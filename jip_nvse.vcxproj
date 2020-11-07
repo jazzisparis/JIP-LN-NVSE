@@ -1,0 +1,213 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectName>jip_nvse</ProjectName>
+    <ProjectGuid>{AE7CFEE7-4058-4E3C-ADC2-AE7480EE2028}</ProjectGuid>
+    <RootNamespace>nvse_plugin_example</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Configuration)\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;RUNTIME_VERSION=0x040020D0;RUNTIME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ForcedIncludeFiles>internal/prefix.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <AssemblerOutput>NoListing</AssemblerOutput>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <OmitFramePointers>false</OmitFramePointers>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <StringPooling>true</StringPooling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <ModuleDefinitionFile>exports.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <TargetMachine>MachineX86</TargetMachine>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Message>Installing DLL...</Message>
+      <Command>copy "$(TargetPath)" "D:\Games\Fallout New Vegas\Data\NVSE\plugins\$(TargetFileName)"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="dllmain.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="internal\containers.cpp" />
+    <ClCompile Include="internal\utility.cpp" />
+    <ClCompile Include="jip_nvse.cpp" />
+    <ClCompile Include="nvse\GameAPI.cpp" />
+    <ClCompile Include="nvse\GameBSExtraData.cpp" />
+    <ClCompile Include="nvse\GameData.cpp" />
+    <ClCompile Include="nvse\GameExtraData.cpp" />
+    <ClCompile Include="nvse\GameForms.cpp" />
+    <ClCompile Include="nvse\GameObjects.cpp" />
+    <ClCompile Include="nvse\GameRTTI.cpp" />
+    <ClCompile Include="nvse\GameScript.cpp" />
+    <ClCompile Include="nvse\GameSettings.cpp" />
+    <ClCompile Include="nvse\GameTasks.cpp" />
+    <ClCompile Include="nvse\GameTiles.cpp" />
+    <ClCompile Include="nvse\GameTypes.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="functions_jip\jip_fn_actor.h" />
+    <ClInclude Include="functions_jip\jip_fn_ammo.h" />
+    <ClInclude Include="functions_jip\jip_fn_ammo_effect.h" />
+    <ClInclude Include="functions_jip\jip_fn_armor.h" />
+    <ClInclude Include="functions_jip\jip_fn_aux_variable.h" />
+    <ClInclude Include="functions_jip\jip_fn_body_part_data.h" />
+    <ClInclude Include="functions_jip\jip_fn_ccc.h" />
+    <ClInclude Include="functions_jip\jip_fn_cell.h" />
+    <ClInclude Include="functions_jip\jip_fn_class.h" />
+    <ClInclude Include="functions_jip\jip_fn_climate.h" />
+    <ClInclude Include="functions_jip\jip_fn_combat_style.h" />
+    <ClInclude Include="functions_jip\jip_fn_destruction_data.h" />
+    <ClInclude Include="functions_jip\jip_fn_effect.h" />
+    <ClInclude Include="functions_jip\jip_fn_explosion.h" />
+    <ClInclude Include="functions_jip\jip_fn_faction.h" />
+    <ClInclude Include="functions_jip\jip_fn_global_var.h" />
+    <ClInclude Include="functions_jip\jip_fn_grass.h" />
+    <ClInclude Include="functions_jip\jip_fn_imagespace.h" />
+    <ClInclude Include="functions_jip\jip_fn_impact_data.h" />
+    <ClInclude Include="functions_jip\jip_fn_input.h" />
+    <ClInclude Include="functions_jip\jip_fn_inventory.h" />
+    <ClInclude Include="functions_jip\jip_fn_land_texture.h" />
+    <ClInclude Include="functions_jip\jip_fn_light.h" />
+    <ClInclude Include="functions_jip\jip_fn_minimap.h" />
+    <ClInclude Include="functions_jip\jip_fn_miscellaneous.h" />
+    <ClInclude Include="functions_jip\jip_fn_misc_ref.h" />
+    <ClInclude Include="functions_jip\jip_fn_package.h" />
+    <ClInclude Include="functions_jip\jip_fn_perk.h" />
+    <ClInclude Include="functions_jip\jip_fn_projectile.h" />
+    <ClInclude Include="functions_jip\jip_fn_quest.h" />
+    <ClInclude Include="functions_jip\jip_fn_ref_map.h" />
+    <ClInclude Include="functions_jip\jip_fn_script.h" />
+    <ClInclude Include="functions_jip\jip_fn_sound.h" />
+    <ClInclude Include="functions_jip\jip_fn_string.h" />
+    <ClInclude Include="functions_jip\jip_fn_texture_set.h" />
+    <ClInclude Include="functions_jip\jip_fn_ui.h" />
+    <ClInclude Include="functions_jip\jip_fn_utility.h" />
+    <ClInclude Include="functions_jip\jip_fn_water.h" />
+    <ClInclude Include="functions_jip\jip_fn_weapon.h" />
+    <ClInclude Include="functions_jip\jip_fn_weather.h" />
+    <ClInclude Include="functions_jip\jip_fn_worldspace.h" />
+    <ClInclude Include="functions_ln\ln_fn_activator.h" />
+    <ClInclude Include="functions_ln\ln_fn_actor.h" />
+    <ClInclude Include="functions_ln\ln_fn_casino.h" />
+    <ClInclude Include="functions_ln\ln_fn_cell.h" />
+    <ClInclude Include="functions_ln\ln_fn_challenge.h" />
+    <ClInclude Include="functions_ln\ln_fn_gamepad.h" />
+    <ClInclude Include="functions_ln\ln_fn_game_data.h" />
+    <ClInclude Include="functions_ln\ln_fn_inventory.h" />
+    <ClInclude Include="functions_ln\ln_fn_leveled_list.h" />
+    <ClInclude Include="functions_ln\ln_fn_load_screen.h" />
+    <ClInclude Include="functions_ln\ln_fn_map_marker.h" />
+    <ClInclude Include="functions_ln\ln_fn_math.h" />
+    <ClInclude Include="functions_ln\ln_fn_miscellaneous.h" />
+    <ClInclude Include="functions_ln\ln_fn_misc_ref.h" />
+    <ClInclude Include="functions_ln\ln_fn_perk.h" />
+    <ClInclude Include="functions_ln\ln_fn_race.h" />
+    <ClInclude Include="functions_ln\ln_fn_radio_ref.h" />
+    <ClInclude Include="functions_ln\ln_fn_recipe.h" />
+    <ClInclude Include="functions_ln\ln_fn_terminal.h" />
+    <ClInclude Include="functions_ln\ln_fn_utility.h" />
+    <ClInclude Include="functions_ln\ln_fn_weapon.h" />
+    <ClInclude Include="internal\debug.h" />
+    <ClInclude Include="internal\decoding.h" />
+    <ClInclude Include="internal\dinput.h" />
+    <ClInclude Include="internal\havok.h" />
+    <ClInclude Include="internal\hooks.h" />
+    <ClInclude Include="internal\lutana.h" />
+    <ClInclude Include="internal\netimmerse.h" />
+    <ClInclude Include="internal\param_info.h" />
+    <ClInclude Include="internal\patches_cmd.h" />
+    <ClInclude Include="internal\patches_game.h" />
+    <ClInclude Include="internal\prefix.h" />
+    <ClInclude Include="internal\serialization.h" />
+    <ClInclude Include="internal\containers.h" />
+    <ClInclude Include="internal\type_defs.h" />
+    <ClInclude Include="internal\utility.h" />
+    <ClInclude Include="internal\version.h" />
+    <ClInclude Include="jip_nvse.h" />
+    <ClInclude Include="nvse\CommandTable.h" />
+    <ClInclude Include="nvse\GameAPI.h" />
+    <ClInclude Include="nvse\GameBSExtraData.h" />
+    <ClInclude Include="nvse\GameData.h" />
+    <ClInclude Include="nvse\GameEffects.h" />
+    <ClInclude Include="nvse\GameExtraData.h" />
+    <ClInclude Include="nvse\GameForms.h" />
+    <ClInclude Include="nvse\GameObjects.h" />
+    <ClInclude Include="nvse\GameOSDepend.h" />
+    <ClInclude Include="nvse\GameProcess.h" />
+    <ClInclude Include="nvse\GameRTTI.h" />
+    <ClInclude Include="nvse\GameScript.h" />
+    <ClInclude Include="nvse\GameSettings.h" />
+    <ClInclude Include="nvse\GameTasks.h" />
+    <ClInclude Include="nvse\GameTiles.h" />
+    <ClInclude Include="nvse\GameTypes.h" />
+    <ClInclude Include="nvse\GameUI.h" />
+    <ClInclude Include="nvse\NiTypes.h" />
+    <ClInclude Include="nvse\ParamInfos.h" />
+    <ClInclude Include="nvse\PluginAPI.h" />
+    <ClInclude Include="nvse\Utilities.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="exports.def" />
+    <None Include="nvse\GameRTTI_1_4_0_525.inc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="jip_nvse.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

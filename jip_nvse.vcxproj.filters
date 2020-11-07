@@ -1,0 +1,372 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="internal">
+      <UniqueIdentifier>{1dd87614-a78f-4b5a-aa4c-9ad421ccc4f3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="functions_jip">
+      <UniqueIdentifier>{0aa711ce-2035-4577-910e-601ff7c6ae65}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="functions_ln">
+      <UniqueIdentifier>{33b5a03a-b467-4257-9b19-895b53a46328}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="nvse">
+      <UniqueIdentifier>{24d2020b-84bb-4362-a28b-e4919d0156c7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="dllmain.c" />
+    <ClCompile Include="jip_nvse.cpp" />
+    <ClCompile Include="internal\utility.cpp">
+      <Filter>internal</Filter>
+    </ClCompile>
+    <ClCompile Include="nvse\GameAPI.cpp">
+      <Filter>nvse</Filter>
+    </ClCompile>
+    <ClCompile Include="nvse\GameBSExtraData.cpp">
+      <Filter>nvse</Filter>
+    </ClCompile>
+    <ClCompile Include="nvse\GameData.cpp">
+      <Filter>nvse</Filter>
+    </ClCompile>
+    <ClCompile Include="nvse\GameExtraData.cpp">
+      <Filter>nvse</Filter>
+    </ClCompile>
+    <ClCompile Include="nvse\GameForms.cpp">
+      <Filter>nvse</Filter>
+    </ClCompile>
+    <ClCompile Include="nvse\GameObjects.cpp">
+      <Filter>nvse</Filter>
+    </ClCompile>
+    <ClCompile Include="nvse\GameScript.cpp">
+      <Filter>nvse</Filter>
+    </ClCompile>
+    <ClCompile Include="nvse\GameSettings.cpp">
+      <Filter>nvse</Filter>
+    </ClCompile>
+    <ClCompile Include="nvse\GameTasks.cpp">
+      <Filter>nvse</Filter>
+    </ClCompile>
+    <ClCompile Include="nvse\GameTiles.cpp">
+      <Filter>nvse</Filter>
+    </ClCompile>
+    <ClCompile Include="nvse\GameTypes.cpp">
+      <Filter>nvse</Filter>
+    </ClCompile>
+    <ClCompile Include="nvse\GameRTTI.cpp">
+      <Filter>nvse</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\containers.cpp">
+      <Filter>internal</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="jip_nvse.h" />
+    <ClInclude Include="internal\decoding.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\param_info.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\hooks.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\serialization.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\debug.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\containers.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\havok.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\netimmerse.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\utility.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\lutana.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_actor.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_ammo.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_ammo_effect.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_armor.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_aux_variable.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_body_part_data.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_ccc.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_class.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_climate.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_combat_style.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_destruction_data.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_effect.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_explosion.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_faction.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_global_var.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_grass.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_imagespace.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_impact_data.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_inventory.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_land_texture.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_light.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_misc_ref.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_miscellaneous.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_package.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_perk.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_projectile.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_ref_map.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_script.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_sound.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_string.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_texture_set.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_ui.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_utility.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_water.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_weapon.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_weather.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_activator.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_actor.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_casino.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_challenge.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_game_data.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_gamepad.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_leveled_list.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_load_screen.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_map_marker.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_math.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_perk.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_race.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_radio_ref.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_recipe.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_terminal.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_utility.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_weapon.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_miscellaneous.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_misc_ref.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_cell.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_ln\ln_fn_inventory.h">
+      <Filter>functions_ln</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_worldspace.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_cell.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\version.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_input.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_quest.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\patches_cmd.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\patches_game.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="functions_jip\jip_fn_minimap.h">
+      <Filter>functions_jip</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\dinput.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\prefix.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\type_defs.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\CommandTable.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameAPI.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameBSExtraData.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameData.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameEffects.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameExtraData.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameForms.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameObjects.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameOSDepend.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameProcess.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameRTTI.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameScript.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameSettings.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameTasks.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameTiles.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameTypes.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameUI.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\NiTypes.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\ParamInfos.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\PluginAPI.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\Utilities.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="exports.def" />
+    <None Include="nvse\GameRTTI_1_4_0_525.inc">
+      <Filter>nvse</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="jip_nvse.rc" />
+  </ItemGroup>
+</Project>

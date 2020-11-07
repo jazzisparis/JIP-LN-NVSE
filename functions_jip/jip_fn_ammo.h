@@ -1,0 +1,70 @@
+#pragma once
+
+DEFINE_COMMAND_PLUGIN(GetAmmoTraitNumeric, , 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetAmmoTraitNumeric, , 0, 3, kParams_JIP_OneForm_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetAmmoProjectile, , 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetAmmoProjectile, , 0, 2, kParams_JIP_OneForm_OneOptionalForm);
+
+bool Cmd_GetAmmoTraitNumeric_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	TESAmmo *ammo;
+	UInt32 traitID;
+	if (!ExtractArgs(EXTRACT_ARGS, &ammo, &traitID) || NOT_TYPE(ammo, TESAmmo)) return true;
+	switch (traitID)
+	{
+	case 0:
+		*result = ammo->speed;
+		break;
+	case 1:
+		*result = (int)ammo->projPerShot;
+		break;
+	case 2:
+		*result = ammo->ammoPercentConsumed;
+		break;
+	case 3:
+		*result = ammo->clipRounds.clipRounds;
+	}
+	return true;
+}
+
+bool Cmd_SetAmmoTraitNumeric_Execute(COMMAND_ARGS)
+{
+	TESAmmo *ammo;
+	UInt32 traitID;
+	float val;
+	if (!ExtractArgs(EXTRACT_ARGS, &ammo, &traitID, &val) || NOT_TYPE(ammo, TESAmmo)) return true;
+	switch (traitID)
+	{
+	case 0:
+		ammo->speed = val;
+		break;
+	case 1:
+		ammo->projPerShot = (int)val;
+		break;
+	case 2:
+		ammo->ammoPercentConsumed = val;
+		break;
+	case 3:
+		ammo->clipRounds.clipRounds = val;
+	}
+	return true;
+}
+
+bool Cmd_GetAmmoProjectile_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	TESAmmo *ammo;
+	if (ExtractArgs(EXTRACT_ARGS, &ammo) && IS_TYPE(ammo, TESAmmo) && ammo->projectile)
+		REFR_RES = ammo->projectile->refID;
+	return true;
+}
+
+bool Cmd_SetAmmoProjectile_Execute(COMMAND_ARGS)
+{
+	TESAmmo *ammo;
+	BGSProjectile *proj;
+	if (ExtractArgs(EXTRACT_ARGS, &ammo, &proj) && IS_TYPE(ammo, TESAmmo) && IS_TYPE(proj, BGSProjectile))
+		ammo->projectile = proj;
+	return true;
+}
