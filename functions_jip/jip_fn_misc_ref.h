@@ -1547,38 +1547,48 @@ bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 	if (ExtractFormatStringArgs(1, blockName + 1, EXTRACT_ARGS_EX, kCommandInfo_ModelHasBlock.numParams, &form))
 	{
 		TESObjectREFR *refr = form->GetIsReference() ? (TESObjectREFR*)form : NULL;
-		if (refr && refr->GetNiBlock(blockName + 1))
-		{
-			*result = 1;
-			return true;
-		}
+		NiNode *rootNode = refr ? refr->GetNiNode() : NULL;
+		if (rootNode && rootNode->GetBlock(blockName + 1))
+			goto Retn1;
 		NodeNamesMap *namesMap = s_insertNodeMap.GetPtr(form);
 		if (namesMap)
 		{
 			for (auto iter = namesMap->Begin(); iter; ++iter)
-			{
-				if (!iter().HasKey(blockName + 1) && !iter().HasKey(blockName))
-					continue;
-				*result = 1;
-				return true;
-			}
+				if (iter().HasKey(blockName + 1) || iter().HasKey(blockName))
+					goto Retn1;
 		}
 		if (refr)
 		{
-			namesMap = s_insertNodeMap.GetPtr(refr->GetBaseForm());
+			form = refr->GetBaseForm();
+			if (!form) goto Retn0;
+			namesMap = s_insertNodeMap.GetPtr(form);
 			if (namesMap)
 			{
 				for (auto iter = namesMap->Begin(); iter; ++iter)
+					if (iter().HasKey(blockName + 1) || iter().HasKey(blockName))
+						goto Retn1;
+			}
+		}
+		if (!rootNode && form->IsBoundObject())
+		{
+			TESModel *model = DYNAMIC_CAST(form, TESForm, TESModel);
+			if (model)
+			{
+				const char *modelPath = model->GetModelPath();
+				if (modelPath && *modelPath)
 				{
-					if (!iter().HasKey(blockName + 1) && !iter().HasKey(blockName))
-						continue;
-					*result = 1;
-					return true;
+					rootNode = LoadModel(g_modelLoader, modelPath, 0, 1, 0, 0, 0);
+					if (rootNode && rootNode->GetBlock(blockName + 1))
+						goto Retn1;
 				}
 			}
 		}
 	}
+Retn0:
 	*result = 0;
+	return true;
+Retn1:
+	*result = 1;
 	return true;
 }
 
