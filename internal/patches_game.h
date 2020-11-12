@@ -80,12 +80,12 @@ __declspec(naked) void DoQueuedPlayerHook()
 		mov		[eax+8], edx
 		lea		ecx, [esi+0xD74]
 		pxor	xmm0, xmm0
-		mov		dl, 6
-	iterHead:
 		movdqu	xmmword ptr [ecx], xmm0
-		add		ecx, 0x10
-		dec		dl
-		jnz		iterHead
+		movdqu	xmmword ptr [ecx+0x10], xmm0
+		movdqu	xmmword ptr [ecx+0x20], xmm0
+		movdqu	xmmword ptr [ecx+0x30], xmm0
+		movdqu	xmmword ptr [ecx+0x40], xmm0
+		movdqu	xmmword ptr [ecx+0x50], xmm0
 		pop		ecx
 		mov		eax, 0x440BA0
 		call	eax
@@ -1037,13 +1037,16 @@ __declspec(naked) void ExtractStringHook()
 		jnz		notVar
 		push	edi
 		mov		edi, [ebp-0xE8]
-		mov		dx, si
+		mov		edx, esi
+		jmp		iterHead
+		lea		esp, [esp]
+		lea		esp, [esp]
 	iterHead:
 		mov		al, [ecx]
 		mov		[edi], al
 		inc		ecx
 		inc		edi
-		dec		dx
+		dec		edx
 		jnz		iterHead
 		mov		[edi], 0
 		pop		edi
@@ -3285,7 +3288,7 @@ __declspec(naked) void InitFontManagerHook()
 		call	UnorderedMap<const char*, FontInfo*>::InsertNotIn
 		add		esi, 4
 		add		edi, 0xC
-		inc		bl
+		inc		ebx
 		cmp		bl, 9
 		jb		defFontHead
 		mov		eax, [ebp-4]
@@ -3293,7 +3296,7 @@ __declspec(naked) void InitFontManagerHook()
 		mov		[ebp-4], eax
 		mov		edi, offset s_extraFontsPaths
 	extFontHead:
-		inc		bl
+		inc		ebx
 		cmp		bl, 0x5A
 		jnb		done
 		cmp		dword ptr [edi], 0
