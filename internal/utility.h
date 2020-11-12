@@ -15,18 +15,14 @@ template <int x> struct static_assert_test { };
 static const double
 kDblZero = 0,
 kDblHalf = 0.5,
-kDblOne = 1,
 kDblPI = 3.141592653589793,
 kDblPId2 = 1.5707963267948966,
 kDblPId180 = 0.017453292519943295;
 
 static const float
 kFltZero = 0.0F,
-kFltDot1 = 0.1F,
 kFltHalf = 0.5F,
 kFltOne = 1.0F,
-kFltTwo = 2.0F,
-kFltFour = 4.0F,
 kFltFive = 5.0F,
 kFltSix = 6.0F,
 kFlt10 = 10.0F,
@@ -102,11 +98,8 @@ public:
 };
 
 void* __fastcall Pool_Alloc(UInt32 size);
-void* __fastcall Pool_Alloc_Al4(UInt32 size);
 void __fastcall Pool_Free(void *pBlock, UInt32 size);
-void __fastcall Pool_Free_Al4(void *pBlock, UInt32 size);
 void* __fastcall Pool_Realloc(void *pBlock, UInt32 curSize, UInt32 reqSize);
-void* __fastcall Pool_Realloc_Al4(void *pBlock, UInt32 curSize, UInt32 reqSize);
 
 void* __stdcall GameHeapAlloc(UInt32 size);
 void __stdcall GameHeapFree(void *ptr);
@@ -471,9 +464,12 @@ public:
 	bool IsFile() const {return !(fndData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);}
 	bool IsFolder() const
 	{
-		if (IsFile()) return false;
-		if (fndData.cFileName[0] != '.') return true;
-		if (fndData.cFileName[1] != '.') return fndData.cFileName[1] != 0;
+		if (IsFile())
+			return false;
+		if (fndData.cFileName[0] != '.')
+			return true;
+		if (fndData.cFileName[1] != '.')
+			return fndData.cFileName[1] != 0;
 		return fndData.cFileName[2] != 0;
 	}
 	const char *Get() const {return fndData.cFileName;}
