@@ -330,7 +330,7 @@ __declspec(naked) void MainLoopCallback::Execute()
 		push	ebp
 		mov		ebp, esp
 		movzx	edx, byte ptr [ecx+8]
-		dec		dl
+		dec		edx
 		js		doExecute
 		mov		eax, [ecx+0x18]
 		jnz		pushArgs
@@ -338,7 +338,7 @@ __declspec(naked) void MainLoopCallback::Execute()
 		jmp		doExecute
 	pushArgs:
 		push	dword ptr [eax+edx*4]
-		dec		dl
+		dec		edx
 		jns		pushArgs
 	doExecute:
 		mov		eax, [ecx]
@@ -552,7 +552,7 @@ __declspec(naked) void DoQueuedCmdCallHook()
 		jz		doExecute
 		lea		ecx, [eax+0x10]
 	pushArgs:
-		dec		dl
+		dec		edx
 		push	dword ptr [ecx+edx*4]
 		jnz		pushArgs
 	doExecute:
@@ -1319,19 +1319,19 @@ __declspec(naked) void WeaponSwitchSelectHook()
 		mov		edx, [ecx+4]
 		mov		ecx, [ecx+8]
 	loopHead:
-		test	cl, cl
+		test	ecx, ecx
 		jz		done
 		cmp		[edx], eax
 		jz		found
-		dec		cl
+		dec		ecx
 		add		edx, 0x14
 		jmp		loopHead
 	found:
 		lea     eax, [ebp-0x68]
 		mov		edx, [eax+8]
-		sub		dl, cl
+		sub		edx, ecx
 		mov		[ebp-0xBC], edx
-		inc		dl
+		inc		edx
 		mov		[eax+8], edx
 		retn
 	done:
