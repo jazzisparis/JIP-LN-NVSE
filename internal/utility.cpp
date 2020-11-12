@@ -7,41 +7,9 @@ memcpy_t MemCopy = memcpy, MemMove = memmove;
 
 alignas(16) void *s_availableCachedBlocks[(MAX_CACHED_BLOCK_SIZE >> 2) + 1] = {NULL};
 
-CriticalSection s_poolCritSection;
+alignas(16) UInt32 s_poolSemaphore = 0;
 
 __declspec(naked) void* __fastcall Pool_Alloc(UInt32 size)
-{
-	__asm
-	{
-		push	ecx
-		cmp		ecx, MAX_CACHED_BLOCK_SIZE
-		ja		doAlloc
-		push	offset s_poolCritSection
-		call	EnterCriticalSection
-		pop		ecx
-		lea		edx, s_availableCachedBlocks[ecx]
-		mov		eax, [edx]
-		test	eax, eax
-		jz		leaveCS
-		mov		ecx, [eax]
-		mov		[edx], ecx
-		push	eax
-		push	offset s_poolCritSection
-		call	LeaveCriticalSection
-		pop		eax
-		retn
-	leaveCS:
-		push	ecx
-		push	offset s_poolCritSection
-		call	LeaveCriticalSection
-	doAlloc:
-		call	malloc
-		pop		ecx
-		retn
-	}
-}
-
-__declspec(naked) void* __fastcall Pool_Alloc_Al4(UInt32 size)
 {
 	__asm
 	{
@@ -49,8 +17,32 @@ __declspec(naked) void* __fastcall Pool_Alloc_Al4(UInt32 size)
 		jz		isAligned
 		and		cl, 0xFC
 		add		ecx, 4
+		jmp		isAligned
+		and		esp, 0xEFFFFFFF
 	isAligned:
-		jmp		Pool_Alloc
+		cmp		ecx, MAX_CACHED_BLOCK_SIZE
+		ja		doAlloc
+		mov		edx, offset s_poolSemaphore
+	spinHead:
+		xor		eax, eax
+		lock cmpxchg [edx], edx
+		test	eax, eax
+		jnz		spinHead
+		lea		edx, s_availableCachedBlocks[ecx]
+		mov		eax, [edx]
+		test	eax, eax
+		jz		noCached
+		mov		ecx, [eax]
+		mov		[edx], ecx
+		mov		s_poolSemaphore, 0
+		retn
+	noCached:
+		mov		s_poolSemaphore, 0
+	doAlloc:
+		push	ecx
+		call	malloc
+		pop		ecx
+		retn
 	}
 }
 
@@ -59,41 +51,36 @@ __declspec(naked) void __fastcall Pool_Free(void *pBlock, UInt32 size)
 	__asm
 	{
 		test	ecx, ecx
-		jnz		proceed
-		retn
-	proceed:
-		push	ecx
-		cmp		edx, MAX_CACHED_BLOCK_SIZE
-		ja		doFree
-		push	edx
-		push	offset s_poolCritSection
-		call	EnterCriticalSection
-		pop		edx
-		pop		ecx
-		lea		eax, s_availableCachedBlocks[edx]
-		mov		edx, [eax]
-		mov		[ecx], edx
-		mov		[eax], ecx
-		push	offset s_poolCritSection
-		call	LeaveCriticalSection
-		retn
-	doFree:
-		call	free
-		pop		ecx
-		retn
-	}
-}
-
-__declspec(naked) void __fastcall Pool_Free_Al4(void *pBlock, UInt32 size)
-{
-	__asm
-	{
+		jz		nullPtr
 		test	dl, 3
 		jz		isAligned
 		and		dl, 0xFC
 		add		edx, 4
 	isAligned:
-		jmp		Pool_Free
+		cmp		edx, MAX_CACHED_BLOCK_SIZE
+		jbe		doCache
+		push	ecx
+		call	free
+		pop		ecx
+	nullPtr:
+		retn
+		mov		eax, 0
+		mov		eax, 0
+	doCache:
+		push	edx
+		mov		edx, offset s_poolSemaphore
+	spinHead:
+		xor		eax, eax
+		lock cmpxchg [edx], edx
+		test	eax, eax
+		jnz		spinHead
+		pop		edx
+		lea		eax, s_availableCachedBlocks[edx]
+		mov		edx, [eax]
+		mov		[ecx], edx
+		mov		[eax], ecx
+		mov		s_poolSemaphore, 0
+		retn
 	}
 }
 
@@ -101,57 +88,29 @@ __declspec(naked) void* __fastcall Pool_Realloc(void *pBlock, UInt32 curSize, UI
 {
 	__asm
 	{
-		cmp		edx, MAX_CACHED_BLOCK_SIZE
-		ja		doRealloc
-		test	ecx, ecx
-		jnz		proceed
-		mov		ecx, [esp+4]
-		call	Pool_Alloc
-		retn	4
-	proceed:
-		push	edx
-		push	ecx
-		mov		ecx, [esp+0xC]
-		call	Pool_Alloc
-		push	eax
-		call	MemCopy
-		pop		eax
-		pop		ecx
-		pop		edx
-		push	eax
-		call	Pool_Free
-		pop		eax
-		retn	4
-	doRealloc:
-		push	dword ptr [esp+4]
-		push	ecx
-		call	realloc
-		add		esp, 8
-		retn	4
-	}
-}
-
-__declspec(naked) void* __fastcall Pool_Realloc_Al4(void *pBlock, UInt32 curSize, UInt32 reqSize)
-{
-	__asm
-	{
 		test	dl, 3
 		jz		isAligned
 		and		dl, 0xFC
 		add		edx, 4
 	isAligned:
 		cmp		edx, MAX_CACHED_BLOCK_SIZE
-		ja		doRealloc
-		test	ecx, ecx
-		jnz		proceed
-		mov		ecx, [esp+4]
-		call	Pool_Alloc_Al4
+		jbe		doCache
+		push	dword ptr [esp+4]
+		push	ecx
+		call	realloc
+		add		esp, 8
 		retn	4
-	proceed:
+	doCache:
+		test	ecx, ecx
+		jnz		doRealloc
+		mov		ecx, [esp+4]
+		call	Pool_Alloc
+		retn	4
+	doRealloc:
 		push	edx
 		push	ecx
 		mov		ecx, [esp+0xC]
-		call	Pool_Alloc_Al4
+		call	Pool_Alloc
 		push	eax
 		call	MemCopy
 		pop		eax
@@ -160,12 +119,6 @@ __declspec(naked) void* __fastcall Pool_Realloc_Al4(void *pBlock, UInt32 curSize
 		push	eax
 		call	Pool_Free
 		pop		eax
-		retn	4
-	doRealloc:
-		push	dword ptr [esp+4]
-		push	ecx
-		call	realloc
-		add		esp, 8
 		retn	4
 	}
 }
@@ -1139,43 +1092,38 @@ __declspec(naked) char* __fastcall GetNextToken(char *str, const char *delims)
 		mov		ebp, esp
 		sub		esp, 0x100
 		push	esi
-		lea		esi, [ebp-0x100]
-		push	ecx
-		push	edx
-		mov		edx, 0x100
-		mov		ecx, esi
-		call	MemZero
-		pop		eax
-		xor		edx, edx
-		jmp		dlmIter
-		and		esp, 0xEFFFFFFF
-		and		esp, 0xEFFFFFFF
-		nop
+		push	edi
+		mov		esi, ecx
+		lea		edi, [ebp-0x100]
+		xor		eax, eax
+		mov		ecx, 0x40
+		rep stosd
+		lea		edi, [ebp-0x100]
 	dlmIter:
-		mov		dl, [eax]
-		test	dl, dl
-		jz		dlmEnd
-		mov		byte ptr [esi+edx], 1
-		inc		eax
+		mov		al, [edx]
+		test	al, al
+		jz		mainHead
+		mov		byte ptr [edi+eax], 1
+		inc		edx
 		jmp		dlmIter
-	dlmEnd:
-		pop		eax
-		xor		cl, cl
+		nop
 	mainHead:
-		mov		dl, [eax]
-		test	dl, dl
+		mov		al, [esi]
+		test	al, al
 		jz		done
-		cmp		byte ptr [esi+edx], 0
+		cmp		byte ptr [edi+eax], 0
 		jz		wasFound
-		mov		cl, 1
-		mov		[eax], 0
+		inc		ecx
+		mov		[esi], 0
 	mainNext:
-		inc		eax
+		inc		esi
 		jmp		mainHead
 	wasFound:
 		test	cl, cl
 		jz		mainNext
 	done:
+		mov		eax, esi
+		pop		edi
 		pop		esi
 		mov		esp, ebp
 		pop		ebp
