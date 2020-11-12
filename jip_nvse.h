@@ -3589,17 +3589,17 @@ __declspec(naked) void NiNode::ToggleCollision(bool enable)
 		jz		doDisable
 		or		dword ptr [eax+0xC], 1
 		jmp		noColObj
-		nop
+		lea		esp, [esp]
 	doDisable:
 		and		dword ptr [eax+0xC], 0xFFFFFFFE
 	noColObj:
-		mov		ax, [ecx+0xA6]
-		test	ax, ax
+		movzx	eax, word ptr [ecx+0xA6]
+		test	eax, eax
 		jz		done
 		push	esi
 		push	edi
 		mov		esi, [ecx+0xA0]
-		mov		di, ax
+		mov		edi, eax
 	iterHead:
 		mov		ecx, [esi]
 		mov		eax, [ecx]
@@ -3611,7 +3611,7 @@ __declspec(naked) void NiNode::ToggleCollision(bool enable)
 		call	NiNode::ToggleCollision
 	iterNext:
 		add		esi, 4
-		dec		di
+		dec		edi
 		jnz		iterHead
 		pop		edi
 		pop		esi
@@ -3629,15 +3629,15 @@ __declspec(naked) void NiNode::DisableCollision()
 		jz		noColObj
 		and		dword ptr [eax+0xC], 0xFFFFFFFE
 	noColObj:
-		mov		ax, [ecx+0xA6]
-		test	ax, ax
+		movzx	eax, word ptr [ecx+0xA6]
+		test	eax, eax
 		jnz		proceed
 		retn
 	proceed:
 		push	esi
 		push	edi
 		mov		esi, [ecx+0xA0]
-		mov		di, ax
+		mov		edi, eax
 	iterHead:
 		mov		ecx, [esi]
 		mov		eax, [ecx]
@@ -3648,7 +3648,7 @@ __declspec(naked) void NiNode::DisableCollision()
 		call	NiNode::DisableCollision
 	iterNext:
 		add		esi, 4
-		dec		di
+		dec		edi
 		jnz		iterHead
 		pop		edi
 		pop		esi
@@ -3666,17 +3666,17 @@ __declspec(naked) UInt32 NiAVObject::GetIndex()
 		mov		ecx, [ecx+0x18]
 		test	ecx, ecx
 		jz		done
-		mov		dx, [ecx+0xA6]
-		test	dx, dx
+		movzx	edx, word ptr [ecx+0xA6]
+		test	edx, edx
 		jz		done
 		mov		ecx, [ecx+0xA0]
-		fnop
+		lea		esp, [esp]
 	iterHead:
 		inc		eax
 		cmp		[ecx], esi
 		jz		done
 		add		ecx, 4
-		dec		dx
+		dec		edx
 		jnz		iterHead
 		xor		eax, eax
 	done:
@@ -3845,13 +3845,13 @@ __declspec(naked) void NiNode::ApplyForce(hkVector4 *forceVector)
 		push	dword ptr [esp+8]
 		call	bhkWorldObject::ApplyForce
 	doneCol:
-		mov		dx, [ebx+0xA6]
-		test	dx, dx
+		movzx	edx, word ptr [ebx+0xA6]
+		test	edx, edx
 		jz		done
 		push	esi
 		push	edi
 		mov		esi, [ebx+0xA0]
-		mov		di, dx
+		mov		edi, edx
 	iterHead:
 		mov		ecx, [esi]
 		test	ecx, ecx
@@ -3865,7 +3865,7 @@ __declspec(naked) void NiNode::ApplyForce(hkVector4 *forceVector)
 		call	NiNode::ApplyForce
 	iterNext:
 		add		esi, 4
-		dec		di
+		dec		edi
 		jnz		iterHead
 		pop		edi
 		pop		esi
@@ -3982,7 +3982,7 @@ __declspec(naked) LODdata::LODNode *LODdata::LODNode::GetNodeByCoord(UInt32 coor
 		mov		edx, [ebp-0xC]
 	iterNext:
 		mov		ecx, [ebp-4]
-		inc		dl
+		inc		edx
 		mov		[ebp-0xC], edx
 		cmp		dl, 4
 		jb		iterHead
@@ -5891,6 +5891,8 @@ bool __fastcall IsMenuMode(UInt32 menuID)
 		case 0:
 			return g_interfaceManager->currentMode != 1;
 		case 1:
+			if (*(bool*)0x11CAB24)
+				return g_menuVisibility[kMenuType_Inventory] || g_menuVisibility[kMenuType_Stats] || g_menuVisibility[kMenuType_Map];
 			return g_interfaceManager->pipBoyMode == 3;
 		case 2:
 		{
