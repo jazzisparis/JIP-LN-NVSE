@@ -81,7 +81,7 @@ __declspec(naked) void UpdateTileScales()
 		mulss	xmm0, [eax+8]
 		mov		edx, 9
 	iterHead:
-		dec		dl
+		dec		edx
 		mov		eax, s_localMapShapes[edx*4]
 		movss	[eax+0x64], xmm0
 		jnz		iterHead
@@ -350,6 +350,8 @@ __declspec(naked) IntSeenData *IntSeenData::GetSectionSeenData(int sectionX, int
 		mov		eax, ecx
 		mov		ecx, [esp+8]
 		mov		edx, [esp+0xC]
+		jmp		iterHead
+		lea		esp, [esp]
 	iterHead:
 		movsx	esi, byte ptr [eax+0x24]
 		cmp		esi, ecx
@@ -771,6 +773,10 @@ __declspec(naked) void __stdcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
 		mov		edi, 0x10
 		mov		dword ptr [ebp-4], 0
 		inc		dword ptr [ebp-0xC]
+		jmp		iter2Head
+		and		esp, 0xEFFFFFFF
+		lea		esp, [esp]
+		fnop
 	iter2Head:
 		lea		ecx, [ebp-0x14]
 		call	GetSectionSeenLevel
@@ -1306,6 +1312,8 @@ __declspec(naked) bool __stdcall UpdateSeenBitsHook(NiVector3 *posVector1, NiVec
 		add		eax, [ebp-0xC]
 		imul	eax, eax
 		mov		[ebp-0x10], eax
+		jmp		iter2Head
+		and		esp, 0xEFFFFFFF
 	iter2Head:
 		mov		ecx, esi
 		and		ecx, 1
