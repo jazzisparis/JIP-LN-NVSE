@@ -897,22 +897,22 @@ __declspec(naked) void ExtCaptureBoundsHook()
 		shl		eax, 0xC
 		add		eax, 0x800
 		mov		[ebp-0xDC], eax
-		cvtsi2ss	xmm0, eax
-		movss	[ebp-0x3C], xmm0
+		fild	dword ptr [ebp-0xDC]
+		fstp	dword ptr [ebp-0x3C]
 		mov		eax, [ecx+4]
 		shl		eax, 0xC
 		add		eax, 0x800
 		mov		[ebp-0xE0], eax
-		cvtsi2ss	xmm0, eax
-		movss	[ebp-0x38], xmm0
+		fild	dword ptr [ebp-0xE0]
+		fstp	dword ptr [ebp-0x38]
 		movdqa	xmm0, xmmword ptr ds:[kCaptureBounds]
 		movdqu	xmmword ptr [ebp-0x98], xmm0
-		movss	xmm0, kFlt12288
-		addss	xmm0, [ebp-0x40]
-		movss	[ebp-0x34], xmm0
-		addss	xmm0, kFlt4096
-		subss	xmm0, [ebp-0x44]
-		movss	[ebp-0x84], xmm0
+		fld		kFlt12288
+		fadd	dword ptr [ebp-0x40]
+		fst		dword ptr [ebp-0x34]
+		fadd	kFlt4096
+		fsub	dword ptr [ebp-0x44]
+		fstp	dword ptr [ebp-0x84]
 		push	0x114
 		CALL_EAX(0xAA13E0)
 		pop		ecx
@@ -959,39 +959,39 @@ __declspec(naked) void IntCaptureBoundsHook()
 		shl		eax, 0xC
 		add		eax, 0x1000
 		mov		[ebp-0x12C], eax
-		cvtsi2ss	xmm0, eax
-		movss	[ecx], xmm0
+		fild	dword ptr [ebp-0x12C]
+		fstp	dword ptr [ecx]
 		mov		eax, [ebp+0xC]
 		shl		eax, 0xC
 		add		eax, 0x1000
 		mov		[ebp-0x130], eax
-		cvtsi2ss	xmm0, eax
-		movss	[ecx+4], xmm0
-		movss	xmm0, [ebp-0x3C]
-		addss	xmm0, kFlt40000
-		movss	[ecx+8], xmm0
+		fild	dword ptr [ebp-0x130]
+		fstp	dword ptr [ecx+4]
+		fld		dword ptr [ebp-0x3C]
+		fadd	kFlt40000
+		fstp	dword ptr [ecx+8]
 		cmp		s_cellNorthRotation, 0
 		jz		noRot
 		mov		eax, offset s_northRotationVector
-		movss	xmm0, [ecx]
-		mulss	xmm0, [eax]
-		movss	xmm1, [ecx+4]
-		mulss	xmm1, [eax+4]
-		addss	xmm0, xmm1
-		movss	xmm1, [ecx]
-		mulss	xmm1, [eax+8]
-		movss	xmm2, [ecx+4]
-		mulss	xmm2, [eax+0xC]
-		addss	xmm1, xmm2
-		movss	[ecx], xmm0
-		movss	[ecx+4], xmm1
+		fld		dword ptr [ecx]
+		fmul	dword ptr [eax]
+		fld		dword ptr [ecx+4]
+		fmul	dword ptr [eax+4]
+		faddp	st(1), st
+		fld		dword ptr [ecx]
+		fmul	dword ptr [eax+8]
+		fld		dword ptr [ecx+4]
+		fmul	dword ptr [eax+0xC]
+		faddp	st(1), st
+		fstp	dword ptr [ecx+4]
+		fstp	dword ptr [ecx]
 	noRot:
 		movdqa	xmm0, xmmword ptr ds:[kCaptureBounds]
 		movdqu	xmmword ptr [ebp-0xA8], xmm0
-		movss	xmm0, [ecx+8]
-		subss	xmm0, [ebp-0x40]
-		addss	xmm0, kFlt10000
-		movss	[ebp-0x94], xmm0
+		fld		dword ptr [ecx+8]
+		fsub	dword ptr [ebp-0x40]
+		fadd	kFlt10000
+		fstp	dword ptr [ebp-0x94]
 		JMP_EAX(0x54F727)
 	}
 }
@@ -1256,14 +1256,12 @@ __declspec(naked) bool __stdcall UpdateSeenBitsHook(NiVector3 *posVector1, NiVec
 		lea		ebx, [ecx+4]
 		mov		eax, [ebp+8]
 		mov		ecx, [ebp+0xC]
-		movss	xmm0, [ecx]
-		subss	xmm0, [eax]
-		cvtss2si	edx, xmm0
-		mov		[ebp-8], edx
-		movss	xmm0, [ecx+4]
-		subss	xmm0, [eax+4]
-		cvtss2si	edx, xmm0
-		mov		[ebp-0xC], edx
+		fld		dword ptr [ecx]
+		fsub	dword ptr [eax]
+		fistp	dword ptr [ebp-8]
+		fld		dword ptr [ecx+4]
+		fsub	dword ptr [eax+4]
+		fistp	dword ptr [ebp-0xC]
 		xor		esi, esi
 		mov		[ebp-4], esi
 		ALIGN 16

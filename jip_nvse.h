@@ -252,9 +252,11 @@ __declspec(naked) bool Sky::GetIsRaining()
 		cmp		byte ptr [eax+0xEB], 4
 		jnz		retnFalse
 	weatherPerc:
-		movss	xmm0, kFltOne
-		comiss	xmm0, [ecx+0xF4]
+		fld		dword ptr [ecx+0xF4]
+		fld1
+		fucomip	st, st(1)
 		setbe	al
+		fstp	st
 		retn
 	retnFalse:
 		xor		al, al
@@ -1294,15 +1296,16 @@ __declspec(naked) void __fastcall DoSetAngle(TESObjectREFR *refr, int EDX, float
 {
 	__asm
 	{
-		movss	xmm0, kFltPId180
-		movss	xmm1, [esp+4]
-		mulss	xmm1, xmm0
-		movss	[ecx+0x24], xmm1
-		movss	xmm1, [esp+8]
-		mulss	xmm1, xmm0
-		movss	[ecx+0x28], xmm1
-		mulss	xmm0, [esp+0xC]
-		movss	[ecx+0x2C], xmm0
+		fld		kDblPId180
+		fld		dword ptr [esp+4]
+		fmul	st, st(1)
+		fstp	dword ptr [ecx+0x24]
+		fld		dword ptr [esp+8]
+		fmul	st, st(1)
+		fstp	dword ptr [ecx+0x28]
+		fld		dword ptr [esp+0xC]
+		fmulp	st(1), st
+		fstp	dword ptr [ecx+0x2C]
 		push	0
 		push	0
 		push	ecx
@@ -1662,18 +1665,18 @@ __declspec(naked) NiAVObject* __fastcall _GetRayCastObject(void *rcData, void *a
 		add		eax, [edi+0x14]
 		mov		ecx, [edi+8]
 		lea		edx, [ebp-0xC]
-		movss	xmm0, [edi+0x10]
-		movss	xmm1, [eax+0x18]
-		mulss	xmm1, xmm0
-		addss	xmm1, [ecx+8]
-		movss	[edx+8], xmm1
-		movss	xmm1, [eax+0xC]
-		mulss	xmm1, xmm0
-		addss	xmm1, [ecx+4]
-		movss	[edx+4], xmm1
-		mulss	xmm0, [eax]
-		addss	xmm0, [ecx]
-		movss	[edx], xmm0
+		fld		dword ptr [edi+0x10]
+		fld		dword ptr [eax+0x18]
+		fmul	st, st(1)
+		fadd	dword ptr [ecx+8]
+		fstp	dword ptr [edx+8]
+		fld		dword ptr [eax+0xC]
+		fmul	st, st(1)
+		fadd	dword ptr [ecx+4]
+		fstp	dword ptr [edx+4]
+		fmul	dword ptr [eax]
+		fadd	dword ptr [ecx]
+		fstp	dword ptr [edx]
 		mov		ecx, esi
 		CALL_EAX(0x4A3C20)
 		lea		eax, [esi+0x24]
@@ -2276,12 +2279,13 @@ __declspec(naked) void Actor::TurnAngle(float angle)
 {
 	__asm
 	{
+		lea		eax, [esp+4]
 		push	0
-		movss	xmm0, [esp+8]
-		mulss	xmm0, kFltPId180
-		addss	xmm0, [ecx+0x2C]
-		push	ecx
-		movss	[esp], xmm0
+		fld		dword ptr [eax]
+		fmul	kDblPId180
+		fadd	dword ptr [ecx+0x2C]
+		fstp	dword ptr [eax]
+		push	dword ptr [eax]
 		CALL_EAX(0x8BB5C0)
 		retn	4
 	}

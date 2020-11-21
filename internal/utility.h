@@ -49,7 +49,6 @@ kDblPId180 = 0.017453292519943295;
 
 static const float
 kFltZero = 0.0F,
-kFltPId180 = 0.01745329238F,
 kFltHalf = 0.5F,
 kFltOne = 1.0F,
 kFltFive = 5.0F,

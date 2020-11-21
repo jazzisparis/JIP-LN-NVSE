@@ -1198,30 +1198,27 @@ __declspec(naked) UInt8* __fastcall GetAuxBuffer(AuxBuffer &buffer, UInt32 reqSi
 	{
 		mov		eax, [ecx]
 		cmp		[ecx+4], edx
-		jb		doRealloc
-		test	eax, eax
-		jz		doInit
-		retn
-	doInit:
-		push	ecx
-		push	0x10
-		push	dword ptr [ecx+4]
-		jmp		doAlloc
-	doRealloc:
+		jnb		sizeOK
 		mov		[ecx+4], edx
 		push	ecx
-		push	0x10
 		push	edx
 		test	eax, eax
 		jz		doAlloc
 		push	eax
-		call	_aligned_free
+		call	free
 		pop		ecx
+		jmp		doAlloc
+	sizeOK:
+		test	eax, eax
+		jnz		done
+		push	ecx
+		push	dword ptr [ecx+4]
 	doAlloc:
-		call	_aligned_malloc
-		add		esp, 8
+		call	malloc
+		pop		ecx
 		pop		ecx
 		mov		[ecx], eax
+	done:
 		retn
 	}
 }

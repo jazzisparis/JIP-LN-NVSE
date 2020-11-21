@@ -1611,9 +1611,11 @@ __declspec(naked) void DamageActorValueHook()
 		jg		done
 		cmp		dword ptr [ebp+0x10], 0
 		jz		done
-		movss	xmm0, [ebp+0x10]
-		addss	xmm0, [ebp+0x14]
-		comiss	xmm0, kFltZero
+		fldz
+		fld		dword ptr [ebp+0x10]
+		fadd	dword ptr [ebp+0x14]
+		fucomip	st, st(1)
+		fstp	st
 		ja		done
 		push	esi
 		mov		ecx, offset s_crippledLimbEventMap
@@ -1630,9 +1632,11 @@ __declspec(naked) void DamageActorValueHook()
 	healthDmg:
 		test	byte ptr [esi+0x107], kHookActorFlag3_OnHealthDamage
 		jz		done
-		xorps	xmm0, xmm0
-		comiss	xmm0, [ebp+0x14]
-		jbe		done
+		fldz
+		fld		dword ptr [ebp+0x14]
+		fucomip	st, st(1)
+		fstp	st
+		ja		done
 		push	esi
 		mov		ecx, offset s_healthDamageEventMap
 		call	ActorEventCallbacks::GetPtr

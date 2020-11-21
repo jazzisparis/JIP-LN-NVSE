@@ -586,8 +586,10 @@ __declspec(naked) void QttMenuEnableWheelHook()
 	__asm
 	{
 		mov		eax, g_interfaceManager
-		xorps	xmm0, xmm0
-		comiss	xmm0, [eax+0x44]
+		fld		dword ptr [eax+0x44]
+		fldz
+		fucomip	st, st(1)
+		fstp	st
 		jz		done
 		setb	dl
 		add		dl, 1
@@ -749,8 +751,10 @@ __declspec(naked) void ArmourPenetratedHook()
 {
 	__asm
 	{
-		movss	xmm0, [ebp-0xC]
-		comiss	xmm0, [ecx+0x14]
+		fld		dword ptr [ecx+0x14]
+		fld		dword ptr [ebp-0xC]
+		fucomip	st, st(1)
+		fstp	st
 		ja		done
 		or		dword ptr [ecx+0x58], 0x80000000
 	done:
@@ -1977,14 +1981,14 @@ __declspec(naked) void WaterToLandClipHook()
 		mov		eax, [eax+0x28]
 		test	eax, eax
 		jz		noData
-		movss	xmm0, [eax+0xA0]
-		subss	xmm0, kFltOne
+		fld1
+		fsubr	dword ptr [eax+0xA0]
 		mov		al, 1
 		jmp		done
 	noData:
-		xorps	xmm0, xmm0
+		fldz
 	done:
-		movss	[ebp-0x20], xmm0
+		fstp	dword ptr [ebp-0x20]
 		mov		[ebp-0x31], al
 		JMP_EAX(0x49CA94)
 	}
@@ -2483,9 +2487,10 @@ __declspec(naked) void RepairMenuClickHook()
 	}
 }
 
+const double kDegrMultDefault = 0.2, kDegrMultSmallGuns = 0.03, kDegrMultEnergyWpn = 0.04, kDegrMultUnarmedMelee = 0.05, kDegrMultBigGuns = 0.06;
+
 __declspec(naked) void DamageToWeaponHook()
 {
-	static const float kDegrMultDefault = 0.2F, kDegrMultSmallGuns = 0.03F, kDegrMultEnergyWpn = 0.04F, kDegrMultUnarmedMelee = 0.05F, kDegrMultBigGuns = 0.06F;
 	__asm
 	{
 		mov		eax, ds:[0x11CF154]
@@ -2504,19 +2509,20 @@ __declspec(naked) void DamageToWeaponHook()
 		test	ecx, ecx
 		jz		defaultDmg
 		mov		[ebp-8], ecx
+		fld		dword ptr [ebp-4]
+		fdiv	kDegrMultDefault
 		movzx	eax, word ptr [ecx+0xA0]
-		cvtsi2ss	xmm0, eax
-		mulss	xmm0, [ebp-4]
-		divss	xmm0, kDegrMultDefault
+		mov		[ebp-0xC], eax
+		fimul	dword ptr [ebp-0xC]
 		mov		al, [ecx+0x15C]
 		cmp		al, kAVCode_Guns
 		jnz		checkSkill1
-		mulss	xmm0, kDegrMultSmallGuns
+		fmul	kDegrMultSmallGuns
 		jmp		done
 	checkSkill1:
 		cmp		al, kAVCode_EnergyWeapons
 		jnz		checkSkill2
-		mulss	xmm0, kDegrMultEnergyWpn
+		fmul	kDegrMultEnergyWpn
 		jmp		done
 	checkSkill2:
 		cmp		al, kAVCode_Explosives
@@ -2524,18 +2530,22 @@ __declspec(naked) void DamageToWeaponHook()
 		cmp		al, kAVCode_BigGuns
 		jnz		checkSkill3
 	checkSkill2a:
-		mulss	xmm0, kDegrMultBigGuns
+		fmul	kDegrMultBigGuns
 		jmp		done
 	checkSkill3:
 		cmp		al, kAVCode_MeleeWeapons
 		jz		checkSkill3a
 		cmp		al, kAVCode_Unarmed
-		jnz		defaultDmg
+		jz		checkSkill3a
+		fstp	st
+		jmp		defaultDmg
 	checkSkill3a:
-		mulss	xmm0, kDegrMultUnarmedMelee
-	done:
-		movss	[ebp-4], xmm0
+		fmul	kDegrMultUnarmedMelee
+		jmp		done
 	defaultDmg:
+		fld		dword ptr [ebp-4]
+	done:
+		fstp	dword ptr [ebp-4]
 		retn
 	}
 }
@@ -2887,37 +2897,41 @@ __declspec(naked) bool ModHardcoreNeedsHook()
 	{
 		cmp		s_hardcoreNeedsFix, 0
 		jz		tracking
-		xor		edx, edx
-		xorps	xmm1, xmm1
-		cmp		[ecx+0x49C], edx
+		cmp		dword ptr [ecx+0x49C], 0
 		jz		FOD
-		movss	xmm0, [ecx+0x49C]
-		mov		[ecx+0x49C], edx
-		addss	xmm0, [ecx+0x5D4]
-		movss	[ecx+0x5D4], xmm0
-		comiss	xmm0, xmm1
-		jnb		FOD
-		mov		[ecx+0x5D4], edx
+		fld		dword ptr [ecx+0x49C]
+		mov		dword ptr [ecx+0x49C], 0
+		fadd	dword ptr [ecx+0x5D4]
+		fst		dword ptr [ecx+0x5D4]
+		fldz
+		fucomip	st, st(1)
+		fstp	st
+		jbe		FOD
+		mov		dword ptr [ecx+0x5D4], 0
 	FOD:
-		cmp		[ecx+0x4A0], edx
+		cmp		dword ptr [ecx+0x4A0], 0
 		jz		SLP
-		movss	xmm0, [ecx+0x4A0]
-		mov		[ecx+0x4A0], edx
-		addss	xmm0, [ecx+0x5D8]
-		movss	[ecx+0x5D8], xmm0
-		comiss	xmm0, xmm1
-		jnb		SLP
-		mov		[ecx+0x5D8], edx
+		fld		dword ptr [ecx+0x4A0]
+		mov		dword ptr [ecx+0x4A0], 0
+		fadd	dword ptr [ecx+0x5D8]
+		fst		dword ptr [ecx+0x5D8]
+		fldz
+		fucomip	st, st(1)
+		fstp	st
+		jbe		SLP
+		mov		dword ptr [ecx+0x5D8], 0
 	SLP:
-		cmp		[ecx+0x4A4], edx
+		cmp		dword ptr [ecx+0x4A4], 0
 		jz		tracking
-		movss	xmm0, [ecx+0x4A4]
-		mov		[ecx+0x4A4], edx
-		addss	xmm0, [ecx+0x5DC]
-		movss	[ecx+0x5DC], xmm0
-		comiss	xmm0, xmm1
-		jnb		tracking
-		mov		[ecx+0x5DC], edx
+		fld		dword ptr [ecx+0x4A4]
+		mov		dword ptr [ecx+0x4A4], 0
+		fadd	dword ptr [ecx+0x5DC]
+		fst		dword ptr [ecx+0x5DC]
+		fldz
+		fucomip	st, st(1)
+		fstp	st
+		jbe		tracking
+		mov		dword ptr [ecx+0x5DC], 0
 	tracking:
 		test	s_serializedFlags, kSerializedFlag_NoHardcoreTracking
 		jz		done
