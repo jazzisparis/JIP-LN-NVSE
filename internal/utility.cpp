@@ -3,45 +3,80 @@
 
 memcpy_t MemCopy = memcpy, MemMove = memmove;
 
-#define MAX_CACHED_BLOCK_SIZE 0x200
+#define MAX_CACHED_BLOCK_SIZE 0x400
+#define MEMORY_POOL_SIZE 0x1000
 
-alignas(16) void *s_availableCachedBlocks[(MAX_CACHED_BLOCK_SIZE >> 2) + 1] = {NULL};
-
-alignas(16) UInt32 s_poolSemaphore = 0;
+alignas(16) void *s_availableCachedBlocks[(MAX_CACHED_BLOCK_SIZE >> 4) + 1] = {NULL};
 
 __declspec(naked) void* __fastcall Pool_Alloc(UInt32 size)
 {
 	__asm
 	{
-		test	cl, 3
+		cmp		ecx, 0x10
+		jbe		minSize
+		test	cl, 0xF
 		jz		isAligned
-		and		cl, 0xFC
-		add		ecx, 4
-		jmp		isAligned
-		and		esp, 0xEFFFFFFF
+		and		cl, 0xF0
+		add		ecx, 0x10
 	isAligned:
 		cmp		ecx, MAX_CACHED_BLOCK_SIZE
-		ja		doAlloc
-		mov		edx, offset s_poolSemaphore
+		jbe		doCache
+		push	ecx
+		call	malloc
+		pop		ecx
+		retn
+		NOP_0x5
+	minSize:
+		mov		ecx, 0x10
+	doCache:
+		mov		edx, offset s_availableCachedBlocks
 	spinHead:
 		xor		eax, eax
 		lock cmpxchg [edx], edx
 		test	eax, eax
 		jnz		spinHead
-		lea		edx, s_availableCachedBlocks[ecx]
+		mov		eax, ecx
+		shr		eax, 2
+		add		edx, eax
 		mov		eax, [edx]
 		test	eax, eax
-		jz		noCached
+		jz		allocPool
 		mov		ecx, [eax]
 		mov		[edx], ecx
-		mov		s_poolSemaphore, 0
+		xor		edx, edx
+		mov		s_availableCachedBlocks, edx
 		retn
-	noCached:
-		mov		s_poolSemaphore, 0
-	doAlloc:
+	allocPool:
+		push	esi
+		mov		esi, ecx
+		mov		ecx, MEMORY_POOL_SIZE
+		push	edx
+		xor		edx, edx
+		mov		eax, ecx
+		div		esi
+		push	eax
+		sub		ecx, edx
+		add		ecx, 8
 		push	ecx
 		call	malloc
 		pop		ecx
+		pop		ecx
+		sub		ecx, 2
+		pop		edx
+		add		eax, 8
+		and		al, 0xF0
+		mov		[edx], eax
+		lea		edx, [eax+esi]
+	linkHead:
+		mov		[eax], edx
+		mov		eax, edx
+		add		edx, esi
+		dec		ecx
+		jnz		linkHead
+		mov		[eax], ecx
+		mov		eax, edx
+		mov		s_availableCachedBlocks, ecx
+		pop		esi
 		retn
 	}
 }
@@ -52,10 +87,11 @@ __declspec(naked) void __fastcall Pool_Free(void *pBlock, UInt32 size)
 	{
 		test	ecx, ecx
 		jz		nullPtr
-		test	dl, 3
+		test	dl, 0xF
 		jz		isAligned
-		and		dl, 0xFC
-		add		edx, 4
+		and		dl, 0xF0
+		add		edx, 0x10
+		ALIGN 16
 	isAligned:
 		cmp		edx, MAX_CACHED_BLOCK_SIZE
 		jbe		doCache
@@ -64,22 +100,22 @@ __declspec(naked) void __fastcall Pool_Free(void *pBlock, UInt32 size)
 		pop		ecx
 	nullPtr:
 		retn
-		mov		eax, 0
-		mov		eax, 0
+		NOP_0x9
 	doCache:
 		push	edx
-		mov		edx, offset s_poolSemaphore
+		mov		edx, offset s_availableCachedBlocks
 	spinHead:
 		xor		eax, eax
 		lock cmpxchg [edx], edx
 		test	eax, eax
 		jnz		spinHead
-		pop		edx
-		lea		eax, s_availableCachedBlocks[edx]
-		mov		edx, [eax]
-		mov		[ecx], edx
-		mov		[eax], ecx
-		mov		s_poolSemaphore, 0
+		pop		eax
+		shr		eax, 2
+		add		edx, eax
+		mov		eax, [edx]
+		mov		[ecx], eax
+		mov		[edx], ecx
+		mov		s_availableCachedBlocks, 0
 		retn
 	}
 }
@@ -88,28 +124,27 @@ __declspec(naked) void* __fastcall Pool_Realloc(void *pBlock, UInt32 curSize, UI
 {
 	__asm
 	{
-		test	dl, 3
-		jz		isAligned
-		and		dl, 0xFC
-		add		edx, 4
-	isAligned:
-		cmp		edx, MAX_CACHED_BLOCK_SIZE
-		jbe		doCache
-		push	dword ptr [esp+4]
-		push	ecx
-		call	realloc
-		add		esp, 8
-		retn	4
-	doCache:
-		test	ecx, ecx
-		jnz		doRealloc
+		mov		eax, ecx
 		mov		ecx, [esp+4]
+		test	eax, eax
+		jnz		notNull
 		call	Pool_Alloc
 		retn	4
-	doRealloc:
-		push	edx
+	notNull:
+		cmp		ecx, edx
+		jbe		done
+		cmp		edx, MAX_CACHED_BLOCK_SIZE
+		jbe		doCache
 		push	ecx
-		mov		ecx, [esp+0xC]
+		push	eax
+		call	realloc
+		add		esp, 8
+	done:
+		retn	4
+		ALIGN 16
+	doCache:
+		push	edx
+		push	eax
 		call	Pool_Alloc
 		push	eax
 		call	MemCopy
@@ -120,26 +155,6 @@ __declspec(naked) void* __fastcall Pool_Realloc(void *pBlock, UInt32 curSize, UI
 		call	Pool_Free
 		pop		eax
 		retn	4
-	}
-}
-
-__declspec(naked) void* __stdcall GameHeapAlloc(UInt32 size)
-{
-	__asm
-	{
-		mov		ecx, 0x11F6238
-		mov		eax, 0xAA3E40
-		jmp		eax
-	}
-}
-
-__declspec(naked) void __stdcall GameHeapFree(void *ptr)
-{
-	__asm
-	{
-		mov		ecx, 0x11F6238
-		mov		eax, 0xAA4060
-		jmp		eax
 	}
 }
 
@@ -155,8 +170,7 @@ __declspec(naked) TESForm* __stdcall LookupFormByRefID(UInt32 refID)
 		mov		eax, [eax+edx*4]
 		mov		edx, [esp+4]
 		jmp		iterNext
-		lea		esp, [esp]
-		nop
+		ALIGN 16
 	iterHead:
 		cmp		[eax+4], edx
 		jz		found
@@ -165,13 +179,14 @@ __declspec(naked) TESForm* __stdcall LookupFormByRefID(UInt32 refID)
 		test	eax, eax
 		jnz		iterHead
 		retn	4
+		ALIGN 16
 	found:
 		mov		eax, [eax+8]
 		retn	4
 	}
 }
 
-alignas(16) static const UInt64 kSignMask[] = {0x8000000000000000, 0x8000000000000000};
+alignas(16) static const UInt64 kSignMaskD[] = {0x8000000000000000, 0x8000000000000000};
 
 __declspec(naked) UInt32 __vectorcall cvtd2ui(double value)
 {
@@ -186,42 +201,31 @@ __declspec(naked) UInt32 __vectorcall cvtd2ui(double value)
 	}
 }
 
-bool fCompare(float lval, float rval)
-{
-	return fabs(lval - rval) < FLT_EPSILON;
-}
-
-__declspec(naked) int __stdcall lfloor(float value)
+__declspec(naked) int __vectorcall lfloor(float value)
 {
 	__asm
 	{
-		fld		dword ptr [esp+4]
-		fstcw	[esp+4]
-		mov		dx, [esp+4]
-		or		word ptr [esp+4], 0x400
-		fldcw	[esp+4]
-		fistp	dword ptr [esp+4]
-		mov		eax, [esp+4]
-		mov		[esp+4], dx
-		fldcw	[esp+4]
-		retn	4
+		movd	eax, xmm0
+		test	eax, eax
+		jnb		isPos
+		subss	xmm0, kFltHalf
+	isPos:
+		cvttss2si	eax, xmm0
+		retn
 	}
 }
 
-__declspec(naked) int __stdcall lceil(float value)
+__declspec(naked) int __vectorcall lceil(float value)
 {
 	__asm
 	{
-		fld		dword ptr [esp+4]
-		fstcw	[esp+4]
-		mov		dx, [esp+4]
-		or		word ptr [esp+4], 0x800
-		fldcw	[esp+4]
-		fistp	dword ptr [esp+4]
-		mov		eax, [esp+4]
-		mov		[esp+4], dx
-		fldcw	[esp+4]
-		retn	4
+		movd	eax, xmm0
+		test	eax, eax
+		jbe		isNeg
+		addss	xmm0, kFltHalf
+	isNeg:
+		cvttss2si	eax, xmm0
+		retn
 	}
 }
 
@@ -282,7 +286,7 @@ __declspec(naked) UInt32 __fastcall StrLen(const char *str)
 		jz		done1
 		test	ecx, 3
 		jnz		iter1
-		nop
+		ALIGN 16
 	iter4:
 		mov		eax, [ecx]
 		mov		edx, 0x7EFEFEFF
@@ -303,16 +307,21 @@ __declspec(naked) UInt32 __fastcall StrLen(const char *str)
 		jnz		iter4
 	done1:
 		lea		eax, [ecx-1]
-		jmp		done
+		pop		ecx
+		sub		eax, ecx
+		retn
 	done2:
 		lea		eax, [ecx-2]
-		jmp		done
+		pop		ecx
+		sub		eax, ecx
+		retn
 	done3:
 		lea		eax, [ecx-3]
-		jmp		done
+		pop		ecx
+		sub		eax, ecx
+		retn
 	done4:
 		lea		eax, [ecx-4]
-	done:
 		pop		ecx
 		sub		eax, ecx
 		retn
@@ -514,621 +523,218 @@ alignas(16) static const UInt8 kUprCaseConverter[] =
 	0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF
 };
 
-__declspec(naked) bool __fastcall StrEqualCS(const char *lstr, const char *rstr)
+__declspec(noinline) char __fastcall StrCompare(const char *lstr, const char *rstr)
 {
-	__asm
+	if (!lstr) return rstr ? -1 : 0;
+	if (!rstr) return 1;
+	UInt8 lchr, rchr;
+	while (*lstr)
 	{
-		push	esi
-		push	edi
-		test	ecx, ecx
-		jz		retn0
-		test	edx, edx
-		jz		retn0
-		mov		esi, ecx
-		mov		edi, edx
-		call	StrLen
-		push	eax
-		mov		ecx, edi
-		call	StrLen
-		pop		edx
-		cmp		eax, edx
-		jnz		retn0
-		test	edx, edx
-		jz		retn1
-		mov		ecx, edx
-		shr		ecx, 2
-		jz		comp1
-		repe cmpsd
-		jnz		retn0
-	comp1:
-		and		edx, 3
-		jz		retn1
-		mov		ecx, edx
-		repe cmpsb
-		jnz		retn0
-	retn1:
-		mov		al, 1
-		pop		edi
-		pop		esi
-		retn
-	retn0:
-		xor		al, al
-		pop		edi
-		pop		esi
-		retn
+		lchr = kLwrCaseConverter[*(UInt8*)lstr];
+		rchr = kLwrCaseConverter[*(UInt8*)rstr];
+		if (lchr == rchr)
+		{
+			lstr++;
+			rstr++;
+			continue;
+		}
+		return (lchr < rchr) ? -1 : 1;
+	}
+	return *rstr ? -1 : 0;
+}
+
+__declspec(noinline) char __fastcall StrBeginsCS(const char *lstr, const char *rstr)
+{
+	if (!lstr || !rstr) return 0;
+	UInt32 length = StrLen(rstr);
+	while (length >= 4)
+	{
+		if (*(UInt32*)lstr != *(UInt32*)rstr)
+			return 0;
+		lstr += 4;
+		rstr += 4;
+		length -= 4;
+	}
+	while (length)
+	{
+		if (*lstr != *rstr)
+			return 0;
+		lstr++;
+		rstr++;
+		length--;
+	}
+	return *lstr ? 1 : 2;
+}
+
+__declspec(noinline) char __fastcall StrBeginsCI(const char *lstr, const char *rstr)
+{
+	if (!lstr || !rstr) return 0;
+	UInt32 length = StrLen(rstr);
+	while (length)
+	{
+		if (kLwrCaseConverter[*(UInt8*)lstr] != kLwrCaseConverter[*(UInt8*)rstr])
+			return 0;
+		lstr++;
+		rstr++;
+		length--;
+	}
+	return *lstr ? 1 : 2;
+}
+
+__declspec(noinline) void __fastcall FixPath(char *str)
+{
+	if (!str) return;
+	UInt8 curr;
+	while (curr = *str)
+	{
+		if (curr == '\\')
+			*str = '/';
+		else *str = kLwrCaseConverter[curr];
+		str++;
 	}
 }
 
-__declspec(naked) bool __fastcall StrEqualCI(const char *lstr, const char *rstr)
+__declspec(noinline) void __fastcall StrToLower(char *str)
 {
-	__asm
+	if (!str) return;
+	UInt8 curr;
+	while (curr = *str)
 	{
-		push	esi
-		push	edi
-		test	ecx, ecx
-		jz		retnFalse
-		test	edx, edx
-		jz		retnFalse
-		mov		esi, ecx
-		mov		edi, edx
-		call	StrLen
-		push	eax
-		mov		ecx, edi
-		call	StrLen
-		pop		edx
-		cmp		eax, edx
-		jnz		retnFalse
-		test	edx, edx
-		jz		retnTrue
-		xor		eax, eax
-		mov		ecx, eax
-	iterHead:
-		mov		al, [esi]
-		mov		cl, kLwrCaseConverter[eax]
-		mov		al, [edi]
-		cmp		cl, kLwrCaseConverter[eax]
-		jnz		retnFalse
-		inc		esi
-		inc		edi
-		dec		edx
-		jnz		iterHead
-	retnTrue:
-		mov		al, 1
-		pop		edi
-		pop		esi
-		retn
-	retnFalse:
-		xor		al, al
-		pop		edi
-		pop		esi
-		retn
+		*str = kLwrCaseConverter[curr];
+		str++;
 	}
 }
 
-__declspec(naked) char __fastcall StrCompare(const char *lstr, const char *rstr)
+__declspec(noinline) void __fastcall StrToUpper(char *str)
 {
-	__asm
+	if (!str) return;
+	UInt8 curr;
+	while (curr = *str)
 	{
-		push	ebx
-		test	ecx, ecx
-		jnz		proceed
-		test	edx, edx
-		jz		retnEQ
-		jmp		retnLT
-	proceed:
-		test	edx, edx
-		jz		retnGT
-		xor		eax, eax
-		mov		ebx, eax
-		jmp		iterHead
-		and		esp, 0xEFFFFFFF
-		lea		esp, [esp]
-		fnop
-	iterHead:
-		mov		al, [ecx]
-		test	al, al
-		jz		iterEnd
-		mov		bl, kLwrCaseConverter[eax]
-		mov		al, [edx]
-		cmp		bl, kLwrCaseConverter[eax]
-		jz		iterNext
-		jl		retnLT
-		jmp		retnGT
-	iterNext:
-		inc		ecx
-		inc		edx
-		jmp		iterHead
-	iterEnd:
-		cmp		[edx], 0
-		jz		retnEQ
-	retnLT:
-		mov		al, -1
-		pop		ebx
-		retn
-	retnGT:
-		mov		al, 1
-		pop		ebx
-		retn
-	retnEQ:
-		xor		al, al
-		pop		ebx
-		retn
+		*str = kUprCaseConverter[curr];
+		str++;
 	}
 }
 
-__declspec(naked) char __fastcall StrBeginsCS(const char *lstr, const char *rstr)
+__declspec(noinline) void __fastcall ReplaceChr(char *str, char from, char to)
 {
-	__asm
+	if (!str) return;
+	char curr;
+	while (curr = *str)
 	{
-		push	esi
-		push	edi
-		test	ecx, ecx
-		jz		retn0
-		test	edx, edx
-		jz		retn0
-		mov		esi, ecx
-		mov		edi, edx
-		call	StrLen
-		push	eax
-		mov		ecx, edi
-		call	StrLen
-		pop		edx
-		cmp		eax, edx
-		jg		retn0
-		test	edx, edx
-		jz		retn1
-		mov		ecx, eax
-		shr		ecx, 2
-		jz		comp1
-		repe cmpsd
-		jnz		retn0
-	comp1:
-		and		eax, 3
-		jz		retn1
-		mov		ecx, eax
-		repe cmpsb
-		jnz		retn0
-	retn1:
-		cmp		[esi], 0
-		setz	al
-		inc		al
-		pop		edi
-		pop		esi
-		retn
-	retn0:
-		xor		al, al
-		pop		edi
-		pop		esi
-		retn
+		if (curr == from)
+			*str = to;
+		str++;
 	}
 }
 
-__declspec(naked) char __fastcall StrBeginsCI(const char *lstr, const char *rstr)
+__declspec(noinline) char* __fastcall FindChrR(const char *str, UInt32 length, char chr)
 {
-	__asm
+	if (!str) return NULL;
+	char *strEnd = const_cast<char*>(str) + length;
+	while (strEnd > str)
 	{
-		push	esi
-		push	edi
-		test	ecx, ecx
-		jz		retn0
-		test	edx, edx
-		jz		retn0
-		mov		esi, ecx
-		mov		edi, edx
-		call	StrLen
-		push	eax
-		mov		ecx, edi
-		call	StrLen
-		pop		edx
-		cmp		eax, edx
-		jg		retn0
-		test	edx, edx
-		jz		iterEnd
-		xor		ecx, ecx
-		mov		edx, ecx
-		jmp		iterHead
-		and		esp, 0xEFFFFFFF
-	iterHead:
-		mov		cl, [edi]
-		test	cl, cl
-		jz		iterEnd
-		mov		dl, kLwrCaseConverter[ecx]
-		mov		cl, [esi]
-		cmp		dl, kLwrCaseConverter[ecx]
-		jnz		retn0
-		inc		esi
-		inc		edi
-		dec		eax
-		jnz		iterHead
-	iterEnd:
-		cmp		[esi], 0
-		setz	al
-		inc		al
-		pop		edi
-		pop		esi
-		retn
-	retn0:
-		xor		al, al
-		pop		edi
-		pop		esi
-		retn
+		strEnd--;
+		if (*strEnd == chr)
+			return strEnd;
 	}
+	return NULL;
 }
 
-__declspec(naked) void __fastcall FixPath(char *str)
+__declspec(noinline) char* __fastcall SubStrCI(const char *srcStr, const char *subStr)
 {
-	__asm
+	int srcLen = StrLen(srcStr);
+	if (!srcLen) return NULL;
+	int subLen = StrLen(subStr);
+	if (!subLen) return NULL;
+	srcLen -= subLen;
+	if (srcLen < 0) return NULL;
+	int index;
+	do
 	{
-		test	ecx, ecx
-		jz		done
-		xor		eax, eax
-		jmp		iterHead
-	done:
-		retn
-		and		esp, 0xEFFFFFFF
-		nop
-	iterHead:
-		mov		al, [ecx]
-		test	al, al
-		jz		done
-		cmp		al, '\\'
-		jnz		notSlash
-		mov		[ecx], '/'
-		inc		ecx
-		jmp		iterHead
-	notSlash:
-		mov		dl, kLwrCaseConverter[eax]
-		mov		[ecx], dl
-		inc		ecx
-		jmp		iterHead
+		index = 0;
+		while (true)
+		{
+			if (kLwrCaseConverter[*(UInt8*)(srcStr + index)] != kLwrCaseConverter[*(UInt8*)(subStr + index)])
+				break;
+			if (++index == subLen)
+				return const_cast<char*>(srcStr);
+		}
+		srcStr++;
 	}
+	while (--srcLen >= 0);
+	return NULL;
 }
 
-__declspec(naked) void __fastcall StrToLower(char *str)
+__declspec(noinline) char* __fastcall SlashPos(const char *str)
 {
-	__asm
+	if (!str) return NULL;
+	char curr;
+	while (curr = *str)
 	{
-		test	ecx, ecx
-		jz		done
-		xor		eax, eax
-		jmp		iterHead
-	done:
-		retn
-		and		esp, 0xEFFFFFFF
-		nop
-	iterHead:
-		mov		al, [ecx]
-		test	al, al
-		jz		done
-		mov		dl, kLwrCaseConverter[eax]
-		mov		[ecx], dl
-		inc		ecx
-		jmp		iterHead
+		if ((curr == '/') || (curr == '\\'))
+			return const_cast<char*>(str);
+		str++;
 	}
+	return NULL;
 }
 
-__declspec(naked) void __fastcall StrToUpper(char *str)
+__declspec(noinline) char* __fastcall SlashPosR(const char *str)
 {
-	__asm
+	if (!str) return NULL;
+	char *strEnd = const_cast<char*>(str) + StrLen(str);
+	while (strEnd > str)
 	{
-		test	ecx, ecx
-		jz		done
-		xor		eax, eax
-		jmp		iterHead
-	done:
-		retn
-		and		esp, 0xEFFFFFFF
-		nop
-	iterHead:
-		mov		al, [ecx]
-		test	al, al
-		jz		done
-		mov		dl, kUprCaseConverter[eax]
-		mov		[ecx], dl
-		inc		ecx
-		jmp		iterHead
+		strEnd--;
+		if ((*strEnd == '/') || (*strEnd == '\\'))
+			return strEnd;
 	}
+	return NULL;
 }
 
-__declspec(naked) void __fastcall ReplaceChr(char *str, char from, char to)
+__declspec(noinline) char* __fastcall GetNextToken(char *str, char delim)
 {
-	__asm
+	if (!str) return NULL;
+	bool found = false;
+	char chr;
+	while (chr = *str)
 	{
-		test	ecx, ecx
-		jz		done
-		mov		al, [esp+4]
-		jmp		iterHead
-		and		esp, 0xEFFFFFFF
-	iterHead:
-		cmp		[ecx], 0
-		jz		done
-		cmp		[ecx], dl
-		jnz		iterNext
-		mov		[ecx], al
-	iterNext:
-		inc		ecx
-		jmp		iterHead
-	done:
-		retn	4
+		if (chr == delim)
+		{
+			*str = 0;
+			found = true;
+		}
+		else if (found)
+			break;
+		str++;
 	}
+	return str;
 }
 
-__declspec(naked) char* __fastcall FindChr(const char *str, char chr)
+__declspec(noinline) char* __fastcall GetNextToken(char *str, const char *delims)
 {
-	__asm
+	if (!str) return NULL;
+	bool table[0x100];
+	MemZero(table, 0x100);
+	UInt8 curr;
+	while (curr = *delims)
 	{
-		mov		eax, ecx
-		test	ecx, ecx
-		jnz		iterHead
-		retn
-	retnNULL:
-		xor		eax, eax
-	done:
-		retn
-		and		esp, 0xEFFFFFFF
-	iterHead:
-		cmp		[eax], 0
-		jz		retnNULL
-		cmp		[eax], dl
-		jz		done
-		inc		eax
-		jmp		iterHead
+		table[curr] = true;
+		delims++;
 	}
-}
-
-__declspec(naked) char* __fastcall FindChrR(const char *str, UInt32 length, char chr)
-{
-	__asm
+	bool found = false;
+	while (curr = *str)
 	{
-		test	ecx, ecx
-		jz		retnNULL
-		lea		eax, [ecx+edx]
-		mov		dl, [esp+4]
-		jmp		iterHead
-		lea		esp, [esp]
-	iterHead:
-		cmp		eax, ecx
-		jz		retnNULL
-		dec		eax
-		cmp		[eax], dl
-		jz		done
-		jmp		iterHead
-	retnNULL:
-		xor		eax, eax
-	done:
-		retn	4
+		if (table[curr])
+		{
+			*str = 0;
+			found = true;
+		}
+		else if (found)
+			break;
+		str++;
 	}
-}
-
-__declspec(naked) char* __fastcall SubStrCS(const char *srcStr, const char *subStr)
-{
-	__asm
-	{
-		push	ebx
-		push	esi
-		push	edi
-		mov		edi, edx
-		call	StrLen
-		test	eax, eax
-		jz		done
-		mov		esi, ecx
-		mov		ebx, eax
-		mov		ecx, edi
-		call	StrLen
-		sub		ebx, eax
-		js		retnNULL
-	mainHead:
-		mov		ecx, esi
-		mov		edx, edi
-	subHead:
-		mov		al, [edx]
-		test	al, al
-		jnz		proceed
-		mov		eax, esi
-		jmp		done
-	proceed:
-		cmp		al, [ecx]
-		jnz		mainNext
-		inc		ecx
-		inc		edx
-		jmp		subHead
-	mainNext:
-		inc		esi
-		dec		ebx
-		jns		mainHead
-	retnNULL:
-		xor		eax, eax
-	done:
-		pop		edi
-		pop		esi
-		pop		ebx
-		retn
-	}
-}
-
-__declspec(naked) char* __fastcall SubStrCI(const char *srcStr, const char *subStr)
-{
-	__asm
-	{
-		push	ebx
-		push	esi
-		push	edi
-		mov		edi, edx
-		call	StrLen
-		test	eax, eax
-		jz		done
-		mov		esi, ecx
-		mov		ebx, eax
-		mov		ecx, edi
-		call	StrLen
-		sub		ebx, eax
-		js		retnNULL
-		push	ebx
-		xor		eax, eax
-		mov		ebx, eax
-	mainHead:
-		mov		ecx, esi
-		mov		edx, edi
-	subHead:
-		mov		al, [edx]
-		test	al, al
-		jnz		proceed
-		mov		eax, esi
-		pop		ecx
-		jmp		done
-	proceed:
-		mov		bl, kLwrCaseConverter[eax]
-		mov		al, [ecx]
-		cmp		bl, kLwrCaseConverter[eax]
-		jnz		mainNext
-		inc		ecx
-		inc		edx
-		jmp		subHead
-	mainNext:
-		inc		esi
-		dec		dword ptr [esp]
-		jns		mainHead
-		pop		ecx
-	retnNULL:
-		xor		eax, eax
-	done:
-		pop		edi
-		pop		esi
-		pop		ebx
-		retn
-	}
-}
-
-__declspec(naked) char* __fastcall SlashPos(const char *str)
-{
-	__asm
-	{
-		mov		eax, ecx
-		test	ecx, ecx
-		jnz		iterHead
-		retn
-	retnNULL:
-		xor		eax, eax
-	done:
-		retn
-		and		esp, 0xEFFFFFFF
-	iterHead:
-		mov		cl, [eax]
-		test	cl, cl
-		jz		retnNULL
-		cmp		cl, '/'
-		jz		done
-		cmp		cl, '\\'
-		jz		done
-		inc		eax
-		jmp		iterHead
-	}
-}
-
-__declspec(naked) char* __fastcall SlashPosR(const char *str)
-{
-	__asm
-	{
-		call	StrLen
-		add		eax, ecx
-		jmp		iterHead
-	retnNULL:
-		xor		eax, eax
-	done:
-		retn
-		lea		esp, [esp]
-		nop
-	iterHead:
-		cmp		eax, ecx
-		jz		retnNULL
-		dec		eax
-		mov		dl, [eax]
-		cmp		dl, '/'
-		jz		done
-		cmp		dl, '\\'
-		jz		done
-		jmp		iterHead
-	}
-}
-
-__declspec(naked) char* __fastcall GetNextToken(char *str, char delim)
-{
-	__asm
-	{
-		push	ebx
-		mov		eax, ecx
-		xor		bl, bl
-		jmp		iterHead
-	done:
-		pop		ebx
-		retn
-		and		esp, 0xEFFFFFFF
-		nop
-	iterHead:
-		mov		cl, [eax]
-		test	cl, cl
-		jz		done
-		cmp		cl, dl
-		jz		chrEQ
-		test	bl, bl
-		jnz		done
-		jmp		iterNext
-	chrEQ:
-		test	bl, bl
-		jnz		iterNext
-		mov		bl, 1
-		mov		[eax], 0
-	iterNext:
-		inc		eax
-		jmp		iterHead
-	}
-}
-
-__declspec(naked) char* __fastcall GetNextToken(char *str, const char *delims)
-{
-	__asm
-	{
-		push	ebp
-		mov		ebp, esp
-		sub		esp, 0x100
-		push	esi
-		push	edi
-		mov		esi, ecx
-		lea		edi, [ebp-0x100]
-		xor		eax, eax
-		mov		ecx, 0x40
-		rep stosd
-		lea		edi, [ebp-0x100]
-	dlmIter:
-		mov		al, [edx]
-		test	al, al
-		jz		mainHead
-		mov		byte ptr [edi+eax], 1
-		inc		edx
-		jmp		dlmIter
-		nop
-	mainHead:
-		mov		al, [esi]
-		test	al, al
-		jz		done
-		cmp		byte ptr [edi+eax], 0
-		jz		wasFound
-		inc		ecx
-		mov		[esi], 0
-	mainNext:
-		inc		esi
-		jmp		mainHead
-	wasFound:
-		test	cl, cl
-		jz		mainNext
-	done:
-		mov		eax, esi
-		pop		edi
-		pop		esi
-		mov		esp, ebp
-		pop		ebp
-		retn
-	}
+	return str;
 }
 
 __declspec(naked) char* __fastcall CopyString(const char *key)
@@ -1160,7 +766,7 @@ __declspec(naked) char* __fastcall CopyCString(const char *src)
 		push	eax
 		push	ecx
 		push	eax
-		call	GameHeapAlloc
+		GAME_HEAP_ALLOC
 		push	eax
 		call	MemCopy
 		add		esp, 0xC
@@ -1177,8 +783,7 @@ __declspec(naked) UInt32 __fastcall StrHashCS(const char *inKey)
 		test	ecx, ecx
 		jnz		proceed
 		retn
-		and		esp, 0xEFFFFFFF
-		lea		esp, [esp]
+		ALIGN 16
 	iterHead:
 		mov		edx, eax
 		shl		edx, 5
@@ -1207,7 +812,7 @@ __declspec(naked) UInt32 __fastcall StrHashCI(const char *inKey)
 	done:
 		pop		esi
 		retn
-		nop
+		ALIGN 16
 	iterHead:
 		mov		cl, [esi]
 		test	cl, cl
@@ -1278,7 +883,7 @@ __declspec(naked) char* __vectorcall FltToStr(char *str, double value)
 		retn
 	nonZero:
 		ja		isPos
-		xorpd	xmm0, kSignMask
+		xorpd	xmm0, kSignMaskD
 		mov		[ecx], '-'
 		inc		ecx
 	isPos:
@@ -1502,7 +1107,7 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 	addSign:
 		test	cl, 6
 		jz		done
-		xorpd	xmm0, kSignMask
+		xorpd	xmm0, kSignMaskD
 	done:
 		pop		edi
 		pop		esi
@@ -1618,22 +1223,12 @@ __declspec(naked) UInt8* __fastcall GetAuxBuffer(AuxBuffer &buffer, UInt32 reqSi
 	}
 }
 
-__forceinline UInt16 Align4Alloc(UInt16 alloc)
-{
-	if (alloc & 3)
-	{
-		alloc &= 0xFFFC;
-		alloc += 4;
-	}
-	return alloc;
-}
-
 DString::DString(const char *from)
 {
 	length = StrLen(from);
 	if (length)
 	{
-		alloc = Align4Alloc(length + 1);
+		alloc = AlignNumAlloc<char>(length + 1);
 		str = (char*)Pool_Alloc(alloc);
 		memcpy(str, from, length + 1);
 	}
@@ -1649,7 +1244,7 @@ DString::DString(const DString &from)
 	length = from.length;
 	if (length)
 	{
-		alloc = Align4Alloc(length + 1);
+		alloc = AlignNumAlloc<char>(length + 1);
 		str = (char*)Pool_Alloc(alloc);
 		memcpy(str, from.str, length + 1);
 	}
@@ -1664,7 +1259,7 @@ DString::DString(UInt16 _alloc) : length(0)
 {
 	if (_alloc)
 	{
-		alloc = Align4Alloc(_alloc + 1);
+		alloc = AlignNumAlloc<char>(_alloc + 1);
 		str = (char*)Pool_Alloc(alloc);
 		*str = 0;
 	}
@@ -1678,7 +1273,7 @@ DString::DString(UInt16 _alloc) : length(0)
 void DString::Reserve(UInt16 size)
 {
 	if (alloc > size) return;
-	UInt16 newAlloc = Align4Alloc(size + 1);
+	UInt16 newAlloc = AlignNumAlloc<char>(size + 1);
 	char *newStr = (char*)Pool_Alloc(newAlloc);
 	if (str)
 	{
@@ -1700,7 +1295,7 @@ DString& DString::operator=(const char *other)
 			if (alloc <= length)
 			{
 				if (str) Pool_Free(str, alloc);
-				alloc = Align4Alloc(length + 1);
+				alloc = AlignNumAlloc<char>(length + 1);
 				str = (char*)Pool_Alloc(alloc);
 			}
 			memcpy(str, other, length + 1);
@@ -1721,7 +1316,7 @@ DString& DString::operator=(const DString &other)
 			if (alloc <= length)
 			{
 				if (str) Pool_Free(str, alloc);
-				alloc = Align4Alloc(length + 1);
+				alloc = AlignNumAlloc<char>(length + 1);
 				str = (char*)Pool_Alloc(alloc);
 			}
 			memcpy(str, other.str, length + 1);
@@ -1767,12 +1362,12 @@ DString& DString::operator+=(const DString &other)
 
 bool DString::operator==(const char *other)
 {
-	return StrEqualCS(str, other);
+	return !strcmp(str, other);
 }
 
 bool DString::operator==(const DString &other)
 {
-	return StrEqualCS(str, other.str);
+	return !strcmp(str, other.str);
 }
 
 DString& DString::Insert(UInt16 index, char chr)
@@ -1886,7 +1481,7 @@ DString DString::SubString(UInt16 bgnIdx, UInt16 endIdx)
 		resLen = endIdx - bgnIdx;
 		if (resLen)
 		{
-			resAlloc = Align4Alloc(resLen + 1);
+			resAlloc = AlignNumAlloc<char>(resLen + 1);
 			resStr = (char*)Pool_Alloc(resAlloc);
 			memcpy(resStr, str + bgnIdx, resLen);
 			resStr[resLen] = 0;
@@ -1898,7 +1493,7 @@ DString DString::SubString(UInt16 bgnIdx, UInt16 endIdx)
 DString DString::ToLower()
 {
 	if (!length) return DString();
-	UInt16 resAlloc = Align4Alloc(length + 1);
+	UInt16 resAlloc = AlignNumAlloc<char>(length + 1);
 	char *resStr = (char*)Pool_Alloc(resAlloc);
 	memcpy(resStr, str, length + 1);
 	StrToLower(resStr);
@@ -1908,7 +1503,7 @@ DString DString::ToLower()
 DString DString::ToUpper()
 {
 	if (!length) return DString();
-	UInt16 resAlloc = Align4Alloc(length + 1);
+	UInt16 resAlloc = AlignNumAlloc<char>(length + 1);
 	char *resStr = (char*)Pool_Alloc(resAlloc);
 	memcpy(resStr, str, length + 1);
 	StrToUpper(resStr);
@@ -1917,7 +1512,7 @@ DString DString::ToUpper()
 
 DString operator+(const DString &lStr, char rChr)
 {
-	UInt16 resLen = lStr.length + 1, resAlloc = Align4Alloc(resLen + 1);
+	UInt16 resLen = lStr.length + 1, resAlloc = AlignNumAlloc<char>(resLen + 1);
 	char *resStr = (char*)Pool_Alloc(resAlloc);
 	if (lStr.length) memcpy(resStr, lStr.str, lStr.length);
 	*(UInt16*)(resStr + lStr.length) = rChr;
@@ -1930,7 +1525,7 @@ DString operator+(const DString &lStr, const char *rStr)
 	UInt16 rLen = StrLen(rStr), resLen = lStr.length + rLen, resAlloc = 0;
 	if (resLen)
 	{
-		resAlloc = Align4Alloc(resLen + 1);
+		resAlloc = AlignNumAlloc<char>(resLen + 1);
 		resStr = (char*)Pool_Alloc(resAlloc);
 		if (lStr.length) memcpy(resStr, lStr.str, lStr.length);
 		if (rLen) memcpy(resStr + lStr.length, rStr, rLen);
@@ -1945,7 +1540,7 @@ DString operator+(const char *lStr, const DString &rStr)
 	UInt16 lLen = StrLen(lStr), resLen = lLen + rStr.length, resAlloc = 0;
 	if (resLen)
 	{
-		resAlloc = Align4Alloc(resLen + 1);
+		resAlloc = AlignNumAlloc<char>(resLen + 1);
 		resStr = (char*)Pool_Alloc(resAlloc);
 		if (lLen) memcpy(resStr, lStr, lLen);
 		if (rStr.length) memcpy(resStr + lLen, rStr.str, rStr.length);

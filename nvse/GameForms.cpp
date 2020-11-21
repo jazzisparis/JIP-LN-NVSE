@@ -260,12 +260,30 @@ TESObjectIMOD* TESObjectWEAP::GetItemMod(UInt8 which)
 	return itemMod[which - 1];
 }
 
-TESAmmo *TESObjectWEAP::GetAmmo()
+__declspec(naked) TESAmmo *TESObjectWEAP::GetAmmo()
 {
-	if (!ammo.ammo) return NULL;
-	if IS_ID(ammo.ammo, BGSListForm)
-		return (TESAmmo*)((BGSListForm*)ammo.ammo)->list.GetFirstItem();
-	return (TESAmmo*)ammo.ammo;
+	__asm
+	{
+		mov		eax, [ecx+0xA8]
+		test	eax, eax
+		jz		done
+		cmp		byte ptr [eax+4], kFormType_BGSListForm
+		jnz		done
+		lea		ecx, [eax+0x18]
+		mov		edx, [eax+0x20]
+	iterHead:
+		dec		edx
+		jns		iterNext
+		mov		eax, [ecx]
+		retn
+	iterNext:
+		mov		ecx, [ecx+4]
+		test	ecx, ecx
+		jnz		iterHead
+		mov		eax, [eax+0x18]
+	done:
+		retn
+	}
 }
 
 class FindByForm {

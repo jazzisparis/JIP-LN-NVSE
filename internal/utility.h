@@ -7,6 +7,34 @@ template <int x> struct static_assert_test { };
 
 #define STATIC_ASSERT(a)	typedef static_assert_test <sizeof(StaticAssertFailure<(bool)(a)>)> static_assert_typedef_ ## __COUNTER__
 
+#define CALL_EAX(addr) __asm mov eax, addr __asm call eax
+#define JMP_EAX(addr)  __asm mov eax, addr __asm jmp eax
+#define JMP_EDX(addr)  __asm mov edx, addr __asm jmp edx
+
+// These are used for 10h aligning segments in ASM code (massive performance gain, particularly with loops).
+#define EMIT(bt) __asm _emit bt
+#define NOP_0x1 EMIT(0x90)
+#define NOP_0x2 EMIT(0x66) EMIT(0x90)
+#define NOP_0x3 EMIT(0x0F) EMIT(0x1F) EMIT(0x00)
+#define NOP_0x4 EMIT(0x0F) EMIT(0x1F) EMIT(0x40) EMIT(0x00)
+#define NOP_0x5 EMIT(0x0F) EMIT(0x1F) EMIT(0x44) EMIT(0x00) EMIT(0x00)
+#define NOP_0x6 EMIT(0x66) EMIT(0x0F) EMIT(0x1F) EMIT(0x44) EMIT(0x00) EMIT(0x00)
+#define NOP_0x7 EMIT(0x0F) EMIT(0x1F) EMIT(0x80) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00)
+#define NOP_0x8 EMIT(0x0F) EMIT(0x1F) EMIT(0x84) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00)
+#define NOP_0x9 EMIT(0x66) EMIT(0x0F) EMIT(0x1F) EMIT(0x84) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00)
+#define NOP_0xA NOP_0x5 NOP_0x5
+#define NOP_0xB NOP_0x5 NOP_0x6
+#define NOP_0xC NOP_0x6 NOP_0x6
+#define NOP_0xD NOP_0x6 NOP_0x7
+#define NOP_0xE NOP_0x7 NOP_0x7
+#define NOP_0xF NOP_0x7 NOP_0x8
+
+#define GAME_HEAP_ALLOC __asm mov ecx, 0x11F6238 CALL_EAX(0xAA3E40)
+#define GAME_HEAP_FREE  __asm mov ecx, 0x11F6238 CALL_EAX(0xAA4060)
+
+#define GameHeapAlloc(size) ThisCall<void*, UInt32>(0xAA3E40, (void*)0x11F6238, size)
+#define GameHeapFree(ptr) ThisCall<void, void*>(0xAA4060, (void*)0x11F6238, ptr)
+
 #define GetRandomUInt(n) ThisCall<UInt32, UInt32>(0xAA5230, (void*)0x11C4180, n)
 #define GetRandomIntInRange(iMin, iMax) ThisCall<SInt32, SInt32>(0xAA5230, (void*)0x11C4180, iMax - iMin) + iMin
 
@@ -101,9 +129,6 @@ void* __fastcall Pool_Alloc(UInt32 size);
 void __fastcall Pool_Free(void *pBlock, UInt32 size);
 void* __fastcall Pool_Realloc(void *pBlock, UInt32 curSize, UInt32 reqSize);
 
-void* __stdcall GameHeapAlloc(UInt32 size);
-void __stdcall GameHeapFree(void *ptr);
-
 TESForm* __stdcall LookupFormByRefID(UInt32 refID);
 
 union Coordinate
@@ -155,10 +180,8 @@ template <typename T> inline T sqr(T value)
 
 UInt32 __vectorcall cvtd2ui(double value);
 
-bool fCompare(float lval, float rval);
-
-int __stdcall lfloor(float value);
-int __stdcall lceil(float value);
+int __vectorcall lfloor(float value);
+int __vectorcall lceil(float value);
 
 UInt32 __fastcall RGBHexToDec(UInt32 rgb);
 
@@ -178,10 +201,6 @@ char* __fastcall StrLenCopy(char *dest, const char *src, UInt32 length);
 
 char* __fastcall StrCat(char *dest, const char *src);
 
-bool __fastcall StrEqualCS(const char *lstr, const char *rstr);
-
-bool __fastcall StrEqualCI(const char *lstr, const char *rstr);
-
 char __fastcall StrCompare(const char *lstr, const char *rstr);
 
 char __fastcall StrBeginsCS(const char *lstr, const char *rstr);
@@ -196,11 +215,7 @@ void __fastcall StrToUpper(char *str);
 
 void __fastcall ReplaceChr(char *str, char from, char to);
 
-char* __fastcall FindChr(const char *str, char chr);
-
 char* __fastcall FindChrR(const char *str, UInt32 length, char chr);
-
-char* __fastcall SubStrCS(const char *srcStr, const char *subStr);
 
 char* __fastcall SubStrCI(const char *srcStr, const char *subStr);
 
@@ -297,13 +312,13 @@ public:
 class DString
 {
 	char		*str;
-	UInt16		length;
 	UInt16		alloc;
+	UInt16		length;
 
-	DString(char *_str, UInt16 _length, UInt16 _alloc) : str(_str), length(_length), alloc(_alloc) {}
+	DString(char *_str, UInt16 _length, UInt16 _alloc) : str(_str), alloc(_alloc), length(_length) {}
 
 public:
-	DString() : str(NULL) {*(UInt32*)&length = 0;}
+	DString() : str(NULL) {*(UInt32*)&alloc = 0;}
 	DString(const char *from);
 	DString(const DString &from);
 	DString(UInt16 _alloc);
@@ -314,7 +329,7 @@ public:
 		{
 			Pool_Free(str, alloc);
 			str = NULL;
-			*(UInt32*)&length = 0;
+			*(UInt32*)&alloc = 0;
 		}
 	}
 

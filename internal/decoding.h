@@ -1596,11 +1596,13 @@ public:
 	ListBox<UInt32>		queuedActions;	// 0B0
 	float				actionPoints;	// 0E0
 	float				maxActionPoints;// 0E4
-	UInt32				unk0E8;			// 0E8
-	UInt32				unk0EC;			// 0EC
+	float				flt0E8;			// 0E8
+	float				flt0EC;			// 0EC
 	float				clipAmmo;		// 0F0
 	float				reserveAmmo;	// 0F4
-	UInt32				unk0F8[9];		// 0F8
+	UInt32				unk0F8;			// 0F8
+	float				flt0FC;			// 0FC
+	UInt32				unk100[7];		// 100
 	int					actionType;		// 11C
 	UInt8				isSuccess;		// 120
 	UInt8				byte121;		// 121

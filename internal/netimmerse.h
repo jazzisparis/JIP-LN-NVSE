@@ -625,7 +625,7 @@ public:
 	UInt8				byte060;		// 060
 	UInt8				byte061;		// 061
 	UInt8				byte062;		// 062
-	UInt8				byte063;		// 063
+	UInt8				bDepth;			// 063
 	UInt32				unk064;			// 064
 	UInt32				unk068;			// 068
 	float				flt06C;			// 06C
@@ -635,13 +635,21 @@ public:
 	UInt8				byte07C;		// 07C
 	UInt8				byte07D;		// 07D
 	UInt8				byte07E;		// 07E
-	UInt8				byte07F;		// 07F
-	UInt8				byte080;		// 080
-	UInt8				byte081;		// 081
+	UInt8				useDefaultWater;// 07F
+	UInt8				bReflections;	// 080
+	UInt8				bRefractions;	// 081
 	UInt8				byte082;		// 082
 	UInt8				byte083;		// 083
 	UInt32				unk084;			// 084
-	float				flt088[40];		// 088
+	float				flt088[13];		// 088
+	float				reflectivity;	// 0BC
+	float				opacity;		// 0C0
+	float				distortion;		// 0C4
+	float				flt0C8[20];		// 0C8
+	float				fresnel;		// 118
+	float				noise;			// 11C
+	float				fog;			// 120
+	float				flt124;			// 124
 	UInt32				unk128[3];		// 128
 	NiSourceTexture		*srcTexture;	// 134
 	NiObject			*noDepth;		// 138	Seen 010AE500
@@ -702,7 +710,7 @@ public:
 	virtual void	Unk_24(NiMatrix33 *arg1, NiVector3 *arg2, bool arg3);
 	virtual void	Unk_25(UInt32 arg1);
 	virtual void	Unk_26(UInt32 arg1);
-	virtual NiAVObject	*GetObjectByName(char **objName);	// Must be strings generated at startup by sub_4B7920
+	virtual NiAVObject	*GetObjectByName(const char **objName);	// Must be strings generated at startup by sub_4B7920
 	virtual void	Unk_28(UInt32 arg1, UInt32 arg2, UInt32 arg3);
 	virtual void	Unk_29(UInt32 arg1, UInt32 arg2);
 	virtual void	Unk_2A(UInt32 arg1, UInt32 arg2);
@@ -769,7 +777,7 @@ public:
 
 	UInt32 GetIndex();
 	NiProperty *GetProperty(UInt32 propID);
-	void Rename(const char *newName);
+	void SetName(const char *newName);
 
 	void DumpProperties();
 	void DumpParents();
@@ -781,10 +789,10 @@ class NiNode : public NiAVObject
 public:
 	virtual void	AddObject(NiAVObject *object, bool arg2);
 	virtual void	AddObjectAt(UInt32 index, NiAVObject *object);
-	virtual void	RemoveObject(NiAVObject *toRemove, NiAVObject **out);
-	virtual void	Unk_3A(void);
-	virtual void	Unk_3B(void);
-	virtual void	Unk_3C(void);
+	virtual void	RemoveObject2(NiAVObject *toRemove, NiAVObject **arg2);
+	virtual void	RemoveObject(NiAVObject *toRemove);	//	Calls RemoveObject2 with arg2 as ptr to NULL
+	virtual void	RemoveNthObject2(UInt32 index, NiAVObject **arg2);
+	virtual void	RemoveNthObject(UInt32 index);			//	Calls RemoveNthObject2 with arg2 as ptr to NULL
 	virtual void	Unk_3D(void);
 	virtual void	Unk_3E(void);
 	virtual void	Unk_3F(void);
@@ -811,14 +819,22 @@ STATIC_ASSERT(sizeof(NiNode) == 0xAC);
 class BSFadeNode : public NiNode
 {
 public:
-	float			fltAC;			// AC
-	float			fltB0;			// B0
-	float			fltB4;			// B4
-	float			opacity;		// B8	[0.0, 1.0]; Used for fade-in/out
-	UInt32			unkBC;			// BC
-	UInt32			unkC0;			// C0
+	enum FadeType
+	{
+		kFade_Object =			1,
+		kFade_Item =			2,
+		kFade_Actor =			3,
+		kFade_LODFadeOutMax =	0xA,
+	};
+
+	float			nearDistSqr;	// AC
+	float			farDistSqr;		// B0
+	float			lastFade;		// B4
+	float			currentFade;	// B8	[0.0, 1.0]; Used for fade-in/out
+	float			fltBC;			// BC
+	float			timeSinceUpdate;// C0
 	UInt32			fadeType;		// C4
-	UInt32			unkC8;			// C8
+	UInt32			frameCounter;	// C8
 	TESObjectREFR	*linkedObj;		// CC
 	UInt32			unkD0[5];		// D0
 };

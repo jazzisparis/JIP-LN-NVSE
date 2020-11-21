@@ -81,7 +81,7 @@ bool __fastcall GetINIPath(Script *scriptObj)
 		StrCopy(s_configPath, g_dataHandler->GetNthModName(modIdx));
 	}
 	else ReplaceChr(s_configPath, '/', '\\');
-	char *dotPos = FindChrR(s_configPath, StrLen(s_configPath), '.');
+	char *dotPos = strrchr(s_configPath, '.');
 	if (dotPos) memcpy(dotPos + 1, "ini", 4);
 	else StrCat(s_configPath, ".ini");
 	return true;

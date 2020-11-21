@@ -24,7 +24,9 @@ DEFINE_COMMAND_PLUGIN(DisableScriptedActivate, , 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(RunBatchScript, , 0, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(ExecuteScript, , 1, 0, NULL);
 
-bool ScriptVariableAction_Execute(COMMAND_ARGS, UInt8 action)
+UInt8 s_scriptVarActionType = 0;
+
+bool ScriptVariableAction_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form = NULL;
@@ -35,7 +37,7 @@ bool ScriptVariableAction_Execute(COMMAND_ARGS, UInt8 action)
 		form = thisObj;
 	}
 	s_strArgBuffer[255] = 0;
-	if (action == 2)
+	if (s_scriptVarActionType == 2)
 	{
 		auto findOwner = s_scriptVariablesBuffer.Find(form->refID);
 		if (findOwner)
@@ -53,7 +55,7 @@ bool ScriptVariableAction_Execute(COMMAND_ARGS, UInt8 action)
 	Script *pScript;
 	ScriptEventList *pEventList;
 	if (!form->GetScriptAndEventList(&pScript, &pEventList)) return true;
-	if (action)
+	if (s_scriptVarActionType)
 	{
 		if (pScript->AddVariable(pEventList, form->refID, scriptObj->GetOverridingModIdx()))
 			*result = 1;
@@ -70,19 +72,31 @@ bool ScriptVariableAction_Execute(COMMAND_ARGS, UInt8 action)
 	return true;
 }
 
-bool Cmd_HasVariableAdded_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_HasVariableAdded_Execute(COMMAND_ARGS)
 {
-	return ScriptVariableAction_Execute(PASS_COMMAND_ARGS, 0);
+	__asm
+	{
+		mov		s_scriptVarActionType, 0
+		jmp		ScriptVariableAction_Execute
+	}
 }
 
-bool Cmd_AddScriptVariable_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_AddScriptVariable_Execute(COMMAND_ARGS)
 {
-	return ScriptVariableAction_Execute(PASS_COMMAND_ARGS, 1);
+	__asm
+	{
+		mov		s_scriptVarActionType, 1
+		jmp		ScriptVariableAction_Execute
+	}
 }
 
-bool Cmd_RemoveScriptVariable_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_RemoveScriptVariable_Execute(COMMAND_ARGS)
 {
-	return ScriptVariableAction_Execute(PASS_COMMAND_ARGS, 2);
+	__asm
+	{
+		mov		s_scriptVarActionType, 2
+		jmp		ScriptVariableAction_Execute
+	}
 }
 
 bool Cmd_RemoveAllAddedVariables_Execute(COMMAND_ARGS)

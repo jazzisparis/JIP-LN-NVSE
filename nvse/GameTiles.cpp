@@ -28,7 +28,7 @@ __declspec(naked) Tile::Value *Tile::GetValue(UInt32 typeID)
 		xor		esi, esi
 		mov		edi, [ecx+0x18]
 		mov		edx, [esp+0x10]
-		nop
+		ALIGN 16
 	iterHead:
 		cmp		esi, edi
 		jz		iterEnd
@@ -74,7 +74,7 @@ char *Tile::GetComponentFullName(char *resStr)
 	while (node->data != this)
 		node = node->prev;
 	int index = 0;
-	while ((node = node->prev) && StrEqualCS(name.m_data, node->data->name.m_data))
+	while ((node = node->prev) && !strcmp(name.m_data, node->data->name.m_data))
 		index++;
 	if (index)
 	{
@@ -108,13 +108,11 @@ __declspec(naked) void Tile::PokeValue(UInt32 valueID)
 		push	1
 		push	0x3F800000
 		mov		ecx, eax
-		mov		eax, 0xA0A270
-		call	eax
+		CALL_EAX(0xA0A270)
 		pop		ecx
 		push	1
 		push	0
-		mov		eax, 0xA0A270
-		call	eax
+		CALL_EAX(0xA0A270)
 	done:
 		retn	4
 	}
@@ -132,13 +130,11 @@ __declspec(naked) void Tile::FakeClick()
 		push	1
 		push	0x3F800000
 		mov		ecx, eax
-		mov		eax, 0xA0A270
-		call	eax
+		CALL_EAX(0xA0A270)
 		pop		ecx
 		push	1
 		push	0
-		mov		eax, 0xA0A270
-		call	eax
+		CALL_EAX(0xA0A270)
 	done:
 		retn
 	}
@@ -159,7 +155,7 @@ void Tile::DestroyAllChildren()
 Tile *Tile::GetChild(const char *childName)
 {
 	int childIndex = 0;
-	char *colon = FindChr(childName, ':');
+	char *colon = strchr(const_cast<char*>(childName), ':');
 	if (colon)
 	{
 		if (colon == childName) return NULL;

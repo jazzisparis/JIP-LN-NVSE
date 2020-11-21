@@ -12,8 +12,7 @@ __declspec(naked) NiTriangle *GenerateTriangles()
 	__asm
 	{
 		push	0xC00
-		mov		eax, 0xAA13E0
-		call	eax
+		CALL_EAX(0xAA13E0)
 		pop		ecx
 		mov		ecx, eax
 		push	eax
@@ -106,7 +105,7 @@ __declspec(naked) void __fastcall GetNorthRotation(TESObjectCELL *cell)
 		jz		noRotation
 		push	kExtraData_NorthRotation
 		add		ecx, 0x28
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		test	eax, eax
 		jz		noRotation
 		fld		dword ptr [eax+0xC]
@@ -314,7 +313,7 @@ __declspec(naked) SeenData* __fastcall GetSeenData(TESObjectCELL *cell)
 	{
 		push	kExtraData_SeenData
 		add		ecx, 0x28
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		test	eax, eax
 		jz		done
 		mov		eax, [eax+0xC]
@@ -350,8 +349,7 @@ __declspec(naked) IntSeenData *IntSeenData::GetSectionSeenData(int sectionX, int
 		mov		eax, ecx
 		mov		ecx, [esp+8]
 		mov		edx, [esp+0xC]
-		jmp		iterHead
-		lea		esp, [esp]
+		ALIGN 16
 	iterHead:
 		movsx	esi, byte ptr [eax+0x24]
 		cmp		esi, ecx
@@ -768,15 +766,13 @@ __declspec(naked) void __stdcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
 		mov		[ebp-0xC], edx
 		xor		esi, esi
 		mov		eax, esi
+		ALIGN 16
 	iter1Head:
 		mov		[ebp-8], eax
 		mov		edi, 0x10
 		mov		dword ptr [ebp-4], 0
 		inc		dword ptr [ebp-0xC]
-		jmp		iter2Head
-		and		esp, 0xEFFFFFFF
-		lea		esp, [esp]
-		fnop
+		ALIGN 16
 	iter2Head:
 		lea		ecx, [ebp-0x14]
 		call	GetSectionSeenLevel
@@ -786,6 +782,7 @@ __declspec(naked) void __stdcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
 		test	edi, 0x10
 		jz		iter2Next
 		dec		dword ptr [ebp-0xC]
+		ALIGN 16
 	iter2Next:
 		dec		edi
 		mov		[ebp-4], edi
@@ -820,7 +817,7 @@ __declspec(naked) bool __fastcall GetLinkedCellVisited(TESObjectREFR *doorRef)
 	{
 		push	kExtraData_Teleport
 		add		ecx, 0x44
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		test	eax, eax
 		jz		retn1
 		mov		ecx, [eax+0xC]
@@ -891,8 +888,7 @@ __declspec(naked) void ExtCaptureBoundsHook()
 		cmp		s_useAltFormat, 0
 		jnz		altFormat
 		mov		dword ptr [ebp-0x78], 0x880
-		mov		eax, 0x54EF77
-		jmp		eax
+		JMP_EAX(0x54EF77)
 	altFormat:
 		mov		dword ptr [ebp-0x78], 0x800
 		mov		ecx, [ebp-0xD8]
@@ -918,16 +914,13 @@ __declspec(naked) void ExtCaptureBoundsHook()
 		fsub	dword ptr [ebp-0x44]
 		fstp	dword ptr [ebp-0x84]
 		push	0x114
-		mov		eax, 0xAA13E0
-		call	eax
+		CALL_EAX(0xAA13E0)
 		pop		ecx
 		mov		ecx, eax
-		mov		eax, 0xA712F0
-		call	eax
+		CALL_EAX(0xA712F0)
 		mov		[ebp-0xC8], eax
 		mov		dword ptr [eax+0x110], 0x3A83126F
-		mov		eax, 0x54F05B
-		jmp		eax
+		JMP_EAX(0x54F05B)
 	}
 }
 
@@ -958,8 +951,7 @@ __declspec(naked) void IntCaptureBoundsHook()
 		cmp		s_useAltFormat, 0
 		jnz		altFormat
 		mov		dword ptr [ebp-0x78], 0x880
-		mov		eax, 0x54F68F
-		jmp		eax
+		JMP_EAX(0x54F68F)
 	altFormat:
 		mov		dword ptr [ebp-0x78], 0x800
 		lea		ecx, [ebp-0x38]
@@ -1000,8 +992,7 @@ __declspec(naked) void IntCaptureBoundsHook()
 		fsub	dword ptr [ebp-0x40]
 		fadd	kFlt10000
 		fstp	dword ptr [ebp-0x94]
-		mov		eax, 0x54F727
-		jmp		eax
+		JMP_EAX(0x54F727)
 	}
 }
 
@@ -1014,8 +1005,7 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		cmp		s_useAltFormat, 2
 		jz		altFormat
 		push	0xFFFFFFFF
-		mov		eax, 0x54E835
-		jmp		eax
+		JMP_EAX(0x54E835)
 	altFormat:
 		sub		esp, 0x104
 		mov		[ebp-0x100], ecx
@@ -1027,16 +1017,13 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		push	1
 		push	0xE
 		lea		ecx, [ebp-0xE4]
-		mov		eax, 0x404EB0
-		call	eax
+		CALL_EAX(0x404EB0)
 		push	dword ptr ds:[0x11F95EC]
 		lea		ecx, [ebp-0xF8]
-		mov		eax, 0x633C90
-		call	eax
+		CALL_EAX(0x633C90)
 		push	0
 		lea		ecx, [ebp-0xDC]
-		mov		eax, 0x4A0EB0
-		call	eax
+		CALL_EAX(0x4A0EB0)
 		mov		dword ptr [ebp-0x10], 0
 		push	0
 		push	0
@@ -1046,14 +1033,12 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		mov		[ebp-0xE8], eax
 		push	eax
 		mov		ecx, ds:[0x11F91A8]
-		mov		eax, 0xB6E110
-		call	eax
+		CALL_EAX(0xB6E110)
 		test	eax, eax
 		jz		done
 		push	eax
 		lea		ecx, [ebp-0x10]
-		mov		eax, 0x66B0D0
-		call	eax
+		CALL_EAX(0x66B0D0)
 		mov		ecx, [ebp-0xE8]
 		mov		eax, [ecx+0x5E0]
 		mov		[ebp-0xEC], eax
@@ -1080,51 +1065,42 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		mov		[ebp-0xFC], eax
 		or		dword ptr [eax+0x30], 1
 	skipHide:
-		mov		eax, 0x54EE20
-		call	eax
+		CALL_EAX(0x54EE20)
 		mov		[ebp-0xE0], al
 		push	0
-		mov		eax, 0x54EE60
-		call	eax
+		CALL_EAX(0x54EE60)
 		pop		ecx
 		mov		ecx, [ebp-0x10]
 		cmp		[ebp-0xDF], 0
 		jz		bgnScnAlt
-		mov		eax, 0xB6B260
-		call	eax
+		CALL_EAX(0xB6B260)
 		push	eax
 		push	7
-		mov		eax, 0xB6B8D0
-		call	eax
+		CALL_EAX(0xB6B8D0)
 		jmp		doneBgnScn
 	bgnScnAlt:
 		push	7
 		push	ecx
-		mov		eax, 0x54EDE0
-		call	eax
+		CALL_EAX(0x54EDE0)
 	doneBgnScn:
 		add		esp, 8
 		push	0x280
-		mov		eax, 0xAA13E0
-		call	eax
+		CALL_EAX(0xAA13E0)
 		pop		ecx
 		push	0x2F7
 		push	1
 		push	0x63
 		mov		ecx, eax
-		mov		eax, 0xB660D0
-		call	eax
+		CALL_EAX(0xB660D0)
 		push	eax
 		lea		ecx, [ebp-0xF4]
-		mov		eax, 0x633C90
-		call	eax
+		CALL_EAX(0x633C90)
 		mov		eax, [ebp-0xF0]
 		mov		ecx, [ebp-0xF4]
 		mov		[ecx+0x194], eax
 		push	ecx
 		lea		ecx, [ebp-0x18]
-		mov		eax, 0x66B0D0
-		call	eax
+		CALL_EAX(0x66B0D0)
 		mov		ecx, [ebp-0xF4]
 		xor		eax, eax
 		mov		edx, 0xC
@@ -1133,54 +1109,44 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		mov		[ecx+0x19C], eax
 		push	3
 		lea		ecx, [ebp-0xDC]
-		mov		eax, 0xC4F270
-		call	eax
+		CALL_EAX(0xC4F270)
 		lea		edx, [ebp-0xDC]
 		push	edx
 		push	dword ptr [ebp-0xF0]
 		push	dword ptr [ebp+8]
-		mov		eax, 0xB6BEE0
-		call	eax
+		CALL_EAX(0xB6BEE0)
 		add		esp, 0xC
 		lea		ecx, [ebp-0xDC]
-		mov		eax, 0xC4F2D0
-		call	eax
+		CALL_EAX(0xC4F2D0)
 		push	6
 		mov		ecx, [ebp-0x100]
-		mov		eax, 0x456FC0
-		call	eax
+		CALL_EAX(0x456FC0)
 		mov		[ebp-0x104], eax
 		test	eax, eax
 		jz		noNode6
 		push	1
 		lea		ecx, [ebp-0xDC]
-		mov		eax, 0xC4F270
-		call	eax
+		CALL_EAX(0xC4F270)
 		lea		edx, [ebp-0xDC]
 		push	edx
 		push	dword ptr [ebp-0x104]
 		push	dword ptr [ebp+8]
-		mov		eax, 0xB6BEE0
-		call	eax
+		CALL_EAX(0xB6BEE0)
 		add		esp, 0xC
 		lea		ecx, [ebp-0xDC]
-		mov		eax, 0xC4F2D0
-		call	eax
+		CALL_EAX(0xC4F2D0)
 	noNode6:
 		push	0
 		push	dword ptr [ebp-0xF4]
 		push	dword ptr [ebp+8]
-		mov		eax, 0xB6C0D0
-		call	eax
+		CALL_EAX(0xB6C0D0)
 		add		esp, 0xC
 		push	0
 		lea		ecx, [ebp-0x18]
-		mov		eax, 0x66B0D0
-		call	eax
+		CALL_EAX(0x66B0D0)
 		push	0
 		lea		ecx, [ebp-0xF4]
-		mov		eax, 0x66B0D0
-		call	eax
+		CALL_EAX(0x66B0D0)
 		mov		eax, 0xB6B790
 		mov		ecx, 0xB6B840
 		cmp		byte ptr [ebp-0xDF], 0
@@ -1188,8 +1154,7 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		call	eax
 		movzx	eax, byte ptr [ebp-0xE0]
 		push	eax
-		mov		eax, 0x54EE60
-		call	eax
+		CALL_EAX(0x54EE60)
 		pop		ecx
 		mov		eax, [ebp-0xFC]
 		test	eax, eax
@@ -1205,23 +1170,18 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		mov		eax, [ebp-0xEC]
 		mov		[ecx+0x5E0], eax
 		lea		ecx, [ebp-0xF4]
-		mov		eax, 0x45CEC0
-		call	eax
+		CALL_EAX(0x45CEC0)
 	done:
 		lea		eax, [ebp-0x10]
 		push	eax
 		mov		ecx, [ebp+0xC]
-		mov		eax, 0x6E5CC0
-		call	eax
+		CALL_EAX(0x6E5CC0)
 		lea		ecx, [ebp-0x10]
-		mov		eax, 0x45CEC0
-		call	eax
+		CALL_EAX(0x45CEC0)
 		lea		ecx, [ebp-0xDC]
-		mov		eax, 0x4A0F60
-		call	eax
+		CALL_EAX(0x4A0F60)
 		lea		ecx, [ebp-0xE4]
-		mov		eax, 0x404EE0
-		call	eax
+		CALL_EAX(0x404EE0)
 		mov		esp, ebp
 		pop		ebp
 		retn	8
@@ -1264,8 +1224,7 @@ __declspec(naked) void DiscoverLocationHook()
 	{
 		mov		s_updateMapMarkers, 1
 		mov		eax, 0x11D0368
-		mov		edx, 0x779571
-		jmp		edx
+		JMP_EDX(0x779571)
 	}
 }
 
@@ -1278,8 +1237,7 @@ __declspec(naked) void SetQuestTargetsHook()
 		add		ecx, 0x4C
 		mov		[ebp-4], ecx
 		mov		s_updateQuestTargets, 1
-		mov		edx, 0x60F145
-		jmp		edx
+		JMP_EDX(0x60F145)
 	}
 }
 
@@ -1306,14 +1264,14 @@ __declspec(naked) bool __stdcall UpdateSeenBitsHook(NiVector3 *posVector1, NiVec
 		fistp	dword ptr [ebp-0xC]
 		xor		esi, esi
 		mov		[ebp-4], esi
+		ALIGN 16
 	iter1Head:
 		xor		edi, edi
 		imul	eax, esi, 0x100
 		add		eax, [ebp-0xC]
 		imul	eax, eax
 		mov		[ebp-0x10], eax
-		jmp		iter2Head
-		and		esp, 0xEFFFFFFF
+		ALIGN 16
 	iter2Head:
 		mov		ecx, esi
 		and		ecx, 1
@@ -1364,8 +1322,7 @@ __declspec(naked) void RendererRecreateHook()
 		mov		[edx+8], ecx
 		mov		[edx+0xC], eax
 		mov		s_regenTextures, 1
-		mov		edx, 0xE7D144
-		jmp		edx
+		JMP_EDX(0xE7D144)
 	}
 }
 
@@ -1703,7 +1660,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			s_worldMapTile->SetString(kTileValue_filename, ddsPath);
 			s_worldMapRect->SetFloat(kTileValue_user1, rootWorld->mapData.usableDimensions.X);
 			s_worldMapRect->SetFloat(kTileValue_user2, rootWorld->mapData.usableDimensions.Y);
-			s_markerRange = lceil(60.0 / rootWorld->mapData.usableDimensions.X *
+			s_markerRange = lceil(60.0F / rootWorld->mapData.usableDimensions.X *
 				(rootWorld->mapData.cellSECoordinates.X - rootWorld->mapData.cellNWCoordinates.X +
 				rootWorld->mapData.cellNWCoordinates.Y - rootWorld->mapData.cellSECoordinates.Y));
 			updateTiles = true;

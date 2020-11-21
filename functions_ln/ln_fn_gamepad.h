@@ -331,34 +331,44 @@ bool Cmd_TapTrigger_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool SetOnTriggerEventHandler_Execute(COMMAND_ARGS, bool onDown)
+UInt8 s_onTriggerEventType = 0;
+
+bool SetOnTriggerEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt, rTrigger;
 	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &rTrigger) || NOT_TYPE(script, Script) || !s_controllerReady) return true;
 	UInt8 idx = rTrigger ? 2 : 0;
-	UInt32 eventMask = onDown ? kLNEventMask_OnTriggerDown : kLNEventMask_OnTriggerUp;
+	UInt32 eventMask = s_onTriggerEventType ? kLNEventMask_OnTriggerDown : kLNEventMask_OnTriggerUp;
 	if (addEvnt)
 	{
-		if (s_LNOnTriggerEvents[idx + onDown].Insert(script))
+		if (s_LNOnTriggerEvents[idx + s_onTriggerEventType].Insert(script))
 			s_LNEventFlags |= eventMask;
 	}
-	else if (s_LNOnTriggerEvents[idx + onDown].Erase(script))
+	else if (s_LNOnTriggerEvents[idx + s_onTriggerEventType].Erase(script))
 	{
-		if (s_LNOnTriggerEvents[onDown].Empty() && s_LNOnTriggerEvents[onDown + 2].Empty())
+		if (s_LNOnTriggerEvents[s_onTriggerEventType].Empty() && s_LNOnTriggerEvents[s_onTriggerEventType + 2].Empty())
 			s_LNEventFlags ^= eventMask;
 	}
 	return true;
 }
 
-bool Cmd_SetOnTriggerDownEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_SetOnTriggerDownEventHandler_Execute(COMMAND_ARGS)
 {
-	return SetOnTriggerEventHandler_Execute(PASS_COMMAND_ARGS, true);
+	__asm
+	{
+		mov		s_onTriggerEventType, 1
+		jmp		SetOnTriggerEventHandler_Execute
+	}
 }
 
-bool Cmd_SetOnTriggerUpEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_SetOnTriggerUpEventHandler_Execute(COMMAND_ARGS)
 {
-	return SetOnTriggerEventHandler_Execute(PASS_COMMAND_ARGS, false);
+	__asm
+	{
+		mov		s_onTriggerEventType, 0
+		jmp		SetOnTriggerEventHandler_Execute
+	}
 }
 
 bool Cmd_IsStickDisabled_Execute(COMMAND_ARGS)
