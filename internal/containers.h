@@ -8,9 +8,9 @@
 void* __fastcall Pool_Alloc_Buckets(UInt32 numBuckets);
 UInt32 __fastcall AlignBucketCount(UInt32 count);
 
-#define POOL_ALLOC(count, type) (alignof(type) < 4) ? (type*)Pool_Alloc_Al4(count * sizeof(type)) : (type*)Pool_Alloc(count * sizeof(type))
-#define POOL_FREE(block, count, type) (alignof(type) < 4) ? Pool_Free_Al4(block, count * sizeof(type)) : Pool_Free(block, count * sizeof(type))
-#define POOL_REALLOC(block, curCount, newCount, type) block = (alignof(type) < 4) ? (type*)Pool_Realloc_Al4(block, curCount * sizeof(type), newCount * sizeof(type)) : (type*)Pool_Realloc(block, curCount * sizeof(type), newCount * sizeof(type))
+#define POOL_ALLOC(count, type) (type*)Pool_Alloc(count * sizeof(type))
+#define POOL_FREE(block, count, type) Pool_Free(block, count * sizeof(type))
+#define POOL_REALLOC(block, curCount, newCount, type) block = (type*)Pool_Realloc(block, curCount * sizeof(type), newCount * sizeof(type))
 #define ALLOC_NODE(type) (type*)Pool_Alloc(sizeof(type))
 
 template <typename T_Data> class Stack
@@ -464,6 +464,46 @@ public:
 	}
 };
 
+template <typename T_Data> __forceinline UInt32 AlignNumAlloc(UInt32 numAlloc)
+{
+	switch (alignof(T_Data))
+	{
+		case 1:
+			if (numAlloc & 0xF)
+			{
+				numAlloc &= 0xFFFFFFF0;
+				numAlloc += 0x10;
+			}
+			return numAlloc;
+		case 2:
+			if (numAlloc & 7)
+			{
+				numAlloc &= 0xFFFFFFF8;
+				numAlloc += 8;
+			}
+			return numAlloc;
+		default:
+		{
+			switch (sizeof(T_Data) & 0xC)
+			{
+				case 0:
+					return numAlloc;
+				case 8:
+					if (numAlloc & 1)
+						numAlloc++;
+					return numAlloc;
+				default:
+					if (numAlloc & 3)
+					{
+						numAlloc &= 0xFFFFFFFC;
+						numAlloc += 4;
+					}
+					return numAlloc;
+			}
+		}
+	}
+}
+
 template <typename T_Key> class MapKey
 {
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
@@ -585,7 +625,10 @@ template <typename T_Key, typename T_Data> class Map
 			return false;
 		}
 		if (!entries)
+		{
+			numAlloc = AlignNumAlloc<Entry>(numAlloc);
 			entries = POOL_ALLOC(numAlloc, Entry);
+		}
 		else if (numAlloc <= numEntries)
 		{
 			UInt32 newAlloc = numAlloc << 1;
@@ -736,7 +779,7 @@ public:
 			UInt32 size = frwrd ? (count - 1) : (source.numEntries - count);
 			source.numEntries--;
 			if (size) memmove(pEntry, pEntry + 1, size * sizeof(Entry));
-			pEntry--;
+			if (frwrd) pEntry--;
 		}
 
 		OpIterator(Map &source)
@@ -839,7 +882,10 @@ public:
 		UInt32 index;
 		if (GetIndex(key, &index)) return false;
 		if (!keys)
+		{
+			numAlloc = AlignNumAlloc<M_Key>(numAlloc);
 			keys = POOL_ALLOC(numAlloc, M_Key);
+		}
 		else if (numAlloc <= numKeys)
 		{
 			UInt32 newAlloc = numAlloc << 1;
@@ -1638,7 +1684,10 @@ template <typename T_Data> class Vector
 	__declspec(noinline) T_Data *AllocateData()
 	{
 		if (!data)
+		{
+			numAlloc = AlignNumAlloc<T_Data>(numAlloc);
 			data = POOL_ALLOC(numAlloc, T_Data);
+		}
 		else if (numAlloc <= numItems)
 		{
 			UInt32 newAlloc = numAlloc << 1;
@@ -1724,10 +1773,12 @@ public:
 		if (!data)
 		{
 			if (numAlloc < newCount) numAlloc = newCount;
+			numAlloc = AlignNumAlloc<T_Data>(numAlloc);
 			data = POOL_ALLOC(numAlloc, T_Data);
 		}
 		else if (numAlloc < newCount)
 		{
+			newCount = AlignNumAlloc<T_Data>(newCount);
 			POOL_REALLOC(data, numAlloc, newCount, T_Data);
 			numAlloc = newCount;
 		}
@@ -1910,11 +1961,12 @@ public:
 		{
 			if (!data)
 			{
-				numAlloc = newSize;
+				numAlloc = AlignNumAlloc<T_Data>(newSize);
 				data = POOL_ALLOC(numAlloc, T_Data);
 			}
 			else if (numAlloc < newSize)
 			{
+				newSize = AlignNumAlloc<T_Data>(newSize);
 				POOL_REALLOC(data, numAlloc, newSize, T_Data);
 				numAlloc = newSize;
 			}

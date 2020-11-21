@@ -955,8 +955,8 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
 		if (niBlock)
 		{
-			if (transform) niBlock->m_localRotate.Rotate(rotX * kDblPId180, rotY * kDblPId180, rotZ * kDblPId180);
-			else niBlock->m_localRotate.RotationMatrix(rotX * kDblPId180, rotY * kDblPId180, rotZ * kDblPId180);
+			if (transform) niBlock->m_localRotate.Rotate(rotX * kFltPId180, rotY * kFltPId180, rotZ * kFltPId180);
+			else niBlock->m_localRotate.RotationMatrix(rotX * kFltPId180, rotY * kFltPId180, rotZ * kFltPId180);
 			if (thisObj->IsActor()) niBlock->UpdateTransform(0);
 			else niBlock->UpdateBounds(0);
 		}
@@ -1252,39 +1252,32 @@ __declspec(naked) TESObjectREFR *GetCrosshairRef()
 		jz		firstPerson
 		lea		eax, [ebp-0x18]
 		push	eax
-		mov		eax, 0x70C410
-		call	eax
+		CALL_EAX(0x70C410)
 		push	eax
 		lea		ecx, [ebp-0xC]
-		mov		eax, 0x63C8A0
-		call	eax
+		CALL_EAX(0x63C8A0)
 		mov		ecx, g_thePlayer
 	firstPerson:
 		push	0
-		mov		eax, 0x953F20
-		call	eax
+		CALL_EAX(0x953F20)
 		fstp	dword ptr [ebp-0x18]
 		push	dword ptr [ebp-0x18]
 		lea		ecx, [ebp-0x3C]
-		mov		eax, 0x4A0C90
-		call	eax
+		CALL_EAX(0x4A0C90)
 		mov		eax, g_thePlayer
 		push	dword ptr [eax+0x24]
 		lea		ecx, [ebp-0x60]
-		mov		eax, 0x524AC0
-		call	eax
+		CALL_EAX(0x524AC0)
 		lea		eax, [ebp-0x60]
 		push	eax
 		lea		ecx, [ebp-0x3C]
 		push	ecx
-		mov		eax, 0x43F8D0
-		call	eax
+		CALL_EAX(0x43F8D0)
 		lea		eax, [ebp-0x18]
 		push	eax
 		push	1
 		lea		ecx, [ebp-0x3C]
-		mov		eax, 0x439F50
-		call	eax
+		CALL_EAX(0x439F50)
 		lea		eax, [ebp-0x60]
 		push	eax
 		lea		eax, [ebp-0x3C]
@@ -1296,8 +1289,7 @@ __declspec(naked) TESObjectREFR *GetCrosshairRef()
 		push	eax
 		mov		ecx, g_interfaceManager
 		mov		ecx, [ecx+0x13C]
-		mov		eax, 0x631D60
-		call	eax
+		CALL_EAX(0x631D60)
 		mov		esp, ebp
 		pop		ebp
 		retn
@@ -1459,7 +1451,7 @@ bool RegisterInsertObject(COMMAND_ARGS)
 	{
 		UnorderedMap<TESForm*, NodeNamesMap> &formsMap = (s_insertObjectFlag == kHookFormFlag6_InsertNode) ? s_insertNodeMap : s_attachModelMap;
 
-		char *nodeName = "", *objectName = FindChrR(s_strArgBuffer, StrLen(s_strArgBuffer), '|');
+		char *nodeName = "", *objectName = strrchr(s_strArgBuffer, '|');
 		if (objectName)
 		{
 			*objectName++ = 0;
@@ -1483,8 +1475,7 @@ bool RegisterInsertObject(COMMAND_ARGS)
 			auto findForm = formsMap.Find(form);
 			if (!findForm) return true;
 			auto findNode = findForm().FindOp(nodeName);
-			if (!findNode) return true;
-			if (!findNode().Erase(objectName))
+			if (!findNode || !findNode().Erase(objectName))
 				return true;
 			if (findNode().Empty())
 			{

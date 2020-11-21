@@ -229,7 +229,7 @@ bool Cmd_SetWindDirection_Execute(COMMAND_ARGS)
 {
 	float windDirection;
 	if (ExtractArgs(EXTRACT_ARGS, &windDirection) && g_TES->sky)
-		g_TES->sky->windDirection = windDirection * -kDblPId180;
+		g_TES->sky->windDirection = windDirection * -kFltPId180;
 	return true;
 }
 

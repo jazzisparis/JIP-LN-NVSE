@@ -179,7 +179,7 @@ bool Cmd_SetBodyPartTraitNumeric_Execute(COMMAND_ARGS)
 		bodyPart->goreEffTranslate[traitID - 13] = val;
 		break;
 	default:
-		bodyPart->goreEffRotation[traitID - 16] = val * kDblPId180;
+		bodyPart->goreEffRotation[traitID - 16] = val * kFltPId180;
 	}
 	return true;
 }

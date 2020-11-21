@@ -921,12 +921,16 @@ bool Cmd_GetAshPileSource_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS, ActorAnimEventCallbacks &eventMap, UInt8 flag)
+UInt8 s_onAnimEventFlag = 0;
+
+bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt, animID;
 	TESForm *actorOrList;
-	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &actorOrList, &animID) || NOT_TYPE(script, Script)) return true;
+	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &actorOrList, &animID) || NOT_TYPE(script, Script))
+		return true;
+	ActorAnimEventCallbacks &eventMap = (s_onAnimEventFlag == kHookActorFlag3_OnAnimAction) ? s_animActionEventMap : s_playGroupEventMap;
 	ListNode<TESForm> *iter;
 	if IS_TYPE(actorOrList, BGSListForm)
 		iter = ((BGSListForm*)actorOrList)->list.Head();
@@ -946,7 +950,7 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS, ActorAnimEventCallbacks &e
 			if (eventMap.Insert(actor, &scriptsMap))
 				HOOK_MOD(SetAnimSequence, true);
 			if ((*scriptsMap)[animID].Insert(script))
-				actor->jipActorFlags3 |= flag;
+				actor->jipActorFlags3 |= s_onAnimEventFlag;
 		}
 		else
 		{
@@ -955,7 +959,7 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS, ActorAnimEventCallbacks &e
 			auto findAnim = findActor().Find(animID);
 			if (!findAnim || !findAnim().Erase(script)) continue;
 			if (actor->IsActor())
-				actor->jipActorFlags3 ^= flag;
+				actor->jipActorFlags3 &= ~s_onAnimEventFlag;
 			if (!findAnim().Empty()) continue;
 			findAnim.Remove();
 			if (!findActor().Empty()) continue;
@@ -967,22 +971,33 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS, ActorAnimEventCallbacks &e
 	return true;
 }
 
-bool Cmd_SetOnAnimActionEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_SetOnAnimActionEventHandler_Execute(COMMAND_ARGS)
 {
-	return SetOnAnimationEventHandler_Execute(PASS_COMMAND_ARGS, s_animActionEventMap, kHookActorFlag3_OnAnimAction);
+	__asm
+	{
+		mov		s_onAnimEventFlag, kHookActorFlag3_OnAnimAction
+		jmp		SetOnAnimationEventHandler_Execute
+	}
 }
 
-bool Cmd_SetOnPlayGroupEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_SetOnPlayGroupEventHandler_Execute(COMMAND_ARGS)
 {
-	return SetOnAnimationEventHandler_Execute(PASS_COMMAND_ARGS, s_playGroupEventMap, kHookActorFlag3_OnPlayGroup);
+	__asm
+	{
+		mov		s_onAnimEventFlag, kHookActorFlag3_OnPlayGroup
+		jmp		SetOnAnimationEventHandler_Execute
+	}
 }
 
-bool SetActorEventHandler_Execute(COMMAND_ARGS, ActorEventCallbacks &eventMap, UInt8 flag, UInt8 hookID)
+UInt8 s_actorEventType = 0;
+
+bool SetActorEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt;
 	TESForm *actorOrList = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &actorOrList) || NOT_TYPE(script, Script)) return true;
+	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &actorOrList) || NOT_TYPE(script, Script))
+		return true;
 	if (!actorOrList)
 	{
 		if (addEvnt)
@@ -993,6 +1008,33 @@ bool SetActorEventHandler_Execute(COMMAND_ARGS, ActorEventCallbacks &eventMap, U
 		else if (s_onHitEventScripts.Erase(script))
 			HOOK_MOD(OnHitEvent, false);
 		return true;
+	}
+	ActorEventCallbacks *eventMap;
+	UInt8 flag, hookID;
+	switch (s_actorEventType)
+	{
+		case 0:
+			eventMap = &s_healthDamageEventMap;
+			flag = kHookActorFlag3_OnHealthDamage;
+			hookID = kHook_DamageActorValue;
+			break;
+		case 1:
+			eventMap = &s_crippledLimbEventMap;
+			flag = kHookActorFlag3_OnCrippledLimb;
+			hookID = kHook_DamageActorValue;
+			break;
+		case 2:
+			eventMap = &s_fireWeaponEventMap;
+			flag = kHookActorFlag3_OnFireWeapon;
+			hookID = kHook_RemoveAmmo;
+			break;
+		case 3:
+			eventMap = &s_onHitEventMap;
+			flag = kHookActorFlag3_OnHit;
+			hookID = kHook_OnHitEvent;
+			break;
+		default:
+			return true;
 	}
 	ListNode<TESForm> *iter;
 	Actor *actor;
@@ -1010,17 +1052,17 @@ bool SetActorEventHandler_Execute(COMMAND_ARGS, ActorEventCallbacks &eventMap, U
 		if (addEvnt)
 		{
 			if (!actor->IsActor()) continue;
-			if (eventMap.Insert(actor, &callbacks))
+			if (eventMap->Insert(actor, &callbacks))
 				s_hookInfos[hookID].ModUsers(true);
 			callbacks->Insert(script);
 			actor->jipActorFlags3 |= flag;
 		}
 		else
 		{
-			auto findActor = eventMap.Find(actor);
+			auto findActor = eventMap->Find(actor);
 			if (!findActor || !findActor().Erase(script)) continue;
 			if (actor->IsActor())
-				actor->jipActorFlags3 ^= flag;
+				actor->jipActorFlags3 &= ~flag;
 			if (!findActor().Empty()) continue;
 			findActor.Remove();
 			s_hookInfos[hookID].ModUsers(false);
@@ -1030,24 +1072,40 @@ bool SetActorEventHandler_Execute(COMMAND_ARGS, ActorEventCallbacks &eventMap, U
 	return true;
 }
 
-bool Cmd_SetOnHealthDamageEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_SetOnHealthDamageEventHandler_Execute(COMMAND_ARGS)
 {
-	return SetActorEventHandler_Execute(PASS_COMMAND_ARGS, s_healthDamageEventMap, kHookActorFlag3_OnHealthDamage, kHook_DamageActorValue);
+	__asm
+	{
+		mov		s_actorEventType, 0
+		jmp		SetActorEventHandler_Execute
+	}
 }
 
-bool Cmd_SetOnCrippledLimbEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_SetOnCrippledLimbEventHandler_Execute(COMMAND_ARGS)
 {
-	return SetActorEventHandler_Execute(PASS_COMMAND_ARGS, s_crippledLimbEventMap, kHookActorFlag3_OnCrippledLimb, kHook_DamageActorValue);
+	__asm
+	{
+		mov		s_actorEventType, 1
+		jmp		SetActorEventHandler_Execute
+	}
 }
 
-bool Cmd_SetOnFireWeaponEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_SetOnFireWeaponEventHandler_Execute(COMMAND_ARGS)
 {
-	return SetActorEventHandler_Execute(PASS_COMMAND_ARGS, s_fireWeaponEventMap, kHookActorFlag3_OnFireWeapon, kHook_RemoveAmmo);
+	__asm
+	{
+		mov		s_actorEventType, 2
+		jmp		SetActorEventHandler_Execute
+	}
 }
 
-bool Cmd_SetOnHitEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_SetOnHitEventHandler_Execute(COMMAND_ARGS)
 {
-	return SetActorEventHandler_Execute(PASS_COMMAND_ARGS, s_onHitEventMap, kHookActorFlag3_OnHit, kHook_OnHitEvent);
+	__asm
+	{
+		mov		s_actorEventType, 3
+		jmp		SetActorEventHandler_Execute
+	}
 }
 
 bool Cmd_GetCurrentAmmo_Execute(COMMAND_ARGS)
@@ -1398,7 +1456,6 @@ bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 	Character *character = (Character*)thisObj;
 	if (character->IsCharacter() && character->GetNiNode() && character->validBip01Names)
 	{
-		NiAVObject *unused = NULL;
 		bool isPlayer = character == g_thePlayer;
 		ValidBip01Names::Data *slotData = character->validBip01Names->slotData;
 		UInt32 slotIdx;
@@ -1408,7 +1465,7 @@ bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 		{
 			if ((slotIdx != 14) && slotData->armor && IS_ID(slotData->armor, TESObjectARMO) && slotData->boneNode)
 			{
-				((NiNode*)slotData->boneNode->m_parent)->RemoveObject(slotData->boneNode, &unused);
+				((NiNode*)slotData->boneNode->m_parent)->RemoveObject(slotData->boneNode);
 				slotData->boneNode = NULL;
 			}
 			slotData++;
@@ -1454,8 +1511,7 @@ __declspec(naked) bool __fastcall IsIdlePlayingEx(Actor *actor, TESIdleForm *idl
 		test	eax, eax
 		jz		done
 		mov		ecx, eax
-		mov		eax, 0x4985F0
-		call	eax
+		CALL_EAX(0x4985F0)
 		test	al, al
 		setz	al
 		jnz		done
@@ -2192,7 +2248,7 @@ bool Cmd_SetActorTiltAngle_Execute(COMMAND_ARGS)
 			bhkCharacterController *charCtrl = actor->baseProcess->GetCharacterController();
 			if (charCtrl)
 			{
-				angle *= kDblPId180;
+				angle *= kFltPId180;
 				if (axis == 'X')
 					charCtrl->tiltAngleX = angle;
 				else charCtrl->tiltAngleY = angle;
@@ -2259,8 +2315,7 @@ __declspec(naked) void __fastcall DoFireWeaponEx(TESObjectWEAP *weapon, int EDX,
 		mov		dword ptr [edx+0x114], 0
 		push	edx
 		push	eax
-		mov		eax, 0x523150
-		call	eax
+		CALL_EAX(0x523150)
 		pop		eax
 		pop		dword ptr [eax+0x114]
 		pop		dword ptr [eax+0x118]

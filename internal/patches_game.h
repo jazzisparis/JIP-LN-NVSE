@@ -23,13 +23,11 @@ __declspec(naked) void TESGlobalLoadFormHook()
 	{
 		test	dword ptr [ecx+8], 0x40
 		jz		contRetn
-		mov		eax, 0x5A65BD
-		jmp		eax
+		JMP_EAX(0x5A65BD)
 	contRetn:
 		mov		[ebp-0x10], ecx
 		mov		ecx, [ebp+8]
-		mov		eax, 0x5A64C6
-		jmp		eax
+		JMP_EAX(0x5A64C6)
 	}
 }
 
@@ -39,8 +37,7 @@ __declspec(naked) void DoQueuedPlayerHook()
 	{
 		cmp		s_queuedPlayerLock, 0
 		jnz		proceed
-		mov		eax, 0x440BA0
-		jmp		eax
+		JMP_EAX(0x440BA0)
 	proceed:
 		push	esi
 		push	ecx
@@ -48,27 +45,23 @@ __declspec(naked) void DoQueuedPlayerHook()
 		mov		esi, ecx
 		push	1
 		push	0
-		mov		eax, 0x5702E0
-		call	eax
+		CALL_EAX(0x5702E0)
 		mov		ecx, [esi+0x68C]
 		test	ecx, ecx
 		jz		done68C
 		push	1
-		mov		eax, 0x418E00
-		call	eax
+		CALL_EAX(0x418E00)
 	done68C:
 		mov		ecx, [esi+0x690]
 		test	ecx, ecx
 		jz		done690
 		push	1
-		mov		eax, 0x418D20
-		call	eax
+		CALL_EAX(0x418D20)
 	done690:
 		mov		ecx, [esi+0x694]
 		test	ecx, ecx
 		jz		doneNode
-		mov		eax, 0x401970
-		call	eax
+		CALL_EAX(0x401970)
 	doneNode:
 		xor		edx, edx
 		mov		[esi+0x68C], edx
@@ -80,18 +73,16 @@ __declspec(naked) void DoQueuedPlayerHook()
 		mov		[eax+8], edx
 		lea		ecx, [esi+0xD74]
 		pxor	xmm0, xmm0
-		mov		dl, 6
-	iterHead:
 		movdqu	xmmword ptr [ecx], xmm0
-		add		ecx, 0x10
-		dec		dl
-		jnz		iterHead
+		movdqu	xmmword ptr [ecx+0x10], xmm0
+		movdqu	xmmword ptr [ecx+0x20], xmm0
+		movdqu	xmmword ptr [ecx+0x30], xmm0
+		movdqu	xmmword ptr [ecx+0x40], xmm0
+		movdqu	xmmword ptr [ecx+0x50], xmm0
 		pop		ecx
-		mov		eax, 0x440BA0
-		call	eax
+		CALL_EAX(0x440BA0)
 		mov		ecx, esi
-		mov		eax, 0x950B60
-		call	eax
+		CALL_EAX(0x950B60)
 		test	eax, eax
 		jz		done
 		and		dword ptr [eax+0x30], 0xFFFFFFFE
@@ -192,8 +183,7 @@ __declspec(naked) float MaxMessageWidthHook()
 	{
 		cmp		s_messageBoxScript, 0
 		jnz		overrideWidth
-		mov		eax, kAddr_TileGetFloat
-		jmp		eax
+		JMP_EAX(kAddr_TileGetFloat)
 	overrideWidth:
 		fld		maxWidth
 		retn	4
@@ -206,11 +196,9 @@ __declspec(naked) void InitBarterMenuHook()
 	{
 		push	ecx
 		push	dword ptr [ecx+0x48]
-		mov		eax, 0x7301F0
-		call	eax
+		CALL_EAX(0x7301F0)
 		pop		ecx
-		mov		eax, 0x72DC30
-		jmp		eax
+		JMP_EAX(0x72DC30)
 	}
 }
 
@@ -223,13 +211,11 @@ __declspec(naked) void InitArmorFormHook()
 		push	0xFFFFFFFF
 		mov		ecx, [ebp]
 		mov		ecx, [ecx-0xC]
-		mov		eax, 0x484E60
-		call	eax
+		CALL_EAX(0x484E60)
 		push	eax
 		lea		eax, [ebp+8]
 		push	eax
-		mov		eax, 0x485D50
-		call	eax
+		CALL_EAX(0x485D50)
 		add		esp, 8
 		push	dword ptr [ebp+8]
 		call	LookupFormByRefID
@@ -287,8 +273,7 @@ __declspec(naked) void GetMouseWheelHook()
 	retnZero:
 		xor		eax, eax
 	done:
-		mov		edx, 0xA23A26
-		jmp		edx
+		JMP_EDX(0xA23A26)
 	}
 }
 
@@ -318,8 +303,7 @@ __declspec(naked) void PackageSetRunHook()
 		jnz		skipRetn
 		cmp		byte ptr [ecx+0x104], 0
 		jnz		skipRetn
-		mov		eax, 0x8DAAA9
-		jmp		eax
+		JMP_EAX(0x8DAAA9)
 	skipRetn:
 		mov		eax, 0x201
 	done:
@@ -379,7 +363,7 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		test	ecx, ecx
 		jz		countNext
 		push	kExtraData_OriginalReference
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		test	eax, eax
 		jz		countNext
 		mov		eax, [eax+0xC]
@@ -387,7 +371,7 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		jnz		countNext
 		push	kExtraData_Count
 		mov		ecx, [esi]
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		test	eax, eax
 		jz		addHead
 		mov		ecx, 0x7FFF
@@ -416,7 +400,7 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		call	ExtraCount::Create
 		push	eax
 		mov		ecx, esi
-		call	AddExtraData
+		CALL_EAX(kAddr_AddExtraData)
 		push	esi
 		mov		ecx, [ebp-8]
 		call	ExtraContainerChanges::ExtendDataList::Append
@@ -439,8 +423,7 @@ __declspec(naked) void BarterSellFixHook()
 		mov		ecx, [ecx-0x1C]
 		call	FixVendorCaps
 		mov		ecx, g_dataHandler
-		mov		eax, 0x46F640
-		jmp		eax
+		JMP_EAX(0x46F640)
 	}
 }
 
@@ -456,8 +439,7 @@ __declspec(naked) void JumpHeightFixHook()
 		mulss	xmm0, toMetric
 		addss	xmm0, [esp+0x28]
 		movss	[esi+0x544], xmm0
-		mov		eax, 0xCD4486
-		jmp		eax
+		JMP_EAX(0xCD4486)
 	}
 }
 
@@ -496,8 +478,7 @@ __declspec(naked) void EffectSkillModifiers1Hook()
 		test	al, 1
 		jz		survival
 		mov		ecx, g_thePlayer
-		mov		eax, 0x8BEBB0
-		call	eax
+		CALL_EAX(0x8BEBB0)
 		jmp		doPerkMod
 	survival:
 		test	byte ptr [ebp-0xDC], 2
@@ -505,8 +486,7 @@ __declspec(naked) void EffectSkillModifiers1Hook()
 		cmp		dword ptr [ebp-0xBC], kAVCode_RadiationRads
 		jz		done
 		mov		ecx, g_thePlayer
-		mov		eax, 0x8BEC80
-		call	eax
+		CALL_EAX(0x8BEC80)
 	doPerkMod:
 		fimul	dword ptr [ebp-0xB8]
 		fstp	dword ptr [ebp-0xC0]
@@ -516,8 +496,7 @@ __declspec(naked) void EffectSkillModifiers1Hook()
 		push	eax
 		push	g_thePlayer
 		push	kPerkEntry_ModifyRecoveredHealth
-		mov		eax, 0x5E58F0
-		call	eax
+		CALL_EAX(0x5E58F0)
 		add		esp, 0xC
 	skipPerkMod:
 		cvttss2si	eax, dword ptr [ebp-0xC0]
@@ -548,8 +527,7 @@ __declspec(naked) void EffectSkillModifiers2Hook()
 		test	al, 4
 		jz		survival
 		mov		ecx, [ebp-0x28]
-		mov		eax, 0x8BEBB0
-		call	eax
+		CALL_EAX(0x8BEBB0)
 		jmp		doPerkMod
 	survival:
 		test	byte ptr [ebp-0x40], 2
@@ -557,8 +535,7 @@ __declspec(naked) void EffectSkillModifiers2Hook()
 		cmp		dword ptr [ebp-0x38], kAVCode_RadiationRads
 		jz		done
 		mov		ecx, [ebp-0x28]
-		mov		eax, 0x8BEC80
-		call	eax
+		CALL_EAX(0x8BEC80)
 	doPerkMod:
 		fmul	dword ptr [ebp+0x14]
 		fstp	dword ptr [ebp-0x50]
@@ -571,14 +548,12 @@ __declspec(naked) void EffectSkillModifiers2Hook()
 		push	eax
 		push	ecx
 		push	kPerkEntry_ModifyRecoveredHealth
-		mov		eax, 0x5E58F0
-		call	eax
+		CALL_EAX(0x5E58F0)
 		add		esp, 0xC
 	skipPerkMod:
 		push	dword ptr [ebp-0x50]
 		mov		ecx, [ebp-0x74]
-		mov		eax, 0x804BC0
-		call	eax
+		CALL_EAX(0x804BC0)
 	done:
 		retn
 	}
@@ -594,18 +569,15 @@ __declspec(naked) void RecipeMenuAmmoEffectsHook()
 		push	0x100
 		lea		eax, [ebp-0x338]
 		push	eax
-		mov		eax, 0x503A70
-		call	eax
-		mov		eax, 0x729506
-		jmp		eax
+		CALL_EAX(0x503A70)
+		JMP_EAX(0x729506)
 	notAmmo:
 		mov		ecx, [ebp-0x6C]
 		test	ecx, ecx
 		jz		done
 		cmp		dword ptr [ecx+4], 0
 	done:
-		mov		eax, 0x7294F0
-		jmp		eax
+		JMP_EAX(0x7294F0)
 	}
 }
 
@@ -614,13 +586,10 @@ __declspec(naked) void QttMenuEnableWheelHook()
 	__asm
 	{
 		mov		eax, g_interfaceManager
-		fldz
-		fcomp	dword ptr [eax+0x44]
-		fnstsw	ax
-		test	ah, 0x44
-		jnp		done
-		test	ah, 1
-		setnz	dl
+		xorps	xmm0, xmm0
+		comiss	xmm0, [eax+0x44]
+		jz		done
+		setb	dl
 		add		dl, 1
 		movzx	eax, dl
 		push	0
@@ -629,8 +598,7 @@ __declspec(naked) void QttMenuEnableWheelHook()
 		call	dword ptr [eax+0xC]
 	done:
 		push	0xFC4
-		mov		eax, 0x7AC17E
-		jmp		eax
+		JMP_EAX(0x7AC17E)
 	}
 }
 
@@ -646,7 +614,7 @@ __declspec(naked) bool __stdcall TerminalGetLockedHook(TESObjectREFR *terminalRe
 		jz		setRes
 		add		ecx, 0x44
 		push	kExtraData_TerminalState
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		test	eax, eax
 		jz		setRes
 		mov		cl, [eax+0xD]
@@ -765,15 +733,13 @@ __declspec(naked) void RemoveHotkeyFixHook()
 		cmp		eax, g_thePlayer
 		jz		doRemove
 		mov		ecx, [ebp+0x18]
-		mov		eax, 0x418770
-		call	eax
+		CALL_EAX(0x418770)
 		movsx	eax, ax
 		cmp		[ebp+0x14], eax
 		jnz		done
 	doRemove:
 		mov		ecx, [ebp+0x18]
-		mov		eax, 0x42DEC0
-		call	eax
+		CALL_EAX(0x42DEC0)
 	done:
 		retn
 	}
@@ -783,11 +749,9 @@ __declspec(naked) void ArmourPenetratedHook()
 {
 	__asm
 	{
-		fld		dword ptr [ebp-0xC]
-		fcomp	dword ptr [ecx+0x14]
-		fnstsw	ax
-		test	ah, 0x41
-		jz		done
+		movss	xmm0, [ebp-0xC]
+		comiss	xmm0, [ecx+0x14]
+		ja		done
 		or		dword ptr [ecx+0x58], 0x80000000
 	done:
 		retn
@@ -834,7 +798,7 @@ __declspec(naked) UInt8 __fastcall GetEntryDataModFlagsHook(ContChangesEntry *en
 		mov		ecx, eax
 		push	ecx
 		push	kExtraData_ItemDropper
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		pop		ecx
 		test	eax, eax
 		jz		noDropper
@@ -844,7 +808,7 @@ __declspec(naked) UInt8 __fastcall GetEntryDataModFlagsHook(ContChangesEntry *en
 		lea		ecx, [eax+0x44]
 	noDropper:
 		push	kExtraData_WeaponModFlags
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		test	eax, eax
 		jz		done
 		mov		al, [eax+0xC]
@@ -899,7 +863,7 @@ __declspec(naked) void RolloverWeaponHook()
 		push	kExtraData_WeaponModFlags
 		mov		ecx, [ebp+8]
 		add		ecx, 0x44
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		test	eax, eax
 		jz		retn1
 		cmp		byte ptr [eax+0xC], 0
@@ -940,7 +904,7 @@ __declspec(naked) void ConstructItemEntryNameHook()
 		cmp		al, kFormType_TESObjectARMO
 		jnz		isWeapon
 		push	kExtraData_Charge
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		test	eax, eax
 		jz		doneExtra
 		cvtss2si	edx, [eax+0xC]
@@ -957,7 +921,7 @@ __declspec(naked) void ConstructItemEntryNameHook()
 	isWeapon:
 		push	ecx
 		push	kExtraData_ItemDropper
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		pop		ecx
 		test	eax, eax
 		jz		noDropper
@@ -967,7 +931,7 @@ __declspec(naked) void ConstructItemEntryNameHook()
 		lea		ecx, [eax+0x44]
 	noDropper:
 		push	kExtraData_WeaponModFlags
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		test	eax, eax
 		jz		doneExtra
 		cmp		byte ptr [eax+0xC], 0
@@ -1012,8 +976,7 @@ __declspec(naked) void ConstructItemEntryNameHook()
 		push	edx
 		push	kTileValue_string
 		mov		ecx, [ebp+8]
-		mov		eax, kAddr_TileSetString
-		call	eax
+		CALL_EAX(kAddr_TileSetString)
 	done:
 		pop		edi
 		pop		esi
@@ -1037,13 +1000,14 @@ __declspec(naked) void ExtractStringHook()
 		jnz		notVar
 		push	edi
 		mov		edi, [ebp-0xE8]
-		mov		dx, si
+		mov		edx, esi
+		ALIGN 16
 	iterHead:
 		mov		al, [ecx]
 		mov		[edi], al
 		inc		ecx
 		inc		edi
-		dec		dx
+		dec		edx
 		jnz		iterHead
 		mov		[edi], 0
 		pop		edi
@@ -1170,10 +1134,8 @@ __declspec(naked) void ProcessGradualSetFloatHook()
 		push	eax
 		push	dword ptr [ecx+0x10]
 		mov		ecx, [ecx+0x14]
-		mov		eax, kAddr_TileSetFloat
-		call	eax
-		mov		eax, 0xA08155
-		jmp		eax
+		CALL_EAX(kAddr_TileSetFloat)
+		JMP_EAX(0xA08155)
 	}
 }
 
@@ -1263,15 +1225,13 @@ __declspec(naked) void PickWeaponModelHook()
 		jz		noBip01
 		push	eax
 		push	dword ptr [ebp+8]
-		mov		eax, 0x4AB750
-		call	eax
+		CALL_EAX(0x4AB750)
 		retn
 	noBip01:
 		push	1
 		push	eax
 		mov		ecx, [ebp+8]
-		mov		eax, 0x522DF0
-		call	eax
+		CALL_EAX(0x522DF0)
 		mov		[ebp-0x1C], eax
 		retn
 	}
@@ -1300,7 +1260,7 @@ __declspec(naked) void PlayAttackSoundHook()
 		mov		ecx, [eax]
 		mov		ecx, [ecx]
 		push	kExtraData_WeaponModFlags
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		pop		edx
 		test	eax, eax
 		jz		done
@@ -1342,8 +1302,7 @@ __declspec(naked) void AddProjectileLightHook()
 		push	dword ptr [ebp-0x14]
 		mov		ecx, ds:[0x11F1958]
 		mov		ecx, [ecx+0x14]
-		mov		eax, 0x9A52F0
-		call	eax
+		CALL_EAX(0x9A52F0)
 		mov		eax, [ebp+8]
 		mov		eax, [eax+0x70]
 		test	eax, eax
@@ -1358,8 +1317,7 @@ __declspec(naked) void AddProjectileLightHook()
 		push	eax
 		push	dword ptr [ebp-0x14]
 		mov		ecx, [ebp-0x18]
-		mov		eax, 0x50D810
-		call	eax
+		CALL_EAX(0x50D810)
 		test	eax, eax
 		jz		done
 		mov		dword ptr [eax+0xA8], 0x12E
@@ -1375,8 +1333,7 @@ __declspec(naked) void AddProjectileLightHook()
 		mov		edx, [ecx+0xB4]
 		mov		[eax+0xC4], edx
 	done:
-		mov		eax, 0x9BD51D
-		jmp		eax
+		JMP_EAX(0x9BD51D)
 	}
 }
 
@@ -1456,8 +1413,7 @@ __declspec(naked) void DeathResponseFixHook()
 		push	1
 		push	1
 	done:
-		mov		eax, 0x984160
-		jmp		eax
+		JMP_EAX(0x984160)
 	}
 }
 
@@ -1470,7 +1426,7 @@ __declspec(naked) void ClearAshPilesHook()
 		push	kExtraData_AshPileRef
 		mov		ecx, [ebp-0x2C]
 		add		ecx, 0x44
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		test	eax, eax
 		jz		doUnload
 		mov		edx, [eax+0xC]
@@ -1479,19 +1435,16 @@ __declspec(naked) void ClearAshPilesHook()
 		push	eax
 		mov		ecx, [ebp-0x2C]
 		add		ecx, 0x44
-		mov		eax, 0x410020
-		call	eax
+		CALL_EAX(0x410020)
 		mov		ecx, [ebp-0x20]
 		test	ecx, ecx
 		jz		done
 		push	kExtraData_AshPileRef
 		add		ecx, 0x44
-		mov		eax, 0x410140
-		call	eax
+		CALL_EAX(0x410140)
 	doUnload:
 		mov		ecx, [ebp-0x2C]
-		mov		eax, 0x572270
-		call	eax
+		CALL_EAX(0x572270)
 	done:
 		retn
 	}
@@ -1508,8 +1461,7 @@ __declspec(naked) void SetAcousticSpaceFixHook()
 		cmp		eax, ds:[0x11DCFB4]
 		jz		done
 		push	eax
-		mov		eax, 0x82EAE0
-		call	eax
+		CALL_EAX(0x82EAE0)
 		pop		ecx
 	done:
 		retn
@@ -1537,8 +1489,7 @@ __declspec(naked) bool __cdecl PickSoundFileFromFolderHook(char *outFilePath)
 		push	dword ptr [ebp+8]
 		lea		ecx, [ebp-0x100]
 		push	ecx
-		mov		eax, 0xAF7400
-		call	eax
+		CALL_EAX(0xAF7400)
 		add		esp, 0xC
 		jmp		done
 	invalidate:
@@ -1547,8 +1498,7 @@ __declspec(naked) bool __cdecl PickSoundFileFromFolderHook(char *outFilePath)
 		push	dword ptr [ebp+8]
 		lea		ecx, [ebp-0x100]
 		push	ecx
-		mov		eax, 0xAFE420
-		call	eax
+		CALL_EAX(0xAFE420)
 		add		esp, 0x10
 		mov		esi, eax
 		mov		dword ptr [edi+1], 'ggo.'
@@ -1557,8 +1507,7 @@ __declspec(naked) bool __cdecl PickSoundFileFromFolderHook(char *outFilePath)
 		push	dword ptr [ebp+8]
 		lea		ecx, [ebp-0x100]
 		push	ecx
-		mov		eax, 0xAFE420
-		call	eax
+		CALL_EAX(0xAFE420)
 		add		esp, 0x10
 		test	esi, esi
 		jnz		hasWAVs
@@ -1593,8 +1542,7 @@ __declspec(naked) bool __cdecl PickSoundFileFromFolderHook(char *outFilePath)
 		inc		edi
 		push	edi
 		mov		ecx, 0x11C4180
-		mov		eax, 0xAA5230
-		call	eax
+		CALL_EAX(0xAA5230)
 		mov		edi, eax
 	clearIter:
 		test	edi, edi
@@ -1607,8 +1555,8 @@ __declspec(naked) bool __cdecl PickSoundFileFromFolderHook(char *outFilePath)
 		push	esi
 		push	dword ptr [esi]
 		mov		esi, [esi+4]
-		call	GameHeapFree
-		call	GameHeapFree
+		GAME_HEAP_FREE
+		GAME_HEAP_FREE
 		test	esi, esi
 		jnz		clearIter
 		mov		al, 1
@@ -1673,8 +1621,7 @@ __declspec(naked) void SetSourceSoundRequestHook()
 		test	eax, eax
 		jnz		iterHead
 	done:
-		mov		eax, 0xAE5527
-		jmp		eax
+		JMP_EAX(0xAE5527)
 	}
 }
 
@@ -1698,8 +1645,7 @@ __declspec(naked) void FillGameSoundPropsHook()
 		push	eax
 		push	0x36
 		mov		ecx, 0x11F6EF0
-		mov		eax, 0xADB1A0
-		call	eax
+		CALL_EAX(0xADB1A0)
 		mov		ecx, [ebp-0xC]
 	done:
 		retn
@@ -1785,8 +1731,7 @@ __declspec(naked) BGSImpactData* __fastcall GetImpactDataHook(BGSImpactDataSet *
 		push	eax
 		push	eax
 		push	edx
-		mov		eax, 0x58F6F0
-		call	eax
+		CALL_EAX(0x58F6F0)
 		pop		ecx
 		test	eax, eax
 		cmovz	eax, ecx
@@ -1800,8 +1745,7 @@ __declspec(naked) UInt32 __fastcall GetFactionReactionHook(TESFaction *faction, 
 	__asm
 	{
 		add		ecx, 0x24
-		mov		eax, 0x48C1B0
-		jmp		eax
+		JMP_EAX(0x48C1B0)
 	}
 }
 
@@ -1847,13 +1791,12 @@ __declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadin
 		jnz		doGeneric
 		test	eax, eax
 		jz		doGeneric
-		mov		esi, ds:[s_locationLoadScreens]
-		mov		edi, ds:[s_locationLoadScreens+4]
+		mov		esi, ds:[s_locationLoadScreens.data]
+		mov		edi, ds:[s_locationLoadScreens.numItems]
 	iter1Head:
 		push	dword ptr [esp]
 		mov		ecx, [esi]
-		mov		eax, 0x5A6EC0
-		call	eax
+		CALL_EAX(0x5A6EC0)
 		test	al, al
 		jz		iter1Next
 		test	bh, bh
@@ -1870,8 +1813,7 @@ __declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadin
 	doAdd1:
 		push	esi
 		mov		ecx, [esp+0x18]
-		mov		eax, 0x7CB2E0
-		call	eax
+		CALL_EAX(0x7CB2E0)
 	iter1Next:
 		add		esi, 4
 		dec		edi
@@ -1880,10 +1822,10 @@ __declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadin
 		cmp		dword ptr [eax+8], 0
 		jnz		done
 	doGeneric:
-		mov		edi, ds:[s_genericLoadScreens+4]
+		mov		edi, ds:[s_genericLoadScreens.numItems]
 		test	edi, edi
 		jz		done
-		mov		esi, ds:[s_genericLoadScreens]
+		mov		esi, ds:[s_genericLoadScreens.data]
 	iter2Head:
 		mov		eax, [esi]
 		test	bl, bl
@@ -1904,8 +1846,7 @@ __declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadin
 	doAdd2:
 		push	esi
 		mov		ecx, [esp+0x18]
-		mov		eax, 0x7CB2E0
-		call	eax
+		CALL_EAX(0x7CB2E0)
 	iter2Next:
 		add		esi, 4
 		dec		edi
@@ -2036,27 +1977,28 @@ __declspec(naked) void WaterToLandClipHook()
 		mov		eax, [eax+0x28]
 		test	eax, eax
 		jz		noData
-		fld1
-		fsubr	dword ptr [eax+0xA0]
+		movss	xmm0, [eax+0xA0]
+		subss	xmm0, kFltOne
 		mov		al, 1
 		jmp		done
 	noData:
-		fldz
+		xorps	xmm0, xmm0
 	done:
-		fstp	dword ptr [ebp-0x20]
+		movss	[ebp-0x20], xmm0
 		mov		[ebp-0x31], al
-		mov		eax, 0x49CA94
-		jmp		eax
+		JMP_EAX(0x49CA94)
 	}
 }
 
 bool s_localizedDTDR = false;
 UInt32 s_doCalcDamage = 0;
 
+float s_VATSHitLocDT = 0;
+
 void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, UInt32 noBlock)
 {
-	if (g_VATSCameraData->mode && (g_VATSCameraData->mode != 4))
-		return;
+	/*if (g_VATSCameraData->mode && (g_VATSCameraData->mode != 4))
+		return;*/
 	if (s_doCalcDamage)
 	{
 		noBlock = s_doCalcDamage - 1;
@@ -2084,10 +2026,17 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	TESObjectWEAP *hitWeapon = hitData->weapon;
 	hitData->wpnBaseDmg = hitData->healthDmg;
 	tList<TESAmmoEffect> *ammoEffects = NULL;
-	if (hitWeapon)
+	if (hitWeapon && hitWeapon->ammo.ammo)
 	{
-		TESAmmo *ammo = ThisCall<TESAmmo*>(0x525980, hitWeapon, source);
-		if (ammo && !ammo->effectList.Empty())
+		TESAmmo *ammo = NULL;
+		if (source)
+		{
+			ContChangesEntry *ammoInfo = source->baseProcess->GetAmmoInfo();
+			if (ammoInfo) ammo = (TESAmmo*)ammoInfo->type;
+		}
+		if (!ammo || NOT_ID(ammo, TESAmmo))
+			ammo = hitWeapon->GetAmmo();
+		if (ammo && IS_ID(ammo, TESAmmo) && !ammo->effectList.Empty())
 		{
 			ammoEffects = &ammo->effectList;
 			hitData->fatigueDmg = ApplyAmmoEffects(kAmmoEffect_FatigueMod, ammoEffects, hitData->fatigueDmg);
@@ -2110,36 +2059,40 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	}
 	else
 	{
-		SInt32 hitLocation = hitData->hitLocation;
-		if (s_localizedDTDR && (hitLocation >= 0) && (hitLocation <= 12) && NOT_TYPE(target, Creature))
+		if (s_localizedDTDR)
 		{
-			ValidBip01Names *validBip = ((Character*)target)->validBip01Names;
-			if (validBip)
+			SInt32 hitLocation = hitData->hitLocation;
+			if ((hitLocation >= 0) && (hitLocation <= 12) && NOT_TYPE(target, Creature))
 			{
-				ValidBip01Names::Data *slotData = validBip->slotData;
-				TESObjectARMO *hitLocArmor;
-				if (hitLocation == 1)
+				ValidBip01Names *validBip = ((Character*)target)->validBip01Names;
+				if (validBip)
 				{
-					hitLocArmor = slotData[2].armor;
-					if (hitLocArmor && IS_TYPE(hitLocArmor, TESObjectARMO))
+					ValidBip01Names::Data *slotData = validBip->slotData;
+					TESObjectARMO *hitLocArmor;
+					if (hitLocation == 1)
 					{
-						hitLocDT = hitLocArmor->damageThreshold;
-						hitLocDR = (float)hitLocArmor->armorRating;
-					}
-				}
-				else
-				{
-					for (UInt32 slotIdx : {0, 1, 9, 10, 14})
-					{
-						hitLocArmor = slotData[slotIdx].armor;
-						if (hitLocArmor && IS_TYPE(hitLocArmor, TESObjectARMO) && !(hitLocArmor->bipedModel.partMask & 4))
+						hitLocArmor = slotData[2].armor;
+						if (hitLocArmor && IS_TYPE(hitLocArmor, TESObjectARMO))
 						{
-							hitLocDT += hitLocArmor->damageThreshold;
-							hitLocDR += (float)hitLocArmor->armorRating;
+							hitLocDT = hitLocArmor->damageThreshold;
+							hitLocDR = (float)hitLocArmor->armorRating;
+						}
+					}
+					else
+					{
+						for (UInt32 slotIdx : {0, 1, 9, 10, 14})
+						{
+							hitLocArmor = slotData[slotIdx].armor;
+							if (hitLocArmor && IS_TYPE(hitLocArmor, TESObjectARMO) && !(hitLocArmor->bipedModel.partMask & 4))
+							{
+								hitLocDT += hitLocArmor->damageThreshold;
+								hitLocDR += (float)hitLocArmor->armorRating;
+							}
 						}
 					}
 				}
 			}
+			s_VATSHitLocDT = hitLocDT;
 		}
 		valueMod1 = 1.0F;
 		if (flagPCTM & 8)
@@ -2162,12 +2115,12 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 		if (ammoEffects)
 			dmgThreshold = ApplyAmmoEffects(kAmmoEffect_DTMod, ammoEffects, dmgThreshold);
 	}
+	HighProcess *hiProcess = (HighProcess*)target->baseProcess;
 	ContChangesEntry *weaponInfo;
-	if (!noBlock && !target->Unk_8D() && ThisCall<bool>(0x894D60, target) &&
+	if (!noBlock && (hiProcess->currentAction == kAnimAction_Block) && !target->Unk_8D() &&
 		CdeclCall<bool>(0x9A6AE0, target, hitData->projectile ? hitData->projectile : (TESObjectREFR*)source, 0))
 	{
-		BaseProcess *process = target->baseProcess;
-		weaponInfo = process->GetWeaponInfo();
+		weaponInfo = hiProcess->weaponInfo;
 		bool noInfo = !weaponInfo;
 		TESObjectWEAP *pWeapon = weaponInfo ? (TESObjectWEAP*)weaponInfo->type : NULL;
 		hitData->flags |= 1;
@@ -2196,23 +2149,24 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 				hitData->blockDTMod += *(float*)0x11CFD90 * target->avOwner.GetActorValue(skillModType);	// fBlockSkillMult
 			dmgThreshold += hitData->blockDTMod;
 		}
-		if (pWeapon && process->IsWeaponOut())
+		if (pWeapon && hiProcess->isWeaponOut)
 			hitData->flags |= 2;
 		else hitData->flags &= ~2;
 	}
 	if (hitWeapon)
 	{
-		hitData->healthDmg = ApplyAmmoEffects(kAmmoEffect_DamageMod, ammoEffects, hitData->healthDmg);
+		if (ammoEffects)
+			hitData->healthDmg = ApplyAmmoEffects(kAmmoEffect_DamageMod, ammoEffects, hitData->healthDmg);
 		if (flagPCTM & 3)
 			ApplyPerkModifiers(kPerkEntry_CalculateWeaponDamage, source, hitWeapon, target, &hitData->healthDmg);
 	}
-	valueMod2 = hitData->healthDmg;
-	hitData->healthDmg *= dmgResist;
-	if (!hitWeapon && source)
+	else if (source)
 	{
 		hitData->weapon = g_fistsWeapon;
 		hitWeapon = g_fistsWeapon;
 	}
+	valueMod2 = hitData->healthDmg;
+	hitData->healthDmg *= dmgResist;
 	valueMod1 = 0;
 	if (flagPCTM & 3)
 	{
@@ -2227,7 +2181,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	bool flagArg;
 	if (dmgThreshold > 0)
 	{
-		if (source && source->baseProcess)
+		if (source)
 		{
 			weaponInfo = source->baseProcess->GetWeaponInfo();
 			if (weaponInfo && ThisCall<bool>(0x4BDA70, weaponInfo, 0xC))
@@ -2340,6 +2294,81 @@ __declspec(naked) void SetHitLocationHook()
 	}
 }
 
+__declspec(naked) float __cdecl GetVATSTargetDTHook(PlayerCharacter *thePlayer, Actor *target)
+{
+	__asm
+	{
+		push	ebp
+		mov		ebp, esp
+		push	0
+		push	esi
+		mov		esi, ds:[0x11D98D4]
+		test	esi, esi
+		cmovz	esi, g_fistsWeapon
+		push	kAVCode_DamageThreshold
+		mov		ecx, [ebp+0xC]
+		add		ecx, 0xA4
+		mov		eax, [ecx]
+		call	dword ptr [eax+0xC]
+		cmp		s_localizedDTDR, 0
+		jz		noLocalized
+		fsub	s_VATSHitLocDT
+	noLocalized:
+		lea		eax, [ebp-4]
+		push	eax
+		push	dword ptr [ebp+0xC]
+		push	esi
+		push	dword ptr [ebp+8]
+		push	kPerkEntry_ModifyDamageThresholdAttacker
+		CALL_EAX(kAddr_ApplyPerkModifiers)
+		add		esp, 0x14
+		fsub	dword ptr [ebp-4]
+		mov		ecx, [ebp+0xC]
+		cmp		byte ptr [ecx+0x18D], 0
+		jz		notTeammate
+		lea		eax, [ebp-4]
+		mov		dword ptr [eax], 0
+		push	eax
+		push	esi
+		push	dword ptr [ebp+8]
+		push	ecx
+		push	kPerkEntry_ModifyDamageThresholdDefender
+		CALL_EAX(kAddr_ApplyPerkModifiers)
+		add		esp, 0x14
+		fadd	dword ptr [ebp-4]
+	notTeammate:
+		cmp		dword ptr [esi+0xA8], 0
+		jz		done
+		mov		ecx, [ebp+8]
+		mov		ecx, [ecx+0x68]
+		mov		ecx, [ecx+0x118]
+		test	ecx, ecx
+		jz		done
+		mov		ecx, [ecx+8]
+		test	ecx, ecx
+		jz		done
+		add		ecx, 0xD4
+		cmp		dword ptr [ecx], 0
+		jz		done
+		push	ecx
+		fstp	dword ptr [esp]
+		push	ecx
+		push	kAmmoEffect_DTMod
+		CALL_EAX(kAddr_ApplyAmmoEffects)
+		add		esp, 0xC
+		fldz
+		fucomip	st, st(1)
+		jbe		done
+		fstp	st
+		fldz
+	done:
+		pop		esi
+		mov		esp, ebp
+		pop		ebp
+		retn
+	}
+}
+
 float s_repairedItemHealth = 0;
 
 __declspec(naked) float GetPCRepairSkill()
@@ -2350,8 +2379,7 @@ __declspec(naked) float GetPCRepairSkill()
 		push	kAVCode_Repair
 		mov		ecx, g_thePlayer
 		add		ecx, 0xA4
-		mov		eax, 0x66EF50
-		call	eax
+		CALL_EAX(0x66EF50)
 		fmul	k0dot6
 		fadd	k40dot0
 		retn
@@ -2377,8 +2405,7 @@ __declspec(naked) void PopulateRepairListHook()
 	{
 		push	dword ptr [ebp+8]
 		push	dword ptr [eax+8]
-		mov		eax, 0x47BB50
-		call	eax
+		CALL_EAX(0x47BB50)
 		add		esp, 8
 		test	al, al
 		jz		done
@@ -2387,11 +2414,11 @@ __declspec(naked) void PopulateRepairListHook()
 		cmp		[ebp+8], edx
 		jnz		done
 		push	1
-		call	GetItemHealthPerc
-		fcomp	s_repairedItemHealth
-		fnstsw	ax
-		test	ah, 0x41
-		setnp	al
+		CALL_EAX(kAddr_GetItemHealthPerc)
+		fld		s_repairedItemHealth
+		fucomip	st, st(1)
+		setnbe	al
+		fstp	st
 	done:
 		retn
 	}
@@ -2409,17 +2436,12 @@ __declspec(naked) void SetRepairListValuesHook()
 		push	dword ptr [ebp-0xC]
 		push	dword ptr [ebp-4]
 		push	dword ptr [ebp-8]
-		mov		eax, 0x648090
-		call	eax
+		CALL_EAX(0x648090)
 		add		esp, 0x10
-		fst		dword ptr [ebp-8]
-		fcomp	dword ptr [ebp-0x14]
-		fnstsw	ax
-		test	ah, 0x41
-		jz		lvlCap
-		fld		dword ptr [ebp-8]
-		jmp		done
-	lvlCap:
+		fld		dword ptr [ebp-0x14]
+		fucomip	st, st(1)
+		jnb		done
+		fstp	st
 		fld		dword ptr [ebp-0x14]
 	done:
 		fdiv	kFlt100
@@ -2435,22 +2457,16 @@ __declspec(naked) void DoRepairItemHook()
 		fst		dword ptr [ebp-0x18]
 		fistp	dword ptr [ebp-0x14]
 		push	dword ptr [ebp-0x14]
-		mov		eax, 0x648090
-		call	eax
+		CALL_EAX(0x648090)
 		add		esp, 0x10
-		fst		dword ptr [ebp-0x14]
-		fcomp	dword ptr [ebp-0x18]
-		fnstsw	ax
-		test	ah, 0x41
-		jz		lvlCap
-		fld		dword ptr [ebp-0x14]
-		jmp		done
-	lvlCap:
+		fld		dword ptr [ebp-0x18]
+		fucomip	st, st(1)
+		jnb		done
+		fstp	st
 		fld		dword ptr [ebp-0x18]
 	done:
 		fdiv	kFlt100
-		mov		eax, 0x7B5E08
-		jmp		eax
+		JMP_EAX(0x7B5E08)
 	}
 }
 
@@ -2461,16 +2477,15 @@ __declspec(naked) void RepairMenuClickHook()
 		call	GetPCRepairSkill
 		push	1
 		mov		ecx, ds:[0x11DA760]
-		call	GetItemHealthPerc
+		CALL_EAX(kAddr_GetItemHealthPerc)
 		fcompp
 		retn
 	}
 }
 
-const double kDegrMultDefault = 0.2, kDegrMultSmallGuns = 0.03, kDegrMultEnergyWpn = 0.04, kDegrMultUnarmedMelee = 0.05, kDegrMultBigGuns = 0.06;
-
 __declspec(naked) void DamageToWeaponHook()
 {
+	static const float kDegrMultDefault = 0.2F, kDegrMultSmallGuns = 0.03F, kDegrMultEnergyWpn = 0.04F, kDegrMultUnarmedMelee = 0.05F, kDegrMultBigGuns = 0.06F;
 	__asm
 	{
 		mov		eax, ds:[0x11CF154]
@@ -2489,20 +2504,19 @@ __declspec(naked) void DamageToWeaponHook()
 		test	ecx, ecx
 		jz		defaultDmg
 		mov		[ebp-8], ecx
-		fld		dword ptr [ebp-4]
-		fdiv	kDegrMultDefault
 		movzx	eax, word ptr [ecx+0xA0]
-		mov		[ebp-0xC], eax
-		fimul	dword ptr [ebp-0xC]
+		cvtsi2ss	xmm0, eax
+		mulss	xmm0, [ebp-4]
+		divss	xmm0, kDegrMultDefault
 		mov		al, [ecx+0x15C]
 		cmp		al, kAVCode_Guns
 		jnz		checkSkill1
-		fmul	kDegrMultSmallGuns
+		mulss	xmm0, kDegrMultSmallGuns
 		jmp		done
 	checkSkill1:
 		cmp		al, kAVCode_EnergyWeapons
 		jnz		checkSkill2
-		fmul	kDegrMultEnergyWpn
+		mulss	xmm0, kDegrMultEnergyWpn
 		jmp		done
 	checkSkill2:
 		cmp		al, kAVCode_Explosives
@@ -2510,22 +2524,18 @@ __declspec(naked) void DamageToWeaponHook()
 		cmp		al, kAVCode_BigGuns
 		jnz		checkSkill3
 	checkSkill2a:
-		fmul	kDegrMultBigGuns
+		mulss	xmm0, kDegrMultBigGuns
 		jmp		done
 	checkSkill3:
 		cmp		al, kAVCode_MeleeWeapons
 		jz		checkSkill3a
 		cmp		al, kAVCode_Unarmed
-		jz		checkSkill3a
-		fstp	st
-		jmp		defaultDmg
+		jnz		defaultDmg
 	checkSkill3a:
-		fmul	kDegrMultUnarmedMelee
-		jmp		done
-	defaultDmg:
-		fld		dword ptr [ebp-4]
+		mulss	xmm0, kDegrMultUnarmedMelee
 	done:
-		fstp	dword ptr [ebp-4]
+		movss	[ebp-4], xmm0
+	defaultDmg:
 		retn
 	}
 }
@@ -2560,8 +2570,7 @@ __declspec(naked) void QttSelectInventoryHook()
 		cmp		byte ptr [ecx+0x17E], 0
 		jnz		dropAll
 		mov		eax, 0x11D241C
-		mov		edx, 0x780B13
-		jmp		edx
+		JMP_EDX(0x780B13)
 	dropOne:
 		push	1
 		jmp		edx
@@ -2586,8 +2595,7 @@ __declspec(naked) void QttSelectContainerHook()
 		cmp		byte ptr [ecx+0x17E], 0
 		jnz		dropAll
 		mov		eax, 0x11D241C
-		mov		edx, 0x75BFA1
-		jmp		edx
+		JMP_EDX(0x75BFA1)
 	dropOne:
 		push	1
 		jmp		edx
@@ -2612,8 +2620,7 @@ __declspec(naked) void QttSelectBarterHook()
 		cmp		byte ptr [ecx+0x17E], 0
 		jnz		dropAll
 		mov		eax, 0x11D241C
-		mov		edx, 0x72D8BE
-		jmp		edx
+		JMP_EDX(0x72D8BE)
 	dropOne:
 		push	1
 		jmp		edx
@@ -2708,18 +2715,15 @@ __declspec(naked) void InitControllerShapeHook()
 		push	eax
 		sub		eax, 0x14
 		push	eax
-		mov		eax, 0xC70DE0
-		call	eax
+		CALL_EAX(0xC70DE0)
 		add		esp, 0x10
 		push	eax
 		mov		ecx, offset s_pcControllerShape
-		mov		eax, 0x66B0D0
-		call	eax
+		CALL_EAX(0x66B0D0)
 	done:
 		push	eax
 		lea		ecx, [ebx+0x5A8]
-		mov		eax, 0xC663D0
-		call	eax
+		CALL_EAX(0xC663D0)
 		retn
 	}
 }
@@ -2883,44 +2887,37 @@ __declspec(naked) bool ModHardcoreNeedsHook()
 	{
 		cmp		s_hardcoreNeedsFix, 0
 		jz		tracking
-		cmp		dword ptr [ecx+0x49C], 0
+		xor		edx, edx
+		xorps	xmm1, xmm1
+		cmp		[ecx+0x49C], edx
 		jz		FOD
-		fld		dword ptr [ecx+0x49C]
-		mov		dword ptr [ecx+0x49C], 0
-		fadd	dword ptr [ecx+0x5D4]
-		fst		dword ptr [ecx+0x5D4]
-		fldz
-		fcompp
-		fnstsw	ax
-		test	ah, 0x41
-		jnp		FOD
-		mov		dword ptr [ecx+0x5D4], 0
+		movss	xmm0, [ecx+0x49C]
+		mov		[ecx+0x49C], edx
+		addss	xmm0, [ecx+0x5D4]
+		movss	[ecx+0x5D4], xmm0
+		comiss	xmm0, xmm1
+		jnb		FOD
+		mov		[ecx+0x5D4], edx
 	FOD:
-		cmp		dword ptr [ecx+0x4A0], 0
+		cmp		[ecx+0x4A0], edx
 		jz		SLP
-		fld		dword ptr [ecx+0x4A0]
-		mov		dword ptr [ecx+0x4A0], 0
-		fadd	dword ptr [ecx+0x5D8]
-		fst		dword ptr [ecx+0x5D8]
-		fldz
-		fcompp
-		fnstsw	ax
-		test	ah, 0x41
-		jnp		SLP
-		mov		dword ptr [ecx+0x5D8], 0
+		movss	xmm0, [ecx+0x4A0]
+		mov		[ecx+0x4A0], edx
+		addss	xmm0, [ecx+0x5D8]
+		movss	[ecx+0x5D8], xmm0
+		comiss	xmm0, xmm1
+		jnb		SLP
+		mov		[ecx+0x5D8], edx
 	SLP:
-		cmp		dword ptr [ecx+0x4A4], 0
+		cmp		[ecx+0x4A4], edx
 		jz		tracking
-		fld		dword ptr [ecx+0x4A4]
-		mov		dword ptr [ecx+0x4A4], 0
-		fadd	dword ptr [ecx+0x5DC]
-		fst		dword ptr [ecx+0x5DC]
-		fldz
-		fcompp
-		fnstsw	ax
-		test	ah, 0x41
-		jnp		tracking
-		mov		dword ptr [ecx+0x5DC], 0
+		movss	xmm0, [ecx+0x4A4]
+		mov		[ecx+0x4A4], edx
+		addss	xmm0, [ecx+0x5DC]
+		movss	[ecx+0x5DC], xmm0
+		comiss	xmm0, xmm1
+		jnb		tracking
+		mov		[ecx+0x5DC], edx
 	tracking:
 		test	s_serializedFlags, kSerializedFlag_NoHardcoreTracking
 		jz		done
@@ -2932,149 +2929,181 @@ __declspec(naked) bool ModHardcoreNeedsHook()
 	}
 }
 
+#define OPERATOR_RES_FLT __asm movq qword ptr [ebp-8], xmm0 __asm mov [ebp-0x10], 1 __asm retn __asm ALIGN 16
+#define OPERATOR_RES_EAX __asm mov [ebp-8], eax __asm retn __asm ALIGN 16
+#define OPERATOR_RES_EDX __asm mov [ebp-8], edx __asm retn __asm ALIGN 16
+#define OPERATOR_CMP_FLT(cmpr) __asm xor edx, edx __asm comisd xmm0, xmm1 __asm set##cmpr dl OPERATOR_RES_EDX
+#define OPERATOR_CMP_INT(cmpr) __asm xor edx, edx __asm cmp eax, ecx __asm set##cmpr dl OPERATOR_RES_EDX
+
 __declspec(naked) void DoOperator()
 {
 	__asm
 	{
+//	Operator &&
+		xor		edx, edx
+		pxor	xmm0, xmm0
+		test	al, al
+		jz		lIntAND
+		comisd	xmm0, qword ptr [ebp-0x20]
+		jz		doneAND
+		jmp		doRAND
+	lIntAND:
+		cmp		[ebp-0x20], edx
+		jz		doneAND
+	doRAND:
+		test	cl, cl
+		jz		rIntAND
+		comisd	xmm0, qword ptr [ebp-0x38]
+		jmp		doneAND
+	rIntAND:
+		cmp		[ebp-0x38], edx
+	doneAND:
+		setnz	dl
+		OPERATOR_RES_EDX
+//	Operator ||
+		xor		edx, edx
+		pxor	xmm0, xmm0
+		test	al, al
+		jz		lIntOR
+		comisd	xmm0, qword ptr [ebp-0x20]
+		jnz		doneOR
+		jmp		doROR
+	lIntOR:
+		cmp		[ebp-0x20], edx
+		jnz		doneOR
+	doROR:
+		test	cl, cl
+		jz		rIntOR
+		comisd	xmm0, qword ptr [ebp-0x38]
+		jmp		doneOR
+	rIntOR:
+		cmp		[ebp-0x38], edx
+	doneOR:
+		setnz	dl
+		OPERATOR_RES_EDX
 //	Operator <= (flt)
-		comisd		xmm0, xmm1
-		setbe		al
-		jmp			retnBool
+		OPERATOR_CMP_FLT(be)
 //	Operator <= (int)
-		cmp			eax, ecx
-		setle		al
-		jmp			retnBool
+		OPERATOR_CMP_INT(le)
 //	Operator < (flt)
-		comisd		xmm0, xmm1
-		setb		al
-		jmp			retnBool
+		OPERATOR_CMP_FLT(b)
 //	Operator < (int)
-		cmp			eax, ecx
-		setl		al
-		jmp			retnBool
+		OPERATOR_CMP_INT(l)
 //	Operator >= (flt)
-		comisd		xmm0, xmm1
-		setnb		al
-		jmp			retnBool
+		OPERATOR_CMP_FLT(nb)
 //	Operator >= (int)
-		cmp			eax, ecx
-		setnl		al
-		jmp			retnBool
+		OPERATOR_CMP_INT(nl)
 //	Operator > (flt)
-		comisd		xmm0, xmm1
-		setnbe		al
-		jmp			retnBool
+		OPERATOR_CMP_FLT(nbe)
 //	Operator > (int)
-		cmp			eax, ecx
-		setnle		al
-		jmp			retnBool
+		OPERATOR_CMP_INT(nle)
 //	Operator == (flt)
-		comisd		xmm0, xmm1
-		setz		al
-		jmp			retnBool
+		OPERATOR_CMP_FLT(z)
 //	Operator == (int)
-		cmp			eax, ecx
-		setz		al
-		jmp			retnBool
+		OPERATOR_CMP_INT(z)
 //	Operator != (flt)
-		comisd		xmm0, xmm1
-		setnz		al
-		jmp			retnBool
+		OPERATOR_CMP_FLT(nz)
 //	Operator != (int)
-		cmp			eax, ecx
-		setnz		al
-		jmp			retnBool
+		OPERATOR_CMP_INT(nz)
 //	Operator - (flt)
-		subsd		xmm0, xmm1
-		jmp			retnFlt
+		subsd	xmm0, xmm1
+		OPERATOR_RES_FLT
 //	Operator - (int)
-		sub			eax, ecx
-		jmp			retnInt
+		sub		eax, ecx
+		OPERATOR_RES_EAX
 //	Operator + (flt)
-		addsd		xmm0, xmm1
-		jmp			retnFlt
+		addsd	xmm0, xmm1
+		OPERATOR_RES_FLT
 //	Operator + (int)
-		add			eax, ecx
-		jmp			retnInt
+		add		eax, ecx
+		OPERATOR_RES_EAX
 //	Operator * (flt)
-		mulsd		xmm0, xmm1
-		jmp			retnFlt
+		mulsd	xmm0, xmm1
+		OPERATOR_RES_FLT
 //	Operator * (int)
-		imul		eax, ecx
-		jmp			retnInt
+		imul	eax, ecx
+		OPERATOR_RES_EAX
 //	Operator / (flt)
-		comisd		xmm1, kDblZero
-		jz			retnFlt
-		divsd		xmm0, xmm1
-		jmp			retnFlt
+		comisd	xmm1, kDblZero
+		jz		div0Flt
+		divsd	xmm0, xmm1
+	div0Flt:
+		OPERATOR_RES_FLT
 //	Operator / (int)
-		test		ecx, ecx
-		jz			retnInt
-		cdq
-		idiv		ecx
-		jmp			retnInt
+		test	ecx, ecx
+		jz		div0Int
+		xor		edx, edx
+		idiv	ecx
+	div0Int:
+		OPERATOR_RES_EAX
 //	Operator % (flt)
 		cvttsd2si	eax, xmm0
 		cvttsd2si	ecx, xmm1
+		xor		edx, edx
+		test	ecx, ecx
+		jz		mod0Flt
+		idiv	ecx
+	mod0Flt:
+		OPERATOR_RES_EDX
 //	Operator % (int)
-		test		ecx, ecx
-		jz			retnInt
-		cdq
-		idiv		ecx
-		mov			eax, edx
-		jmp			retnInt
-	retnBool:
-		movzx		eax, al
-	retnInt:
-		mov			byte ptr [ebp-0x10], 0
-		mov			[ebp-8], eax
-		jmp			done
-	retnFlt:
-		mov			byte ptr [ebp-0x10], 1
-		movq		qword ptr [ebp-8], xmm0
-	done:
-		mov			eax, 0x5948BB
-		jmp			eax
+		xor		edx, edx
+		test	ecx, ecx
+		jz		mod0Int
+		idiv	ecx
+	mod0Int:
+		OPERATOR_RES_EDX
 	}
 }
 
 const UInt32 kDoOperatorJumpTable[] =
 {
-	0x593FC9, 0x593FC9, 0x5940B4, 0x5940B4, (UInt32)DoOperator, (UInt32)DoOperator + 0xC,
-	(UInt32)DoOperator + 0x16, (UInt32)DoOperator + 0x22, (UInt32)DoOperator + 0x2C, (UInt32)DoOperator + 0x38,
-	(UInt32)DoOperator + 0x3F, (UInt32)DoOperator + 0x48, (UInt32)DoOperator + 0x4F, (UInt32)DoOperator + 0x58,
-	(UInt32)DoOperator + 0x5F, (UInt32)DoOperator + 0x68, (UInt32)DoOperator + 0x6F, (UInt32)DoOperator + 0x75,
-	(UInt32)DoOperator + 0x79, (UInt32)DoOperator + 0x7F, (UInt32)DoOperator + 0x83, (UInt32)DoOperator + 0x89,
-	(UInt32)DoOperator + 0x8E, (UInt32)DoOperator + 0x9E, (UInt32)DoOperator + 0xA7, (UInt32)DoOperator + 0xAF
+	(UInt32)DoOperator, (UInt32)DoOperator,
+	(UInt32)DoOperator + 0x30, (UInt32)DoOperator + 0x30,
+	(UInt32)DoOperator + 0x60, (UInt32)DoOperator + 0x70,
+	(UInt32)DoOperator + 0x80, (UInt32)DoOperator + 0x90,
+	(UInt32)DoOperator + 0xA0, (UInt32)DoOperator + 0xB0,
+	(UInt32)DoOperator + 0xC0, (UInt32)DoOperator + 0xD0,
+	(UInt32)DoOperator + 0xE0, (UInt32)DoOperator + 0xF0,
+	(UInt32)DoOperator + 0x100, (UInt32)DoOperator + 0x110,
+	(UInt32)DoOperator + 0x120, (UInt32)DoOperator + 0x130,
+	(UInt32)DoOperator + 0x140, (UInt32)DoOperator + 0x150,
+	(UInt32)DoOperator + 0x160, (UInt32)DoOperator + 0x170,
+	(UInt32)DoOperator + 0x180, (UInt32)DoOperator + 0x1A0,
+	(UInt32)DoOperator + 0x1B0, (UInt32)DoOperator + 0x1D0
 };
 
 __declspec(naked) void DoOperatorHook()
 {
 	__asm
 	{
-		shl			dl, 3
-		cmp			dl, 8
-		jbe			doJump
-		cmp			byte ptr [ebp-0x28], 0
-		jnz			lValFlt
-		cmp			byte ptr [ebp-0x40], 0
-		jnz			lValCvt
-		mov			eax, [ebp-0x20]
-		mov			ecx, [ebp-0x38]
-		add			edx, 4
-		jmp			doJump
+		mov		al, [ebp-0x28]
+		mov		cl, [ebp-0x40]
+		shl		edx, 3
+		cmp		edx, 8
+		jbe		doJump
+		test	al, al
+		jnz		lValFlt
+		test	cl, cl
+		jnz		lValCvt
+		mov		eax, [ebp-0x20]
+		mov		ecx, [ebp-0x38]
+		add		edx, 4
+		jmp		doJump
+		ALIGN 16
 	lValFlt:
-		movq		xmm0, qword ptr [ebp-0x20]
-		cmp			byte ptr [ebp-0x40], 0
-		jnz			rValFlt
+		movq	xmm0, qword ptr [ebp-0x20]
+		test	cl, cl
+		jnz		rValFlt
 		cvtsi2sd	xmm1, [ebp-0x38]
-		jmp			doJump
+		jmp		doJump
 	lValCvt:
 		cvtsi2sd	xmm0, [ebp-0x20]
 	rValFlt:
-		movq		xmm1, qword ptr [ebp-0x38]
+		movq	xmm1, qword ptr [ebp-0x38]
 	doJump:
-		jmp			kDoOperatorJumpTable[edx]
+		mov		[ebp-0x10], 0
+		push	0x5948BB
+		jmp		kDoOperatorJumpTable[edx]
 	}
 }
 
@@ -3082,8 +3111,7 @@ __declspec(naked) void DefaultTextureHook()
 {
 	__asm
 	{
-		mov		eax, 0xAFE220
-		call	eax
+		CALL_EAX(0xAFE220)
 		mov		[ebp-8], eax
 		test	eax, eax
 		jnz		done
@@ -3103,8 +3131,7 @@ __declspec(naked) void DefaultTextureHook()
 		mov		ecx, offset s_missingTextures
 		call	DebugLog::Message
 	done:
-		mov		eax, 0xAFE19E
-		jmp		eax
+		JMP_EAX(0xAFE19E)
 	}
 }
 
@@ -3117,10 +3144,16 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 {
 	switch (patchID)
 	{
+		default:
 		case 0:
 			return 0;
 		case 1:
-			return HOOK_SET(CalculateHitDamage, bEnable) ? 1 : 0;
+			if (HOOK_SET(CalculateHitDamage, bEnable))
+			{
+				if (!bEnable) s_localizedDTDR = false;
+				return 1;
+			}
+			return 0;
 		case 2:
 		{
 			if (!HOOK_SET(EnableRepairButton, bEnable))
@@ -3188,7 +3221,7 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 		case 11:
 			return HOOK_SET(DamageToWeapon, bEnable) ? 11 : 0;
 		case 12:
-			if (s_localizedDTDR == bEnable)
+			if ((s_localizedDTDR == bEnable) || !HOOK_INSTALLED(CalculateHitDamage))
 				return 0;
 			s_localizedDTDR = bEnable;
 			return 12;
@@ -3241,8 +3274,6 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			WriteRelCall(0x54E2A4, (UInt32)ResetActorFlagsRespawnHook);
 			return 17;
 		}
-		default:
-			return 0;
 	}
 }
 
@@ -3263,7 +3294,7 @@ __declspec(naked) void InitFontManagerHook()
 		cmp		dword ptr [esi], 0
 		jnz		done
 		push	0x164
-		call	GameHeapAlloc
+		GAME_HEAP_ALLOC
 		mov		[esi], eax
 		mov		[ebp-4], eax
 		mov		dword ptr [eax+0x20], 0
@@ -3272,12 +3303,12 @@ __declspec(naked) void InitFontManagerHook()
 		mov		ebx, 1
 	defFontHead:
 		push	0x54
-		call	GameHeapAlloc
+		GAME_HEAP_ALLOC
 		push	1
 		push	dword ptr [edi]
 		push	ebx
 		mov		ecx, eax
-		call	InitFontInfo
+		CALL_EAX(kAddr_InitFontInfo)
 		mov		[esi], eax
 		push	eax
 		push	dword ptr [edi]
@@ -3285,7 +3316,7 @@ __declspec(naked) void InitFontManagerHook()
 		call	UnorderedMap<const char*, FontInfo*>::InsertNotIn
 		add		esi, 4
 		add		edi, 0xC
-		inc		bl
+		inc		ebx
 		cmp		bl, 9
 		jb		defFontHead
 		mov		eax, [ebp-4]
@@ -3293,7 +3324,7 @@ __declspec(naked) void InitFontManagerHook()
 		mov		[ebp-4], eax
 		mov		edi, offset s_extraFontsPaths
 	extFontHead:
-		inc		bl
+		inc		ebx
 		cmp		bl, 0x5A
 		jnb		done
 		cmp		dword ptr [edi], 0
@@ -3304,12 +3335,12 @@ __declspec(naked) void InitFontManagerHook()
 		test	eax, eax
 		jnz		extFontNext
 		push	0x54
-		call	GameHeapAlloc
+		GAME_HEAP_ALLOC
 		push	1
 		push	dword ptr [edi]
 		push	ebx
 		mov		ecx, eax
-		call	InitFontInfo
+		CALL_EAX(kAddr_InitFontInfo)
 		cmp		dword ptr [eax+0x38], 0
 		jz		doFree
 		push	eax
@@ -3319,7 +3350,7 @@ __declspec(naked) void InitFontManagerHook()
 		jmp		extFontNext
 	doFree:
 		push	eax
-		call	GameHeapFree
+		GAME_HEAP_FREE
 	useDefault:
 		mov		eax, [ebp-4]
 	extFontNext:
@@ -3616,6 +3647,7 @@ void InitGamePatches()
 	WriteRelCall(0x86AC60, (UInt32)ProcessCustomINI);
 
 	WritePushRetRelJump(0x9B6E81, 0x9B6EC4, (UInt32)SetHitLocationHook);
+	WriteRelCall(0x7ECE32, (UInt32)GetVATSTargetDTHook);
 
 	HOOK_INIT_JUMP(CalculateHitDamage, 0x9B5A30);
 	HOOK_INIT_JPRT(EnableRepairButton, 0x7818C8, 0x7818D3);

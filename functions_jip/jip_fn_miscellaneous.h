@@ -474,34 +474,52 @@ bool Cmd_SetLocalGravityVector_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool SetOnKeyEventHandler_Execute(COMMAND_ARGS, UInt32 eventMask)
+UInt32 s_onKeyEventMask = 0;
+
+bool SetOnKeyEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt;
 	SInt32 keyID = -1;
 	if (ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &keyID) && IS_TYPE(script, Script))
-		SetDInputEventHandler(eventMask, script, keyID, addEvnt != 0);
+		SetDInputEventHandler(s_onKeyEventMask, script, keyID, addEvnt != 0);
 	return true;
 }
 
-bool Cmd_SetOnKeyDownEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_SetOnKeyDownEventHandler_Execute(COMMAND_ARGS)
 {
-	return SetOnKeyEventHandler_Execute(PASS_COMMAND_ARGS, kLNEventMask_OnKeyDown);
+	__asm
+	{
+		mov		s_onKeyEventMask, kLNEventMask_OnKeyDown
+		jmp		SetOnKeyEventHandler_Execute
+	}
 }
 
-bool Cmd_SetOnKeyUpEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_SetOnKeyUpEventHandler_Execute(COMMAND_ARGS)
 {
-	return SetOnKeyEventHandler_Execute(PASS_COMMAND_ARGS, kLNEventMask_OnKeyUp);
+	__asm
+	{
+		mov		s_onKeyEventMask, kLNEventMask_OnKeyUp
+		jmp		SetOnKeyEventHandler_Execute
+	}
 }
 
-bool Cmd_SetOnControlDownEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_SetOnControlDownEventHandler_Execute(COMMAND_ARGS)
 {
-	return SetOnKeyEventHandler_Execute(PASS_COMMAND_ARGS, kLNEventMask_OnControlDown);
+	__asm
+	{
+		mov		s_onKeyEventMask, kLNEventMask_OnControlDown
+		jmp		SetOnKeyEventHandler_Execute
+	}
 }
 
-bool Cmd_SetOnControlUpEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_SetOnControlUpEventHandler_Execute(COMMAND_ARGS)
 {
-	return SetOnKeyEventHandler_Execute(PASS_COMMAND_ARGS, kLNEventMask_OnControlUp);
+	__asm
+	{
+		mov		s_onKeyEventMask, kLNEventMask_OnControlUp
+		jmp		SetOnKeyEventHandler_Execute
+	}
 }
 
 bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
@@ -779,9 +797,9 @@ bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 		if (rotationKeys)
 		{
 			NiQuaternion quaternion;
-			rotYPR.x *= kDblPId180;
-			rotYPR.y *= kDblPId180;
-			rotYPR.z *= kDblPId180;
+			rotYPR.x *= kFltPId180;
+			rotYPR.y *= kFltPId180;
+			rotYPR.z *= kFltPId180;
 			rotYPR.ToQuaternion(quaternion);
 			rotationKeys[1].value = quaternion;
 			rotationKeys[1].quaternion20 = quaternion;
@@ -1012,8 +1030,7 @@ __declspec(naked) BGSProjectile* __fastcall GetWeaponProjectileHook(TESObjectWEA
 	{
 		push	ecx
 		push	dword ptr [esp+8]
-		mov		eax, 0x525980
-		call	eax
+		CALL_EAX(0x525980)
 		pop		ecx
 		test    eax, eax
 		jz		weapProj
@@ -1063,8 +1080,7 @@ __declspec(naked) TESForm* __fastcall GetWeaponAmmoHook(TESObjectWEAP *weapon, i
 	baseWeap:
 		pop		ecx
 		add		ecx, 0xA4
-		mov		eax, 0x474920
-		call	eax
+		CALL_EAX(0x474920)
 		retn	4
 	retnNull:
 		xor		eax, eax
