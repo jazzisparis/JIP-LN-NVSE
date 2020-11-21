@@ -324,7 +324,7 @@ bool Cmd_ClickMenuButton_Execute(COMMAND_ARGS)
 	Tile *component = NULL;
 	Menu *parentMenu = NULL;
 	SInt32 tileID = -1;
-	char *hashPos = FindChr(s_strArgBuffer, '#');
+	char *hashPos = strchr(s_strArgBuffer, '#');
 	if (hashPos)
 	{
 		tileID = StrToInt(hashPos + 1);
@@ -537,13 +537,11 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 	{
 		push	esi
 		push	edi
-		mov		eax, 0x703DA0
-		call	eax
+		CALL_EAX(0x703DA0)
 		mov		esi, g_interfaceManager
 		push	offset altXMLPath
 		mov		ecx, [esi+0x9C]
-		mov		eax, 0xA01B00
-		call	eax
+		CALL_EAX(0xA01B00)
 		mov		edi, [eax+0x3C]
 		test	edi, edi
 		jz		done
@@ -551,8 +549,7 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		mov		dword ptr [edi+0x14], 0x41B
 		push	0x41B
 		mov		ecx, esi
-		mov		eax, 0x714D90
-		call	eax
+		CALL_EAX(0x714D90)
 		cmp		[esi+0xD0], edi
 		jz		isActive
 		mov		ecx, [esi+0xCC]
@@ -561,36 +558,31 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		push	1
 		push	0
 		push	kTileValue_mouseover
-		mov		eax, kAddr_TileSetFloat
-		call	eax
+		CALL_EAX(kAddr_TileSetFloat)
 	resetActive:
 		mov		dword ptr [esi+0xCC], 0
 		mov		dword ptr [esi+0xD0], 0
 	isActive:
 		mov		ds:[0x11DAEC4], edi
-		mov		eax, 0xA1DFB0
-		call	eax
+		CALL_EAX(0xA1DFB0)
 		push	1
 		push	ecx
 		fstp	dword ptr [esp]
 		push	kTileValue_depth
 		mov		ecx, [edi+4]
-		mov		eax, kAddr_TileSetFloat
-		call	eax
+		CALL_EAX(kAddr_TileSetFloat)
 		mov		eax, [esp+0xC]
 		push	1
 		push	eax
 		push	kTileValue_user0
 		mov		ecx, [edi+4]
-		mov		eax, kAddr_TileSetFloat
-		call	eax
+		CALL_EAX(kAddr_TileSetFloat)
 		mov		eax, [esp+0x10]
 		push	1
 		push	eax
 		push	kTileValue_user1
 		mov		ecx, [edi+4]
-		mov		eax, kAddr_TileSetFloat
-		call	eax
+		CALL_EAX(kAddr_TileSetFloat)
 		mov		esi, offset s_strArgBuffer
 		mov		[esi+0x50], 0
 		cmp		[esi], 0
@@ -599,19 +591,16 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		push	0
 		push	kTileValue_visible
 		mov		ecx, [edi+0x30]
-		mov		eax, kAddr_TileSetFloat
-		call	eax
+		CALL_EAX(kAddr_TileSetFloat)
 	hasTitle:
 		push	1
 		push	esi
 		push	kTileValue_string
 		mov		ecx, [edi+0x30]
-		mov		eax, kAddr_TileSetString
-		call	eax
+		CALL_EAX(kAddr_TileSetString)
 		push	kTileValue_font
 		mov		ecx, [edi+0x28]
-		mov		eax, kAddr_TileGetFloat
-		call	eax
+		CALL_EAX(kAddr_TileGetFloat)
 		fistp	dword ptr [edi+0x4C]
 		mov		ecx, [edi+0x4C]
 		mov		esi, offset s_fontHeightDatas
@@ -620,14 +609,12 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		push	dword ptr [esi]
 		push	kTileValue_user0
 		mov		ecx, [edi+0x28]
-		mov		eax, kAddr_TileSetFloat
-		call	eax
+		CALL_EAX(kAddr_TileSetFloat)
 		push	1
 		push	dword ptr [esi+4]
 		push	kTileValue_user1
 		mov		ecx, [edi+0x28]
-		mov		eax, kAddr_TileSetFloat
-		call	eax
+		CALL_EAX(kAddr_TileSetFloat)
 		push	0x400
 		lea		ecx, [edi+0x34]
 		call	String::Init
@@ -641,8 +628,7 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		push	dword ptr ds:[0x11D38BC]
 		push	kTileValue_string
 		mov		ecx, [edi+0x2C]
-		mov		eax, kAddr_TileSetString
-		call	eax
+		CALL_EAX(kAddr_TileSetString)
 		mov		dword ptr [edi+0x44], 0
 		mov		dword ptr [edi+0x48], 0x7FFF0001
 		mov		eax, [edi+0x28]
@@ -655,8 +641,7 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		call	TextInputRefreshHook
 		push	0
 		mov		ecx, edi
-		mov		eax, 0xA1DC20
-		call	eax
+		CALL_EAX(0xA1DC20)
 		push	1
 		mov		ecx, offset s_hookInfos+kHook_TextInputClose*0x10
 		call	HookInfo::Set
@@ -785,7 +770,7 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 	if (slashPos) *slashPos = 0;
 	else
 	{
-		hashPos = FindChr(s_strArgBuffer, '#');
+		hashPos = strchr(s_strArgBuffer, '#');
 		if (hashPos) *hashPos = 0;
 	}
 	UInt32 menuID = s_menuNameToID.Get(s_strArgBuffer);
@@ -862,7 +847,9 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 	return true;
 }
 
-void SetOnMenuStateEvent(Script *script, bool doAdd, char idx, UInt8 evtType)
+UInt8 s_menuStateEventType = 0;
+
+void SetOnMenuStateEvent(Script *script, bool doAdd, char idx)
 {
 	MenuStateCallbacks *callbacks = s_menuStateEventMap[idx];
 	if (!callbacks)
@@ -872,11 +859,11 @@ void SetOnMenuStateEvent(Script *script, bool doAdd, char idx, UInt8 evtType)
 		new (callbacks) MenuStateCallbacks();
 		s_menuStateEventMap[idx] = callbacks;
 	}
-	EventCallbackScripts *scripts = (evtType == 2) ? &callbacks->onMouseover : (evtType ? &callbacks->onClose : &callbacks->onOpen);
+	EventCallbackScripts *scripts = (s_menuStateEventType == 2) ? &callbacks->onMouseover : (s_menuStateEventType ? &callbacks->onClose : &callbacks->onOpen);
 	if (doAdd)
 	{
 		if (scripts->HasKey(script)) return;
-		if (evtType == 2)
+		if (s_menuStateEventType == 2)
 		{
 			if (scripts->Empty())
 				HOOK_MOD(MenuHandleMouseover, true);
@@ -891,7 +878,7 @@ void SetOnMenuStateEvent(Script *script, bool doAdd, char idx, UInt8 evtType)
 	else
 	{
 		if (!scripts->Erase(script)) return;
-		if (evtType == 2)
+		if (s_menuStateEventType == 2)
 		{
 			if (scripts->Empty())
 				HOOK_MOD(MenuHandleMouseover, false);
@@ -904,7 +891,7 @@ void SetOnMenuStateEvent(Script *script, bool doAdd, char idx, UInt8 evtType)
 	}
 }
 
-bool SetOnMenuStateEventHandler_Execute(COMMAND_ARGS, UInt8 evtType)
+bool SetOnMenuStateEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt, menuID = 0;
@@ -915,30 +902,42 @@ bool SetOnMenuStateEventHandler_Execute(COMMAND_ARGS, UInt8 evtType)
 		if (menuID)
 		{
 			idx = kMenuIDJumpTable[menuID - kMenuType_Min];
-			if (idx != -1) SetOnMenuStateEvent(script, doAdd, idx, evtType);
+			if (idx != -1) SetOnMenuStateEvent(script, doAdd, idx);
 		}
 		else
 		{
 			for (idx = 0; idx < 35; idx++)
-				SetOnMenuStateEvent(script, doAdd, idx, evtType);
+				SetOnMenuStateEvent(script, doAdd, idx);
 		}
 	}
 	return true;
 }
 
-bool Cmd_SetOnMenuOpenEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_SetOnMenuOpenEventHandler_Execute(COMMAND_ARGS)
 {
-	return SetOnMenuStateEventHandler_Execute(PASS_COMMAND_ARGS, 0);
+	__asm
+	{
+		mov		s_menuStateEventType, 0
+		jmp		SetOnMenuStateEventHandler_Execute
+	}
 }
 
-bool Cmd_SetOnMenuCloseEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_SetOnMenuCloseEventHandler_Execute(COMMAND_ARGS)
 {
-	return SetOnMenuStateEventHandler_Execute(PASS_COMMAND_ARGS, 1);
+	__asm
+	{
+		mov		s_menuStateEventType, 1
+		jmp		SetOnMenuStateEventHandler_Execute
+	}
 }
 
-bool Cmd_SetOnMouseoverChangeEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_SetOnMouseoverChangeEventHandler_Execute(COMMAND_ARGS)
 {
-	return SetOnMenuStateEventHandler_Execute(PASS_COMMAND_ARGS, 2);
+	__asm
+	{
+		mov		s_menuStateEventType, 2
+		jmp		SetOnMenuStateEventHandler_Execute
+	}
 }
 
 __declspec(naked) void __fastcall RefreshRecipeMenu(RecipeMenu *menu)
@@ -953,8 +952,7 @@ __declspec(naked) void __fastcall RefreshRecipeMenu(RecipeMenu *menu)
 		mov		ecx, esi
 		push	dword ptr [ecx+0x64]
 		push	0
-		mov		eax, 0x727680
-		call	eax
+		CALL_EAX(0x727680)
 		add		esi, 0x6C
 		mov		ecx, esi
 		mov		edi, [ecx]
@@ -967,17 +965,14 @@ __declspec(naked) void __fastcall RefreshRecipeMenu(RecipeMenu *menu)
 		mov		ecx, esi
 		call	dword ptr [edi+0x10]
 		mov		ecx, esi
-		mov		eax, 0x7312E0
-		call	eax
+		CALL_EAX(0x7312E0)
 		mov		eax, 0x727637
 		push	dword ptr [eax]
 		mov		ecx, esi
-		mov		eax, 0x729FE0
-		call	eax
+		CALL_EAX(0x729FE0)
 		push	1
 		mov		ecx, esi
-		mov		eax, 0x72A660
-		call	eax
+		CALL_EAX(0x72A660)
 		pop		edi
 		pop		esi
 		retn
@@ -1164,7 +1159,7 @@ bool Cmd_MessageBoxExAlt_Execute(COMMAND_ARGS)
 			*++buttonPtr = delim;
 		}
 		if (!*buttonPtr) *++buttonPtr = "OK";
-		if ((s_strArgBuffer[0] == '^') && (delim = FindChr(s_strArgBuffer + 1, '^')))
+		if ((s_strArgBuffer[0] == '^') && (delim = strchr(s_strArgBuffer + 1, '^')))
 		{
 			*delim = 0;
 			*msgStrings = s_strArgBuffer + 1;
@@ -1311,8 +1306,7 @@ __declspec(naked) void QueueQuestMsgHook(TESQuest *quest)
 		jnz		done
 		push	0
 	setCurrent:
-		mov		eax, 0x9529D0
-		call	eax
+		CALL_EAX(0x9529D0)
 	done:
 		retn
 	}
@@ -1353,15 +1347,13 @@ __declspec(naked) void RecipeMenuAcceptHook()
 		push	kTileValue_target
 		mov		ecx, [ebp-4]
 		mov		ecx, [ecx+0x44]
-		mov		eax, 0xA01230
-		call	eax
+		CALL_EAX(0xA01230)
 		test	al, al
 		jz		done
 		push	0x7FFFFFFF
 		push	0x7284F0
 		push	dword ptr ds:[0x11D8EA8]
-		mov		eax, 0x7ABA00
-		call	eax
+		CALL_EAX(0x7ABA00)
 	done:
 		mov		esp, ebp
 		pop		ebp
@@ -1378,8 +1370,7 @@ __declspec(naked) void RecipeMenuCloseHook()
 		push	0
 		push	1
 		push	dword ptr [ebp-0x20]
-		mov		eax, 0x8ADCF0
-		call	eax
+		CALL_EAX(0x8ADCF0)
 		test	eax, eax
 		jz		doneSound
 		push	0
@@ -1389,8 +1380,7 @@ __declspec(naked) void RecipeMenuCloseHook()
 		lea		eax, [ebp-0x44]
 		push	eax
 		mov		ecx, g_thePlayer
-		mov		eax, 0x933270
-		call	eax
+		CALL_EAX(0x933270)
 	doneSound:
 		mov		esi, ds:[0x11D8E90]
 		test	esi, esi
@@ -1403,8 +1393,7 @@ __declspec(naked) void RecipeMenuCloseHook()
 		test	al, al
 		jz		doRefresh
 		mov		ecx, g_thePlayer
-		mov		eax, 0x950030
-		call	eax
+		CALL_EAX(0x950030)
 	doRefresh:
 		mov		ecx, esi
 		call	RefreshRecipeMenu
@@ -1480,8 +1469,7 @@ __declspec(naked) void __stdcall TogglePipBoyLight(UInt32 turnON)
 		add		esi, 0x18
 		push	esi
 		add		ecx, 0x94
-		mov		eax, 0x824400
-		call	eax
+		CALL_EAX(0x824400)
 	finish:
 		mov		esi, g_interfaceManager
 		mov		esi, [esi+0x174]
@@ -1489,14 +1477,12 @@ __declspec(naked) void __stdcall TogglePipBoyLight(UInt32 turnON)
 		push	dword ptr [esp+0xC]
 		push	1
 		mov		ecx, esi
-		mov		eax, 0x7FA310
-		call	eax
+		CALL_EAX(0x7FA310)
 		push	1
 		push	dword ptr [esp+0xC]
 		push	0
 		mov		ecx, esi
-		mov		eax, 0x7FA310
-		call	eax
+		CALL_EAX(0x7FA310)
 		pop		esi
 		retn	4
 	}

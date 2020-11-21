@@ -382,9 +382,7 @@ __declspec(naked) T_Data *NiTPointerMap<T_Data>::Lookup(UInt32 key) const
 		mov		eax, [eax+edx*4]
 		mov		edx, [esp+4]
 		jmp		iterNext
-		and		esp, 0xEFFFFFFF
-		lea		esp, [esp]
-		fnop
+		ALIGN 16
 	iterHead:
 		cmp		[eax+4], edx
 		jz		found
@@ -563,7 +561,7 @@ __declspec(naked) bool NiTMapBase<T_Key, T_Data>::Insert(T_Key key, T_Data value
 		jmp		done
 	addEntry:
 		push	0xC
-		call	GameHeapAlloc
+		GAME_HEAP_ALLOC
 		mov		dword ptr [eax], 0
 		mov		[edi], eax
 		push	dword ptr [esp+0x10]

@@ -137,11 +137,20 @@ double s_condDmgPenalty = 0.67;
 
 enum
 {
+	kAddr_AddExtraData =			0x40FF60,
+	kAddr_GetExtraData =			0x410220,
+	kAddr_LoadModel =				0x447080,
+	kAddr_GetItemHealthPerc =		0x4BCDB0,
+	kAddr_ApplyAmmoEffects =		0x59A030,
+	kAddr_MoveToMarker =			0x5CCB20,
+	kAddr_ApplyPerkModifiers =		0x5E58F0,
+	kAddr_PurgeTerminalModel =		0x7FFE00,
 	kAddr_EquipItem =				0x88C650,
 	kAddr_UnequipItem =				0x88C790,
 	kAddr_TileGetFloat =			0xA011B0,
 	kAddr_TileSetFloat =			0xA012D0,
 	kAddr_TileSetString =			0xA01350,
+	kAddr_InitFontInfo =			0xA12020,
 };
 
 bool (*IsPipBoyActive)(UInt32 menuID) = (bool (*)(UInt32))0x702450;
@@ -243,11 +252,11 @@ __declspec(naked) bool Sky::GetIsRaining()
 		cmp		byte ptr [eax+0xEB], 4
 		jnz		retnFalse
 	weatherPerc:
+		fld		dword ptr [ecx+0xF4]
 		fld1
-		fcomp	dword ptr [ecx+0xF4]
-		fnstsw	ax
-		test	ah, 0x41
-		setnp	al
+		fucomip	st, st(1)
+		setbe	al
+		fstp	st
 		retn
 	retnFalse:
 		xor		al, al
@@ -535,7 +544,7 @@ UInt32 __fastcall StringToRef(char *refStr)
 	UInt32 *findStr;
 	if (!s_strRefs.Insert(refStr, &findStr)) return *findStr;
 	*findStr = 0;
-	char *colon = FindChr(refStr, ':');
+	char *colon = strchr(refStr, ':');
 	if (colon)
 	{
 		UInt8 modIdx;
@@ -570,7 +579,7 @@ __declspec(naked) TESForm *TESObjectREFR::GetBaseForm()
 		push	eax
 		push	kExtraData_LeveledCreature
 		add		ecx, 0x44
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		pop		ecx
 		test	eax, eax
 		cmovz	eax, ecx
@@ -587,13 +596,11 @@ __declspec(naked) bool TESObjectREFR::GetDisabled()
 		push	ecx
 		test	dword ptr [ecx+8], 0x800
 		jz		notPerm
-		mov		eax, 0x5AA680
-		call	eax
+		CALL_EAX(0x5AA680)
 		xor		al, 1
 		jnz		done
 	notPerm:
-		mov		eax, 0x5AA630
-		call	eax
+		CALL_EAX(0x5AA630)
 	done:
 		pop		ecx
 		retn
@@ -605,10 +612,7 @@ __declspec(naked) ContChangesEntry *ExtraContainerChanges::EntryDataList::FindFo
 	__asm
 	{
 		mov		edx, [esp+4]
-		jmp		listIter
-		and		esp, 0xEFFFFFFF
-		lea		esp, [esp]
-		nop
+		ALIGN 16
 	listIter:
 		mov		eax, [ecx]
 		test	eax, eax
@@ -616,7 +620,7 @@ __declspec(naked) ContChangesEntry *ExtraContainerChanges::EntryDataList::FindFo
 		cmp		[eax+8], edx
 		jnz		listNext
 		retn	4
-		fnop
+		ALIGN 16
 	listNext:
 		mov		ecx, [ecx+4]
 		test	ecx, ecx
@@ -649,7 +653,7 @@ __declspec(naked) ExtraContainerChanges::EntryDataList *TESObjectREFR::GetContai
 	{
 		push	kExtraData_ContainerChanges
 		add		ecx, 0x44
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		test	eax, eax
 		jz		done
 		mov		eax, [eax+0xC]
@@ -667,7 +671,7 @@ __declspec(naked) ContChangesEntry *TESObjectREFR::GetContainerChangesEntry(TESF
 	{
 		push	kExtraData_ContainerChanges
 		add		ecx, 0x44
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		test	eax, eax
 		jz		done
 		mov		eax, [eax+0xC]
@@ -681,8 +685,7 @@ __declspec(naked) ContChangesEntry *TESObjectREFR::GetContainerChangesEntry(TESF
 		jmp		itemIter
 	done:
 		retn	4
-		and		esp, 0xEFFFFFFF
-		lea		esp, [esp]
+		ALIGN 16
 	itemIter:
 		mov		eax, [ecx]
 		test	eax, eax
@@ -690,7 +693,7 @@ __declspec(naked) ContChangesEntry *TESObjectREFR::GetContainerChangesEntry(TESF
 		cmp		[eax+8], edx
 		jnz		itemNext
 		retn	4
-		fnop
+		ALIGN 16
 	itemNext:
 		mov		ecx, [ecx+4]
 		test	ecx, ecx
@@ -708,9 +711,7 @@ __declspec(naked) SInt32 TESContainer::GetCountForForm(TESForm *form)
 		lea		esi, [ecx+4]
 		xor		eax, eax
 		mov		edx, [esp+8]
-		jmp		iterHead
-		lea		esp, [esp]
-		nop
+		ALIGN 16
 	iterHead:
 		mov		ecx, [esi]
 		test	ecx, ecx
@@ -718,7 +719,7 @@ __declspec(naked) SInt32 TESContainer::GetCountForForm(TESForm *form)
 		cmp		[ecx+4], edx
 		jnz		iterNext
 		add		eax, [ecx]
-		lea		esp, [esp]
+		ALIGN 16
 	iterNext:
 		mov		esi, [esi+4]
 		test	esi, esi
@@ -736,8 +737,7 @@ __declspec(naked) SInt32 __fastcall GetFormCount(TESContainer::FormCountList *fo
 		push	edi
 		mov		esi, [esp+0xC]
 		xor		edi, edi
-		jmp		contIter
-		and		esp, 0xEFFFFFFF
+		ALIGN 16
 	contIter:
 		mov		eax, [ecx]
 		test	eax, eax
@@ -745,14 +745,13 @@ __declspec(naked) SInt32 __fastcall GetFormCount(TESContainer::FormCountList *fo
 		cmp		[eax+4], esi
 		jnz		contNext
 		add		edi, [eax]
-		lea		esp, [esp]
+		ALIGN 16
 	contNext:
 		mov		ecx, [ecx+4]
 		test	ecx, ecx
 		jnz		contIter
 		jmp		doXtra
-		and		esp, 0xEFFFFFFF
-		nop
+		ALIGN 16
 	xtraIter:
 		mov		ecx, [edx]
 		test	ecx, ecx
@@ -769,7 +768,6 @@ __declspec(naked) SInt32 __fastcall GetFormCount(TESContainer::FormCountList *fo
 		add		eax, edi
 		js		retnZero
 		jmp		done
-		fnop
 	noCont:
 		mov		eax, [esi+4]
 		test	eax, eax
@@ -777,6 +775,7 @@ __declspec(naked) SInt32 __fastcall GetFormCount(TESContainer::FormCountList *fo
 	retnZero:
 		xor		eax, eax
 		jmp		done
+		ALIGN 16
 	xtraNext:
 		mov		edx, [edx+4]
 	doXtra:
@@ -819,7 +818,7 @@ __declspec(naked) SInt32 TESObjectREFR::GetItemCount(TESForm *form)
 		push	edi
 		lea		esi, [edx+0x18]
 		mov		edi, 0
-		nop
+		ALIGN 16
 	iterHead:
 		mov		eax, [esi]
 		test	eax, eax
@@ -890,8 +889,7 @@ __declspec(naked) void Actor::EquipItemAlt(TESForm *itemForm, ContChangesEntry *
 	doEquip:
 		push	dword ptr [ebp+8]
 		mov		ecx, [ebp-4]
-		mov		eax, kAddr_EquipItem
-		call	eax
+		CALL_EAX(kAddr_EquipItem)
 	done:
 		mov		esp, ebp
 		pop		ebp
@@ -909,8 +907,7 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 		sub		esp, 0x10
 		push	esi
 		lea		ecx, [ebp-0x10]
-		mov		eax, 0x481610
-		call	eax
+		CALL_EAX(0x481610)
 		mov		ecx, [ebp+8]
 		movzx	eax, byte ptr [ecx+4]
 		cmp		al, kFormType_TESLevItem
@@ -923,14 +920,12 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 		push	dword ptr [ebp+0xC]
 		push	ecx
 		lea		ecx, [ebp-0x10]
-		mov		eax, 0x4818E0
-		call	eax
+		CALL_EAX(0x4818E0)
 		jmp		doMove
 	lvlItem:
 		push	0
 		mov		ecx, [ebp-4]
-		mov		eax, 0x567E10
-		call	eax
+		CALL_EAX(0x567E10)
 		push	0
 		lea		ecx, [ebp-0x10]
 		push	ecx
@@ -938,8 +933,7 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 		push	eax
 		mov		ecx, [ebp+8]
 		add		ecx, 0x30
-		mov		eax, 0x487F70
-		call	eax
+		CALL_EAX(0x487F70)
 		jmp		doMove
 	itemList:
 		mov		esi, [ebp+8]
@@ -955,8 +949,7 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 		push	dword ptr [ebp+0xC]
 		push	ecx
 		lea		ecx, [ebp-0x10]
-		mov		eax, 0x4818E0
-		call	eax
+		CALL_EAX(0x4818E0)
 	listNext:
 		mov		esi, [esi+4]
 		test	esi, esi
@@ -964,13 +957,11 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 	doMove:
 		push	dword ptr [ebp+0x10]
 		lea		ecx, [ebp-0x10]
-		mov		eax, 0x482090
-		call	eax
+		CALL_EAX(0x482090)
 		push	1
 		push	dword ptr [ebp-4]
 		lea		ecx, [ebp-0x10]
-		mov		eax, 0x4821A0
-		call	eax
+		CALL_EAX(0x4821A0)
 		cmp		byte ptr [ebp+0x14], 0
 		jz		done
 		mov		ecx, [ebp-4]
@@ -1003,8 +994,7 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 		jnz		eqpIter
 	done:
 		lea		ecx, [ebp-0x10]
-		mov		eax, 0x481680
-		call	eax
+		CALL_EAX(0x481680)
 		pop		esi
 		mov		esp, ebp
 		pop		ebp
@@ -1123,7 +1113,7 @@ __declspec(naked) TESObjectCELL *TESObjectREFR::GetParentCell()
 		jnz		done
 		push	kExtraData_PersistentCell
 		add		ecx, 0x44
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		test	eax, eax
 		jz		done
 		mov		eax, [eax+0xC]
@@ -1141,7 +1131,7 @@ __declspec(naked) TESWorldSpace *TESObjectREFR::GetParentWorld()
 		jnz		getWorld
 		push	kExtraData_PersistentCell
 		add		ecx, 0x44
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		test	eax, eax
 		jz		done
 		mov		eax, [eax+0xC]
@@ -1235,8 +1225,7 @@ __declspec(naked) void __fastcall DoSetPos(TESObjectREFR *refr, int EDX, float p
 		sub		esp, 0x10
 		lea		eax, [ebp+8]
 		push	eax
-		mov		eax, 0x575830
-		call	eax
+		CALL_EAX(0x575830)
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x100]
@@ -1251,15 +1240,13 @@ __declspec(naked) void __fastcall DoSetPos(TESObjectREFR *refr, int EDX, float p
 		jz		noCharCtrl
 		mov		[ebp-8], eax
 		mov		ecx, eax
-		mov		eax, 0x5C0860
-		call	eax
+		CALL_EAX(0x5C0860)
 		test	al, al
 		jnz		noCharCtrl
 		lea		eax, [ebp+8]
 		push	eax
 		mov		ecx, [ebp-8]
-		mov		eax, 0x5620E0
-		call	eax
+		CALL_EAX(0x5620E0)
 	noCharCtrl:
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
@@ -1270,12 +1257,10 @@ __declspec(naked) void __fastcall DoSetPos(TESObjectREFR *refr, int EDX, float p
 		mov		ecx, eax
 		lea		eax, [ebp+8]
 		push	eax
-		mov		eax, 0x440460
-		call	eax
+		CALL_EAX(0x440460)
 		push	1
 		push	dword ptr [ebp-8]
-		mov		eax, 0xC6BD00
-		call	eax
+		CALL_EAX(0xC6BD00)
 		add		esp, 8
 		lea		eax, [ebp-0x14]
 		xor		edx, edx
@@ -1284,8 +1269,7 @@ __declspec(naked) void __fastcall DoSetPos(TESObjectREFR *refr, int EDX, float p
 		mov		[eax+8], edx
 		push	eax
 		mov		ecx, [ebp-8]
-		mov		eax, 0xA59C60
-		call	eax
+		CALL_EAX(0xA59C60)
 	done:
 		mov		esp, ebp
 		pop		ebp
@@ -1328,8 +1312,7 @@ __declspec(naked) void __fastcall DoSetAngle(TESObjectREFR *refr, int EDX, float
 		push	2
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x48]
-		mov		eax, 0x5C0B10
-		call	eax
+		CALL_EAX(0x5C0B10)
 		add		esp, 0xC
 		retn	0xC
 	}
@@ -1359,14 +1342,12 @@ __declspec(naked) TESObjectREFR *GetTempPosMarker()
 		test	eax, eax
 		jnz		done
 		push	0x68
-		call	GameHeapAlloc
+		GAME_HEAP_ALLOC
 		mov		ecx, eax
-		mov		eax, 0x55A2F0
-		call	eax
+		CALL_EAX(0x55A2F0)
 		mov		tempPosMarker, eax
 		mov		ecx, eax
-		mov		eax, 0x484490
-		call	eax
+		CALL_EAX(0x484490)
 		mov		eax, tempPosMarker
 	done:
 		retn
@@ -1393,7 +1374,7 @@ __declspec(naked) void __fastcall DoMoveToCell(TESObjectREFR *refr, int EDX, TES
 		push	0
 		push	eax
 		push	ecx
-		call	MoveToMarker
+		CALL_EAX(kAddr_MoveToMarker)
 		add		esp, 0x14
 		retn	0x10
 	}
@@ -1433,13 +1414,12 @@ __declspec(naked) bool TESObjectREFR::Disable()
 		jnz		retnFalse
 		push	kExtraData_EnableStateParent
 		add		ecx, 0x44
-		call	GetExtraData
+		CALL_EAX(kAddr_GetExtraData)
 		test	eax, eax
 		jnz		retnFalse
 		push	0
 		push	esi
-		mov		eax, 0x5AA500
-		call	eax
+		CALL_EAX(0x5AA500)
 		add		esp, 8
 		mov		al, 1
 		jmp		done
@@ -1476,8 +1456,7 @@ __declspec(naked) void TESObjectREFR::DeleteReference()
 		lea		eax, [ebp-4]
 		push	eax
 		mov		ecx, 0x11CACB8
-		mov		eax, 0x5AE3D0
-		call	eax
+		CALL_EAX(0x5AE3D0)
 	done:
 		mov		esp, ebp
 		pop		ebp
@@ -1508,8 +1487,7 @@ __declspec(naked) float TESObjectREFR::GetWaterImmersionPerc()	// result >= 0.87
 		jnz		invalid
 		push	dword ptr [ecx+0x40]
 		push	dword ptr [ecx+0x38]
-		mov		eax, 0x885560
-		call	eax
+		CALL_EAX(0x885560)
 		retn
 	invalid:
 		fldz
@@ -1543,8 +1521,7 @@ __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const c
 		jz		done
 		push	3
 		mov		ecx, eax
-		mov		eax, 0xA59D30
-		call	eax
+		CALL_EAX(0xA59D30)
 		test	eax, eax
 		jz		done
 		mov		[ebp-4], eax
@@ -1555,12 +1532,10 @@ __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const c
 		push	ecx
 		push	dword ptr [ebp+0xC]
 		mov		ecx, g_TES
-		mov		eax, 0x4568C0
-		call	eax
+		CALL_EAX(0x4568C0)
 		push	0x11F5AE0
 		mov		ecx, [ebp-4]
-		mov		eax, 0x653290
-		call	eax
+		CALL_EAX(0x653290)
 		test	eax, eax
 		jz		noLighting
 		mov		edx, [eax+0x1C]
@@ -1577,20 +1552,17 @@ __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const c
 	noLighting:
 		push	0x11FA05C
 		mov		ecx, [ebp-4]
-		mov		eax, 0x653290
-		call	eax
+		CALL_EAX(0x653290)
 		test	eax, eax
 		jz		release
 		push	dword ptr [ebp-8]
 		mov		ecx, eax
-		mov		eax, 0x438230
-		call	eax
+		CALL_EAX(0x438230)
 	release:
 		mov		ecx, [ebp-8]
 		test	ecx, ecx
 		jz		done
-		mov		eax, 0x401970
-		call	eax
+		CALL_EAX(0x401970)
 	done:
 		mov		esp, ebp
 		pop		ebp
@@ -1706,29 +1678,24 @@ __declspec(naked) NiAVObject* __fastcall _GetRayCastObject(void *rcData, void *a
 		fadd	dword ptr [ecx]
 		fstp	dword ptr [edx]
 		mov		ecx, esi
-		mov		eax, 0x4A3C20
-		call	eax
+		CALL_EAX(0x4A3C20)
 		lea		eax, [esi+0x24]
 		push	eax
 		mov		ecx, g_thePlayer
-		mov		eax, 0x931ED0
-		call	eax
+		CALL_EAX(0x931ED0)
 		mov		edx, [eax]
 		mov		dx, [edi+0x18]
 		mov		[eax], edx
 		push	dword ptr [edi+8]
 		mov		ecx, esi
-		mov		eax, 0x4A3DA0
-		call	eax
+		CALL_EAX(0x4A3DA0)
 		lea		eax, [ebp-0xC]
 		push	eax
 		mov		ecx, esi
-		mov		eax, 0x4A3EB0
-		call	eax
+		CALL_EAX(0x4A3EB0)
 		push	esi
 		mov		ecx, g_TES
-		mov		eax, 0x458420
-		call	eax
+		CALL_EAX(0x458420)
 		pop		edi
 		pop		esi
 		mov		esp, ebp
@@ -1768,12 +1735,10 @@ __declspec(naked) bool NiVector3::RayCastCoords(NiVector3 *posVector, NiMatrix33
 		call	_GetRayCastObject
 		push	dword ptr [esp]
 		lea		ecx, [esp+0x14]
-		mov		eax, 0x5DBE60
-		call	eax
+		CALL_EAX(0x5DBE60)
 		push	dword ptr [esp]
 		mov		ecx, g_TES
-		mov		eax, 0x451110
-		call	eax
+		CALL_EAX(0x451110)
 		mov		esp, ebp
 		pop		ebp
 		retn	0x14
@@ -1831,8 +1796,7 @@ __declspec(naked) int __stdcall GetRayCastMaterial(NiVector3 *posVector, NiMatri
 		jz		invalid
 		mov		[esp+0xC], eax
 		push	eax
-		mov		eax, 0x56F930
-		call	eax
+		CALL_EAX(0x56F930)
 		pop		ecx
 		test	eax, eax
 		jz		isTerrain
@@ -1867,22 +1831,18 @@ __declspec(naked) int __stdcall GetRayCastMaterial(NiVector3 *posVector, NiMatri
 		test	ecx, ecx
 		jz		invalid
 		push	0
-		mov		eax, 0xC84F10
-		call	eax
+		CALL_EAX(0xC84F10)
 		jmp		convert
 	isTerrain:
 		push	esp
 		lea		ecx, [esp+0x14]
-		mov		eax, 0x5DBE60
-		call	eax
+		CALL_EAX(0x5DBE60)
 		push	esp
 		mov		ecx, g_TES
-		mov		eax, 0x451110
-		call	eax
+		CALL_EAX(0x451110)
 		push	esp
 		mov		ecx, g_TES
-		mov		eax, 0x457720
-		call	eax
+		CALL_EAX(0x457720)
 		test	eax, eax
 		jz		invalid
 		movzx	eax, byte ptr [eax+0x1C]
@@ -1971,8 +1931,7 @@ __declspec(naked) char Actor::GetCurrentAIProcedure()
 		cmp		byte ptr [eax+0x20], 0x12
 		jnz		notCombat
 		mov		ecx, eax
-		mov		eax, 0x981990
-		call	eax
+		CALL_EAX(0x981990)
 		test	al, al
 		jz		notCombat
 		mov		al, 0x10
@@ -2122,8 +2081,7 @@ __declspec(naked) bool Actor::IsInCombatWith(Actor *target)
 		jnz		iterHead
 	done:
 		retn	4
-		lea		esp, [esp]
-		fnop
+		ALIGN 16
 	iterHead:
 		cmp		[ecx], edx
 		jz		rtnTrue
@@ -2262,17 +2220,15 @@ __declspec(naked) BackUpPackage *Actor::AddBackUpPackage(TESObjectREFR *targetRe
 		jz		done
 	noPackage:
 		push	0x8C
-		call	GameHeapAlloc
+		GAME_HEAP_ALLOC
 		mov		ecx, eax
-		mov		eax, 0x9ED030
-		call	eax
+		CALL_EAX(0x9ED030)
 		mov		[ebp-0xC], eax
 		push	dword ptr [ebp+8]
 		push	dword ptr [ebp+0xC]
 		push	dword ptr [ebp-4]
 		mov		ecx, eax
-		mov		eax, 0x9ED0D0
-		call	eax
+		CALL_EAX(0x9ED0D0)
 		mov		ecx, [ebp-0xC]
 		cmp		dword ptr [ebp+0xC], 0
 		jnz		haveCell
@@ -2314,8 +2270,7 @@ __declspec(naked) void Actor::TurnToFaceObject(TESObjectREFR *target)
 		push	dword ptr [eax+0x38]
 		push	dword ptr [eax+0x34]
 		push	dword ptr [eax+0x30]
-		mov		eax, 0x8BB520
-		call	eax
+		CALL_EAX(0x8BB520)
 		retn	4
 	}
 }
@@ -2331,8 +2286,7 @@ __declspec(naked) void Actor::TurnAngle(float angle)
 		fadd	dword ptr [ecx+0x2C]
 		fstp	dword ptr [eax]
 		push	dword ptr [eax]
-		mov		eax, 0x8BB5C0
-		call	eax
+		CALL_EAX(0x8BB5C0)
 		retn	4
 	}
 }
@@ -2351,8 +2305,7 @@ __declspec(naked) void Actor::PlayIdle(TESIdleForm *idleAnim)
 		jz		jmpAddr1
 		mov		[ebp-8], eax
 		mov		ecx, eax
-		mov		eax, 0x4985F0
-		call	eax
+		CALL_EAX(0x4985F0)
 		test	al, al
 		setz	dl
 		mov		[ebp-9], dl
@@ -2410,8 +2363,7 @@ __declspec(naked) UInt32 Actor::GetLevel()
 	{
 		mov		ecx, [ecx+0x20]
 		add		ecx, 0x30
-		mov		eax, 0x47DED0
-		call	eax
+		CALL_EAX(0x47DED0)
 		movzx	eax, ax
 		retn
 	}
@@ -2424,8 +2376,7 @@ __declspec(naked) float Actor::GetKillXP()
 		push	ecx
 		mov		ecx, [ecx+0x20]
 		add		ecx, 0x30
-		mov		eax, 0x47DED0
-		call	eax
+		CALL_EAX(0x47DED0)
 		pop		ecx
 		movzx	edx, ax
 		push	edx
@@ -2433,20 +2384,17 @@ __declspec(naked) float Actor::GetKillXP()
 		setnz	al
 		movzx	edx, al
 		push	edx
-		mov		eax, 0x6705B0
-		call	eax
+		CALL_EAX(0x6705B0)
 		add		esp, 8
 		cvtsi2ss	xmm0, eax
 		mov		eax, g_thePlayer
 		push	dword ptr [eax+0x7B8]
 		push	ecx
 		movss	[esp], xmm0
-		mov		eax, 0x648C80
-		call	eax
+		CALL_EAX(0x648C80)
 		pop		ecx
 		fstp	dword ptr [esp]
-		mov		eax, 0x406CE0
-		call	eax
+		CALL_EAX(0x406CE0)
 		pop		ecx
 		retn
 	}
@@ -2463,13 +2411,11 @@ __declspec(naked) void Actor::DismemberLimb(UInt32 bodyPartID, bool explode)
 		push	ecx
 		push	ecx
 		push	dword ptr [ebp+8]
-		mov		eax, 0x573090
-		call	eax
+		CALL_EAX(0x573090)
 		test	al, al
 		jnz		done
 		mov		ecx, [ebp-4]
-		mov		eax, 0x87F3D0
-		call	eax
+		CALL_EAX(0x87F3D0)
 		test	al, al
 		jnz		done
 		push	0
@@ -2502,8 +2448,7 @@ __declspec(naked) void Actor::DismemberLimb(UInt32 bodyPartID, bool explode)
 		test	ecx, ecx
 		jz		done
 		push	1
-		mov		eax, 0x456630
-		call	eax
+		CALL_EAX(0x456630)
 		test	al, al
 		jnz		done
 		movzx	eax, [ebp+0xC]
@@ -2513,8 +2458,7 @@ __declspec(naked) void Actor::DismemberLimb(UInt32 bodyPartID, bool explode)
 		push	0
 		push	dword ptr [ebp+8]
 		mov		ecx, [ebp-4]
-		mov		eax, 0x572FC0
-		call	eax
+		CALL_EAX(0x572FC0)
 		push	0
 		push	1
 		push	1
@@ -2523,8 +2467,7 @@ __declspec(naked) void Actor::DismemberLimb(UInt32 bodyPartID, bool explode)
 		push	dword ptr [ebp+8]
 		push	dword ptr [ebp-8]
 		mov		ecx, [ebp-4]
-		mov		eax, 0x8B52A0
-		call	eax
+		CALL_EAX(0x8B52A0)
 	done:
 		mov		esp, ebp
 		pop		ebp
@@ -2580,8 +2523,7 @@ __declspec(naked) float Actor::AdjustPushForce(float baseForce)
 	{
 		push	0xA
 		add		ecx, 0xA4
-		mov		eax, 0x66EF50
-		call	eax
+		CALL_EAX(0x66EF50)
 		fmul	kFlt10
 		fmul	dword ptr ds:[0x11CEA6C]
 		fadd	dword ptr ds:[0x11CE664]
@@ -2706,8 +2648,7 @@ __declspec(naked) int Actor::GetGroundMaterial()
 		test	eax, eax
 		jz		invalid
 		mov		ecx, eax
-		mov		eax, 0x546FB0
-		call	eax
+		CALL_EAX(0x546FB0)
 		test	eax, eax
 		jz		invalid
 		mov		ecx, eax
@@ -2717,15 +2658,13 @@ __declspec(naked) int Actor::GetGroundMaterial()
 		lea		edx, [ebp-0x50]
 		push	edx
 		mov		esi, ecx
-		mov		eax, 0x53B550
-		call	eax
+		CALL_EAX(0x53B550)
 		movzx	edx, word ptr [ebp-0x14]
 		push	edx
 		movzx	edx, byte ptr [ebp-0x38]
 		push	edx
 		mov		ecx, esi
-		mov		eax, 0x53A630
-		call	eax
+		CALL_EAX(0x53A630)
 		test	eax, eax
 		jz		invalid
 		movzx	eax, byte ptr [eax+0x1C]
@@ -2894,8 +2833,7 @@ __declspec(naked) void TESNPC::SetSex(UInt32 flags)
 		push	eax
 		push	1
 		add		ecx, 0x30
-		mov		eax, 0x47DD50
-		call	eax
+		CALL_EAX(0x47DD50)
 	done:
 		retn	4
 	}
@@ -2915,8 +2853,7 @@ __declspec(naked) void TESNPC::SetRace(TESRace *pRace)
 		jnz		notPlayer
 		push	0
 		push	edx
-		mov		eax, 0x60B240
-		call	eax
+		CALL_EAX(0x60B240)
 		retn	4
 	notPlayer:
 		mov		[ecx+0x110], edx
@@ -2951,11 +2888,9 @@ __declspec(naked) void PlayerCharacter::UpdatePlayer3D()
 		push	1
 		push	dword ptr ds:[0x11CDD7C]
 		mov		ecx, g_modelLoader
-		mov		eax, 0x445300
-		call	eax
+		CALL_EAX(0x445300)
 		mov		ecx, g_modelLoader
-		mov		eax, 0x444850
-		call	eax
+		CALL_EAX(0x444850)
 	done:
 		retn
 	}
@@ -3113,17 +3048,14 @@ __declspec(naked) NiNode* __stdcall NiNode::Create(const char *nodeName)
 	__asm
 	{
 		push	0xAC
-		mov		eax, 0xAA13E0
-		call	eax
+		CALL_EAX(0xAA13E0)
 		pop		ecx
 		push	0
 		mov		ecx, eax
-		mov		eax, 0xA5ECB0
-		call	eax
+		CALL_EAX(0xA5ECB0)
 		push	eax
 		push	dword ptr [esp+8]
-		mov		eax, 0xA5B690
-		call	eax
+		CALL_EAX(0xA5B690)
 		pop		ecx
 		pop		ecx
 		mov		[ecx+8], eax
@@ -3144,13 +3076,11 @@ __declspec(naked) NiNode *NiNode::CreateCopy()
 		sub		esp, 0x1C
 		push	0x3F800000
 		lea		ecx, [ebp-0x20]
-		mov		eax, 0x4AD050
-		call	eax
+		CALL_EAX(0x4AD050)
 		lea		eax, [ebp-0x20]
 		push	eax
 		mov		ecx, [ebp-4]
-		mov		eax, 0xA5D2C0
-		call	eax
+		CALL_EAX(0xA5D2C0)
 		mov		[ebp-4], eax
 		test	eax, eax
 		jz		done
@@ -3163,8 +3093,7 @@ __declspec(naked) NiNode *NiNode::CreateCopy()
 		movss	[eax+0x64], xmm0
 	done:
 		lea		ecx, [ebp-0x20]
-		mov		eax, 0x4AD270
-		call	eax
+		CALL_EAX(0x4AD270)
 		mov		eax, [ebp-4]
 		mov		esp, ebp
 		pop		ebp
@@ -3179,8 +3108,7 @@ __declspec(naked) NiAVObject *NiNode::GetBlock(const char *blockName)
 		push	esi
 		mov		esi, ecx
 		push	dword ptr [esp+8]
-		mov		eax, 0xA5B690
-		call	eax
+		CALL_EAX(0xA5B690)
 		pop		ecx
 		push	eax
 		push	esp
@@ -3189,8 +3117,7 @@ __declspec(naked) NiAVObject *NiNode::GetBlock(const char *blockName)
 		call	dword ptr [eax+0x9C]
 		mov		esi, eax
 		push	esp
-		mov		eax, 0x4381D0
-		call	eax
+		CALL_EAX(0x4381D0)
 		add		esp, 8
 		mov		eax, esi
 		pop		esi
@@ -3589,17 +3516,17 @@ __declspec(naked) void NiNode::ToggleCollision(bool enable)
 		jz		doDisable
 		or		dword ptr [eax+0xC], 1
 		jmp		noColObj
-		nop
 	doDisable:
 		and		dword ptr [eax+0xC], 0xFFFFFFFE
 	noColObj:
-		mov		ax, [ecx+0xA6]
-		test	ax, ax
+		movzx	eax, word ptr [ecx+0xA6]
+		test	eax, eax
 		jz		done
 		push	esi
 		push	edi
 		mov		esi, [ecx+0xA0]
-		mov		di, ax
+		mov		edi, eax
+		ALIGN 16
 	iterHead:
 		mov		ecx, [esi]
 		mov		eax, [ecx]
@@ -3609,9 +3536,10 @@ __declspec(naked) void NiNode::ToggleCollision(bool enable)
 		push	dword ptr [esp+0xC]
 		mov		ecx, eax
 		call	NiNode::ToggleCollision
+		ALIGN 16
 	iterNext:
 		add		esi, 4
-		dec		di
+		dec		edi
 		jnz		iterHead
 		pop		edi
 		pop		esi
@@ -3629,15 +3557,16 @@ __declspec(naked) void NiNode::DisableCollision()
 		jz		noColObj
 		and		dword ptr [eax+0xC], 0xFFFFFFFE
 	noColObj:
-		mov		ax, [ecx+0xA6]
-		test	ax, ax
+		movzx	eax, word ptr [ecx+0xA6]
+		test	eax, eax
 		jnz		proceed
 		retn
 	proceed:
 		push	esi
 		push	edi
 		mov		esi, [ecx+0xA0]
-		mov		di, ax
+		mov		edi, eax
+		ALIGN 16
 	iterHead:
 		mov		ecx, [esi]
 		mov		eax, [ecx]
@@ -3646,9 +3575,10 @@ __declspec(naked) void NiNode::DisableCollision()
 		jz		iterNext
 		mov		ecx, eax
 		call	NiNode::DisableCollision
+		ALIGN 16
 	iterNext:
 		add		esi, 4
-		dec		di
+		dec		edi
 		jnz		iterHead
 		pop		edi
 		pop		esi
@@ -3666,17 +3596,17 @@ __declspec(naked) UInt32 NiAVObject::GetIndex()
 		mov		ecx, [ecx+0x18]
 		test	ecx, ecx
 		jz		done
-		mov		dx, [ecx+0xA6]
-		test	dx, dx
+		movzx	edx, word ptr [ecx+0xA6]
+		test	edx, edx
 		jz		done
 		mov		ecx, [ecx+0xA0]
-		fnop
+		ALIGN 16
 	iterHead:
 		inc		eax
 		cmp		[ecx], esi
 		jz		done
 		add		ecx, 4
-		dec		dx
+		dec		edx
 		jnz		iterHead
 		xor		eax, eax
 	done:
@@ -3697,24 +3627,19 @@ NiProperty *NiAVObject::GetProperty(UInt32 propID)
 	return NULL;
 }
 
-__declspec(naked) void NiAVObject::Rename(const char *newName)
+__declspec(naked) void NiAVObject::SetName(const char *newName)
 {
 	__asm
 	{
 		push	ecx
-		mov		eax, [ecx+8]
-		test	eax, eax
-		jz		doneCurr
-		sub		eax, 8
-		push	eax
-		call	dword ptr ds:[0xFDF1C4]
-	doneCurr:
 		push	dword ptr [esp+8]
-		mov		eax, 0xA5B690
-		call	eax
+		CALL_EAX(0xA5B690)
 		pop		ecx
 		pop		ecx
-		mov		[ecx+8], eax
+		push	eax
+		push	esp
+		CALL_EAX(0xA5B950)
+		pop		ecx
 		retn	4
 	}
 }
@@ -3845,13 +3770,13 @@ __declspec(naked) void NiNode::ApplyForce(hkVector4 *forceVector)
 		push	dword ptr [esp+8]
 		call	bhkWorldObject::ApplyForce
 	doneCol:
-		mov		dx, [ebx+0xA6]
-		test	dx, dx
+		movzx	edx, word ptr [ebx+0xA6]
+		test	edx, edx
 		jz		done
 		push	esi
 		push	edi
 		mov		esi, [ebx+0xA0]
-		mov		di, dx
+		mov		edi, edx
 	iterHead:
 		mov		ecx, [esi]
 		test	ecx, ecx
@@ -3865,7 +3790,7 @@ __declspec(naked) void NiNode::ApplyForce(hkVector4 *forceVector)
 		call	NiNode::ApplyForce
 	iterNext:
 		add		esi, 4
-		dec		di
+		dec		edi
 		jnz		iterHead
 		pop		edi
 		pop		esi
@@ -3891,8 +3816,7 @@ __declspec(naked) void bhkWorldObject::ApplyForce(hkVector4 *forceVector)
 		push	eax
 		lea		eax, [esp+8]
 		push	eax
-		mov		eax, 0x458620
-		call	eax
+		CALL_EAX(0x458620)
 		add		esp, 8
 		mov		eax, [ebp+8]
 		lea		ecx, [esp+4]
@@ -3909,8 +3833,7 @@ __declspec(naked) void bhkWorldObject::ApplyForce(hkVector4 *forceVector)
 		mov		ecx, [esp]
 		mov		ecx, [ecx+8]
 		add		ecx, 0xE0
-		mov		eax, 0xC86430
-		call	eax
+		CALL_EAX(0xC86430)
 		fstp	dword ptr [esp+0x1C]
 		mov		eax, [ebp+8]
 		movss	xmm0, [eax+0xC]
@@ -3927,8 +3850,7 @@ __declspec(naked) void bhkWorldObject::ApplyForce(hkVector4 *forceVector)
 		movss	[eax+8], xmm1
 		push	eax
 		mov		ecx, [esp+4]
-		mov		eax, 0x9B0BF0
-		call	eax
+		CALL_EAX(0x9B0BF0)
 		mov		esp, ebp
 		pop		ebp
 		retn	4
@@ -3982,7 +3904,7 @@ __declspec(naked) LODdata::LODNode *LODdata::LODNode::GetNodeByCoord(UInt32 coor
 		mov		edx, [ebp-0xC]
 	iterNext:
 		mov		ecx, [ebp-4]
-		inc		dl
+		inc		edx
 		mov		[ebp-0xC], edx
 		cmp		dl, 4
 		jb		iterHead
@@ -4010,8 +3932,7 @@ __declspec(naked) float ExtraContainerChanges::Data::GetInventoryWeight()
 		movzx	eax, byte ptr [eax+0x7BC]
 		push	eax
 		mov		byte ptr ds:[0x11E0898], 1
-		mov		eax, 0x4D0900
-		call	eax
+		CALL_EAX(0x4D0900)
 		mov		byte ptr ds:[0x11E0898], 0
 		retn
 	}
@@ -4063,8 +3984,7 @@ __declspec(naked) bool ExtraContainerChanges::EntryData::HasExtraLeveledItem()
 		jnz		iterHead
 		xor		al, al
 		retn
-		and		esp, 0xEFFFFFFF
-		nop
+		ALIGN 16
 	iterHead:
 		mov		edx, [ecx]
 		test	edx, edx
@@ -4073,7 +3993,7 @@ __declspec(naked) bool ExtraContainerChanges::EntryData::HasExtraLeveledItem()
 		jz		iterNext
 		mov		al, 1
 		retn
-		nop
+		ALIGN 16
 	iterNext:
 		mov		ecx, [ecx+4]
 		test	ecx, ecx
@@ -4144,8 +4064,7 @@ __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(
 		mov		ecx, [esp+0x24]
 		add		ecx, 0xA4
 		push	ecx
-		mov		eax, 0x644CE0
-		call	eax
+		CALL_EAX(0x644CE0)
 		add		esp, 0x20
 		mov		ecx, [esp+0x10]
 		test	ecx, ecx
@@ -4157,14 +4076,12 @@ __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(
 		fstp	dword ptr [esp]
 		push	ecx
 		push	kAmmoEffect_DamageMod
-		mov		eax, 0x59A030
-		call	eax
+		CALL_EAX(0x59A030)
 		add		esp, 0xC
 	noAmmo:
 		push	0xC
 		mov		ecx, esi
-		mov		eax, 0x4BDA70
-		call	eax
+		CALL_EAX(0x4BDA70)
 		test	al, al
 		jz		noMod
 		fmul	kSplitBeamMult
@@ -4182,8 +4099,7 @@ __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(
 		push	dword ptr [esi+8]
 		push	ecx
 		push	kPerkEntry_CalculateWeaponDamage
-		mov		eax, 0x5E58F0
-		call	eax
+		CALL_EAX(0x5E58F0)
 		add		esp, 0x14
 		fld		dword ptr [esp]
 		pop		ecx
@@ -4439,7 +4355,7 @@ void TESModelList::CopyFrom(TESModelList *source)
 	{
 		nifPath = currNode->data;
 		if (nifPath && *nifPath)
-			modelList.Insert(CopyString(nifPath));
+			modelList.Insert(CopyCString(nifPath));
 	}
 	while (currNode = currNode->next);
 }
@@ -4727,23 +4643,20 @@ __declspec(naked) TESObjectREFR *InterfaceManager::GetCursorPick()
 		push	8
 		push	0
 		mov     ecx, edi
-		mov		eax, 0xE98F20
-		call	eax
+		CALL_EAX(0xE98F20)
 		mov     ecx, edi
 		mov		dword ptr [ecx], 1
 		mov		byte ptr [ecx+0x11], 1
 		mov		eax, g_TES
 		push	dword ptr [eax+0xC]
-		mov		eax, 0x705FC0
-		call	eax
+		CALL_EAX(0x705FC0)
 		push	0
 		push	0
 		push	0
 		mov		eax, g_thePlayer
 		push	dword ptr [eax+0x670]
 		mov		ecx, ds:[0x11DEB7C]
-		mov		eax, 0xC52020
-		call	eax
+		CALL_EAX(0xC52020)
 		push	0
 		lea     edx, [ebp-0x4C]
 		push	edx
@@ -4755,16 +4668,14 @@ __declspec(naked) TESObjectREFR *InterfaceManager::GetCursorPick()
 		push	edx
 		mov		ecx, ds:[0x11DEB7C]
 		mov		ecx, [ecx+0xAC]
-		mov		eax, 0xA71080
-		call	eax
+		CALL_EAX(0xA71080)
 		push	0
 		lea     edx, [ebp-0x4C]
 		push	edx
 		lea     edx, [ebp-0x40]
 		push	edx
 		mov     ecx, edi
-		mov		eax, 0xE98E20
-		call	eax
+		CALL_EAX(0xE98E20)
 		xor		esi, esi
 		test	al, al
 		jz		done
@@ -4773,14 +4684,12 @@ __declspec(naked) TESObjectREFR *InterfaceManager::GetCursorPick()
 		mov		eax, [edi+0x1C]
 		mov		eax, [eax]
 		push	dword ptr [eax]
-		mov		eax, 0x56F930
-		call	eax
+		CALL_EAX(0x56F930)
 		pop		ecx
 		mov		esi, eax
 	done:
 		mov     ecx, edi
-		mov		eax, 0xE98FA0
-		call	eax
+		CALL_EAX(0xE98FA0)
 		mov		eax, esi
 		pop		edi
 		pop		esi
@@ -5011,12 +4920,39 @@ class AuxVariableValue
 	{
 		if (alloc)
 		{
-			free(str);
+			Pool_Free(str, alloc);
 			alloc = 0;
 		}
 	}
 
+	void ReadValData()
+	{
+		if (type == 4)
+		{
+			UInt16 size;
+			ReadRecordData(&size, 2);
+			if (size)
+			{
+				alloc = AlignNumAlloc<char>(size + 1);
+				str = (char*)Pool_Alloc(alloc);
+				ReadRecordData(str, size);
+				str[size] = 0;
+			}
+		}
+		else
+		{
+			ReadRecordData(&ref, 4);
+			if (type == 2) ResolveRefID(ref, &ref);
+		}
+	}
+
 public:
+	AuxVariableValue() : alloc(0) {}
+	AuxVariableValue(UInt8 _type) : type(_type), alloc(0) {ReadValData();}
+	AuxVariableValue(NVSEArrayElement &elem) : alloc(0) {SetElem(elem);}
+
+	~AuxVariableValue() {Clear();}
+
 	UInt8 GetType() const {return type;}
 	float GetFlt() const {return (type == 1) ? flt : 0;}
 	UInt32 GetRef() const {return (type == 2) ? ref : 0;}
@@ -5042,13 +4978,14 @@ public:
 		UInt16 size = StrLen(value);
 		if (size)
 		{
+			size++;
 			if (alloc < size)
 			{
-				if (alloc) free(str);
-				alloc = size;
-				str = (char*)malloc(size + 1);
+				if (alloc) Pool_Free(str, alloc);
+				alloc = AlignNumAlloc<char>(size);
+				str = (char*)Pool_Alloc(alloc);
 			}
-			memmove(str, value, size + 1);
+			memcpy(str, value, size);
 		}
 		else if (alloc)
 			*str = 0;
@@ -5068,27 +5005,6 @@ public:
 		return ArrayElementL(flt);
 	}
 
-	void ReadValData(UInt8 _type)
-	{
-		type = _type;
-		if (type == 4)
-		{
-			ReadRecordData(&alloc, 2);
-			if (alloc)
-			{
-				str = (char*)malloc(alloc + 1);
-				str[alloc] = 0;
-				ReadRecordData(str, alloc);
-			}
-		}
-		else
-		{
-			alloc = 0;
-			ReadRecordData(&ref, 4);
-			if (type == 2) ResolveRefID(ref, &ref);
-		}
-	}
-
 	void WriteValData() const
 	{
 		WriteRecordData(&type, 1);
@@ -5100,12 +5016,6 @@ public:
 		}
 		else WriteRecordData(&ref, 4);
 	}
-
-	AuxVariableValue() : alloc(0) {}
-	AuxVariableValue(UInt8 _type) {ReadValData(_type);}
-	AuxVariableValue(NVSEArrayElement &elem) : alloc(0) {SetElem(elem);}
-
-	~AuxVariableValue() {Clear();}
 };
 
 struct AuxVarValsArr : Vector<AuxVariableValue>
@@ -5167,7 +5077,7 @@ void __fastcall RemoveAttachedLight(TESObjectREFR *refr, char *nodeName)
 
 struct EventCallbackScripts : Set<Script*>
 {
-	EventCallbackScripts(UInt32 _alloc = 2) : Set<Script*>(_alloc) {}
+	EventCallbackScripts(UInt32 _alloc = 4) : Set<Script*>(_alloc) {}
 
 	void InvokeEvents(UInt32 arg);
 	void InvokeEvents2(UInt32 arg1, UInt32 arg2);
@@ -5702,26 +5612,21 @@ __declspec(naked) bool __stdcall JIPScriptRunner::RunScript(const char *scriptTe
 		mov		ebx, offset s_jipScriptRunner
 		mov		esi, [ebx]
 		mov		ecx, esi
-		mov		eax, 0x5AA0F0
-		call	eax
+		CALL_EAX(0x5AA0F0)
 		mov		ecx, esi
-		mov		eax, 0x484490
-		call	eax
+		CALL_EAX(0x484490)
 		push	dword ptr [esp+0xC]
 		mov		ecx, esi
-		mov		eax, 0x5ABE50
-		call	eax
+		CALL_EAX(0x5ABE50)
 		push	dword ptr [esp+0x10]
 		push	1
 		push	dword ptr [ebx+4]
 		mov		ecx, esi
-		mov		eax, 0x5AC400
-		call	eax
+		CALL_EAX(0x5AC400)
 		mov		ecx, esi
 		cmp		dword ptr [ecx+0x20], 0
 		setnz	bl
-		mov		eax, 0x5AA1A0
-		call	eax
+		CALL_EAX(0x5AA1A0)
 		mov		al, bl
 		pop		esi
 		pop		ebx
@@ -5891,6 +5796,8 @@ bool __fastcall IsMenuMode(UInt32 menuID)
 		case 0:
 			return g_interfaceManager->currentMode != 1;
 		case 1:
+			if (*(bool*)0x11CAB24)
+				return g_menuVisibility[kMenuType_Inventory] || g_menuVisibility[kMenuType_Stats] || g_menuVisibility[kMenuType_Map];
 			return g_interfaceManager->pipBoyMode == 3;
 		case 2:
 		{
@@ -5956,8 +5863,7 @@ __declspec(naked) void __fastcall DoConsolePrint(double *result)
 		push	eax
 		push	eax
 		mov		ecx, g_consoleManager
-		mov		eax, 0x71D0A0
-		call	eax
+		CALL_EAX(0x71D0A0)
 		mov		esp, ebp
 		pop		ebp
 		retn
@@ -6017,8 +5923,7 @@ __declspec(naked) void __fastcall DoConsolePrintID(double *result)
 		push	eax
 		push	eax
 		mov		ecx, g_consoleManager
-		mov		eax, 0x71D0A0
-		call	eax
+		CALL_EAX(0x71D0A0)
 		mov		esp, ebp
 		pop		ebp
 		retn
@@ -6114,8 +6019,7 @@ __declspec(naked) bool __fastcall GetFileArchived(const char *filePath)
 		lea		eax, [ebp-0xC]
 		push	eax
 		push	esi
-		mov		eax, 0xAFD270
-		call	eax
+		CALL_EAX(0xAFD270)
 		add		esp, 0xC
 		mov		edi, ds:[0x11F8160]
 	iterHead:
@@ -6136,8 +6040,7 @@ __declspec(naked) bool __fastcall GetFileArchived(const char *filePath)
 		push	eax
 		lea		eax, [ebp-0xC]
 		push	eax
-		mov		eax, 0xAF9BF0
-		call	eax
+		CALL_EAX(0xAF9BF0)
 		test	al, al
 		jnz		done
 	iterNext:

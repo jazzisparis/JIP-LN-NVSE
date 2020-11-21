@@ -10,9 +10,9 @@ DEFINE_COMMAND_PLUGIN(HasActionRef, , 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetRadius, , 0, 1, kParams_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(SetRadius, , 0, 2, kParams_JIP_OneFloat_OneOptionalForm);
 
-bool Cmd_SetLinkedRef_Execute(COMMAND_ARGS)
+__declspec(naked) bool Cmd_SetLinkedRef_Execute(COMMAND_ARGS)
 {
-	return Cmd_SetLinkedReference_Execute(PASS_COMMAND_ARGS);
+	__asm	jmp		Cmd_SetLinkedReference_Execute
 }
 
 bool Cmd_IsParentActivateOnly_Execute(COMMAND_ARGS)

@@ -162,7 +162,7 @@ char s_lastLoadedPath[MAX_PATH];
 void LoadGameCallback(void*)
 {
 	const char *currentPath = GetSavePath();
-	if (!StrEqualCS(s_lastLoadedPath, currentPath))
+	if (strcmp(s_lastLoadedPath, currentPath))
 	{
 		StrCopy(s_lastLoadedPath, currentPath);
 		s_dataChangedFlags = kChangedFlag_All;
