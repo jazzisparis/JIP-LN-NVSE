@@ -1519,6 +1519,7 @@ __declspec(naked) bool __cdecl PickSoundFileFromFolderHook(char *outFilePath)
 		test	eax, eax
 		jz		doneLists
 		mov		ecx, esi
+		ALIGN 16
 	appendIter:
 		mov		edx, [ecx+4]
 		test	edx, edx
@@ -1530,6 +1531,7 @@ __declspec(naked) bool __cdecl PickSoundFileFromFolderHook(char *outFilePath)
 	doneLists:
 		xor		edi, edi
 		mov		ecx, esi
+		ALIGN 16
 	countIter:
 		mov		ecx, [ecx+4]
 		test	ecx, ecx
@@ -1544,6 +1546,7 @@ __declspec(naked) bool __cdecl PickSoundFileFromFolderHook(char *outFilePath)
 		mov		ecx, 0x11C4180
 		CALL_EAX(0xAA5230)
 		mov		edi, eax
+		ALIGN 16
 	clearIter:
 		test	edi, edi
 		jnz		skipCopy
@@ -1607,19 +1610,20 @@ __declspec(naked) void SetSourceSoundRequestHook()
 		jz		done
 		mov		ecx, [ebp+8]
 		mov		edx, [ecx+4]
+		ALIGN 16
 	iterHead:
 		cmp		[eax+4], edx
-		jnz		iterNext
+		jz		found
+		mov		eax, [eax]
+		test	eax, eax
+		jnz		iterHead
+		jmp		done
+	found:
 		mov		eax, [eax+8]
 		mov		ecx, [ecx+8]
 		mov		[eax+0x134], ecx
 		call	GetFrequencyModifier
 		movss	[eax+0x138], xmm0
-		jmp		done
-	iterNext:
-		mov		eax, [eax]
-		test	eax, eax
-		jnz		iterHead
 	done:
 		JMP_EAX(0xAE5527)
 	}
@@ -1793,6 +1797,7 @@ __declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadin
 		jz		doGeneric
 		mov		esi, ds:[s_locationLoadScreens.data]
 		mov		edi, ds:[s_locationLoadScreens.numItems]
+		ALIGN 16
 	iter1Head:
 		push	dword ptr [esp]
 		mov		ecx, [esi]
@@ -1826,6 +1831,7 @@ __declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadin
 		test	edi, edi
 		jz		done
 		mov		esi, ds:[s_genericLoadScreens.data]
+		ALIGN 16
 	iter2Head:
 		mov		eax, [esi]
 		test	bl, bl
@@ -1997,8 +2003,6 @@ float s_VATSHitLocDT = 0;
 
 void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, UInt32 noBlock)
 {
-	/*if (g_VATSCameraData->mode && (g_VATSCameraData->mode != 4))
-		return;*/
 	if (s_doCalcDamage)
 	{
 		noBlock = s_doCalcDamage - 1;
@@ -2029,7 +2033,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	if (hitWeapon && hitWeapon->ammo.ammo)
 	{
 		TESAmmo *ammo = NULL;
-		if (source)
+		if (source && source->baseProcess)
 		{
 			ContChangesEntry *ammoInfo = source->baseProcess->GetAmmoInfo();
 			if (ammoInfo) ammo = (TESAmmo*)ammoInfo->type;
@@ -2181,7 +2185,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	bool flagArg;
 	if (dmgThreshold > 0)
 	{
-		if (source)
+		if (source && source->baseProcess)
 		{
 			weaponInfo = source->baseProcess->GetWeaponInfo();
 			if (weaponInfo && ThisCall<bool>(0x4BDA70, weaponInfo, 0xC))
@@ -2390,11 +2394,9 @@ __declspec(naked) void EnableRepairButtonHook()
 {
 	__asm
 	{
-		fst		s_repairedItemHealth
 		call	GetPCRepairSkill
-		fcompp
-		fnstsw	ax
-		test	ah, 0x41
+		fucomip	st, st(1)
+		fstp	s_repairedItemHealth
 		retn
 	}
 }
@@ -2417,7 +2419,7 @@ __declspec(naked) void PopulateRepairListHook()
 		CALL_EAX(kAddr_GetItemHealthPerc)
 		fld		s_repairedItemHealth
 		fucomip	st, st(1)
-		setnbe	al
+		setnb	al
 		fstp	st
 	done:
 		retn
@@ -2478,7 +2480,9 @@ __declspec(naked) void RepairMenuClickHook()
 		push	1
 		mov		ecx, ds:[0x11DA760]
 		CALL_EAX(kAddr_GetItemHealthPerc)
-		fcompp
+		fucomip	st, st(1)
+		fstp	st
+		setb	ah
 		retn
 	}
 }
@@ -2666,11 +2670,12 @@ __declspec(naked) void VoiceModulationFixHook()
 	}
 }
 
-float s_shapeVerticesZ[40];
+alignas(16) float s_shapeVerticesZ[40];
 bhkCharControllerShape *s_pcControllerShape = NULL;
 
 __declspec(naked) void InitControllerShapeHook()
 {
+	static const float kFltSix = 6.0F;
 	__asm
 	{
 		mov		eax, 0x1267BE0
@@ -2690,16 +2695,19 @@ __declspec(naked) void InitControllerShapeHook()
 		mov		ecx, ds:[0x1267BE0]
 		mov		ecx, [ecx+8]
 		mov		ecx, [ecx+0x40]
+		add		ecx, 0x20
 		mov		dl, 5
+		xorps	xmm1, xmm1
+		movss	xmm2, kFltSix
 	iter1Head:
-		movdqu	xmm0, xmmword ptr [ecx+0x20]
-		movdqu	xmmword ptr [eax], xmm0
+		movdqu	xmm0, xmmword ptr [ecx]
+		movdqa	xmmword ptr [eax], xmm0
 		mov		dh, 4
 	iter2Head:
 		movss	xmm0, [eax]
-		comiss	xmm0, kFltZero
+		comiss	xmm0, xmm1
 		jb		iter2Next
-		subss	xmm0, kFltSix
+		subss	xmm0, xmm2
 	iter2Next:
 		movss	[eax+0x50], xmm0
 		add		eax, 4
@@ -2749,18 +2757,20 @@ __declspec(naked) bool __fastcall SneakBoundingBoxFixHook(PlayerCharacter *thePl
 		mov		s_playerIsSneaking, al
 		mov		ecx, [ecx+8]
 		mov		ecx, [ecx+0x40]
-		movzx	edx, al
-		imul	edx, 0x50
+		movzx	eax, al
+		mov		edx, 0x50
+		test	eax, eax
+		cmovz	edx, eax
 		add		edx, offset s_shapeVerticesZ
-		movdqu	xmm0, xmmword ptr [edx]
+		movdqa	xmm0, xmmword ptr [edx]
 		movdqu	xmmword ptr [ecx+0x20], xmm0
-		movdqu	xmm0, xmmword ptr [edx+0x10]
+		movdqa	xmm0, xmmword ptr [edx+0x10]
 		movdqu	xmmword ptr [ecx+0x50], xmm0
-		movdqu	xmm0, xmmword ptr [edx+0x20]
+		movdqa	xmm0, xmmword ptr [edx+0x20]
 		movdqu	xmmword ptr [ecx+0x80], xmm0
-		movdqu	xmm0, xmmword ptr [edx+0x30]
+		movdqa	xmm0, xmmword ptr [edx+0x30]
 		movdqu	xmmword ptr [ecx+0xB0], xmm0
-		movdqu	xmm0, xmmword ptr [edx+0x40]
+		movdqa	xmm0, xmmword ptr [edx+0x40]
 		movdqu	xmmword ptr [ecx+0xE0], xmm0
 	done:
 		retn
@@ -2793,137 +2803,139 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 	static double gameHour = 0, daysPassed = 0;
 	__asm
 	{
-		movq		xmm4, kDbl24dot0
-		cvtss2sd	xmm2, dword ptr [esp+4]
-		mov			eax, [ecx+0x14]
-		cvtss2sd	xmm0, dword ptr [eax+0x24]
-		mulsd		xmm2, xmm0
-		divsd		xmm2, kDbl3600dot0
-		mov			eax, [ecx+0xC]
-		cvtss2sd	xmm0, dword ptr [eax+0x24]
-		cmp			byte ptr [ecx+0x1C], 0
-		jnz			doRecalc
-		movq		xmm1, xmm0
-		movq		xmm3, gameHour
-		subsd		xmm1, xmm3
-		comisd		xmm1, kDbl0dot1
-		ja			doRecalc
-		movq		xmm0, xmm3
-		movq		xmm1, daysPassed
-		jmp			proceed
+		movq	xmm4, kDbl24dot0
+		cvtss2sd	xmm2, [esp+4]
+		mov		eax, [ecx+0x14]
+		cvtss2sd	xmm0, [eax+0x24]
+		mulsd	xmm2, xmm0
+		divsd	xmm2, kDbl3600dot0
+		mov		eax, [ecx+0xC]
+		cvtss2sd	xmm0, [eax+0x24]
+		cmp		byte ptr [ecx+0x1C], 0
+		jnz		doRecalc
+		movq	xmm1, xmm0
+		movq	xmm3, gameHour
+		subsd	xmm1, xmm3
+		comisd	xmm1, kDbl0dot1
+		ja		doRecalc
+		movq	xmm0, xmm3
+		movq	xmm1, daysPassed
+		jmp		proceed
 	doRecalc:
-		mov			byte ptr [ecx+0x1C], 0
-		mov			edx, g_thePlayer
-		mov			byte ptr [edx+0xE39], 1
-		movq		xmm1, xmm0
-		divsd		xmm1, xmm4
-		mov			eax, [ecx+0x10]
-		cvttss2si	edx, dword ptr [eax+0x24]
+		mov		[ecx+0x1C], 0
+		mov		edx, g_thePlayer
+		mov		[edx+0xE39], 1
+		movq	xmm1, xmm0
+		divsd	xmm1, xmm4
+		mov		eax, [ecx+0x10]
+		cvttss2si	edx, [eax+0x24]
 		cvtsi2sd	xmm3, edx
-		addsd		xmm1, xmm3
+		addsd	xmm1, xmm3
 	proceed:
-		addsd		xmm0, xmm2
-		comisd		xmm0, xmm4
-		jbe			done
-		push		esi
-		push		edi
-		mov			eax, [ecx+4]
-		cvttss2si	esi, dword ptr [eax+0x24]
-		mov			eax, [ecx+8]
-		cvttss2si	edi, dword ptr [eax+0x24]
-		movzx		edx, kDaysPerMonth[esi]
+		addsd	xmm0, xmm2
+		comisd	xmm0, xmm4
+		jbe		done
+		push	esi
+		push	edi
+		mov		eax, [ecx+4]
+		cvttss2si	esi, [eax+0x24]
+		mov		eax, [ecx+8]
+		cvttss2si	edi, [eax+0x24]
+		movzx	edx, kDaysPerMonth[esi]
 	iterHead:
-		cmp			edi, edx
-		jb			incDay
-		mov			edi, 1
-		cmp			esi, 0xB
-		jb			incMonth
-		xor			esi, esi
-		mov			edx, 0x1F
-		mov			eax, [ecx]
-		movss		xmm3, [eax+0x24]
-		addss		xmm3, kFltOne
-		movss		[eax+0x24], xmm3
-		jmp			iterNext
+		cmp		edi, edx
+		jb		incDay
+		mov		edi, 1
+		cmp		esi, 0xB
+		jb		incMonth
+		xor		esi, esi
+		mov		edx, 0x1F
+		mov		eax, [ecx]
+		movss	xmm3, [eax+0x24]
+		addss	xmm3, kFltOne
+		movss	[eax+0x24], xmm3
+		jmp		iterNext
 	incDay:
-		inc			edi
-		jmp			iterNext
+		inc		edi
+		jmp		iterNext
 	incMonth:
-		inc			esi
-		movzx		edx, kDaysPerMonth[esi]
+		inc		esi
+		movzx	edx, kDaysPerMonth[esi]
 	iterNext:
-		subsd		xmm0, xmm4
-		comisd		xmm0, xmm4
-		ja			iterHead
+		subsd	xmm0, xmm4
+		comisd	xmm0, xmm4
+		ja		iterHead
 		cvtsi2ss	xmm3, esi
-		mov			eax, [ecx+4]
-		movss		[eax+0x24], xmm3
+		mov		eax, [ecx+4]
+		movss	[eax+0x24], xmm3
 		cvtsi2ss	xmm3, edi
-		mov			eax, [ecx+8]
-		movss		[eax+0x24], xmm3
-		inc			dword ptr [ecx+0x18]
-		pop			edi
-		pop			esi
+		mov		eax, [ecx+8]
+		movss	[eax+0x24], xmm3
+		inc		dword ptr [ecx+0x18]
+		pop		edi
+		pop		esi
 	done:
 		cvtsd2ss	xmm3, xmm0
-		mov			eax, [ecx+0xC]
-		movss		[eax+0x24], xmm3
-		divsd		xmm2, xmm4
-		addsd		xmm1, xmm2
+		mov		eax, [ecx+0xC]
+		movss	[eax+0x24], xmm3
+		divsd	xmm2, xmm4
+		addsd	xmm1, xmm2
 		cvtsd2ss	xmm3, xmm1
-		mov			eax, [ecx+0x10]
-		movss		[eax+0x24], xmm3
-		movq		gameHour, xmm0
-		movq		daysPassed, xmm1
-		retn		4
+		mov		eax, [ecx+0x10]
+		movss	[eax+0x24], xmm3
+		movq	gameHour, xmm0
+		movq	daysPassed, xmm1
+		retn	4
 	}
 }
 
 bool s_hardcoreNeedsFix = false;
 
-__declspec(naked) bool ModHardcoreNeedsHook()
+__declspec(naked) bool __fastcall ModHardcoreNeedsHook(PlayerCharacter *thePlayer, int EDX, UInt32 flag)
 {
 	__asm
 	{
+		lea		eax, [ecx+0x5D4]
 		cmp		s_hardcoreNeedsFix, 0
 		jz		tracking
+		add		ecx, 0x49C
 		xor		edx, edx
 		xorps	xmm1, xmm1
-		cmp		[ecx+0x49C], edx
+		cmp		[ecx], edx
 		jz		FOD
-		movss	xmm0, [ecx+0x49C]
-		mov		[ecx+0x49C], edx
-		addss	xmm0, [ecx+0x5D4]
-		movss	[ecx+0x5D4], xmm0
+		movss	xmm0, [ecx]
+		mov		[ecx], edx
+		addss	xmm0, [eax]
+		movss	[eax], xmm0
 		comiss	xmm0, xmm1
 		jnb		FOD
-		mov		[ecx+0x5D4], edx
+		mov		[eax], edx
 	FOD:
-		cmp		[ecx+0x4A0], edx
+		cmp		[ecx+4], edx
 		jz		SLP
-		movss	xmm0, [ecx+0x4A0]
-		mov		[ecx+0x4A0], edx
-		addss	xmm0, [ecx+0x5D8]
-		movss	[ecx+0x5D8], xmm0
+		movss	xmm0, [ecx+4]
+		mov		[ecx+4], edx
+		addss	xmm0, [eax+4]
+		movss	[eax+4], xmm0
 		comiss	xmm0, xmm1
 		jnb		SLP
-		mov		[ecx+0x5D8], edx
+		mov		[eax+4], edx
 	SLP:
-		cmp		[ecx+0x4A4], edx
+		cmp		[ecx+8], edx
 		jz		tracking
-		movss	xmm0, [ecx+0x4A4]
-		mov		[ecx+0x4A4], edx
-		addss	xmm0, [ecx+0x5DC]
-		movss	[ecx+0x5DC], xmm0
+		movss	xmm0, [ecx+8]
+		mov		[ecx+8], edx
+		addss	xmm0, [eax+8]
+		movss	[eax+8], xmm0
 		comiss	xmm0, xmm1
 		jnb		tracking
-		mov		[ecx+0x5DC], edx
+		mov		[eax+8], edx
 	tracking:
 		test	s_serializedFlags, kSerializedFlag_NoHardcoreTracking
 		jz		done
-		mov		byte ptr [ecx+0xE39], 1
+		mov		byte ptr [eax+0x865], 1
 	done:
-		test	byte ptr [ecx+0x680], 4
+		test	byte ptr [eax+0xAC], 4
 		setnz	al
 		retn	4
 	}
@@ -2941,43 +2953,37 @@ __declspec(naked) void DoOperator()
 	{
 //	Operator &&
 		xor		edx, edx
-		pxor	xmm0, xmm0
+		mov		ecx, [ebp-0x20]
 		test	al, al
 		jz		lIntAND
-		comisd	xmm0, qword ptr [ebp-0x20]
-		jz		doneAND
-		jmp		doRAND
+		or		ecx, [ebp-0x1C]
 	lIntAND:
-		cmp		[ebp-0x20], edx
+		test	ecx, ecx
 		jz		doneAND
-	doRAND:
-		test	cl, cl
+		mov		ecx, [ebp-0x38]
+		test	ah, ah
 		jz		rIntAND
-		comisd	xmm0, qword ptr [ebp-0x38]
-		jmp		doneAND
+		or		ecx, [ebp-0x34]
 	rIntAND:
-		cmp		[ebp-0x38], edx
+		test	ecx, ecx
 	doneAND:
 		setnz	dl
 		OPERATOR_RES_EDX
 //	Operator ||
 		xor		edx, edx
-		pxor	xmm0, xmm0
+		mov		ecx, [ebp-0x20]
 		test	al, al
 		jz		lIntOR
-		comisd	xmm0, qword ptr [ebp-0x20]
-		jnz		doneOR
-		jmp		doROR
+		or		ecx, [ebp-0x1C]
 	lIntOR:
-		cmp		[ebp-0x20], edx
+		test	ecx, ecx
 		jnz		doneOR
-	doROR:
-		test	cl, cl
+		mov		ecx, [ebp-0x38]
+		test	ah, ah
 		jz		rIntOR
-		comisd	xmm0, qword ptr [ebp-0x38]
-		jmp		doneOR
+		or		ecx, [ebp-0x34]
 	rIntOR:
-		cmp		[ebp-0x38], edx
+		test	ecx, ecx
 	doneOR:
 		setnz	dl
 		OPERATOR_RES_EDX
@@ -3077,13 +3083,13 @@ __declspec(naked) void DoOperatorHook()
 	__asm
 	{
 		mov		al, [ebp-0x28]
-		mov		cl, [ebp-0x40]
+		mov		ah, [ebp-0x40]
 		shl		edx, 3
 		cmp		edx, 8
 		jbe		doJump
 		test	al, al
 		jnz		lValFlt
-		test	cl, cl
+		test	ah, ah
 		jnz		lValCvt
 		mov		eax, [ebp-0x20]
 		mov		ecx, [ebp-0x38]
@@ -3092,7 +3098,7 @@ __declspec(naked) void DoOperatorHook()
 		ALIGN 16
 	lValFlt:
 		movq	xmm0, qword ptr [ebp-0x20]
-		test	cl, cl
+		test	ah, ah
 		jnz		rValFlt
 		cvtsi2sd	xmm1, [ebp-0x38]
 		jmp		doJump
@@ -3158,7 +3164,7 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 		{
 			if (!HOOK_SET(EnableRepairButton, bEnable))
 				return 0;
-			SafeWrite8(0x7818D3, bEnable ? 0x74 : 0x7A);
+			SafeWrite8(0x7818D3, bEnable ? 0x77 : 0x7A);
 			HOOK_SET(PopulateRepairList, bEnable);
 			HOOK_SET(SetRepairListValues, bEnable);
 			HOOK_SET(DoRepairItem, bEnable);
@@ -3422,11 +3428,16 @@ bool ProcessCustomINI()
 
 UnorderedSet<const char*> s_overrideBSAFiles;
 
-void *LoadBSAFileHook(const char *filename, short arg2, bool isOverride)
+__declspec(naked) BSArchive* __cdecl LoadBSAFileHook(const char *filename, short arg2, bool isOverride)
 {
-	if (s_overrideBSAFiles.HasKey(filename))
-		isOverride = true;
-	return CdeclCall<void*>(0xAF4BE0, filename, arg2, isOverride);
+	__asm
+	{
+		push	dword ptr [esp+4]
+		mov		ecx, offset s_overrideBSAFiles
+		call	UnorderedSet<const char*>::HasKey
+		mov		[esp+0xC], al
+		JMP_EAX(0xAF4BE0)
+	}
 }
 
 float s_msgDisplayTime = 2;				// Replacement float for 0x010162C0
@@ -3470,7 +3481,7 @@ void InitGamePatches()
 	SafeWriteBuf(0x5A8ECF, "\x8B\x45\xFC\x8B\x40\x04\x89\x45\xFC\x85\xD2\x74\x0D\xC7\x42\x04\x00\x00\x00\x00\xEB\xCD", 22);
 
 	//	Earn Steam achievements even if the console has been used
-	SafeWrite16(0x5D3B69, 0x9090);
+	SafeWrite16(0x5D3B69, 0x9066);
 
 	//	Don't reset Actor::actorFlags for creatures, upon LoadGame
 	SafeWrite16(0x8D5003, 0x0BEB);
@@ -3493,8 +3504,8 @@ void InitGamePatches()
 	s_hasNVAC = GetModuleHandle("nvac.dll") != 0;
 	if (!s_hasNVAC)		//	NVAC already patches those
 	{
-		SafeWrite32(0x57D3B9, 0x90901AEB);	//	Increase grass fade distance
-		SafeWrite8(0xC44405, 4);			//	Increase buffer size for GetPrivateProfileString
+		SafeWrite16(0x57D3B9, 0x1AEB);	//	Increase grass fade distance
+		SafeWrite8(0xC44405, 4);		//	Increase buffer size for GetPrivateProfileString
 	}
 
 	//	Increase corner message max text length to 0x203 characters
@@ -3525,7 +3536,7 @@ void InitGamePatches()
 	SafeWrite8(0x5EB79B, 0x23);
 
 	//	Fix item value/weight display in the crafting menu
-	SafeWrite16(0x728E10, 0x06EB);
+	SafeWriteBuf(0x728E10, "\x0F\x1F\x84\x00\x00\x00\x00\x00", 8);
 	SafeWrite32(0x729616, 0x1030018);
 
 	//	Don't play equip sound if item is already equipped
@@ -3556,9 +3567,9 @@ void InitGamePatches()
 	SafeWriteBuf(0x7AA80F, "\x8B\x01\x8B\x40\x04\x85\xC0\x75\x03\xEB\x68", 11);
 
 	//	AI Z fix (credits to Stewie)
-	SafeWrite16(0x6B10A3, 0x03EB);
-	SafeWrite16(0x881A9C, 0x03EB);
-	SafeWrite16(0x9E6A82, 0x03EB);
+	SafeWriteBuf(0x6B10A3, "\x0F\x1F\x44\x00\x00", 5);
+	SafeWriteBuf(0x881A9C, "\x0F\x1F\x44\x00\x00", 5);
+	SafeWriteBuf(0x9E6A82, "\x0F\x1F\x44\x00\x00", 5);
 
 	//	ScriptRunner::Run skip Script::GetName calls
 	SafeWrite16(0x5E0DD1, 0x39EB);
@@ -3624,7 +3635,6 @@ void InitGamePatches()
 	WriteRelCall(0x9D10F3, (UInt32)ReactionCooldownCheckHook);
 	WritePushRetRelJump(0x9F50C4, 0x9F50E7, (UInt32)IsValidAITargetHook);
 	WritePushRetRelJump(0x5719ED, 0x571A27, (UInt32)PickWeaponModelHook);
-	//SafeWrite16(0x4AB458, 0x22EB);
 	WritePushRetRelJump(0x83AD97, 0x83AE4F, (UInt32)PlayAttackSoundHook);
 	WriteRelJump(0x9BD507, (UInt32)AddProjectileLightHook);
 	WriteRelCall(0x89DC0E, (UInt32)KillChallengeFixHook);
@@ -3635,7 +3645,7 @@ void InitGamePatches()
 	SafeWrite16(0x54E421, 0x1EEB);
 	WritePushRetRelJump(0x54E4E1, 0x54E5E6, (UInt32)ClearAshPilesHook);
 	WritePushRetRelJump(0x82D8CA, 0x82D8F4, (UInt32)SetAcousticSpaceFixHook);
-	SafeWriteBuf(0xAEACAA, "\x31\xD2\x89\x90\x34\x01\x00\x00\x89\x90\x9C\x01\x00\x00\x89\x90\xA0\x01\x00\x00\x89\x90\xDC\x01\x00\x00\xC7\x80\x38\x01\x00\x00\x00\x00\x80\x3F\x90\x90\x90", 39);
+	SafeWriteBuf(0xAEACAA, "\x31\xD2\x89\x90\x34\x01\x00\x00\x89\x90\x9C\x01\x00\x00\x89\x90\xA0\x01\x00\x00\x89\x90\xDC\x01\x00\x00\xC7\x80\x38\x01\x00\x00\x00\x00\x80\x3F\x0F\x1F\x00", 39);
 	SafeWrite32(0xAE5648, (UInt32)SetSourceSoundRequestHook);
 	WritePushRetRelJump(0x82D416, 0x82D426, (UInt32)FillGameSoundPropsHook);
 	SafeWrite32(0x10A3C58, (UInt32)AdjustSoundFrequencyHook);
@@ -3654,7 +3664,7 @@ void InitGamePatches()
 	HOOK_INIT_JPRT(PopulateRepairList, 0x4D4C11, 0x4D4C26);
 	HOOK_INIT_JPRT(SetRepairListValues, 0x7B58DB, 0x7B5927);
 	HOOK_INIT_JUMP(DoRepairItem, 0x7B5DCE);
-	HOOK_INIT_JPRT(RepairMenuClick, 0x7B5CED, 0x7B5D00);
+	HOOK_INIT_JPRT(RepairMenuClick, 0x7B5CED, 0x7B5D02);
 	HOOK_INIT_JPRT(DamageToWeapon, 0x646266, 0x64629A);
 	HOOK_INIT_CALL(InitMissileFlags, 0x9B7E14);
 	HOOK_INIT_JUMP(QttSelectInventory, 0x780B09);

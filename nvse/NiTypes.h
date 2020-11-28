@@ -2,8 +2,6 @@
 
 #include "nvse/Utilities.h"
 
-const UInt32 kNiTMapLookupAddr = 0x853130;
-
 // 08
 struct NiRTTI
 {
@@ -294,24 +292,6 @@ public:
 
 	T_Data *Lookup(UInt32 key) const;
 
-	bool Insert(UInt32 key, T_Data ***outData)
-	{
-		Entry **bucket = &m_buckets[key % m_numBuckets], *entry = *bucket;
-		while (entry)
-		{
-			if (entry->key != key) continue;
-			*outData = &entry->data;
-			return false;
-		}
-		m_numItems++;
-		entry = AllocNewEntry();
-		entry->key = key;
-		entry->next = *bucket;
-		*bucket = entry;
-		*outData = &entry->data;
-		return true;
-	}
-
 	void DumpLoads()
 	{
 		int loadsArray[0x80];
@@ -380,19 +360,20 @@ __declspec(naked) T_Data *NiTPointerMap<T_Data>::Lookup(UInt32 key) const
 		div		dword ptr [ecx+4]
 		mov		eax, [ecx+8]
 		mov		eax, [eax+edx*4]
+		test	eax, eax
+		jz		done
 		mov		edx, [esp+4]
-		jmp		iterNext
 		ALIGN 16
 	iterHead:
 		cmp		[eax+4], edx
 		jz		found
 		mov		eax, [eax]
-	iterNext:
 		test	eax, eax
 		jnz		iterHead
 		retn	4
 	found:
 		mov		eax, [eax+8]
+	done:
 		retn	4
 	}
 }
@@ -401,18 +382,16 @@ __declspec(naked) T_Data *NiTPointerMap<T_Data>::Lookup(UInt32 key) const
 // todo: NiTPointerMap should derive from this
 // cleaning that up now could cause problems, so it will wait
 
-template <typename T_Key, typename T_Data> struct NiTMapEntry
-{
-	NiTMapEntry		*next;
-	T_Key			key;
-	T_Data			data;
-};
-
 template <typename T_Key, typename T_Data>
 class NiTMapBase
 {
 public:
-	typedef NiTMapEntry<T_Key, T_Data> Entry;
+	struct Entry
+	{
+		Entry		*next;
+		T_Key		key;
+		T_Data		data;
+	};
 
 	virtual NiTMapBase	*Destructor(bool doFree);
 	virtual UInt32		CalculateBucket(T_Key key);
@@ -426,40 +405,11 @@ public:
 	Entry		**buckets;	// 08
 	UInt32		numItems;	// 0C
 
-	bool InsertKey(T_Key key, T_Data **outData)
+	T_Data Lookup(T_Key key)
 	{
-		Entry **bucket = &buckets[key % numBuckets], *entry = *bucket;
-		while (entry)
-		{
-			if (entry->key == key)
-			{
-				*outData = &entry->data;
-				return false;
-			}
-			entry = entry->next;
-		}
-		numItems++;
-		entry = AllocNewEntry();
-		entry->key = key;
-		entry->next = *bucket;
-		*bucket = entry;
-		*outData = &entry->data;
-		return true;
-	}
-
-	void Clear()
-	{
-		if (!numItems) return;
-		numItems = 0;
-		Entry **bucket = buckets, *entry;
-		for (UInt32 count = numBuckets; count; count--, bucket++)
-		{
-			while (entry = *bucket)
-			{
-				*bucket = entry->next;
-				FreeEntry(entry);
-			}
-		}
+		for (Entry *entry = buckets[CalculateBucket(key)]; entry; entry = entry->next)
+			if (Equal(key, entry->key)) return entry->data;
+		return NULL;
 	}
 
 	class Iterator
@@ -493,98 +443,16 @@ public:
 		T_Key Key() const {return entry->key;}
 	};
 
-	Entry *Get(T_Key key);
-	bool Insert(T_Key key, T_Data value);
-
 	Iterator Begin() {return Iterator(*this);}
 };
 
-template <typename T_Key, typename T_Data>
-__declspec(naked) NiTMapEntry<T_Key, T_Data> *NiTMapBase<T_Key, T_Data>::Get(T_Key key)
-{
-	__asm
-	{
-		push	esi
-		push	edi
-		mov		esi, ecx
-		push	dword ptr [esp+0xC]
-		mov		eax, [ecx]
-		call	dword ptr [eax+4]
-		mov		ecx, [esi+8]
-		mov		edi, [ecx+eax*4]
-	findEntry:
-		test	edi, edi
-		jz		done
-		push	dword ptr [esp+0xC]
-		push	dword ptr [edi+4]
-		mov		ecx, esi
-		mov		eax, [ecx]
-		call	dword ptr [eax+8]
-		test	al, al
-		jnz		done
-		mov		edi, [edi]
-		jmp		findEntry
-	done:
-		mov		eax, edi
-		pop		edi
-		pop		esi
-		retn	4
-	}
-}
-
-template <typename T_Key, typename T_Data>
-__declspec(naked) bool NiTMapBase<T_Key, T_Data>::Insert(T_Key key, T_Data value)
-{
-	__asm
-	{
-		push	esi
-		push	edi
-		mov		esi, ecx
-		push	dword ptr [esp+0xC]
-		mov		eax, [ecx]
-		call	dword ptr [eax+4]
-		mov		ecx, [esi+8]
-		lea		edi, [ecx+eax*4]
-	findEntry:
-		mov		eax, [edi]
-		test	eax, eax
-		jz		addEntry
-		push	dword ptr [esp+0xC]
-		push	dword ptr [eax+4]
-		mov		ecx, esi
-		mov		eax, [ecx]
-		call	dword ptr [eax+8]
-		mov		edi, [edi]
-		test	al, al
-		jz		findEntry
-		xor		al, al
-		jmp		done
-	addEntry:
-		push	0xC
-		GAME_HEAP_ALLOC
-		mov		dword ptr [eax], 0
-		mov		[edi], eax
-		push	dword ptr [esp+0x10]
-		push	dword ptr [esp+0x10]
-		push	eax
-		mov		ecx, esi
-		mov		eax, [ecx]
-		call	dword ptr [eax+0xC]
-		inc		dword ptr [esi+0xC]
-		mov		al, 1
-	done:
-		pop		edi
-		pop		esi
-		retn	8
-	}
-}
-
 // 14
 template <typename T_Data>
-class NiTStringPointerMap : public NiTPointerMap<T_Data>
+class NiTStringPointerMap : public NiTMapBase<const char*, T_Data>
 {
 public:
-	UInt32	unk010;
+	UInt8		byte10;
+	UInt8		pad11[3];
 };
 
 // not sure how much of this is in NiTListBase and how much is in NiTPointerListBase

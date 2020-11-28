@@ -7,11 +7,8 @@
 
 void* __fastcall Pool_Alloc_Buckets(UInt32 numBuckets);
 UInt32 __fastcall AlignBucketCount(UInt32 count);
-
-#define POOL_ALLOC(count, type) (type*)Pool_Alloc(count * sizeof(type))
-#define POOL_FREE(block, count, type) Pool_Free(block, count * sizeof(type))
-#define POOL_REALLOC(block, curCount, newCount, type) block = (type*)Pool_Realloc(block, curCount * sizeof(type), newCount * sizeof(type))
-#define ALLOC_NODE(type) (type*)Pool_Alloc(sizeof(type))
+UInt32 __fastcall StrHashCS(const char *inKey);
+UInt32 __fastcall StrHashCI(const char *inKey);
 
 template <typename T_Data> class Stack
 {
@@ -466,41 +463,39 @@ public:
 
 template <typename T_Data> __forceinline UInt32 AlignNumAlloc(UInt32 numAlloc)
 {
-	switch (alignof(T_Data))
+	switch (sizeof(T_Data) & 0xF)
 	{
-		case 1:
-			if (numAlloc & 0xF)
-			{
-				numAlloc &= 0xFFFFFFF0;
-				numAlloc += 0x10;
-			}
+		case 0:
 			return numAlloc;
 		case 2:
+		case 6:
+		case 0xA:
+		case 0xE:
 			if (numAlloc & 7)
 			{
 				numAlloc &= 0xFFFFFFF8;
 				numAlloc += 8;
 			}
 			return numAlloc;
-		default:
-		{
-			switch (sizeof(T_Data) & 0xC)
+		case 4:
+		case 0xC:
+			if (numAlloc & 3)
 			{
-				case 0:
-					return numAlloc;
-				case 8:
-					if (numAlloc & 1)
-						numAlloc++;
-					return numAlloc;
-				default:
-					if (numAlloc & 3)
-					{
-						numAlloc &= 0xFFFFFFFC;
-						numAlloc += 4;
-					}
-					return numAlloc;
+				numAlloc &= 0xFFFFFFFC;
+				numAlloc += 4;
 			}
-		}
+			return numAlloc;
+		case 8:
+			if (numAlloc & 1)
+				numAlloc++;
+			return numAlloc;
+		default:
+			if (numAlloc & 0xF)
+			{
+				numAlloc &= 0xFFFFFFF0;
+				numAlloc += 0x10;
+			}
+			return numAlloc;
 	}
 }
 
@@ -580,7 +575,7 @@ template <typename T_Key, typename T_Data> class Map
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
 	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 
-	struct __declspec(align(4)) Entry
+	struct Entry
 	{
 		M_Key		key;
 		M_Value		value;

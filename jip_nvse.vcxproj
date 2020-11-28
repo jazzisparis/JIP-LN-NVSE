@@ -83,6 +83,7 @@
       </ForcedIncludeFiles>
     </ClCompile>
     <ClCompile Include="internal\containers.cpp" />
+    <ClCompile Include="internal\memory_pool.cpp" />
     <ClCompile Include="internal\utility.cpp" />
     <ClCompile Include="jip_nvse.cpp" />
     <ClCompile Include="nvse\GameAPI.cpp" />
@@ -167,6 +168,7 @@
     <ClInclude Include="internal\havok.h" />
     <ClInclude Include="internal\hooks.h" />
     <ClInclude Include="internal\lutana.h" />
+    <ClInclude Include="internal\memory_pool.h" />
     <ClInclude Include="internal\netimmerse.h" />
     <ClInclude Include="internal\param_info.h" />
     <ClInclude Include="internal\patches_cmd.h" />

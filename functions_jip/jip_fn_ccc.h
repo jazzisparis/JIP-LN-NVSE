@@ -439,8 +439,8 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 				if (!mkRefr || (mkRefr->baseForm->refID != 0x10)) continue;
 				xMarker = GetExtraType(&mkRefr->extraDataList, MapMarker);
 				if (!xMarker || !xMarker->data || !xMarker->data->fullName.name.m_dataLen) continue;
-				coord.x = lfloor(mkRefr->posX / 4096);
-				coord.y = lfloor(mkRefr->posY / 4096);
+				coord.x = ifloor(mkRefr->posX / 4096);
+				coord.y = ifloor(mkRefr->posY / 4096);
 				(*markersGrid)[coord.xy] = mkRefr;
 			}
 			while (objIter = objIter->next);
@@ -449,7 +449,7 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 	if (!markersGrid->Empty())
 	{
 		mkRefr = NULL;
-		SInt16 gridX = coord.x = lfloor(thisObj->posX / 4096), gridY = coord.y = lfloor(thisObj->posY / 4096);
+		SInt16 gridX = coord.x = ifloor(thisObj->posX / 4096), gridY = coord.y = ifloor(thisObj->posY / 4096);
 		char modX, modY, count;
 		TESObjectREFR *findMarker;
 		float distMin = 40000, distTmp;
@@ -605,11 +605,11 @@ bool Cmd_RefToPosStr_Execute(COMMAND_ARGS)
 		char *pos = s_strValBuffer;
 		pos = UIntToHex(pos, cell->worldSpace ? cell->worldSpace->refID : cell->refID);
 		*pos++ = ' ';
-		pos = IntToStr(pos, lfloor(thisObj->posX));
+		pos = IntToStr(pos, ifloor(thisObj->posX));
 		*pos++ = ' ';
-		pos = IntToStr(pos, lfloor(thisObj->posY));
+		pos = IntToStr(pos, ifloor(thisObj->posY));
 		*pos++ = ' ';
-		IntToStr(pos, lceil(thisObj->posZ));
+		IntToStr(pos, iceil(thisObj->posZ));
 	}
 	else s_strValBuffer[0] = 0;
 	AssignString(PASS_COMMAND_ARGS, s_strValBuffer);

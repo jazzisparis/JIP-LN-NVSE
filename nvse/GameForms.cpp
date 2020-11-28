@@ -271,16 +271,17 @@ __declspec(naked) TESAmmo *TESObjectWEAP::GetAmmo()
 		jnz		done
 		lea		ecx, [eax+0x18]
 		mov		edx, [eax+0x20]
+		ALIGN 16
 	iterHead:
 		dec		edx
-		jns		iterNext
-		mov		eax, [ecx]
-		retn
-	iterNext:
+		js		iterEnd
 		mov		ecx, [ecx+4]
 		test	ecx, ecx
 		jnz		iterHead
 		mov		eax, [eax+0x18]
+		retn
+	iterEnd:
+		mov		eax, [ecx]
 	done:
 		retn
 	}

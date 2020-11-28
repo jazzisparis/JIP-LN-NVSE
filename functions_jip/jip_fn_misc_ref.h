@@ -1136,9 +1136,8 @@ bool Cmd_GetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 			NiControllerManager *ctrlMgr = (NiControllerManager*)rootNode->m_controller;
 			if (ctrlMgr && IS_TYPE(ctrlMgr, NiControllerManager))
 			{
-				NiTMapEntry<const char*, NiControllerSequence*> *entry = ctrlMgr->seqStrMap.Get(s_strArgBuffer);
-				if (entry && entry->data)
-					*result = entry->data->frequency;
+				NiControllerSequence *sequence = ctrlMgr->seqStrMap.Lookup(s_strArgBuffer);
+				if (sequence) *result = sequence->frequency;
 			}
 		}
 	}
@@ -1161,9 +1160,8 @@ bool Cmd_SetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 						iter->frequency = frequency;
 				else
 				{
-					NiTMapEntry<const char*, NiControllerSequence*> *entry = ctrlMgr->seqStrMap.Get(s_strArgBuffer);
-					if (entry && entry->data)
-						entry->data->frequency = frequency;
+					NiControllerSequence *sequence = ctrlMgr->seqStrMap.Lookup(s_strArgBuffer);
+					if (sequence) sequence->frequency = frequency;
 				}
 			}
 		}

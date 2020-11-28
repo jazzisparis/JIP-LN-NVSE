@@ -88,7 +88,7 @@ __declspec(naked) void UpdateTileScales()
 		movss	xmm0, [eax+8]
 		mulss	xmm0, kFlt10
 		cvttss2si	eax, xmm0
-		imul	eax, 0x10
+		shl		eax, 4
 		add		eax, 0x70
 		mov		s_texturePixelSize, eax
 		retn
@@ -127,6 +127,7 @@ __declspec(naked) void __fastcall GetNorthRotation(TESObjectCELL *cell)
 
 __declspec(naked) void __fastcall AdjustInteriorPos(CoordXY *inPos, CoordXY *outPos)
 {
+	static const float kFlt2048 = 2048.0F;
 	__asm
 	{
 		cmp		s_cellNorthRotation, 0
@@ -843,7 +844,7 @@ TESObjectDOOR *s_defaultDoor;
 
 void __fastcall GetTeleportDoors(TESObjectCELL *cell, DoorRefsList *doorRefsList)
 {
-	ThisCall(0x541AC0, cell);
+	cell->RefLockEnter();
 	ListNode<TESObjectREFR> *refsIter = cell->objectList.Head();
 	TESObjectREFR *refr;
 	TESObjectDOOR *baseDoor;
@@ -856,7 +857,7 @@ void __fastcall GetTeleportDoors(TESObjectCELL *cell, DoorRefsList *doorRefsList
 			doorRefsList->Append(refr);
 	}
 	while (refsIter = refsIter->next);
-	ThisCall(0x541AE0, cell);
+	cell->RefLockLeave();
 }
 
 TESForm *s_blackPlaneBase;
@@ -864,7 +865,7 @@ Vector<NiNode*> s_hiddenNodes(0x20);
 
 void __fastcall GetBlackPlaneNodes(TESObjectCELL *cell)
 {
-	ThisCall(0x541AC0, cell);
+	cell->RefLockEnter();
 	ListNode<TESObjectREFR> *refsIter = cell->objectList.Head();
 	TESObjectREFR *refr;
 	NiNode *node;
@@ -875,7 +876,7 @@ void __fastcall GetBlackPlaneNodes(TESObjectCELL *cell)
 			s_hiddenNodes.Append(node);
 	}
 	while (refsIter = refsIter->next);
-	ThisCall(0x541AE0, cell);
+	cell->RefLockLeave();
 }
 
 UInt8 s_useAltFormat = 0;
@@ -883,6 +884,7 @@ alignas(16) const UInt32 kCaptureBounds[] = {0xC5000000, 0x45000000, 0x45000000,
 
 __declspec(naked) void ExtCaptureBoundsHook()
 {
+	static const float kFlt4096 = 4096.0F, kFlt12288 = 12288.0F;
 	__asm
 	{
 		cmp		s_useAltFormat, 0
@@ -946,6 +948,7 @@ __declspec(naked) void ExtCaptureBoundsHook()
 
 __declspec(naked) void IntCaptureBoundsHook()
 {
+	static const float kFlt10000 = 10000.0F, kFlt40000 = 40000.0F;
 	__asm
 	{
 		cmp		s_useAltFormat, 0
@@ -1243,7 +1246,7 @@ __declspec(naked) void SetQuestTargetsHook()
 
 bool s_updateFogOfWar = false;
 
-__declspec(naked) bool __stdcall UpdateSeenBitsHook(NiVector3 *posVector1, NiVector3 *posVector2)
+__declspec(naked) bool __fastcall UpdateSeenBitsHook(SeenData *seenData, int EDX, NiVector3 *posVector1, NiVector3 *posVector2)
 {
 	__asm
 	{
@@ -1269,7 +1272,8 @@ __declspec(naked) bool __stdcall UpdateSeenBitsHook(NiVector3 *posVector1, NiVec
 		ALIGN 16
 	iter1Head:
 		xor		edi, edi
-		imul	eax, esi, 0x100
+		mov		eax, esi
+		shl		eax, 8
 		add		eax, [ebp-0xC]
 		imul	eax, eax
 		mov		[ebp-0x10], eax
@@ -1286,7 +1290,8 @@ __declspec(naked) bool __stdcall UpdateSeenBitsHook(NiVector3 *posVector1, NiVec
 		lea		ecx, [ebx+eax*4]
 		test	dword ptr [ecx], edx
 		jnz		doInc
-		imul	eax, edi, 0x100
+		mov		eax, edi
+		shl		eax, 8
 		add		eax, [ebp-8]
 		imul	eax, eax
 		add		eax, [ebp-0x10]
@@ -1487,8 +1492,8 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 			xMarker = GetExtraType(&markerRef->extraDataList, MapMarker);
 			if (!xMarker || !xMarker->data) continue;
 			AdjustWorldPos(markerRef->PosXY(), &posXY);
-			coord.x = lfloor(posXY.x / 4096);
-			coord.y = lfloor(posXY.y / 4096);
+			coord.x = ifloor(posXY.x / 4096);
+			coord.y = ifloor(posXY.y / 4096);
 			GetWorldMapPosMults(&posXY);
 			if (!worldMarkers)
 				worldMarkers = &s_worldMapMarkers[rootWorld];
@@ -1662,7 +1667,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			s_worldMapTile->SetString(kTileValue_filename, ddsPath);
 			s_worldMapRect->SetFloat(kTileValue_user1, rootWorld->mapData.usableDimensions.X);
 			s_worldMapRect->SetFloat(kTileValue_user2, rootWorld->mapData.usableDimensions.Y);
-			s_markerRange = lceil(60.0F / rootWorld->mapData.usableDimensions.X *
+			s_markerRange = iceil(60.0F / rootWorld->mapData.usableDimensions.X *
 				(rootWorld->mapData.cellSECoordinates.X - rootWorld->mapData.cellNWCoordinates.X +
 				rootWorld->mapData.cellNWCoordinates.Y - rootWorld->mapData.cellSECoordinates.Y));
 			updateTiles = true;
@@ -1676,8 +1681,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		}
 
 		AdjustWorldPos(objectRef->PosXY(), &posMult);
-		coord.x = lfloor(posMult.x / 4096);
-		coord.y = lfloor(posMult.y / 4096);
+		coord.x = ifloor(posMult.x / 4096);
+		coord.y = ifloor(posMult.y / 4096);
 		GetWorldMapPosMults(&posMult);
 
 		if (s_currWorldCoords != coord)
@@ -1706,7 +1711,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			WorldMapMarkers *worldMarkers = s_worldMapMarkers.GetPtr(rootWorld);
 			if (worldMarkers)
 			{
-				int range = lceil(s_markerRange / s_worldMapZoom->num);
+				int range = iceil(s_markerRange / s_worldMapZoom->num);
 				CellMapMarkers *mapMarkers;
 				DynamicTiles *dynamicTiles;
 				coord.x -= range;

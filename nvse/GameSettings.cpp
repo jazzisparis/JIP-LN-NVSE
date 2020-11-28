@@ -105,7 +105,7 @@ __declspec(naked) bool GameSettingCollection::GetGameSetting(char *settingName, 
 	__asm
 	{
 		add		ecx, 0x10C
-		jmp		kNiTMapLookupAddr
+		JMP_EAX(0x853130)
 	}
 }
 

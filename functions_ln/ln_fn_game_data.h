@@ -185,7 +185,7 @@ bool Cmd_Search_Execute(COMMAND_ARGS)
 	{
 		if ((first >= '0') && (first <= '9'))
 		{
-			filter = StrToUInt(s_strValBuffer);
+			filter = StrToInt(s_strValBuffer);
 			if (filter > 120) filter = 0;
 		}
 		else

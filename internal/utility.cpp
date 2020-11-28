@@ -3,159 +3,45 @@
 
 memcpy_t MemCopy = memcpy, MemMove = memmove;
 
-#define MAX_CACHED_BLOCK_SIZE 0x400
-#define MEMORY_POOL_SIZE 0x1000
-
-alignas(16) void *s_availableCachedBlocks[(MAX_CACHED_BLOCK_SIZE >> 4) + 1] = {NULL};
-
-__declspec(naked) void* __fastcall Pool_Alloc(UInt32 size)
+void SpinLock::Enter()
 {
-	__asm
+	UInt32 threadID = GetCurrentThreadId();
+	if (owningThread == threadID)
 	{
-		cmp		ecx, 0x10
-		jbe		minSize
-		test	cl, 0xF
-		jz		isAligned
-		and		cl, 0xF0
-		add		ecx, 0x10
-	isAligned:
-		cmp		ecx, MAX_CACHED_BLOCK_SIZE
-		jbe		doCache
-		push	ecx
-		call	malloc
-		pop		ecx
-		retn
-		NOP_0x5
-	minSize:
-		mov		ecx, 0x10
-	doCache:
-		mov		edx, offset s_availableCachedBlocks
-	spinHead:
-		xor		eax, eax
-		lock cmpxchg [edx], edx
-		test	eax, eax
-		jnz		spinHead
-		mov		eax, ecx
-		shr		eax, 2
-		add		edx, eax
-		mov		eax, [edx]
-		test	eax, eax
-		jz		allocPool
-		mov		ecx, [eax]
-		mov		[edx], ecx
-		xor		edx, edx
-		mov		s_availableCachedBlocks, edx
-		retn
-	allocPool:
-		push	esi
-		mov		esi, ecx
-		mov		ecx, MEMORY_POOL_SIZE
-		push	edx
-		xor		edx, edx
-		mov		eax, ecx
-		div		esi
-		push	eax
-		sub		ecx, edx
-		add		ecx, 8
-		push	ecx
-		call	malloc
-		pop		ecx
-		pop		ecx
-		sub		ecx, 2
-		pop		edx
-		add		eax, 8
-		and		al, 0xF0
-		mov		[edx], eax
-		lea		edx, [eax+esi]
-	linkHead:
-		mov		[eax], edx
-		mov		eax, edx
-		add		edx, esi
-		dec		ecx
-		jnz		linkHead
-		mov		[eax], ecx
-		mov		eax, edx
-		mov		s_availableCachedBlocks, ecx
-		pop		esi
-		retn
+		enterCount++;
+		return;
 	}
+	while (InterlockedCompareExchange(&owningThread, threadID, 0));
+	enterCount = 1;
 }
 
-__declspec(naked) void __fastcall Pool_Free(void *pBlock, UInt32 size)
+#define FAST_SLEEP_COUNT 10000UL
+
+void SpinLock::EnterSleep()
 {
-	__asm
+	UInt32 threadID = GetCurrentThreadId();
+	if (owningThread == threadID)
 	{
-		test	ecx, ecx
-		jz		nullPtr
-		test	dl, 0xF
-		jz		isAligned
-		and		dl, 0xF0
-		add		edx, 0x10
-		ALIGN 16
-	isAligned:
-		cmp		edx, MAX_CACHED_BLOCK_SIZE
-		jbe		doCache
-		push	ecx
-		call	free
-		pop		ecx
-	nullPtr:
-		retn
-		NOP_0x9
-	doCache:
-		push	edx
-		mov		edx, offset s_availableCachedBlocks
-	spinHead:
-		xor		eax, eax
-		lock cmpxchg [edx], edx
-		test	eax, eax
-		jnz		spinHead
-		pop		eax
-		shr		eax, 2
-		add		edx, eax
-		mov		eax, [edx]
-		mov		[ecx], eax
-		mov		[edx], ecx
-		mov		s_availableCachedBlocks, 0
-		retn
+		enterCount++;
+		return;
 	}
+	UInt32 fastIdx = FAST_SLEEP_COUNT;
+	while (InterlockedCompareExchange(&owningThread, threadID, 0))
+	{
+		if (fastIdx)
+		{
+			fastIdx--;
+			Sleep(0);
+		}
+		else Sleep(1);
+	}
+	enterCount = 1;
 }
 
-__declspec(naked) void* __fastcall Pool_Realloc(void *pBlock, UInt32 curSize, UInt32 reqSize)
+void SpinLock::Leave()
 {
-	__asm
-	{
-		mov		eax, ecx
-		mov		ecx, [esp+4]
-		test	eax, eax
-		jnz		notNull
-		call	Pool_Alloc
-		retn	4
-	notNull:
-		cmp		ecx, edx
-		jbe		done
-		cmp		edx, MAX_CACHED_BLOCK_SIZE
-		jbe		doCache
-		push	ecx
-		push	eax
-		call	realloc
-		add		esp, 8
-	done:
-		retn	4
-		ALIGN 16
-	doCache:
-		push	edx
-		push	eax
-		call	Pool_Alloc
-		push	eax
-		call	MemCopy
-		pop		eax
-		pop		ecx
-		pop		edx
-		push	eax
-		call	Pool_Free
-		pop		eax
-		retn	4
-	}
+	if (owningThread && !--enterCount)
+		owningThread = 0;
 }
 
 __declspec(naked) TESForm* __stdcall LookupFormByRefID(UInt32 refID)
@@ -168,25 +54,26 @@ __declspec(naked) TESForm* __stdcall LookupFormByRefID(UInt32 refID)
 		div		dword ptr [ecx+4]
 		mov		eax, [ecx+8]
 		mov		eax, [eax+edx*4]
+		test	eax, eax
+		jz		done
 		mov		edx, [esp+4]
-		jmp		iterNext
 		ALIGN 16
 	iterHead:
 		cmp		[eax+4], edx
 		jz		found
 		mov		eax, [eax]
-	iterNext:
 		test	eax, eax
 		jnz		iterHead
 		retn	4
-		ALIGN 16
 	found:
 		mov		eax, [eax+8]
+	done:
 		retn	4
 	}
 }
 
 alignas(16) static const UInt64 kSignMaskD[] = {0x8000000000000000, 0x8000000000000000};
+alignas(16) static const double kValueBounds[] = {4294967296, -4294967296};
 
 __declspec(naked) UInt32 __vectorcall cvtd2ui(double value)
 {
@@ -201,30 +88,15 @@ __declspec(naked) UInt32 __vectorcall cvtd2ui(double value)
 	}
 }
 
-__declspec(naked) int __vectorcall lfloor(float value)
+__declspec(naked) double __vectorcall cvtui2d(UInt32 value)
 {
 	__asm
 	{
-		movd	eax, xmm0
-		test	eax, eax
-		jnb		isPos
-		subss	xmm0, kFltHalf
-	isPos:
-		cvttss2si	eax, xmm0
-		retn
-	}
-}
-
-__declspec(naked) int __vectorcall lceil(float value)
-{
-	__asm
-	{
-		movd	eax, xmm0
-		test	eax, eax
-		jbe		isNeg
-		addss	xmm0, kFltHalf
-	isNeg:
-		cvttss2si	eax, xmm0
+		cvtsi2sd	xmm0, ecx
+		test	ecx, ecx
+		jns		done
+		addsd	xmm0, kValueBounds
+	done:
 		retn
 	}
 }
@@ -272,13 +144,11 @@ __declspec(naked) UInt32 __fastcall StrLen(const char *str)
 	__asm
 	{
 		test	ecx, ecx
-		jnz		proceed
-		xor		eax, eax
-		retn
-	proceed:
+		jz		nullPtr
 		push	ecx
 		test	ecx, 3
 		jz		iter4
+		ALIGN 16
 	iter1:
 		mov		al, [ecx]
 		inc		ecx
@@ -324,6 +194,9 @@ __declspec(naked) UInt32 __fastcall StrLen(const char *str)
 		lea		eax, [ecx-4]
 		pop		ecx
 		sub		eax, ecx
+		retn
+	nullPtr:
+		xor		eax, eax
 		retn
 	}
 }
@@ -387,11 +260,7 @@ __declspec(naked) char* __fastcall StrCopy(char *dest, const char *src)
 		test	ecx, ecx
 		jz		done
 		test	edx, edx
-		jnz		proceed
-		mov		[eax], 0
-	done:
-		retn
-	proceed:
+		jz		nullTerm
 		push	ecx
 		mov		ecx, edx
 		call	StrLen
@@ -405,6 +274,10 @@ __declspec(naked) char* __fastcall StrCopy(char *dest, const char *src)
 		add		esp, 0xC
 		pop		ecx
 		add		eax, ecx
+		retn
+	nullTerm:
+		mov		[eax], 0
+	done:
 		retn
 	}
 }
@@ -472,19 +345,19 @@ __declspec(naked) char* __fastcall StrCat(char *dest, const char *src)
 	__asm
 	{
 		test	ecx, ecx
-		jnz		proceed
-		mov		eax, ecx
-		retn
-	proceed:
+		jz		nullPtr
 		push	edx
 		call	StrLen
 		pop		edx
 		add		ecx, eax
 		jmp		StrCopy
+	nullPtr:
+		xor		eax, eax
+		retn
 	}
 }
 
-alignas(16) static const UInt8 kLwrCaseConverter[] =
+alignas(16) const UInt8 kLwrCaseConverter[] =
 {
 	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
 	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
@@ -503,7 +376,7 @@ alignas(16) static const UInt8 kLwrCaseConverter[] =
 	0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF,
 	0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF
 };
-alignas(16) static const UInt8 kUprCaseConverter[] =
+alignas(16) const UInt8 kUprCaseConverter[] =
 {
 	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
 	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
@@ -775,58 +648,6 @@ __declspec(naked) char* __fastcall CopyCString(const char *src)
 	}
 }
 
-__declspec(naked) UInt32 __fastcall StrHashCS(const char *inKey)
-{
-	__asm
-	{
-		xor		eax, eax
-		test	ecx, ecx
-		jnz		proceed
-		retn
-		ALIGN 16
-	iterHead:
-		mov		edx, eax
-		shl		edx, 5
-		add		eax, edx
-	proceed:
-		movzx	edx, byte ptr [ecx]
-		add		eax, edx
-		inc		ecx
-		test	edx, edx
-		jnz		iterHead
-		retn
-	}
-}
-
-__declspec(naked) UInt32 __fastcall StrHashCI(const char *inKey)
-{
-	__asm
-	{
-		push	esi
-		xor		eax, eax
-		test	ecx, ecx
-		jz		done
-		mov		esi, ecx
-		mov		ecx, eax
-		jmp		iterHead
-	done:
-		pop		esi
-		retn
-		ALIGN 16
-	iterHead:
-		mov		cl, [esi]
-		test	cl, cl
-		jz		done
-		mov		edx, eax
-		shl		edx, 5
-		add		eax, edx
-		movzx	edx, kLwrCaseConverter[ecx]
-		add		eax, edx
-		inc		esi
-		jmp		iterHead
-	}
-}
-
 __declspec(naked) char* __fastcall IntToStr(char *str, int num)
 {
 	__asm
@@ -843,6 +664,7 @@ __declspec(naked) char* __fastcall IntToStr(char *str, int num)
 		mov		edi, ecx
 		mov		eax, edx
 		mov		ecx, 0xA
+		ALIGN 16
 	workIter:
 		xor		edx, edx
 		div		ecx
@@ -853,6 +675,7 @@ __declspec(naked) char* __fastcall IntToStr(char *str, int num)
 		jnz		workIter
 		mov		[esi], 0
 		mov		eax, esi
+		ALIGN 16
 	swapIter:
 		dec		esi
 		cmp		esi, edi
@@ -889,35 +712,21 @@ __declspec(naked) char* __vectorcall FltToStr(char *str, double value)
 	isPos:
 		push	esi
 		push	edi
-		cvttsd2si	esi, xmm0
+		roundsd	xmm2, xmm0, 3
+		lea		eax, [esp-8]
+		movsd	[eax], xmm2
+		fld		qword ptr [eax]
+		fisttp	qword ptr [eax]
+		mov		esi, [eax]
 		test	esi, esi
 		jz		noWhole
-		cvtsi2sd	xmm2, esi
 		subsd	xmm0, xmm2
 	noWhole:
 		xor		edi, edi
 		comisd	xmm0, xmm1
 		jz		noFrac
 		mulsd	xmm0, kDbl1Mil
-		cvttsd2si	edi, xmm0
-		cvtsi2sd	xmm2, edi
-		subsd	xmm0, xmm2
-		comisd	xmm0, kDblHalf
-		jb		noFrac
-		jz		eqHalf
-		inc		edi
-		cmp		edi, 0xF4240
-		jb		noFrac
-		xor		edi, edi
-		inc		esi
-		jmp		noFrac
-	eqHalf:
-		test	edi, edi
-		jz		incFrac
-		test	edi, 1
-		jz		noFrac
-	incFrac:
-		inc		edi
+		cvtsd2si	edi, xmm0
 	noFrac:
 		test	esi, esi
 		jz		zeroWhole
@@ -934,6 +743,7 @@ __declspec(naked) char* __vectorcall FltToStr(char *str, double value)
 		mov		[ecx], '.'
 		inc		ecx
 		mov		esi, 0x186A0
+		ALIGN 16
 	fracHead:
 		xor		edx, edx
 		mov		eax, edi
@@ -948,6 +758,7 @@ __declspec(naked) char* __vectorcall FltToStr(char *str, double value)
 		shr		esi, 3
 		test	edi, edi
 		jnz		fracHead
+		ALIGN 16
 	trimHead:
 		cmp		[ecx-1], '0'
 		jnz		done
@@ -966,35 +777,44 @@ __declspec(naked) int __fastcall StrToInt(const char *str)
 {
 	__asm
 	{
+		push	esi
+		push	edi
 		xor		eax, eax
 		test	ecx, ecx
-		jnz		proceed
-		retn
-	proceed:
-		push	esi
+		jz		done
 		mov		esi, ecx
-		mov		ecx, eax
+		xor		ecx, ecx
+		xor		edi, edi
 		cmp		[esi], '-'
 		setz	dl
 		jnz		charIter
 		inc		esi
+		ALIGN 16
 	charIter:
 		mov		cl, [esi]
 		sub		cl, '0'
 		cmp		cl, 9
 		ja		iterEnd
-		imul	eax, 0xA
-		jo		overflow
-		add		eax, ecx
+		lea		eax, [eax+eax*4]
+		lea		eax, [ecx+eax*2]
+		cmp		eax, edi
+		jl		overflow
+		mov		edi, eax
 		inc		esi
 		jmp		charIter
-	overflow:
-		mov		eax, 0x7FFFFFFF
+		ALIGN 16
 	iterEnd:
 		test	dl, dl
 		jz		done
 		neg		eax
 	done:
+		pop		edi
+		pop		esi
+		retn
+	overflow:
+		movzx	eax, dl
+		add		eax, 0x7FFFFFFF
+		pop		edi
 		pop		esi
 		retn
 	}
@@ -1004,32 +824,43 @@ __declspec(naked) UInt32 __fastcall StrToUInt(const char *str)
 {
 	__asm
 	{
-		xor		eax, eax
-		test	ecx, ecx
-		jnz		proceed
-		retn
-	proceed:
 		push	esi
 		push	edi
+		xor		eax, eax
+		test	ecx, ecx
+		jz		done
 		mov		esi, ecx
-		mov		edi, 0xA
-		mov		ecx, eax
+		xor		ecx, ecx
+		xor		edi, edi
 		cmp		[esi], '-'
+		setz	dl
 		jnz		charIter
 		inc		esi
+		ALIGN 16
 	charIter:
 		mov		cl, [esi]
 		sub		cl, '0'
 		cmp		cl, 9
-		ja		done
-		mul		edi
-		jo		overflow
-		add		eax, ecx
+		ja		iterEnd
+		lea		eax, [eax+eax*4]
+		lea		eax, [ecx+eax*2]
+		cmp		eax, edi
+		jb		overflow
+		mov		edi, eax
 		inc		esi
 		jmp		charIter
-	overflow:
-		mov		eax, 0xFFFFFFFF
+		ALIGN 16
+	iterEnd:
+		test	dl, dl
+		jz		done
+		neg		eax
 	done:
+		pop		edi
+		pop		esi
+		retn
+	overflow:
+		movzx	eax, dl
+		dec		eax
 		pop		edi
 		pop		esi
 		retn
@@ -1039,39 +870,35 @@ __declspec(naked) UInt32 __fastcall StrToUInt(const char *str)
 __declspec(naked) double __vectorcall StrToDbl(const char *str)
 {
 	static const double kFactor10Div[] = {10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
-	static const double kValueBounds[] = {4294967296, -4294967296};
 	__asm
 	{
-		pxor	xmm0, xmm0
-		test	ecx, ecx
-		jnz		proceed
-		retn
-	proceed:
-		push	ebx
 		push	esi
 		push	edi
+		pxor	xmm0, xmm0
+		test	ecx, ecx
+		jz		done
 		mov		esi, ecx
-		mov		edi, 0xA
 		xor		eax, eax
-		mov		ebx, eax
-		mov		ecx, eax
+		xor		ecx, ecx
+		xor		edi, edi
 		cmp		[esi], '-'
-		setz	cl
+		setz	dl
 		jnz		intIter
 		inc		esi
+		ALIGN 16
 	intIter:
-		mov		bl, [esi]
-		sub		bl, '0'
-		cmp		bl, 9
+		mov		cl, [esi]
+		sub		cl, '0'
+		cmp		cl, 9
 		ja		intEnd
-		mul		edi
-		jo		overflow
-		add		eax, ebx
+		lea		eax, [eax+eax*4]
+		lea		eax, [ecx+eax*2]
+		cmp		eax, edi
+		jb		overflow
+		mov		edi, eax
 		inc		esi
 		jmp		intIter
-	overflow:
-		movsd	xmm0, kValueBounds[ecx*8]
-		jmp		done
+		ALIGN 16
 	intEnd:
 		test	eax, eax
 		jz		noInt
@@ -1079,39 +906,45 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 		jns		noOverflow
 		addsd	xmm0, kValueBounds
 	noOverflow:
-		shl		cl, 1
+		shl		dl, 1
 		xor		eax, eax
 	noInt:
-		cmp		bl, 0xFE
+		cmp		cl, 0xFE
 		jnz		addSign
-		mov		ch, 0xFF
+		mov		dh, 0xFF
+		ALIGN 16
 	fracIter:
 		inc		esi
-		mov		bl, [esi]
-		sub		bl, '0'
-		cmp		bl, 9
+		mov		cl, [esi]
+		sub		cl, '0'
+		cmp		cl, 9
 		ja		fracEnd
-		mul		edi
-		add		eax, ebx
-		inc		ch
-		cmp		ch, 8
+		lea		eax, [eax+eax*4]
+		lea		eax, [ecx+eax*2]
+		inc		dh
+		cmp		dh, 8
 		jb		fracIter
 	fracEnd:
 		test	eax, eax
 		jz		addSign
 		cvtsi2sd	xmm1, eax
-		shl		cl, 1
-		mov		bl, ch
-		divsd	xmm1, kFactor10Div[ebx*8]
+		shl		dl, 1
+		mov		cl, dh
+		divsd	xmm1, kFactor10Div[ecx*8]
 		addsd	xmm0, xmm1
 	addSign:
-		test	cl, 6
+		test	dl, 6
 		jz		done
 		xorpd	xmm0, kSignMaskD
 	done:
 		pop		edi
 		pop		esi
-		pop		ebx
+		retn
+	overflow:
+		movzx	eax, dl
+		movsd	xmm0, kValueBounds[eax*8]
+		pop		edi
+		pop		esi
 		retn
 	}
 }
@@ -1126,6 +959,7 @@ __declspec(naked) char* __fastcall UIntToHex(char *str, UInt32 num)
 		mov		esi, ecx
 		mov		edi, ecx
 		xor		eax, eax
+		ALIGN 16
 	workIter:
 		mov		al, dl
 		and		al, 0xF
@@ -1136,6 +970,7 @@ __declspec(naked) char* __fastcall UIntToHex(char *str, UInt32 num)
 		jnz		workIter
 		mov		[esi], 0
 		mov		eax, esi
+		ALIGN 16
 	swapIter:
 		dec		esi
 		cmp		esi, edi
@@ -1669,6 +1504,8 @@ bool DebugLog::Create(const char *filePath)
 	theFile = _fsopen(filePath, "wb", 0x20);
 	return theFile ? true : false;
 }
+
+const char kIndentLevelStr[] = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
 
 void DebugLog::Message(const char *msgStr)
 {

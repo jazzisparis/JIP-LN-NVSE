@@ -4094,8 +4094,8 @@ public:
 	TESTexture				noiseTexture;			// 58
 	BSSimpleArray<NavMesh>	*navMeshArray;			// 64
 	UInt32					unk68[6];				// 68
-	void					*refLockSemaphore;		// 80
-	UInt32					unk84[8];				// 84
+	SpinLock				refLock;				// 80
+	UInt32					unk88[7];				// 88
 	UInt32					actorCount;				// A4
 	UInt16					countVisibleDistant;	// A8
 	UInt16					unkAA;					// AA
@@ -4121,6 +4121,15 @@ public:
 	bool IsInterior() { return worldSpace == NULL; }
 	NiNode *Get3DNode(UInt32 index);
 	void ToggleNodes(UInt32 nodeBits, UInt8 doHide);
+
+	__forceinline void RefLockEnter()
+	{
+		ThisCall(0x40FBF0, &refLock, (const char*)0x102EAEC);
+	}
+	__forceinline void RefLockLeave()
+	{
+		ThisCall(0x40FBA0, &refLock);
+	}
 };
 STATIC_ASSERT(sizeof(TESObjectCELL) == 0xE0);
 

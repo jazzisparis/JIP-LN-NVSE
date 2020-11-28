@@ -314,18 +314,17 @@ class NiControllerManager : public NiTimeController
 public:
 	virtual void	Unk_2D(void);
 
-	NiTArray<NiControllerSequence*>					sequences;		// 34
-	void											*ptr44;			// 44
-	UInt32											unk48;			// 48
-	UInt32											unk4C;			// 4C
-	NiTMapBase<const char*, NiControllerSequence*>	seqStrMap;		// 50
-	UInt32											unk60;			// 60
-	NiTArray<void*>									*arr64;			// 64
-	UInt32											unk68;			// 68
-	UInt32											unk6C;			// 6C
-	UInt32											unk70;			// 70
-	UInt32											unk74;			// 74
-	NiDefaultAVObjectPalette						*defObjPlt;		// 78
+	NiTArray<NiControllerSequence*>				sequences;		// 34
+	void										*ptr44;			// 44
+	UInt32										unk48;			// 48
+	UInt32										unk4C;			// 4C
+	NiTStringPointerMap<NiControllerSequence*>	seqStrMap;		// 50
+	NiTArray<void*>								*arr64;			// 64
+	UInt32										unk68;			// 68
+	UInt32										unk6C;			// 6C
+	UInt32										unk70;			// 70
+	UInt32										unk74;			// 74
+	NiDefaultAVObjectPalette					*defObjPlt;		// 78
 };
 STATIC_ASSERT(sizeof(NiControllerManager) == 0x7C);
 

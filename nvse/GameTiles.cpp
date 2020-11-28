@@ -40,6 +40,7 @@ __declspec(naked) Tile::Value *Tile::GetValue(UInt32 typeID)
 		jb		isLT
 		mov		edi, ecx
 		jmp		iterHead
+		ALIGN 16
 	isLT:
 		lea		esi, [ecx+1]
 		jmp		iterHead

@@ -59,6 +59,9 @@
     <ClCompile Include="internal\containers.cpp">
       <Filter>internal</Filter>
     </ClCompile>
+    <ClCompile Include="internal\memory_pool.cpp">
+      <Filter>internal</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="jip_nvse.h" />
@@ -358,6 +361,9 @@
     </ClInclude>
     <ClInclude Include="nvse\Utilities.h">
       <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\memory_pool.h">
+      <Filter>internal</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

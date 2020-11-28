@@ -2303,18 +2303,18 @@ __declspec(naked) ProjectileData* __fastcall GetProjectileDataHook(HighProcess *
 	}
 }
 
-__declspec(naked) void __fastcall DoFireWeaponEx(TESObjectWEAP *weapon, int EDX, TESObjectREFR *refr)
+__declspec(naked) void __fastcall DoFireWeaponEx(TESObjectREFR *refr, int EDX, TESObjectWEAP *weapon)
 {
 	__asm
 	{
-		mov		eax, [esp+4]
-		mov		edx, [eax+0x68]
+		mov		edx, [ecx+0x68]
 		push	dword ptr [edx+0x118]
 		mov		dword ptr [edx+0x118], 0
 		push	dword ptr [edx+0x114]
 		mov		dword ptr [edx+0x114], 0
 		push	edx
-		push	eax
+		push	ecx
+		mov		ecx, [esp+0x14]
 		CALL_EAX(0x523150)
 		pop		eax
 		pop		dword ptr [eax+0x114]
@@ -2352,11 +2352,11 @@ bool Cmd_FireWeaponEx_Execute(COMMAND_ARGS)
 
 		if (CdeclCall<bool>(0x8C7AA0))
 		{
-			QueuedCmdCall qCall(DoFireWeaponEx, weapon, 1);
-			qCall.args[0] = thisObj;
+			QueuedCmdCall qCall(DoFireWeaponEx, thisObj->refID, 1);
+			qCall.args[0] = weapon;
 			AddQueuedCmdCall(qCall);
 		}
-		else DoFireWeaponEx(weapon, 0, thisObj);
+		else DoFireWeaponEx(thisObj, 0, weapon);
 	}
 	return true;
 }

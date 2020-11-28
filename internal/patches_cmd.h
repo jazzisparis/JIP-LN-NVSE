@@ -447,6 +447,8 @@ bool Hook_GetInvRefsForItem_Execute(COMMAND_ARGS)
 	return true;
 }
 
+Cmd_Execute IsPluginInstalled, GetPluginVersion;
+
 bool __fastcall IsJIPAlias(const char *pluginName)
 {
 	return !StrCompare(pluginName, "JIP NVSE Plugin") || !StrCompare(pluginName, "lutana_nvse") || StrBeginsCI(pluginName, "JIP LN NVSE");

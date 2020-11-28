@@ -271,3 +271,10 @@ inline Vector3 operator/(const Vector3 & lhs, const Vector3 & rhs)
 {
 	return Vector3(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z);
 }
+
+// Based on the boost implementation of static asserts
+template <bool x> struct StaticAssertFailure;
+template <> struct StaticAssertFailure <true> { enum { a = 1 }; };
+template <int x> struct static_assert_test { };
+
+#define STATIC_ASSERT(a)	typedef static_assert_test <sizeof(StaticAssertFailure<(bool)(a)>)> static_assert_typedef_ ## __COUNTER__

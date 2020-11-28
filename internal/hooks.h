@@ -551,19 +551,23 @@ __declspec(naked) void DoQueuedCmdCallHook()
 {
 	__asm
 	{
+		push	dword ptr [eax+8]
+		call	LookupFormByRefID
+		test	eax, eax
+		jz		done
+		mov		ecx, eax
+		mov		eax, [ebp+8]
 		mov		edx, [eax+0xC]
-		test	dl, dl
+		test	edx, edx
 		jz		doExecute
-		lea		ecx, [eax+0x10]
 		ALIGN 16
 	pushArgs:
 		dec		edx
-		push	dword ptr [ecx+edx*4]
+		push	dword ptr [eax+edx*4+0x10]
 		jnz		pushArgs
 	doExecute:
-		mov		ecx, [eax+8]
-		mov		eax, [eax+4]
-		call	eax
+		call	dword ptr [eax+4]
+	done:
 		mov		ecx, [ebp-0xC]
 		mov		fs:0, ecx
 		pop		ecx
@@ -943,7 +947,7 @@ __declspec(naked) void MenuHandleClickHook(int tileID, Tile *clickedTile)
 		mov		ecx, eax
 		mov		edx, [ecx+0x20]
 		movzx	eax, kMenuIDJumpTable[edx-kMenuType_Min]
-		imul	eax, 0x20
+		shl		eax, 5
 		jmp		dword ptr s_menuClickEventMap[eax]
 	}
 }
@@ -1291,22 +1295,26 @@ __declspec(naked) void WeaponSwitchSelectHook()
 		jz		hasAmmo
 		push	eax
 		call	TESObjectREFR::GetItemCount
-		cmp		eax, 1
-		jl		done
+		test	eax, eax
+		jle		done
 	hasAmmo:
-		mov		eax, [ebp-0x2C]
-		mov		eax, [eax+8]
-		lea     ecx, [ebp-0x68]
-		mov		edx, [ecx+4]
-		mov		ecx, [ecx+8]
-	loopHead:
+		lea     edx, [ebp-0x68]
+		mov		ecx, [edx+8]
 		test	ecx, ecx
 		jz		done
+		mov		eax, [ebp-0x2C]
+		mov		eax, [eax+8]
+		mov		edx, [edx+4]
+		ALIGN 16
+	loopHead:
 		cmp		[edx], eax
 		jz		found
-		dec		ecx
 		add		edx, 0x14
-		jmp		loopHead
+		dec		ecx
+		jnz		loopHead
+	done:
+		mov		dword ptr [ebp-0xBC], 0
+		retn
 	found:
 		lea     eax, [ebp-0x68]
 		mov		edx, [eax+8]
@@ -1314,9 +1322,6 @@ __declspec(naked) void WeaponSwitchSelectHook()
 		mov		[ebp-0xBC], edx
 		inc		edx
 		mov		[eax+8], edx
-		retn
-	done:
-		mov		dword ptr [ebp-0xBC], 0
 		retn
 	}
 }
@@ -1414,8 +1419,6 @@ __declspec(naked) void MenuStateOpenHook()
 		mov		[ecx], dl
 		lea		ecx, [eax-kMenuType_Min]
 		movzx	eax, kMenuIDJumpTable[ecx]
-		cmp		al, 0xFF
-		jz		done
 		mov		ecx, s_menuStateEventMap[eax*4]
 		test	ecx, ecx
 		jz		done
@@ -1448,8 +1451,6 @@ __declspec(naked) void MenuStateCloseHook()
 		jz		done
 		mov		byte ptr [ecx], 0
 		movzx	eax, kMenuIDJumpTable[edx-kMenuType_Min]
-		cmp		al, 0xFF
-		jz		done
 		mov		ecx, s_menuStateEventMap[eax*4]
 		test	ecx, ecx
 		jz		done
@@ -1480,8 +1481,6 @@ __declspec(naked) void MenuHandleMouseoverHook()
 		mov		lastMenuID, ecx
 	gotID:
 		movzx	edx, kMenuIDJumpTable[ecx-kMenuType_Min]
-		cmp		dl, 0xFF
-		jz		skipRetn
 		mov		ecx, s_menuStateEventMap[edx*4]
 		test	ecx, ecx
 		jz		skipRetn
@@ -2010,6 +2009,7 @@ __declspec(naked) bool __fastcall HandleSetQuestStage(TESQuest *quest, UInt8 sta
 		push	edi
 		mov		esi, [eax]
 		mov		edi, [eax+4]
+		ALIGN 16
 	iterHead:
 		test	edi, edi
 		jz		iterEnd
@@ -2026,6 +2026,7 @@ __declspec(naked) bool __fastcall HandleSetQuestStage(TESQuest *quest, UInt8 sta
 		call	CallFunction
 		add		esp, 0x1C
 		or		bl, byte ptr [esi+1]
+		ALIGN 16
 	iterNext:
 		add		esi, 8
 		dec		edi
@@ -2710,7 +2711,7 @@ __declspec(naked) void ApplyActorVelocityHook()
 
 struct DataStrings : Set<char*>
 {
-	DataStrings(UInt32 _alloc = 2) : Set<char*>(_alloc) {}
+	DataStrings(UInt32 _alloc = 4) : Set<char*>(_alloc) {}
 };
 typedef Map<char*, DataStrings> NodeNamesMap;
 UnorderedMap<TESForm*, NodeNamesMap> s_insertNodeMap, s_attachModelMap;
@@ -2723,9 +2724,7 @@ __declspec(naked) void __fastcall DoInsertNodes(TESForm *form, int EDX, NiNode *
 		mov		ecx, offset s_insertNodeMap
 		call	UnorderedMap<TESForm*, NodeNamesMap>::GetPtr
 		test	eax, eax
-		jnz		proceed
-		retn	4
-	proceed:
+		jz		done
 		push	ebp
 		mov		ebp, esp
 		sub		esp, 8
@@ -2735,6 +2734,7 @@ __declspec(naked) void __fastcall DoInsertNodes(TESForm *form, int EDX, NiNode *
 		mov		esi, [eax]
 		mov		eax, [eax+4]
 		mov		[ebp-4], eax
+		ALIGN 16
 	nodeHead:
 		mov		ebx, [ebp+8]
 		mov		eax, [esi]
@@ -2751,6 +2751,7 @@ __declspec(naked) void __fastcall DoInsertNodes(TESForm *form, int EDX, NiNode *
 		mov		edi, [eax]
 		mov		edx, [eax+4]
 		mov		[ebp-8], edx
+		ALIGN 16
 	insHead:
 		mov		eax, [edi]
 		cmp		[eax], '^'
@@ -2815,6 +2816,7 @@ __declspec(naked) void __fastcall DoInsertNodes(TESForm *form, int EDX, NiNode *
 		pop		ebx
 		mov		esp, ebp
 		pop		ebp
+	done:
 		retn	4
 	}
 }
@@ -2827,9 +2829,7 @@ __declspec(naked) void __fastcall DoAttachModels(TESForm *form, int EDX, NiNode 
 		mov		ecx, offset s_attachModelMap
 		call	UnorderedMap<TESForm*, NodeNamesMap>::GetPtr
 		test	eax, eax
-		jnz		proceed
-		retn	4
-	proceed:
+		jz		done
 		push	ebp
 		mov		ebp, esp
 		sub		esp, 8
@@ -2839,6 +2839,7 @@ __declspec(naked) void __fastcall DoAttachModels(TESForm *form, int EDX, NiNode 
 		mov		esi, [eax]
 		mov		eax, [eax+4]
 		mov		[ebp-4], eax
+		ALIGN 16
 	nodeHead:
 		mov		ebx, [ebp+8]
 		mov		eax, [esi]
@@ -2855,6 +2856,7 @@ __declspec(naked) void __fastcall DoAttachModels(TESForm *form, int EDX, NiNode 
 		mov		edi, [eax]
 		mov		edx, [eax+4]
 		mov		[ebp-8], edx
+		ALIGN 16
 	insHead:
 		push	0
 		push	0
@@ -2890,6 +2892,7 @@ __declspec(naked) void __fastcall DoAttachModels(TESForm *form, int EDX, NiNode 
 		pop		ebx
 		mov		esp, ebp
 		pop		ebp
+	done:
 		retn	4
 	}
 }
@@ -3243,6 +3246,7 @@ __declspec(naked) void ProcessHUDMainUI()
 		test	eax, eax
 		jz		done
 		mov		[ebp-8], eax
+		ALIGN 16
 	iterHead:
 		push	kTileValue_wheelable
 		mov		ecx, esi
@@ -3251,8 +3255,9 @@ __declspec(naked) void ProcessHUDMainUI()
 		jnz		iterEnd
 		mov		esi, [esi+0x28]
 		test	esi, esi
-		jz		done
-		jmp		iterHead
+		jnz		iterHead
+		jmp		done
+		ALIGN 16
 	iterEnd:
 		push	1
 		fild	dword ptr [ebp-8]

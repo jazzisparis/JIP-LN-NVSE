@@ -165,8 +165,6 @@ bool HookXInput()
 	return false;
 }
 
-Cmd_Execute IsPluginInstalled, GetPluginVersion, SetEventHandler, RemoveEventHandler;
-
 struct LNEventData
 {
 	UInt8				eventID;
@@ -365,14 +363,22 @@ bool Hook_IsControlPressed_Eval(TESObjectREFR *thisObj, UInt32 ctrlID, UInt32 fl
 	return true;
 }
 
-const UInt16 kValidKeyCodes[] =
-{
-	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-	41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78,
-	79, 80, 81, 82, 83, 87, 88, 156, 157, 181, 184, 199, 200, 201, 203, 205, 207, 208, 209, 210, 211, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265
-};
-
 UnorderedMap<const char*, UInt32> s_LNEventNames(0x10);
+
+Cmd_Execute SetEventHandler, RemoveEventHandler;
+
+const bool kValidKeyCode[] =
+{
+	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+};
 
 const bool kValidFilterForm[] =
 {
@@ -380,15 +386,6 @@ const bool kValidFilterForm[] =
 	1, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0
 };
-
-bool __fastcall IsValidKeyCode(UInt32 key)
-{
-	if (!key) return false;
-	if (key <= 83) return true;
-	for (UInt8 idx = 83; idx < 109; idx++)
-		if (key == kValidKeyCodes[idx]) return true;
-	return false;
-}
 
 UInt32 s_DInputEventClear = 0;
 
@@ -410,7 +407,13 @@ bool SetDInputEventHandler(UInt32 eventMask, Script *script, SInt32 keyID, bool 
 		}
 		return result;
 	}
-	else if ((onKey && !IsValidKeyCode(keyID)) || (!onKey && (keyID > 27))) return false;
+	else if (onKey)
+	{
+		if ((keyID >= sizeof(kValidKeyCode)) || !kValidKeyCode[keyID])
+			return false;
+	}
+	else if (keyID > 27)
+		return false;
 	LNDInpuCallbacks *callbacks;
 	if (doAdd)
 	{
@@ -430,7 +433,9 @@ bool SetDInputEventHandler(UInt32 eventMask, Script *script, SInt32 keyID, bool 
 	return result;
 }
 
-bool ProcessEventHandler(COMMAND_ARGS, bool doAdd)
+bool s_processEventAdd = false;
+
+bool ProcessEventHandler(COMMAND_ARGS)
 {
 	*result = 0;
 	if (!scriptObj) return true;
@@ -460,6 +465,8 @@ bool ProcessEventHandler(COMMAND_ARGS, bool doAdd)
 
 	char *delim = GetNextToken(evnName, ':');
 	UInt32 eventMask = s_LNEventNames.Get(evnName);
+
+	bool doAdd = s_processEventAdd;
 
 	if (!eventMask) return doAdd ? SetEventHandler(PASS_COMMAND_ARGS) : RemoveEventHandler(PASS_COMMAND_ARGS);
 
@@ -533,14 +540,22 @@ bool ProcessEventHandler(COMMAND_ARGS, bool doAdd)
 	return true;
 }
 
-bool Hook_SetEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Hook_SetEventHandler_Execute(COMMAND_ARGS)
 {
-	return ProcessEventHandler(PASS_COMMAND_ARGS, true);
+	__asm
+	{
+		mov		s_processEventAdd, 1
+		jmp		ProcessEventHandler
+	}
 }
 
-bool Hook_RemoveEventHandler_Execute(COMMAND_ARGS)
+__declspec(naked) bool Hook_RemoveEventHandler_Execute(COMMAND_ARGS)
 {
-	return ProcessEventHandler(PASS_COMMAND_ARGS, false);
+	__asm
+	{
+		mov		s_processEventAdd, 0
+		jmp		ProcessEventHandler
+	}
 }
 
 bool s_gameLoadFlagLN = true;

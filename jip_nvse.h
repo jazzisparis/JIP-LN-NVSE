@@ -213,13 +213,13 @@ void MainLoopAddCallbackArgsEx(void *cmdPtr, void *thisObj, UInt32 callCount, UI
 
 struct QueuedCmdCall
 {
-	UInt32			opcode;
-	void			*cmdAddr;
-	void			*thisObj;
-	UInt32			numArgs;
-	FunctionArg		args[4];
+	UInt32			opcode;		// 00
+	void			*cmdAddr;	// 04
+	UInt32			thisObj;	// 08	refID
+	UInt32			numArgs;	// 0C
+	FunctionArg		args[4];	// 10
 
-	QueuedCmdCall(void *_cmdAddr, void *_thisObj = NULL, UInt32 _numArgs = 0) : opcode(0x2B), cmdAddr(_cmdAddr), thisObj(_thisObj), numArgs(_numArgs) {}
+	QueuedCmdCall(void *_cmdAddr, UInt32 _thisObj, UInt8 _numArgs) : opcode(0x2B), cmdAddr(_cmdAddr), thisObj(_thisObj), numArgs(_numArgs) {}
 };
 
 #define AddQueuedCmdCall(qCall) ThisCall(0x87D160, g_scrapHeapQueue, &qCall)
@@ -616,14 +616,13 @@ __declspec(naked) ContChangesEntry *ExtraContainerChanges::EntryDataList::FindFo
 		test	eax, eax
 		jz		listNext
 		cmp		[eax+8], edx
-		jnz		listNext
-		retn	4
-		ALIGN 16
+		jz		done
 	listNext:
 		mov		ecx, [ecx+4]
 		test	ecx, ecx
 		jnz		listIter
 		xor		eax, eax
+	done:
 		retn	4
 	}
 }
@@ -680,23 +679,19 @@ __declspec(naked) ContChangesEntry *TESObjectREFR::GetContainerChangesEntry(TESF
 		jz		done
 		mov		ecx, eax
 		mov		edx, [esp+4]
-		jmp		itemIter
-	done:
-		retn	4
 		ALIGN 16
 	itemIter:
 		mov		eax, [ecx]
 		test	eax, eax
 		jz		itemNext
 		cmp		[eax+8], edx
-		jnz		itemNext
-		retn	4
-		ALIGN 16
+		jz		done
 	itemNext:
 		mov		ecx, [ecx+4]
 		test	ecx, ecx
 		jnz		itemIter
 		xor		eax, eax
+	done:
 		retn	4
 	}
 }
@@ -1280,7 +1275,7 @@ void TESObjectREFR::SetPos(NiVector3 &posVector)
 	if (!ThisCall<bool>(0x572C80, this)) return;
 	if (s_multiThreaded && !IsActor())
 	{
-		QueuedCmdCall qCall(DoSetPos, this, 3);
+		QueuedCmdCall qCall(DoSetPos, refID, 3);
 		UInt32 *ptr = (UInt32*)&posVector;
 		qCall.args[0] = ptr[0];
 		qCall.args[1] = ptr[1];
@@ -1320,7 +1315,7 @@ void TESObjectREFR::SetAngle(NiVector3 &rotVector)
 	if (!ThisCall<bool>(0x572C80, this)) return;
 	if (s_multiThreaded && !IsActor())
 	{
-		QueuedCmdCall qCall(DoSetAngle, this, 3);
+		QueuedCmdCall qCall(DoSetAngle, refID, 3);
 		UInt32 *ptr = (UInt32*)&rotVector;
 		qCall.args[0] = ptr[0];
 		qCall.args[1] = ptr[1];
@@ -1389,7 +1384,7 @@ bool TESObjectREFR::MoveToCell(TESForm *worldOrCell, NiVector3 &posVector)
 	if (!cell) return false;
 	if (s_multiThreaded)
 	{
-		QueuedCmdCall qCall(DoMoveToCell, this, 4);
+		QueuedCmdCall qCall(DoMoveToCell, refID, 4);
 		UInt32 *ptr = (UInt32*)&posVector;
 		qCall.args[0] = cell;
 		qCall.args[1] = ptr[0];
@@ -2073,11 +2068,9 @@ __declspec(naked) bool Actor::IsInCombatWith(Actor *target)
 		jz		done
 		mov		ecx, [eax+4]
 		mov		eax, [eax+8]
-		mov		edx, [esp+4]
 		test	eax, eax
-		jnz		iterHead
-	done:
-		retn	4
+		jz		done
+		mov		edx, [esp+4]
 		ALIGN 16
 	iterHead:
 		cmp		[ecx], edx
@@ -2088,6 +2081,7 @@ __declspec(naked) bool Actor::IsInCombatWith(Actor *target)
 		retn	4
 	rtnTrue:
 		mov		al, 1
+	done:
 		retn	4
 	}
 }
@@ -2538,7 +2532,7 @@ __declspec(naked) float Actor::AdjustPushForce(float baseForce)
 
 __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR *originRef, bool adjustForce)
 {
-	static const float kPushTime = 96.0F;
+	static const float kFltFive = 5.0F, kPushTime = 96.0F;
 	__asm
 	{
 		push	esi
@@ -3773,6 +3767,7 @@ __declspec(naked) void NiNode::ApplyForce(hkVector4 *forceVector)
 		push	edi
 		mov		esi, [ebx+0xA0]
 		mov		edi, edx
+		ALIGN 16
 	iterHead:
 		mov		ecx, [esi]
 		test	ecx, ecx
@@ -3784,6 +3779,7 @@ __declspec(naked) void NiNode::ApplyForce(hkVector4 *forceVector)
 		push	dword ptr [esp+0x10]
 		mov		ecx, eax
 		call	NiNode::ApplyForce
+		ALIGN 16
 	iterNext:
 		add		esi, 4
 		dec		edi
@@ -3888,6 +3884,7 @@ __declspec(naked) LODdata::LODNode *LODdata::LODNode::GetNodeByCoord(UInt32 coor
 		jnz		iterHead
 		mov		[ebp-8], ecx
 		jmp		done
+		ALIGN 16
 	iterHead:
 		mov		ecx, [ecx+edx*4+0x20]
 		test	ecx, ecx
@@ -3940,9 +3937,7 @@ __declspec(naked) bool ExtraContainerChanges::EntryData::HasExtraType(UInt8 xTyp
 	{
 		mov		eax, [ecx]
 		test	eax, eax
-		jnz		proceed
-		retn	4
-	proceed:
+		jz		done
 		push	esi
 		mov		esi, eax
 		mov		cl, [esp+8]
@@ -3952,21 +3947,24 @@ __declspec(naked) bool ExtraContainerChanges::EntryData::HasExtraType(UInt8 xTyp
 		and		cl, 7
 		mov		dl, 1
 		shl		dl, cl
+		ALIGN 16
 	iterHead:
 		mov		ecx, [esi]
 		test	ecx, ecx
 		jz		iterNext
 		test	byte ptr [ecx+eax], dl
-		jz		iterNext
-		mov		al, 1
-		jmp		done
+		jnz		retnTrue
 	iterNext:
 		mov		esi, [esi+4]
 		test	esi, esi
 		jnz		iterHead
 		xor		al, al
-	done:
 		pop		esi
+		retn	4
+	retnTrue:
+		mov		al, 1
+		pop		esi
+	done:
 		retn	4
 	}
 }
@@ -3977,24 +3975,23 @@ __declspec(naked) bool ExtraContainerChanges::EntryData::HasExtraLeveledItem()
 	{
 		mov		ecx, [ecx]
 		test	ecx, ecx
-		jnz		iterHead
-		xor		al, al
-		retn
+		jz		retnFalse
 		ALIGN 16
 	iterHead:
 		mov		edx, [ecx]
 		test	edx, edx
 		jz		iterNext
 		test	byte ptr [edx+0xD], 0x80
-		jz		iterNext
-		mov		al, 1
-		retn
-		ALIGN 16
+		jnz		retnTrue
 	iterNext:
 		mov		ecx, [ecx+4]
 		test	ecx, ecx
 		jnz		iterHead
+	retnFalse:
 		xor		al, al
+		retn
+	retnTrue:
+		mov		al, 1
 		retn
 	}
 }
@@ -6018,6 +6015,7 @@ __declspec(naked) bool __fastcall GetFileArchived(const char *filePath)
 		CALL_EAX(0xAFD270)
 		add		esp, 0xC
 		mov		edi, ds:[0x11F8160]
+		ALIGN 16
 	iterHead:
 		test	edi, edi
 		jz		retnFalse

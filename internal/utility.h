@@ -1,12 +1,5 @@
 #pragma once
 
-// Based on the boost implementation of static asserts
-template <bool x> struct StaticAssertFailure;
-template <> struct StaticAssertFailure <true> { enum { a = 1 }; };
-template <int x> struct static_assert_test { };
-
-#define STATIC_ASSERT(a)	typedef static_assert_test <sizeof(StaticAssertFailure<(bool)(a)>)> static_assert_typedef_ ## __COUNTER__
-
 #define CALL_EAX(addr) __asm mov eax, addr __asm call eax
 #define JMP_EAX(addr)  __asm mov eax, addr __asm jmp eax
 #define JMP_EDX(addr)  __asm mov edx, addr __asm jmp edx
@@ -14,20 +7,31 @@ template <int x> struct static_assert_test { };
 // These are used for 10h aligning segments in ASM code (massive performance gain, particularly with loops).
 #define EMIT(bt) __asm _emit bt
 #define NOP_0x1 EMIT(0x90)
-#define NOP_0x2 EMIT(0x66) EMIT(0x90)
+//	"\x90"
+#define NOP_0x2 EMIT(0x66) NOP_0x1
+//	"\x66\x90"
 #define NOP_0x3 EMIT(0x0F) EMIT(0x1F) EMIT(0x00)
+//	"\x0F\x1F\x00"
 #define NOP_0x4 EMIT(0x0F) EMIT(0x1F) EMIT(0x40) EMIT(0x00)
+//	"\x0F\x1F\x40\x00"
 #define NOP_0x5 EMIT(0x0F) EMIT(0x1F) EMIT(0x44) EMIT(0x00) EMIT(0x00)
-#define NOP_0x6 EMIT(0x66) EMIT(0x0F) EMIT(0x1F) EMIT(0x44) EMIT(0x00) EMIT(0x00)
+//	"\x0F\x1F\x44\x00\x00"
+#define NOP_0x6 EMIT(0x66) NOP_0x5
+//	"\x66\x0F\x1F\x44\x00\x00"
 #define NOP_0x7 EMIT(0x0F) EMIT(0x1F) EMIT(0x80) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00)
+//	"\x0F\x1F\x80\x00\x00\x00\x00"
 #define NOP_0x8 EMIT(0x0F) EMIT(0x1F) EMIT(0x84) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00)
-#define NOP_0x9 EMIT(0x66) EMIT(0x0F) EMIT(0x1F) EMIT(0x84) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00)
-#define NOP_0xA NOP_0x5 NOP_0x5
-#define NOP_0xB NOP_0x5 NOP_0x6
-#define NOP_0xC NOP_0x6 NOP_0x6
-#define NOP_0xD NOP_0x6 NOP_0x7
+//	"\x0F\x1F\x84\x00\x00\x00\x00\x00"
+#define NOP_0x9 EMIT(0x66) NOP_0x8
+//	"\x66\x0F\x1F\x84\x00\x00\x00\x00\x00"
+#define NOP_0xA EMIT(0x66) NOP_0x9
+//	"\x66\x66\x0F\x1F\x84\x00\x00\x00\x00\x00"
+#define NOP_0xB EMIT(0x66) NOP_0xA
+//	"\x66\x66\x66\x0F\x1F\x84\x00\x00\x00\x00\x00"
+#define NOP_0xC NOP_0x8 NOP_0x4
+#define NOP_0xD NOP_0x8 NOP_0x5
 #define NOP_0xE NOP_0x7 NOP_0x7
-#define NOP_0xF NOP_0x7 NOP_0x8
+#define NOP_0xF NOP_0x8 NOP_0x7
 
 #define GAME_HEAP_ALLOC __asm mov ecx, 0x11F6238 CALL_EAX(0xAA3E40)
 #define GAME_HEAP_FREE  __asm mov ecx, 0x11F6238 CALL_EAX(0xAA4060)
@@ -52,17 +56,10 @@ kFltZero = 0.0F,
 kFltPId180 = 0.01745329238F,
 kFltHalf = 0.5F,
 kFltOne = 1.0F,
-kFltFive = 5.0F,
-kFltSix = 6.0F,
 kFlt10 = 10.0F,
 kFlt100 = 100.0F,
 kFlt200 = 200.0F,
 kFlt1000 = 1000.0F,
-kFlt2048 = 2048.0F,
-kFlt4096 = 4096.0F,
-kFlt10000 = 10000.0F,
-kFlt12288 = 12288.0F,
-kFlt40000 = 40000.0F,
 kFltMax = FLT_MAX;
 
 typedef void* (__cdecl *memcpy_t)(void*, const void*, size_t);
@@ -126,9 +123,18 @@ public:
 	bool TryEnter() {return TryEnterCriticalSection(&critSection) != 0;}
 };
 
-void* __fastcall Pool_Alloc(UInt32 size);
-void __fastcall Pool_Free(void *pBlock, UInt32 size);
-void* __fastcall Pool_Realloc(void *pBlock, UInt32 curSize, UInt32 reqSize);
+class SpinLock
+{
+	UInt32	owningThread;
+	UInt32	enterCount;
+
+public:
+	SpinLock() : owningThread(0), enterCount(0) {}
+
+	void Enter();
+	void EnterSleep();
+	void Leave();
+};
 
 TESForm* __stdcall LookupFormByRefID(UInt32 refID);
 
@@ -179,10 +185,28 @@ template <typename T> inline T sqr(T value)
 	return value * value;
 }
 
+extern const UInt8 kLwrCaseConverter[], kUprCaseConverter[];
+
 UInt32 __vectorcall cvtd2ui(double value);
 
-int __vectorcall lfloor(float value);
-int __vectorcall lceil(float value);
+double __vectorcall cvtui2d(UInt32 value);
+
+__forceinline int ifloor(float value)
+{
+	__m128 temp = _mm_load_ss(&value);
+	return _mm_cvtt_ss2si(_mm_round_ss(temp, temp, 1));
+}
+
+__forceinline int iceil(float value)
+{
+	__m128 temp = _mm_load_ss(&value);
+	return _mm_cvtt_ss2si(_mm_round_ss(temp, temp, 2));
+}
+
+__forceinline int iround(float value)
+{
+	return _mm_cvt_ss2si(_mm_load_ss(&value));
+}
 
 UInt32 __fastcall RGBHexToDec(UInt32 rgb);
 
@@ -231,10 +255,6 @@ char* __fastcall GetNextToken(char *str, const char *delims);
 char* __fastcall CopyString(const char *key);
 
 char* __fastcall CopyCString(const char *src);
-
-UInt32 __fastcall StrHashCS(const char *inKey);
-
-UInt32 __fastcall StrHashCI(const char *inKey);
 
 char* __fastcall IntToStr(char *str, int num);
 
@@ -431,7 +451,7 @@ public:
 	static void MakeAllDirs(char *fullPath);
 };
 
-static const char kIndentLevelStr[] = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
+extern const char kIndentLevelStr[];
 
 class DebugLog
 {
