@@ -776,7 +776,7 @@ public:
 
 	UInt32 GetIndex();
 	NiProperty *GetProperty(UInt32 propID);
-	void SetName(const char *newName);
+	void __fastcall SetName(const char *newName);
 
 	void DumpProperties();
 	void DumpParents();
@@ -800,11 +800,11 @@ public:
 
 	static NiNode* __stdcall Create(const char *nodeName);
 	NiNode* CreateCopy();
-	NiAVObject *GetBlock(const char *blockName);
-	NiNode *GetNode(const char *nodeName);
+	NiAVObject* __fastcall GetBlock(const char *blockName);
+	NiNode* __fastcall GetNode(const char *nodeName);
 	bool IsMovable();
 	void ToggleCollision(bool enable);
-	void DisableCollision();
+	void RemoveCollision();
 	void BulkSetMaterialPropertyTraitValue(UInt32 traitID, float value);
 	void GetContactObjects(ContactObjects *contactObjs);
 	bool HasPhantom();

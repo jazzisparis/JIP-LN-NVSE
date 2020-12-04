@@ -72,7 +72,6 @@ __declspec(naked) TESForm* __stdcall LookupFormByRefID(UInt32 refID)
 	}
 }
 
-alignas(16) static const UInt64 kSignMaskD[] = {0x8000000000000000, 0x8000000000000000};
 alignas(16) static const double kValueBounds[] = {4294967296, -4294967296};
 
 __declspec(naked) UInt32 __vectorcall cvtd2ui(double value)
@@ -696,6 +695,7 @@ __declspec(naked) char* __fastcall IntToStr(char *str, int num)
 __declspec(naked) char* __vectorcall FltToStr(char *str, double value)
 {
 	static const double kDbl1Mil = 1000000.0;
+	static const int kIntDivisors[] = {10, 100, 1000, 10000, 100000};
 	__asm
 	{
 		pxor	xmm1, xmm1
@@ -706,7 +706,9 @@ __declspec(naked) char* __vectorcall FltToStr(char *str, double value)
 		retn
 	nonZero:
 		ja		isPos
-		xorpd	xmm0, kSignMaskD
+		pcmpeqd	xmm2, xmm2
+		psllq	xmm2, 0x3F
+		xorpd	xmm0, xmm2
 		mov		[ecx], '-'
 		inc		ecx
 	isPos:
@@ -719,51 +721,51 @@ __declspec(naked) char* __vectorcall FltToStr(char *str, double value)
 		fisttp	qword ptr [eax]
 		mov		esi, [eax]
 		test	esi, esi
-		jz		noWhole
+		jz		noInt
 		subsd	xmm0, xmm2
-	noWhole:
+	noInt:
 		xor		edi, edi
 		comisd	xmm0, xmm1
 		jz		noFrac
 		mulsd	xmm0, kDbl1Mil
 		cvtsd2si	edi, xmm0
+		cmp		edi, 0xF4240
+		jnz		noFrac
+		xor		edi, edi
+		inc		esi
 	noFrac:
 		test	esi, esi
-		jz		zeroWhole
+		jz		zeroInt
 		mov		edx, esi
 		call	IntToStr
 		mov		ecx, eax
-		jmp		doneWhole
-	zeroWhole:
+		jmp		doneInt
+	zeroInt:
 		mov		[ecx], '0'
 		inc		ecx
-	doneWhole:
+	doneInt:
 		test	edi, edi
 		jz		done
 		mov		[ecx], '.'
 		inc		ecx
-		mov		esi, 0x186A0
+		mov		edx, edi
+		mov		esi, offset kIntDivisors
+		mov		edi, 4
 		ALIGN 16
-	fracHead:
+	fracIter:
+		mov		eax, edx
 		xor		edx, edx
-		mov		eax, edi
-		div		esi
-		mov		edi, edx
+		div		dword ptr [esi+edi*4]
 		add		al, '0'
 		mov		[ecx], al
 		inc		ecx
-		mov     eax, 0xCCCCCCCD
-		mul		esi
-		mov		esi, edx
-		shr		esi, 3
-		test	edi, edi
-		jnz		fracHead
-		ALIGN 16
-	trimHead:
-		cmp		[ecx-1], '0'
-		jnz		done
-		dec		ecx
-		jmp		trimHead
+		test	edx, edx
+		jz		done
+		dec		edi
+		jns		fracIter
+		add		dl, '0'
+		mov		[ecx], dl
+		inc		ecx
 	done:
 		mov		[ecx], 0
 		mov		eax, ecx
@@ -869,7 +871,7 @@ __declspec(naked) UInt32 __fastcall StrToUInt(const char *str)
 
 __declspec(naked) double __vectorcall StrToDbl(const char *str)
 {
-	static const double kFactor10Div[] = {10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
+	static const double kFactor10Div[] = {1000000000, 100000000, 10000000, 1000000, 100000, 10000, 1000, 100, 10};
 	__asm
 	{
 		push	esi
@@ -911,7 +913,7 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 	noInt:
 		cmp		cl, 0xFE
 		jnz		addSign
-		mov		dh, 0xFF
+		mov		dh, 9
 		ALIGN 16
 	fracIter:
 		inc		esi
@@ -921,9 +923,8 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 		ja		fracEnd
 		lea		eax, [eax+eax*4]
 		lea		eax, [ecx+eax*2]
-		inc		dh
-		cmp		dh, 8
-		jb		fracIter
+		dec		dh
+		jnz		fracIter
 	fracEnd:
 		test	eax, eax
 		jz		addSign
@@ -935,7 +936,9 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 	addSign:
 		test	dl, 6
 		jz		done
-		xorpd	xmm0, kSignMaskD
+		pcmpeqd	xmm1, xmm1
+		psllq	xmm1, 0x3F
+		xorpd	xmm0, xmm1
 	done:
 		pop		edi
 		pop		esi

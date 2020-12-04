@@ -171,8 +171,8 @@ public:
 	void SwapTexture(const char *blockName, const char *filePath, UInt32 texIdx);
 	bool SetLinkedRef(TESObjectREFR *linkObj, UInt8 modIdx);
 	bool ValidForHooks();
-	NiAVObject *GetNiBlock(const char *blockName);
-	NiNode *GetNode(const char *nodeName);
+	NiAVObject* __fastcall GetNiBlock(const char *blockName);
+	NiNode* __fastcall GetNode(const char *nodeName);
 	hkpRigidBody *GetRigidBody(const char *nodeName);
 	bool RunScriptSource(const char *sourceStr);
 
@@ -495,8 +495,8 @@ public:
 	virtual void		Unk_113(void);
 	virtual void		Unk_114(void);
 	virtual void		Unk_115(void);
-	virtual float		CalcSpeedMult(void);
-	virtual void		Unk_117(void);
+	virtual float		CalculateMoveSpeed();
+	virtual float		CalculateRunSpeed();
 	virtual void		Unk_118(void);
 	virtual void		Unk_119(void);
 	virtual void		Unk_11A(void);
@@ -679,8 +679,8 @@ public:
 	UInt8 EquippedWeaponHasMod(UInt8 modID);
 	bool IsSneaking();
 	void StopCombat();
-	bool IsInCombatWith(Actor *target);
-	int GetDetectionValue(Actor *detected);
+	bool __fastcall IsInCombatWith(Actor *target);
+	int __fastcall GetDetectionValue(Actor *detected);
 	TESPackage *GetStablePackage();
 	PackageInfo *GetPackageInfo();
 	TESObjectREFR *GetPackageTarget();
@@ -691,7 +691,7 @@ public:
 	bool GetIsGhost();
 	float GetRadiationLevel();
 	BackUpPackage *AddBackUpPackage(TESObjectREFR *targetRef, TESObjectCELL *targetCell, UInt32 flags);
-	void TurnToFaceObject(TESObjectREFR *target);
+	void __fastcall TurnToFaceObject(TESObjectREFR *target);
 	void TurnAngle(float angle);
 	Actor *HandleSetAnimSequence(SInt32 animAction, BSAnimGroupSequence *animGroupSeq);
 	void PlayIdle(TESIdleForm *idleAnim);
@@ -785,6 +785,15 @@ public:
 		UInt8		isHostile;
 		UInt8		isDetected;
 		UInt8		pad06[2];
+	};
+
+	struct PCLevelData
+	{
+		UInt8		byte00;
+		UInt8		pad01[3];
+		UInt32		xpToNextLevel;
+		UInt8		byte08;
+		UInt8		pad09[3];
 	};
 
 	UInt32								unk1C8[17];				// 1C8	208 could be a DialogPackage
@@ -906,7 +915,8 @@ public:
 	float								flycamPosX;				// 7E8
 	float								flycamPosY;				// 7EC
 	float								flycamPosZ;				// 7F0
-	UInt32								unk7F4[34];				// 7F4
+	UInt32								unk7F4[33];				// 7F4
+	PCLevelData							*pcLevelData;			// 878
 	tList<PerkRank>						perkRanksPC;			// 87C
 	tList<BGSEntryPointPerkEntry>		perkEntriesPC[74];		// 884
 	tList<PerkRank>						perkRanksTM;			// AD4
@@ -962,7 +972,7 @@ public:
 
 	bool IsThirdPerson() { return bThirdPerson ? true : false; }
 	UInt32 GetMovementFlags() { return actorMover->GetMovementFlags(); }	// 11: IsSwimming, 9: IsSneaking, 8: IsRunning, 7: IsWalking, 0: keep moving
-	bool IsPlayerSwimming() { return (GetMovementFlags()  >> 11) & 1; }
+	bool IsPlayerSwimming() { return (actorMover->GetMovementFlags() & 0x800) ? true : false; }
 
 	static PlayerCharacter*	GetSingleton();
 	bool SetSkeletonPath(const char* newPath);

@@ -335,7 +335,7 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		mov		ecx, g_dataHandler
 		mov		ecx, [ecx+0x628]
 		mov		ecx, [ecx]
-		push	g_capsItem
+		mov		edx, g_capsItem
 		call	ExtraContainerChanges::EntryDataList::FindForItem
 		test	eax, eax
 		jz		done
@@ -347,7 +347,7 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		mov		eax, [ecx+4]
 		mov		[ebp-0xC], eax
 		mov		ecx, [ecx]
-		push	g_capsItem
+		mov		edx, g_capsItem
 		call	ExtraContainerChanges::EntryDataList::FindForItem
 		test	eax, eax
 		jz		done
@@ -2489,57 +2489,41 @@ __declspec(naked) void RepairMenuClickHook()
 
 __declspec(naked) void DamageToWeaponHook()
 {
-	static const float kDegrMultDefault = 0.2F, kDegrMultSmallGuns = 0.03F, kDegrMultEnergyWpn = 0.04F, kDegrMultUnarmedMelee = 0.05F, kDegrMultBigGuns = 0.06F;
+	static const char kSkillMatcher[] = {3, 1, 3, -1, -1, 2, -1, -1, 0, -1, -1, -1, 2};
+	static const float kDegrMults[] = {0.15F, 0.2F, 0.25F, 0.3F};
 	__asm
 	{
 		mov		eax, ds:[0x11CF154]
 		mov		[ebp-4], eax
-		mov		dword ptr [ebp-8], 0
+		xor		edx, edx
+		mov		[ebp-8], edx
 		mov		ecx, [ebp+8]
 		mov		ecx, [ecx+0x68]
 		test	ecx, ecx
-		jz		defaultDmg
+		jz		done
 		cmp		dword ptr [ecx+0x28], 1
-		ja		defaultDmg
+		ja		done
 		mov		eax, [ecx+0x114]
 		test	eax, eax
-		jz		defaultDmg
+		jz		done
 		mov		ecx, [eax+8]
 		test	ecx, ecx
-		jz		defaultDmg
+		jz		done
 		mov		[ebp-8], ecx
-		movzx	eax, word ptr [ecx+0xA0]
-		cvtsi2ss	xmm0, eax
+		mov		dl, [ecx+0x15C]
+		sub		dl, kAVCode_BigGuns
+		js		done
+		cmp		dl, 0xC
+		ja		done
+		movsx	eax, kSkillMatcher[edx]
+		test	eax, eax
+		js		done
+		movzx	edx, word ptr [ecx+0xA0]
+		cvtsi2ss	xmm0, edx
 		mulss	xmm0, [ebp-4]
-		divss	xmm0, kDegrMultDefault
-		mov		al, [ecx+0x15C]
-		cmp		al, kAVCode_Guns
-		jnz		checkSkill1
-		mulss	xmm0, kDegrMultSmallGuns
-		jmp		done
-	checkSkill1:
-		cmp		al, kAVCode_EnergyWeapons
-		jnz		checkSkill2
-		mulss	xmm0, kDegrMultEnergyWpn
-		jmp		done
-	checkSkill2:
-		cmp		al, kAVCode_Explosives
-		jz		checkSkill2a
-		cmp		al, kAVCode_BigGuns
-		jnz		checkSkill3
-	checkSkill2a:
-		mulss	xmm0, kDegrMultBigGuns
-		jmp		done
-	checkSkill3:
-		cmp		al, kAVCode_MeleeWeapons
-		jz		checkSkill3a
-		cmp		al, kAVCode_Unarmed
-		jnz		defaultDmg
-	checkSkill3a:
-		mulss	xmm0, kDegrMultUnarmedMelee
-	done:
+		mulss	xmm0, kDegrMults[eax*4]
 		movss	[ebp-4], xmm0
-	defaultDmg:
+	done:
 		retn
 	}
 }
@@ -2639,15 +2623,15 @@ __declspec(naked) void RefreshHPBarDelayHook()
 	__asm
 	{
 		mov		eax, [ebp-0xC]
-		cmp		eax, 0xA
+		mov		edx, 0xA
+		cmp		eax, edx
 		jnb		done
-		mov		dword ptr [ebp-0xC], 0xA
+		mov		[ebp-0xC], edx
 		cmp		s_sleepSemaphore, 0
 		jnz		done
 		mov		s_sleepSemaphore, 1
-		sub		eax, 0xA
-		neg		eax
-		push	eax
+		sub		edx, eax
+		push	edx
 		call	Sleep
 	done:
 		retn
@@ -3571,6 +3555,9 @@ void InitGamePatches()
 	SafeWriteBuf(0x881A9C, "\x0F\x1F\x44\x00\x00", 5);
 	SafeWriteBuf(0x9E6A82, "\x0F\x1F\x44\x00\x00", 5);
 
+	//	Fix SetLevel XP
+	SafeWriteBuf(0x8D535F, "\x0F\x1F\x00", 3);
+
 	//	ScriptRunner::Run skip Script::GetName calls
 	SafeWrite16(0x5E0DD1, 0x39EB);
 
@@ -3640,7 +3627,7 @@ void InitGamePatches()
 	WriteRelCall(0x89DC0E, (UInt32)KillChallengeFixHook);
 	WriteRelCall(0x72880D, (UInt32)IsDisposableWeaponHook);
 	WriteRelJump(0x984156, (UInt32)DeathResponseFixHook);
-	SafeWriteBuf(0x9EE367, "\x83\xBA\x08\x01\x00\x00\x02\x0F\x84\x88\x00\x00\x00\xEB\x47", 15);
+	SafeWriteBuf(0x9EE367, "\x8B\x8A\xB0\x00\x00\x00\x83\xB9\x08\x01\x00\x00\x02\x0F\x84\x82\x00\x00\x00\xEB\x41", 21);
 	WriteRelJump(0x867E30, (UInt32)GetHoursPassed);
 	SafeWrite16(0x54E421, 0x1EEB);
 	WritePushRetRelJump(0x54E4E1, 0x54E5E6, (UInt32)ClearAshPilesHook);
@@ -3801,7 +3788,6 @@ void DeferredInit()
 	g_gooPileACTI->SetJIPFlag(kHookFormFlag6_IsAshPile, true);
 	g_eventCmdInfos[1].execute = Hook_MenuMode_Execute;
 	g_eventCmdInfos[0xE].execute = Cmd_EmptyCommand_Execute;
-	s_multiThreaded = *(UInt32*)0x11C3EA8 > 1;
 
 	g_condDmgPenalty = *(double**)0x646D25;
 	if ((UInt32)g_condDmgPenalty == 0x1051680)

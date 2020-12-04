@@ -91,7 +91,7 @@ public:
 		SInt32	unk30;					// 30
 		SInt32	unk34;					// 34
 		float	walkSpeed;				// 38
-		float	runSpeedMult;			// 3C
+		float	runSpeed;				// 3C
 		UInt8	hasNoCrippledLegs;		// 40
 		UInt8	pad41[3];				// 41
 		UInt32	flags;					// 44
@@ -873,7 +873,12 @@ public:
 	UInt8								byte17D;			// 17D
 	UInt8								byte17E;			// 17E
 	UInt8								byte17F;			// 17F
-	UInt32								unk180[3];			// 180
+	UInt32								unk180;				// 180
+	UInt32								unk184;				// 184
+	UInt8								byte188;			// 188
+	UInt8								byte189;			// 189
+	UInt8								byte18A;			// 18A
+	UInt8								byte18B;			// 18B
 	UInt8								byte18C;			// 18C
 	UInt8								byte18D[3];			// 18D
 	UInt32								unk190[10];			// 190

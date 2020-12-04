@@ -106,22 +106,26 @@ STATIC_ASSERT(sizeof(Script) == SCRIPT_SIZE);
 
 struct ScriptRunner
 {
-	UInt32				unk00;			// 00
-	TESForm				*baseForm;		// 04
-	ScriptEventList		*eventList;		// 08
-	UInt32				unk0C;			// 0C
-	UInt32				unk10;			// 10
-	Script				*script;		// 14
-	UInt32				unk18;			// 18	= 6 after failed to evaluate expression
-	UInt32				unk1C;			// 1C
-	UInt32				stackDepth;		// 20
-	UInt32				stack[10];		// 24
-	UInt32				stack2Depth;	// 4C
-	UInt32				stack2[10];		// 50
-	UInt32				stack3[10];		// 78
-	UInt8				byteA0;			// A0
-	UInt8				byteA1;			// A1	is set during runLine if CmdExecute.byt025 is not NULL
-	UInt8				padA2[2];		// A2
+	enum IfFlag
+	{
+		kIfFlag_IF =		1,
+		kIfFlag_ELSEIF =	2
+	};
+
+	UInt32				unk00;				// 00
+	TESForm				*baseForm;			// 04
+	ScriptEventList		*eventList;			// 08
+	UInt32				unk0C;				// 0C
+	UInt32				unk10;				// 10
+	Script				*script;			// 14
+	UInt32				unk18;				// 18	Set to 6 after a failed expression evaluation
+	UInt32				unk1C;				// 1C	Set to Expression::errorCode
+	UInt32				ifStackDepth;		// 20
+	UInt32				ifStackFlags[10];	// 24
+	UInt32				unk4C[21];			// 4C
+	UInt8				invalidRefs;		// A0	Set when the dot operator fails to resolve a reference (inside the error message handler)
+	UInt8				byteA1;				// A1	Set when the executing CommandInfo's 2nd flag bit (+0x25) is set
+	UInt8				padA2[2];			// A2
 };
 STATIC_ASSERT(sizeof(ScriptRunner) == 0xA4);
 

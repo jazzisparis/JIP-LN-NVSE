@@ -337,7 +337,7 @@ public:
 			extendData(extend), countDelta(count), type(item) {}
 
 		void Cleanup();
-		bool HasExtraType(UInt8 xType);
+		bool __fastcall HasExtraType(UInt8 xType);
 		bool HasExtraLeveledItem();
 		void RemoveCannotWear();
 		ExtraDataList *GetEquippedExtra();
@@ -346,7 +346,7 @@ public:
 
 	struct EntryDataList : tList<EntryData>
 	{
-		EntryData *FindForItem(TESForm *item);
+		EntryData* __fastcall FindForItem(TESForm *item);
 	};
 
 	// 14

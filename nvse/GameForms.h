@@ -1274,7 +1274,7 @@ public:
 
 	FormCountList	formCountList;	// 04
 
-	SInt32 GetCountForForm(TESForm *form);
+	SInt32 __fastcall GetCountForForm(TESForm *form);
 };
 
 // 00C
@@ -1878,7 +1878,7 @@ public:
 	TESQuest			*quest;				// 48
 	UInt32				modInfoFileOffset;	// 4C	during LoadForm
 
-	__forceinline void RunResultScript(bool onEnd, Actor *actor)
+	__forceinline void RunResultScript(UInt32 onEnd, Actor *actor)
 	{
 		ThisCall(0x61F170, this, onEnd, actor);
 	}
@@ -3529,8 +3529,8 @@ public:
 	float					weight;				// 1F8	Aparently, getWeight purposly returns height except for the player.
 	NiTArray<FaceGenUndo*>	faceGenUndo;		// 1FC
 
-	void SetSex(UInt32 flags);
-	void SetRace(TESRace *pRace);
+	void __fastcall SetSex(UInt32 flags);
+	void __fastcall SetRace(TESRace *pRace);
 	__forceinline void CopyAppearance(TESNPC *srcNPC)
 	{
 		ThisCall(0x603790, this, srcNPC);
@@ -4119,7 +4119,7 @@ public:
 	UInt32					inheritFlags;			// DC
 
 	bool IsInterior() { return worldSpace == NULL; }
-	NiNode *Get3DNode(UInt32 index);
+	NiNode* __fastcall Get3DNode(UInt32 index);
 	void ToggleNodes(UInt32 nodeBits, UInt8 doHide);
 
 	__forceinline void RefLockEnter()

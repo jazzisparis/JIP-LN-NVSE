@@ -988,7 +988,7 @@ __declspec(naked) void SetCombatTargetHook()
 		test	eax, eax
 		jz		contRetn
 		mov		[ebp-0x14], eax
-		push	eax
+		mov		edx, eax
 		mov		ecx, [ebp+8]
 		call	Actor::IsInCombatWith
 		test	al, al
@@ -1481,6 +1481,8 @@ __declspec(naked) void MenuHandleMouseoverHook()
 		mov		lastMenuID, ecx
 	gotID:
 		movzx	edx, kMenuIDJumpTable[ecx-kMenuType_Min]
+		cmp		dl, 0xFF
+		jz		skipRetn
 		mov		ecx, s_menuStateEventMap[edx*4]
 		test	ecx, ecx
 		jz		skipRetn
@@ -2179,12 +2181,12 @@ __declspec(naked) void __fastcall ResetHitDataHook(MiddleHighProcess *process)
 
 struct ScriptWaitInfo
 {
-	TESForm		*owner;			// 00
-	UInt32		iterNum;		// 04
-	UInt32		blockOffset;	// 08
-	UInt32		savedOffset;	// 0C
-	UInt32		stackDepth;		// 10
-	UInt32		stack[10];		// 14
+	TESForm		*owner;				// 00
+	UInt32		iterNum;			// 04
+	UInt32		blockOffset;		// 08
+	UInt32		savedOffset;		// 0C
+	UInt32		ifStackDepth;		// 10
+	UInt32		ifStackFlags[10];	// 14
 
 	ScriptWaitInfo() {}
 
@@ -2195,7 +2197,7 @@ struct ScriptWaitInfo
 		blockOffset = _blockOffset;
 		savedOffset = *opcodeOffsetPtr - blockOffset;
 		ScriptRunner *scrRunner = *(ScriptRunner**)(opcodeOffsetPtr - 0x3B0);
-		memcpy(&stackDepth, &scrRunner->stackDepth, 0x2C);
+		memcpy(&ifStackDepth, &scrRunner->ifStackDepth, 0x2C);
 	}
 }
 *s_scriptWaitInfo = NULL;
@@ -2287,10 +2289,9 @@ __declspec(naked) void EvalEventBlockHook()
 		jz		skipBlock
 		retn
 	skipBlock:
-		mov		edx, [ebp+0x14]
-		mov		eax, [edx]
-		add		eax, [ebp-0x20]
-		mov		[edx], eax
+		mov		eax, [ebp+0x14]
+		mov		edx, [ebp-0x20]
+		add		[eax], edx
 		retn
 	}
 }
@@ -2737,10 +2738,9 @@ __declspec(naked) void __fastcall DoInsertNodes(TESForm *form, int EDX, NiNode *
 		ALIGN 16
 	nodeHead:
 		mov		ebx, [ebp+8]
-		mov		eax, [esi]
-		cmp		[eax], 0
+		mov		edx, [esi]
+		cmp		[edx], 0
 		jz		useRoot
-		push	eax
 		mov		ecx, ebx
 		call	NiNode::GetNode
 		test	eax, eax
@@ -2753,15 +2753,14 @@ __declspec(naked) void __fastcall DoInsertNodes(TESForm *form, int EDX, NiNode *
 		mov		[ebp-8], edx
 		ALIGN 16
 	insHead:
-		mov		eax, [edi]
-		cmp		[eax], '^'
-		jnz		notParent
-		cmp		[ebp+8], ebx
-		jz		insNext
-		inc		eax
-		push	eax
-		push	eax
 		mov		ecx, [ebp+8]
+		mov		edx, [edi]
+		cmp		[edx], '^'
+		jnz		notParent
+		cmp		ecx, ebx
+		jz		insNext
+		inc		edx
+		push	edx
 		call	NiNode::GetBlock
 		test	eax, eax
 		jz		doCreate
@@ -2790,8 +2789,6 @@ __declspec(naked) void __fastcall DoInsertNodes(TESForm *form, int EDX, NiNode *
 		mov		eax, ebx
 		jmp		doAdd
 	notParent:
-		push	eax
-		mov		ecx, [ebp+8]
 		call	NiNode::GetBlock
 		test	eax, eax
 		jnz		insNext
@@ -2842,10 +2839,9 @@ __declspec(naked) void __fastcall DoAttachModels(TESForm *form, int EDX, NiNode 
 		ALIGN 16
 	nodeHead:
 		mov		ebx, [ebp+8]
-		mov		eax, [esi]
-		cmp		[eax], 0
+		mov		edx, [esi]
+		cmp		[edx], 0
 		jz		useRoot
-		push	eax
 		mov		ecx, ebx
 		call	NiNode::GetNode
 		test	eax, eax
@@ -2875,7 +2871,7 @@ __declspec(naked) void __fastcall DoAttachModels(TESForm *form, int EDX, NiNode 
 		push	1
 		push	eax
 		mov		ecx, eax
-		call	NiNode::DisableCollision
+		call	NiNode::RemoveCollision
 		mov		ecx, ebx
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xDC]
@@ -2991,7 +2987,7 @@ __declspec(naked) void SynchronizePositionHook()
 		cmp		[edx+0xC0], ecx
 		jnz		done
 	sameCell:
-		push	offset s_syncPositionNode
+		mov		edx, offset s_syncPositionNode
 		mov		ecx, eax
 		call	TESObjectREFR::GetNode
 		test	eax, eax

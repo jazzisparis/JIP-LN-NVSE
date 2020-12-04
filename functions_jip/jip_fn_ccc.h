@@ -549,7 +549,7 @@ bool Cmd_CCCSayTo_Execute(COMMAND_ARGS)
 	ExtraSayToTopicInfo *xSayTo = GetExtraType(&thisObj->extraDataList, SayToTopicInfo);
 	if (xSayTo)
 	{
-		if (xSayTo->info) xSayTo->info->RunResultScript(true, (Actor*)thisObj);
+		if (xSayTo->info) xSayTo->info->RunResultScript(1, (Actor*)thisObj);
 		RemoveExtraData(&thisObj->extraDataList, xSayTo, true);
 	}
 	return true;
@@ -565,8 +565,8 @@ bool Cmd_CCCRunResultScripts_Execute(COMMAND_ARGS)
 		TESTopicInfo *topicInfo = GetTopicInfo(topic, &eval, actor, g_thePlayer, 1, NULL, NULL);
 		if (topicInfo)
 		{
-			topicInfo->RunResultScript(false, actor);
-			topicInfo->RunResultScript(true, actor);
+			topicInfo->RunResultScript(0, actor);
+			topicInfo->RunResultScript(1, actor);
 		}
 	}
 	return true;
@@ -602,8 +602,7 @@ bool Cmd_RefToPosStr_Execute(COMMAND_ARGS)
 	TESObjectCELL *cell = thisObj->GetParentCell();
 	if (cell)
 	{
-		char *pos = s_strValBuffer;
-		pos = UIntToHex(pos, cell->worldSpace ? cell->worldSpace->refID : cell->refID);
+		char *pos = UIntToHex(s_strValBuffer, cell->worldSpace ? cell->worldSpace->refID : cell->refID);
 		*pos++ = ' ';
 		pos = IntToStr(pos, ifloor(thisObj->posX));
 		*pos++ = ' ';
