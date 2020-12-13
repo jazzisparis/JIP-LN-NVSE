@@ -577,7 +577,7 @@ bool Cmd_TF_DebugDump_Execute(COMMAND_ARGS)
 {
 	if (!GetFormIDFromEDID)
 	{
-		HMODULE johnny = GetModuleHandle("johnnyguitar.dll");
+		HMODULE johnny = GetModuleHandle("johnnyguitar");
 		if (!johnny) return true;
 		GetFormIDFromEDID = (UInt32 (*)(const char*))GetProcAddress(johnny, "JGNVSE_GetFormIDFromEDID");
 		if (!GetFormIDFromEDID) return true;

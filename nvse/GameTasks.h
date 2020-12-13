@@ -71,9 +71,6 @@ public:
 	virtual void Unk_05(void);			// doesNothing
 	virtual void Unk_06(void);				
 	virtual void Unk_07(UInt32 arg0);	// most (all?) implementations appear to call IOManager::1202D98(this, arg0) eventually
-
-	IOTask();
-	~IOTask();
 };
 
 // 14
@@ -82,13 +79,25 @@ class QueuedChildren : public BSSimpleArray<NiPointer<QueuedFile>>
 	UInt32	counter;
 };
 
+struct Model
+{
+	const char	*path;		// 00
+	UInt32		counter1;	// 04
+	UInt32		counter2;	// 08
+	NiNode		*niNode;	// 0C
+
+	void Destroy()
+	{
+		GameHeapFree((void*)path);
+		if (niNode) NiReleaseObject(niNode);
+		GameHeapFree(this);
+	}
+};
+
 // 28
 class QueuedFile : public IOTask
 {
 public:
-	QueuedFile();
-	~QueuedFile();
-
 	//Unk_01:	doesNothing
 	//Unk_02:	virtual void Call_Unk_0A(void);
 	//Unk_03:	implemented
@@ -115,9 +124,6 @@ public:
 class QueuedReference : public QueuedFile
 {
 public:
-	QueuedReference();
-	~QueuedReference();
-
 	virtual void Unk_0B(void);			// Initialize validBip01Names (and cretae the 3D model?)
 	virtual void Unk_0C(void);
 	virtual void Unk_0D(NiNode *arg0);
@@ -125,11 +131,11 @@ public:
 	virtual void Unk_0F(void);
 	virtual void Unk_10(void);			// doesNothing
 
-	TESObjectREFR	*refr;		// 28 
+	TESObjectREFR	*refr;		// 28
 	RefNiRefObject	*unk2C;		// 2C	OBSE QueuedChildren	*queuedChildren;
-	NiRefObject		*unk30;		// 30 
-	NiRefObject		*unk34;		// 34 
-	RefNiRefObject	*unk38;		// 38 
+	Model			*model;		// 30
+	NiNode			*resultObj;	// 34
+	RefNiRefObject	*unk38;		// 38
 	UInt32			unk3C;		// 3C	uninitialized
 };
 
@@ -137,25 +143,18 @@ public:
 class QueuedActor : public QueuedReference
 {
 public:
-	QueuedActor();
-	~QueuedActor();
 };
 
 // 40
 class QueuedCreature : public QueuedActor
 {
 public:
-	QueuedCreature();
-	~QueuedCreature();
 };
 
 // 48
 class QueuedCharacter : public QueuedActor
 {
 public:
-	QueuedCharacter();
-	~QueuedCharacter();
-
 	typedef RefNiRefObject RefQueuedHead;
 
 	RefQueuedHead	*refQueuedHead;	// 40
@@ -166,38 +165,22 @@ public:
 class QueuedPlayer : public QueuedCharacter
 {
 public:
-	QueuedPlayer();
-	~QueuedPlayer();
 };
 
 // 030
 class QueuedFileEntry : public QueuedFile
 {
 public:
-	QueuedFileEntry();
-	~QueuedFileEntry();
-
 	virtual bool Unk_0B(void) = 0;
 
 	char	* name;		// 028
 	BSAData	* bsaData;	// 02C
 };
 
-struct Model
-{
-	const char	*path;		// 00
-	UInt32		counter1;	// 04
-	UInt32		counter2;	// 08
-	NiNode		*niNode;	// 0C
-};
-
 // 44
 class QueuedModel : public QueuedFileEntry
 {
 public:
-	QueuedModel();
-	~QueuedModel();
-
 	virtual void Unk_0C(UInt32 arg0);
 
 	Model		* model;		// 030
@@ -214,9 +197,6 @@ public:
 class QueuedTexture : public QueuedFileEntry
 {
 public:
-	QueuedTexture();
-	~QueuedTexture();
-
 	void	* niTexture;	// 030
 };
 
@@ -234,9 +214,6 @@ class KFModel
 class QueuedKF : public QueuedFileEntry
 {
 public:
-	QueuedKF();
-	~QueuedKF();
-
 	KFModel		* kf;		// 030
 	UInt8		unk034;		// 034
 	UInt8		pad035[3];	// 035
@@ -246,9 +223,6 @@ public:
 class QueuedAnimIdle : public QueuedKF
 {
 public:
-	QueuedAnimIdle();
-	~QueuedAnimIdle();
-
 	ModelLoader	* modelLoader;	// 038	Init"d by arg2
 	RefNiObject	* unk03C;		// 03C	Init"d by arg1
 };
@@ -257,9 +231,6 @@ public:
 class QueuedHead : public QueuedFile
 {
 public:
-	QueuedHead();
-	~QueuedHead();
-
 	TESNPC			* npc;				// 028
 	BSFaceGenNiNode * faceNiNodes[2];	// 02C OBSE presumably male and female
 	UInt32			unk034;				// 034
@@ -320,38 +291,85 @@ public:
 extern IOManager** g_ioManager;
 */
 
+// 40
 template <typename T_Key, typename T_Data> class LockFreeMap
 {
 public:
-	virtual void	Unk_00(void);
-	virtual void	Unk_01(void);
-	virtual bool	Lookup(T_Key key, T_Data *result);
-	virtual void	Unk_03(void);
-	virtual void	Unk_04(void);
-	virtual bool	EraseKey(T_Key key);
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
-	virtual void	Unk_08(void);
-	virtual void	Unk_09(void);
-	virtual void	Unk_0A(void);
-	virtual void	Unk_0B(void);
-	virtual void	Unk_0C(void);
-	virtual void	Unk_0D(void);
-	virtual void	Unk_0E(void);
-	virtual void	Unk_0F(void);
-	virtual void	Unk_10(void);
-	virtual void	Unk_11(void);
-	virtual void	Unk_12(void);
+	struct Entry
+	{
+		T_Key		key;
+		T_Data		data;
+		Entry		*next;
+	};
 
-	void		*ptr04;			// 04
-	UInt32		numBuckets;		// 08
-	void		*ptr0C;			// 0C
-	UInt32		unk10;			// 10
-	void		*ptr14;			// 14
-	UInt32		numItems;		// 18
-	UInt32		unk1C;			// 1C
-	void		*semaphore;		// 20
+	struct Bucket
+	{
+		Entry		*entries;
+	};
+
+	/*00*/virtual void		Destroy(bool doFree);
+	/*04*/virtual void		*Unk_01(UInt32 arg);
+	/*08*/virtual bool		Lookup(T_Key key, T_Data *result);
+	/*0C*/virtual bool		Unk_03(UInt32 arg1, UInt32 arg2, UInt32 arg3, UInt8 arg4);
+	/*10*/virtual bool		Insert(T_Key key, T_Data *dataPtr, UInt8 arg3);
+	/*14*/virtual bool		EraseKey(T_Key key);
+	/*18*/virtual bool		Unk_06(UInt32 arg1, UInt32 arg2);
+	/*1C*/virtual bool		Unk_07(UInt32 arg);
+	/*20*/virtual bool		Unk_08(UInt32 arg1, UInt32 arg2);
+	/*24*/virtual UInt32	CalcBucketIndex(T_Key key);
+	/*28*/virtual void		FreeKey(T_Key key);
+	/*2C*/virtual T_Key		GenerateKey(T_Key src);
+	/*30*/virtual void		CopyKeyTo(T_Key src, T_Key *destPtr);
+	/*34*/virtual bool		LKeyGreaterOrEqual(T_Key lkey, T_Key rkey);
+	/*38*/virtual bool		KeysEqual(T_Key lkey, T_Key rkey);
+	/*3C*/virtual UInt32	IncNumItems();
+	/*40*/virtual UInt32	DecNumItems();
+	/*44*/virtual UInt32	GetNumItems();
+
+	void			*ptr04;			// 04
+	UInt32			numBuckets;		// 08
+	Bucket			*buckets;		// 0C
+	UInt32			unk10;			// 10
+	void			*ptr14;			// 14
+	UInt32			numItems;		// 18
+	UInt32			unk1C;			// 1C
+	SpinLock		semaphore;		// 20
+	UInt32			unk28[6];		// 28
+
+	class Iterator
+	{
+		friend LockFreeMap;
+
+		LockFreeMap		*table;
+		Bucket			*bucket;
+		Entry			*entry;
+
+		void FindNonEmpty()
+		{
+			for (Bucket *end = &table->buckets[table->numBuckets]; bucket != end; bucket++)
+				if (entry = bucket->entries) return;
+		}
+
+	public:
+		Iterator(LockFreeMap &_table) : table(&_table), bucket(table->buckets), entry(NULL) {FindNonEmpty();}
+
+		bool End() const {return !entry;}
+		void operator++()
+		{
+			entry = entry->next;
+			if (!entry)
+			{
+				bucket++;
+				FindNonEmpty();
+			}
+		}
+		T_Data Get() const {return entry->data;}
+		T_Key Key() const {return entry->key;}
+	};
+
+	Iterator Begin() {return Iterator(*this);}
 };
+STATIC_ASSERT(sizeof(LockFreeMap<int, int>) == 0x40);
 
 class AnimIdle;
 class Animation;

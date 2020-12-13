@@ -1138,8 +1138,7 @@ __declspec(naked) void __fastcall MessageBoxExAlt(char **msgStrings)
 		push	0
 		push	dword ptr [ecx]
 		call	ShowMessageBox
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -1355,8 +1354,7 @@ __declspec(naked) void RecipeMenuAcceptHook()
 		push	dword ptr ds:[0x11D8EA8]
 		CALL_EAX(0x7ABA00)
 	done:
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	8
 	}
 }
@@ -1413,8 +1411,7 @@ __declspec(naked) void RecipeMenuCloseHook()
 		mov		fs:0, ecx
 		pop		ecx
 		pop		esi
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -1543,8 +1540,7 @@ __declspec(naked) void ItemFilterHook()
 		mov		ecx, [ecx+8]
 		call	ShouldHideItem
 	done:
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }

@@ -1,12 +1,11 @@
 #pragma once
 
+NiRefObject** __stdcall NiReleaseAddRef(NiRefObject **toRelease, NiRefObject *toAdd);
+
 // 584
 class InterfaceManager
 {
 public:
-	InterfaceManager();
-	~InterfaceManager();
-
 	struct HighlightedRef
 	{
 		TESObjectREFR	*refr;
@@ -15,13 +14,13 @@ public:
 		void Set(TESObjectREFR *_refr)
 		{
 			refr = _refr;
-			ThisCall(0x66B0D0, &node, _refr->GetNiNode());
+			NiReleaseAddRef((NiRefObject**)&node, _refr->GetNiNode());
 		}
 
 		void Clear()
 		{
 			refr = NULL;
-			if (node) ThisCall(0x66B0D0, &node, 0);
+			if (node) NiReleaseAddRef((NiRefObject**)&node, nullptr);
 		}
 	};
 
@@ -243,9 +242,6 @@ enum MenuSpecialKeyboardInputCode
 class Menu
 {
 public:
-	Menu();
-	~Menu();
-
 	virtual void	Destructor(bool doFree);
 	virtual void	SetTile(UInt32 idx, Tile *value);
 	virtual void	HandleLeftClickPress(UInt32 tileID, Tile *activeTile);	// called when the mouse has moved and left click is pressed
@@ -298,21 +294,8 @@ public:
 	// check 4 at 0xA1D9EC (when closing menu) :: set at 0x7036A4, 0x71204D
 	// check 8 at 0x712194 :: set 8 at 0xA1DB8F (when opening menu), 0x720B39
 
-	Menu *HandleMenuInput(int tileID, Tile *clickedTile);
 	__forceinline Tile *AddTileFromTemplate(Tile *destTile, const char *templateName, UInt32 arg3)
 	{
 		return ThisCall<Tile*>(0xA1DDB0, this, destTile, templateName, arg3);
 	}
-};
-
-// 170
-class RaceSexMenu : public Menu		// 1036
-{
-public:
-	RaceSexMenu();
-	~RaceSexMenu();
-
-	UInt32				unk028[44];		// 028
-	TESNPC				*npc;			// 0D8
-	UInt32				unk0DC[37];		// 0DC
 };

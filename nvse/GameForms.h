@@ -313,6 +313,7 @@ enum ObjectVtbl
 	kVtbl_LockpickMenu =							0x107439C,
 	kVtbl_QuantityMenu =							0x10701C4,
 	kVtbl_MapMenu =									0x1074D44,
+	kVtbl_BookMenu =								0x1070ECC,
 	kVtbl_LevelUpMenu =								0x1073CDC,
 	kVtbl_RepairMenu =								0x1075C5C,
 	kVtbl_RaceSexMenu =								0x1075974,
@@ -540,6 +541,8 @@ public:
 	UInt8 GetOverridingModIdx();
 	const char *GetDescriptionText();
 	const char *RefToString();
+	const char *GetModelPath();
+	void UnloadModel();
 	TESLeveledList *GetLvlList();
 	void SetJIPFlag(UInt16 jipFlag, bool bSet);
 
@@ -1542,22 +1545,18 @@ public:
 	ActorValueOwner();
 	~ActorValueOwner();
 
-	virtual UInt32	GetBaseActorValue(UInt32 avCode);		// GetBaseActorValue (used from Eval) result in EAX
-	virtual float	GetBaseAVFloat(UInt32 avCode);			// GetBaseActorValue internal, result in st
-	virtual float	Fn_02(UInt32 avCode);					// GetActorValue internal, result in EAX
-	virtual float	GetActorValue(UInt32 avCode);			// GetActorValue (used from Eval) result in EAX
-	virtual float	Fn_04(UInt32 avCode);					// GetBaseActorValue04 (internal) result in st
-	virtual float	GetActorValueDamage(UInt32 avCode);
-	virtual float	Fn_06(UInt32 avCode);					// GetDamageActorValue or GetModifiedActorValue		called from Fn_08, result in st, added to Fn_01
-	virtual UInt32	Fn_07(UInt32 avCode);					// Manipulate GetPermanentActorValue, maybe convert to integer.
-	virtual float	GetPermanentActorValue(UInt32 avCode);	// GetPermanentActorValue (used from Eval) result in EAX
-	virtual Actor*	Fn_09(void);							// GetActorBase (= this - 0x100) or GetActorBase (= this - 0x0A4)
-	virtual UInt16	GetLevel();								// GetLevel (from ActorBase)
-
-	// SkillsCurrentValue[14] at index 20
+	virtual int		GetBaseActorValueInt(UInt32 avCode);
+	virtual float	GetBaseActorValue(UInt32 avCode);
+	virtual int		GetActorValueInt(UInt32 avCode);
+	virtual float	GetActorValue(UInt32 avCode);
+	virtual float	GetBaseSubAV(UInt32 avCode);
+	virtual float	GetSubAVDamage(UInt32 avCode);
+	virtual float	GetSubAVMod(UInt32 avCode);
+	virtual int		GetPermanentActorValueInt(UInt32 avCode);
+	virtual float	GetPermanentActorValue(UInt32 avCode);
+	virtual Actor	*GetActor();
+	virtual UInt16	GetLevel();
 };
-
-STATIC_ASSERT(sizeof(ActorValueOwner) == 0x004);
 
 class CachedValuesOwner
 {
@@ -1583,7 +1582,6 @@ public:
 	virtual float	GetRunSpeedMult(void);
 	virtual bool	GetHasNoCrippledLimbs(void);
 };
-STATIC_ASSERT(sizeof(CachedValuesOwner) == 4);
 
 // 10C
 class TESActorBase : public TESBoundAnimObject
@@ -4256,7 +4254,7 @@ public:
 	};
 
 	TESFullName			fullName;			// 18
-	TESTexture			texture;			// 24
+	TESTexture			worldMap;			// 24
 	CellPointerMap		*cellMap;			// 30
 	TESObjectCELL		*cell;				// 34
 	UInt32				unk38;				// 38
@@ -4300,7 +4298,7 @@ public:
 	TESChildCell();
 	~TESChildCell();
 
-	virtual TESObjectCELL	*GetChildCell();
+	virtual TESObjectCELL	*GetPersistentCell();
 };
 
 // 2C

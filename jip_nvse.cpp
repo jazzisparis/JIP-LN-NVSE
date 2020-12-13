@@ -71,8 +71,9 @@
 #include "functions_ln/ln_fn_terminal.h"
 #include "functions_ln/ln_fn_utility.h"
 #include "functions_ln/ln_fn_weapon.h"
-
+#if JIP_DEBUG
 #include "internal/debug.h"
+#endif
 
 bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 {
@@ -99,7 +100,7 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 	}
 	if (version >= 0x5020010)
 		s_xNVSE = true;
-	PrintLog("NVSE version:\t%.2f\nJIP LN version:\t%.2f\nBase address:\t%08X\n", s_nvseVersion, JIP_LN_VERSION, GetModuleHandle("jip_nvse.dll"));
+	PrintLog("NVSE version:\t%.2f\nJIP LN version:\t%.2f\nBase address:\t%08X\n", s_nvseVersion, JIP_LN_VERSION, GetModuleHandle("jip_nvse"));
 	return true;
 }
 
@@ -1290,6 +1291,9 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v55.70
 	REG_CMD(GetArmorEffectiveDT)
 	REG_CMD(GetArmorEffectiveDR)
+	//	v55.80
+	REG_CMD(GetActorGravityMult)
+	REG_CMD(SetActorGravityMult)
 
 	//===========================================================
 
@@ -1346,7 +1350,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	DelStringVar = (void (*)(void*, UInt32))nvseData->GetFunc(NVSEDataInterface::kNVSEData_StringVarMapDeleteBySelf);
 	g_numPreloadMods = (UInt8*)nvseData->GetData(NVSEDataInterface::kNVSEData_NumPreloadMods);
 
-	HMODULE handle = GetModuleHandle("nvse_1_4.dll");
+	HMODULE handle = GetModuleHandle("nvse_1_4");
 	if (((UInt32)g_NVSEArrayMap - (UInt32)handle) == 0xE3EF0)
 		s_releaseFast = false;
 

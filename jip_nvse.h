@@ -130,7 +130,8 @@ const char *g_terminalModelDefault = NULL;
 TESObjectWEAP *g_fistsWeapon = NULL;
 TESObjectACTI *g_ashPileACTI = NULL;
 TESObjectACTI *g_gooPileACTI = NULL;
-TESForm *g_capsItem = NULL;
+TESObjectMISC *g_capsItem = NULL;
+TESImageSpaceModifier *g_getHitIMOD = NULL;
 double *g_condDmgPenalty = NULL;
 double s_condDmgPenalty = 0.67;
 
@@ -160,6 +161,7 @@ NiNode* (*GetCdBodyNode)(hkCdBody *cdBody) = (NiNode* (*)(hkCdBody*))0xC7FA90;
 TESObjectREFR* (*GetCdBodyRef)(hkCdBody *cdBody) = (TESObjectREFR* (*)(hkCdBody*))0x62B4E0;
 void (*RefreshItemListBox)(void) = (void (*)(void))0x704AF0;
 void (*RefreshContainerMenu)(void) = (void (*)(void))0x704BC0;
+void (__thiscall *DoRefreshContainerMenu)(ContainerMenu *menu, TESForm *itemForm) = (void (__thiscall *)(ContainerMenu*, TESForm*))0x75C280;
 void (*ApplyPerkModifiers)(UInt32 entryPointID, TESObjectREFR *perkOwner, void *arg3, ...) = (void (*)(UInt32, TESObjectREFR*, void*, ...))0x5E58F0;
 float (*ApplyAmmoEffects)(UInt32 effType, tList<TESAmmoEffect> *effList, float baseValue) = (float (*)(UInt32, tList<TESAmmoEffect>*, float))0x59A030;
 float (*GetWeaponDamage)(TESObjectWEAP *weapon, float condition, ContChangesEntry *entry, TESForm *ammo) = (float (*)(TESObjectWEAP*, float, ContChangesEntry*, TESForm*))0x6450F0;
@@ -182,7 +184,8 @@ Projectile* (*CreateProjectile)(BGSProjectile *baseProj, TESObjectREFR *sourceRe
 void (*FormatString)(char *destStr, UInt32 size, const char *formatStr, ...) = (void (*)(char*, UInt32, const char*, ...))0x406D00;
 BSFile* (*OpenStream)(const char *filePath, UInt32 openMode, UInt32 bufferSize) = (BSFile* (*)(const char*, UInt32, UInt32))0xAFDF00;
 float (__thiscall *GetItemHealthPerc)(ContChangesEntry *entry, bool arg1) = (float (__thiscall *)(ContChangesEntry*, bool))0x4BCDB0;
-NiNode* (__thiscall *LoadModel)(ModelLoader *modelLoader, const char *nifPath, UInt32 arg2, UInt8 arg3, UInt32 arg4, UInt8 arg5, UInt8 arg6) = (NiNode* (__thiscall *)(ModelLoader*, const char*, UInt32, UInt8, UInt32, UInt8, UInt8))0x447080;
+NiNode* (__thiscall *LoadModel)(ModelLoader *modelLoader, const char *nifPath, UInt32 baseClass, bool flag3Cbit0, UInt32 unused, bool flag3Cbit5, bool dontIncCounter) =
+	(NiNode* (__thiscall *)(ModelLoader*, const char*, UInt32, bool, UInt32, bool, bool))0x447080;
 FontInfo* (__thiscall *InitFontInfo)(FontInfo *fontInfo, UInt32 fontID, const char *filePath, bool arg3) = (FontInfo* (__thiscall *)(FontInfo*, UInt32, const char*, bool))0xA12020;
 
 Cmd_Execute SayTo, KillActor, AddNote, AttachAshPile, GetRefs;
@@ -527,6 +530,32 @@ const char *TESForm::RefToString()
 	return refStr;
 }
 
+const char *TESForm::GetModelPath()
+{
+	TESModel *baseModel = DYNAMIC_CAST(this, TESForm, TESModel);
+	if (baseModel)
+	{
+		const char *modelPath = baseModel->GetModelPath();
+		if (modelPath && *modelPath)
+			return modelPath;
+	}
+	return NULL;
+}
+
+void TESForm::UnloadModel()
+{
+	const char *modelPath = GetModelPath();
+	if (modelPath)
+	{
+		Model *model = NULL;
+		if (g_modelLoader->modelMap->Lookup(modelPath, &model))
+		{
+			g_modelLoader->modelMap->EraseKey(modelPath);
+			model->Destroy();
+		}
+	}
+}
+
 TESLeveledList *TESForm::GetLvlList()
 {
 	if (IS_TYPE(this, TESLevCreature) || IS_TYPE(this, TESLevCharacter) || IS_TYPE(this, TESLevItem))
@@ -825,8 +854,7 @@ __declspec(naked) SInt32 TESObjectREFR::GetItemCount(TESForm *form)
 		pop		edi
 		pop		esi
 	done:
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	4
 	}
 }
@@ -880,8 +908,7 @@ __declspec(naked) void Actor::EquipItemAlt(TESForm *itemForm, ContChangesEntry *
 		mov		ecx, [ebp-4]
 		CALL_EAX(kAddr_EquipItem)
 	done:
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	0x10
 	}
 }
@@ -985,8 +1012,7 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 		lea		ecx, [ebp-0x10]
 		CALL_EAX(0x481680)
 		pop		esi
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	0x10
 	}
 }
@@ -1260,8 +1286,7 @@ __declspec(naked) void __fastcall DoSetPos(TESObjectREFR *refr, int EDX, float p
 		mov		ecx, [ebp-8]
 		CALL_EAX(0xA59C60)
 	done:
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	0xC
 	}
 }
@@ -1444,8 +1469,28 @@ __declspec(naked) void TESObjectREFR::DeleteReference()
 		mov		ecx, 0x11CACB8
 		CALL_EAX(0x5AE3D0)
 	done:
-		mov		esp, ebp
-		pop		ebp
+		leave
+		retn
+	}
+}
+
+__declspec(naked) bhkCharacterController *TESObjectREFR::GetCharacterController()
+{
+	__asm
+	{
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x100]
+		test	al, al
+		jz		retnNULL
+		mov		ecx, [ecx+0x68]
+		test	ecx, ecx
+		jz		retnNULL
+		cmp		dword ptr [ecx+0x28], 1
+		ja		retnNULL
+		mov		eax, [ecx+0x138]
+		retn
+	retnNULL:
+		xor		eax, eax
 		retn
 	}
 }
@@ -1548,10 +1593,9 @@ __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const c
 		mov		ecx, [ebp-8]
 		test	ecx, ecx
 		jz		done
-		CALL_EAX(0x401970)
+		call	NiReleaseObject
 	done:
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	0xC
 	}
 }
@@ -1614,6 +1658,25 @@ __declspec(naked) NiNode* __fastcall TESObjectREFR::GetNode(const char *nodeName
 	done:
 		retn
 	}
+}
+
+NiNode *TESObjectREFR::GetNiNodeCopyIfTemplate()
+{
+	NiNode *rootNode = GetNiNode();
+	if (rootNode)
+	{
+		const char *modelPath = GetBaseForm()->GetModelPath();
+		if (modelPath)
+		{
+			Model *model = NULL;
+			if (g_modelLoader->modelMap->Lookup(modelPath, &model) && (model->niNode == rootNode))
+			{
+				NiNode *nodeCopy = rootNode->CreateCopy();
+				if (nodeCopy) NiReleaseAddRef((NiRefObject**)&model->niNode, nodeCopy);
+			}
+		}
+	}
+	return rootNode;
 }
 
 hkpRigidBody *TESObjectREFR::GetRigidBody(const char *nodeName)
@@ -1685,8 +1748,7 @@ __declspec(naked) NiAVObject* __fastcall _GetRayCastObject(void *rcData, void *a
 		CALL_EAX(0x458420)
 		pop		edi
 		pop		esi
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -1702,8 +1764,7 @@ __declspec(naked) NiAVObject* __stdcall GetRayCastObject(NiVector3 *posVector, N
 		mov		edx, ebp
 		mov		ecx, esp
 		call	_GetRayCastObject
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	0x14
 	}
 }
@@ -1726,8 +1787,7 @@ __declspec(naked) bool NiVector3::RayCastCoords(NiVector3 *posVector, NiMatrix33
 		push	dword ptr [esp]
 		mov		ecx, g_TES
 		CALL_EAX(0x451110)
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	0x14
 	}
 }
@@ -1842,8 +1902,7 @@ __declspec(naked) int __stdcall GetRayCastMaterial(NiVector3 *posVector, NiMatri
 	invalid:
 		mov		eax, 0xFFFFFFFF
 	done:
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	0x14
 	}
 }
@@ -1965,8 +2024,7 @@ __declspec(naked) char Actor::GetCurrentAIProcedure()
 	retnInvalid:
 		mov		al, -1
 	done:
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -2240,8 +2298,7 @@ __declspec(naked) BackUpPackage *Actor::AddBackUpPackage(TESObjectREFR *targetRe
 	done:
 		mov		s_moveAwayDistance, 0x43960000
 		mov		eax, [ebp-0xC]
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	0xC
 	}
 }
@@ -2334,8 +2391,7 @@ __declspec(naked) void Actor::PlayIdle(TESIdleForm *idleAnim)
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x614]
 	jmpAddr1:
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	4
 	}
 }
@@ -2452,8 +2508,7 @@ __declspec(naked) void Actor::DismemberLimb(UInt32 bodyPartID, bool explode)
 		mov		ecx, [ebp-4]
 		CALL_EAX(0x8B52A0)
 	done:
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	8
 	}
 }
@@ -2661,8 +2716,7 @@ __declspec(naked) int Actor::GetGroundMaterial()
 		mov		eax, 0xFFFFFFFF
 	done:
 		pop		esi
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -3019,8 +3073,6 @@ __declspec(naked) UInt32 TESGlobal::ResolveRefValue()
 	}
 }
 
-#define NiReleaseThenAdd(address, object) ThisCall<void*, void*>(0x66B0D0, address, object)
-
 __declspec(naked) NiNode* __stdcall NiNode::Create(const char *nodeName)
 {
 	__asm
@@ -3042,8 +3094,6 @@ __declspec(naked) NiNode* __stdcall NiNode::Create(const char *nodeName)
 	}
 }
 
-alignas(16) const UInt32 kDefaultRotPos[] = {0x3F800000, 0, 0, 0};
-
 __declspec(naked) NiNode *NiNode::CreateCopy()
 {
 	__asm
@@ -3063,18 +3113,18 @@ __declspec(naked) NiNode *NiNode::CreateCopy()
 		test	eax, eax
 		jz		done
 		mov		dword ptr [eax+0x18], 0
-		and		dword ptr [eax+0x30], 0xFFFFFFFE
-		movdqa	xmm0, xmmword ptr ds:[kDefaultRotPos]
+		and		byte ptr [eax+0x30], 0xFE
+		mov		edx, 0x3F800000
+		movd	xmm0, edx
 		movdqu	xmmword ptr [eax+0x34], xmm0
 		movdqu	xmmword ptr [eax+0x44], xmm0
 		movdqu	xmmword ptr [eax+0x54], xmm0
-		movss	[eax+0x64], xmm0
+		mov		[eax+0x64], edx
 	done:
 		lea		ecx, [ebp-0x20]
 		CALL_EAX(0x4AD270)
 		mov		eax, [ebp-4]
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -3215,8 +3265,7 @@ __declspec(naked) void NiMatrix33::Rotate(float rotX, float rotY, float rotZ)
 		push	eax
 		mov		ecx, [ebp-4]
 		call	NiMatrix33::MultiplyMatrices
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	0xC
 	}
 }
@@ -3540,7 +3589,7 @@ __declspec(naked) void NiNode::RemoveCollision()
 		jz		noColObj
 		push	ecx
 		mov		ecx, eax
-		CALL_EAX(0x401970)
+		call	NiReleaseObject
 		pop		ecx
 		mov		dword ptr [ecx+0x1C], 0
 	noColObj:
@@ -3839,8 +3888,7 @@ __declspec(naked) void bhkWorldObject::ApplyForce(hkVector4 *forceVector)
 		push	eax
 		mov		ecx, [esp+4]
 		CALL_EAX(0x9B0BF0)
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	4
 	}
 }
@@ -3899,8 +3947,7 @@ __declspec(naked) LODdata::LODNode *LODdata::LODNode::GetNodeByCoord(UInt32 coor
 		jb		iterHead
 	done:
 		mov		eax, [ebp-8]
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	4
 	}
 }
@@ -4682,8 +4729,7 @@ __declspec(naked) TESObjectREFR *InterfaceManager::GetCursorPick()
 		mov		eax, esi
 		pop		edi
 		pop		esi
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -5832,9 +5878,7 @@ __declspec(naked) void __fastcall DoConsolePrint(double *result)
 	{
 		call	IsConsoleOpen
 		test	al, al
-		jnz		proceed
-		retn
-	proceed:
+		jz		done
 		mov		edx, [ebp]
 		mov		edx, [edx-0x30]
 		mov		edx, [edx]
@@ -5853,21 +5897,19 @@ __declspec(naked) void __fastcall DoConsolePrint(double *result)
 		push	eax
 		mov		ecx, g_consoleManager
 		CALL_EAX(0x71D0A0)
-		mov		esp, ebp
-		pop		ebp
+		leave
+	done:
 		retn
 	}
 }
 
-__declspec(naked) void __fastcall DoConsolePrintID(double *result)
+__declspec(naked) void __fastcall DoConsolePrint(TESForm *result)
 {
 	__asm
 	{
 		call	IsConsoleOpen
 		test	al, al
-		jnz		proceed
-		retn
-	proceed:
+		jz		done
 		mov		edx, [ebp]
 		mov		edx, [edx-0x30]
 		mov		edx, [edx]
@@ -5875,7 +5917,7 @@ __declspec(naked) void __fastcall DoConsolePrintID(double *result)
 		mov		ebp, esp
 		sub		esp, 0x60
 		push	esi
-		mov		esi, [ecx]
+		mov		esi, ecx
 		lea		ecx, [ebp-0x60]
 		call	StrCopy
 		mov		ecx, eax
@@ -5886,14 +5928,10 @@ __declspec(naked) void __fastcall DoConsolePrintID(double *result)
 		mov		word ptr [ecx], '0'
 		jmp		noEDID
 	haveID:
-		mov		edx, esi
+		mov		edx, [esi+0xC]
 		call	UIntToHex
-		push	esi
+		mov		ecx, esi
 		mov		esi, eax
-		call	LookupFormByRefID
-		test	eax, eax
-		jz		noEDID
-		mov		ecx, eax
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x130]
 		test	eax, eax
@@ -5913,8 +5951,8 @@ __declspec(naked) void __fastcall DoConsolePrintID(double *result)
 		push	eax
 		mov		ecx, g_consoleManager
 		CALL_EAX(0x71D0A0)
-		mov		esp, ebp
-		pop		ebp
+		leave
+	done:
 		retn
 	}
 }
@@ -6047,8 +6085,7 @@ __declspec(naked) bool __fastcall GetFileArchived(const char *filePath)
 	done:
 		pop		edi
 		pop		esi
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -6093,9 +6130,9 @@ TESWorldSpace *s_pcRootWorld = NULL;
 
 const char kMenuIDJumpTable[] =
 {
-	0, 1, 2, 3, -1, -1, 4, 5, 6, -1, -1, 7, 8, 9, -1, 10, -1, -1, -1, -1, -1, -1, 11, -1, -1, -1, 12, -1, -1, -1, 
-	-1, -1, -1, -1, 13, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 15, -1, -1, 16, -1, 17, 18, 19, 20, 21, 
-	22, 23, 24, 25, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 26, 27, 28, 29, -1, -1, 30, 31, 32, 33, 34
+	0, 1, 2, 3, -1, -1, 4, 5, 6, -1, -1, 7, 8, 9, -1, 10, -1, -1, -1, -1, -1, -1, 11, -1, -1, 12, 13, -1, -1, -1, 
+	-1, -1, -1, -1, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 16, -1, -1, 17, -1, 18, 19, 20, 21, 22, 
+	23, 24, 25, 26, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 27, 28, 29, 30, -1, -1, 31, 32, 33, 34, 35
 };
 
 UnorderedMap<const char*, UInt32> s_menuNameToID(0x40);

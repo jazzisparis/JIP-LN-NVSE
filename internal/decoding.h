@@ -405,7 +405,7 @@ public:
 	Struct128			unk128;			// 128
 	Struct128			unk134;			// 134
 	UInt32				unk140;			// 140
-	UInt32				unk144;			// 144
+	ContChangesEntry	*rockItEntry;	// 144
 	UInt8				byte148;		// 148
 	UInt8				pad149[3];		// 149
 	float				range;			// 14C
@@ -583,6 +583,18 @@ public:
 
 typedef ListBox<ContChangesEntry> MenuItemEntryList;
 
+struct HotKeyWheel
+{
+	TileRect	*parent;		// 00
+	TileRect	*hotkeys[8];	// 04
+	UInt8		byte24;			// 24
+	UInt8		pad25[3];		// 25
+	UInt32		unk28;			// 28
+	UInt32		selectedHotkeyTrait;// 2C
+	UInt32		selectedTextTrait;	// 30
+};
+STATIC_ASSERT(sizeof(HotKeyWheel) == 0x34);
+
 // 124
 class InventoryMenu : public Menu		// 1002
 {
@@ -619,16 +631,7 @@ public:
 	UInt32					filter;			// 084
 	ScrollPos				tabScrollPos[6];// 088	The scroll index for Weapons, Apparel, Aid, Misc, Ammo and the Keyring
 	MenuItemEntryList		itemList;		// 0B8
-	TileRect				*tile0E8;		// 0E8
-	TileRect				*tile0EC;		// 0EC
-	TileRect				*tile0F0;		// 0F0
-	TileRect				*tile0F4;		// 0F4
-	TileRect				*tile0F8;		// 0F8
-	TileRect				*tile0FC;		// 0FC
-	TileRect				*tile100;		// 100
-	TileRect				*tile104;		// 104
-	TileRect				*tile108;		// 108
-	UInt32					unk10C[4];		// 10C
+	HotKeyWheel				hotKeyWheel;	// 0E8
 	tList<ContChangesEntry>	changedItemsList;	// 11C
 };
 STATIC_ASSERT(sizeof(InventoryMenu) == 0x124);
@@ -711,13 +714,14 @@ public:
 	TileImage						*tile174;			// 174
 	TileImage						*tile178;			// 178
 	TileImage						*tile17C;			// 17C
-	ListBox<UInt32>					avIndexList180;		// 180
-	ListBox<UInt32>					avIndxeList1B0;		// 1B0
+	ListBox<UInt32>					SPECIALList;		// 180
+	ListBox<UInt32>					skillList;			// 1B0
 	ListBox<PerkRank>				perkRankList;		// 1E0
 	ListBox<UInt32>					miscStatIDList;		// 210
 	ListBox<StatusEffect>			statusEffListBox;	// 240
 	ListBox<TESReputation>			reputationList;		// 270
-	UInt32							unk2A0;				// 2A0
+	UInt8							isInHealLimbSelect;	// 2A0
+	UInt8							pad2A0[3];			// 2A1
 };
 
 // 50
@@ -754,6 +758,13 @@ public:
 		UInt8		byte1C;		// 1C
 		UInt8		byte1D;		// 1D
 		UInt8		pad1E[2];	// 1E
+	};
+
+	struct QueuedQuestText
+	{
+		char		msg[0x104];
+		bool		byte104;
+		bool		byte105;
 	};
 
 	enum VisibilityFlags
@@ -903,16 +914,7 @@ public:
 	UInt32							unk1BC;				// 1BC
 	UInt32							visibilityOverrides;	// 1C0
 	UInt32							stage;				// 1C4
-	TileRect						*tile1C8;			// 1C8	Hokeys\hotkey_selector
-	TileRect						*tile1CC;			// 1CC	Hokeys\hotkey_selector\HK_Item_0
-	UInt32							unk1D0;				// 1D0
-	TileRect						*tile1D4;			// 1D4	Hokeys\hotkey_selector\HK_Item_2
-	TileRect						*tile1D8;			// 1D8	Hokeys\hotkey_selector\HK_Item_3
-	TileRect						*tile1DC;			// 1DC	Hokeys\hotkey_selector\HK_Item_4
-	TileRect						*tile1E0;			// 1E0	Hokeys\hotkey_selector\HK_Item_5
-	TileRect						*tile1E4;			// 1E4	Hokeys\hotkey_selector\HK_Item_6
-	TileRect						*tile1E8;			// 1E8	Hokeys\hotkey_selector\HK_Item_7
-	UInt32							unk1EC[4];			// 1EC
+	HotKeyWheel						hotKeyWheel;		// 1C8
 	UInt8							isUsingScope;		// 1FC
 	UInt8							byte1FD[3];			// 1FD
 	NiControllerSequence			*niContSeq;			// 200
@@ -929,7 +931,7 @@ public:
 	Struct224						unk224;				// 224
 	UInt32							unk244;				// 244
 	UInt32							unk248[4];			// 248
-	tList<UInt32>					list258;			// 258
+	tList<QueuedQuestText>			queuedQuestTextList;// 258
 	UInt8							byte260;			// 260
 	UInt8							byte261;			// 261
 	UInt8							pad262[2];			// 262
@@ -1375,6 +1377,16 @@ public:
 	TileImage				*tile58;		// 58
 	MenuItemEntryList		repairItems;	// 5C
 };
+
+// 1A4
+class RaceSexMenu : public Menu			// 1036
+{
+public:
+	UInt32				unk028[44];		// 028
+	TESNPC				*npc;			// 0D8
+	UInt32				unk0DC[50];		// 0DC
+};
+STATIC_ASSERT(sizeof(RaceSexMenu) == 0x1A4);
 
 // 5C
 class TextEditMenu : public Menu		// 1051

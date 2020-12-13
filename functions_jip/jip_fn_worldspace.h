@@ -40,9 +40,11 @@ bool Cmd_GetWorldspaceClimate_Execute(COMMAND_ARGS)
 	TESWorldSpace *wldSpc;
 	if (ExtractArgs(EXTRACT_ARGS, &wldSpc))
 	{
-		while (wldSpc->parent && (wldSpc->parentFlags & 16)) wldSpc = wldSpc->parent;
-		if (wldSpc->climate) REFR_RES = wldSpc->climate->refID;
-		DoConsolePrintID(result);
+		while (wldSpc->parent && (wldSpc->parentFlags & 0x10))
+			wldSpc = wldSpc->parent;
+		TESClimate *climate = wldSpc->climate;
+		if (climate) REFR_RES = climate->refID;
+		DoConsolePrint(climate);
 	}
 	return true;
 }

@@ -227,6 +227,7 @@ class FlameProjectile;
 class GrenadeProjectile;
 class MissileProjectile;
 class Explosion;
+class Setting;
 struct BaseExtraList;
 struct ExtraDataList;
 class ExtraCount;

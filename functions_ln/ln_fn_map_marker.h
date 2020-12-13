@@ -106,9 +106,9 @@ bool Cmd_GetMapMarkerRep_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	ExtraMapMarker *xMarker = GetExtraType(&thisObj->extraDataList, MapMarker);
-	if (xMarker && xMarker->data->reputation)
-		REFR_RES = xMarker->data->reputation->refID;
-	DoConsolePrintID(result);
+	TESForm *reputation = xMarker ? xMarker->data->reputation : NULL;
+	if (reputation) REFR_RES = reputation->refID;
+	DoConsolePrint(reputation);
 	return true;
 }
 

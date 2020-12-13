@@ -1002,10 +1002,13 @@ bool Cmd_ToggleBipedSlotVisibility_Execute(COMMAND_ARGS)
 
 bool Cmd_ToggleImmortalMode_Execute(COMMAND_ARGS)
 {
-	*result = HOOK_INSTALLED(PlayerMinHealth);
+	*result = s_playerMinHPMode;
 	UInt32 toggle;
 	if (NUM_ARGS && ExtractArgs(EXTRACT_ARGS, &toggle))
-		HOOK_SET(PlayerMinHealth, toggle != 0);
+	{
+		s_playerMinHPMode = toggle;
+		HOOK_SET(PlayerMinHealth, toggle == 1);
+	}
 	return true;
 }
 

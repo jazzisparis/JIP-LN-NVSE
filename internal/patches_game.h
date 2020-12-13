@@ -61,7 +61,7 @@ __declspec(naked) void DoQueuedPlayerHook()
 		mov		ecx, [esi+0x694]
 		test	ecx, ecx
 		jz		doneNode
-		CALL_EAX(0x401970)
+		call	NiReleaseObject
 	doneNode:
 		xor		edx, edx
 		mov		[esi+0x68C], edx
@@ -219,8 +219,7 @@ __declspec(naked) void InitArmorFormHook()
 		add		esp, 8
 		push	dword ptr [ebp+8]
 		call	LookupFormByRefID
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -307,8 +306,7 @@ __declspec(naked) void PackageSetRunHook()
 	skipRetn:
 		mov		eax, 0x201
 	done:
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	0x18
 	}
 }
@@ -409,8 +407,7 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		pop		edi
 		pop		esi
 	done:
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -1566,8 +1563,7 @@ __declspec(naked) bool __cdecl PickSoundFileFromFolderHook(char *outFilePath)
 	done:
 		pop		edi
 		pop		esi
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -2019,7 +2015,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	}
 	Actor *target = hitData->target;
 	if (!target || !target->IsActor()) return;
-	if (target->magicTarget.Unk_04())
+	if (target->magicTarget.CannotBeHit())
 	{
 		hitData->healthDmg = 0;
 		hitData->wpnBaseDmg = 0;
@@ -2367,13 +2363,45 @@ __declspec(naked) float __cdecl GetVATSTargetDTHook(PlayerCharacter *thePlayer, 
 		fldz
 	done:
 		pop		esi
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
 
-float s_repairedItemHealth = 0;
+UInt8 s_playerMinHPMode = 0;
+
+__declspec(naked) bool PlayerCannotBeHitHook()
+{
+	__asm
+	{
+		mov		al, ds:[0x11E0898]
+		test	al, al
+		jnz		done
+		cmp		s_playerMinHPMode, 2
+		setz	al
+		jz		done
+		mov		al, ds:[0x11E07BA]
+	done:
+		retn
+	}
+}
+
+__declspec(naked) TESImageSpaceModifier *GetHitIMODHook()
+{
+	__asm
+	{
+		cmp		byte ptr ds:[0x118ABB1], 0
+		jz		retnNULL
+		call	PlayerCannotBeHitHook
+		test	al, al
+		jnz		retnNULL
+		mov		eax, g_getHitIMOD
+		retn
+	retnNULL:
+		xor		eax, eax
+		retn
+	}
+}
 
 __declspec(naked) float GetPCRepairSkill()
 {
@@ -2390,10 +2418,24 @@ __declspec(naked) float GetPCRepairSkill()
 	}
 }
 
+float s_repairedItemHealth = 0;
+bool s_repairedItemModded = false;
+
 __declspec(naked) void EnableRepairButtonHook()
 {
 	__asm
 	{
+		mov		ecx, [ebp+8]
+		mov		eax, [ecx]
+		test	eax, eax
+		jz		doneMods
+		mov		eax, [eax]
+		test	eax, eax
+		jz		doneMods
+		test	byte ptr [eax+0x19], 0x20
+		setnz	al
+	doneMods:
+		mov		s_repairedItemModded, al
 		call	GetPCRepairSkill
 		fucomip	st, st(1)
 		fstp	s_repairedItemHealth
@@ -2414,6 +2456,8 @@ __declspec(naked) void PopulateRepairListHook()
 		mov		ecx, [ebp-8]
 		mov		edx, [ecx+8]
 		cmp		[ebp+8], edx
+		jnz		done
+		cmp		s_repairedItemModded, 0
 		jnz		done
 		push	1
 		CALL_EAX(kAddr_GetItemHealthPerc)
@@ -2710,8 +2754,8 @@ __declspec(naked) void InitControllerShapeHook()
 		CALL_EAX(0xC70DE0)
 		add		esp, 0x10
 		push	eax
-		mov		ecx, offset s_pcControllerShape
-		CALL_EAX(0x66B0D0)
+		push	offset s_pcControllerShape
+		call	NiReleaseAddRef
 	done:
 		push	eax
 		lea		ecx, [ebx+0x5A8]
@@ -2761,10 +2805,23 @@ __declspec(naked) bool __fastcall SneakBoundingBoxFixHook(PlayerCharacter *thePl
 	}
 }
 
+bool s_NVACLogUpdated = false;
+
+__declspec(naked) void NVACLogUpdateHook()
+{
+	__asm
+	{
+		mov		s_NVACLogUpdated, 1
+		retn	8
+	}
+}
+
 UInt32 s_lastNVACLogSize = 0;
 
 void CheckNVACLog()
 {
+	if (!s_NVACLogUpdated) return;
+	s_NVACLogUpdated = false;
 	FileStream srcFile;
 	if (!srcFile.Open("nvac.log")) return;
 	UInt32 length = srcFile.GetLength();
@@ -3127,7 +3184,8 @@ __declspec(naked) void DefaultTextureHook()
 
 UnorderedMap<const char*, UInt32> s_optionalHacks(0x20);
 
-bool s_bigGunsSkill = false, s_failedScriptLocks = false, s_hasNVAC = false, s_NVACAlerts = false, s_NPCWeaponMods = false;
+bool s_bigGunsSkill = false, s_failedScriptLocks = false, s_NVACAlerts = false, s_NPCWeaponMods = false;
+UInt32 s_NVACAddress = 0;
 char *s_bigGunsDescription = "The Big Guns skill determines your combat effectiveness with all oversized weapons such as the Fat Man, Missile Launcher, Flamer, Minigun, Gatling Laser, etc.";
 
 char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
@@ -3227,13 +3285,27 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			HOOK_SET(SneakBoundingBoxFix, bEnable);
 			return 14;
 		case 15:
-			if (!s_hasNVAC || (s_NVACAlerts == bEnable))
+		{
+			if (!s_NVACAddress || (s_NVACAlerts == bEnable))
+				return 0;
+			UInt32 patchAddr = s_NVACAddress + 0x14B0;
+			if (*(UInt32*)patchAddr != 0xFF102474)
 				return 0;
 			s_NVACAlerts = bEnable;
+			patchAddr += 0x10;
 			if (bEnable)
+			{
+				WriteRelJump(patchAddr, (UInt32)NVACLogUpdateHook);
 				MainLoopAddCallbackEx(CheckNVACLog, NULL, 0, 60);
-			else MainLoopRemoveCallback(CheckNVACLog);
+				s_NVACLogUpdated = true;
+			}
+			else
+			{
+				SafeWrite32(patchAddr, 0x8C2);
+				MainLoopRemoveCallback(CheckNVACLog);
+			}
 			return 15;
+		}
 		case 16:
 		{
 			if (!HOOK_SET(GetSuitableLoadScreens, bEnable))
@@ -3352,8 +3424,7 @@ __declspec(naked) void InitFontManagerHook()
 		pop		edi
 		pop		esi
 		pop		ebx
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -3485,8 +3556,8 @@ void InitGamePatches()
 		SafeWriteBuf(patchAddr, "\x8B\x41\x20\x66\xF7\x40\x06\x20\x00\x0F\x95\xC0\x34\x01\xEB\x0B", 16);
 	SafeWriteBuf(0x573194, "\x8B\x41\x20\x66\xF7\x40\x06\x20\x00\x0F\x95\xC0\x34\x01\xEB\x0E", 16);
 
-	s_hasNVAC = GetModuleHandle("nvac.dll") != 0;
-	if (!s_hasNVAC)		//	NVAC already patches those
+	s_NVACAddress = (UInt32)GetModuleHandle("nvac");
+	if (!s_NVACAddress)		//	NVAC already patches those
 	{
 		SafeWrite16(0x57D3B9, 0x1AEB);	//	Increase grass fade distance
 		SafeWrite8(0xC44405, 4);		//	Increase buffer size for GetPrivateProfileString
@@ -3565,6 +3636,7 @@ void InitGamePatches()
 	SafeWrite32(0x1016DB8, (UInt32)DoQueuedPlayerHook);
 	SafeWrite32(0x104A1B8, (UInt32)GetNPCModelHook);
 	SafeWrite32(0x104A1BC, (UInt32)SetNPCModelHook);
+	SafeWrite8(0x40F75B, 0x18);
 
 	SafeWrite32(0x9ED3F8, (UInt32)&s_moveAwayDistance);
 	SafeWrite32(0x9ED528, (UInt32)&s_moveAwayDistance);
@@ -3645,6 +3717,8 @@ void InitGamePatches()
 
 	WritePushRetRelJump(0x9B6E81, 0x9B6EC4, (UInt32)SetHitLocationHook);
 	WriteRelCall(0x7ECE32, (UInt32)GetVATSTargetDTHook);
+	SafeWrite32(0x108A9B4, (UInt32)PlayerCannotBeHitHook);
+	WriteRelJump(0x5D2860, (UInt32)GetHitIMODHook);
 
 	HOOK_INIT_JUMP(CalculateHitDamage, 0x9B5A30);
 	HOOK_INIT_JPRT(EnableRepairButton, 0x7818C8, 0x7818D3);
@@ -3745,7 +3819,7 @@ void InitGamePatches()
 		}
 		else if (*delim == '1')
 		{
-			if ((index == 3) || (index == 16) || (index == 17))
+			if ((index == 3) || (index >= 15))
 				s_deferrSetOptional |= 1 << index;
 			else SetOptionalPatch(index, true);
 		}
@@ -3780,7 +3854,8 @@ void DeferredInit()
 	g_screenWidth = *(UInt32*)0x11C73E0;
 	g_screenHeight = *(UInt32*)0x11C7190;
 	g_terminalModelDefault = *g_terminalModelPtr;
-	g_capsItem = LookupFormByRefID(0xF);
+	g_capsItem = (TESObjectMISC*)LookupFormByRefID(0xF);
+	g_getHitIMOD = (TESImageSpaceModifier*)LookupFormByRefID(0x162);
 	g_fistsWeapon = *(TESObjectWEAP**)0x11CA278;
 	g_ashPileACTI = *(TESObjectACTI**)0x11CA27C;
 	g_gooPileACTI = *(TESObjectACTI**)0x11CA280;
@@ -3846,7 +3921,17 @@ void DeferredInit()
 			*(UInt32*)(cccMain->data + 0x29C) = ' 552';
 	}
 
-	Console_Print("JIP LN Version: %.2f", JIP_LN_VERSION);
+	if (s_NVACAddress)
+	{
+		FILE *nvacLog = _fsopen("nvac.log", "ab", 0x20);
+		if (nvacLog)
+		{
+			fprintf(nvacLog, "JIP LN version: %.2f\tBase address: %08X\n", JIP_LN_VERSION, (UInt32)GetModuleHandle("jip_nvse"));
+			fclose(nvacLog);
+		}
+	}
+
+	Console_Print("JIP LN version: %.2f", JIP_LN_VERSION);
 }
 
 void InitEditorPatches()

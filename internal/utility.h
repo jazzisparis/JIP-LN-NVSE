@@ -191,22 +191,18 @@ UInt32 __vectorcall cvtd2ui(double value);
 
 double __vectorcall cvtui2d(UInt32 value);
 
-__forceinline int ifloor(float value)
-{
-	__m128 temp = _mm_load_ss(&value);
-	return _mm_cvtt_ss2si(_mm_round_ss(temp, temp, 1));
-}
+int __vectorcall ifloor(float value);
 
-__forceinline int iceil(float value)
-{
-	__m128 temp = _mm_load_ss(&value);
-	return _mm_cvtt_ss2si(_mm_round_ss(temp, temp, 2));
-}
+int __vectorcall iceil(float value);
 
 __forceinline int iround(float value)
 {
 	return _mm_cvt_ss2si(_mm_load_ss(&value));
 }
+
+void __fastcall NiReleaseObject(NiRefObject *toRelease);
+
+NiRefObject** __stdcall NiReleaseAddRef(NiRefObject **toRelease, NiRefObject *toAdd);
 
 UInt32 __fastcall RGBHexToDec(UInt32 rgb);
 
@@ -447,6 +443,7 @@ public:
 	void WriteChar(char chr);
 	void WriteStr(const char *inStr);
 	void WriteBuf(const void *inData, UInt32 inLength);
+	int WriteFmtStr(const char *fmt, ...);
 
 	static void MakeAllDirs(char *fullPath);
 };

@@ -346,8 +346,7 @@ __declspec(naked) void MainLoopCallback::Execute()
 		mov		eax, [ecx]
 		mov		ecx, [ecx+4]
 		call	eax
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -571,8 +570,7 @@ __declspec(naked) void DoQueuedCmdCallHook()
 		mov		ecx, [ebp-0xC]
 		mov		fs:0, ecx
 		pop		ecx
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -879,49 +877,51 @@ __declspec(naked) void TextInputCloseHook()
 	}
 }
 
-void MenuHandleClickHook(int tileID, Tile *clickedTile);
+void __fastcall MenuHandleClickHook(Menu *menu, int EDX, int tileID, Tile *clickedTile);
 
 struct MenuClickEvent
 {
-	UInt32				funcAddr;
-	UInt32				patchOffset;
+	typedef void (__thiscall *MenuHandleClick)(Menu*, int, Tile*);
+
+	UInt32				patchAddr;
+	MenuHandleClick		funcPtr;
 	MenuClickFiltersMap filtersMap;
 	MenuClickIDsMap		idsMap;
 
 	MenuClickEvent(UInt32 menuVtbl)
 	{
-		patchOffset = menuVtbl + 0xC;
-		funcAddr = *(UInt32*)patchOffset;
+		patchAddr = menuVtbl + 0xC;
+		funcPtr = (MenuHandleClick)*(UInt32*)patchAddr;
 	}
 
 	bool Empty() const {return filtersMap.Empty() && idsMap.Empty();}
 
-	void SetHook(bool doSet) {SafeWrite32(patchOffset, doSet ? (UInt32)MenuHandleClickHook : funcAddr);}
+	void SetHook(bool doSet) {SafeWrite32(patchAddr, doSet ? (UInt32)MenuHandleClickHook : (UInt32)funcPtr);}
 }
 s_menuClickEventMap[] =
 {
-	{kVtbl_MessageMenu}, {kVtbl_InventoryMenu}, {kVtbl_StatsMenu}, {kVtbl_HUDMainMenu}, {kVtbl_LoadingMenu}, 
-	{kVtbl_ContainerMenu}, {kVtbl_DialogMenu}, {kVtbl_SleepWaitMenu}, {kVtbl_StartMenu}, {kVtbl_LockpickMenu}, 
-	{kVtbl_QuantityMenu}, {kVtbl_MapMenu}, {kVtbl_LevelUpMenu}, {kVtbl_RepairMenu}, {kVtbl_RaceSexMenu}, 
-	{kVtbl_CharGenMenu}, {kVtbl_TextEditMenu}, {kVtbl_BarterMenu}, {kVtbl_SurgeryMenu}, {kVtbl_HackingMenu}, 
-	{kVtbl_VATSMenu}, {kVtbl_ComputersMenu}, {kVtbl_RepairServicesMenu}, {kVtbl_TutorialMenu}, {kVtbl_SpecialBookMenu}, 
-	{kVtbl_ItemModMenu}, {kVtbl_LoveTesterMenu}, {kVtbl_CompanionWheelMenu}, {kVtbl_TraitSelectMenu}, {kVtbl_RecipeMenu}, 
-	{kVtbl_SlotMachineMenu}, {kVtbl_BlackjackMenu}, {kVtbl_RouletteMenu}, {kVtbl_CaravanMenu}, {kVtbl_TraitMenu}
+	kVtbl_MessageMenu, kVtbl_InventoryMenu, kVtbl_StatsMenu, kVtbl_HUDMainMenu, kVtbl_LoadingMenu, 
+	kVtbl_ContainerMenu, kVtbl_DialogMenu, kVtbl_SleepWaitMenu, kVtbl_StartMenu, kVtbl_LockpickMenu, 
+	kVtbl_QuantityMenu, kVtbl_MapMenu, kVtbl_BookMenu, kVtbl_LevelUpMenu, kVtbl_RepairMenu, kVtbl_RaceSexMenu, 
+	kVtbl_CharGenMenu, kVtbl_TextEditMenu, kVtbl_BarterMenu, kVtbl_SurgeryMenu, kVtbl_HackingMenu, 
+	kVtbl_VATSMenu, kVtbl_ComputersMenu, kVtbl_RepairServicesMenu, kVtbl_TutorialMenu, kVtbl_SpecialBookMenu, 
+	kVtbl_ItemModMenu, kVtbl_LoveTesterMenu, kVtbl_CompanionWheelMenu, kVtbl_TraitSelectMenu, kVtbl_RecipeMenu, 
+	kVtbl_SlotMachineMenu, kVtbl_BlackjackMenu, kVtbl_RouletteMenu, kVtbl_CaravanMenu, kVtbl_TraitMenu
 };
 
-Menu *Menu::HandleMenuInput(int tileID, Tile *clickedTile)
+void __fastcall MenuHandleClickHook(Menu *menu, int EDX, int tileID, Tile *clickedTile)
 {
-	static char lastClickedTilePath[0x200];
-	MenuClickEvent &clickEvent = s_menuClickEventMap[kMenuIDJumpTable[id - kMenuType_Min]];
+	MenuClickEvent &clickEvent = s_menuClickEventMap[kMenuIDJumpTable[menu->id - kMenuType_Min]];
 	if (clickedTile && !clickEvent.filtersMap.Empty())
 	{
+		char lastClickedTilePath[0x200];
 		clickedTile->GetComponentFullName(lastClickedTilePath);
 		StrToLower(lastClickedTilePath);
 		for (auto filter = clickEvent.filtersMap.FindOpDir(lastClickedTilePath, false); filter; --filter)
 		{
 			if (!StrBeginsCS(lastClickedTilePath, filter.Key())) break;
 			for (auto script = filter().BeginCp(); script; ++script)
-				CallFunction(*script, NULL, NULL, &s_callRes, 3, id, tileID, clickedTile->name.m_data);
+				CallFunction(*script, NULL, NULL, &s_callRes, 3, menu->id, tileID, clickedTile->name.m_data);
 		}
 	}
 	if (!clickEvent.idsMap.Empty())
@@ -931,25 +931,10 @@ Menu *Menu::HandleMenuInput(int tileID, Tile *clickedTile)
 		{
 			const char *tileName = clickedTile ? clickedTile->name.m_data : "";
 			for (auto script = callbacks->BeginCp(); script; ++script)
-				CallFunction(*script, NULL, NULL, &s_callRes, 3, id, tileID, tileName);
+				CallFunction(*script, NULL, NULL, &s_callRes, 3, menu->id, tileID, tileName);
 		}
 	}
-	return this;
-}
-
-__declspec(naked) void MenuHandleClickHook(int tileID, Tile *clickedTile)
-{
-	__asm
-	{
-		push	dword ptr [esp+8]
-		push	dword ptr [esp+8]
-		call	Menu::HandleMenuInput
-		mov		ecx, eax
-		mov		edx, [ecx+0x20]
-		movzx	eax, kMenuIDJumpTable[edx-kMenuType_Min]
-		shl		eax, 5
-		jmp		dword ptr s_menuClickEventMap[eax]
-	}
+	return clickEvent.funcPtr(menu, tileID, clickedTile);
 }
 
 __declspec(naked) void StartCombatHook()
@@ -964,8 +949,7 @@ __declspec(naked) void StartCombatHook()
 		JMP_EDX(0x9001CC)
 	skipRetn:
 		xor		al, al
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	0x34
 	}
 }
@@ -996,8 +980,7 @@ __declspec(naked) void SetCombatTargetHook()
 		mov		eax, [ebp-0x14]
 	skipRetn:
 		pop		esi
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	4
 	contRetn:
 		JMP_EAX(0x986C8C)
@@ -1046,8 +1029,7 @@ __declspec(naked) void ResetHPCommandHook()
 		JMP_EAX(0x5C6B91)
 	skipRetn:
 		mov		al, 1
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -1079,8 +1061,7 @@ __declspec(naked) void ResetHPWakeUpHook()
 		push	kAVCode_Health
 		mov		ecx, [ebp-8]
 		CALL_EAX(0x88B740)
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -1272,8 +1253,7 @@ __declspec(naked) void ReEquipAllHook()
 		CALL_EAX(0x4459E0)
 	skipRetn:
 		pop		esi
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	0x14
 	}
 }
@@ -1357,8 +1337,7 @@ __declspec(naked) void GetPreferedWeaponHook()
 		test	byte ptr [ecx+0x105], kHookActorFlag1_LockedEquipment
 		jz		contRetn
 		mov		eax, [ebp-8]
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	4
 	contRetn:
 		JMP_EAX(0x891C90)
@@ -1405,7 +1384,7 @@ struct MenuStateCallbacks
 	EventCallbackScripts	onClose;
 	EventCallbackScripts	onMouseover;
 }
-*s_menuStateEventMap[35] = {NULL};
+*s_menuStateEventMap[36] = {NULL};
 
 __declspec(naked) void MenuStateOpenHook()
 {
@@ -1419,6 +1398,8 @@ __declspec(naked) void MenuStateOpenHook()
 		mov		[ecx], dl
 		lea		ecx, [eax-kMenuType_Min]
 		movzx	eax, kMenuIDJumpTable[ecx]
+		cmp		al, 0xFF
+		jz		done
 		mov		ecx, s_menuStateEventMap[eax*4]
 		test	ecx, ecx
 		jz		done
@@ -1435,8 +1416,7 @@ __declspec(naked) void MenuStateOpenHook()
 		call	EventCallbackScripts::InvokeEvents
 	done:
 		xor		eax, eax
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	0xC
 	}
 }
@@ -1451,6 +1431,8 @@ __declspec(naked) void MenuStateCloseHook()
 		jz		done
 		mov		byte ptr [ecx], 0
 		movzx	eax, kMenuIDJumpTable[edx-kMenuType_Min]
+		cmp		al, 0xFF
+		jz		done
 		mov		ecx, s_menuStateEventMap[eax*4]
 		test	ecx, ecx
 		jz		done
@@ -1584,8 +1566,7 @@ __declspec(naked) void SetAnimSequenceHook()
 		mov		ecx, [ecx+0x68]
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x3EC]
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	8
 	}
 }
@@ -1658,8 +1639,7 @@ __declspec(naked) void DamageActorValueHook()
 		push	dword ptr [ebp+8]
 		mov		eax, [ebp-4]
 		call	dword ptr [eax+0x54]
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -2040,8 +2020,7 @@ __declspec(naked) bool __fastcall HandleSetQuestStage(TESQuest *quest, UInt8 sta
 		cmp		bl, 2
 		setnz	al
 		pop		ebx
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -2358,9 +2337,8 @@ __declspec(naked) void AddVATSTargetHook()
 		mov		ecx, [ecx]
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x100]
-		test	al, al
-		setz	al
-		jz		done
+		xor		al, 1
+		jnz		done
 		test	byte ptr [ecx+0x106], kHookActorFlag2_NonTargetable
 		setz	al
 	done:
@@ -2493,8 +2471,7 @@ __declspec(naked) void OnHitEventHook()
 		call	EventCallbackScripts::InvokeEventsThis
 	done:
 		mov		al, [ebp-1]
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -2591,8 +2568,7 @@ __declspec(naked) void EquipAidItemHook()
 		mov		ecx, eax
 		call	EventCallbackScripts::InvokeEventsThis1
 	done:
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	0x18
 	}
 }
@@ -2627,8 +2603,7 @@ __declspec(naked) void ReloadWeaponHook()
 		mov		ecx, offset s_reloadWeaponEventScripts
 		call	EventCallbackScripts::InvokeEventsThis1
 	done:
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	8
 	}
 }
@@ -2678,6 +2653,8 @@ __declspec(naked) void PlayerMinHealthHook()
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x20]
 		fdivp	st(1), st
+		cmp		dword ptr [ebp+0xC], 0
+		jge		done
 		movss	xmm0, [ebp-0x40]
 		movss	xmm1, xmm0
 		addss	xmm1, [ebp+0xC]
@@ -2811,8 +2788,7 @@ __declspec(naked) void __fastcall DoInsertNodes(TESForm *form, int EDX, NiNode *
 		pop		edi
 		pop		esi
 		pop		ebx
-		mov		esp, ebp
-		pop		ebp
+		leave
 	done:
 		retn	4
 	}
@@ -2854,7 +2830,7 @@ __declspec(naked) void __fastcall DoAttachModels(TESForm *form, int EDX, NiNode 
 		mov		[ebp-8], edx
 		ALIGN 16
 	insHead:
-		push	0
+		push	1
 		push	0
 		push	0
 		push	1
@@ -2886,8 +2862,7 @@ __declspec(naked) void __fastcall DoAttachModels(TESForm *form, int EDX, NiNode 
 		pop		edi
 		pop		esi
 		pop		ebx
-		mov		esp, ebp
-		pop		ebp
+		leave
 	done:
 		retn	4
 	}
@@ -2911,18 +2886,34 @@ __declspec(naked) void InsertObjectHook()
 		test	word ptr [eax+6], kHookFormFlag6_InsertObject
 		jz		done
 	hasFlag:
+		mov		ecx, [ebp-0x18]
+		mov		edx, [ecx+0x34]
+		test	edx, edx
+		jz		done
+		mov		[ebp-0x10], edx
 		mov		[ebp-0x18], eax
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1D0]
+		mov		ecx, [ecx+0x30]
+		test	ecx, ecx
+		jz		doneProt
+		cmp		[ecx+0xC], edx
+		jnz		doneProt
+		push	ecx
+		mov		ecx, edx
+		call	NiNode::CreateCopy
+		pop		ecx
 		test	eax, eax
 		jz		done
-		mov		[ebp-0x10], eax
+		push	eax
+		add		ecx, 0xC
+		push	ecx
+		call	NiReleaseAddRef
+	doneProt:
 		cmp		dword ptr ds:[s_insertNodeMap.numEntries], 0
 		jz		doModels
 		mov		ecx, [ebp-0x1C]
 		test	word ptr [ecx+6], kHookFormFlag6_InsertNode
 		jz		checkBase1
-		push	eax
+		push	dword ptr [ebp-0x10]
 		call	DoInsertNodes
 	checkBase1:
 		mov		ecx, [ebp-0x18]
@@ -2951,8 +2942,7 @@ __declspec(naked) void InsertObjectHook()
 		mov		ecx, [ebp-0xC]
 		mov		fs:0, ecx
 		pop		ecx
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -3295,8 +3285,7 @@ __declspec(naked) void ProcessHUDMainUI()
 		pop		edi
 		pop		esi
 		pop		ebx
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }

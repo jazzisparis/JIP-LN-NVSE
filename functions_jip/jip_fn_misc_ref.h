@@ -307,10 +307,11 @@ bool Cmd_GetRefType_Execute(COMMAND_ARGS)
 bool Cmd_ToggleObjectCollision_Execute(COMMAND_ARGS)
 {
 	UInt32 enable;
-	if (ExtractArgs(EXTRACT_ARGS, &enable) && !thisObj->IsActor())
+	if (ExtractArgs(EXTRACT_ARGS, &enable) && !thisObj->IsActor() && !kInventoryType[thisObj->baseForm->typeID])
 	{
-		NiNode *node = thisObj->GetNiNode();
-		if (node) node->ToggleCollision(enable != 0);
+		NiNode *rootNode = enable ? thisObj->GetNiNode() : thisObj->GetNiNodeCopyIfTemplate();
+		if (rootNode)
+			rootNode->ToggleCollision(enable != 0);
 	}
 	return true;
 }
@@ -806,13 +807,12 @@ bool Cmd_MoveToFadeDelay_Execute(COMMAND_ARGS)
 bool Cmd_GetCrosshairWater_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	TESWaterForm *water = NULL;
 	TESObjectREFR *refr = g_interfaceManager->crosshairRef;
 	if (refr && IS_TYPE(refr->baseForm, BGSPlaceableWater))
-	{
-		TESWaterForm *water = ((BGSPlaceableWater*)refr->baseForm)->water;
-		if (water) REFR_RES = water->refID;
-	}
-	DoConsolePrintID(result);
+		water = ((BGSPlaceableWater*)refr->baseForm)->water;
+	if (water) REFR_RES = water->refID;
+	DoConsolePrint(water);
 	return true;
 }
 
@@ -1288,8 +1288,7 @@ __declspec(naked) TESObjectREFR *GetCrosshairRef()
 		mov		ecx, g_interfaceManager
 		mov		ecx, [ecx+0x13C]
 		CALL_EAX(0x631D60)
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -1560,16 +1559,12 @@ bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 		}
 		if (!rootNode && form->IsBoundObject())
 		{
-			TESModel *model = DYNAMIC_CAST(form, TESForm, TESModel);
-			if (model)
+			const char *modelPath = form->GetModelPath();
+			if (modelPath)
 			{
-				const char *modelPath = model->GetModelPath();
-				if (modelPath && *modelPath)
-				{
-					rootNode = LoadModel(g_modelLoader, modelPath, 0, 1, 0, 0, 0);
-					if (rootNode && rootNode->GetBlock(blockName + 1))
-						goto Retn1;
-				}
+				rootNode = LoadModel(g_modelLoader, modelPath, 0, 1, 0, 0, 1);
+				if (rootNode && rootNode->GetBlock(blockName + 1))
+					goto Retn1;
 			}
 		}
 	}

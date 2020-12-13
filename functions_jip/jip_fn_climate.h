@@ -219,10 +219,9 @@ bool Cmd_ClimateRemoveWeatherType_Execute(COMMAND_ARGS)
 bool Cmd_GetCurrentClimate_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	Sky *currSky = g_TES->sky;
-	if (currSky && currSky->currClimate)
-		REFR_RES = currSky->currClimate->refID;
-	DoConsolePrintID(result);
+	TESClimate *climate = g_TES->sky ? g_TES->sky->currClimate : NULL;
+	if (climate) REFR_RES = climate->refID;
+	DoConsolePrint(climate);
 	return true;
 }
 

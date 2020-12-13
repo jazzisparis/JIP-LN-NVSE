@@ -126,6 +126,8 @@ DEFINE_COMMAND_PLUGIN(SetActorTiltAngle, , 1, 2, kParams_JIP_OneAxis_OneFloat);
 DEFINE_COMMAND_PLUGIN(ReloadCharController, , 1, 0, NULL);
 DEFINE_CMD_ALT_COND_PLUGIN(GetGroundMaterial, , , 1, NULL);
 DEFINE_COMMAND_PLUGIN(FireWeaponEx, , 1, 2, kParams_JIP_OneObjectID_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(GetActorGravityMult, , 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetActorGravityMult, , 1, 1, kParams_OneFloat);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -689,12 +691,9 @@ bool Cmd_ToggleNoHealthReset_Execute(COMMAND_ARGS)
 bool Cmd_GetCurrentStablePackage_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (thisObj->IsActor())
-	{
-		TESPackage *package = ((Actor*)thisObj)->GetStablePackage();
-		if (package) REFR_RES = package->refID;
-	}
-	DoConsolePrintID(result);
+	TESPackage *package = thisObj->IsActor() ? ((Actor*)thisObj)->GetStablePackage() : NULL;
+	if (package) REFR_RES = package->refID;
+	DoConsolePrint(package);
 	return true;
 }
 
@@ -792,44 +791,28 @@ bool Cmd_HolsterWeapon_Execute(COMMAND_ARGS)
 	return true;
 }
 
-void __fastcall GetFallTime(Actor *actor, UInt8 action, double *result)
-{
-	*result = 0;
-	if (!actor->IsActor() || !actor->baseProcess) return;
-	bhkCharacterController *charCtrl = actor->baseProcess->GetCharacterController();
-	if (!charCtrl) return;
-	switch (action)
-	{
-		case 0:
-			*result = charCtrl->fallTimeElapsed;
-			break;
-		case 1:
-			*result = charCtrl->fallTimeRemaining;
-			break;
-		case 2:
-			charCtrl->startingHeight = actor->posZ;
-			charCtrl->fallTimeElapsed = 0;
-			*result = 1;
-			break;
-		default: break;
-	}
-}
-
 bool Cmd_GetFallTimeElapsed_Execute(COMMAND_ARGS)
 {
-	GetFallTime((Actor*)thisObj, 0, result);
+	bhkCharacterController *charCtrl = thisObj->GetCharacterController();
+	*result = charCtrl ? charCtrl->fallTimeElapsed : 0;
 	return true;
 }
 
 bool Cmd_GetFallTimeRemaining_Execute(COMMAND_ARGS)
 {
-	GetFallTime((Actor*)thisObj, 1, result);
+	bhkCharacterController *charCtrl = thisObj->GetCharacterController();
+	*result = charCtrl ? charCtrl->fallTimeRemaining : 0;
 	return true;
 }
 
 bool Cmd_ResetFallTime_Execute(COMMAND_ARGS)
 {
-	GetFallTime((Actor*)thisObj, 2, result);
+	bhkCharacterController *charCtrl = thisObj->GetCharacterController();
+	if (charCtrl)
+	{
+		charCtrl->startingHeight = thisObj->posZ;
+		charCtrl->fallTimeElapsed = 0;
+	}
 	return true;
 }
 
@@ -1238,9 +1221,9 @@ bool Cmd_GetActorVelocity_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char axis = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &axis) && thisObj->IsActor() && ((Actor*)thisObj)->baseProcess)
+	if (ExtractArgs(EXTRACT_ARGS, &axis))
 	{
-		bhkCharacterController *charCtrl = ((Actor*)thisObj)->baseProcess->GetCharacterController();
+		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 		if (charCtrl)
 		{
 			if (axis) *result = charCtrl->velocity[axis - 'X'];
@@ -1250,30 +1233,24 @@ bool Cmd_GetActorVelocity_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool __fastcall IsInAir(Actor *actor)
-{
-	if (!actor->IsActor() || !actor->baseProcess) return false;
-	bhkCharacterController *charCtrl = actor->baseProcess->GetCharacterController();
-	return charCtrl ? ((charCtrl->chrContext.hkState & 2) != 0) : false;
-}
-
 bool Cmd_IsInAir_Execute(COMMAND_ARGS)
 {
-	*result = IsInAir((Actor*)thisObj);
+	bhkCharacterController *charCtrl = thisObj->GetCharacterController();
+	*result = (charCtrl && (charCtrl->chrContext.hkState & 2)) ? 1 : 0;
 	return true;
 }
 
 bool Cmd_IsInAir_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = IsInAir((Actor*)thisObj);
+	bhkCharacterController *charCtrl = thisObj->GetCharacterController();
+	*result = (charCtrl && (charCtrl->chrContext.hkState & 2)) ? 1 : 0;
 	return true;
 }
 
 bool Cmd_GetObjectUnderFeet_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!thisObj->IsActor() || !((Actor*)thisObj)->baseProcess) return true;
-	bhkCharacterController *charCtrl = ((Actor*)thisObj)->baseProcess->GetCharacterController();
+	bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 	if (charCtrl && charCtrl->bodyUnderFeet)
 	{
 		TESObjectREFR *refr = GetCdBodyRef(&charCtrl->bodyUnderFeet->cdBody);
@@ -1440,9 +1417,9 @@ bool Cmd_GetKiller_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	Actor *actor = (Actor*)thisObj;
-	if (thisObj->IsActor() && actor->HasHealth(0) && actor->killer)
-		REFR_RES = actor->killer->refID;
-	DoConsolePrintID(result);
+	actor = (actor->IsActor() && actor->HasHealth(0)) ? actor->killer : NULL;
+	if (actor) REFR_RES = actor->refID;
+	DoConsolePrint(actor);
 	return true;
 }
 
@@ -1666,9 +1643,9 @@ bool Cmd_SetActorVelocity_Execute(COMMAND_ARGS)
 {
 	char axis;
 	float velocity;
-	if (ExtractArgs(EXTRACT_ARGS, &axis, &velocity) && thisObj->IsActor() && ((Actor*)thisObj)->baseProcess)
+	if (ExtractArgs(EXTRACT_ARGS, &axis, &velocity))
 	{
-		bhkCharacterController *charCtrl = ((Actor*)thisObj)->baseProcess->GetCharacterController();
+		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 		if (charCtrl && charCtrl->refObject)
 			((hkpCharacterProxy*)charCtrl->refObject)->velocity[axis - 'X'] = velocity;
 	}
@@ -2219,19 +2196,11 @@ bool Cmd_GetActorTiltAngle_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char axis;
-	if (ExtractArgs(EXTRACT_ARGS, &axis) && thisObj->IsActor() && (axis < 'Z'))
+	if (ExtractArgs(EXTRACT_ARGS, &axis) && (axis < 'Z'))
 	{
-		Actor *actor = (Actor*)thisObj;
-		if (actor->baseProcess)
-		{
-			bhkCharacterController *charCtrl = actor->baseProcess->GetCharacterController();
-			if (charCtrl)
-			{
-				if (axis == 'X')
-					*result = charCtrl->tiltAngleX / kDblPId180;
-				else *result = charCtrl->tiltAngleY / kDblPId180;
-			}
-		}
+		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
+		if (charCtrl)
+			*result = ((axis == 'X') ? charCtrl->tiltAngleX : charCtrl->tiltAngleY) / kDblPId180;
 	}
 	return true;
 }
@@ -2240,19 +2209,15 @@ bool Cmd_SetActorTiltAngle_Execute(COMMAND_ARGS)
 {
 	char axis;
 	float angle;
-	if (ExtractArgs(EXTRACT_ARGS, &axis, &angle) && thisObj->IsActor() && (axis < 'Z'))
+	if (ExtractArgs(EXTRACT_ARGS, &axis, &angle) && (axis < 'Z'))
 	{
-		Actor *actor = (Actor*)thisObj;
-		if (actor->baseProcess)
+		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
+		if (charCtrl)
 		{
-			bhkCharacterController *charCtrl = actor->baseProcess->GetCharacterController();
-			if (charCtrl)
-			{
-				angle *= kFltPId180;
-				if (axis == 'X')
-					charCtrl->tiltAngleX = angle;
-				else charCtrl->tiltAngleY = angle;
-			}
+			angle *= kFltPId180;
+			if (axis == 'X')
+				charCtrl->tiltAngleX = angle;
+			else charCtrl->tiltAngleY = angle;
 		}
 	}
 	return true;
@@ -2357,6 +2322,24 @@ bool Cmd_FireWeaponEx_Execute(COMMAND_ARGS)
 			AddQueuedCmdCall(qCall);
 		}
 		else DoFireWeaponEx(thisObj, 0, weapon);
+	}
+	return true;
+}
+
+bool Cmd_GetActorGravityMult_Execute(COMMAND_ARGS)
+{
+	bhkCharacterController *charCtrl = thisObj->GetCharacterController();
+	*result = charCtrl ? charCtrl->gravityMult : 0;
+	return true;
+}
+
+bool Cmd_SetActorGravityMult_Execute(COMMAND_ARGS)
+{
+	float gravityMult;
+	if (ExtractArgs(EXTRACT_ARGS, &gravityMult))
+	{
+		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
+		if (charCtrl) charCtrl->gravityMult = gravityMult;
 	}
 	return true;
 }

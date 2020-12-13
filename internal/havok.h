@@ -626,6 +626,19 @@ class bhkSPCollisionObject : public bhkPCollisionObject
 public:
 };
 
+// 2C
+class bhkBlendCollisionObject : public bhkCollisionObject
+{
+public:
+	UInt8		byte14;		// 14
+	UInt8		pad15[3];	// 15
+	float		flt18;		// 18
+	float		flt1C;		// 1C
+	UInt32		unk20;		// 20
+	UInt32		unk24;		// 24
+	UInt32		unk28;		// 28
+};
+
 // 08
 class hkpCdPointCollector
 {
@@ -1005,7 +1018,7 @@ public:
 	float					flt540;				// 540
 	float					startingHeight;		// 544
 	float					fallTimeElapsed;	// 548
-	float					flt54C;				// 54C
+	float					gravityMult;		// 54C
 	float					tiltAngleX;			// 550
 	float					tiltAngleY;			// 554
 	float					flt558;				// 558	Likely some sort of timer for gradual tilting

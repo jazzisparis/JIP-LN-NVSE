@@ -100,6 +100,85 @@ __declspec(naked) double __vectorcall cvtui2d(UInt32 value)
 	}
 }
 
+__declspec(naked) int __vectorcall ifloor(float value)
+{
+	__asm
+	{
+		movd	eax, xmm0
+		test	eax, eax
+		jns		isPos
+		push	0x3FA0
+		ldmxcsr	[esp]
+		cvtss2si	eax, xmm0
+		mov		dword ptr [esp], 0x1FA0
+		ldmxcsr	[esp]
+		pop		ecx
+		retn
+	isPos:
+		cvttss2si	eax, xmm0
+		retn
+	}
+}
+
+__declspec(naked) int __vectorcall iceil(float value)
+{
+	__asm
+	{
+		movd	eax, xmm0
+		test	eax, eax
+		js		isNeg
+		push	0x5FA0
+		ldmxcsr	[esp]
+		cvtss2si	eax, xmm0
+		mov		dword ptr [esp], 0x1FA0
+		ldmxcsr	[esp]
+		pop		ecx
+		retn
+	isNeg:
+		cvttss2si	eax, xmm0
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall NiReleaseObject(NiRefObject *toRelease)
+{
+	__asm
+	{
+		lock dec dword ptr [ecx+4]
+		jnz		done
+		mov		eax, [ecx]
+		call	dword ptr [eax+4]
+	done:
+		retn
+	}
+}
+
+__declspec(naked) NiRefObject** __stdcall NiReleaseAddRef(NiRefObject **toRelease, NiRefObject *toAdd)
+{
+	__asm
+	{
+		mov		eax, [esp+4]
+		mov		ecx, [eax]
+		cmp		ecx, [esp+8]
+		jz		done
+		test	ecx, ecx
+		jz		doAdd
+		lock dec dword ptr [ecx+4]
+		jnz		doAdd
+		mov		eax, [ecx]
+		call	dword ptr [eax+4]
+		mov		eax, [esp+4]
+	doAdd:
+		mov		ecx, [esp+8]
+		mov		[eax], ecx
+		test	ecx, ecx
+		jz		done
+		lock inc dword ptr [ecx+4]
+	done:
+		retn	8
+	}
+}
+
 __declspec(naked) UInt32 __fastcall RGBHexToDec(UInt32 rgb)
 {
 	__asm
@@ -707,14 +786,24 @@ __declspec(naked) char* __vectorcall FltToStr(char *str, double value)
 	nonZero:
 		ja		isPos
 		pcmpeqd	xmm2, xmm2
-		psllq	xmm2, 0x3F
-		xorpd	xmm0, xmm2
+		psrlq	xmm2, 1
+		andpd	xmm0, xmm2
 		mov		[ecx], '-'
 		inc		ecx
 	isPos:
 		push	esi
 		push	edi
-		roundsd	xmm2, xmm0, 3
+		lea		eax, [esp-8]
+		movsd	[eax], xmm0
+		fld		qword ptr [eax]
+		fld		st
+		fisttp	qword ptr [eax]
+		mov		esi, [eax]
+		fild	qword ptr [eax]
+		fsubp	st(1), st
+		fstp	qword ptr [eax]
+		movsd	xmm0, [eax]
+		/*roundsd	xmm2, xmm0, 3
 		lea		eax, [esp-8]
 		movsd	[eax], xmm2
 		fld		qword ptr [eax]
@@ -723,7 +812,7 @@ __declspec(naked) char* __vectorcall FltToStr(char *str, double value)
 		test	esi, esi
 		jz		noInt
 		subsd	xmm0, xmm2
-	noInt:
+	noInt:*/
 		xor		edi, edi
 		comisd	xmm0, xmm1
 		jz		noFrac
@@ -938,7 +1027,7 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 		jz		done
 		pcmpeqd	xmm1, xmm1
 		psllq	xmm1, 0x3F
-		xorpd	xmm0, xmm1
+		orpd	xmm0, xmm1
 	done:
 		pop		edi
 		pop		esi
@@ -1487,6 +1576,16 @@ void FileStream::WriteBuf(const void *inData, UInt32 inLength)
 	fflush(theFile);
 }
 
+int FileStream::WriteFmtStr(const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	int iWritten = vfprintf(theFile, fmt, args);
+	va_end(args);
+	fflush(theFile);
+	return iWritten;
+}
+
 void FileStream::MakeAllDirs(char *fullPath)
 {
 	char *traverse = fullPath, curr;
@@ -1856,36 +1955,29 @@ struct ControlName
 	UInt32		unk0C;
 };
 
-ControlName **g_keyNames = (ControlName**)0x11D52F0;
-ControlName **g_mouseButtonNames = (ControlName**)0x11D5240;
-ControlName **g_joystickNames = (ControlName**)0x11D51B0;
+Setting **g_keyNames = (Setting**)0x11D52F0;
+Setting **g_mouseButtonNames = (Setting**)0x11D5240;
+Setting **g_joystickNames = (Setting**)0x11D51B0;
 
 const char* __fastcall GetDXDescription(UInt32 keyID)
 {
-	const char *keyName = "<no key>";
-
 	if (keyID <= 220)
 	{
 		if (g_keyNames[keyID])
-			keyName = g_keyNames[keyID]->name;
+			return g_keyNames[keyID]->data.str;
 	}
-	else if (keyID < 255);
-	else if (keyID == 255)
-	{
-		if (g_mouseButtonNames[0])
-			keyName = g_mouseButtonNames[0]->name;
-	}
+	else if (keyID <= 255);
 	else if (keyID <= 263)
 	{
 		if (g_mouseButtonNames[keyID - 256])
-			keyName = g_mouseButtonNames[keyID - 256]->name;
+			return g_mouseButtonNames[keyID - 256]->data.str;
 	}
 	else if (keyID == 264)
-		keyName = "WheelUp";
+		return "WheelUp";
 	else if (keyID == 265)
-		keyName = "WheelDown";
+		return "WheelDown";
 
-	return keyName;
+	return "<no key>";
 }
 
 __declspec(naked) UInt32 __fastcall ByteSwap(UInt32 dword)

@@ -430,7 +430,7 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 	MapMarkersGrid *markersGrid;
 	if (s_worldspaceMap.Insert(currentWspc, &markersGrid))
 	{
-		if (currentWspc->cell && (currentWspc->texture.ddsPath.m_dataLen || currentWspc->parent))
+		if (currentWspc->cell && (currentWspc->worldMap.ddsPath.m_dataLen || currentWspc->parent))
 		{
 			ListNode<TESObjectREFR> *objIter = currentWspc->cell->objectList.Head();
 			do
@@ -712,11 +712,12 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 		character->ModActorValue(kAVCode_DamageThreshold, 0, 0);
 		return true;
 	}
+	ContainerMenu *containerMenu = *g_containerMenu;
 	ContChangesEntry *menuEntry = *g_containerMenuSelection;
-	if (!menuEntry || !*g_containerMenu || !(*g_containerMenu)->rightItems.selected || (GetActiveTileID() != 20) || FindMainLoopCallback(RefreshContainerMenu))
+	if (!menuEntry || !containerMenu || !containerMenu->rightItems.selected || (GetActiveTileID() != 20) || FindMainLoopCallback(DoRefreshContainerMenu, containerMenu))
 		return true;
 	item = menuEntry->type;
-	character = (Character*)(*g_containerMenu)->containerRef;
+	character = (Character*)containerMenu->containerRef;
 	if (!item || NOT_TYPE(character, Character))
 		return true;
 	ExtraContainerChanges::EntryDataList *entryList = character->GetContainerChangesList();
@@ -724,7 +725,7 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 	if IS_TYPE(item, AlchemyItem)
 	{
 		character->EquipItem(item);
-		RefreshContainerMenu();
+		DoRefreshContainerMenu(containerMenu, item);
 		return true;
 	}
 	if (NOT_TYPE(item, TESObjectARMO) && NOT_TYPE(item, TESObjectWEAP))
@@ -789,7 +790,7 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 		}
 		character->EquipItem(item, 1, xData, 1, 0, 0);
 	}
-	MainLoopAddCallbackEx(RefreshContainerMenu, NULL, 1, 15);
+	MainLoopAddCallbackArgsEx(DoRefreshContainerMenu, containerMenu, 1, 5, 1, item);
 	return true;
 }
 

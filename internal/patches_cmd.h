@@ -133,7 +133,7 @@ bool Hook_GetBaseObject_Execute(COMMAND_ARGS)
 		}
 		REFR_RES = baseForm->refID;
 	}
-	DoConsolePrintID(result);
+	DoConsolePrint(baseForm);
 	return true;
 }
 
@@ -329,9 +329,9 @@ bool Hook_SetNumericINISetting_Execute(COMMAND_ARGS)
 bool Hook_GetDebugSelection_Execute(COMMAND_ARGS)	// Modifies GetDebugSelection to return the correct pointer.
 {
 	*result = 0;
-	if (g_interfaceManager->debugSelection)
-		REFR_RES = g_interfaceManager->debugSelection->refID;
-	DoConsolePrintID(result);
+	TESObjectREFR *debugSelection = g_interfaceManager->debugSelection;
+	if (debugSelection) REFR_RES = debugSelection->refID;
+	DoConsolePrint(debugSelection);
 	return true;
 }
 

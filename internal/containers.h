@@ -506,36 +506,26 @@ template <typename T_Key> class MapKey
 	T_Key		key;
 
 public:
-	Key_Arg Get() const {return key;}
-	void Set(Key_Arg inKey) {key = inKey;}
-	char Compare(Key_Arg inKey) const
+	__forceinline Key_Arg Get() const {return key;}
+	__forceinline void Set(Key_Arg inKey)
 	{
+		if (std::is_same_v<T_Key, char*>)
+			*(char**)&key = CopyString(*(const char**)&inKey);
+		else key = inKey;
+	}
+	__forceinline char Compare(Key_Arg inKey) const
+	{
+		if (std::is_same_v<T_Key, char*> || std::is_same_v<T_Key, const char*>)
+			return StrCompare(*(const char**)&inKey, *(const char**)&key);
 		if (inKey < key) return -1;
 		return (key < inKey) ? 1 : 0;
 	}
-	void Clear() {key.~T_Key();}
-};
-
-template <> class MapKey<const char*>
-{
-	const char	*key;
-
-public:
-	const char *Get() const {return key;}
-	void Set(const char *inKey) {key = inKey;}
-	char Compare(const char *inKey) const {return StrCompare(inKey, key);}
-	void Clear() {}
-};
-
-template <> class MapKey<char*>
-{
-	char		*key;
-
-public:
-	char *Get() const {return key;}
-	void Set(char *inKey) {key = CopyString(inKey);}
-	char Compare(char *inKey) const {return StrCompare(inKey, key);}
-	void Clear() {free(key);}
+	__forceinline void Clear()
+	{
+		if (std::is_same_v<T_Key, char*>)
+			free(*(char**)&key);
+		else key.~T_Key();
+	}
 };
 
 template <typename T_Data> class MapValue
@@ -543,10 +533,10 @@ template <typename T_Data> class MapValue
 	T_Data		value;
 
 public:
-	T_Data *Init() {return &value;}
-	T_Data& Get() {return value;}
-	T_Data *Ptr() {return &value;}
-	void Clear() {value.~T_Data();}
+	__forceinline T_Data *Init() {return &value;}
+	__forceinline T_Data& Get() {return value;}
+	__forceinline T_Data *Ptr() {return &value;}
+	__forceinline void Clear() {value.~T_Data();}
 };
 
 template <typename T_Data> class MapValue_p
@@ -554,14 +544,14 @@ template <typename T_Data> class MapValue_p
 	T_Data		*value;
 
 public:
-	T_Data *Init()
+	__forceinline T_Data *Init()
 	{
 		value = ALLOC_NODE(T_Data);
 		return value;
 	}
-	T_Data& Get() {return *value;}
-	T_Data *Ptr() {return value;}
-	void Clear()
+	__forceinline T_Data& Get() {return *value;}
+	__forceinline T_Data *Ptr() {return value;}
+	__forceinline void Clear()
 	{
 		value->~T_Data();
 		Pool_Free(value, sizeof(T_Data));
@@ -993,7 +983,7 @@ public:
 template <typename T_Key> __forceinline UInt32 HashKey(T_Key inKey)
 {
 	if (std::is_same_v<T_Key, char*> || std::is_same_v<T_Key, const char*>)
-		return StrHashCI(reinterpret_cast<const char*>(inKey));
+		return StrHashCI(*(const char**)&inKey);
 	UInt32 uKey;
 	if (sizeof(T_Key) == 1)
 		uKey = *(UInt8*)&inKey;
@@ -1015,11 +1005,11 @@ template <typename T_Key> class HashedKey
 	T_Key		key;
 
 public:
-	bool Match(Key_Arg inKey, UInt32) const {return key == inKey;}
-	Key_Arg Get() const {return key;}
-	void Set(Key_Arg inKey, UInt32) {key = inKey;}
-	UInt32 GetHash() const {return HashKey<T_Key>(key);}
-	void Clear() {key.~T_Key();}
+	__forceinline bool Match(Key_Arg inKey, UInt32) const {return key == inKey;}
+	__forceinline Key_Arg Get() const {return key;}
+	__forceinline void Set(Key_Arg inKey, UInt32) {key = inKey;}
+	__forceinline UInt32 GetHash() const {return HashKey<T_Key>(key);}
+	__forceinline void Clear() {key.~T_Key();}
 };
 
 template <> class HashedKey<const char*>
@@ -1027,11 +1017,11 @@ template <> class HashedKey<const char*>
 	UInt32		hashVal;
 
 public:
-	bool Match(const char*, UInt32 inHash) const {return hashVal == inHash;}
-	const char *Get() const {return "";}
-	void Set(const char*, UInt32 inHash) {hashVal = inHash;}
-	UInt32 GetHash() const {return hashVal;}
-	void Clear() {}
+	__forceinline bool Match(const char*, UInt32 inHash) const {return hashVal == inHash;}
+	__forceinline const char *Get() const {return "";}
+	__forceinline void Set(const char*, UInt32 inHash) {hashVal = inHash;}
+	__forceinline UInt32 GetHash() const {return hashVal;}
+	__forceinline void Clear() {}
 };
 
 template <> class HashedKey<char*>
@@ -1040,15 +1030,15 @@ template <> class HashedKey<char*>
 	char		*key;
 
 public:
-	bool Match(char*, UInt32 inHash) const {return hashVal == inHash;}
-	char *Get() const {return key;}
-	void Set(char *inKey, UInt32 inHash)
+	__forceinline bool Match(char*, UInt32 inHash) const {return hashVal == inHash;}
+	__forceinline char *Get() const {return key;}
+	__forceinline void Set(char *inKey, UInt32 inHash)
 	{
 		hashVal = inHash;
 		key = CopyString(inKey);
 	}
-	UInt32 GetHash() const {return hashVal;}
-	void Clear() {free(key);}
+	__forceinline UInt32 GetHash() const {return hashVal;}
+	__forceinline void Clear() {free(key);}
 };
 
 template <typename T_Key, typename T_Data> class UnorderedMap

@@ -134,11 +134,11 @@ public:
 
 	ScriptEventList *GetEventList() const;
 
-	bool IsTaken() const {return (flags & kFlags_Taken) == kFlags_Taken;} // Need to implement
+	bool IsTaken() const {return (flags & kFlags_Taken) != 0;}
 	bool IsPersistent() const {return (flags & kFlags_Persistent) != 0;}
-	bool IsTemporary() {return (flags & kFlags_Temporary) ? true : false;}
-	bool IsDeleted() {return (flags & kFlags_Deleted) ? true : false;}
-	bool IsDestroyed() {return (flags & kFlags_Destroyed) ? true : false;}
+	bool IsTemporary() const {return (flags & kFlags_Temporary) != 0;}
+	bool IsDeleted() const {return (flags & kFlags_Deleted) != 0;}
+	bool IsDestroyed() const {return (flags & kFlags_Destroyed) != 0;}
 
 	NiVector3 *PosVector() {return (NiVector3*)&posX;}
 	CoordXY *PosXY() {return (CoordXY*)&posX;}
@@ -164,6 +164,7 @@ public:
 	bool MoveToCell(TESForm *worldOrCell, NiVector3 &posVector);
 	bool Disable();
 	void DeleteReference();
+	bhkCharacterController *GetCharacterController();
 	TESObjectREFR *GetMerchantContainer();
 	float GetWaterImmersionPerc();
 	bool IsMobile();
@@ -173,6 +174,7 @@ public:
 	bool ValidForHooks();
 	NiAVObject* __fastcall GetNiBlock(const char *blockName);
 	NiNode* __fastcall GetNode(const char *nodeName);
+	NiNode *GetNiNodeCopyIfTemplate();
 	hkpRigidBody *GetRigidBody(const char *nodeName);
 	bool RunScriptSource(const char *sourceStr);
 
@@ -304,7 +306,7 @@ public:
 	virtual Actor	*GetActor(void);
 	virtual ActiveEffectList	*GetEffectList(void);
 	virtual void	Unk_03(void);
-	virtual bool	Unk_04(void);
+	virtual bool	CannotBeHit(void);
 	virtual void	Unk_05(void);
 	virtual void	Unk_06(void);
 	virtual void	Unk_07(void);
@@ -945,7 +947,10 @@ public:
 	UInt8								byteDF2;				// DF2
 	UInt8								byteDF3;				// DF3
 	BSSimpleArray<ItemChange>			itemChanges;			// DF4
-	UInt32								unkE04[5];				// E04
+	UInt32								unkE04;					// E04
+	UInt8								byteE08;				// E08
+	UInt8								padE09[3];				// E09
+	UInt32								unkE0C[3];				// E0C
 	float								killCamTimer;			// E18
 	float								killCamCooldown;		// E1C
 	UInt8								byteE20;				// E20

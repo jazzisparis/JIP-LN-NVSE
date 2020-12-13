@@ -719,8 +719,7 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(void *dataPtr)
 		pop		edi
 		pop		esi
 		pop		ebx
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn
 	}
 }
@@ -806,8 +805,7 @@ __declspec(naked) void __stdcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
 		pop		edi
 		pop		esi
 		pop		ebx
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	4
 	}
 }
@@ -840,7 +838,7 @@ __declspec(naked) bool __fastcall GetLinkedCellVisited(TESObjectREFR *doorRef)
 }
 
 typedef Vector<TESObjectREFR*> DoorRefsList;
-TESObjectDOOR *s_defaultDoor;
+TESObjectDOOR *g_defaultDoor;
 
 void __fastcall GetTeleportDoors(TESObjectCELL *cell, DoorRefsList *doorRefsList)
 {
@@ -853,14 +851,14 @@ void __fastcall GetTeleportDoors(TESObjectCELL *cell, DoorRefsList *doorRefsList
 		refr = refsIter->data;
 		if (!refr || (refr->flags & 0x860)) continue;
 		baseDoor = (TESObjectDOOR*)refr->baseForm;
-		if (IS_ID(baseDoor, TESObjectDOOR) && (baseDoor != s_defaultDoor) && (!baseDoor->list88.Empty() || GetExtraType(&refr->extraDataList, Teleport)))
+		if (IS_ID(baseDoor, TESObjectDOOR) && (baseDoor != g_defaultDoor) && (!baseDoor->list88.Empty() || refr->extraDataList.HasType(kExtraData_Teleport)))
 			doorRefsList->Append(refr);
 	}
 	while (refsIter = refsIter->next);
 	cell->RefLockLeave();
 }
 
-TESForm *s_blackPlaneBase;
+TESForm *g_blackPlaneBase;
 Vector<NiNode*> s_hiddenNodes(0x20);
 
 void __fastcall GetBlackPlaneNodes(TESObjectCELL *cell)
@@ -872,7 +870,7 @@ void __fastcall GetBlackPlaneNodes(TESObjectCELL *cell)
 	do
 	{
 		refr = refsIter->data;
-		if (refr && (refr->baseForm == s_blackPlaneBase) && (node = refr->GetNiNode()))
+		if (refr && (refr->baseForm == g_blackPlaneBase) && (node = refr->GetNiNode()))
 			s_hiddenNodes.Append(node);
 	}
 	while (refsIter = refsIter->next);
@@ -1041,7 +1039,8 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		jz		done
 		push	eax
 		lea		ecx, [ebp-0x10]
-		CALL_EAX(0x66B0D0)
+		push	ecx
+		call	NiReleaseAddRef
 		mov		ecx, [ebp-0xE8]
 		mov		eax, [ecx+0x5E0]
 		mov		[ebp-0xEC], eax
@@ -1103,7 +1102,8 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		mov		[ecx+0x194], eax
 		push	ecx
 		lea		ecx, [ebp-0x18]
-		CALL_EAX(0x66B0D0)
+		push	ecx
+		call	NiReleaseAddRef
 		mov		ecx, [ebp-0xF4]
 		xor		eax, eax
 		mov		edx, 0xC
@@ -1146,10 +1146,12 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		add		esp, 0xC
 		push	0
 		lea		ecx, [ebp-0x18]
-		CALL_EAX(0x66B0D0)
+		push	ecx
+		call	NiReleaseAddRef
 		push	0
 		lea		ecx, [ebp-0xF4]
-		CALL_EAX(0x66B0D0)
+		push	ecx
+		call	NiReleaseAddRef
 		mov		eax, 0xB6B790
 		mov		ecx, 0xB6B840
 		cmp		byte ptr [ebp-0xDF], 0
@@ -1185,8 +1187,7 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		CALL_EAX(0x4A0F60)
 		lea		ecx, [ebp-0xE4]
 		CALL_EAX(0x404EE0)
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	8
 	}
 }
@@ -1219,15 +1220,42 @@ __declspec(naked) void D3DFormatHook()
 	}
 }
 
-bool s_updateMapMarkers = false;
+typedef Vector<Tile*> DynamicTiles;
+typedef UnorderedMap<UInt32, DynamicTiles> RenderedMapMarkers;
+RenderedMapMarkers s_renderedMapMarkers(0x40);
+
+void __fastcall DestroyCellMarkers(RenderedMapMarkers::Iterator &cmkIter)
+{
+	for (auto dtlIter = cmkIter().Begin(); dtlIter; ++dtlIter)
+		dtlIter->Destroy(true);
+	cmkIter.Remove();
+}
+
+bool s_discoveredLocation = false;
+
+void __fastcall HandleDiscoverLocation(TESObjectCELL *markerCell)
+{
+	if (markerCell)
+	{
+		auto findRendered = s_renderedMapMarkers.Find(GetPackedCoords(&markerCell->coords.exterior->x));
+		if (findRendered)
+		{
+			DestroyCellMarkers(findRendered);
+			s_discoveredLocation = true;
+		}
+	}
+	StdCall(0x8D5100, *(int*)0x11D0368);
+}
 
 __declspec(naked) void DiscoverLocationHook()
 {
 	__asm
 	{
-		mov		s_updateMapMarkers, 1
-		mov		eax, 0x11D0368
-		JMP_EDX(0x779571)
+		mov		ecx, [ebp-0x8C]
+		mov		ecx, [ecx+4]
+		mov		ecx, [ecx+0x40]
+		push	0x77958A
+		jmp		HandleDiscoverLocation
 	}
 }
 
@@ -1313,8 +1341,7 @@ __declspec(naked) bool __fastcall UpdateSeenBitsHook(SeenData *seenData, int EDX
 		pop		edi
 		pop		esi
 		pop		ebx
-		mov		esp, ebp
-		pop		ebp
+		leave
 		retn	8
 	}
 }
@@ -1451,7 +1478,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 		GameHeapFree(shapeData->triangles);
 		shapeData->triangles = shapeTriangles;
 
-		NiReleaseThenAdd(&sciTriShp->m_propertyList.Head()->data, alphaProp);
+		NiReleaseAddRef((NiRefObject**)&sciTriShp->m_propertyList.Head()->data, alphaProp);
 		sciTriShp->alphaProp = alphaProp;
 	}
 	UpdateTileScales();
@@ -1503,8 +1530,8 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	}
 	while (worldIter = worldIter->next);
 
-	s_defaultDoor = *(TESObjectDOOR**)0x11CA258;
-	s_blackPlaneBase = LookupFormByRefID(0x15A1F2);
+	g_defaultDoor = *(TESObjectDOOR**)0x11CA258;
+	g_blackPlaneBase = LookupFormByRefID(0x15A1F2);
 	s_defaultGridSize = *(UInt8*)0x11C63D0 <= 5;
 	g_shadowSceneNode = *(ShadowSceneNode**)0x11F91C8;
 	g_shadowFogProperty = *(BSFogProperty**)0x11DEB00;
@@ -1520,16 +1547,6 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	WriteRelJump(0x879AD0, (UInt32)UpdateSeenBitsHook);
 	WriteRelJump(0xE7D13A, (UInt32)RendererRecreateHook);
 	return true;
-}
-
-typedef Vector<Tile*> DynamicTiles;
-typedef UnorderedMap<UInt32, DynamicTiles> RenderedMapMarkers;
-
-void __fastcall DestroyCellMarkers(RenderedMapMarkers::Iterator &cmkIter)
-{
-	for (auto dtlIter = cmkIter().Begin(); dtlIter; ++dtlIter)
-		dtlIter->Destroy(true);
-	cmkIter.Remove();
 }
 
 alignas(16) const UInt32
@@ -1573,14 +1590,13 @@ UInt32 *g_lightingPasses = (UInt32*)0x11F91D8, s_currentMapMode = 0, s_targetsUp
 TESWorldSpace *s_pcCurrWorld = NULL;
 Coordinate s_currLocalCoords(0x7FFF, 0x7FFF), s_currWorldCoords(0x7FFF, 0x7FFF);
 const char **g_mapMarkerIcons = (const char**)0x11A0404;
-RenderedMapMarkers s_renderedMapMarkers(0x40);
 UnorderedSet<UInt32> s_currMarkerCells(0x40);
 UnorderedMap<UInt32, ExteriorEntry> s_renderedExteriors(0x80);
 Vector<UInt32> s_exteriorKeys(0x60);
 UnorderedMap<UInt32, NiRenderedTexture*> s_renderedInterior(0x20);
-UnorderedMap<TESObjectCELL*, DoorRefsList> s_exteriorDoorRefs(0x20);
+UnorderedMap<UInt32, DoorRefsList> s_exteriorDoorRefs(0x20);
 DoorRefsList s_doorRefsList(0x20);
-Set<TESObjectCELL*> s_currCellsSet(9);
+Set<TESObjectCELL*> s_currCellsSet(0xC);
 TESQuest *s_activeQuest = NULL;
 UnorderedMap<TESObjectREFR*, QuestMarkerPos> s_questMarkers(0x10);
 TESObjectCELL *s_currCellGrid[9] = {}, *s_lastInterior = NULL;
@@ -1662,7 +1678,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		{
 			s_pcRootWorld = rootWorld;
 			GetWorldDimensions(rootWorld);
-			const char *ddsPath = rootWorld->texture.ddsPath.m_data;
+			const char *ddsPath = rootWorld->worldMap.ddsPath.m_data;
 			if (!ddsPath) ddsPath = "jazzisparis\\minimap\\blanktile.dds";
 			s_worldMapTile->SetString(kTileValue_filename, ddsPath);
 			s_worldMapRect->SetFloat(kTileValue_user1, rootWorld->mapData.usableDimensions.X);
@@ -1671,7 +1687,11 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				(rootWorld->mapData.cellSECoordinates.X - rootWorld->mapData.cellNWCoordinates.X +
 				rootWorld->mapData.cellNWCoordinates.Y - rootWorld->mapData.cellSECoordinates.Y));
 			updateTiles = true;
-			s_updateMapMarkers = true;
+			if (showFlags & 1)
+			{
+				s_mapMarkersRect->DestroyAllChildren();
+				s_renderedMapMarkers.Clear();
+			}
 		}
 
 		if (s_pcCurrWorld != parentWorld)
@@ -1699,14 +1719,9 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				s_renderedMapMarkers.Clear();
 			}
 		}
-		else if (updateTiles || s_updateMapMarkers)
+		else if (updateTiles || s_discoveredLocation)
 		{
-			if (s_updateMapMarkers)
-			{
-				s_updateMapMarkers = false;
-				s_mapMarkersRect->DestroyAllChildren();
-				s_renderedMapMarkers.Clear();
-			}
+			s_discoveredLocation = false;
 			s_currMarkerCells.Clear();
 			WorldMapMarkers *worldMarkers = s_worldMapMarkers.GetPtr(rootWorld);
 			if (worldMarkers)
@@ -1754,7 +1769,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			if (!s_exteriorKeys.Empty())
 			{
 				for (auto prgIter = s_renderedExteriors.Begin(); prgIter; ++prgIter)
-					if (prgIter().texture) ThisCall(0x401970, prgIter().texture);
+					if (prgIter().texture) ThisCall(0xA7FD30, prgIter().texture, true);
 				s_renderedExteriors.Clear();
 				s_exteriorKeys.Clear();
 			}
@@ -1806,11 +1821,11 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				{
 					DoorRefsList *listPtr;
 					for (auto clsIter = s_currCellsSet.Begin(); clsIter; ++clsIter)
-						if (s_exteriorDoorRefs.Insert(*clsIter, &listPtr))
+						if (s_exteriorDoorRefs.Insert(clsIter->refID, &listPtr))
 							GetTeleportDoors(*clsIter, listPtr);
 					s_doorRefsList.Clear();
 					for (auto drlIter = s_exteriorDoorRefs.Begin(); drlIter; ++drlIter)
-						if (s_currCellsSet.HasKey(drlIter.Key()))
+						if (s_currCellsSet.HasKey((TESObjectCELL*)LookupFormByRefID(drlIter.Key())))
 							s_doorRefsList.Concatenate(drlIter());
 						else drlIter.Remove();
 				}
@@ -1885,7 +1900,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 						findTex.Find(s_exteriorKeys[count]);
 						if (!findTex) continue;
 						if (findTex().texture)
-							ThisCall(0x401970, findTex().texture);
+							ThisCall(0xA7FD30, findTex().texture, true);
 						findTex.Remove();
 					}
 					s_exteriorKeys.RemoveRange(0, size);
@@ -1920,7 +1935,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				if (!s_renderedInterior.Empty())
 				{
 					for (auto clrIter = s_renderedInterior.Begin(); clrIter; ++clrIter)
-						if (*clrIter) ThisCall(0x401970, *clrIter);
+						if (*clrIter) ThisCall(0xA7FD30, *clrIter, true);
 					s_renderedInterior.Clear();
 				}
 				updateTiles = true;

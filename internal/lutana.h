@@ -150,7 +150,7 @@ __declspec(naked) UInt32 __stdcall Hook_XInputGetState(UInt32 index, XINPUT_GAME
 
 bool HookXInput()
 {
-	HMODULE xinput = GetModuleHandle("XINPUT1_3.dll");
+	HMODULE xinput = GetModuleHandle("XINPUT1_3");
 	if (xinput)
 	{
 		XInputGetStateEx = (UInt32 (__stdcall *)(UInt32, XINPUT_GAMEPAD_EX*))GetProcAddress(xinput, (LPCSTR)0x64);

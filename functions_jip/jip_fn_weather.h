@@ -197,9 +197,9 @@ bool Cmd_SetWeatherRGBColor_Execute(COMMAND_ARGS)
 bool Cmd_GetCurrentWeather_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	Sky *currSky = *g_currentSky;
-	if (currSky && currSky->currWeather) REFR_RES = currSky->currWeather->refID;
-	DoConsolePrintID(result);
+	TESWeather *weather = g_TES->sky ? g_TES->sky->currWeather : NULL;
+	if (weather) REFR_RES = weather->refID;
+	DoConsolePrint(weather);
 	return true;
 }
 
