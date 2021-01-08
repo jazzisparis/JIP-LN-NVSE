@@ -31,15 +31,16 @@ bool Cmd_fsqrt_Execute(COMMAND_ARGS)
 bool Cmd_GetDistance2D_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *refr;
-	if (ExtractArgs(EXTRACT_ARGS, &refr))
-		*result = GetAxisDistance(thisObj, refr, 3);
-	else *result = 0;
+	if (ExtractArgs(EXTRACT_ARGS, &refr) && thisObj->GetInSameCellOrWorld(refr))
+		*result = GetDistance2D(thisObj, refr);
+	else *result = kFltMax;
 	return true;
 }
 
 bool Cmd_GetDistance2D_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = GetAxisDistance(thisObj, (TESObjectREFR*)arg1, 3);
+	TESObjectREFR *refr = (TESObjectREFR*)arg1;
+	*result = thisObj->GetInSameCellOrWorld(refr) ? GetDistance2D(thisObj, refr) : kFltMax;
 	return true;
 }
 
@@ -47,14 +48,14 @@ bool Cmd_GetDistance3D_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *refr;
 	if (ExtractArgs(EXTRACT_ARGS, &refr))
-		*result = GetAxisDistance(thisObj, refr, 7);
-	else *result = 0;
+		*result = thisObj->GetDistance(refr);
+	else *result = kFltMax;
 	return true;
 }
 
 bool Cmd_GetDistance3D_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = GetAxisDistance(thisObj, (TESObjectREFR*)arg1, 7);
+	*result = thisObj->GetDistance((TESObjectREFR*)arg1);
 	return true;
 }
 

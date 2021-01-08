@@ -34,8 +34,8 @@ DEFINE_COMMAND_PLUGIN(SetOnKeyDownEventHandler, , 0, 3, kParams_JIP_OneForm_OneI
 DEFINE_COMMAND_PLUGIN(SetOnKeyUpEventHandler, , 0, 3, kParams_JIP_OneForm_OneInt_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetOnControlDownEventHandler, , 0, 3, kParams_JIP_OneForm_OneInt_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetOnControlUpEventHandler, , 0, 3, kParams_JIP_OneForm_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetReticlePos, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetReticleRange, , 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetReticlePos, , 0, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetReticleRange, , 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetOnDialogTopicEventHandler, , 0, 3, kParams_JIP_OneForm_OneInt_OneForm);
 DEFINE_COMMAND_PLUGIN(GetGameDaysPassed, , 0, 3, kParams_JIP_ThreeOptionalInts);
 DEFINE_COMMAND_PLUGIN(IsPCInCombat, , 0, 0, NULL);
@@ -66,6 +66,8 @@ DEFINE_COMMAND_PLUGIN(ToggleBipedSlotVisibility, , 0, 2, kParams_OneInt_OneOptio
 DEFINE_COMMAND_PLUGIN(ToggleImmortalMode, , 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ToggleCameraCollision, , 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(InitRockItLauncher, , 0, 1, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(ToggleHitEffects, , 0, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(ToggleNoMovementCombat, , 0, 1, kParams_OneOptionalInt);
 
 bool Cmd_DisableNavMeshAlt_Execute(COMMAND_ARGS)
 {
@@ -524,10 +526,16 @@ __declspec(naked) bool Cmd_SetOnControlUpEventHandler_Execute(COMMAND_ARGS)
 
 bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 {
-	NiVector3 coords;
-	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, 50000.0F))
+	UInt32 filter = 6;
+	if (NUM_ARGS)
 	{
-		ArrayElementL elements[3] = { coords.x, coords.y, coords.z };
+		ExtractArgs(EXTRACT_ARGS, &filter);
+		filter &= 0x3F;
+	}
+	NiVector3 coords;
+	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, 50000.0F, 0, filter))
+	{
+		ArrayElementL elements[3] = {coords.x, coords.y, coords.z};
 		AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
 	}
 	else *result = 0;
@@ -536,8 +544,14 @@ bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 
 bool Cmd_GetReticleRange_Execute(COMMAND_ARGS)
 {
+	UInt32 filter = 6;
+	if (NUM_ARGS)
+	{
+		ExtractArgs(EXTRACT_ARGS, &filter);
+		filter &= 0x3F;
+	}
 	NiVector3 coords;
-	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, 50000.0F))
+	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, 50000.0F, 0, filter))
 		*result = Vector3Distance(&coords, &g_thePlayer->cameraPos);
 	else *result = -1;
 	return true;
@@ -548,69 +562,23 @@ bool Cmd_SetOnDialogTopicEventHandler_Execute(COMMAND_ARGS)
 	Script *script;
 	UInt32 addEvnt;
 	TESForm *form;
-	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &form) || NOT_TYPE(script, Script))
-		return true;
-
-	TESTopic *topic = NULL;
-	TESTopicInfo *info = NULL;
-	if IS_TYPE(form, TESTopic)
-		topic = (TESTopic*)form;
-	else if IS_TYPE(form, TESTopicInfo)
-		info = (TESTopicInfo*)form;
-	else return true;
-
-	ListNode<TESTopic::Info> *listIter;
-	TESTopic::Info *entry;
-	if (addEvnt)
+	if (ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &form) && IS_TYPE(script, Script) && (IS_TYPE(form, TESTopic) || IS_TYPE(form, TESTopicInfo)))
 	{
-		EventCallbackScripts *callbacks;
-		if (topic)
+		if (addEvnt)
 		{
-			if (s_dialogTopicEventMap.Insert(topic, &callbacks))
-			{
-				listIter = topic->infos.Head();
-				do
-				{
-					entry = listIter->data;
-					if (!entry || !entry->infoArray.firstFreeEntry)
-						continue;
-					for (auto infoIter = entry->infoArray.Begin(); !infoIter.End(); ++infoIter)
-						s_infoToTopicMap[*infoIter] = topic;
-				}
-				while (listIter = listIter->next);
+			EventCallbackScripts *callbacks;
+			if (s_dialogTopicEventMap.Insert(form, &callbacks))
 				HOOK_MOD(RunResultScript, true);
-			}
+			callbacks->Insert(script);
 		}
-		else if (s_topicInfoEventMap.Insert(info, &callbacks))
-			HOOK_MOD(RunResultScript, true);
-		callbacks->Insert(script);
-	}
-	else if (topic)
-	{
-		auto findTopic = s_dialogTopicEventMap.Find(topic);
-		if (findTopic && findTopic().Erase(script) && findTopic().Empty())
+		else
 		{
-			listIter = topic->infos.Head();
-			do
+			auto findTopic = s_dialogTopicEventMap.Find(form);
+			if (findTopic && findTopic().Erase(script) && findTopic().Empty())
 			{
-				entry = listIter->data;
-				if (!entry || !entry->infoArray.firstFreeEntry)
-					continue;
-				for (auto infoIter = entry->infoArray.Begin(); !infoIter.End(); ++infoIter)
-					s_infoToTopicMap.Erase(*infoIter);
+				findTopic.Remove();
+				HOOK_MOD(RunResultScript, false);
 			}
-			while (listIter = listIter->next);
-			findTopic.Remove();
-			HOOK_MOD(RunResultScript, false);
-		}
-	}
-	else
-	{
-		auto findInfo = s_topicInfoEventMap.Find(info);
-		if (findInfo && findInfo().Erase(script) && findInfo().Empty())
-		{
-			findInfo.Remove();
-			HOOK_MOD(RunResultScript, false);
 		}
 	}
 	return true;
@@ -1008,6 +976,8 @@ bool Cmd_ToggleImmortalMode_Execute(COMMAND_ARGS)
 	{
 		s_playerMinHPMode = toggle;
 		HOOK_SET(PlayerMinHealth, toggle == 1);
+		if (toggle == 2) s_disableHitEffects |= 2;
+		else s_disableHitEffects &= 1;
 	}
 	return true;
 }
@@ -1128,5 +1098,26 @@ bool Cmd_InitRockItLauncher_Execute(COMMAND_ARGS)
 		if (*(UInt8*)0x781EE6 != 0xEB)
 			WritePushRetRelJump(0x940998, 0x9409B2, (UInt32)PCAmmoSwitchHook);
 	}
+	return true;
+}
+
+bool Cmd_ToggleHitEffects_Execute(COMMAND_ARGS)
+{
+	*result = !s_disableHitEffects;
+	UInt32 toggle;
+	if (NUM_ARGS && ExtractArgs(EXTRACT_ARGS, &toggle))
+	{
+		if (toggle) s_disableHitEffects &= 2;
+		else s_disableHitEffects |= 1;
+	}
+	return true;
+}
+
+bool Cmd_ToggleNoMovementCombat_Execute(COMMAND_ARGS)
+{
+	*result = s_noMovementCombat;
+	UInt32 toggle;
+	if (NUM_ARGS && ExtractArgs(EXTRACT_ARGS, &toggle))
+		s_noMovementCombat = toggle != 0;
 	return true;
 }

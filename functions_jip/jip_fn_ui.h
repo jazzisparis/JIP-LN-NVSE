@@ -895,19 +895,19 @@ bool SetOnMenuStateEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt, menuID = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &menuID) && (menuID <= kMenuType_Max) && IS_TYPE(script, Script))
+	if (ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &menuID) && IS_TYPE(script, Script))
 	{
 		char idx;
 		bool doAdd = (addEvnt != 0);
-		if (menuID)
+		if (!menuID)
+		{
+			for (idx = 0; idx < 36; idx++)
+				SetOnMenuStateEvent(script, doAdd, idx);
+		}
+		else if ((menuID >= kMenuType_Min) && (menuID <= kMenuType_Max))
 		{
 			idx = kMenuIDJumpTable[menuID - kMenuType_Min];
 			if (idx != -1) SetOnMenuStateEvent(script, doAdd, idx);
-		}
-		else
-		{
-			for (idx = 0; idx < 35; idx++)
-				SetOnMenuStateEvent(script, doAdd, idx);
 		}
 	}
 	return true;
@@ -1638,7 +1638,7 @@ bool Cmd_AddTileFromTemplate_Execute(COMMAND_ARGS)
 		}
 		if (component)
 		{
-			component = menu->menu->AddTileFromTemplate(component, tempName, 0);
+			component = menu->menu->AddTileFromTemplate(component, tempName);
 			if (component)
 			{
 				*result = 1;

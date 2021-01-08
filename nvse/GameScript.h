@@ -1,17 +1,9 @@
 #pragma once
 
-#define SCRIPT_SIZE 0x54
-static const UInt32 kScript_ExecuteFnAddr = 0x005AC1E0;
-
 // 54
 class Script : public TESForm
 {
 public:
-	Script();
-	~Script();
-
-	// members
-
 	struct RefVariable
 	{
 		String		name;		// 00 variable name/editorID (not used at run-time)
@@ -94,7 +86,7 @@ public:
 	// no changed flags (TESForm flags)
 	MEMBER_FN_PREFIX(Script);
 	// arg3 appears to be true for result scripts (runs script even if dataLength <= 4)
-	DEFINE_MEMBER_FN(Execute, bool, kScript_ExecuteFnAddr, TESObjectREFR* thisObj, ScriptEventList* eventList, TESObjectREFR* containingObj, bool arg3);
+	DEFINE_MEMBER_FN(Execute, bool, 0x005AC1E0, TESObjectREFR* thisObj, ScriptEventList* eventList, TESObjectREFR* containingObj, bool arg3);
 	DEFINE_MEMBER_FN(Constructor, Script *, 0x005AA0F0);
 	DEFINE_MEMBER_FN(SetText, void, 0x005ABE50, const char * text);
 	DEFINE_MEMBER_FN(Run, bool, 0x005AC400, void * scriptContext, bool unkAlwaysOne, TESObjectREFR * object);
@@ -102,7 +94,7 @@ public:
 
 	ScriptEventList	*CreateEventList();
 };
-STATIC_ASSERT(sizeof(Script) == SCRIPT_SIZE);
+STATIC_ASSERT(sizeof(Script) == 0x54);
 
 struct ScriptRunner
 {
@@ -153,23 +145,20 @@ struct ConditionEntry
 	ConditionEntry	* next;
 };
 
-// 6C
+// 70
 struct QuestStageItem
 {
 	UInt32			unk00;			// 00
 	ConditionEntry	conditionList;	// 04
 	Script			resultScript;	// 0C
-	UInt32			unk5C;			// 5C disk offset to log text records? consistent within a single quest
-	UInt8			index;			// 60 sequential
-	bool			hasLogText;		// 61
-	UInt8			unk62[2];		// 62 pad?
-	UInt32			logDate;		// 64
-	TESQuest		* owningQuest;	// 68;
+	UInt32			unk60;			// 60 disk offset to log text records? consistent within a single quest
+	UInt8			index;			// 64 sequential
+	bool			hasLogText;		// 65
+	UInt8			pad66[2];		// 66 pad?
+	UInt32			logDate;		// 68
+	TESQuest		*owningQuest;	// 6C;
 };
-
-#if RUNTIME
-STATIC_ASSERT(sizeof(QuestStageItem) == (SCRIPT_SIZE + 0x1C));
-#endif
+STATIC_ASSERT(sizeof(QuestStageItem) == 0x70);
 
 // 41C
 struct ScriptLineBuffer

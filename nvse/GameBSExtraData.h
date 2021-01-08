@@ -27,12 +27,13 @@ struct BaseExtraList
 {
 	virtual void	Destroy(bool doFree);
 
-	BSExtraData		*m_data;					// 004
-	UInt8			m_presenceBitfield[0x15];	// 008 - if a bit is set, then the extralist should contain that extradata
-	UInt8			pad1D[3];					// 01D
+	BSExtraData		*m_data;					// 04
+	UInt8			m_presenceBitfield[0x15];	// 08 - if a bit is set, then the extralist should contain that extradata
+	UInt8			flags;						// 1D	0x61 in TESObjectREFR
+	UInt8			byte1E;						// 1E
+	UInt8			byte1F;						// 1F
 
 	bool HasType(UInt32 type) const;
-	void MarkType(UInt32 type, bool bCleared);
 	bool MarkScriptEvent(UInt32 eventMask, TESForm *eventTarget);
 	void DebugDump() const;
 	bool IsWorn() const;

@@ -48,9 +48,6 @@ struct ActorHitData
 class BaseProcess
 {
 public:
-	BaseProcess();
-	~BaseProcess();
-
 	struct Data2C
 	{
 		enum
@@ -97,7 +94,7 @@ public:
 		UInt32	flags;					// 44
 	};
 
-	virtual void	Destroy(bool noDealloc);
+	virtual void	Destroy(bool deFree);
 	virtual void	Unk_01(void);
 	virtual void	Unk_02(void);
 	virtual void	Unk_03(void);
@@ -604,9 +601,6 @@ public:
 class LowProcess : public BaseProcess
 {
 public:
-	LowProcess();
-	~LowProcess();
-
 	struct FloatPair
 	{
 		float	flt000;
@@ -686,16 +680,45 @@ public:
 class MiddleLowProcess : public LowProcess
 {
 public:
-	MiddleLowProcess();
-	~MiddleLowProcess();
-
 	virtual void		Unk_207();
 
 	UInt32				unk0B4;			// B4
 	ActorValueModifiers	tempModifiers;	// B8
 };
 
-class AnimSequenceBase;
+// 04
+class AnimSequenceBase
+{
+public:
+	virtual void	Destroy(bool deFree);
+	virtual void	Unk_01(void);
+	virtual void	Unk_02(void);
+	virtual void	Unk_03(void);
+	virtual void	Unk_04(void);
+	virtual void	Unk_05(void);
+	virtual void	Unk_06(void);
+};
+
+// 08
+class AnimSequenceSingle : public AnimSequenceBase
+{
+public:
+	UInt32		unk04;		// 04
+};
+
+// 08
+class AnimSequenceMultiple : public AnimSequenceBase
+{
+public:
+	struct Struct04
+	{
+		UInt32		unk00;
+		UInt32		unk04;
+		UInt32		unk08;
+	};
+
+	Struct04	*ptr04;		// 04
+};
 
 enum AnimAction
 {
@@ -763,10 +786,12 @@ struct AnimData
 	NiNode							*nWeapon;			// 038
 	UInt32							unk03C[2];			// 03C
 	NiNode							*nNeck1;			// 044
-	UInt32							unk048[5];			// 048
+	UInt32							unk048;				// 048
+	UInt16							animGroupIDs[8];	// 04C
 	SInt32							sequenceState1[8];	// 05C
 	SInt32							sequenceState2[8];	// 07C
-	UInt32							unk09C[12];			// 09C
+	UInt16							word09C[8];			// 09C
+	UInt32							unk0AC[8];			// 0AC
 	float							flt0CC;				// 0CC
 	float							flt0D0;				// 0D0
 	UInt32							unk0D4;				// 0D4
@@ -798,9 +823,6 @@ class NiTriShape;
 class MiddleHighProcess : public MiddleLowProcess
 {
 public:
-	MiddleHighProcess();
-	~MiddleHighProcess();
-
 	virtual void	SetAnimation(UInt32 newAnimation);
 	virtual void	Unk_209();
 	virtual void	Unk_20A();

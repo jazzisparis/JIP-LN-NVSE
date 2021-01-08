@@ -11,6 +11,11 @@ struct alignas(16) AlignedVector4
 
 	AlignedVector4() {}
 	AlignedVector4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
+
+	float operator[](char axis)
+	{
+		return ((float*)&x)[axis];
+	}
 };
 
 template <typename T_Data> class hkArray
@@ -994,19 +999,19 @@ public:
 	bhkCharacterListener	chrListener;		// 410
 
 	UInt32					unk480[4];			// 480
-	NiVector4				vector490;			// 490
-	NiVector4				vector4A0;			// 4A0
+	AlignedVector4			vector490;			// 490
+	AlignedVector4			vector4A0;			// 4A0
 	float					flt4B0;				// 4B0
 	UInt32					unk4B4[5];			// 4B4
 	float					unk4C8[2];			// 4C8
-	NiVector4				vector4D0;			// 4D0
+	AlignedVector4			vector4D0;			// 4D0
 	float					unk4E0;				// 4E0
 	float					unk4E4;				// 4E4
 	float					timeDelta;			// 4E8
 	float					unk4EC;				// 4EC
-	NiVector4				velocity;			// 4F0
-	NiVector4				throwbackVelocity;	// 500
-	NiVector4				vector510;			// 510
+	AlignedVector4			velocity;			// 4F0
+	AlignedVector4			throwbackVelocity;	// 500
+	AlignedVector4			vector510;			// 510
 	UInt32					unk520;				// 520
 	float					throwbackTimer;		// 524
 	float					flt528;				// 528
@@ -1027,7 +1032,7 @@ public:
 	float					flt564;				// 564	ControllerShape total length (z)
 	float					flt568;				// 568
 	float					flt56C;				// 56C
-	NiVector4				vector570;			// 570
+	AlignedVector4			vector570;			// 570
 	float					flt580;				// 580
 	float					flt584;				// 584
 	float					flt588;				// 588
@@ -1051,7 +1056,7 @@ public:
 	UInt8					byte610;			// 610
 	UInt8					pad611[3];			// 611
 	UInt32					unk614[3];			// 614
-	NiVector4				vector620;			// 620
+	AlignedVector4			vector620;			// 620
 	void					*ptr630;			// 630
 	float					flt634;				// 634
 	void					*ptr638;			// 638
@@ -1177,16 +1182,16 @@ public:
 	UInt16			word00A;		// 00A
 	UInt16			word00C;		// 00C
 	UInt8			pad00E[2];		// 00E
-	NiVector4		vector010;		// 010
-	NiVector4		vector020;		// 020
-	NiVector4		vector030;		// 030
-	NiVector4		vector040;		// 040
-	NiVector4		vector050;		// 050
-	NiVector4		vector060;		// 060
-	NiVector4		quaternion070;	// 070
-	NiVector4		quaternion080;	// 080
-	NiVector4		vector090;		// 090
-	NiVector4		vector0A0;		// 0A0
+	AlignedVector4	vector010;		// 010
+	AlignedVector4	vector020;		// 020
+	AlignedVector4	vector030;		// 030
+	AlignedVector4	vector040;		// 040
+	AlignedVector4	vector050;		// 050
+	AlignedVector4	vector060;		// 060
+	AlignedVector4	quaternion070;	// 070
+	AlignedVector4	quaternion080;	// 080
+	AlignedVector4	vector090;		// 090
+	AlignedVector4	vector0A0;		// 0A0
 	float			flt0B0;			// 0B0
 	float			linDamping;		// 0B4
 	float			angDamping;		// 0B8
@@ -1198,10 +1203,10 @@ public:
 	float			inertiaY;		// 0C4
 	float			inertiaZ;		// 0C8
 	float			bodyMass;		// 0CC
-	NiVector4		linVelocity;	// 0D0
-	NiVector4		angVelocity;	// 0E0
-	NiVector4		vector0F0;		// 0F0
-	NiVector4		vector100;		// 100
+	AlignedVector4	linVelocity;	// 0D0
+	AlignedVector4	angVelocity;	// 0E0
+	AlignedVector4	vector0F0;		// 0F0
+	AlignedVector4	vector100;		// 100
 	UInt32			unk110[12];		// 110
 
 	__forceinline float GetBodyMass()

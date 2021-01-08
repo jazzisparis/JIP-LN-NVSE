@@ -78,10 +78,7 @@ __declspec(naked) bool DIHookControl::IsKeyPressed(UInt32 keycode, UInt8 flags)
 	{
 		mov		eax, [esp+4]
 		cmp		eax, kMaxMacros
-		jb		proceed
-		xor		al, al
-		retn	8
-	proceed:
+		jnb		retnFalse
 		mov		dl, [esp+8]
 		test	dl, dl
 		jnz		doneFlag
@@ -96,6 +93,9 @@ __declspec(naked) bool DIHookControl::IsKeyPressed(UInt32 keycode, UInt8 flags)
 		or		al, [ecx+1]
 		test	al, dl
 		setnz	al
+		retn	8
+	retnFalse:
+		xor		al, al
 		retn	8
 	}
 }

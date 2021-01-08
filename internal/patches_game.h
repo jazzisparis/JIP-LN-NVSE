@@ -1,33 +1,24 @@
 #pragma once
 
-__declspec(naked) void SetTypeIDHook()
+__declspec(naked) void InitTopicInfoHook()
 {
 	__asm
 	{
-		movzx	eax, [esp+4]
-		mov		[ecx+4], eax
-		cmp		al, kFormType_Character
-		jz		isActor
-		cmp		al, kFormType_Creature
-		jnz		done
-	isActor:
-		mov		dword ptr [ecx+0x104], 0
-	done:
-		retn	4
+		xor		edx, edx
+		mov		[ecx], edx
+		mov		[ecx+4], edx
+		mov		[ecx+0x38], edx
+		retn
 	}
 }
 
-__declspec(naked) void TESGlobalLoadFormHook()
+__declspec(naked) void LoadTopicInfoHook()
 {
 	__asm
 	{
-		test	dword ptr [ecx+8], 0x40
-		jz		contRetn
-		JMP_EAX(0x5A65BD)
-	contRetn:
-		mov		[ebp-0x10], ecx
-		mov		ecx, [ebp+8]
-		JMP_EAX(0x5A64C6)
+		mov		eax, [esp+8]
+		mov		[eax+0x50], ecx
+		JMP_EAX(0x619820)
 	}
 }
 
@@ -73,12 +64,12 @@ __declspec(naked) void DoQueuedPlayerHook()
 		mov		[eax+8], edx
 		lea		ecx, [esi+0xD74]
 		pxor	xmm0, xmm0
-		movdqu	xmmword ptr [ecx], xmm0
-		movdqu	xmmword ptr [ecx+0x10], xmm0
-		movdqu	xmmword ptr [ecx+0x20], xmm0
-		movdqu	xmmword ptr [ecx+0x30], xmm0
-		movdqu	xmmword ptr [ecx+0x40], xmm0
-		movdqu	xmmword ptr [ecx+0x50], xmm0
+		movups	[ecx], xmm0
+		movups	[ecx+0x10], xmm0
+		movups	[ecx+0x20], xmm0
+		movups	[ecx+0x30], xmm0
+		movups	[ecx+0x40], xmm0
+		movups	[ecx+0x50], xmm0
 		pop		ecx
 		CALL_EAX(0x440BA0)
 		mov		ecx, esi
@@ -101,6 +92,20 @@ __declspec(naked) void DoQueuedPlayerHook()
 		mov		s_queuedPlayerLock, 0
 		pop		esi
 		retn
+	}
+}
+
+__declspec(naked) void TESGlobalLoadFormHook()
+{
+	__asm
+	{
+		test	dword ptr [ecx+8], 0x40
+		jz		contRetn
+		JMP_EAX(0x5A65BD)
+	contRetn:
+		mov		[ebp-0x10], ecx
+		mov		ecx, [ebp+8]
+		JMP_EAX(0x5A64C6)
 	}
 }
 
@@ -426,14 +431,14 @@ __declspec(naked) void BarterSellFixHook()
 
 __declspec(naked) void JumpHeightFixHook()
 {
-	static const float toMetric = 7;
+	static const UInt32 kFlt7 = 0x40E00000;
 	__asm
 	{
 		add		esp, 8
 		mov		dword ptr [esi+0x3F0], 2
 		mov		dword ptr [esi+0x520], 0xB
 		movss	xmm0, [esi+0x540]
-		mulss	xmm0, toMetric
+		mulss	xmm0, kFlt7
 		addss	xmm0, [esp+0x28]
 		movss	[esi+0x544], xmm0
 		JMP_EAX(0xCD4486)
@@ -782,10 +787,7 @@ __declspec(naked) UInt8 __fastcall GetEntryDataModFlagsHook(ContChangesEntry *en
 	{
 		mov		eax, [ecx+8]
 		cmp		byte ptr [eax+4], kFormType_TESObjectWEAP
-		jz		proceed
-		xor		al, al
-		retn
-	proceed:
+		jnz		retn0
 		mov		eax, [ecx]
 		test	eax, eax
 		jz		done
@@ -810,6 +812,9 @@ __declspec(naked) UInt8 __fastcall GetEntryDataModFlagsHook(ContChangesEntry *en
 		jz		done
 		mov		al, [eax+0xC]
 	done:
+		retn
+	retn0:
+		xor		al, al
 		retn
 	}
 }
@@ -1105,6 +1110,44 @@ __declspec(naked) bool __fastcall GetEffectHiddenHook(EffectItem *effItem)
 	}
 }
 
+__declspec(naked) void QueuedRefStopFadeInHook()
+{
+	__asm
+	{
+		lea		edx, [eax+0xA4]
+		lock dec dword ptr [edx]
+		jns		doneSmph1
+		mov		dword ptr [edx], 0
+	doneSmph1:
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x100]
+		test	al, al
+		jnz		doneSmph2
+		sub		edx, 4
+		lock dec dword ptr [edx]
+		jns		doneSmph2
+		mov		dword ptr [edx], 0
+	doneSmph2:
+		test	byte ptr [ecx+0x61], 1
+		jz		done
+		xor		byte ptr [ecx+0x61], 1
+		mov		eax, [ebp-0x18]
+		mov		ecx, [eax+0x34]
+		test	ecx, ecx
+		jz		done
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x10]
+		test	eax, eax
+		jz		done
+		mov		edx, 0x3F800000
+		mov		[eax+0xB4], edx
+		mov		[eax+0xB8], edx
+		or		dword ptr [eax+0x30], 0x4000
+	done:
+		retn
+	}
+}
+
 __declspec(naked) void ProcessGradualSetFloatHook()
 {
 	__asm
@@ -1371,7 +1414,7 @@ Actor* __fastcall GetNearestLivingAlly(Actor *actor)
 		ally = *iter;
 		if (!ally || (ally == actor) || ally->GetDead() || ThisCall<bool>(0x8A67F0, ally))
 			continue;
-		distance = GetAxisDistance(actor, ally, 7);
+		distance = GetDistance3D(actor, ally);
 		if (distance > minDistance)
 			continue;
 		minDistance = distance;
@@ -1971,27 +2014,6 @@ __declspec(naked) void ResetActorFlagsRespawnHook()
 	}
 }
 
-__declspec(naked) void WaterToLandClipHook()
-{
-	__asm
-	{
-		mov		eax, [ebp-0x10]
-		mov		eax, [eax+0x28]
-		test	eax, eax
-		jz		noData
-		movss	xmm0, [eax+0xA0]
-		subss	xmm0, kFltOne
-		mov		al, 1
-		jmp		done
-	noData:
-		xorps	xmm0, xmm0
-	done:
-		movss	[ebp-0x20], xmm0
-		mov		[ebp-0x31], al
-		JMP_EAX(0x49CA94)
-	}
-}
-
 bool s_localizedDTDR = false;
 UInt32 s_doCalcDamage = 0;
 
@@ -2386,20 +2408,63 @@ __declspec(naked) bool PlayerCannotBeHitHook()
 	}
 }
 
+UInt8 s_disableHitEffects = 0;
+
 __declspec(naked) TESImageSpaceModifier *GetHitIMODHook()
 {
 	__asm
 	{
 		cmp		byte ptr ds:[0x118ABB1], 0
 		jz		retnNULL
-		call	PlayerCannotBeHitHook
-		test	al, al
+		cmp		s_disableHitEffects, 0
 		jnz		retnNULL
 		mov		eax, g_getHitIMOD
 		retn
 	retnNULL:
 		xor		eax, eax
 		retn
+	}
+}
+
+__declspec(naked) TESImageSpaceModifier *GetExplosionInFaceIMODHook()
+{
+	__asm
+	{
+		cmp		s_disableHitEffects, 0
+		jnz		retnNULL
+		mov		eax, g_explosionInFaceIMOD
+		retn
+	retnNULL:
+		xor		eax, eax
+		retn
+	}
+}
+
+__declspec(naked) void ExplosionScreenShakeHook()
+{
+	__asm
+	{
+		cmp		s_disableHitEffects, 0
+		jnz		skipShake
+		mov		edx, [eax+0x1F4]
+		JMP_EAX(0x9AD2CB)
+	skipShake:
+		JMP_EAX(0x9AD2FE)
+	}
+}
+
+bool s_noMovementCombat = false;
+
+__declspec(naked) bool __fastcall GetControlFlagHook(PlayerCharacter *thePlayer, int EDX, UInt32 flag)
+{
+	__asm
+	{
+		cmp		s_noMovementCombat, 1
+		jz		done
+		test	byte ptr [ecx+0x680], 1
+	done:
+		setnz	al
+		retn	4
 	}
 }
 
@@ -2728,8 +2793,8 @@ __declspec(naked) void InitControllerShapeHook()
 		xorps	xmm1, xmm1
 		movss	xmm2, kFltSix
 	iter1Head:
-		movdqu	xmm0, xmmword ptr [ecx]
-		movdqa	xmmword ptr [eax], xmm0
+		movups	xmm0, [ecx]
+		movaps	[eax], xmm0
 		mov		dh, 4
 	iter2Head:
 		movss	xmm0, [eax]
@@ -2790,32 +2855,22 @@ __declspec(naked) bool __fastcall SneakBoundingBoxFixHook(PlayerCharacter *thePl
 		test	eax, eax
 		cmovz	edx, eax
 		add		edx, offset s_shapeVerticesZ
-		movdqa	xmm0, xmmword ptr [edx]
-		movdqu	xmmword ptr [ecx+0x20], xmm0
-		movdqa	xmm0, xmmword ptr [edx+0x10]
-		movdqu	xmmword ptr [ecx+0x50], xmm0
-		movdqa	xmm0, xmmword ptr [edx+0x20]
-		movdqu	xmmword ptr [ecx+0x80], xmm0
-		movdqa	xmm0, xmmword ptr [edx+0x30]
-		movdqu	xmmword ptr [ecx+0xB0], xmm0
-		movdqa	xmm0, xmmword ptr [edx+0x40]
-		movdqu	xmmword ptr [ecx+0xE0], xmm0
+		movaps	xmm0, [edx]
+		movups	[ecx+0x20], xmm0
+		movaps	xmm0, [edx+0x10]
+		movups	[ecx+0x50], xmm0
+		movaps	xmm0, [edx+0x20]
+		movups	[ecx+0x80], xmm0
+		movaps	xmm0, [edx+0x30]
+		movups	[ecx+0xB0], xmm0
+		movaps	xmm0, [edx+0x40]
+		movups	[ecx+0xE0], xmm0
 	done:
 		retn
 	}
 }
 
 bool s_NVACLogUpdated = false;
-
-__declspec(naked) void NVACLogUpdateHook()
-{
-	__asm
-	{
-		mov		s_NVACLogUpdated, 1
-		retn	8
-	}
-}
-
 UInt32 s_lastNVACLogSize = 0;
 
 void CheckNVACLog()
@@ -2854,19 +2909,19 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		cvtss2sd	xmm0, [eax+0x24]
 		cmp		byte ptr [ecx+0x1C], 0
 		jnz		doRecalc
-		movq	xmm1, xmm0
+		movapd	xmm1, xmm0
 		movq	xmm3, gameHour
 		subsd	xmm1, xmm3
 		comisd	xmm1, kDbl0dot1
 		ja		doRecalc
-		movq	xmm0, xmm3
+		movapd	xmm0, xmm3
 		movq	xmm1, daysPassed
 		jmp		proceed
 	doRecalc:
 		mov		[ecx+0x1C], 0
 		mov		edx, g_thePlayer
 		mov		[edx+0xE39], 1
-		movq	xmm1, xmm0
+		movapd	xmm1, xmm0
 		divsd	xmm1, xmm4
 		mov		eax, [ecx+0x10]
 		cvttss2si	edx, [eax+0x24]
@@ -3071,7 +3126,7 @@ __declspec(naked) void DoOperator()
 		imul	eax, ecx
 		OPERATOR_RES_EAX
 //	Operator / (flt)
-		comisd	xmm1, kDblZero
+		cmp		dword ptr [ebp-0x34], 0
 		jz		div0Flt
 		divsd	xmm0, xmm1
 	div0Flt:
@@ -3295,7 +3350,11 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			patchAddr += 0x10;
 			if (bEnable)
 			{
-				WriteRelJump(patchAddr, (UInt32)NVACLogUpdateHook);
+				UInt8 buffer[10];
+				*(UInt16*)buffer = 0x5C6;
+				*(UInt32*)(buffer + 2) = (UInt32)&s_NVACLogUpdated;
+				*(UInt32*)(buffer + 6) = 0x8C201;
+				SafeWriteBuf(patchAddr, buffer, sizeof(buffer));
 				MainLoopAddCallbackEx(CheckNVACLog, NULL, 0, 60);
 				s_NVACLogUpdated = true;
 			}
@@ -3632,6 +3691,13 @@ void InitGamePatches()
 	//	ScriptRunner::Run skip Script::GetName calls
 	SafeWrite16(0x5E0DD1, 0x39EB);
 
+	//	Store parent TESTopic for every TESTopicInfo
+	SafeWrite8(0x468CE7, 0x54);
+	WriteRelCall(0x61CD16, (UInt32)InitTopicInfoHook);
+	WriteRelCall(0x61E086, (UInt32)LoadTopicInfoHook);
+	SafeWriteBuf(0x61A310, "\x8B\x44\x24\x04\x8B\x40\x50\xC3", 8);
+	SafeWriteBuf(0x61D041, "\x8B\x42\x50\x66\x0F\x1F\x44\x00\x00", 9);
+
 	SafeWrite16(0x94E5F6, 0x18EB);
 	SafeWrite32(0x1016DB8, (UInt32)DoQueuedPlayerHook);
 	SafeWrite32(0x104A1B8, (UInt32)GetNPCModelHook);
@@ -3641,7 +3707,7 @@ void InitGamePatches()
 	SafeWrite32(0x9ED3F8, (UInt32)&s_moveAwayDistance);
 	SafeWrite32(0x9ED528, (UInt32)&s_moveAwayDistance);
 
-	WriteRelJump(0x4F15A0, (UInt32)SetTypeIDHook);
+	SafeWriteBuf(0x4F15A0, "\x0F\xB6\x44\x24\x04\x89\x41\x04\x3C\x3B\x74\x07\x3C\x3C\x74\x03\xC2\x04\x00\x31\xD2\x89\x91\x04\x01\x00\x00\xC2\x04\x00", 30);
 	WriteRelJump(0x5A64C0, (UInt32)TESGlobalLoadFormHook);
 	WriteRelCall(0x8A0DAB, (UInt32)DetectionTeammateHook);
 	WriteRelCall(0x8A1291, (UInt32)DetectionTeammateHook);
@@ -3688,6 +3754,7 @@ void InitGamePatches()
 	WritePushRetRelJump(0x5ADDB2, 0x5ADDE3, (UInt32)ExtractStringHook);
 	WriteRelCall(0x48E761, (UInt32)GetIconPathForItemHook);
 	WriteRelCall(0x406720, (UInt32)GetEffectHiddenHook);
+	WritePushRetRelJump(0x440D0D, 0x440D43, (UInt32)QueuedRefStopFadeInHook);
 	SafeWrite8(0xA081A8, 5);
 	SafeWrite32(0xA08718, (UInt32)ProcessGradualSetFloatHook);
 	WritePushRetRelJump(0x454576, 0x454580, (UInt32)CloudsFixHook);
@@ -3700,7 +3767,6 @@ void InitGamePatches()
 	WriteRelCall(0x72880D, (UInt32)IsDisposableWeaponHook);
 	WriteRelJump(0x984156, (UInt32)DeathResponseFixHook);
 	SafeWriteBuf(0x9EE367, "\x8B\x8A\xB0\x00\x00\x00\x83\xB9\x08\x01\x00\x00\x02\x0F\x84\x82\x00\x00\x00\xEB\x41", 21);
-	WriteRelJump(0x867E30, (UInt32)GetHoursPassed);
 	SafeWrite16(0x54E421, 0x1EEB);
 	WritePushRetRelJump(0x54E4E1, 0x54E5E6, (UInt32)ClearAshPilesHook);
 	WritePushRetRelJump(0x82D8CA, 0x82D8F4, (UInt32)SetAcousticSpaceFixHook);
@@ -3719,6 +3785,9 @@ void InitGamePatches()
 	WriteRelCall(0x7ECE32, (UInt32)GetVATSTargetDTHook);
 	SafeWrite32(0x108A9B4, (UInt32)PlayerCannotBeHitHook);
 	WriteRelJump(0x5D2860, (UInt32)GetHitIMODHook);
+	WriteRelCall(0x9ACEC6, (UInt32)GetExplosionInFaceIMODHook);
+	WriteRelJump(0x9AD2C5, (UInt32)ExplosionScreenShakeHook);
+	WriteRelCall(0x8A04B2, (UInt32)GetControlFlagHook);
 
 	HOOK_INIT_JUMP(CalculateHitDamage, 0x9B5A30);
 	HOOK_INIT_JPRT(EnableRepairButton, 0x7818C8, 0x7818D3);
@@ -3832,7 +3901,6 @@ void InitGamePatches()
 
 typedef int (*_ReloadENB)(UInt32 type, void *data);
 _ReloadENB ReloadENB = NULL;
-UInt8 s_miniMapIndex = 0xFF;
 
 void DeferredInit()
 {
@@ -3856,6 +3924,7 @@ void DeferredInit()
 	g_terminalModelDefault = *g_terminalModelPtr;
 	g_capsItem = (TESObjectMISC*)LookupFormByRefID(0xF);
 	g_getHitIMOD = (TESImageSpaceModifier*)LookupFormByRefID(0x162);
+	g_explosionInFaceIMOD = (TESImageSpaceModifier*)LookupFormByRefID(0x166);
 	g_fistsWeapon = *(TESObjectWEAP**)0x11CA278;
 	g_ashPileACTI = *(TESObjectACTI**)0x11CA27C;
 	g_gooPileACTI = *(TESObjectACTI**)0x11CA280;
@@ -3891,10 +3960,6 @@ void DeferredInit()
 
 	(*g_BSWin32Audio)->PickSoundFileFromFolder = PickSoundFileFromFolderHook;
 
-	s_miniMapIndex = g_dataHandler->GetModIndex("JIP MiniMap.esp");
-	if (s_miniMapIndex != 0xFF)
-		WriteRelJump(0x49CA5A, (UInt32)WaterToLandClipHook);
-
 	GetModuleFileName(GetModuleHandle(NULL), s_strArgBuffer, MAX_PATH);
 	char *delim = SlashPosR(s_strArgBuffer) + 1;
 	memcpy(delim, "d3d9.dll", 9);
@@ -3926,7 +3991,7 @@ void DeferredInit()
 		FILE *nvacLog = _fsopen("nvac.log", "ab", 0x20);
 		if (nvacLog)
 		{
-			fprintf(nvacLog, "JIP LN version: %.2f\tBase address: %08X\n", JIP_LN_VERSION, (UInt32)GetModuleHandle("jip_nvse"));
+			fprintf(nvacLog, "NVSE version: %.2f\tJIP LN version: %.2f\tBase address: %08X\n", s_nvseVersion, JIP_LN_VERSION, (UInt32)GetModuleHandle("jip_nvse"));
 			fclose(nvacLog);
 		}
 	}

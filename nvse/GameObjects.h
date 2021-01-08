@@ -1,21 +1,10 @@
 #pragma once
 
-static const UInt32 s_TESObject_REFR_init = 0x55A2F0;			// TESObject_REFR initialization routine (first reference to s_TESObject_REFR_vtbl)
-static const UInt32	s_Actor_EquipItem = 0x88C650;				// maybe, also, would be: 007198E0 for FOSE	4th call from the end of TESObjectREFR::RemoveItem (func5F)
-static const UInt32	s_Actor_UnequipItem = 0x88C790;				// maybe, also, would be: 007133E0 for FOSE next sub after EquipItem
-static const UInt32 s_TESObjectREFR__GetContainer = 0x55D310;	// First call in REFR::RemoveItem
-static const UInt32 s_TESObjectREFR_Set3D = 0x5702E0;			// void : (const char*)
-
-const UInt32 kUpdateAppearanceAddr = 0x8D3FA0;
-
 // 68
 class TESObjectREFR : public TESForm
 {
 public:
 	MEMBER_FN_PREFIX(TESObjectREFR);
-
-	TESObjectREFR();
-	~TESObjectREFR();
 
 	virtual void		Unk_4E(void);	// GetStartingPosition(Position, Rotation, WorldOrCell)
 	virtual void		Unk_4F(void);
@@ -158,10 +147,11 @@ public:
 	bool GetInventoryItems(UInt8 typeID);
 	TESObjectCELL *GetParentCell();
 	TESWorldSpace *GetParentWorld();
-	float GetDistance(TESObjectREFR *target);
-	void SetPos(NiVector3 &posVector);
-	void SetAngle(NiVector3 &rotVector);
-	bool MoveToCell(TESForm *worldOrCell, NiVector3 &posVector);
+	bool __fastcall GetInSameCellOrWorld(TESObjectREFR *target);
+	float __vectorcall GetDistance(TESObjectREFR *target);
+	void SetPos(NiVector3 *posVector);
+	void SetAngle(NiVector3 *rotVector);
+	bool MoveToCell(TESForm *worldOrCell, NiVector3 *posVector);
 	bool Disable();
 	void DeleteReference();
 	bhkCharacterController *GetCharacterController();
@@ -189,9 +179,6 @@ STATIC_ASSERT(sizeof(TESObjectREFR) == 0x068);
 class MobileObject : public TESObjectREFR
 {
 public:
-	MobileObject();
-	~MobileObject();
-
 	virtual void		Unk_91(void);
 	virtual void		Unk_92(void);
 	virtual void		Unk_93(void);
@@ -267,9 +254,6 @@ typedef tList<ActiveEffect> ActiveEffectList;
 class MagicCaster
 {
 public:
-	MagicCaster();
-	~MagicCaster();
-
 	virtual void	Unk_00(void);
 	virtual void	Unk_01(void);
 	virtual void	Unk_02(void);
@@ -299,9 +283,6 @@ STATIC_ASSERT(sizeof(MagicCaster) == 0xC);
 class MagicTarget
 {
 public:
-	MagicTarget();
-	~MagicTarget();
-
 	virtual bool	ApplyEffect(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect, bool arg4);
 	virtual Actor	*GetActor(void);
 	virtual ActiveEffectList	*GetEffectList(void);
@@ -341,9 +322,6 @@ public:
 class ActorMover
 {
 public:
-	ActorMover();
-	~ActorMover();
-
 	virtual void		Unk_00(void);
 	virtual void		Unk_01(void);
 	virtual void		ClearMovementFlag(void);
@@ -393,9 +371,6 @@ public:
 class PlayerMover : public ActorMover
 {
 public:
-	PlayerMover();
-	~PlayerMover();
-
 	float			flt88;				// 88
 	float			flt8C;				// 8C
 	float			flt90;				// 90
@@ -409,9 +384,6 @@ typedef ActiveEffect *(*ActiveEffectCreate)(MagicCaster *magCaster, MagicItem *m
 class Actor : public MobileObject
 {
 public:
-	Actor();
-	~Actor();
-
 	virtual void		Unk_C1(void);
 	virtual void		Unk_C2(void);
 	virtual void		Unk_C3(void);
@@ -695,7 +667,6 @@ public:
 	BackUpPackage *AddBackUpPackage(TESObjectREFR *targetRef, TESObjectCELL *targetCell, UInt32 flags);
 	void __fastcall TurnToFaceObject(TESObjectREFR *target);
 	void TurnAngle(float angle);
-	Actor *HandleSetAnimSequence(SInt32 animAction, BSAnimGroupSequence *animGroupSeq);
 	void PlayIdle(TESIdleForm *idleAnim);
 	UInt32 GetLevel();
 	float GetKillXP();
@@ -712,9 +683,6 @@ public:
 class Creature : public Actor
 {
 public:
-	Creature();
-	~Creature();
-
 	virtual void	Unk_137(void);
 
 	UInt8			byte1B4;			// 1B4
@@ -726,9 +694,6 @@ public:
 class Character : public Actor
 {
 public:
-	Character();
-	~Character();
-
 	virtual void	Unk_137(void);
 	virtual void	Unk_138(void);
 
@@ -757,9 +722,6 @@ struct PerkRank
 class PlayerCharacter : public Character
 {
 public:
-	PlayerCharacter();
-	~PlayerCharacter();
-
 	// used to flag controls as disabled in disabledControlFlags
 	enum
 	{

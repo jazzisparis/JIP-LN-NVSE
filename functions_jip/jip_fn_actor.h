@@ -128,6 +128,8 @@ DEFINE_CMD_ALT_COND_PLUGIN(GetGroundMaterial, , , 1, NULL);
 DEFINE_COMMAND_PLUGIN(FireWeaponEx, , 1, 2, kParams_JIP_OneObjectID_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetActorGravityMult, , 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(SetActorGravityMult, , 1, 1, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(SetTeammateKillable, , 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(SetNoGunWobble, , 1, 1, kParams_OneInt);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -913,7 +915,9 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS)
 	TESForm *actorOrList;
 	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &actorOrList, &animID) || NOT_TYPE(script, Script))
 		return true;
-	ActorAnimEventCallbacks &eventMap = (s_onAnimEventFlag == kHookActorFlag3_OnAnimAction) ? s_animActionEventMap : s_playGroupEventMap;
+	UInt8 flag = s_onAnimEventFlag;
+	ActorAnimEventCallbacks &eventMap = (flag == kHookActorFlag3_OnAnimAction) ? s_animActionEventMap : s_playGroupEventMap;
+	UInt32 hookIdx = (flag == kHookActorFlag3_OnAnimAction) ? kHook_SetAnimAction : kHook_SetAnimGroup;
 	ListNode<TESForm> *iter;
 	if IS_TYPE(actorOrList, BGSListForm)
 		iter = ((BGSListForm*)actorOrList)->list.Head();
@@ -923,7 +927,7 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS)
 		iter = &tempList;
 	}
 	Actor *actor;
-	AnimGroupScripsMap *scriptsMap;
+	AnimEventCallbacks *scriptsMap;
 	do
 	{
 		if (!(actor = (Actor*)iter->data)) continue;
@@ -931,9 +935,9 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS)
 		{
 			if (!actor->IsActor()) continue;
 			if (eventMap.Insert(actor, &scriptsMap))
-				HOOK_MOD(SetAnimSequence, true);
+				s_hookInfos[hookIdx].ModUsers(true);
 			if ((*scriptsMap)[animID].Insert(script))
-				actor->jipActorFlags3 |= s_onAnimEventFlag;
+				actor->jipActorFlags3 |= flag;
 		}
 		else
 		{
@@ -942,12 +946,12 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS)
 			auto findAnim = findActor().Find(animID);
 			if (!findAnim || !findAnim().Erase(script)) continue;
 			if (actor->IsActor())
-				actor->jipActorFlags3 &= ~s_onAnimEventFlag;
+				actor->jipActorFlags3 &= ~flag;
 			if (!findAnim().Empty()) continue;
 			findAnim.Remove();
 			if (!findActor().Empty()) continue;
 			findActor.Remove();
-			HOOK_MOD(SetAnimSequence, false);
+			s_hookInfos[hookIdx].ModUsers(false);
 		}
 	}
 	while (iter = iter->next);
@@ -1227,7 +1231,7 @@ bool Cmd_GetActorVelocity_Execute(COMMAND_ARGS)
 		if (charCtrl)
 		{
 			if (axis) *result = charCtrl->velocity[axis - 'X'];
-			else *result = Vector3Length((NiVector3*)&charCtrl->velocity);
+			else *result = Vector3Length(&charCtrl->velocity);
 		}
 	}
 	return true;
@@ -2340,6 +2344,28 @@ bool Cmd_SetActorGravityMult_Execute(COMMAND_ARGS)
 	{
 		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 		if (charCtrl) charCtrl->gravityMult = gravityMult;
+	}
+	return true;
+}
+
+bool Cmd_SetTeammateKillable_Execute(COMMAND_ARGS)
+{
+	UInt32 doSet;
+	if (ExtractArgs(EXTRACT_ARGS, &doSet) && thisObj->IsActor())
+	{
+		if (doSet) ((Actor*)thisObj)->jipActorFlags2 |= kHookActorFlag2_TeammateKillable;
+		else ((Actor*)thisObj)->jipActorFlags2 &= ~kHookActorFlag2_TeammateKillable;
+	}
+	return true;
+}
+
+bool Cmd_SetNoGunWobble_Execute(COMMAND_ARGS)
+{
+	UInt32 doSet;
+	if (ExtractArgs(EXTRACT_ARGS, &doSet) && thisObj->IsActor())
+	{
+		if (doSet) ((Actor*)thisObj)->jipActorFlags2 |= kHookActorFlag2_NoGunWobble;
+		else ((Actor*)thisObj)->jipActorFlags2 &= ~kHookActorFlag2_NoGunWobble;
 	}
 	return true;
 }

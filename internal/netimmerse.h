@@ -447,7 +447,7 @@ public:
 	UInt32				unk18;			// 18
 	float				specularRGB[3];	// 1C
 	float				emissiveRGB[3];	// 28
-	UInt32				unk34;			// 34
+	UInt32				isExternalEmit;	// 34
 	float				glossiness;		// 38
 	float				alpha;			// 3C
 	float				emitMult;		// 40
@@ -830,7 +830,7 @@ public:
 	float			farDistSqr;		// B0
 	float			lastFade;		// B4
 	float			currentFade;	// B8	[0.0, 1.0]; Used for fade-in/out
-	float			fltBC;			// BC
+	float			boundRadius;	// BC
 	float			timeSinceUpdate;// C0
 	UInt32			fadeType;		// C4
 	UInt32			frameCounter;	// C8
@@ -1076,9 +1076,8 @@ class TESAnimGroup : public NiRefObject
 {
 public:
 	UInt32			unk08[2];	// 08
-	UInt8			index;		// 10
-	UInt8			unk11;		// 11
-	UInt8			unk12[1];	// 12
+	UInt8			groupIndex;	// 10
+	UInt8			pad11[3];	// 11
 	UInt32			unk14[10];	// 14
 };
 
@@ -1535,11 +1534,11 @@ struct NiTriangle
 };
 
 // 54
-class RendererData		//	010F017C
+class NiGeometryBufferData		//	010F017C
 {
 public:
-	virtual RendererData	*Destructor(bool doFree);
-	virtual bool			Unk_01(UInt32 arg1);
+	virtual void	Destructor(bool doFree);
+	virtual bool	Unk_01(UInt32 arg1);
 
 	UInt32						flags;			// 04
 	NiUnsharedGeometryGroup		*unsharedGeom;	// 08
@@ -1562,7 +1561,7 @@ public:
 	UInt32						unk4C;			// 4C
 	NiTriangle					*triangles;		// 50	Same ptr as in NiTriShapeData
 };
-STATIC_ASSERT(sizeof(RendererData) == 0x54);
+STATIC_ASSERT(sizeof(NiGeometryBufferData) == 0x54);
 
 // 40
 class NiGeometryData : public NiObject
@@ -1575,22 +1574,22 @@ public:
 	virtual bool	Unk_27(UInt32 arg);
 	virtual void	Unk_28(void);
 
-	UInt16			numVertices;	// 08
-	UInt16			word0A;			// 0A
-	UInt16			word0C;			// 0C
-	UInt16			word0E;			// 0E
-	NiSphere		bounds;			// 10
-	NiVector3		*vertices;		// 20
-	NiVector3		*normals;		// 24
-	NiColorAlpha	*vertexColors;	// 28
-	UVCoord			*uvCoords;		// 2C
-	UInt32			unk30;			// 30
-	RendererData	*rendererData;	// 34
-	UInt8			byte38;			// 38
-	UInt8			byte39;			// 39
-	UInt8			byte3A;			// 3A
-	UInt8			byte3B;			// 3B
-	UInt32			unk3C;			// 3C
+	UInt16					numVertices;	// 08
+	UInt16					word0A;			// 0A
+	UInt16					word0C;			// 0C
+	UInt16					word0E;			// 0E
+	NiSphere				bounds;			// 10
+	NiVector3				*vertices;		// 20
+	NiVector3				*normals;		// 24
+	NiColorAlpha			*vertexColors;	// 28
+	UVCoord					*uvCoords;		// 2C
+	UInt32					unk30;			// 30
+	NiGeometryBufferData	*bufferData;	// 34
+	UInt8					byte38;			// 38
+	UInt8					byte39;			// 39
+	UInt8					byte3A;			// 3A
+	UInt8					byte3B;			// 3B
+	UInt32					unk3C;			// 3C
 };
 STATIC_ASSERT(sizeof(NiGeometryData) == 0x40);
 

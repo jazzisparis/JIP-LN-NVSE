@@ -151,7 +151,7 @@ bool Cmd_CopyFaceGenFrom_Execute(COMMAND_ARGS)
 			aprUndo.Remove();
 		}
 		*(bool*)0x11D5AE0 = true;
-		ThisCall(kUpdateAppearanceAddr, thisObj);
+		ThisCall(0x8D3FA0, thisObj);
 	}
 	return true;
 }

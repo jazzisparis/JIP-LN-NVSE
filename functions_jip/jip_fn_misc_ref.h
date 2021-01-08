@@ -253,7 +253,7 @@ bool Cmd_MoveToCell_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	NiVector3 posVector;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &posVector.x, &posVector.y, &posVector.z) && thisObj->MoveToCell(form, posVector))
+	if (ExtractArgs(EXTRACT_ARGS, &form, &posVector.x, &posVector.y, &posVector.z) && thisObj->MoveToCell(form, &posVector))
 		*result = 1;
 	else *result = 0;
 	return true;
@@ -265,13 +265,13 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 	if (thisObj->IsActor())
 	{
 		Actor *actor = (Actor*)thisObj;
-		if (actor->MoveToCell(actor->startingWorldOrCell, actor->startingPos)) *result = 1;
+		if (actor->MoveToCell(actor->startingWorldOrCell, &actor->startingPos)) *result = 1;
 		return true;
 	}
 	ExtraStartingPosition *xStartingPos = GetExtraType(&thisObj->extraDataList, StartingPosition);
 	if (!xStartingPos) return true;
 	ExtraStartingWorldOrCell *xStartingCell = GetExtraType(&thisObj->extraDataList, StartingWorldOrCell);
-	if (thisObj->MoveToCell(xStartingCell ? xStartingCell->worldOrCell : thisObj->GetParentCell(), xStartingPos->posVector))
+	if (thisObj->MoveToCell(xStartingCell ? xStartingCell->worldOrCell : thisObj->GetParentCell(), &xStartingPos->posVector))
 		*result = 1;
 	return true;
 }
@@ -683,7 +683,7 @@ bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 {
 	NiVector3 posVector;
 	if (ExtractArgs(EXTRACT_ARGS, &posVector.x, &posVector.y, &posVector.z))
-		thisObj->SetPos(posVector);
+		thisObj->SetPos(&posVector);
 	return true;
 }
 
@@ -703,7 +703,7 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 				coords.y += posYmod;
 				coords.z += posZmod;
 			}
-			*result = thisObj->MoveToCell(g_thePlayer->parentCell, coords);
+			*result = thisObj->MoveToCell(g_thePlayer->parentCell, &coords);
 		}
 	}
 	return true;
@@ -741,7 +741,7 @@ bool Cmd_SetAngleEx_Execute(COMMAND_ARGS)
 {
 	NiVector3 rotVector;
 	if (ExtractArgs(EXTRACT_ARGS, &rotVector.x, &rotVector.y, &rotVector.z))
-		thisObj->SetAngle(rotVector);
+		thisObj->SetAngle(&rotVector);
 	return true;
 }
 
@@ -825,11 +825,12 @@ bool Cmd_IsAnimPlayingEx_Execute(COMMAND_ARGS)
 		AnimData *animData = thisObj->GetAnimData();
 		if (animData)
 		{
-			for (BSAnimGroupSequence *sequence : animData->animSequence)
+			AnimGroupClassify *classify;
+			for (UInt16 groupID : animData->animGroupIDs)
 			{
-				if (!sequence) continue;
-				AnimGroupClassify &classify = s_animGroupClassify[sequence->animGroup->index];
-				if ((classify.category == category) && ((category >= 4) || ((!subType || (classify.subType == subType)) && (!flags || (classify.flags & flags)))))
+				if (groupID == 0xFF) continue;
+				classify = &s_animGroupClassify[groupID];
+				if ((classify->category == category) && ((category >= 4) || ((!subType || (classify->subType == subType)) && (!flags || (classify->flags & flags)))))
 				{
 					*result = 1;
 					break;
@@ -1035,7 +1036,7 @@ bool Cmd_GetObjectVelocity_Execute(COMMAND_ARGS)
 				{
 					float *velocity = (float*)&rigidBody->motion.linVelocity;
 					if (axis) *result = rigidBody->motion.linVelocity[axis - 'X'];
-					else *result = Vector3Length((NiVector3*)&rigidBody->motion.linVelocity);
+					else *result = Vector3Length(&rigidBody->motion.linVelocity);
 				}
 			}
 		}
@@ -1182,7 +1183,7 @@ bool Cmd_MoveToNode_Execute(COMMAND_ARGS)
 			posMods.x += targetNode->m_worldTranslate.x;
 			posMods.y += targetNode->m_worldTranslate.y;
 			posMods.z += targetNode->m_worldTranslate.z;
-			*result = thisObj->MoveToCell(targetRef->parentCell, posMods);
+			*result = thisObj->MoveToCell(targetRef->GetParentCell(), &posMods);
 		}
 	}
 	return true;
@@ -1513,17 +1514,28 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 	TESObjectREFR *targetRef = NULL;
 	UInt32 syncRot = 0;
 	s_syncPositionMods.z = 0;
-	s_syncPositionNode[0] = 0;
-	bool toggle = false;
-	if (ExtractArgs(EXTRACT_ARGS, &targetRef, &syncRot, &s_syncPositionMods.z, &s_syncPositionNode) && targetRef)
+	if (NUM_ARGS) s_syncPositionNode[0] = 0;
+	if (ExtractArgs(EXTRACT_ARGS, &targetRef, &syncRot, &s_syncPositionMods.z, &s_syncPositionNode))
 	{
-		s_syncPositionRef = targetRef;
-		s_syncPositionFlags = (syncRot != 0);
-		if (g_thePlayer->parentCell != targetRef->parentCell)
-			MoveToMarker(g_thePlayer, targetRef, 0, 0, 0);
-		toggle = true;
+		if (targetRef)
+		{
+			if (g_thePlayer->GetDistance(targetRef) > 1024.0F)
+				g_thePlayer->MoveToCell(targetRef->GetParentCell(), targetRef->PosVector());
+			s_syncPositionRef = targetRef;
+			s_syncPositionFlags = (syncRot != 0);
+			_mm_store_ps(&s_syncPositionPos.x, _mm_loadu_ps(&targetRef->posX));
+			HOOK_SET(SynchronizePosition, true);
+		}
+		else
+		{
+			HOOK_SET(SynchronizePosition, false);
+			if (targetRef = s_syncPositionRef)
+			{
+				s_syncPositionRef = NULL;
+				g_thePlayer->MoveToCell(targetRef->GetParentCell(), (NiVector3*)&s_syncPositionPos);
+			}
+		}
 	}
-	HOOK_SET(SynchronizePosition, toggle);
 	return true;
 }
 

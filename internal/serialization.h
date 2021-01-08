@@ -39,8 +39,6 @@ void DoLoadGameCleanup()
 	}
 	s_dataChangedFlags = 0;
 	s_serializedFlags = 0;
-	s_pcCurrCell = NULL;
-	s_pcRootWorld = NULL;
 
 	auto pcAprUndo = s_appearanceUndoMap.Find((TESNPC*)g_thePlayer->baseForm);
 	if (pcAprUndo)
@@ -540,7 +538,11 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 		case NVSEMessagingInterface::kMessage_PreLoadGame:
 			CleanMLCallbacks();
 			s_gameLoadFlagLN = true;
+			s_pcCurrCell0 = NULL;
+			s_pcCurrCell = NULL;
+			s_pcRootWorld = NULL;
 			HOOK_SET(SynchronizePosition, false);
+			s_syncPositionRef = NULL;
 			break;
 		case NVSEMessagingInterface::kMessage_ExitGame_Console:
 			JIPScriptRunner::RunScriptFiles('xg');

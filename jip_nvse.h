@@ -132,12 +132,14 @@ TESObjectACTI *g_ashPileACTI = NULL;
 TESObjectACTI *g_gooPileACTI = NULL;
 TESObjectMISC *g_capsItem = NULL;
 TESImageSpaceModifier *g_getHitIMOD = NULL;
+TESImageSpaceModifier *g_explosionInFaceIMOD = NULL;
 double *g_condDmgPenalty = NULL;
 double s_condDmgPenalty = 0.67;
 
 enum
 {
 	kAddr_AddExtraData =			0x40FF60,
+	kAddr_RemoveExtraType =			0x410140,
 	kAddr_GetExtraData =			0x410220,
 	kAddr_LoadModel =				0x447080,
 	kAddr_GetItemHealthPerc =		0x4BCDB0,
@@ -1157,76 +1159,96 @@ __declspec(naked) TESWorldSpace *TESObjectREFR::GetParentWorld()
 	}
 }
 
-__declspec(naked) float __fastcall GetAxisDistance(TESObjectREFR *ref1, TESObjectREFR *ref2, UInt8 axis)
+__declspec(naked) float __vectorcall GetDistance3D(TESObjectREFR *ref1, TESObjectREFR *ref2)
 {
 	__asm
 	{
-		xorps	xmm0, xmm0
-		mov		al, [esp+4]
-		test	al, 1
-		jz		doneX
-		movss	xmm0, [ecx+0x30]
-		subss	xmm0, [edx+0x30]
-		mulss	xmm0, xmm0
-	doneX:
-		test	al, 2
-		jz		doneY
-		movss	xmm1, [ecx+0x34]
-		subss	xmm1, [edx+0x34]
-		mulss	xmm1, xmm1
-		addss	xmm0, xmm1
-	doneY:
-		test	al, 4
-		jz		doneZ
-		movss	xmm1, [ecx+0x38]
-		subss	xmm1, [edx+0x38]
-		mulss	xmm1, xmm1
-		addss	xmm0, xmm1
-	doneZ:
-		sqrtss	xmm0, xmm0
-		movss	[esp+4], xmm0
-		fld		dword ptr [esp+4]
-		retn	4
+		movups	xmm0, [ecx+0x30]
+		movups	xmm1, [edx+0x30]
+		subps	xmm0, xmm1
+		mulps	xmm0, xmm0
+		movhlps	xmm1, xmm0
+		addss	xmm1, xmm0
+		psrlq	xmm0, 0x20
+		addss	xmm1, xmm0
+		sqrtss	xmm0, xmm1
+		retn
 	}
 }
 
-__declspec(naked) float TESObjectREFR::GetDistance(TESObjectREFR *target)
+__declspec(naked) float __vectorcall GetDistance2D(TESObjectREFR *ref1, TESObjectREFR *ref2)
 {
 	__asm
 	{
-		push	ebx
-		push	esi
-		push	edi
-		mov		ebx, ecx
-		mov		esi, [esp+0x10]
-		call	TESObjectREFR::GetParentCell
+		movq	xmm0, qword ptr [ecx+0x30]
+		movq	xmm1, qword ptr [edx+0x30]
+		subps	xmm0, xmm1
+		mulps	xmm0, xmm0
+		movss	xmm1, xmm0
+		psrlq	xmm0, 0x20
+		addss	xmm1, xmm0
+		sqrtss	xmm0, xmm1
+		retn
+	}
+}
+
+__declspec(naked) bool __fastcall TESObjectREFR::GetInSameCellOrWorld(TESObjectREFR *target)
+{
+	__asm
+	{
+		mov		eax, [ecx+0x40]
 		test	eax, eax
-		jz		fltMax
-		mov		edi, eax
-		mov		ecx, esi
-		call	TESObjectREFR::GetParentCell
+		jnz		hasCell1
+		push	edx
+		push	kExtraData_PersistentCell
+		add		ecx, 0x44
+		CALL_EAX(kAddr_GetExtraData)
+		pop		edx
 		test	eax, eax
-		jz		fltMax
-		cmp		edi, eax
-		jz		calcDist
-		mov		edi, [edi+0xC0]
-		test	edi, edi
-		jz		fltMax
-		cmp		edi, [eax+0xC0]
-		jnz		fltMax
-	calcDist:
-		push	7
-		mov		edx, esi
-		mov		ecx, ebx
-		call	GetAxisDistance
-		jmp		done
-	fltMax:
-		fld		kFltMax
+		jz		done
+		mov		eax, [eax+0xC]
+	hasCell1:
+		mov		ecx, [edx+0x40]
+		test	ecx, ecx
+		jnz		hasCell2
+		push	eax
+		push	kExtraData_PersistentCell
+		lea		ecx, [edx+0x44]
+		CALL_EAX(kAddr_GetExtraData)
+		pop		edx
+		test	eax, eax
+		jz		done
+		mov		ecx, [eax+0xC]
+		mov		eax, edx
+	hasCell2:
+		cmp		eax, ecx
+		jz		retnTrue
+		mov		eax, [eax+0xC0]
+		test	eax, eax
+		jz		done
+		cmp		eax, [ecx+0xC0]
+	retnTrue:
+		setz	al
 	done:
-		pop		edi
-		pop		esi
-		pop		ebx
-		retn	4
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall TESObjectREFR::GetDistance(TESObjectREFR *target)
+{
+	__asm
+	{
+		push	ecx
+		push	edx
+		call	TESObjectREFR::GetInSameCellOrWorld
+		pop		edx
+		pop		ecx
+		test	al, al
+		jz		fltMax
+		jmp		GetDistance3D
+	fltMax:
+		movss	xmm0, kFltMax
+		retn
 	}
 }
 
@@ -1291,15 +1313,14 @@ __declspec(naked) void __fastcall DoSetPos(TESObjectREFR *refr, int EDX, float p
 	}
 }
 
-void TESObjectREFR::SetPos(NiVector3 &posVector)
+void TESObjectREFR::SetPos(NiVector3 *posVector)
 {
-	if (!ThisCall<bool>(0x572C80, this)) return;
 	if (IsActor())
-		DoSetPos(this, 0, posVector.x, posVector.y, posVector.z);
+		DoSetPos(this, 0, posVector->x, posVector->y, posVector->z);
 	else
 	{
 		QueuedCmdCall qCall(DoSetPos, refID, 3);
-		UInt32 *ptr = (UInt32*)&posVector;
+		UInt32 *ptr = (UInt32*)posVector;
 		qCall.args[0] = ptr[0];
 		qCall.args[1] = ptr[1];
 		qCall.args[2] = ptr[2];
@@ -1332,15 +1353,14 @@ __declspec(naked) void __fastcall DoSetAngle(TESObjectREFR *refr, int EDX, float
 	}
 }
 
-void TESObjectREFR::SetAngle(NiVector3 &rotVector)
+void TESObjectREFR::SetAngle(NiVector3 *rotVector)
 {
-	if (!ThisCall<bool>(0x572C80, this)) return;
 	if (IsActor())
-		DoSetAngle(this, 0, rotVector.x, rotVector.y, rotVector.z);
+		DoSetAngle(this, 0, rotVector->x, rotVector->y, rotVector->z);
 	else
 	{
 		QueuedCmdCall qCall(DoSetAngle, refID, 3);
-		UInt32 *ptr = (UInt32*)&rotVector;
+		UInt32 *ptr = (UInt32*)rotVector;
 		qCall.args[0] = ptr[0];
 		qCall.args[1] = ptr[1];
 		qCall.args[2] = ptr[2];
@@ -1395,23 +1415,36 @@ __declspec(naked) void __fastcall DoMoveToCell(TESObjectREFR *refr, int EDX, TES
 	}
 }
 
-bool TESObjectREFR::MoveToCell(TESForm *worldOrCell, NiVector3 &posVector)
+bool TESObjectREFR::MoveToCell(TESForm *worldOrCell, NiVector3 *posVector)
 {
-	if (!worldOrCell || !ThisCall<bool>(0x572C80, this))
-		return false;
-	TESObjectCELL *cell = NULL;
+	if (!worldOrCell) return false;
+	TESObjectCELL *cell;
+	TESWorldSpace *world = NULL;
 	if IS_ID(worldOrCell, TESObjectCELL)
+	{
 		cell = (TESObjectCELL*)worldOrCell;
+		world = cell->worldSpace;
+	}
 	else if IS_ID(worldOrCell, TESWorldSpace)
-		cell = ((TESWorldSpace*)worldOrCell)->cell;
-	if (!cell) return false;
-	QueuedCmdCall qCall(DoMoveToCell, refID, 4);
-	UInt32 *ptr = (UInt32*)&posVector;
-	qCall.args[0] = cell;
-	qCall.args[1] = ptr[0];
-	qCall.args[2] = ptr[1];
-	qCall.args[3] = ptr[2];
-	AddQueuedCmdCall(qCall);
+	{
+		world = (TESWorldSpace*)worldOrCell;
+		cell = world->cell;
+	}
+	else return false;
+	TESObjectCELL *currCell = GetParentCell();
+	if (!currCell) return false;
+	if ((currCell == cell) || (world && (currCell->worldSpace == world)))
+		SetPos(posVector);
+	else
+	{
+		QueuedCmdCall qCall(DoMoveToCell, refID, 4);
+		UInt32 *ptr = (UInt32*)posVector;
+		qCall.args[0] = cell;
+		qCall.args[1] = ptr[0];
+		qCall.args[2] = ptr[1];
+		qCall.args[3] = ptr[2];
+		AddQueuedCmdCall(qCall);
+	}
 	return true;
 }
 
@@ -2593,7 +2626,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		mov		esi, [esi+0x68]
 		mov		esi, [esi+0x138]
 		pxor	xmm0, xmm0
-		movdqu	xmmword ptr [esi+0x500], xmm0
+		movaps	[esi+0x500], xmm0
 		mov		dword ptr [esi+0x524], 0
 		jmp		done
 	hasForce:
@@ -2941,7 +2974,7 @@ __declspec(naked) NiNode* __fastcall TESObjectCELL::Get3DNode(UInt32 index)
 		mov		eax, [eax]
 		test	eax, eax
 		jz		done
-		cmp		word ptr [eax+0xA6], dx
+		cmp		[eax+0xA6], dx
 		ja		getChild
 		xor		eax, eax
 		retn
@@ -2961,8 +2994,7 @@ void TESObjectCELL::ToggleNodes(UInt32 nodeBits, UInt8 doHide)
 		if (!*childIter) break;
 		if ((nodeBits & 1) && ((childIter->m_flags & 1) != doHide))
 			childIter->m_flags ^= 1;
-		nodeBits >>= 1;
-		if (!nodeBits) break;
+		if (!(nodeBits >>= 1)) break;
 	}
 }
 
@@ -3116,9 +3148,9 @@ __declspec(naked) NiNode *NiNode::CreateCopy()
 		and		byte ptr [eax+0x30], 0xFE
 		mov		edx, 0x3F800000
 		movd	xmm0, edx
-		movdqu	xmmword ptr [eax+0x34], xmm0
-		movdqu	xmmword ptr [eax+0x44], xmm0
-		movdqu	xmmword ptr [eax+0x54], xmm0
+		movups	[eax+0x34], xmm0
+		movups	[eax+0x44], xmm0
+		movups	[eax+0x54], xmm0
 		mov		[eax+0x64], edx
 	done:
 		lea		ecx, [ebp-0x20]
@@ -3248,10 +3280,10 @@ __declspec(naked) void NiMatrix33::Rotate(float rotX, float rotY, float rotZ)
 		push	ecx
 		sub		esp, 0x48
 		lea		eax, [ebp-0x28]
-		movdqu	xmm0, xmmword ptr [ecx]
-		movdqu	xmmword ptr [eax], xmm0
-		movdqu	xmm0, xmmword ptr [ecx+0x10]
-		movdqu	xmmword ptr [eax+0x10], xmm0
+		movups	xmm0, [ecx]
+		movups	[eax], xmm0
+		movups	xmm0, [ecx+0x10]
+		movups	[eax+0x10], xmm0
 		mov		edx, [ecx+0x20]
 		mov		[eax+0x20], edx
 		push	dword ptr [ebp+0x10]
@@ -3418,19 +3450,17 @@ __declspec(naked) void NiVector3::MultiplyMatrixVector(NiMatrix33 &mat, NiVector
     }
 }
 
-__declspec(naked) float __vectorcall Vector3Length(NiVector3 *inVec)
+__declspec(naked) float __vectorcall Vector3Length(AlignedVector4 *inVec)
 {
     __asm
     {
-		movss	xmm0, [ecx]
-        mulss	xmm0, xmm0
-		movss	xmm1, [ecx+4]
-        mulss	xmm1, xmm1
-        addss	xmm0, xmm1
-		movss	xmm1, [ecx+8]
-        mulss	xmm1, xmm1
-        addss	xmm0, xmm1
-        sqrtss	xmm0, xmm0
+		movaps	xmm0, [ecx]
+		mulps	xmm0, xmm0
+		movhlps	xmm1, xmm0
+		addss	xmm1, xmm0
+		psrlq	xmm0, 0x20
+		addss	xmm1, xmm0
+		sqrtss	xmm0, xmm1
         retn
     }
 }
@@ -3439,18 +3469,19 @@ __declspec(naked) float __vectorcall Vector3Distance(NiVector3 *vec1, NiVector3 
 {
 	__asm
 	{
-		movss	xmm0, [ecx]
-		subss	xmm0, [edx]
-		mulss	xmm0, xmm0
-		movss	xmm1, [ecx+4]
-		subss	xmm1, [edx+4]
-		mulss	xmm1, xmm1
-		addss	xmm0, xmm1
-		movss	xmm1, [ecx+8]
-		subss	xmm1, [edx+8]
-		mulss	xmm1, xmm1
-		addss	xmm0, xmm1
-		sqrtss	xmm0, xmm0
+		movss	xmm0, [ecx+8]
+		movlhps	xmm0, xmm0
+		movlps	xmm0, [ecx]
+		movss	xmm1, [edx+8]
+		movlhps	xmm1, xmm1
+		movlps	xmm1, [edx]
+		subps	xmm0, xmm1
+		mulps	xmm0, xmm0
+		movhlps	xmm1, xmm0
+		addss	xmm1, xmm0
+		psrlq	xmm0, 0x20
+		addss	xmm1, xmm0
+		sqrtss	xmm0, xmm1
 		retn
 	}
 }
@@ -3459,31 +3490,28 @@ __declspec(naked) void NiVector3::Normalize()
 {
     __asm
     {
-		movss	xmm0, [ecx]
-        mulss	xmm0, xmm0
-		movss	xmm1, [ecx+4]
-        mulss	xmm1, xmm1
-        addss	xmm0, xmm1
-		movss	xmm1, [ecx+8]
-        mulss	xmm1, xmm1
-        addss	xmm0, xmm1
-        sqrtss	xmm0, xmm0
-        xorpd	xmm1, xmm1
-        comiss	xmm0, xmm1
+		movss	xmm0, [ecx+8]
+		movlhps	xmm0, xmm0
+		movlps	xmm0, [ecx]
+		movaps	xmm1, xmm0
+		mulps	xmm1, xmm1
+		movhlps	xmm2, xmm1
+		addss	xmm2, xmm1
+		psrlq	xmm1, 0x20
+		addss	xmm2, xmm1
+		sqrtss	xmm1, xmm2
+		pxor	xmm2, xmm2
+		comiss	xmm1, xmm2
         jz		zeroLen
-		movss	xmm1, [ecx]
-        divss	xmm1, xmm0
-		movss	[ecx], xmm1
-		movss	xmm1, [ecx+4]
-        divss	xmm1, xmm0
-		movss	[ecx+4], xmm1
-		movss	xmm1, [ecx+8]
-        divss	xmm1, xmm0
+		shufps	xmm1, xmm1, 0
+		divps	xmm0, xmm1
+		movhlps	xmm1, xmm0
+		movlps	[ecx], xmm0
 		movss	[ecx+8], xmm1
-        retn
-    zeroLen:
-        movq	qword ptr [ecx], xmm1
-        mov		dword ptr [ecx+8], 0
+		retn
+	zeroLen:
+        movlps	[ecx], xmm2
+        movss	[ecx+8], xmm2
         retn
     }
 }
@@ -4793,18 +4821,6 @@ float GameTimeGlobals::GetDaysPassed(int bgnYear, int bgnMonth, int bgnDay)
 	return (float)totalDays + (hour->data / 24);
 }
 
-__declspec(naked) UInt32 GetHoursPassed()
-{
-	__asm
-	{
-		mov			eax, ds:[0x11DE7C8]
-		cvtss2sd	xmm0, dword ptr [eax+0x24]
-		mulsd		xmm0, qword ptr ds:[0x10356D8]
-		cvttsd2si	eax, xmm0
-		retn
-	}
-}
-
 void PlayGameSound(const char *soundEDID)
 {
 	Sound sound(soundEDID, 0x121);
@@ -5179,7 +5195,7 @@ public:
 	}
 };
 
-struct AnimGroupScripsMap : UnorderedMap<UInt32, EventCallbackScripts> {};
+struct AnimEventCallbacks : UnorderedMap<UInt32, EventCallbackScripts> {};
 
 struct CriticalHitEventData
 {
@@ -5881,6 +5897,8 @@ __declspec(naked) void __fastcall DoConsolePrint(double *result)
 		jz		done
 		mov		edx, [ebp]
 		mov		edx, [edx-0x30]
+		test	edx, edx
+		jz		done
 		mov		edx, [edx]
 		movsd	xmm0, qword ptr [ecx]
 		push	ebp
@@ -5912,6 +5930,8 @@ __declspec(naked) void __fastcall DoConsolePrint(TESForm *result)
 		jz		done
 		mov		edx, [ebp]
 		mov		edx, [edx-0x30]
+		test	edx, edx
+		jz		done
 		mov		edx, [edx]
 		push	ebp
 		mov		ebp, esp
@@ -6125,7 +6145,7 @@ int GetIsLAA()
 	return s_isLAA;
 }
 
-TESObjectCELL *s_pcCurrCell = NULL;
+TESObjectCELL *s_pcCurrCell0 = NULL, *s_pcCurrCell = NULL;
 TESWorldSpace *s_pcRootWorld = NULL;
 
 const char kMenuIDJumpTable[] =

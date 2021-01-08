@@ -13,21 +13,27 @@ bool BaseExtraList::HasType(UInt32 type) const
 	return (m_presenceBitfield[type >> 3] & (1 << (type & 7))) != 0;
 }
 
-void BaseExtraList::MarkType(UInt32 type, bool bCleared)
+__declspec(naked) ExtraDataList* __stdcall ExtraDataList::Create(BSExtraData *xBSData)
 {
-	UInt8 bitMask = 1 << (type & 7);
-	UInt8 &flag = m_presenceBitfield[type >> 3];
-	if (bCleared) flag &= ~bitMask;
-	else flag |= bitMask;
-}
-
-ExtraDataList *ExtraDataList::Create(BSExtraData *xBSData)
-{
-	ExtraDataList *xData = (ExtraDataList*)GameHeapAlloc(sizeof(ExtraDataList));
-	MemZero(xData, sizeof(ExtraDataList));
-	*(UInt32*)xData = kVtbl_ExtraDataList;
-	if (xBSData) AddExtraData(xData, xBSData);
-	return xData;
+	__asm
+	{
+		push	0x20
+		GAME_HEAP_ALLOC
+		pxor	xmm0, xmm0
+		movups	[eax], xmm0
+		movups	[eax+0x10], xmm0
+		mov		dword ptr [eax], kVtbl_ExtraDataList
+		mov		edx, [esp+4]
+		test	edx, edx
+		jz		done
+		push	eax
+		push	edx
+		mov		ecx, eax
+		CALL_EAX(0x40FF60)
+		pop		eax
+	done:
+		retn	4
+	}
 }
 
 bool BaseExtraList::IsWorn() const

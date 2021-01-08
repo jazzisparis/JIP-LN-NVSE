@@ -210,7 +210,7 @@ bool Cmd_LNSetName_Execute(COMMAND_ARGS)
 
 bool Cmd_GetGlobalTimeMultiplier_Execute(COMMAND_ARGS)
 {
-	*result = *(float*)0x11AC3A4;
+	*result = *(float*)0x11AC3A0;
 	DoConsolePrint(result);
 	return true;
 }

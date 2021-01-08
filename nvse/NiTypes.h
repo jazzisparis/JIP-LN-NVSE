@@ -34,13 +34,13 @@ struct NiVector3
 	NiVector3() {}
 	NiVector3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
 
-	void operator +=(const NiVector3 &rhs)
+	void operator+=(const NiVector3 &rhs)
 	{
 		x += rhs.x;
 		y += rhs.y;
 		z += rhs.z;
 	}
-	void operator -=(const NiVector3 &rhs)
+	void operator-=(const NiVector3 &rhs)
 	{
 		x -= rhs.x;
 		y -= rhs.y;

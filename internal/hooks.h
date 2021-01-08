@@ -22,7 +22,8 @@ enum
 	kHook_ShowTutorial,
 	kHook_MenuStateOpen,
 	kHook_MenuStateClose,
-	kHook_SetAnimSequence,
+	kHook_SetAnimAction,
+	kHook_SetAnimGroup,
 	kHook_DamageActorValue,
 	kHook_InitMoon,
 	kHook_UpdateWeather,
@@ -112,10 +113,11 @@ enum
 
 	kHookActorFlag2_ForceDetectionVal =		1 << 0,
 	kHookActorFlag2_NonTargetable =			1 << 1,
+	kHookActorFlag2_TeammateKillable =		1 << 2,
+	kHookActorFlag2_NoGunWobble =			1 << 3,
 
 	kHookActorFlag3_OnAnimAction =			1 << 0,
 	kHookActorFlag3_OnPlayGroup =			1 << 1,
-	kHookActorFlag3_OnAnimChange =			kHookActorFlag3_OnAnimAction | kHookActorFlag3_OnPlayGroup,
 	kHookActorFlag3_OnHealthDamage =		1 << 2,
 	kHookActorFlag3_OnCrippledLimb =		1 << 3,
 	kHookActorFlag3_OnFireWeapon =			1 << 4,
@@ -1486,88 +1488,79 @@ __declspec(naked) void MenuHandleMouseoverHook()
 	}
 }
 
-typedef UnorderedMap<Actor*, AnimGroupScripsMap> ActorAnimEventCallbacks;
+typedef UnorderedMap<Actor*, AnimEventCallbacks> ActorAnimEventCallbacks;
 ActorAnimEventCallbacks s_animActionEventMap, s_playGroupEventMap;
 
-__declspec(naked) Actor *Actor::HandleSetAnimSequence(SInt32 animAction, BSAnimGroupSequence *animGroupSeq)
+__declspec(naked) void SetAnimActionHook()
 {
 	__asm
 	{
-		push	esi
-		push	edi
-		mov		esi, ecx
-		mov		edi, [ecx+0x68]
+		pop		edx
+		mov		ecx, [ebp-0x10]
+		mov		eax, [ecx+0x68]
+		pop		dword ptr [eax+0x2F0]
+		mov		edx, [ebp+8]
+		cmp		[eax+0x2EC], dx
+		jz		done
+		mov		[eax+0x2EC], dx
+		test	edx, edx
+		js		done
 		test	byte ptr [ecx+0x107], kHookActorFlag3_OnAnimAction
-		jz		playGroup
-		cmp		dword ptr [ebp+8], 0
-		jl		playGroup
-		movsx	eax, word ptr [edi+0x2EC]
-		cmp		[ebp+8], eax
-		jz		playGroup
+		jz		done
 		push	ecx
 		mov		ecx, offset s_animActionEventMap
 		call	ActorAnimEventCallbacks::GetPtr
 		test	eax, eax
-		jz		playGroup
+		jz		done
 		push	dword ptr [ebp+8]
 		mov		ecx, eax
-		call	AnimGroupScripsMap::GetPtr
+		call	AnimEventCallbacks::GetPtr
 		test	eax, eax
-		jz		playGroup
+		jz		done
 		push	dword ptr [ebp+8]
-		push	esi
+		push	dword ptr [ebp-0x10]
 		mov		ecx, eax
 		call	EventCallbackScripts::InvokeEventsThis1
-	playGroup:
-		mov		ecx, esi
+	done:
+		leave
+		retn	8
+	}
+}
+
+__declspec(naked) void SetAnimGroupHook()
+{
+	__asm
+	{
+		mov		ecx, [ebp+8]
+		mov		[eax+edx*4+0xE0], ecx
+		mov		cx, [ebp+0xC]
+		mov		[eax+edx*2+0x4C], cx
+		cmp		cx, 0xFF
+		jz		done
+		mov		ecx, [eax+4]
 		test	byte ptr [ecx+0x107], kHookActorFlag3_OnPlayGroup
 		jz		done
-		mov		eax, [edi+0x2F0]
-		cmp		[ebp+0xC], eax
+		cmp		ecx, g_thePlayer
+		jnz		notPlayer
+		cmp		[ecx+0x690], eax
 		jz		done
+	notPlayer:
 		push	ecx
 		mov		ecx, offset s_playGroupEventMap
 		call	ActorAnimEventCallbacks::GetPtr
 		test	eax, eax
 		jz		done
+		push	dword ptr [ebp-0x28]
 		mov		ecx, eax
-		mov		eax, [ebp+0xC]
-		mov		eax, [eax+0x74]
-		movzx	edi, byte ptr [eax+0x10]
-		push	edi
-		call	AnimGroupScripsMap::GetPtr
+		call	AnimEventCallbacks::GetPtr
 		test	eax, eax
 		jz		done
-		push	edi
-		push	esi
+		push	dword ptr [ebp-0x28]
+		push	dword ptr [ebp-0x18]
 		mov		ecx, eax
 		call	EventCallbackScripts::InvokeEventsThis1
 	done:
-		mov		eax, esi
-		pop		edi
-		pop		esi
-		retn	8
-	}
-}
-
-__declspec(naked) void SetAnimSequenceHook()
-{
-	__asm
-	{
-		test	edx, edx
-		jz		done
-		test	byte ptr [ecx+0x107], kHookActorFlag3_OnAnimChange
-		jz		done
-		push	edx
-		push	eax
-		call	Actor::HandleSetAnimSequence
-		mov		ecx, eax
-	done:
-		mov		ecx, [ecx+0x68]
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x3EC]
-		leave
-		retn	8
+		retn
 	}
 }
 
@@ -2053,9 +2046,7 @@ __declspec(naked) void SetQuestStageHook()
 	}
 }
 
-UnorderedMap<TESTopicInfo*, EventCallbackScripts> s_topicInfoEventMap;
-UnorderedMap<TESTopicInfo*, TESTopic*> s_infoToTopicMap;
-UnorderedMap<TESTopic*, EventCallbackScripts> s_dialogTopicEventMap;
+UnorderedMap<TESForm*, EventCallbackScripts> s_dialogTopicEventMap;
 
 __declspec(naked) void RunResultScriptHook()
 {
@@ -2064,8 +2055,8 @@ __declspec(naked) void RunResultScriptHook()
 		cmp		dword ptr [ebp+8], 0
 		jnz		done
 		push	dword ptr [ebp-0xC]
-		mov		ecx, offset s_topicInfoEventMap
-		call	UnorderedMap<TESTopic*, EventCallbackScripts>::GetPtr
+		mov		ecx, offset s_dialogTopicEventMap
+		call	UnorderedMap<TESForm*, EventCallbackScripts>::GetPtr
 		test	eax, eax
 		jz		doneInfo
 		push	dword ptr [ebp-0xC]
@@ -2073,15 +2064,12 @@ __declspec(naked) void RunResultScriptHook()
 		mov		ecx, eax
 		call	EventCallbackScripts::InvokeEventsThis1
 	doneInfo:
-		push	dword ptr [ebp-0xC]
-		mov		ecx, offset s_infoToTopicMap
-		call	UnorderedMap<TESTopicInfo*, TESTopic*>::Get
-		test	eax, eax
-		jz		done
+		mov		ecx, [ebp-0xC]
+		mov		eax, [ecx+0x50]
 		push	eax
 		push	eax
 		mov		ecx, offset s_dialogTopicEventMap
-		call	UnorderedMap<TESTopic*, EventCallbackScripts>::GetPtr
+		call	UnorderedMap<TESForm*, EventCallbackScripts>::GetPtr
 		pop		ecx
 		test	eax, eax
 		jz		done
@@ -2579,18 +2567,15 @@ __declspec(naked) void ReloadWeaponHook()
 {
 	__asm
 	{
+		push	dword ptr [ebp+0xC]
+		mov		edx, [ebp+8]
+		push	edx
 		mov		eax, [ecx+0x68]
-		test	eax, eax
-		jz		done
-		mov		edx, [ebp+0xC]
-		mov		[eax+0x2F0], edx
-		mov		dx, [ebp+8]
 		cmp		[eax+0x2EC], dx
 		jz		done
-		mov		[eax+0x2EC], dx
-		cmp		dx, kAnimAction_Reload
+		cmp		dl, kAnimAction_Reload
 		jz		proceed
-		cmp		dx, kAnimAction_ReloadLoop
+		cmp		dl, kAnimAction_ReloadLoop
 		jnz		done
 	proceed:
 		mov		eax, [eax+0x114]
@@ -2603,8 +2588,7 @@ __declspec(naked) void ReloadWeaponHook()
 		mov		ecx, offset s_reloadWeaponEventScripts
 		call	EventCallbackScripts::InvokeEventsThis1
 	done:
-		leave
-		retn	8
+		JMP_EAX(0x8A7551)
 	}
 }
 
@@ -2886,19 +2870,25 @@ __declspec(naked) void InsertObjectHook()
 		test	word ptr [eax+6], kHookFormFlag6_InsertObject
 		jz		done
 	hasFlag:
-		mov		ecx, [ebp-0x18]
-		mov		edx, [ecx+0x34]
-		test	edx, edx
+		mov		[ebp-0x10], eax
+		mov		edx, [ebp-0x18]
+		mov		eax, [edx+0x34]
+		test	eax, eax
+		jnz		gotNode
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x1D0]
+		test	eax, eax
 		jz		done
-		mov		[ebp-0x10], edx
+		mov		edx, [ebp-0x18]
+	gotNode:
 		mov		[ebp-0x18], eax
-		mov		ecx, [ecx+0x30]
+		mov		ecx, [edx+0x30]
 		test	ecx, ecx
 		jz		doneProt
-		cmp		[ecx+0xC], edx
+		cmp		[ecx+0xC], eax
 		jnz		doneProt
 		push	ecx
-		mov		ecx, edx
+		mov		ecx, eax
 		call	NiNode::CreateCopy
 		pop		ecx
 		test	eax, eax
@@ -2913,13 +2903,13 @@ __declspec(naked) void InsertObjectHook()
 		mov		ecx, [ebp-0x1C]
 		test	word ptr [ecx+6], kHookFormFlag6_InsertNode
 		jz		checkBase1
-		push	dword ptr [ebp-0x10]
+		push	dword ptr [ebp-0x18]
 		call	DoInsertNodes
 	checkBase1:
-		mov		ecx, [ebp-0x18]
+		mov		ecx, [ebp-0x10]
 		test	word ptr [ecx+6], kHookFormFlag6_InsertNode
 		jz		doModels
-		push	dword ptr [ebp-0x10]
+		push	dword ptr [ebp-0x18]
 		call	DoInsertNodes
 	doModels:
 		cmp		dword ptr ds:[s_attachModelMap.numEntries], 0
@@ -2927,13 +2917,13 @@ __declspec(naked) void InsertObjectHook()
 		mov		ecx, [ebp-0x1C]
 		test	word ptr [ecx+6], kHookFormFlag6_AttachModel
 		jz		checkBase2
-		push	dword ptr [ebp-0x10]
+		push	dword ptr [ebp-0x18]
 		call	DoAttachModels
 	checkBase2:
-		mov		ecx, [ebp-0x18]
+		mov		ecx, [ebp-0x10]
 		test	word ptr [ecx+6], kHookFormFlag6_AttachModel
 		jz		done
-		push	dword ptr [ebp-0x10]
+		push	dword ptr [ebp-0x18]
 		call	DoAttachModels
 	done:
 		push	dword ptr [ebp-0x14]
@@ -2982,10 +2972,10 @@ __declspec(naked) void SynchronizePositionHook()
 		call	TESObjectREFR::GetNode
 		test	eax, eax
 		jz		done
-		movdqu	xmm0, xmmword ptr [eax+0x8C]
-		addps	xmm0, xmmword ptr ds:[s_syncPositionMods]
+		movups	xmm0, [eax+0x8C]
+		addps	xmm0, s_syncPositionMods
 		mov		ecx, offset s_syncPositionPos
-		movdqa	xmmword ptr [ecx], xmm0
+		movaps	[ecx], xmm0
 		mov		[ebp+8], ecx
 		cmp		s_syncPositionFlags, 0
 		jz		done
@@ -3312,11 +3302,12 @@ __declspec(naked) void BipedSlotVisibilityHook()
 {
 	__asm
 	{
-		bt		s_bipedSlotVisibility, eax
-		jnc		skipRetn
-		JMP_EAX(0x4AC666)
-	skipRetn:
-		JMP_EAX(0x4AC285)
+		mov		ecx, s_bipedSlotVisibility
+		bt		ecx, eax
+		mov		eax, 0x4AC666
+		mov		ecx, 0x4AC285
+		cmovnc	eax, ecx
+		jmp		eax
 	}
 }
 
@@ -3333,6 +3324,38 @@ __declspec(naked) void SkyRefreshClimateHook()
 		mov		[ebp+8], eax
 	done:
 		JMP_EAX(0x63C92E)
+	}
+}
+
+__declspec(naked) void IsActorEssentialHook()
+{
+	__asm
+	{
+		test	byte ptr [ecx+0x106], kHookActorFlag2_TeammateKillable
+		jnz		done
+		mov		ecx, g_thePlayer
+		cmp		byte ptr [ecx+0x7BC], 0
+	done:
+		setnz	al
+		JMP_EDX(0x87F432)
+	}
+}
+
+__declspec(naked) void FireWeaponWobbleHook()
+{
+	__asm
+	{
+		mov		ecx, [ebp-0x2C]
+		test	byte ptr [ecx+0x106], kHookActorFlag2_NoGunWobble
+		jnz		done
+		push	2
+		CALL_EAX(0x8B0DD0)
+		fmul	dword ptr ds:[0x11CE038]
+		fmul	qword ptr ds:[0x1023128]
+		fadd	dword ptr [ebp-0x1C]
+		fstp	dword ptr [ebp-0x1C]
+	done:
+		retn
 	}
 }
 
@@ -3389,7 +3412,8 @@ void InitJIPHooks()
 	HOOK_INIT_JUMP(ShowTutorial, 0x7E88B6);
 	HOOK_INIT_JUMP(MenuStateOpen, 0xA1F2F9);
 	HOOK_INIT_JPRT(MenuStateClose, 0xA1C573, 0xA1C57D);
-	HOOK_INIT_JUMP(SetAnimSequence, 0x8A7551);
+	HOOK_INIT_JUMP(SetAnimAction, 0x8A7551);
+	HOOK_INIT_JPRT(SetAnimGroup, 0x494E19, 0x494E32);
 	HOOK_INIT_JUMP(DamageActorValue, 0x66EE72);
 	HOOK_INIT_JPRT(InitMoon, 0x634B30, 0x634BF4);
 	HOOK_INIT_JPRT(UpdateWeather, 0x63D4F5, 0x63D528);
@@ -3417,7 +3441,7 @@ void InitJIPHooks()
 	HOOK_INIT_JPRT(ProjectileImpact, 0x9C20BF, 0x9C20C9);
 	HOOK_INIT_JPRT(AddNote, 0x966AF9, 0x966B04);
 	HOOK_INIT_JUMP(EquipAidItem, 0x88C74E);
-	HOOK_INIT_JUMP(ReloadWeapon, 0x8A7543);
+	HOOK_INIT_JUMP(ReloadWeapon, 0x8A7549);
 	HOOK_INIT_JUMP(OnRagdoll, 0xC7C151);
 	HOOK_INIT_JPRT(PlayerMinHealth, 0x93B80A, 0x93B84F);
 	HOOK_INIT_JUMP(ApplyActorVelocity, 0xC6D4E4);
@@ -3428,6 +3452,8 @@ void InitJIPHooks()
 	WriteRelJump(0x92C4A0, (UInt32)ResetHitDataHook);
 	WriteRelJump(0x4AC645, (UInt32)BipedSlotVisibilityHook);
 	WriteRelJump(0x63C929, (UInt32)SkyRefreshClimateHook);
+	WriteRelJump(0x87F427, (UInt32)IsActorEssentialHook);
+	WritePushRetRelJump(0x524014, 0x524042, (UInt32)FireWeaponWobbleHook);
 
 	const char *strPos = kEventNames;
 	UInt32 count = 0;

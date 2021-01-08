@@ -149,6 +149,8 @@ union Coordinate
 
 	Coordinate() {}
 	Coordinate(SInt16 _x, SInt16 _y) : x(_x), y(_y) {}
+	Coordinate(UInt32 _xy) : xy(_xy) {}
+	Coordinate(SInt32 *_x) : x(_x[0]), y(_x[1]) {}
 
 	inline Coordinate& operator=(const Coordinate &rhs)
 	{
@@ -164,10 +166,12 @@ union Coordinate
 	inline bool operator==(const Coordinate &rhs) {return xy == rhs.xy;}
 	inline bool operator!=(const Coordinate &rhs) {return xy != rhs.xy;}
 
-	inline Coordinate operator+(const char *rhs)
+	inline Coordinate operator+(const Coordinate &rhs)
 	{
-		return Coordinate(x + rhs[0], y + rhs[1]);
+		return Coordinate(x + rhs.x, y + rhs.y);
 	}
+
+	inline operator UInt32() const {return xy;}
 };
 
 template <typename T1, typename T2> inline T1 GetMin(T1 value1, T2 value2)

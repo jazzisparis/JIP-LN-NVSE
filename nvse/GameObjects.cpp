@@ -43,67 +43,26 @@ bool TESObjectREFR::IsMapMarker()
 	return baseForm->refID == 0x10;
 }
 
-bool PlayerCharacter::SetSkeletonPath(const char* newPath)
-{
-	if (!bThirdPerson) {
-		// ###TODO: enable in first person
-		return false;
-	}
-
-	//// store parent of current niNode
-	//NiNode* niParent = (NiNode*)(renderState->niNode->m_parent);
-
-	//// set niNode to NULL via BASE CLASS Set3D() method
-	//ThisCall(s_TESObjectREFR_Set3D, this, NULL);
-
-	//// modify model path
-	//if (newPath) {
-	//	TESNPC* base = DYNAMIC_CAST(baseForm, TESForm, TESNPC);
-	//	base->model.SetPath(newPath);
-	//}
-
-	//// create new NiNode, add to parent
-	//*(g_bUpdatePlayerModel) = 1;
-	//NiNode* newNode = (NiNode*)ThisCall(s_PlayerCharacter_GenerateNiNode, this);
-
-	//niParent->AddObject(newNode, 1);
-	//*(g_bUpdatePlayerModel) = 0;
-	//newNode->SetName("Player");
-
-	//// get and store camera node
-	//// ### TODO: pretty this up
-	//UInt32 vtbl = *((UInt32*)newNode);
-	//UInt32 vfunc = *((UInt32*)(vtbl + 0x58));
-	//NiObject* cameraNode = (NiObject*)ThisCall(vfunc, newNode, "Camera01");
-	//*g_3rdPersonCameraNode = cameraNode;
-
-	//cameraNode = (NiObject*)ThisCall(vfunc, (NiNode*)this->firstPersonNiNode, "Camera01");
-	//*g_1stPersonCameraNode = cameraNode;
-
-	//Unk_52();
-
-	return true;
-}
-
 extern ModelLoader *g_modelLoader;
 
 void TESObjectREFR::Update3D()
 {
 	if (this == g_thePlayer)
 	{
-		ThisCall(kUpdateAppearanceAddr, this);
+		ThisCall(0x8D3FA0, this);
 	}
-	else
+	else if (GetNiNode())
 	{
 		Set3D(NULL, true);
-		g_modelLoader->QueueReference(this, 1, 0);
+		extraDataList.flags |= 1;
+		g_modelLoader->QueueReference(this);
 	}
 }
 
 TESObjectREFR *TESObjectREFR::Create(bool bTemp)
 {
 	TESObjectREFR *refr = (TESObjectREFR*)GameHeapAlloc(sizeof(TESObjectREFR));
-	ThisCall(s_TESObject_REFR_init, refr);
+	ThisCall(0x55A2F0, refr);
 	if (bTemp) ThisCall(0x484490, refr);
 	return refr;
 }

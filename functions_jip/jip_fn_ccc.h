@@ -42,8 +42,6 @@ bool Cmd_CCCOnLoad_Execute(COMMAND_ARGS)
 	{
 		globVar = (TESGlobal*)LookupFormByRefID(index | 0x8F6D);
 		if (globVar) globVar->data = 1;
-		*ShowMessageBox_pScriptRefID = scriptObj->refID;
-		*ShowMessageBox_button = 0xFF;
 		ShowMessageBox("Please be advised:\n\nJIP CC&C versions older than 2.60 will NOT work with JIP LN NVSE.\n\nYou MUST update JIP CC&C to the latest version.", MSGBOX_ARGS);
 		return false;
 	}
@@ -329,9 +327,13 @@ bool Cmd_CCCSetTrait_Execute(COMMAND_ARGS)
 bool Cmd_CCCGetDistance_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *objRef;
-	UInt32 axis = 7;
+	UInt32 axis = 3;
 	if (ExtractArgs(EXTRACT_ARGS, &objRef, &axis))
-		*result = GetAxisDistance(thisObj, objRef, axis);
+	{
+		if (axis == 4)
+			*result = abs(thisObj->posZ - objRef->posZ);
+		else *result = GetDistance2D(thisObj, objRef);
+	}
 	else *result = 0;
 	return true;
 }
@@ -441,7 +443,7 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 				if (!xMarker || !xMarker->data || !xMarker->data->fullName.name.m_dataLen) continue;
 				coord.x = ifloor(mkRefr->posX / 4096);
 				coord.y = ifloor(mkRefr->posY / 4096);
-				(*markersGrid)[coord.xy] = mkRefr;
+				(*markersGrid)[coord] = mkRefr;
 			}
 			while (objIter = objIter->next);
 		}
@@ -462,7 +464,7 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 			count = 1;
 			do
 			{
-				findMarker = markersGrid->Get(coord.xy);
+				findMarker = markersGrid->Get(coord);
 				if (findMarker)
 				{
 					distTmp = Vector3Distance(thisObj->PosVector(), findMarker->PosVector());
@@ -634,7 +636,7 @@ bool Cmd_MoveToPosStr_Execute(COMMAND_ARGS)
 	posVector.y = StrToInt(pos);
 	if (!*delim) return true;
 	posVector.z = StrToInt(delim);
-	if (thisObj->MoveToCell(form, posVector)) *result = 1;
+	if (thisObj->MoveToCell(form, &posVector)) *result = 1;
 	return true;
 }
 

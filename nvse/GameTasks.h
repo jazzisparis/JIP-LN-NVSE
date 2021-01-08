@@ -396,5 +396,8 @@ struct ModelLoader
 	UInt8												pad2D[3];			// 2D
 
 	static ModelLoader *GetSingleton();
-	void QueueReference(TESObjectREFR *refr, UInt32 arg2, UInt32 arg3);
+	__forceinline void QueueReference(TESObjectREFR *refr)
+	{
+		ThisCall(0x444850, this, refr, 1, false);
+	}
 };

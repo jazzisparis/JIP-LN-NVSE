@@ -19,7 +19,6 @@ DEFINE_COMMAND_PLUGIN(GetPluginHeaderVersion, , 0, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(GetIsLAA, , 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(Sleep, , 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetArrayValue, , 0, 2, kParams_TwoInts);
-DEFINE_COMMAND_PLUGIN(TF_DebugDump, , 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetRandomInRange, , 0, 2, kParams_TwoInts);
 
 bool Cmd_RefToString_Execute(COMMAND_ARGS)
@@ -501,119 +500,6 @@ bool Cmd_GetArrayValue_Execute(COMMAND_ARGS)
 		case 4:
 			*result = (int)resElement.raw;
 			break;
-	}
-	return true;
-}
-
-void DumpFormData(FileStream *outputFile, TESForm *form)
-{
-	char *endPtr = s_strValBuffer;
-
-	endPtr += sprintf_s(s_strValBuffer, 0x10000, "Dumping: %s [%08X]\nType: ", form->GetName(), form->refID);
-
-	if IS_ID(form, TESQuest)
-	{
-		TESQuest *quest = (TESQuest*)form;
-
-		endPtr += sprintf_s(endPtr, 0x10000, "QUEST\nIs running: %s\nCurrent stage: %d\nStages:\n", (quest->flags & 1) ? "YES" : "NO", quest->currentStage);
-
-		ListNode<TESQuest::StageInfo> *stageIter = quest->stages.Head();
-		TESQuest::StageInfo *stageInfo;
-		do
-		{
-			stageInfo = stageIter->data;
-			if (stageInfo)
-				endPtr += sprintf_s(endPtr, 0x10000, "%d\t%sDONE\n", stageInfo->stage, stageInfo->isDone ? "" : "NOT ");
-		}
-		while (stageIter = stageIter->next);
-	}
-	else endPtr = StrLenCopy(endPtr, "REFERENCE", 9);
-
-	Script *pScript;
-	ScriptEventList *pEventList;
-	if (form->GetScriptAndEventList(&pScript, &pEventList) && pScript->info.varCount)
-	{
-		endPtr += sprintf_s(endPtr, 0x10000, "\nScript: %s [%08X]\nVariables:\n", pScript->GetName(), pScript->refID);
-
-		ListNode<VariableInfo> *varIter = pScript->varList.Head();
-		VariableInfo *varInfo;
-		ScriptVar *var;
-		UInt32 refID;
-		do
-		{
-			varInfo = varIter->data;
-			if (!varInfo) continue;
-			var = pEventList->GetVariable(varInfo->idx);
-			if (!var) continue;
-
-			endPtr = StrCopy(endPtr, varInfo->name.m_data);
-			*(UInt16*)endPtr = '\t\t';
-			endPtr += 2;
-
-			if (pScript->GetVariable(varInfo->idx))
-			{
-				refID = *(UInt32*)&var->data;
-				form = LookupFormByRefID(refID);
-				if (form)
-					endPtr += sprintf_s(endPtr, 0x10000, "%s [%08X]\n", form->GetName(), refID);
-				else endPtr = StrLenCopy(endPtr, "0\n", 2);
-			}
-			else
-			{
-				endPtr = FltToStr(endPtr, var->data);
-				*endPtr++ = '\n';
-			}
-		}
-		while (varIter = varIter->next);
-	}
-
-	memcpy(endPtr, "------------------------------------------------\n", 50);
-	outputFile->WriteStr(s_strValBuffer);
-}
-
-UInt32 (*GetFormIDFromEDID)(const char *edidStr) = NULL;
-
-bool Cmd_TF_DebugDump_Execute(COMMAND_ARGS)
-{
-	if (!GetFormIDFromEDID)
-	{
-		HMODULE johnny = GetModuleHandle("johnnyguitar");
-		if (!johnny) return true;
-		GetFormIDFromEDID = (UInt32 (*)(const char*))GetProcAddress(johnny, "JGNVSE_GetFormIDFromEDID");
-		if (!GetFormIDFromEDID) return true;
-	}
-
-	GetTimeStamp(StrLenCopy(s_strValBuffer, "TF Debug\\", 9));
-	memcpy(s_strValBuffer + 17, ".log", 5);
-
-	FileStream outputFile;
-	if (!outputFile.Create(s_strValBuffer))
-		return true;
-
-	char *endPtr = StrLenCopy(s_strValBuffer, "Mod list:\n", 10);
-
-	ListNode<ModInfo> *modIter = g_dataHandler->modList.modInfoList.Head();
-	ModInfo *modInfo;
-	UInt32 index = 0;
-	do
-	{
-		modInfo = modIter->data;
-		if (!modInfo) break;
-		endPtr += sprintf_s(endPtr, 0x10000, "%02X\t%s\n", index++, modInfo->name);
-	}
-	while (modIter = modIter->next);
-
-	memcpy(endPtr, "================================================\n\n", 51);
-	outputFile.WriteStr(s_strValBuffer);
-
-	LineIterator lineIter("TF Debug\\tf_debug_list.txt", s_strArgBuffer);
-	TESForm *form;
-	while (!lineIter.End())
-	{
-		form = LookupFormByRefID(GetFormIDFromEDID(lineIter.Get()));
-		if (form && (IS_ID(form, TESQuest) || form->GetIsReference()))
-			DumpFormData(&outputFile, form);
-		lineIter.Next();
 	}
 	return true;
 }

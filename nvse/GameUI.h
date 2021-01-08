@@ -294,8 +294,8 @@ public:
 	// check 4 at 0xA1D9EC (when closing menu) :: set at 0x7036A4, 0x71204D
 	// check 8 at 0x712194 :: set 8 at 0xA1DB8F (when opening menu), 0x720B39
 
-	__forceinline Tile *AddTileFromTemplate(Tile *destTile, const char *templateName, UInt32 arg3)
+	__forceinline Tile *AddTileFromTemplate(Tile *destTile, const char *templateName)
 	{
-		return ThisCall<Tile*>(0xA1DDB0, this, destTile, templateName, arg3);
+		return ThisCall<Tile*>(0xA1DDB0, this, destTile, templateName, 0);
 	}
 };

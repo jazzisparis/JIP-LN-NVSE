@@ -1266,7 +1266,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	REG_CMD(SetLinearVelocity)
 	//	v55.45
 	REG_CMD_ARR(GetEquippedArmorRefs)
-	REG_CMD(TF_DebugDump)
+	REG_CMD(EmptyCommand)
 	REG_CMD(InsertNode)
 	REG_CMD(AttachModel)
 	REG_CMD(SynchronizePosition)
@@ -1294,6 +1294,11 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v55.80
 	REG_CMD(GetActorGravityMult)
 	REG_CMD(SetActorGravityMult)
+	//	v55.82
+	REG_CMD(ToggleHitEffects)
+	REG_CMD(ToggleNoMovementCombat)
+	REG_CMD(SetTeammateKillable)
+	REG_CMD(SetNoGunWobble)
 
 	//===========================================================
 

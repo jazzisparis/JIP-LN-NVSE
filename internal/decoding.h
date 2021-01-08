@@ -2994,9 +2994,7 @@ public:
 	virtual void	LoadGame(UInt32 arg1);
 	virtual void	DoLoad(UInt32 arg1);
 
-	UInt32			alphaLevels[8];		// 04
-
-	bool GetBitSeen(UInt32 row, UInt32 column);
+	UInt32			seenBits[8];	// 04	256 bit field
 };
 
 // 2C
@@ -3007,8 +3005,6 @@ public:
 	SInt8			segmentY;		// 25
 	UInt8			pad26[2];		// 26
 	IntSeenData		*nextSegment;	// 28
-
-	IntSeenData *GetSectionSeenData(int sectionX, int sectionY);
 };
 
 // 10

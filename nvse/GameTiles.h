@@ -123,9 +123,6 @@ enum
 class Tile
 {
 public:
-	Tile();
-	~Tile();
-
 	enum eTileID
 	{
 		kTileID_rect = 0x0385,
@@ -195,9 +192,6 @@ public:
 	class Action
 	{
 	public:
-		Action();
-		~Action();
-
 		virtual float	GetFloat();
 		virtual Value	*GetValue();
 
@@ -209,9 +203,6 @@ public:
 	class RefValueAction : public Action
 	{
 	public:
-		RefValueAction();
-		~RefValueAction();
-
 		Value		*tileVal;	// 0C
 	};
 
@@ -219,9 +210,6 @@ public:
 	class FloatAction : public Action
 	{
 	public:
-		FloatAction();
-		~FloatAction();
-
 		float		value;		// 0C
 	};
 
