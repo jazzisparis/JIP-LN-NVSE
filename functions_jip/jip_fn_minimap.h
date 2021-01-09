@@ -96,11 +96,11 @@ __declspec(naked) void UpdateTileScales()
 }
 
 float s_cellNorthRotation = 0;
-alignas(16) float s_northRotationMods[] = {0, 1, -1, 0};
+__m128 s_northRotationMods = {0, 1, -1, 0};
 
 __declspec(naked) void __fastcall AdjustInteriorPos(TESObjectREFR *refr, CoordXY *outPos)
 {
-	alignas(16) static const float kIntrPosMods[] = {2048, 2048, 0, 0};
+	static const __m128 kIntrPosMods = {2048, 2048, 0, 0};
 	__asm
 	{
 		movq	xmm0, qword ptr [ecx+0x30]
@@ -212,10 +212,10 @@ __declspec(naked) void __fastcall AdjustWorldPos(TESObjectREFR *refr, CoordXY *o
 		movd	xmm1, ecx
 		movsldup	xmm1, xmm1
 		mulps	xmm0, xmm1
-		movlps	xmm1, qword ptr [eax+0xC]
+		movq	xmm1, qword ptr [eax+0xC]
 		jmp		done
 	noScale:
-		movlps	xmm1, qword ptr [eax+4]
+		movq	xmm1, qword ptr [eax+4]
 	done:
 		addps	xmm0, xmm1
 		movq	qword ptr [edx], xmm0
@@ -225,14 +225,14 @@ __declspec(naked) void __fastcall AdjustWorldPos(TESObjectREFR *refr, CoordXY *o
 
 __declspec(naked) void __fastcall GetWorldMapPosMults(CoordXY *outMults)
 {
-	alignas(16) static const UInt32 kPosMultMods[] = {0x3DD00000, 0x3DD00000, 0, 0};
+	static const __m128 kPosMultMods = {0.1015625, 0.1015625, 0, 0};
 	__asm
 	{
 		movq	xmm0, qword ptr [ecx]
 		mov		eax, offset s_rootWorldDimensions
 		movq	xmm1, qword ptr [eax]
 		subps	xmm0, xmm1
-		movlps	xmm1, qword ptr [eax+8]
+		movq	xmm1, qword ptr [eax+8]
 		movlhps	xmm1, xmm1
 		divps	xmm0, xmm1
 		addps	xmm0, kPosMultMods
@@ -243,7 +243,7 @@ __declspec(naked) void __fastcall GetWorldMapPosMults(CoordXY *outMults)
 
 __declspec(naked) void __fastcall GetLocalMapPosMults(CoordXY *inPos, CoordXY *nwXY, CoordXY *outMults)
 {
-	alignas(16) static const float kPosMultDivs[] = {12288, -12288, 1, 1};
+	static const __m128 kPosMultDivs = {12288, -12288, 1, 1};
 	__asm
 	{
 		movq	xmm0, qword ptr [ecx]
@@ -772,7 +772,7 @@ __declspec(naked) void __fastcall DoSelectiveFOWUpdate(CoordXY *adjustedPos)
 
 bool s_updateFogOfWar = false;
 
-__declspec(naked) UInt32 __fastcall UpdateSeenBits(SeenData *seenData, SInt32 *posPtr)
+__declspec(naked) bool __fastcall UpdateSeenBits(SeenData *seenData, SInt32 *posPtr)
 {
 	__asm
 	{
@@ -785,6 +785,7 @@ __declspec(naked) UInt32 __fastcall UpdateSeenBits(SeenData *seenData, SInt32 *p
 		push	edi
 		lea		esi, [ecx+4]
 		mov		edi, edx
+		xor		ecx, ecx
 		mov		bl, 0xF
 		ALIGN 16
 	iter1Head:
@@ -803,7 +804,6 @@ __declspec(naked) UInt32 __fastcall UpdateSeenBits(SeenData *seenData, SInt32 *p
 		add		edx, [ebp-4]
 		cmp		edx, 0x10
 		ja		iter2Next
-		xor		ecx, ecx
 		mov		cl, bh
 		shr		cl, 1
 		lea		eax, [esi+ecx*4]
@@ -824,23 +824,26 @@ __declspec(naked) UInt32 __fastcall UpdateSeenBits(SeenData *seenData, SInt32 *p
 	iter1Next:
 		dec		bl
 		jns		iter1Head
-		popcnt	eax, [esi]
-		popcnt	edx, [esi+4]
-		add		eax, edx
-		popcnt	edx, [esi+8]
-		add		eax, edx
-		popcnt	edx, [esi+0xC]
-		add		eax, edx
-		popcnt	edx, [esi+0x10]
-		add		eax, edx
-		popcnt	edx, [esi+0x14]
-		add		eax, edx
-		popcnt	edx, [esi+0x18]
-		add		eax, edx
-		popcnt	edx, [esi+0x1C]
-		add		eax, edx
 		mov		dl, [ebp-8]
 		or		s_updateFogOfWar, dl
+		mov		edx, 0xFFFFFFFF
+		cmp		[esi], edx
+		jnz		done
+		cmp		[esi+4], edx
+		jnz		done
+		cmp		[esi+8], edx
+		jnz		done
+		cmp		[esi+0xC], edx
+		jnz		done
+		cmp		[esi+0x10], edx
+		jnz		done
+		cmp		[esi+0x14], edx
+		jnz		done
+		cmp		[esi+0x18], edx
+		jnz		done
+		cmp		[esi+0x1C], edx
+	done:
+		setz	al
 		lea		ecx, [esi-4]
 		pop		edi
 		pop		esi
@@ -940,8 +943,8 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		mov		esi, [ebx+0x40]
 		test	esi, esi
 		jz		doneExt
-		mov		edi, 0x11CA208
 		movq	xmm0, qword ptr [ebx+0x30]
+		mov		edi, 0x11CA208
 		cmp		s_pcCurrCell0, esi
 		jz		sameCell
 		mov		s_pcCurrCell0, esi
@@ -965,9 +968,8 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		fstp	dword ptr [eax+8]
 		jmp		skipPosDiff
 	sameCell:
-		movaps	xmm1, xmm0
-		movq	xmm2, qword ptr [edi]
-		subps	xmm1, xmm2
+		movq	xmm1, qword ptr [edi]
+		subps	xmm1, xmm0
 		mulps	xmm1, xmm1
 		movss	xmm2, xmm1
 		psrlq	xmm1, 0x20
@@ -1033,8 +1035,8 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		lea		edx, [ebp-8]
 		mov		ecx, eax
 		call	UpdateSeenBits
-		cmp		eax, 0xF8
-		jb		iterNextExt
+		test	al, al
+		jz		iterNextExt
 		push	kExtraData_SeenData
 		lea		ecx, [esi+0x28]
 		CALL_EAX(kAddr_RemoveExtraType)
@@ -1130,8 +1132,6 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		lea		edx, [ebp-8]
 		mov		ecx, eax
 		call	UpdateSeenBits
-		cmp		eax, 0xFF
-		seta	al
 		mov		[ecx+0x26], al
 	iterNextInt:
 		add		dword ptr [ebp-4], 0x10
@@ -1218,7 +1218,7 @@ __declspec(naked) float* __fastcall GetVtxAlphaPtr(CoordXY *posMult)
 }
 
 UInt8 s_useAltFormat = 0;
-alignas(16) const float kCaptureBounds[] = {-2048, 2048, 2048, -2048};
+const __m128 kCaptureBounds = {-2048, 2048, 2048, -2048};
 
 __declspec(naked) void ExtCaptureBoundsHook()
 {
@@ -1246,7 +1246,7 @@ __declspec(naked) void ExtCaptureBoundsHook()
 		cvtsi2ss	xmm0, eax
 		movss	[ebp-0x38], xmm0
 		movaps	xmm0, kCaptureBounds
-		movups	xmmword ptr [ebp-0x98], xmm0
+		movups	[ebp-0x98], xmm0
 		movss	xmm0, kFlt12288
 		addss	xmm0, [ebp-0x40]
 		movss	[ebp-0x34], xmm0
@@ -1313,7 +1313,7 @@ __declspec(naked) void IntCaptureBoundsHook()
 		movss	[ecx+8], xmm0
 		cmp		s_cellNorthRotation, 0
 		jz		noRot
-		movlps	xmm0, qword ptr [ecx]
+		movq	xmm0, qword ptr [ecx]
 		unpcklps	xmm0, xmm0
 		pshufd	xmm1, s_northRotationMods, 0xD8
 		mulps	xmm0, xmm1
@@ -1322,7 +1322,7 @@ __declspec(naked) void IntCaptureBoundsHook()
 		movq	qword ptr [ecx], xmm0
 	noRot:
 		movaps	xmm0, kCaptureBounds
-		movups	xmmword ptr [ebp-0xA8], xmm0
+		movups	[ebp-0xA8], xmm0
 		movss	xmm0, [ecx+8]
 		subss	xmm0, [ebp-0x40]
 		addss	xmm0, kFlt10000
@@ -1619,7 +1619,7 @@ __declspec(naked) void WaterToLandClipHook()
 		mov		al, 1
 		jmp		done
 	noData:
-		xorps	xmm0, xmm0
+		pxor	xmm0, xmm0
 	done:
 		movss	[ebp-0x20], xmm0
 		mov		[ebp-0x31], al
@@ -1834,7 +1834,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	return true;
 }
 
-alignas(16) const float kVertexAlphaMults[] = {0.25, 0.5, 0.75, 1};
+const __m128 kVertexAlphaMults = {0.25, 0.5, 0.75, 1};
 alignas(16) const UInt32
 kDirectionalLightValues[] = {0x3F59D9DA, 0x3F59D9DA, 0x3F59D9DA, 0x3E4CCCCD, 0x3E4CCCCD, 0x3E4CCCCD, 0, 0, 0, 0, 0xBFC90FDB, 0, 0},
 kFogPropertyValues[] = {0x3DF8F8F9, 0x3E3CBCBD, 0x3E7CFCFD, 0x48F42400, 0x48F42400};
@@ -1953,7 +1953,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				movss	xmm0, [eax+0x78]
 				shufps	xmm0, xmm0, 0
 				mulps	xmm0, kVertexAlphaMults
-				movups	xmmword ptr ds:[s_vertexAlphaLevel+4], xmm0
+				movups	ds:[s_vertexAlphaLevel+4], xmm0
 			}
 		}
 	}
@@ -2337,10 +2337,15 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			{
 				for (auto doorIter = s_doorRefsList.Begin(); doorIter; ++doorIter)
 				{
-					objectRef = doorIter().doorRef;
-					if (parentWorld) adjustedPos = *objectRef->PosXY();
-					else AdjustInteriorPos(objectRef, &adjustedPos);
-					GetLocalMapPosMults(&adjustedPos, &nwXY, &adjustedPos);
+					if (parentWorld)
+						GetLocalMapPosMults(doorIter().doorRef->PosXY(), &nwXY, &adjustedPos);
+					else
+					{
+						AdjustInteriorPos(doorIter().doorRef, &adjustedPos);
+						GetLocalMapPosMults(&adjustedPos, &nwXY, &adjustedPos);
+						if ((adjustedPos.x < 0) || (adjustedPos.x > 1.0F) || (adjustedPos.y < 0) || (adjustedPos.y > 1.0F))
+							continue;
+					}
 					markerTile = hudMain->AddTileFromTemplate(s_doorMarkersRect, "MiniMapDoorMarkerTemplate");
 					markerTile->SetFloat(kTileValue_user0, adjustedPos.x);
 					markerTile->SetFloat(kTileValue_user1, adjustedPos.y);
@@ -2421,10 +2426,11 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					AdjustWorldPos(objectRef, &adjustedPos);
 					GetWorldMapPosMults(&adjustedPos);
 				}
+				else if (parentWorld)
+					GetLocalMapPosMults(objectRef->PosXY(), &nwXY, &adjustedPos);
 				else
 				{
-					if (parentWorld) adjustedPos = *objectRef->PosXY();
-					else AdjustInteriorPos(objectRef, &adjustedPos);
+					AdjustInteriorPos(objectRef, &adjustedPos);
 					GetLocalMapPosMults(&adjustedPos, &nwXY, &adjustedPos);
 				}
 				markerPos->x->SetFloat(adjustedPos.x);
