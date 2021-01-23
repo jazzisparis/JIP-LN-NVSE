@@ -66,7 +66,7 @@ void SetHotkey(UInt8 index, HotkeyInfo &hotkey)
 				if ((hotkey.health >= 0) || (hotkey.modFlags > 0)) continue;
 				xData = ExtraDataList::Create();
 				AddExtraData(xData, ExtraHotkey::Create(index));
-				entry->extendData->Insert(xData);
+				entry->extendData->Prepend(xData);
 				continue;
 			}
 			xdlIter = entry->extendData->Head();
@@ -304,7 +304,7 @@ bool Cmd_BaseAddItem_Execute(COMMAND_ARGS)
 	formCount->form = form;
 	formCount->count = count;
 	formCount->contExtraData->health = 1;
-	container->formCountList.Insert(formCount);
+	container->formCountList.Prepend(formCount);
 	return true;
 }
 
@@ -338,7 +338,7 @@ bool Cmd_BaseAddItemHealth_Execute(COMMAND_ARGS)
 	formCount->form = form;
 	formCount->count = count;
 	formCount->contExtraData->health = health;
-	container->formCountList.Insert(formCount);
+	container->formCountList.Prepend(formCount);
 	return true;
 }
 

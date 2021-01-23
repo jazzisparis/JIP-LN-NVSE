@@ -101,7 +101,7 @@ bool Cmd_LandTextureAddGrass_Execute(COMMAND_ARGS)
 	if (ExtractArgs(EXTRACT_ARGS, &landTex, &grass) && (landTex->typeID == kFormType_TESLandTexture) &&
 		(grass->typeID == kFormType_TESGrass) && !landTex->grasses.IsInList(grass))
 	{
-		landTex->grasses.Insert(grass);
+		landTex->grasses.Prepend(grass);
 		*result = 1;
 	}
 	else *result = 0;

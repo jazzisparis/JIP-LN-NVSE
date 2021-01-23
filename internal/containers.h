@@ -189,6 +189,7 @@ template <typename T_Data> class LinkedList
 
 public:
 	LinkedList() : head(nullptr), tail(nullptr) {}
+	LinkedList(std::initializer_list<T_Data> inList) : head(nullptr), tail(nullptr) {AppendList(inList);}
 	~LinkedList() {Clear();}
 
 	bool Empty() const {return !head;}
@@ -235,6 +236,12 @@ public:
 		T_Data *data = &newNode->data;
 		new (data) T_Data(std::forward<Args>(args)...);
 		return data;
+	}
+
+	void AppendList(std::initializer_list<T_Data> inList)
+	{
+		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
+			Append(*iter);
 	}
 
 	T_Data *Insert(UInt32 index, Data_Arg item)
@@ -499,6 +506,12 @@ template <typename T_Data> __forceinline UInt32 AlignNumAlloc(UInt32 numAlloc)
 	}
 }
 
+template <typename T_Key, typename T_Data> struct MappedPair
+{
+	T_Key		key;
+	T_Data		value;
+};
+
 template <typename T_Key> class MapKey
 {
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
@@ -633,6 +646,7 @@ template <typename T_Key, typename T_Data> class Map
 
 public:
 	Map(UInt32 _alloc = MAP_DEFAULT_ALLOC) : entries(nullptr), numEntries(0), numAlloc(_alloc) {}
+	Map(std::initializer_list<MappedPair<T_Key, T_Data>> inList) : entries(nullptr), numEntries(0), numAlloc(inList.size()) {InsertList(inList);}
 	~Map()
 	{
 		if (!entries) return;
@@ -668,6 +682,16 @@ public:
 		return outData;
 	}
 
+	void InsertList(std::initializer_list<MappedPair<T_Key, T_Data>> inList)
+	{
+		T_Data *outData;
+		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
+		{
+			InsertKey(iter->key, &outData);
+			*outData = iter->value;
+		}
+	}
+
 	bool HasKey(Key_Arg key) const
 	{
 		UInt32 index;
@@ -700,14 +724,16 @@ public:
 
 	void Clear()
 	{
-		if (!numEntries) return;
-		Entry *pEntry = entries, *pEnd = End();
-		do
+		if (numEntries)
 		{
-			pEntry->Clear();
-			pEntry++;
+			Entry *pEntry = entries, *pEnd = End();
+			do
+			{
+				pEntry->Clear();
+				pEntry++;
+			}
+			while (pEntry != pEnd);
 		}
-		while (pEntry != pEnd);
 		numEntries = 0;
 	}
 
@@ -850,6 +876,7 @@ template <typename T_Key> class Set
 
 public:
 	Set(UInt32 _alloc = MAP_DEFAULT_ALLOC) : keys(nullptr), numKeys(0), numAlloc(_alloc) {}
+	Set(std::initializer_list<T_Key> inList) : keys(nullptr), numKeys(0), numAlloc(inList.size()) {InsertList(inList);}
 	~Set()
 	{
 		if (!keys) return;
@@ -885,6 +912,12 @@ public:
 		return true;
 	}
 
+	void InsertList(std::initializer_list<T_Key> inList)
+	{
+		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
+			Insert(*iter);
+	}
+
 	bool HasKey(Key_Arg key) const
 	{
 		UInt32 index;
@@ -905,14 +938,16 @@ public:
 
 	void Clear()
 	{
-		if (!numKeys) return;
-		M_Key *pKey = keys, *pEnd = End();
-		do
+		if (numKeys)
 		{
-			pKey->Clear();
-			pKey++;
+			M_Key *pKey = keys, *pEnd = End();
+			do
+			{
+				pKey->Clear();
+				pKey++;
+			}
+			while (pKey != pEnd);
 		}
-		while (pKey != pEnd);
 		numKeys = 0;
 	}
 
@@ -1169,6 +1204,7 @@ template <typename T_Key, typename T_Data> class UnorderedMap
 
 public:
 	UnorderedMap(UInt32 _numBuckets = MAP_DEFAULT_BUCKET_COUNT) : buckets(nullptr), numBuckets(_numBuckets), numEntries(0) {}
+	UnorderedMap(std::initializer_list<MappedPair<T_Key, T_Data>> inList) : buckets(nullptr), numBuckets(inList.size()), numEntries(0) {InsertList(inList);}
 	~UnorderedMap()
 	{
 		if (!buckets) return;
@@ -1225,6 +1261,16 @@ public:
 		if (InsertKey(key, &outData))
 			RawAssign<T_Data>(*outData, value);
 		return value;
+	}
+
+	void InsertList(std::initializer_list<MappedPair<T_Key, T_Data>> inList)
+	{
+		T_Data *outData;
+		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
+		{
+			InsertKey(iter->key, &outData);
+			*outData = iter->value;
+		}
 	}
 
 	bool HasKey(Key_Arg key) const {return FindEntry(key) ? true : false;}
@@ -1407,7 +1453,7 @@ public:
 			entry = prev;
 		}
 
-		Iterator() : table(nullptr), entry(nullptr) {}
+		Iterator(UnorderedMap *_table = nullptr) : table(_table), entry(nullptr) {}
 		Iterator(UnorderedMap &_table) {Init(_table);}
 		Iterator(UnorderedMap &_table, Key_Arg key) : table(&_table) {Find(key);}
 	};
@@ -1502,6 +1548,7 @@ template <typename T_Key> class UnorderedSet
 
 public:
 	UnorderedSet(UInt32 _numBuckets = MAP_DEFAULT_BUCKET_COUNT) : buckets(nullptr), numBuckets(_numBuckets), numEntries(0) {}
+	UnorderedSet(std::initializer_list<T_Key> inList) : buckets(nullptr), numBuckets(inList.size()), numEntries(0) {InsertList(inList);}
 	~UnorderedSet()
 	{
 		if (!buckets) return;
@@ -1546,6 +1593,12 @@ public:
 		newEntry->key.Set(key, hashVal);
 		pBucket->Insert(newEntry);
 		return true;
+	}
+
+	void InsertList(std::initializer_list<T_Key> inList)
+	{
+		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
+			Insert(*iter);
 	}
 
 	bool HasKey(Key_Arg key) const
@@ -1686,6 +1739,7 @@ template <typename T_Data> class Vector
 
 public:
 	Vector(UInt32 _alloc = VECTOR_DEFAULT_ALLOC) : data(nullptr), numItems(0), numAlloc(_alloc) {}
+	Vector(std::initializer_list<T_Data> inList) : data(nullptr), numItems(0), numAlloc(inList.size()) {AppendList(inList);}
 	~Vector()
 	{
 		if (!data) return;
@@ -1718,6 +1772,12 @@ public:
 		T_Data *pData = AllocateData();
 		new (pData) T_Data(std::forward<Args>(args)...);
 		return pData;
+	}
+
+	void AppendList(std::initializer_list<T_Data> inList)
+	{
+		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
+			Append(*iter);
 	}
 
 	T_Data* Insert(UInt32 index, Data_Arg item)
@@ -1989,14 +2049,16 @@ public:
 
 	void Clear()
 	{
-		if (!numItems) return;
-		T_Data *pData = data, *pEnd = End();
-		do
+		if (numItems)
 		{
-			pData->~T_Data();
-			pData++;
+			T_Data *pData = data, *pEnd = End();
+			do
+			{
+				pData->~T_Data();
+				pData++;
+			}
+			while (pData != pEnd);
 		}
-		while (pData != pEnd);
 		numItems = 0;
 	}
 

@@ -109,25 +109,6 @@ __declspec(naked) void TESGlobalLoadFormHook()
 	}
 }
 
-__declspec(naked) const char *GetNPCModelHook()
-{
-	__asm
-	{
-		mov		eax, [ecx+4]
-		test	eax, eax
-		jz		noModel
-		retn
-	noModel:
-		sub		ecx, 0xD8
-		test	dword ptr [ecx], 1
-		mov		eax, 0x11D3E48
-		mov		ecx, 0x11D271C
-		cmovnz	eax, ecx
-		mov		eax, [eax]
-		retn
-	}
-}
-
 __declspec(naked) bool SetNPCModelHook()
 {
 	__asm
@@ -588,7 +569,7 @@ __declspec(naked) void QttMenuEnableWheelHook()
 	__asm
 	{
 		mov		eax, g_interfaceManager
-		xorps	xmm0, xmm0
+		pxor	xmm0, xmm0
 		comiss	xmm0, [eax+0x44]
 		jz		done
 		setb	dl
@@ -678,7 +659,7 @@ void __fastcall BuildMusicMarkerList(TESWorldSpace *worldspace, tList<TESObjectR
 	{
 		musicMarker = (MusicMarker*)GameHeapAlloc(8);
 		*musicMarker = mkIter();
-		musicMarkers->Insert(musicMarker);
+		musicMarkers->Prepend(musicMarker);
 	}
 }
 
@@ -1032,7 +1013,7 @@ __declspec(naked) void ExtractStringHook()
 		call	ScriptEventList::GetVariable
 		test	eax, eax
 		jz		done
-		cvttsd2si	edx, qword ptr [eax+8]
+		cvttsd2si	edx, [eax+8]
 		push	edx
 		call	GetStringVar
 		pop		ecx
@@ -2763,7 +2744,7 @@ __declspec(naked) void VoiceModulationFixHook()
 	}
 }
 
-alignas(16) float s_shapeVerticesZ[40];
+__m128 s_shapeVerticesZ[10];
 bhkCharControllerShape *s_pcControllerShape = NULL;
 
 __declspec(naked) void InitControllerShapeHook()
@@ -2790,7 +2771,7 @@ __declspec(naked) void InitControllerShapeHook()
 		mov		ecx, [ecx+0x40]
 		add		ecx, 0x20
 		mov		dl, 5
-		xorps	xmm1, xmm1
+		pxor	xmm1, xmm1
 		movss	xmm2, kFltSix
 	iter1Head:
 		movups	xmm0, [ecx]
@@ -2909,19 +2890,19 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		cvtss2sd	xmm0, [eax+0x24]
 		cmp		byte ptr [ecx+0x1C], 0
 		jnz		doRecalc
-		movapd	xmm1, xmm0
+		movq	xmm1, xmm0
 		movq	xmm3, gameHour
 		subsd	xmm1, xmm3
 		comisd	xmm1, kDbl0dot1
 		ja		doRecalc
-		movapd	xmm0, xmm3
+		movq	xmm0, xmm3
 		movq	xmm1, daysPassed
 		jmp		proceed
 	doRecalc:
 		mov		[ecx+0x1C], 0
 		mov		edx, g_thePlayer
 		mov		[edx+0xE39], 1
-		movapd	xmm1, xmm0
+		movq	xmm1, xmm0
 		divsd	xmm1, xmm4
 		mov		eax, [ecx+0x10]
 		cvttss2si	edx, [eax+0x24]
@@ -2996,7 +2977,7 @@ __declspec(naked) bool __fastcall ModHardcoreNeedsHook(PlayerCharacter *thePlaye
 		jz		tracking
 		add		ecx, 0x49C
 		xor		edx, edx
-		xorps	xmm1, xmm1
+		pxor	xmm1, xmm1
 		cmp		[ecx], edx
 		jz		FOD
 		movss	xmm0, [ecx]
@@ -3237,7 +3218,10 @@ __declspec(naked) void DefaultTextureHook()
 	}
 }
 
-UnorderedMap<const char*, UInt32> s_optionalHacks(0x20);
+UnorderedMap<const char*, UInt32> s_optionalHacks({{"bIgnoreDTDRFix", 1}, {"bEnableFO3Repair", 2}, {"bEnableBigGunsSkill", 3}, {"bProjImpactDmgFix", 4},
+	{"bGameDaysPassedFix", 5}, {"bHardcoreNeedsFix", 6}, {"bNoFailedScriptLocks", 7}, {"bDoublePrecision", 8}, {"bQttSelectShortKeys", 9},
+	{"bMultiProjectileFix", 10}, {"bFO3WpnDegradation", 11}, {"bLocalizedDTDR", 12}, {"bVoiceModulationFix", 13}, {"bSneakBoundingBoxFix", 14},
+	{"bEnableNVACAlerts", 15}, {"bLoadScreenFix", 16}, {"bNPCWeaponMods", 17}, {"uWMChancePerLevel", 18}, {"uWMChanceMin", 19}, {"uWMChanceMax", 20}});
 
 bool s_bigGunsSkill = false, s_failedScriptLocks = false, s_NVACAlerts = false, s_NPCWeaponMods = false;
 UInt32 s_NVACAddress = 0;
@@ -3581,10 +3565,6 @@ void PatchDisplayTime(bool enable = true)
 }
 
 UInt32 s_deferrSetOptional = 0;
-const char kOptSettingNames[] =
-"bIgnoreDTDRFix\0bEnableFO3Repair\0bEnableBigGunsSkill\0bProjImpactDmgFix\0bGameDaysPassedFix\0bHardcoreNeedsFix\0bNoFailedScriptLocks\0bDoublePrecision\0\
-bQttSelectShortKeys\0bMultiProjectileFix\0bFO3WpnDegradation\0bLocalizedDTDR\0bVoiceModulationFix\0bSneakBoundingBoxFix\0bEnableNVACAlerts\0bLoadScreenFix\0\
-bNPCWeaponMods\0uWMChancePerLevel\0uWMChanceMin\0uWMChanceMax";
 
 void InitGamePatches()
 {
@@ -3700,7 +3680,7 @@ void InitGamePatches()
 
 	SafeWrite16(0x94E5F6, 0x18EB);
 	SafeWrite32(0x1016DB8, (UInt32)DoQueuedPlayerHook);
-	SafeWrite32(0x104A1B8, (UInt32)GetNPCModelHook);
+	SafeWriteBuf(0x601C30, "\x8B\x41\x04\x85\xC0\x74\x01\xC3\x81\xE9\xD8\x00\x00\x00\xF7\x01\x01\x00\x00\x00\xB8\x48\x3E\x1D\x01\xB9\x1C\x27\x1D\x01\x0F\x45\xC1\x8B\x00\xC3", 36);
 	SafeWrite32(0x104A1BC, (UInt32)SetNPCModelHook);
 	SafeWrite8(0x40F75B, 0x18);
 
@@ -3852,15 +3832,6 @@ void InitGamePatches()
 	if (!s_overrideBSAFiles.Empty())
 		WriteRelCall(0x463855, (UInt32)LoadBSAFileHook);
 
-	const char *strPos = kOptSettingNames;
-	index = 1;
-	do
-	{
-		s_optionalHacks[strPos] = index;
-		strPos += StrLen(strPos) + 1;
-	}
-	while (++index < 21);
-
 	lines = GetPrivateProfileSection("GamePatches", s_strValBuffer, 0x10000, "Data\\NVSE\\plugins\\jip_nvse.ini");
 	dataPtr = s_strValBuffer;
 	while (lines > 0)
@@ -3930,6 +3901,10 @@ void DeferredInit()
 	g_gooPileACTI = *(TESObjectACTI**)0x11CA280;
 	g_ashPileACTI->SetJIPFlag(kHookFormFlag6_IsAshPile, true);
 	g_gooPileACTI->SetJIPFlag(kHookFormFlag6_IsAshPile, true);
+
+	s_tempPosMarker = ThisCall<TESObjectREFR*>(0x55A2F0, GameHeapAlloc(sizeof(TESObjectREFR)));
+	ThisCall(0x484490, s_tempPosMarker);
+
 	g_eventCmdInfos[1].execute = Hook_MenuMode_Execute;
 	g_eventCmdInfos[0xE].execute = Cmd_EmptyCommand_Execute;
 
@@ -3977,6 +3952,8 @@ void DeferredInit()
 	avInfo->callback4C = 0x643BD0;
 
 	JIPScriptRunner::Init();
+
+	ThisCall(0x4AD050, &s_NiObjectCopyInfo, 0x3F800000);
 
 	UInt8 cccIdx = g_dataHandler->GetModIndex("JIP Companions Command & Control.esp");
 	if (cccIdx != 0xFF)

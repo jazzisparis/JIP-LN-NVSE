@@ -323,9 +323,6 @@ public:
 	DEFINE_MEMBER_FN(Print, void, s_Console__Print, const char * fmt, va_list args);
 #endif
 
-	ConsoleManager();
-	~ConsoleManager();
-
 	struct TextNode
 	{
 		TextNode	*next;
@@ -403,9 +400,6 @@ class NumericIDBufferMap;
 class NiBinaryStream
 {
 public:
-	NiBinaryStream();
-	~NiBinaryStream();
-
 	virtual void	Destructor(bool freeMemory);		// 00
 	virtual void	Unk_01(void);						// 04
 	virtual void	SeekCur(SInt32 delta);				// 08
@@ -421,9 +415,6 @@ public:
 class NiFile: public NiBinaryStream
 {
 public:
-	NiFile();
-	~NiFile();
-
 	virtual UInt32	SetOffset(UInt32 newOffset, UInt32 arg2);	// 14
 	virtual UInt32	GetFilename(void);	// 18
 	virtual UInt32	GetSize();			// 1C
@@ -440,9 +431,6 @@ public:
 class BSFile : public NiFile
 {
 public:
-	BSFile();
-	~BSFile();
-
 	virtual bool	Reset(bool arg1, bool arg2);	// 20
 	virtual bool	Unk_09(UInt32 arg1);	// 24
 	virtual UInt32	Unk_0A();	// 28
@@ -598,9 +586,6 @@ union preloadData
 class BGSLoadGameBuffer
 {
 public:
-	BGSLoadGameBuffer();
-	~BGSLoadGameBuffer();
-
 	virtual UInt8			GetSaveFormVersion(void);	// replaced in descendant 
 	virtual TESForm*		getForm(void);				// only implemented in descendants
 	virtual TESObjectREFR*	getREFR(void);				// only implemented in descendants
@@ -627,9 +612,6 @@ struct	BGSSaveLoadChangesMap
 class BGSLoadFormBuffer: public BGSLoadGameBuffer
 {
 public:
-	BGSLoadFormBuffer();
-	~BGSLoadFormBuffer();
-
 	typedef UInt8 EncodedID[3];
 	struct Header	// 00C
 	{
@@ -648,20 +630,34 @@ public:
 	BGSFormChange*	currentFormChange;	// 02C
 };
 
-class BGSSaveFormBuffer: public BGSLoadGameBuffer
+// 14
+class BGSSaveGameBuffer
 {
-	BGSSaveFormBuffer();
-	~BGSSaveFormBuffer();
+public:
+	virtual TESForm	*GetForm(void);
+	virtual TESObjectREFR	*GetRefr(void);
+	virtual Actor	*GetActor(void);
 
-};	// in BGSSaveGameBuffer there is a 010, which look like a counter (ChunkCount ?), then the Header
+	UInt32		unk04;		// 04
+	UInt32		unk08;		// 08
+	UInt32		unk0C;		// 0C
+	UInt32		unk10;		// 10
+};
+
+// 24
+class BGSSaveFormBuffer : public BGSSaveGameBuffer
+{
+public:
+	UInt32		unk14;		// 14
+	UInt32		unk18;		// 18
+	UInt32		unk1C;		// 1C
+	TESForm		*form;		// 20
+};
 
 // 1C8 - only explicitly marked things are verified
 class TESSaveLoadGame
 {
 public:
-	TESSaveLoadGame();
-	~TESSaveLoadGame();
-
 	struct CreatedObject {
 		UInt32			refID;
 		CreatedObject	* next;
@@ -736,9 +732,6 @@ class BGSReconstructFormsInAllFilesMap;
 class BGSSaveLoadGame	// 0x011DDF38
 {
 public:
-	BGSSaveLoadGame();
-	~BGSSaveLoadGame();
-
 	typedef UInt32	RefID;
 	typedef UInt32	IndexRefID;
 	struct RefIDIndexMapping	// reversible map between refID and loaded form index
@@ -792,9 +785,6 @@ STATIC_ASSERT(sizeof(BGSSaveLoadGame) == 0x24C);
 class SaveGameManager
 {
 public:
-	SaveGameManager();
-	~SaveGameManager();
-
 	static SaveGameManager* GetSingleton();
 	MEMBER_FN_PREFIX(SaveGameManager);
 	DEFINE_MEMBER_FN(ConstructSavegameFilename, void, _SaveGameManager_ConstructSavegameFilename, 

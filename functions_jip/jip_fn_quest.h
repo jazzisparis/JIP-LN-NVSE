@@ -104,7 +104,7 @@ bool Cmd_AddObjectiveTarget_Execute(COMMAND_ARGS)
 			BGSQuestObjective::Target *target = (BGSQuestObjective::Target*)GameHeapAlloc(sizeof(BGSQuestObjective::Target));
 			ThisCall(0x60FF70, target);
 			target->target = refr;
-			objective->targets.Insert(target);
+			objective->targets.Prepend(target);
 		}
 	}
 	return true;

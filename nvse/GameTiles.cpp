@@ -56,7 +56,7 @@ __declspec(naked) Tile::Value *Tile::GetValue(UInt32 typeID)
 
 Tile::Value *Tile::GetValueName(const char *valueName)
 {
-	return GetValue(TraitNameToID(valueName));
+	return GetValue(::TraitNameToID(valueName));
 }
 
 DListNode<Tile> *Tile::GetNthChild(UInt32 index)
@@ -64,25 +64,41 @@ DListNode<Tile> *Tile::GetNthChild(UInt32 index)
 	return children.Tail()->Regress(index);
 }
 
-char *Tile::GetComponentFullName(char *resStr)
+void Tile::GetComponentFullName(char *resStr)
 {
-	if IS_TYPE(this, TileMenu)
-		return StrLenCopy(resStr, name.m_data, name.m_dataLen);
-	char *fullName = parent->GetComponentFullName(resStr);
-	*fullName++ = '/';
-	fullName = StrLenCopy(fullName, name.m_data, name.m_dataLen);
-	DListNode<Tile> *node = parent->children.Tail();
-	while (node->data != this)
-		node = node->prev;
-	int index = 0;
-	while ((node = node->prev) && !strcmp(name.m_data, node->data->name.m_data))
-		index++;
-	if (index)
+	Tile *parents[24], *pTile = this;
+	UInt32 count = 0, length;
+	while (true)
 	{
-		*fullName++ = ':';
-		fullName = IntToStr(fullName, index);
+		parents[count++] = pTile;
+		if IS_TYPE(pTile, TileMenu) break;
+		pTile = pTile->parent;
 	}
-	return fullName;
+	char *pName;
+	DListNode<Tile> *node;
+	int index;
+	while (true)
+	{
+		pTile = parents[--count];
+		pName = pTile->name.m_data;
+		length = pTile->name.m_dataLen;
+		memcpy(resStr, pName, length);
+		resStr += length;
+		node = pTile->parent->children.Tail();
+		while (node->data != pTile)
+			node = node->prev;
+		index = 0;
+		while ((node = node->prev) && !strcmp(pName, node->data->name.m_data))
+			index++;
+		if (index)
+		{
+			*resStr++ = ':';
+			resStr = IntToStr(resStr, index);
+		}
+		if (!count) break;
+		*resStr++ = '/';
+	}
+	*resStr = 0;
 }
 
 Menu *Tile::GetParentMenu()
@@ -141,15 +157,30 @@ __declspec(naked) void Tile::FakeClick()
 	}
 }
 
-void Tile::DestroyAllChildren()
+__declspec(naked) void Tile::DestroyAllChildren()
 {
-	DListNode<Tile> *node = children.Tail();
-	Tile *child;
-	while (node)
+	__asm
 	{
-		child = node->data;
-		node = node->prev;
-		if (child) child->Destroy(true);
+		mov		eax, [ecx+4]
+		test	eax, eax
+		jz		done
+		push	esi
+		mov		esi, eax
+		ALIGN 16
+	iterHead:
+		mov		ecx, [esi+8]
+		mov		esi, [esi]
+		test	ecx, ecx
+		jz		iterNext
+		push	1
+		mov		eax, [ecx]
+		call	dword ptr [eax]
+	iterNext:
+		test	esi, esi
+		jnz		iterHead
+		pop		esi
+	done:
+		retn
 	}
 }
 
@@ -164,9 +195,10 @@ Tile *Tile::GetChild(const char *childName)
 		childIndex = StrToInt(colon + 1);
 	}
 	Tile *result = NULL;
+	bool wildcard = *childName == '*';
 	for (DListNode<Tile> *node = children.Head(); node; node = node->next)
 	{
-		if (node->data && ((*childName == '*') || !StrCompare(node->data->name.m_data, childName)) && !childIndex--)
+		if (node->data && (wildcard || !StrCompare(node->data->name.m_data, childName)) && !childIndex--)
 		{
 			result = node->data;
 			break;
@@ -252,10 +284,7 @@ void Tile::Dump()
 // also this is slow and sucks
 const char *TraitIDToName(int id)
 {
-	for (UInt32 i = 0; i < g_traitNameMap->numBuckets; i++)
-		for (TraitNameMap::Entry * bucket = g_traitNameMap->buckets[i]; bucket; bucket = bucket->next)
-			if(bucket->data == id)
-				return bucket->key;
-
+	for (auto iter = g_traitNameMap->Begin(); !iter.End(); ++iter)
+		if (iter.Get() == id) return iter.Key();
 	return NULL;
 }

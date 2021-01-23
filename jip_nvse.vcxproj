@@ -179,6 +179,7 @@
     <ClInclude Include="internal\type_defs.h" />
     <ClInclude Include="internal\utility.h" />
     <ClInclude Include="internal\version.h" />
+    <ClInclude Include="internal\xinput.h" />
     <ClInclude Include="jip_nvse.h" />
     <ClInclude Include="nvse\CommandTable.h" />
     <ClInclude Include="nvse\GameAPI.h" />

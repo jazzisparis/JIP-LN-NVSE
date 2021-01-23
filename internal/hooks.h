@@ -511,6 +511,9 @@ __declspec(naked) void CycleMainLoopCallbacks()
 	}
 }
 
+UInt32 s_LNEventFlags = 0;
+void LN_ProcessEvents();
+
 bool s_sleepSemaphore = false;
 
 __declspec(naked) void GameMainLoopHook()
@@ -698,6 +701,7 @@ bool __fastcall HandleInputKey(TextEditMenu *menu, UInt32 inputKey)
 {
 	if (!menu->isActive || (inputKey < 0x20))
 		return false;
+	char *currText = menu->currentText.m_data;
 	SInt32 currIdx = menu->cursorIndex, newIdx;
 	UInt16 length = menu->currentText.m_dataLen;
 	if (inputKey < kInputCode_Backspace)
@@ -706,9 +710,14 @@ bool __fastcall HandleInputKey(TextEditMenu *menu, UInt32 inputKey)
 			return false;
 		if (menu->miscFlags & 1)
 		{
-			if (inputKey == '.')
+			if (inputKey == '-')
 			{
-				if (strchr(menu->currentText.m_data, '.'))
+				if (currIdx || (*currText == '-'))
+					return false;
+			}
+			else if (inputKey == '.')
+			{
+				if (strchr(currText, '.'))
 					return false;
 			}
 			else if ((inputKey < '0') || (inputKey > '9'))
@@ -746,16 +755,16 @@ bool __fastcall HandleInputKey(TextEditMenu *menu, UInt32 inputKey)
 			break;
 		case kInputCode_Home:
 		{
-			chrPtr = FindChrR(menu->currentText.m_data, currIdx, '\n');
-			newIdx = chrPtr ? (chrPtr - menu->currentText.m_data + 1) : 0;
+			chrPtr = FindChrR(currText, currIdx, '\n');
+			newIdx = chrPtr ? (chrPtr - currText + 1) : 0;
 			if (newIdx == currIdx) break;
 			menu->cursorIndex = newIdx;
 			return true;
 		}
 		case kInputCode_End:
 		{
-			chrPtr = strchr(menu->currentText.m_data + currIdx, '\n');
-			newIdx = chrPtr ? (chrPtr - menu->currentText.m_data) : length;
+			chrPtr = strchr(currText + currIdx, '\n');
+			newIdx = chrPtr ? (chrPtr - currText) : length;
 			if (newIdx == currIdx) break;
 			menu->cursorIndex = newIdx;
 			return true;
@@ -1588,7 +1597,8 @@ __declspec(naked) void DamageActorValueHook()
 		jz		done
 		movss	xmm0, [ebp+0x10]
 		addss	xmm0, [ebp+0x14]
-		comiss	xmm0, kFltZero
+		pxor	xmm1, xmm1
+		comiss	xmm0, xmm1
 		ja		done
 		push	esi
 		mov		ecx, offset s_crippledLimbEventMap
@@ -1605,7 +1615,7 @@ __declspec(naked) void DamageActorValueHook()
 	healthDmg:
 		test	byte ptr [esi+0x107], kHookActorFlag3_OnHealthDamage
 		jz		done
-		xorps	xmm0, xmm0
+		pxor	xmm0, xmm0
 		comiss	xmm0, [ebp+0x14]
 		jbe		done
 		push	esi
@@ -1655,38 +1665,34 @@ __declspec(naked) void InitMoonHook()
 {
 	__asm
 	{
-		push	s_moonTexturesSet[0]
-		mov		ecx, [ebp-0x18]
-		add		ecx, 0x18
+		push	esi
+		mov		esi, [ebp-0x18]
+		mov		eax, offset s_moonTexturesSet
+		push	dword ptr [eax+0x1C]
+		push	dword ptr [eax+0x18]
+		push	dword ptr [eax+0x14]
+		push	dword ptr [eax+0x10]
+		push	dword ptr [eax+0xC]
+		push	dword ptr [eax+8]
+		push	dword ptr [eax+4]
+		push	dword ptr [eax]
+		lea		ecx, [esi+0x18]
 		call	String::Set
-		push	s_moonTexturesSet[4]
-		mov		ecx, [ebp-0x18]
-		add		ecx, 0x20
+		lea		ecx, [esi+0x20]
 		call	String::Set
-		push	s_moonTexturesSet[8]
-		mov		ecx, [ebp-0x18]
-		add		ecx, 0x28
+		lea		ecx, [esi+0x28]
 		call	String::Set
-		push	s_moonTexturesSet[0xC]
-		mov		ecx, [ebp-0x18]
-		add		ecx, 0x30
+		lea		ecx, [esi+0x30]
 		call	String::Set
-		push	s_moonTexturesSet[0x10]
-		mov		ecx, [ebp-0x18]
-		add		ecx, 0x38
+		lea		ecx, [esi+0x38]
 		call	String::Set
-		push	s_moonTexturesSet[0x14]
-		mov		ecx, [ebp-0x18]
-		add		ecx, 0x40
+		lea		ecx, [esi+0x40]
 		call	String::Set
-		push	s_moonTexturesSet[0x18]
-		mov		ecx, [ebp-0x18]
-		add		ecx, 0x48
+		lea		ecx, [esi+0x48]
 		call	String::Set
-		push	s_moonTexturesSet[0x1C]
-		mov		ecx, [ebp-0x18]
-		add		ecx, 0x50
+		lea		ecx, [esi+0x50]
 		call	String::Set
+		pop		esi
 		retn
 	}
 }
@@ -2087,18 +2093,9 @@ __declspec(naked) void RunResultScriptHook()
 
 void __fastcall InvokeActorHitEvents(ActorHitData *hitData)
 {
-	CriticalHitEventData *eventData;
 	for (auto iter = s_criticalHitEvents.BeginCp(); iter; ++iter)
-	{
-		eventData = &iter();
-		if (eventData->target && (eventData->target != hitData->target))
-			continue;
-		if (eventData->source && (eventData->source != hitData->source))
-			continue;
-		if (eventData->weapon && (eventData->weapon != hitData->weapon))
-			continue;
-		CallFunction(eventData->callback, hitData->target, NULL, &s_callRes, 2, hitData->source, hitData->weapon);
-	}
+		if ((!iter().target || (iter().target == hitData->target)) && (!iter().source || (iter().source == hitData->source)) && (!iter().weapon || (iter().weapon == hitData->weapon)))
+			CallFunction(iter().callback, hitData->target, NULL, &s_callRes, 2, hitData->source, hitData->weapon);
 }
 
 __declspec(naked) void __fastcall CopyHitDataHook(MiddleHighProcess *process, int EDX, ActorHitData *copyFrom)
@@ -2115,34 +2112,28 @@ __declspec(naked) void __fastcall CopyHitDataHook(MiddleHighProcess *process, in
 		mov		[ecx+0x240], eax
 	allocated:
 		mov		edx, [esp+4]
+		movdqu	xmm0, xmmword ptr [edx]
+		movdqu	xmmword ptr [eax], xmm0
+		movdqu	xmm0, xmmword ptr [edx+0x10]
+		movdqu	xmmword ptr [eax+0x10], xmm0
+		movdqu	xmm0, xmmword ptr [edx+0x20]
+		movdqu	xmmword ptr [eax+0x20], xmm0
+		movdqu	xmm0, xmmword ptr [edx+0x30]
+		movdqu	xmmword ptr [eax+0x30], xmm0
+		movdqu	xmm0, xmmword ptr [edx+0x40]
+		movdqu	xmmword ptr [eax+0x40], xmm0
+		movdqu	xmm0, xmmword ptr [edx+0x50]
+		movdqu	xmmword ptr [eax+0x50], xmm0
 		mov		ecx, [edx+0x10]
 		mov		[eax+0x60], ecx
-		push	0x60
-		push	edx
-		push	eax
-		call	MemCopy
-		add		esp, 0xC
-		cmp		dword ptr ds:[s_criticalHitEvents.numItems], 0
-		jz		done
 		test	byte ptr [eax+0x58], 4
+		jz		done
+		cmp		dword ptr ds:[s_criticalHitEvents.numItems], 0
 		jz		done
 		mov		ecx, eax
 		call	InvokeActorHitEvents
 	done:
 		retn	4
-	}
-}
-
-__declspec(naked) void __fastcall ResetHitDataHook(MiddleHighProcess *process)
-{
-	__asm
-	{
-		mov		eax, [ecx+0x240]
-		test	eax, eax
-		jz		done
-		mov		dword ptr [eax+0x10], 0xFFFFFFFF
-	done:
-		retn
 	}
 }
 
@@ -2207,7 +2198,7 @@ __declspec(naked) void EvalEventBlockHook()
 	__asm
 	{
 		pxor	xmm0, xmm0
-		comisd	xmm0, qword ptr [ebp-0x2C]
+		comisd	xmm0, [ebp-0x2C]
 		setnz	al
 		jz		retnFalse
 		cmp		byte ptr [ebp+0x28], 0
@@ -2229,17 +2220,17 @@ __declspec(naked) void EvalEventBlockHook()
 		mov		eax, [ecx+0xC]
 		mov		edx, [ebp+0x14]
 		add		[edx], eax
-		push	0x2C
-		lea		edx, [ecx+0x10]
-		push	edx
-		mov		ecx, [ebp-0xED0]
-		add		ecx, 0x20
-		push	ecx
-		call	MemCopy
-		add		esp, 0xC
-		mov		eax, s_scriptWaitInfo
+		mov		edx, [ebp-0xED0]
+		movdqu	xmm0, xmmword ptr [ecx+0x10]
+		movdqu	xmmword ptr [edx+0x20], xmm0
+		movdqu	xmm0, xmmword ptr [ecx+0x20]
+		movdqu	xmmword ptr [edx+0x30], xmm0
+		movq	xmm0, qword ptr [ecx+0x30]
+		movq	qword ptr [edx+0x40], xmm0
+		mov		eax, [ecx+0x38]
+		mov		[edx+0x48], eax
 		mov		s_scriptWaitInfo, 0
-		mov		eax, [eax]
+		mov		eax, [ecx]
 		and		byte ptr [eax+5], ~kHookFormFlag5_ScriptOnWait
 		push	dword ptr [eax+0xC]
 		mov		ecx, offset s_scriptWaitInfoMap
@@ -2660,7 +2651,7 @@ __declspec(naked) void ApplyActorVelocityHook()
 		fld		dword ptr [eax]
 		test	dword ptr [ecx+0x414], 0x80000000
 		jz		contRetn
-		xorps	xmm0, xmm0
+		pxor	xmm0, xmm0
 		comiss	xmm0, [ecx+0x524]
 		jnb		rmvFlag
 		JMP_EDX(0xC6D5A5)
@@ -2826,8 +2817,6 @@ __declspec(naked) void __fastcall DoAttachModels(TESForm *form, int EDX, NiNode 
 		jz		insNext
 		mov		ecx, eax
 		call	NiNode::CreateCopy
-		test	eax, eax
-		jz		insNext
 		push	1
 		push	eax
 		mov		ecx, eax
@@ -2861,7 +2850,7 @@ __declspec(naked) void InsertObjectHook()
 		add		ecx, 0x80
 		CALL_EAX(0x40FBA0)
 		mov		ecx, [ebp-0x1C]
-		call	TESObjectREFR::GetBaseForm
+		call	TESObjectREFR::GetBaseForm2
 		test	eax, eax
 		jz		done
 		mov		ecx, [ebp-0x1C]
@@ -2891,8 +2880,6 @@ __declspec(naked) void InsertObjectHook()
 		mov		ecx, eax
 		call	NiNode::CreateCopy
 		pop		ecx
-		test	eax, eax
-		jz		done
 		push	eax
 		add		ecx, 0xC
 		push	ecx
@@ -3359,32 +3346,11 @@ __declspec(naked) void FireWeaponWobbleHook()
 	}
 }
 
-UnorderedMap<const char*, UInt32> s_eventMasks(0x20);
-const char
-kEventNames[] =
-"OnActivate\0OnAdd\0OnEquip\0OnActorEquip\0OnDrop\0OnUnequip\0OnActorUnequip\0OnDeath\0OnMurder\0OnCombatEnd\0OnHit\0\
-OnHitWith\0OnPackageStart\0OnPackageDone\0OnPackageChange\0OnLoad\0OnMagicEffectHit\0OnSell\0OnStartCombat\0OnOpen\0\
-OnClose\0SayToDone\0OnGrab\0OnRelease\0OnDestructionStageChange\0OnFire\0OnTrigger\0OnTriggerEnter\0OnTriggerLeave\0OnReset",
-kMenuNames[] =
-"MessageMenu\0InventoryMenu\0StatsMenu\0HUDMainMenu\0LoadingMenu\0ContainerMenu\0DialogMenu\0SleepWaitMenu\0StartMenu\0\
-LockpickMenu\0QuantityMenu\0MapMenu\0BookMenu\0LevelUpMenu\0RepairMenu\0RaceSexMenu\0CharGenMenu\0TextEditMenu\0BarterMenu\0\
-SurgeryMenu\0HackingMenu\0VATSMenu\0ComputersMenu\0RepairServicesMenu\0TutorialMenu\0SpecialBookMenu\0ItemModMenu\0LoveTesterMenu\0\
-CompanionWheelMenu\0TraitSelectMenu\0RecipeMenu\0SlotMachineMenu\0BlackjackMenu\0RouletteMenu\0CaravanMenu\0TraitMenu";
-const UInt32
-kEventMasks[] =
-{
-	0, 1, 2, 2, 4, 8, 8, 0x10, 0x20, 0x40, 0x80, 0x100, 0x200, 0x400, 0x800, 0x1000, 0x2000, 0x4000, 0x8000, 0x10000,
-	0x20000, 0x40000, 0x80000, 0x100000, 0x200000, 0x400000, 0x10000000, 0x20000000, 0x40000000, 0x80000000
-},
-kMenuIDs[] =
-{
-	kMenuType_Message, kMenuType_Inventory, kMenuType_Stats, kMenuType_HUDMain, kMenuType_Loading, kMenuType_Container,
-	kMenuType_Dialog, kMenuType_SleepWait, kMenuType_Start, kMenuType_LockPick, kMenuType_Quantity, kMenuType_Map, kMenuType_Book,
-	kMenuType_LevelUp, kMenuType_Repair, kMenuType_RaceSex, kMenuType_CharGen, kMenuType_TextEdit, kMenuType_Barter, kMenuType_Surgery,
-	kMenuType_Hacking, kMenuType_VATS, kMenuType_Computers, kMenuType_RepairServices, kMenuType_Tutorial, kMenuType_SpecialBook,
-	kMenuType_ItemMod, kMenuType_LoveTester, kMenuType_CompanionWheel, kMenuType_TraitSelect, kMenuType_Recipe, kMenuType_SlotMachine,
-	kMenuType_Blackjack, kMenuType_Roulette, kMenuType_Caravan, kMenuType_Trait
-};
+UnorderedMap<const char*, UInt32> s_eventMasks({{"OnActivate", 0}, {"OnAdd", 1}, {"OnEquip", 2}, {"OnActorEquip", 2}, {"OnDrop", 4}, {"OnUnequip", 8}, {"OnActorUnequip", 8},
+	{"OnDeath", 0x10}, {"OnMurder", 0x20}, {"OnCombatEnd", 0x40}, {"OnHit", 0x80}, {"OnHitWith", 0x100}, {"OnPackageStart", 0x200}, {"OnPackageDone", 0x400},
+	{"OnPackageChange", 0x800}, {"OnLoad", 0x1000}, {"OnMagicEffectHit", 0x2000}, {"OnSell", 0x4000}, {"OnStartCombat", 0x8000}, {"OnOpen", 0x10000}, {"OnClose", 0x20000},
+	{"SayToDone", 0x40000}, {"OnGrab", 0x80000}, {"OnRelease", 0x100000}, {"OnDestructionStageChange", 0x200000}, {"OnFire", 0x400000}, {"OnTrigger", 0x10000000},
+	{"OnTriggerEnter", 0x20000000}, {"OnTriggerLeave", 0x40000000}, {"OnReset", 0x80000000}});
 
 void InitJIPHooks()
 {
@@ -3449,29 +3415,11 @@ void InitJIPHooks()
 	HOOK_INIT_JPRT(SynchronizePosition, 0x575836, 0x575845);
 
 	WriteRelJump(0x92C400, (UInt32)CopyHitDataHook);
-	WriteRelJump(0x92C4A0, (UInt32)ResetHitDataHook);
+	SafeWriteBuf(0x92C4A0, "\x8B\x81\x40\x02\x00\x00\x85\xC0\x74\x07\xC7\x40\x10\xFF\xFF\xFF\xFF\xC3", 18);
 	WriteRelJump(0x4AC645, (UInt32)BipedSlotVisibilityHook);
 	WriteRelJump(0x63C929, (UInt32)SkyRefreshClimateHook);
 	WriteRelJump(0x87F427, (UInt32)IsActorEssentialHook);
 	WritePushRetRelJump(0x524014, 0x524042, (UInt32)FireWeaponWobbleHook);
-
-	const char *strPos = kEventNames;
-	UInt32 count = 0;
-	do
-	{
-		s_eventMasks[strPos] = kEventMasks[count];
-		strPos += StrLen(strPos) + 1;
-	}
-	while (++count < 30);
-
-	strPos = kMenuNames;
-	count = 0;
-	do
-	{
-		s_menuNameToID[strPos] = kMenuIDs[count];
-		strPos += StrLen(strPos) + 1;
-	}
-	while (++count < 36);
 
 	PrintLog("> JIP hooks initialized successfully.");
 }

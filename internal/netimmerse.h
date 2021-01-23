@@ -37,6 +37,19 @@ public:
 	UInt32		m_uiRefCount;	// 04
 };
 
+struct NiObjectCopyInfo
+{
+	NiTMapBase<NiObject*, NiObject*>	*map00;		// 00
+	NiTMapBase<NiObject*, bool>			*map04;		// 04
+	UInt32								unk08;		// 08	Init'd to 1
+	UInt8								byte0C;		// 0C	Init'd to 0x24
+	UInt8								pad0D[3];	// 0D
+	NiVector3							scale;		// 10
+
+	/*NiObjectCopyInfo(float _scale) {ThisCall(0x4AD050, this, _scale);}
+	~NiObjectCopyInfo() {ThisCall(0x4AD1D0, this);}*/
+};
+
 // 08
 class NiObject : public NiRefObject
 {
@@ -44,28 +57,28 @@ public:
 	virtual NiRTTI	*GetType();
 	virtual NiNode	*GetNiNode();
 	virtual BSFadeNode	*GetFadeNode();
-	virtual void	Unk_05(void);
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
-	virtual void	Unk_08(void);
-	virtual void	Unk_09(void);
-	virtual void	Unk_0A(void);
-	virtual void	Unk_0B(void);
-	virtual void	Unk_0C(void);
-	virtual void	Unk_0D(void);
-	virtual void	Unk_0E(void);
-	virtual void	Unk_0F(void);
-	virtual void	Unk_10(void);
-	virtual void	Unk_11(void);
-	virtual void	Unk_12(UInt32 arg);
-	virtual void	Unk_13(UInt32 arg);
+	virtual BSMultiBoundNode	*GetMultiBoundNode();
+	virtual NiGeometry	*GetNiGeometry();
+	virtual NiTriBasedGeom	*GetTriBasedGeom();
+	virtual NiTriStrips	*GetTriStrips();
+	virtual NiTriShape	*GetTriShape();
+	virtual BSSegmentedTriShape	*GetSegmentedTriShape();
+	virtual BSResizableTriShape	*GetResizableTriShape();
+	virtual NiParticles	*GetNiParticles();
+	virtual NiLines	*GetNiLines();
+	virtual bhkNiCollisionObject	*GetCollisionObject();
+	virtual bhkBlendCollisionObject	*GetBlendCollisionObject();
+	virtual bhkRigidBody	*GetRigidBody();
+	virtual bhkLimitedHingeConstraint	*GetLimitedHingeConstraint();
+	virtual NiObject	*Clone(NiObjectCopyInfo *copyInfo);
+	virtual void	Load(UInt32 arg);
 	virtual void	Unk_14(UInt32 arg);
 	virtual void	Unk_15(UInt32 arg);
 	virtual void	Unk_16(UInt32 arg);
 	virtual void	Unk_17(UInt32 arg);
 	virtual void	Unk_18(UInt32 arg);
 	virtual void	Unk_19(UInt32 arg);
-	virtual void	Unk_1A(UInt32 arg);
+	virtual void	Unk_1A(NiObjectCopyInfo *copyInfo);
 	virtual void	Unk_1B(UInt32 arg);
 	virtual void	Unk_1C(void);
 	virtual void	Unk_1D(void);
@@ -463,6 +476,20 @@ public:
 	enum
 	{
 		kFlag_EnableBlending =		1 << 0,
+		kFlag_SourceInverse =		1 << 1,
+		kFlag_SourceSrcColor =		1 << 2,
+		kFlag_SourceDestColor =		1 << 3,
+		kFlag_SourceDestAlpha =		1 << 4,
+		kFlag_DestinInverse =		1 << 5,
+		kFlag_DestinSrcColor =		1 << 6,
+		kFlag_DestinDestColor =		1 << 7,
+		kFlag_DestinDestAlpha =		1 << 8,
+		kFlag_EnableTesting =		1 << 9,
+		kFlag_TestFuncLess =		1 << 10,
+		kFlag_TestFuncEqual =		1 << 11,
+		kFlag_TestFuncGreater =		1 << 12,
+		kFlag_TestFuncNever =		kFlag_TestFuncLess | kFlag_TestFuncEqual | kFlag_TestFuncGreater,
+		kFlag_NoSorter =			1 << 13,
 
 	};
 
@@ -513,25 +540,25 @@ public:
 	virtual void	Unk_2F(UInt32 arg1, UInt32 arg2);
 	virtual void	Unk_30(void);
 
-	UInt16			unk18;		// 18
-	UInt16			unk1A;		// 1A
-	UInt32			unk1C;		// 1C
-	UInt32			unk20;		// 20
-	UInt32			unk24;		// 24
-	float			flt28;		// 28
-	float			flt2C;		// 2C
-	float			flt30;		// 30
-	float			flt34;		// 34
-	UInt32			unk38;		// 38
-	void			*ptr03C;	// 3C	Seen 010B8480
-	UInt32			unk40;		// 40
-	UInt32			unk44;		// 44
-	UInt32			unk48;		// 48
-	UInt32			unk4C;		// 4C
-	UInt32			unk50;		// 50
-	UInt32			unk54;		// 54
-	UInt32			unk58;		// 58
-	float			flt5C;		// 5C
+	UInt16			unk18;				// 18
+	UInt16			unk1A;				// 1A
+	UInt32			unk1C;				// 1C
+	UInt32			flags20;			// 20
+	UInt32			flags24;			// 24
+	float			alpha;				// 28
+	float			fadeAlpha;			// 2C
+	float			envMapScale;		// 30
+	float			flt34;				// 34
+	UInt32			lastRenderPassState;// 38
+	void			*renderPassList;	// 3C	Seen 010B8480
+	UInt32			unk40;				// 40
+	UInt32			unk44;				// 44
+	UInt32			unk48;				// 48
+	UInt32			unk4C;				// 4C
+	UInt32			unk50;				// 50
+	UInt32			unk54;				// 54
+	UInt32			unk58;				// 58
+	float			flt5C;				// 5C
 };
 STATIC_ASSERT(sizeof(BSShaderProperty) == 0x60);
 
@@ -695,7 +722,7 @@ public:
 	UInt32				unk8C;			// 8C
 	UInt8				byte90;			// 90
 	UInt8				byte91;			// 91
-	UInt8				hasVtxColors;	// 92
+	bool				hasVtxColors;	// 92
 	UInt8				byte93;			// 93
 	UInt32				unk94[7];		// 94
 };
@@ -1075,16 +1102,42 @@ public:
 class TESAnimGroup : public NiRefObject
 {
 public:
-	UInt32			unk08[2];	// 08
-	UInt8			groupIndex;	// 10
-	UInt8			pad11[3];	// 11
-	UInt32			unk14[10];	// 14
+	UInt32			unk08[2];		// 08
+	UInt8			groupIndex;		// 10
+	UInt8			pad11[3];		// 11
+	UInt32			maxID;			// 14
+	float			*actionTimes;	// 18
+	float			flt1C;			// 1C
+	float			flt20;			// 20
+	float			flt24;			// 24
+	UInt8			leftOrRightFoot;// 28
+	UInt8			blend;			// 29
+	UInt8			blendIn;		// 2A
+	UInt8			blendOut;		// 2B
+	UInt8			decal;			// 2C
+	UInt8			pad2D[3];		// 2D
+	char			*parentRootNode;// 30
+	UInt32			unk34[2];		// 34
 };
+STATIC_ASSERT(sizeof(TESAnimGroup) == 0x3C);
 
 // 78
 class BSAnimGroupSequence : public NiControllerSequence
 {
 public:
+	enum AnimSequenceType
+	{
+		kSequence_Idle,
+		kSequence_Movement,
+		kSequence_LeftArm,
+		kSequence_LeftHand,
+		kSequence_Weapon,
+		kSequence_WeaponUp,
+		kSequence_WeaponDown,
+		kSequence_SpecialIdle,
+		kSequence_Death = 0x14
+	};
+
 	TESAnimGroup	*animGroup;		// 74
 };
 
@@ -1781,6 +1834,23 @@ public:
 	UInt32			height;			// D0
 };
 STATIC_ASSERT(sizeof(BSScissorTriShape) == 0xD4);
+
+// D8
+class BSResizableTriShape : public NiTriShape
+{
+public:
+	virtual void	Unk_3D();
+	virtual void	Unk_3E();
+
+	UInt32		unkC4[5];		// C4
+};
+
+// D0
+class BSSegmentedTriShape : public NiTriShape
+{
+public:
+	UInt32		unkC4[3];		// C4
+};
 
 // 14C
 class ParticleShaderProperty : public BSShaderProperty

@@ -41,130 +41,6 @@ enum
 	kLNEventMask_OnTrigger =			kLNEventMask_OnTriggerDown | kLNEventMask_OnTriggerUp,
 };
 
-struct alignas(16) XINPUT_GAMEPAD_EX
-{
-	UInt32		eventCount;		// 00
-	UInt16		wButtons;		// 04
-	UInt8		bLeftTrigger;	// 06
-	UInt8		bRightTrigger;	// 07
-	SInt16		sThumbLX;		// 08
-	SInt16		sThumbLY;		// 0A
-	SInt16		sThumbRX;		// 0C
-	SInt16		sThumbRY;		// 0E
-}
-s_gamePad = {};
-
-bool s_controllerReady = false;
-
-UInt32 (__stdcall *XInputGetStateEx)(UInt32, XINPUT_GAMEPAD_EX*);
-
-UInt16 s_deadZoneLS = 0x1EA9, s_deadZoneRS = 0x21F1;
-double s_deadZoneLSd = 24918.0, s_deadZoneRSd = 24078.0;
-
-struct XInputStateMods
-{
-	UInt16		buttonSkip;		// 00
-	UInt16		buttonHold;		// 02
-	UInt16		buttonTap;		// 04
-	UInt8		triggerMods;	// 06
-	UInt8		stickMods;		// 07
-}
-s_XIStateMods = {0xFFFF, 0, 0, 0, 0};
-
-__declspec(naked) UInt32 __stdcall Hook_XInputGetState(UInt32 index, XINPUT_GAMEPAD_EX *currState)
-{
-	static UInt32 result = ERROR_DEVICE_NOT_CONNECTED;
-	__asm
-	{
-		mov		eax, [esp+8]
-		mov		ecx, 0x11F35A8
-		cmp		eax, ecx
-		jz		updateState
-		movdqu	xmm0, xmmword ptr [ecx]
-		movdqu	xmmword ptr [eax], xmm0
-		jmp		done
-	updateState:
-		push	ecx
-		push	dword ptr [esp+8]
-		call	XInputGetStateEx
-		mov		result, eax
-		movzx	edx, byte ptr ds:[0x11D8C50]
-		or		eax, edx
-		setz	al
-		mov		s_controllerReady, al
-		jnz		done
-		push	esi
-		mov		esi, 0x11F35A8
-		movdqu	xmm0, xmmword ptr [esi]
-		movdqa	xmmword ptr ds:[s_gamePad], xmm0
-		mov		ecx, offset s_XIStateMods
-		mov		ax, [esi+4]
-		or		ax, word ptr [ecx+2]
-		and		ax, word ptr [ecx]
-		or		ax, word ptr [ecx+4]
-		mov		word ptr [ecx+4], 0
-		mov		[esi+4], ax
-		mov		al, [ecx+6]
-		test	al, al
-		jz		doneTRmods
-		mov		dl, al
-		and		dl, 0x11
-		cmp		dl, 1
-		jnz		testLThold
-		mov		[esi+6], 0
-		jmp		testRTskip
-	testLThold:
-		test	al, 0x14
-		jz		testRTskip
-		mov		byte ptr [esi+6], 0xFF
-	testRTskip:
-		mov		dl, al
-		and		dl, 0x22
-		cmp		dl, 2
-		jnz		testRThold
-		mov		[esi+7], 0
-		jmp		clrTRtap
-	testRThold:
-		test	al, 0x28
-		jz		clrTRtap
-		mov		byte ptr [esi+7], 0xFF
-	clrTRtap:
-		and		al, 0xF
-		mov		[ecx+6], al
-	doneTRmods:
-		mov		al, [ecx+7]
-		test	al, 1
-		jz		rightStick
-		mov		dword ptr [esi+8], 0
-	rightStick:
-		test	al, 2
-		jz		doneSticks
-		mov		dword ptr [esi+0xC], 0
-	doneSticks:
-		pop		esi
-	done:
-		mov		eax, result
-		retn	8
-	}
-}
-
-bool HookXInput()
-{
-	HMODULE xinput = GetModuleHandle("XINPUT1_3");
-	if (xinput)
-	{
-		XInputGetStateEx = (UInt32 (__stdcall *)(UInt32, XINPUT_GAMEPAD_EX*))GetProcAddress(xinput, (LPCSTR)0x64);
-		if (XInputGetStateEx)
-		{
-			WriteRelJump(0x9F996E, (UInt32)Hook_XInputGetState);
-			return true;
-		}
-		PrintLog("ERROR: XInputGetStateEx not found.");
-	}
-	else PrintLog("ERROR: XInput module not found.");
-	return false;
-}
-
 struct LNEventData
 {
 	UInt8				eventID;
@@ -219,12 +95,10 @@ bool LNEventData::EvalFilter()
 		case 2: return form == s_evalBase;
 		case 3:
 		{
-			TESForm *form;
 			ListNode<TESForm> *iter = list->Head();
 			do
 			{
-				form = iter->data;
-				if ((form == s_evalRefr) || (form == s_evalBase))
+				if ((iter->data == s_evalRefr) || (iter->data == s_evalBase))
 					return true;
 			}
 			while (iter = iter->next);
@@ -251,119 +125,10 @@ LNDInputEventsMap s_LNOnKeyEvents, s_LNOnControlEvents;
 
 EventCallbackScripts s_LNOnTriggerEvents[4];
 
-UInt32 s_LNEventFlags = 0;
-
-bool __fastcall GetXIControlPressed(UInt32 ctrlID, UInt32 flags)
-{
-	XINPUT_GAMEPAD_EX *xiState = (flags & 2) ? &s_gamePad : (XINPUT_GAMEPAD_EX*)0x11F35A8;
-	switch (ctrlID)
-	{
-		case kXboxCtrl_DPAD_UP:
-			return (xiState->wButtons & 1) != 0;
-		case kXboxCtrl_DPAD_DOWN:
-			return (xiState->wButtons & 2) != 0;
-		case kXboxCtrl_DPAD_RIGHT:
-			return (xiState->wButtons & 8) != 0;
-		case kXboxCtrl_DPAD_LEFT:
-			return (xiState->wButtons & 4) != 0;
-		case kXboxCtrl_START:
-			return (xiState->wButtons & 0x10) != 0;
-		case kXboxCtrl_BACK:
-			return (xiState->wButtons & 0x20) != 0;
-		case kXboxCtrl_LS_BUTTON:
-			return (xiState->wButtons & 0x40) != 0;
-		case kXboxCtrl_RS_BUTTON:
-			return (xiState->wButtons & 0x80) != 0;
-		case kXboxCtrl_BUTTON_A:
-			return (xiState->wButtons & 0x1000) != 0;
-		case kXboxCtrl_BUTTON_B:
-			return (xiState->wButtons & 0x2000) != 0;
-		case kXboxCtrl_BUTTON_X:
-			return (xiState->wButtons & 0x4000) != 0;
-		case kXboxCtrl_BUTTON_Y:
-			return (xiState->wButtons & 0x8000) != 0;
-		case kXboxCtrl_RB:
-			return (xiState->wButtons & 0x200) != 0;
-		case kXboxCtrl_LB:
-			return (xiState->wButtons & 0x100) != 0;
-		case kXboxCtrl_LT:
-			return xiState->bLeftTrigger != 0;
-		case kXboxCtrl_RT:
-			return xiState->bRightTrigger != 0;
-		case kXboxCtrl_LS_UP:
-			return xiState->sThumbLY > s_deadZoneLS;
-		case kXboxCtrl_LS_DOWN:
-			return xiState->sThumbLY < -s_deadZoneLS;
-		case kXboxCtrl_LS_RIGHT:
-			return xiState->sThumbLX > s_deadZoneLS;
-		case kXboxCtrl_LS_LEFT:
-			return xiState->sThumbLX < -s_deadZoneLS;
-		default:
-			return false;
-	}
-}
-
-bool Hook_IsKeyPressed_Execute(COMMAND_ARGS)
-{
-	UInt32 keyID, flags = 1;
-	if (ExtractArgs(EXTRACT_ARGS, &keyID, &flags))
-		*result = g_DIHookCtrl->IsKeyPressed(keyID, flags);
-	else *result = 0;
-	return true;
-}
-
-bool Hook_IsKeyPressed_Eval(TESObjectREFR *thisObj, UInt32 keyID, UInt32 flags, double *result)
-{
-	*result = g_DIHookCtrl->IsKeyPressed(keyID, flags);
-	return true;
-}
-
-bool __fastcall IsControlPressed(UInt32 ctrlID, UInt32 flags = 1)
-{
-	if (s_controllerReady)
-		return GetXIControlPressed(g_inputGlobals->controllerBinds[ctrlID], flags);
-	UInt32 keyID = g_inputGlobals->keyBinds[ctrlID];
-	if ((keyID != 0xFF) && g_DIHookCtrl->IsKeyPressed(keyID, flags))
-		return true;
-	else
-	{
-		keyID = g_inputGlobals->mouseBinds[ctrlID];
-		return (keyID != 0xFF) && g_DIHookCtrl->IsKeyPressed(keyID + 0x100, flags);
-	}
-}
-
-bool __fastcall IsControlPressedRaw(UInt32 ctrlID)
-{
-	if (s_controllerReady)
-		return GetXIControlPressed(g_inputGlobals->controllerBinds[ctrlID], 2);
-	UInt32 keyID = g_inputGlobals->keyBinds[ctrlID];
-	if ((keyID != 0xFF) && g_DIHookCtrl->IsKeyPressedRaw(keyID))
-		return true;
-	else
-	{
-		keyID = g_inputGlobals->mouseBinds[ctrlID];
-		return (keyID != 0xFF) && g_DIHookCtrl->IsKeyPressedRaw(keyID + 0x100);
-	}
-}
-
-bool Hook_IsControlPressed_Execute(COMMAND_ARGS)
-{
-	UInt32 ctrlID, flags = 1;
-	if (ExtractArgs(EXTRACT_ARGS, &ctrlID, &flags) && (ctrlID < kMaxControlBinds))
-		*result = IsControlPressed(ctrlID, flags);
-	else *result = 0;
-	return true;
-}
-
-bool Hook_IsControlPressed_Eval(TESObjectREFR *thisObj, UInt32 ctrlID, UInt32 flags, double *result)
-{
-	if (ctrlID < kMaxControlBinds)
-		*result = IsControlPressed(ctrlID, flags);
-	else *result = 0;
-	return true;
-}
-
-UnorderedMap<const char*, UInt32> s_LNEventNames(0x10);
+UnorderedMap<const char*, UInt32> s_LNEventNames({{"OnCellEnter", kLNEventMask_OnCellEnter}, {"OnCellExit", kLNEventMask_OnCellExit}, {"OnPlayerGrab", kLNEventMask_OnPlayerGrab},
+	{"OnPlayerRelease", kLNEventMask_OnPlayerRelease}, {"OnCrosshairOn", kLNEventMask_OnCrosshairOn}, {"OnCrosshairOff", kLNEventMask_OnCrosshairOff},
+	{"OnButtonDown", kLNEventMask_OnButtonDown}, {"OnButtonUp", kLNEventMask_OnButtonUp}, {"OnKeyDown", kLNEventMask_OnKeyDown},
+	{"OnKeyUp", kLNEventMask_OnKeyUp}, {"OnControlDown", kLNEventMask_OnControlDown}, {"OnControlUp", kLNEventMask_OnControlUp}});
 
 Cmd_Execute SetEventHandler, RemoveEventHandler;
 
@@ -749,32 +514,14 @@ void LN_ProcessEvents()
 	s_gameLoadFlagLN = false;
 }
 
-const char kLNEventNames[] =
-"OnCellEnter\0OnCellExit\0OnPlayerGrab\0OnPlayerRelease\0OnCrosshairOn\0OnCrosshairOff\0OnButtonDown\0OnButtonUp\0OnKeyDown\0OnKeyUp\0OnControlDown\0OnControlUp";
-
 void InitLNHooks()
 {
-	CommandInfo *cmdInfo = GetCmdByOpcode(0x1453);
-	cmdInfo->execute = Hook_IsKeyPressed_Execute;
-	cmdInfo->eval = (Cmd_Eval)Hook_IsKeyPressed_Eval;
-	cmdInfo = GetCmdByOpcode(0x146B);
-	cmdInfo->execute = Hook_IsControlPressed_Execute;
-	cmdInfo->eval = (Cmd_Eval)Hook_IsControlPressed_Eval;
-	cmdInfo = GetCmdByOpcode(0x15E9);
+	CommandInfo *cmdInfo = GetCmdByOpcode(0x15E9);
 	SetEventHandler = cmdInfo->execute;
 	cmdInfo->execute = Hook_SetEventHandler_Execute;
 	cmdInfo = GetCmdByOpcode(0x15EA);
 	RemoveEventHandler = cmdInfo->execute;
 	cmdInfo->execute = Hook_RemoveEventHandler_Execute;
-
-	const char *strPos = kLNEventNames;
-	UInt32 count = 0;
-	do
-	{
-		s_LNEventNames[strPos] = 1 << count;
-		strPos += StrLen(strPos) + 1;
-	}
-	while (++count < 12);
 
 	PrintLog("> LN hooks initialized successfully.");
 }

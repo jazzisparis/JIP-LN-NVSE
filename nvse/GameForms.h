@@ -468,8 +468,8 @@ public:
 	virtual bool		Unk_48(UInt32 formType);	// returns if the same FormType is passed in
 	virtual bool		Unk_49(void * arg0, void * arg1, void * arg2, void * arg3, void * arg4);	// looks to be func33 in Oblivion
 	virtual void		SetRefID(UInt32 refID, bool generateID);
-	virtual char *		GetName2(void);
-	virtual char *		GetName(void);
+	virtual const char	*GetName(void);
+	virtual const char	*GetEditorID(void);
 	virtual bool		SetEditorID(const char * edid);		// simply returns true at run-time
 	// 4E
 
@@ -485,7 +485,7 @@ public:
 		kFormFlags_Initialized =	0x00000008,	// set by TESForm::InitItem()
 		kFormFlags_CastShadows =	0x00000200,
 		kFormFlags_QuestItem =		0x00000400,
-		kFormFlags_IsPermanent =	0x00000800,
+		kFormFlags_Disabled =		0x00000800,
 		kFormFlags_DontSaveForm =	0x00004000,	// TODO: investigate
 		kFormFlags_Compressed =		0x00040000,
 	};
@@ -1373,7 +1373,7 @@ public:
 	// return the nth package
 	SInt32 AddPackageAt(TESPackage* pPackage, SInt32 anIndex)
 	{
-		return packageList.AddAt(pPackage, anIndex == -1 ? eListEnd : anIndex);
+		return packageList.Insert(pPackage, anIndex == -1 ? eListEnd : anIndex);
 	}
 
 	TESPackage* RemovePackageAt(SInt32 anIndex)
@@ -5121,12 +5121,11 @@ public:
 		return list.GetNthItem(n);
 	}
 
-	UInt32 AddAt(TESForm* pForm, SInt32 n) {
-		SInt32	result = list.AddAt(pForm, n);
-
-		if(result >= 0 && IsAddedObject(n))
+	UInt32 AddAt(TESForm* pForm, SInt32 n)
+	{
+		SInt32 result = list.Insert(pForm, n);
+		if ((result >= 0) && IsAddedObject(n))
 			numAddedObjects++;
-
 		return result;
 	}
 

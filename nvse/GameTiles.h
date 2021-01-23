@@ -259,7 +259,7 @@ public:
 	{
 		return ThisCall<Tile*>(0xA01B00, this, xmlPath);
 	}
-	char *GetComponentFullName(char *resStr);
+	void GetComponentFullName(char *resStr);
 	__forceinline void SetFloat(UInt32 id, float fltVal, bool bPropagate = true)
 	{
 		ThisCall(0xA012D0, this, id, fltVal, bPropagate);

@@ -35,7 +35,7 @@ bool Cmd_AddAmmoEffect_Execute(COMMAND_ARGS)
 	TESAmmoEffect *effect;
 	if (ExtractArgs(EXTRACT_ARGS, &ammo, &effect) && IS_TYPE(ammo, TESAmmo) && IS_TYPE(effect, TESAmmoEffect) && !ammo->effectList.IsInList(effect))
 	{
-		ammo->effectList.Insert(effect);
+		ammo->effectList.Prepend(effect);
 		*result = 1;
 	}
 	else *result = 0;

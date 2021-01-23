@@ -38,7 +38,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList)
 		for (UInt32 count = g_dataHandler->cellArray.Length(); count; count--, cells++)
 		{
 			if ((index != -1) && (index != (*cells)->modIndex)) continue;
-			if (outList) outList->Insert(*cells);
+			if (outList) outList->Prepend(*cells);
 			else s_tempElements.Append(*cells);
 		}
 	}
@@ -56,7 +56,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList)
 			{
 				refr = refrIter->data;
 				if (!refr || !refr->extraDataList.HasType(kExtraData_MapMarker) || ((index != -1) && (index != refr->modIndex))) continue;
-				if (outList) outList->Insert(refr);
+				if (outList) outList->Prepend(refr);
 				else s_tempElements.Append(refr);
 			}
 			while (refrIter = refrIter->next);
@@ -75,7 +75,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList)
 			{
 				refr = refrIter->data;
 				if (!refr || !refr->extraDataList.HasType(kExtraData_RadioData) || ((index != -1) && (index != refr->modIndex))) continue;
-				if (outList) outList->Insert(refr);
+				if (outList) outList->Prepend(refr);
 				else s_tempElements.Append(refr);
 			}
 			while (refrIter = refrIter->next);
@@ -92,7 +92,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList)
 			{
 				form = iter->data;
 				if (!form || ((index != -1) && (index != form->modIndex))) continue;
-				if (outList) outList->Insert(form);
+				if (outList) outList->Prepend(form);
 				else s_tempElements.Append(form);
 			}
 			while (iter = iter->next);
@@ -102,7 +102,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList)
 			for (TESBoundObject *object = g_dataHandler->boundObjectList->first; object; object = object->next)
 			{
 				if ((object->typeID != formType) || ((index != -1) && (index != object->modIndex))) continue;
-				if (outList) outList->Insert(object);
+				if (outList) outList->Prepend(object);
 				else s_tempElements.Append(object);
 			}
 		}
@@ -112,7 +112,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList)
 			{
 				form = mIter.Get();
 				if (!form || (form->typeID != formType) || ((index != -1) && (index != form->modIndex))) continue;
-				if (outList) outList->Insert(form);
+				if (outList) outList->Prepend(form);
 				else s_tempElements.Append(form);
 			}
 		}
@@ -167,7 +167,7 @@ Vector<SearchForm> s_searchForms(0x10000);
 
 void SearchForm::Add(TESForm *pForm)
 {
-	const char *pName = pForm->GetTheName(), *pEDID = pForm->GetName();
+	const char *pName = pForm->GetTheName(), *pEDID = pForm->GetEditorID();
 	if (!*pName) pName = NULL;
 	if (pEDID && !*pEDID) pEDID = NULL;
 	if (pName || pEDID)

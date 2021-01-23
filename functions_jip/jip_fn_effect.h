@@ -163,7 +163,7 @@ bool Cmd_AddNewEffect_Execute(COMMAND_ARGS)
 	effItem->setting = effSetting;
 	effItem->cost = 0;
 	effItem->conditions.Init();
-	magicItem->list.list.Insert(effItem);
+	magicItem->list.list.Prepend(effItem);
 	*result = (int)magicItem->list.list.Count();
 	UpdateEffectsAllActors(magicItem, effItem, true);
 	return true;
@@ -387,15 +387,16 @@ bool Cmd_GetTempEffects_Execute(COMMAND_ARGS)
 		form = DYNAMIC_CAST(activeEff->magicItem, MagicItem, TESForm);
 		if (!form) continue;
 		timeLeft = activeEff->duration - activeEff->timeElapsed;
-		ArrayElementL elements[5] =
+		ArrayElementL elements[6] =
 		{
 			form,
 			activeEff->effectItem->setting,
 			(activeEff->effectItem->setting->effectFlags & 2) ? (int)activeEff->effectItem->magnitude : fabs(activeEff->magnitude),
 			timeLeft,
-			activeEff->caster ? activeEff->caster->GetActor() : NULL
+			activeEff->caster ? activeEff->caster->GetActor() : NULL,
+			activeEff->duration
 		};
-		sortEffects.InsertSorted(SortEffectsEntry(CreateArray(elements, 5, scriptObj), timeLeft));
+		sortEffects.InsertSorted(SortEffectsEntry(CreateArray(elements, 6, scriptObj), timeLeft));
 	}
 	while (iter = iter->next);
 	if (!sortEffects.Empty())

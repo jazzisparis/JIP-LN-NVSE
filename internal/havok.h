@@ -12,7 +12,7 @@ struct alignas(16) AlignedVector4
 	AlignedVector4() {}
 	AlignedVector4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
 
-	float operator[](char axis)
+	float& operator[](char axis)
 	{
 		return ((float*)&x)[axis];
 	}
@@ -368,6 +368,23 @@ public:
 
 // 14
 class bhkTransformShape : public bhkShape
+{
+public:
+};
+
+// 10
+class bhkConstraint : public bhkSerializable
+{
+public:
+	virtual void	Unk_31(void);
+	virtual void	Unk_32(void);
+	virtual void	Unk_33(void);
+	virtual void	Unk_34(void);
+	virtual void	Unk_35(void);
+};
+
+// 10
+class bhkLimitedHingeConstraint : public bhkConstraint
 {
 public:
 };
@@ -780,6 +797,15 @@ public:
 class bhkCharacterListener : public hkpCharacterProxyListener
 {
 public:
+	enum
+	{
+		kJumping =			0x400,
+		kIsSceneComplex =	0x100000,
+		kTiltFrontBack =	0x2000000,
+		kTiltLeftRight =	0x4000000,
+		kIsUsingFurniture =	0x8000000,
+	};
+
 	UInt32			flags;			// 04 (414)
 	UInt32			unk08[6];		// 08
 	float			flt20;			// 20 (430)
@@ -986,6 +1012,15 @@ class bhkListShape : public bhkShapeCollection
 public:
 };
 
+// 10
+struct hkStepInfo
+{
+	float		startTime;		// 00
+	float		endTime;		// 04
+	float		deltaTime;		// 08
+	float		invDeltaTime;	// 0C
+};
+
 // 650
 class bhkCharacterController : public bhkCharacterProxy
 {
@@ -1004,35 +1039,32 @@ public:
 	float					flt4B0;				// 4B0
 	UInt32					unk4B4[5];			// 4B4
 	float					unk4C8[2];			// 4C8
-	AlignedVector4			vector4D0;			// 4D0
-	float					unk4E0;				// 4E0
-	float					unk4E4;				// 4E4
-	float					timeDelta;			// 4E8
-	float					unk4EC;				// 4EC
+	AlignedVector4			forwardVec;			// 4D0
+	hkStepInfo				stepInfo;			// 4E0
 	AlignedVector4			velocity;			// 4F0
 	AlignedVector4			throwbackVelocity;	// 500
 	AlignedVector4			vector510;			// 510
 	UInt32					unk520;				// 520
 	float					throwbackTimer;		// 524
-	float					flt528;				// 528
-	float					flt52C;				// 52C
-	float					fallTimeRemaining;	// 530
-	float					flt534;				// 534
-	float					flt538;				// 538
-	float					flt53C;				// 53C
-	float					flt540;				// 540
+	float					rotMod;				// 528
+	float					rotModTime;			// 52C
+	float					calculatePitchTimer;// 530
+	float					acrobatics;			// 534	Always 100.0
+	float					center;				// 538
+	float					waterHeight;		// 53C
+	float					jumpHeight;			// 540
 	float					startingHeight;		// 544
 	float					fallTimeElapsed;	// 548
 	float					gravityMult;		// 54C
 	float					tiltAngleX;			// 550
 	float					tiltAngleY;			// 554
-	float					flt558;				// 558	Likely some sort of timer for gradual tilting
-	float					flt55C;				// 55C	Scale
-	float					flt560;				// 560	Always 1.6
-	float					flt564;				// 564	ControllerShape total length (z)
-	float					flt568;				// 568
+	float					pitchMult;			// 558
+	float					scale;				// 55C
+	float					swimFloatHeight;	// 560	Always 1.6
+	float					actorHeight;		// 564	ControllerShape total length (z)
+	float					speedPct;			// 568
 	float					flt56C;				// 56C
-	AlignedVector4			vector570;			// 570
+	AlignedVector4			rotCenter;			// 570
 	float					flt580;				// 580
 	float					flt584;				// 584
 	float					flt588;				// 588

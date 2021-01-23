@@ -648,7 +648,7 @@ bool Cmd_AddRefMapMarker_Execute(COMMAND_ARGS)
 	if (!s_refMapMarkersCount)
 		s_refMapMarkersList.Head()->next = g_thePlayer->teammates.Head();
 	else if (s_refMapMarkersList.IsInList(thisObj)) return true;
-	s_refMapMarkersList.Insert(thisObj);
+	s_refMapMarkersList.Prepend(thisObj);
 	s_refMapMarkersCount++;
 	HOOK_MOD(CreateMapMarkers, true);
 	return true;
@@ -825,10 +825,10 @@ bool Cmd_IsAnimPlayingEx_Execute(COMMAND_ARGS)
 		AnimData *animData = thisObj->GetAnimData();
 		if (animData)
 		{
-			AnimGroupClassify *classify;
+			const AnimGroupClassify *classify;
 			for (UInt16 groupID : animData->animGroupIDs)
 			{
-				if (groupID == 0xFF) continue;
+				if (groupID >= 245) continue;
 				classify = &s_animGroupClassify[groupID];
 				if ((classify->category == category) && ((category >= 4) || ((!subType || (classify->subType == subType)) && (!flags || (classify->flags & flags)))))
 				{
@@ -1051,7 +1051,7 @@ bool Cmd_GetAngularVelocity_Execute(COMMAND_ARGS)
 	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &axis))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(s_strArgBuffer);
-		if (rigidBody) *result = ((float*)&rigidBody->motion.angVelocity)[axis - 'X'];
+		if (rigidBody) *result = rigidBody->motion.angVelocity[axis - 'X'];
 	}
 	return true;
 }
@@ -1065,7 +1065,7 @@ bool Cmd_SetAngularVelocity_Execute(COMMAND_ARGS)
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(s_strArgBuffer);
 		if (rigidBody)
 		{
-			((float*)&rigidBody->motion.angVelocity)[axis - 'X'] = velocity;
+			rigidBody->motion.angVelocity[axis - 'X'] = velocity;
 			rigidBody->UpdateMotion();
 		}
 	}
@@ -1075,26 +1075,21 @@ bool Cmd_SetAngularVelocity_Execute(COMMAND_ARGS)
 bool Cmd_PlaceAtCell_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESForm *form, *worldOrCell;
+	TESForm *form;
 	UInt32 count;
-	float posX, posY, posZ;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &count, &worldOrCell, &posX, &posY, &posZ))
+	TESObjectCELL *worldOrCell;
+	TESObjectREFR *tempPosMarker = s_tempPosMarker;
+	if (ExtractArgs(EXTRACT_ARGS, &form, &count, &worldOrCell, &tempPosMarker->posX, &tempPosMarker->posY, &tempPosMarker->posZ))
 	{
-		TESObjectCELL *destCell = NULL;
-		if IS_TYPE(worldOrCell, TESObjectCELL)
-			destCell = (TESObjectCELL*)worldOrCell;
-		else if IS_TYPE(worldOrCell, TESWorldSpace)
-			destCell = ((TESWorldSpace*)worldOrCell)->cell;
-		if (destCell)
+		if NOT_ID(worldOrCell, TESObjectCELL)
 		{
-			TESObjectREFR *tempPosMarker = GetTempPosMarker();
-			tempPosMarker->posX = posX;
-			tempPosMarker->posY = posY;
-			tempPosMarker->posZ = posZ;
-			tempPosMarker->parentCell = destCell;
-			TESObjectREFR *placedRef = PlaceAtMe(tempPosMarker, form, count, 0, 0, 1);
-			if (placedRef) REFR_RES = placedRef->refID;
+			if NOT_ID(worldOrCell, TESWorldSpace)
+				return true;
+			worldOrCell = ((TESWorldSpace*)worldOrCell)->cell;
 		}
+		tempPosMarker->parentCell = worldOrCell;
+		TESObjectREFR *placedRef = PlaceAtMe(tempPosMarker, form, count, 0, 0, 1);
+		if (placedRef) REFR_RES = placedRef->refID;
 	}
 	return true;
 }
@@ -1559,7 +1554,7 @@ bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 		}
 		if (refr)
 		{
-			form = refr->GetBaseForm();
+			form = refr->GetBaseForm2();
 			if (!form) goto Retn0;
 			namesMap = s_insertNodeMap.GetPtr(form);
 			if (namesMap)

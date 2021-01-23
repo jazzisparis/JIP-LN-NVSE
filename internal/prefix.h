@@ -13,6 +13,7 @@
 #include <string>
 #include <regex>
 #include <type_traits>
+#include <initializer_list>
 #include <intrin.h>
 
 #include "internal/version.h"
@@ -332,6 +333,7 @@ class NiProperty;
 class NiAVObject;
 class NiNode;
 class BSFadeNode;
+class BSMultiBoundNode;
 class ShadowSceneNode;
 class NiCamera;
 class BSSceneGraph;
@@ -341,9 +343,13 @@ class BSAnimGroupSequence;
 class NiTexture;
 class NiSourceTexture;
 class NiRenderedTexture;
+class NiGeometry;
+class NiTriBasedGeom;
 class NiTriShape;
 class NiTriStrips;
 class BSScissorTriShape;
+class BSSegmentedTriShape;
+class BSResizableTriShape;
 class BSFaceGenNiNode;
 class BSShaderAccumulator;
 
@@ -355,10 +361,13 @@ class bhkWorld;
 class bhkWorldM;
 class NiCollisionObject;
 class bhkNiCollisionObject;
+class bhkBlendCollisionObject;
 class bhkCharacterController;
 class hkpRigidBody;
 class bhkRigidBody;
 class bhkRigidBodyT;
+class bhkConstraint;
+class bhkLimitedHingeConstraint;
 class bhkRagdollController;
 class bhkRagdollPenetrationUtil;
 

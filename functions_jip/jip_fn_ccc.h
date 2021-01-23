@@ -35,8 +35,8 @@ bool Cmd_CCCOnLoad_Execute(COMMAND_ARGS)
 {
 	if (s_CCCModIdx) return true;
 
-	s_CCCModIdx = scriptObj->GetOverridingModIdx();
-	UInt32 index = s_CCCModIdx << 24;
+	s_CCCModIdx = scriptObj->modIndex;
+	UInt32 index = scriptObj->modIndex << 24;
 	TESGlobal *globVar = (TESGlobal*)LookupFormByRefID(index | 0x5000);
 	if (!globVar || (globVar->data < 260))
 	{

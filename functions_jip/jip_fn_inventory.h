@@ -373,7 +373,7 @@ bool Cmd_GetAllItems_Execute(COMMAND_ARGS)
 		item = itemIter.Key();
 		if ((noNonPlayable && !item->IsItemPlayable()) || (noQuestItem && item->IsQuestItem()) || (noEquipped && ((Actor*)thisObj)->IsItemEquipped(item)))
 			continue;
-		if (listForm) listForm->list.Insert(item);
+		if (listForm) listForm->list.Prepend(item);
 		else s_tempElements.Append(item);
 		count++;
 	}
@@ -426,7 +426,7 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 				if (noEquipped && xData->HasType(kExtraData_Worn))
 					continue;
 				invRef = CreateInventoryRef(thisObj, item, xCount, xData);
-				if (listForm) listForm->list.Insert(invRef);
+				if (listForm) listForm->list.Prepend(invRef);
 				else s_tempElements.Append(invRef);
 				count++;
 			}
@@ -435,7 +435,7 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 		if (baseCount > 0)
 		{
 			invRef = CreateInventoryRef(thisObj, item, baseCount, NULL);
-			if (listForm) listForm->list.Insert(invRef);
+			if (listForm) listForm->list.Prepend(invRef);
 			else s_tempElements.Append(invRef);
 			count++;
 		}

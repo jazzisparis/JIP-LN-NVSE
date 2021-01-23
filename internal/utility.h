@@ -45,14 +45,10 @@
 #define LOG_HOOKS 0
 
 static const double
-kDblZero = 0,
-kDblHalf = 0.5,
-kDblPI = 3.141592653589793,
-kDblPId2 = 1.5707963267948966,
-kDblPId180 = 0.017453292519943295;
+kDblPId180 = 0.017453292519943295,
+kDblPId2 = 1.5707963267948966;
 
 static const float
-kFltZero = 0.0F,
 kFltPId180 = 0.01745329238F,
 kFltHalf = 0.5F,
 kFltOne = 1.0F,

@@ -6,8 +6,6 @@ struct CombatTarget;
 struct BGSSaveLoadFileEntry;
 class Sky;
 class BSTempNodeManager;
-class CombatProcedure;
-class CombatAction;
 class CombatGoal;
 class PathingLocation;
 class PathingCoverLocation;
@@ -206,7 +204,7 @@ public:
 	UInt32								unk2A4;				// 2A4
 	float								flt2A8;				// 2A8
 	UInt32								unk2AC;				// 2AC
-	float								flt2B0;				// 2B0
+	float								actorAlpha2;		// 2B0
 	float								flt2B4;				// 2B4
 	float								flt2B8;				// 2B8
 	float								flt2BC;				// 2BC
@@ -2234,6 +2232,89 @@ public:
 };
 STATIC_ASSERT(sizeof(TES) == 0xC4);
 
+// 0C
+struct CombatActionInfo
+{
+	char		*name;	// 00
+	float		cost;	// 04
+	UInt32		unk08;	// 08
+};
+
+enum CombatActions
+{
+	COMBAT_ACTION_ATTACK_RANGED_EXPLOSIVE,
+	COMBAT_ACTION_ATTACK_RANGED_EXPLOSIVE_F,
+	COMBAT_ACTION_ATTACK_RANGED,
+	COMBAT_ACTION_ATTACK_RANGED_FROM_COVER,
+	COMBAT_ACTION_ATTACK_GRENADE,
+	COMBAT_ACTION_ATTACK_GRENADE_FLUSH_TARG,
+	COMBAT_ACTION_ATTACK_GRENADE_FROM_COVER,
+	COMBAT_ACTION_ATTACK_MELEE,
+	COMBAT_ACTION_ATTACK_HAND_TO_HAND,
+	COMBAT_ACTION_MOVE,
+	COMBAT_ACTION_MOVE_AND_SWITCH_TO_MELEE,
+	COMBAT_ACTION_MOVE_AND_ATTACK_RANGED,
+	COMBAT_ACTION_MOVE_AND_ATTACK_RANGED_EX,
+	COMBAT_ACTION_MOVE_AND_ATTACK_GRENADE,
+	COMBAT_ACTION_DRAW_WEAPON,
+	COMBAT_ACTION_SWITCH_WEAPON,
+	COMBAT_ACTION_AVOID_THREAT,
+	COMBAT_ACTION_SEARCH,
+	COMBAT_ACTION_INVESTIGATE,
+	COMBAT_ACTION_DODGE,
+	COMBAT_ACTION_IGNORE_BLOCKED_TARGET,
+	COMBAT_ACTION_FLEE,
+	COMBAT_ACTION_ACTIVATE_COMBAT_ITEM,
+	COMBAT_ACTION_USE_COMBAT_ITEM,
+	COMBAT_ACTION_ACQUIRE_LINE_OF_SIGHT,
+	COMBAT_ACTION_HIDE,
+	COMBAT_ACTION_APPROACH_TARGET
+};
+
+// 2C
+class CombatAction
+{
+public:
+	virtual void	IsApplicable(void);
+	virtual void	AddProcedureToController(CombatController *combatCtrl, void *a2);
+	virtual void	Unk_02(void);
+	virtual void	GetCost(CombatController *combatCtrl, int a2);
+
+	tList<void>		list04;		// 04
+	tList<void>		list0C;		// 0C
+	tList<void>		list14;		// 14
+	tList<void>		list1C;		// 1C
+	UInt32			actionID;	// 24
+	UInt32			unk28;		// 28
+};
+STATIC_ASSERT(sizeof(CombatAction) == 0x2C);
+
+class CombatProcedure
+{
+public:
+	virtual void	Destroy(bool doFree);
+	virtual void	Update(void);
+	virtual void	SetCombatController(CombatController *_combatCtrl);
+	virtual void	Unk_03(void);
+	virtual void	ClearTargettedRefIfEqualTo(TESObjectREFR *targettedRef);
+	virtual void	DebugPrint(void);
+	virtual void	Unk_06(NiVector3 *out, NiVector3 *in);
+	virtual void	SetLastError_Disarmed(int unused);
+	virtual void	Unk_08(int a1);
+	virtual void	Unk_09(void);
+	virtual void	Unk_0A(int a1, int a2, int a3, int a4);
+	virtual void	Unk_0B(void);
+	virtual void	Unk_0C(void);
+	virtual void	Unk_0D(void);
+	virtual void	SaveGame(int a1);
+	virtual void	LoadGame(int a1);
+	virtual void	LoadGame2(int a1);
+
+	CombatController	*combatCtrl;	// 04
+	UInt32				*status;		// 08
+	char				*errorText;		// 0C
+};
+
 // 68
 struct CombatTarget
 {
@@ -2994,7 +3075,7 @@ public:
 	virtual void	LoadGame(UInt32 arg1);
 	virtual void	DoLoad(UInt32 arg1);
 
-	UInt32			seenBits[8];	// 04	256 bit field
+	UInt8			seenBits[32];	// 04	256 bitfield
 };
 
 // 2C
@@ -3003,7 +3084,8 @@ class IntSeenData : public SeenData
 public:
 	SInt8			segmentX;		// 24
 	SInt8			segmentY;		// 25
-	UInt8			pad26[2];		// 26
+	bool			fullySeen;		// 26	MiniMap only!
+	UInt8			pad27;			// 27
 	IntSeenData		*nextSegment;	// 28
 };
 
@@ -3623,8 +3705,8 @@ struct AnimGroupClassify
 	UInt8	subType;	// 01
 	UInt8	flags;		// 02
 	UInt8	byte03;		// 03
-}
-s_animGroupClassify[] =
+};
+const AnimGroupClassify s_animGroupClassify[] =
 {
 	{1, 1, 0, 0}, {1, 1, 0, 0}, {1, 1, 0, 0}, {2, 1, 0, 0}, {2, 2, 0, 0}, {2, 3, 0, 0}, {2, 4, 0, 0}, {2, 1, 1, 0}, {2, 2, 1, 0}, 
 	{2, 3, 1, 0}, {2, 4, 1, 0}, {2, 1, 2, 0}, {2, 2, 2, 0}, {2, 3, 2, 0}, {2, 4, 2, 0}, {2, 3, 4, 0}, {2, 4, 4, 0}, {3, 0, 0, 0}, 

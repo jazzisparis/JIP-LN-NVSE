@@ -130,6 +130,7 @@ DEFINE_COMMAND_PLUGIN(GetActorGravityMult, , 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(SetActorGravityMult, , 1, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(SetTeammateKillable, , 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(SetNoGunWobble, , 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetHitNode, , 1, 0, NULL);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -803,7 +804,7 @@ bool Cmd_GetFallTimeElapsed_Execute(COMMAND_ARGS)
 bool Cmd_GetFallTimeRemaining_Execute(COMMAND_ARGS)
 {
 	bhkCharacterController *charCtrl = thisObj->GetCharacterController();
-	*result = charCtrl ? charCtrl->fallTimeRemaining : 0;
+	*result = charCtrl ? charCtrl->calculatePitchTimer : 0;
 	return true;
 }
 
@@ -1539,8 +1540,8 @@ bool Cmd_AddBaseEffectListEffect_Execute(COMMAND_ARGS)
 		if (!thisObj || !thisObj->IsActor()) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
-	if (actorBase->spellList.spellList.GetIndexOf(spell) == -1)
-		actorBase->spellList.spellList.Insert(spell);
+	if (!actorBase->spellList.spellList.IsInList(spell))
+		actorBase->spellList.spellList.Prepend(spell);
 	return true;
 }
 
@@ -1936,11 +1937,8 @@ bool Cmd_GetEquippedEx_Execute(COMMAND_ARGS)
 				s_tempFormList.Clear();
 				TESForm *item;
 				for (ValidBip01Names::Data &slotData : validBip->slotData)
-				{
-					item = slotData.item;
-					if (item && !item->IsArmorAddon())
+					if ((item = slotData.item) && !item->IsArmorAddon())
 						s_tempFormList.Insert(item);
-				}
 				if (!s_tempFormList.Empty())
 				{
 					ListNode<TESForm> *traverse = listForm->list.Head();
@@ -1958,7 +1956,7 @@ bool Cmd_GetEquippedEx_Execute(COMMAND_ARGS)
 		else if (actor->baseProcess)
 		{
 			ContChangesEntry *weaponInfo = actor->baseProcess->GetWeaponInfo();
-			if (weaponInfo && (listForm->list.GetIndexOf(weaponInfo->type) >= 0))
+			if (weaponInfo && listForm->list.IsInList(weaponInfo->type))
 				REFR_RES = weaponInfo->type->refID;
 		}
 	}
@@ -2367,5 +2365,34 @@ bool Cmd_SetNoGunWobble_Execute(COMMAND_ARGS)
 		if (doSet) ((Actor*)thisObj)->jipActorFlags2 |= kHookActorFlag2_NoGunWobble;
 		else ((Actor*)thisObj)->jipActorFlags2 &= ~kHookActorFlag2_NoGunWobble;
 	}
+	return true;
+}
+
+bool Cmd_GetHitNode_Execute(COMMAND_ARGS)
+{
+	const char *nodeName = "NULL";
+	Actor *actor = (Actor*)thisObj;
+	if (actor->IsActor() && actor->baseProcess)
+	{
+		ActorHitData *hitData = actor->baseProcess->GetHitData();
+		if (hitData && hitData->projectile && hitData->projectile->IsProjectile())
+		{
+			auto traverse = hitData->projectile->impactDataList.Head();
+			Projectile::ImpactData *impactData;
+			do
+			{
+				if (!(impactData = traverse->data) || (impactData->refr != actor))
+					continue;
+				hkpRigidBody *rigidBody = impactData->rigidBody;
+				if (!rigidBody) continue;
+				NiNode *hitNode = GetCdBodyNode(&rigidBody->cdBody);
+				if (!hitNode) continue;
+				nodeName = hitNode->m_blockName;
+				break;
+			}
+			while (traverse = traverse->next);
+		}
+	}
+	AssignString(PASS_COMMAND_ARGS, nodeName);
 	return true;
 }

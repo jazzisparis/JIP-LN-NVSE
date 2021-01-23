@@ -118,21 +118,8 @@ bool Hook_HasPerk_Eval(Actor *thisObj, BGSPerk *perk, UInt32 useAlt, double *res
 bool Hook_GetBaseObject_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESForm *baseForm = thisObj->baseForm;
-	if (baseForm)
-	{
-		if (baseForm->modIndex == 0xFF)
-		{
-			if IS_TYPE(baseForm, BGSPlaceableWater)
-				baseForm = ((BGSPlaceableWater*)baseForm)->water;
-			else
-			{
-				ExtraLeveledCreature *xLvlCre = GetExtraType(&thisObj->extraDataList, LeveledCreature);
-				if (xLvlCre) baseForm = xLvlCre->baseForm;
-			}
-		}
-		REFR_RES = baseForm->refID;
-	}
+	TESForm *baseForm = thisObj->GetBaseForm();
+	if (baseForm) REFR_RES = baseForm->refID;
 	DoConsolePrint(baseForm);
 	return true;
 }
@@ -144,7 +131,7 @@ TESObjectWEAP* __fastcall ExtractWeapon(TESObjectWEAP *weapon, TESObjectREFR *th
 		if (!thisObj) return NULL;
 		weapon = (TESObjectWEAP*)thisObj->baseForm;
 	}
-	else if (weapon->GetIsReference())
+	else if IS_TYPE(weapon, TESObjectREFR)
 		weapon = (TESObjectWEAP*)((TESObjectREFR*)weapon)->baseForm;
 	return IS_TYPE(weapon, TESObjectWEAP) ? weapon : NULL;
 }
@@ -186,6 +173,66 @@ bool Hook_GetCurrentHealth_Execute(COMMAND_ARGS)
 		}
 	}
 	DoConsolePrint(result);
+	return true;
+}
+
+bool Hook_IsKeyPressed_Execute(COMMAND_ARGS)
+{
+	UInt32 keyID, flags = 1;
+	if (ExtractArgs(EXTRACT_ARGS, &keyID, &flags))
+		*result = g_DIHookCtrl->IsKeyPressed(keyID, flags);
+	else *result = 0;
+	return true;
+}
+
+bool Hook_IsKeyPressed_Eval(TESObjectREFR *thisObj, UInt32 keyID, UInt32 flags, double *result)
+{
+	*result = g_DIHookCtrl->IsKeyPressed(keyID, flags);
+	return true;
+}
+
+bool __fastcall IsControlPressed(UInt32 ctrlID, UInt32 flags = 1)
+{
+	if (s_controllerReady)
+		return GetXIControlPressed(g_inputGlobals->controllerBinds[ctrlID], flags);
+	UInt32 keyID = g_inputGlobals->keyBinds[ctrlID];
+	if ((keyID != 0xFF) && g_DIHookCtrl->IsKeyPressed(keyID, flags))
+		return true;
+	else
+	{
+		keyID = g_inputGlobals->mouseBinds[ctrlID];
+		return (keyID != 0xFF) && g_DIHookCtrl->IsKeyPressed(keyID + 0x100, flags);
+	}
+}
+
+bool __fastcall IsControlPressedRaw(UInt32 ctrlID)
+{
+	if (s_controllerReady)
+		return GetXIControlPressed(g_inputGlobals->controllerBinds[ctrlID], 2);
+	UInt32 keyID = g_inputGlobals->keyBinds[ctrlID];
+	if ((keyID != 0xFF) && g_DIHookCtrl->IsKeyPressedRaw(keyID))
+		return true;
+	else
+	{
+		keyID = g_inputGlobals->mouseBinds[ctrlID];
+		return (keyID != 0xFF) && g_DIHookCtrl->IsKeyPressedRaw(keyID + 0x100);
+	}
+}
+
+bool Hook_IsControlPressed_Execute(COMMAND_ARGS)
+{
+	UInt32 ctrlID, flags = 1;
+	if (ExtractArgs(EXTRACT_ARGS, &ctrlID, &flags) && (ctrlID < kMaxControlBinds))
+		*result = IsControlPressed(ctrlID, flags);
+	else *result = 0;
+	return true;
+}
+
+bool Hook_IsControlPressed_Eval(TESObjectREFR *thisObj, UInt32 ctrlID, UInt32 flags, double *result)
+{
+	if (ctrlID < kMaxControlBinds)
+		*result = IsControlPressed(ctrlID, flags);
+	else *result = 0;
 	return true;
 }
 
@@ -516,6 +563,12 @@ void InitCmdPatches()
 	cmdInfo->execute = Hook_GetWeaponAttackAnimation_Execute;
 	cmdInfo = GetCmdByOpcode(0x1451);
 	cmdInfo->execute = Hook_GetCurrentHealth_Execute;
+	cmdInfo = GetCmdByOpcode(0x1453);
+	cmdInfo->execute = Hook_IsKeyPressed_Execute;
+	cmdInfo->eval = (Cmd_Eval)Hook_IsKeyPressed_Eval;
+	cmdInfo = GetCmdByOpcode(0x146B);
+	cmdInfo->execute = Hook_IsControlPressed_Execute;
+	cmdInfo->eval = (Cmd_Eval)Hook_IsControlPressed_Eval;
 	if (!s_xNVSE)
 	{
 		cmdInfo = GetCmdByOpcode(0x1476);

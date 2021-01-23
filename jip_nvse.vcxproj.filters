@@ -365,6 +365,9 @@
     <ClInclude Include="internal\memory_pool.h">
       <Filter>internal</Filter>
     </ClInclude>
+    <ClInclude Include="internal\xinput.h">
+      <Filter>internal</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="exports.def" />
