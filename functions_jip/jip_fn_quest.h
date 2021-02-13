@@ -20,7 +20,7 @@ bool Cmd_SetStageAlt_Execute(COMMAND_ARGS)
 {
 	TESQuest *quest;
 	UInt32 stageID;
-	if (ExtractArgs(EXTRACT_ARGS, &quest, &stageID) && quest->SetStage(stageID))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &stageID) && quest->SetStage(stageID))
 	{
 		quest->currentStage = stageID;
 		*result = 1;
@@ -41,7 +41,7 @@ bool Cmd_GetObjectiveTargets_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESQuest *quest;
 	UInt32 objectiveID;
-	if (!ExtractArgs(EXTRACT_ARGS, &quest, &objectiveID)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID)) return true;
 	BGSQuestObjective *objective = quest->GetObjective(objectiveID);
 	if (!objective || objective->targets.Empty()) return true;
 	s_tempElements.Clear();
@@ -64,7 +64,7 @@ bool Cmd_SetObjectiveNthTarget_Execute(COMMAND_ARGS)
 	TESQuest *quest;
 	UInt32 objectiveID, index;
 	TESObjectREFR *refr;
-	if (ExtractArgs(EXTRACT_ARGS, &quest, &objectiveID, &index, &refr))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID, &index, &refr))
 	{
 		BGSQuestObjective *objective = quest->GetObjective(objectiveID);
 		if (objective)
@@ -82,7 +82,7 @@ bool Cmd_GetObjectiveHasTarget_Execute(COMMAND_ARGS)
 	TESQuest *quest;
 	UInt32 objectiveID;
 	TESObjectREFR *refr;
-	if (ExtractArgs(EXTRACT_ARGS, &quest, &objectiveID, &refr))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID, &refr))
 	{
 		BGSQuestObjective *objective = quest->GetObjective(objectiveID);
 		if (objective && (objective->GetTargetIndex(refr) >= 0))
@@ -96,7 +96,7 @@ bool Cmd_AddObjectiveTarget_Execute(COMMAND_ARGS)
 	TESQuest *quest;
 	UInt32 objectiveID;
 	TESObjectREFR *refr;
-	if (ExtractArgs(EXTRACT_ARGS, &quest, &objectiveID, &refr))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID, &refr))
 	{
 		BGSQuestObjective *objective = quest->GetObjective(objectiveID);
 		if (objective && (objective->GetTargetIndex(refr) < 0))
@@ -115,7 +115,7 @@ bool Cmd_RemoveObjectiveTarget_Execute(COMMAND_ARGS)
 	TESQuest *quest;
 	UInt32 objectiveID;
 	TESObjectREFR *refr;
-	if (ExtractArgs(EXTRACT_ARGS, &quest, &objectiveID, &refr))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID, &refr))
 	{
 		BGSQuestObjective *objective = quest->GetObjective(objectiveID);
 		SInt32 index = objective ? objective->GetTargetIndex(refr) : -1;
@@ -133,7 +133,7 @@ bool Cmd_GetObjectiveText_Execute(COMMAND_ARGS)
 	TESQuest *quest;
 	UInt32 objectiveID;
 	const char *resStr = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &quest, &objectiveID))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID))
 	{
 		BGSQuestObjective *objective = quest->GetObjective(objectiveID);
 		if (objective) resStr = objective->displayText.m_data;
@@ -158,7 +158,7 @@ bool Cmd_GetQuests_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 completed = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &completed))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &completed))
 		return true;
 	s_tempFormList.Clear();
 	ListNode<BGSQuestObjective> *iter = g_thePlayer->questObjectiveList.Head();
@@ -189,7 +189,7 @@ bool Cmd_GetQuestObjectives_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESQuest *quest;
 	UInt32 completed;
-	if (!ExtractArgs(EXTRACT_ARGS, &quest, &completed)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &completed)) return true;
 	s_tempElements.Clear();
 	ListNode<void> *iter = quest->lVarOrObjectives.Head();
 	BGSQuestObjective *objective;
@@ -230,7 +230,7 @@ bool Cmd_GetObjectiveTeleportLinks_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESQuest *quest;
 	UInt32 objectiveID;
-	if (!ExtractArgs(EXTRACT_ARGS, &quest, &objectiveID)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID)) return true;
 	BGSQuestObjective *objective = quest->GetObjective(objectiveID);
 	if (!objective || ((objective->status & 3) != 1)) return true;
 	NVSEArrayVar *linksArr = CreateArray(NULL, 0, scriptObj);
@@ -256,7 +256,7 @@ bool Cmd_GetQuestFlag_Execute(COMMAND_ARGS)
 {
 	TESQuest *quest;
 	UInt32 flagID;
-	if (ExtractArgs(EXTRACT_ARGS, &quest, &flagID) && (flagID <= 3))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &flagID) && (flagID <= 3))
 		*result = (quest->flags & (1 << flagID)) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -266,7 +266,7 @@ bool Cmd_SetQuestFlag_Execute(COMMAND_ARGS)
 {
 	TESQuest *quest;
 	UInt32 flagID, doSet;
-	if (ExtractArgs(EXTRACT_ARGS, &quest, &flagID, &doSet) && (flagID <= 3))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &flagID, &doSet) && (flagID <= 3))
 	{
 		if (doSet) quest->flags |= (1 << flagID);
 		else quest->flags &= ~(1 << flagID);

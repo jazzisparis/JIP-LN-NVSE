@@ -13,7 +13,7 @@ bool Cmd_GetLandTextureTextureSet_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESLandTexture *landTex;
-	if (ExtractArgs(EXTRACT_ARGS, &landTex) && (landTex->typeID == kFormType_TESLandTexture) && landTex->textureSet)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &landTex) && (landTex->typeID == kFormType_TESLandTexture) && landTex->textureSet)
 		REFR_RES = landTex->textureSet->refID;
 	return true;
 }
@@ -22,7 +22,7 @@ bool Cmd_SetLandTextureTextureSet_Execute(COMMAND_ARGS)
 {
 	TESLandTexture *landTex;
 	BGSTextureSet *texSet;
-	if (ExtractArgs(EXTRACT_ARGS, &landTex, &texSet) && (landTex->typeID == kFormType_TESLandTexture) && (texSet->typeID == kFormType_BGSTextureSet))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &landTex, &texSet) && (landTex->typeID == kFormType_TESLandTexture) && (texSet->typeID == kFormType_BGSTextureSet))
 		landTex->textureSet = texSet;
 	return true;
 }
@@ -32,7 +32,7 @@ bool Cmd_GetLandTextureTraitNumeric_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESLandTexture *landTex;
 	UInt32 traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &landTex, &traitID) || (landTex->typeID != kFormType_TESLandTexture)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &landTex, &traitID) || (landTex->typeID != kFormType_TESLandTexture)) return true;
 	switch (traitID)
 	{
 	case 0:
@@ -54,7 +54,7 @@ bool Cmd_SetLandTextureTraitNumeric_Execute(COMMAND_ARGS)
 {
 	TESLandTexture *landTex;
 	UInt32 traitID, val;
-	if (!ExtractArgs(EXTRACT_ARGS, &landTex, &traitID, &val) || (landTex->typeID != kFormType_TESLandTexture)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &landTex, &traitID, &val) || (landTex->typeID != kFormType_TESLandTexture)) return true;
 	switch (traitID)
 	{
 	case 0:
@@ -75,7 +75,7 @@ bool Cmd_SetLandTextureTraitNumeric_Execute(COMMAND_ARGS)
 bool Cmd_GetLandTextureNumGrasses_Execute(COMMAND_ARGS)
 {
 	TESLandTexture *landTex;
-	if (ExtractArgs(EXTRACT_ARGS, &landTex) && (landTex->typeID == kFormType_TESLandTexture))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &landTex) && (landTex->typeID == kFormType_TESLandTexture))
 		*result = (int)landTex->grasses.Count();
 	else *result = 0;
 	return true;
@@ -86,7 +86,7 @@ bool Cmd_GetLandTextureNthGrass_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESLandTexture *landTex;
 	UInt32 idx;
-	if (ExtractArgs(EXTRACT_ARGS, &landTex, &idx) && (landTex->typeID == kFormType_TESLandTexture))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &landTex, &idx) && (landTex->typeID == kFormType_TESLandTexture))
 	{
 		TESGrass *grass = landTex->grasses.GetNthItem(idx);
 		if (grass) REFR_RES = grass->refID;
@@ -98,7 +98,7 @@ bool Cmd_LandTextureAddGrass_Execute(COMMAND_ARGS)
 {
 	TESLandTexture *landTex;
 	TESGrass *grass;
-	if (ExtractArgs(EXTRACT_ARGS, &landTex, &grass) && (landTex->typeID == kFormType_TESLandTexture) &&
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &landTex, &grass) && (landTex->typeID == kFormType_TESLandTexture) &&
 		(grass->typeID == kFormType_TESGrass) && !landTex->grasses.IsInList(grass))
 	{
 		landTex->grasses.Prepend(grass);
@@ -112,7 +112,7 @@ bool Cmd_LandTextureRemoveGrass_Execute(COMMAND_ARGS)
 {
 	TESLandTexture *landTex;
 	TESGrass *grass;
-	if (ExtractArgs(EXTRACT_ARGS, &landTex, &grass) && (landTex->typeID == kFormType_TESLandTexture) &&
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &landTex, &grass) && (landTex->typeID == kFormType_TESLandTexture) &&
 		(grass->typeID == kFormType_TESGrass) && landTex->grasses.Remove(grass))
 		*result = 1;
 	else *result = 0;

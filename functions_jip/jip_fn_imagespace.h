@@ -10,7 +10,7 @@ bool Cmd_GetImageSpaceTrait_Execute(COMMAND_ARGS)
 {
 	TESImageSpace *imgSpace;
 	UInt32 traitID;
-	if (ExtractArgs(EXTRACT_ARGS, &imgSpace, &traitID) && (traitID <= 32))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &imgSpace, &traitID) && (traitID <= 32))
 	{
 		if (((traitID >= 21) && (traitID <= 23)) || ((traitID >= 29) && (traitID <= 31))) *result = imgSpace->traitValues[traitID] * 255;
 		else *result = imgSpace->traitValues[traitID];
@@ -24,7 +24,7 @@ bool Cmd_SetImageSpaceTrait_Execute(COMMAND_ARGS)
 	TESImageSpace *imgSpace;
 	UInt32 traitID;
 	float value;
-	if (ExtractArgs(EXTRACT_ARGS, &imgSpace, &traitID, &value) && (traitID <= 32))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &imgSpace, &traitID, &value) && (traitID <= 32))
 	{
 		if (((traitID >= 21) && (traitID <= 23)) || ((traitID >= 29) && (traitID <= 31))) imgSpace->traitValues[traitID] = value / 255;
 		else imgSpace->traitValues[traitID] = value;
@@ -36,7 +36,7 @@ bool Cmd_GetImageSpaceModTrait_Execute(COMMAND_ARGS)
 {
 	TESImageSpaceModifier *imod;
 	UInt32 traitID;
-	if (ExtractArgs(EXTRACT_ARGS, &imod, &traitID) && (traitID <= 63))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &imod, &traitID) && (traitID <= 63))
 	{
 		if (!traitID)
 			*result = imod->duration;
@@ -62,7 +62,7 @@ bool Cmd_SetImageSpaceModTrait_Execute(COMMAND_ARGS)
 	TESImageSpaceModifier *imod;
 	UInt32 traitID;
 	float value;
-	if (ExtractArgs(EXTRACT_ARGS, &imod, &traitID, &value) && (traitID <= 63))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &imod, &traitID, &value) && (traitID <= 63))
 	{
 		if (!traitID)
 			imod->duration = value;

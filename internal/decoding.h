@@ -7,6 +7,9 @@ struct BGSSaveLoadFileEntry;
 class Sky;
 class BSTempNodeManager;
 class CombatGoal;
+struct CombatSearchLocation;
+struct CombatSearchDoor;
+struct CombatGroupCluster;
 class PathingLocation;
 class PathingCoverLocation;
 struct UnreachableLocation;
@@ -118,24 +121,172 @@ public:
 };
 STATIC_ASSERT(sizeof(MagicShaderHitEffect) == 0x6C);
 
-// 160
+// 0C
+struct TaskletInfo
+{
+	enum TaskletStage
+	{
+		kStage_EnterCS,
+		kStage_Execute,
+		kStage_LeaveCS
+	};
+
+	UInt32			stage;
+	UInt32			unk04;	// Unused
+	TESObjectREFR	*execOn;
+};
+
+// 08
+class BSTaskletData
+{
+public:
+	virtual void	Destroy(bool doFree);
+	virtual bool	Unk_01(void);	// Returns true
+	virtual void	ExecuteQueuedTasks();
+	virtual void	Unk_03(void);	// Does nothing
+
+	UInt8		byte04;		// 04
+	UInt8		pad05[3];	// 05
+};
+
+// 14
+class BSWin32TaskletData : public BSTaskletData
+{
+public:
+	UInt32		unk08;		// 08
+	UInt8		byte0C;		// 0C
+	UInt8		pad0D[3];	// 0D
+	UInt32		unk10;		// 10
+};
+
+// 14
+class BSTCommonLLMessageQueue
+{
+public:
+	virtual void	Destroy(bool doFree);
+	virtual void	Unk_01(void);
+	virtual void	Unk_02(void);
+	virtual void	Unk_03(void);
+	virtual void	Unk_04(void);
+	virtual void	Unk_05(void);
+	virtual void	Unk_06(void);
+
+	UInt32		unk04[4];	// 04
+};
+
+// 38
+class MobileObjectTaskletData : public BSWin32TaskletData
+{
+public:
+	virtual void	EnterCriticalSections(UInt32 unused);
+	virtual void	ExecuteTask(TESObjectREFR *execOn);
+	virtual void	LeaveCriticalSections(UInt32 unused);
+
+	UInt32					unk14[2];		// 14
+	BSTCommonLLMessageQueue	messageQueue;	// 1C
+	UInt32					unk30[2];		// 30
+};
+
+// 40
+class DetectionTaskData : public MobileObjectTaskletData
+{
+public:
+	float			flt38;		// 38
+	UInt32			unk3C;		// 3C
+};
+
+// 38
+class AnimationTaskData : public MobileObjectTaskletData
+{
+public:
+};
+
+// 44
+class PackageUpdateTaskData : public MobileObjectTaskletData
+{
+public:
+	UInt32			unk38[3];	// 38
+};
+
+// 3C
+class ActorUpdateTaskData : public MobileObjectTaskletData
+{
+public:
+	UInt32			unk38;		// 38
+};
+
+// 40
+class ActorsScriptTaskData : public MobileObjectTaskletData
+{
+public:
+	UInt32			unk38[2];	// 38
+};
+
+// 3C
+class MovementTaskData : public MobileObjectTaskletData
+{
+public:
+	UInt32			unk38;		// 38
+};
+
+struct LipTask;
+
+// 103CC (estimated according to highest init'd field)
+// C'tor: 0x96D020
 struct ProcessManager
 {
-	UInt32					unk000;				// 000
-	NiTArray<MobileObject*>	objects;			// 004
-	UInt32					beginOffsets[4];	// 014	0: High, 1: Mid-High, 2: Mid-Low, 3: Low
-	UInt32					endOffsets[4];		// 024
-	UInt32					unk034[11];			// 034
-	tList<BSTempEffect>		tempEffects;		// 060
-	UInt32					unk068[6];			// 068
-	tList<Actor>			highActors;			// 080
-	UInt32					unk088[54];			// 088
+	UInt32									unk000;				// 000
+	NiTArray<MobileObject*>					objects;			// 004
+	UInt32									beginOffsets[4];	// 014	0: High, 1: Mid-High, 2: Mid-Low, 3: Low
+	UInt32									endOffsets[4];		// 024
+	UInt32									offsets034[4];		// 034	Same as beginOffsets
+	UInt32									unk044[5];			// 044
+	tList<void>								list058;			// 058
+	tList<BSTempEffect>						tempEffects;		// 060
+	tList<void>								list068;			// 068
+	tList<void>								list070;			// 070
+	tList<void>								list078;			// 078
+	tList<Actor>							highActors;			// 080
+	UInt32									unk088[50];			// 088
+	UInt32									unk150;				// 150
+	float									flt154;				// 154
+	float									flt158;				// 158
+	UInt8									byte15C;			// 15C
+	UInt8									byte15D;			// 15D
+	UInt8									pad15E[2];			// 15E
+	DetectionTaskData						detectionTasks;		// 160
+	AnimationTaskData						animationTasks;		// 1A0
+	PackageUpdateTaskData					packageUpdTasks;	// 1D8
+	ActorUpdateTaskData						actorUpdTasks;		// 21C
+	ActorsScriptTaskData					actorScriptTasks;	// 258
+	MovementTaskData						movementTasks;		// 298
+	UInt32									unk2D4[0x4023];		// 2D4
+	LockFreeMap<MobileObject*, LipTask*>	lipTasksMap;		// 10360
+	UInt8									toggleAI;			// 103A0
+	UInt8									toggleDetection;	// 103A1
+	UInt8									toggleDetectionStats;	// 103A2
+	UInt8									byte103A3;			// 103A3
+	UInt32									detectionStats;		// 103A4
+	UInt8									toggleHighProcess;	// 103A8
+	UInt8									toggleLowProcess;	// 103A9
+	UInt8									toggleMidHighProcess;	// 103AA
+	UInt8									toggleMidLowProcess;	// 103AB
+	UInt8									toggleAISchedules;	// 103AC
+	UInt8									showSubtitle;		// 103AD
+	UInt8									byte103AE;			// 103AE
+	UInt8									byte103AF;			// 103AF
+	UInt32									unk103B0;			// 103B0
+	float									flt103B4;			// 103B4
+	UInt32									unk103B8;			// 103B8
+	float									removeDeadActorsTime;	// 103BC
+	UInt32									unk103C0[3];		// 103C0
 
 	__forceinline int GetTotalDetectionValue(Actor *actor, bool arg2 = false)
 	{
 		return ThisCall<int>(0x973710, this, actor, arg2);
 	}
 };
+STATIC_ASSERT(sizeof(ProcessManager) == 0x103CC);
 
 struct DetectionData
 {
@@ -2329,13 +2480,67 @@ struct CombatAlly
 	UInt32		unk04[4];
 };
 
-// 28
+// 15C
 struct CombatActors
 {
-	UInt32							unk00[2];	// 00
-	BSSimpleArray<CombatTarget>		targets;	// 08
-	BSSimpleArray<CombatAlly>		allies;		// 18
+	struct Unk0F0
+	{
+		NiVector3		vector00;
+		UInt32			unk0C;
+	};
+
+	UInt32									unk000[2];			// 000
+	BSSimpleArray<CombatTarget>				targets;			// 008
+	BSSimpleArray<CombatAlly>				allies;				// 018
+	UInt32									unk028;				// 028
+	UInt8									byte02C;			// 02C
+	UInt8									pad02D[3];			// 02D
+	NiPoint2								unk030;				// 030
+	NiPoint2								unk038;				// 038
+	UInt32									unk040;				// 040
+	float									flt044;				// 044
+	NiPoint2								unk048;				// 048
+	NiPoint2								unk050;				// 050
+	NiPoint2								unk058;				// 058
+	NiPoint2								unk060;				// 060
+	NiPoint2								unk068;				// 068
+	NiPoint2								unk070;				// 070
+	NiPoint2								unk078;				// 078
+	NiPoint2								unk080;				// 080
+	NiPoint2								unk088;				// 088
+	NiPoint2								unk090;				// 090
+	NiPoint2								unk098;				// 098
+	NiPoint2								unk0A0;				// 0A0
+	NiPoint2								unk0A8;				// 0A8
+	NiPoint2								unk0B0;				// 0B0
+	NiPoint2								unk0B8;				// 0B8
+	float									flt0C0;				// 0C0
+	float									flt0C4;				// 0C4
+	float									flt0C8;				// 0C8
+	float									flt0CC;				// 0CC
+	UInt32									targetSearchState;	// 0D0	0 - Not searching; 1-2 - Searching
+	NiRefObject								*object0D4;			// 0D4
+	NiPoint2								unk0D8;				// 0D8
+	NiPoint2								unk0E0;				// 0E0
+	float									flt0E8;				// 0E8
+	UInt32									unk0EC;				// 0EC
+	Unk0F0									unk0F0;				// 0F0
+	NiVector3								vector100;			// 100
+	float									flt10C;				// 10C
+	BSSimpleArray<CombatSearchLocation>		searchLocations;	// 110
+	BSSimpleArray<CombatSearchDoor>			searchDoors;		// 120
+	NiRefObject								*object130;			// 130
+	UInt8									byte134;			// 134
+	UInt8									pad135[3];			// 135
+	BSSimpleArray<CombatGroupCluster>		groupClusters;		// 138
+	UInt32									unk148;				// 148
+	UInt32									unk14C;				// 14C
+	UInt32									unk150;				// 150
+	UInt8									byte154;			// 154
+	UInt8									pad155[3];			// 155
+	NiRefObject								*object158;			// 158
 };
+STATIC_ASSERT(sizeof(CombatActors) == 0x15C);
 
 // 188
 class CombatController : public TESPackage
@@ -2364,9 +2569,9 @@ public:
 		UInt32									unk184[15];	// 184
 		Actor									*actor1C0;	// 1C0
 		CombatController						*cmbtCtrl;	// 1C4
-		UInt32									unk1C8[22];	// 1C8
+		UInt32									unk1C8[25];	// 1C8
 	};
-	STATIC_ASSERT(sizeof(Unk09C) == 0x220);
+	STATIC_ASSERT(sizeof(Unk09C) == 0x22C);
 
 	CombatActors					*combatActors;		// 080
 	CombatProcedure					*combatProcedure1;	// 084

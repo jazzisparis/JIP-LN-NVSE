@@ -12,7 +12,7 @@ bool Hook_MenuMode_Execute(COMMAND_ARGS)
 {
 	UInt32 menuID = 0;
 	bool menuMode = false;
-	if (ExtractArgs(EXTRACT_ARGS, &menuID))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &menuID))
 		menuMode = IsMenuMode(menuID);
 	*result = menuMode;
 	if (IsConsoleOpen()) Console_Print("MenuMode %d >> %d", menuID, menuMode);
@@ -28,7 +28,7 @@ bool Hook_MenuMode_Eval(TESObjectREFR *thisObj, UInt32 menuID, UInt32 arg2, doub
 bool Hook_GetItemCount_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
-	if (ExtractArgs(EXTRACT_ARGS, &form))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
 		*result = thisObj->GetItemCount(form);
 		DoConsolePrint(result);
@@ -61,7 +61,7 @@ bool Hook_IsInList_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	BGSListForm *formList;
-	if (ExtractArgs(EXTRACT_ARGS, &formList))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &formList))
 	{
 		if (formList->list.IsInList(thisObj->GetBaseForm()))
 			*result = 1;
@@ -93,7 +93,7 @@ bool Hook_HasPerk_Execute(COMMAND_ARGS)		// Modifies HasPerk to allow detection 
 	BGSPerk *perk;
 	UInt32 useAlt = 0;
 	UInt8 rank = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &perk, &useAlt))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &useAlt))
 	{
 		if (thisObj == g_thePlayer)
 			rank = g_thePlayer->GetPerkRank(perk, false);
@@ -131,55 +131,15 @@ TESObjectWEAP* __fastcall ExtractWeapon(TESObjectWEAP *weapon, TESObjectREFR *th
 		if (!thisObj) return NULL;
 		weapon = (TESObjectWEAP*)thisObj->baseForm;
 	}
-	else if IS_TYPE(weapon, TESObjectREFR)
+	else if IS_ID(weapon, TESObjectREFR)
 		weapon = (TESObjectWEAP*)((TESObjectREFR*)weapon)->baseForm;
-	return IS_TYPE(weapon, TESObjectWEAP) ? weapon : NULL;
-}
-
-bool Hook_GetWeaponCritDamage_Execute(COMMAND_ARGS)
-{
-	TESObjectWEAP *weapon = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon) && (weapon = ExtractWeapon(weapon, thisObj)))
-		*result = weapon->criticalDamage;
-	else *result = 0;
-	return true;
-}
-
-bool Hook_GetWeaponAttackAnimation_Execute(COMMAND_ARGS)
-{
-	TESObjectWEAP *weapon = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon) && (weapon = ExtractWeapon(weapon, thisObj)))
-		*result = weapon->AttackAnimation();
-	else *result = 0;
-	return true;
-}
-
-bool Hook_GetCurrentHealth_Execute(COMMAND_ARGS)
-{
-	*result = 0;
-	TESHealthForm *healthForm = DYNAMIC_CAST(thisObj->baseForm, TESForm, TESHealthForm);
-	if (healthForm)
-	{
-		ExtraHealth *xHealth = GetExtraType(&thisObj->extraDataList, Health);
-		*result = xHealth ? xHealth->health : (int)healthForm->health;
-	}
-	else
-	{
-		BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(thisObj->baseForm, TESForm, BGSDestructibleObjectForm);
-		if (destructible && destructible->data)
-		{
-			ExtraObjectHealth *xObjHealth = GetExtraType(&thisObj->extraDataList, ObjectHealth);
-			*result = xObjHealth ? xObjHealth->health : (int)destructible->data->health;
-		}
-	}
-	DoConsolePrint(result);
-	return true;
+	return IS_ID(weapon, TESObjectWEAP) ? weapon : NULL;
 }
 
 bool Hook_IsKeyPressed_Execute(COMMAND_ARGS)
 {
 	UInt32 keyID, flags = 1;
-	if (ExtractArgs(EXTRACT_ARGS, &keyID, &flags))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &keyID, &flags))
 		*result = g_DIHookCtrl->IsKeyPressed(keyID, flags);
 	else *result = 0;
 	return true;
@@ -222,7 +182,7 @@ bool __fastcall IsControlPressedRaw(UInt32 ctrlID)
 bool Hook_IsControlPressed_Execute(COMMAND_ARGS)
 {
 	UInt32 ctrlID, flags = 1;
-	if (ExtractArgs(EXTRACT_ARGS, &ctrlID, &flags) && (ctrlID < kMaxControlBinds))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ctrlID, &flags) && (ctrlID < kMaxControlBinds))
 		*result = IsControlPressed(ctrlID, flags);
 	else *result = 0;
 	return true;
@@ -233,25 +193,6 @@ bool Hook_IsControlPressed_Eval(TESObjectREFR *thisObj, UInt32 ctrlID, UInt32 fl
 	if (ctrlID < kMaxControlBinds)
 		*result = IsControlPressed(ctrlID, flags);
 	else *result = 0;
-	return true;
-}
-
-bool Hook_GetRefCount_Execute(COMMAND_ARGS)
-{
-	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
-	if (invRef)
-		*result = invRef->GetCount();
-	else
-		*result = thisObj->extraDataList.GetCount();
-	return true;
-}
-
-bool Hook_SetWeaponAttackAnimation_Execute(COMMAND_ARGS)
-{
-	UInt32 attackAnim;
-	TESObjectWEAP *weapon = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &attackAnim, &weapon) && (attackAnim < TESObjectWEAP::eAttackAnim_Count) && (weapon = ExtractWeapon(weapon, thisObj)))
-		weapon->SetAttackAnimation(attackAnim);
 	return true;
 }
 
@@ -306,7 +247,7 @@ void InitSettingMaps()
 bool Hook_GetNumericGameSetting_Execute(COMMAND_ARGS)
 {
 	*result = -1;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer) && ((s_strArgBuffer[0] | 0x20) != 's'))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer) && ((s_strArgBuffer[0] | 0x20) != 's'))
 	{
 		Setting *setting = s_gameSettingsMap.Get(s_strArgBuffer);
 		if (setting)
@@ -323,8 +264,8 @@ bool Hook_GetNumericGameSetting_Execute(COMMAND_ARGS)
 bool Hook_SetNumericGameSetting_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	float newVal;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &newVal) && ((s_strArgBuffer[0] | 0x20) != 's'))
+	double newVal;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &newVal) && ((s_strArgBuffer[0] | 0x20) != 's'))
 	{
 		Setting *setting = s_gameSettingsMap.Get(s_strArgBuffer);
 		if (setting)
@@ -341,7 +282,7 @@ bool Hook_SetNumericGameSetting_Execute(COMMAND_ARGS)
 bool Hook_GetNumericINISetting_Execute(COMMAND_ARGS)
 {
 	*result = -1;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer) && ((s_strArgBuffer[0] | 0x20) != 's'))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer) && ((s_strArgBuffer[0] | 0x20) != 's'))
 	{
 		Setting *setting = s_INISettingsMap.Get(s_strArgBuffer);
 		if (setting)
@@ -358,8 +299,8 @@ bool Hook_GetNumericINISetting_Execute(COMMAND_ARGS)
 bool Hook_SetNumericINISetting_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	float newVal;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &newVal) && ((s_strArgBuffer[0] | 0x20) != 's'))
+	double newVal;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &newVal) && ((s_strArgBuffer[0] | 0x20) != 's'))
 	{
 		Setting *setting = s_INISettingsMap.Get(s_strArgBuffer);
 		if (setting)
@@ -370,15 +311,6 @@ bool Hook_SetNumericINISetting_Execute(COMMAND_ARGS)
 		else if (IsConsoleOpen())
 			Console_Print("SetNumericINISetting >> NOT FOUND");
 	}
-	return true;
-}
-
-bool Hook_GetDebugSelection_Execute(COMMAND_ARGS)	// Modifies GetDebugSelection to return the correct pointer.
-{
-	*result = 0;
-	TESObjectREFR *debugSelection = g_interfaceManager->debugSelection;
-	if (debugSelection) REFR_RES = debugSelection->refID;
-	DoConsolePrint(debugSelection);
 	return true;
 }
 
@@ -394,7 +326,7 @@ bool Hook_IsRefInList_Execute(COMMAND_ARGS)
 {
 	BGSListForm *listForm;
 	TESForm *form;
-	if (ExtractArgs(EXTRACT_ARGS, &listForm, &form))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &listForm, &form))
 		*result = IsRefInList(listForm, form);
 	else *result = -1;
 	DoConsolePrint(result);
@@ -417,7 +349,7 @@ bool Hook_ActorValueToStringC_Execute(COMMAND_ARGS)
 {
 	const char *resStr = NULL;
 	UInt32 avCode, nameType = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &avCode, &nameType) && (avCode <= kAVCode_DamageThreshold))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &avCode, &nameType) && (avCode <= kAVCode_DamageThreshold))
 	{
 		ActorValueInfo *avInfo = g_actorValueInfoArray[avCode];
 		switch (nameType)
@@ -437,63 +369,6 @@ bool Hook_ActorValueToStringC_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool Hook_GetInvRefsForItem_Execute(COMMAND_ARGS)
-{
-	*result = 0;
-	TESForm *itemForm;
-	if (!ExtractArgs(EXTRACT_ARGS, &itemForm)) return true;
-	TESContainer *container = thisObj->GetContainer();
-	if (!container) return true;
-	ExtraContainerChanges::EntryDataList *entryList = thisObj->GetContainerChangesList();
-	if (!entryList) return true;
-
-	ContChangesEntry *entry = entryList->FindForItem(itemForm);
-	SInt32 countDelta = container->GetCountForForm(itemForm), xCount;
-	if (entry)
-	{
-		xCount = entry->countDelta;
-		if (countDelta)
-		{
-			if (entry->HasExtraLeveledItem())
-				countDelta = xCount;
-			else countDelta += xCount;
-		}
-		else countDelta = xCount;
-	}
-
-	if (countDelta <= 0) return true;
-
-	ExtraDataList *xData;
-	TESObjectREFR *invRef;
-	s_tempElements.Clear();
-
-	if (entry && entry->extendData)
-	{
-		ListNode<ExtraDataList> *xdlIter = entry->extendData->Head();
-		do
-		{
-			if (!(xData = xdlIter->data)) continue;
-			xCount = xData->GetCount();
-			if (xCount < 1) continue;
-			if (xCount > countDelta)
-				xCount = countDelta;
-			countDelta -= xCount;
-			invRef = CreateInventoryRef(thisObj, itemForm, xCount, xData);
-			s_tempElements.Append(invRef);
-		}
-		while (countDelta && (xdlIter = xdlIter->next));
-	}
-	if (countDelta > 0)
-	{
-		invRef = CreateInventoryRef(thisObj, itemForm, countDelta, NULL);
-		s_tempElements.Append(invRef);
-	}
-
-	AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
-
-	return true;
-}
-
 Cmd_Execute IsPluginInstalled, GetPluginVersion;
 
 bool __fastcall IsJIPAlias(const char *pluginName)
@@ -503,15 +378,11 @@ bool __fastcall IsJIPAlias(const char *pluginName)
 
 bool Hook_IsPluginInstalled_Execute(COMMAND_ARGS)
 {
-	UInt32 opcodeOffset = *opcodeOffsetPtr;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
-		if (IsJIPAlias(s_strArgBuffer)) *result = 1;
-		else
-		{
-			*opcodeOffsetPtr = opcodeOffset;
-			IsPluginInstalled(PASS_COMMAND_ARGS);
-		}
+		if (IsJIPAlias(s_strArgBuffer))
+			*result = 1;
+		else IsPluginInstalled(PASS_COMMAND_ARGS);
 	}
 	else *result = 0;
 	DoConsolePrint(result);
@@ -520,15 +391,11 @@ bool Hook_IsPluginInstalled_Execute(COMMAND_ARGS)
 
 bool Hook_GetPluginVersion_Execute(COMMAND_ARGS)
 {
-	UInt32 opcodeOffset = *opcodeOffsetPtr;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
-		if (IsJIPAlias(s_strArgBuffer)) *result = JIP_LN_VERSION;
-		else
-		{
-			*opcodeOffsetPtr = opcodeOffset;
-			GetPluginVersion(PASS_COMMAND_ARGS);
-		}
+		if (IsJIPAlias(s_strArgBuffer))
+			*result = JIP_LN_VERSION;
+		else GetPluginVersion(PASS_COMMAND_ARGS);
 	}
 	else *result = 0;
 	DoConsolePrint(result);
@@ -557,35 +424,22 @@ void InitCmdPatches()
 	cmdInfo->execute = Cmd_GetNVSEVersionFull_Execute;
 	cmdInfo = GetCmdByOpcode(0x1403);
 	cmdInfo->execute = Hook_GetBaseObject_Execute;
-	cmdInfo = GetCmdByOpcode(0x1419);
-	cmdInfo->execute = Hook_GetWeaponCritDamage_Execute;
-	cmdInfo = GetCmdByOpcode(0x142F);
-	cmdInfo->execute = Hook_GetWeaponAttackAnimation_Execute;
-	cmdInfo = GetCmdByOpcode(0x1451);
-	cmdInfo->execute = Hook_GetCurrentHealth_Execute;
 	cmdInfo = GetCmdByOpcode(0x1453);
 	cmdInfo->execute = Hook_IsKeyPressed_Execute;
 	cmdInfo->eval = (Cmd_Eval)Hook_IsKeyPressed_Eval;
 	cmdInfo = GetCmdByOpcode(0x146B);
 	cmdInfo->execute = Hook_IsControlPressed_Execute;
 	cmdInfo->eval = (Cmd_Eval)Hook_IsControlPressed_Eval;
-	if (!s_xNVSE)
-	{
-		cmdInfo = GetCmdByOpcode(0x1476);
-		cmdInfo->execute = Hook_GetRefCount_Execute;
-	}
-	cmdInfo = GetCmdByOpcode(0x1495);
-	cmdInfo->execute = Hook_SetWeaponAttackAnimation_Execute;
 	cmdInfo = GetCmdByOpcode(0x149A);
 	cmdInfo->execute = Hook_GetNumericGameSetting_Execute;
 	cmdInfo = GetCmdByOpcode(0x149B);
 	cmdInfo->execute = Hook_SetNumericGameSetting_Execute;
+	cmdInfo->params = kParams_JIP_OneString_OneDouble;
 	cmdInfo = GetCmdByOpcode(0x149C);
 	cmdInfo->execute = Hook_GetNumericINISetting_Execute;
 	cmdInfo = GetCmdByOpcode(0x149D);
 	cmdInfo->execute = Hook_SetNumericINISetting_Execute;
-	cmdInfo = GetCmdByOpcode(0x14B2);
-	cmdInfo->execute = Hook_GetDebugSelection_Execute;
+	cmdInfo->params = kParams_JIP_OneString_OneDouble;
 	cmdInfo = GetCmdByOpcode(0x1511);
 	cmdInfo->execute = Hook_IsRefInList_Execute;
 	cmdInfo->eval = (Cmd_Eval)Hook_IsRefInList_Eval;
@@ -593,8 +447,6 @@ void InitCmdPatches()
 	cmdInfo->execute = Hook_Update3D_Execute;
 	cmdInfo = GetCmdByOpcode(0x158D);
 	cmdInfo->execute = Hook_ActorValueToStringC_Execute;
-	cmdInfo = GetCmdByOpcode(0x15BA);
-	cmdInfo->execute = Hook_GetInvRefsForItem_Execute;
 	cmdInfo = GetCmdByOpcode(0x15DF);
 	IsPluginInstalled = cmdInfo->execute;
 	cmdInfo->execute = Hook_IsPluginInstalled_Execute;

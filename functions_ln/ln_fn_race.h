@@ -11,7 +11,7 @@ bool Cmd_GetRaceVoice_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESRace *race;
 	UInt32 gender;
-	if (ExtractArgs(EXTRACT_ARGS, &race, &gender) && IS_TYPE(race, TESRace))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &race, &gender) && IS_ID(race, TESRace))
 	{
 		BGSVoiceType *voice = race->voiceTypes[gender != 0];
 		if (voice) REFR_RES = voice->refID;
@@ -24,7 +24,7 @@ bool Cmd_SetRaceVoice_Execute(COMMAND_ARGS)
 	TESRace *race;
 	UInt32 gender;
 	BGSVoiceType *voice;
-	if (ExtractArgs(EXTRACT_ARGS, &race, &gender, &voice) && IS_TYPE(race, TESRace) && IS_TYPE(voice, BGSVoiceType))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &race, &gender, &voice) && IS_ID(race, TESRace) && IS_ID(voice, BGSVoiceType))
 		race->voiceTypes[gender != 0] = voice;
 	return true;
 }
@@ -34,7 +34,7 @@ bool Cmd_GetRaceAgeRace_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESRace *race;
 	UInt32 age;
-	if (ExtractArgs(EXTRACT_ARGS, &race, &age) && IS_TYPE(race, TESRace))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &race, &age) && IS_ID(race, TESRace))
 	{
 		race = race->ageRace[age != 0];
 		if (race) REFR_RES = race->refID;
@@ -46,7 +46,7 @@ bool Cmd_SetRaceAgeRace_Execute(COMMAND_ARGS)
 {
 	TESRace *race, *ageRace;
 	UInt32 age;
-	if (ExtractArgs(EXTRACT_ARGS, &race, &age, &ageRace) && IS_TYPE(race, TESRace) && IS_TYPE(ageRace, TESRace))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &race, &age, &ageRace) && IS_ID(race, TESRace) && IS_ID(ageRace, TESRace))
 		race->ageRace[age != 0] = ageRace;
 	return true;
 }
@@ -55,7 +55,7 @@ bool Cmd_SetRace_Execute(COMMAND_ARGS)
 {
 	TESNPC *npc;
 	TESRace *race;
-	if (ExtractArgs(EXTRACT_ARGS, &npc, &race) && IS_TYPE(npc, TESNPC) && IS_TYPE(race, TESRace))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &npc, &race) && IS_ID(npc, TESNPC) && IS_ID(race, TESRace))
 		npc->SetRace(race);
 	return true;
 }

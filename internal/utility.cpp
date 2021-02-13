@@ -310,22 +310,17 @@ __declspec(naked) void __fastcall MemZero(void *dest, UInt32 bsize)
 {
 	__asm
 	{
-		push	edi
 		test	ecx, ecx
 		jz		done
+		shr		edx, 2
+		jz		done
+		push	edi
 		mov		edi, ecx
 		xor		eax, eax
 		mov		ecx, edx
-		shr		ecx, 2
-		jz		write1
 		rep stosd
-	write1:
-		and		edx, 3
-		jz		done
-		mov		ecx, edx
-		rep stosb
-	done:
 		pop		edi
+	done:
 		retn
 	}
 }

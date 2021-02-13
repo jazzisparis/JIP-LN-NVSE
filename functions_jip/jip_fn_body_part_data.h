@@ -20,7 +20,7 @@ bool Cmd_GetBodyPartDataSkeleton_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	BGSBodyPartData *bpData;
-	if (ExtractArgs(EXTRACT_ARGS, &bpData) && IS_TYPE(bpData, BGSBodyPartData))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bpData) && IS_ID(bpData, BGSBodyPartData))
 		resStr = bpData->model.GetModelPath();
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -30,7 +30,7 @@ bool Cmd_GetBodyPartDataSkeleton_Execute(COMMAND_ARGS)
 bool Cmd_SetBodyPartDataSkeleton_Execute(COMMAND_ARGS)
 {
 	BGSBodyPartData *bpData;
-	if (ExtractArgs(EXTRACT_ARGS, &bpData, &s_strArgBuffer) && IS_TYPE(bpData, BGSBodyPartData))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &s_strArgBuffer) && IS_ID(bpData, BGSBodyPartData))
 		bpData->model.SetModelPath(s_strArgBuffer);
 	return true;
 }
@@ -39,7 +39,7 @@ bool Cmd_GetBodyPartDataRagdoll_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	BGSBodyPartData *bpData;
-	if (ExtractArgs(EXTRACT_ARGS, &bpData) && IS_TYPE(bpData, BGSBodyPartData) && bpData->ragDoll)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bpData) && IS_ID(bpData, BGSBodyPartData) && bpData->ragDoll)
 		REFR_RES = bpData->ragDoll->refID;
 	return true;
 }
@@ -48,7 +48,7 @@ bool Cmd_SetBodyPartDataRagdoll_Execute(COMMAND_ARGS)
 {
 	BGSBodyPartData *bpData;
 	BGSRagdoll *ragDoll = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &bpData, &ragDoll) && IS_TYPE(bpData, BGSBodyPartData) && (!ragDoll || IS_TYPE(ragDoll, BGSRagdoll)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &ragDoll) && IS_ID(bpData, BGSBodyPartData) && (!ragDoll || IS_ID(ragDoll, BGSRagdoll)))
 		bpData->ragDoll = ragDoll;
 	return true;
 }
@@ -57,7 +57,7 @@ bool Cmd_GetBodyPartDataHasPart_Execute(COMMAND_ARGS)
 {
 	BGSBodyPartData *bpData;
 	UInt32 partID;
-	if (ExtractArgs(EXTRACT_ARGS, &bpData, &partID) && IS_TYPE(bpData, BGSBodyPartData) &&
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID) && IS_ID(bpData, BGSBodyPartData) &&
 		(partID <= 14) && bpData->bodyParts[partID]) *result = 1;
 	else *result = 0;
 	return true;
@@ -68,7 +68,7 @@ bool Cmd_GetBodyPartTraitNumeric_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSBodyPartData *bpData;
 	UInt32 partID, traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &bpData, &partID, &traitID) || NOT_TYPE(bpData, BGSBodyPartData) || (partID > 14) || (traitID > 18)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &traitID) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14) || (traitID > 18)) return true;
 	BGSBodyPart *bodyPart = bpData->bodyParts[partID];
 	if (!bodyPart) return true;
 	switch (traitID)
@@ -128,7 +128,7 @@ bool Cmd_SetBodyPartTraitNumeric_Execute(COMMAND_ARGS)
 	BGSBodyPartData *bpData;
 	UInt32 partID, traitID;
 	float val;
-	if (!ExtractArgs(EXTRACT_ARGS, &bpData, &partID, &traitID, &val) || NOT_TYPE(bpData, BGSBodyPartData) || (partID > 14) || (traitID > 18) || (val < 0))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &traitID, &val) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14) || (traitID > 18) || (val < 0))
 		return true;
 	BGSBodyPart *bodyPart = bpData->bodyParts[partID];
 	if (!bodyPart) return true;
@@ -189,7 +189,7 @@ bool Cmd_GetBodyPartTraitForm_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSBodyPartData *bpData;
 	UInt32 partID, traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &bpData, &partID, &traitID) || NOT_TYPE(bpData, BGSBodyPartData) || (partID > 14) || (traitID > 5)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &traitID) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14) || (traitID > 5)) return true;
 	BGSBodyPart *bodyPart = bpData->bodyParts[partID];
 	if (!bodyPart) return true;
 	switch (traitID)
@@ -220,28 +220,28 @@ bool Cmd_SetBodyPartTraitForm_Execute(COMMAND_ARGS)
 	BGSBodyPartData *bpData;
 	TESForm *object = NULL;
 	UInt32 partID, traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &bpData, &partID, &traitID, &object) || NOT_TYPE(bpData, BGSBodyPartData) || (partID > 14) || (traitID > 5)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &traitID, &object) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14) || (traitID > 5)) return true;
 	BGSBodyPart *bodyPart = bpData->bodyParts[partID];
 	if (!bodyPart) return true;
 	switch (traitID)
 	{
 	case 0:
-		bodyPart->sevrExplosion = (object && IS_TYPE(object, BGSExplosion)) ? (BGSExplosion*)object : NULL;
+		bodyPart->sevrExplosion = (object && IS_ID(object, BGSExplosion)) ? (BGSExplosion*)object : NULL;
 		break;
 	case 1:
-		bodyPart->explExplosion = (object && IS_TYPE(object, BGSExplosion)) ? (BGSExplosion*)object : NULL;
+		bodyPart->explExplosion = (object && IS_ID(object, BGSExplosion)) ? (BGSExplosion*)object : NULL;
 		break;
 	case 2:
-		bodyPart->sevrDebris = (object && IS_TYPE(object, BGSDebris)) ? (BGSDebris*)object : NULL;
+		bodyPart->sevrDebris = (object && IS_ID(object, BGSDebris)) ? (BGSDebris*)object : NULL;
 		break;
 	case 3:
-		bodyPart->explDebris = (object && IS_TYPE(object, BGSDebris)) ? (BGSDebris*)object : NULL;
+		bodyPart->explDebris = (object && IS_ID(object, BGSDebris)) ? (BGSDebris*)object : NULL;
 		break;
 	case 4:
-		bodyPart->sevrImpactDS = (object && IS_TYPE(object, BGSImpactDataSet)) ? (BGSImpactDataSet*)object : NULL;
+		bodyPart->sevrImpactDS = (object && IS_ID(object, BGSImpactDataSet)) ? (BGSImpactDataSet*)object : NULL;
 		break;
 	default:
-		bodyPart->explImpactDS = (object && IS_TYPE(object, BGSImpactDataSet)) ? (BGSImpactDataSet*)object : NULL;
+		bodyPart->explImpactDS = (object && IS_ID(object, BGSImpactDataSet)) ? (BGSImpactDataSet*)object : NULL;
 	}
 	return true;
 }
@@ -251,7 +251,7 @@ bool Cmd_GetBodyPartName_Execute(COMMAND_ARGS)
 	const char *resStr = NULL;
 	BGSBodyPartData *bpData;
 	UInt32 partID;
-	if (ExtractArgs(EXTRACT_ARGS, &bpData, &partID) && IS_TYPE(bpData, BGSBodyPartData) && (partID <= 14))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID) && IS_ID(bpData, BGSBodyPartData) && (partID <= 14))
 	{
 		BGSBodyPart *bodyPart = bpData->bodyParts[partID];
 		if (bodyPart && bodyPart->partName.m_dataLen)
@@ -265,7 +265,7 @@ bool Cmd_SetBodyPartName_Execute(COMMAND_ARGS)
 {
 	BGSBodyPartData *bpData;
 	UInt32 partID;
-	if (!ExtractArgs(EXTRACT_ARGS, &bpData, &partID, &s_strArgBuffer) || NOT_TYPE(bpData, BGSBodyPartData) || (partID > 14)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &s_strArgBuffer) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14)) return true;
 	BGSBodyPart *bodyPart = bpData->bodyParts[partID];
 	if (bodyPart) bodyPart->partName.Set(s_strArgBuffer);
 	return true;
@@ -276,7 +276,7 @@ bool Cmd_GetBodyPartReplacementModel_Execute(COMMAND_ARGS)
 	const char *resStr = NULL;
 	BGSBodyPartData *bpData;
 	UInt32 partID;
-	if (ExtractArgs(EXTRACT_ARGS, &bpData, &partID) && IS_TYPE(bpData, BGSBodyPartData) && (partID <= 14))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID) && IS_ID(bpData, BGSBodyPartData) && (partID <= 14))
 	{
 		BGSBodyPart *bodyPart = bpData->bodyParts[partID];
 		if (bodyPart) resStr = bodyPart->limbReplacement.GetModelPath();
@@ -289,7 +289,7 @@ bool Cmd_SetBodyPartReplacementModel_Execute(COMMAND_ARGS)
 {
 	BGSBodyPartData *bpData;
 	UInt32 partID;
-	if (!ExtractArgs(EXTRACT_ARGS, &bpData, &partID, &s_strArgBuffer) || NOT_TYPE(bpData, BGSBodyPartData) || (partID > 14)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &s_strArgBuffer) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14)) return true;
 	BGSBodyPart *bodyPart = bpData->bodyParts[partID];
 	if (bodyPart) bodyPart->limbReplacement.SetModelPath(s_strArgBuffer);
 	return true;
@@ -300,7 +300,7 @@ bool Cmd_GetBodyPartFlag_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSBodyPartData *bpData;
 	UInt32 partID, flagID;
-	if (!ExtractArgs(EXTRACT_ARGS, &bpData, &partID, &flagID) || NOT_TYPE(bpData, BGSBodyPartData) || (partID > 14) || (flagID > 6)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &flagID) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14) || (flagID > 6)) return true;
 	BGSBodyPart *bodyPart = bpData->bodyParts[partID];
 	if (bodyPart) *result = (bodyPart->flags & (1 << flagID)) ? 1 : 0;
 	return true;
@@ -310,7 +310,7 @@ bool Cmd_SetBodyPartFlag_Execute(COMMAND_ARGS)
 {
 	BGSBodyPartData *bpData;
 	UInt32 partID, flagID, val;
-	if (!ExtractArgs(EXTRACT_ARGS, &bpData, &partID, &flagID, &val) || NOT_TYPE(bpData, BGSBodyPartData) || (partID > 14) || (flagID > 6)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &flagID, &val) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14) || (flagID > 6)) return true;
 	BGSBodyPart *bodyPart = bpData->bodyParts[partID];
 	if (bodyPart) bodyPart->SetFlag(1 << flagID, val != 0);
 	return true;

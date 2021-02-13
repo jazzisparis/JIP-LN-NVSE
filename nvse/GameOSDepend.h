@@ -125,8 +125,8 @@ public:
 	UInt8			currKeyStates[256];		// 18F8
 	UInt8			lastKeyStates[256];		// 19F8
 	UInt32			unk1AF8[11];			// 1AF8
-	int				unk1B24;				// 1B24
-	int				unk1B28;				// 1B28
+	int				mouseMovementX;			// 1B24
+	int				mouseMovementY;			// 1B28
 	int				mouseWheelScroll;		// 1B2C
 	UInt8			currButtonStates[8];	// 1B30
 	UInt32			unk1B38[3];				// 1B38

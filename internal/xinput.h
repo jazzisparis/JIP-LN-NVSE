@@ -18,7 +18,8 @@ bool s_controllerReady = false;
 UInt32 (__stdcall *XInputGetStateEx)(UInt32, XINPUT_GAMEPAD_EX*);
 
 UInt16 s_deadZoneLS = 0x1EA9, s_deadZoneRS = 0x21F1;
-double s_deadZoneLSd = 24918.0, s_deadZoneRSd = 24078.0;
+double s_deadZoneLSg = 7849, s_deadZoneRSg = 8689;
+double s_deadZoneLSd = 24918, s_deadZoneRSd = 24078;
 
 struct XInputStateMods
 {

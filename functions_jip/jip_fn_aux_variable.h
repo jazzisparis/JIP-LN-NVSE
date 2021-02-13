@@ -48,7 +48,7 @@ bool Cmd_AuxiliaryVariableGetSize_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &form)) return true;
 	UInt32 ownerID = GetSubjectID(form, thisObj);
 	if (!ownerID) return true;
 	GetBaseParams(scriptObj);
@@ -64,7 +64,7 @@ bool AuxiliaryVariableGet_Execute(COMMAND_ARGS)
 	const char *resStr = NULL;
 	SInt32 idx = 0;
 	TESForm *form = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &idx, &form) && (idx >= 0))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &idx, &form) && (idx >= 0))
 	{
 		UInt32 ownerID = GetSubjectID(form, thisObj);
 		if (ownerID)
@@ -135,7 +135,7 @@ bool Cmd_AuxiliaryVariableGetAsArray_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &form)) return true;
 	UInt32 ownerID = GetSubjectID(form, thisObj);
 	if (!ownerID) return true;
 	GetBaseParams(scriptObj);
@@ -154,7 +154,7 @@ bool Cmd_AuxiliaryVariableGetAll_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 type;
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &type, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &type, &form)) return true;
 	UInt32 ownerID = GetSubjectID(form, thisObj);
 	if (!ownerID) return true;
 	GetBaseParams(scriptObj, type);
@@ -183,13 +183,13 @@ bool AuxiliaryVariableSet_Execute(COMMAND_ARGS)
 	switch (s_auxVarOperationType)
 	{
 	case 0:
-		if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &fltVal, &idx, &form)) return true;
+		if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &fltVal, &idx, &form)) return true;
 		break;
 	case 1:
-		if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &refVal, &idx, &form)) return true;
+		if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &refVal, &idx, &form)) return true;
 		break;
 	default:
-		if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &s_strValBuffer, &idx, &form)) return true;
+		if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer, &idx, &form)) return true;
 	}
 	if (!s_strArgBuffer[0]) return true;
 	UInt32 ownerID = GetSubjectID(form, thisObj);
@@ -245,7 +245,7 @@ bool Cmd_AuxiliaryVariableSetFromArray_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 arrID;
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &arrID, &form) || !s_strArgBuffer[0] || !arrID)
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &arrID, &form) || !s_strArgBuffer[0] || !arrID)
 		return true;
 	UInt32 ownerID = GetSubjectID(form, thisObj);
 	if (!ownerID) return true;
@@ -275,7 +275,7 @@ bool Cmd_AuxiliaryVariableErase_Execute(COMMAND_ARGS)
 	*result = -1;
 	SInt32 idx = -1;
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &idx, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &idx, &form)) return true;
 	UInt32 ownerID = GetSubjectID(form, thisObj);
 	if (!ownerID) return true;
 	GetBaseParams(scriptObj);
@@ -310,7 +310,7 @@ bool Cmd_AuxiliaryVariableEraseAll_Execute(COMMAND_ARGS)
 {
 	UInt32 type;
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &type, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &type, &form)) return true;
 	UInt32 ownerID = GetSubjectID(form, thisObj);
 	if (!ownerID) return true;
 	GetBaseParams(scriptObj, type);
@@ -331,7 +331,7 @@ float __fastcall AuxVarGetFltCond(TESObjectREFR *thisObj, TESQuest *quest, UInt3
 		ScriptVar *scriptVar = quest->scriptEventList->GetVariable(varIndex);
 		if (scriptVar)
 		{
-			const char *varName = GetStringVar((int)scriptVar->data);
+			const char *varName = GetStringVar((int)scriptVar->data.num);
 			if (varName && *varName)
 			{
 				StrCopy(s_strArgBuffer, varName);
@@ -354,7 +354,7 @@ bool Cmd_AuxVarGetFltCond_Execute(COMMAND_ARGS)
 {
 	TESQuest *quest;
 	UInt32 varIndex;
-	if (ExtractArgs(EXTRACT_ARGS, &quest, &varIndex))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &varIndex))
 		*result = AuxVarGetFltCond(thisObj, quest, varIndex);
 	else *result = 0;
 	return true;

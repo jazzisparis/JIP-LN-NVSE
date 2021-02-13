@@ -16,7 +16,7 @@ public:
 	virtual void		Unk_55(void);
 	virtual void		Unk_56(void);
 	virtual bool		IsObstacle();
-	virtual void		Unk_58(void);
+	virtual bool		BaseIsQuestItem();
 	virtual void		Unk_59(void);
 	virtual void		Unk_5A(void);
 	virtual void		Unk_5B(void);
@@ -70,7 +70,7 @@ public:
 	virtual void		Unk_8A(void);			// SetParentCell (Interior only ?)
 	virtual bool		HasHealth(bool arg0);	// HasHealth (baseForm health > 0 or Flags bit23 set)
 	virtual bool		GetHasKnockedState();
-	virtual bool		Unk_8D(void);
+	virtual bool		GetIsParalyzed();
 	virtual void		Unk_8E(void);
 	virtual void		Unk_8F(void);
 	virtual void		Unk_90(void);
@@ -130,7 +130,7 @@ public:
 	bool IsDestroyed() const {return (flags & kFlags_Destroyed) != 0;}
 
 	NiVector3 *PosVector() {return (NiVector3*)&posX;}
-	CoordXY *PosXY() {return (CoordXY*)&posX;}
+	NiPoint2 *PosXY() {return (NiPoint2*)&posX;}
 
 	void Update3D();
 	TESContainer *GetContainer();
@@ -192,17 +192,17 @@ public:
 	virtual void		Unk_9A(void);
 	virtual void		Unk_9B(void);
 	virtual void		Unk_9C(void);
-	virtual void		Unk_9D(void);
+	virtual bool		IsInCombat(bool notSearching);
 	virtual void		Unk_9E(void);
 	virtual void		Unk_9F(void);
 	virtual void		Unk_A0(void);
 	virtual void		Unk_A1(void);
 	virtual void		Unk_A2(void);
 	virtual void		Unk_A3(void);
-	virtual void		Unk_A4(void);
-	virtual void		Unk_A5(void);
-	virtual void		Unk_A6(void);
-	virtual void		Unk_A7(void);
+	virtual bool		HasStartingWorldOrCell();
+	virtual TESWorldSpace	*GetStartingWorld();
+	virtual TESObjectCELL	*GetStartingCell();
+	virtual NiVector3	*GetStartingPos(NiVector3 *outPos);
 	virtual void		Unk_A8(void);
 	virtual void		Unk_A9(void);
 	virtual void		Unk_AA(void);
@@ -405,7 +405,7 @@ public:
 	virtual void		Unk_D2(void);
 	virtual void		Unk_D3(void);
 	virtual void		Unk_D4(void);
-	virtual void		Unk_D5(void);
+	virtual float		GetDefaultTurningSpeed();
 	virtual bool		IsOverencumbered();
 	virtual void		Unk_D7(void);
 	virtual bool		IsPlayerRef();
@@ -415,7 +415,7 @@ public:
 	virtual void		Unk_DC(void);
 	virtual void		Unk_DD(void);
 	virtual void		Unk_DE(void);
-	virtual void		Unk_DF(void);
+	virtual TESRace		*GetRace();
 	virtual void		Unk_E0(void);
 	virtual void		Unk_E1(void);
 	virtual void		Unk_E2(void);
@@ -569,7 +569,7 @@ public:
 	bool								forceRun;					// 124
 	bool								forceSneak;					// 125
 	UInt8								byte126;					// 126-
-	UInt8								byte127;					// 127-
+	bool								searchingForEnemies;		// 127
 	Actor								*combatTarget;				// 128
 	BSSimpleArray<Actor*>				*combatTargets;				// 12C
 	BSSimpleArray<Actor*>				*combatAllies;				// 130
@@ -649,6 +649,8 @@ public:
 	char GetCurrentAIPackage();
 	char GetCurrentAIProcedure();
 	bool IsFleeing();
+	ContChangesEntry *GetWeaponInfo();
+	ContChangesEntry *GetAmmoInfo();
 	TESObjectWEAP *GetEquippedWeapon();
 	bool IsItemEquipped(TESForm *item);
 	UInt8 EquippedWeaponHasMod(UInt8 modID);

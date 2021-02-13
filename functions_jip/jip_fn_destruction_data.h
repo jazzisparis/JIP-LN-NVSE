@@ -20,7 +20,7 @@ bool Cmd_GetDestructionDataHealth_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *object;
-	if (!ExtractArgs(EXTRACT_ARGS, &object)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &object)) return true;
 	BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(object, TESForm, BGSDestructibleObjectForm);
 	if (destructible && destructible->data) *result = (int)destructible->data->health;
 	return true;
@@ -30,7 +30,7 @@ bool Cmd_SetDestructionDataHealth_Execute(COMMAND_ARGS)
 {
 	TESForm *object;
 	UInt32 value;
-	if (!ExtractArgs(EXTRACT_ARGS, &object, &value)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &object, &value)) return true;
 	BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(object, TESForm, BGSDestructibleObjectForm);
 	if (destructible && destructible->data)
 		destructible->data->health = value;
@@ -41,7 +41,7 @@ bool Cmd_GetDestructionDataTargetable_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *object;
-	if (!ExtractArgs(EXTRACT_ARGS, &object)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &object)) return true;
 	BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(object, TESForm, BGSDestructibleObjectForm);
 	if (destructible && destructible->data) *result = destructible->data->targetable ? 1 : 0;
 	return true;
@@ -51,7 +51,7 @@ bool Cmd_SetDestructionDataTargetable_Execute(COMMAND_ARGS)
 {
 	TESForm *object;
 	UInt32 value;
-	if (!ExtractArgs(EXTRACT_ARGS, &object, &value)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &object, &value)) return true;
 	BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(object, TESForm, BGSDestructibleObjectForm);
 	if (destructible && destructible->data)
 		destructible->data->targetable = value ? true : false;
@@ -62,7 +62,7 @@ bool Cmd_GetDestructionDataNumStages_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *object;
-	if (!ExtractArgs(EXTRACT_ARGS, &object)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &object)) return true;
 	BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(object, TESForm, BGSDestructibleObjectForm);
 	if (destructible && destructible->data) *result = destructible->data->stageCount;
 	return true;
@@ -73,7 +73,7 @@ bool Cmd_GetNthDestructionStageTrait_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESForm *object;
 	UInt32 idx, traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &object, &idx, &traitID)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &object, &idx, &traitID)) return true;
 	BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(object, TESForm, BGSDestructibleObjectForm);
 	if (!destructible || !destructible->data || !destructible->data->stages || (idx >= destructible->data->stageCount)) return true;
 	switch (traitID)
@@ -100,7 +100,7 @@ bool Cmd_SetNthDestructionStageTrait_Execute(COMMAND_ARGS)
 {
 	TESForm *object;
 	UInt32 idx, traitID, value;
-	if (!ExtractArgs(EXTRACT_ARGS, &object, &idx, &traitID, &value)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &object, &idx, &traitID, &value)) return true;
 	BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(object, TESForm, BGSDestructibleObjectForm);
 	if (!destructible || !destructible->data || !destructible->data->stages || (idx >= destructible->data->stageCount)) return true;
 	switch (traitID)
@@ -128,7 +128,7 @@ bool Cmd_GetNthDestructionStageExplosion_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESForm *object;
 	UInt32 idx;
-	if (ExtractArgs(EXTRACT_ARGS, &object, &idx))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &object, &idx))
 	{
 		BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(object, TESForm, BGSDestructibleObjectForm);
 		if (destructible && destructible->data && destructible->data->stages && (idx < destructible->data->stageCount) && destructible->data->stages[idx]->explosion)
@@ -142,11 +142,11 @@ bool Cmd_SetNthDestructionStageExplosion_Execute(COMMAND_ARGS)
 	TESForm *object;
 	UInt32 idx;
 	BGSExplosion *explForm = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &object, &idx, &explForm))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &object, &idx, &explForm))
 	{
 		BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(object, TESForm, BGSDestructibleObjectForm);
 		if (destructible && destructible->data && destructible->data->stages && (idx < destructible->data->stageCount))
-			destructible->data->stages[idx]->explosion = (explForm && IS_TYPE(explForm, BGSExplosion)) ? explForm : NULL;
+			destructible->data->stages[idx]->explosion = (explForm && IS_ID(explForm, BGSExplosion)) ? explForm : NULL;
 	}
 	return true;
 }
@@ -156,7 +156,7 @@ bool Cmd_GetNthDestructionStageDebris_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESForm *object;
 	UInt32 idx;
-	if (ExtractArgs(EXTRACT_ARGS, &object, &idx))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &object, &idx))
 	{
 		BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(object, TESForm, BGSDestructibleObjectForm);
 		if (destructible && destructible->data && destructible->data->stages && (idx < destructible->data->stageCount) && destructible->data->stages[idx]->debris)
@@ -170,11 +170,11 @@ bool Cmd_SetNthDestructionStageDebris_Execute(COMMAND_ARGS)
 	TESForm *object;
 	UInt32 idx;
 	BGSDebris *dbrForm = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &object, &idx, &dbrForm))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &object, &idx, &dbrForm))
 	{
 		BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(object, TESForm, BGSDestructibleObjectForm);
 		if (destructible && destructible->data && destructible->data->stages && (idx < destructible->data->stageCount))
-			destructible->data->stages[idx]->debris = (dbrForm && IS_TYPE(dbrForm, BGSDebris)) ? dbrForm : NULL;
+			destructible->data->stages[idx]->debris = (dbrForm && IS_ID(dbrForm, BGSDebris)) ? dbrForm : NULL;
 	}
 	return true;
 }
@@ -184,7 +184,7 @@ bool Cmd_GetNthDestructionStageReplacement_Execute(COMMAND_ARGS)
 	const char *resStr = NULL;
 	TESForm *object;
 	UInt32 idx;
-	if (ExtractArgs(EXTRACT_ARGS, &object, &idx))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &object, &idx))
 	{
 		BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(object, TESForm, BGSDestructibleObjectForm);
 		if (destructible && destructible->data && destructible->data->stages && (idx < destructible->data->stageCount) && destructible->data->stages[idx]->replacement)
@@ -199,7 +199,7 @@ bool Cmd_SetNthDestructionStageReplacement_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESForm *object;
 	UInt32 idx;
-	if (!ExtractArgs(EXTRACT_ARGS, &object, &idx, &s_strArgBuffer)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &object, &idx, &s_strArgBuffer)) return true;
 	BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(object, TESForm, BGSDestructibleObjectForm);
 	if (!destructible || !destructible->data || !destructible->data->stages || (idx >= destructible->data->stageCount)) return true;
 	TESModelTextureSwap *rplc = destructible->data->stages[idx]->replacement;
@@ -220,7 +220,7 @@ bool Cmd_AddDestructionStage_Execute(COMMAND_ARGS)
 	TESForm *object;
 	SInt32 idx;
 	UInt32 health, dmgStg;
-	if (!ExtractArgs(EXTRACT_ARGS, &object, &idx, &health, &dmgStg)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &object, &idx, &health, &dmgStg)) return true;
 	BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(object, TESForm, BGSDestructibleObjectForm);
 	if (!destructible) return true;
 	SInt32 count = (destructible->data && destructible->data->stages) ? destructible->data->stageCount : 0;
@@ -261,7 +261,7 @@ bool Cmd_RemoveDestructionStage_Execute(COMMAND_ARGS)
 	*result = -1;
 	TESForm *object;
 	UInt32 idx;
-	if (!ExtractArgs(EXTRACT_ARGS, &object, &idx)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &object, &idx)) return true;
 	BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(object, TESForm, BGSDestructibleObjectForm);
 	if (!destructible) return true;
 	DestructibleData *data = destructible->data;

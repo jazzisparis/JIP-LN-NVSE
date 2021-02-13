@@ -33,7 +33,7 @@ bool Cmd_GetNumEffects_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form;
-	if (ExtractArgs(EXTRACT_ARGS, &form))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
 		EffectItemList *effList = DYNAMIC_CAST(form, TESForm, EffectItemList);
 		if (effList) *result = (int)effList->list.Count();
@@ -46,7 +46,7 @@ bool Cmd_GetNthEffectBase_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESForm *form;
 	UInt32 idx;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &idx))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &idx))
 	{
 		EffectItemList *effList = DYNAMIC_CAST(form, TESForm, EffectItemList);
 		if (effList)
@@ -64,7 +64,7 @@ bool Cmd_SetNthEffectBase_Execute(COMMAND_ARGS)
 	TESForm *form;
 	UInt32 idx;
 	EffectSetting *effSetting;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &idx, &effSetting))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &idx, &effSetting))
 	{
 		MagicItem *magicItem = DYNAMIC_CAST(form, TESForm, MagicItem);
 		if (magicItem)
@@ -86,7 +86,7 @@ bool Cmd_GetNthEffectTraitNumeric_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESForm *form;
 	UInt32 idx, traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &form, &idx, &traitID)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &idx, &traitID)) return true;
 	EffectItemList *effList = DYNAMIC_CAST(form, TESForm, EffectItemList);
 	if (!effList) return true;
 	EffectItem *effItem = effList->list.GetNthItem(idx);
@@ -112,7 +112,7 @@ bool Cmd_SetNthEffectTraitNumeric_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	UInt32 idx, traitID, val;
-	if (!ExtractArgs(EXTRACT_ARGS, &form, &idx, &traitID, &val) || (traitID > 2)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &idx, &traitID, &val) || (traitID > 2)) return true;
 	MagicItem *magicItem = DYNAMIC_CAST(form, TESForm, MagicItem);
 	if (!magicItem) return true;
 	EffectItem *effItem = magicItem->list.list.GetNthItem(idx);
@@ -138,11 +138,11 @@ bool Cmd_AddNewEffect_Execute(COMMAND_ARGS)
 	TESForm *form;
 	EffectSetting *effSetting;
 	UInt32 duration, magnitude, range = 0, area = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &form, &effSetting, &duration, &magnitude, &range, &area) || (range > 2)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &effSetting, &duration, &magnitude, &range, &area) || (range > 2)) return true;
 	MagicItem *magicItem = DYNAMIC_CAST(form, TESForm, MagicItem);
 	if (!magicItem) return true;
-	if IS_TYPE(form, AlchemyItem) area = range = 0;
-	else if IS_TYPE(form, EnchantmentItem)
+	if IS_ID(form, AlchemyItem) area = range = 0;
+	else if IS_ID(form, EnchantmentItem)
 	{
 		if (((EnchantmentItem*)form)->type == 2) range = 1;
 		else area = range = 0;
@@ -174,7 +174,7 @@ bool Cmd_RemoveNthEffect_Execute(COMMAND_ARGS)
 	*result = -1;
 	TESForm *form;
 	SInt32 idx;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &idx))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &idx))
 	{
 		EffectItemList *effList = DYNAMIC_CAST(form, TESForm, EffectItemList);
 		if (effList && effList->RemoveNthEffect(idx))
@@ -188,10 +188,10 @@ bool Cmd_SetObjectEffect_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESForm *form;
 	EnchantmentItem *effect = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &form, &effect)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &effect)) return true;
 	TESEnchantableForm *enchantable = DYNAMIC_CAST(form, TESForm, TESEnchantableForm);
 	if (!enchantable) return true;
-	if (effect && IS_TYPE(effect, EnchantmentItem))
+	if (effect && IS_ID(effect, EnchantmentItem))
 	{
 		if IS_TYPE(form, TESObjectARMO)
 		{
@@ -209,7 +209,7 @@ bool Cmd_GetNumActorEffects_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESActorBase *actorBase = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &actorBase)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
 	{
 		if (!thisObj || !thisObj->IsActor()) return true;
@@ -224,7 +224,7 @@ bool Cmd_GetNthActorEffect_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 idx;
 	TESActorBase *actorBase = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &idx, &actorBase)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &idx, &actorBase)) return true;
 	if (!actorBase)
 	{
 		if (!thisObj || !thisObj->IsActor()) return true;
@@ -239,7 +239,7 @@ bool Cmd_GetActorUnarmedEffect_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESActorBase *actorBase = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &actorBase)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
 	{
 		if (!thisObj || !thisObj->IsActor()) return true;
@@ -254,17 +254,17 @@ bool Cmd_SetActorUnarmedEffect_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESForm *effForm;
 	TESActorBase *actorBase = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &effForm, &actorBase)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &effForm, &actorBase)) return true;
 	if (!actorBase)
 	{
 		if (!thisObj || !thisObj->IsActor()) return true;
 		actorBase = (TESActorBase*)thisObj->baseForm;
 	}
-	if IS_TYPE(effForm, EnchantmentItem)
+	if IS_ID(effForm, EnchantmentItem)
 	{
 		if (((EnchantmentItem*)effForm)->type != 2) return true;
 	}
-	else if IS_TYPE(effForm, SpellItem)
+	else if IS_ID(effForm, SpellItem)
 	{
 		if (((SpellItem*)effForm)->type) return true;
 	}
@@ -278,7 +278,7 @@ bool Cmd_GetAddictionEffect_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	AlchemyItem *alch;
-	if (ExtractArgs(EXTRACT_ARGS, &alch) && IS_TYPE(alch, AlchemyItem) && alch->withdrawalEffect)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &alch) && IS_ID(alch, AlchemyItem) && alch->withdrawalEffect)
 		REFR_RES = alch->withdrawalEffect->refID;
 	return true;
 }
@@ -287,15 +287,15 @@ bool Cmd_SetAddictionEffect_Execute(COMMAND_ARGS)
 {
 	AlchemyItem *alch;
 	SpellItem *effect = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &alch, &effect) && IS_TYPE(alch, AlchemyItem))
-		alch->withdrawalEffect = (effect && IS_TYPE(effect, SpellItem)) ? effect : NULL;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &alch, &effect) && IS_ID(alch, AlchemyItem))
+		alch->withdrawalEffect = (effect && IS_ID(effect, SpellItem)) ? effect : NULL;
 	return true;
 }
 
 bool Cmd_GetAddictionChance_Execute(COMMAND_ARGS)
 {
 	AlchemyItem *alch;
-	if (ExtractArgs(EXTRACT_ARGS, &alch) && IS_TYPE(alch, AlchemyItem) && alch->withdrawalEffect)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &alch) && IS_ID(alch, AlchemyItem) && alch->withdrawalEffect)
 		*result = alch->addictionChance;
 	else *result = 0;
 	return true;
@@ -305,7 +305,7 @@ bool Cmd_SetAddictionChance_Execute(COMMAND_ARGS)
 {
 	AlchemyItem *alch;
 	float chance;
-	if (ExtractArgs(EXTRACT_ARGS, &alch, &chance) && IS_TYPE(alch, AlchemyItem) && alch->withdrawalEffect)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &alch, &chance) && IS_ID(alch, AlchemyItem) && alch->withdrawalEffect)
 		alch->addictionChance = chance;
 	return true;
 }
@@ -313,7 +313,7 @@ bool Cmd_SetAddictionChance_Execute(COMMAND_ARGS)
 bool Cmd_GetIsPoison_Execute(COMMAND_ARGS)
 {
 	AlchemyItem *alch;
-	if (ExtractArgs(EXTRACT_ARGS, &alch) && IS_TYPE(alch, AlchemyItem))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &alch) && IS_ID(alch, AlchemyItem))
 		*result = alch->IsPoison() ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -323,7 +323,7 @@ bool Cmd_GetActiveEffects_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 filter = 7;
-	if (!ExtractArgs(EXTRACT_ARGS, &filter) || !thisObj->IsActor())
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &filter) || !thisObj->IsActor())
 		return true;
 	filter = ((filter & 1) ? kFormType_EnchantmentItem : 63) & ((filter & 2) ? kFormType_SpellItem : 63) & ((filter & 4) ? kFormType_AlchemyItem : 63);
 	ActiveEffectList *effList = ((Actor*)thisObj)->magicTarget.GetEffectList();
@@ -413,7 +413,7 @@ bool Cmd_RemoveNthTempEffect_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 index;
-	if (!ExtractArgs(EXTRACT_ARGS, &index) || !thisObj->IsActor()) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &index) || !thisObj->IsActor()) return true;
 	ActiveEffectList *effList = ((Actor*)thisObj)->magicTarget.GetEffectList();
 	if (!effList) return true;
 	ListNode<ActiveEffect> *iter = effList->Head();
@@ -439,7 +439,7 @@ bool Cmd_GetEffectFlag_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESForm *effForm;
 	UInt32 flagID;
-	if (!ExtractArgs(EXTRACT_ARGS, &effForm, &flagID) || (flagID > 7)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &effForm, &flagID) || (flagID > 7)) return true;
 	UInt8 flags;
 	switch (effForm->typeID)
 	{
@@ -463,7 +463,7 @@ bool Cmd_SetEffectFlag_Execute(COMMAND_ARGS)
 {
 	TESForm *effForm;
 	UInt32 flagID, val;
-	if (!ExtractArgs(EXTRACT_ARGS, &effForm, &flagID, &val) || (flagID > 7)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &effForm, &flagID, &val) || (flagID > 7)) return true;
 	UInt8 *flagsPtr;
 	switch (effForm->typeID)
 	{
@@ -488,7 +488,7 @@ bool Cmd_GetBaseEffectFlag_Execute(COMMAND_ARGS)
 {
 	EffectSetting *effForm;
 	UInt32 flagID;
-	if (ExtractArgs(EXTRACT_ARGS, &effForm, &flagID) && IS_TYPE(effForm, EffectSetting) && (flagID <= 31))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &effForm, &flagID) && IS_ID(effForm, EffectSetting) && (flagID <= 31))
 		*result = (effForm->effectFlags & (1 << flagID)) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -498,7 +498,7 @@ bool Cmd_SetBaseEffectFlag_Execute(COMMAND_ARGS)
 {
 	EffectSetting *effSetting;
 	UInt32 flagID, val;
-	if (ExtractArgs(EXTRACT_ARGS, &effSetting, &flagID, &val) && IS_TYPE(effSetting, EffectSetting) && (flagID <= 31))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &effSetting, &flagID, &val) && IS_ID(effSetting, EffectSetting) && (flagID <= 31))
 	{
 		if (val) effSetting->effectFlags |= (1 << flagID);
 		else effSetting->effectFlags &= ~(1 << flagID);
@@ -510,7 +510,7 @@ bool Cmd_GetBaseEffectScript_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	EffectSetting *effect;
-	if (ExtractArgs(EXTRACT_ARGS, &effect) && IS_TYPE(effect, EffectSetting) && (effect->archtype == 1) && effect->associatedItem)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &effect) && IS_ID(effect, EffectSetting) && (effect->archtype == 1) && effect->associatedItem)
 		REFR_RES = effect->associatedItem->refID;
 	return true;
 }
@@ -519,7 +519,7 @@ bool Cmd_SetBaseEffectScript_Execute(COMMAND_ARGS)
 {
 	EffectSetting *effect;
 	Script *script;
-	if (ExtractArgs(EXTRACT_ARGS, &effect, &script) && IS_TYPE(effect, EffectSetting) && (effect->archtype == 1) && IS_TYPE(script, Script))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &effect, &script) && IS_ID(effect, EffectSetting) && (effect->archtype == 1) && IS_ID(script, Script))
 		effect->associatedItem = script;
 	return true;
 }
@@ -544,7 +544,7 @@ bool __fastcall IsSpellTargetAlt(Actor *actor, MagicItem *magicItem)
 bool Cmd_IsSpellTargetAlt_Execute(COMMAND_ARGS)
 {
 	MagicItem *magicItem;
-	if (ExtractArgs(EXTRACT_ARGS, &magicItem))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem))
 		*result = IsSpellTargetAlt((Actor*)thisObj, magicItem);
 	else *result = 0;
 	return true;
@@ -560,7 +560,7 @@ bool Cmd_CastImmediate_Execute(COMMAND_ARGS)
 {
 	MagicItem *magicItem;
 	Actor *target = (Actor*)thisObj, *caster = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &magicItem, &caster) && target->IsActor() && target->parentCell && (magicItem->GetType() != 4) && (!caster || caster->IsActor()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &caster) && target->IsActor() && target->parentCell && (magicItem->GetType() != 4))
 	{
 		if (!caster) caster = target;
 		UInt32 *reachMultPtr = (UInt32*)0x11CF1E4, reachMult = *reachMultPtr;

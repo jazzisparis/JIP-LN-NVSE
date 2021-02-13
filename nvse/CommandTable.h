@@ -52,7 +52,7 @@ enum ParamType
 	kParamType_ImageSpaceModifier =		0x2A,	//							kFormType_ImageSpaceModifier
 	kParamType_ImageSpace =				0x2B,	//							kFormType_ImageSpace
 	kParamType_Double =					0x2C,	// 
-	kParamType_Script =					0x2D,	// 
+	kParamType_ScriptVariable =			0x2D,	// 
 	kParamType_Unhandled2E =			0x2E,	// 
 	kParamType_EncounterZone =			0x2F,	//							kFormType_EncounterZone
 	kParamType_IdleForm =				0x30,	//							kFormType_TESIdleForm
@@ -107,12 +107,12 @@ struct ParamInfo
 	UInt32		isOptional;	// do other bits do things?
 };
 
-#define COMMAND_ARGS		ParamInfo *paramInfo, void *scriptData, TESObjectREFR *thisObj, TESObjectREFR *containingObj, Script *scriptObj, ScriptEventList *eventList, double *result, UInt32 *opcodeOffsetPtr
+#define COMMAND_ARGS		ParamInfo *paramInfo, UInt8 *scriptData, TESObjectREFR *thisObj, TESObjectREFR *containingObj, Script *scriptObj, ScriptEventList *eventList, double *result, UInt32 *opcodeOffsetPtr
 #define PASS_COMMAND_ARGS	paramInfo, scriptData, thisObj, containingObj, scriptObj, eventList, result, opcodeOffsetPtr
 #define EXTRACT_ARGS		paramInfo, scriptData, opcodeOffsetPtr, thisObj, containingObj, scriptObj, eventList
 #define COMMAND_ARGS_EVAL	TESObjectREFR *thisObj, void *arg1, void *arg2, double *result
 #define PASS_CMD_ARGS_EVAL	thisObj, arg1, arg2, result
-#define COMMAND_ARGS_EX		ParamInfo *paramInfo, void *scriptData, UInt32 *opcodeOffsetPtr, Script *scriptObj, ScriptEventList *eventList
+#define COMMAND_ARGS_EX		ParamInfo *paramInfo, UInt8 *scriptData, UInt32 *opcodeOffsetPtr, Script *scriptObj, ScriptEventList *eventList
 #define EXTRACT_ARGS_EX		paramInfo, scriptData, opcodeOffsetPtr, scriptObj, eventList
 
 //Macro to make CommandInfo definitions a bit less tedious

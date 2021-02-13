@@ -29,7 +29,7 @@ bool Cmd_GetMapMarkerName_Execute(COMMAND_ARGS)
 
 bool Cmd_SetMapMarkerName_Execute(COMMAND_ARGS)
 {
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
 		ExtraMapMarker *xMarker = GetExtraType(&thisObj->extraDataList, MapMarker);
 		if (xMarker) xMarker->data->fullName.name.Set(s_strArgBuffer);
@@ -40,7 +40,7 @@ bool Cmd_SetMapMarkerName_Execute(COMMAND_ARGS)
 bool Cmd_SetMapMarkerVisible_Execute(COMMAND_ARGS)
 {
 	UInt32 visible;
-	if (ExtractArgs(EXTRACT_ARGS, &visible))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &visible))
 	{
 		ExtraMapMarker *xMarker = GetExtraType(&thisObj->extraDataList, MapMarker);
 		if (xMarker) xMarker->SetVisible(visible != 0);
@@ -58,7 +58,7 @@ bool Cmd_GetMapMarkerTravel_Execute(COMMAND_ARGS)
 bool Cmd_SetMapMarkerTravel_Execute(COMMAND_ARGS)
 {
 	UInt32 travel;
-	if (ExtractArgs(EXTRACT_ARGS, &travel))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &travel))
 	{
 		ExtraMapMarker *xMarker = GetExtraType(&thisObj->extraDataList, MapMarker);
 		if (xMarker) xMarker->SetCanTravel(travel != 0);
@@ -76,7 +76,7 @@ bool Cmd_GetMapMarkerHidden_Execute(COMMAND_ARGS)
 bool Cmd_SetMapMarkerHidden_Execute(COMMAND_ARGS)
 {
 	UInt32 hidden;
-	if (ExtractArgs(EXTRACT_ARGS, &hidden))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &hidden))
 	{
 		ExtraMapMarker *xMarker = GetExtraType(&thisObj->extraDataList, MapMarker);
 		if (xMarker) xMarker->SetHidden(hidden != 0);
@@ -94,7 +94,7 @@ bool Cmd_GetMapMarkerType_Execute(COMMAND_ARGS)
 bool Cmd_SetMapMarkerType_Execute(COMMAND_ARGS)
 {
 	UInt32 type;
-	if (ExtractArgs(EXTRACT_ARGS, &type))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type))
 	{
 		ExtraMapMarker *xMarker = GetExtraType(&thisObj->extraDataList, MapMarker);
 		if (xMarker) xMarker->data->type = type;
@@ -115,7 +115,7 @@ bool Cmd_GetMapMarkerRep_Execute(COMMAND_ARGS)
 bool Cmd_SetMapMarkerRep_Execute(COMMAND_ARGS)
 {
 	TESReputation *reputation = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &reputation) && (!reputation || IS_TYPE(reputation, TESReputation)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &reputation) && (!reputation || IS_ID(reputation, TESReputation)))
 	{
 		ExtraMapMarker *xMarker = GetExtraType(&thisObj->extraDataList, MapMarker);
 		if (xMarker) xMarker->data->reputation = reputation;

@@ -24,7 +24,7 @@ DEFINE_COMMAND_PLUGIN(GetRandomInRange, , 0, 2, kParams_TwoInts);
 bool Cmd_RefToString_Execute(COMMAND_ARGS)
 {
 	TESForm *form = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &form))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
 		if (form)
 		{
@@ -40,7 +40,7 @@ bool Cmd_RefToString_Execute(COMMAND_ARGS)
 bool Cmd_StringToRef_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 		REFR_RES = StringToRef(s_strArgBuffer);
 	return true;
 }
@@ -49,7 +49,7 @@ bool Cmd_GetMinOf_Execute(COMMAND_ARGS)
 {
 	UInt8 numArgs = NUM_ARGS;
 	double values[5];
-	if (!ExtractArgs(EXTRACT_ARGS, &values[0], &values[1], &values[2], &values[3], &values[4]))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &values[0], &values[1], &values[2], &values[3], &values[4]))
 		return true;
 	double *current = values, *minVal = values;
 	do
@@ -66,7 +66,7 @@ bool Cmd_GetMaxOf_Execute(COMMAND_ARGS)
 {
 	UInt8 numArgs = NUM_ARGS;
 	double values[5];
-	if (!ExtractArgs(EXTRACT_ARGS, &values[0], &values[1], &values[2], &values[3], &values[4]))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &values[0], &values[1], &values[2], &values[3], &values[4]))
 		return true;
 	double *current = values, *maxVal = values;
 	do
@@ -92,7 +92,7 @@ void __fastcall CreateForType(NVSEArrayVar *arr, char *dataStr)
 bool Cmd_ReadArrayFromFile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 		return true;
 	ReplaceChr(s_strArgBuffer, '/', '\\');
 	LineIterator lineIter(s_strArgBuffer, s_strValBuffer);
@@ -146,7 +146,7 @@ bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 apnd, arrID;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &apnd, &arrID))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &apnd, &arrID))
 		return true;
 	NVSEArrayVar *mainArray = LookupArrayByID(arrID), *column;
 	if (!mainArray) return true;
@@ -215,7 +215,7 @@ bool Cmd_ReadStringFromFile_Execute(COMMAND_ARGS)
 {
 	UInt32 startAt = 0, lineCount = 0;
 	char *resStr = s_strValBuffer;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &startAt, &lineCount))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &startAt, &lineCount))
 	{
 		ReplaceChr(s_strArgBuffer, '/', '\\');
 		FileStream sourceFile;
@@ -290,7 +290,7 @@ bool Cmd_GetLoadOrderChanged_Execute(COMMAND_ARGS)
 bool Cmd_ValidateModIndex_Execute(COMMAND_ARGS)
 {
 	UInt32 modIdx;
-	if (ExtractArgs(EXTRACT_ARGS, &modIdx) && (modIdx <= 0xFF) && ResolveRefID(modIdx << 24, &modIdx))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &modIdx) && (modIdx <= 0xFF) && ResolveRefID(modIdx << 24, &modIdx))
 	{
 		modIdx >>= 24;
 		*result = (int)modIdx;
@@ -302,7 +302,7 @@ bool Cmd_ValidateModIndex_Execute(COMMAND_ARGS)
 bool Cmd_ClearJIPSavedData_Execute(COMMAND_ARGS)
 {
 	UInt32 scrVars, lnkRefs, auxVars, refMaps;
-	if (!ExtractArgs(EXTRACT_ARGS, &scrVars, &lnkRefs, &auxVars, &refMaps))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &scrVars, &lnkRefs, &auxVars, &refMaps))
 		return true;
 	UInt8 modIdx = scriptObj->GetOverridingModIdx();
 	if (scrVars)
@@ -329,8 +329,8 @@ bool Cmd_ClearJIPSavedData_Execute(COMMAND_ARGS)
 
 bool Cmd_ClearModNVSEVars_Execute(COMMAND_ARGS)
 {
-	UInt32 keepArrs = 0, keepStrs = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &keepArrs, &keepStrs) || s_releaseFast)
+	/*UInt32 keepArrs = 0, keepStrs = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &keepArrs, &keepStrs) || s_releaseFast)
 		return true;
 	UInt8 modIdx = scriptObj->GetOverridingModIdx();
 	NVSEVarsCollector vars(false, modIdx);
@@ -341,7 +341,7 @@ bool Cmd_ClearModNVSEVars_Execute(COMMAND_ARGS)
 	{
 		vars.RemoveToKeep(keepArrs);
 		vars.ClearVars();
-	}
+	}*/
 	return true;
 }
 
@@ -373,7 +373,7 @@ bool Cmd_ModLogPrint_Execute(COMMAND_ARGS)
 bool Cmd_GetOptionalPatch_Execute(COMMAND_ARGS)
 {
 	bool enabled = false;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
 		switch (s_optionalHacks.Get(s_strArgBuffer))
 		{
@@ -438,7 +438,7 @@ bool Cmd_GetOptionalPatch_Execute(COMMAND_ARGS)
 bool Cmd_SetOptionalPatch_Execute(COMMAND_ARGS)
 {
 	UInt32 enable;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &enable))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &enable))
 		SetOptionalPatch(s_optionalHacks.Get(s_strArgBuffer), enable != 0);
 	return true;
 }
@@ -446,7 +446,7 @@ bool Cmd_SetOptionalPatch_Execute(COMMAND_ARGS)
 bool Cmd_GetPluginHeaderVersion_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgs(EXTRACT_ARGS, s_dataPath))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, s_dataPath))
 	{
 		FileStream sourceFile;
 		if (sourceFile.OpenAt(s_dataPathFull, 0x1E))
@@ -469,7 +469,7 @@ bool Cmd_GetIsLAA_Execute(COMMAND_ARGS)
 bool Cmd_Sleep_Execute(COMMAND_ARGS)
 {
 	UInt32 milliseconds;
-	if (ExtractArgs(EXTRACT_ARGS, &milliseconds))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &milliseconds))
 		Sleep(milliseconds);
 	return true;
 }
@@ -479,7 +479,7 @@ bool Cmd_GetArrayValue_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 arrID;
 	SInt32 index;
-	if (!ExtractArgs(EXTRACT_ARGS, &arrID, &index) || !arrID)
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &arrID, &index) || !arrID)
 		return true;
 	ArrayElementR resElement;
 	if (!GetElement((NVSEArrayVar*)arrID, ArrayElementL(index), resElement))
@@ -507,7 +507,7 @@ bool Cmd_GetArrayValue_Execute(COMMAND_ARGS)
 bool Cmd_GetRandomInRange_Execute(COMMAND_ARGS)
 {
 	int minVal, maxVal;
-	if (ExtractArgs(EXTRACT_ARGS, &minVal, &maxVal))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &minVal, &maxVal))
 		*result = GetRandomIntInRange(minVal, maxVal);
 	else *result = 0;
 	return true;

@@ -356,11 +356,8 @@ struct NVSEArrayVarInterface
 		ElementL& operator=(NVSEArrayVarInterface::Array *_arr) {dataType = kType_Array; arr = _arr; return *this;}
 		ElementL& operator=(const Element &rhs)
 		{
-			if (this != &rhs)
-			{
-				num = rhs.num;
-				dataType = rhs.dataType;
-			}
+			num = rhs.num;
+			dataType = rhs.dataType;
 			return *this;
 		}
 	};
@@ -388,15 +385,12 @@ struct NVSEArrayVarInterface
 		ElementR& operator=(NVSEArrayVarInterface::Array *_arr) {dataType = kType_Array; arr = _arr; return *this;}
 		ElementR& operator=(const Element &rhs)
 		{
-			if (this != &rhs)
-			{
-				if (dataType == kType_String)
-					GameHeapFree(str);
-				dataType = rhs.dataType;
-				if (dataType == kType_String)
-					str = CopyCString(rhs.str);
-				else num = rhs.num;
-			}
+			if (dataType == kType_String)
+				GameHeapFree(str);
+			dataType = rhs.dataType;
+			if (dataType == kType_String)
+				str = CopyCString(rhs.str);
+			else num = rhs.num;
 			return *this;
 		}
 	};
@@ -507,9 +501,9 @@ struct NVSEScriptInterface
 		NVSEArrayVarInterface::Element * result, UInt8 numArgs, ...);
 
 	UInt32	(* GetFunctionParams)(Script* funcScript, UInt8* paramTypesOut);
-	bool	(* ExtractArgsEx)(ParamInfo * paramInfo, void * scriptDataIn, UInt32 * scriptDataOffset, Script * scriptObj,
+	bool	(* ExtractArgsEx)(ParamInfo * paramInfo, UInt8 * scriptDataIn, UInt32 * scriptDataOffset, Script * scriptObj,
 		ScriptEventList * eventList, ...);
-	bool	(* ExtractFormatStringArgs)(UInt32 fmtStringPos, char* buffer, ParamInfo * paramInfo, void * scriptDataIn, 
+	bool	(* ExtractFormatStringArgs)(UInt32 fmtStringPos, char* buffer, ParamInfo * paramInfo, UInt8 * scriptDataIn, 
 		UInt32 * scriptDataOffset, Script * scriptObj, ScriptEventList * eventList, UInt32 maxParams, ...);
 };
 
@@ -659,6 +653,18 @@ struct NVSESerializationInterface
 
 	// Peeks at the data without interfiring with the current position
 	UInt32	(* PeekRecordData)(void * buf, UInt32 length);
+
+	void	(*WriteRecord8)(UInt8 inData);
+	void	(*WriteRecord16)(UInt16 inData);
+	void	(*WriteRecord32)(UInt32 inData);
+	void	(*WriteRecord64)(const void *inData);
+
+	UInt8	(*ReadRecord8)();
+	UInt16	(*ReadRecord16)();
+	UInt32	(*ReadRecord32)();
+	void	(*ReadRecord64)(void *outData);
+
+	void	(*SkipNBytes)(UInt32 byteNum);
 };
 
 struct PluginInfo

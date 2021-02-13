@@ -22,7 +22,7 @@ bool Cmd_HasPerkRank_Execute(COMMAND_ARGS)
 {
 	BGSPerk *perk;
 	UInt32 useAlt = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &perk, &useAlt) && (thisObj->refID == 0x14) && IS_TYPE(perk, BGSPerk))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &useAlt) && (thisObj->refID == 0x14) && IS_ID(perk, BGSPerk))
 		*result = g_thePlayer->GetPerkRank(perk, useAlt != 0);
 	else *result = 0;
 	DoConsolePrint(result);
@@ -33,7 +33,7 @@ bool Cmd_SetPerkRank_Execute(COMMAND_ARGS)
 {
 	BGSPerk *perk;
 	UInt32 rank, useAlt = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &perk, &rank, &useAlt) && (thisObj->refID == 0x14) && IS_TYPE(perk, BGSPerk) && rank)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &rank, &useAlt) && (thisObj->refID == 0x14) && IS_ID(perk, BGSPerk) && rank)
 		g_thePlayer->SetPerkRank(perk, GetMin(rank, perk->data.numRanks), useAlt != 0);
 	return true;
 }
@@ -41,7 +41,7 @@ bool Cmd_SetPerkRank_Execute(COMMAND_ARGS)
 bool Cmd_GetPerkEntryCount_Execute(COMMAND_ARGS)
 {
 	BGSPerk *perk;
-	if (ExtractArgs(EXTRACT_ARGS, &perk) && IS_TYPE(perk, BGSPerk))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk) && IS_ID(perk, BGSPerk))
 		*result = (int)perk->entries.Count();
 	else *result = 0;
 	return true;
@@ -52,7 +52,7 @@ bool Cmd_GetNthPerkEntryType_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSPerk *perk;
 	UInt32 index;
-	if (!ExtractArgs(EXTRACT_ARGS, &perk, &index) || NOT_TYPE(perk, BGSPerk)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index) || NOT_ID(perk, BGSPerk)) return true;
 	BGSPerkEntry *entry = perk->entries.GetNthItem(index);
 	if (!entry) return true;
 	if IS_TYPE(entry, BGSEntryPointPerkEntry)
@@ -81,7 +81,7 @@ bool Cmd_GetNthPerkEntryFunction_Execute(COMMAND_ARGS)
 	*result = -1;
 	BGSPerk *perk;
 	UInt32 index;
-	if (ExtractArgs(EXTRACT_ARGS, &perk, &index) && IS_TYPE(perk, BGSPerk))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index) && IS_ID(perk, BGSPerk))
 	{
 		BGSEntryPointPerkEntry *entry = (BGSEntryPointPerkEntry*)perk->entries.GetNthItem(index);
 		if (entry && IS_TYPE(entry, BGSEntryPointPerkEntry))
@@ -94,7 +94,7 @@ bool Cmd_SetNthPerkEntryFunction_Execute(COMMAND_ARGS)
 {
 	BGSPerk *perk;
 	UInt32 index, func;
-	if (ExtractArgs(EXTRACT_ARGS, &perk, &index, &func) && IS_TYPE(perk, BGSPerk))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index, &func) && IS_ID(perk, BGSPerk))
 	{
 		BGSEntryPointPerkEntry *entry = (BGSEntryPointPerkEntry*)perk->entries.GetNthItem(index);
 		if (entry && IS_TYPE(entry, BGSEntryPointPerkEntry))
@@ -108,7 +108,7 @@ bool Cmd_GetNthPerkEntryForm_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSPerk *perk;
 	UInt32 index;
-	if (!ExtractArgs(EXTRACT_ARGS, &perk, &index) || NOT_TYPE(perk, BGSPerk)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index) || NOT_ID(perk, BGSPerk)) return true;
 	BGSPerkEntry *entry = perk->entries.GetNthItem(index);
 	if (!entry) return true;
 	switch (*(UInt32*)entry)
@@ -140,17 +140,17 @@ bool Cmd_SetNthPerkEntryForm_Execute(COMMAND_ARGS)
 	BGSPerk *perk;
 	TESForm *value;
 	UInt32 index;
-	if (!ExtractArgs(EXTRACT_ARGS, &perk, &index, &value) || NOT_TYPE(perk, BGSPerk)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index, &value) || NOT_ID(perk, BGSPerk)) return true;
 	BGSPerkEntry *entry = perk->entries.GetNthItem(index);
 	if (!entry) return true;
 	if IS_TYPE(entry, BGSQuestPerkEntry)
 	{
-		if IS_TYPE(value, TESQuest)
+		if IS_ID(value, TESQuest)
 			((BGSQuestPerkEntry*)entry)->quest = (TESQuest*)value;
 	}
 	else if IS_TYPE(entry, BGSAbilityPerkEntry)
 	{
-		if IS_TYPE(value, SpellItem)
+		if IS_ID(value, SpellItem)
 			((BGSAbilityPerkEntry*)entry)->ability = (SpellItem*)value;
 	}
 	return true;
@@ -161,7 +161,7 @@ bool Cmd_GetNthPerkEntryValue1_Execute(COMMAND_ARGS)
 	*result = -1;
 	BGSPerk *perk;
 	UInt32 index;
-	if (!ExtractArgs(EXTRACT_ARGS, &perk, &index) || NOT_TYPE(perk, BGSPerk)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index) || NOT_ID(perk, BGSPerk)) return true;
 	BGSPerkEntry *entry = perk->entries.GetNthItem(index);
 	if (!entry) return true;
 	if IS_TYPE(entry, BGSEntryPointPerkEntry)
@@ -182,7 +182,7 @@ bool Cmd_SetNthPerkEntryValue1_Execute(COMMAND_ARGS)
 	BGSPerk *perk;
 	UInt32 index;
 	float value;
-	if (!ExtractArgs(EXTRACT_ARGS, &perk, &index, &value) || NOT_TYPE(perk, BGSPerk)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index, &value) || NOT_ID(perk, BGSPerk)) return true;
 	BGSPerkEntry *entry = perk->entries.GetNthItem(index);
 	if (!entry) return true;
 	if IS_TYPE(entry, BGSEntryPointPerkEntry)
@@ -203,7 +203,7 @@ bool Cmd_GetNthPerkEntryValue2_Execute(COMMAND_ARGS)
 	*result = -1;
 	BGSPerk *perk;
 	UInt32 index;
-	if (!ExtractArgs(EXTRACT_ARGS, &perk, &index) || NOT_TYPE(perk, BGSPerk)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index) || NOT_ID(perk, BGSPerk)) return true;
 	BGSPerkEntry *entry = perk->entries.GetNthItem(index);
 	if (entry && IS_TYPE(entry, BGSEntryPointPerkEntry))
 	{
@@ -219,7 +219,7 @@ bool Cmd_SetNthPerkEntryValue2_Execute(COMMAND_ARGS)
 	BGSPerk *perk;
 	UInt32 index;
 	float value;
-	if (!ExtractArgs(EXTRACT_ARGS, &perk, &index, &value) || NOT_TYPE(perk, BGSPerk)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index, &value) || NOT_ID(perk, BGSPerk)) return true;
 	BGSPerkEntry *entry = perk->entries.GetNthItem(index);
 	if (entry && IS_TYPE(entry, BGSEntryPointPerkEntry))
 	{
@@ -235,7 +235,7 @@ bool Cmd_GetNthPerkEntryString_Execute(COMMAND_ARGS)
 	const char *resStr = NULL;
 	BGSPerk *perk;
 	UInt32 index;
-	if (ExtractArgs(EXTRACT_ARGS, &perk, &index) && IS_TYPE(perk, BGSPerk))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index) && IS_ID(perk, BGSPerk))
 	{
 		BGSPerkEntry *entry = perk->entries.GetNthItem(index);
 		if (entry && IS_TYPE(entry, BGSEntryPointPerkEntry))
@@ -253,7 +253,7 @@ bool Cmd_SetNthPerkEntryString_Execute(COMMAND_ARGS)
 {
 	BGSPerk *perk;
 	UInt32 index;
-	if (!ExtractArgs(EXTRACT_ARGS, &perk, &index, &s_strArgBuffer) || NOT_TYPE(perk, BGSPerk)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index, &s_strArgBuffer) || NOT_ID(perk, BGSPerk)) return true;
 	BGSPerkEntry *entry = perk->entries.GetNthItem(index);
 	if (!entry) return true;
 	if (entry && IS_TYPE(entry, BGSEntryPointPerkEntry))
@@ -268,7 +268,7 @@ bool Cmd_SetNthPerkEntryString_Execute(COMMAND_ARGS)
 bool Cmd_IsTrait_Execute(COMMAND_ARGS)
 {
 	BGSPerk *perk;
-	if (ExtractArgs(EXTRACT_ARGS, &perk) && IS_TYPE(perk, BGSPerk))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk) && IS_ID(perk, BGSPerk))
 		*result = perk->data.isTrait;
 	else *result = 0;
 	return true;
@@ -277,7 +277,7 @@ bool Cmd_IsTrait_Execute(COMMAND_ARGS)
 bool Cmd_GetPerkLevel_Execute(COMMAND_ARGS)
 {
 	BGSPerk *perk;
-	if (ExtractArgs(EXTRACT_ARGS, &perk) && IS_TYPE(perk, BGSPerk))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk) && IS_ID(perk, BGSPerk))
 		*result = perk->data.minLevel;
 	else *result = 0;
 	return true;
@@ -287,7 +287,7 @@ bool Cmd_SetPerkLevel_Execute(COMMAND_ARGS)
 {
 	BGSPerk *perk;
 	UInt32 level;
-	if (ExtractArgs(EXTRACT_ARGS, &perk, &level) && IS_TYPE(perk, BGSPerk))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &level) && IS_ID(perk, BGSPerk))
 		perk->data.minLevel = level;
 	return true;
 }

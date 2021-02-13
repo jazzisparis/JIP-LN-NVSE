@@ -31,7 +31,7 @@ RefMapIDsMap *RMFind()
 bool Cmd_RefMapArrayGetSize_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
 		GetBaseParams(scriptObj);
 		RefMapIDsMap *idsMap = RMFind();
@@ -46,7 +46,7 @@ bool RefMapArrayGet_Execute(COMMAND_ARGS)
 {
 	const char *resStr = NULL;
 	TESForm *form = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &form))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &form))
 	{
 		GetBaseParams(scriptObj);
 		RefMapIDsMap *idsMap = RMFind();
@@ -154,7 +154,7 @@ NVSEArrayVar* __fastcall RefMapArrayIterator(Script *scriptObj, bool getFirst)
 bool Cmd_RefMapArrayGetFirst_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
 		NVSEArrayVar *pairArr = RefMapArrayIterator(scriptObj, true);
 		if (pairArr) AssignCommandResult(pairArr, result);
@@ -165,7 +165,7 @@ bool Cmd_RefMapArrayGetFirst_Execute(COMMAND_ARGS)
 bool Cmd_RefMapArrayGetNext_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
 		NVSEArrayVar *pairArr = RefMapArrayIterator(scriptObj, false);
 		if (pairArr) AssignCommandResult(pairArr, result);
@@ -176,7 +176,7 @@ bool Cmd_RefMapArrayGetNext_Execute(COMMAND_ARGS)
 bool Cmd_RefMapArrayGetKeys_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer)) return true;
 	GetBaseParams(scriptObj);
 	RefMapIDsMap *idsMap = RMFind();
 	if (!idsMap) return true;
@@ -192,7 +192,7 @@ bool Cmd_RefMapArrayGetAll_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 type;
-	if (!ExtractArgs(EXTRACT_ARGS, &type)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &type)) return true;
 	GetBaseParams(scriptObj, type);
 	RefMapVarsMap *findMod = RM_Map.GetPtr(s_avModIdx);
 	if (!findMod || findMod->Empty()) return true;
@@ -216,21 +216,21 @@ bool RefMapArraySet_Execute(COMMAND_ARGS)
 	switch (s_refMapOperationType)
 	{
 		case 0:
-			if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &fltVal, &form))
+			if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &fltVal, &form))
 				return true;
 			break;
 		case 1:
-			if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &refVal, &form))
+			if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &refVal, &form))
 				return true;
 			break;
 		case 2:
-			if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &s_strValBuffer, &form))
+			if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer, &form))
 				return true;
 			break;
 		case 3:
 		{
 			UInt32 arrID;
-			if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &arrID, &form))
+			if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &arrID, &form))
 				return true;
 			srcArr = LookupArrayByID(arrID);
 			if (!srcArr || (GetArraySize(srcArr) != 1))
@@ -309,7 +309,7 @@ bool Cmd_RefMapArrayErase_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &form)) return true;
 	GetBaseParams(scriptObj);
 	auto findMod = RM_Map.Find(s_avModIdx);
 	if (!findMod) return true;
@@ -331,7 +331,7 @@ bool Cmd_RefMapArrayErase_Execute(COMMAND_ARGS)
 bool Cmd_RefMapArrayValidate_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer)) return true;
 	GetBaseParams(scriptObj);
 	auto findMod = RM_Map.Find(s_avModIdx);
 	if (!findMod) return true;
@@ -356,7 +356,7 @@ bool Cmd_RefMapArrayValidate_Execute(COMMAND_ARGS)
 
 bool Cmd_RefMapArrayDestroy_Execute(COMMAND_ARGS)
 {
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer)) return true;
 	GetBaseParams(scriptObj);
 	auto findMod = RM_Map.Find(s_avModIdx);
 	if (!findMod) return true;

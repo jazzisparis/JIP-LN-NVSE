@@ -68,7 +68,7 @@ bool Cmd_GetArmorClass_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectARMO *armor = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &armor)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &armor)) return true;
 	if (armor)
 	{
 		if NOT_TYPE(armor, TESObjectARMO) return true;
@@ -89,7 +89,7 @@ bool Cmd_GetArmorClass_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_SetGlobalValue_Execute(COMMAND_ARGS)
 {
 	float value;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &value)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &value)) return true;
 	ListNode<TESGlobal> *iter = g_dataHandler->globalList.Head();
 	TESGlobal *global;
 	do
@@ -108,7 +108,7 @@ bool Cmd_GetWorldspaceParentWorldspace_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESWorldSpace *wspc;
-	if (ExtractArgs(EXTRACT_ARGS, &wspc) && wspc->parent)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc) && wspc->parent)
 		REFR_RES = wspc->parent->refID;
 	return true;
 }
@@ -117,7 +117,7 @@ bool Cmd_GetCellCoords_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectCELL *cell = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &cell)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &cell)) return true;
 	NVSEArrayVar *outArray = CreateStringMap(NULL, NULL, 0, scriptObj);
 	if (!cell) cell = thisObj ? thisObj->parentCell : g_thePlayer->parentCell;
 	SetElement(outArray, ArrayElementL("x"), (cell && !cell->IsInterior()) ? ArrayElementL(cell->coords.exterior->x) : ArrayElementL(0.0));
@@ -131,7 +131,7 @@ bool Cmd_GetBipedModelList_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form)) return true;
 	if (!form)
 	{
 		if (!thisObj) return true;
@@ -139,7 +139,7 @@ bool Cmd_GetBipedModelList_Execute(COMMAND_ARGS)
 	}
 	BGSListForm *models = NULL;
 	if IS_TYPE(form, TESObjectARMO) models = ((TESObjectARMO*)form)->bipedModelList.models;
-	else if IS_TYPE(form, TESObjectWEAP) models = ((TESObjectWEAP*)form)->bipedModelList.models;
+	else if IS_ID(form, TESObjectWEAP) models = ((TESObjectWEAP*)form)->bipedModelList.models;
 	if (models) REFR_RES = models->refID;
 	return true;
 }
@@ -148,10 +148,10 @@ bool Cmd_SetBipedModelList_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	BGSListForm *list = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &list) && (!list || IS_TYPE(list, BGSListForm)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &list) && (!list || IS_ID(list, BGSListForm)))
 	{
 		if IS_TYPE(form, TESObjectARMO) ((TESObjectARMO*)form)->bipedModelList.models = list;
-		else if IS_TYPE(form, TESObjectWEAP) ((TESObjectWEAP*)form)->bipedModelList.models = list;
+		else if IS_ID(form, TESObjectWEAP) ((TESObjectWEAP*)form)->bipedModelList.models = list;
 	}
 	return true;
 }
@@ -166,7 +166,7 @@ bool Cmd_GetIdleAnimPath_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	TESIdleForm *idle;
-	if (ExtractArgs(EXTRACT_ARGS, &idle) && IS_TYPE(idle, TESIdleForm))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idle) && IS_ID(idle, TESIdleForm))
 		resStr = idle->anim.GetModelPath();
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -176,7 +176,7 @@ bool Cmd_GetIdleAnimPath_Execute(COMMAND_ARGS)
 bool Cmd_SetIdleAnimPath_Execute(COMMAND_ARGS)
 {
 	TESIdleForm *idle;
-	if (ExtractArgs(EXTRACT_ARGS, &idle, &s_strArgBuffer) && IS_TYPE(idle, TESIdleForm))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idle, &s_strArgBuffer) && IS_ID(idle, TESIdleForm))
 		idle->anim.SetModelPath(s_strArgBuffer);
 	return true;
 }
@@ -185,7 +185,7 @@ bool Cmd_LNGetName_Execute(COMMAND_ARGS)
 {
 	const char *resStr = NULL;
 	TESForm *form = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &form) && (form || (thisObj && (form = thisObj->baseForm))))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (form || (thisObj && (form = thisObj->baseForm))))
 	{
 		if (thisObj) resStr = s_refNamesMap.Get(thisObj);
 		if (!resStr) resStr = form->GetTheName();
@@ -197,7 +197,7 @@ bool Cmd_LNGetName_Execute(COMMAND_ARGS)
 bool Cmd_LNSetName_Execute(COMMAND_ARGS)
 {
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &form)) return true;
 	if (!form)
 	{
 		if (!thisObj) return true;
@@ -219,7 +219,7 @@ bool Cmd_GetWaterFormEffect_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESWaterForm *water;
-	if (ExtractArgs(EXTRACT_ARGS, &water) && IS_TYPE(water, TESWaterForm) && water->drinkEffect)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &water) && IS_ID(water, TESWaterForm) && water->drinkEffect)
 		REFR_RES = water->drinkEffect->refID;
 	return true;
 }
@@ -227,7 +227,7 @@ bool Cmd_GetWaterFormEffect_Execute(COMMAND_ARGS)
 bool Cmd_ar_Cat_Execute(COMMAND_ARGS)
 {
 	UInt32 arr1ID, arr2ID;
-	if (!ExtractArgs(EXTRACT_ARGS, &arr1ID, &arr2ID)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &arr1ID, &arr2ID)) return true;
 	NVSEArrayVar *inArray = LookupArrayByID(arr1ID);
 	NVSEArrayVar *catArray = LookupArrayByID(arr2ID);
 	if (!inArray || !catArray) return true;
@@ -248,7 +248,7 @@ bool Cmd_GetFormFlag_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	UInt32 flag;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &flag))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &flag))
 		*result = (form->flags & flag) ? 1 : 0;
 	else *result = 0;
 	DoConsolePrint(result);
@@ -259,7 +259,7 @@ bool Cmd_SetFormFlag_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	UInt32 flag, inval;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &flag, &inval))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &flag, &inval))
 	{
 		if (inval) form->flags |= flag;
 		else form->flags &= ~flag;
@@ -271,7 +271,7 @@ bool Cmd_GetIngestibleFlag_Execute(COMMAND_ARGS)
 {
 	AlchemyItem *alch;
 	UInt32 flag;
-	if (ExtractArgs(EXTRACT_ARGS, &alch, &flag) && IS_TYPE(alch, AlchemyItem))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &alch, &flag) && IS_ID(alch, AlchemyItem))
 		*result = (alch->alchFlags & flag) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -281,7 +281,7 @@ bool Cmd_SetIngestibleFlag_Execute(COMMAND_ARGS)
 {
 	AlchemyItem *alch;
 	UInt32 flag, inval;
-	if (ExtractArgs(EXTRACT_ARGS, &alch, &flag, &inval) && IS_TYPE(alch, AlchemyItem))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &alch, &flag, &inval) && IS_ID(alch, AlchemyItem))
 	{
 		if (inval) alch->alchFlags |= flag;
 		else alch->alchFlags &= ~flag;
@@ -293,7 +293,7 @@ bool Cmd_IsSkillMagazine_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	AlchemyItem *ingestible;
-	if (!ExtractArgs(EXTRACT_ARGS, &ingestible) || NOT_TYPE(ingestible, AlchemyItem)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &ingestible) || NOT_ID(ingestible, AlchemyItem)) return true;
 	ListNode<EffectItem> *effIter = ingestible->magicItem.list.list.Head();
 	EffectItem *effItem;
 	ListNode<Condition> *condIter;
@@ -321,7 +321,7 @@ bool Cmd_IsSkillMagazine_Execute(COMMAND_ARGS)
 
 bool __fastcall PlayerHasKey(TESObjectREFR *thisObj)
 {
-	if IS_TYPE(thisObj->baseForm, BGSTerminal)
+	if IS_ID(thisObj->baseForm, BGSTerminal)
 	{
 		BGSNote *password = ((BGSTerminal*)thisObj->baseForm)->password;
 		if (password && g_thePlayer->notes.IsInList(password))
@@ -353,7 +353,7 @@ bool Cmd_GetAnimObjectIdle_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectANIO *anio;
-	if (ExtractArgs(EXTRACT_ARGS, &anio) && IS_TYPE(anio, TESObjectANIO) && anio->idleForm)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &anio) && IS_ID(anio, TESObjectANIO) && anio->idleForm)
 		REFR_RES = anio->idleForm->refID;
 	return true;
 }
@@ -362,7 +362,7 @@ bool Cmd_SetAnimObjectIdle_Execute(COMMAND_ARGS)
 {
 	TESObjectANIO *anio;
 	TESIdleForm *idle;
-	if (ExtractArgs(EXTRACT_ARGS, &anio, &idle) && IS_TYPE(anio, TESObjectANIO) && IS_TYPE(idle, TESIdleForm))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &anio, &idle) && IS_ID(anio, TESObjectANIO) && IS_ID(idle, TESIdleForm))
 		anio->idleForm = idle;
 	return true;
 }
@@ -371,7 +371,7 @@ bool Cmd_GetPickupSound_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form;
-	if (ExtractArgs(EXTRACT_ARGS, &form))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
 		BGSPickupPutdownSounds *sounds = DYNAMIC_CAST(form, TESForm, BGSPickupPutdownSounds);
 		if (sounds && sounds->pickupSound) REFR_RES = sounds->pickupSound->refID;
@@ -383,7 +383,7 @@ bool Cmd_SetPickupSound_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	TESSound *sound;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &sound) && IS_TYPE(sound, TESSound))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &sound) && IS_ID(sound, TESSound))
 	{
 		BGSPickupPutdownSounds *sounds = DYNAMIC_CAST(form, TESForm, BGSPickupPutdownSounds);
 		if (sounds) sounds->pickupSound = sound;
@@ -395,7 +395,7 @@ bool Cmd_GetPutdownSound_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form;
-	if (ExtractArgs(EXTRACT_ARGS, &form))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
 		BGSPickupPutdownSounds *sounds = DYNAMIC_CAST(form, TESForm, BGSPickupPutdownSounds);
 		if (sounds && sounds->putdownSound) REFR_RES = sounds->putdownSound->refID;
@@ -407,7 +407,7 @@ bool Cmd_SetPutdownSound_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	TESSound *sound;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &sound) && IS_TYPE(sound, TESSound))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &sound) && IS_ID(sound, TESSound))
 	{
 		BGSPickupPutdownSounds *sounds = DYNAMIC_CAST(form, TESForm, BGSPickupPutdownSounds);
 		if (sounds) sounds->putdownSound = sound;
@@ -419,13 +419,13 @@ bool Cmd_GetContainerOpenSound_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectCONT *container = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &container)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &container)) return true;
 	if (!container)
 	{
 		if (!thisObj) return true;
 		container = (TESObjectCONT*)thisObj->baseForm;
 	}
-	if (IS_TYPE(container, TESObjectCONT) && container->openSound)
+	if (IS_ID(container, TESObjectCONT) && container->openSound)
 		REFR_RES = container->openSound->refID;
 	return true;
 }
@@ -434,13 +434,13 @@ bool Cmd_SetContainerOpenSound_Execute(COMMAND_ARGS)
 {
 	TESSound *sound;
 	TESObjectCONT *container = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &sound, &container) || NOT_TYPE(sound, TESSound)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &container) || NOT_ID(sound, TESSound)) return true;
 	if (!container)
 	{
 		if (!thisObj) return true;
 		container = (TESObjectCONT*)thisObj->baseForm;
 	}
-	if IS_TYPE(container, TESObjectCONT)
+	if IS_ID(container, TESObjectCONT)
 		container->openSound = sound;
 	return true;
 }
@@ -449,13 +449,13 @@ bool Cmd_GetContainerCloseSound_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectCONT *container = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &container)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &container)) return true;
 	if (!container)
 	{
 		if (!thisObj) return true;
 		container = (TESObjectCONT*)thisObj->baseForm;
 	}
-	if (IS_TYPE(container, TESObjectCONT) && container->closeSound)
+	if (IS_ID(container, TESObjectCONT) && container->closeSound)
 		REFR_RES = container->closeSound->refID;
 	return true;
 }
@@ -464,13 +464,13 @@ bool Cmd_SetContainerCloseSound_Execute(COMMAND_ARGS)
 {
 	TESSound *sound;
 	TESObjectCONT *container = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &sound, &container) || NOT_TYPE(sound, TESSound)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &container) || NOT_ID(sound, TESSound)) return true;
 	if (!container)
 	{
 		if (!thisObj) return true;
 		container = (TESObjectCONT*)thisObj->baseForm;
 	}
-	if IS_TYPE(container, TESObjectCONT)
+	if IS_ID(container, TESObjectCONT)
 		container->closeSound = sound;
 	return true;
 }
@@ -492,7 +492,7 @@ bool Cmd_GetZoneFlag_Execute(COMMAND_ARGS)
 {
 	BGSEncounterZone *encZone;
 	UInt32 flag;
-	if (ExtractArgs(EXTRACT_ARGS, &encZone, &flag) && IS_TYPE(encZone, BGSEncounterZone))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &encZone, &flag) && IS_ID(encZone, BGSEncounterZone))
 		*result = (encZone->flags & flag) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -502,7 +502,7 @@ bool Cmd_SetZoneFlag_Execute(COMMAND_ARGS)
 {
 	BGSEncounterZone *encZone;
 	UInt32 flag, inval;
-	if (ExtractArgs(EXTRACT_ARGS, &encZone, &flag, &inval) && IS_TYPE(encZone, BGSEncounterZone))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &encZone, &flag, &inval) && IS_ID(encZone, BGSEncounterZone))
 	{
 		if (inval) encZone->zoneFlags |= flag;
 		else encZone->zoneFlags &= ~flag;
@@ -514,7 +514,7 @@ bool Cmd_GetImpactDataSet_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectWEAP *weapon;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon) && IS_TYPE(weapon, TESObjectWEAP) && weapon->impactDataSet)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon) && IS_ID(weapon, TESObjectWEAP) && weapon->impactDataSet)
 		REFR_RES = weapon->impactDataSet->refID;
 	return true;
 }
@@ -523,7 +523,7 @@ bool Cmd_SetImpactDataSet_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
 	BGSImpactDataSet *idSet;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon, &idSet) && IS_TYPE(weapon, TESObjectWEAP) && IS_TYPE(idSet, BGSImpactDataSet))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &idSet) && IS_ID(weapon, TESObjectWEAP) && IS_ID(idSet, BGSImpactDataSet))
 		weapon->impactDataSet = idSet;
 	return true;
 }
@@ -532,7 +532,7 @@ bool Cmd_LNIsPlayable_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form)) return true;
 	if (!form)
 	{
 		if (!thisObj) return true;
@@ -568,7 +568,7 @@ bool Cmd_LNSetIsPlayable_Execute(COMMAND_ARGS)
 {
 	UInt32 playable;
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &playable, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &playable, &form)) return true;
 	if (!form)
 	{
 		if (!thisObj) return true;
@@ -623,7 +623,7 @@ UInt8 __fastcall CrosshairRefInList(BGSListForm *listForm)
 {
 	TESObjectREFR *refr = g_interfaceManager->crosshairRef;
 	if (!refr) return 0;
-	TESForm *base = IS_TYPE(refr->baseForm, BGSPlaceableWater) ? ((BGSPlaceableWater*)refr->baseForm)->water : refr->baseForm, *form;
+	TESForm *base = IS_ID(refr->baseForm, BGSPlaceableWater) ? ((BGSPlaceableWater*)refr->baseForm)->water : refr->baseForm, *form;
 	ListNode<TESForm> *iter = listForm->list.Head();
 	do
 	{
@@ -640,7 +640,7 @@ UInt8 __fastcall CrosshairRefInList(BGSListForm *listForm)
 bool Cmd_CrosshairRefInList_Execute(COMMAND_ARGS)
 {
 	BGSListForm *listForm;
-	if (ExtractArgs(EXTRACT_ARGS, &listForm))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &listForm))
 		*result = CrosshairRefInList(listForm);
 	else *result = 0;
 	return true;
@@ -663,7 +663,7 @@ bool Cmd_GetWaterTrait_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESWaterForm *water;
 	UInt32 traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &water, &traitID) || NOT_TYPE(water, TESWaterForm) || (traitID > 50)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &water, &traitID) || NOT_ID(water, TESWaterForm) || (traitID > 50)) return true;
 	switch (traitID)
 	{
 	case 0:
@@ -688,7 +688,7 @@ bool Cmd_SetWaterTrait_Execute(COMMAND_ARGS)
 	TESWaterForm *water;
 	UInt32 traitID;
 	double value;
-	if (!ExtractArgs(EXTRACT_ARGS, &water, &traitID, &value) || NOT_TYPE(water, TESWaterForm) || (traitID > 50)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &water, &traitID, &value) || NOT_ID(water, TESWaterForm) || (traitID > 50)) return true;
 	UInt32 intVal = (int)value;
 	switch (traitID)
 	{

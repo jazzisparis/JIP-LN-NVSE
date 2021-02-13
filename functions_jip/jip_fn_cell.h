@@ -11,7 +11,7 @@ bool Cmd_SetCellWaterForm_Execute(COMMAND_ARGS)
 {
 	TESObjectCELL *cell;
 	TESWaterForm *water = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &cell, &water) && (!water || IS_TYPE(water, TESWaterForm)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &water) && (!water || IS_ID(water, TESWaterForm)))
 	{
 		ExtraCellWaterType *xCellWater = GetExtraType(&cell->extraDataList, CellWaterType);
 		if (xCellWater)
@@ -28,7 +28,7 @@ bool Cmd_GetCellClimate_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectCELL *cell;
-	if (ExtractArgs(EXTRACT_ARGS, &cell))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell))
 	{
 		ExtraCellClimate *xCellClimate = GetExtraType(&cell->extraDataList, CellClimate);
 		if (xCellClimate && xCellClimate->climate) REFR_RES = xCellClimate->climate->refID;
@@ -40,7 +40,7 @@ bool Cmd_SetCellClimate_Execute(COMMAND_ARGS)
 {
 	TESObjectCELL *cell;
 	TESClimate *climate = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &cell, &climate) && (!climate || IS_TYPE(climate, TESClimate)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &climate) && (!climate || IS_ID(climate, TESClimate)))
 	{
 		ExtraCellClimate *xCellClimate = GetExtraType(&cell->extraDataList, CellClimate);
 		if (xCellClimate)
@@ -57,7 +57,7 @@ bool Cmd_GetCellNoiseTexture_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	TESObjectCELL *cell;
-	if (ExtractArgs(EXTRACT_ARGS, &cell))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell))
 		resStr = cell->noiseTexture.ddsPath.m_data;
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -67,7 +67,7 @@ bool Cmd_GetCellNoiseTexture_Execute(COMMAND_ARGS)
 bool Cmd_SetCellNoiseTexture_Execute(COMMAND_ARGS)
 {
 	TESObjectCELL *cell;
-	if (ExtractArgs(EXTRACT_ARGS, &cell, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &s_strArgBuffer))
 		cell->noiseTexture.ddsPath.Set(s_strArgBuffer);
 	return true;
 }
@@ -76,7 +76,7 @@ bool Cmd_GetOwnerOfCell_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectCELL *cell;
-	if (ExtractArgs(EXTRACT_ARGS, &cell))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell))
 	{
 		ExtraOwnership *xOwnership = GetExtraType(&cell->extraDataList, Ownership);
 		if (xOwnership && xOwnership->owner)

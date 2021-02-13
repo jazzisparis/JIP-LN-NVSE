@@ -10,13 +10,13 @@ bool Cmd_GetTerminalLock_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	BGSTerminal *terminal = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &terminal)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &terminal)) return true;
 	if (!terminal)
 	{
 		if (!thisObj) return true;
 		terminal = (BGSTerminal*)thisObj->baseForm;
 	}
-	if IS_TYPE(terminal, BGSTerminal)
+	if IS_ID(terminal, BGSTerminal)
 		*result = (terminal->data.terminalFlags & BGSTerminal::kTerminalFlagUnlocked) ? -1 : terminal->data.difficulty;
 	return true;
 }
@@ -25,13 +25,13 @@ bool Cmd_GetPasswordNote_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	BGSTerminal *terminal = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &terminal)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &terminal)) return true;
 	if (!terminal)
 	{
 		if (!thisObj) return true;
 		terminal = (BGSTerminal*)thisObj->baseForm;
 	}
-	if (IS_TYPE(terminal, BGSTerminal) && terminal->password)
+	if (IS_ID(terminal, BGSTerminal) && terminal->password)
 		REFR_RES = terminal->password->refID;
 	return true;
 }
@@ -40,13 +40,13 @@ bool Cmd_SetPasswordNote_Execute(COMMAND_ARGS)
 {
 	BGSNote *note;
 	BGSTerminal *terminal = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &note, &terminal) || NOT_TYPE(note, BGSNote)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &note, &terminal) || NOT_ID(note, BGSNote)) return true;
 	if (!terminal)
 	{
 		if (!thisObj) return true;
 		terminal = (BGSTerminal*)thisObj->baseForm;
 	}
-	if IS_TYPE(terminal, BGSTerminal)
+	if IS_ID(terminal, BGSTerminal)
 		terminal->password = note;
 	return true;
 }
@@ -55,7 +55,7 @@ bool Cmd_GetLockedOut_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectREFR *refr = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &refr)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &refr)) return true;
 	if (!refr)
 	{
 		if (!thisObj) return true;
@@ -79,13 +79,13 @@ bool Cmd_SetLockedOut_Execute(COMMAND_ARGS)
 {
 	UInt32 state;
 	TESObjectREFR *refr = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &state, &refr) || (state > 2)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &state, &refr) || (state > 2)) return true;
 	if (!refr)
 	{
 		if (!thisObj) return true;
 		refr = thisObj;
 	}
-	if IS_TYPE(refr->baseForm, BGSTerminal)
+	if IS_ID(refr->baseForm, BGSTerminal)
 	{
 		ExtraTerminalState *xTerm = GetExtraType(&refr->extraDataList, TerminalState);
 		if (!xTerm)

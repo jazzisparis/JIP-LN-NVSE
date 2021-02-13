@@ -12,7 +12,7 @@ bool Cmd_GetTextureSetTexture_Execute(COMMAND_ARGS)
 	const char *resStr;
 	BGSTextureSet *texSet;
 	UInt32 mapID;
-	if (ExtractArgs(EXTRACT_ARGS, &texSet, &mapID) && IS_TYPE(texSet, BGSTextureSet) && (mapID <= 5))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &texSet, &mapID) && IS_ID(texSet, BGSTextureSet) && (mapID <= 5))
 		resStr = texSet->textures[mapID].ddsPath.m_data;
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -23,7 +23,7 @@ bool Cmd_SetTextureSetTexture_Execute(COMMAND_ARGS)
 {
 	BGSTextureSet *texSet;
 	UInt32 mapID;
-	if (ExtractArgs(EXTRACT_ARGS, &texSet, &mapID, &s_strArgBuffer) && IS_TYPE(texSet, BGSTextureSet) && (mapID <= 5))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &texSet, &mapID, &s_strArgBuffer) && IS_ID(texSet, BGSTextureSet) && (mapID <= 5))
 		texSet->textures[mapID].ddsPath.Set(s_strArgBuffer);
 	return true;
 }
@@ -33,7 +33,7 @@ bool Cmd_GetTextureSetTraitNumeric_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSTextureSet *texSet;
 	UInt32 traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &texSet, &traitID) || NOT_TYPE(texSet, BGSTextureSet) || !texSet->decalInfo) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &texSet, &traitID) || NOT_ID(texSet, BGSTextureSet) || !texSet->decalInfo) return true;
 	switch (traitID)
 	{
 		case 0:
@@ -59,7 +59,7 @@ bool Cmd_SetTextureSetTraitNumeric_Execute(COMMAND_ARGS)
 	BGSTextureSet *texSet;
 	UInt32 traitID;
 	double value;
-	if (!ExtractArgs(EXTRACT_ARGS, &texSet, &traitID, &value) || NOT_TYPE(texSet, BGSTextureSet) || (value < 0) || !texSet->decalInfo) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &texSet, &traitID, &value) || NOT_ID(texSet, BGSTextureSet) || (value < 0) || !texSet->decalInfo) return true;
 	UInt32 intVal = (int)value;
 	switch (traitID)
 	{
@@ -86,7 +86,7 @@ bool Cmd_GetTextureSetFlag_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSTextureSet *texSet;
 	UInt32 flagID;
-	if (ExtractArgs(EXTRACT_ARGS, &texSet, &flagID) && IS_TYPE(texSet, BGSTextureSet) && (flagID <= 3))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &texSet, &flagID) && IS_ID(texSet, BGSTextureSet) && (flagID <= 3))
 	{
 		if (!flagID) *result = texSet->texFlags ? 1 : 0;
 		else if (texSet->decalInfo) *result = (texSet->decalInfo->flags & (1 << (flagID - 1))) ? 1 : 0;
@@ -98,7 +98,7 @@ bool Cmd_SetTextureSetFlag_Execute(COMMAND_ARGS)
 {
 	BGSTextureSet *texSet;
 	UInt32 flagID, val;
-	if (!ExtractArgs(EXTRACT_ARGS, &texSet, &flagID, &val) || NOT_TYPE(texSet, BGSTextureSet) || (flagID > 3)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &texSet, &flagID, &val) || NOT_ID(texSet, BGSTextureSet) || (flagID > 3)) return true;
 	if (!flagID) texSet->texFlags = val ? 1 : 0;
 	else if (texSet->decalInfo)
 	{

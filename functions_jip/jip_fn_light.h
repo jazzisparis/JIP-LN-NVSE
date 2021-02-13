@@ -10,7 +10,7 @@ bool Cmd_GetLightTraitNumeric_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESObjectLIGH *light;
 	UInt32 traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &light, &traitID) || NOT_TYPE(light, TESObjectLIGH)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &light, &traitID) || NOT_ID(light, TESObjectLIGH)) return true;
 	switch (traitID)
 	{
 	case 0:
@@ -42,7 +42,7 @@ bool Cmd_SetLightTraitNumeric_Execute(COMMAND_ARGS)
 	TESObjectLIGH *light;
 	UInt32 traitID;
 	float val;
-	if (!ExtractArgs(EXTRACT_ARGS, &light, &traitID, &val) || NOT_TYPE(light, TESObjectLIGH)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &light, &traitID, &val) || NOT_ID(light, TESObjectLIGH)) return true;
 	UInt32 intVal = (int)val;
 	switch (traitID)
 	{
@@ -74,7 +74,7 @@ bool Cmd_GetLightFlag_Execute(COMMAND_ARGS)
 {
 	TESObjectLIGH *light;
 	UInt32 flagID;
-	if (ExtractArgs(EXTRACT_ARGS, &light, &flagID) && IS_TYPE(light, TESObjectLIGH) && (flagID <= 10))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &light, &flagID) && IS_ID(light, TESObjectLIGH) && (flagID <= 10))
 		*result = (light->lightFlags & (1 << flagID)) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -84,7 +84,7 @@ bool Cmd_SetLightFlag_Execute(COMMAND_ARGS)
 {
 	TESObjectLIGH *light;
 	UInt32 flagID, val;
-	if (ExtractArgs(EXTRACT_ARGS, &light, &flagID, &val) && IS_TYPE(light, TESObjectLIGH) && (flagID <= 10))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &light, &flagID, &val) && IS_ID(light, TESObjectLIGH) && (flagID <= 10))
 		light->SetFlag(1 << flagID, val != 0);
 	return true;
 }

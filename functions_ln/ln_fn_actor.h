@@ -35,7 +35,7 @@ bool Cmd_LNGetAggroRadius_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESActorBase *actorBase = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &actorBase)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
 	{
 		if (!thisObj || !thisObj->IsActor()) return true;
@@ -49,7 +49,7 @@ bool Cmd_LNSetAggroRadius_Execute(COMMAND_ARGS)
 {
 	UInt32 value;
 	TESActorBase *actorBase = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &value, &actorBase)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &value, &actorBase)) return true;
 	if (!actorBase)
 	{
 		if (!thisObj || !thisObj->IsActor()) return true;
@@ -82,7 +82,7 @@ bool __fastcall IsRaceInList(TESObjectREFR *thisObj, BGSListForm *listForm)
 bool Cmd_IsRaceInList_Execute(COMMAND_ARGS)
 {
 	BGSListForm *listForm;
-	if (ExtractArgs(EXTRACT_ARGS, &listForm))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &listForm))
 		*result = IsRaceInList(thisObj, listForm);
 	else *result = 0;
 	return true;
@@ -98,13 +98,13 @@ bool Cmd_GetCreatureType_Execute(COMMAND_ARGS)
 {
 	*result = -1;
 	TESCreature *creature = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &creature)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &creature)) return true;
 	if (!creature)
 	{
 		if (!thisObj || !thisObj->IsActor()) return true;
 		creature = (TESCreature*)((Actor*)thisObj)->GetActorBase();
 	}
-	if IS_TYPE(creature, TESCreature)
+	if IS_ID(creature, TESCreature)
 		*result = creature->type;
 	DoConsolePrint(result);
 	return true;
@@ -114,7 +114,7 @@ bool Cmd_GetCombatStyle_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESActorBase *actorBase = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &actorBase)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	TESCombatStyle *combatStyle = NULL;
 	if (actorBase)
 		combatStyle = actorBase->GetCombatStyle();
@@ -127,7 +127,7 @@ bool Cmd_GetCombatStyle_Execute(COMMAND_ARGS)
 bool Cmd_CopyFaceGenFrom_Execute(COMMAND_ARGS)
 {
 	TESNPC *srcNPC = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &srcNPC) && thisObj->IsCharacter() && (!srcNPC || IS_TYPE(srcNPC, TESNPC)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &srcNPC) && thisObj->IsCharacter() && (!srcNPC || IS_ID(srcNPC, TESNPC)))
 	{
 		TESNPC *destNPC = (TESNPC*)thisObj->baseForm;
 		if (srcNPC)
@@ -160,7 +160,7 @@ bool Cmd_GetServiceFlag_Execute(COMMAND_ARGS)
 {
 	TESActorBase *actorBase;
 	UInt32 flag;
-	if (ExtractArgs(EXTRACT_ARGS, &actorBase, &flag))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase, &flag))
 		*result = (actorBase->ai.buySellsAndServices & flag) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -170,7 +170,7 @@ bool Cmd_SetServiceFlag_Execute(COMMAND_ARGS)
 {
 	TESActorBase *actorBase;
 	UInt32 flag, inval;
-	if (ExtractArgs(EXTRACT_ARGS, &actorBase, &flag, &inval))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase, &flag, &inval))
 	{
 		if (inval) actorBase->ai.buySellsAndServices |= flag;
 		else actorBase->ai.buySellsAndServices &= ~flag;
@@ -183,7 +183,7 @@ bool Cmd_GetActorTemplateFlag_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 flag;
 	TESActorBase *actorBase = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &flag, &actorBase)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &flag, &actorBase)) return true;
 	if (!actorBase)
 	{
 		if (!thisObj || !thisObj->IsActor()) return true;
@@ -197,7 +197,7 @@ bool Cmd_SetActorTemplateFlag_Execute(COMMAND_ARGS)
 {
 	UInt32 flag, inval;
 	TESActorBase *actorBase = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &flag, &inval, &actorBase)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &flag, &inval, &actorBase)) return true;
 	if (!actorBase)
 	{
 		if (!thisObj || !thisObj->IsActor()) return true;
@@ -212,7 +212,7 @@ bool Cmd_LNSetActorTemplate_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	TESActorBase *actorBase = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &form, &actorBase)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &actorBase)) return true;
 	if (!actorBase)
 	{
 		if (!thisObj || !thisObj->IsActor()) return true;
@@ -227,7 +227,7 @@ bool Cmd_GetBaseFactionRank_Execute(COMMAND_ARGS)
 	*result = -1;
 	TESFaction *faction;
 	TESActorBase *actorBase = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &faction, &actorBase) || NOT_TYPE(faction, TESFaction)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &faction, &actorBase) || NOT_ID(faction, TESFaction)) return true;
 	if (!actorBase)
 	{
 		if (!thisObj || !thisObj->IsActor()) return true;
@@ -242,7 +242,7 @@ bool Cmd_SetBaseFactionRank_Execute(COMMAND_ARGS)
 	TESFaction *faction;
 	SInt32 rank;
 	TESActorBase *actorBase = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &faction, &rank, &actorBase)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &faction, &rank, &actorBase)) return true;
 	if (!actorBase)
 	{
 		if (!thisObj || !thisObj->IsActor()) return true;
@@ -257,7 +257,7 @@ bool Cmd_GetEquippedData_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 slot;
-	if (!ExtractArgs(EXTRACT_ARGS, &slot) || !thisObj->IsActor())
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &slot) || !thisObj->IsActor())
 		return true;
 	ExtraContainerChanges *xChanges = GetExtraType(&thisObj->extraDataList, ContainerChanges);
 	if (!xChanges || !xChanges->data || !xChanges->data->objList)
@@ -271,7 +271,7 @@ bool Cmd_GetEquippedData_Execute(COMMAND_ARGS)
 	{
 		if (!(entry = traverse->data) || !entry->extendData) continue;
 		item = entry->type;
-		if IS_TYPE(item, TESObjectWEAP)
+		if IS_ID(item, TESObjectWEAP)
 		{
 			if (!(slot & TESBipedModelForm::eSlot_Weapon))
 				continue;
@@ -326,7 +326,7 @@ void SetEquippedData(Actor *actor, TESForm *form, float health, UInt8 flags, boo
 bool Cmd_SetEquippedData_Execute(COMMAND_ARGS)
 {
 	UInt32 arrID, lock = 0, silent = 1;
-	if (!ExtractArgs(EXTRACT_ARGS, &arrID, &lock, &silent) || !thisObj->IsActor())
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &arrID, &lock, &silent) || !thisObj->IsActor())
 		return true;
 	NVSEArrayVar *inArray = LookupArrayByID(arrID);
 	if (!inArray || (GetArraySize(inArray) != 3))
@@ -342,7 +342,7 @@ bool Cmd_EquipItemData_Execute(COMMAND_ARGS)
 	TESForm *form;
 	float health = 0;
 	UInt32 flags = 0, lock = 0, silent = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &health, &flags, &lock, &silent) && thisObj->IsActor())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &health, &flags, &lock, &silent) && thisObj->IsActor())
 		SetEquippedData((Actor*)thisObj, form, health, flags, lock != 0, silent != 0);
 	return true;
 }
@@ -351,7 +351,7 @@ bool Cmd_GetBaseKarma_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESActorBase *actorBase = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &actorBase)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
 	{
 		if (!thisObj || !thisObj->IsActor()) return true;
@@ -365,7 +365,7 @@ bool Cmd_SetBaseKarma_Execute(COMMAND_ARGS)
 {
 	SInt32 karma;
 	TESActorBase *actorBase = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &karma, &actorBase)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &karma, &actorBase)) return true;
 	if (!actorBase)
 	{
 		if (!thisObj || !thisObj->IsActor()) return true;
@@ -399,7 +399,7 @@ bool __fastcall ActorHasEffect(Actor *actor, EffectSetting *effSetting)
 bool Cmd_ActorHasEffect_Execute(COMMAND_ARGS)
 {
 	EffectSetting *effSetting;
-	if (ExtractArgs(EXTRACT_ARGS, &effSetting))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &effSetting))
 		*result = ActorHasEffect((Actor*)thisObj, effSetting);
 	else *result = 0;
 	DoConsolePrint(result);
@@ -416,7 +416,7 @@ bool Cmd_GetBodyPartData_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESActorBase *actorBase;
-	if (ExtractArgs(EXTRACT_ARGS, &actorBase))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase))
 	{
 		BGSBodyPartData *bpData = actorBase->GetBodyPartData();
 		if (bpData) REFR_RES = bpData->refID;
@@ -428,7 +428,7 @@ bool Cmd_SetBodyPartData_Execute(COMMAND_ARGS)
 {
 	TESCreature *creature;
 	BGSBodyPartData *bpData;
-	if (ExtractArgs(EXTRACT_ARGS, &creature, &bpData) && IS_TYPE(creature, TESCreature) && IS_TYPE(bpData, BGSBodyPartData))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &creature, &bpData) && IS_ID(creature, TESCreature) && IS_ID(bpData, BGSBodyPartData))
 		creature->bodyPartData = bpData;
 	return true;
 }

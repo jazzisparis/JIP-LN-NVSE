@@ -26,7 +26,7 @@ bool Cmd_GetRadioBroadcastType_Execute(COMMAND_ARGS)
 bool Cmd_SetRadioBroadcastType_Execute(COMMAND_ARGS)
 {
 	UInt32 type;
-	if (ExtractArgs(EXTRACT_ARGS, &type) && (type <= 4))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type) && (type <= 4))
 	{
 		ExtraRadioData *xRadio = GetExtraType(&thisObj->extraDataList, RadioData);
 		if (xRadio)
@@ -48,7 +48,7 @@ bool Cmd_GetRadioRadius_Execute(COMMAND_ARGS)
 bool Cmd_SetRadioRadius_Execute(COMMAND_ARGS)
 {
 	float radius;
-	if (ExtractArgs(EXTRACT_ARGS, &radius) && (radius >= 0))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &radius) && (radius >= 0))
 	{
 		ExtraRadioData *xRadio = GetExtraType(&thisObj->extraDataList, RadioData);
 		if (xRadio && !xRadio->rangeType) xRadio->radius = radius;
@@ -66,7 +66,7 @@ bool Cmd_GetRadioStatic_Execute(COMMAND_ARGS)
 bool Cmd_SetRadioStatic_Execute(COMMAND_ARGS)
 {
 	float radStatic;
-	if (ExtractArgs(EXTRACT_ARGS, &radStatic) && (radStatic >= 0))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &radStatic) && (radStatic >= 0))
 	{
 		ExtraRadioData *xRadio = GetExtraType(&thisObj->extraDataList, RadioData);
 		if (xRadio && !xRadio->rangeType) xRadio->staticPerc = radStatic;
@@ -85,7 +85,7 @@ bool Cmd_GetRadioPosRef_Execute(COMMAND_ARGS)
 bool Cmd_SetRadioPosRef_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *refr;
-	if (ExtractArgs(EXTRACT_ARGS, &refr))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &refr))
 	{
 		ExtraRadioData *xRadio = GetExtraType(&thisObj->extraDataList, RadioData);
 		if (xRadio && !xRadio->rangeType) xRadio->positionRef = refr;

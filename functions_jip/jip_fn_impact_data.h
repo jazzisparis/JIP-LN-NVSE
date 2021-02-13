@@ -12,7 +12,7 @@ bool Cmd_GetImpactDataModel_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	BGSImpactData *impactData;
-	if (ExtractArgs(EXTRACT_ARGS, &impactData) && IS_TYPE(impactData, BGSImpactData))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &impactData) && IS_ID(impactData, BGSImpactData))
 		resStr = impactData->model.GetModelPath();
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -22,7 +22,7 @@ bool Cmd_GetImpactDataModel_Execute(COMMAND_ARGS)
 bool Cmd_SetImpactDataModel_Execute(COMMAND_ARGS)
 {
 	BGSImpactData *impactData;
-	if (ExtractArgs(EXTRACT_ARGS, &impactData, &s_strArgBuffer) && IS_TYPE(impactData, BGSImpactData))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &impactData, &s_strArgBuffer) && IS_ID(impactData, BGSImpactData))
 		impactData->model.SetModelPath(s_strArgBuffer);
 	return true;
 }
@@ -32,7 +32,7 @@ bool Cmd_GetImpactDataTrait_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSImpactData *impactData;
 	UInt32 traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &impactData, &traitID) || NOT_TYPE(impactData, BGSImpactData)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &impactData, &traitID) || NOT_ID(impactData, BGSImpactData)) return true;
 	switch (traitID)
 	{
 	case 1:
@@ -80,7 +80,7 @@ bool Cmd_SetImpactDataTraitNumeric_Execute(COMMAND_ARGS)
 	BGSImpactData *impactData;
 	UInt32 traitID;
 	double value;
-	if (!ExtractArgs(EXTRACT_ARGS, &impactData, &traitID, &value) || NOT_TYPE(impactData, BGSImpactData)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &impactData, &traitID, &value) || NOT_ID(impactData, BGSImpactData)) return true;
 	UInt32 intVal = (int)value;
 	switch (traitID)
 	{
@@ -122,17 +122,17 @@ bool Cmd_SetImpactDataTraitForm_Execute(COMMAND_ARGS)
 	BGSImpactData *impactData;
 	UInt32 traitID;
 	TESForm *object = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &impactData, &traitID, &object) || NOT_TYPE(impactData, BGSImpactData)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &impactData, &traitID, &object) || NOT_ID(impactData, BGSImpactData)) return true;
 	switch (traitID)
 	{
 	case 0:
-		impactData->textureSet = (object && IS_TYPE(object, BGSTextureSet)) ? (BGSTextureSet*)object : NULL;
+		impactData->textureSet = (object && IS_ID(object, BGSTextureSet)) ? (BGSTextureSet*)object : NULL;
 		break;
 	case 1:
-		impactData->sound1 = (object && IS_TYPE(object, TESSound)) ? (TESSound*)object : NULL;
+		impactData->sound1 = (object && IS_ID(object, TESSound)) ? (TESSound*)object : NULL;
 		break;
 	case 2:
-		impactData->sound2 = (object && IS_TYPE(object, TESSound)) ? (TESSound*)object : NULL;
+		impactData->sound2 = (object && IS_ID(object, TESSound)) ? (TESSound*)object : NULL;
 	}
 	return true;
 }
@@ -142,7 +142,7 @@ bool Cmd_GetImpactDataSetForm_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSImpactDataSet *impactDataSet;
 	UInt32 materialID;
-	if (ExtractArgs(EXTRACT_ARGS, &impactDataSet, &materialID) && IS_TYPE(impactDataSet, BGSImpactDataSet) && (materialID <= 11) && impactDataSet->impactDatas[materialID])
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &impactDataSet, &materialID) && IS_ID(impactDataSet, BGSImpactDataSet) && (materialID <= 11) && impactDataSet->impactDatas[materialID])
 		REFR_RES = impactDataSet->impactDatas[materialID]->refID;
 	return true;
 }
@@ -152,7 +152,7 @@ bool Cmd_SetImpactDataSetForm_Execute(COMMAND_ARGS)
 	BGSImpactDataSet *impactDataSet;
 	UInt32 materialID;
 	BGSImpactData *impactData = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &impactDataSet, &materialID, &impactData) && IS_TYPE(impactDataSet, BGSImpactDataSet) && (materialID <= 11) && (!impactData || IS_TYPE(impactData, BGSImpactData)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &impactDataSet, &materialID, &impactData) && IS_ID(impactDataSet, BGSImpactDataSet) && (materialID <= 11) && (!impactData || IS_ID(impactData, BGSImpactData)))
 		impactDataSet->impactDatas[materialID] = impactData;
 	return true;
 }

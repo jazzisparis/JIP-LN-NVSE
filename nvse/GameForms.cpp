@@ -218,7 +218,7 @@ void TESObjectWEAP::SetHandGrip(UInt8 _handGrip)
 
 UInt8 TESObjectWEAP::AttackAnimation() const
 {
-	switch(attackAnim)
+	switch (attackAnim)
 	{
 		case eAttackAnim_Default:		return 0;
 		case eAttackAnim_Attack3:		return 1;

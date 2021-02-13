@@ -204,8 +204,8 @@ bool ProcessEventHandler(COMMAND_ARGS)
 {
 	*result = 0;
 	if (!scriptObj) return true;
-	UInt8 *data = (UInt8*)scriptData + *opcodeOffsetPtr;
-	UInt8 numArgs = *(UInt8*)data;
+	UInt8 *data = scriptData + *opcodeOffsetPtr;
+	UInt8 numArgs = *data;
 	data += 4;
 	UInt16 argLen = *(UInt16*)data;
 	data += 2;
@@ -216,7 +216,7 @@ bool ProcessEventHandler(COMMAND_ARGS)
 	Script::RefVariable *scrVar = scriptObj->GetVariable(*(UInt16*)data);
 	if (!scrVar) return true;
 	Script *script = (Script*)scrVar->form;
-	if (!script || NOT_TYPE(script, Script)) return true;
+	if (!script || NOT_ID(script, Script)) return true;
 
 	TESForm *formFilter = NULL;
 	if (numArgs > 2)
@@ -249,7 +249,7 @@ bool ProcessEventHandler(COMMAND_ARGS)
 
 	if (formFilter)
 	{
-		if IS_TYPE(formFilter, BGSListForm)
+		if IS_ID(formFilter, BGSListForm)
 		{
 			evntData.list = &((BGSListForm*)formFilter)->list;
 			if (evntData.list->Empty()) return true;
@@ -257,7 +257,7 @@ bool ProcessEventHandler(COMMAND_ARGS)
 		}
 		else if (eventID <= kLNEventID_OnCellExit)
 		{
-			if NOT_TYPE(formFilter, TESObjectCELL) return true;
+			if NOT_ID(formFilter, TESObjectCELL) return true;
 			evntData.filterType = 2;
 			evntData.form = formFilter;
 		}

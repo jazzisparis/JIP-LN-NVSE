@@ -11,7 +11,7 @@ bool Cmd_GetLoadScreenTexture_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	TESLoadScreen *loadScreen;
-	if (ExtractArgs(EXTRACT_ARGS, &loadScreen) && IS_TYPE(loadScreen, TESLoadScreen))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &loadScreen) && IS_ID(loadScreen, TESLoadScreen))
 		resStr = loadScreen->texture.ddsPath.m_data;
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -21,7 +21,7 @@ bool Cmd_GetLoadScreenTexture_Execute(COMMAND_ARGS)
 bool Cmd_SetLoadScreenTexture_Execute(COMMAND_ARGS)
 {
 	TESLoadScreen *loadScreen;
-	if (ExtractArgs(EXTRACT_ARGS, &loadScreen, &s_strArgBuffer) && IS_TYPE(loadScreen, TESLoadScreen))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &loadScreen, &s_strArgBuffer) && IS_ID(loadScreen, TESLoadScreen))
 		loadScreen->texture.ddsPath.Set(s_strArgBuffer);
 	return true;
 }
@@ -30,7 +30,7 @@ bool Cmd_GetLoadScreenType_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESLoadScreen *loadScreen;
-	if (ExtractArgs(EXTRACT_ARGS, &loadScreen) && IS_TYPE(loadScreen, TESLoadScreen) && loadScreen->type)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &loadScreen) && IS_ID(loadScreen, TESLoadScreen) && loadScreen->type)
 		REFR_RES = loadScreen->type->refID;
 	return true;
 }
@@ -39,7 +39,7 @@ bool Cmd_SetLoadScreenType_Execute(COMMAND_ARGS)
 {
 	TESLoadScreen *loadScreen;
 	TESLoadScreenType *loadScrType;
-	if (ExtractArgs(EXTRACT_ARGS, &loadScreen, &loadScrType) && IS_TYPE(loadScreen, TESLoadScreen) && IS_TYPE(loadScrType, TESLoadScreenType))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &loadScreen, &loadScrType) && IS_ID(loadScreen, TESLoadScreen) && IS_ID(loadScrType, TESLoadScreenType))
 		loadScreen->type = loadScrType;
 	return true;
 }
@@ -48,7 +48,7 @@ bool Cmd_GetLoadScreenTypeTextRGB_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESLoadScreenType *loadScrType;
-	if (!ExtractArgs(EXTRACT_ARGS, &loadScrType) || NOT_TYPE(loadScrType, TESLoadScreenType)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &loadScrType) || NOT_ID(loadScrType, TESLoadScreenType)) return true;
 	NVSEArrayVar *outArray = CreateStringMap(NULL, NULL, 0, scriptObj);
 	SetElement(outArray, ArrayElementL("r"), ArrayElementL(loadScrType->fontcolor1.R));
 	SetElement(outArray, ArrayElementL("g"), ArrayElementL(loadScrType->fontcolor1.G));
@@ -61,7 +61,7 @@ bool Cmd_SetLoadScreenTypeTextRGB_Execute(COMMAND_ARGS)
 {
 	TESLoadScreenType *loadScrType;
 	float inR, inG, inB;
-	if (!ExtractArgs(EXTRACT_ARGS, &loadScrType, &inR, &inG, &inB) || NOT_TYPE(loadScrType, TESLoadScreenType)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &loadScrType, &inR, &inG, &inB) || NOT_ID(loadScrType, TESLoadScreenType)) return true;
 	loadScrType->fontcolor1.R = inR;
 	loadScrType->fontcolor1.G = inG;
 	loadScrType->fontcolor1.B = inB;

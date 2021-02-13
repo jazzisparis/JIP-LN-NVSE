@@ -72,7 +72,7 @@ void Script::RefVariable::Resolve(ScriptEventList *eventList)
 	if (varIdx && eventList)
 	{
 		ScriptVar *var = eventList->GetVariable(varIdx);
-		if (var) form = LookupFormByRefID(*(UInt32*)&var->data);
+		if (var) form = LookupFormByRefID(var->data.refID);
 	}
 }
 

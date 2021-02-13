@@ -1098,7 +1098,7 @@ __declspec(naked) bool __fastcall RemoveAmmoHook(Actor *actor, int EDX, TESObjec
 		mov		ecx, eax
 		call	EventCallbackScripts::InvokeEventsThis1
 	skipHandler:
-		cmp		esi, g_thePlayer
+		cmp		dword ptr [esi+0xC], 0x14
 		jz		retnTrue
 		test	byte ptr [esi+0x105], kHookActorFlag1_InfiniteAmmo
 		jnz		retnFalse
@@ -1549,7 +1549,7 @@ __declspec(naked) void SetAnimGroupHook()
 		mov		ecx, [eax+4]
 		test	byte ptr [ecx+0x107], kHookActorFlag3_OnPlayGroup
 		jz		done
-		cmp		ecx, g_thePlayer
+		cmp		dword ptr [ecx+0xC], 0x14
 		jnz		notPlayer
 		cmp		[ecx+0x690], eax
 		jz		done
@@ -2620,13 +2620,13 @@ __declspec(naked) void PlayerMinHealthHook()
 		mov		ecx, [ebp-0x38]
 		add		ecx, 0xA4
 		mov		[ebp-0x10], ecx
-		mov		eax, [ecx]
-		call	dword ptr [eax+0xC]
+		mov		eax, 0x93ACB0
+		call	eax
 		fst		dword ptr [ebp-0x40]
 		push	kAVCode_Health
 		mov		ecx, [ebp-0x10]
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x20]
+		mov		eax, 0x93AD60
+		call	eax
 		fdivp	st(1), st
 		cmp		dword ptr [ebp+0xC], 0
 		jge		done
@@ -2845,27 +2845,38 @@ __declspec(naked) void InsertObjectHook()
 {
 	__asm
 	{
-		mov		[ebp-0x1C], ecx
+		push	esi
+		mov		esi, ecx
+		mov		dword ptr [ebp-0x1C], 0
 		mov		ecx, [ecx+0x40]
 		add		ecx, 0x80
 		CALL_EAX(0x40FBA0)
-		mov		ecx, [ebp-0x1C]
+		mov		ecx, esi
 		call	TESObjectREFR::GetBaseForm2
 		test	eax, eax
 		jz		done
-		mov		ecx, [ebp-0x1C]
-		test	word ptr [ecx+6], kHookFormFlag6_InsertObject
+		test	word ptr [esi+6], kHookFormFlag6_InsertObject
 		jnz		hasFlag
 		test	word ptr [eax+6], kHookFormFlag6_InsertObject
 		jz		done
 	hasFlag:
 		mov		[ebp-0x10], eax
+		mov		ecx, esi
+		cmp		dword ptr [ecx+0xC], 0x14
+		jnz		notPlayer
+		CALL_EAX(0x43FCD0)
+		test	eax, eax
+		jz		done
+		mov		[ebp-0x18], eax
+		mov		eax, [esi+0x694]
+		mov		[ebp-0x1C], eax
+		jmp		doneProt
+	notPlayer:
 		mov		edx, [ebp-0x18]
 		mov		eax, [edx+0x34]
 		test	eax, eax
 		jnz		gotNode
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1D0]
+		CALL_EAX(0x43FCD0)
 		test	eax, eax
 		jz		done
 		mov		edx, [ebp-0x18]
@@ -2887,10 +2898,10 @@ __declspec(naked) void InsertObjectHook()
 	doneProt:
 		cmp		dword ptr ds:[s_insertNodeMap.numEntries], 0
 		jz		doModels
-		mov		ecx, [ebp-0x1C]
-		test	word ptr [ecx+6], kHookFormFlag6_InsertNode
+		test	word ptr [esi+6], kHookFormFlag6_InsertNode
 		jz		checkBase1
 		push	dword ptr [ebp-0x18]
+		mov		ecx, esi
 		call	DoInsertNodes
 	checkBase1:
 		mov		ecx, [ebp-0x10]
@@ -2900,19 +2911,27 @@ __declspec(naked) void InsertObjectHook()
 		call	DoInsertNodes
 	doModels:
 		cmp		dword ptr ds:[s_attachModelMap.numEntries], 0
-		jz		done
-		mov		ecx, [ebp-0x1C]
-		test	word ptr [ecx+6], kHookFormFlag6_AttachModel
+		jz		do1stPerson
+		test	word ptr [esi+6], kHookFormFlag6_AttachModel
 		jz		checkBase2
 		push	dword ptr [ebp-0x18]
+		mov		ecx, esi
 		call	DoAttachModels
 	checkBase2:
 		mov		ecx, [ebp-0x10]
 		test	word ptr [ecx+6], kHookFormFlag6_AttachModel
-		jz		done
+		jz		do1stPerson
 		push	dword ptr [ebp-0x18]
 		call	DoAttachModels
+	do1stPerson:
+		mov		eax, [ebp-0x1C]
+		test	eax, eax
+		jz		done
+		mov		[ebp-0x18], eax
+		mov		dword ptr [ebp-0x1C], 0
+		jmp		doneProt
 	done:
+		pop		esi
 		push	dword ptr [ebp-0x14]
 		CALL_EAX(0x404F30)
 		pop		ecx
@@ -2925,7 +2944,7 @@ __declspec(naked) void InsertObjectHook()
 }
 
 TESObjectREFR *s_syncPositionRef = NULL;
-char s_syncPositionNode[0x80];
+char s_syncPositionNode[0x40];
 AlignedVector4 s_syncPositionMods(0, 0, 0, 0), s_syncPositionPos;
 UInt8 s_syncPositionFlags = 0;
 
@@ -2937,7 +2956,7 @@ __declspec(naked) void SynchronizePositionHook()
 		mov		[ebp-0x1D], 0
 		mov		eax, ds:[0x11F426C]
 		mov		[ebp-0x10], eax
-		cmp		ecx, g_thePlayer
+		cmp		dword ptr [ecx+0xC], 0x14
 		jnz		done
 		mov		ecx, [ecx+0x40]
 		test	ecx, ecx
@@ -2970,7 +2989,7 @@ __declspec(naked) void SynchronizePositionHook()
 		push	dword ptr [eax+0x6C]
 		CALL_EAX(0xA811F0)
 		add		esp, 8
-		mov		ecx, g_thePlayer
+		mov		ecx, [ebp-0x44]
 		fstp	dword ptr [ecx+0x2C]
 	done:
 		retn

@@ -5,7 +5,6 @@
 #include "internal/xinput.h"
 
 DebugLog s_log, s_debug, s_missingTextures;
-bool s_releaseFast = true, s_xNVSE = false;
 
 bool (*WriteRecord)(UInt32 type, UInt32 version, const void *buffer, UInt32 length);
 bool (*WriteRecordData)(const void *buffer, UInt32 length);
@@ -13,6 +12,15 @@ bool (*GetNextRecordInfo)(UInt32 *type, UInt32 *version, UInt32 *length);
 UInt32 (*ReadRecordData)(void *buffer, UInt32 length);
 bool (*ResolveRefID)(UInt32 refID, UInt32 *outRefID);
 const char* (*GetSavePath)(void);
+void (*WriteRecord8)(UInt8 inData);
+void (*WriteRecord16)(UInt16 inData);
+void (*WriteRecord32)(UInt32 inData);
+void (*WriteRecord64)(const void *inData);
+UInt8 (*ReadRecord8)();
+UInt16 (*ReadRecord16)();
+UInt32 (*ReadRecord32)();
+void (*ReadRecord64)(void *outData);
+void (*SkipNBytes)(UInt32 byteNum);
 CommandInfo* (*GetCmdByOpcode)(UInt32 opcode);
 const char* (*GetStringVar)(UInt32 stringID);
 bool (*AssignString)(COMMAND_ARGS, const char *newValue);
@@ -25,6 +33,7 @@ UInt32 (*GetArraySize)(NVSEArrayVar *arr);
 NVSEArrayVar* (*LookupArrayByID)(UInt32 id);
 bool (*GetElement)(NVSEArrayVar *arr, const NVSEArrayElement &key, NVSEArrayElement &outElement);
 bool (*GetElements)(NVSEArrayVar *arr, NVSEArrayElement *elements, NVSEArrayElement *keys);
+bool (*ExtractArgsEx)(COMMAND_ARGS_EX, ...);
 bool (*ExtractFormatStringArgs)(UInt32 fmtStringPos, char *buffer, COMMAND_ARGS_EX, UInt32 maxParams, ...);
 bool (*CallFunction)(Script *funcScript, TESObjectREFR *callingObj, TESObjectREFR *container, NVSEArrayElement *result, UInt8 numArgs, ...);
 
@@ -562,7 +571,7 @@ void TESForm::UnloadModel()
 
 TESLeveledList *TESForm::GetLvlList()
 {
-	if (IS_TYPE(this, TESLevCreature) || IS_TYPE(this, TESLevCharacter) || IS_TYPE(this, TESLevItem))
+	if (IS_ID(this, TESLevCreature) || IS_ID(this, TESLevCharacter) || IS_ID(this, TESLevItem))
 		return &((TESLevCreature*)this)->list;
 	return NULL;
 }
@@ -2069,19 +2078,51 @@ bool Actor::IsFleeing()
 	return false;
 }
 
+__declspec(naked) ContChangesEntry *Actor::GetWeaponInfo()
+{
+	__asm
+	{
+		mov		eax, [ecx+0x68]
+		test	eax, eax
+		jz		done
+		cmp		dword ptr [eax+0x28], 1
+		ja		retnNULL
+		mov		eax, [eax+0x114]
+		retn
+	retnNULL:
+		xor		eax, eax
+	done:
+		retn
+	}
+}
+
+__declspec(naked) ContChangesEntry *Actor::GetAmmoInfo()
+{
+	__asm
+	{
+		mov		eax, [ecx+0x68]
+		test	eax, eax
+		jz		done
+		cmp		dword ptr [eax+0x28], 1
+		ja		retnNULL
+		mov		eax, [eax+0x118]
+		retn
+	retnNULL:
+		xor		eax, eax
+	done:
+		retn
+	}
+}
+
 TESObjectWEAP *Actor::GetEquippedWeapon()
 {
-	if (baseProcess)
-	{
-		ContChangesEntry *weaponInfo = baseProcess->GetWeaponInfo();
-		if (weaponInfo) return (TESObjectWEAP*)weaponInfo->type;
-	}
-	return NULL;
+	ContChangesEntry *weaponInfo = GetWeaponInfo();
+	return weaponInfo ? (TESObjectWEAP*)weaponInfo->type : NULL;
 }
 
 bool Actor::IsItemEquipped(TESForm *item)
 {
-	if IS_TYPE(item, TESObjectWEAP)
+	if IS_ID(item, TESObjectWEAP)
 		return item == GetEquippedWeapon();
 	if (NOT_TYPE(item, TESObjectARMO) || (typeID == kFormType_Creature))
 		return false;
@@ -2102,8 +2143,7 @@ bool Actor::IsItemEquipped(TESForm *item)
 
 UInt8 Actor::EquippedWeaponHasMod(UInt8 modID)
 {
-	if (!baseProcess) return 0;
-	ContChangesEntry *weaponInfo = baseProcess->GetWeaponInfo();
+	ContChangesEntry *weaponInfo = GetWeaponInfo();
 	if (!weaponInfo) return 0;
 	TESObjectWEAP *weapon = (TESObjectWEAP*)weaponInfo->type;
 	if (!weapon) return 0;
@@ -3092,6 +3132,31 @@ __declspec(naked) UInt32 TESGlobal::ResolveRefValue()
 		retn
 	invalid:
 		mov		[esi], eax
+		pop		esi
+		retn
+	}
+}
+
+__declspec(naked) NiExtraData* __fastcall NiObjectNET::GetExtraData(UInt32 vtbl)
+{
+	__asm
+	{
+		push	esi
+		mov		esi, [ecx+0x10]
+		movzx	ecx, word ptr [ecx+0x14]
+		ALIGN 16
+	iterHead:
+		dec		ecx
+		js		retnNULL
+		mov		eax, [esi+ecx*4]
+		test	eax, eax
+		jz		iterHead
+		cmp		[eax], edx
+		jnz		iterHead
+		pop		esi
+		retn
+	retnNULL:
+		xor		eax, eax
 		pop		esi
 		retn
 	}
@@ -4138,7 +4203,7 @@ __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(
 		fmul	kSplitBeamMult
 	noMod:
 		mov		ecx, [esp+8]
-		cmp		ecx, g_thePlayer
+		cmp		dword ptr [ecx+0xC], 0x14
 		jz		perkMod
 		cmp		byte ptr [ecx+0x18D], 0
 		jz		done
@@ -4641,7 +4706,7 @@ bool TESLeveledList::HasFormDeep(TESForm *form)
 		if (data->form == form)
 			return true;
 		lvlList = data->form->GetLvlList();
-		if (lvlList && lvlList->HasFormDeep(form))
+		if (lvlList && s_tempFormList.Insert(data->form) && lvlList->HasFormDeep(form))
 			return true;
 	}
 	while (iter = iter->next);
@@ -4859,7 +4924,7 @@ ScriptVar *Script::AddVariable(ScriptEventList *eventList, UInt32 ownerID, UInt8
 		var = (ScriptVar*)GameHeapAlloc(sizeof(ScriptVar));
 		var->id = varInfo->idx;
 		var->next = NULL;
-		var->data = 0;
+		var->data.num = 0;
 		eventList->m_vars->Append(var);
 	}
 
@@ -4967,8 +5032,7 @@ class AuxVariableValue
 	{
 		if (type == 4)
 		{
-			UInt16 size;
-			ReadRecordData(&size, 2);
+			UInt16 size = ReadRecord16();
 			if (size)
 			{
 				alloc = AlignNumAlloc<char>(size + 1);
@@ -4979,7 +5043,7 @@ class AuxVariableValue
 		}
 		else
 		{
-			ReadRecordData(&ref, 4);
+			ref = ReadRecord32();
 			if (type == 2) ResolveRefID(ref, &ref);
 		}
 	}
@@ -5045,14 +5109,14 @@ public:
 
 	void WriteValData() const
 	{
-		WriteRecordData(&type, 1);
+		WriteRecord8(type);
 		if (type == 4)
 		{
 			UInt16 size = alloc ? StrLen(str) : 0;
-			WriteRecordData(&size, 2);
+			WriteRecord16(size);
 			if (size) WriteRecordData(str, size);
 		}
-		else WriteRecordData(&ref, 4);
+		else WriteRecord32(ref);
 	}
 };
 
@@ -5471,11 +5535,11 @@ TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 	TESForm *item;
 	ContChangesEntry *entry;
 	ExtraDataList *xData;
-	if (actor->baseProcess && actor->GetNiNode())
+	if (actor->GetNiNode())
 	{
 		if (slotIndex == 5)
 		{
-			entry = actor->baseProcess->GetWeaponInfo();
+			entry = actor->GetWeaponInfo();
 			if (entry && entry->extendData)
 				return CreateInventoryRef(actor, entry->type, entry->countDelta, entry->extendData->GetFirstItem());
 		}
@@ -5508,7 +5572,7 @@ TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 			item = entry->type;
 			if (slotIndex == 5)
 			{
-				if NOT_TYPE(item, TESObjectWEAP)
+				if NOT_ID(item, TESObjectWEAP)
 					continue;
 			}
 			else if (NOT_TYPE(item, TESObjectARMO) || !(((TESObjectARMO*)item)->bipedModel.partMask & partMask))
@@ -5521,10 +5585,10 @@ TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 	return NULL;
 }
 
-bool __fastcall ClearHotkey(UInt8 index)
+ContChangesEntry* __fastcall GetHotkeyItemEntry(UInt8 index, ExtraDataList **outXData)
 {
 	ExtraContainerChanges::EntryDataList *entryList = g_thePlayer->GetContainerChangesList();
-	if (!entryList) return false;
+	if (!entryList) return NULL;
 	ListNode<ContChangesEntry> *entryIter = entryList->Head();
 	ContChangesEntry *entry;
 	UInt8 type;
@@ -5543,21 +5607,32 @@ bool __fastcall ClearHotkey(UInt8 index)
 		{
 			if (!(xData = xdlIter->data)) continue;
 			xHotkey = GetExtraType(xData, Hotkey);
-			if (xHotkey && (xHotkey->index == index))
-			{
-				RemoveExtraData(xData, xHotkey, true);
-				if (!xData->m_data)
-				{
-					entry->extendData->Remove(xData);
-					GameHeapFree(xData);
-				}
-				return true;
-			}
+			if (!xHotkey || (xHotkey->index != index))
+				continue;
+			*outXData = xData;
+			return entry;
 		}
 		while (xdlIter = xdlIter->next);
 	}
 	while (entryIter = entryIter->next);
-	return true;
+	return NULL;
+}
+
+bool __fastcall ClearHotkey(UInt8 index)
+{
+	ExtraDataList *xData;
+	ContChangesEntry *entry = GetHotkeyItemEntry(index, &xData);
+	if (entry)
+	{
+		RemoveExtraType(xData, kExtraData_Hotkey);
+		if (!xData->m_data)
+		{
+			entry->extendData->Remove(xData);
+			GameHeapFree(xData);
+		}
+		return true;
+	}
+	return false;
 }
 
 float TESObjectWEAP::GetModBonuses(UInt8 modFlags, UInt32 effectID)
@@ -5572,7 +5647,7 @@ float TESObjectWEAP::GetModBonuses(UInt8 modFlags, UInt32 effectID)
 float __fastcall GetModBonuses(TESObjectREFR *wpnRef, UInt32 effectID)
 {
 	TESObjectWEAP *weapon = (TESObjectWEAP*)wpnRef->baseForm;
-	if NOT_TYPE(weapon, TESObjectWEAP) return 0;
+	if NOT_ID(weapon, TESObjectWEAP) return 0;
 	ExtraWeaponModFlags *xModFlags = GetExtraType(&wpnRef->extraDataList, WeaponModFlags);
 	if (!xModFlags) return 0;
 	float result = 0;
@@ -5585,7 +5660,7 @@ float __fastcall GetModBonuses(TESObjectREFR *wpnRef, UInt32 effectID)
 float __fastcall GetModBonuses(InventoryRef *invRef, UInt32 effectID)
 {
 	TESObjectWEAP *weapon = (TESObjectWEAP*)invRef->type;
-	if NOT_TYPE(weapon, TESObjectWEAP) return 0;
+	if NOT_ID(weapon, TESObjectWEAP) return 0;
 	ExtraWeaponModFlags *xModFlags = GetExtraType(invRef->xData, WeaponModFlags);
 	if (!xModFlags) return 0;
 	float result = 0;
@@ -6142,7 +6217,7 @@ double s_nvseVersion = 0;
 #define REG_CMD_ARR(name) nvse->RegisterTypedCommand(&kCommandInfo_##name, kRetnType_Array)
 
 #define REFR_RES *(UInt32*)result
-#define NUM_ARGS *((UInt8*)scriptData + *opcodeOffsetPtr)
+#define NUM_ARGS scriptData[*opcodeOffsetPtr]
 
 DEFINE_COMMAND_PLUGIN(EmptyCommand, , 0, 0, NULL);
 bool Cmd_EmptyCommand_Execute(COMMAND_ARGS)

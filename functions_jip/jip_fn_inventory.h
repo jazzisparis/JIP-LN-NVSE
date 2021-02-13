@@ -3,7 +3,7 @@
 DEFINE_COMMAND_PLUGIN(AddItemAlt, , 1, 4, kParams_JIP_OneItemOrList_OneInt_OneOptionalFloat_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetValueAlt, , 0, 1, kParams_OneOptionalObjectID);
 DEFINE_COMMAND_PLUGIN(SetValueAlt, , 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_COMMAND_PLUGIN(RemoveItemTarget, , 1, 4, kParams_JIP_OneItemOrList_OneObjectRef_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(RemoveItemTarget, , 1, 4, kParams_JIP_OneItemOrList_OneContainer_TwoOptionalInts);
 DEFINE_COMMAND_PLUGIN(GetWeaponRefModFlags, , 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(SetWeaponRefModFlags, , 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetItemRefCurrentHealth, , 1, 0, NULL);
@@ -15,7 +15,7 @@ DEFINE_COMMAND_PLUGIN(DropAlt, , 1, 3, kParams_JIP_OneItemOrList_TwoOptionalInts
 DEFINE_COMMAND_PLUGIN(DropMeAlt, , 1, 2, kParams_JIP_TwoOptionalInts);
 DEFINE_COMMAND_PLUGIN(GetAllItems, , 1, 5, kParams_JIP_FourOptionalInts_OneOptionalList);
 DEFINE_COMMAND_PLUGIN(GetAllItemRefs, , 1, 5, kParams_JIP_FourOptionalInts_OneOptionalList);
-DEFINE_COMMAND_PLUGIN(RemoveMeIRAlt, , 1, 3, kParams_JIP_TwoOptionalInts_OneOptionalObjectRef);
+DEFINE_COMMAND_PLUGIN(RemoveMeIRAlt, , 1, 3, kParams_JIP_TwoOptionalInts_OneOptionalContainer);
 DEFINE_COMMAND_PLUGIN(GetEquippedItemRef, , 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetNoUnequip, , 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(SetNoUnequip, , 1, 1, kParams_OneInt);
@@ -26,13 +26,14 @@ DEFINE_COMMAND_PLUGIN(SetOnUseAidItemEventHandler, , 0, 3, kParams_JIP_OneForm_O
 DEFINE_COMMAND_PLUGIN(GetEquippedArmorRefs, , 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDT, , 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDR, , 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetHotkeyItemRef, , 0, 1, kParams_OneInt);
 
 bool Cmd_AddItemAlt_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	UInt32 count, doEquip = 0;
 	float condition = 100;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &count, &condition, &doEquip) && count && thisObj->GetContainer())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &count, &condition, &doEquip) && count && thisObj->GetContainer())
 	{
 		condition = GetMin(GetMax(condition, 0.0F), 100.0F) / 100;
 		thisObj->AddItemAlt(form, count, condition, doEquip != 0);
@@ -43,7 +44,7 @@ bool Cmd_AddItemAlt_Execute(COMMAND_ARGS)
 bool Cmd_GetValueAlt_Execute(COMMAND_ARGS)
 {
 	TESForm *form = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &form) && (form || (thisObj && (form = thisObj->baseForm) && kInventoryType[form->typeID])))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (form || (thisObj && (form = thisObj->baseForm) && kInventoryType[form->typeID])))
 		*result = (int)form->GetItemValue();
 	else *result = 0;
 	return true;
@@ -53,11 +54,11 @@ bool Cmd_SetValueAlt_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	UInt32 newVal;
-	if (!ExtractArgs(EXTRACT_ARGS, &form, &newVal))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &newVal))
 		return true;
 	TESValueForm *valForm = DYNAMIC_CAST(form, TESForm, TESValueForm);
 	if (valForm) valForm->value = newVal;
-	else if IS_TYPE(form, AlchemyItem)
+	else if IS_ID(form, AlchemyItem)
 		((AlchemyItem*)form)->value = newVal;
 	return true;
 }
@@ -67,7 +68,7 @@ bool Cmd_RemoveItemTarget_Execute(COMMAND_ARGS)
 	TESForm *form;
 	TESObjectREFR *target;
 	SInt32 quantity = 0, clrOwner = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &target, &quantity, &clrOwner) && thisObj->GetContainer() && target->GetContainer())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &target, &quantity, &clrOwner) && thisObj->GetContainer())
 		thisObj->RemoveItemTarget(form, target, quantity, !clrOwner);
 	return true;
 }
@@ -89,10 +90,10 @@ bool Cmd_SetWeaponRefModFlags_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 flags;
-	if (!ExtractArgs(EXTRACT_ARGS, &flags) || (flags > 7))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &flags) || (flags > 7))
 		return true;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
-	if (!invRef || NOT_TYPE(invRef->type, TESObjectWEAP))
+	if (!invRef || NOT_ID(invRef->type, TESObjectWEAP))
 		return true;
 	TESObjectIMOD **mods = ((TESObjectWEAP*)invRef->type)->itemMod;
 	if (!mods[0]) flags &= ~1;
@@ -162,7 +163,7 @@ bool Cmd_SetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	float health;
-	if (!ExtractArgs(EXTRACT_ARGS, &health)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &health)) return true;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 	if (!invRef) return true;
 	TESHealthForm *healthForm = DYNAMIC_CAST(invRef->type, TESForm, TESHealthForm);
@@ -191,7 +192,7 @@ bool Cmd_SetHotkeyItemRef_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 keyNum;
-	if (!ExtractArgs(EXTRACT_ARGS, &keyNum) || !keyNum || (keyNum > 8))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &keyNum) || !keyNum || (keyNum > 8))
 		return true;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 	if (!invRef || (invRef->containerRef != g_thePlayer))
@@ -233,7 +234,7 @@ bool Cmd_EquipItemAlt_Execute(COMMAND_ARGS)
 {
 	TESForm *item;
 	UInt32 noUnequip = 0, noMessage = 1;
-	if (ExtractArgs(EXTRACT_ARGS, &item, &noUnequip, &noMessage) && thisObj->IsActor())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &item, &noUnequip, &noMessage) && thisObj->IsActor())
 	{
 		ExtraContainerChanges::EntryDataList *entryList = thisObj->GetContainerChangesList();
 		if (entryList)
@@ -246,8 +247,8 @@ bool Cmd_UnequipItemAlt_Execute(COMMAND_ARGS)
 {
 	TESForm *item;
 	UInt32 noEquip = 0, noMessage = 1;
-	if (!ExtractArgs(EXTRACT_ARGS, &item, &noEquip, &noMessage) || !thisObj->IsActor() || 
-		(NOT_TYPE(item, TESObjectWEAP) && NOT_TYPE(item, TESObjectARMO)))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &item, &noEquip, &noMessage) || !thisObj->IsActor() || 
+		(NOT_ID(item, TESObjectWEAP) && NOT_TYPE(item, TESObjectARMO)))
 		return true;
 	ContChangesEntry *entry = thisObj->GetContainerChangesEntry(item);
 	if (entry && entry->extendData)
@@ -270,12 +271,12 @@ bool Cmd_DropAlt_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	SInt32 dropCount = 0, clrOwner = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &form, &dropCount, &clrOwner) || !thisObj->GetContainer())
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &dropCount, &clrOwner) || !thisObj->GetContainer())
 		return true;
 	ExtraContainerChanges::EntryDataList *entryList = thisObj->GetContainerChangesList();
 	if (!entryList) return true;
 	ListNode<TESForm> *iter;
-	if IS_TYPE(form, BGSListForm)
+	if IS_ID(form, BGSListForm)
 		iter = ((BGSListForm*)form)->list.Head();
 	else
 	{
@@ -299,7 +300,7 @@ bool Cmd_DropAlt_Execute(COMMAND_ARGS)
 		if ((entry = entryList->FindForItem(item)) && entry->extendData)
 		{
 			hasScript = item->HasScript();
-			stacked = IS_TYPE(item, TESObjectWEAP) ? (((TESObjectWEAP*)item)->eWeaponType > 9) : NOT_TYPE(item, TESObjectARMO);
+			stacked = IS_ID(item, TESObjectWEAP) ? (((TESObjectWEAP*)item)->eWeaponType > 9) : NOT_TYPE(item, TESObjectARMO);
 			while ((total > 0) && (xData = entry->extendData->GetFirstItem()))
 			{
 				subCount = xData->GetCount();
@@ -336,7 +337,7 @@ bool Cmd_DropAlt_Execute(COMMAND_ARGS)
 bool Cmd_DropMeAlt_Execute(COMMAND_ARGS)
 {
 	SInt32 dropCount = 0, clrOwner = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &dropCount, &clrOwner))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &dropCount, &clrOwner))
 		return true;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 	if (!invRef) return true;
@@ -347,7 +348,7 @@ bool Cmd_DropMeAlt_Execute(COMMAND_ARGS)
 	if ((dropCount < 1) || (dropCount > countExtra))
 		dropCount = countExtra;
 	TESForm *item = invRef->type;
-	bool stacked = IS_TYPE(item, TESObjectWEAP) ? (((TESObjectWEAP*)item)->eWeaponType > 9) : NOT_TYPE(item, TESObjectARMO);
+	bool stacked = IS_ID(item, TESObjectWEAP) ? (((TESObjectWEAP*)item)->eWeaponType > 9) : NOT_TYPE(item, TESObjectARMO);
 	if (stacked) invRef->containerRef->RemoveItem(item, xData, dropCount, !clrOwner, 1, NULL, 0, 0, 1, 0);
 	else while (dropCount-- > 0) invRef->containerRef->RemoveItem(item, xData, 1, !clrOwner, 1, NULL, 0, 0, 1, 0);
 	invRef->removed = true;
@@ -359,7 +360,7 @@ bool Cmd_GetAllItems_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 typeID = 0, noNonPlayable = 0, noQuestItem = 0, noEquipped = 0;
 	BGSListForm *listForm = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &typeID, &noNonPlayable, &noQuestItem, &noEquipped, &listForm))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &typeID, &noNonPlayable, &noQuestItem, &noEquipped, &listForm))
 		return true;
 	if ((typeID && !kInventoryType[typeID]) || !thisObj->GetInventoryItems(typeID))
 		return true;
@@ -390,7 +391,7 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 typeID = 0, noNonPlayable = 0, noQuestItem = 0, noEquipped = 0;
 	BGSListForm *listForm = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &typeID, &noNonPlayable, &noQuestItem, &noEquipped, &listForm))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &typeID, &noNonPlayable, &noQuestItem, &noEquipped, &listForm))
 		return true;
 	if ((typeID && !kInventoryType[typeID]) || !thisObj->GetInventoryItems(typeID))
 		return true;
@@ -452,7 +453,7 @@ bool Cmd_RemoveMeIRAlt_Execute(COMMAND_ARGS)
 {
 	SInt32 quantity = 0, clrOwner = 0;
 	TESObjectREFR *destRef = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &quantity, &clrOwner, &destRef) || (destRef && !destRef->GetContainer()))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &quantity, &clrOwner, &destRef))
 		return true;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 	if (!invRef) return true;
@@ -470,7 +471,7 @@ bool Cmd_GetEquippedItemRef_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 slotIdx;
-	if (ExtractArgs(EXTRACT_ARGS, &slotIdx) && (slotIdx <= 19) && thisObj->IsActor())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &slotIdx) && (slotIdx <= 19) && thisObj->IsActor())
 	{
 		TESObjectREFR *invRef = GetEquippedItemRef((Actor*)thisObj, slotIdx);
 		if (invRef) REFR_RES = invRef->refID;
@@ -488,7 +489,7 @@ bool Cmd_GetNoUnequip_Execute(COMMAND_ARGS)
 bool Cmd_SetNoUnequip_Execute(COMMAND_ARGS)
 {
 	UInt32 noUnequip;
-	if (ExtractArgs(EXTRACT_ARGS, &noUnequip))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &noUnequip))
 	{
 		InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 		ExtraDataList *xData = invRef ? invRef->xData : NULL;
@@ -506,9 +507,9 @@ bool Cmd_SetNoUnequip_Execute(COMMAND_ARGS)
 bool Cmd_GetEquippedWeaponPoison_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (thisObj->IsActor() && ((Actor*)thisObj)->baseProcess)
+	if (thisObj->IsActor())
 	{
-		ContChangesEntry *wpnInfo = ((Actor*)thisObj)->baseProcess->GetWeaponInfo();
+		ContChangesEntry *wpnInfo = ((Actor*)thisObj)->GetWeaponInfo();
 		if (wpnInfo && wpnInfo->extendData)
 		{
 			ExtraDataList *xDataList = wpnInfo->extendData->GetFirstItem();
@@ -527,12 +528,12 @@ bool Cmd_ToggleItemUnique_Execute(COMMAND_ARGS)
 {
 	TESForm *itemOrList;
 	UInt32 toggle;
-	if (ExtractArgs(EXTRACT_ARGS, &itemOrList, &toggle))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &itemOrList, &toggle))
 	{
 		ListNode<TESForm> *traverse = NULL;
-		if IS_TYPE(itemOrList, BGSListForm)
+		if IS_ID(itemOrList, BGSListForm)
 			traverse = ((BGSListForm*)itemOrList)->list.Head();
-		else if (IS_TYPE(itemOrList, TESObjectARMO) || IS_TYPE(itemOrList, TESObjectWEAP))
+		else if (IS_TYPE(itemOrList, TESObjectARMO) || IS_ID(itemOrList, TESObjectWEAP))
 		{
 			ListNode<TESForm> tempList(itemOrList);
 			traverse = &tempList;
@@ -543,7 +544,7 @@ bool Cmd_ToggleItemUnique_Execute(COMMAND_ARGS)
 			TESForm *item;
 			do
 			{
-				if (!(item = traverse->data) || (NOT_TYPE(item, TESObjectARMO) && NOT_TYPE(item, TESObjectWEAP)) || (bToggle == ((item->jipFormFlags6 & kHookFormFlag6_UniqueItem) != 0)))
+				if (!(item = traverse->data) || (NOT_TYPE(item, TESObjectARMO) && NOT_ID(item, TESObjectWEAP)) || (bToggle == ((item->jipFormFlags6 & kHookFormFlag6_UniqueItem) != 0)))
 					continue;
 				item->SetJIPFlag(kHookFormFlag6_UniqueItem, bToggle);
 				HOOK_MOD(CheckUniqueItem, bToggle);
@@ -558,7 +559,7 @@ bool Cmd_GetBaseItems_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *baseForm = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &baseForm))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &baseForm))
 		return true;
 	if (!baseForm)
 	{
@@ -587,12 +588,12 @@ bool Cmd_SetOnUseAidItemEventHandler_Execute(COMMAND_ARGS)
 	Script *script;
 	UInt32 addEvnt;
 	TESForm *itemOrList;
-	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &itemOrList) || NOT_TYPE(script, Script))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &itemOrList) || NOT_ID(script, Script))
 		return true;
 	ListNode<TESForm> *iter;
 	AlchemyItem *alchItem;
 	EventCallbackScripts *callbacks;
-	if IS_TYPE(itemOrList, BGSListForm)
+	if IS_ID(itemOrList, BGSListForm)
 		iter = ((BGSListForm*)itemOrList)->list.Head();
 	else
 	{
@@ -602,7 +603,7 @@ bool Cmd_SetOnUseAidItemEventHandler_Execute(COMMAND_ARGS)
 	do
 	{
 		alchItem = (AlchemyItem*)iter->data;
-		if (!alchItem || NOT_TYPE(alchItem, AlchemyItem))
+		if (!alchItem || NOT_ID(alchItem, AlchemyItem))
 			continue;
 		if (addEvnt)
 		{
@@ -682,5 +683,22 @@ bool Cmd_GetArmorEffectiveDT_Execute(COMMAND_ARGS)
 bool Cmd_GetArmorEffectiveDR_Execute(COMMAND_ARGS)
 {
 	*result = GetArmorEffectiveDX(thisObj, 0x4BDF90);
+	return true;
+}
+
+bool Cmd_GetHotkeyItemRef_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	UInt32 keyNum;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &keyNum) && keyNum && (keyNum <= 8))
+	{
+		ExtraDataList *xData;
+		ContChangesEntry *entry = GetHotkeyItemEntry(keyNum, &xData);
+		if (entry)
+		{
+			TESObjectREFR *invRef = CreateInventoryRef(g_thePlayer, entry->type, xData->GetCount(), xData);
+			REFR_RES = invRef->refID;
+		}
+	}
 	return true;
 }

@@ -5,7 +5,7 @@ DEFINE_COMMAND_PLUGIN(FileExists, , 0, 2, kParams_JIP_OneString_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ListToArray, , 0, 1, kParams_FormList);
 DEFINE_COMMAND_PLUGIN(GetTimeStamp, , 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetINIFloat, , 0, 2, kParams_JIP_OneString_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(SetINIFloat, , 0, 3, kParams_JIP_OneString_OneFloat_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(SetINIFloat, , 0, 3, kParams_JIP_OneString_OneDouble_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetINIString, , 0, 2, kParams_JIP_OneString_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(SetINIString, , 0, 3, kParams_JIP_TwoString_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetINISection, , 0, 3, kParams_JIP_OneString_OneOptionalString_OneOptionalInt);
@@ -35,7 +35,7 @@ bool Cmd_FileExists_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 checkDir = 0;
-	if (ExtractArgs(EXTRACT_ARGS, s_dataPath, &checkDir))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, s_dataPath, &checkDir))
 	{
 		ReplaceChr(s_dataPath, '/', '\\');
 		DWORD attr = GetFileAttributes(s_dataPathFull);
@@ -52,7 +52,7 @@ bool Cmd_ListToArray_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	BGSListForm *listForm;
-	if (!ExtractArgs(EXTRACT_ARGS, &listForm)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &listForm)) return true;
 	s_tempElements.Clear();
 	ListNode<TESForm> *iter = listForm->list.Head();
 	do
@@ -91,7 +91,7 @@ bool Cmd_GetINIFloat_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	*s_configPath = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, s_configPath) || !GetINIPath(scriptObj)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, s_configPath) || !GetINIPath(scriptObj)) return true;
 	char *delim = GetNextToken(s_strArgBuffer, ":\\/");
 	if (!*delim) return true;
 	s_strValBuffer[0] = 0;
@@ -103,9 +103,9 @@ bool Cmd_GetINIFloat_Execute(COMMAND_ARGS)
 bool Cmd_SetINIFloat_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	float value;
+	double value;
 	*s_configPath = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &value, s_configPath) || !GetINIPath(scriptObj)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &value, s_configPath) || !GetINIPath(scriptObj)) return true;
 	char *delim = GetNextToken(s_strArgBuffer, ":\\/");
 	if (!*delim) return true;
 	if (!FileExists(s_configPathFull)) FileStream::MakeAllDirs(s_configPathFull);
@@ -119,7 +119,7 @@ bool Cmd_GetINIString_Execute(COMMAND_ARGS)
 {
 	s_strValBuffer[0] = 0;
 	*s_configPath = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, s_configPath) && GetINIPath(scriptObj))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, s_configPath) && GetINIPath(scriptObj))
 	{
 		char *delim = GetNextToken(s_strArgBuffer, ":\\/");
 		if (*delim) GetPrivateProfileString(s_strArgBuffer, delim, NULL, s_strValBuffer, kMaxMessageLength, s_configPathFull);
@@ -132,7 +132,7 @@ bool Cmd_SetINIString_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	*s_configPath = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &s_strValBuffer, s_configPath) || !GetINIPath(scriptObj)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer, s_configPath) || !GetINIPath(scriptObj)) return true;
 	char *delim = GetNextToken(s_strArgBuffer, ":\\/");
 	if (!*delim) return true;
 	if (!FileExists(s_configPathFull)) FileStream::MakeAllDirs(s_configPathFull);
@@ -146,7 +146,7 @@ bool Cmd_GetINISection_Execute(COMMAND_ARGS)
 	*result = 0;
 	*s_configPath = 0;
 	UInt32 getNumeric = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, s_configPath, &getNumeric) || !GetINIPath(scriptObj)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, s_configPath, &getNumeric) || !GetINIPath(scriptObj)) return true;
 	NVSEArrayVar *outArray = CreateStringMap(NULL, NULL, 0, scriptObj);
 	char *buffer = s_strValBuffer, *delim;
 	SInt32 length = GetPrivateProfileSection(s_strArgBuffer, s_strValBuffer, 0x10000, s_configPathFull), size;
@@ -167,7 +167,7 @@ bool Cmd_SetINISection_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 arrID;
 	*s_configPath = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &arrID, s_configPath) || !GetINIPath(scriptObj)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &arrID, s_configPath) || !GetINIPath(scriptObj)) return true;
 	NVSEArrayVar *srcArray = LookupArrayByID(arrID);
 	if (!srcArray) return true;
 	UInt32 size = GetArraySize(srcArray);
@@ -202,7 +202,7 @@ bool Cmd_GetINISectionNames_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	*s_configPath = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, s_configPath) || !GetINIPath(scriptObj)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, s_configPath) || !GetINIPath(scriptObj)) return true;
 	s_tempElements.Clear();
 	SInt32 length = GetPrivateProfileSectionNames(s_strValBuffer, kMaxMessageLength, s_configPathFull), size;
 	char *name = s_strValBuffer;
@@ -220,7 +220,7 @@ bool Cmd_RemoveINIKey_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	*s_configPath = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, s_configPath) || !GetINIPath(scriptObj) || !FileExists(s_configPathFull)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, s_configPath) || !GetINIPath(scriptObj) || !FileExists(s_configPathFull)) return true;
 	char *key = GetNextToken(s_strArgBuffer, ":\\/");
 	if (*key && WritePrivateProfileString(s_strArgBuffer, key, NULL, s_configPathFull))
 		*result = 1;
@@ -230,7 +230,7 @@ bool Cmd_RemoveINIKey_Execute(COMMAND_ARGS)
 bool Cmd_RemoveINISection_Execute(COMMAND_ARGS)
 {
 	*s_configPath = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, s_configPath) && GetINIPath(scriptObj) && FileExists(s_configPathFull) && 
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, s_configPath) && GetINIPath(scriptObj) && FileExists(s_configPathFull) && 
 		WritePrivateProfileStruct(s_strArgBuffer, NULL, NULL, 0, s_configPathFull)) *result = 1;
 	else *result = 0;
 	return true;
@@ -241,7 +241,7 @@ bool Cmd_GetFilesInFolder_Execute(COMMAND_ARGS)
 	*result = 0;
 	s_strArgBuffer[0] = '*';
 	s_strArgBuffer[1] = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, s_dataPath, &s_strArgBuffer)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, s_dataPath, &s_strArgBuffer)) return true;
 	ReplaceChr(s_dataPath, '/', '\\');
 	char *pathEnd = s_dataPath + StrLen(s_dataPath);
 	if (pathEnd[-1] != '\\') *pathEnd++ = '\\';
@@ -258,7 +258,7 @@ bool Cmd_GetFoldersInFolder_Execute(COMMAND_ARGS)
 	*result = 0;
 	s_strArgBuffer[0] = '*';
 	s_strArgBuffer[1] = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, s_dataPath, &s_strArgBuffer)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, s_dataPath, &s_strArgBuffer)) return true;
 	ReplaceChr(s_dataPath, '/', '\\');
 	char *pathEnd = s_dataPath + StrLen(s_dataPath);
 	if (pathEnd[-1] != '\\') *pathEnd++ = '\\';
@@ -274,7 +274,7 @@ bool Cmd_SortFormsByType_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 formArrID, typeArrID;
-	if (!ExtractArgs(EXTRACT_ARGS, &formArrID, &typeArrID)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &formArrID, &typeArrID)) return true;
 	NVSEArrayVar *formArray = LookupArrayByID(formArrID);
 	NVSEArrayVar *typeArray = LookupArrayByID(typeArrID);
 	if (!formArray || !typeArray) return true;
@@ -318,7 +318,7 @@ bool Cmd_GetFormCountType_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 arrID, typeID;
-	if (!ExtractArgs(EXTRACT_ARGS, &arrID, &typeID)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &arrID, &typeID)) return true;
 	NVSEArrayVar *formArray = LookupArrayByID(arrID);
 	if (!formArray) return true;
 	UInt32 size;
@@ -345,7 +345,7 @@ bool Cmd_GetDefaultMessageTime_Execute(COMMAND_ARGS)
 bool Cmd_SetDefaultMessageTime_Execute(COMMAND_ARGS)
 {
 	float inval;
-	if (ExtractArgs(EXTRACT_ARGS, &inval))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &inval))
 		s_msgDisplayTime = inval;
 	return true;
 }
@@ -361,7 +361,7 @@ bool Cmd_Console_Execute(COMMAND_ARGS)
 bool Cmd_GetENBFloat_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &s_strValBuffer) || !FileExists(s_strArgBuffer)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer) || !FileExists(s_strArgBuffer)) return true;
 	char *delim = GetNextToken(s_strValBuffer, ":\\/");
 	if (!*delim) return true;
 	char strVal[0x20];
@@ -374,7 +374,7 @@ bool Cmd_SetENBFloat_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	float value;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &s_strValBuffer, &value) || !FileExists(s_strArgBuffer)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer, &value) || !FileExists(s_strArgBuffer)) return true;
 	char *delim = GetNextToken(s_strValBuffer, ":\\/");
 	if (!*delim) return true;
 	char strVal[0x20];

@@ -13,7 +13,7 @@ bool Cmd_GetArmorRCT_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	TESObjectARMO *armor;
-	if (ExtractArgs(EXTRACT_ARGS, &armor) && IS_TYPE(armor, TESObjectARMO))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &armor) && IS_TYPE(armor, TESObjectARMO))
 		resStr = armor->bipedModel.modelRDT.nifPath.m_data;
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -23,7 +23,7 @@ bool Cmd_GetArmorRCT_Execute(COMMAND_ARGS)
 bool Cmd_SetArmorRCT_Execute(COMMAND_ARGS)
 {
 	TESObjectARMO *armor;
-	if (ExtractArgs(EXTRACT_ARGS, &armor, &s_strArgBuffer) && IS_TYPE(armor, TESObjectARMO))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &armor, &s_strArgBuffer) && IS_TYPE(armor, TESObjectARMO))
 		armor->bipedModel.modelRDT.nifPath.Set(s_strArgBuffer);
 	return true;
 }
@@ -42,7 +42,7 @@ bool Cmd_GetArmorAudioTemplate_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectARMO *armor;
-	if (ExtractArgs(EXTRACT_ARGS, &armor) && IS_TYPE(armor, TESObjectARMO) && !armor->overrideSounds && armor->audioTemplate)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &armor) && IS_TYPE(armor, TESObjectARMO) && !armor->overrideSounds && armor->audioTemplate)
 		REFR_RES = armor->audioTemplate->refID;
 	return true;
 }
@@ -50,7 +50,7 @@ bool Cmd_GetArmorAudioTemplate_Execute(COMMAND_ARGS)
 bool Cmd_SetArmorAudioTemplate_Execute(COMMAND_ARGS)
 {
 	TESObjectARMO *armor, *audioTemp = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &armor, &audioTemp) && IS_TYPE(armor, TESObjectARMO) && !armor->overrideSounds && 
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &armor, &audioTemp) && IS_TYPE(armor, TESObjectARMO) && !armor->overrideSounds && 
 		(!audioTemp || (IS_TYPE(audioTemp, TESObjectARMO) && audioTemp->overrideSounds)))
 		armor->audioTemplate = audioTemp;
 	return true;
@@ -59,7 +59,7 @@ bool Cmd_SetArmorAudioTemplate_Execute(COMMAND_ARGS)
 bool Cmd_IsArmorAddon_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
-	if (ExtractArgs(EXTRACT_ARGS, &form) && IS_TYPE(form, TESObjectARMA))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && IS_TYPE(form, TESObjectARMA))
 		*result = 1;
 	else *result = 0;
 	return true;
@@ -69,7 +69,7 @@ bool Cmd_SetArmorClass_Execute(COMMAND_ARGS)
 {
 	TESObjectARMO *armor;
 	UInt32 newClass;
-	if (ExtractArgs(EXTRACT_ARGS, &armor, &newClass) && IS_TYPE(armor, TESObjectARMO) && newClass && (newClass <= 3))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &armor, &newClass) && IS_TYPE(armor, TESObjectARMO) && newClass && (newClass <= 3))
 	{
 		armor->bipedModel.bipedFlags &= ~0x88;
 		if (newClass > 1)
@@ -81,7 +81,7 @@ bool Cmd_SetArmorClass_Execute(COMMAND_ARGS)
 bool Cmd_ClearModelAltTextures_Execute(COMMAND_ARGS)
 {
 	TESObjectARMO *armor;
-	if (ExtractArgs(EXTRACT_ARGS, &armor) && IS_TYPE(armor, TESObjectARMO))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &armor) && IS_TYPE(armor, TESObjectARMO))
 	{
 		TESModelTextureSwap *texSwap = armor->bipedModel.bipedModel;
 		for (UInt32 index = 0; index < 4; index++)

@@ -19,7 +19,7 @@ bool Cmd_IsParentActivateOnly_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectREFR *refr = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &refr)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &refr)) return true;
 	if (!refr)
 	{
 		if (!thisObj) return true;
@@ -33,7 +33,7 @@ bool Cmd_IsParentActivateOnly_Execute(COMMAND_ARGS)
 bool Cmd_SetBaseForm_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
-	if (!containingObj && !thisObj->IsActor() && ExtractArgs(EXTRACT_ARGS, &form))
+	if (!containingObj && !thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
 		thisObj->baseForm = form;
 		if (thisObj->GetNiNode()) thisObj->Update3D();
@@ -58,7 +58,7 @@ bool Cmd_GetReferenceFlag_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_GetReferenceFlag_Execute(COMMAND_ARGS)
 {
 	UInt32 flag;
-	if (ExtractArgs(EXTRACT_ARGS, &flag))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &flag))
 		*result = (thisObj->flags & flag) ? 1 : 0;
 	else *result = 0;
 	DoConsolePrint(result);
@@ -68,7 +68,7 @@ bool Cmd_GetReferenceFlag_Execute(COMMAND_ARGS)
 bool Cmd_SetReferenceFlag_Execute(COMMAND_ARGS)
 {
 	UInt32 flag, inval;
-	if (ExtractArgs(EXTRACT_ARGS, &flag, &inval))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &flag, &inval))
 	{
 		if (inval) thisObj->flags |= flag;
 		else thisObj->flags &= ~flag;
@@ -86,7 +86,7 @@ bool Cmd_GetRadius_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectLIGH *light = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &light)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &light)) return true;
 	if (!light)
 	{
 		if (thisObj)
@@ -96,7 +96,7 @@ bool Cmd_GetRadius_Execute(COMMAND_ARGS)
 		}
 		return true;
 	}
-	if IS_TYPE(light, TESObjectLIGH)
+	if IS_ID(light, TESObjectLIGH)
 		*result = (int)light->radius;
 	return true;
 }
@@ -105,7 +105,7 @@ bool Cmd_SetRadius_Execute(COMMAND_ARGS)
 {
 	float value;
 	TESObjectLIGH *light = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &value, &light)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &value, &light)) return true;
 	if (!light)
 	{
 		if (thisObj)
@@ -120,7 +120,7 @@ bool Cmd_SetRadius_Execute(COMMAND_ARGS)
 		}
 		return true;
 	}
-	if IS_TYPE(light, TESObjectLIGH)
+	if IS_ID(light, TESObjectLIGH)
 		light->radius = (int)value;
 	return true;
 }

@@ -19,7 +19,7 @@ bool Cmd_GetSoundTraitNumeric_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESSound *sound;
 	UInt32 traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &sound, &traitID)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &traitID)) return true;
 	switch (traitID)
 	{
 	case 0:
@@ -61,7 +61,7 @@ bool Cmd_SetSoundTraitNumeric_Execute(COMMAND_ARGS)
 	TESSound *sound;
 	UInt32 traitID;
 	float val;
-	if (!ExtractArgs(EXTRACT_ARGS, &sound, &traitID, &val)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &traitID, &val)) return true;
 	int intVal = (int)val;
 	BSGameSound *gameSound;
 	switch (traitID)
@@ -163,7 +163,7 @@ bool Cmd_GetSoundFlag_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESSound *sound;
 	UInt32 flagID;
-	if (ExtractArgs(EXTRACT_ARGS, &sound, &flagID) && (flagID <= 15))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &flagID) && (flagID <= 15))
 		*result = (sound->soundFlags & (1 << flagID)) ? 1 : 0;
 	return true;
 }
@@ -172,7 +172,7 @@ bool Cmd_SetSoundFlag_Execute(COMMAND_ARGS)
 {
 	TESSound *sound;
 	UInt32 flagID, val;
-	if (ExtractArgs(EXTRACT_ARGS, &sound, &flagID, &val) && (flagID <= 15))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &flagID, &val) && (flagID <= 15))
 		sound->SetFlag(1 << flagID, val != 0);
 	return true;
 }
@@ -181,7 +181,7 @@ bool Cmd_GetSoundSourceFile_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	TESSound *sound;
-	if (ExtractArgs(EXTRACT_ARGS, &sound))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sound))
 		resStr = sound->soundFile.path.m_data;
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -191,7 +191,7 @@ bool Cmd_GetSoundSourceFile_Execute(COMMAND_ARGS)
 bool Cmd_SetSoundSourceFile_Execute(COMMAND_ARGS)
 {
 	TESSound *sound;
-	if (ExtractArgs(EXTRACT_ARGS, &sound, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &s_strArgBuffer))
 		sound->soundFile.Set(s_strArgBuffer);
 	return true;
 }
@@ -201,7 +201,7 @@ bool Cmd_IsSoundPlaying_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESSound *soundForm;
 	TESObjectREFR *refr = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &soundForm, &refr))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm, &refr))
 	{
 		auto sndIter = g_audioManager->playingSounds.Begin();
 		BSGameSound *gameSound;
@@ -237,7 +237,7 @@ bool Cmd_GetSoundPlayers_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESSound *soundForm;
-	if (ExtractArgs(EXTRACT_ARGS, &soundForm))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm))
 	{
 		s_tempElements.Clear();
 		BSGameSound *gameSound;
@@ -260,7 +260,7 @@ bool Cmd_GetSoundPlayers_Execute(COMMAND_ARGS)
 bool Cmd_StopSound_Execute(COMMAND_ARGS)
 {
 	TESSound *soundForm;
-	if (ExtractArgs(EXTRACT_ARGS, &soundForm))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm))
 	{
 		BSGameSound *gameSound;
 		for (auto sndIter = g_audioManager->playingSounds.Begin(); !sndIter.End(); ++sndIter)
@@ -279,14 +279,14 @@ bool Cmd_IsMusicPlaying_Execute(COMMAND_ARGS)
 {
 	UInt8 playState = 0;
 	TESForm *form = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &form))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
 		UInt8 flags = g_playingMusic->track1Active ? g_playingMusic->track1Flags : g_playingMusic->track2Flags;
 		if (flags & kMusicState_Play)
 		{
 			if (!form || (form == g_playingMusic->medLocCtrl))
 				playState = (flags & kMusicState_Pause) ? 1 : 2;
-			else if IS_TYPE(form, BGSMusicType)
+			else if IS_ID(form, BGSMusicType)
 			{
 				String *filePath = &((BGSMusicType*)form)->soundFile.path;
 				if (filePath->m_dataLen && StrBeginsCI(g_playingMusic->track1Active ? g_playingMusic->track1Path : g_playingMusic->track2Path, filePath->m_data))
@@ -301,7 +301,7 @@ bool Cmd_IsMusicPlaying_Execute(COMMAND_ARGS)
 bool Cmd_SetMusicState_Execute(COMMAND_ARGS)
 {
 	UInt32 state;
-	if (ExtractArgs(EXTRACT_ARGS, &state))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &state))
 	{
 		UInt8 *flagsPtr = g_playingMusic->track1Active ? &g_playingMusic->track1Flags : &g_playingMusic->track2Flags;
 		if (*flagsPtr & kMusicState_Play)
@@ -326,7 +326,7 @@ bool Cmd_SetMusicState_Execute(COMMAND_ARGS)
 bool Cmd_GetGameVolume_Execute(COMMAND_ARGS)
 {
 	UInt32 volType;
-	if (ExtractArgs(EXTRACT_ARGS, &volType) && (volType <= 5))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &volType) && (volType <= 5))
 		*result = g_audioManager->volumes[volType] * 100;
 	else *result = 0;
 	return true;
@@ -336,7 +336,7 @@ bool Cmd_SetGameVolume_Execute(COMMAND_ARGS)
 {
 	UInt32 volType;
 	int volLevel = -1;
-	if (ExtractArgs(EXTRACT_ARGS, &volType, &volLevel) && (volType <= 5) && (volLevel <= 100))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &volType, &volLevel) && (volType <= 5) && (volLevel <= 100))
 		g_audioManager->volumes[volType] = (volLevel < 0) ? *(float*)(0x11F6E18 + volType * 0xC) : (volLevel / 100.0);
 	return true;
 }

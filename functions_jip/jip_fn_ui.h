@@ -98,7 +98,7 @@ Menu* __fastcall GetMenuByType(UInt32 menuID)
 
 bool Cmd_IsComponentLoaded_Execute(COMMAND_ARGS)
 {
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer) && GetTargetComponent(s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer) && GetTargetComponent(s_strArgBuffer))
 		*result = 1;
 	else *result = 0;
 	return true;
@@ -107,7 +107,7 @@ bool Cmd_IsComponentLoaded_Execute(COMMAND_ARGS)
 bool Cmd_InjectUIXML_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &s_strValBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer))
 	{
 		Tile *component = GetTargetComponent(s_strArgBuffer);
 		if (component) *result = component->ReadXML(s_strValBuffer) ? 1 : 0;
@@ -140,7 +140,7 @@ bool Cmd_InjectUIComponent_Execute(COMMAND_ARGS)
 bool Cmd_GetCursorPos_Execute(COMMAND_ARGS)
 {
 	char axis;
-	if (ExtractArgs(EXTRACT_ARGS, &axis))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &axis))
 		*result = (axis == 'X') ? g_interfaceManager->cursorX : g_interfaceManager->cursorY;
 	else *result = 0;
 	return true;
@@ -149,7 +149,7 @@ bool Cmd_GetCursorPos_Execute(COMMAND_ARGS)
 bool Cmd_GetUIString_Execute(COMMAND_ARGS)
 {
 	const char *resStr = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
 		Tile::Value *value = NULL;
 		if (GetTargetComponent(s_strArgBuffer, &value) && value)
@@ -209,7 +209,7 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 menuID;
-	if (!ExtractArgs(EXTRACT_ARGS, &menuID) || (menuID > kMenuType_Max)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &menuID) || (menuID > kMenuType_Max)) return true;
 	TileMenu *tileMenu = g_tileMenuArray[menuID - kMenuType_Min];
 	Menu *menu = tileMenu ? tileMenu->menu : NULL;
 	if (!menu) return true;
@@ -222,7 +222,7 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 		case kMenuType_Dialog:
 		{
 			menuRef = ((DialogMenu*)menu)->partnerRef;
-			if (menuRef && IS_TYPE(((TESObjectREFR*)menuRef)->baseForm, BGSTalkingActivator))
+			if (menuRef && IS_ID(((TESObjectREFR*)menuRef)->baseForm, BGSTalkingActivator))
 			{
 				ExtraTalkingActor *xTalker = GetExtraType(&((TESObjectREFR*)menuRef)->extraDataList, TalkingActor);
 				if (xTalker) menuRef = xTalker->actor;
@@ -301,7 +301,7 @@ bool Cmd_GetMenuItemFilter_Execute(COMMAND_ARGS)
 {
 	*result = -1;
 	UInt32 menuID, useRef = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &menuID, &useRef)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &menuID, &useRef)) return true;
 	switch (menuID)
 	{
 		case kMenuType_Inventory:
@@ -320,7 +320,7 @@ bool Cmd_ClickMenuButton_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 times = 1;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &times) || !GetMenuMode() || !times) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &times) || !GetMenuMode() || !times) return true;
 	Tile *component = NULL;
 	Menu *parentMenu = NULL;
 	SInt32 tileID = -1;
@@ -426,7 +426,7 @@ bool Cmd_GetBarterItems_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 sold;
-	if (!ExtractArgs(EXTRACT_ARGS, &sold) || !*g_barterMenu || !(*g_barterMenu)->merchantRef) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &sold) || !*g_barterMenu || !(*g_barterMenu)->merchantRef) return true;
 	BarterMenu *brtMenu = *g_barterMenu;
 	TESObjectREFR *target = sold ? brtMenu->merchantRef->GetMerchantContainer() : g_thePlayer, *itemRef;
 	s_tempElements.Clear();
@@ -465,7 +465,7 @@ bool Cmd_GetRecipeMenuCategory_Execute(COMMAND_ARGS)
 bool Cmd_UnlockRecipeMenuQuantity_Execute(COMMAND_ARGS)
 {
 	UInt32 limit = 0x7FFFFFFF;
-	if (ExtractArgs(EXTRACT_ARGS, &limit)) SafeWrite32(0x727975, limit);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &limit)) SafeWrite32(0x727975, limit);
 	return true;
 }
 
@@ -498,7 +498,7 @@ bool Cmd_GetFontFile_Execute(COMMAND_ARGS)
 {
 	const char *resStr = NULL;
 	UInt32 fontID;
-	if (ExtractArgs(EXTRACT_ARGS, &fontID) && fontID && (fontID <= 89) && (fontID != 9))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &fontID) && fontID && (fontID <= 89) && (fontID != 9))
 	{
 		FontInfo *fontInfo = g_fontManager->fontInfos[fontID - 1];
 		if (fontInfo) resStr = fontInfo->filePath;
@@ -511,7 +511,7 @@ bool Cmd_SetFontFile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 fontID;
-	if (!ExtractArgs(EXTRACT_ARGS, &fontID, s_dataPath) || !fontID || (fontID > 89) || (fontID == 9) || !*s_dataPath) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fontID, s_dataPath) || !fontID || (fontID > 89) || (fontID == 9) || !*s_dataPath) return true;
 	FontInfo *fontInfo = s_fontInfosMap.Get(s_dataPath);
 	if (!fontInfo)
 	{
@@ -664,7 +664,7 @@ bool Cmd_ShowTextInputMenu_Execute(COMMAND_ARGS)
 	Script *callback;
 	float width, height;
 	if (!*g_textEditMenu && ExtractFormatStringArgs(3, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_ShowTextInputMenu.numParams,
-		&callback, &width, &height) && IS_TYPE(callback, Script) && ShowTextEditMenu(width, height, callback))
+		&callback, &width, &height) && IS_ID(callback, Script) && ShowTextEditMenu(width, height, callback))
 		*result = 1;
 	else *result = 0;
 	return true;
@@ -675,7 +675,7 @@ bool Cmd_SetTextInputExtendedProps_Execute(COMMAND_ARGS)
 	float posX, posY;
 	UInt32 minLength = 1, maxLength = 0, miscFlags = 0;
 	TextEditMenu *textMenu = *g_textEditMenu;
-	if (textMenu && HOOK_INSTALLED(TextInputClose) && ExtractArgs(EXTRACT_ARGS, &posX, &posY, &minLength, &maxLength, &miscFlags))
+	if (textMenu && HOOK_INSTALLED(TextInputClose) && ExtractArgsEx(EXTRACT_ARGS_EX, &posX, &posY, &minLength, &maxLength, &miscFlags))
 	{
 		if (posX > 0)
 			textMenu->tile->SetFloat(kTileValue_user2, posX);
@@ -707,9 +707,9 @@ bool Cmd_SetMessageDisabled_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	UInt32 disable;
-	if (!ExtractArgs(EXTRACT_ARGS, &form, &disable)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &disable)) return true;
 	ListNode<TESForm> *iter;
-	if IS_TYPE(form, BGSListForm)
+	if IS_ID(form, BGSListForm)
 		iter = ((BGSListForm*)form)->list.Head();
 	else
 	{
@@ -718,7 +718,7 @@ bool Cmd_SetMessageDisabled_Execute(COMMAND_ARGS)
 	}
 	do
 	{
-		if (!(form = iter->data) || NOT_TYPE(form, BGSMessage)) continue;
+		if (!(form = iter->data) || NOT_ID(form, BGSMessage)) continue;
 		form->SetJIPFlag(kHookFormFlag6_MessageDisabled, disable != 0);
 	}
 	while (iter = iter->next);
@@ -730,7 +730,7 @@ bool Cmd_SetMessageDisabled_Execute(COMMAND_ARGS)
 bool Cmd_GetMessageDisabled_Execute(COMMAND_ARGS)
 {
 	BGSMessage *message;
-	if (ExtractArgs(EXTRACT_ARGS, &message) && (message->jipFormFlags6 & kHookFormFlag6_MessageDisabled)) *result = 1;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &message) && (message->jipFormFlags6 & kHookFormFlag6_MessageDisabled)) *result = 1;
 	else *result = 0;
 	return true;
 }
@@ -738,7 +738,7 @@ bool Cmd_GetMessageDisabled_Execute(COMMAND_ARGS)
 bool Cmd_GetMessageFlags_Execute(COMMAND_ARGS)
 {
 	BGSMessage *message;
-	if (ExtractArgs(EXTRACT_ARGS, &message)) *result = message->msgFlags;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &message)) *result = message->msgFlags;
 	else *result = 0;
 	return true;
 }
@@ -747,7 +747,7 @@ bool Cmd_SetMessageFlags_Execute(COMMAND_ARGS)
 {
 	BGSMessage *message;
 	UInt32 flags;
-	if (ExtractArgs(EXTRACT_ARGS, &message, &flags) && (flags <= 3))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &message, &flags) && (flags <= 3))
 		message->msgFlags = flags;
 	return true;
 }
@@ -756,7 +756,7 @@ bool Cmd_SetMessageDisplayTime_Execute(COMMAND_ARGS)
 {
 	BGSMessage *message;
 	UInt32 displayTime;
-	if (ExtractArgs(EXTRACT_ARGS, &message, &displayTime))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &message, &displayTime))
 		message->displayTime = displayTime;
 	return true;
 }
@@ -765,7 +765,7 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt;
-	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &s_strArgBuffer) || NOT_TYPE(script, Script)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &s_strArgBuffer) || NOT_ID(script, Script)) return true;
 	char *slashPos = SlashPos(s_strArgBuffer), *hashPos = NULL;
 	if (slashPos) *slashPos = 0;
 	else
@@ -895,7 +895,7 @@ bool SetOnMenuStateEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt, menuID = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &menuID) && IS_TYPE(script, Script))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &menuID) && IS_ID(script, Script))
 	{
 		char idx;
 		bool doAdd = (addEvnt != 0);
@@ -990,7 +990,7 @@ bool Cmd_RefreshItemsList_Execute(COMMAND_ARGS)
 bool Cmd_GetBarterPriceMult_Execute(COMMAND_ARGS)
 {
 	UInt32 sellMult;
-	if (ExtractArgs(EXTRACT_ARGS, &sellMult) && *g_barterMenu)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sellMult) && *g_barterMenu)
 		*result = sellMult ? (*g_barterMenu)->sellValueMult : (*g_barterMenu)->buyValueMult;
 	else *result = 0;
 	return true;
@@ -1000,7 +1000,7 @@ bool Cmd_SetBarterPriceMult_Execute(COMMAND_ARGS)
 {
 	UInt32 sellMult;
 	float valueMult;
-	if (ExtractArgs(EXTRACT_ARGS, &sellMult, &valueMult) && *g_barterMenu)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sellMult, &valueMult) && *g_barterMenu)
 	{
 		if (sellMult) (*g_barterMenu)->sellValueMult = valueMult;
 		else (*g_barterMenu)->buyValueMult = valueMult;
@@ -1024,10 +1024,10 @@ bool Cmd_SetTerminalUIModel_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	s_strArgBuffer[0] = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &form, &s_strArgBuffer)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &s_strArgBuffer)) return true;
 	bool bRemove = !s_strArgBuffer[0];
 	ListNode<TESForm> *lstIter;
-	if IS_TYPE(form, BGSListForm)
+	if IS_ID(form, BGSListForm)
 		lstIter = ((BGSListForm*)form)->list.Head();
 	else
 	{
@@ -1039,7 +1039,7 @@ bool Cmd_SetTerminalUIModel_Execute(COMMAND_ARGS)
 	do
 	{
 		terminal = (BGSTerminal*)lstIter->data;
-		if (!terminal || NOT_TYPE(terminal, BGSTerminal)) continue;
+		if (!terminal || NOT_ID(terminal, BGSTerminal)) continue;
 		if (bRemove) DoPurgePath(s_terminalAltModelsMap.GetErase(terminal));
 		else
 		{
@@ -1080,8 +1080,8 @@ bool Cmd_ShowQuantityMenu_Execute(COMMAND_ARGS)
 {
 	Script *callback;
 	int maxCount;
-	if (!*g_quantityMenu && !s_quantityMenuScript && ExtractArgs(EXTRACT_ARGS, &callback, &maxCount) && 
-		IS_TYPE(callback, Script) && ShowQuantityMenu(maxCount, QuantityMenuCallback, maxCount))
+	if (!*g_quantityMenu && !s_quantityMenuScript && ExtractArgsEx(EXTRACT_ARGS_EX, &callback, &maxCount) && 
+		IS_ID(callback, Script) && ShowQuantityMenu(maxCount, QuantityMenuCallback, maxCount))
 		s_quantityMenuScript = callback;
 	return true;
 }
@@ -1217,7 +1217,7 @@ bool Cmd_ToggleCraftingMessages_Execute(COMMAND_ARGS)
 {
 	*result = s_craftingMessages;
 	UInt32 toggle;
-	if (NUM_ARGS && ExtractArgs(EXTRACT_ARGS, &toggle) && (s_craftingMessages == !toggle))
+	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle) && (s_craftingMessages == !toggle))
 	{
 		s_craftingMessages = !s_craftingMessages;
 		SafeWriteBuf(0x728933, s_craftingMessages ? "\x8D\x4D\xCC\xE8\x75" : "\xE9\xC4\x00\x00\x00", 5);
@@ -1228,7 +1228,7 @@ bool Cmd_ToggleCraftingMessages_Execute(COMMAND_ARGS)
 bool Cmd_SetCursorPos_Execute(COMMAND_ARGS)
 {
 	float posX, posY;
-	if (ExtractArgs(EXTRACT_ARGS, &posX, &posY) && GetMenuMode())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posX, &posY) && GetMenuMode())
 	{
 		NiNode *cursorNode = g_interfaceManager->cursor ? g_interfaceManager->cursor->node : NULL;
 		if (cursorNode)
@@ -1243,7 +1243,7 @@ bool Cmd_SetCursorPos_Execute(COMMAND_ARGS)
 
 bool Cmd_UnloadUIComponent_Execute(COMMAND_ARGS)
 {
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
 		Tile *component = GetTargetComponent(s_strArgBuffer);
 		if (component) component->Destroy(true);
@@ -1275,7 +1275,7 @@ bool Cmd_ClearMessageQueue_Execute(COMMAND_ARGS)
 bool Cmd_SetSystemColor_Execute(COMMAND_ARGS)
 {
 	UInt32 type, red, green, blue;
-	if (ExtractArgs(EXTRACT_ARGS, &type, &red, &green, &blue) && type && (type <= 5))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type, &red, &green, &blue) && type && (type <= 5))
 	{
 		DListNode<SystemColorManager::SystemColor> *colorNode = g_sysColorManager->sysColors.Head()->Advance(type - 1);
 		if (colorNode && colorNode->data)
@@ -1434,7 +1434,7 @@ bool Cmd_EnableImprovedRecipeMenu_Execute(COMMAND_ARGS)
 bool Cmd_ClickMenuTile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer) && GetMenuMode())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer) && GetMenuMode())
 	{
 		Tile *component = GetTargetComponent(s_strArgBuffer);
 		if (component && (component->GetValueFloat(kTileValue_target) > 0))
@@ -1489,7 +1489,7 @@ bool Cmd_TogglePipBoyLight_Execute(COMMAND_ARGS)
 {
 	UInt32 turnON, currState = ThisCall<bool>(0x822B90, &g_thePlayer->magicTarget, &g_pipBoyLight->magicItem, 1);
 	*result = (int)currState;
-	if (NUM_ARGS && ExtractArgs(EXTRACT_ARGS, &turnON) && (turnON != currState))
+	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &turnON) && (turnON != currState))
 		TogglePipBoyLight(turnON);
 	return true;
 }
@@ -1579,7 +1579,7 @@ bool Cmd_SetItemFilter_Execute(COMMAND_ARGS)
 	if (s_itemFilterString)
 	{
 		*s_itemFilterString = 0;
-		ExtractArgs(EXTRACT_ARGS, s_itemFilterString);
+		ExtractArgsEx(EXTRACT_ARGS_EX, s_itemFilterString);
 	}
 	return true;
 }
@@ -1588,7 +1588,7 @@ bool Cmd_ToggleHUDCursor_Execute(COMMAND_ARGS)
 {
 	*result = s_HUDCursorMode;
 	UInt32 toggle;
-	if (NUM_ARGS && ExtractArgs(EXTRACT_ARGS, &toggle) && (g_interfaceManager->currentMode == 1) && !s_controllerReady && (s_HUDCursorMode == !toggle))
+	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle) && (g_interfaceManager->currentMode == 1) && !s_controllerReady && (s_HUDCursorMode == !toggle))
 	{
 		s_HUDCursorMode = !s_HUDCursorMode;
 		if (toggle)
@@ -1656,7 +1656,7 @@ bool Cmd_SetUIFloatGradual_Execute(COMMAND_ARGS)
 	float startVal, endVal, timer;
 	UInt32 changeMode = 0;
 	UInt8 numArgs = NUM_ARGS;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &startVal, &endVal, &timer, &changeMode))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &startVal, &endVal, &timer, &changeMode))
 	{
 		Tile::Value *tileVal = NULL;
 		Tile *component = GetTargetComponent(s_strArgBuffer, &tileVal);
@@ -1682,7 +1682,7 @@ bool Cmd_SetUIFloatGradual_Execute(COMMAND_ARGS)
 bool Cmd_CloseActiveMenu_Execute(COMMAND_ARGS)
 {
 	UInt32 closeAll = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &closeAll) && (g_interfaceManager->currentMode > 1))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &closeAll) && (g_interfaceManager->currentMode > 1))
 	{
 		UInt32 index = 10, *mnStack = &g_interfaceManager->menuStack[9], menuID;
 		do
@@ -1710,7 +1710,7 @@ bool Cmd_CloseActiveMenu_Execute(COMMAND_ARGS)
 bool Cmd_ShowLevelUpMenuEx_Execute(COMMAND_ARGS)
 {
 	UInt32 skillPoints;
-	if (ExtractArgs(EXTRACT_ARGS, &skillPoints))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &skillPoints))
 	{
 		CdeclCall(0x784C80);
 		LevelUpMenu *menu = *(LevelUpMenu**)0x11D9FDC;

@@ -8,7 +8,7 @@ bool Cmd_GetPerkFlag_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSPerk *perk;
 	UInt32 flagID;
-	if (!ExtractArgs(EXTRACT_ARGS, &perk, &flagID)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &flagID)) return true;
 	switch (flagID)
 	{
 		case 0:
@@ -27,7 +27,7 @@ bool Cmd_SetPerkFlag_Execute(COMMAND_ARGS)
 {
 	BGSPerk *perk;
 	UInt32 flagID, value;
-	if (!ExtractArgs(EXTRACT_ARGS, &perk, &flagID, &value)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &flagID, &value)) return true;
 	switch (flagID)
 	{
 		case 0:

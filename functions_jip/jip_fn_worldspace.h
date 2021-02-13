@@ -15,7 +15,7 @@ bool Cmd_GetWorldspaceFlag_Execute(COMMAND_ARGS)
 {
 	TESWorldSpace *wspc;
 	UInt32 flagID;
-	if (ExtractArgs(EXTRACT_ARGS, &wspc, &flagID) && (flagID <= 7))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc, &flagID) && (flagID <= 7))
 		*result = (wspc->flags & (1 << flagID)) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -25,7 +25,7 @@ bool Cmd_SetWorldspaceFlag_Execute(COMMAND_ARGS)
 {
 	TESWorldSpace *wspc;
 	UInt32 flagID, val;
-	if (ExtractArgs(EXTRACT_ARGS, &wspc, &flagID, &val) && (flagID <= 7))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc, &flagID, &val) && (flagID <= 7))
 	{
 		flagID = 1 << flagID;
 		if (val) wspc->flags |= flagID;
@@ -38,7 +38,7 @@ bool Cmd_GetWorldspaceClimate_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESWorldSpace *wldSpc;
-	if (ExtractArgs(EXTRACT_ARGS, &wldSpc))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wldSpc))
 	{
 		while (wldSpc->parent && (wldSpc->parentFlags & 0x10))
 			wldSpc = wldSpc->parent;
@@ -53,7 +53,7 @@ bool Cmd_SetWorldspaceClimate_Execute(COMMAND_ARGS)
 {
 	TESWorldSpace *wldSpc;
 	TESClimate *climate = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &wldSpc, &climate) && (!climate || IS_TYPE(climate, TESClimate)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wldSpc, &climate) && (!climate || IS_ID(climate, TESClimate)))
 	{
 		if (wldSpc->parent && (wldSpc->parentFlags & 16)) wldSpc->parentFlags -= 16;
 		wldSpc->climate = climate;
@@ -70,7 +70,7 @@ bool Cmd_GetWorldspaceNoiseTexture_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	TESWorldSpace *wspc;
-	if (ExtractArgs(EXTRACT_ARGS, &wspc) && IS_TYPE(wspc, TESWorldSpace))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc) && IS_ID(wspc, TESWorldSpace))
 		resStr = wspc->waterNoiseTexture.ddsPath.m_data;
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -80,7 +80,7 @@ bool Cmd_GetWorldspaceNoiseTexture_Execute(COMMAND_ARGS)
 bool Cmd_SetWorldspaceNoiseTexture_Execute(COMMAND_ARGS)
 {
 	TESWorldSpace *wspc;
-	if (ExtractArgs(EXTRACT_ARGS, &wspc, &s_strArgBuffer) && IS_TYPE(wspc, TESWorldSpace))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc, &s_strArgBuffer) && IS_ID(wspc, TESWorldSpace))
 		wspc->waterNoiseTexture.ddsPath.Set(s_strArgBuffer);
 	return true;
 }
@@ -89,7 +89,7 @@ bool Cmd_GetWorldspaceWaterType_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESWorldSpace *wldSpc;
-	if (ExtractArgs(EXTRACT_ARGS, &wldSpc) && wldSpc->waterFormFirst)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wldSpc) && wldSpc->waterFormFirst)
 		REFR_RES = wldSpc->waterFormFirst->refID;
 	return true;
 }
@@ -98,7 +98,7 @@ bool Cmd_SetWorldspaceWaterType_Execute(COMMAND_ARGS)
 {
 	TESWorldSpace *wldSpc;
 	TESWaterForm *water = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &wldSpc, &water) && (!water || IS_TYPE(water, TESWaterForm)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wldSpc, &water) && (!water || IS_ID(water, TESWaterForm)))
 		wldSpc->waterFormFirst = water;
 	return true;
 }
@@ -107,7 +107,7 @@ bool Cmd_GetWorldspaceImagespace_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESWorldSpace *wldSpc;
-	if (ExtractArgs(EXTRACT_ARGS, &wldSpc) && wldSpc->imageSpace)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wldSpc) && wldSpc->imageSpace)
 		REFR_RES = wldSpc->imageSpace->refID;
 	return true;
 }
@@ -116,7 +116,7 @@ bool Cmd_SetWorldspaceImagespace_Execute(COMMAND_ARGS)
 {
 	TESWorldSpace *wldSpc;
 	TESImageSpace *imgSpc = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &wldSpc, &imgSpc) && (!imgSpc || IS_TYPE(imgSpc, TESImageSpace)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wldSpc, &imgSpc) && (!imgSpc || IS_ID(imgSpc, TESImageSpace)))
 		wldSpc->imageSpace = imgSpc;
 	return true;
 }

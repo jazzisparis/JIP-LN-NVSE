@@ -78,7 +78,7 @@ DEFINE_COMMAND_PLUGIN(GetRayCastMaterial, , 1, 2, kParams_JIP_OneOptionalInt_One
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
 	UInt32 flag;
-	if (ExtractArgs(EXTRACT_ARGS, &flag))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &flag))
 	{
 		if (flag) thisObj->flags |= TESObjectREFR::kFlags_Persistent;
 		else thisObj->flags &= ~TESObjectREFR::kFlags_Persistent;
@@ -91,13 +91,23 @@ bool Cmd_GetObjectDimensions_Execute(COMMAND_ARGS)
 	*result = 0;
 	char axis;
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &axis, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &axis, &form)) return true;
 	float scale;
 	if (!form)
 	{
 		if (!thisObj) return true;
-		form = thisObj->baseForm;
 		scale = thisObj->scale;
+		if (thisObj->IsActor())
+		{
+			Actor *actor = (Actor*)thisObj;
+			if (actor->baseProcess && (actor->baseProcess->processLevel <= 1))
+			{
+				BSBound *bounds = ((MiddleHighProcess*)actor->baseProcess)->boundingBox;
+				if (bounds) *result = bounds->dimensions[axis - 'X'] * 2 * scale;
+			}
+			return true;
+		}
+		form = thisObj->baseForm;
 	}
 	else scale = 1;
 	TESBoundObject *object = DYNAMIC_CAST(form, TESForm, TESBoundObject);
@@ -111,7 +121,7 @@ bool Cmd_GetIsItem_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form)) return true;
 	if (!form)
 	{
 		if (!thisObj) return true;
@@ -125,7 +135,7 @@ bool Cmd_SetLinkedReference_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectREFR *linkRef = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &linkRef) && thisObj->SetLinkedRef(linkRef, scriptObj->GetOverridingModIdx()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &linkRef) && thisObj->SetLinkedRef(linkRef, scriptObj->GetOverridingModIdx()))
 	{
 		*result = 1;
 		s_dataChangedFlags |= kChangedFlag_LinkedRefs;
@@ -178,7 +188,7 @@ bool Cmd_GetPrimitiveBound_Execute(COMMAND_ARGS)
 {
 	*result = -1;
 	char axis;
-	if (ExtractArgs(EXTRACT_ARGS, &axis))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &axis))
 	{
 		ExtraPrimitive *xPrimitive = GetExtraType(&thisObj->extraDataList, Primitive);
 		if (xPrimitive && xPrimitive->primitive)
@@ -192,7 +202,7 @@ bool Cmd_SetPrimitiveBound_Execute(COMMAND_ARGS)
 	*result = -1;
 	char axis;
 	float val;
-	if (!ExtractArgs(EXTRACT_ARGS, &axis, &val)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &axis, &val)) return true;
 	ExtraPrimitive *xPrimitive = GetExtraType(&thisObj->extraDataList, Primitive);
 	if (!xPrimitive || !xPrimitive->primitive) return true;
 	BGSPrimitive *primitive = xPrimitive->primitive;
@@ -209,8 +219,8 @@ bool Cmd_AddPrimitive_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 type;
 	float boundX, boundY, boundZ;
-	if (ExtractArgs(EXTRACT_ARGS, &type, &boundX, &boundY, &boundZ) && (type >= 1) && (type <= 3) &&
-		((thisObj->baseForm->refID == 0x21) || (IS_TYPE(thisObj->baseForm, TESObjectACTI) && (type != 3))) &&
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type, &boundX, &boundY, &boundZ) && (type >= 1) && (type <= 3) &&
+		((thisObj->baseForm->refID == 0x21) || (IS_ID(thisObj->baseForm, TESObjectACTI) && (type != 3))) &&
 		!thisObj->extraDataList.HasType(kExtraData_Primitive))
 	{
 		ExtraPrimitive *xPrimitive = ExtraPrimitive::Create();
@@ -253,7 +263,7 @@ bool Cmd_MoveToCell_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	NiVector3 posVector;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &posVector.x, &posVector.y, &posVector.z) && thisObj->MoveToCell(form, &posVector))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &posVector.x, &posVector.y, &posVector.z) && thisObj->MoveToCell(form, &posVector))
 		*result = 1;
 	else *result = 0;
 	return true;
@@ -280,7 +290,7 @@ bool Cmd_GetCenterPos_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char axis;
-	if (ExtractArgs(EXTRACT_ARGS, &axis))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &axis))
 	{
 		TESBoundObject *object = DYNAMIC_CAST(thisObj->baseForm, TESForm, TESBoundObject);
 		if (object)
@@ -295,7 +305,7 @@ bool Cmd_GetCenterPos_Execute(COMMAND_ARGS)
 bool Cmd_GetRefType_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *objRefr = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &objRefr) && (objRefr || (objRefr = thisObj)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &objRefr) && (objRefr || (objRefr = thisObj)))
 	{
 		*result = objRefr->typeID;
 		DoConsolePrint(result);
@@ -307,7 +317,7 @@ bool Cmd_GetRefType_Execute(COMMAND_ARGS)
 bool Cmd_ToggleObjectCollision_Execute(COMMAND_ARGS)
 {
 	UInt32 enable;
-	if (ExtractArgs(EXTRACT_ARGS, &enable) && !thisObj->IsActor() && !kInventoryType[thisObj->baseForm->typeID])
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && !thisObj->IsActor() && !kInventoryType[thisObj->baseForm->typeID])
 	{
 		NiNode *rootNode = enable ? thisObj->GetNiNode() : thisObj->GetNiNodeCopyIfTemplate();
 		if (rootNode)
@@ -320,7 +330,7 @@ bool Cmd_GetMaterialPropertyValue_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &traitID) || (traitID > 8)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &traitID) || (traitID > 8)) return true;
 	NiAVObject *block = thisObj->GetNiBlock(s_strArgBuffer);
 	if (!block) return true;
 	NiMaterialProperty *matProp = (NiMaterialProperty*)block->GetProperty(2);
@@ -353,7 +363,7 @@ bool Cmd_SetMaterialPropertyValue_Execute(COMMAND_ARGS)
 {
 	UInt32 traitID;
 	float value;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &traitID, &value) && (traitID <= 8) && (value >= 0))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &traitID, &value) && (traitID <= 8) && (value >= 0))
 	{
 		NiNode *niNode = thisObj->GetNiNode();
 		if (niNode)
@@ -430,7 +440,7 @@ bool __fastcall GetHasContact(TESObjectREFR *thisObj, TESForm *form)
 bool Cmd_GetHasContact_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
-	if (ExtractArgs(EXTRACT_ARGS, &form))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 		*result = GetHasContact(thisObj, form);
 	else *result = 0;
 	return true;
@@ -477,7 +487,7 @@ bool __fastcall GetHasContactBase(TESObjectREFR *thisObj, TESForm *form)
 bool Cmd_GetHasContactBase_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
-	if (ExtractArgs(EXTRACT_ARGS, &form))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 		*result = GetHasContactBase(thisObj, form);
 	else *result = 0;
 	return true;
@@ -523,7 +533,7 @@ bool __fastcall GetHasContactType(TESObjectREFR *thisObj, UInt32 typeID)
 bool Cmd_GetHasContactType_Execute(COMMAND_ARGS)
 {
 	UInt32 typeID;
-	if (ExtractArgs(EXTRACT_ARGS, &typeID))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &typeID))
 		*result = GetHasContactType(thisObj, typeID);
 	else *result = 0;
 	return true;
@@ -594,7 +604,7 @@ bool Cmd_GetHasPhantom_Execute(COMMAND_ARGS)
 bool Cmd_GetInteractionDisabled_Execute(COMMAND_ARGS)
 {
 	TESForm *form = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &form) && (form || (form = thisObj)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (form || (form = thisObj)))
 		*result = (form->jipFormFlags6 & kHookFormFlag6_NoPCActivation) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -604,7 +614,7 @@ bool Cmd_SetInteractionDisabled_Execute(COMMAND_ARGS)
 {
 	UInt32 disable;
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &disable, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &disable, &form)) return true;
 	if (!form)
 	{
 		if (!thisObj) return true;
@@ -623,7 +633,7 @@ bool Cmd_SetInteractionDisabled_Execute(COMMAND_ARGS)
 bool Cmd_GetInteractionDisabledType_Execute(COMMAND_ARGS)
 {
 	UInt32 typeID;
-	if (ExtractArgs(EXTRACT_ARGS, &typeID) && (typeID < kFormType_Max) && kValidFilterForm[typeID])
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &typeID) && (typeID < kFormType_Max) && kValidFilterForm[typeID])
 		*result = s_activationDisabledTypes[typeID] ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -632,7 +642,7 @@ bool Cmd_GetInteractionDisabledType_Execute(COMMAND_ARGS)
 bool Cmd_SetInteractionDisabledType_Execute(COMMAND_ARGS)
 {
 	UInt32 disable, typeID;
-	if (ExtractArgs(EXTRACT_ARGS, &disable, &typeID) && (typeID < kFormType_Max) && kValidFilterForm[typeID] && (!disable == s_activationDisabledTypes[typeID]))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &disable, &typeID) && (typeID < kFormType_Max) && kValidFilterForm[typeID] && (!disable == s_activationDisabledTypes[typeID]))
 	{
 		bool add = (disable != 0);
 		s_activationDisabledTypes[typeID] = add;
@@ -682,7 +692,7 @@ bool Cmd_RefHasMapMarker_Execute(COMMAND_ARGS)
 bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 {
 	NiVector3 posVector;
-	if (ExtractArgs(EXTRACT_ARGS, &posVector.x, &posVector.y, &posVector.z))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posVector.x, &posVector.y, &posVector.z))
 		thisObj->SetPos(&posVector);
 	return true;
 }
@@ -692,7 +702,7 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 	*result = 0;
 	float maxRange = 10000.0F, posXmod = 0, posYmod = 0, posZmod = 0;
 	UInt8 numArgs = NUM_ARGS;
-	if (ExtractArgs(EXTRACT_ARGS, &maxRange, &posXmod, &posYmod, &posZmod))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &posXmod, &posYmod, &posZmod))
 	{
 		NiVector3 coords;
 		if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, maxRange))
@@ -712,7 +722,7 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 bool Cmd_SetRefName_Execute(COMMAND_ARGS)
 {
 	UInt8 numArgs = NUM_ARGS;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer) || !thisObj->ValidForHooks()) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer) || !thisObj->ValidForHooks()) return true;
 	if (numArgs)
 	{
 		char **namePtr;
@@ -740,7 +750,7 @@ bool Cmd_SetRefName_Execute(COMMAND_ARGS)
 bool Cmd_SetAngleEx_Execute(COMMAND_ARGS)
 {
 	NiVector3 rotVector;
-	if (ExtractArgs(EXTRACT_ARGS, &rotVector.x, &rotVector.y, &rotVector.z))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &rotVector.x, &rotVector.y, &rotVector.z))
 		thisObj->SetAngle(&rotVector);
 	return true;
 }
@@ -748,7 +758,7 @@ bool Cmd_SetAngleEx_Execute(COMMAND_ARGS)
 bool Cmd_GetTeleportDoor_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if IS_TYPE(thisObj->baseForm, TESObjectDOOR)
+	if IS_ID(thisObj->baseForm, TESObjectDOOR)
 	{
 		ExtraTeleport *xTeleport = GetExtraType(&thisObj->extraDataList, Teleport);
 		if (xTeleport && xTeleport->data && xTeleport->data->linkedDoor)
@@ -764,7 +774,7 @@ bool Cmd_SetOnCriticalHitEventHandler_Execute(COMMAND_ARGS)
 	Actor *target = NULL;
 	TESObjectREFR *source = NULL;
 	TESObjectWEAP *weapon = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &target, &source, &weapon) || NOT_TYPE(script, Script)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &target, &source, &weapon) || NOT_ID(script, Script)) return true;
 	if (target)
 	{
 		if (!target->IsActor())
@@ -779,7 +789,7 @@ bool Cmd_SetOnCriticalHitEventHandler_Execute(COMMAND_ARGS)
 				if (!weapon) return true;
 				source = NULL;
 			}
-			if (weapon && NOT_TYPE(weapon, TESObjectWEAP))
+			if (weapon && NOT_ID(weapon, TESObjectWEAP))
 				return true;
 		}
 	}
@@ -809,7 +819,7 @@ bool Cmd_GetCrosshairWater_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESWaterForm *water = NULL;
 	TESObjectREFR *refr = g_interfaceManager->crosshairRef;
-	if (refr && IS_TYPE(refr->baseForm, BGSPlaceableWater))
+	if (refr && IS_ID(refr->baseForm, BGSPlaceableWater))
 		water = ((BGSPlaceableWater*)refr->baseForm)->water;
 	if (water) REFR_RES = water->refID;
 	DoConsolePrint(water);
@@ -820,16 +830,18 @@ bool Cmd_IsAnimPlayingEx_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 category, subType = 0, flags = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &category, &subType, &flags))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &category, &subType, &flags))
 	{
 		AnimData *animData = thisObj->GetAnimData();
 		if (animData)
 		{
+			UInt32 animID;
 			const AnimGroupClassify *classify;
 			for (UInt16 groupID : animData->animGroupIDs)
 			{
-				if (groupID >= 245) continue;
-				classify = &s_animGroupClassify[groupID];
+				animID = groupID & 0xFF;
+				if (animID >= 245) continue;
+				classify = &s_animGroupClassify[animID];
 				if ((classify->category == category) && ((category >= 4) || ((!subType || (classify->subType == subType)) && (!flags || (classify->flags & flags)))))
 				{
 					*result = 1;
@@ -857,7 +869,7 @@ bool Cmd_PushObject_Execute(COMMAND_ARGS)
 {
 	hkVector4 forceVector;
 	TESObjectREFR *refr = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &forceVector.x, &forceVector.y, &forceVector.z, &forceVector.w, &refr))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &forceVector.x, &forceVector.y, &forceVector.z, &forceVector.w, &refr))
 	{
 		NiNode *niNode = thisObj->GetNiNode();
 		if (niNode)
@@ -876,7 +888,7 @@ bool Cmd_MoveToContainer_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *target;
 	UInt32 clrOwner = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &target, &clrOwner) && kInventoryType[thisObj->baseForm->typeID] && target->GetContainer())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &target, &clrOwner) && kInventoryType[thisObj->baseForm->typeID] && target->GetContainer())
 	{
 		SInt32 quantity = 1;
 		ExtraDataList *xDataList = NULL;
@@ -898,7 +910,7 @@ bool Cmd_GetNifBlockTranslation_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 getWorld = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &getWorld))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &getWorld))
 	{
 		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
 		if (niBlock)
@@ -915,7 +927,7 @@ bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 {
 	NiVector3 transltn;
 	UInt32 transform = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &transltn.x, &transltn.y, &transltn.z, &transform))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &transltn.x, &transltn.y, &transltn.z, &transform))
 	{
 		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
 		if (niBlock)
@@ -932,7 +944,7 @@ bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 getWorld = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &getWorld))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &getWorld))
 	{
 		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
 		if (niBlock)
@@ -951,7 +963,7 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 {
 	float rotX, rotY, rotZ;
 	UInt32 transform = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &rotX, &rotY, &rotZ, &transform))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &rotX, &rotY, &rotZ, &transform))
 	{
 		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
 		if (niBlock)
@@ -968,7 +980,7 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 bool Cmd_GetNifBlockScale_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
 		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
 		if (niBlock) *result = niBlock->m_localScale;
@@ -979,7 +991,7 @@ bool Cmd_GetNifBlockScale_Execute(COMMAND_ARGS)
 bool Cmd_SetNifBlockScale_Execute(COMMAND_ARGS)
 {
 	float newScale;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &newScale))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &newScale))
 	{
 		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
 		if (niBlock)
@@ -996,7 +1008,7 @@ bool Cmd_GetNifBlockFlag_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 flagID;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &flagID) && (flagID <= 31))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &flagID) && (flagID <= 31))
 	{
 		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
 		if (niBlock) *result = (niBlock->m_flags & (1 << flagID)) != 0;
@@ -1007,7 +1019,7 @@ bool Cmd_GetNifBlockFlag_Execute(COMMAND_ARGS)
 bool Cmd_SetNifBlockFlag_Execute(COMMAND_ARGS)
 {
 	UInt32 flagID, doSet;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &flagID, &doSet) && (flagID <= 31))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &flagID, &doSet) && (flagID <= 31))
 	{
 		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
 		if (niBlock)
@@ -1023,7 +1035,7 @@ bool Cmd_GetObjectVelocity_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char axis = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &axis))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &axis))
 	{
 		NiNode *objNode = thisObj->GetNiNode();
 		if (objNode && objNode->m_collisionObject)
@@ -1048,7 +1060,7 @@ bool Cmd_GetAngularVelocity_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char axis;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &axis))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &axis))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(s_strArgBuffer);
 		if (rigidBody) *result = rigidBody->motion.angVelocity[axis - 'X'];
@@ -1060,7 +1072,7 @@ bool Cmd_SetAngularVelocity_Execute(COMMAND_ARGS)
 {
 	char axis;
 	float velocity;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &axis, &velocity))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &axis, &velocity))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(s_strArgBuffer);
 		if (rigidBody)
@@ -1079,7 +1091,7 @@ bool Cmd_PlaceAtCell_Execute(COMMAND_ARGS)
 	UInt32 count;
 	TESObjectCELL *worldOrCell;
 	TESObjectREFR *tempPosMarker = s_tempPosMarker;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &count, &worldOrCell, &tempPosMarker->posX, &tempPosMarker->posY, &tempPosMarker->posZ))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &count, &worldOrCell, &tempPosMarker->posX, &tempPosMarker->posY, &tempPosMarker->posZ))
 	{
 		if NOT_ID(worldOrCell, TESObjectCELL)
 		{
@@ -1101,7 +1113,7 @@ bool Cmd_GetRayCastPos_Execute(COMMAND_ARGS)
 	float posZmod = 0;
 	UInt32 filter = 6;
 	s_strArgBuffer[0] = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &outX, &outY, &outZ, &posZmod, &filter, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outX, &outY, &outZ, &posZmod, &filter, &s_strArgBuffer))
 	{
 		NiNode *objNode = thisObj->GetNode(s_strArgBuffer);
 		if (objNode)
@@ -1124,7 +1136,7 @@ bool Cmd_GetRayCastPos_Execute(COMMAND_ARGS)
 bool Cmd_GetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 {
 	*result = -1;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
 		NiNode *rootNode = thisObj->GetNiNode();
 		if (rootNode)
@@ -1143,7 +1155,7 @@ bool Cmd_GetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 bool Cmd_SetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 {
 	float frequency;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &frequency))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &frequency))
 	{
 		NiNode *rootNode = thisObj->GetNiNode();
 		if (rootNode)
@@ -1170,7 +1182,7 @@ bool Cmd_MoveToNode_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESObjectREFR *targetRef;
 	NiVector3 posMods(0, 0, 0);
-	if (ExtractArgs(EXTRACT_ARGS, &targetRef, &s_strArgBuffer, &posMods.x, &posMods.y, &posMods.z))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &targetRef, &s_strArgBuffer, &posMods.x, &posMods.y, &posMods.z))
 	{
 		NiNode *targetNode = targetRef->GetNode(s_strArgBuffer);
 		if (targetNode)
@@ -1207,7 +1219,7 @@ bool Cmd_GetPlayerPerks_Execute(COMMAND_ARGS)
 bool Cmd_GetNifBlockParentNodes_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
 		NiNode *rootNode = thisObj->GetNiNode();
 		if (rootNode)
@@ -1319,7 +1331,7 @@ bool Cmd_AttachLight_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESObjectLIGH *lightForm;
 	NiVector3 offsetMod(0, 0, 0);
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &lightForm, &offsetMod.x, &offsetMod.y, &offsetMod.z) && IS_TYPE(lightForm, TESObjectLIGH))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &lightForm, &offsetMod.x, &offsetMod.y, &offsetMod.z) && IS_ID(lightForm, TESObjectLIGH))
 	{
 		NiNode *objNode = thisObj->GetNode(s_strArgBuffer);
 		if (objNode)
@@ -1338,7 +1350,10 @@ bool Cmd_AttachLight_Execute(COMMAND_ARGS)
 			{
 				pointLight->unkA8 = 0x12E;
 				pointLight->ambientColor = {1, 1, 1};
-				pointLight->radius = (int)lightForm->radius;
+				float radius = (int)lightForm->radius;
+				pointLight->radius = radius;
+				pointLight->radiusE4 = radius;
+				pointLight->radiusE8 = radius;
 				pointLight->attenuation2 = 1;
 				pointLight->attenuation3 = 0;
 				pointLight->m_localTranslate = offsetMod;
@@ -1355,7 +1370,7 @@ bool Cmd_AttachLight_Execute(COMMAND_ARGS)
 
 bool Cmd_RemoveLight_Execute(COMMAND_ARGS)
 {
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
 		auto findID = s_attachedLightsMap.Find(thisObj->refID);
 		if (!findID) return true;
@@ -1389,7 +1404,7 @@ bool Cmd_GetExtraFloat_Execute(COMMAND_ARGS)
 bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
 {
 	float fltVal;
-	if (ExtractArgs(EXTRACT_ARGS, &fltVal))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &fltVal))
 	{
 		ExtraDataList *xData = NULL;
 		InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
@@ -1420,7 +1435,7 @@ bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
 bool Cmd_SetLinearVelocity_Execute(COMMAND_ARGS)
 {
 	AlignedVector4 velocity;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &velocity.x, &velocity.y, &velocity.z))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &velocity.x, &velocity.y, &velocity.z))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(s_strArgBuffer);
 		if (rigidBody)
@@ -1510,7 +1525,7 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 	UInt32 syncRot = 0;
 	s_syncPositionMods.z = 0;
 	if (NUM_ARGS) s_syncPositionNode[0] = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &targetRef, &syncRot, &s_syncPositionMods.z, &s_syncPositionNode))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &targetRef, &syncRot, &s_syncPositionMods.z, &s_syncPositionNode))
 	{
 		if (targetRef)
 		{
@@ -1588,7 +1603,7 @@ bool Cmd_GetRayCastRef_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 filter = 6;
 	s_strArgBuffer[0] = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &filter, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filter, &s_strArgBuffer))
 	{
 		NiNode *objNode = thisObj->GetNode(s_strArgBuffer);
 		if (objNode)
@@ -1610,7 +1625,7 @@ bool Cmd_GetRayCastMaterial_Execute(COMMAND_ARGS)
 	*result = -1;
 	UInt32 filter = 6;
 	s_strArgBuffer[0] = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &filter, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filter, &s_strArgBuffer))
 	{
 		NiNode *objNode = thisObj->GetNode(s_strArgBuffer);
 		if (objNode)

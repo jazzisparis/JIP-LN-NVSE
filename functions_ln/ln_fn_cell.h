@@ -18,7 +18,7 @@ bool Cmd_GetCellRefs_Execute(COMMAND_ARGS)		// Deprecated
 bool Cmd_GetCellWaterHeight_Execute(COMMAND_ARGS)
 {
 	TESObjectCELL *cell = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &cell) && (cell || (cell = g_thePlayer->parentCell)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && (cell || (cell = g_thePlayer->parentCell)))
 		*result = cell->waterHeight;
 	else *result = 0;
 	return true;
@@ -28,7 +28,7 @@ bool Cmd_SetCellWaterHeight_Execute(COMMAND_ARGS)
 {
 	float height;
 	TESObjectCELL *cell = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &height, &cell) && (cell || (cell = g_thePlayer->parentCell)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &height, &cell) && (cell || (cell = g_thePlayer->parentCell)))
 		cell->waterHeight = height;
 	return true;
 }
@@ -37,7 +37,7 @@ bool Cmd_GetCellWaterForm_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectCELL *cell = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &cell) && (cell || (cell = g_thePlayer->parentCell)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && (cell || (cell = g_thePlayer->parentCell)))
 	{
 		ExtraCellWaterType *xCellWater = GetExtraType(&cell->extraDataList, CellWaterType);
 		if (xCellWater && xCellWater->waterForm)
@@ -52,7 +52,7 @@ bool Cmd_GetCellImageSpace_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectCELL *cell;
-	if (ExtractArgs(EXTRACT_ARGS, &cell))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell))
 	{
 		ExtraCellImageSpace *xCellIS = GetExtraType(&cell->extraDataList, CellImageSpace);
 		if (xCellIS && xCellIS->imageSpace) REFR_RES = xCellIS->imageSpace->refID;
@@ -64,7 +64,7 @@ bool Cmd_GetCellLightingTemplate_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectCELL *cell;
-	if (ExtractArgs(EXTRACT_ARGS, &cell) && cell->lightingTemplate)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && cell->lightingTemplate)
 		REFR_RES = cell->lightingTemplate->refID;
 	return true;
 }
@@ -73,7 +73,7 @@ bool Cmd_SetCellLightingTemplate_Execute(COMMAND_ARGS)
 {
 	TESObjectCELL *cell;
 	BGSLightingTemplate *lgtTemp = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &cell, &lgtTemp) && (!lgtTemp || IS_TYPE(lgtTemp, BGSLightingTemplate)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &lgtTemp) && (!lgtTemp || IS_ID(lgtTemp, BGSLightingTemplate)))
 		cell->lightingTemplate = lgtTemp;
 	return true;
 }
@@ -82,7 +82,7 @@ bool Cmd_GetCellFlag_Execute(COMMAND_ARGS)
 {
 	TESObjectCELL *cell;
 	UInt32 flag;
-	if (ExtractArgs(EXTRACT_ARGS, &cell, &flag) && (flag <= 16))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &flag) && (flag <= 16))
 	{
 		if (flag <= 7) *result = (cell->cellFlags & (1 << flag)) ? 1 : 0;
 		else *result = (cell->inheritFlags & (1 << (flag - 8))) ? 1 : 0;
@@ -95,7 +95,7 @@ bool Cmd_SetCellFlag_Execute(COMMAND_ARGS)
 {
 	TESObjectCELL *cell;
 	UInt32 flag, value;
-	if (ExtractArgs(EXTRACT_ARGS, &cell, &flag, &value) && (flag <= 16))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &flag, &value) && (flag <= 16))
 	{
 		if (flag <= 7)
 		{

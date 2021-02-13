@@ -42,7 +42,7 @@ bool Cmd_GetController_Execute(COMMAND_ARGS)
 bool Cmd_IsButtonPressed_Execute(COMMAND_ARGS)
 {
 	UInt32 button;
-	if (ExtractArgs(EXTRACT_ARGS, &button))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button))
 		*result = (s_gamePad.wButtons & (UInt16)button) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -149,7 +149,7 @@ bool Cmd_GetDeadZoneRS_Execute(COMMAND_ARGS)
 bool Cmd_SetDeadZoneLS_Execute(COMMAND_ARGS)
 {
 	double deadzone;
-	if (ExtractArgs(EXTRACT_ARGS, &deadzone))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &deadzone))
 	{
 		SInt32 value;
 		if (deadzone <= 0.1)
@@ -159,6 +159,7 @@ bool Cmd_SetDeadZoneLS_Execute(COMMAND_ARGS)
 		else
 			value = deadzone * 32767;
 		s_deadZoneLS = value;
+		s_deadZoneLSg = value;
 		s_deadZoneLSd = 32767.0 - value;
 		for (UInt32 patchAddr : {0x717B90, 0x717BA5, 0x717C15, 0x717C2A, 0x755552, 0x755569, 0x7AED31, 0x7E7F82, 0x7ECA56, 0x941157, 0x941177, 0xA23E5E, 0xA23E87})
 			SafeWrite32(patchAddr, value);
@@ -172,7 +173,7 @@ bool Cmd_SetDeadZoneLS_Execute(COMMAND_ARGS)
 bool Cmd_SetDeadZoneRS_Execute(COMMAND_ARGS)
 {
 	double deadzone;
-	if (ExtractArgs(EXTRACT_ARGS, &deadzone))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &deadzone))
 	{
 		SInt32 value;
 		if (deadzone <= 0.1)
@@ -182,6 +183,7 @@ bool Cmd_SetDeadZoneRS_Execute(COMMAND_ARGS)
 		else
 			value = deadzone * 32767;
 		s_deadZoneRS = value;
+		s_deadZoneRSg = value;
 		s_deadZoneRSd = 32767.0 - value;
 		for (UInt32 patchAddr : {0x7AE57A, 0x7AE598, 0x7AE666, 0x7AE687, 0x7AE699, 0x7AE6AE, 0x7AE6C0, 0x7D57C0, 0x7D57D3, 0x7E7FAD, 0x7ECAAC, 0x7ECB3A, 0x7ECB51, 0x941197, 0x9455F5, 0x945644, 0x9456F0, 0x945710})
 			SafeWrite32(patchAddr, value);
@@ -194,7 +196,7 @@ bool Cmd_SetDeadZoneRS_Execute(COMMAND_ARGS)
 bool Cmd_EnableButton_Execute(COMMAND_ARGS)
 {
 	UInt32 button;
-	if (ExtractArgs(EXTRACT_ARGS, &button))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button))
 		s_XIStateMods.buttonSkip |= button;
 	return true;
 }
@@ -202,7 +204,7 @@ bool Cmd_EnableButton_Execute(COMMAND_ARGS)
 bool Cmd_DisableButton_Execute(COMMAND_ARGS)
 {
 	UInt32 button;
-	if (ExtractArgs(EXTRACT_ARGS, &button))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button))
 		s_XIStateMods.buttonSkip &= ~button;
 	return true;
 }
@@ -210,7 +212,7 @@ bool Cmd_DisableButton_Execute(COMMAND_ARGS)
 bool Cmd_IsButtonDisabled_Execute(COMMAND_ARGS)
 {
 	UInt32 button;
-	if (ExtractArgs(EXTRACT_ARGS, &button))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button))
 		*result = !(s_XIStateMods.buttonSkip & button);
 	else *result = 0;
 	return true;
@@ -225,7 +227,7 @@ bool Cmd_IsButtonDisabled_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_HoldButton_Execute(COMMAND_ARGS)
 {
 	UInt32 button;
-	if (ExtractArgs(EXTRACT_ARGS, &button))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button))
 		s_XIStateMods.buttonHold |= button;
 	return true;
 }
@@ -233,7 +235,7 @@ bool Cmd_HoldButton_Execute(COMMAND_ARGS)
 bool Cmd_ReleaseButton_Execute(COMMAND_ARGS)
 {
 	UInt32 button;
-	if (ExtractArgs(EXTRACT_ARGS, &button))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button))
 		s_XIStateMods.buttonHold &= ~button;
 	return true;
 }
@@ -241,7 +243,7 @@ bool Cmd_ReleaseButton_Execute(COMMAND_ARGS)
 bool Cmd_IsButtonHeld_Execute(COMMAND_ARGS)
 {
 	UInt32 button;
-	if (ExtractArgs(EXTRACT_ARGS, &button))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button))
 		*result = (s_XIStateMods.buttonHold & button) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -256,7 +258,7 @@ bool Cmd_IsButtonHeld_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_EnableTrigger_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgs(EXTRACT_ARGS, &trigger) && (trigger < 2))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger < 2))
 		s_XIStateMods.triggerMods &= ~(1 << trigger);
 	return true;
 }
@@ -264,7 +266,7 @@ bool Cmd_EnableTrigger_Execute(COMMAND_ARGS)
 bool Cmd_DisableTrigger_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgs(EXTRACT_ARGS, &trigger) && (trigger < 2))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger < 2))
 		s_XIStateMods.triggerMods |= (1 << trigger);
 	return true;
 }
@@ -272,7 +274,7 @@ bool Cmd_DisableTrigger_Execute(COMMAND_ARGS)
 bool Cmd_IsTriggerDisabled_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgs(EXTRACT_ARGS, &trigger))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger))
 		*result = (s_XIStateMods.triggerMods & (1 << trigger)) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -287,7 +289,7 @@ bool Cmd_IsTriggerDisabled_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_HoldTrigger_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgs(EXTRACT_ARGS, &trigger) && (trigger < 2))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger < 2))
 		s_XIStateMods.triggerMods |= (4 << trigger);
 	return true;
 }
@@ -295,7 +297,7 @@ bool Cmd_HoldTrigger_Execute(COMMAND_ARGS)
 bool Cmd_ReleaseTrigger_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgs(EXTRACT_ARGS, &trigger) && (trigger < 2))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger < 2))
 		s_XIStateMods.triggerMods &= ~(4 << trigger);
 	return true;
 }
@@ -303,7 +305,7 @@ bool Cmd_ReleaseTrigger_Execute(COMMAND_ARGS)
 bool Cmd_IsTriggerHeld_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgs(EXTRACT_ARGS, &trigger))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger))
 		*result = (s_XIStateMods.triggerMods & (4 << trigger)) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -318,7 +320,7 @@ bool Cmd_IsTriggerHeld_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_TapButton_Execute(COMMAND_ARGS)
 {
 	UInt32 button;
-	if (ExtractArgs(EXTRACT_ARGS, &button))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button))
 		s_XIStateMods.buttonTap |= button;
 	return true;
 }
@@ -326,7 +328,7 @@ bool Cmd_TapButton_Execute(COMMAND_ARGS)
 bool Cmd_TapTrigger_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgs(EXTRACT_ARGS, &trigger) && (trigger < 2))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger < 2))
 		s_XIStateMods.triggerMods |= (16 << trigger);
 	return true;
 }
@@ -337,7 +339,7 @@ bool SetOnTriggerEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt, rTrigger;
-	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &rTrigger) || NOT_TYPE(script, Script) || !s_controllerReady) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &rTrigger) || NOT_ID(script, Script) || !s_controllerReady) return true;
 	UInt8 idx = rTrigger ? 2 : 0;
 	UInt32 eventMask = s_onTriggerEventType ? kLNEventMask_OnTriggerDown : kLNEventMask_OnTriggerUp;
 	if (addEvnt)
@@ -374,7 +376,7 @@ __declspec(naked) bool Cmd_SetOnTriggerUpEventHandler_Execute(COMMAND_ARGS)
 bool Cmd_IsStickDisabled_Execute(COMMAND_ARGS)
 {
 	UInt32 stick;
-	if (ExtractArgs(EXTRACT_ARGS, &stick) && (stick <= 1))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &stick) && (stick <= 1))
 		*result = (s_XIStateMods.stickMods & (1 << stick)) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -389,7 +391,7 @@ bool Cmd_IsStickDisabled_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_SetStickDisabled_Execute(COMMAND_ARGS)
 {
 	UInt32 stick, doSet;
-	if (ExtractArgs(EXTRACT_ARGS, &stick, &doSet) && (stick <= 1))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &stick, &doSet) && (stick <= 1))
 	{
 		if (doSet) s_XIStateMods.stickMods |= (1 << stick);
 		else s_XIStateMods.stickMods &= ~(1 << stick);

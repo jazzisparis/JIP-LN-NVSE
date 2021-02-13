@@ -9,6 +9,23 @@ struct NiRTTI
 	NiRTTI			*parent;
 };
 
+// 08
+struct NiPoint2
+{
+	float	x;
+	float	y;
+
+	NiPoint2() {}
+	NiPoint2(float _x, float _y) : x(_x), y(_y) {}
+	NiPoint2(const NiPoint2 &rhs) {*(double*)this = *(double*)&rhs;}
+
+	inline NiPoint2& operator=(const NiPoint2 &rhs)
+	{
+		*(double*)this = *(double*)&rhs;
+		return *this;
+	}
+};
+
 // 24
 struct NiMatrix33
 {
@@ -33,6 +50,11 @@ struct NiVector3
 
 	NiVector3() {}
 	NiVector3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+
+	float operator[](char axis)
+	{
+		return ((float*)&x)[axis];
+	}
 
 	void operator+=(const NiVector3 &rhs)
 	{

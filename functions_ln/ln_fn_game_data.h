@@ -124,7 +124,7 @@ bool Cmd_GetLoadedType_Execute(COMMAND_ARGS)
 	BGSListForm *listForm;
 	UInt32 formType, noClear = 0;
 	int index = -1;
-	if (ExtractArgs(EXTRACT_ARGS, &listForm, &formType, &index, &noClear))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &listForm, &formType, &index, &noClear))
 	{
 		if (!noClear) listForm->list.RemoveAll();
 		GetLoadedType(formType, index, &listForm->list);
@@ -137,7 +137,7 @@ bool Cmd_GetLoadedTypeArray_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 formType;
 	int index = -1;
-	if (ExtractArgs(EXTRACT_ARGS, &formType, &index))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &formType, &index))
 	{
 		s_tempElements.Clear();
 		GetLoadedType(formType, index, NULL);
@@ -177,7 +177,7 @@ void SearchForm::Add(TESForm *pForm)
 bool Cmd_Search_Execute(COMMAND_ARGS)
 {
 	s_strValBuffer[0] = 0;
-	if (!IsConsoleOpen() || !ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &s_strValBuffer))
+	if (!IsConsoleOpen() || !ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer))
 		return true;
 	UInt32 filter = 0;
 	char first = s_strValBuffer[0];
@@ -238,7 +238,7 @@ bool Cmd_GetModName_Execute(COMMAND_ARGS)
 {
 	s_strValBuffer[0] = 0;
 	UInt32 index, keepExt = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &index, &keepExt))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &index, &keepExt))
 	{
 		StrCopy(s_strValBuffer, g_dataHandler->GetNthModName(index));
 		if (s_strValBuffer[0] && !keepExt) GetNextToken(s_strValBuffer, '.');
@@ -251,7 +251,7 @@ bool Cmd_GetFormMods_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form)) return true;
 	if (!form)
 	{
 		if (!thisObj) return true;
@@ -272,7 +272,7 @@ bool Cmd_GetFormRefs_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form;
-	if (!ExtractArgs(EXTRACT_ARGS, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form)) return true;
 	s_tempElements.Clear();
 	ListNode<TESWorldSpace> *wspcIter = g_dataHandler->worldSpaceList.Head();
 	TESWorldSpace *wspc;
@@ -317,7 +317,7 @@ bool Cmd_GetSelfModIndex_Execute(COMMAND_ARGS)
 bool Cmd_IsFormOverridden_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
-	if (scriptObj && ExtractArgs(EXTRACT_ARGS, &form))
+	if (scriptObj && ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
 		UInt8 overriding = form->GetOverridingModIdx();
 		*result = ((overriding > scriptObj->modIndex) && (overriding != 0xFF)) ? 1 : 0;
@@ -329,7 +329,7 @@ bool Cmd_IsFormOverridden_Execute(COMMAND_ARGS)
 bool Cmd_GetFormFromMod_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &s_strValBuffer)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer)) return true;
 	UInt8 modIndex;
 	if (StrCompare(s_strArgBuffer, "NONE") != 0)
 	{
@@ -345,7 +345,7 @@ bool Cmd_GetFormFromMod_Execute(COMMAND_ARGS)
 bool Cmd_GetStringSetting_Execute(COMMAND_ARGS)
 {
 	const char *resStr = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer) && ((s_strArgBuffer[0] | 0x20) == 's'))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer) && ((s_strArgBuffer[0] | 0x20) == 's'))
 	{
 		Setting *setting = s_gameSettingsMap.Get(s_strArgBuffer);
 		if (setting)
@@ -357,7 +357,7 @@ bool Cmd_GetStringSetting_Execute(COMMAND_ARGS)
 
 bool Cmd_SetStringSetting_Execute(COMMAND_ARGS)
 {
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &s_strValBuffer) && ((s_strArgBuffer[0] | 0x20) == 's'))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer) && ((s_strArgBuffer[0] | 0x20) == 's'))
 	{
 		Setting *setting = s_gameSettingsMap.Get(s_strArgBuffer);
 		if (setting)
@@ -370,7 +370,7 @@ bool Cmd_GetGameSettings_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 gmstType = 3;
-	if (ExtractArgs(EXTRACT_ARGS, &gmstType))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &gmstType))
 	{
 		NVSEArrayVar *outArray = CreateStringMap(NULL, NULL, 0, scriptObj);
 		char namePrfx;

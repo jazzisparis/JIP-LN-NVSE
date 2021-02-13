@@ -10,7 +10,7 @@ bool Cmd_GetCombatStyleTraitNumeric_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESCombatStyle *cStyle;
 	UInt32 traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &cStyle, &traitID) || (traitID > 63)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &cStyle, &traitID) || (traitID > 63)) return true;
 	switch (traitID)
 	{
 	case 0:
@@ -91,7 +91,7 @@ bool Cmd_SetCombatStyleTraitNumeric_Execute(COMMAND_ARGS)
 	TESCombatStyle *cStyle;
 	UInt32 traitID;
 	float fVal;
-	if (!ExtractArgs(EXTRACT_ARGS, &cStyle, &traitID, &fVal) || (traitID > 63)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &cStyle, &traitID, &fVal) || (traitID > 63)) return true;
 	UInt8 bVal = fVal;
 	switch (traitID)
 	{
@@ -173,7 +173,7 @@ bool Cmd_GetCombatStyleFlag_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESCombatStyle *cStyle;
 	UInt32 flagID;
-	if (ExtractArgs(EXTRACT_ARGS, &cStyle, &flagID) && (flagID <= 8))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cStyle, &flagID) && (flagID <= 8))
 		*result = (cStyle->csFlags & (1 << flagID)) ? 1 : 0;
 	return true;
 }
@@ -182,7 +182,7 @@ bool Cmd_SetCombatStyleFlag_Execute(COMMAND_ARGS)
 {
 	TESCombatStyle *cStyle;
 	UInt32 flagID, val;
-	if (ExtractArgs(EXTRACT_ARGS, &cStyle, &flagID, &val) && (flagID <= 8))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cStyle, &flagID, &val) && (flagID <= 8))
 		cStyle->SetFlag(1 << flagID, val != 0);
 	return true;
 }

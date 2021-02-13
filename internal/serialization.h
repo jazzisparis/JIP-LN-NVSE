@@ -134,13 +134,6 @@ void DoLoadGameCleanup()
 	}
 }
 
-void __fastcall ReadDataDump(UInt16 type)
-{
-	if (type == 4) ReadRecordData(&type, 2);
-	else type = 4;
-	ReadRecordData(s_strValBuffer, type);
-}
-
 void __fastcall RestoreLinkedRefs(UnorderedMap<UInt32, UInt32> *tempMap = NULL)
 {
 	if (s_linkedRefDefault.Empty()) return;
@@ -181,38 +174,29 @@ void LoadGameCallback(void*)
 				TESForm *form;
 				Script *script;
 				ScriptEventList *eventList;
-				UInt32 value[2], *pVal;
 				ScriptVar *var;
-				ReadRecordData(&nRecs, 2);
+				VarData varData;
+				nRecs = ReadRecord16();
 				while (nRecs)
 				{
 					nRecs--;
-					ReadRecordData(&buffer4, 4);
-					if (!ResolveRefID(buffer4, &refID) || !(form = LookupFormByRefID(refID)) || !form->GetScriptAndEventList(&script, &eventList)) continue;
-					ReadRecordData(&nVars, 2);
+					refID = ReadRecord32();
+					if (!ResolveRefID(refID, &refID) || !(form = LookupFormByRefID(refID)) || !form->GetScriptAndEventList(&script, &eventList)) continue;
+					nVars = ReadRecord16();
 					while (nVars)
 					{
 						nVars--;
-						ReadRecordData(&modIdx, 1);
-						ReadRecordData(&buffer1, 1);
+						modIdx = ReadRecord8();
+						buffer1 = ReadRecord8();
 						ReadRecordData(s_strArgBuffer, buffer1);
 						s_strArgBuffer[buffer1] = 0;
-						ReadRecordData(value, 8);
+						ReadRecord64(&varData);
 						if (!ResolveRefID(modIdx << 24, &buffer4)) continue;
 						if (var = script->AddVariable(eventList, refID, buffer4 >> 24))
 						{
-							if (*value && !value[1])
-							{
-								if (ResolveRefID(*value, value))
-								{
-									pVal = (UInt32*)&var->data;
-									*pVal = *value;
-									pVal[1] = 0;
-									continue;
-								}
-								*value = 0;
-							}
-							var->data = *(double*)value;
+							if (varData.refID && !varData.pad && !ResolveRefID(varData.refID, &varData.refID))
+								varData.refID = 0;
+							var->data.num = varData.num;
 						}
 					}
 				}
@@ -225,19 +209,19 @@ void LoadGameCallback(void*)
 				AuxVarVarsMap *aVarsMap;
 				AuxVarValsArr *valsArr;
 				UInt16 nElems;
-				ReadRecordData(&nRecs, 2);
+				nRecs = ReadRecord16();
 				while (nRecs)
 				{
 					nRecs--;
-					ReadRecordData(&buffer1, 1);
+					buffer1 = ReadRecord8();
 					if (!ResolveRefID(buffer1 << 24, &buffer4)) continue;
 					ownersMap = NULL;
 					modIdx = buffer4 >> 24;
-					ReadRecordData(&nRefs, 2);
+					nRefs = ReadRecord16();
 					while (nRefs)
 					{
-						ReadRecordData(&refID, 4);
-						ReadRecordData(&nVars, 2);
+						refID = ReadRecord32();
+						nVars = ReadRecord16();
 						if (ResolveRefID(refID, &refID) && LookupFormByRefID(refID))
 						{
 							if (!ownersMap) ownersMap = s_auxVariablesPerm.Emplace(modIdx, nRefs);
@@ -247,19 +231,21 @@ void LoadGameCallback(void*)
 						while (nVars)
 						{
 							valsArr = NULL;
-							ReadRecordData(&buffer1, 1);
+							buffer1 = ReadRecord8();
 							ReadRecordData(s_strArgBuffer, buffer1);
 							s_strArgBuffer[buffer1] = 0;
-							ReadRecordData(&nElems, 2);
+							nElems = ReadRecord16();
 							while (nElems)
 							{
-								ReadRecordData(&buffer1, 1);
+								buffer1 = ReadRecord8();
 								if (aVarsMap)
 								{
 									if (!valsArr) valsArr = aVarsMap->Emplace(s_strArgBuffer, nElems);
 									valsArr->Append(buffer1);
 								}
-								else ReadDataDump(buffer1);
+								else if (buffer1 == 4)
+									SkipNBytes(ReadRecord16());
+								else SkipNBytes(4);
 								nElems--;
 							}
 							nVars--;
@@ -274,26 +260,26 @@ void LoadGameCallback(void*)
 				if (!(changedFlags & kChangedFlag_RefMaps)) continue;
 				RefMapVarsMap *rVarsMap;
 				RefMapIDsMap *idsMap;
-				ReadRecordData(&nRecs, 2);
+				nRecs = ReadRecord16();
 				while (nRecs)
 				{
 					nRecs--;
-					ReadRecordData(&buffer1, 1);
+					buffer1 = ReadRecord8();
 					if (!ResolveRefID(buffer1 << 24, &buffer4)) continue;
 					rVarsMap = NULL;
 					modIdx = buffer4 >> 24;
-					ReadRecordData(&nVars, 2);
+					nVars = ReadRecord16();
 					while (nVars)
 					{
 						idsMap = NULL;
-						ReadRecordData(&buffer1, 1);
+						buffer1 = ReadRecord8();
 						ReadRecordData(s_strArgBuffer, buffer1);
 						s_strArgBuffer[buffer1] = 0;
-						ReadRecordData(&nRefs, 2);
+						nRefs = ReadRecord16();
 						while (nRefs)
 						{
-							ReadRecordData(&refID, 4);
-							ReadRecordData(&buffer1, 1);
+							refID = ReadRecord32();
+							buffer1 = ReadRecord8();
 							if (ResolveRefID(refID, &refID))
 							{
 								if (!idsMap)
@@ -303,7 +289,9 @@ void LoadGameCallback(void*)
 								}
 								idsMap->Emplace(refID, buffer1);
 							}
-							else ReadDataDump(buffer1);
+							else if (buffer1 == 4)
+								SkipNBytes(ReadRecord16());
+							else SkipNBytes(4);
 							nRefs--;
 						}
 						nVars--;
@@ -315,13 +303,13 @@ void LoadGameCallback(void*)
 			{
 				if (!(changedFlags & kChangedFlag_LinkedRefs)) continue;
 				UInt32 lnkID;
-				ReadRecordData(&nRecs, 2);
+				nRecs = ReadRecord16();
 				while (nRecs)
 				{
 					nRecs--;
-					ReadRecordData(&refID, 4);
-					ReadRecordData(&lnkID, 4);
-					ReadRecordData(&buffer1, 1);
+					refID = ReadRecord32();
+					lnkID = ReadRecord32();
+					buffer1 = ReadRecord8();
 					if (ResolveRefID(refID, &refID) && ResolveRefID(lnkID, &lnkID) &&
 						ResolveRefID(buffer1 << 24, &buffer4) && SetLinkedRefID(refID, lnkID, buffer4 >> 24))
 						s_linkedRefsTemp[refID] = lnkID;
@@ -330,33 +318,33 @@ void LoadGameCallback(void*)
 			}
 			case 'FGPJ':
 			{
-				ReadRecordData(&s_serializedFlags, 4);
+				s_serializedFlags = ReadRecord32();
 				break;
 			}
 			case 'UAPJ':
 			{
 				AppearanceUndo *aprUndo = (AppearanceUndo*)malloc(sizeof(AppearanceUndo));
 				ReadRecordData(aprUndo->values0, 0x214);
-				ReadRecordData(&refID, 4);
+				refID = ReadRecord32();
 				if (!ResolveRefID(refID, &refID) || !(aprUndo->race = (TESRace*)LookupFormByRefID(refID)))
 					aprUndo->race = (TESRace*)LookupFormByRefID(0x19);
-				ReadRecordData(&refID, 4);
+				refID = ReadRecord32();
 				if (!ResolveRefID(refID, &refID) || !(aprUndo->hair = (TESHair*)LookupFormByRefID(refID)))
 				{
 					refID = (aprUndo->flags & 1) ? 0x22E4E : 0x14B90;
 					aprUndo->hair = (TESHair*)LookupFormByRefID(refID);
 				}
-				ReadRecordData(&refID, 4);
+				refID = ReadRecord32();
 				if (!ResolveRefID(refID, &refID) || !(aprUndo->eyes = (TESEyes*)LookupFormByRefID(refID)))
 					aprUndo->eyes = (TESEyes*)LookupFormByRefID(0x4255);
-				ReadRecordData(&buffer1, 1);
+				buffer1 = ReadRecord8();
 				aprUndo->numParts = buffer1;
 				if (buffer1)
 				{
 					BGSHeadPart **ptr = aprUndo->headParts = (BGSHeadPart**)malloc(buffer1 * 4);
 					do
 					{
-						ReadRecordData(&refID, 4);
+						refID = ReadRecord32();
 						if (ResolveRefID(refID, &refID) && (*ptr = (BGSHeadPart*)LookupFormByRefID(refID)))
 							ptr++;
 						else aprUndo->numParts--;
@@ -374,14 +362,26 @@ void LoadGameCallback(void*)
 	if (changedFlags & kChangedFlag_LinkedRefs)
 		RestoreLinkedRefs(&s_linkedRefsTemp);
 	if (s_NPCWeaponMods && !(g_thePlayer->actorFlags & 0x10000000))
-		DoDistributeWeaponModsLoadGame();
+	{
+		g_thePlayer->actorFlags |= 0x10000000;
+		auto actorIter = g_processManager->highActors.Head();
+		Actor *actor;
+		do
+		{
+			if (!(actor = actorIter->data) || (actor->actorFlags & 0x10000000))
+				continue;
+			actor->actorFlags |= 0x10000000;
+			if (!actor->isTeammate)
+				DistributeWeaponMods(actor);
+		}
+		while (actorIter = actorIter->next);
+	}
 }
 
 void SaveGameCallback(void*)
 {
 	UInt8 buffer1;
 	UInt16 buffer2;
-	UInt32 numKey;
 
 	StrCopy(s_lastLoadedPath, GetSavePath());
 	s_dataChangedFlags = 0;
@@ -391,17 +391,15 @@ void SaveGameCallback(void*)
 		WriteRecord('VSPJ', 9, &buffer2, 2);
 		for (auto svOwnerIt = s_scriptVariablesBuffer.Begin(); svOwnerIt; ++svOwnerIt)
 		{
-			numKey = svOwnerIt.Key();
-			WriteRecordData(&numKey, 4);
-			buffer2 = svOwnerIt().Size();
-			WriteRecordData(&buffer2, 2);
+			WriteRecord32(svOwnerIt.Key());
+			WriteRecord16(svOwnerIt().Size());
 			for (auto svVarIt = svOwnerIt().Begin(); svVarIt; ++svVarIt)
 			{
-				WriteRecordData(&svVarIt().modIdx, 1);
+				WriteRecord8(svVarIt().modIdx);
 				buffer1 = StrLen(svVarIt.Key());
-				WriteRecordData(&buffer1, 1);
+				WriteRecord8(buffer1);
 				WriteRecordData(svVarIt.Key(), buffer1);
-				WriteRecordData(&svVarIt().value->data, 8);
+				WriteRecord64(&svVarIt().value->data);
 			}
 		}
 	}
@@ -410,23 +408,18 @@ void SaveGameCallback(void*)
 		WriteRecord('VAPJ', 9, &buffer2, 2);
 		for (auto avModIt = s_auxVariablesPerm.Begin(); avModIt; ++avModIt)
 		{
-			buffer1 = avModIt.Key();
-			WriteRecordData(&buffer1, 1);
-			buffer2 = avModIt().Size();
-			WriteRecordData(&buffer2, 2);
+			WriteRecord8(avModIt.Key());
+			WriteRecord16(avModIt().Size());
 			for (auto avOwnerIt = avModIt().Begin(); avOwnerIt; ++avOwnerIt)
 			{
-				numKey = avOwnerIt.Key();
-				WriteRecordData(&numKey, 4);
-				buffer2 = avOwnerIt().Size();
-				WriteRecordData(&buffer2, 2);
+				WriteRecord32(avOwnerIt.Key());
+				WriteRecord16(avOwnerIt().Size());
 				for (auto avVarIt = avOwnerIt().Begin(); avVarIt; ++avVarIt)
 				{
 					buffer1 = StrLen(avVarIt.Key());
-					WriteRecordData(&buffer1, 1);
+					WriteRecord8(buffer1);
 					WriteRecordData(avVarIt.Key(), buffer1);
-					buffer2 = avVarIt().Size();
-					WriteRecordData(&buffer2, 2);
+					WriteRecord16(avVarIt().Size());
 					for (auto avValIt = avVarIt().Begin(); avValIt; ++avValIt)
 						avValIt().WriteValData();
 				}
@@ -438,21 +431,17 @@ void SaveGameCallback(void*)
 		WriteRecord('MRPJ', 9, &buffer2, 2);
 		for (auto rmModIt = s_refMapArraysPerm.Begin(); rmModIt; ++rmModIt)
 		{
-			buffer1 = rmModIt.Key();
-			WriteRecordData(&buffer1, 1);
-			buffer2 = rmModIt().Size();
-			WriteRecordData(&buffer2, 2);
+			WriteRecord8(rmModIt.Key());
+			WriteRecord16(rmModIt().Size());
 			for (auto rmVarIt = rmModIt().Begin(); rmVarIt; ++rmVarIt)
 			{
 				buffer1 = StrLen(rmVarIt.Key());
-				WriteRecordData(&buffer1, 1);
+				WriteRecord8(buffer1);
 				WriteRecordData(rmVarIt.Key(), buffer1);
-				buffer2 = rmVarIt().Size();
-				WriteRecordData(&buffer2, 2);
+				WriteRecord16(rmVarIt().Size());
 				for (auto rmRefIt = rmVarIt().Begin(); rmRefIt; ++rmRefIt)
 				{
-					numKey = rmRefIt.Key();
-					WriteRecordData(&numKey, 4);
+					WriteRecord32(rmRefIt.Key());
 					rmRefIt().WriteValData();
 				}
 			}
@@ -463,9 +452,9 @@ void SaveGameCallback(void*)
 		WriteRecord('RLPJ', 9, &buffer2, 2);
 		for (auto lrRefIt = s_linkedRefModified.Begin(); lrRefIt; ++lrRefIt)
 		{
-			numKey = lrRefIt.Key();
-			WriteRecordData(&numKey, 4);
-			WriteRecordData(&lrRefIt(), 5);
+			WriteRecord32(lrRefIt.Key());
+			WriteRecord32(lrRefIt().linkID);
+			WriteRecord8(lrRefIt().modIdx);
 		}
 	}
 	if (s_serializedFlags)
@@ -474,17 +463,17 @@ void SaveGameCallback(void*)
 	if (aprUndo)
 	{
 		WriteRecord('UAPJ', 9, aprUndo->values0, 0x214);
-		WriteRecordData(&aprUndo->race->refID, 4);
-		WriteRecordData(&aprUndo->hair->refID, 4);
-		WriteRecordData(&aprUndo->eyes->refID, 4);
+		WriteRecord32(aprUndo->race->refID);
+		WriteRecord32(aprUndo->hair->refID);
+		WriteRecord32(aprUndo->eyes->refID);
 		buffer1 = aprUndo->numParts;
-		WriteRecordData(&buffer1, 1);
+		WriteRecord8(buffer1);
 		if (buffer1)
 		{
 			BGSHeadPart **ptr = aprUndo->headParts;
 			do
 			{
-				WriteRecordData(&(*ptr)->refID, 4);
+				WriteRecord32((*ptr)->refID);
 				ptr++;
 			}
 			while (--buffer1);

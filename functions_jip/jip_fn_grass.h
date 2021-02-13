@@ -10,7 +10,7 @@ bool Cmd_GetGrassTraitNumeric_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESGrass *grass;
 	UInt32 traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &grass, &traitID) || NOT_TYPE(grass, TESGrass)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &grass, &traitID) || NOT_ID(grass, TESGrass)) return true;
 	switch (traitID)
 	{
 	case 0:
@@ -51,7 +51,7 @@ bool Cmd_SetGrassTraitNumeric_Execute(COMMAND_ARGS)
 	TESGrass *grass;
 	UInt32 traitID;
 	float fVal;
-	if (!ExtractArgs(EXTRACT_ARGS, &grass, &traitID, &fVal) || NOT_TYPE(grass, TESGrass) || (fVal < 0)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &grass, &traitID, &fVal) || NOT_ID(grass, TESGrass) || (fVal < 0)) return true;
 	int iVal = fVal;
 	switch (traitID)
 	{
@@ -92,7 +92,7 @@ bool Cmd_GetGrassModel_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	TESGrass *grass;
-	if (ExtractArgs(EXTRACT_ARGS, &grass) && IS_TYPE(grass, TESGrass))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &grass) && IS_ID(grass, TESGrass))
 		resStr = grass->model.GetModelPath();
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -102,7 +102,7 @@ bool Cmd_GetGrassModel_Execute(COMMAND_ARGS)
 bool Cmd_SetGrassModel_Execute(COMMAND_ARGS)
 {
 	TESGrass *grass;
-	if (ExtractArgs(EXTRACT_ARGS, &grass, &s_strArgBuffer) && IS_TYPE(grass, TESGrass))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &grass, &s_strArgBuffer) && IS_ID(grass, TESGrass))
 		grass->model.SetModelPath(s_strArgBuffer);
 	return true;
 }

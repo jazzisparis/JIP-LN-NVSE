@@ -30,7 +30,7 @@ bool Cmd_GetProjectileTraitNumeric_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSProjectile *projectile;
 	UInt32 traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &projectile, &traitID) || NOT_TYPE(projectile, BGSProjectile)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &projectile, &traitID) || NOT_ID(projectile, BGSProjectile)) return true;
 	switch (traitID)
 	{
 	case 0:
@@ -68,7 +68,7 @@ bool Cmd_SetProjectileTraitNumeric_Execute(COMMAND_ARGS)
 	BGSProjectile *projectile;
 	UInt32 traitID;
 	float fVal;
-	if (!ExtractArgs(EXTRACT_ARGS, &projectile, &traitID, &fVal) || NOT_TYPE(projectile, BGSProjectile)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &projectile, &traitID, &fVal) || NOT_ID(projectile, BGSProjectile)) return true;
 	UInt32 iVal = (int)fVal;
 	switch (traitID)
 	{
@@ -107,7 +107,7 @@ bool Cmd_GetProjectileFlag_Execute(COMMAND_ARGS)
 {
 	BGSProjectile *projectile;
 	UInt32 flagID;
-	if (ExtractArgs(EXTRACT_ARGS, &projectile, &flagID) && IS_TYPE(projectile, BGSProjectile) && (flagID <= 11))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile, &flagID) && IS_ID(projectile, BGSProjectile) && (flagID <= 11))
 		*result = (projectile->projFlags & (1 << flagID)) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -117,7 +117,7 @@ bool Cmd_SetProjectileFlag_Execute(COMMAND_ARGS)
 {
 	BGSProjectile *projectile;
 	UInt32 flagID, val;
-	if (ExtractArgs(EXTRACT_ARGS, &projectile, &flagID, &val) && IS_TYPE(projectile, BGSProjectile) && (flagID <= 11))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile, &flagID, &val) && IS_ID(projectile, BGSProjectile) && (flagID <= 11))
 		projectile->SetFlag(1 << flagID, val != 0);
 	return true;
 }
@@ -126,7 +126,7 @@ bool Cmd_GetProjectileExplosion_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	BGSProjectile *projectile;
-	if (ExtractArgs(EXTRACT_ARGS, &projectile) && IS_TYPE(projectile, BGSProjectile) && projectile->explosion)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile) && IS_ID(projectile, BGSProjectile) && projectile->explosion)
 		REFR_RES = projectile->explosion->refID;
 	return true;
 }
@@ -135,8 +135,8 @@ bool Cmd_SetProjectileExplosion_Execute(COMMAND_ARGS)
 {
 	BGSProjectile *projectile;
 	BGSExplosion *explosion = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &projectile, &explosion) && IS_TYPE(projectile, BGSProjectile))
-		projectile->explosion = (explosion && IS_TYPE(explosion, BGSExplosion)) ? explosion : NULL;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile, &explosion) && IS_ID(projectile, BGSProjectile))
+		projectile->explosion = (explosion && IS_ID(explosion, BGSExplosion)) ? explosion : NULL;
 	return true;
 }
 
@@ -179,7 +179,7 @@ bool Cmd_GetProjectileRefSpeedMult_Execute(COMMAND_ARGS)
 bool Cmd_SetProjectileRefSource_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *newSource = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &newSource) && thisObj->IsProjectile())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &newSource) && thisObj->IsProjectile())
 		((Projectile*)thisObj)->sourceRef = newSource;
 	return true;
 }
@@ -187,7 +187,7 @@ bool Cmd_SetProjectileRefSource_Execute(COMMAND_ARGS)
 bool Cmd_SetProjectileRefWeapon_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon) && thisObj->IsProjectile() && IS_TYPE(weapon, TESObjectWEAP))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon) && thisObj->IsProjectile() && IS_ID(weapon, TESObjectWEAP))
 		((Projectile*)thisObj)->sourceWeap = weapon;
 	return true;
 }
@@ -195,7 +195,7 @@ bool Cmd_SetProjectileRefWeapon_Execute(COMMAND_ARGS)
 bool Cmd_SetProjectileRefDamage_Execute(COMMAND_ARGS)
 {
 	float damage;
-	if (ExtractArgs(EXTRACT_ARGS, &damage) && thisObj->IsProjectile())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &damage) && thisObj->IsProjectile())
 		((Projectile*)thisObj)->hitDamage = damage;
 	return true;
 }
@@ -203,14 +203,14 @@ bool Cmd_SetProjectileRefDamage_Execute(COMMAND_ARGS)
 bool Cmd_SetProjectileRefSpeedMult_Execute(COMMAND_ARGS)
 {
 	float speedMult;
-	if (ExtractArgs(EXTRACT_ARGS, &speedMult) && thisObj->IsProjectile())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &speedMult) && thisObj->IsProjectile())
 		((Projectile*)thisObj)->speedMult2 = speedMult;
 	return true;
 }
 
 bool Cmd_GetDetonationTimer_Execute(COMMAND_ARGS)
 {
-	if (IS_TYPE(thisObj, GrenadeProjectile) && (((BGSProjectile*)thisObj->baseForm)->projFlags & 4))
+	if (IS_ID(thisObj, GrenadeProjectile) && (((BGSProjectile*)thisObj->baseForm)->projFlags & 4))
 		*result = ((Projectile*)thisObj)->detonationTime;
 	else *result = -1;
 	return true;
@@ -219,7 +219,7 @@ bool Cmd_GetDetonationTimer_Execute(COMMAND_ARGS)
 bool Cmd_SetDetonationTimer_Execute(COMMAND_ARGS)
 {
 	float detnTime;
-	if (ExtractArgs(EXTRACT_ARGS, &detnTime) && IS_TYPE(thisObj, GrenadeProjectile) && (((BGSProjectile*)thisObj->baseForm)->projFlags & 4))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &detnTime) && IS_ID(thisObj, GrenadeProjectile) && (((BGSProjectile*)thisObj->baseForm)->projFlags & 4))
 		((Projectile*)thisObj)->detonationTime = detnTime;
 	return true;
 }
@@ -227,7 +227,7 @@ bool Cmd_SetDetonationTimer_Execute(COMMAND_ARGS)
 bool Cmd_GetMineArmed_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if NOT_TYPE(thisObj, GrenadeProjectile) return true;
+	if NOT_ID(thisObj, GrenadeProjectile) return true;
 	GrenadeProjectile *projectile = (GrenadeProjectile*)thisObj;
 	if (!(projectile->projFlags & 0x200) && (projectile->sourceRef != g_thePlayer) && ((((BGSProjectile*)thisObj->baseForm)->projFlags & 0x426) == 0x26))
 		*result = 1;
@@ -238,7 +238,7 @@ bool Cmd_GetProjectileMuzzleFlash_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	BGSProjectile *projectile;
-	if (ExtractArgs(EXTRACT_ARGS, &projectile) && IS_TYPE(projectile, BGSProjectile))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile) && IS_ID(projectile, BGSProjectile))
 		resStr = projectile->muzzleFlash.GetModelPath();
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -248,7 +248,7 @@ bool Cmd_GetProjectileMuzzleFlash_Execute(COMMAND_ARGS)
 bool Cmd_SetProjectileMuzzleFlash_Execute(COMMAND_ARGS)
 {
 	BGSProjectile *projectile;
-	if (ExtractArgs(EXTRACT_ARGS, &projectile, &s_strArgBuffer) && IS_TYPE(projectile, BGSProjectile))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile, &s_strArgBuffer) && IS_ID(projectile, BGSProjectile))
 		projectile->muzzleFlash.SetModelPath(s_strArgBuffer);
 	return true;
 }
@@ -264,11 +264,11 @@ bool Cmd_SetOnProjectileImpactEventHandler_Execute(COMMAND_ARGS)
 	Script *script;
 	UInt32 addEvnt;
 	TESForm *projectileOrList;
-	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &projectileOrList) || NOT_TYPE(script, Script)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &projectileOrList) || NOT_ID(script, Script)) return true;
 	ListNode<TESForm> *iter;
 	BGSProjectile *projectile;
 	EventCallbackScripts *callbacks;
-	if IS_TYPE(projectileOrList, BGSListForm)
+	if IS_ID(projectileOrList, BGSListForm)
 		iter = ((BGSListForm*)projectileOrList)->list.Head();
 	else
 	{
@@ -278,7 +278,7 @@ bool Cmd_SetOnProjectileImpactEventHandler_Execute(COMMAND_ARGS)
 	do
 	{
 		projectile = (BGSProjectile*)iter->data;
-		if (!projectile || NOT_TYPE(projectile, BGSProjectile)) continue;
+		if (!projectile || NOT_ID(projectile, BGSProjectile)) continue;
 		if (addEvnt)
 		{
 			if (s_projectileImpactEventMap.Insert(projectile, &callbacks))

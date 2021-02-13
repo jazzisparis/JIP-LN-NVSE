@@ -29,7 +29,7 @@ bool Cmd_LeveledListAddForm_Execute(COMMAND_ARGS)
 	UInt32 level, count;
 	float health;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &list, &form, &level, &count, &health) && (lvlList = list->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &list, &form, &level, &count, &health) && (lvlList = list->GetLvlList()))
 		lvlList->AddItem(form, level, count, health ? (health <= 1 ? health : health / 100) : 0);
 	return true;
 }
@@ -38,7 +38,7 @@ bool Cmd_LeveledListRemoveForm_Execute(COMMAND_ARGS)
 {
 	TESForm *list, *form;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &list, &form) && (lvlList = list->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &list, &form) && (lvlList = list->GetLvlList()))
 		*result = (int)lvlList->RemoveItem(form);
 	else *result = 0;
 	return true;
@@ -48,7 +48,7 @@ bool Cmd_LeveledListReplaceForm_Execute(COMMAND_ARGS)
 {
 	TESForm *list, *oldform, *newform;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &list, &oldform, &newform) && (lvlList = list->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &list, &oldform, &newform) && (lvlList = list->GetLvlList()))
 	{
 		ListNode<TESLeveledList::ListData> *iter = lvlList->list.Head();
 		TESLeveledList::ListData *data;
@@ -66,7 +66,7 @@ bool Cmd_GetChanceNone_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &form) && (lvlList = form->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (lvlList = form->GetLvlList()))
 		*result = lvlList->chanceNone;
 	else *result = -1;
 	return true;
@@ -77,7 +77,7 @@ bool Cmd_SetChanceNone_Execute(COMMAND_ARGS)
 	TESForm *form;
 	UInt32 newChance;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &newChance) && (lvlList = form->GetLvlList()) && (newChance <= 100))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &newChance) && (lvlList = form->GetLvlList()) && (newChance <= 100))
 		lvlList->chanceNone = newChance;
 	return true;
 }
@@ -87,7 +87,7 @@ bool Cmd_GetChanceNoneGlobal_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESForm *form;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &form) && (lvlList = form->GetLvlList()) && lvlList->global)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (lvlList = form->GetLvlList()) && lvlList->global)
 		REFR_RES = lvlList->global->refID;
 	return true;
 }
@@ -97,7 +97,7 @@ bool Cmd_SetChanceNoneGlobal_Execute(COMMAND_ARGS)
 	TESForm *list;
 	TESGlobal *global = NULL;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &list, &global) && (lvlList = list->GetLvlList()) && (!global || IS_TYPE(global, TESGlobal)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &list, &global) && (lvlList = list->GetLvlList()) && (!global || IS_ID(global, TESGlobal)))
 		lvlList->global = global;
 	return true;
 }
@@ -106,7 +106,7 @@ bool Cmd_GetNumLevItems_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &form) && (lvlList = form->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (lvlList = form->GetLvlList()))
 		*result = (int)lvlList->list.Count();
 	else *result = 0;
 	return true;
@@ -118,7 +118,7 @@ bool Cmd_GetNthLevItem_Execute(COMMAND_ARGS)
 	TESForm *form;
 	UInt32 index;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &index) && (lvlList = form->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &index) && (lvlList = form->GetLvlList()))
 	{
 		TESLeveledList::ListData *data = lvlList->list.GetNthItem(index);
 		if (data && data->form) REFR_RES = data->form->refID;
@@ -131,7 +131,7 @@ bool Cmd_SetNthLevItem_Execute(COMMAND_ARGS)
 	TESForm *list, *form;
 	UInt32 index;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &list, &index, &form) && (lvlList = list->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &list, &index, &form) && (lvlList = list->GetLvlList()))
 	{
 		TESLeveledList::ListData *data = lvlList->list.GetNthItem(index);
 		if (data && data->form) data->form = form;
@@ -145,7 +145,7 @@ bool Cmd_GetNthLevItemLevel_Execute(COMMAND_ARGS)
 	TESForm *form;
 	UInt32 index;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &index) && (lvlList = form->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &index) && (lvlList = form->GetLvlList()))
 	{
 		TESLeveledList::ListData *data = lvlList->list.GetNthItem(index);
 		if (data) *result = data->level;
@@ -159,7 +159,7 @@ bool Cmd_SetNthLevItemLevel_Execute(COMMAND_ARGS)
 	UInt32 index;
 	UInt32 level;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &index, &level) && (lvlList = form->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &index, &level) && (lvlList = form->GetLvlList()))
 	{
 		TESLeveledList::ListData *data = lvlList->list.GetNthItem(index);
 		if (data) data->level = level;
@@ -173,7 +173,7 @@ bool Cmd_GetNthLevItemCount_Execute(COMMAND_ARGS)
 	TESForm *form;
 	UInt32 index;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &index) && (lvlList = form->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &index) && (lvlList = form->GetLvlList()))
 	{
 		TESLeveledList::ListData *data = lvlList->list.GetNthItem(index);
 		if (data) *result = data->count;
@@ -187,7 +187,7 @@ bool Cmd_SetNthLevItemCount_Execute(COMMAND_ARGS)
 	UInt32 index;
 	UInt32 count;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &index, &count) && (lvlList = form->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &index, &count) && (lvlList = form->GetLvlList()))
 	{
 		TESLeveledList::ListData *data = lvlList->list.GetNthItem(index);
 		if (data) data->count = count;
@@ -200,7 +200,7 @@ bool Cmd_RemoveNthLevItem_Execute(COMMAND_ARGS)
 	TESForm *form;
 	UInt32 index;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &index) && (lvlList = form->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &index) && (lvlList = form->GetLvlList()))
 		lvlList->list.RemoveNth(index);
 	return true;
 }
@@ -209,7 +209,7 @@ bool Cmd_LeveledListClear_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &form) && (lvlList = form->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (lvlList = form->GetLvlList()))
 		lvlList->list.RemoveAll();
 	return true;
 }
@@ -219,7 +219,7 @@ bool Cmd_GetLevItemIndexByLevel_Execute(COMMAND_ARGS)
 	TESForm *form;
 	UInt32 level;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &level) && (lvlList = form->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &level) && (lvlList = form->GetLvlList()))
 		*result = lvlList->GetItemIndexByLevel(level);
 	else *result = -1;
 	return true;
@@ -229,7 +229,7 @@ bool Cmd_GetLevItemIndexByForm_Execute(COMMAND_ARGS)
 {
 	TESForm *list, *form;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &list, &form) && (lvlList = list->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &list, &form) && (lvlList = list->GetLvlList()))
 		*result = lvlList->GetItemIndexByForm(form);
 	else *result = -1;
 	return true;
@@ -239,7 +239,7 @@ bool Cmd_DumpLevList_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &form) && IsConsoleOpen() && (lvlList = form->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && IsConsoleOpen() && (lvlList = form->GetLvlList()))
 	{
 		Console_Print("Dumping LeveledList [%08X]", form->refID);
 		s_dumpLvlListIndent = 50;
@@ -252,7 +252,7 @@ bool Cmd_GetLeveledListFlags_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &form) && (lvlList = form->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (lvlList = form->GetLvlList()))
 		*result = lvlList->flags;
 	else *result = 0;
 	return true;
@@ -263,7 +263,7 @@ bool Cmd_SetLeveledListFlags_Execute(COMMAND_ARGS)
 	TESForm *form;
 	UInt32 flags;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &flags) && (lvlList = form->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &flags) && (lvlList = form->GetLvlList()))
 		lvlList->flags = flags;
 	return true;
 }
@@ -272,8 +272,11 @@ bool Cmd_LeveledListHasFormDeep_Execute(COMMAND_ARGS)
 {
 	TESForm *list, *form;
 	TESLeveledList *lvlList;
-	if (ExtractArgs(EXTRACT_ARGS, &list, &form) && (lvlList = list->GetLvlList()))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &list, &form) && (lvlList = list->GetLvlList()))
+	{
+		s_tempFormList.Clear();
 		*result = lvlList->HasFormDeep(form);
+	}
 	else *result = 0;
 	return true;
 }

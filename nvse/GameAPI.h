@@ -93,11 +93,21 @@ struct NVSEStringVarInterface;
 	// I'm sure there is a better way to do this but I haven't found it
 void RegisterStringVarInterface(NVSEStringVarInterface* intfc);
 
+union VarData
+{
+	double			num;
+	struct
+	{
+		UInt32		refID;
+		UInt32		pad;
+	};
+};
+
 struct ScriptVar
 {
 	UInt32				id;
 	ListNode<ScriptVar>	*next;
-	double				data;
+	VarData				data;
 };
 
 // only records individual objects if there's a block that matches it

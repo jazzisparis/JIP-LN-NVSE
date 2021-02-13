@@ -53,7 +53,7 @@ bool Cmd_sv_RegexReplace_Execute(COMMAND_ARGS)
 bool Cmd_sv_DestructAlt_Execute(COMMAND_ARGS)
 {
 	UInt32 strID1, strID2 = 0, strID3 = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &strID1, &strID2, &strID3))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &strID1, &strID2, &strID3))
 	{
 		if (strID1) DeleteStringVar(strID1);
 		if (strID2) DeleteStringVar(strID2);

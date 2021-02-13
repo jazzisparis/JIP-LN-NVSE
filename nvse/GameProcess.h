@@ -17,6 +17,22 @@ struct PackageInfo
 // 64
 struct ActorHitData
 {
+	enum HitFlags
+	{
+		kFlag_TargetIsBlocking =		1,
+		kFlag_TargetWeaponOut =			2,
+		kFlag_IsCritical =				4,
+		kFlag_OnDeathCritEffect =		8,
+		kFlag_IsFatal =					0x10,
+		kFlag_DismemberLimb =			0x20,
+		kFlag_ExplodeLimb =				0x40,
+		kFlag_CrippleLimb =				0x80,
+		kFlag_BreakWeaponNonEmbedded =	0x100,
+		kFlag_BreakWeaponEmbedded =		0x200,
+		kFlag_IsSneakAttack =			0x400,
+		kFlag_ArmorPenetrated =			0x80000000	// JIP only
+	};
+
 	Actor				*source;		// 00
 	Actor				*target;		// 04
 	union								// 08
@@ -24,7 +40,7 @@ struct ActorHitData
 		Projectile		*projectile;
 		Explosion		*explosion;
 	};
-	UInt32				unk0C;			// 0C
+	UInt32				weaponAV;		// 0C
 	SInt32				hitLocation;	// 10
 	float				healthDmg;		// 14
 	float				wpnBaseDmg;		// 18	Skill and weapon condition modifiers included
@@ -474,8 +490,8 @@ public:
 	virtual void	Unk_179();
 	virtual void	Unk_17A();
 	virtual void	Unk_17B();
-	virtual void	Unk_17C();
-	virtual void	Unk_17D();
+	virtual BSBound	*GetBoundingBox();
+	virtual void	SetBoundingBox(BSBound *bounds);
 	virtual void	Unk_17E();
 	virtual void	Unk_17F();
 	virtual void	Unk_180();
@@ -566,8 +582,8 @@ public:
 	virtual void	Unk_1D5();
 	virtual void	Unk_1D6();
 	virtual void	Unk_1D7();
-	virtual void	Unk_1D8();
-	virtual void	Unk_1D9();
+	virtual void	SetWaterRadsSec(float radsSec);
+	virtual float	GetWaterRadsSec();
 	virtual void	Unk_1DA();
 	virtual float	GetRadsSec();
 	virtual ActorHitData *GetHitData();
@@ -816,8 +832,6 @@ STATIC_ASSERT(sizeof(AnimData) == 0x12C);
 
 class QueuedFile;
 class BSFaceGenAnimationData;
-class BSBound;
-class NiTriShape;
 
 // 25C
 class MiddleHighProcess : public MiddleLowProcess

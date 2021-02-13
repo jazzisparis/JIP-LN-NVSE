@@ -68,11 +68,14 @@ DEFINE_COMMAND_PLUGIN(ToggleCameraCollision, , 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(InitRockItLauncher, , 0, 1, kParams_OneObjectID);
 DEFINE_COMMAND_PLUGIN(ToggleHitEffects, , 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ToggleNoMovementCombat, , 0, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(RewardXPExact, , 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(ClearDeadActors, , 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetCameraMovement, , 0, 2, kParams_JIP_TwoScriptVars);
 
 bool Cmd_DisableNavMeshAlt_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
-	if (ExtractArgs(EXTRACT_ARGS, &form) && IS_TYPE(form, NavMesh))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && IS_ID(form, NavMesh))
 		ThisCall(0x6C1150, CdeclCall<void*>(0x6C0720), form->refID);
 	return true;
 }
@@ -80,7 +83,7 @@ bool Cmd_DisableNavMeshAlt_Execute(COMMAND_ARGS)
 bool Cmd_EnableNavMeshAlt_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
-	if (ExtractArgs(EXTRACT_ARGS, &form) && IS_TYPE(form, NavMesh))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && IS_ID(form, NavMesh))
 		ThisCall(0x6C1130, CdeclCall<void*>(0x6C0720), form->refID);
 	return true;
 }
@@ -88,7 +91,7 @@ bool Cmd_EnableNavMeshAlt_Execute(COMMAND_ARGS)
 bool Cmd_GetTerrainHeight_Execute(COMMAND_ARGS)
 {
 	float posXY[2], tempRes = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &posXY[0], &posXY[1]))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posXY[0], &posXY[1]))
 		g_TES->GetTerrainHeight(posXY, &tempRes);
 	*result = tempRes;
 	return true;
@@ -98,7 +101,7 @@ bool Cmd_GetFormDescription_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	TESForm *form;
-	if (ExtractArgs(EXTRACT_ARGS, &form)) resStr = form->GetDescriptionText();
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form)) resStr = form->GetDescriptionText();
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
@@ -108,13 +111,13 @@ bool Cmd_GetContainerRespawns_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectCONT *container = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &container)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &container)) return true;
 	if (!container)
 	{
 		if (!thisObj) return true;
 		container = (TESObjectCONT*)thisObj->baseForm;
 	}
-	if IS_TYPE(container, TESObjectCONT)
+	if IS_ID(container, TESObjectCONT)
 		*result = (container->flags & 2) ? 1 : 0;
 	return true;
 }
@@ -123,13 +126,13 @@ bool Cmd_SetContainerRespawns_Execute(COMMAND_ARGS)
 {
 	UInt32 respawn;
 	TESObjectCONT *container = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &respawn, &container)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &respawn, &container)) return true;
 	if (!container)
 	{
 		if (!thisObj) return true;
 		container = (TESObjectCONT*)thisObj->baseForm;
 	}
-	if IS_TYPE(container, TESObjectCONT)
+	if IS_ID(container, TESObjectCONT)
 	{
 		if (respawn) container->flags |= 2;
 		else container->flags &= 0xFD;
@@ -142,7 +145,7 @@ bool Cmd_GetExteriorCell_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESWorldSpace *wspc;
 	SInt32 coordX, coordY;
-	if (ExtractArgs(EXTRACT_ARGS, &wspc, &coordX, &coordY) && wspc->cellMap)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc, &coordX, &coordY) && wspc->cellMap)
 	{
 		Coordinate coord;
 		coord.x = coordX;
@@ -157,7 +160,7 @@ bool Cmd_GetCellBuffered_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectCELL *cell = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &cell) || (!cell && (!thisObj || !(cell = thisObj->parentCell))))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &cell) || (!cell && (!thisObj || !(cell = thisObj->parentCell))))
 		return true;
 	TESObjectCELL **cellsBuffer = cell->worldSpace ? g_TES->exteriorsBuffer : g_TES->interiorsBuffer;
 	if (cellsBuffer)
@@ -192,7 +195,7 @@ bool Cmd_GetGameDifficulty_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_ToggleFirstPerson_Execute(COMMAND_ARGS)
 {
 	UInt32 toggleON;
-	if (ExtractArgs(EXTRACT_ARGS, &toggleON))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &toggleON))
 	{
 		bool bToggle = toggleON != 0;
 		if (bToggle == g_thePlayer->bThirdPerson)
@@ -208,7 +211,7 @@ bool Cmd_SetFormDescription_Execute(COMMAND_ARGS)
 	if (!ExtractFormatStringArgs(1, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_SetFormDescription.numParams, &form))
 		return true;
 	TESDescription *description = DYNAMIC_CAST(form, TESForm, TESDescription);
-	if (!description && (NOT_TYPE(form, BGSNote) || !(description = ((BGSNote*)form)->noteText))) return true;
+	if (!description && (NOT_ID(form, BGSNote) || !(description = ((BGSNote*)form)->noteText))) return true;
 	UInt16 newLen = StrLen(s_strArgBuffer);
 	char **findDesc, *newDesc;
 	if (!s_descriptionChanges.Insert(description, &findDesc))
@@ -310,7 +313,7 @@ bool Cmd_GetIdleLoopTimes_Execute(COMMAND_ARGS)
 {
 	TESIdleForm *idle;
 	UInt32 maxTimes;
-	if (ExtractArgs(EXTRACT_ARGS, &idle, &maxTimes) && IS_TYPE(idle, TESIdleForm))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idle, &maxTimes) && IS_ID(idle, TESIdleForm))
 		*result = maxTimes ? idle->data.loopMax : idle->data.loopMin;
 	else *result = 0;
 	return true;
@@ -320,7 +323,7 @@ bool Cmd_SetIdleLoopTimes_Execute(COMMAND_ARGS)
 {
 	TESIdleForm *idle;
 	UInt32 loopMin, loopMax;
-	if (!ExtractArgs(EXTRACT_ARGS, &idle, &loopMin, &loopMax) || NOT_TYPE(idle, TESIdleForm)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &idle, &loopMin, &loopMax) || NOT_ID(idle, TESIdleForm)) return true;
 	if (loopMin > 255) loopMin = 255;
 	if (loopMax < loopMin) loopMax = loopMin;
 	idle->data.loopMin = loopMin;
@@ -352,7 +355,7 @@ bool Cmd_SwapTextureEx_Execute(COMMAND_ARGS)
 	TESObjectREFR *refr;
 	UInt32 texIdx = 0;
 	char *pathBgn = StrLenCopy(s_strValBuffer, "Textures\\", 9);
-	if (ExtractArgs(EXTRACT_ARGS, &refr, &s_strArgBuffer, pathBgn, &texIdx))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &refr, &s_strArgBuffer, pathBgn, &texIdx))
 	{
 		StrCat(pathBgn, ".dds");
 		refr->SwapTexture(s_strArgBuffer, s_strValBuffer, texIdx);
@@ -364,7 +367,7 @@ bool Cmd_SetOnFastTravelEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt;
-	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt) || NOT_TYPE(script, Script)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt) || NOT_ID(script, Script)) return true;
 	if (addEvnt)
 	{
 		if (s_fastTravelEventScripts.Insert(script))
@@ -380,7 +383,7 @@ bool Cmd_GetMoonTexture_Execute(COMMAND_ARGS)
 	UInt32 textureID;
 	const char *texturePath;
 	Sky *currSky = *g_currentSky;
-	if (ExtractArgs(EXTRACT_ARGS, &textureID) && (textureID <= 7) && currSky && currSky->masserMoon)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &textureID) && (textureID <= 7) && currSky && currSky->masserMoon)
 		texturePath = currSky->masserMoon->moonTexture[textureID].m_data;
 	else texturePath = NULL;
 	AssignString(PASS_COMMAND_ARGS, texturePath);
@@ -391,7 +394,7 @@ bool Cmd_SetMoonTexture_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 textureID;
-	if (!ExtractArgs(EXTRACT_ARGS, &textureID, &s_strArgBuffer) || (textureID > 7) || !*g_currentSky) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &textureID, &s_strArgBuffer) || (textureID > 7) || !*g_currentSky) return true;
 	const char *newTexture = CopyString(s_strArgBuffer);
 	for (UInt8 idx = 0; idx < 8; idx++)
 	{
@@ -439,7 +442,7 @@ bool Cmd_SetOnPCTargetChangeEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt;
-	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt) || NOT_TYPE(script, Script)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt) || NOT_ID(script, Script)) return true;
 	if (addEvnt)
 	{
 		if (s_targetChangeEventScripts.Insert(script))
@@ -460,7 +463,7 @@ bool Cmd_GetLocalGravity_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char axis;
-	if (ExtractArgs(EXTRACT_ARGS, &axis))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &axis))
 	{
 		hkpWorld *world = GethkpWorld();
 		if (world) *result = ((float*)&world->gravity)[axis - 'X'];
@@ -472,7 +475,7 @@ bool Cmd_GetLocalGravity_Execute(COMMAND_ARGS)
 bool Cmd_SetLocalGravityVector_Execute(COMMAND_ARGS)
 {
 	hkpWorld *world = GethkpWorld();
-	if (world) ExtractArgs(EXTRACT_ARGS, &world->gravity.x, &world->gravity.y, &world->gravity.z);
+	if (world) ExtractArgsEx(EXTRACT_ARGS_EX, &world->gravity.x, &world->gravity.y, &world->gravity.z);
 	return true;
 }
 
@@ -483,7 +486,7 @@ bool SetOnKeyEventHandler_Execute(COMMAND_ARGS)
 	Script *script;
 	UInt32 addEvnt;
 	SInt32 keyID = -1;
-	if (ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &keyID) && IS_TYPE(script, Script))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &keyID) && IS_ID(script, Script))
 		SetDInputEventHandler(s_onKeyEventMask, script, keyID, addEvnt != 0);
 	return true;
 }
@@ -529,7 +532,7 @@ bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 	UInt32 filter = 6;
 	if (NUM_ARGS)
 	{
-		ExtractArgs(EXTRACT_ARGS, &filter);
+		ExtractArgsEx(EXTRACT_ARGS_EX, &filter);
 		filter &= 0x3F;
 	}
 	NiVector3 coords;
@@ -547,7 +550,7 @@ bool Cmd_GetReticleRange_Execute(COMMAND_ARGS)
 	UInt32 filter = 6;
 	if (NUM_ARGS)
 	{
-		ExtractArgs(EXTRACT_ARGS, &filter);
+		ExtractArgsEx(EXTRACT_ARGS_EX, &filter);
 		filter &= 0x3F;
 	}
 	NiVector3 coords;
@@ -562,7 +565,7 @@ bool Cmd_SetOnDialogTopicEventHandler_Execute(COMMAND_ARGS)
 	Script *script;
 	UInt32 addEvnt;
 	TESForm *form;
-	if (ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &form) && IS_TYPE(script, Script) && (IS_TYPE(form, TESTopic) || IS_TYPE(form, TESTopicInfo)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &form) && IS_ID(script, Script) && (IS_ID(form, TESTopic) || IS_ID(form, TESTopicInfo)))
 	{
 		if (addEvnt)
 		{
@@ -587,7 +590,7 @@ bool Cmd_SetOnDialogTopicEventHandler_Execute(COMMAND_ARGS)
 bool Cmd_GetGameDaysPassed_Execute(COMMAND_ARGS)
 {
 	int bgnYear = 2281, bgnMonth = 10, bgnDay = 13;
-	if (ExtractArgs(EXTRACT_ARGS, &bgnYear, &bgnMonth, &bgnDay) && (bgnMonth <= 12))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bgnYear, &bgnMonth, &bgnDay) && (bgnMonth <= 12))
 		*result = g_gameTimeGlobals->GetDaysPassed(bgnYear, bgnMonth - 1, bgnDay);
 	else *result = 0;
 	DoConsolePrint(result);
@@ -603,7 +606,7 @@ bool Cmd_IsPCInCombat_Execute(COMMAND_ARGS)
 bool Cmd_ToggleHardcoreTracking_Execute(COMMAND_ARGS)
 {
 	UInt32 toggleON;
-	if (ExtractArgs(EXTRACT_ARGS, &toggleON))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &toggleON))
 	{
 		if (toggleON) s_serializedFlags &= ~kSerializedFlag_NoHardcoreTracking;
 		else s_serializedFlags |= kSerializedFlag_NoHardcoreTracking;
@@ -614,7 +617,7 @@ bool Cmd_ToggleHardcoreTracking_Execute(COMMAND_ARGS)
 bool Cmd_SetGameDifficulty_Execute(COMMAND_ARGS)
 {
 	UInt32 difficulty;
-	if (ExtractArgs(EXTRACT_ARGS, &difficulty) && (difficulty <= 4))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &difficulty) && (difficulty <= 4))
 		g_thePlayer->gameDifficulty = difficulty;
 	return true;
 }
@@ -630,20 +633,20 @@ bool Cmd_GetEnemyHealthTarget_Execute(COMMAND_ARGS)
 bool Cmd_MarkActivatorAshPile_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
-	if (ExtractArgs(EXTRACT_ARGS, &form))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
-		if IS_TYPE(form, TESObjectACTI)
+		if IS_ID(form, TESObjectACTI)
 		{
 			form->SetJIPFlag(kHookFormFlag6_IsAshPile, true);
 			form->flags |= 1;
 		}
-		else if IS_TYPE(form, BGSListForm)
+		else if IS_ID(form, BGSListForm)
 		{
 			ListNode<TESForm> *iter = ((BGSListForm*)form)->list.Head();
 			do
 			{
 				form = iter->data;
-				if (form && IS_TYPE(form, TESObjectACTI))
+				if (form && IS_ID(form, TESObjectACTI))
 				{
 					form->SetJIPFlag(kHookFormFlag6_IsAshPile, true);
 					form->flags |= 1;
@@ -659,7 +662,7 @@ bool Cmd_GetBufferedCells_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 interiors;
-	if (ExtractArgs(EXTRACT_ARGS, &interiors))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &interiors))
 	{
 		s_tempElements.Clear();
 		TESObjectCELL **cellsBuffer = interiors ? g_TES->interiorsBuffer : g_TES->exteriorsBuffer, *cell;
@@ -683,7 +686,7 @@ bool Cmd_SetOnLocationDiscoverEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt;
-	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt) || NOT_TYPE(script, Script)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt) || NOT_ID(script, Script)) return true;
 	if (addEvnt)
 	{
 		if (s_locationDiscoverEventScripts.Insert(script))
@@ -698,7 +701,7 @@ bool Cmd_SetOnCraftingEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt;
-	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt) || NOT_TYPE(script, Script)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt) || NOT_ID(script, Script)) return true;
 	if (addEvnt)
 	{
 		if (s_itemCraftedEventScripts.Insert(script))
@@ -725,7 +728,7 @@ bool Cmd_SwapObjectLOD_Execute(COMMAND_ARGS)
 {
 	TESWorldSpace *worldSpc;
 	SInt32 cellX, cellY;
-	if (ExtractArgs(EXTRACT_ARGS, &worldSpc, &cellX, &cellY) && IS_TYPE(worldSpc, TESWorldSpace))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &worldSpc, &cellX, &cellY) && IS_ID(worldSpc, TESWorldSpace))
 	{
 		Coordinate cellXY(cellX, cellY);
 		if (s_swapObjLODMap[(UInt32)worldSpc].Insert(cellXY.xy))
@@ -740,7 +743,7 @@ QuaternionKey *g_wobbleAnimRotations[9] = {};
 bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 {
 	NiVector3 rotYPR;
-	if (ExtractArgs(EXTRACT_ARGS, &rotYPR.x, &rotYPR.y, &rotYPR.z))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &rotYPR.x, &rotYPR.y, &rotYPR.z))
 	{
 		if (!g_wobbleAnimations)
 		{
@@ -792,7 +795,7 @@ bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 bool Cmd_SetGameHour_Execute(COMMAND_ARGS)
 {
 	float newHour;
-	if (ExtractArgs(EXTRACT_ARGS, &newHour))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &newHour))
 	{
 		float *hour = &g_gameTimeGlobals->hour->data;
 		if (*hour <= newHour)
@@ -808,7 +811,7 @@ UnorderedMap<const char*, UInt32> s_actorValueIDsMap(0x80);
 bool Cmd_StringToActorValue_Execute(COMMAND_ARGS)
 {
 	*result = -1;
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
 		if (s_actorValueIDsMap.Empty())
 		{
@@ -840,7 +843,7 @@ bool Cmd_GetHardcoreTracking_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_GetNoteRead_Execute(COMMAND_ARGS)
 {
 	BGSNote *note;
-	if (ExtractArgs(EXTRACT_ARGS, &note))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &note))
 		*result = note->read;
 	else *result = 0;
 	return true;
@@ -856,7 +859,7 @@ bool Cmd_SetOnNoteAddedEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt;
-	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt) || NOT_TYPE(script, Script)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt) || NOT_ID(script, Script)) return true;
 	if (addEvnt)
 	{
 		if (s_noteAddedEventScripts.Insert(script))
@@ -875,7 +878,7 @@ bool __fastcall IsHardcoreStage(TESForm *form)
 bool Cmd_GetHardcoreStageThreshold_Execute(COMMAND_ARGS)
 {
 	BGSRadiationStage *hcStage;
-	if (ExtractArgs(EXTRACT_ARGS, &hcStage) && IsHardcoreStage(hcStage))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &hcStage) && IsHardcoreStage(hcStage))
 		*result = (int)hcStage->threshold;
 	else *result = 0;
 	return true;
@@ -885,7 +888,7 @@ bool Cmd_SetHardcoreStageThreshold_Execute(COMMAND_ARGS)
 {
 	BGSRadiationStage *hcStage;
 	UInt32 threshold;
-	if (ExtractArgs(EXTRACT_ARGS, &hcStage, &threshold) && IsHardcoreStage(hcStage))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &hcStage, &threshold) && IsHardcoreStage(hcStage))
 		hcStage->threshold = threshold;
 	return true;
 }
@@ -894,7 +897,7 @@ bool Cmd_GetHardcoreStageEffect_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	BGSRadiationStage *hcStage;
-	if (ExtractArgs(EXTRACT_ARGS, &hcStage) && IsHardcoreStage(hcStage) && hcStage->effect)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &hcStage) && IsHardcoreStage(hcStage) && hcStage->effect)
 		REFR_RES = hcStage->effect->refID;
 	return true;
 }
@@ -903,7 +906,7 @@ bool Cmd_SetHardcoreStageEffect_Execute(COMMAND_ARGS)
 {
 	BGSRadiationStage *hcStage;
 	SpellItem *effect = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &hcStage, &effect) && IsHardcoreStage(hcStage))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &hcStage, &effect) && IsHardcoreStage(hcStage))
 		hcStage->effect = effect;
 	return true;
 }
@@ -920,7 +923,7 @@ const UInt32 kDebugModeBytes[] =
 bool Cmd_GetDebugModeState_Execute(COMMAND_ARGS)
 {
 	UInt32 modeID;
-	if (ExtractArgs(EXTRACT_ARGS, &modeID) && (modeID <= 4))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &modeID) && (modeID <= 4))
 		*result = *(UInt8*)kDebugModeBytes[modeID];
 	else *result = 0;
 	return true;
@@ -930,7 +933,7 @@ bool Cmd_FreezeTime_Execute(COMMAND_ARGS)
 {
 	*result = g_OSGlobals->freezeTime;
 	UInt32 toggle;
-	if (NUM_ARGS && ExtractArgs(EXTRACT_ARGS, &toggle) && (g_OSGlobals->freezeTime == !toggle))
+	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle) && (g_OSGlobals->freezeTime == !toggle))
 		g_OSGlobals->freezeTime = toggle != 0;
 	return true;
 }
@@ -944,7 +947,7 @@ bool Cmd_GetConditionDamagePenalty_Execute(COMMAND_ARGS)
 bool Cmd_SetConditionDamagePenalty_Execute(COMMAND_ARGS)
 {
 	double value;
-	if (ExtractArgs(EXTRACT_ARGS, &value))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
 		*g_condDmgPenalty = value;
 	return true;
 }
@@ -954,7 +957,7 @@ bool Cmd_ToggleBipedSlotVisibility_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt8 numArgs = NUM_ARGS;
 	UInt32 slotID, toggle;
-	if (ExtractArgs(EXTRACT_ARGS, &slotID, &toggle) && (slotID <= 19))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &slotID, &toggle) && (slotID <= 19))
 	{
 		slotID = 1 << slotID;
 		if (numArgs > 1)
@@ -972,7 +975,7 @@ bool Cmd_ToggleImmortalMode_Execute(COMMAND_ARGS)
 {
 	*result = s_playerMinHPMode;
 	UInt32 toggle;
-	if (NUM_ARGS && ExtractArgs(EXTRACT_ARGS, &toggle))
+	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle))
 	{
 		s_playerMinHPMode = toggle;
 		HOOK_SET(PlayerMinHealth, toggle == 1);
@@ -987,7 +990,7 @@ bool Cmd_ToggleCameraCollision_Execute(COMMAND_ARGS)
 	static bool cameraCollision = true;
 	*result = cameraCollision;
 	UInt32 toggle;
-	if (NUM_ARGS && ExtractArgs(EXTRACT_ARGS, &toggle) && (!toggle == cameraCollision))
+	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle) && (!toggle == cameraCollision))
 	{
 		cameraCollision = !cameraCollision;
 		SafeWrite8(0x94A34E, toggle ? 0x74 : 0xEB);
@@ -1089,7 +1092,7 @@ __declspec(naked) void PCAmmoSwitchHook()
 bool Cmd_InitRockItLauncher_Execute(COMMAND_ARGS)
 {
 	static bool installed = false;
-	if (!installed && ExtractArgs(EXTRACT_ARGS, &g_rockItLauncher))
+	if (!installed && ExtractArgsEx(EXTRACT_ARGS_EX, &g_rockItLauncher))
 	{
 		installed = true;
 		WriteRelJump(0x525980, (UInt32)GetWeaponAmmoHook);
@@ -1105,7 +1108,7 @@ bool Cmd_ToggleHitEffects_Execute(COMMAND_ARGS)
 {
 	*result = !s_disableHitEffects;
 	UInt32 toggle;
-	if (NUM_ARGS && ExtractArgs(EXTRACT_ARGS, &toggle))
+	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle))
 	{
 		if (toggle) s_disableHitEffects &= 2;
 		else s_disableHitEffects |= 1;
@@ -1117,7 +1120,85 @@ bool Cmd_ToggleNoMovementCombat_Execute(COMMAND_ARGS)
 {
 	*result = s_noMovementCombat;
 	UInt32 toggle;
-	if (NUM_ARGS && ExtractArgs(EXTRACT_ARGS, &toggle))
+	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle))
 		s_noMovementCombat = toggle != 0;
+	return true;
+}
+
+bool Cmd_RewardXPExact_Execute(COMMAND_ARGS)
+{
+	int xpAmount;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &xpAmount))
+	{
+		g_thePlayer->ModActorValue(kAVCode_XP, xpAmount, 0);
+		ThisCall(0xAD7FA0, *(BSWin32Audio**)0x11F6D98, (const char*)0x106F354, 0x121);
+	}
+	return true;
+}
+
+bool Cmd_ClearDeadActors_Execute(COMMAND_ARGS)
+{
+	UInt32 count = g_processManager->beginOffsets[0];
+	MobileObject **objArray = g_processManager->objects.data + count;
+	count = g_processManager->endOffsets[0] - count;
+	Actor *actor;
+	HighProcess *hiProcess;
+	while (count)
+	{
+		actor = (Actor*)objArray[--count];
+		if (!actor || !actor->IsActor() || (actor->lifeState != 2) || (actor->flags & 0x200000) || (actor->baseForm->flags & 0x400))
+			continue;
+		hiProcess = (HighProcess*)actor->baseProcess;
+		if (hiProcess && !hiProcess->processLevel && !hiProcess->fadeType && (hiProcess->flt330 < 0) && 
+			!actor->extraDataList.HasType(kExtraData_EnableStateChildren) && !ThisCall<bool>(0x577DE0, actor))
+			ThisCall(0x8FEB60, hiProcess, actor);
+	}
+	return true;
+}
+
+bool Cmd_GetCameraMovement_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	ScriptVar *outX, *outY;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outX, &outY))
+	{
+		bool controller = s_controllerReady;
+		int iMovX, iMovY;
+		if (controller)
+		{
+			iMovX = *(short*)0x11F35B4;
+			if ((iMovX >= -s_deadZoneRS) && (iMovX <= s_deadZoneRS))
+				iMovX = 0;
+			iMovY = *(short*)0x11F35B6;
+			if ((iMovY >= -s_deadZoneRS) && (iMovY <= s_deadZoneRS))
+				iMovY = 0;
+		}
+		else
+		{
+			iMovX = g_inputGlobals->mouseMovementX;
+			iMovY = g_inputGlobals->mouseMovementY;
+		}
+		if (iMovX || iMovY)
+		{
+			if (iMovY && *(bool*)0x11E0A60)
+				iMovY = -iMovY;
+			double mouseSensitivity = *(float*)0x11E0A70;
+			double fMovX = iMovX * mouseSensitivity;
+			double fMovY = iMovY * mouseSensitivity;
+			if (controller)
+			{
+				fMovX /= 1500;
+				fMovY /= -1500;
+			}
+			outX->data.num = fMovX;
+			outY->data.num = fMovY;
+			*result = 1;
+		}
+		else
+		{
+			outX->data.num = 0;
+			outY->data.num = 0;
+		}
+	}
 	return true;
 }

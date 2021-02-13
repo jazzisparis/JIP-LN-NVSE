@@ -30,7 +30,7 @@ bool ScriptVariableAction_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &form) || !s_strArgBuffer[0]) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &form) || !s_strArgBuffer[0]) return true;
 	if (!form)
 	{
 		if (!thisObj) return true;
@@ -102,7 +102,7 @@ __declspec(naked) bool Cmd_RemoveScriptVariable_Execute(COMMAND_ARGS)
 bool Cmd_RemoveAllAddedVariables_Execute(COMMAND_ARGS)
 {
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form)) return true;
 	if (!form)
 	{
 		if (!thisObj) return true;
@@ -121,7 +121,7 @@ bool Cmd_GetDelayElapsed_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESQuest *quest;
-	if (ExtractArgs(EXTRACT_ARGS, &quest) && quest->scriptable.script)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest) && quest->scriptable.script)
 		*result = quest->scriptable.script->questDelayTimeCounter;
 	return true;
 }
@@ -130,7 +130,7 @@ bool Cmd_SetDelayElapsed_Execute(COMMAND_ARGS)
 {
 	TESQuest *quest;
 	float delay;
-	if (ExtractArgs(EXTRACT_ARGS, &quest, &delay) && quest->scriptable.script)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &delay) && quest->scriptable.script)
 		quest->scriptable.script->questDelayTimeCounter = delay;
 	return true;
 }
@@ -139,7 +139,7 @@ bool Cmd_SetGameMainLoopCallback_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 doAdd, callDelay = 1, modeFlag = 3;
-	if (ExtractArgs(EXTRACT_ARGS, &script, &doAdd, &callDelay, &modeFlag) && IS_TYPE(script, Script))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script, &doAdd, &callDelay, &modeFlag) && IS_ID(script, Script))
 	{
 		TESObjectREFR *callingRef = thisObj ? thisObj : g_thePlayer;
 		MainLoopCallback *callback = FindMainLoopCallback(script, callingRef);
@@ -168,7 +168,7 @@ bool Cmd_SetGameMainLoopCallback_Execute(COMMAND_ARGS)
 bool Cmd_GetScriptDisabled_Execute(COMMAND_ARGS)
 {
 	Script *script;
-	if (ExtractArgs(EXTRACT_ARGS, &script) && IS_TYPE(script, Script) && !script->info.dataLength)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script) && IS_ID(script, Script) && !script->info.dataLength)
 		*result = 1;
 	else *result = 0;
 	return true;
@@ -187,11 +187,11 @@ bool Cmd_SetScriptDisabled_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	UInt32 disable;
-	if (ExtractArgs(EXTRACT_ARGS, &form, &disable))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &disable))
 	{
 		bool bDisable = (disable != 0);
 		ListNode<TESForm> *iter;
-		if IS_TYPE(form, BGSListForm)
+		if IS_ID(form, BGSListForm)
 			iter = ((BGSListForm*)form)->list.Head();
 		else
 		{
@@ -201,7 +201,7 @@ bool Cmd_SetScriptDisabled_Execute(COMMAND_ARGS)
 		do
 		{
 			form = iter->data;
-			if (form && IS_TYPE(form, Script))
+			if (form && IS_ID(form, Script))
 				SetScriptDisabled((Script*)form, bDisable);
 		}
 		while (iter = iter->next);
@@ -213,7 +213,7 @@ bool Cmd_GetScriptEventDisabled_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form;
-	if (!ExtractArgs(EXTRACT_ARGS, &form, &s_strArgBuffer)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &s_strArgBuffer)) return true;
 	UInt32 *inMask = s_eventMasks.GetPtr(s_strArgBuffer);
 	if (!inMask) return true;
 	if (*inMask)
@@ -262,7 +262,7 @@ bool Cmd_SetScriptEventDisabled_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	UInt32 disable;
-	if (!ExtractArgs(EXTRACT_ARGS, &form, &s_strArgBuffer, &disable)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &s_strArgBuffer, &disable)) return true;
 	bool bDisable = (disable != 0), onActivate = false;
 	char *posPtr = s_strArgBuffer, *delim;
 	UInt32 *evntMask, inMask = 0;
@@ -278,7 +278,7 @@ bool Cmd_SetScriptEventDisabled_Execute(COMMAND_ARGS)
 	while (*posPtr);
 	if (!inMask && !onActivate) return true;
 	ListNode<TESForm> *iter;
-	if IS_TYPE(form, BGSListForm)
+	if IS_ID(form, BGSListForm)
 		iter = ((BGSListForm*)form)->list.Head();
 	else
 	{
@@ -289,7 +289,7 @@ bool Cmd_SetScriptEventDisabled_Execute(COMMAND_ARGS)
 	do
 	{
 		form = iter->data;
-		if (!form || IS_TYPE(form, TESQuest)) continue;
+		if (!form || IS_ID(form, TESQuest)) continue;
 		if (form->GetIsReference())
 		{
 			refBase = ((TESObjectREFR*)form)->baseForm;
@@ -306,7 +306,7 @@ bool Cmd_FakeScriptEvent_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *filterForm = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer, &filterForm)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &filterForm)) return true;
 	UInt32 inMask = s_eventMasks.Get(s_strArgBuffer);
 	if (!inMask) return true;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
@@ -324,7 +324,7 @@ bool Cmd_SetOnQuestStageEventHandler_Execute(COMMAND_ARGS)
 	Script *script;
 	UInt32 addEvnt, stageID, skipRes = 0;
 	TESQuest *quest;
-	if (!ExtractArgs(EXTRACT_ARGS, &script, &addEvnt, &quest, &stageID, &skipRes) || NOT_TYPE(script, Script))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &quest, &stageID, &skipRes) || NOT_ID(script, Script))
 		return true;
 	TESQuest::StageInfo *info = NULL;
 	ListNode<TESQuest::StageInfo> *iter = quest->stages.Head();
@@ -388,10 +388,11 @@ bool Cmd_ScriptWait_Execute(COMMAND_ARGS)
 {
 	if (_ReturnAddress() != (void*)0x5E234B) return true;
 	UInt32 iterNum;
-	if (!ExtractArgs(EXTRACT_ARGS, &iterNum) || !scriptObj->refID || (scriptObj->info.type > 1) || !iterNum) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &iterNum) || !scriptObj->refID || (scriptObj->info.type > 1) || !iterNum) return true;
 	TESForm *owner = scriptObj->info.type ? scriptObj->quest : (TESForm*)thisObj;
 	if (!owner) return true;
-	ScriptBlockIterator blockIter((UInt8*)scriptData, *opcodeOffsetPtr);
+	*opcodeOffsetPtr += *(UInt16*)(scriptData + *opcodeOffsetPtr - 2);
+	ScriptBlockIterator blockIter(scriptData, *opcodeOffsetPtr);
 	while (!blockIter.End()) blockIter.Next();
 	UInt8 *blockType = blockIter.TypePtr();
 	if (!blockType || (*blockType == 0xD)) return true;
@@ -412,7 +413,7 @@ bool Cmd_IsScriptWaiting_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *owner = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &owner))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &owner))
 	{
 		if (!owner)
 		{
@@ -428,7 +429,7 @@ bool Cmd_IsScriptWaiting_Execute(COMMAND_ARGS)
 bool Cmd_StopScriptWaiting_Execute(COMMAND_ARGS)
 {
 	TESForm *owner = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &owner))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &owner))
 	{
 		if (!owner)
 		{
@@ -446,7 +447,7 @@ bool Cmd_GetScriptBlockDisabled_Execute(COMMAND_ARGS)
 	*result = 0;
 	Script *script;
 	UInt32 blockType;
-	if (ExtractArgs(EXTRACT_ARGS, &script, &blockType) && IS_TYPE(script, Script) && (blockType <= 0x25))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script, &blockType) && IS_ID(script, Script) && (blockType <= 0x25))
 	{
 		auto findScript = s_disabledScriptBlocksMap.Find(script);
 		if (findScript && findScript().Find(DisabledBlockFinder(blockType)))
@@ -459,7 +460,7 @@ bool Cmd_SetScriptBlockDisabled_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	SInt32 disable, blockType = -1;
-	if (!ExtractArgs(EXTRACT_ARGS, &script, &disable, &blockType) || NOT_TYPE(script, Script) || (blockType > 0x25)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &disable, &blockType) || NOT_ID(script, Script) || (blockType > 0x25)) return true;
 	auto findScript = s_disabledScriptBlocksMap.Find(script);
 	DisabledScriptBlocks *disabledBlocks = findScript ? &findScript() : NULL;
 	if (disable)
@@ -484,14 +485,14 @@ bool Cmd_HasScriptBlock_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 blockType;
 	TESForm *form = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &blockType, &form) || (blockType > 0x25)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &blockType, &form) || (blockType > 0x25)) return true;
 	if (!form)
 	{
 		if (!thisObj) return true;
 		form = thisObj->baseForm;
 	}
 	Script *script;
-	if IS_TYPE(form, Script)
+	if IS_ID(form, Script)
 		script = (Script*)form;
 	else
 	{
@@ -515,7 +516,7 @@ bool Cmd_HasScriptBlock_Execute(COMMAND_ARGS)
 bool Cmd_DisableScriptedActivate_Execute(COMMAND_ARGS)
 {
 	UInt32 disable;
-	if (!ExtractArgs(EXTRACT_ARGS, &disable)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &disable)) return true;
 	ExtraScript *xScript = GetExtraType(&thisObj->extraDataList, Script);
 	if (!xScript || !xScript->script || !xScript->eventList) return true;
 	Script *script = xScript->script;
@@ -555,7 +556,7 @@ bool Cmd_DisableScriptedActivate_Execute(COMMAND_ARGS)
 
 bool Cmd_RunBatchScript_Execute(COMMAND_ARGS)
 {
-	if (ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
 		TESObjectREFR *callingRef = thisObj ? thisObj : g_thePlayer;
 		*result = FileToBuffer(s_strArgBuffer, s_strValBuffer) && callingRef->RunScriptSource(s_strValBuffer);

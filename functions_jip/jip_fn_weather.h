@@ -24,7 +24,7 @@ bool Cmd_GetWeatherImageSpaceMod_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESWeather *weather;
 	UInt32 time;
-	if (ExtractArgs(EXTRACT_ARGS, &weather, &time) && (time <= 5) && weather->imageSpaceMods[time])
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &time) && (time <= 5) && weather->imageSpaceMods[time])
 		REFR_RES = weather->imageSpaceMods[time]->refID;
 	return true;
 }
@@ -34,7 +34,7 @@ bool Cmd_SetWeatherImageSpaceMod_Execute(COMMAND_ARGS)
 	TESWeather *weather;
 	UInt32 time;
 	TESImageSpaceModifier *imgSpcMod = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &weather, &time, &imgSpcMod) && (time <= 5))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &time, &imgSpcMod) && (time <= 5))
 		weather->imageSpaceMods[time] = imgSpcMod;
 	return true;
 }
@@ -44,7 +44,7 @@ bool Cmd_GetWeatherTexture_Execute(COMMAND_ARGS)
 	const char *resStr;
 	TESWeather *weather;
 	UInt32 layer;
-	if (ExtractArgs(EXTRACT_ARGS, &weather, &layer) && (layer <= 3))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &layer) && (layer <= 3))
 		resStr = weather->layerTextures[layer].ddsPath.m_data;
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -55,7 +55,7 @@ bool Cmd_SetWeatherTexture_Execute(COMMAND_ARGS)
 {
 	TESWeather *weather;
 	UInt32 layer;
-	if (ExtractArgs(EXTRACT_ARGS, &weather, &layer, &s_strArgBuffer) && (layer <= 3))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &layer, &s_strArgBuffer) && (layer <= 3))
 		weather->layerTextures[layer].ddsPath.Set(s_strArgBuffer);
 	return true;
 }
@@ -64,7 +64,7 @@ bool Cmd_GetWeatherPrecipitationModel_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	TESWeather *weather;
-	if (ExtractArgs(EXTRACT_ARGS, &weather))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather))
 		resStr = weather->model.GetModelPath();
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -74,7 +74,7 @@ bool Cmd_GetWeatherPrecipitationModel_Execute(COMMAND_ARGS)
 bool Cmd_SetWeatherPrecipitationModel_Execute(COMMAND_ARGS)
 {
 	TESWeather *weather;
-	if (ExtractArgs(EXTRACT_ARGS, &weather, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &s_strArgBuffer))
 		weather->model.SetModelPath(s_strArgBuffer);
 	return true;
 }
@@ -84,7 +84,7 @@ bool Cmd_GetWeatherTraitNumeric_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESWeather *weather;
 	UInt32 traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &weather, &traitID) || (traitID > 20)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &traitID) || (traitID > 20)) return true;
 	switch (traitID)
 	{
 		case 0:
@@ -125,7 +125,7 @@ bool Cmd_SetWeatherTraitNumeric_Execute(COMMAND_ARGS)
 	TESWeather *weather;
 	UInt32 traitID, intVal;
 	double value;
-	if (!ExtractArgs(EXTRACT_ARGS, &weather, &traitID, &value) || (traitID > 20)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &traitID, &value) || (traitID > 20)) return true;
 	switch (traitID)
 	{
 		case 0:
@@ -170,7 +170,7 @@ bool Cmd_GetWeatherRGBColor_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESWeather *weather;
 	UInt32 type, time, layer = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &weather, &type, &time, &layer) && (type <= 9) && (time <= 5))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &type, &time, &layer) && (type <= 9) && (time <= 5))
 	{
 		if (type != 2)
 			*result = RGBHexToDec(weather->colors[type][time]);
@@ -184,7 +184,7 @@ bool Cmd_SetWeatherRGBColor_Execute(COMMAND_ARGS)
 {
 	TESWeather *weather;
 	UInt32 type, time, rgb, layer = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &weather, &type, &time, &rgb, &layer) && (type <= 9) && (time <= 5) && (rgb <= 255255255))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &type, &time, &rgb, &layer) && (type <= 9) && (time <= 5) && (rgb <= 255255255))
 	{
 		if (type != 2)
 			weather->colors[type][time] = RGBDecToHex(rgb);
@@ -206,7 +206,7 @@ bool Cmd_GetCurrentWeather_Execute(COMMAND_ARGS)
 bool Cmd_SetWeatherTransitionTimeOverride_Execute(COMMAND_ARGS)
 {
 	UInt32 transTime = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &transTime))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &transTime))
 	{
 		if (transTime != 0) s_weatherTransitionRateOverride = 120.0F / (int)transTime;
 		HOOK_SET(UpdateWeather, transTime != 0);
@@ -228,7 +228,7 @@ bool Cmd_GetWindDirection_Execute(COMMAND_ARGS)
 bool Cmd_SetWindDirection_Execute(COMMAND_ARGS)
 {
 	float windDirection;
-	if (ExtractArgs(EXTRACT_ARGS, &windDirection) && g_TES->sky)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &windDirection) && g_TES->sky)
 		g_TES->sky->windDirection = windDirection * -kFltPId180;
 	return true;
 }
@@ -236,7 +236,7 @@ bool Cmd_SetWindDirection_Execute(COMMAND_ARGS)
 bool Cmd_SetWindSpeedMult_Execute(COMMAND_ARGS)
 {
 	double speedMult;
-	if (ExtractArgs(EXTRACT_ARGS, &speedMult))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &speedMult))
 		s_windSpeedMult = speedMult / 255.0;
 	return true;
 }
@@ -251,7 +251,11 @@ bool Cmd_TriggerLightningFX_Execute(COMMAND_ARGS)
 
 bool Cmd_ResetClouds_Execute(COMMAND_ARGS)
 {
-	MemZero((void*)0x11FF8B4, 0x10);
+	__asm
+	{
+		pxor	xmm0, xmm0
+		movdqu	xmmword ptr ds:[0x11FF8B4], xmm0
+	}
 	return true;
 }
 

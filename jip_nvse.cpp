@@ -93,12 +93,11 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 	}
 	int version = nvse->nvseVersion;
 	s_nvseVersion = (version >> 24) + (((version >> 16) & 0xFF) * 0.1) + (((version & 0xFF) >> 4) * 0.01);
-	if (version < 0x5010040)
+	if (version < 0x6000050)
 	{
-		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v5.14 minimum.", s_nvseVersion);
+		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.05 minimum.", s_nvseVersion);
 		return false;
 	}
-	s_xNVSE = version >= 0x5020010;
 	PrintLog("NVSE version:\t%.2f\nJIP LN version:\t%.2f\n", s_nvseVersion, JIP_LN_VERSION);
 	return true;
 }
@@ -1298,6 +1297,12 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*28EA*/REG_CMD(ToggleNoMovementCombat);
 	/*28EB*/REG_CMD(SetTeammateKillable);
 	/*28EC*/REG_CMD(SetNoGunWobble);
+	//	v56.00
+	/*28ED*/REG_CMD(RewardXPExact);
+	/*28EE*/REG_CMD(GetHitExtendedFlag);
+	/*28EF*/REG_CMD(ClearDeadActors);
+	/*28F0*/REG_CMD(GetCameraMovement);
+	/*28F1*/REG_CMD(GetHotkeyItemRef);
 
 	//===========================================================
 
@@ -1324,6 +1329,15 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	ReadRecordData = serialization->ReadRecordData;
 	ResolveRefID = serialization->ResolveRefID;
 	GetSavePath = serialization->GetSavePath;
+	WriteRecord8 = serialization->WriteRecord8;
+	WriteRecord16 = serialization->WriteRecord16;
+	WriteRecord32 = serialization->WriteRecord32;
+	WriteRecord64 = serialization->WriteRecord64;
+	ReadRecord8 = serialization->ReadRecord8;
+	ReadRecord16 = serialization->ReadRecord16;
+	ReadRecord32 = serialization->ReadRecord32;
+	ReadRecord64 = serialization->ReadRecord64;
+	SkipNBytes = serialization->SkipNBytes;
 	serialization->SetLoadCallback(pluginHandle, LoadGameCallback);
 	serialization->SetSaveCallback(pluginHandle, SaveGameCallback);
 	serialization->SetNewGameCallback(pluginHandle, NewGameCallback);
@@ -1341,6 +1355,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	GetElement = arrInterface->GetElement;
 	GetElements = arrInterface->GetElements;
 	NVSEScriptInterface *scrInterface = (NVSEScriptInterface*)nvse->QueryInterface(kInterface_Script);
+	ExtractArgsEx = scrInterface->ExtractArgsEx;
 	ExtractFormatStringArgs = scrInterface->ExtractFormatStringArgs;
 	CallFunction = scrInterface->CallFunction;
 
@@ -1353,8 +1368,6 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	DelArrayVar = (void (*)(void*, UInt32))nvseData->GetFunc(NVSEDataInterface::kNVSEData_ArrayVarMapDeleteBySelf);
 	DelStringVar = (void (*)(void*, UInt32))nvseData->GetFunc(NVSEDataInterface::kNVSEData_StringVarMapDeleteBySelf);
 	g_numPreloadMods = (UInt8*)nvseData->GetData(NVSEDataInterface::kNVSEData_NumPreloadMods);
-
-	s_releaseFast = ((UInt32)g_NVSEArrayMap - (UInt32)GetModuleHandle("nvse_1_4")) != 0xE3EF0;
 
 	((NVSEMessagingInterface*)nvse->QueryInterface(kInterface_Messaging))->RegisterListener(pluginHandle, "NVSE", NVSEMessageHandler);
 

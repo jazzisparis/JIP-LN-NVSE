@@ -220,7 +220,7 @@ bool Cmd_CCCSetFloat_Execute(COMMAND_ARGS)
 {
 	UInt32 trait;
 	float value;
-	if (s_UILoaded && ExtractArgs(EXTRACT_ARGS, &trait, &value))
+	if (s_UILoaded && ExtractArgsEx(EXTRACT_ARGS_EX, &trait, &value))
 		s_UIelements[trait]->SetFloat(value);
 	return true;
 }
@@ -239,7 +239,7 @@ UnorderedMap<UInt32, const char*> s_pathForID(0x20);
 bool Cmd_CCCSetTrait_Execute(COMMAND_ARGS)
 {
 	SInt32 trait, child, value = 0;
-	if (!s_UILoaded || !ExtractArgs(EXTRACT_ARGS, &trait, &child, &value)) return true;
+	if (!s_UILoaded || !ExtractArgsEx(EXTRACT_ARGS_EX, &trait, &child, &value)) return true;
 	if (trait == 40)
 	{
 		const char *pathStr = kAvatarMale;
@@ -253,7 +253,7 @@ bool Cmd_CCCSetTrait_Execute(COMMAND_ARGS)
 				const char *findName = s_avatarPaths.Get(fullName);
 				if (!findName)
 				{
-					if IS_TYPE(actorBase, TESCreature)
+					if IS_ID(actorBase, TESCreature)
 					{
 						for (auto iter = s_avatarCommon.Begin(); iter; ++iter)
 						{
@@ -328,7 +328,7 @@ bool Cmd_CCCGetDistance_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *objRef;
 	UInt32 axis = 3;
-	if (ExtractArgs(EXTRACT_ARGS, &objRef, &axis))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &objRef, &axis))
 	{
 		if (axis == 4)
 			*result = abs(thisObj->posZ - objRef->posZ);
@@ -342,7 +342,7 @@ bool Cmd_CCCInFaction_Execute(COMMAND_ARGS)
 {
 	TESFaction *faction;
 	UInt32 inBase = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &faction, &inBase) && thisObj->IsActor() && 
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &faction, &inBase) && thisObj->IsActor() && 
 		((inBase && (((TESActorBase*)thisObj->baseForm)->baseData.GetFactionRank(faction) >= 0)) || 
 		(thisObj->extraDataList.GetExtraFactionRank(faction) >= 0))) *result = 1;
 	else *result = 0;
@@ -364,7 +364,7 @@ void SetNCCS(TESActorBase *actorBase, bool doSet)
 bool Cmd_CCCSetNCCS_Execute(COMMAND_ARGS)
 {
 	UInt32 doSet = 1;
-	if (ExtractArgs(EXTRACT_ARGS, &doSet) && thisObj->IsActor())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &doSet) && thisObj->IsActor())
 	{
 		TESActorBase *actorBase = (TESActorBase*)thisObj->baseForm;
 		if (doSet)
@@ -404,7 +404,7 @@ bool Cmd_CCCSavedForm_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 idx;
-	if (ExtractArgs(EXTRACT_ARGS, &idx)) REFR_RES = s_savedForms[idx];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idx)) REFR_RES = s_savedForms[idx];
 	return true;
 }
 
@@ -560,7 +560,7 @@ bool Cmd_CCCSayTo_Execute(COMMAND_ARGS)
 bool Cmd_CCCRunResultScripts_Execute(COMMAND_ARGS)
 {
 	TESTopic *topic;
-	if (ExtractArgs(EXTRACT_ARGS, &topic) && thisObj->IsActor())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &topic) && thisObj->IsActor())
 	{
 		Actor *actor = (Actor*)thisObj;
 		bool eval;
@@ -577,7 +577,7 @@ bool Cmd_CCCRunResultScripts_Execute(COMMAND_ARGS)
 bool Cmd_CCCSetFollowState_Execute(COMMAND_ARGS)
 {
 	SInt32 state = -1;
-	if (!ExtractArgs(EXTRACT_ARGS, &state) || !thisObj->IsActor()) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &state) || !thisObj->IsActor()) return true;
 	Actor *actor = (Actor*)thisObj;
 	if (state < 0)
 	{
@@ -620,7 +620,7 @@ bool Cmd_RefToPosStr_Execute(COMMAND_ARGS)
 bool Cmd_MoveToPosStr_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &s_strArgBuffer)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer)) return true;
 	char *pos = s_strArgBuffer, *delim = GetNextToken(pos, ' ');
 	UInt32 refID = HexToUInt(pos);
 	if (!refID || !*delim || !ResolveRefID(refID, &refID)) return true;
@@ -643,7 +643,7 @@ bool Cmd_MoveToPosStr_Execute(COMMAND_ARGS)
 bool Cmd_LockEquipment_Execute(COMMAND_ARGS)
 {
 	UInt32 lockEqp;
-	if (ExtractArgs(EXTRACT_ARGS, &lockEqp) && IS_TYPE(thisObj, Character) && 
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &lockEqp) && IS_TYPE(thisObj, Character) && 
 		(!lockEqp != !(((Character*)thisObj)->jipActorFlags1 & kHookActorFlag1_LockedEquipment)))
 	{
 		((Character*)thisObj)->jipActorFlags1 ^= kHookActorFlag1_LockedEquipment;
@@ -724,17 +724,17 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 		return true;
 	ExtraContainerChanges::EntryDataList *entryList = character->GetContainerChangesList();
 	if (!entryList) return true;
-	if IS_TYPE(item, AlchemyItem)
+	if IS_ID(item, AlchemyItem)
 	{
 		character->EquipItem(item);
 		DoRefreshContainerMenu(containerMenu, item);
 		return true;
 	}
-	if (NOT_TYPE(item, TESObjectARMO) && NOT_TYPE(item, TESObjectWEAP))
+	if (NOT_TYPE(item, TESObjectARMO) && NOT_ID(item, TESObjectWEAP))
 		return true;
 	if (menuEntry->extendData) xData = menuEntry->extendData->GetFirstItem();
 	bool equipped = xData && xData->HasType(kExtraData_Worn);
-	if IS_TYPE(item, TESObjectWEAP)
+	if IS_ID(item, TESObjectWEAP)
 	{
 		if (xData && xData->HasType(kExtraData_CannotWear))
 		{
@@ -758,7 +758,7 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 				return true;
 			}
 			wpnType = (wpnType > 9) ? menuEntry->countDelta : 1;
-			entry = character->baseProcess->GetWeaponInfo();
+			entry = character->GetWeaponInfo();
 			if (entry && entry->type)
 			{
 				entry = entryList->FindForItem(entry->type);
@@ -799,7 +799,7 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 bool Cmd_CCCSMS_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *objRefr = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &objRefr) || !objRefr) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &objRefr) || !objRefr) return true;
 	ListNode<BSTempEffect> *effIter = g_processManager->tempEffects.Head();
 	MagicShaderHitEffect *mshEff;
 	do
@@ -816,7 +816,7 @@ bool Cmd_CCCTaskPackageFlags_Execute(COMMAND_ARGS)
 {
 	TESPackage *package;
 	UInt32 taskType, var1, var2;
-	if (ExtractArgs(EXTRACT_ARGS, &package, &taskType, &var1, &var2))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &package, &taskType, &var1, &var2))
 	{
 		if (taskType)
 		{

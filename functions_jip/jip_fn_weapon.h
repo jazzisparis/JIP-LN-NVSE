@@ -26,7 +26,7 @@ DEFINE_COMMAND_PLUGIN(SetWeaponModel, , 0, 3, kParams_JIP_OneForm_OneInt_OneStri
 bool Cmd_GetWeaponDetectionSoundLevel_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon) && IS_TYPE(weapon, TESObjectWEAP))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon) && IS_ID(weapon, TESObjectWEAP))
 		*result = (int)weapon->soundLevel;
 	else *result = 0;
 	return true;
@@ -36,7 +36,7 @@ bool Cmd_SetWeaponDetectionSoundLevel_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
 	UInt32 level;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon, &level) && IS_TYPE(weapon, TESObjectWEAP) && (level <= 2))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &level) && IS_ID(weapon, TESObjectWEAP) && (level <= 2))
 		weapon->soundLevel = level;
 	return true;
 }
@@ -70,7 +70,7 @@ bool Cmd_GetWeaponSound_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESObjectWEAP *weapon;
 	UInt32 type;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon, &type) && IS_TYPE(weapon, TESObjectWEAP) && (type <= 13))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &type) && IS_ID(weapon, TESObjectWEAP) && (type <= 13))
 	{
 		TESSound *sound = (type < 12) ? weapon->sounds[type] : ((type == 12) ? weapon->pickupPutdownSounds.pickupSound : weapon->pickupPutdownSounds.putdownSound);
 		if (sound) REFR_RES = sound->refID;
@@ -83,7 +83,7 @@ bool Cmd_SetWeaponSound_Execute(COMMAND_ARGS)
 	TESObjectWEAP *weapon;
 	UInt32 type;
 	TESSound *newSound = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &weapon, &type, &newSound) || NOT_TYPE(weapon, TESObjectWEAP) || (type > 13)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &type, &newSound) || NOT_ID(weapon, TESObjectWEAP) || (type > 13)) return true;
 	if (type < 12)
 		weapon->sounds[type] = newSound;
 	else if (type == 12)
@@ -98,8 +98,8 @@ bool Cmd_SetWeaponItemMod_Execute(COMMAND_ARGS)
 	TESObjectWEAP *weapon;
 	UInt32 idx;
 	TESObjectIMOD *wmod = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon, &idx, &wmod) && IS_TYPE(weapon, TESObjectWEAP) && idx && (idx <= 3))
-		weapon->itemMod[idx - 1] = (wmod && IS_TYPE(wmod, TESObjectIMOD)) ? wmod : NULL;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &idx, &wmod) && IS_ID(weapon, TESObjectWEAP) && idx && (idx <= 3))
+		weapon->itemMod[idx - 1] = (wmod && IS_ID(wmod, TESObjectIMOD)) ? wmod : NULL;
 	return true;
 }
 
@@ -107,7 +107,7 @@ bool Cmd_SetWeaponItemModEffect_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
 	UInt32 idx, type;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon, &idx, &type) && IS_TYPE(weapon, TESObjectWEAP) && idx && (idx <= 3) && type && (type <= 14) && (type != 5))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &idx, &type) && IS_ID(weapon, TESObjectWEAP) && idx && (idx <= 3) && type && (type <= 14) && (type != 5))
 		weapon->effectMods[idx - 1] = type;
 	return true;
 }
@@ -117,7 +117,7 @@ bool Cmd_SetWeaponItemModValue_Execute(COMMAND_ARGS)
 	TESObjectWEAP *weapon;
 	UInt32 idx;
 	float val;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon, &idx, &val) && IS_TYPE(weapon, TESObjectWEAP) && idx && (idx <= 3))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &idx, &val) && IS_ID(weapon, TESObjectWEAP) && idx && (idx <= 3))
 		weapon->value1Mod[idx - 1] = val;
 	return true;
 }
@@ -125,7 +125,7 @@ bool Cmd_SetWeaponItemModValue_Execute(COMMAND_ARGS)
 bool Cmd_GetWeaponModReloadAnim_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon) && IS_TYPE(weapon, TESObjectWEAP))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon) && IS_ID(weapon, TESObjectWEAP))
 		*result = weapon->modReloadAnim;
 	else *result = 0;
 	return true;
@@ -135,7 +135,7 @@ bool Cmd_SetWeaponModReloadAnim_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
 	UInt32 anim;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon, &anim) && IS_TYPE(weapon, TESObjectWEAP) && (anim <= 22))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &anim) && IS_ID(weapon, TESObjectWEAP) && (anim <= 22))
 		weapon->modReloadAnim = anim;
 	return true;
 }
@@ -144,7 +144,7 @@ bool Cmd_GetWeaponShellCasingModel_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	TESObjectWEAP *weapon;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon) && IS_TYPE(weapon, TESObjectWEAP))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon) && IS_ID(weapon, TESObjectWEAP))
 		resStr = weapon->shellCasingModel.GetModelPath();
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -154,7 +154,7 @@ bool Cmd_GetWeaponShellCasingModel_Execute(COMMAND_ARGS)
 bool Cmd_SetWeaponShellCasingModel_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon, &s_strArgBuffer) && IS_TYPE(weapon, TESObjectWEAP))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &s_strArgBuffer) && IS_ID(weapon, TESObjectWEAP))
 		weapon->shellCasingModel.SetModelPath(s_strArgBuffer);
 	return true;
 }
@@ -162,7 +162,7 @@ bool Cmd_SetWeaponShellCasingModel_Execute(COMMAND_ARGS)
 bool Cmd_SetEmbeddedWeaponNode_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon, &s_strArgBuffer) && IS_TYPE(weapon, TESObjectWEAP))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &s_strArgBuffer) && IS_ID(weapon, TESObjectWEAP))
 		weapon->embeddedNodeName.Set(s_strArgBuffer);
 	return true;
 }
@@ -171,7 +171,7 @@ bool Cmd_SetEmbeddedWeaponAV_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
 	UInt32 avCode = 0;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon, &avCode) && IS_TYPE(weapon, TESObjectWEAP))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &avCode) && IS_ID(weapon, TESObjectWEAP))
 		weapon->embedWeaponAV = avCode;
 	return true;
 }
@@ -180,7 +180,7 @@ bool Cmd_GetCalculatedWeaponDamage_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectWEAP *weapon = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &weapon)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &weapon)) return true;
 	float condition = 1.0F;
 	InventoryRef *invRef = NULL;
 	Actor *owner = g_thePlayer;
@@ -227,7 +227,7 @@ bool Cmd_GetCalculatedWeaponDamage_Execute(COMMAND_ARGS)
 bool Cmd_GetWeaponOnHitSetting_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon) && IS_TYPE(weapon, TESObjectWEAP))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon) && IS_ID(weapon, TESObjectWEAP))
 		*result = (int)weapon->onHit;
 	else *result = -1;
 	return true;
@@ -237,7 +237,7 @@ bool Cmd_SetWeaponOnHitSetting_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
 	UInt32 setting;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon, &setting) && IS_TYPE(weapon, TESObjectWEAP) && (setting <= 3))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &setting) && IS_ID(weapon, TESObjectWEAP) && (setting <= 3))
 		weapon->onHit = setting;
 	return true;
 }
@@ -246,7 +246,7 @@ bool Cmd_GetWeaponSemiAutoFireDelay_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
 	UInt32 getMax;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon, &getMax) && IS_TYPE(weapon, TESObjectWEAP))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &getMax) && IS_ID(weapon, TESObjectWEAP))
 		*result = weapon->semiAutoFireDelay[getMax != 0];
 	else *result = 0;
 	return true;
@@ -257,7 +257,7 @@ bool Cmd_SetWeaponSemiAutoFireDelay_Execute(COMMAND_ARGS)
 	TESObjectWEAP *weapon;
 	UInt32 getMax;
 	float value;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon, &getMax, &value) && IS_TYPE(weapon, TESObjectWEAP))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &getMax, &value) && IS_ID(weapon, TESObjectWEAP))
 		weapon->semiAutoFireDelay[getMax != 0] = value;
 	return true;
 }
@@ -267,7 +267,7 @@ bool Cmd_GetWeaponModel_Execute(COMMAND_ARGS)
 	const char *resStr;
 	TESObjectWEAP *weapon;
 	UInt32 modFlags;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon, &modFlags) && IS_TYPE(weapon, TESObjectWEAP) && (modFlags <= 7))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &modFlags) && IS_ID(weapon, TESObjectWEAP) && (modFlags <= 7))
 	{
 		switch (modFlags)
 		{
@@ -293,7 +293,7 @@ bool Cmd_SetWeaponModel_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
 	UInt32 modFlags;
-	if (ExtractArgs(EXTRACT_ARGS, &weapon, &modFlags, &s_strArgBuffer) && IS_TYPE(weapon, TESObjectWEAP) && (modFlags <= 7))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &modFlags, &s_strArgBuffer) && IS_ID(weapon, TESObjectWEAP) && (modFlags <= 7))
 	{
 		switch (modFlags)
 		{

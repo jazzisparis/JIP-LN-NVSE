@@ -137,7 +137,7 @@ bool Cmd_SetHotkey_Execute(COMMAND_ARGS)
 	TESForm *form;
 	float health = -2.0F;
 	int flags = -1;
-	if (ExtractArgs(EXTRACT_ARGS, &index, &form, &health, &flags) && index && (index <= 8))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &index, &form, &health, &flags) && index && (index <= 8))
 		SetHotkey(index - 1, HotkeyInfo(form, health, flags));
 	return true;
 }
@@ -228,7 +228,7 @@ bool Cmd_SaveHotkeys_Execute(COMMAND_ARGS)
 bool Cmd_RestoreHotkeys_Execute(COMMAND_ARGS)
 {
 	UInt32 arrID = 0;
-	if (!ExtractArgs(EXTRACT_ARGS, &arrID)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &arrID)) return true;
 	if (arrID)
 	{
 		NVSEArrayVar *inArray = LookupArrayByID(arrID), *dataArray;
@@ -251,7 +251,7 @@ bool Cmd_BaseGetItemCount_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form, *base = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &form, &base)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &base)) return true;
 	if (!base)
 	{
 		if (!thisObj) return true;
@@ -279,7 +279,7 @@ bool Cmd_BaseAddItem_Execute(COMMAND_ARGS)
 {
 	TESForm *form, *base = NULL;
 	UInt32 count;
-	if (!ExtractArgs(EXTRACT_ARGS, &form, &count, &base)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &count, &base)) return true;
 	if (!base)
 	{
 		if (!thisObj) return true;
@@ -313,7 +313,7 @@ bool Cmd_BaseAddItemHealth_Execute(COMMAND_ARGS)
 	TESForm *form, *base = NULL;
 	UInt32 count;
 	float health;
-	if (!ExtractArgs(EXTRACT_ARGS, &form, &count, &health, &base)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &count, &health, &base)) return true;
 	if (!base)
 	{
 		if (!thisObj) return true;
@@ -346,7 +346,7 @@ bool Cmd_BaseRemoveItem_Execute(COMMAND_ARGS)
 {
 	TESForm *form, *base = NULL;
 	UInt32 count;
-	if (!ExtractArgs(EXTRACT_ARGS, &form, &count, &base)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &count, &base)) return true;
 	if (!base)
 	{
 		if (!thisObj) return true;

@@ -300,10 +300,10 @@ ParamInfo kParams_JIP_OneForm_ThreeInts[] =
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_JIP_OneItemOrList_OneObjectRef_TwoOptionalInts[] =
+ParamInfo kParams_JIP_OneItemOrList_OneContainer_TwoOptionalInts[] =
 {
 	{"Item/List", kParamType_InvObjOrFormList, 0},
-	{"Object Ref", kParamType_ObjectRef, 0},
+	{"Container", kParamType_Container, 0},
 	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1}
 };
@@ -884,10 +884,10 @@ ParamInfo kParams_JIP_OneString_OneOptionalString[] =
 	{"String", kParamType_String, 1}
 };
 
-ParamInfo kParams_JIP_OneString_OneFloat_OneOptionalString[] =
+ParamInfo kParams_JIP_OneString_OneDouble_OneOptionalString[] =
 {
 	{"String", kParamType_String, 0},
-	{"Float", kParamType_Float, 0},
+	{"Double", kParamType_Double, 0},
 	{"String", kParamType_String, 1}
 };
 
@@ -1031,11 +1031,11 @@ ParamInfo kParams_JIP_OneCell_OneString[] =
 	{"String", kParamType_String, 0}
 };
 
-ParamInfo kParams_JIP_TwoOptionalInts_OneOptionalObjectRef[] =
+ParamInfo kParams_JIP_TwoOptionalInts_OneOptionalContainer[] =
 {
 	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1},
-	{"Object Ref", kParamType_ObjectRef, 1}
+	{"Container", kParamType_Container, 1}
 };
 
 ParamInfo kParams_JIP_OneForm_OneString_OneInt[] =
@@ -1410,9 +1410,9 @@ ParamInfo kParams_JIP_OneOptionalObjectRef_OneOptionalInt_OneOptionalFloat_OneOp
 	{"String", kParamType_String, 1}
 };
 
-ParamInfo kParams_JIP_OneScript[] =
+ParamInfo kParams_JIP_OneScriptVar[] =
 {
-	{"Script", kParamType_Script, 0}
+	{"Variable", kParamType_ScriptVariable, 0}
 };
 
 ParamInfo kParams_JIP_OneOptionalInt_OneOptionalString[] =
@@ -1425,4 +1425,16 @@ ParamInfo kParams_JIP_OneObjectID_OneOptionalString[] =
 {
 	{"Object ID", kParamType_ObjectID, 0},
 	{"String", kParamType_String, 1}
+};
+
+ParamInfo kParams_JIP_OneString_OneDouble[] =
+{
+	{"String", kParamType_String, 0},
+	{"Double", kParamType_Double, 0}
+};
+
+ParamInfo kParams_JIP_TwoScriptVars[] =
+{
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 0}
 };

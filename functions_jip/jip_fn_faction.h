@@ -7,7 +7,7 @@ bool Cmd_GetFactionReputationType_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESFaction *faction;
-	if (ExtractArgs(EXTRACT_ARGS, &faction) && faction->reputation) REFR_RES = faction->reputation->refID;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &faction) && faction->reputation) REFR_RES = faction->reputation->refID;
 	return true;
 }
 
@@ -15,7 +15,7 @@ bool Cmd_SetFactionReputationType_Execute(COMMAND_ARGS)
 {
 	TESFaction *faction;
 	TESReputation *reputation = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &faction, &reputation))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &faction, &reputation))
 		faction->reputation = reputation;
 	return true;
 }

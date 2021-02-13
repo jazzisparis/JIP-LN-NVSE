@@ -23,7 +23,7 @@ bool Cmd_GetClimateSunTexture_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	TESClimate *climate;
-	if (ExtractArgs(EXTRACT_ARGS, &climate) && IS_TYPE(climate, TESClimate))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate) && IS_ID(climate, TESClimate))
 		resStr = climate->sunTexture.ddsPath.m_data;
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -33,7 +33,7 @@ bool Cmd_GetClimateSunTexture_Execute(COMMAND_ARGS)
 bool Cmd_SetClimateSunTexture_Execute(COMMAND_ARGS)
 {
 	TESClimate *climate;
-	if (ExtractArgs(EXTRACT_ARGS, &climate, &s_strArgBuffer) && IS_TYPE(climate, TESClimate))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &s_strArgBuffer) && IS_ID(climate, TESClimate))
 		climate->sunTexture.ddsPath.Set(s_strArgBuffer);
 	return true;
 }
@@ -42,7 +42,7 @@ bool Cmd_GetClimateSunGlareTexture_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	TESClimate *climate;
-	if (ExtractArgs(EXTRACT_ARGS, &climate) && IS_TYPE(climate, TESClimate))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate) && IS_ID(climate, TESClimate))
 		resStr = climate->sunGlareTexture.ddsPath.m_data;
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -52,7 +52,7 @@ bool Cmd_GetClimateSunGlareTexture_Execute(COMMAND_ARGS)
 bool Cmd_SetClimateSunGlareTexture_Execute(COMMAND_ARGS)
 {
 	TESClimate *climate;
-	if (ExtractArgs(EXTRACT_ARGS, &climate, &s_strArgBuffer) && IS_TYPE(climate, TESClimate))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &s_strArgBuffer) && IS_ID(climate, TESClimate))
 		climate->sunGlareTexture.ddsPath.Set(s_strArgBuffer);
 	return true;
 }
@@ -61,7 +61,7 @@ bool Cmd_GetClimateNightSkyModel_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	TESClimate *climate;
-	if (ExtractArgs(EXTRACT_ARGS, &climate) && IS_TYPE(climate, TESClimate))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate) && IS_ID(climate, TESClimate))
 		resStr = climate->nightSkyModel.GetModelPath();
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -71,7 +71,7 @@ bool Cmd_GetClimateNightSkyModel_Execute(COMMAND_ARGS)
 bool Cmd_SetClimateNightSkyModel_Execute(COMMAND_ARGS)
 {
 	TESClimate *climate;
-	if (ExtractArgs(EXTRACT_ARGS, &climate, &s_strArgBuffer) && IS_TYPE(climate, TESClimate))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &s_strArgBuffer) && IS_ID(climate, TESClimate))
 		climate->nightSkyModel.SetModelPath(s_strArgBuffer);
 	return true;
 }
@@ -81,7 +81,7 @@ bool Cmd_GetClimateTraitNumeric_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESClimate *climate;
 	UInt32 traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &climate, &traitID) || NOT_TYPE(climate, TESClimate)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &traitID) || NOT_ID(climate, TESClimate)) return true;
 	switch (traitID)
 	{
 	case 0:
@@ -112,7 +112,7 @@ bool Cmd_SetClimateTraitNumeric_Execute(COMMAND_ARGS)
 {
 	TESClimate *climate;
 	UInt32 traitID, val;
-	if (!ExtractArgs(EXTRACT_ARGS, &climate, &traitID, &val) || NOT_TYPE(climate, TESClimate)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &traitID, &val) || NOT_ID(climate, TESClimate)) return true;
 	switch (traitID)
 	{
 	case 0:
@@ -142,7 +142,7 @@ bool Cmd_SetClimateTraitNumeric_Execute(COMMAND_ARGS)
 bool Cmd_GetClimateNumWeatherTypes_Execute(COMMAND_ARGS)
 {
 	TESClimate *climate;
-	if (ExtractArgs(EXTRACT_ARGS, &climate) && IS_TYPE(climate, TESClimate))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate) && IS_ID(climate, TESClimate))
 		*result = (int)climate->weatherTypes.Count();
 	else *result = 0;
 	return true;
@@ -153,7 +153,7 @@ bool Cmd_GetClimateNthWeatherType_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESClimate *climate;
 	UInt32 idx;
-	if (ExtractArgs(EXTRACT_ARGS, &climate, &idx) && IS_TYPE(climate, TESClimate))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &idx) && IS_ID(climate, TESClimate))
 	{
 		WeatherEntry *entry = climate->weatherTypes.GetNthItem(idx);
 		if (entry && entry->weather) REFR_RES = entry->weather->refID;
@@ -166,7 +166,7 @@ bool Cmd_GetClimateNthWeatherChance_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESClimate *climate;
 	UInt32 idx;
-	if (!ExtractArgs(EXTRACT_ARGS, &climate, &idx) || NOT_TYPE(climate, TESClimate)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &idx) || NOT_ID(climate, TESClimate)) return true;
 	WeatherEntry *entry = climate->weatherTypes.GetNthItem(idx);
 	if (entry) *result = (int)entry->chance;
 	return true;
@@ -177,7 +177,7 @@ bool Cmd_GetClimateNthWeatherGlobal_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESClimate *climate;
 	UInt32 idx;
-	if (ExtractArgs(EXTRACT_ARGS, &climate, &idx) && IS_TYPE(climate, TESClimate))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &idx) && IS_ID(climate, TESClimate))
 	{
 		WeatherEntry *entry = climate->weatherTypes.GetNthItem(idx);
 		if (entry && entry->global) REFR_RES = entry->global->refID;
@@ -192,7 +192,7 @@ bool Cmd_ClimateAddWeatherType_Execute(COMMAND_ARGS)
 	TESWeather *weather;
 	UInt32 chance;
 	TESGlobal *global = NULL;
-	if (!ExtractArgs(EXTRACT_ARGS, &climate, &weather, &chance, &global) || NOT_TYPE(climate, TESClimate)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &weather, &chance, &global) || NOT_ID(climate, TESClimate)) return true;
 	WeatherEntry *entry = climate->GetWeatherEntry(weather);
 	entry->weather = weather;
 	entry->chance = chance % 101;
@@ -206,7 +206,7 @@ bool Cmd_ClimateRemoveWeatherType_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESClimate *climate;
 	TESWeather *weather;
-	if (!ExtractArgs(EXTRACT_ARGS, &climate, &weather) || NOT_TYPE(climate, TESClimate)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &weather) || NOT_ID(climate, TESClimate)) return true;
 	WeatherEntry *entry = climate->GetWeatherEntry(weather, true);
 	if (entry)
 	{
@@ -228,7 +228,7 @@ bool Cmd_GetCurrentClimate_Execute(COMMAND_ARGS)
 bool Cmd_SetCurrentClimate_Execute(COMMAND_ARGS)
 {
 	TESClimate *climate;
-	if (ExtractArgs(EXTRACT_ARGS, &climate) && IS_TYPE(climate, TESClimate))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate) && IS_ID(climate, TESClimate))
 	{
 		if (s_forcedClimate && (s_forcedClimate != climate))
 			s_forcedClimate = NULL;
@@ -249,7 +249,7 @@ bool Cmd_RefreshCurrentClimate_Execute(COMMAND_ARGS)
 bool Cmd_ForceClimate_Execute(COMMAND_ARGS)
 {
 	TESClimate *climate = NULL;
-	if (ExtractArgs(EXTRACT_ARGS, &climate) && (!climate || IS_TYPE(climate, TESClimate)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate) && (!climate || IS_ID(climate, TESClimate)))
 		s_forcedClimate = climate;
 	return true;
 }

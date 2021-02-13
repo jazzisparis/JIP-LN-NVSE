@@ -10,7 +10,7 @@ bool Cmd_GetAmmoTraitNumeric_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESAmmo *ammo;
 	UInt32 traitID;
-	if (!ExtractArgs(EXTRACT_ARGS, &ammo, &traitID) || NOT_TYPE(ammo, TESAmmo)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &ammo, &traitID) || NOT_ID(ammo, TESAmmo)) return true;
 	switch (traitID)
 	{
 	case 0:
@@ -33,7 +33,7 @@ bool Cmd_SetAmmoTraitNumeric_Execute(COMMAND_ARGS)
 	TESAmmo *ammo;
 	UInt32 traitID;
 	float val;
-	if (!ExtractArgs(EXTRACT_ARGS, &ammo, &traitID, &val) || NOT_TYPE(ammo, TESAmmo)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &ammo, &traitID, &val) || NOT_ID(ammo, TESAmmo)) return true;
 	switch (traitID)
 	{
 	case 0:
@@ -55,7 +55,7 @@ bool Cmd_GetAmmoProjectile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESAmmo *ammo;
-	if (ExtractArgs(EXTRACT_ARGS, &ammo) && IS_TYPE(ammo, TESAmmo) && ammo->projectile)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ammo) && IS_ID(ammo, TESAmmo) && ammo->projectile)
 		REFR_RES = ammo->projectile->refID;
 	return true;
 }
@@ -64,7 +64,7 @@ bool Cmd_SetAmmoProjectile_Execute(COMMAND_ARGS)
 {
 	TESAmmo *ammo;
 	BGSProjectile *proj;
-	if (ExtractArgs(EXTRACT_ARGS, &ammo, &proj) && IS_TYPE(ammo, TESAmmo) && IS_TYPE(proj, BGSProjectile))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ammo, &proj) && IS_ID(ammo, TESAmmo) && IS_ID(proj, BGSProjectile))
 		ammo->projectile = proj;
 	return true;
 }
