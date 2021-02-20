@@ -37,6 +37,21 @@ public:
 	UInt32		m_uiRefCount;	// 04
 };
 
+class TempNiRefObject
+{
+	NiRefObject		*object;
+
+public:
+	TempNiRefObject(NiRefObject *_object) : object(nullptr)
+	{
+		NiReleaseAddRef(&object, _object);
+	}
+	~TempNiRefObject()
+	{
+		NiReleaseAddRef(&object, nullptr);
+	}
+};
+
 struct NiObjectCopyInfo
 {
 	NiTMapBase<NiObject*, NiObject*>	*map00;		// 00
@@ -802,7 +817,7 @@ public:
 	virtual void	Unk_32(UInt32 arg1);
 	virtual void	Unk_33(UInt32 arg1);
 	virtual void	Unk_34(void);
-	virtual void	Unk_35(void);
+	virtual void	Unk_35(UInt32 arg1);
 	virtual void	Unk_36(UInt32 arg1);
 
 	enum NiFlags
@@ -871,8 +886,8 @@ public:
 	virtual void	RemoveObject(NiAVObject *toRemove);	//	Calls RemoveObject2 with arg2 as ptr to NULL
 	virtual void	RemoveNthObject2(UInt32 index, NiAVObject **arg2);
 	virtual void	RemoveNthObject(UInt32 index);			//	Calls RemoveNthObject2 with arg2 as ptr to NULL
-	virtual void	Unk_3D(void);
-	virtual void	Unk_3E(void);
+	virtual void	Unk_3D(UInt32 arg1, UInt32 arg2, UInt32 arg3);
+	virtual void	Unk_3E(UInt32 arg1, UInt32 arg2);
 	virtual void	Unk_3F(void);
 
 	NiTArray<NiAVObject*>	m_children;		// 9C
@@ -902,6 +917,9 @@ public:
 		kFade_Object =			1,
 		kFade_Item =			2,
 		kFade_Actor =			3,
+		kFade_Unknown6 =		6,
+		kFade_Unknown7 =		7,
+		kFade_Unknown8 =		8,
 		kFade_LODFadeOutMax =	0xA,
 	};
 

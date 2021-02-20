@@ -962,6 +962,5 @@ public:
 		return ThisCall<bool>(0x950110, this, toggleON);
 	}
 	char GetDetectionState();
-	void UpdatePlayer3D();
 };
 STATIC_ASSERT(sizeof(PlayerCharacter) == 0xE50);

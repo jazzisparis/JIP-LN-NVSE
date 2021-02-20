@@ -2101,7 +2101,7 @@ bool Cmd_SetOnReloadWeaponEventHandler_Execute(COMMAND_ARGS)
 
 bool Cmd_UpdatePlayer3D_Execute(COMMAND_ARGS)
 {
-	g_thePlayer->UpdatePlayer3D();
+	g_thePlayer->Update3D();
 	return true;
 }
 

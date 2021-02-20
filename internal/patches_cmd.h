@@ -182,7 +182,7 @@ bool __fastcall IsControlPressedRaw(UInt32 ctrlID)
 bool Hook_IsControlPressed_Execute(COMMAND_ARGS)
 {
 	UInt32 ctrlID, flags = 1;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ctrlID, &flags) && (ctrlID < kMaxControlBinds))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ctrlID, &flags) && (ctrlID < MAX_CONTROL_BIND))
 		*result = IsControlPressed(ctrlID, flags);
 	else *result = 0;
 	return true;
@@ -190,7 +190,7 @@ bool Hook_IsControlPressed_Execute(COMMAND_ARGS)
 
 bool Hook_IsControlPressed_Eval(TESObjectREFR *thisObj, UInt32 ctrlID, UInt32 flags, double *result)
 {
-	if (ctrlID < kMaxControlBinds)
+	if (ctrlID < MAX_CONTROL_BIND)
 		*result = IsControlPressed(ctrlID, flags);
 	else *result = 0;
 	return true;
@@ -341,7 +341,10 @@ bool Hook_IsRefInList_Eval(TESObjectREFR *thisObj, BGSListForm *listForm, TESFor
 
 bool Hook_Update3D_Execute(COMMAND_ARGS)
 {
-	thisObj->Update3D();
+	if (thisObj->refID == 0x14)
+		ThisCall(0x8D3FA0, thisObj);
+	else
+		thisObj->Update3D();
 	return true;
 }
 

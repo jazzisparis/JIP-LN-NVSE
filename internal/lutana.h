@@ -486,7 +486,7 @@ void LN_ProcessEvents()
 		if (currCrosshair) lastCrshrID = currCrosshair->refID;
 	}
 	
-	static bool lastCtrlState[kMaxControlBinds] = {0};
+	static bool lastCtrlState[MAX_CONTROL_BIND] = {0};
 
 	if (s_LNEventFlags & kLNEventMask_OnControl)
 	{

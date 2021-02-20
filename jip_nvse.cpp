@@ -1023,7 +1023,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2807*/REG_CMD(PlayIdleEx);
 	/*2808*/REG_CMD(SetBipedModelPathAlt);
 	/*2809*/REG_CMD(GetKillXP);
-	/*280A*/REG_CMD(sv_DestructAlt);
+	/*280A*/REG_CMD(EmptyCommand);
 	/*280B*/REG_CMD(GetKiller);
 	/*280C*/REG_CMD(KillActorAlt);
 	/*280D*/REG_CMD(ReloadEquippedModels);
@@ -1303,6 +1303,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*28EF*/REG_CMD(ClearDeadActors);
 	/*28F0*/REG_CMD(GetCameraMovement);
 	/*28F1*/REG_CMD(GetHotkeyItemRef);
+	//	v56.02
+	/*28F2*/REG_CMD_ARR(GetCollisionNodes);
 
 	//===========================================================
 
@@ -1363,10 +1365,6 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	g_DIHookCtrl = (DIHookControl*)nvseData->GetSingleton(NVSEDataInterface::kNVSEData_DIHookControl);
 	InventoryRefCreate = (InventoryRef* (*)(TESObjectREFR*, const InventoryRefData&, bool))nvseData->GetFunc(NVSEDataInterface::kNVSEData_InventoryReferenceCreate);
 	InventoryRefGetForID = (InventoryRef* (*)(UInt32))nvseData->GetFunc(NVSEDataInterface::kNVSEData_InventoryReferenceGetForRefID);
-	g_NVSEArrayMap = nvseData->GetSingleton(NVSEDataInterface::kNVSEData_ArrayMap);
-	g_NVSEStringMap = nvseData->GetSingleton(NVSEDataInterface::kNVSEData_StringMap);
-	DelArrayVar = (void (*)(void*, UInt32))nvseData->GetFunc(NVSEDataInterface::kNVSEData_ArrayVarMapDeleteBySelf);
-	DelStringVar = (void (*)(void*, UInt32))nvseData->GetFunc(NVSEDataInterface::kNVSEData_StringVarMapDeleteBySelf);
 	g_numPreloadMods = (UInt8*)nvseData->GetData(NVSEDataInterface::kNVSEData_NumPreloadMods);
 
 	((NVSEMessagingInterface*)nvse->QueryInterface(kInterface_Messaging))->RegisterListener(pluginHandle, "NVSE", NVSEMessageHandler);

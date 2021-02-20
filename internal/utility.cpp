@@ -145,7 +145,7 @@ __declspec(naked) void __fastcall NiReleaseObject(NiRefObject *toRelease)
 	__asm
 	{
 		lock dec dword ptr [ecx+4]
-		jnz		done
+		jg		done
 		mov		eax, [ecx]
 		call	dword ptr [eax+4]
 	done:
@@ -164,7 +164,7 @@ __declspec(naked) NiRefObject** __stdcall NiReleaseAddRef(NiRefObject **toReleas
 		test	ecx, ecx
 		jz		doAdd
 		lock dec dword ptr [ecx+4]
-		jnz		doAdd
+		jg		doAdd
 		mov		eax, [ecx]
 		call	dword ptr [eax+4]
 		mov		eax, [esp+4]
@@ -276,33 +276,6 @@ __declspec(naked) UInt32 __fastcall StrLen(const char *str)
 	nullPtr:
 		xor		eax, eax
 		retn
-	}
-}
-
-__declspec(naked) bool __fastcall MemCmp(const void *ptr1, const void *ptr2, UInt32 bsize)
-{
-	__asm
-	{
-		push	esi
-		push	edi
-		mov		esi, ecx
-		mov		edi, edx
-		mov		eax, [esp+0xC]
-		mov		ecx, eax
-		shr		ecx, 2
-		jz		comp1
-		repe cmpsd
-		jnz		done
-	comp1:
-		and		eax, 3
-		jz		done
-		mov		ecx, eax
-		repe cmpsb
-	done:
-		setz	al
-		pop		edi
-		pop		esi
-		retn	4
 	}
 }
 

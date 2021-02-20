@@ -693,7 +693,7 @@ bool Cmd_GetHotkeyItemRef_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &keyNum) && keyNum && (keyNum <= 8))
 	{
 		ExtraDataList *xData;
-		ContChangesEntry *entry = GetHotkeyItemEntry(keyNum, &xData);
+		ContChangesEntry *entry = GetHotkeyItemEntry(keyNum - 1, &xData);
 		if (entry)
 		{
 			TESObjectREFR *invRef = CreateInventoryRef(g_thePlayer, entry->type, xData->GetCount(), xData);

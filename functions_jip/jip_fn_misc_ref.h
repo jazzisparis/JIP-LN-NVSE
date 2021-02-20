@@ -74,6 +74,7 @@ DEFINE_COMMAND_ALT_PLUGIN(SynchronizePosition, SyncPos, , 0, 4, kParams_JIP_OneO
 DEFINE_COMMAND_PLUGIN(ModelHasBlock, , 0, 22, kParams_JIP_OneForm_OneFormatString);
 DEFINE_COMMAND_PLUGIN(GetRayCastRef, , 1, 2, kParams_JIP_OneOptionalInt_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetRayCastMaterial, , 1, 2, kParams_JIP_OneOptionalInt_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(GetCollisionNodes, , 1, 0, NULL);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -1455,9 +1456,17 @@ bool RegisterInsertObject(COMMAND_ARGS)
 	*result = 0;
 	TESForm *form;
 	UInt32 doInsert;
-	if (ExtractFormatStringArgs(2, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_AttachModel.numParams, &form, &doInsert) && (form->GetIsReference() || form->IsBoundObject()))
+	if (ExtractFormatStringArgs(2, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_AttachModel.numParams, &form, &doInsert) && (form->modIndex != 0xFF))
 	{
-		UnorderedMap<TESForm*, NodeNamesMap> &formsMap = (s_insertObjectFlag == kHookFormFlag6_InsertNode) ? s_insertNodeMap : s_attachModelMap;
+		if (form->GetIsReference())
+		{
+			if (kInventoryType[((TESObjectREFR*)form)->baseForm->typeID])
+				return true;
+		}
+		else if (!form->IsBoundObject())
+			return true;
+
+		auto formsMap = (s_insertObjectFlag == kHookFormFlag6_InsertNode) ? &s_insertNodeMap : &s_attachModelMap;
 
 		char *nodeName = "", *objectName = strrchr(s_strArgBuffer, '|');
 		if (objectName)
@@ -1470,21 +1479,18 @@ bool RegisterInsertObject(COMMAND_ARGS)
 		if (doInsert)
 		{
 			NodeNamesMap *namesMap;
-			if (formsMap.Insert(form, &namesMap))
-			{
+			if (formsMap->Insert(form, &namesMap))
 				form->SetJIPFlag(s_insertObjectFlag, true);
-				HOOK_MOD(InsertObject, true);
-			}
 			if (!(*namesMap)[nodeName].Insert(objectName))
-				return true;
+				goto done;
 		}
 		else
 		{
-			auto findForm = formsMap.Find(form);
-			if (!findForm) return true;
+			auto findForm = formsMap->Find(form);
+			if (!findForm) goto done;
 			auto findNode = findForm().FindOp(nodeName);
 			if (!findNode || !findNode().Erase(objectName))
-				return true;
+				goto done;
 			if (findNode().Empty())
 			{
 				findNode.Remove(findForm());
@@ -1492,11 +1498,12 @@ bool RegisterInsertObject(COMMAND_ARGS)
 				{
 					findForm.Remove();
 					form->SetJIPFlag(s_insertObjectFlag, false);
-					HOOK_MOD(InsertObject, false);
 				}
 			}
 		}
 		*result = 1;
+	done:
+		s_insertObjects = !s_insertNodeMap.Empty() || !s_attachModelMap.Empty();
 	}
 	return true;
 }
@@ -1633,6 +1640,38 @@ bool Cmd_GetRayCastMaterial_Execute(COMMAND_ARGS)
 			filter &= 0x3F;
 			*result = GetRayCastMaterial(&objNode->m_worldTranslate, &objNode->m_worldRotate, 50000.0F, 4, filter);
 		}
+	}
+	return true;
+}
+
+void __fastcall GetCollisionNodes(NiNode *node)
+{
+	if (node->m_collisionObject)
+	{
+		bhkWorldObject *hWorldObj = node->m_collisionObject->worldObj;
+		if (hWorldObj)
+		{
+			hkpRigidBody *rigidBody = (hkpRigidBody*)hWorldObj->refObject;
+			UInt8 motionType = rigidBody->motion.type;
+			if ((motionType == 2) || (motionType == 3) || (motionType == 6))
+				s_tempElements.Append(node->m_blockName);
+		}
+	}
+	for (auto iter = node->m_children.Begin(); !iter.End(); ++iter)
+		if (*iter && iter->GetNiNode())
+			GetCollisionNodes((NiNode*)*iter);
+}
+
+bool Cmd_GetCollisionNodes_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	NiNode *rootNode = thisObj->GetNiNode();
+	if (rootNode)
+	{
+		s_tempElements.Clear();
+		GetCollisionNodes(rootNode);
+		if (!s_tempElements.Empty())
+			AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
 	}
 	return true;
 }

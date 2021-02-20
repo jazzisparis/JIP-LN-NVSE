@@ -792,7 +792,7 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 		}
 		character->EquipItem(item, 1, xData, 1, 0, 0);
 	}
-	MainLoopAddCallbackArgsEx(DoRefreshContainerMenu, containerMenu, 1, 5, 1, item);
+	MainLoopAddCallbackArgsEx(DoRefreshContainerMenu, containerMenu, 1, 10, 1, item);
 	return true;
 }
 

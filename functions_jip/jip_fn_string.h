@@ -3,7 +3,6 @@
 DEFINE_COMMAND_PLUGIN(sv_RegexMatch, , 0, 22, kParams_JIP_OneInt_OneFormatString);
 DEFINE_COMMAND_PLUGIN(sv_RegexSearch, , 0, 22, kParams_JIP_OneInt_OneFormatString);
 DEFINE_COMMAND_PLUGIN(sv_RegexReplace, , 0, 22, kParams_JIP_OneInt_OneFormatString);
-DEFINE_COMMAND_PLUGIN(sv_DestructAlt, , 0, 3, kParams_JIP_OneInt_TwoOptionalInts);
 
 bool Cmd_sv_RegexMatch_Execute(COMMAND_ARGS)
 {
@@ -47,17 +46,5 @@ bool Cmd_sv_RegexReplace_Execute(COMMAND_ARGS)
 	if (srcStr && *rgxStr)
 		AssignString(PASS_COMMAND_ARGS, std::regex_replace(srcStr, std::regex(rgxStr), s_strArgBuffer).c_str());
 	else AssignString(PASS_COMMAND_ARGS, NULL);
-	return true;
-}
-
-bool Cmd_sv_DestructAlt_Execute(COMMAND_ARGS)
-{
-	UInt32 strID1, strID2 = 0, strID3 = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &strID1, &strID2, &strID3))
-	{
-		if (strID1) DeleteStringVar(strID1);
-		if (strID2) DeleteStringVar(strID2);
-		if (strID3) DeleteStringVar(strID3);
-	}
 	return true;
 }

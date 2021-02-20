@@ -210,8 +210,6 @@ UInt32 __fastcall RGBDecToHex(UInt32 rgb);
 
 UInt32 __fastcall StrLen(const char *str);
 
-bool __fastcall MemCmp(const void *ptr1, const void *ptr2, UInt32 bsize);
-
 void __fastcall MemZero(void *dest, UInt32 bsize);
 
 char* __fastcall StrCopy(char *dest, const char *src);

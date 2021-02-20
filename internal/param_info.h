@@ -803,9 +803,9 @@ ParamInfo kParams_JIP_OneInt_TwoOptionalInts[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_EquipData[] =
+ParamInfo kParams_JIP_OneObjectID_OneOptionalFloat_ThreeOptionalInts[] =
 {
-	{"Form", kParamType_AnyForm, 0},
+	{"Object ID", kParamType_ObjectID, 0},
 	{"Float", kParamType_Float, 1},
 	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1},

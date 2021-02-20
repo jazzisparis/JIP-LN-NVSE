@@ -5,10 +5,7 @@
 #define DIRECTINPUT_VERSION 0x0800
 #define DIRECTSOUND_VERSION 0x0800
 
-enum
-{
-	kMaxControlBinds =	0x1C,
-};
+#define MAX_CONTROL_BIND 28
 
 enum XboxControlCode
 {
@@ -48,65 +45,6 @@ public:
 		kFlag_BackgroundMouse =	1 << 3,
 	};
 
-	// Have not verified nothing has changed here so commenting out (no controllers to test with currently)
-#if 0
-	enum
-	{
-		kMaxDevices = 8,
-	};
-
-	OSInputGlobals();
-	~OSInputGlobals();
-
-	// 244
-	class Joystick
-	{
-	public:
-		Joystick();
-		~Joystick();
-
-		UInt32	unk000[0x244 >> 2];
-	};
-
-	struct JoystickObjectsInfo
-	{
-		enum
-		{
-			kHasXAxis =		1 << 0,
-			kHasYAxis =		1 << 1,
-			kHasZAxis =		1 << 2,
-			kHasXRotAxis =	1 << 3,
-			kHasYRotAxis =	1 << 4,
-			kHasZRotAxis =	1 << 5
-		};
-
-		UInt32	axis;
-		UInt32	buttons;
-	};
-
-	// 2C
-	struct Unk1AF4
-	{
-		UInt32	bufLen;
-		UInt8	unk04[0x2C - 4];
-	};
-
-	// 28
-	struct Unk1B20
-	{
-		UInt32	unk00;
-		UInt32	unk04;
-		UInt32	unk08;
-		UInt32	unk0C;
-		UInt32	unk10;
-		UInt32	unk14;
-		UInt32	unk18;
-		UInt32	unk1C;
-		UInt32	unk20;
-		UInt32	unk24;
-	};
-#endif
-
 	UInt32			unk0000;				// 0000
 	UInt32			flags;					// 0004
 	_IDirectInput8	*directInput;			// 0008
@@ -144,122 +82,86 @@ public:
 };
 STATIC_ASSERT(sizeof(OSInputGlobals) == 0x1C04);
 
-#if 0
-#include "GameTypes.h"
-
-class TESGameSound;
-class NiAVObject;
-
-// 58
-class TESGameSound
+// 20
+struct BSPackedTask
 {
-public:
-	TESGameSound();
-	~TESGameSound();
-
-	UInt32			unk00[3];	// 00
-	UInt32			hashKey;	// 0C
-	UInt32			unk10[4];	// 10
-	float			x;			// 20
-	float			y;			// 24
-	float			z;			// 28
-	UInt32			unk2C[4];	// 2C
-	float			unk3C;		// 3C
-	UInt32			unk40[3];	// 40
-	const char *	name;		// 4C
-	UInt32			unk50;		// 50
-	UInt32			unk54;		// 54
-};
-
-// 328
-class OSSoundGlobals
-{
-public:
-	OSSoundGlobals();
-	~OSSoundGlobals();
-
-	enum
+	union TaskArg
 	{
-		kFlags_HasDSound =		1 << 0,
-		kFlags_HasHardware3D =	1 << 2,
+		UInt8		byteVal;
+		SInt32		intVal;
+		UInt32		uintVal;
+		float		fltVal;
+		void		*ptrVal;
+		TESForm		*formVal;
 	};
-	
-	typedef NiTPointerMap <TESGameSound>	TESGameSoundMap;
-	typedef NiTPointerMap <NiAVObject>		NiAVObjectMap;
 
-	UInt32					unk000;						// 000
-	UInt32					unk004;						// 004
-	IDirectSound8			* dsoundInterface;			// 008
-	IDirectSoundBuffer8		* primaryBufferInterface;	// 00C
-	DSCAPS					soundCaps;					// 010
-	UInt32					unk070;						// 070
-	UInt32					unk074;						// 074
-	IDirectSound3DListener	* listenerInterface;		// 078
-	UInt32					unk07C[(0x0A4-0x07C) >> 2];	// 07C
-	UInt8					unk0A4;						// 0A4
-	UInt8					unk0A5;						// 0A5
-	UInt8					unk0A6;						// 0A6
-	UInt8					pad0A7;						// 0A7
-	UInt32					unk0A8;						// 0A8
-	UInt32					flags;						// 0AC - flags?
-	UInt32					unk0B0;						// 0B0
-	float					unk0B4;						// 0B4
-	float					masterVolume;				// 0B8
-	float					footVolume;					// 0BC
-	float					voiceVolume;				// 0C0
-	float					effectsVolume;				// 0C4
-	UInt32					unk0C8;						// 0C8 - time
-	UInt32					unk0CC;						// 0CC - time
-	UInt32					unk0D0;						// 0D0 - time
-	UInt32					unk0D4[(0x0DC-0x0D4) >> 2];	// 0D4
-	UInt32					unk0DC;						// 0DC
-	UInt32					unk0E0[(0x2F0-0x0E0) >> 2];	// 0E0
-	float					musicVolume;				// 2F0
-	UInt32					unk2F4;						// 2F4
-	float					musicVolume2;				// 2F8
-	UInt32					unk2FC;						// 2FC
-	TESGameSoundMap			* gameSoundMap;				// 300
-	NiAVObjectMap			* niObjectMap;				// 304
-	NiTPointerList <void>	* soundMessageMap;			// 308 - AudioManager::SoundMessage *
-	UInt32					unk30C[(0x320-0x30C) >> 2];	// 30C
-	void					* soundMessageList;			// 320
-	UInt32					unk324;						// 324
+	UInt32			type;		// 00
+	UInt32			cmdOpcode;	// 04
+	UInt32			thisObj;	// 08	refID
+	TaskArg			args[5];	// 0C
 };
 
-STATIC_ASSERT(sizeof(OSSoundGlobals) == 0x328);
-#endif
+// 10
+struct ScrapHeapBuffer
+{
+	BSPackedTask	*buffer;
+	BSPackedTask	*firstFree;
+	BSPackedTask	*bufferEnd;
+	UInt32			unk0C;
+};
 
-class OSSoundGlobals {
+// 28
+class BSTCommonScrapHeapMessageQueue
+{
+public:
+	virtual void	Destroy(bool doFree);
+	virtual void	Unk_01(void);
+	virtual void	Unk_02(void);
+	virtual void	Unk_03(void);
+	virtual void	Unk_04(void);
+	virtual void	Unk_05(void);
+	virtual void	Unk_06(void);
+
+	typedef void (__cdecl *DoQueuedTask)(BSPackedTask *taskData);
+
+	UInt32				unk04;			// 04
+	ScrapHeapBuffer		*taskBuffer;	// 08
+	UInt32				unk0C;			// 0C
+	void				*ptr10;			// 10
+	UInt32				currCount;		// 14
+	HANDLE				semaphore;		// 18
+	UInt32				maxCount;		// 1C
+	DoQueuedTask		doQueuedTask;	// 20	0x87B990
+	UInt8				byte24;			// 24
+	UInt8				pad25[3];		// 25
 };
 
 // A4
 class OSGlobals
 {
 public:
-	OSGlobals();
-	~OSGlobals();
-
-	UInt8			oneMore;			// 00
-	UInt8			quitGame;			// 01	The seven are initialized to 0, this one is set by QQQ
-	UInt8			exitToMainMenu;		// 02
-	UInt8			unk03;				// 03
-	UInt8			unk04;				// 04
-	UInt8			unk05;				// 05
-	UInt8			unk06;				// 06	This looks promising as TFC status byte
-	bool			freezeTime;			// 07
-	HWND			window;				// 08
-	HINSTANCE		procInstance;		// 0C
-	UInt32			mainThreadID;		// 10
-	HANDLE			mainThreadHandle;	// 14
-	UInt32			*unk18;				// 18	ScrapHeapManager::Buffer*
-	UInt32			unk1C;				// 1C
-	OSInputGlobals	*input;				// 20
-	OSSoundGlobals	*sound;				// 24
-	UInt32			unk28;				// 28	relates to unk18
-	//...
-	UInt32			*unk50;				// 50	same object as unk18
-	//..
-	UInt32			unk60;				// 60	relates to unk50
+	UInt8							oneMore;		// 00
+	UInt8							quitGame;		// 01
+	UInt8							exitToMainMenu;	// 02
+	UInt8							byte03;			// 03
+	UInt8							byte04;			// 04
+	UInt8							byte05;			// 05
+	UInt8							tfcState;		// 06
+	bool							freezeTime;		// 07
+	HWND							window;			// 08
+	HINSTANCE						procInstance;	// 0C
+	UInt32							mainThreadID;	// 10
+	UInt32							unk14;			// 14
+	ScrapHeapBuffer					shBuffer18;		// 18
+	BSTCommonScrapHeapMessageQueue	shQueue28;		// 28
+	ScrapHeapBuffer					shBuffer50;		// 50
+	BSTCommonScrapHeapMessageQueue	shQueue60;		// 60
+	BSShaderAccumulator				*shaderAccum88;	// 88
+	BSShaderAccumulator				*shaderAccum8C;	// 8C
+	BSShaderAccumulator				*shaderAccum90;	// 90
+	BSShaderAccumulator				*shaderAccum94;	// 94
+	BSShaderAccumulator				*shaderAccum98;	// 98
+	UInt32							unk9C;			// 9C
+	NiCamera						*cameraA0;		// A0
 };
-
-//STATIC_ASSERT(sizeof(OSGlobals) == 0x0A4);	// found in oldWinMain 0x0086AF4B
+STATIC_ASSERT(sizeof(OSGlobals) == 0xA4);

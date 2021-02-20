@@ -26,52 +26,54 @@ __declspec(naked) void DoQueuedPlayerHook()
 {
 	__asm
 	{
-		cmp		s_queuedPlayerLock, 0
+		mov		eax, [ecx+0x28]
+		test	byte ptr [eax+0x61], 1
 		jnz		proceed
-		JMP_EAX(0x440BA0)
+		jmp		DoQueuedReferenceHook
 	proceed:
 		push	esi
 		push	ecx
-		mov		ecx, [ecx+0x28]
-		mov		esi, ecx
+		mov		esi, eax
 		push	1
 		push	0
+		mov		ecx, esi
 		CALL_EAX(0x5702E0)
 		mov		ecx, [esi+0x68C]
 		test	ecx, ecx
 		jz		done68C
 		push	1
 		CALL_EAX(0x418E00)
+		mov		dword ptr [esi+0x68C], 0
 	done68C:
 		mov		ecx, [esi+0x690]
 		test	ecx, ecx
 		jz		done690
 		push	1
 		CALL_EAX(0x418D20)
+		mov		dword ptr [esi+0x690], 0
 	done690:
-		mov		ecx, [esi+0x694]
+		mov		edx, [esi+0x694]
+		test	edx, edx
+		jz		done694
+		mov		ecx, [edx+0x18]
 		test	ecx, ecx
-		jz		doneNode
-		call	NiReleaseObject
-	doneNode:
-		xor		edx, edx
-		mov		[esi+0x68C], edx
-		mov		[esi+0x690], edx
-		mov		[esi+0x694], edx
-		mov		eax, 0x11E07D0
-		mov		[eax], edx
-		mov		[eax+4], edx
-		mov		[eax+8], edx
-		lea		ecx, [esi+0xD74]
+		jz		done694
+		push	edx
+		mov		eax, [ecx]
+		call	dword ptr [eax+0xE8]
+	done694:
 		pxor	xmm0, xmm0
+		movups	xmmword ptr ds:[0x11E07CC], xmm0
+		lea		ecx, [esi+0xD74]
 		movups	[ecx], xmm0
 		movups	[ecx+0x10], xmm0
 		movups	[ecx+0x20], xmm0
 		movups	[ecx+0x30], xmm0
 		movups	[ecx+0x40], xmm0
 		movups	[ecx+0x50], xmm0
+		and		byte ptr [esi+0x61], 0xFE
 		pop		ecx
-		CALL_EAX(0x440BA0)
+		call	DoQueuedReferenceHook
 		mov		eax, [esi+0x64]
 		test	eax, eax
 		jz		done
@@ -85,8 +87,8 @@ __declspec(naked) void DoQueuedPlayerHook()
 		cmp		byte ptr [esi+0x64A], 0
 		cmovz	ecx, eax
 		cmovz	eax, edx
-		or		dword ptr [ecx+0x30], 1
-		and		dword ptr [eax+0x30], 0xFFFFFFFE
+		or		byte ptr [ecx+0x30], 1
+		and		byte ptr [eax+0x30], 0xFE
 		mov		ecx, [esi+0x68]
 		test	ecx, ecx
 		jz		done
@@ -96,8 +98,7 @@ __declspec(naked) void DoQueuedPlayerHook()
 		jz		reEquip
 		push	0
 		push	esi
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x458]
+		CALL_EAX(0x915D60)
 		jmp		done
 	reEquip:
 		mov		eax, [ecx+0x114]
@@ -111,7 +112,6 @@ __declspec(naked) void DoQueuedPlayerHook()
 		mov		ecx, esi
 		CALL_EAX(0x88DB20)
 	done:
-		mov		s_queuedPlayerLock, 0
 		pop		esi
 		retn
 	}
@@ -1024,44 +1024,6 @@ __declspec(naked) bool __fastcall GetEffectHiddenHook(EffectItem *effItem)
 	}
 }
 
-__declspec(naked) void QueuedRefStopFadeInHook()
-{
-	__asm
-	{
-		lea		edx, [eax+0xA4]
-		lock dec dword ptr [edx]
-		jns		doneSmph1
-		mov		dword ptr [edx], 0
-	doneSmph1:
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x100]
-		test	al, al
-		jnz		doneSmph2
-		sub		edx, 4
-		lock dec dword ptr [edx]
-		jns		doneSmph2
-		mov		dword ptr [edx], 0
-	doneSmph2:
-		test	byte ptr [ecx+0x61], 1
-		jz		done
-		xor		byte ptr [ecx+0x61], 1
-		mov		eax, [ebp-0x18]
-		mov		ecx, [eax+0x34]
-		test	ecx, ecx
-		jz		done
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x10]
-		test	eax, eax
-		jz		done
-		mov		edx, 0x3F800000
-		mov		[eax+0xB4], edx
-		mov		[eax+0xB8], edx
-		or		dword ptr [eax+0x30], 0x4000
-	done:
-		retn
-	}
-}
-
 __declspec(naked) void ProcessGradualSetFloatHook()
 {
 	__asm
@@ -1703,23 +1665,6 @@ __declspec(naked) UInt32 __fastcall GetFactionReactionHook(TESFaction *faction, 
 	{
 		add		ecx, 0x24
 		JMP_EAX(0x48C1B0)
-	}
-}
-
-__declspec(naked) void GetActorAgilityHook()
-{
-	__asm
-	{
-		push	0xA
-		add		ecx, 0xA4
-		mov		eax, [ecx]
-		call	dword ptr [eax+0xC]
-		fstp	dword ptr [ebp-0xC]
-		movss	xmm0, [ebp-0xC]
-		maxss	xmm0, kFltOne
-		minss	xmm0, kFlt10
-		movss	[ebp-0xC], xmm0
-		retn
 	}
 }
 
@@ -3638,7 +3583,12 @@ void InitGamePatches()
 	SafeWriteBuf(0x47667D, "\x89\xC8\x0F\x1F\x00", 5);
 	SafeWriteBuf(0x9C35F7, "\x89\xC8\x0F\x1F\x00", 5);
 
+	//	Cap Agility for calculating reload & equip speeds
+	SafeWriteBuf(0x8C17D9, "\xB8\x50\xEF\x66\x00\xFF\xD0\x0F\x1F\x80\x00\x00\x00\x00", 14);
+	SafeWriteBuf(0x8C1959, "\xB8\x50\xEF\x66\x00\xFF\xD0\x0F\x1F\x80\x00\x00\x00\x00", 14);
+
 	SafeWrite16(0x94E5F6, 0x18EB);
+	SafeWrite8(0x94E4A2, 1);
 	SafeWrite32(0x1016DB8, (UInt32)DoQueuedPlayerHook);
 	SafeWriteBuf(0x601C30, "\x8B\x41\x04\x85\xC0\x74\x01\xC3\x81\xE9\xD8\x00\x00\x00\xF7\x01\x01\x00\x00\x00\xB8\x48\x3E\x1D\x01\xB9\x1C\x27\x1D\x01\x0F\x45\xC1\x8B\x00\xC3", 36);
 	SafeWrite32(0x104A1BC, (UInt32)SetNPCModelHook);
@@ -3693,7 +3643,6 @@ void InitGamePatches()
 	WritePushRetRelJump(0x72F33D, 0x72F37F, (UInt32)ConstructItemEntryNameHook);
 	WriteRelCall(0x48E761, (UInt32)GetIconPathForItemHook);
 	WriteRelCall(0x406720, (UInt32)GetEffectHiddenHook);
-	WritePushRetRelJump(0x440D0D, 0x440D43, (UInt32)QueuedRefStopFadeInHook);
 	SafeWrite8(0xA081A8, 5);
 	SafeWrite32(0xA08718, (UInt32)ProcessGradualSetFloatHook);
 	WritePushRetRelJump(0x454576, 0x454580, (UInt32)CloudsFixHook);
@@ -3717,8 +3666,6 @@ void InitGamePatches()
 	WriteRelJump(0x58E9D0, (UInt32)GetImpactDataHook);
 	WriteRelCall(0x5956BC, (UInt32)GetFactionReactionHook);
 	*(UInt32*)0x11D0190 = 0x41200000;
-	WritePushRetRelJump(0x8C17CE, 0x8C17EA, (UInt32)GetActorAgilityHook);
-	WritePushRetRelJump(0x8C194E, 0x8C196A, (UInt32)GetActorAgilityHook);
 	WriteRelJump(0x595560, (UInt32)PickMediaSetHook);
 	WriteRelCall(0x969C41, (UInt32)ModHardcoreNeedsHook);
 	WriteRelCall(0x86AC60, (UInt32)ProcessCustomINI);

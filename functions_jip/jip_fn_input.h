@@ -6,7 +6,7 @@ DEFINE_COMMAND_PLUGIN(ToggleVanityWheel, , 0, 1, kParams_OneOptionalInt);
 
 void SetCtrlHeldState(UInt32 ctrlID, bool bHold)
 {
-	if (ctrlID >= kMaxControlBinds) return;
+	if (ctrlID >= MAX_CONTROL_BIND) return;
 	UInt32 keyID = g_inputGlobals->keyBinds[ctrlID];
 	if (keyID != 0xFF) g_DIHookCtrl->SetKeyHeldState(keyID, bHold);
 	keyID = g_inputGlobals->mouseBinds[ctrlID];

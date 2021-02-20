@@ -55,7 +55,6 @@ enum
 	kHook_OnRagdoll,
 	kHook_PlayerMinHealth,
 	kHook_ApplyActorVelocity,
-	kHook_InsertObject,
 	kHook_SynchronizePosition,
 	kHook_CalculateHitDamage,
 	kHook_EnableRepairButton,
@@ -2727,8 +2726,8 @@ __declspec(naked) void __fastcall DoInsertNodes(TESForm *form, int EDX, NiNode *
 		jmp		doAdd
 	doCreate:
 		call	NiNode::Create
-		mov		edx, [ebx+0x30]
-		mov		[eax+0x30], edx
+		/*mov		edx, [ebx+0x30]
+		mov		[eax+0x30], edx*/
 		push	eax
 		push	eax
 		mov		ecx, ebx
@@ -2769,6 +2768,61 @@ __declspec(naked) void __fastcall DoInsertNodes(TESForm *form, int EDX, NiNode *
 	}
 }
 
+__declspec(naked) NiNode* __fastcall LoadModelCopy(const char *filePath)
+{
+	__asm
+	{
+		push	ebp
+		mov		ebp, esp
+		push	0
+		push	ecx
+		sub		esp, 0x48
+		lea		edx, [ebp-4]
+		push	edx
+		push	ecx
+		mov		eax, g_modelLoader
+		mov		ecx, [eax]
+		mov		eax, [ecx]
+		call	dword ptr [eax+8]
+		test	al, al
+		jnz		hasModel
+		push	0
+		push	1
+		push	0
+		push	0
+		push	dword ptr [ebp-8]
+		lea		ecx, [ebp-0x50]
+		CALL_EAX(0x43C6E0)
+		and		byte ptr [eax+0x3C], 0xDF
+		or		byte ptr [eax+0x3C], 0x10
+		mov		ecx, eax
+		CALL_EAX(0x43CCF0)
+		lea		ecx, [ebp-0x50]
+		CALL_EAX(0x43D180)
+		mov		eax, [ebp-0x20]
+		mov		[ebp-4], eax
+		lea		ecx, [ebp-0x50]
+		CALL_EAX(0x43C830)
+		mov		eax, [ebp-4]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0xC]
+		jmp		done
+	hasModel:
+		mov		eax, [ebp-4]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0xC]
+		test	eax, eax
+		jz		done
+		mov		ecx, eax
+		call	NiNode::CreateCopy
+	done:
+		leave
+		retn
+	}
+}
+
 __declspec(naked) void __fastcall DoAttachModels(TESForm *form, int EDX, NiNode *rootNode)
 {
 	__asm
@@ -2805,18 +2859,10 @@ __declspec(naked) void __fastcall DoAttachModels(TESForm *form, int EDX, NiNode 
 		mov		[ebp-8], edx
 		ALIGN 16
 	insHead:
-		push	1
-		push	0
-		push	0
-		push	1
-		push	0
-		push	dword ptr [edi]
-		mov		ecx, g_modelLoader
-		CALL_EAX(kAddr_LoadModel)
+		mov		ecx, [edi]
+		call	LoadModelCopy
 		test	eax, eax
 		jz		insNext
-		mov		ecx, eax
-		call	NiNode::CreateCopy
 		push	1
 		push	eax
 		mov		ecx, eax
@@ -2841,104 +2887,258 @@ __declspec(naked) void __fastcall DoAttachModels(TESForm *form, int EDX, NiNode 
 	}
 }
 
-__declspec(naked) void InsertObjectHook()
+bool s_insertObjects = false;
+
+__declspec(naked) void __fastcall DoInsertObjects(TESForm *form1, TESForm *form2, NiNode *rootNode)
 {
 	__asm
 	{
 		push	esi
+		push	edi
 		mov		esi, ecx
-		mov		dword ptr [ebp-0x1C], 0
-		mov		ecx, [ecx+0x40]
+		mov		edi, edx
+		cmp		dword ptr ds:[s_insertNodeMap.numEntries], 0
+		jz		doModels
+		test	word ptr [esi+6], kHookFormFlag6_InsertNode
+		jz		nodeForm2
+		push	dword ptr [esp+0xC]
+		call	DoInsertNodes
+	nodeForm2:
+		test	edi, edi
+		jz		doModels
+		test	word ptr [edi+6], kHookFormFlag6_InsertNode
+		jz		doModels
+		push	dword ptr [esp+0xC]
+		mov		ecx, edi
+		call	DoInsertNodes
+	doModels:
+		cmp		dword ptr ds:[s_attachModelMap.numEntries], 0
+		jz		done
+		test	word ptr [esi+6], kHookFormFlag6_AttachModel
+		jz		modelForm2
+		push	dword ptr [esp+0xC]
+		mov		ecx, esi
+		call	DoAttachModels
+	modelForm2:
+		test	edi, edi
+		jz		done
+		test	word ptr [edi+6], kHookFormFlag6_AttachModel
+		jz		done
+		push	dword ptr [esp+0xC]
+		mov		ecx, edi
+		call	DoAttachModels
+	done:
+		pop		edi
+		pop		esi
+		retn	4
+	}
+}
+
+__declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedRef)
+{
+	__asm
+	{
+		push	ebp
+		mov		ebp, esp
+		sub		esp, 0xC
+		push	esi
+		push	edi
+		cmp		dword ptr [ecx+0xC], 6
+		jz		done
+		mov		esi, ecx
+		mov		edi, [ecx+0x28]
+		mov		eax, ds:[0x126FD98]
+		mov		edx, fs:[0x2C]
+		mov		eax, [edx+eax*4]
+		add		eax, 0x2B4
+		mov		edx, [eax]
+		mov		[ebp-4], edx
+		mov		edx, [ecx+0x18]
+		mov		[eax], edx
+		test	dword ptr [edi+8], 0x820
+		jnz		doErase
+		mov		ecx, [edi+0x40]
+		test	ecx, ecx
+		jz		doErase
+		push	0x102EAEC
+		add		ecx, 0x80
+		CALL_EAX(0x40FBF0)
+		mov		ecx, [edi+0x40]
+		cmp		byte ptr [ecx+0x26], 2
+		jb		doErase
+		mov		eax, [esi+0x30]
+		test	eax, eax
+		jz		noModel
+		push	dword ptr [eax+0xC]
+		push	edi
+		mov		ecx, g_modelLoader
+		CALL_EAX(0x4489B0)
+	noModel:
+		push	0
+		push	esi
+		push	dword ptr [edi+0x40]
+		push	edi
+		mov		ecx, g_TES
+		CALL_EAX(0x451EF0)
+	doErase:
+		push	edi
+		mov		eax, g_modelLoader
+		mov		ecx, [eax+8]
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x14]
+		mov		ecx, [edi+0x40]
+		test	ecx, ecx
+		jz		popTLS
+		lea		edx, [ecx+0xA4]
+		lock dec dword ptr [edx]
+		jns		doneSmph1
+		mov		dword ptr [edx], 0
+	doneSmph1:
+		mov		ecx, edi
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x100]
+		test	al, al
+		jnz		doneSmph2
+		sub		edx, 4
+		lock dec dword ptr [edx]
+		jns		doneSmph2
+		mov		dword ptr [edx], 0
+	doneSmph2:
+		test	byte ptr [edi+0x61], 1
+		jz		doneFade
+		and		byte ptr [edi+0x61], 0xFE
+		mov		ecx, [esi+0x34]
+		test	ecx, ecx
+		jz		doneFade
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x10]
+		test	eax, eax
+		jz		doneFade
+		fld1
+		fst		dword ptr [eax+0xB4]
+		fstp	dword ptr [eax+0xB8]
+		or		dword ptr [eax+0x30], 0x4000
+	doneFade:
+		mov		ecx, [edi+0x40]
 		add		ecx, 0x80
 		CALL_EAX(0x40FBA0)
-		mov		ecx, esi
+		cmp		s_insertObjects, 0
+		jz		popTLS
+		mov		ecx, edi
 		call	TESObjectREFR::GetBaseForm2
 		test	eax, eax
-		jz		done
-		test	word ptr [esi+6], kHookFormFlag6_InsertObject
+		jz		popTLS
+		test	word ptr [edi+6], kHookFormFlag6_InsertObject
 		jnz		hasFlag
 		test	word ptr [eax+6], kHookFormFlag6_InsertObject
-		jz		done
+		jz		popTLS
 	hasFlag:
-		mov		[ebp-0x10], eax
-		mov		ecx, esi
+		mov		[ebp-8], eax
+		mov		ecx, edi
 		cmp		dword ptr [ecx+0xC], 0x14
-		jnz		notPlayer
-		CALL_EAX(0x43FCD0)
-		test	eax, eax
-		jz		done
-		mov		[ebp-0x18], eax
-		mov		eax, [esi+0x694]
-		mov		[ebp-0x1C], eax
-		jmp		doneProt
-	notPlayer:
-		mov		edx, [ebp-0x18]
-		mov		eax, [edx+0x34]
+		jz		isPlayer
+		mov		eax, [esi+0x34]
 		test	eax, eax
 		jnz		gotNode
 		CALL_EAX(0x43FCD0)
 		test	eax, eax
-		jz		done
-		mov		edx, [ebp-0x18]
+		jz		popTLS
 	gotNode:
-		mov		[ebp-0x18], eax
-		mov		ecx, [edx+0x30]
+		mov		[ebp-0xC], eax
+		mov		ecx, [esi+0x30]
 		test	ecx, ecx
-		jz		doneProt
+		jz		doInsert
 		cmp		[ecx+0xC], eax
-		jnz		doneProt
-		push	ecx
+		jnz		doInsert
 		mov		ecx, eax
 		call	NiNode::CreateCopy
-		pop		ecx
 		push	eax
+		mov		ecx, [esi+0x30]
 		add		ecx, 0xC
 		push	ecx
 		call	NiReleaseAddRef
-	doneProt:
-		cmp		dword ptr ds:[s_insertNodeMap.numEntries], 0
-		jz		doModels
-		test	word ptr [esi+6], kHookFormFlag6_InsertNode
-		jz		checkBase1
-		push	dword ptr [ebp-0x18]
-		mov		ecx, esi
-		call	DoInsertNodes
-	checkBase1:
-		mov		ecx, [ebp-0x10]
-		test	word ptr [ecx+6], kHookFormFlag6_InsertNode
-		jz		doModels
-		push	dword ptr [ebp-0x18]
-		call	DoInsertNodes
-	doModels:
-		cmp		dword ptr ds:[s_attachModelMap.numEntries], 0
-		jz		do1stPerson
-		test	word ptr [esi+6], kHookFormFlag6_AttachModel
-		jz		checkBase2
-		push	dword ptr [ebp-0x18]
-		mov		ecx, esi
-		call	DoAttachModels
-	checkBase2:
-		mov		ecx, [ebp-0x10]
-		test	word ptr [ecx+6], kHookFormFlag6_AttachModel
-		jz		do1stPerson
-		push	dword ptr [ebp-0x18]
-		call	DoAttachModels
-	do1stPerson:
-		mov		eax, [ebp-0x1C]
+		jmp		doInsert
+	isPlayer:
+		CALL_EAX(0x43FCD0)
 		test	eax, eax
-		jz		done
-		mov		[ebp-0x18], eax
-		mov		dword ptr [ebp-0x1C], 0
-		jmp		doneProt
+		jz		popTLS
+		push	eax
+		mov		edx, [ebp-8]
+		mov		ecx, edi
+		call	DoInsertObjects
+		mov		eax, [edi+0x694]
+		test	eax, eax
+		jz		popTLS
+		mov		[ebp-0xC], eax
+	doInsert:
+		push	dword ptr [ebp-0xC]
+		mov		edx, [ebp-8]
+		mov		ecx, edi
+		call	DoInsertObjects
+	popTLS:
+		mov		eax, ds:[0x126FD98]
+		mov		edx, fs:[0x2C]
+		mov		eax, [edx+eax*4]
+		mov		edx, [ebp-4]
+		mov		[eax+0x2B4], edx
 	done:
+		pop		edi
 		pop		esi
-		push	dword ptr [ebp-0x14]
-		CALL_EAX(0x404F30)
-		pop		ecx
-		mov		ecx, [ebp-0xC]
-		mov		fs:0, ecx
-		pop		ecx
 		leave
+		retn
+	}
+}
+
+__declspec(naked) void LoadArmorSlotHook()
+{
+	__asm
+	{
+		mov		ecx, [ebp-0x30]
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x10]
+		test	eax, eax
+		mov		eax, [ebp-0x30]
+		jz		skipFadeType
+		mov		dword ptr [eax+0xC4], 7
+	skipFadeType:
+		cmp		s_insertObjects, 0
+		jz		done
+		mov		ecx, [ebp-0x174]
+		mov		edx, [ebp-0x14]
+		shl		edx, 4
+		mov		ecx, [ecx+edx+0x2C]
+		test	ecx, ecx
+		jz		done
+		test	word ptr [ecx+6], kHookFormFlag6_InsertObject
+		jz		done
+		push	eax
+		xor		edx, edx
+		call	DoInsertObjects
+	done:
+		retn
+	}
+}
+
+__declspec(naked) void LoadWeaponSlotHook()
+{
+	__asm
+	{
+		test	al, al
+		mov		eax, [ebp-0x14]
+		jz		skipFadeType
+		mov		dword ptr [eax+0xC4], 7
+	skipFadeType:
+		cmp		s_insertObjects, 0
+		jz		done
+		mov		ecx, [ebp+8]
+		test	ecx, ecx
+		jz		done
+		test	word ptr [ecx+6], kHookFormFlag6_InsertObject
+		jz		done
+		push	eax
+		xor		edx, edx
+		call	DoInsertObjects
+	done:
 		retn
 	}
 }
@@ -3430,10 +3630,15 @@ void InitJIPHooks()
 	HOOK_INIT_JUMP(OnRagdoll, 0xC7C151);
 	HOOK_INIT_JPRT(PlayerMinHealth, 0x93B80A, 0x93B84F);
 	HOOK_INIT_JUMP(ApplyActorVelocity, 0xC6D4E4);
-	HOOK_INIT_JUMP(InsertObject, 0x440D49);
 	HOOK_INIT_JPRT(SynchronizePosition, 0x575836, 0x575845);
 
-	WriteRelJump(0x92C400, (UInt32)CopyHitDataHook);
+	SafeWrite32(0x1016BE0, (UInt32)DoQueuedReferenceHook);
+	SafeWrite32(0x1016D28, (UInt32)DoQueuedReferenceHook);
+	SafeWrite32(0x1016D70, (UInt32)DoQueuedReferenceHook);
+	WritePushRetRelJump(0x4AC89D, 0x4AC8BD, (UInt32)LoadArmorSlotHook);
+	WritePushRetRelJump(0x4AF0C7, 0x4AF0DE, (UInt32)LoadWeaponSlotHook);
+	SafeWrite32(0x1087FD8, (UInt32)CopyHitDataHook);
+	SafeWrite32(0x10897C0, (UInt32)CopyHitDataHook);
 	SafeWriteBuf(0x92C4A0, "\x8B\x81\x40\x02\x00\x00\x85\xC0\x74\x07\xC7\x40\x10\xFF\xFF\xFF\xFF\xC3", 18);
 	WriteRelJump(0x4AC645, (UInt32)BipedSlotVisibilityHook);
 	WriteRelJump(0x63C929, (UInt32)SkyRefreshClimateHook);

@@ -2185,10 +2185,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 						s_exteriorKeys.Append(parentCell->refID);
 					}
 					else if (updateTiles)
-					{
-						s_exteriorKeys.Remove(parentCell->refID);
-						s_exteriorKeys.Append(parentCell->refID);
-					}
+						s_exteriorKeys.MoveToEnd(parentCell->refID);
 					else if (!(exteriorEntry->regenFlags & quadrant))
 					{
 						if (gridIdx == 4) exteriorEntry->regenFlags = 0xF;

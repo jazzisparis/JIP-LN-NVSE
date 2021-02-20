@@ -38,7 +38,6 @@
 class BackgroundCloneThread;
 class BSFaceGenModel;
 class QueuedReference;
-class AttachDistant3DTask;
 class BSTaskManagerThread;
 
 class RefNiRefObject;
@@ -50,10 +49,10 @@ class BSTask
 {
 public:
 	virtual void Destroy(bool doFree);
-	virtual void Run(void) = 0;
-	virtual void Unk_02(void) = 0;
-	virtual void Unk_03(UInt32 arg0, UInt32 arg1);						// doesNothing
-	virtual bool GetDebugDescription(char *outDesc, void *arg1) = 0;	// return 0
+	virtual void Run(void);
+	virtual void Unk_02(void);
+	virtual void Unk_03(UInt32 arg0, UInt32 arg1);
+	virtual bool GetDebugDescription(char *outDesc, void *arg1);
 	
 	BSTask		*unk04;		// 04
 	UInt32		refCounter; // 08
@@ -68,9 +67,17 @@ public:
 class IOTask : public BSTask
 {
 public:
-	virtual void Unk_05(void);			// doesNothing
+	virtual void Unk_05(void);
 	virtual void Unk_06(void);				
 	virtual void Unk_07(UInt32 arg0);	// most (all?) implementations appear to call IOManager::1202D98(this, arg0) eventually
+};
+
+// 20
+class AttachDistant3DTask : public IOTask
+{
+public:
+	TESObjectREFR	*refr;		// 18
+	NiAVObject		*object1C;	// 1C
 };
 
 // 14
@@ -98,10 +105,7 @@ struct Model
 class QueuedFile : public IOTask
 {
 public:
-	//Unk_01:	doesNothing
-	//Unk_02:	virtual void Call_Unk_0A(void);
-	//Unk_03:	implemented
-	virtual void Unk_08(void);				// doesNothing
+	virtual void Unk_08(void);
 	virtual void Unk_09(UInt32 arg0);
 	virtual void Unk_0A(void);				
 
@@ -114,7 +118,7 @@ public:
 		UInt32		offset;
 	};
 
-	BSTask			*unk18;				// 18	init to tlsData:2B4 not confirmed OBSE for QueuedModel, seen QueuedReference (ref to which model will be attached)
+	BSTask			*task18;				// 18	init to tlsData:2B4
 	QueuedReference	*queuedRef;			// 1C	could be last QueuedRef
 	QueuedChildren	*queuedChildren;	// 20
 	UInt32			*unk24;				// 24	struct, 04 is a base, 08 is a length
@@ -129,13 +133,13 @@ public:
 	virtual void Unk_0D(NiNode *arg0);
 	virtual bool Unk_0E(void);
 	virtual void Unk_0F(void);
-	virtual void Unk_10(void);			// doesNothing
+	virtual void Unk_10(void);
 
 	TESObjectREFR	*refr;		// 28
-	RefNiRefObject	*unk2C;		// 2C	OBSE QueuedChildren	*queuedChildren;
+	BSTask			*task2C;	// 2C
 	Model			*model;		// 30
 	NiNode			*resultObj;	// 34
-	RefNiRefObject	*unk38;		// 38
+	BSTask			*task38;	// 38
 	UInt32			unk3C;		// 3C	uninitialized
 };
 
@@ -253,42 +257,6 @@ public:
 	Character			* character;			// 30
 	UInt32				unk34;					// 34
 };
-
-// 30
-class BSTaskManager : public LockFreeMap< NiPointer< BSTask > >
-{
-public:
-	virtual void Unk_0F(UInt32 arg0) = 0;
-	virtual void Unk_10(UInt32 arg0) = 0;
-	virtual void Unk_11(UInt32 arg0) = 0;
-	virtual void Unk_12(void) = 0;
-	virtual void Unk_13(UInt32 arg0) = 0;
-
-	UInt32				unk1C;			// 1C
-	UInt32				unk20;			// 20
-	UInt32				numThreads;		// 24
-	BSTaskManagerThread	** threads;		// 28 array of size numThreads
-	UInt32				unk2C;			// 2C
-};
-
-// 3C
-class IOManager : public BSTaskManager
-{
-public:
-	virtual void Unk_14(UInt32 arg0) = 0;
-
-	static IOManager* GetSingleton();
-
-	UInt32									unk30;			// 30
-	LockFreeQueue< NiPointer< IOTask > >	* taskQueue;	// 34
-	UInt32									unk38;			// 38
-
-	bool IsInQueue(TESObjectREFR *refr);
-	void QueueForDeletion(TESObjectREFR* refr);
-	void DumpQueuedTasks();
-};
-
-extern IOManager** g_ioManager;
 */
 
 // 40
@@ -401,3 +369,72 @@ struct ModelLoader
 		ThisCall(0x444850, this, refr, 1, false);
 	}
 };
+
+// 40
+template <typename T_Data> class LockFreeQueue
+{
+public:
+	virtual void Destroy(bool doFree);
+	virtual void Unk_01(void);
+	virtual void Unk_02(void);
+	virtual void Unk_03(void);
+	virtual void Unk_04(void);
+
+	UInt32		unk04[15];	// 04
+};
+
+// 10
+template <typename T_Data> class LockFreePriorityQueue
+{
+public:
+	virtual void Destroy(bool doFree);
+	virtual void Unk_01(void);
+	virtual void Unk_02(void);
+	virtual void Unk_03(void);
+
+	LockFreeQueue<T_Data>	**queues;	// 04
+	UInt32					numQueues;	// 08
+	UInt32					unk0C;		// 0C
+};
+
+// A0
+class IOManager
+{
+public:
+	virtual void Destroy(bool doFree);
+	virtual void Unk_01(void);
+	virtual void Unk_02(void);
+	virtual void Unk_03(void);
+	virtual void Unk_04(void);
+	virtual void Unk_05(void);
+	virtual void Unk_06(void);
+	virtual void Unk_07(void);
+	virtual void Unk_08(void);
+	virtual void Unk_09(void);
+	virtual void Unk_0A(void);
+	virtual void Unk_0B(void);
+	virtual void Unk_0C(void);
+	virtual void Unk_0D(void);
+	virtual void Unk_0E(void);
+	virtual void Unk_0F(void);
+	virtual void Unk_10(void);
+	virtual void Unk_11(void);
+	virtual void Unk_12(void);
+	virtual void Unk_13(void);
+	virtual void Unk_14(void);
+	virtual void Unk_15(void);
+	virtual void Unk_16(void);
+
+	void							*ptr04;		// 04
+	UInt32							unk08;		// 08
+	void							*ptr0C;		// 0C
+	UInt32							unk10;		// 10
+	void							*ptr14;		// 14
+	UInt32							unk18[14];	// 18
+	void							*ptr50;		// 50
+	void							*ptr54;		// 54
+	UInt32							unk58[3];	// 58
+	LockFreePriorityQueue<IOTask*>	*taskQueue;	// 64
+	UInt32							unk68[14];	// 68
+};
+STATIC_ASSERT(sizeof(IOManager) == 0xA0);

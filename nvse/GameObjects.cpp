@@ -45,17 +45,35 @@ bool TESObjectREFR::IsMapMarker()
 
 extern ModelLoader *g_modelLoader;
 
-void TESObjectREFR::Update3D()
+__declspec(naked) void TESObjectREFR::Update3D()
 {
-	if (this == g_thePlayer)
+	__asm
 	{
-		ThisCall(0x8D3FA0, this);
-	}
-	else if (GetNiNode())
-	{
-		Set3D(NULL, true);
-		extraDataList.flags |= 1;
-		g_modelLoader->QueueReference(this);
+		mov		eax, [ecx+0x64]
+		test	eax, eax
+		jz		done
+		cmp		dword ptr [eax+0x14], 0
+		jz		done
+		cmp		dword ptr [ecx+0xC], 0x14
+		jz		isPlayer
+		push	ecx
+		push	1
+		push	0
+		CALL_EAX(0x5702E0)
+		pop		ecx
+		jmp		doQueue
+	isPlayer:
+		test	byte ptr [ecx+0x61], 1
+		jnz		done
+	doQueue:
+		or		byte ptr [ecx+0x61], 1
+		push	0
+		push	1
+		push	ecx
+		mov		ecx, g_modelLoader
+		CALL_EAX(0x444850)
+	done:
+		retn
 	}
 }
 

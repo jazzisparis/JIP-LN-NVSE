@@ -1876,6 +1876,25 @@ public:
 		return lBound;
 	}
 
+	void MoveToEnd(Data_Arg item)
+	{
+		if (numItems > 1)
+		{
+			T_Data *pData = data, *pEnd = End() - 1;
+			do
+			{
+				if (*pData == item)
+				{
+					memmove(pData, pData + 1, (UInt32)pEnd - (UInt32)pData);
+					RawAssign<T_Data>(*pEnd, item);
+					return;
+				}
+				pData++;
+			}
+			while (pData != pEnd);
+		}
+	}
+
 	SInt32 GetIndexOf(Data_Arg item) const
 	{
 		if (numItems)

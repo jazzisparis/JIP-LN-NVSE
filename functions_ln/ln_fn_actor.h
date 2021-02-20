@@ -16,7 +16,7 @@ DEFINE_COMMAND_PLUGIN(GetBaseFactionRank, , 0, 2, kParams_JIP_OneForm_OneOptiona
 DEFINE_COMMAND_PLUGIN(SetBaseFactionRank, , 0, 3, kParams_JIP_OneFaction_OneInt_OneOptionalActorBase);
 DEFINE_COMMAND_ALT_PLUGIN(GetEquippedData, GetEqData, , 1, 1, kParams_OneInt);
 DEFINE_COMMAND_ALT_PLUGIN(SetEquippedData, SetEqData, , 1, 3, kParams_JIP_OneInt_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(EquipItemData, , 1, 5, kParams_EquipData);
+DEFINE_COMMAND_PLUGIN(EquipItemData, , 1, 5, kParams_JIP_OneObjectID_OneOptionalFloat_ThreeOptionalInts);
 DEFINE_COMMAND_PLUGIN(GetBaseKarma, , 0, 1, kParams_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(SetBaseKarma, , 0, 2, kParams_JIP_OneInt_OneOptionalActorBase);
 DEFINE_CMD_ALT_COND_PLUGIN(ActorHasEffect, , , 1, kParams_JIP_OneEffect);

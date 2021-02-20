@@ -36,7 +36,7 @@ bool Cmd_SetBaseForm_Execute(COMMAND_ARGS)
 	if (!containingObj && !thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
 		thisObj->baseForm = form;
-		if (thisObj->GetNiNode()) thisObj->Update3D();
+		thisObj->Update3D();
 	}
 	return true;
 }

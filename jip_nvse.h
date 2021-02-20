@@ -38,10 +38,7 @@ bool (*ExtractFormatStringArgs)(UInt32 fmtStringPos, char *buffer, COMMAND_ARGS_
 bool (*CallFunction)(Script *funcScript, TESObjectREFR *callingObj, TESObjectREFR *container, NVSEArrayElement *result, UInt8 numArgs, ...);
 
 DIHookControl *g_DIHookCtrl = NULL;
-void *g_NVSEArrayMap = NULL, *g_NVSEStringMap = NULL;
 UInt8 *g_numPreloadMods = NULL;
-void (*DelArrayVar)(void *varMap, UInt32 varID);
-void (*DelStringVar)(void *varMap, UInt32 varID);
 
 #define MSGBOX_ARGS 0, 0, ShowMessageBox_Callback, 0, 0x17, 0, 0, "OK", NULL
 
@@ -2971,31 +2968,6 @@ char PlayerCharacter::GetDetectionState()
 	return 2;							// DETECTED
 }
 
-bool s_queuedPlayerLock = false;
-
-__declspec(naked) void PlayerCharacter::UpdatePlayer3D()
-{
-	//	s_queuedPlayerLock is reset by DoQueuedPlayerHook()
-	__asm
-	{
-		cmp		s_queuedPlayerLock, 0
-		jnz		done
-		mov		s_queuedPlayerLock, 1
-		push	0
-		push	1
-		push	ecx
-		push	1
-		push	1
-		push	dword ptr ds:[0x11CDD7C]
-		mov		ecx, g_modelLoader
-		CALL_EAX(0x445300)
-		mov		ecx, g_modelLoader
-		CALL_EAX(0x444850)
-	done:
-		retn
-	}
-}
-
 __declspec(naked) NiNode* __fastcall TESObjectCELL::Get3DNode(UInt32 index)
 {
 	__asm
@@ -3669,14 +3641,14 @@ __declspec(naked) void NiNode::RemoveCollision()
 {
 	__asm
 	{
-		mov		eax, [ecx+0x1C]
-		test	eax, eax
+		lea		eax, [ecx+0x1C]
+		cmp		dword ptr [eax], 0
 		jz		noColObj
 		push	ecx
-		mov		ecx, eax
-		call	NiReleaseObject
+		push	0
+		push	eax
+		call	NiReleaseAddRef
 		pop		ecx
-		mov		dword ptr [ecx+0x1C], 0
 	noColObj:
 		movzx	eax, word ptr [ecx+0xA6]
 		test	eax, eax
@@ -5782,117 +5754,6 @@ bool TESObjectREFR::RunScriptSource(const char *sourceStr)
 	if (sourceStr != s_strValBuffer) free(const_cast<char*>(sourceStr));
 	if (eventList) xScript->eventList = eventList;
 	return success;
-}
-
-__declspec(naked) void __fastcall DeleteArrayVar(UInt32 varID)
-{
-	__asm
-	{
-		push	ecx
-		push	g_NVSEArrayMap
-		call	DelArrayVar
-		add		esp, 8
-		retn
-	}
-}
-
-__declspec(naked) void __fastcall DeleteStringVar(UInt32 varID)
-{
-	__asm
-	{
-		push	ecx
-		push	g_NVSEStringMap
-		call	DelStringVar
-		add		esp, 8
-		retn
-	}
-}
-
-typedef Set<UInt32> NVSEVarsSet;
-
-class NVSEVarsCollector
-{
-public:
-	struct MapNode
-	{
-		MapNode		*lower;
-		MapNode		*parent;
-		MapNode		*higher;
-		UInt32		key;
-		void		*value;
-	};
-
-	bool			getArrays;
-	UInt8			ownerIdx;
-	UInt8			idxOffset;
-	UInt8			pad03;
-	void			(__fastcall *DelVar)(UInt32);
-	MapNode			*root;
-	NVSEVarsSet		varsSet;
-
-	void CollectVars(MapNode *mapNode);
-
-public:
-	void Init(bool _getArrays, UInt8 _ownerIdx = 0xFF);
-	NVSEVarsSet *GetVars() {return &varsSet;}
-	void RemoveToKeep(UInt32 arrID);
-	void ClearVars();
-
-	NVSEVarsCollector(bool _getArrays, UInt8 _ownerIdx = 0xFF) {Init(_getArrays, _ownerIdx);}
-};
-
-void NVSEVarsCollector::Init(bool _getArrays, UInt8 _ownerIdx)
-{
-	getArrays = _getArrays;
-	ownerIdx = _ownerIdx;
-	UInt32 *dataPtr;
-	if (getArrays)
-	{
-		dataPtr = (UInt32*)g_NVSEArrayMap;
-		idxOffset = 0x24;
-		DelVar = DeleteArrayVar;
-	}
-	else
-	{
-		dataPtr = (UInt32*)g_NVSEStringMap;
-		idxOffset = 0x1C;
-		DelVar = DeleteStringVar;
-	}
-	varsSet.Clear();
-	if (!*dataPtr) return;
-	dataPtr = (UInt32*)(((UInt32*)*dataPtr)[6]);
-	if (dataPtr == (UInt32*)dataPtr[1]) return;
-	root = (MapNode*)dataPtr;
-	CollectVars((MapNode*)(dataPtr[1]));
-}
-
-void NVSEVarsCollector::CollectVars(MapNode *node)
-{
-	UInt8 varOwner = ((UInt8*)node->value)[idxOffset];
-	if ((varOwner == ownerIdx) || (varOwner == 0xFF))
-		varsSet.Insert(node->key);
-	if (node->lower != root) CollectVars(node->lower);
-	if (node->higher != root) CollectVars(node->higher);
-}
-
-void NVSEVarsCollector::RemoveToKeep(UInt32 arrID)
-{
-	NVSEArrayVar *pArray = arrID ? LookupArrayByID(arrID) : NULL;
-	if (!pArray) return;
-	UInt32 size;
-	ArrayElementR *elements = GetArrayData(pArray, &size);
-	if (!elements) return;
-	while (size--)
-	{
-		pArray = elements[size].Array();
-		if (pArray) varsSet.Erase((UInt32)pArray);
-	}
-}
-
-void NVSEVarsCollector::ClearVars()
-{
-	for (auto varIter = varsSet.Begin(); varIter; ++varIter)
-		DelVar(*varIter);
 }
 
 bool s_HUDCursorMode = false;
