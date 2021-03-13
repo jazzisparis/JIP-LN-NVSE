@@ -181,18 +181,19 @@ public:
 	BSAData	* bsaData;	// 02C
 };
 
-// 44
+// 48
 class QueuedModel : public QueuedFileEntry
 {
 public:
 	virtual void Unk_0C(UInt32 arg0);
 
-	Model		* model;		// 030
-	TESModel	* tesModel;		// 034
-	UInt32		baseFormClass;	// 038	table at offset : 0x045C708. Pickable, invisible, unpickable ? 6 is VisibleWhenDistant or internal
-	UInt8		flags;			// 03C	bit 0 and bit 1 init'd by parms, bit 2 set after textureSwap, bit 3 is model set, bit 4 is file found.
-	UInt8		pad03D[3];		// 03D
-	float		flt040;			// 040
+	Model		*model;			// 30
+	TESModel	*tesModel;		// 34
+	UInt32		baseFormClass;	// 38	table at offset : 0x045C708. Pickable, invisible, unpickable ? 6 is VisibleWhenDistant or internal
+	UInt8		flags;			// 3C	bit 0 and bit 1 init'd by parms, bit 2 set after textureSwap, bit 3 is model set, bit 4 is file found.
+	UInt8		pad3D[3];		// 3D
+	float		flt40;			// 40
+	UInt32		unk44;			// 44
 
 	// There are at least 3 Create/Initiator
 };
@@ -301,7 +302,7 @@ public:
 	void			*ptr14;			// 14
 	UInt32			numItems;		// 18
 	UInt32			unk1C;			// 1C
-	SpinLock		semaphore;		// 20
+	LightCS			semaphore;		// 20
 	UInt32			unk28[6];		// 28
 
 	class Iterator
@@ -346,42 +347,27 @@ class QueuedHelmet;
 class BSFileEntry;
 class LoadedFile;
 
-// 30
-struct ModelLoader
-{
-	LockFreeMap<const char*, Model*>					*modelMap;			// 00
-	LockFreeMap<const char*, KFModel*>					*kfMap;				// 04
-	LockFreeMap<TESObjectREFR*, QueuedReference*>		*refMap1;			// 08
-	LockFreeMap<TESObjectREFR*, QueuedReference*>		*refMap2;			// 0C
-	LockFreeMap<AnimIdle*, QueuedAnimIdle*>				*idleMap;			// 10
-	LockFreeMap<Animation*, QueuedReplacementKFList*>	*animMap;			// 14
-	LockFreeMap<TESObjectREFR*, QueuedHelmet*>			*helmetMap;			// 18
-	void												*attachQueue;		// 1C
-	LockFreeMap<BSFileEntry*, QueuedTexture*>			*textureMap;		// 20
-	LockFreeMap<const char*, LoadedFile*>				*fileMap;			// 24
-	BackgroundCloneThread								*bgCloneThread;		// 28
-	UInt8												byte2C;				// 2C
-	UInt8												pad2D[3];			// 2D
-
-	static ModelLoader *GetSingleton();
-	__forceinline void QueueReference(TESObjectREFR *refr)
-	{
-		ThisCall(0x444850, this, refr, 1, false);
-	}
-};
-
 // 40
 template <typename T_Data> class LockFreeQueue
 {
 public:
-	virtual void Destroy(bool doFree);
-	virtual void Unk_01(void);
-	virtual void Unk_02(void);
-	virtual void Unk_03(void);
-	virtual void Unk_04(void);
+	virtual void	Destroy(bool doFree);
+	virtual void	*Unk_01(UInt32 arg);
+	virtual UInt32	IncNumItems();
+	virtual UInt32	DecNumItems();
+	virtual UInt32	GetNumItems();
 
-	UInt32		unk04[15];	// 04
+	void			*ptr04;		// 04
+	void			*ptr08;		// 08
+	UInt32			unk0C;		// 0C
+	void			*ptr10;		// 10
+	void			*ptr14;		// 14
+	UInt32			numItems;	// 18
+	UInt32			unk1C;		// 1C
+	LightCS			semaphore;	// 20
+	UInt32			unk28[6];	// 28
 };
+STATIC_ASSERT(sizeof(LockFreeQueue<int>) == 0x40);
 
 // 10
 template <typename T_Data> class LockFreePriorityQueue
@@ -395,6 +381,30 @@ public:
 	LockFreeQueue<T_Data>	**queues;	// 04
 	UInt32					numQueues;	// 08
 	UInt32					unk0C;		// 0C
+};
+
+// 30
+struct ModelLoader
+{
+	LockFreeMap<const char*, Model*>					*modelMap;			// 00
+	LockFreeMap<const char*, KFModel*>					*kfMap;				// 04
+	LockFreeMap<TESObjectREFR*, QueuedReference*>		*refMap1;			// 08
+	LockFreeMap<TESObjectREFR*, QueuedReference*>		*refMap2;			// 0C
+	LockFreeMap<AnimIdle*, QueuedAnimIdle*>				*idleMap;			// 10
+	LockFreeMap<Animation*, QueuedReplacementKFList*>	*animMap;			// 14
+	LockFreeMap<TESObjectREFR*, QueuedHelmet*>			*helmetMap;			// 18
+	LockFreeQueue<AttachDistant3DTask*>					*attachQueue;		// 1C
+	LockFreeMap<BSFileEntry*, QueuedTexture*>			*textureMap;		// 20
+	LockFreeMap<const char*, LoadedFile*>				*fileMap;			// 24
+	BackgroundCloneThread								*bgCloneThread;		// 28
+	UInt8												byte2C;				// 2C
+	UInt8												pad2D[3];			// 2D
+
+	static ModelLoader *GetSingleton();
+	__forceinline void QueueReference(TESObjectREFR *refr)
+	{
+		ThisCall(0x444850, this, refr, 1, false);
+	}
 };
 
 // A0

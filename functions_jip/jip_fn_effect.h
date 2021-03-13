@@ -163,7 +163,7 @@ bool Cmd_AddNewEffect_Execute(COMMAND_ARGS)
 	effItem->setting = effSetting;
 	effItem->cost = 0;
 	effItem->conditions.Init();
-	magicItem->list.list.Prepend(effItem);
+	magicItem->list.list.Append(effItem);
 	*result = (int)magicItem->list.list.Count();
 	UpdateEffectsAllActors(magicItem, effItem, true);
 	return true;

@@ -708,14 +708,10 @@ bool Cmd_SetMessageDisabled_Execute(COMMAND_ARGS)
 	TESForm *form;
 	UInt32 disable;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &disable)) return true;
-	ListNode<TESForm> *iter;
+	tList<TESForm> tempList(form);
 	if IS_ID(form, BGSListForm)
-		iter = ((BGSListForm*)form)->list.Head();
-	else
-	{
-		ListNode<TESForm> tempList(form);
-		iter = &tempList;
-	}
+		tempList = ((BGSListForm*)form)->list;
+	ListNode<TESForm> *iter = tempList.Head();
 	do
 	{
 		if (!(form = iter->data) || NOT_ID(form, BGSMessage)) continue;
@@ -1026,14 +1022,10 @@ bool Cmd_SetTerminalUIModel_Execute(COMMAND_ARGS)
 	s_strArgBuffer[0] = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &s_strArgBuffer)) return true;
 	bool bRemove = !s_strArgBuffer[0];
-	ListNode<TESForm> *lstIter;
+	tList<TESForm> tempList(form);
 	if IS_ID(form, BGSListForm)
-		lstIter = ((BGSListForm*)form)->list.Head();
-	else
-	{
-		ListNode<TESForm> tempList(form);
-		lstIter = &tempList;
-	}
+		tempList = ((BGSListForm*)form)->list;
+	ListNode<TESForm> *lstIter = tempList.Head();
 	BGSTerminal *terminal;
 	char **pathPtr;
 	do

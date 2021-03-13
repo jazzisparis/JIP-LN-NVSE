@@ -13,6 +13,45 @@ bool BaseExtraList::HasType(UInt32 type) const
 	return (m_presenceBitfield[type >> 3] & (1 << (type & 7))) != 0;
 }
 
+__declspec(naked) BSExtraData *BaseExtraList::GetByType(UInt32 xType) const
+{
+	__asm
+	{
+		cmp		dword ptr [ecx+4], 0
+		jz		retnNULL
+		mov		edx, [esp+4]
+		shr		edx, 3
+		movzx	eax, byte ptr [ecx+edx+8]
+		mov		edx, [esp+4]
+		and		edx, 7
+		bt		eax, edx
+		jnc		retnNULL
+		push	ecx
+		mov		ecx, 0x11C3920
+		call	LightCS::EnterSleep
+		pop		ecx
+		mov		eax, [ecx+4]
+		mov		edx, [esp+4]
+		ALIGN 16
+	iterHead:
+		cmp		[eax+4], dl
+		jz		lockLeave
+		mov		eax, [eax+8]
+		test	eax, eax
+		jnz		iterHead
+	lockLeave:
+		mov		edx, 0x11C3920
+		dec		dword ptr [edx+4]
+		jnz		done
+		mov		dword ptr [edx], 0
+	done:
+		retn	4
+	retnNULL:
+		xor		eax, eax
+		retn	4
+	}
+}
+
 __declspec(naked) ExtraDataList* __stdcall ExtraDataList::Create(BSExtraData *xBSData)
 {
 	__asm

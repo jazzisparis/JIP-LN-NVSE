@@ -75,6 +75,8 @@ DEFINE_COMMAND_PLUGIN(ModelHasBlock, , 0, 22, kParams_JIP_OneForm_OneFormatStrin
 DEFINE_COMMAND_PLUGIN(GetRayCastRef, , 1, 2, kParams_JIP_OneOptionalInt_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetRayCastMaterial, , 1, 2, kParams_JIP_OneOptionalInt_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetCollisionNodes, , 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetChildBlocks, , 1, 1, kParams_JIP_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(GetBlockTextureSet, , 1, 1, kParams_OneString);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -289,17 +291,28 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCenterPos_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char axis;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &axis))
 	{
-		TESBoundObject *object = DYNAMIC_CAST(thisObj->baseForm, TESForm, TESBoundObject);
-		if (object)
+		axis -= 'X';
+		*result = ((float*)&thisObj->posX)[axis];
+		if (thisObj->IsActor())
 		{
-			axis -= 'X';
-			*result = ((float*)&thisObj->posX)[axis] + ((object->bounds[axis] + object->bounds[axis + 3]) * thisObj->scale / 2);
+			Actor *actor = (Actor*)thisObj;
+			if (actor->baseProcess && (actor->baseProcess->processLevel <= 1))
+			{
+				BSBound *bounds = ((MiddleHighProcess*)actor->baseProcess)->boundingBox;
+				if (bounds) *result += bounds->centre[axis] * thisObj->scale;
+			}
+		}
+		else
+		{
+			TESBoundObject *object = DYNAMIC_CAST(thisObj->baseForm, TESForm, TESBoundObject);
+			if (object)
+				*result += (object->bounds[axis] + object->bounds[axis + 3]) * thisObj->scale / 2;
 		}
 	}
+	else *result = 0;
 	return true;
 }
 
@@ -318,11 +331,11 @@ bool Cmd_GetRefType_Execute(COMMAND_ARGS)
 bool Cmd_ToggleObjectCollision_Execute(COMMAND_ARGS)
 {
 	UInt32 enable;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && !thisObj->IsActor() && !kInventoryType[thisObj->baseForm->typeID])
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && !thisObj->IsActor() && !kInventoryType[thisObj->baseForm->typeID] && 
+		(!enable == !(thisObj->extraDataList.jipRefFlags61 & kHookRefFlag61_DisableCollision)))
 	{
-		NiNode *rootNode = enable ? thisObj->GetNiNode() : thisObj->GetNiNodeCopyIfTemplate();
-		if (rootNode)
-			rootNode->ToggleCollision(enable != 0);
+		thisObj->extraDataList.jipRefFlags61 ^= kHookRefFlag61_DisableCollision;
+		thisObj->Update3D();
 	}
 	return true;
 }
@@ -338,24 +351,24 @@ bool Cmd_GetMaterialPropertyValue_Execute(COMMAND_ARGS)
 	if (!matProp) return true;
 	switch (traitID)
 	{
-	case 0:
-	case 1:
-	case 2:
-		*result = matProp->specularRGB[traitID];
-		break;
-	case 3:
-	case 4:
-	case 5:
-		*result = matProp->emissiveRGB[traitID - 3];
-		break;
-	case 6:
-		*result = matProp->glossiness;
-		break;
-	case 7:
-		*result = matProp->alpha;
-		break;
-	default:
-		*result = matProp->emitMult;
+		case 0:
+		case 1:
+		case 2:
+			*result = matProp->specularRGB[traitID];
+			break;
+		case 3:
+		case 4:
+		case 5:
+			*result = matProp->emissiveRGB[traitID - 3];
+			break;
+		case 6:
+			*result = matProp->glossiness;
+			break;
+		case 7:
+			*result = matProp->alpha;
+			break;
+		default:
+			*result = matProp->emitMult;
 	}
 	return true;
 }
@@ -934,8 +947,8 @@ bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 		if (niBlock)
 		{
 			niBlock->m_localTranslate = transltn;
-			if (thisObj->IsActor()) niBlock->UpdateTransform(0);
-			else niBlock->UpdateBounds(0);
+			UpdateInfo updInfo;
+			niBlock->UpdateBounds(&updInfo);
 		}
 	}
 	return true;
@@ -971,8 +984,8 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 		{
 			if (transform) niBlock->m_localRotate.Rotate(rotX * kFltPId180, rotY * kFltPId180, rotZ * kFltPId180);
 			else niBlock->m_localRotate.RotationMatrix(rotX * kFltPId180, rotY * kFltPId180, rotZ * kFltPId180);
-			if (thisObj->IsActor()) niBlock->UpdateTransform(0);
-			else niBlock->UpdateBounds(0);
+			UpdateInfo updInfo;
+			niBlock->UpdateBounds(&updInfo);
 		}
 	}
 	return true;
@@ -998,8 +1011,8 @@ bool Cmd_SetNifBlockScale_Execute(COMMAND_ARGS)
 		if (niBlock)
 		{
 			niBlock->m_localScale = newScale;
-			if (thisObj->IsActor()) niBlock->UpdateTransform(0);
-			else niBlock->UpdateBounds(0);
+			UpdateInfo updInfo;
+			niBlock->UpdateBounds(&updInfo);
 		}
 	}
 	return true;
@@ -1230,7 +1243,7 @@ bool Cmd_GetNifBlockParentNodes_Execute(COMMAND_ARGS)
 			{
 				s_tempElements.Clear();
 				while ((niBlock != rootNode) && (niBlock = niBlock->m_parent))
-					s_tempElements.Append(niBlock->m_blockName);
+					s_tempElements.Append(niBlock->GetName());
 				AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
 			}
 		}
@@ -1337,31 +1350,21 @@ bool Cmd_AttachLight_Execute(COMMAND_ARGS)
 		NiNode *objNode = thisObj->GetNode(s_strArgBuffer);
 		if (objNode)
 		{
-			NiPointLight *pointLight = NULL;
+			NiPointLight *pointLight;
 			for (auto iter = objNode->m_children.Begin(); !iter.End(); ++iter)
 			{
-				if NOT_TYPE(*iter, NiPointLight) continue;
-				pointLight = (NiPointLight*)*iter;
+				if (!(pointLight = (NiPointLight*)*iter) || NOT_TYPE(pointLight, NiPointLight))
+					continue;
+				if (!(pointLight->m_flags & 0x20000000) || !(pointLight->lightFlags & 0x8000))
+					return true;
+				objNode->RemoveObject(pointLight);
 				break;
 			}
-			if (pointLight)
-				pointLight->directionalColor = {lightForm->red / 255.0F, lightForm->green / 255.0F, lightForm->blue / 255.0F};
-			else pointLight = lightForm->CreatePointLight(thisObj, objNode, 0);
+			pointLight = CreatePointLight(lightForm, objNode);
 			if (pointLight)
 			{
-				pointLight->unkA8 = 0x12E;
-				pointLight->ambientColor = {1, 1, 1};
-				float radius = (int)lightForm->radius;
-				pointLight->radius = radius;
-				pointLight->radiusE4 = radius;
-				pointLight->radiusE8 = radius;
-				pointLight->attenuation2 = 1;
-				pointLight->attenuation3 = 0;
 				pointLight->m_localTranslate = offsetMod;
-				AttachedLights *attachedLights;
-				if (s_attachedLightsMap.Insert(thisObj->refID, &attachedLights))
-					attachedLights->refrPtr = thisObj;
-				attachedLights->nodeNames.Insert(s_strArgBuffer);
+				pointLight->lightFlags |= 0x8000;
 				*result = 1;
 			}
 		}
@@ -1373,14 +1376,18 @@ bool Cmd_RemoveLight_Execute(COMMAND_ARGS)
 {
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
-		auto findID = s_attachedLightsMap.Find(thisObj->refID);
-		if (!findID) return true;
-		if (LookupFormByRefID(thisObj->refID) != findID().refrPtr)
-			findID().nodeNames.Clear();
-		else if (findID().nodeNames.Erase(s_strArgBuffer))
-			RemoveAttachedLight(findID().refrPtr, s_strArgBuffer);
-		if (findID().nodeNames.Empty())
-			findID.Remove();
+		NiNode *objNode = thisObj->GetNode(s_strArgBuffer);
+		if (objNode)
+		{
+			NiPointLight *pointLight;
+			for (auto iter = objNode->m_children.Begin(); !iter.End(); ++iter)
+			{
+				if (!(pointLight = (NiPointLight*)*iter) || !(pointLight->m_flags & 0x20000000) || NOT_TYPE(pointLight, NiPointLight) || !(pointLight->lightFlags & 0x8000))
+					continue;
+				objNode->RemoveObject(pointLight);
+				break;
+			}
+		}
 	}
 	return true;
 }
@@ -1468,7 +1475,7 @@ bool RegisterInsertObject(COMMAND_ARGS)
 
 		auto formsMap = (s_insertObjectFlag == kHookFormFlag6_InsertNode) ? &s_insertNodeMap : &s_attachModelMap;
 
-		char *nodeName = "", *objectName = strrchr(s_strArgBuffer, '|');
+		char *nodeName = NULL, *objectName = strrchr(s_strArgBuffer, '|');
 		if (objectName)
 		{
 			*objectName++ = 0;
@@ -1481,14 +1488,14 @@ bool RegisterInsertObject(COMMAND_ARGS)
 			NodeNamesMap *namesMap;
 			if (formsMap->Insert(form, &namesMap))
 				form->SetJIPFlag(s_insertObjectFlag, true);
-			if (!(*namesMap)[nodeName].Insert(objectName))
+			if (!(*namesMap)[NiString(nodeName)].Insert(objectName))
 				goto done;
 		}
 		else
 		{
 			auto findForm = formsMap->Find(form);
 			if (!findForm) goto done;
-			auto findNode = findForm().FindOp(nodeName);
+			auto findNode = findForm().FindOp(NiString(nodeName));
 			if (!findNode || !findNode().Erase(objectName))
 				goto done;
 			if (findNode().Empty())
@@ -1531,8 +1538,8 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 	TESObjectREFR *targetRef = NULL;
 	UInt32 syncRot = 0;
 	s_syncPositionMods.z = 0;
-	if (NUM_ARGS) s_syncPositionNode[0] = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &targetRef, &syncRot, &s_syncPositionMods.z, &s_syncPositionNode))
+	s_strArgBuffer[0] = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &targetRef, &syncRot, &s_syncPositionMods.z, &s_strArgBuffer))
 	{
 		if (targetRef)
 		{
@@ -1541,6 +1548,7 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 			s_syncPositionRef = targetRef;
 			s_syncPositionFlags = (syncRot != 0);
 			_mm_store_ps(&s_syncPositionPos.x, _mm_loadu_ps(&targetRef->posX));
+			s_syncPositionNode = s_strArgBuffer;
 			HOOK_SET(SynchronizePosition, true);
 		}
 		else
@@ -1654,7 +1662,7 @@ void __fastcall GetCollisionNodes(NiNode *node)
 			hkpRigidBody *rigidBody = (hkpRigidBody*)hWorldObj->refObject;
 			UInt8 motionType = rigidBody->motion.type;
 			if ((motionType == 2) || (motionType == 3) || (motionType == 6))
-				s_tempElements.Append(node->m_blockName);
+				s_tempElements.Append(node->GetName());
 		}
 	}
 	for (auto iter = node->m_children.Begin(); !iter.End(); ++iter)
@@ -1672,6 +1680,66 @@ bool Cmd_GetCollisionNodes_Execute(COMMAND_ARGS)
 		GetCollisionNodes(rootNode);
 		if (!s_tempElements.Empty())
 			AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	}
+	return true;
+}
+
+void __fastcall GetChildBlocks(NiNode *node)
+{
+	s_tempElements.Append(node->GetName());
+	NiAVObject *block;
+	for (auto iter = node->m_children.Begin(); !iter.End(); ++iter)
+	{
+		if (!(block = *iter)) continue;
+		if (block->GetNiNode())
+			GetChildBlocks((NiNode*)block);
+		else s_tempElements.Append(block->GetName());
+	}
+}
+
+bool Cmd_GetChildBlocks_Execute(COMMAND_ARGS)
+{
+	s_strArgBuffer[0] = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	{
+		NiNode *objNode = thisObj->GetNode(s_strArgBuffer);
+		if (objNode)
+		{
+			s_tempElements.Clear();
+			GetChildBlocks(objNode);
+			UInt32 size = s_tempElements.Size();
+			if (size > 1)
+				AssignCommandResult(CreateArray(s_tempElements.Data() + 1, size - 1, scriptObj), result);
+		}
+	}
+	return true;
+}
+
+bool Cmd_GetBlockTextureSet_Execute(COMMAND_ARGS)
+{
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	{
+		NiAVObject *block = thisObj->GetNiBlock(s_strArgBuffer);
+		if (block && block->GetTriBasedGeom())
+		{
+			BSShaderPPLightingProperty *shaderProp = (BSShaderPPLightingProperty*)block->GetProperty(3);
+			if (shaderProp && IS_TYPE(shaderProp, BSShaderPPLightingProperty) && shaderProp->textureSet)
+			{
+				String *textures = shaderProp->textureSet->textures;
+				ArrayElementL elements[6];
+				const char *filePath;
+				UInt32 index = 0;
+				do
+				{
+					filePath = textures[index].CStr();
+					if (*filePath && StrBeginsCI(filePath, "data\\textures\\"))
+						filePath += 14;
+					elements[index] = filePath;
+				}
+				while (++index < 6);
+				AssignCommandResult(CreateArray(elements, 6, scriptObj), result);
+			}
+		}
 	}
 	return true;
 }

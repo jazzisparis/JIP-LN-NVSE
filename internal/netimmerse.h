@@ -25,6 +25,47 @@ class BSDismemberSkinInstance;
 
 typedef FixedTypeArray<hkpWorldObject*, 0x40> ContactObjects;
 
+class NiString
+{
+	const char		*str;
+
+	UInt32 *RefCount() const {return (UInt32*)(str - 8);}
+
+public:
+	NiString() : str(nullptr) {}
+	NiString(const char *inStr)
+	{
+		str = (inStr && *inStr) ? CdeclCall<const char*>(0xA5B690, inStr) : nullptr;
+	}
+	NiString(const NiString &inStr)
+	{
+		str = inStr.str;
+		if (str) InterlockedIncrement(RefCount());
+	}
+	~NiString()
+	{
+		if (str) InterlockedDecrement(RefCount());
+	}
+
+	const char *Get() const {return str;}
+
+	inline NiString& operator=(const char *inStr)
+	{
+		if (str) InterlockedDecrement(RefCount());
+		str = (inStr && *inStr) ? CdeclCall<const char*>(0xA5B690, inStr) : nullptr;
+		return *this;
+	}
+	inline NiString& operator=(const NiString &inStr)
+	{
+		str = inStr.str;
+		if (str) InterlockedIncrement(RefCount());
+		return *this;
+	}
+
+	inline bool operator==(const NiString &rhs) const {return str == rhs.str;}
+	inline bool operator<(const NiString &rhs) const {return str < rhs.str;}
+};
+
 class NiMemObject {};
 
 // 08
@@ -59,7 +100,7 @@ struct NiObjectCopyInfo
 	UInt32								unk08;		// 08	Init'd to 1
 	UInt8								byte0C;		// 0C	Init'd to 0x24
 	UInt8								pad0D[3];	// 0D
-	NiVector3							scale;		// 10
+	NiVector3							scale;		// 10	Appears to be unused
 
 	/*NiObjectCopyInfo(float _scale) {ThisCall(0x4AD050, this, _scale);}
 	~NiObjectCopyInfo() {ThisCall(0x4AD1D0, this);}*/
@@ -297,13 +338,20 @@ public:
 	float				flt3C;					// 3C
 	NiControllerManager	*manager;				// 40
 	UInt32				unk44;					// 44
-	UInt32				unk48;					// 48
+	float				flt48;					// 48
 	float				flt4C;					// 4C
 	float				flt50;					// 50
 	float				flt54;					// 54
 	UInt32				unk58;					// 58
 	const char			*rootNodeName;			// 5C
-	UInt32				unk60[5];				// 60
+	UInt32				unk60;					// 60
+	UInt32				unk64;					// 64
+	UInt16				word68;					// 68
+	UInt16				word6A;					// 6A	Pad?
+	UInt32				unk6C;					// 6C
+	UInt16				word70;					// 70
+	UInt8				byte72;					// 72
+	UInt8				byte73;					// 73	Pad
 };
 STATIC_ASSERT(sizeof(NiControllerSequence) == 0x74);
 
@@ -399,7 +447,7 @@ public:
 	virtual void	Unk_23(void);
 	virtual void	Unk_24(void);
 
-	const char		*name;		// 08
+	NiString		name;		// 08
 };
 
 // 10
@@ -432,6 +480,13 @@ public:
 };
 
 // 10
+class NiIntegerExtraData : public NiExtraData
+{
+public:
+	SInt32		intData;	// 0C
+};
+
+// 10
 class NiFloatExtraData : public NiExtraData
 {
 public:
@@ -442,7 +497,7 @@ public:
 class NiStringExtraData : public NiExtraData
 {
 public:
-	const char	*strData;	// 0C
+	NiString	strData;	// 0C
 };
 
 // 14
@@ -474,12 +529,17 @@ public:
 class NiObjectNET : public NiObject
 {
 public:
-	const char			*m_blockName;				// 08
+	NiString			m_blockName;				// 08
 	NiTimeController	*m_controller;				// 0C
 	NiExtraData			**m_extraDataList;			// 10
 	UInt16				m_extraDataListLen;			// 14
 	UInt16				m_extraDataListCapacity;	// 16
 
+	const char *GetName() const
+	{
+		const char *name = m_blockName.Get();
+		return name ? name : "NULL";
+	}
 	NiExtraData* __fastcall GetExtraData(UInt32 vtbl);
 	void DumpExtraData();
 };
@@ -513,8 +573,8 @@ class NiMaterialProperty : public NiProperty
 {
 public:
 	UInt32				unk18;			// 18
-	float				specularRGB[3];	// 1C
-	float				emissiveRGB[3];	// 28
+	NiColor				specularRGB;	// 1C
+	NiColor				emissiveRGB;	// 28
 	UInt32				isExternalEmit;	// 34
 	float				glossiness;		// 38
 	float				alpha;			// 3C
@@ -795,6 +855,14 @@ public:
 };
 STATIC_ASSERT(sizeof(TileShaderProperty) == 0xB0);
 
+struct UpdateInfo
+{
+	float		flt00;
+	UInt8		byte04;
+
+	UpdateInfo() : flt00(0), byte04(0) {}
+};
+
 // 9C
 class NiAVObject : public NiObjectNET
 {
@@ -803,16 +871,16 @@ public:
 	virtual void	Unk_24(NiMatrix33 *arg1, NiVector3 *arg2, bool arg3);
 	virtual void	Unk_25(UInt32 arg1);
 	virtual void	Unk_26(UInt32 arg1);
-	virtual NiAVObject	*GetObjectByName(const char **objName);	// Must be strings generated at startup by sub_4B7920
+	virtual NiAVObject	*GetObjectByName(NiString *objName);
 	virtual void	Unk_28(UInt32 arg1, UInt32 arg2, UInt32 arg3);
 	virtual void	Unk_29(UInt32 arg1, UInt32 arg2);
 	virtual void	Unk_2A(UInt32 arg1, UInt32 arg2);
 	virtual void	Unk_2B(UInt32 arg1, UInt32 arg2);
 	virtual void	Unk_2C(UInt32 arg1);
 	virtual void	Unk_2D(UInt32 arg1);
-	virtual void	UpdateTransform(UInt32 arg1);
+	virtual void	UpdateTransform(UpdateInfo *updInfo);
 	virtual void	Unk_2F(void);
-	virtual void	UpdateBounds(UInt32 arg1);
+	virtual void	UpdateBounds(UpdateInfo *updInfo);
 	virtual void	Unk_31(UInt32 arg1, UInt32 arg2);
 	virtual void	Unk_32(UInt32 arg1);
 	virtual void	Unk_33(UInt32 arg1);
@@ -851,12 +919,12 @@ public:
 		kNiFlag_PreProcessedNode =			0x04000000,
 		kNiFlag_UnkBit27 =					0x08000000,
 		kNiFlag_UnkBit28 =					0x10000000,
-		kNiFlag_UnkBit29 =					0x20000000,
-		kNiFlag_UnkBit30 =					0x40000000,
-		kNiFlag_UnkBit31 =					0x80000000
+		kNiFlag_IsPointLight =				0x20000000,	//	JIP only
+		kNiFlag_DoneInitLights =			0x40000000,	//	JIP only
+		kNiFlag_IsInserted =				0x80000000	//	JIP only
 	};
 
-	NiAVObject				*m_parent;				// 18
+	NiNode					*m_parent;				// 18
 	bhkNiCollisionObject	*m_collisionObject;		// 1C
 	NiSphere				*m_kWorldBound;			// 20
 	DList<NiProperty>		m_propertyList;			// 24
@@ -869,6 +937,7 @@ public:
 	float					m_worldScale;			// 98
 
 	UInt32 GetIndex();
+	bool __fastcall ReplaceObject(NiAVObject *object);
 	NiProperty *GetProperty(UInt32 propID);
 	void __fastcall SetName(const char *newName);
 
@@ -894,10 +963,10 @@ public:
 
 	static NiNode* __stdcall Create(const char *nodeName);
 	NiNode* CreateCopy();
+	NiAVObject *GetBlockByName(const char *objName);
 	NiAVObject* __fastcall GetBlock(const char *blockName);
 	NiNode* __fastcall GetNode(const char *nodeName);
 	bool IsMovable();
-	void ToggleCollision(bool enable);
 	void RemoveCollision();
 	void BulkSetMaterialPropertyTraitValue(UInt32 traitID, float value);
 	void GetContactObjects(ContactObjects *contactObjs);
@@ -1016,19 +1085,35 @@ public:
 	DList<NiTriStrips>		lgtList0E0;		// 0E0
 	UInt8					byte0EC;		// 0EC
 	UInt8					byte0ED;		// 0ED
-	UInt8					byte0EE[2];		// 0EE
-	UInt32					unk0F0;			// 0F0
-	UInt32					unk0F4;			// 0F4
+	UInt8					pad0EE[2];		// 0EE
+	NiRefObject				*obj0F0;		// 0F0
+	UInt8					byte0F4;		// 0F4
+	UInt8					byte0F5;		// 0F5
+	UInt8					pad0F6[2];		// 0F6
 	NiLight					*light;			// 0F8
-	UInt32					unk0FC;			// 0FC
-	UInt32					unk100[6];		// 100
+	UInt8					isDynamic;		// 0FC
+	UInt8					pad0FD[3];		// 0FD
+	UInt32					unk100[3];		// 100
+	NiRefObject				*obj10C;		// 10C
+	UInt16					state;			// 110	0xFF = disabled (distance too far), anything else = enabled
+	UInt16					word112;		// 112
+	NiRefObject				*obj114;		// 114
 	UInt8					byte118;		// 118
 	UInt8					pad119[3];		// 119
 	float					flt11C;			// 11C
 	float					flt120;			// 120
 	UInt8					byte124;		// 124
 	UInt8					pad125[3];		// 125
-	UInt32					unk128[66];		// 128
+	NiRefObject				*obj128;		// 128
+	UInt32					unk12C[3];		// 12C
+	NiRefObject				*obj138;		// 138
+	NiRefObject				*obj13C;		// 13C
+	NiRefObject				*obj140;		// 140
+	UInt32					unk144[53];		// 144
+	UInt8					byte208;		// 208
+	UInt8					pad209[3];		// 209
+	NiRefObject				*obj20C;		// 20C
+	UInt32					unk210[4];		// 210
 	BSSimpleArray<NiNode>	array230;		// 230
 	BSPortalGraph			*portalGraph;	// 240
 	UInt32					unk244[3];		// 244
@@ -1048,7 +1133,8 @@ public:
 	LightingData					*data0D8;		// 0D8
 	LightingData					*data0DC;		// 0DC
 	LightingData					*data0E0;		// 0E0
-	UInt32							unk0E4[6];		// 0E4
+	DList<LightingData>				lgtList0E4;		// 0E4
+	UInt32							unk0F0[3];		// 0F0
 	void							*ptr0FC;		// 0FC
 	void							*ptr100;		// 100
 	UInt32							unk104;			// 104
@@ -1115,8 +1201,7 @@ public:
 
 	UInt8			byte9C;			// 9C
 	UInt8			effectType;		// 9D
-	UInt8			byte9E;			// 9E
-	UInt8			byte9F;			// 9F
+	UInt16			lightFlags;		// 9E	JIP only
 	UInt32			unkA0;			// A0
 	UInt32			unkA4;			// A4
 	UInt32			unkA8;			// A8
@@ -1134,20 +1219,20 @@ class NiLight : public NiDynamicEffect
 public:
 	float			fadeValue;			// C4
 	NiColor			ambientColor;		// C8
-	NiColor			directionalColor;	// D4
+	NiColor			diffuseColor;		// D4
 };
 
 // FC
 class NiPointLight : public NiLight
 {
 public:
-	float			radius;				// E0
-	float			radiusE4;			// E4
-	float			radiusE8;			// E8
-	float			unkEC;				// EC
-	float			attenuation1;		// F0
-	float			attenuation2;		// F4
-	float			attenuation3;		// F8
+	float			radius;					// E0
+	float			radiusE4;				// E4
+	float			radiusE8;				// E8
+	float			unkEC;					// EC
+	float			constantAttenuation;	// F0
+	float			linearAttenuation;		// F4
+	float			quadraticAttenuation;	// F8
 };
 STATIC_ASSERT(sizeof(NiPointLight) == 0xFC);
 

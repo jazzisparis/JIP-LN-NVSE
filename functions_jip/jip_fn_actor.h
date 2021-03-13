@@ -918,41 +918,60 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &actorOrList, &animID) || NOT_ID(script, Script))
 		return true;
 	UInt8 flag = s_onAnimEventFlag;
-	ActorAnimEventCallbacks &eventMap = (flag == kHookActorFlag3_OnAnimAction) ? s_animActionEventMap : s_playGroupEventMap;
-	UInt32 hookIdx = (flag == kHookActorFlag3_OnAnimAction) ? kHook_SetAnimAction : kHook_SetAnimGroup;
-	ListNode<TESForm> *iter;
+	bool animAction = flag == kHookActorFlag3_OnAnimAction;
+	UInt32 hookIdx = animAction ? kHook_SetAnimAction : kHook_SetAnimGroup;
+	tList<TESForm> tempList(actorOrList);
 	if IS_ID(actorOrList, BGSListForm)
-		iter = ((BGSListForm*)actorOrList)->list.Head();
-	else
-	{
-		ListNode<TESForm> tempList(actorOrList);
-		iter = &tempList;
-	}
-	Actor *actor;
+		tempList = ((BGSListForm*)actorOrList)->list;
 	AnimEventCallbacks *scriptsMap;
+	if (tempList.Empty())
+	{
+		scriptsMap = animAction ? &s_animActionEventMap : &s_playGroupEventMap;
+		EventCallbackScripts *callbacks;
+		if (addEvnt)
+		{
+			if (scriptsMap->Insert(animID, &callbacks))
+				s_hookInfos[hookIdx].ModUsers(true);
+			callbacks->Insert(script);
+		}
+		else
+		{
+			auto findAnim = scriptsMap->Find(animID);
+			if (findAnim && findAnim().Erase(script) && findAnim().Empty())
+			{
+				findAnim.Remove();
+				s_hookInfos[hookIdx].ModUsers(false);
+			}
+		}
+		return true;
+	}
+	ListNode<TESForm> *iter = tempList.Head();
+	ActorAnimEventCallbacks *eventMap = animAction ? &s_animActionEventMapFl : &s_playGroupEventMapFl;
+	Actor *actor;
 	do
 	{
 		if (!(actor = (Actor*)iter->data)) continue;
 		if (addEvnt)
 		{
 			if (!actor->IsActor()) continue;
-			if (eventMap.Insert(actor, &scriptsMap))
-				s_hookInfos[hookIdx].ModUsers(true);
-			if ((*scriptsMap)[animID].Insert(script))
+			if (eventMap->Insert(actor, &scriptsMap))
+			{
 				actor->jipActorFlags3 |= flag;
+				s_hookInfos[hookIdx].ModUsers(true);
+			}
+			(*scriptsMap)[animID].Insert(script);
 		}
 		else
 		{
-			auto findActor = eventMap.Find(actor);
+			auto findActor = eventMap->Find(actor);
 			if (!findActor) continue;
 			auto findAnim = findActor().Find(animID);
-			if (!findAnim || !findAnim().Erase(script)) continue;
-			if (actor->IsActor())
-				actor->jipActorFlags3 &= ~flag;
-			if (!findAnim().Empty()) continue;
+			if (!findAnim || !findAnim().Erase(script) || !findAnim().Empty())
+				continue;
 			findAnim.Remove();
 			if (!findActor().Empty()) continue;
 			findActor.Remove();
+			actor->jipActorFlags3 &= ~flag;
 			s_hookInfos[hookIdx].ModUsers(false);
 		}
 	}
@@ -1025,16 +1044,12 @@ bool SetActorEventHandler_Execute(COMMAND_ARGS)
 		default:
 			return true;
 	}
-	ListNode<TESForm> *iter;
+	tList<TESForm> tempList(actorOrList);
+	if IS_ID(actorOrList, BGSListForm)
+		tempList = ((BGSListForm*)actorOrList)->list;
+	ListNode<TESForm> *iter = tempList.Head();
 	Actor *actor;
 	EventCallbackScripts *callbacks;
-	if IS_ID(actorOrList, BGSListForm)
-		iter = ((BGSListForm*)actorOrList)->list.Head();
-	else
-	{
-		ListNode<TESForm> tempList(actorOrList);
-		iter = &tempList;
-	}
 	do
 	{
 		if (!(actor = (Actor*)iter->data)) continue;
@@ -1445,10 +1460,10 @@ bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 		slotIdx = 20;
 		do
 		{
-			if ((slotIdx != 14) && slotData->armor && IS_ID(slotData->armor, TESObjectARMO) && slotData->boneNode)
+			if ((slotIdx != 14) && slotData->armor && IS_ID(slotData->armor, TESObjectARMO) && slotData->object)
 			{
-				((NiNode*)slotData->boneNode->m_parent)->RemoveObject(slotData->boneNode);
-				slotData->boneNode = NULL;
+				slotData->object->m_parent->RemoveObject(slotData->object);
+				slotData->object = NULL;
 			}
 			slotData++;
 		}
@@ -2385,7 +2400,7 @@ bool Cmd_GetHitNode_Execute(COMMAND_ARGS)
 				if (!rigidBody) continue;
 				NiNode *hitNode = GetCdBodyNode(&rigidBody->cdBody);
 				if (!hitNode) continue;
-				nodeName = hitNode->m_blockName;
+				nodeName = hitNode->GetName();
 				break;
 			}
 			while (traverse = traverse->next);

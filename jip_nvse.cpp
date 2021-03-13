@@ -1305,6 +1305,9 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*28F1*/REG_CMD(GetHotkeyItemRef);
 	//	v56.02
 	/*28F2*/REG_CMD_ARR(GetCollisionNodes);
+	//	v56.05
+	/*28F3*/REG_CMD_ARR(GetChildBlocks);
+	/*28F4*/REG_CMD_ARR(GetBlockTextureSet);
 
 	//===========================================================
 

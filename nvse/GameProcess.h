@@ -60,6 +60,8 @@ struct ActorHitData
 	SInt32				unk60;			// 60	Unused; rigged by CopyHitDataHook to store hitLocation
 };
 
+struct ProjectileData;
+
 // 30
 class BaseProcess
 {
@@ -210,11 +212,11 @@ public:
 	virtual NiNode	*GetProjectileNode();
 	virtual void	SetProjectileNode(NiNode *node);
 	virtual void	Unk_63(void);
-	virtual void	Unk_64(void);
+	virtual NiNode	*GetWeaponNode(ValidBip01Names *vbp01Names);
 	virtual void	Unk_65(void);
 	virtual void	Unk_66(void);
 	virtual void	Unk_67(void);
-	virtual void	Unk_68(void);
+	virtual NiNode	*GetWeaponNode2(UInt32 arg);
 	virtual void	Unk_69(void);
 	virtual void	Unk_6A(void);
 	virtual void	Unk_6B(void);
@@ -225,10 +227,10 @@ public:
 	virtual void	Unk_70(void);
 	virtual void	Unk_71(void);
 	virtual void	Unk_72(void);
-	virtual void	Unk_73(void);
+	virtual void	Unk_73(bool weaponOut, ValidBip01Names *validBip01Names, AnimData *pAnimData, Actor *actor);
 	virtual void	Unk_74(void);
 	virtual void	Unk_75(void);
-	virtual void	Unk_76(void);
+	virtual void	Unk_76(Actor *actor);
 	virtual void	Unk_77(void);
 	virtual void	Unk_78(void);
 	virtual void	Unk_79(void);
@@ -540,7 +542,7 @@ public:
 	virtual void	Unk_1AB();
 	virtual void	Unk_1AC();
 	virtual void	Unk_1AD();
-	virtual void	Unk_1AE();
+	virtual ProjectileData	*GetProjectileData();
 	virtual void	Unk_1AF();
 	virtual void	Unk_1B0();
 	virtual void	Unk_1B1();
@@ -886,7 +888,7 @@ public:
 	UInt8								fil123;				// 123
 	UInt32								unk124;				// 124
 	UInt32								unk128;				// 128 Gets copied over during TESNPC.CopyFromBase
-	NiNode								*node12C;			// 12C
+	NiNode								*weaponNode;		// 12C
 	NiNode								*projectileNode;	// 130
 	UInt8								byt134;				// 134
 	bool								isWeaponOut;		// 135

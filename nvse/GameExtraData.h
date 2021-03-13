@@ -290,7 +290,7 @@ enum
 	kExtraData_Max
 };
 
-#define GetExtraType(xDataList, Type) (Extra ## Type*)GetExtraData(xDataList, kExtraData_ ## Type)
+#define GetExtraType(xDataList, Type) (Extra ## Type*)(xDataList)->GetByType(kExtraData_ ## Type)
 extern const char *GetExtraDataName(UInt8 extraDataType);
 
 // 14

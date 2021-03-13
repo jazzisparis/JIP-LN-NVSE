@@ -116,16 +116,9 @@ void DoLoadGameCleanup()
 		s_effectItemFree.Clear();
 	}
 
-	if (!s_attachedLightsMap.Empty())
-	{
-		for (auto lghtIter = s_attachedLightsMap.Begin(); lghtIter; ++lghtIter)
-		{
-			if (LookupFormByRefID(lghtIter.Key()) != lghtIter().refrPtr) continue;
-			for (auto nodeIter = lghtIter().nodeNames.Begin(); nodeIter; ++nodeIter)
-				RemoveAttachedLight(lghtIter().refrPtr, *nodeIter);
-		}
-		s_attachedLightsMap.Clear();
-	}
+	for (auto lgtIter = s_activePtLights.Begin(); lgtIter; ++lgtIter)
+		if ((lgtIter->lightFlags & 0x8000) && lgtIter->m_parent)
+			lgtIter->m_parent->RemoveObject(*lgtIter);
 
 	if (!s_swapObjLODMap.Empty())
 	{

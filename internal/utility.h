@@ -119,13 +119,13 @@ public:
 	bool TryEnter() {return TryEnterCriticalSection(&critSection) != 0;}
 };
 
-class SpinLock
+class LightCS
 {
 	UInt32	owningThread;
 	UInt32	enterCount;
 
 public:
-	SpinLock() : owningThread(0), enterCount(0) {}
+	LightCS() : owningThread(0), enterCount(0) {}
 
 	void Enter();
 	void EnterSleep();
@@ -413,7 +413,7 @@ extern AuxBuffer s_auxBuffers[3];
 
 UInt8* __fastcall GetAuxBuffer(AuxBuffer &buffer, UInt32 reqSize);
 
-bool __fastcall FileExists(const char *path);
+bool __fastcall FileExists(const char *filePath);
 
 class FileStream
 {

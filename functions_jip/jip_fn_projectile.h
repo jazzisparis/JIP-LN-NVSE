@@ -265,16 +265,12 @@ bool Cmd_SetOnProjectileImpactEventHandler_Execute(COMMAND_ARGS)
 	UInt32 addEvnt;
 	TESForm *projectileOrList;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &projectileOrList) || NOT_ID(script, Script)) return true;
-	ListNode<TESForm> *iter;
+	tList<TESForm> tempList(projectileOrList);
+	if IS_ID(projectileOrList, BGSListForm)
+		tempList = ((BGSListForm*)projectileOrList)->list;
+	ListNode<TESForm> *iter = tempList.Head();
 	BGSProjectile *projectile;
 	EventCallbackScripts *callbacks;
-	if IS_ID(projectileOrList, BGSListForm)
-		iter = ((BGSListForm*)projectileOrList)->list.Head();
-	else
-	{
-		ListNode<TESForm> tempList(projectileOrList);
-		iter = &tempList;
-	}
 	do
 	{
 		projectile = (BGSProjectile*)iter->data;

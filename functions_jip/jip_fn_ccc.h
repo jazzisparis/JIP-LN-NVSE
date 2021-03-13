@@ -257,7 +257,7 @@ bool Cmd_CCCSetTrait_Execute(COMMAND_ARGS)
 					{
 						for (auto iter = s_avatarCommon.Begin(); iter; ++iter)
 						{
-							if (SubStrCI(fullName, iter.Key()))
+							if (strstr(fullName, iter.Key()))
 							{
 								pathStr = *iter;
 								break;

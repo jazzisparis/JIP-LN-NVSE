@@ -718,7 +718,7 @@ public:
 		pEntry->Clear();
 		numEntries--;
 		index = numEntries - index;
-		if (index) memmove(pEntry, pEntry + 1, sizeof(Entry) * index);
+		if (index) memcpy(pEntry, pEntry + 1, sizeof(Entry) * index);
 		return true;
 	}
 
@@ -789,7 +789,7 @@ public:
 			pEntry->Clear();
 			UInt32 size = frwrd ? (count - 1) : (source.numEntries - count);
 			source.numEntries--;
-			if (size) memmove(pEntry, pEntry + 1, size * sizeof(Entry));
+			if (size) memcpy(pEntry, pEntry + 1, size * sizeof(Entry));
 			if (frwrd) pEntry--;
 		}
 
@@ -932,7 +932,7 @@ public:
 		pKey->Clear();
 		numKeys--;
 		index = numKeys - index;
-		if (index) memmove(pKey, pKey + 1, sizeof(M_Key) * index);
+		if (index) memcpy(pKey, pKey + 1, sizeof(M_Key) * index);
 		return true;
 	}
 
@@ -1004,7 +1004,7 @@ public:
 		numKeys--;
 		if (iter.count > 1)
 		{
-			memmove(iter.pKey, iter.pKey + 1, (iter.count - 1) * sizeof(M_Key));
+			memcpy(iter.pKey, iter.pKey + 1, (iter.count - 1) * sizeof(M_Key));
 			iter.pKey--;
 		}
 	}
@@ -1827,7 +1827,7 @@ public:
 			POOL_REALLOC(data, numAlloc, newCount, T_Data);
 			numAlloc = newCount;
 		}
-		memmove(data + numItems, source.data, sizeof(T_Data) * source.numItems);
+		memcpy(data + numItems, source.data, sizeof(T_Data) * source.numItems);
 		numItems = newCount;
 	}
 
@@ -1885,7 +1885,7 @@ public:
 			{
 				if (*pData == item)
 				{
-					memmove(pData, pData + 1, (UInt32)pEnd - (UInt32)pData);
+					memcpy(pData, pData + 1, (UInt32)pEnd - (UInt32)pData);
 					RawAssign<T_Data>(*pEnd, item);
 					return;
 				}
@@ -1952,7 +1952,7 @@ public:
 		pData->~T_Data();
 		numItems--;
 		index = numItems - index;
-		if (index) memmove(pData, pData + 1, sizeof(T_Data) * index);
+		if (index) memcpy(pData, pData + 1, sizeof(T_Data) * index);
 		return true;
 	}
 
@@ -1968,7 +1968,7 @@ public:
 				numItems--;
 				pData->~T_Data();
 				UInt32 size = (UInt32)End() - (UInt32)pData;
-				if (size) memmove(pData, pData + 1, size);
+				if (size) memcpy(pData, pData + 1, size);
 				return true;
 			}
 			while (pData != pEnd);
@@ -1990,7 +1990,7 @@ public:
 				numItems--;
 				pData->~T_Data();
 				size = (UInt32)End() - (UInt32)pData;
-				if (size) memmove(pData, pData + 1, size);
+				if (size) memcpy(pData, pData + 1, size);
 				removed++;
 			}
 			while (pData != pEnd);
@@ -2012,7 +2012,7 @@ public:
 		}
 		while (pData != pEnd);
 		UInt32 size = (UInt32)End() - (UInt32)pData;
-		if (size) memmove(pBgn, pData, size);
+		if (size) memcpy(pBgn, pData, size);
 		numItems -= count;
 	}
 
@@ -2224,7 +2224,7 @@ public:
 			pData->~T_Data();
 			UInt32 size = source.numItems - count;
 			source.numItems--;
-			if (size) memmove(pData, pData + 1, size * sizeof(T_Data));
+			if (size) memcpy(pData, pData + 1, size * sizeof(T_Data));
 		}
 
 		RvIterator(Vector &source)

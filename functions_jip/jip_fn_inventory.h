@@ -275,14 +275,10 @@ bool Cmd_DropAlt_Execute(COMMAND_ARGS)
 		return true;
 	ExtraContainerChanges::EntryDataList *entryList = thisObj->GetContainerChangesList();
 	if (!entryList) return true;
-	ListNode<TESForm> *iter;
+	tList<TESForm> tempList(form);
 	if IS_ID(form, BGSListForm)
-		iter = ((BGSListForm*)form)->list.Head();
-	else
-	{
-		ListNode<TESForm> tempList(form);
-		iter = &tempList;
-	}
+		tempList = ((BGSListForm*)form)->list;
+	ListNode<TESForm> *iter = tempList.Head();
 	TESForm *item;
 	SInt32 total, subCount;
 	bool keepOwner = !clrOwner, hasScript, stacked;
@@ -530,27 +526,22 @@ bool Cmd_ToggleItemUnique_Execute(COMMAND_ARGS)
 	UInt32 toggle;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &itemOrList, &toggle))
 	{
-		ListNode<TESForm> *traverse = NULL;
+		tList<TESForm> tempList(itemOrList);
 		if IS_ID(itemOrList, BGSListForm)
-			traverse = ((BGSListForm*)itemOrList)->list.Head();
-		else if (IS_TYPE(itemOrList, TESObjectARMO) || IS_ID(itemOrList, TESObjectWEAP))
+			tempList = ((BGSListForm*)itemOrList)->list;
+		else if (NOT_ID(itemOrList, TESObjectWEAP) && NOT_TYPE(itemOrList, TESObjectARMO))
+			return true;
+		ListNode<TESForm> *traverse = tempList.Head();
+		bool bToggle = toggle != 0;
+		TESForm *item;
+		do
 		{
-			ListNode<TESForm> tempList(itemOrList);
-			traverse = &tempList;
+			if (!(item = traverse->data) || (NOT_TYPE(item, TESObjectARMO) && NOT_ID(item, TESObjectWEAP)) || (bToggle == ((item->jipFormFlags6 & kHookFormFlag6_UniqueItem) != 0)))
+				continue;
+			item->SetJIPFlag(kHookFormFlag6_UniqueItem, bToggle);
+			HOOK_MOD(CheckUniqueItem, bToggle);
 		}
-		if (traverse)
-		{
-			bool bToggle = toggle != 0;
-			TESForm *item;
-			do
-			{
-				if (!(item = traverse->data) || (NOT_TYPE(item, TESObjectARMO) && NOT_ID(item, TESObjectWEAP)) || (bToggle == ((item->jipFormFlags6 & kHookFormFlag6_UniqueItem) != 0)))
-					continue;
-				item->SetJIPFlag(kHookFormFlag6_UniqueItem, bToggle);
-				HOOK_MOD(CheckUniqueItem, bToggle);
-			}
-			while (traverse = traverse->next);
-		}
+		while (traverse = traverse->next);
 	}
 	return true;
 }
@@ -590,16 +581,12 @@ bool Cmd_SetOnUseAidItemEventHandler_Execute(COMMAND_ARGS)
 	TESForm *itemOrList;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &itemOrList) || NOT_ID(script, Script))
 		return true;
-	ListNode<TESForm> *iter;
+	tList<TESForm> tempList(itemOrList);
+	if IS_ID(itemOrList, BGSListForm)
+		tempList = ((BGSListForm*)itemOrList)->list;
+	ListNode<TESForm> *iter = tempList.Head();
 	AlchemyItem *alchItem;
 	EventCallbackScripts *callbacks;
-	if IS_ID(itemOrList, BGSListForm)
-		iter = ((BGSListForm*)itemOrList)->list.Head();
-	else
-	{
-		ListNode<TESForm> tempList(itemOrList);
-		iter = &tempList;
-	}
 	do
 	{
 		alchItem = (AlchemyItem*)iter->data;

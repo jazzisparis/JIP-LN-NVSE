@@ -3,6 +3,14 @@
 struct hkVector4
 {
 	float	x, y, z, w;
+
+	hkVector4() {}
+	hkVector4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
+
+	float& operator[](char axis)
+	{
+		return ((float*)&x)[axis];
+	}
 };
 
 struct alignas(16) AlignedVector4
@@ -61,6 +69,8 @@ class hkpSimpleConstraintContactMgr;
 class bhkWorldObject;
 class NiStream;
 class ahkpWorld;
+class TESTrapListener;
+class TESWaterListener;
 class hkpContinuousSimulation;
 class hkpDefaultWorldMaintenanceMgr;
 class hkpBroadPhase;
@@ -559,45 +569,54 @@ STATIC_ASSERT(sizeof(ahkpWorld) == 0x354);
 class bhkWorld : public bhkSerializable
 {
 public:
-	void				*unk10;		// 10 - 0x108 byte object
-	NiRefObject			*visDebug;	// 14
-	UInt8				unk18;		// 18
-	UInt8				enabled;	// 19
-	UInt8				unk1A;		// 1A
-	UInt8				pad1B;		// 1B
-	UInt32				unk1C[3];	// 1C
-	void				*unk28;		// 28 - 0x2EE0 byte buffer
-	UInt32				unk2C;		// 2C
-	void				*unk30;		// 30 - 0x320 byte buffer
-	UInt32				unk34;		// 34
-	void				*unk38;		// 38 - 0x190 byte buffer
-	UInt32				unk3C;		// 3C
-	void				*unk40;		// 40 - 0x320 byte buffer
-	UInt32				unk44;		// 44
-	void				*unk48;		// 48 - 0x2EE0 byte buffer
-	UInt32				unk4C;		// 4C
-	NiVector4			unk50;		// 50
-	NiRefObject			**unk60;	// 60 - simple array
-	UInt32				unk64;		// 64 - num elements in 060
-	UInt32				unk68;		// 68
-	void				*unk6C;		// 6C
-	UInt32				unk70[9];	// 70
+	NiRefObject					*visDebug;				// 10
+	UInt8						byte14;					// 14
+	UInt8						bCollisionEnabled;		// 15
+	UInt8						isDebugTCG;				// 16
+	UInt8						byte17;					// 17
+	UInt32						maybeFlags18;			// 18
+	UInt32						unk1C;					// 1C
+	TESTrapListener				*trapListener;			// 20
+	TESWaterListener			*waterListener;			// 24
+	BGSAcousticSpaceListener	*acousticSpaceListener;	// 28
+	void						*ptr2C;					// 2C
+	void						*ptr30;					// 30
+	void						*ptr34;					// 34
+	void						*ptr38;					// 38
+	void						*ptr3C;					// 3C
+	void						*ptr40;					// 40
+	void						*ptr44;					// 44
+	void						*ptr48;					// 48
+	void						*ptr4C;					// 4C
+	UInt32						unk50;					// 50
+	UInt32						unk54;					// 54
+	UInt32						unk58;					// 58
+	UInt32						unk5C;					// 5C
+	NiVector4					origin;					// 60
+	bhkEntityListener			**listenerArray;		// 70
+	UInt32						numListeners;			// 74
+	UInt32						unk78;					// 78
+	UInt32						unk7C;					// 7C
+	UInt32						unk80;					// 80
+	UInt32						unk84;					// 84
+	UInt32						unk88;					// 88
+	UInt32						unk8C;					// 8C
+	UInt32						unk90;					// 90
+	UInt32						unk94;					// 94
+	UInt32						unk98;					// 98
+	UInt32						unk9C;					// 9C
 };
-STATIC_ASSERT(sizeof(bhkWorld) == 0x94);
+STATIC_ASSERT(sizeof(bhkWorld) == 0xA0);
 
 // E0
 class bhkWorldM : public bhkWorld
 {
 public:
-	float			unk94;			// 94
-	float			unk98;			// 98
-	float			unk9C;			// 9C
 	NiVector4		borderSize;		// A0
 	NiVector4		worldTotalSize;	// B0
-	NiVector4		vectorC0;		// C0
-	UInt32			unkD0[4];		// D0
+	NiVector4		broadPhaseSize;	// C0
 };
-STATIC_ASSERT(sizeof(bhkWorldM) == 0xE0);
+STATIC_ASSERT(sizeof(bhkWorldM) == 0xD0);
 
 // 0C
 class NiCollisionObject : public NiObject
@@ -620,9 +639,9 @@ public:
 	virtual void	Unk_29(void);
 	virtual void	Unk_2A(void);
 	virtual void	Unk_2B(void);
-	virtual void	Unk_2C(void);
+	virtual void	Unk_2C(UInt32 moType, UInt32 arg2, UInt32 arg3);	//	arg3 unused?
 	virtual void	Unk_2D(void);
-	virtual void	Unk_2E(void);
+	virtual void	ProcessCollision(UInt32 arg);
 	virtual void	Unk_2F(void);
 	virtual void	Unk_30(void);
 

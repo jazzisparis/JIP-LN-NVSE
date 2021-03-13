@@ -190,14 +190,10 @@ bool Cmd_SetScriptDisabled_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &disable))
 	{
 		bool bDisable = (disable != 0);
-		ListNode<TESForm> *iter;
+		tList<TESForm> tempList(form);
 		if IS_ID(form, BGSListForm)
-			iter = ((BGSListForm*)form)->list.Head();
-		else
-		{
-			ListNode<TESForm> tempList(form);
-			iter = &tempList;
-		}
+			tempList = ((BGSListForm*)form)->list;
+		ListNode<TESForm> *iter = tempList.Head();
 		do
 		{
 			form = iter->data;
@@ -277,14 +273,10 @@ bool Cmd_SetScriptEventDisabled_Execute(COMMAND_ARGS)
 	}
 	while (*posPtr);
 	if (!inMask && !onActivate) return true;
-	ListNode<TESForm> *iter;
+	tList<TESForm> tempList(form);
 	if IS_ID(form, BGSListForm)
-		iter = ((BGSListForm*)form)->list.Head();
-	else
-	{
-		ListNode<TESForm> tempList(form);
-		iter = &tempList;
-	}
+		tempList = ((BGSListForm*)form)->list;
+	ListNode<TESForm> *iter = tempList.Head();
 	TESForm *refBase;
 	do
 	{

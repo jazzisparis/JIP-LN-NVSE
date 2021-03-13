@@ -22,7 +22,7 @@ public:
 	virtual void		Unk_5B(void);
 	virtual void		Unk_5C(void);
 	virtual void		Unk_5D(void);
-	virtual void		Unk_5E(void);
+	virtual void		RefreshDynamicLight();
 	virtual TESObjectREFR	*RemoveItem(TESForm *toRemove, BaseExtraList *extraList, UInt32 quantity, bool keepOwner, bool drop, TESObjectREFR *destRef,
 		UInt32 unk6, UInt32 unk7, bool unk8, bool unk9);
 	virtual void		Unk_60(void);
@@ -67,7 +67,7 @@ public:
 	virtual bool		IsCreature();
 	virtual bool		IsExplosion();
 	virtual bool		IsProjectile();
-	virtual void		Unk_8A(void);			// SetParentCell (Interior only ?)
+	virtual void		SetParentCell(TESObjectCELL *cell);			// SetParentCell (Interior only ?)
 	virtual bool		HasHealth(bool arg0);	// HasHealth (baseForm health > 0 or Flags bit23 set)
 	virtual bool		GetHasKnockedState();
 	virtual bool		GetIsParalyzed();
@@ -165,7 +165,6 @@ public:
 	bool ValidForHooks();
 	NiAVObject* __fastcall GetNiBlock(const char *blockName);
 	NiNode* __fastcall GetNode(const char *nodeName);
-	NiNode *GetNiNodeCopyIfTemplate();
 	hkpRigidBody *GetRigidBody(const char *nodeName);
 	bool RunScriptSource(const char *sourceStr);
 
@@ -671,6 +670,7 @@ public:
 	void __fastcall TurnToFaceObject(TESObjectREFR *target);
 	void TurnAngle(float angle);
 	void PlayIdle(TESIdleForm *idleAnim);
+	void PlayAnimGroup(UInt32 animGroupID);
 	UInt32 GetLevel();
 	float GetKillXP();
 	void DismemberLimb(UInt32 bodyPartID, bool explode);
@@ -840,7 +840,7 @@ public:
 	UInt32								unk684[2];				// 684
 	ValidBip01Names						*VB01N1stPerson;		// 68C
 	AnimData							*animData1stPerson;		// 690
-	NiNode								*playerNode;			// 694 used as node if unk64A is true
+	NiNode								*node1stPerson;			// 694
 	float								flt698;					// 698
 	UInt32								unk69C[3];				// 69C
 	tList<TESTopic>						topicList;				// 6A8

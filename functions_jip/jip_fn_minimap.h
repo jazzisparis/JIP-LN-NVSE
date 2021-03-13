@@ -217,7 +217,7 @@ __declspec(naked) SeenData* __fastcall GetSeenData(TESObjectCELL *cell)
 	{
 		push	kExtraData_SeenData
 		add		ecx, 0x28
-		CALL_EAX(kAddr_GetExtraData)
+		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		done
 		mov		eax, [eax+0xC]
@@ -908,7 +908,7 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		jz		skipPosDiff
 		push	kExtraData_NorthRotation
 		lea		ecx, [esi+0x28]
-		CALL_EAX(kAddr_GetExtraData)
+		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		skipPosDiff
 		fld		dword ptr [eax+0xC]
@@ -1602,7 +1602,6 @@ TileImage *s_worldMapTile;
 Tile::Value *s_miniMapMode, *s_pcMarkerRotate, *s_miniMapPosX, *s_miniMapPosY, *s_worldMapZoom;
 TileShaderProperty *s_tileShaderProps[9];
 bool s_defaultGridSize;
-ShadowSceneNode *g_shadowSceneNode;
 BSFogProperty *g_shadowFogProperty;
 BSParticleSystemManager *g_particleSysMngr;
 TESForm *g_blackPlaneBase;
@@ -1801,7 +1800,6 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	while (worldIter = worldIter->next);
 
 	s_defaultGridSize = *(UInt8*)0x11C63D0 <= 5;
-	g_shadowSceneNode = *(ShadowSceneNode**)0x11F91C8;
 	g_shadowFogProperty = *(BSFogProperty**)0x11DEB00;
 	g_particleSysMngr = *(BSParticleSystemManager**)0x11DED58;
 	g_blackPlaneBase = LookupFormByRefID(0x15A1F2);
@@ -2151,6 +2149,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				if (showFlags & 8)
 				{
 					s_useAltFormat = 2;
+					g_sceneLightsLock->EnterSleep();
 					for (auto lgtNode = g_shadowSceneNode->lgtList0B4.Head(); lgtNode; lgtNode = lgtNode->next)
 					{
 						if ((pntLight = (NiPointLight*)lgtNode->data->light) && (pntLight->effectType == 2) && !pntLight->unkEC)
@@ -2159,6 +2158,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 							pntLight->radius = 0;
 						}
 					}
+					g_sceneLightsLock->Leave();
 					memcpy(&g_TES->directionalLight->ambientColor, kDirectionalLightValues, sizeof(kDirectionalLightValues));
 					memcpy(&g_shadowFogProperty->color, kFogPropertyValues, sizeof(kFogPropertyValues));
 					g_shadowFogProperty->power = 1;
@@ -2320,6 +2320,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		{
 			if (parentWorld)
 			{
+				g_sceneLightsLock->EnterSleep();
 				for (auto lgtNode = g_shadowSceneNode->lgtList0B4.Head(); lgtNode; lgtNode = lgtNode->next)
 				{
 					if ((pntLight = (NiPointLight*)lgtNode->data->light) && (pntLight->effectType == 2) && !pntLight->radius)
@@ -2328,6 +2329,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 						pntLight->unkEC = 0;
 					}
 				}
+				g_sceneLightsLock->Leave();
 			}
 			else *g_lightingPasses = lightingPasses;
 			g_particleSysMngr->m_flags &= 0xFFFFFFFE;

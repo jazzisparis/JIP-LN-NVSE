@@ -3415,7 +3415,7 @@ public:
 	struct Data
 	{
 		NiPointLight	*pointLight;
-		float			flt04;
+		float			fadeValue;
 	};
 
 	Data		*data;		// 0C

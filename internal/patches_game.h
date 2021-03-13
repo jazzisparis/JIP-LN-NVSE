@@ -22,37 +22,61 @@ __declspec(naked) void LoadTopicInfoHook()
 	}
 }
 
-__declspec(naked) void DoQueuedPlayerHook()
+__declspec(naked) void GeneratePlayerNodeHook()
+{
+	__asm
+	{
+		push	0
+		push	esp
+		push	dword ptr ds:[0x11CDD7C]
+		mov		eax, g_modelLoader
+		mov		ecx, [eax]
+		CALL_EAX(0x4493D0)
+		pop		eax
+		cmp		dword ptr [eax+8], 0
+		jg		skipRefCount
+		lock inc dword ptr [eax+8]
+	skipRefCount:
+		mov		ecx, [eax+0xC]
+		call	NiNode::CreateCopy
+		mov		[ebp-0x18], eax
+		or		dword ptr [eax+0x30], 0x200000
+		mov		s_pc1stPersonNode, eax
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall DoQueuedPlayerHook(QueuedPlayer *queuedPlayer)
 {
 	__asm
 	{
 		mov		eax, [ecx+0x28]
-		test	byte ptr [eax+0x61], 1
+		test	byte ptr [eax+0x61], kHookRefFlag61_Update3D
 		jnz		proceed
 		jmp		DoQueuedReferenceHook
 	proceed:
-		push	esi
+		push	ebx
 		push	ecx
-		mov		esi, eax
+		mov		ebx, eax
 		push	1
 		push	0
-		mov		ecx, esi
+		mov		ecx, ebx
 		CALL_EAX(0x5702E0)
-		mov		ecx, [esi+0x68C]
+		mov		ecx, [ebx+0x68C]
 		test	ecx, ecx
 		jz		done68C
 		push	1
 		CALL_EAX(0x418E00)
-		mov		dword ptr [esi+0x68C], 0
+		mov		dword ptr [ebx+0x68C], 0
 	done68C:
-		mov		ecx, [esi+0x690]
+		mov		ecx, [ebx+0x690]
 		test	ecx, ecx
 		jz		done690
 		push	1
 		CALL_EAX(0x418D20)
-		mov		dword ptr [esi+0x690], 0
+		mov		dword ptr [ebx+0x690], 0
 	done690:
-		mov		edx, [esi+0x694]
+		mov		edx, [ebx+0x694]
 		test	edx, edx
 		jz		done694
 		mov		ecx, [edx+0x18]
@@ -64,55 +88,55 @@ __declspec(naked) void DoQueuedPlayerHook()
 	done694:
 		pxor	xmm0, xmm0
 		movups	xmmword ptr ds:[0x11E07CC], xmm0
-		lea		ecx, [esi+0xD74]
+		lea		ecx, [ebx+0xD74]
 		movups	[ecx], xmm0
 		movups	[ecx+0x10], xmm0
 		movups	[ecx+0x20], xmm0
 		movups	[ecx+0x30], xmm0
 		movups	[ecx+0x40], xmm0
 		movups	[ecx+0x50], xmm0
-		and		byte ptr [esi+0x61], 0xFE
+		and		byte ptr [ebx+0x61], ~kHookRefFlag61_Update3D
 		pop		ecx
 		call	DoQueuedReferenceHook
-		mov		eax, [esi+0x64]
+		mov		eax, [ebx+0x64]
 		test	eax, eax
 		jz		done
 		mov		eax, [eax+0x14]
 		test	eax, eax
 		jz		done
-		mov		ecx, [esi+0x694]
+		mov		ecx, [ebx+0x694]
 		test	ecx, ecx
 		jz		done
 		mov		edx, ecx
-		cmp		byte ptr [esi+0x64A], 0
+		cmp		byte ptr [ebx+0x64A], 0
 		cmovz	ecx, eax
 		cmovz	eax, edx
 		or		byte ptr [ecx+0x30], 1
 		and		byte ptr [eax+0x30], 0xFE
-		mov		ecx, [esi+0x68]
+		mov		ecx, [ebx+0x68]
 		test	ecx, ecx
 		jz		done
 		cmp		dword ptr [ecx+0x28], 0
 		jnz		done
-		cmp		byte ptr [ecx+0x135], 0
-		jz		reEquip
-		push	0
-		push	esi
-		CALL_EAX(0x915D60)
-		jmp		done
-	reEquip:
-		mov		eax, [ecx+0x114]
-		test	eax, eax
+		cmp		dword ptr [ecx+0x114], 0
+		setnz	al
+		movzx	edx, byte ptr [ecx+0x135]
+		or		al, dl
 		jz		done
-		push	0
-		mov		edx, [eax]
-		push	dword ptr [edx]
-		push	dword ptr [eax+4]
-		push	dword ptr [eax+8]
-		mov		ecx, esi
-		CALL_EAX(0x88DB20)
+		push	ebx
+		push	dword ptr [ebx+0x690]
+		push	dword ptr [ebx+0x68C]
+		push	edx
+		push	ebx
+		push	dword ptr [ecx+0x1C0]
+		push	dword ptr [ebx+0x1B4]
+		push	edx
+		mov		ebx, ecx
+		CALL_EAX(0x923960)
+		mov		ecx, ebx
+		CALL_EAX(0x923960)
 	done:
-		pop		esi
+		pop		ebx
 		retn
 	}
 }
@@ -369,15 +393,14 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		test	ecx, ecx
 		jz		countNext
 		push	kExtraData_OriginalReference
-		CALL_EAX(kAddr_GetExtraData)
+		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		countNext
 		mov		eax, [eax+0xC]
 		cmp		[ebp-0xC], eax
 		jnz		countNext
 		push	kExtraData_Count
-		mov		ecx, [esi]
-		CALL_EAX(kAddr_GetExtraData)
+		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		addHead
 		mov		ecx, 0x7FFF
@@ -617,9 +640,9 @@ __declspec(naked) bool __stdcall TerminalGetLockedHook(TESObjectREFR *terminalRe
 		mov		ecx, [esp+8]
 		test	ecx, ecx
 		jz		setRes
-		add		ecx, 0x44
 		push	kExtraData_TerminalState
-		CALL_EAX(kAddr_GetExtraData)
+		add		ecx, 0x44
+		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		setRes
 		mov		cl, [eax+0xD]
@@ -789,11 +812,9 @@ __declspec(naked) UInt8 __fastcall GetEntryDataModFlagsHook(ContChangesEntry *en
 		mov		eax, [eax]
 		test	eax, eax
 		jz		done
-		mov		ecx, eax
-		push	ecx
 		push	kExtraData_ItemDropper
-		CALL_EAX(kAddr_GetExtraData)
-		pop		ecx
+		mov		ecx, eax
+		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		noDropper
 		mov		eax, [eax+0xC]
@@ -802,7 +823,7 @@ __declspec(naked) UInt8 __fastcall GetEntryDataModFlagsHook(ContChangesEntry *en
 		lea		ecx, [eax+0x44]
 	noDropper:
 		push	kExtraData_WeaponModFlags
-		CALL_EAX(kAddr_GetExtraData)
+		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		done
 		mov		al, [eax+0xC]
@@ -860,7 +881,7 @@ __declspec(naked) void RolloverWeaponHook()
 		push	kExtraData_WeaponModFlags
 		mov		ecx, [ebp+8]
 		add		ecx, 0x44
-		CALL_EAX(kAddr_GetExtraData)
+		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		retn1
 		cmp		byte ptr [eax+0xC], 0
@@ -871,6 +892,38 @@ __declspec(naked) void RolloverWeaponHook()
 	retn1:
 		mov		al, 1
 	done:
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall ClearWeaponNodeHook(NiNode *wpnNode)
+{
+	__asm
+	{
+		push	ebx
+		push	esi
+		push	edi
+		mov		ebx, ecx
+		mov		esi, [ecx+0xA0]
+		movzx	edi, word ptr [ecx+0xA6]
+		ALIGN 16
+	iterHead:
+		dec		edi
+		js		done
+		mov		ecx, [esi+edi*4]
+		test	ecx, ecx
+		jz		iterHead
+		test	byte ptr [ecx+0x33], 0x80
+		jnz		iterHead
+		push	ecx
+		mov		ecx, ebx
+		mov		eax, [ecx]
+		call	dword ptr [eax+0xE8]
+		jmp		iterHead
+	done:
+		pop		edi
+		pop		esi
+		pop		ebx
 		retn
 	}
 }
@@ -901,7 +954,7 @@ __declspec(naked) void ConstructItemEntryNameHook()
 		cmp		al, kFormType_TESObjectARMO
 		jnz		isWeapon
 		push	kExtraData_Charge
-		CALL_EAX(kAddr_GetExtraData)
+		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		doneExtra
 		cvtss2si	edx, [eax+0xC]
@@ -916,10 +969,8 @@ __declspec(naked) void ConstructItemEntryNameHook()
 		add		edi, 7
 		jmp		doneExtra
 	isWeapon:
-		push	ecx
 		push	kExtraData_ItemDropper
-		CALL_EAX(kAddr_GetExtraData)
-		pop		ecx
+		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		noDropper
 		mov		eax, [eax+0xC]
@@ -928,7 +979,7 @@ __declspec(naked) void ConstructItemEntryNameHook()
 		lea		ecx, [eax+0x44]
 	noDropper:
 		push	kExtraData_WeaponModFlags
-		CALL_EAX(kAddr_GetExtraData)
+		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		doneExtra
 		cmp		byte ptr [eax+0xC], 0
@@ -1110,44 +1161,134 @@ __declspec(naked) void IsValidAITargetHook()
 	}
 }
 
+__declspec(naked) TESModelTextureSwap* __fastcall GetWeaponModel(TESObjectWEAP *weapon, Actor *actor, UInt32 modFlags)
+{
+	static const UInt32 k1stPnModelByMod[] = {0x250, 0x254, 0x258, 0x260, 0x25C, 0x268, 0x264, 0x26C};
+	__asm
+	{
+		push	esi
+		mov		esi, ecx
+		cmp		dword ptr [edx+0xC], 0x14
+		mov		edx, [esp+8]
+		jz		get1stP
+		test	edx, edx
+		jz		get3rdP
+		cmp		byte ptr [ecx+0xF4], 8
+		jnz		get3rdP
+	get1stP:
+		and		edx, 7
+		mov		ecx, k1stPnModelByMod[edx*4]
+		mov		eax, [esi+ecx]
+		test	eax, eax
+		jz		get3rdP
+		add		eax, 0x30
+		pop		esi
+		retn	4
+	get3rdP:
+		push	1
+		push	dword ptr [esp+0xC]
+		mov		ecx, esi
+		CALL_EAX(0x522DF0)
+		pop		esi
+		retn	4
+	}
+}
+
+__declspec(naked) void __fastcall SetWeaponSlotHook(ValidBip01Names *vbp01Names, int EDX, TESObjectWEAP *weapon, UInt8 modFlags)
+{
+	__asm
+	{
+		push	esi
+		mov		esi, ecx
+		mov		eax, [esp+8]
+		test	eax, eax
+		jz		done
+		cmp		byte ptr [eax+4], kFormType_TESObjectWEAP
+		jnz		done
+		cmp		[esi+0x7C], eax
+		jnz		proceed
+		cmp		dword ptr [esi+0x84], 0
+		jnz		done
+	proceed:
+		push	0
+		push	1
+		push	5
+		CALL_EAX(0x4AAFF0)
+		mov		ecx, [esp+8]
+		mov		[esi+0x7C], ecx
+		movzx	edx, byte ptr [esp+0xC]
+		push	edx
+		mov		edx, [esi+0x2B0]
+		call	GetWeaponModel
+		mov		[esi+0x80], eax
+	done:
+		pop		esi
+		retn	8
+	}
+}
+
+// Credits to carxt for tracing the weapon backpack bug
+__declspec(naked) void InitWornObjectHook()
+{
+	__asm
+	{
+		xor		al, al
+		mov		ecx, [ebp+8]
+		mov		ecx, [ecx+0x68]
+		test	ecx, ecx
+		jz		done
+		cmp		dword ptr [ecx+0x28], 1
+		ja		done
+		mov		ecx, [ecx+0x114]
+		test	ecx, ecx
+		jz		done
+		call	GetEntryDataModFlagsHook
+	done:
+		movzx	edx, al
+		push	edx
+		push	dword ptr [ebp+0x10]
+		mov		ecx, [ebp+0xC]
+		call	SetWeaponSlotHook
+		retn
+	}
+}
+
 __declspec(naked) void PickWeaponModelHook()
 {
 	__asm
 	{
 		mov		dword ptr [ebp-0x1C], 0
+		mov		al, [ebp-9]
+		test	al, al
+		jnz		doCall
 		mov		ecx, [ebp-4]
 		test	ecx, ecx
 		jz		doCall
 		cmp		dword ptr [ecx+0xC], 0x14
-		jz		doCall
-		mov		eax, [ebp+8]
-		cmp		byte ptr [eax+0xF4], 8
 		jz		doCall
 		mov		ecx, [ecx+0x68]
 		test	ecx, ecx
 		jz		doCall
 		cmp		dword ptr [ecx+0x28], 1
 		ja		doCall
-		mov		eax, [ecx+0x114]
-		test	eax, eax
+		mov		ecx, [ecx+0x114]
+		test	ecx, ecx
 		jz		doCall
-		mov		ecx, eax
 		call	GetEntryDataModFlagsHook
-		mov		[ebp-9], al
 	doCall:
-		movzx	eax, byte ptr [ebp-9]
+		movzx	edx, al
 		mov		ecx, [ebp-8]
 		test	ecx, ecx
 		jz		noBip01
-		push	eax
+		push	edx
 		push	dword ptr [ebp+8]
 		CALL_EAX(0x4AB750)
 		retn
 	noBip01:
-		push	1
-		push	eax
+		push	edx
+		mov		edx, [ebp-0x30]
 		mov		ecx, [ebp+8]
-		CALL_EAX(0x522DF0)
+		call	GetWeaponModel
 		mov		[ebp-0x1C], eax
 		retn
 	}
@@ -1173,10 +1314,10 @@ __declspec(naked) void PlayAttackSoundHook()
 		jz		done
 		mov		edx, [eax+8]
 		push	edx
+		push	kExtraData_WeaponModFlags
 		mov		ecx, [eax]
 		mov		ecx, [ecx]
-		push	kExtraData_WeaponModFlags
-		CALL_EAX(kAddr_GetExtraData)
+		call	BaseExtraList::GetByType
 		pop		edx
 		test	eax, eax
 		jz		done
@@ -1215,41 +1356,25 @@ __declspec(naked) void AddProjectileLightHook()
 {
 	__asm
 	{
-		push	dword ptr [ebp-0x14]
-		mov		ecx, ds:[0x11F1958]
-		mov		ecx, [ecx+0x14]
-		CALL_EAX(0x9A52F0)
 		mov		eax, [ebp+8]
 		mov		eax, [eax+0x70]
 		test	eax, eax
 		jz		done
-		mov		[ebp-0x18], eax
-		mov		ecx, [ebp-0x14]
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1D0]
-		test	eax, eax
+		mov		ecx, [ecx+0x64]
+		test	ecx, ecx
 		jz		done
-		push	0
-		push	eax
-		push	dword ptr [ebp-0x14]
-		mov		ecx, [ebp-0x18]
-		CALL_EAX(0x50D810)
-		test	eax, eax
+		mov		ecx, [ecx+0x14]
+		test	ecx, ecx
 		jz		done
-		mov		dword ptr [eax+0xA8], 0x12E
-		mov		edx, 0x3F800000
-		mov		[eax+0xC8], edx
-		mov		[eax+0xCC], edx
-		mov		[eax+0xD0], edx
-		mov		[eax+0xF4], edx
-		mov		dword ptr [eax+0xF8], 0
-		mov		ecx, [ebp-0x18]
-		cvtsi2ss	xmm0, [ecx+0xA0]
-		movss	[eax+0xE0], xmm0
-		mov		edx, [ecx+0xB4]
-		mov		[eax+0xC4], edx
+		mov		edx, ecx
+		mov		ecx, eax
+		call	CreatePointLight
 	done:
-		JMP_EAX(0x9BD51D)
+		push	dword ptr [ebp-0x14]
+		mov		ecx, ds:[0x11F1958]
+		mov		ecx, [ecx+0x14]
+		CALL_EAX(0x9A52F0)
+		retn
 	}
 }
 
@@ -1342,7 +1467,7 @@ __declspec(naked) void ClearAshPilesHook()
 		push	kExtraData_AshPileRef
 		mov		ecx, [ebp-0x2C]
 		add		ecx, 0x44
-		CALL_EAX(kAddr_GetExtraData)
+		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		doUnload
 		mov		edx, [eax+0xC]
@@ -1710,8 +1835,8 @@ __declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadin
 		jnz		doGeneric
 		test	eax, eax
 		jz		doGeneric
-		mov		esi, ds:[s_locationLoadScreens.data]
-		mov		edi, ds:[s_locationLoadScreens.numItems]
+		mov		esi, s_locationLoadScreens.data
+		mov		edi, s_locationLoadScreens.numItems
 		ALIGN 16
 	iter1Head:
 		push	dword ptr [esp]
@@ -1742,10 +1867,10 @@ __declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadin
 		cmp		dword ptr [eax+8], 0
 		jnz		done
 	doGeneric:
-		mov		edi, ds:[s_genericLoadScreens.numItems]
+		mov		edi, s_genericLoadScreens.numItems
 		test	edi, edi
 		jz		done
-		mov		esi, ds:[s_genericLoadScreens.data]
+		mov		esi, s_genericLoadScreens.data
 		ALIGN 16
 	iter2Head:
 		mov		eax, [esi]
@@ -3588,7 +3713,7 @@ void InitGamePatches()
 	SafeWriteBuf(0x8C1959, "\xB8\x50\xEF\x66\x00\xFF\xD0\x0F\x1F\x80\x00\x00\x00\x00", 14);
 
 	SafeWrite16(0x94E5F6, 0x18EB);
-	SafeWrite8(0x94E4A2, 1);
+	WritePushRetRelJump(0x94E4A1, 0x94E4D9, (UInt32)GeneratePlayerNodeHook);
 	SafeWrite32(0x1016DB8, (UInt32)DoQueuedPlayerHook);
 	SafeWriteBuf(0x601C30, "\x8B\x41\x04\x85\xC0\x74\x01\xC3\x81\xE9\xD8\x00\x00\x00\xF7\x01\x01\x00\x00\x00\xB8\x48\x3E\x1D\x01\xB9\x1C\x27\x1D\x01\x0F\x45\xC1\x8B\x00\xC3", 36);
 	SafeWrite32(0x104A1BC, (UInt32)SetNPCModelHook);
@@ -3637,6 +3762,8 @@ void InitGamePatches()
 	WriteRelJump(0x4BD820, (UInt32)GetEntryDataModFlagsHook);
 	WriteRelJump(0x4BDA70, (UInt32)GetEntryDataHasModHook);
 	WritePushRetRelJump(0x777123, 0x77712E, (UInt32)RolloverWeaponHook);
+	WriteRelCall(0x571F65, (UInt32)ClearWeaponNodeHook);
+	WriteRelCall(0x571FDF, (UInt32)ClearWeaponNodeHook);
 	WritePushRetRelJump(0x782876, 0x7828F8, (UInt32)ConstructItemEntryNameHook);
 	WritePushRetRelJump(0x75D1A5, 0x75D1EB, (UInt32)ConstructItemEntryNameHook);
 	SafeWriteBuf(0x72F337, "\x8B\x85\x70\xFF\xFF\xFF", 6);
@@ -3648,9 +3775,11 @@ void InitGamePatches()
 	WritePushRetRelJump(0x454576, 0x454580, (UInt32)CloudsFixHook);
 	WriteRelCall(0x9D10F3, (UInt32)ReactionCooldownCheckHook);
 	WritePushRetRelJump(0x9F50C4, 0x9F50E7, (UInt32)IsValidAITargetHook);
+	WriteRelJump(0x4AB400, (UInt32)SetWeaponSlotHook);
+	WritePushRetRelJump(0x6061D9, 0x60622F, (UInt32)InitWornObjectHook);
 	WritePushRetRelJump(0x5719ED, 0x571A27, (UInt32)PickWeaponModelHook);
 	WritePushRetRelJump(0x83AD97, 0x83AE4F, (UInt32)PlayAttackSoundHook);
-	WriteRelJump(0x9BD507, (UInt32)AddProjectileLightHook);
+	WritePushRetRelJump(0x9BD50A, 0x9BD51D, (UInt32)AddProjectileLightHook);
 	WriteRelCall(0x89DC0E, (UInt32)KillChallengeFixHook);
 	WriteRelCall(0x72880D, (UInt32)IsDisposableWeaponHook);
 	WriteRelJump(0x984156, (UInt32)DeathResponseFixHook);
@@ -3801,6 +3930,7 @@ void DeferredInit()
 	g_sysColorManager = *(SystemColorManager**)0x11D8A88;
 	g_screenWidth = *(UInt32*)0x11C73E0;
 	g_screenHeight = *(UInt32*)0x11C7190;
+	g_shadowSceneNode = *(ShadowSceneNode**)0x11F91C8;
 	g_terminalModelDefault = *g_terminalModelPtr;
 	g_capsItem = (TESObjectMISC*)LookupFormByRefID(0xF);
 	g_getHitIMOD = (TESImageSpaceModifier*)LookupFormByRefID(0x162);
@@ -3868,6 +3998,7 @@ void DeferredInit()
 
 	JIPScriptRunner::Init();
 
+	s_LIGH_EDID = "LIGH_EDID";
 	ThisCall(0x4AD050, &s_NiObjectCopyInfo, 0x3F800000);
 
 	UInt8 cccIdx = g_dataHandler->GetModIndex("JIP Companions Command & Control.esp");

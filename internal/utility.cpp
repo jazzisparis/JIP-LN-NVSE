@@ -3,7 +3,7 @@
 
 memcpy_t MemCopy = memcpy, MemMove = memmove;
 
-void SpinLock::Enter()
+void LightCS::Enter()
 {
 	UInt32 threadID = GetCurrentThreadId();
 	if (owningThread == threadID)
@@ -17,7 +17,7 @@ void SpinLock::Enter()
 
 #define FAST_SLEEP_COUNT 10000UL
 
-void SpinLock::EnterSleep()
+void LightCS::EnterSleep()
 {
 	UInt32 threadID = GetCurrentThreadId();
 	if (owningThread == threadID)
@@ -38,9 +38,9 @@ void SpinLock::EnterSleep()
 	enterCount = 1;
 }
 
-void SpinLock::Leave()
+void LightCS::Leave()
 {
-	if (owningThread && !--enterCount)
+	if (!--enterCount)
 		owningThread = 0;
 }
 
@@ -1447,9 +1447,9 @@ DString operator+(const char *lStr, const DString &rStr)
 	return DString(resStr, resLen, resAlloc);
 }
 
-bool __fastcall FileExists(const char *path)
+bool __fastcall FileExists(const char *filePath)
 {
-	UInt32 attr = GetFileAttributes(path);
+	UInt32 attr = GetFileAttributes(filePath);
 	return (attr != INVALID_FILE_ATTRIBUTES) && !(attr & FILE_ATTRIBUTE_DIRECTORY);
 }
 

@@ -345,6 +345,8 @@ enum ObjectVtbl
 	kVtbl_NiControllerManager =						0x109619C,
 	kVtbl_BSScissorTriShape =						0x10C2E7C,
 	kVtbl_NiPointLight =							0x109DD0C,
+	kVtbl_NiSpotLight =								0x10A01CC,
+	kVtbl_NiDirectionalLight =						0x109D7B4,
 	kVtbl_NiAlphaProperty =							0x10162DC,
 	kVtbl_NiMaterialProperty =						0x109D6C4,
 	kVtbl_NiStencilProperty =						0x101E07C,
@@ -353,6 +355,8 @@ enum ObjectVtbl
 	kVtbl_BSShaderNoLightingProperty =				0x10AE670,
 	kVtbl_BSShaderPPLightingProperty =				0x10AE0D0,
 	kVtbl_SkyShaderProperty =						0x10B8CE0,
+	kVtbl_NiStringExtraData =						0x109D39C,
+	kVtbl_NiIntegerExtraData =						0x10A0D24,
 	kVtbl_NiFloatExtraData =						0x10A0EC4,
 	kVtbl_BSBound =									0x10C2B64,
 
@@ -620,14 +624,14 @@ public:
 	virtual void	Unk_5A(void * arg0, void * arg1);
 	virtual UInt32	Unk_5B(void);
 	virtual UInt32	Unk_5C(void);
-	virtual bool	Unk_5D(TESObjectREFR * refr);	// if false, no NiNode gets returned by Unk_53, true for NPC
+	virtual NiNode	*CreateNiNode(TESObjectREFR *refr);
 };
 
 // 30
 class TESBoundObject : public TESObject
 {
 public:
-	virtual NiNode	*CreateNiNode(TESObjectREFR * refr);	// calls Fn53, for NPC calls ReadBones, for LevelledActor level them if necessary
+	virtual NiNode	*Create3DModel(TESObjectREFR *refr);	// calls Fn53, for NPC calls ReadBones, for LevelledActor level them if necessary
 	virtual bool	Unk_5F(void);
 
 	BoundObjectListHead		*head;		// 018
@@ -762,27 +766,6 @@ public:
 		kRange_Target,
 	};
 
-	struct ScriptEffectInfo
-	{
-		UInt32 scriptRefID;
-		UInt32 school;
-		String effectName;
-		UInt32 visualEffectCode;
-		UInt32 isHostile;
-
-		void SetName(const char* name);
-		void SetSchool(UInt32 school);
-		void SetVisualEffectCode(UInt32 code);
-		void SetIsHostile(bool bIsHostile);
-		bool IsHostile() const;
-		void SetScriptRefID(UInt32 refID);
-
-		ScriptEffectInfo* Clone() const;
-		void CopyFrom(const ScriptEffectInfo* from);
-		static ScriptEffectInfo* Create();
-	};
-
-	// mising flags
 	UInt32				magnitude;			// 00	used as a float
 	UInt32				area;				// 04
 	UInt32				duration;			// 08
@@ -791,36 +774,6 @@ public:
 	EffectSetting		*setting;			// 14
 	float				cost;				// 18 on autocalc items this seems to be the cost
 	ConditionList		conditions;			// 1C
-
-	//bool HasActorValue() const;
-	//UInt32 GetActorValue() const;
-	//bool IsValidActorValue(UInt32 actorValue) const;
-	//void SetActorValue(UInt32 actorValue);
-
-	//bool IsScriptedEffect() const;
-	//UInt32 ScriptEffectRefId() const;
-	//UInt32 ScriptEffectSchool() const;
-	//UInt32 ScriptEffectVisualEffectCode() const;
-	//bool IsScriptEffectHostile() const;
-
-	//EffectItem* Clone() const;
-	//void CopyFrom(const EffectItem* from);
-	//static EffectItem* Create();
-	//static EffectItem* ProxyEffectItemFor(UInt32 effectCode);
-	//
-	//bool operator<(EffectItem*rhs) const;
-	//// return the magicka cost of this effect item
-	//// adjust for skill level if actorCasting is used
-	//float MagickaCost(TESForm* actorCasting = NULL) const;
-
-	//void SetMagnitude(UInt32 magnitude);
-	//void ModMagnitude(float modBy);
-	//void SetArea(UInt32 area);
-	//void ModArea(float modBy);
-	//void SetDuration(UInt32 duration);
-	//void ModDuration(float modBy);
-	//void SetRange(UInt32 range);
-	//bool IsHostile() const;
 };
 
 // 10
@@ -1937,8 +1890,8 @@ public:
 	UInt32			factionFlags;	// 34
 	TESReputation	*reputation;	// 38
 	tList<Rank>		ranks;			// 3C
-	UInt32			crimeCount44;	// 44
-	UInt32			crimeCount48;	// 48
+	UInt32			numMajorCrimes;	// 44
+	UInt32			numMinorCrimes;	// 48
 
 	bool IsFlagSet(UInt32 flag)
 	{
@@ -2269,39 +2222,38 @@ public:
 		kArchType_Turbo,
 	};
 
-	TESModel		model;			// 18
-	TESDescription	description;	// 30
-	TESFullName		fullName;		// 38
-	TESIcon			icon;			// 44
-	UInt32			unk50;			// 50
-	UInt32			unk54;			// 54
-	UInt32			effectFlags;	// 58
-	float			unk5C;			// 5C
-	TESForm			*associatedItem;// 60	// Script* for ScriptEffects
-	UInt32			unk64;			// 64
-	UInt32			resistVal;		// 68 - actor value for resistance
-	UInt16			unk6C;			// 6C
-	UInt8			pad6E[2];		// 6E
-	TESObjectLIGH	*light;			// 70
-	float			projectileSpeed;// 74
-	TESEffectShader	*effectShader;	// 78 - effect shader
-	UInt32			unk7C;			// 7C
-	UInt32			unk80;			// 80
-	UInt32			unk84;			// 84
-	UInt32			hitSound;		// 88
-	UInt32			unk8C;			// 8C
-	float			unk90;			// 90 - fMagicDefaultCEEnchantFactor
-	float			unk94;			// 94 - fMagicDefaultCEBarterFactor
-	UInt8			archtype;		// 98
-	UInt8			pad99[3];		// 99
-	UInt8			actorVal;		// 9C - actor value
-	UInt8			pad9D[3];		// 9D
-	UInt32			unkA0;			// A0
-	UInt32			unkA4;			// A4
-	UInt32			unkA8;			// A8
-	UInt32			unkAC;			// AC
+	TESModel		model;				// 18
+	TESDescription	description;		// 30
+	TESFullName		fullName;			// 38
+	TESIcon			icon;				// 44
+	UInt32			unk50;				// 50
+	UInt32			unk54;				// 54
+	UInt32			effectFlags;		// 58
+	float			baseCost;			// 5C	Unused
+	TESForm			*associatedItem;	// 60	Script* for ScriptEffects
+	UInt32			magicSchool;		// 64	Unused
+	UInt32			resistType;			// 68	actor value for resistance
+	UInt16			counterEffectCount;	// 6C
+	UInt8			pad6E[2];			// 6E
+	TESObjectLIGH	*light;				// 70
+	float			projectileSpeed;	// 74
+	TESEffectShader	*effectShader;		// 78
+	TESEffectShader	*enchantShader;		// 7C
+	TESSound		*castSound;			// 80
+	TESSound		*boltSound;			// 84
+	TESSound		*hitSound;			// 88
+	TESSound		*areaSound;			// 8C
+	float			flt90;				// 90	Unused; fMagicDefaultCEEnchantFactor
+	float			flt94;				// 94	Unused; fMagicDefaultCEBarterFactor
+	UInt8			archtype;			// 98
+	UInt8			pad99[3];			// 99
+	UInt8			actorVal;			// 9C
+	UInt8			pad9D[3];			// 9D
+	UInt32			unkA0;				// A0
+	UInt32			unkA4;				// A4
+	UInt32			unkA8;				// A8
+	UInt32			unkAC;				// AC
 };
-
 STATIC_ASSERT(sizeof(EffectSetting) == 0xB0);
 
 // 68
@@ -2601,13 +2553,13 @@ public:
 		kFlag_CanBeCarried =	2,
 		kFlag_Negative =		4,
 		kFlag_Flicker =			8,
-		kFlag_Unused =			16,
-		kFlag_OffByDefault =	32,
-		kFlag_FlickerSlow =		64,
-		kFlag_Pulse =			128,
-		kFlag_PulseSlow =		256,
-		kFlag_SpotLight =		512,
-		kFlag_SpotShadow =		1024,
+		kFlag_Unused =			0x10,
+		kFlag_OffByDefault =	0x20,
+		kFlag_FlickerSlow =		0x40,
+		kFlag_Pulse =			0x80,
+		kFlag_PulseSlow =		0x100,
+		kFlag_SpotLight =		0x200,
+		kFlag_SpotShadow =		0x400
 	};
 
 	TESFullName					fullName;		// 030
@@ -2638,10 +2590,10 @@ public:
 		else lightFlags &= ~pFlag;
 	}
 
-	__forceinline NiPointLight *CreatePointLight(TESObjectREFR *targetRef, NiNode *targetNode, bool arg3)
+	/*__forceinline NiPointLight *CreatePointLight(TESObjectREFR *targetRef, NiNode *targetNode, bool forceDynamic)
 	{
-		return ThisCall<NiPointLight*>(0x50D810, this, targetRef, targetNode, arg3);
-	}
+		return ThisCall<NiPointLight*>(0x50D810, this, targetRef, targetNode, forceDynamic);
+	}*/
 };
 STATIC_ASSERT(sizeof(TESObjectLIGH) == 0x0C8);
 
@@ -3191,7 +3143,7 @@ struct ValidBip01Names
 			TESRace				*race;
 		};
 		TESModelTextureSwap		*modelTexture;	// 04 texture or model for said form
-		NiNode					*boneNode;		// 08 NiNode for the modelled form
+		NiAVObject				*object;		// 08 NiNode for the modelled form
 		UInt32					unk00C;			// 0C Number, bool or flag
 	};
 
@@ -3355,11 +3307,17 @@ class TESKey : public TESObjectMISC
 public:
 };
 
-// D8
-class AlchemyItem : public TESBoundObject
+// 4C
+class MagicItemObject : public TESBoundObject
 {
 public:
-	MagicItem					magicItem;				// 30
+	MagicItem		magicItem;		// 30
+};
+
+// D8
+class AlchemyItem : public MagicItemObject
+{
+public:
 	TESModelTextureSwap			model;					// 4C
 	TESIcon						icon;					// 6C
 	BGSMessageIcon				messageIcon;			// 78
@@ -3378,7 +3336,6 @@ public:
 
 	bool IsPoison();
 };
-
 STATIC_ASSERT(sizeof(AlchemyItem) == 0xD8);
 
 // BGSIdleMarker (40)
@@ -3752,7 +3709,7 @@ public:
 	TESTexture				noiseTexture;			// 58
 	BSSimpleArray<NavMesh>	*navMeshArray;			// 64
 	UInt32					unk68[6];				// 68
-	SpinLock				refLock;				// 80
+	LightCS					refLock;				// 80
 	UInt32					unk88[7];				// 88
 	UInt32					actorCount;				// A4
 	UInt16					countVisibleDistant;	// A8
@@ -3780,13 +3737,13 @@ public:
 	NiNode* __fastcall Get3DNode(UInt32 index);
 	void ToggleNodes(UInt32 nodeBits, UInt8 doHide);
 
-	__forceinline void RefLockEnter()
+	void RefLockEnter()
 	{
-		ThisCall(0x40FBF0, &refLock, (const char*)0x102EAEC);
+		refLock.EnterSleep();
 	}
-	__forceinline void RefLockLeave()
+	void RefLockLeave()
 	{
-		ThisCall(0x40FBA0, &refLock);
+		refLock.Leave();
 	}
 };
 STATIC_ASSERT(sizeof(TESObjectCELL) == 0xE0);

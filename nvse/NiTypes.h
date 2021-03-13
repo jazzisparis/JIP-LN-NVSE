@@ -51,7 +51,7 @@ struct NiVector3
 	NiVector3() {}
 	NiVector3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
 
-	float operator[](char axis)
+	float& operator[](char axis)
 	{
 		return ((float*)&x)[axis];
 	}
@@ -83,7 +83,7 @@ struct NiVector4
 	NiVector4() {}
 	NiVector4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
 
-	float operator[](char axis)
+	float& operator[](char axis)
 	{
 		return ((float*)&x)[axis];
 	}
@@ -144,6 +144,11 @@ struct NiColor
 	float	r;
 	float	g;
 	float	b;
+
+	float& operator[](UInt32 which)
+	{
+		return ((float*)&r)[which];
+	}
 };
 
 // 10
@@ -153,6 +158,11 @@ struct NiColorAlpha
 	float	g;
 	float	b;
 	float	a;
+
+	float& operator[](UInt32 which)
+	{
+		return ((float*)&r)[which];
+	}
 };
 
 // 10

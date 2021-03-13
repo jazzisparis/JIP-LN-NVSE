@@ -43,6 +43,20 @@ template <typename T_Data> struct ListNode
 
 	ListNode() : data(NULL), next(NULL) {}
 	ListNode(T_Data *_data) : data(_data), next(NULL) {}
+	ListNode(const ListNode &rhs) : data(rhs.data), next(rhs.next) {}
+
+	inline ListNode& operator=(T_Data *_data)
+	{
+		data = _data;
+		next = NULL;
+		return *this;
+	}
+	inline ListNode& operator=(const ListNode &rhs)
+	{
+		data = rhs.data;
+		next = rhs.next;
+		return *this;
+	}
 
 	T_Data *Data() const {return data;}
 	ListNode *Next() const {return next;}
@@ -96,6 +110,10 @@ public:
 
 	Node	m_listHead;
 
+	tList() {}
+	tList(Item *item) {m_listHead = item;}
+	tList(const tList &rhs) {m_listHead = rhs.m_listHead;}
+
 	template <class Op>
 	UInt32 FreeNodes(Node *node, Op &compareOp) const
 	{
@@ -147,11 +165,7 @@ public:
 		return NULL;
 	}
 
-	void Init(Item *item = NULL)
-	{
-		m_listHead.data = item;
-		m_listHead.next = NULL;
-	}
+	void Init(Item *item = NULL) {m_listHead = item;}
 
 	Node *Head() const {return const_cast<Node*>(&m_listHead);}
 
