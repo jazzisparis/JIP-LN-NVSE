@@ -180,8 +180,8 @@ public:
 	virtual void	Unk_41(void);
 	virtual void	Unk_42(void);
 	virtual void	Unk_43(void);
-	virtual void	Unk_44(void);
-	virtual void	Unk_45(void);
+	virtual bool	GetHasCaughtPlayerPickpocketting();
+	virtual void	SetHasCaughtPlayerPickpocketting(bool doSet);
 	virtual void	Unk_46(void);
 	virtual void	Unk_47(void);
 	virtual void	Unk_48(void);
@@ -202,11 +202,11 @@ public:
 	virtual void	Unk_57(void);
 	virtual void	Unk_58(void);
 	virtual void	Unk_59(void);
-	virtual void	Unk_5A(void);
+	virtual void	SetAmmoInfo(ExtraContainerChanges::EntryData *_ammoInfo);
 	virtual void	Unk_5B(void);
-	virtual void	Unk_5C(void);
+	virtual void	HandleQueuedEquipItems(Actor *actor);
 	virtual void	Unk_5D(void);	// Called by 5E with count itemExtraList item
-	virtual void	Unk_5E(void);	// EquipItem and UnEquipItem doEquip item count itemExtraList bytes = [equipArgC lockUnequip unk unEquipArcC lockEquip arg14 ] (arg as from Actor::(Un)EquipItem)
+	virtual void	QueueEquipItem(Actor *actor, bool doEquip, TESForm *item, UInt32 count, ExtraDataList *xDataList, bool applyEnchantment, bool noUnequip, UInt8 arg8, UInt8 arg9, bool playSound);	// EquipItem and UnEquipItem doEquip item count itemExtraList bytes = [equipArgC lockUnequip unk unEquipArcC lockEquip arg14 ] (arg as from Actor::(Un)EquipItem)
 	virtual void	Unk_5F(void);
 	virtual void	Unk_60(void);
 	virtual NiNode	*GetProjectileNode();
@@ -218,11 +218,11 @@ public:
 	virtual void	Unk_67(void);
 	virtual NiNode	*GetWeaponNode2(UInt32 arg);
 	virtual void	Unk_69(void);
-	virtual void	Unk_6A(void);
-	virtual void	Unk_6B(void);
-	virtual void	Unk_6C(void);
-	virtual void	Unk_6D(void);
-	virtual void	Unk_6E(void);
+	virtual bool	IsUsingOneHandGrenade();
+	virtual bool	IsUsingOneHandMine();
+	virtual bool	IsUsingOneHandThrownMineOrGrenade();
+	virtual bool	IsUsingOneHandThrown();
+	virtual AnimData	*GetAnimData();
 	virtual void	Unk_6F(void);
 	virtual void	Unk_70(void);
 	virtual void	Unk_71(void);
@@ -338,9 +338,9 @@ public:
 	virtual void	Unk_DF();
 	virtual void	Unk_E0();
 	virtual void	Unk_E1();
-	virtual void	Unk_E2();
-	virtual TESIdleForm	*GetIdleForm10C();
-	virtual void	SetIdleForm10C(TESIdleForm *idleForm);
+	virtual UInt8	GetPlantedExplosive();
+	virtual TESIdleForm	*GetLastPlayedIdle();
+	virtual void	SetLastPlayedIdle(TESIdleForm *idleForm);
 	virtual void	StopIdle();
 	virtual void	Unk_E6();
 	virtual void	Unk_E7();	// float GetActorValue
@@ -362,14 +362,14 @@ public:
 	virtual void	Unk_F7();
 	virtual void	Unk_F8();
 	virtual SInt16	GetCurrentAction();
-	virtual void	Unk_FA();
-	virtual void	Unk_FB();
+	virtual BSAnimGroupSequence	*GetCurrentSequence();
+	virtual void	SetCurrentActionAndSequence(SInt16 action, BSAnimGroupSequence *sequence);
 	virtual void	Unk_FC();
 	virtual void	Unk_FD();
-	virtual void	Unk_FE();
+	virtual bool	IsReadyForAnim();
 	virtual void	Unk_FF();
-	virtual void	Unk_100();
-	virtual void	Unk_101();
+	virtual void	SetIsAiming(bool aiming);
+	virtual bool	GetIsAiming();
 	virtual void	Unk_102();
 	virtual SInt32	GetKnockedState();
 	virtual void	SetKnockedState(char state);
@@ -377,7 +377,7 @@ public:
 	virtual void	PushActorAway(Actor *pushed, float posX, float posY, float posZ, float force);
 	virtual void	Unk_107(Actor *actor);
 	virtual void	Unk_108();
-	virtual void	Unk_109();
+	virtual void	SetNthAnimSequenceWeight(UInt32 index, BSAnimGroupSequence *animSeq);
 	virtual void	Unk_10A();
 	virtual void	Unk_10B();
 	virtual void	Unk_10C();
@@ -415,7 +415,7 @@ public:
 	virtual void	Unk_12C();
 	virtual void	Unk_12D();
 	virtual bool	IsOnDialoguePackage(Actor *actor);
-	virtual void	Unk_12F();
+	virtual UInt32	GetSitSleepState();
 	virtual void	Unk_130();
 	virtual void	Unk_131();
 	virtual TESObjectREFR	*GetCurrentFurnitureRef();
@@ -877,7 +877,7 @@ public:
 	PackageInfo							interruptPackage;	// 0E4
 	UInt8								unk0FC[12];			// 0FC	Saved as one, might be Pos/Rot given size
 	UInt32								unk108;				// 108
-	TESIdleForm							*idleForm10C;		// 10C
+	TESIdleForm							*LastPlayedIdle;	// 10C
 	UInt32								unk110;				// 110  EntryData, also handled as part of weapon code. AmmoInfo.
 	ExtraContainerChanges::EntryData	*weaponInfo;		// 114
 	ExtraContainerChanges::EntryData	*ammoInfo;			// 118
@@ -886,7 +886,10 @@ public:
 	UInt8								byt121;				// 121
 	UInt8								byt122;				// 122
 	UInt8								fil123;				// 123
-	UInt32								unk124;				// 124
+	UInt8								usingOneHandGrenade;// 124
+	UInt8								usingOneHandMine;	// 125
+	UInt8								usingOneHandThrown;	// 126
+	UInt8								byte127;			// 127
 	UInt32								unk128;				// 128 Gets copied over during TESNPC.CopyFromBase
 	NiNode								*weaponNode;		// 12C
 	NiNode								*projectileNode;	// 130
@@ -896,7 +899,7 @@ public:
 	UInt8								byt137;				// 137
 	bhkCharacterController				*charCtrl;			// 138
 	UInt8								knockedState;		// 13C
-	UInt8								byte13D;			// 13D
+	UInt8								sitSleepState;		// 13D
 	UInt8								unk13E[2];			// 13E
 	TESObjectREFR						*usedFurniture;		// 140
 	UInt8								byte144;			// 144
@@ -913,7 +916,7 @@ public:
 	UInt8								byte17F;			// 17F
 	UInt32								unk180;				// 180
 	UInt32								unk184;				// 184
-	UInt8								byte188;			// 188
+	UInt8								hasCaughtPCPickpocketting;	// 188
 	UInt8								byte189;			// 189
 	UInt8								byte18A;			// 18A
 	UInt8								byte18B;			// 18B
@@ -930,7 +933,9 @@ public:
 	NiNode								*unk21C;			// 21C
 	void								*ptr220;			// 220
 	BSBound								*boundingBox;		// 224
-	UInt32								unk228[3];			// 228
+	bool								isAiming;			// 228
+	UInt8								pad229[3];			// 229
+	UInt32								unk22C[2];			// 22C
 	float								radsSec234;			// 234
 	float								rads238;			// 238
 	float								waterRadsSec;		// 23C

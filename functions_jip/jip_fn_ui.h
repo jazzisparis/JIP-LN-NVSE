@@ -1225,6 +1225,8 @@ bool Cmd_SetCursorPos_Execute(COMMAND_ARGS)
 		NiNode *cursorNode = g_interfaceManager->cursor ? g_interfaceManager->cursor->node : NULL;
 		if (cursorNode)
 		{
+			g_interfaceManager->cursorX = posX;
+			g_interfaceManager->cursorY = posY;
 			double mult = 480.0 / (int)g_screenHeight;
 			cursorNode->m_localTranslate.x = ((posX * 2) - (int)g_screenWidth) * mult;
 			cursorNode->m_localTranslate.z = ((int)g_screenHeight - (posY * 2)) * mult;

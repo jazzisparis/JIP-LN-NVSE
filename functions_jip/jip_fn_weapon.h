@@ -22,6 +22,7 @@ DEFINE_COMMAND_PLUGIN(GetWeaponSemiAutoFireDelay, , 0, 2, kParams_OneObjectID_On
 DEFINE_COMMAND_PLUGIN(SetWeaponSemiAutoFireDelay, , 0, 3, kParams_JIP_OneObjectID_OneInt_OneFloat);
 DEFINE_COMMAND_PLUGIN(GetWeaponModel, , 0, 2, kParams_OneObjectID_OneInt);
 DEFINE_COMMAND_PLUGIN(SetWeaponModel, , 0, 3, kParams_JIP_OneForm_OneInt_OneString);
+DEFINE_CMD_ALT_COND_PLUGIN(EquippedWeaponHasModType, , , 1, kParams_OneInt);
 
 bool Cmd_GetWeaponDetectionSoundLevel_Execute(COMMAND_ARGS)
 {
@@ -310,5 +311,20 @@ bool Cmd_SetWeaponModel_Execute(COMMAND_ARGS)
 			weapon->modModels[modFlags - 1].SetModelPath(s_strArgBuffer);
 		}
 	}
+	return true;
+}
+
+bool Cmd_EquippedWeaponHasModType_Execute(COMMAND_ARGS)
+{
+	UInt32 modType;
+	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &modType) && ((Actor*)thisObj)->EquippedWeaponHasMod(modType))
+		*result = 1;
+	else *result = 0;
+	return true;
+}
+
+bool Cmd_EquippedWeaponHasModType_Eval(COMMAND_ARGS_EVAL)
+{
+	*result = (thisObj->IsActor() && ((Actor*)thisObj)->EquippedWeaponHasMod((UInt32)arg1)) ? 1 : 0;
 	return true;
 }

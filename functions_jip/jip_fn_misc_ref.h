@@ -42,14 +42,14 @@ DEFINE_COMMAND_PLUGIN(IsAnimPlayingEx, , 1, 3, kParams_JIP_OneInt_TwoOptionalInt
 DEFINE_COMMAND_PLUGIN(GetRigidBodyMass, , 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(PushObject, , 1, 5, kParams_JIP_FourFloats_OneOptionalObjectRef);
 DEFINE_COMMAND_PLUGIN(MoveToContainer, , 1, 2, kParams_JIP_OneObjectRef_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetNifBlockTranslation, , 1, 2, kParams_JIP_OneString_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetNifBlockTranslation, , 1, 3, kParams_JIP_OneString_TwoOptionalInts);
 DEFINE_COMMAND_PLUGIN(SetNifBlockTranslation, , 1, 5, kParams_JIP_OneString_ThreeFloats_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetNifBlockRotation, , 1, 2, kParams_JIP_OneString_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetNifBlockRotation, , 1, 5, kParams_JIP_OneString_ThreeFloats_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetNifBlockScale, , 1, 1, kParams_OneString);
-DEFINE_COMMAND_PLUGIN(SetNifBlockScale, , 1, 2, kParams_JIP_OneString_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetNifBlockFlag, , 1, 2, kParams_JIP_OneString_OneInt);
-DEFINE_COMMAND_PLUGIN(SetNifBlockFlag, , 1, 3, kParams_JIP_OneString_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetNifBlockRotation, , 1, 3, kParams_JIP_OneString_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(SetNifBlockRotation, , 1, 6, kParams_JIP_OneString_ThreeFloats_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(GetNifBlockScale, , 1, 2, kParams_JIP_OneString_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetNifBlockScale, , 1, 3, kParams_JIP_OneString_OneFloat_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetNifBlockFlag, , 1, 3, kParams_JIP_OneString_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetNifBlockFlag, , 1, 4, kParams_JIP_OneString_TwoInts_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetObjectVelocity, , 1, 1, kParams_JIP_OneOptionalAxis);
 DEFINE_COMMAND_PLUGIN(GetAngularVelocity, , 1, 2, kParams_JIP_OneString_OneAxis);
 DEFINE_COMMAND_PLUGIN(SetAngularVelocity, , 1, 3, kParams_JIP_OneString_OneAxis_OneFloat);
@@ -59,7 +59,7 @@ DEFINE_COMMAND_PLUGIN(GetAnimSequenceFrequency, , 1, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(SetAnimSequenceFrequency, , 1, 2, kParams_JIP_OneString_OneFloat);
 DEFINE_COMMAND_PLUGIN(MoveToNode, , 1, 5, kParams_JIP_OneObjectRef_OneString_ThreeOptionalFloats);
 DEFINE_COMMAND_PLUGIN(GetPlayerPerks, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetNifBlockParentNodes, , 1, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(GetNifBlockParentNodes, , 1, 2, kParams_JIP_OneString_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetCrosshairRefEx, , 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(IsMobile, , 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(IsGrabbable, , 1, 0, NULL);
@@ -75,7 +75,7 @@ DEFINE_COMMAND_PLUGIN(ModelHasBlock, , 0, 22, kParams_JIP_OneForm_OneFormatStrin
 DEFINE_COMMAND_PLUGIN(GetRayCastRef, , 1, 2, kParams_JIP_OneOptionalInt_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetRayCastMaterial, , 1, 2, kParams_JIP_OneOptionalInt_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetCollisionNodes, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetChildBlocks, , 1, 1, kParams_JIP_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(GetChildBlocks, , 1, 2, kParams_JIP_OneOptionalString_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetBlockTextureSet, , 1, 1, kParams_OneString);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
@@ -264,28 +264,51 @@ bool Cmd_GetTeammates_Execute(COMMAND_ARGS)
 
 bool Cmd_MoveToCell_Execute(COMMAND_ARGS)
 {
-	TESForm *form;
+	*result = 0;
+	TESObjectCELL *cell;
 	NiVector3 posVector;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &posVector.x, &posVector.y, &posVector.z) && thisObj->MoveToCell(form, &posVector))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &posVector.x, &posVector.y, &posVector.z))
+	{
+		if NOT_ID(cell, TESObjectCELL)
+		{
+			if NOT_ID(cell, TESWorldSpace)
+				return true;
+			cell = ((TESWorldSpace*)cell)->cell;
+		}
+		thisObj->MoveToCell(cell, &posVector);
 		*result = 1;
-	else *result = 0;
+	}
 	return true;
 }
 
 bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	TESObjectCELL *cell;
+	NiVector3 *posVector;
 	if (thisObj->IsActor())
 	{
 		Actor *actor = (Actor*)thisObj;
-		if (actor->MoveToCell(actor->startingWorldOrCell, &actor->startingPos)) *result = 1;
-		return true;
+		cell = (TESObjectCELL*)actor->startingWorldOrCell;
+		posVector = &actor->startingPos;
 	}
-	ExtraStartingPosition *xStartingPos = GetExtraType(&thisObj->extraDataList, StartingPosition);
-	if (!xStartingPos) return true;
-	ExtraStartingWorldOrCell *xStartingCell = GetExtraType(&thisObj->extraDataList, StartingWorldOrCell);
-	if (thisObj->MoveToCell(xStartingCell ? xStartingCell->worldOrCell : thisObj->GetParentCell(), &xStartingPos->posVector))
-		*result = 1;
+	else
+	{
+		ExtraStartingPosition *xStartingPos = GetExtraType(&thisObj->extraDataList, StartingPosition);
+		if (!xStartingPos) return true;
+		ExtraStartingWorldOrCell *xStartingCell = GetExtraType(&thisObj->extraDataList, StartingWorldOrCell);
+		cell = xStartingCell ? (TESObjectCELL*)xStartingCell->worldOrCell : thisObj->GetParentCell();
+		posVector = &xStartingPos->posVector;
+	}
+	if (!cell) return true;
+	if NOT_ID(cell, TESObjectCELL)
+	{
+		if NOT_ID(cell, TESWorldSpace)
+			return true;
+		cell = ((TESWorldSpace*)cell)->cell;
+	}
+	thisObj->MoveToCell(cell, posVector);
+	*result = 1;
 	return true;
 }
 
@@ -718,16 +741,21 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 	UInt8 numArgs = NUM_ARGS;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &posXmod, &posYmod, &posZmod))
 	{
-		NiVector3 coords;
-		if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, maxRange))
+		TESObjectCELL *cell = g_thePlayer->parentCell;
+		if (cell)
 		{
-			if (numArgs > 1)
+			NiVector3 coords;
+			if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, maxRange))
 			{
-				coords.x += posXmod;
-				coords.y += posYmod;
-				coords.z += posZmod;
+				if (numArgs > 1)
+				{
+					coords.x += posXmod;
+					coords.y += posYmod;
+					coords.z += posZmod;
+				}
+				thisObj->MoveToCell(cell, &coords);
+				*result = 1;
 			}
-			*result = thisObj->MoveToCell(g_thePlayer->parentCell, &coords);
 		}
 	}
 	return true;
@@ -920,13 +948,47 @@ bool Cmd_MoveToContainer_Execute(COMMAND_ARGS)
 	return true;
 }
 
+__declspec(naked) NiAVObject* __fastcall GetNifBlock(TESObjectREFR *thisObj, UInt32 pcNode)
+{
+	__asm
+	{
+		test	dl, dl
+		jz		notPlayer
+		cmp		dword ptr [ecx+0xC], 0x14
+		jnz		notPlayer
+		test	dl, 1
+		jz		get1stP
+		mov		eax, [ecx+0x64]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x14]
+		jmp		gotRoot
+	get1stP:
+		mov		eax, [ecx+0x694]
+		jmp		gotRoot
+	notPlayer:
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x1D0]
+	gotRoot:
+		test	eax, eax
+		jz		done
+		mov		edx, offset s_strArgBuffer
+		cmp		[edx], 0
+		jz		done
+		mov		ecx, eax
+		call	NiNode::GetBlock
+	done:
+		retn
+	}
+}
+
 bool Cmd_GetNifBlockTranslation_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	UInt32 getWorld = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &getWorld))
+	UInt32 getWorld = 0, pcNode = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &getWorld, &pcNode))
 	{
-		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
 		if (niBlock)
 		{
 			NiVector3 &transltn = getWorld ? niBlock->m_worldTranslate : niBlock->m_localTranslate;
@@ -940,15 +1002,14 @@ bool Cmd_GetNifBlockTranslation_Execute(COMMAND_ARGS)
 bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 {
 	NiVector3 transltn;
-	UInt32 transform = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &transltn.x, &transltn.y, &transltn.z, &transform))
+	UInt32 pcNode = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &transltn.x, &transltn.y, &transltn.z, &pcNode))
 	{
-		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
 		if (niBlock)
 		{
 			niBlock->m_localTranslate = transltn;
-			UpdateInfo updInfo;
-			niBlock->UpdateBounds(&updInfo);
+			niBlock->Update();
 		}
 	}
 	return true;
@@ -957,10 +1018,10 @@ bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	UInt32 getWorld = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &getWorld))
+	UInt32 getWorld = 0, pcNode = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &getWorld, &pcNode))
 	{
-		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
 		if (niBlock)
 		{
 			float rotX, rotY, rotZ;
@@ -976,16 +1037,18 @@ bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 {
 	float rotX, rotY, rotZ;
-	UInt32 transform = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &rotX, &rotY, &rotZ, &transform))
+	UInt32 rotate = 0, pcNode = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &rotX, &rotY, &rotZ, &rotate, &pcNode))
 	{
-		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
 		if (niBlock)
 		{
-			if (transform) niBlock->m_localRotate.Rotate(rotX * kFltPId180, rotY * kFltPId180, rotZ * kFltPId180);
-			else niBlock->m_localRotate.RotationMatrix(rotX * kFltPId180, rotY * kFltPId180, rotZ * kFltPId180);
-			UpdateInfo updInfo;
-			niBlock->UpdateBounds(&updInfo);
+			rotX *= kFltPId180;
+			rotY *= kFltPId180;
+			rotZ *= kFltPId180;
+			if (rotate) niBlock->m_localRotate.Rotate(rotX, rotY, rotZ);
+			else niBlock->m_localRotate.RotationMatrix(rotX, rotY, rotZ);
+			niBlock->Update();
 		}
 	}
 	return true;
@@ -994,9 +1057,10 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 bool Cmd_GetNifBlockScale_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	UInt32 pcNode = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &pcNode))
 	{
-		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
 		if (niBlock) *result = niBlock->m_localScale;
 	}
 	return true;
@@ -1005,14 +1069,14 @@ bool Cmd_GetNifBlockScale_Execute(COMMAND_ARGS)
 bool Cmd_SetNifBlockScale_Execute(COMMAND_ARGS)
 {
 	float newScale;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &newScale))
+	UInt32 pcNode = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &newScale, &pcNode))
 	{
-		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
 		if (niBlock)
 		{
 			niBlock->m_localScale = newScale;
-			UpdateInfo updInfo;
-			niBlock->UpdateBounds(&updInfo);
+			niBlock->Update();
 		}
 	}
 	return true;
@@ -1021,10 +1085,10 @@ bool Cmd_SetNifBlockScale_Execute(COMMAND_ARGS)
 bool Cmd_GetNifBlockFlag_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	UInt32 flagID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &flagID) && (flagID <= 31))
+	UInt32 flagID, pcNode = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &flagID, &pcNode) && (flagID <= 31))
 	{
-		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
 		if (niBlock) *result = (niBlock->m_flags & (1 << flagID)) != 0;
 	}
 	return true;
@@ -1032,10 +1096,10 @@ bool Cmd_GetNifBlockFlag_Execute(COMMAND_ARGS)
 
 bool Cmd_SetNifBlockFlag_Execute(COMMAND_ARGS)
 {
-	UInt32 flagID, doSet;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &flagID, &doSet) && (flagID <= 31))
+	UInt32 flagID, doSet, pcNode = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &flagID, &doSet, &pcNode) && (flagID <= 26))
 	{
-		NiAVObject *niBlock = thisObj->GetNiBlock(s_strArgBuffer);
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
 		if (niBlock)
 		{
 			if (doSet) niBlock->m_flags |= (1 << flagID);
@@ -1198,13 +1262,18 @@ bool Cmd_MoveToNode_Execute(COMMAND_ARGS)
 	NiVector3 posMods(0, 0, 0);
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &targetRef, &s_strArgBuffer, &posMods.x, &posMods.y, &posMods.z))
 	{
-		NiNode *targetNode = targetRef->GetNode(s_strArgBuffer);
-		if (targetNode)
+		TESObjectCELL *cell = targetRef->GetParentCell();
+		if (cell)
 		{
-			posMods.x += targetNode->m_worldTranslate.x;
-			posMods.y += targetNode->m_worldTranslate.y;
-			posMods.z += targetNode->m_worldTranslate.z;
-			*result = thisObj->MoveToCell(targetRef->GetParentCell(), &posMods);
+			NiNode *targetNode = targetRef->GetNode(s_strArgBuffer);
+			if (targetNode)
+			{
+				posMods.x += targetNode->m_worldTranslate.x;
+				posMods.y += targetNode->m_worldTranslate.y;
+				posMods.z += targetNode->m_worldTranslate.z;
+				thisObj->MoveToCell(cell, &posMods);
+				*result = 1;
+			}
 		}
 	}
 	return true;
@@ -1233,9 +1302,17 @@ bool Cmd_GetPlayerPerks_Execute(COMMAND_ARGS)
 bool Cmd_GetNifBlockParentNodes_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	UInt32 pcNode = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &pcNode))
 	{
-		NiNode *rootNode = thisObj->GetNiNode();
+		NiNode *rootNode;
+		if (pcNode && (thisObj->refID == 0x14))
+		{
+			if (pcNode & 1)
+				rootNode = thisObj->renderState ? thisObj->renderState->niNode14 : NULL;
+			else rootNode = ((PlayerCharacter*)thisObj)->node1stPerson;
+		}
+		else rootNode = thisObj->GetNiNode();
 		if (rootNode)
 		{
 			NiAVObject *niBlock = rootNode->GetBlock(s_strArgBuffer);
@@ -1353,20 +1430,16 @@ bool Cmd_AttachLight_Execute(COMMAND_ARGS)
 			NiPointLight *pointLight;
 			for (auto iter = objNode->m_children.Begin(); !iter.End(); ++iter)
 			{
-				if (!(pointLight = (NiPointLight*)*iter) || NOT_TYPE(pointLight, NiPointLight))
+				if (!(pointLight = (NiPointLight*)*iter) || NOT_TYPE(pointLight, NiPointLight) || !(pointLight->m_flags & 0x20000000) || !pointLight->isAttached)
 					continue;
-				if (!(pointLight->m_flags & 0x20000000) || !(pointLight->lightFlags & 0x8000))
-					return true;
-				objNode->RemoveObject(pointLight);
-				break;
+				SetLightProperties(pointLight, lightForm);
+				goto done;
 			}
 			pointLight = CreatePointLight(lightForm, objNode);
-			if (pointLight)
-			{
-				pointLight->m_localTranslate = offsetMod;
-				pointLight->lightFlags |= 0x8000;
-				*result = 1;
-			}
+			pointLight->isAttached = true;
+		done:
+			pointLight->m_localTranslate = offsetMod;
+			*result = 1;
 		}
 	}
 	return true;
@@ -1382,7 +1455,7 @@ bool Cmd_RemoveLight_Execute(COMMAND_ARGS)
 			NiPointLight *pointLight;
 			for (auto iter = objNode->m_children.Begin(); !iter.End(); ++iter)
 			{
-				if (!(pointLight = (NiPointLight*)*iter) || !(pointLight->m_flags & 0x20000000) || NOT_TYPE(pointLight, NiPointLight) || !(pointLight->lightFlags & 0x8000))
+				if (!(pointLight = (NiPointLight*)*iter) || NOT_TYPE(pointLight, NiPointLight) || !(pointLight->m_flags & 0x20000000) || !pointLight->isAttached)
 					continue;
 				objNode->RemoveObject(pointLight);
 				break;
@@ -1473,8 +1546,6 @@ bool RegisterInsertObject(COMMAND_ARGS)
 		else if (!form->IsBoundObject())
 			return true;
 
-		auto formsMap = (s_insertObjectFlag == kHookFormFlag6_InsertNode) ? &s_insertNodeMap : &s_attachModelMap;
-
 		char *nodeName = NULL, *objectName = strrchr(s_strArgBuffer, '|');
 		if (objectName)
 		{
@@ -1483,21 +1554,32 @@ bool RegisterInsertObject(COMMAND_ARGS)
 		}
 		else objectName = s_strArgBuffer;
 
+		if (!*objectName) return true;
+
+		bool insertNode = s_insertObjectFlag == kHookFormFlag6_InsertNode;
+		auto formsMap = insertNode ? &s_insertNodeMap : &s_attachModelMap;
+
 		if (doInsert)
 		{
+			if (!insertNode)
+			{
+				StrCopy(StrLenCopy(s_dataPath, "meshes\\", 7), objectName);
+				if (!FileExistsEx(s_dataPathFull))
+					return true;
+			}
 			NodeNamesMap *namesMap;
 			if (formsMap->Insert(form, &namesMap))
 				form->SetJIPFlag(s_insertObjectFlag, true);
 			if (!(*namesMap)[NiString(nodeName)].Insert(objectName))
-				goto done;
+				return true;
 		}
 		else
 		{
 			auto findForm = formsMap->Find(form);
-			if (!findForm) goto done;
+			if (!findForm) return true;
 			auto findNode = findForm().FindOp(NiString(nodeName));
 			if (!findNode || !findNode().Erase(objectName))
-				goto done;
+				return true;
 			if (findNode().Empty())
 			{
 				findNode.Remove(findForm());
@@ -1508,9 +1590,8 @@ bool RegisterInsertObject(COMMAND_ARGS)
 				}
 			}
 		}
-		*result = 1;
-	done:
 		s_insertObjects = !s_insertNodeMap.Empty() || !s_attachModelMap.Empty();
+		*result = 1;
 	}
 	return true;
 }
@@ -1541,10 +1622,14 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 	s_strArgBuffer[0] = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &targetRef, &syncRot, &s_syncPositionMods.z, &s_strArgBuffer))
 	{
+		TESObjectCELL *cell;
 		if (targetRef)
 		{
 			if (g_thePlayer->GetDistance(targetRef) > 1024.0F)
-				g_thePlayer->MoveToCell(targetRef->GetParentCell(), targetRef->PosVector());
+			{
+				cell = targetRef->GetParentCell();
+				if (cell) g_thePlayer->MoveToCell(cell, targetRef->PosVector());
+			}
 			s_syncPositionRef = targetRef;
 			s_syncPositionFlags = (syncRot != 0);
 			_mm_store_ps(&s_syncPositionPos.x, _mm_loadu_ps(&targetRef->posX));
@@ -1557,7 +1642,8 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 			if (targetRef = s_syncPositionRef)
 			{
 				s_syncPositionRef = NULL;
-				g_thePlayer->MoveToCell(targetRef->GetParentCell(), (NiVector3*)&s_syncPositionPos);
+				cell = targetRef->GetParentCell();
+				if (cell) g_thePlayer->MoveToCell(cell, (NiVector3*)&s_syncPositionPos);
 			}
 		}
 	}
@@ -1699,11 +1785,13 @@ void __fastcall GetChildBlocks(NiNode *node)
 
 bool Cmd_GetChildBlocks_Execute(COMMAND_ARGS)
 {
+	*result = 0;
 	s_strArgBuffer[0] = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	UInt32 pcNode = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &pcNode))
 	{
-		NiNode *objNode = thisObj->GetNode(s_strArgBuffer);
-		if (objNode)
+		NiNode *objNode = (NiNode*)GetNifBlock(thisObj, pcNode);
+		if (objNode && objNode->GetNiNode())
 		{
 			s_tempElements.Clear();
 			GetChildBlocks(objNode);
@@ -1717,6 +1805,7 @@ bool Cmd_GetChildBlocks_Execute(COMMAND_ARGS)
 
 bool Cmd_GetBlockTextureSet_Execute(COMMAND_ARGS)
 {
+	*result = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
 	{
 		NiAVObject *block = thisObj->GetNiBlock(s_strArgBuffer);

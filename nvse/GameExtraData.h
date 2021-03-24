@@ -322,7 +322,6 @@ public:
 	{
 	public:
 		void Clear();
-		ExtraDataList *RemoveByType(ExtraDataList *xDataList, UInt32 type);
 		void CleanEmpty();
 	};
 
@@ -339,7 +338,6 @@ public:
 		void Cleanup();
 		bool __fastcall HasExtraType(UInt8 xType);
 		bool HasExtraLeveledItem();
-		void RemoveCannotWear();
 		ExtraDataList *GetEquippedExtra();
 		float CalculateWeaponDamage(Actor *owner, float condition, TESForm *ammo);
 	};

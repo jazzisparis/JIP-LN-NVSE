@@ -495,9 +495,13 @@ __declspec(naked) void NiTMapBase<T_Key, T_Data>::FreeBuckets()
 		mov		edi, [ecx+4]
 		ALIGN 16
 	bucketIter:
+		dec		edi
+		js		bucketEnd
 		mov		eax, [esi]
+		add		esi, 4
 		test	eax, eax
-		jz		bucketNext
+		jz		bucketIter
+		ALIGN 16
 	entryIter:
 		push	dword ptr [eax]
 		push	eax
@@ -511,12 +515,11 @@ __declspec(naked) void NiTMapBase<T_Key, T_Data>::FreeBuckets()
 		pop		eax
 		test	eax, eax
 		jnz		entryIter
-		mov		[esi], eax
-	bucketNext:
-		add		esi, 4
-		dec		edi
-		jnz		bucketIter
-		mov		[ebx+0xC], eax
+		mov		[esi-4], eax
+		jmp		bucketIter
+		ALIGN 16
+	bucketEnd:
+		mov		dword ptr [ebx+0xC], 0
 		pop		edi
 		pop		esi
 		pop		ebx

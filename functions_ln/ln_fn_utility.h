@@ -33,18 +33,11 @@ bool Cmd_GetLNVersion_Execute(COMMAND_ARGS)
 
 bool Cmd_FileExists_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 checkDir = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, s_dataPath, &checkDir))
-	{
-		ReplaceChr(s_dataPath, '/', '\\');
-		DWORD attr = GetFileAttributes(s_dataPathFull);
-		if (attr != INVALID_FILE_ATTRIBUTES)
-			*result = !(attr & FILE_ATTRIBUTE_DIRECTORY) == !checkDir;
-		else if (!checkDir && GetFileArchived(s_dataPath))
-			*result = 2;
-		DoConsolePrint(result);
-	}
+		*result = FileExistsEx(s_dataPathFull, checkDir != 0);
+	else *result = 0;
+	DoConsolePrint(result);
 	return true;
 }
 

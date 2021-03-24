@@ -430,42 +430,48 @@ __declspec(naked) void CycleMainLoopCallbacks()
 		mov		edi, [ebx+4]
 		ALIGN 16
 	cycleHead:
+		dec		edi
+		js		cycleEnd
 		mov		ecx, [esi]
+		add		esi, 4
 		cmp		[ecx+9], 0
-		jnz		cycleNext
+		jnz		cycleHead
 		cmp		[ecx+0xA], 0
 		jnz		isScript
 		dec		dword ptr [ecx+0x14]
-		jnz		cycleNext
+		jnz		cycleHead
 		dec		dword ptr [ecx+0xC]
 		jnz		resetCount
 		mov		[ecx+9], 1
 		jmp		doExecute
+		ALIGN 16
 	resetCount:
 		mov		eax, [ecx+0x10]
 		mov		[ecx+0x14], eax
 	doExecute:
 		call	MainLoopCallback::Execute
-		jmp		cycleNext
+		jmp		cycleHead
+		ALIGN 16
 	isScript:
 		mov		eax, g_interfaceManager
 		cmp		[eax+0xC], 1
 		seta	al
 		inc		al
 		test	al, [ecx+0xB]
-		jz		cycleNext
+		jz		cycleHead
 		dec		dword ptr [ecx+0x14]
-		jnz		cycleNext
+		jnz		cycleHead
 		mov		eax, [ecx+0x18]
 		cmp		eax, 0x14
 		jz		doCallFunc
 		push	eax
 		call	LookupFormByRefID
-		mov		ecx, [esi]
+		mov		ecx, [esi-4]
 		cmp		[ecx+4], eax
 		jz		doCallFunc
 		mov		[ecx+9], 1
-		jmp		cycleNext
+		jmp		cycleHead
+		ALIGN 16
 	doCallFunc:
 		mov		edx, [ecx+0x10]
 		mov		[ecx+0x14], edx
@@ -476,25 +482,26 @@ __declspec(naked) void CycleMainLoopCallbacks()
 		push	dword ptr [ecx]
 		call	CallFunction
 		add		esp, 0x14
+		jmp		cycleHead
 		ALIGN 16
-	cycleNext:
-		add		esi, 4
-		dec		edi
-		jnz		cycleHead
+	cycleEnd:
 		mov		eax, [ebx]
 		mov		edi, [ebx+4]
 		lea		esi, [eax+edi*4]
 		ALIGN 16
 	removeHead:
+		dec		edi
+		js		done
 		sub		esi, 4
 		mov		ecx, [esi]
 		cmp		[ecx+9], 0
-		jz		removeNext
+		jz		removeHead
 		call	MainLoopCallback::Destroy
 		mov		eax, [ebx+4]
-		dec		dword ptr [ebx+4]
+		dec		eax
+		mov		[ebx+4], eax
 		sub		eax, edi
-		jz		removeNext
+		jz		removeHead
 		shl		eax, 2
 		push	eax
 		lea		edx, [esi+4]
@@ -502,10 +509,9 @@ __declspec(naked) void CycleMainLoopCallbacks()
 		push	esi
 		call	MemCopy
 		add		esp, 0xC
+		jmp		removeHead
 		ALIGN 16
-	removeNext:
-		dec		edi
-		jnz		removeHead
+	done:
 		pop		edi
 		pop		esi
 		pop		ebx
@@ -515,9 +521,6 @@ __declspec(naked) void CycleMainLoopCallbacks()
 
 UInt32 s_LNEventFlags = 0;
 void LN_ProcessEvents();
-
-Vector<NiPointLight*> s_activePtLights(0x40);
-void UpdateActiveLights();
 
 bool s_sleepSemaphore = false;
 
@@ -538,13 +541,6 @@ __declspec(naked) void GameMainLoopHook()
 		jz		doneEvents
 		call	LN_ProcessEvents
 	doneEvents:
-		cmp		s_activePtLights.numItems, 0
-		jz		doneLights
-		mov		ecx, g_interfaceManager
-		cmp		dword ptr [ecx+0xC], 1
-		jnz		doneLights
-		call	UpdateActiveLights
-	doneLights:
 		cmp		s_tempContChangesEntries.numEntries, 0
 		jz		doneEntries
 		call	DoDeferredFreeEntries
@@ -1034,19 +1030,19 @@ __declspec(naked) void ResetHPCommandHook()
 		test	eax, eax
 		jz		contRetn
 		mov		edx, [ebp+0x10]
+		ALIGN 16
 	loopHead:
 		mov		ecx, [eax]
 		test	ecx, ecx
 		jz		contRetn
-		test	dword ptr [ecx+4], 0x40
-		jz		loopNext
+		mov		eax, [eax+4]
+		test	byte ptr [ecx+4], 0x40
+		jz		loopHead
 		mov		ecx, [ecx]
 		test	ecx, ecx
 		jz		skipRetn
 		cmp		ecx, edx
 		jz		skipRetn
-	loopNext:
-		mov		eax, [eax+4]
 		jmp		loopHead
 	contRetn:
 		JMP_EAX(0x5C6B91)
@@ -1182,18 +1178,35 @@ __declspec(naked) void TeleportWithPCHook()
 	}
 }
 
+bool s_forceEquipCall = false;
+
+__declspec(naked) bool __fastcall GetCannotWearHook(ExtraDataList *xData)
+{
+	__asm
+	{
+		test	byte ptr [ecx+0xF], 0x40
+		jz		done
+		cmp		s_forceEquipCall, 1
+	done:
+		setnz	al
+		retn
+	}
+}
+
 __declspec(naked) void EquipItemHook()
 {
 	__asm
 	{
 		movzx	eax, byte ptr [ecx+4]
+		cmp		al, kFormType_TESObjectWEAP
+		jnz		contRetn
+		cmp		s_forceEquipCall, 0
+		jnz		contRetn
+		cmp		dword ptr [ebp+4], 0x9155A2
+		jz		contRetn
 		mov		ecx, [ebp-0x80]
 		test	byte ptr [ecx+0x105], kHookActorFlag1_LockedEquipment
 		jz		contRetn
-		cmp		dword ptr [ebp+4], 0x9155A2
-		jz		contRetn
-		cmp		eax, kFormType_TESObjectWEAP
-		jnz		contRetn
 		JMP_EDX(0x88D27A)
 	contRetn:
 		JMP_EDX(0x88C87F)
@@ -1212,7 +1225,7 @@ __declspec(naked) void ReEquipAllHook()
 		JMP_EAX(0x6047CE)
 	proceed:
 		mov		eax, [ebp]
-		cmp		dword ptr [eax+4], 0x5CD73B
+		cmp		dword ptr [eax+4], 0x5CD73B	//	Cmd_SetCombatStyle_Execute
 		jnz		skipRetn
 		mov		ecx, [ecx+0x68]
 		test	ecx, ecx
@@ -1255,8 +1268,7 @@ __declspec(naked) void ReEquipAllHook()
 		cmp		byte ptr [ecx+0xF4], 9
 		jbe		xData
 		cmp		dword ptr [eax+4], 1
-		jle		xData
-		mov		edx, [eax+4]
+		cmova	edx, [eax+4]
 	xData:
 		mov		eax, [eax]
 		test	eax, eax
@@ -2031,26 +2043,25 @@ __declspec(naked) bool __fastcall HandleSetQuestStage(TESQuest *quest, UInt8 sta
 		mov		edi, [eax+4]
 		ALIGN 16
 	iterHead:
-		test	edi, edi
-		jz		iterEnd
+		dec		edi
+		js		iterEnd
+		mov		ecx, esi
+		add		esi, 8
 		mov		edx, [ebp-8]
-		cmp		byte ptr [esi], dl
-		jnz		iterNext
+		cmp		[ecx], dl
+		jnz		iterHead
 		push	edx
 		push	dword ptr [ebp-4]
 		push	2
 		push	offset s_callRes
 		push	0
 		push	0
-		push	dword ptr [esi+4]
+		push	dword ptr [ecx+4]
 		call	CallFunction
 		add		esp, 0x1C
-		or		bl, byte ptr [esi+1]
-		ALIGN 16
-	iterNext:
-		add		esi, 8
-		dec		edi
+		or		bl, [esi-7]
 		jmp		iterHead
+		ALIGN 16
 	iterEnd:
 		pop		edi
 		pop		esi
@@ -2457,7 +2468,7 @@ __declspec(naked) void OnHitEventHook()
 {
 	__asm
 	{
-		test	dword ptr [ebp+0x10], 0x80
+		test	byte ptr [ebp+0x10], 0x80
 		jz		done
 		/*cmp		dword ptr [ebp+8], 0
 		jz		done*/
@@ -2730,12 +2741,14 @@ __declspec(naked) NiPointLight* __fastcall SetLightProperties(NiPointLight *ptLi
 	__asm
 	{
 		or		byte ptr [ecx+0x33], 0x20
-		mov		eax, [edx+0xA8]
-		and		eax, 0x7FF
-		mov		[ecx+0x9E], ax
+		mov		[ecx+0xE8], edx
+		test	byte ptr [edx+0xA8], 0x20
+		setnz	al
+		or		[ecx+0x30], al
 		mov		eax, [edx+0xB4]
 		mov		[ecx+0xC4], eax
-		mov		[ecx+0xE8], eax
+		pxor	xmm0, xmm0
+		movdqu	xmmword ptr [ecx+0xC8], xmm0
 		xor		eax, eax
 		mov		[ecx+0xF0], eax
 		mov		[ecx+0xF8], eax
@@ -2757,7 +2770,6 @@ __declspec(naked) NiPointLight* __fastcall SetLightProperties(NiPointLight *ptLi
 		fld1
 		fst		dword ptr [ecx+0xE4]
 		fstp	dword ptr [ecx+0xF4]
-		mov		eax, [ecx+0xC4]
 		mov		eax, ecx
 		retn
 	}
@@ -2778,36 +2790,39 @@ __declspec(naked) void __fastcall InitPointLights(NiNode *niNode)
 		mov		edi, eax
 		ALIGN 16
 	blockIter:
+		dec		edi
+		js		blockEnd
 		mov		ecx, [esi]
+		add		esi, 4
 		test	ecx, ecx
-		jz		blockNext
+		jz		blockIter
 		mov		edx, [ecx]
 		call	dword ptr [edx+0xC]
 		test	eax, eax
 		jz		notNode
 		call	InitPointLights
-		jmp		blockNext
+		jmp		blockIter
 		ALIGN 16
 	notNode:
 		cmp		edx, kVtbl_NiPointLight
-		jnz		blockNext
+		jnz		blockIter
 		movzx	eax, word ptr [ecx+0x14]
 		test	eax, eax
-		jz		blockNext
+		jz		blockIter
 		push	ebx
 		mov		ebx, [ecx+0x10]
 		mov		edx, s_LIGH_EDID
 		ALIGN 16
 	xtraIter:
 		dec		eax
-		js		popEBX
+		js		xtraEnd
 		mov		ecx, [ebx+eax*4]
 		test	ecx, ecx
 		jz		xtraIter
 		cmp		[ecx+8], edx
 		jnz		xtraIter
 		push	eax
-		mov		ebx, [esi]
+		mov		ebx, [esi-4]
 		cmp		dword ptr [ecx], kVtbl_NiStringExtraData
 		jnz		removeExtra
 		mov		eax, [ecx+0xC]
@@ -2822,16 +2837,21 @@ __declspec(naked) void __fastcall InitPointLights(NiNode *niNode)
 		mov		ecx, ebx
 		call	SetLightProperties
 		ALIGN 16
+	parentIter:
+		mov		eax, [eax+0x18]
+		test	byte ptr [eax+0x33], 0x20
+		jnz		removeExtra
+		or		byte ptr [eax+0x33], 0x20
+		cmp		eax, ebp
+		jnz		parentIter
 	removeExtra:
 		mov		ecx, ebx
 		CALL_EAX(0xA5B990)
-	popEBX:
+	xtraEnd:
 		pop		ebx
+		jmp		blockIter
 		ALIGN 16
-	blockNext:
-		add		esi, 4
-		dec		edi
-		jnz		blockIter
+	blockEnd:
 		pop		edi
 		pop		esi
 	done:
@@ -2854,14 +2874,18 @@ __declspec(naked) void LoadNifRetnNodeHook()
 		test	byte ptr [eax+0x33], 0x40
 		jnz		done
 		or		byte ptr [eax+0x33], 0x40
-		push	eax
+		push	ebp
+		mov		ebp, eax
 		mov		ecx, eax
 		call	InitPointLights
-		pop		eax
+		mov		eax, ebp
+		pop		ebp
 	done:
 		retn
 	}
 }
+
+Vector<NiPointLight*> s_activePtLights(0x40);
 
 __declspec(naked) NiPointLight* __fastcall DestroyNiPointLightHook(NiPointLight *ptLight, int EDX, bool doFree)
 {
@@ -2913,22 +2937,15 @@ __declspec(naked) NiPointLight* __fastcall CreatePointLight(TESObjectLIGH *light
 		push	ecx
 		call	sprintf_s
 		add		esp, 0x10
-		lea		ecx, [ebp-0x24]
-		push	ecx
-		CALL_EAX(0xA5B690)
-		pop		ecx
-		push	eax
-		push	esp
+		lea		edx, [ebp-0x24]
 		mov		ecx, edi
-		CALL_EAX(0xA5B950)
-		pop		ecx
-		mov		eax, [edi+8]
-		lock dec dword ptr [eax-8]
+		call	NiObjectNET::SetName
 		push	1
 		push	edi
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xDC]
+		or		byte ptr [edi+0x33], 0x40
 		push	edi
 		mov		ecx, offset s_activePtLights
 		call	Vector<NiPointLight*>::Append
@@ -2953,30 +2970,33 @@ __declspec(naked) void __fastcall AddPointLights(NiNode *objNode)
 		mov		edi, eax
 		ALIGN 16
 	iterHead:
+		dec		edi
+		js		iterEnd
 		mov		ecx, [esi]
+		add		esi, 4
 		test	ecx, ecx
-		jz		iterNext
-		test	byte ptr [ecx+0x33], 0x20
-		jnz		isLight
-		mov		eax, [ecx]
-		call	dword ptr [eax+0xC]
+		jz		iterHead
+		mov		edx, [ecx]
+		call	dword ptr [edx+0xC]
 		test	eax, eax
-		jz		iterNext
+		jz		notNode
+		test	byte ptr [ecx+0x33], 0x20
+		jz		iterHead
 		call	AddPointLights
-		jmp		iterNext
+		jmp		iterHead
 		ALIGN 16
-	isLight:
-		test	byte ptr [ecx+0x33], 0x40
-		jnz		iterNext
+	notNode:
+		cmp		edx, kVtbl_NiPointLight
+		jnz		iterHead
+		test	byte ptr [ecx+0x33], 0x60
+		jp		iterHead
 		or		byte ptr [ecx+0x33], 0x40
 		push	ecx
 		mov		ecx, offset s_activePtLights
 		call	Vector<NiPointLight*>::Append
+		jmp		iterHead
 		ALIGN 16
-	iterNext:
-		add		esi, 4
-		dec		edi
-		jnz		iterHead
+	iterEnd:
 		pop		edi
 		pop		esi
 	done:
@@ -3007,49 +3027,58 @@ __declspec(naked) void __fastcall DoInsertNodes(TESForm *form, int EDX, NiNode *
 		push	esi
 		push	edi
 		mov		esi, [eax]
-		mov		eax, [eax+4]
+		mov		edx, [eax+4]
+		lea		eax, [esi+edx*8]
 		mov		[ebp-4], eax
 		ALIGN 16
 	nodeHead:
+		cmp		[ebp-4], esi
+		jz		nodeEnd
+		mov		edi, esi
+		add		esi, 8
 		mov		ebx, [ebp+8]
 		mov		eax, ebx
-		mov		edx, [esi]
+		mov		edx, [edi]
 		test	edx, edx
 		jz		useRoot
-		push	edx
 		mov		ecx, ebx
 		call	NiNode::GetBlockByName
 		test	eax, eax
-		jz		nodeNext
+		jz		nodeHead
 		mov		ebx, eax
 		mov		ecx, eax
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xC]
 	useRoot:
 		mov		[ebp-0xC], eax
-		mov		eax, [esi+4]
+		mov		eax, [edi+4]
 		mov		edi, [eax]
 		mov		edx, [eax+4]
-		mov		[ebp-8], edx
+		lea		eax, [edi+edx*4]
+		mov		[ebp-8], eax
 		ALIGN 16
 	insHead:
-		mov		ecx, [ebp+8]
+		cmp		[ebp-8], edi
+		jz		nodeHead
 		mov		edx, [edi]
+		add		edi, 4
+		mov		ecx, [ebp+8]
 		cmp		[edx], '^'
 		jz		asParent
 		cmp		dword ptr [ebp-0xC], 0
-		jz		insNext
+		jz		insHead
 		call	NiNode::GetBlock
 		test	eax, eax
-		jnz		insNext
-		push	dword ptr [edi]
+		jnz		insHead
+		push	dword ptr [edi-4]
 		call	NiNode::Create
 		or		byte ptr [eax+0x33], 0x80
 		mov		ecx, ebx
 		jmp		doAdd
+		ALIGN 16
 	asParent:
 		cmp		ecx, ebx
-		jz		insNext
+		jz		insHead
 		inc		edx
 		push	edx
 		call	NiNode::GetBlock
@@ -3060,10 +3089,11 @@ __declspec(naked) void __fastcall DoInsertNodes(TESForm *form, int EDX, NiNode *
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xC]
 		test	eax, eax
-		jz		insNext
+		jz		insHead
 		mov		ecx, eax
 		mov		eax, ebx
 		jmp		doAdd
+		ALIGN 16
 	doCreate:
 		call	NiNode::Create
 		or		byte ptr [eax+0x33], 0x80
@@ -3082,14 +3112,9 @@ __declspec(naked) void __fastcall DoInsertNodes(TESForm *form, int EDX, NiNode *
 		push	eax
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xDC]
-	insNext:
-		add		edi, 4
-		dec		dword ptr [ebp-8]
-		jnz		insHead
-	nodeNext:
-		add		esi, 8
-		dec		dword ptr [ebp-4]
-		jnz		nodeHead
+		jmp		insHead
+		ALIGN 16
+	nodeEnd:
 		pop		edi
 		pop		esi
 		pop		ebx
@@ -3145,9 +3170,11 @@ __declspec(naked) NiNode* __fastcall LoadModelCopy(const char *filePath)
 		test	byte ptr [ecx+0x33], 0x40
 		jnz		doCopy
 		or		byte ptr [ecx+0x33], 0x40
-		push	ecx
+		push	ebp
+		mov		ebp, ecx
 		call	InitPointLights
-		pop		ecx
+		mov		ecx, ebp
+		pop		ebp
 	doCopy:
 		call	NiNode::CreateCopy
 	done:
@@ -3167,45 +3194,52 @@ __declspec(naked) void __fastcall DoAttachModels(TESForm *form, int EDX, NiNode 
 		jz		done
 		push	ebp
 		mov		ebp, esp
-		sub		esp, 8
+		sub		esp, 0xC
 		push	ebx
 		push	esi
 		push	edi
 		push	0
 		push	0
 		mov		esi, [eax]
-		mov		eax, [eax+4]
+		mov		edx, [eax+4]
+		lea		eax, [esi+edx*8]
 		mov		[ebp-4], eax
 		ALIGN 16
 	nodeHead:
+		cmp		[ebp-4], esi
+		jz		nodeEnd
+		mov		edi, esi
+		add		esi, 8
 		mov		ebx, [ebp+8]
-		mov		edx, [esi]
+		mov		edx, [edi]
 		test	edx, edx
 		jz		useRoot
-		push	edx
 		mov		ecx, ebx
 		call	NiNode::GetBlockByName
 		test	eax, eax
-		jz		nodeNext
+		jz		nodeHead
 		mov		ecx, eax
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xC]
 		test	eax, eax
-		jz		nodeNext
+		jz		nodeHead
 		mov		ebx, eax
 	useRoot:
-		mov		eax, [esi+4]
+		mov		eax, [edi+4]
 		mov		edi, [eax]
 		mov		edx, [eax+4]
-		mov		[ebp-8], edx
+		lea		eax, [edi+edx*4]
+		mov		[ebp-8], eax
 		ALIGN 16
 	insHead:
+		cmp		[ebp-8], edi
+		jz		nodeHead
 		mov		ecx, [edi]
+		add		edi, 4
 		call	LoadModelCopy
 		test	eax, eax
-		jz		insNext
-		or		byte ptr [eax+0x33], 0x80
-		push	eax
+		jz		insHead
+		mov		[ebp-0xC], eax
 		push	1
 		push	eax
 		mov		ecx, eax
@@ -3213,20 +3247,28 @@ __declspec(naked) void __fastcall DoAttachModels(TESForm *form, int EDX, NiNode 
 		mov		ecx, ebx
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xDC]
-		pop		ecx
+		mov		ecx, [ebp-0xC]
 		CALL_EAX(0xA5A040)
 		push	esp
 		mov		ecx, ebx
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xC0]
-	insNext:
-		add		edi, 4
-		dec		dword ptr [ebp-8]
+		mov		ecx, [ebp-0xC]
+		or		byte ptr [ecx+0x33], 0x80
+		test	byte ptr [ecx+0x33], 0x20
+		jz		insHead
+		mov		edx, [ebp+8]
+		ALIGN 16
+	parentIter:
+		mov		ecx, [ecx+0x18]
+		test	byte ptr [ecx+0x33], 0x20
 		jnz		insHead
-	nodeNext:
-		add		esi, 8
-		dec		dword ptr [ebp-4]
-		jnz		nodeHead
+		or		byte ptr [ecx+0x33], 0x20
+		cmp		ecx, edx
+		jnz		parentIter
+		jmp		insHead
+		ALIGN 16
+	nodeEnd:
 		add		esp, 8
 		pop		edi
 		pop		esi
@@ -3288,6 +3330,9 @@ __declspec(naked) void CreateObjectNodeHook()
 {
 	__asm
 	{
+		test	byte ptr [ecx+0x33], 0x20
+		jnz		skipRetn
+		mov		ecx, [ebp-0x1A8]
 		test	word ptr [ecx+6], kHookFormFlag6_InsertObject
 		jnz		skipRetn
 		mov		eax, [ebp+8]
@@ -3379,18 +3424,6 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		test	ecx, ecx
 		jz		cellUnlock
 		mov		esi, ecx
-		test	byte ptr [edi+0x61], kHookRefFlag61_Update3D
-		jz		doneFade
-		and		byte ptr [edi+0x61], ~kHookRefFlag61_Update3D
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x10]
-		test	eax, eax
-		jz		doneFade
-		fld1
-		fst		dword ptr [eax+0xB4]
-		fstp	dword ptr [eax+0xB8]
-		or		dword ptr [eax+0x30], 0x4000
-	doneFade:
 		test	byte ptr [edi+0x61], kHookRefFlag61_DisableCollision
 		jz		doneCollision
 		call	NiNode::RemoveCollision
@@ -3406,21 +3439,22 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		test	word ptr [eax+6], kHookFormFlag6_InsertObject
 		jz		doLights
 	hasFlag:
-		push	eax
 		push	esi
 		mov		edx, eax
 		mov		ecx, edi
 		call	DoInsertObjects
-		pop		edx
 		cmp		dword ptr [edi+0xC], 0x14
 		jnz		doLights
 		mov		eax, [edi+0x694]
 		test	eax, eax
 		jz		doLights
 		push	eax
+		xor		edx, edx
 		mov		ecx, edi
 		call	DoInsertObjects
 	doLights:
+		test	byte ptr [esi+0x33], 0x20
+		jz		cellUnlock
 		mov		ecx, esi
 		call	AddPointLights
 	cellUnlock:
@@ -3440,8 +3474,6 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		retn
 	}
 }
-
-NiNode *s_pc1stPersonNode = NULL;
 
 __declspec(naked) void LoadBip01SlotHook()
 {
@@ -3471,11 +3503,15 @@ __declspec(naked) void LoadBip01SlotHook()
 		cmp		[ebp-0xE], 0
 		jnz		done
 		mov		ecx, [ebp-0x40]
+		test	byte ptr [ecx+0x33], 0x20
+		jz		done
 		call	AddPointLights
 	done:
 		JMP_EAX(0x4ACD22)
 	}
 }
+
+NiNode *s_pc1stPersonNode = NULL;
 
 __declspec(naked) void LoadWeaponSlotHook()
 {
@@ -3498,49 +3534,158 @@ __declspec(naked) void LoadWeaponSlotHook()
 		xor		edx, edx
 		call	DoInsertObjects
 	doLights:
+		mov		ecx, [ebp-0x14]
+		test	byte ptr [ecx+0x33], 0x20
+		jz		done
 		mov		edx, [ebp+0x18]
 		cmp		edx, s_pc1stPersonNode
 		jz		done
-		mov		ecx, [ebp-0x14]
 		call	AddPointLights
 	done:
 		retn
 	}
 }
 
-void UpdateActiveLights()
+__declspec(naked) void __fastcall SetLightTranslationHook(NiPointLight *ptLight, int EDX, float x, float y, float z)
 {
-	UInt8 buffer[sizeof(TESObjectLIGH)];
-	TESObjectLIGH *baseLight = (TESObjectLIGH*)buffer;
-	g_sceneLightsLock->EnterSleep();
-	ShadowSceneNode *shadowScene = g_shadowSceneNode;
-	NiPointLight *ptLight;
-	for (auto iter = s_activePtLights.BeginRv(); iter; --iter)
+	__asm
 	{
-		ptLight = *iter;
-		if (!ptLight->m_uiRefCount)
-		{
-			iter.Remove(s_activePtLights);
-			NiDeallocator(ptLight, sizeof(NiPointLight));
-		}
-		else if (!(ptLight->m_flags & 0x80000000))
-		{
-			ptLight->m_flags |= 0x80000000;
-			LightingData *lgtData = ThisCall<LightingData*>(0xB9FDA0, NiAllocator(sizeof(LightingData)));
-			ThisCall(0xB9DDA0, lgtData, ptLight);
-			lgtData->isDynamic = 1;
-			ThisCall(0xA5A310, &shadowScene->lgtList0E4, &lgtData);
-			lgtData->portalGraph = shadowScene->portalGraph;
-		}
-		else if ((ptLight->lightFlags & 0x1C8) && (ptLight->m_uiRefCount > 1))
-		{
-			baseLight->lightFlags = ptLight->lightFlags;
-			baseLight->fadeValue = ptLight->radiusE8;
-			InterlockedIncrement(&ptLight->m_uiRefCount);
-			ThisCall(0x50DE60, baseLight, ptLight, &ptLight->radiusE4, 0);
-		}
+		movss	xmm0, [esp+4]
+		movss	xmm1, [esp+8]
+		movss	xmm2, [esp+0xC]
+		test	byte ptr [ecx+0x33], 0x20
+		jnz		isActive
+		movss	[ecx+0x58], xmm0
+		movss	[ecx+0x5C], xmm1
+		movss	[ecx+0x60], xmm2
+		retn	0xC
+	isActive:
+		movss	xmm3, [ecx+0x58]
+		subss	xmm3, [ecx+0xC8]
+		addss	xmm3, xmm0
+		movss	[ecx+0x58], xmm3
+		movss	[ecx+0xC8], xmm0
+		movss	xmm3, [ecx+0x5C]
+		subss	xmm3, [ecx+0xCC]
+		addss	xmm3, xmm1
+		movss	[ecx+0x5C], xmm3
+		movss	[ecx+0xCC], xmm1
+		movss	xmm3, [ecx+0x60]
+		subss	xmm3, [ecx+0xD0]
+		addss	xmm3, xmm2
+		movss	[ecx+0x60], xmm3
+		movss	[ecx+0xD0], xmm2
+		retn	0xC
 	}
-	g_sceneLightsLock->Leave();
+}
+
+__declspec(naked) void __fastcall UpdateAnimatedLightsHook(TES *pTES)
+{
+	__asm
+	{
+		mov		dword ptr ds:[0x11C56E8], 0
+		mov		eax, [ecx+0x34]
+		test	eax, eax
+		jz		isExterior
+		mov		ecx, eax
+		CALL_EAX(0x553820)
+		jmp		doneCells
+	isExterior:
+		mov		ecx, [ecx+8]
+		CALL_EAX(0x4BABA0)
+	doneCells:
+		mov		eax, offset s_activePtLights
+		mov		ecx, [eax+4]
+		test	ecx, ecx
+		jz		done
+		push	ebp
+		push	ebx
+		push	esi
+		push	edi
+		mov		ebp, g_shadowSceneNode
+		mov		ebx, eax
+		mov		eax, [eax]
+		lea		esi, [eax+ecx*4]
+		mov		edi, ecx
+		mov		ecx, 0x11F9EA0
+		call	LightCS::EnterSleep
+		ALIGN 16
+	iterHead:
+		dec		edi
+		js		iterEnd
+		sub		esi, 4
+		mov		ecx, [esi]
+		cmp		dword ptr [ecx+0x18], 0
+		jz		doFree
+		test	byte ptr [ecx+0x30], 1
+		jnz		iterHead
+		cmp		dword ptr [ecx+4], 1
+		jz		doAdd
+		mov		eax, [ecx+0xE8]
+		test	dword ptr [eax+0xA8], 0x1C8
+		jz		iterHead
+		lock inc dword ptr [ecx+4]
+		push	0
+		lea		edx, [ecx+0xE4]
+		push	edx
+		push	ecx
+		mov		ecx, eax
+		CALL_EAX(0x50DE60)
+		jmp		iterHead
+		ALIGN 16
+	doFree:
+		cmp		dword ptr [ecx+4], 0
+		jnz		iterHead
+		push	0xFC
+		push	ecx
+		CALL_EAX(0xAA1460)
+		add		esp, 8
+		mov		eax, [ebx+4]
+		dec		eax
+		mov		[ebx+4], eax
+		sub		eax, edi
+		jz		iterHead
+		shl		eax, 2
+		push	eax
+		lea		edx, [esi+4]
+		push	edx
+		push	esi
+		call	MemCopy
+		add		esp, 0xC
+		jmp		iterHead
+		ALIGN 16
+	doAdd:
+		push	0x250
+		CALL_EAX(0xAA13E0)
+		pop		ecx
+		mov		ecx, eax
+		CALL_EAX(0xB9FDA0)
+		push	eax
+		push	dword ptr [esi]
+		mov		ecx, eax
+		CALL_EAX(0xB9DDA0)
+		push	esp
+		lea		ecx, [ebp+0xE4]
+		CALL_EAX(0xA5A310)
+		pop		ecx
+		mov		[ecx+0xFC], 1
+		mov		edx, [ebp+0x1E0]
+		mov		[ecx+0x240], edx
+		jmp		iterHead
+		ALIGN 16
+	iterEnd:
+		mov		ecx, 0x11F9EA0
+		dec		dword ptr [ecx+4]
+		jnz		inUse
+		mov		dword ptr [ecx], 0
+	inUse:
+		pop		edi
+		pop		esi
+		pop		ebx
+		pop		ebp
+	done:
+		retn
+	}
 }
 
 TESObjectREFR *s_syncPositionRef = NULL;
@@ -3582,7 +3727,6 @@ __declspec(naked) void SynchronizePositionHook()
 		mov		edx, s_syncPositionNode.str
 		test	edx, edx
 		jz		useRoot
-		push	edx
 		mov		ecx, eax
 		call	NiNode::GetBlockByName
 		test	eax, eax
@@ -3620,7 +3764,7 @@ __declspec(naked) void ProcessHUDMainUI()
 		push	edi
 		mov		ebx, g_interfaceManager
 		mov		eax, g_inputGlobals
-		and		dword ptr [eax+4], 0xFFFFFFF7
+		and		byte ptr [eax+4], 0xF7
 		mov		ecx, ebx
 		CALL_EAX(0x7118D0)
 		mov		ecx, g_DIHookCtrl
@@ -4045,18 +4189,21 @@ void InitJIPHooks()
 	SetFormEDID = (_SetFormEDID)*(UInt32*)0x1029018;
 	SafeWrite32(0x1029018, (UInt32)TESObjectLIGHSetEDIDHook);
 	SafeWriteBuf(0xA68D6B, "\x8B\x86\x9C\x00\x00\x00\x89\x87\x9C\x00\x00\x00", 12);
-	SafeWriteBuf(0xB9F133, "\x80\x63\x33\x7F\xF0\xFF\x4B\x04", 8);
 	WritePushRetRelJump(0x447155, 0x447171, (UInt32)LoadNifRetnNodeHook);
 	SafeWrite32(0x109DD0C, (UInt32)DestroyNiPointLightHook);
-	WriteRelJump(0x50EF4C, (UInt32)CreateObjectNodeHook);
+	WriteRelJump(0x50EF46, (UInt32)CreateObjectNodeHook);
 	SafeWrite32(0x1016BE0, (UInt32)DoQueuedReferenceHook);
 	SafeWrite32(0x1016D28, (UInt32)DoQueuedReferenceHook);
 	SafeWrite32(0x1016D70, (UInt32)DoQueuedReferenceHook);
 	WriteRelJump(0x4ACCF1, (UInt32)LoadBip01SlotHook);
 	WritePushRetRelJump(0x4AF0DE, 0x4AF0F8, (UInt32)LoadWeaponSlotHook);
+	WriteRelCall(0x50E12B, (UInt32)SetLightTranslationHook);
+	WriteRelCall(0x8C7C4E, (UInt32)UpdateAnimatedLightsHook);
+	WriteRelCall(0x8C7E18, (UInt32)UpdateAnimatedLightsHook);
 	SafeWrite32(0x1087FD8, (UInt32)CopyHitDataHook);
 	SafeWrite32(0x10897C0, (UInt32)CopyHitDataHook);
 	SafeWriteBuf(0x92C4A0, "\x8B\x81\x40\x02\x00\x00\x85\xC0\x74\x07\xC7\x40\x10\xFF\xFF\xFF\xFF\xC3", 18);
+	WriteRelJump(0x418B10, (UInt32)GetCannotWearHook);
 	WriteRelJump(0x4AC645, (UInt32)BipedSlotVisibilityHook);
 	WriteRelJump(0x63C929, (UInt32)SkyRefreshClimateHook);
 	WriteRelJump(0x87F427, (UInt32)IsActorEssentialHook);

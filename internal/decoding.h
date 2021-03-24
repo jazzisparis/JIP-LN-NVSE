@@ -545,7 +545,7 @@ public:
 	float				flt108;			// 108
 	float				flt10C;			// 10C
 	float				distTravelled;	// 110
-	NiRefObject			*object114;		// 114
+	NiPointLight		*projLight;		// 114
 	UInt8				byte118;		// 118
 	UInt8				pad119[3];		// 119
 	NiNode				*node11C;		// 11C
@@ -3112,6 +3112,24 @@ public:
 };
 STATIC_ASSERT(sizeof(BSWin32Audio) == 0xA4);
 
+// 30
+class BSThread
+{
+public:
+	virtual void	Destroy(bool doFree);
+	virtual void	Unk_01(void);
+
+	LPCRITICAL_SECTION	cs;			// 04
+	UInt32				unk08[10];	// 08
+};
+
+// 9C
+class FAMThread : public BSThread
+{
+public:
+	UInt32				unk30[27];	// 30
+};
+
 enum
 {
 	kMusicState_Pause =		1 << 2,
@@ -3124,7 +3142,7 @@ enum
 struct PlayingMusic
 {
 	char					track1Path[MAX_PATH];	// 000
-	void					*ptr104;				// 104
+	FAMThread				*famThread;				// 104
 	char					track2Path[MAX_PATH];	// 108
 	UInt32					unk20C;					// 20C
 	float					flt210;					// 210

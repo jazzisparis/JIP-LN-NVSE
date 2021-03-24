@@ -1213,6 +1213,16 @@ ParamInfo kParams_JIP_OneString_ThreeFloats_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
+ParamInfo kParams_JIP_OneString_ThreeFloats_TwoOptionalInts[] =
+{
+	{"String", kParamType_String, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Integer", kParamType_Integer, 1},
+	{"Integer", kParamType_Integer, 1}
+};
+
 ParamInfo kParams_JIP_OneString_OneFloat[] =
 {
 	{"String", kParamType_String, 0},
@@ -1437,4 +1447,38 @@ ParamInfo kParams_JIP_TwoScriptVars[] =
 {
 	{"Variable", kParamType_ScriptVariable, 0},
 	{"Variable", kParamType_ScriptVariable, 0}
+};
+
+ParamInfo kParams_JIP_OneString_OneFloat_OneOptionalInt[] =
+{
+	{"String", kParamType_String, 0},
+	{"Float", kParamType_Float, 0},
+	{"Integer", kParamType_Integer, 1}
+};
+
+ParamInfo kParams_JIP_OneString_OneInt_OneOptionalInt[] =
+{
+	{"String", kParamType_String, 0},
+	{"Integer", kParamType_Integer, 0},
+	{"Integer", kParamType_Integer, 1}
+};
+
+ParamInfo kParams_JIP_OneString_TwoInts_OneOptionalInt[] =
+{
+	{"String", kParamType_String, 0},
+	{"Integer", kParamType_Integer, 0},
+	{"Integer", kParamType_Integer, 0},
+	{"Integer", kParamType_Integer, 1}
+};
+
+ParamInfo kParams_JIP_OneOptionalFloat_OneOptionalInt[] =
+{
+	{"Float", kParamType_Float, 1},
+	{"Integer", kParamType_Integer, 1}
+};
+
+ParamInfo kParams_JIP_OneOptionalString_OneOptionalInt[] =
+{
+	{"String", kParamType_String, 1},
+	{"Integer", kParamType_Integer, 1}
 };

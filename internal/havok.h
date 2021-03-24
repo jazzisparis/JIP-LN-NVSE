@@ -592,7 +592,7 @@ public:
 	UInt32						unk54;					// 54
 	UInt32						unk58;					// 58
 	UInt32						unk5C;					// 5C
-	NiVector4					origin;					// 60
+	AlignedVector4				origin;					// 60
 	bhkEntityListener			**listenerArray;		// 70
 	UInt32						numListeners;			// 74
 	UInt32						unk78;					// 78
@@ -612,9 +612,9 @@ STATIC_ASSERT(sizeof(bhkWorld) == 0xA0);
 class bhkWorldM : public bhkWorld
 {
 public:
-	NiVector4		borderSize;		// A0
-	NiVector4		worldTotalSize;	// B0
-	NiVector4		broadPhaseSize;	// C0
+	AlignedVector4		borderSize;		// A0
+	AlignedVector4		worldTotalSize;	// B0
+	AlignedVector4		broadPhaseSize;	// C0
 };
 STATIC_ASSERT(sizeof(bhkWorldM) == 0xD0);
 
@@ -645,7 +645,8 @@ public:
 	virtual void	Unk_2F(void);
 	virtual void	Unk_30(void);
 
-	UInt32			flags;			// 0C
+	UInt16			flags;			// 0C	0x40 is Update? Callbacks array @ 0x11AFE88
+	UInt16			word0E;			// 0E
 	bhkWorldObject	*worldObj;		// 10
 };
 

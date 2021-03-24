@@ -1308,6 +1308,10 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v56.05
 	/*28F3*/REG_CMD_ARR(GetChildBlocks);
 	/*28F4*/REG_CMD_ARR(GetBlockTextureSet);
+	//	v56.08
+	/*28F5*/REG_CMD_STR(GetReticleNode);
+	/*28F6*/REG_CMD_STR(GetBodyPartPartNode);
+	/*28F7*/REG_CMD(EquippedWeaponHasModType);
 
 	//===========================================================
 

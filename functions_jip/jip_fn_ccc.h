@@ -624,8 +624,14 @@ bool Cmd_MoveToPosStr_Execute(COMMAND_ARGS)
 	char *pos = s_strArgBuffer, *delim = GetNextToken(pos, ' ');
 	UInt32 refID = HexToUInt(pos);
 	if (!refID || !*delim || !ResolveRefID(refID, &refID)) return true;
-	TESForm *form = LookupFormByRefID(refID);
-	if (!form) return true;
+	TESObjectCELL *cell = (TESObjectCELL*)LookupFormByRefID(refID);
+	if (!cell) return true;
+	if NOT_ID(cell, TESObjectCELL)
+	{
+		if NOT_ID(cell, TESWorldSpace)
+			return true;
+		cell = ((TESWorldSpace*)cell)->cell;
+	}
 	NiVector3 posVector;
 	pos = delim;
 	delim = GetNextToken(pos, ' ');
@@ -636,7 +642,8 @@ bool Cmd_MoveToPosStr_Execute(COMMAND_ARGS)
 	posVector.y = StrToInt(pos);
 	if (!*delim) return true;
 	posVector.z = StrToInt(delim);
-	if (thisObj->MoveToCell(form, &posVector)) *result = 1;
+	thisObj->MoveToCell(cell, &posVector);
+	*result = 1;
 	return true;
 }
 
@@ -689,10 +696,9 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 		if (!character->validBip01Names || !character->GetInventoryItems(kFormType_TESObjectARMO))
 			return true;
 		UInt32 usedSlots = 0;
-		ValidBip01Names::Data *slotData = character->validBip01Names->slotData;
-		for (UInt8 count = 20; count; count--, slotData++)
+		for (ValidBip01Names::Data &slotData : character->validBip01Names->slotData)
 		{
-			item = slotData->item;
+			item = slotData.item;
 			if (!item || NOT_TYPE(item, TESObjectARMO))
 				continue;
 			s_inventoryItemsMap.Erase(item);
@@ -716,83 +722,48 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 	}
 	ContainerMenu *containerMenu = *g_containerMenu;
 	ContChangesEntry *menuEntry = *g_containerMenuSelection;
-	if (!menuEntry || !containerMenu || !containerMenu->rightItems.selected || (GetActiveTileID() != 20) || FindMainLoopCallback(DoRefreshContainerMenu, containerMenu))
+	if (!menuEntry || !containerMenu || !containerMenu->rightItems.selected || (GetActiveTileID() != 20))
 		return true;
 	item = menuEntry->type;
 	character = (Character*)containerMenu->containerRef;
 	if (!item || NOT_TYPE(character, Character))
 		return true;
-	ExtraContainerChanges::EntryDataList *entryList = character->GetContainerChangesList();
-	if (!entryList) return true;
-	if IS_ID(item, AlchemyItem)
+	bool doEquip = true;
+	SInt32 eqpCount = 1;
+	if (IS_ID(item, TESObjectARMO) || IS_ID(item, TESObjectWEAP))
 	{
-		character->EquipItem(item);
-		DoRefreshContainerMenu(containerMenu, item);
+		if (menuEntry->extendData)
+			xData = menuEntry->extendData->GetFirstItem();
+		if (xData && xData->HasType(kExtraData_Worn))
+			doEquip = false;
+		if IS_ID(item, TESObjectWEAP)
+		{
+			if (doEquip)
+			{
+				weapon = (TESObjectWEAP*)item;
+				UInt8 wpnType = weapon->eWeaponType;
+				if ((wpnType == 11) || (wpnType == 12) || (weapon->weaponFlags2 & 1))
+				{
+					*result = -1;
+					return true;
+				}
+				if ((cmbStyle = character->GetCombatStyle()) && (restrictions = cmbStyle->weaponRestrictions) && ((restrictions == 1) != (wpnType < 3)))
+				{
+					*result = restrictions;
+					return true;
+				}
+				if (wpnType > 9) eqpCount = menuEntry->countDelta;
+			}
+			else eqpCount = menuEntry->countDelta;
+		}
+	}
+	else if NOT_ID(item, AlchemyItem)
 		return true;
-	}
-	if (NOT_TYPE(item, TESObjectARMO) && NOT_ID(item, TESObjectWEAP))
-		return true;
-	if (menuEntry->extendData) xData = menuEntry->extendData->GetFirstItem();
-	bool equipped = xData && xData->HasType(kExtraData_Worn);
-	if IS_ID(item, TESObjectWEAP)
-	{
-		if (xData && xData->HasType(kExtraData_CannotWear))
-		{
-			entry = entryList->FindForItem(item);
-			xData = (entry && entry->extendData) ? entry->extendData->RemoveByType(xData, kExtraData_CannotWear) : NULL;
-		}
-		if (!equipped)
-		{
-			weapon = (TESObjectWEAP*)item;
-			UInt32 wpnType = weapon->eWeaponType;
-			if ((wpnType == 11) || (wpnType == 12) || (weapon->weaponFlags2 & 1))
-			{
-				*result = -1;
-				return true;
-			}
-			cmbStyle = character->GetCombatStyle();
-			restrictions = cmbStyle ? cmbStyle->weaponRestrictions : 0;
-			if (restrictions && ((restrictions == 1) != (wpnType < 3)))
-			{
-				*result = restrictions;
-				return true;
-			}
-			wpnType = (wpnType > 9) ? menuEntry->countDelta : 1;
-			entry = character->GetWeaponInfo();
-			if (entry && entry->type)
-			{
-				entry = entryList->FindForItem(entry->type);
-				if (entry) entry->RemoveCannotWear();
-			}
-			character->EquipItem(item, wpnType, xData, 1, 0, 0);
-		}
-		else character->UnequipItem(item, 1, xData, 1, 0, 0);
-	}
-	else if (equipped)
-	{
-		if (xData->HasType(kExtraData_CannotWear))
-		{
-			entry = entryList->FindForItem(item);
-			xData = (entry && entry->extendData) ? entry->extendData->RemoveByType(xData, kExtraData_CannotWear) : NULL;
-		}
-		character->UnequipItem(item, 1, xData, 1, 0, 0);
-	}
-	else
-	{
-		if (entryList)
-		{
-			ListNode<ContChangesEntry> *entryIter = entryList->Head();
-			do
-			{
-				entry = entryIter->data;
-				if (entry && IS_TYPE(entry->type, TESObjectARMO))
-					entry->RemoveCannotWear();
-			}
-			while (entryIter = entryIter->next);
-		}
-		character->EquipItem(item, 1, xData, 1, 0, 0);
-	}
-	MainLoopAddCallbackArgsEx(DoRefreshContainerMenu, containerMenu, 1, 10, 1, item);
+	s_forceEquipCall = true;
+	ThisCall(doEquip ? 0x88C830 : 0x88D7D0, character, item, eqpCount, xData, 1, 0, 0);
+	s_forceEquipCall = false;
+	ThisCall(0x8ADED0, g_thePlayer, item, doEquip, doEquip);
+	DoRefreshContainerMenu(containerMenu, item);
 	return true;
 }
 

@@ -26,7 +26,7 @@ public:
 	virtual TESObjectREFR	*RemoveItem(TESForm *toRemove, BaseExtraList *extraList, UInt32 quantity, bool keepOwner, bool drop, TESObjectREFR *destRef,
 		UInt32 unk6, UInt32 unk7, bool unk8, bool unk9);
 	virtual void		Unk_60(void);
-	virtual bool		EquipObject(TESForm *item, UInt32 count, ExtraDataList *xData, bool lockEquip);
+	virtual bool		LoadEquipedItem3D(TESForm *item, UInt32 count, ExtraDataList *xData, bool lockEquip);
 	virtual void		Unk_62(void);
 	virtual void		Unk_63(void);
 	virtual void		AddItem(TESForm *item, ExtraDataList *xDataList, UInt32 quantity);
@@ -152,7 +152,7 @@ public:
 	float __vectorcall GetDistance(TESObjectREFR *target);
 	void SetPos(NiVector3 *posVector);
 	void SetAngle(NiVector3 *rotVector);
-	bool MoveToCell(TESForm *worldOrCell, NiVector3 *posVector);
+	void MoveToCell(TESObjectCELL *cell, NiVector3 *posVector);
 	bool Disable();
 	void DeleteReference();
 	bhkCharacterController *GetCharacterController();
@@ -627,9 +627,9 @@ public:
 	// OBSE: unk1 looks like quantity, usu. 1; ignored for ammo (equips entire stack). In NVSE, pretty much always forced internally to 1 
 	// OBSE: itemExtraList is NULL as the container changes entry is not resolved before the call
 	// NVSE: Default values are those used by the vanilla script functions.
-	__forceinline void EquipItem(TESForm *objType, UInt32 equipCount = 1, ExtraDataList *itemExtraList = NULL, bool arg4 = 1, bool lockEquip = 0, bool noMessage = 1)
+	__forceinline void EquipItem(TESForm *objType, UInt32 equipCount = 1, ExtraDataList *itemExtraList = NULL, bool applyEnchantment = 1, bool lockEquip = 0, bool noMessage = 1)
 	{
-		ThisCall(0x88C650, this, objType, equipCount, itemExtraList, arg4, lockEquip, noMessage);
+		ThisCall(0x88C650, this, objType, equipCount, itemExtraList, applyEnchantment, lockEquip, noMessage);
 	}
 	__forceinline void UnequipItem(TESForm *objType, UInt32 unequipCount = 1, ExtraDataList *itemExtraList = NULL, bool arg4 = 1, bool lockUnequip = 0, bool noMessage = 1)
 	{
@@ -652,7 +652,7 @@ public:
 	ContChangesEntry *GetAmmoInfo();
 	TESObjectWEAP *GetEquippedWeapon();
 	bool IsItemEquipped(TESForm *item);
-	UInt8 EquippedWeaponHasMod(UInt8 modID);
+	UInt8 EquippedWeaponHasMod(UInt32 modType);
 	bool IsSneaking();
 	void StopCombat();
 	bool __fastcall IsInCombatWith(Actor *target);

@@ -71,6 +71,7 @@ DEFINE_COMMAND_PLUGIN(ToggleNoMovementCombat, , 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(RewardXPExact, , 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(ClearDeadActors, , 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetCameraMovement, , 0, 2, kParams_JIP_TwoScriptVars);
+DEFINE_COMMAND_PLUGIN(GetReticleNode, , 0, 2, kParams_JIP_OneOptionalFloat_OneOptionalInt);
 
 bool Cmd_DisableNavMeshAlt_Execute(COMMAND_ARGS)
 {
@@ -1200,5 +1201,20 @@ bool Cmd_GetCameraMovement_Execute(COMMAND_ARGS)
 			outY->data.num = 0;
 		}
 	}
+	return true;
+}
+
+bool Cmd_GetReticleNode_Execute(COMMAND_ARGS)
+{
+	const char *nodeName = "";
+	float maxRange = 50000.0F;
+	UInt32 filter = 6;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &filter))
+	{
+		filter &= 0x3F;
+		NiAVObject *rtclObject = GetRayCastObject(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, maxRange, 0, filter);
+		if (rtclObject) nodeName = rtclObject->GetName();
+	}
+	AssignString(PASS_COMMAND_ARGS, nodeName);
 	return true;
 }

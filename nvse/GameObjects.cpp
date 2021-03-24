@@ -19,20 +19,20 @@ __declspec(naked) TESContainer *TESObjectREFR::GetContainer()
 {
 	__asm
 	{
-		mov		eax, [ecx]
-		mov		eax, [eax+0x100]
-		call	eax
-		test	al, al
 		mov		eax, [ecx+0x20]
-		jz		notActor
-		add		eax, 0x64
-		retn
-	notActor:
-		cmp		dword ptr [eax], kVtbl_TESObjectCONT
-		jnz		notCONT
+		mov		dl, [eax+4]
+		cmp		dl, kFormType_TESNPC
+		jz		isActor
+		cmp		dl, kFormType_TESCreature
+		jz		isActor
+		cmp		dl, kFormType_TESObjectCONT
+		jnz		retnNULL
 		add		eax, 0x30
 		retn
-	notCONT:
+	isActor:
+		add		eax, 0x64
+		retn
+	retnNULL:
 		xor		eax, eax
 		retn
 	}
@@ -56,6 +56,7 @@ __declspec(naked) void TESObjectREFR::Update3D()
 		jz		done
 		cmp		dword ptr [ecx+0xC], 0x14
 		jz		isPlayer
+		or		byte ptr [ecx+0xB], 8
 		push	ecx
 		push	1
 		push	0
@@ -65,8 +66,8 @@ __declspec(naked) void TESObjectREFR::Update3D()
 	isPlayer:
 		test	byte ptr [ecx+0x61], 1
 		jnz		done
-	doQueue:
 		or		byte ptr [ecx+0x61], 1
+	doQueue:
 		push	0
 		push	1
 		push	ecx

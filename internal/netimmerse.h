@@ -49,6 +49,8 @@ public:
 
 	const char *Get() const {return str;}
 
+	UInt32 Length() const {return str ? *(UInt32*)(str - 4) : 0;}
+
 	inline NiString& operator=(const char *inStr)
 	{
 		if (str) InterlockedDecrement(RefCount());
@@ -138,7 +140,7 @@ public:
 	virtual void	Unk_1B(UInt32 arg);
 	virtual void	Unk_1C(void);
 	virtual void	Unk_1D(void);
-	virtual void	Unk_1E(UInt32 arg);
+	virtual void	SetWorldBound(NiSphere *worldBound);
 	virtual UInt32	Unk_1F(void);
 	virtual void	Unk_20(void);
 	virtual void	Unk_21(UInt32 arg);
@@ -540,6 +542,7 @@ public:
 		const char *name = m_blockName.Get();
 		return name ? name : "NULL";
 	}
+	void __fastcall SetName(const char *newName);
 	NiExtraData* __fastcall GetExtraData(UInt32 vtbl);
 	void DumpExtraData();
 };
@@ -863,6 +866,25 @@ struct UpdateInfo
 	UpdateInfo() : flt00(0), byte04(0) {}
 };
 
+struct UpdateParams
+{
+	float		flt00;
+	UInt8		byte04;
+	UInt8		byte05;
+	UInt8		byte06;
+	UInt8		byte07;
+	UInt8		byte08;
+	UInt8		pad09[3];
+
+	UpdateParams()
+	{
+		UInt32 *ptr = (UInt32*)&flt00;
+		ptr[0] = 0;
+		ptr[1] = 0;
+		ptr[2] = 0;
+	}
+};
+
 // 9C
 class NiAVObject : public NiObjectNET
 {
@@ -873,7 +895,7 @@ public:
 	virtual void	Unk_26(UInt32 arg1);
 	virtual NiAVObject	*GetObjectByName(NiString *objName);
 	virtual void	Unk_28(UInt32 arg1, UInt32 arg2, UInt32 arg3);
-	virtual void	Unk_29(UInt32 arg1, UInt32 arg2);
+	virtual void	Unk_29(UpdateParams *updParams, UInt32 arg2);
 	virtual void	Unk_2A(UInt32 arg1, UInt32 arg2);
 	virtual void	Unk_2B(UInt32 arg1, UInt32 arg2);
 	virtual void	Unk_2C(UInt32 arg1);
@@ -936,10 +958,10 @@ public:
 	NiVector3				m_worldTranslate;		// 8C
 	float					m_worldScale;			// 98
 
+	void Update();
 	UInt32 GetIndex();
 	bool __fastcall ReplaceObject(NiAVObject *object);
 	NiProperty *GetProperty(UInt32 propID);
-	void __fastcall SetName(const char *newName);
 
 	void DumpProperties();
 	void DumpParents();
@@ -963,7 +985,7 @@ public:
 
 	static NiNode* __stdcall Create(const char *nodeName);
 	NiNode* CreateCopy();
-	NiAVObject *GetBlockByName(const char *objName);
+	NiAVObject* __fastcall GetBlockByName(const char *objName);
 	NiAVObject* __fastcall GetBlock(const char *blockName);
 	NiNode* __fastcall GetNode(const char *nodeName);
 	bool IsMovable();
@@ -1134,14 +1156,10 @@ public:
 	LightingData					*data0DC;		// 0DC
 	LightingData					*data0E0;		// 0E0
 	DList<LightingData>				lgtList0E4;		// 0E4
-	UInt32							unk0F0[3];		// 0F0
-	void							*ptr0FC;		// 0FC
-	void							*ptr100;		// 100
-	UInt32							unk104;			// 104
-	UInt32							unk108[3];		// 108
-	void							*ptr114;		// 114
-	void							*ptr118;		// 118
-	UInt32							unk11C;			// 11C
+	DList<void>						list0F0;		// 0F0
+	DList<void>						list0FC;		// 0FC
+	DList<void>						list108;		// 108
+	DList<void>						list114;		// 114
 	UInt32							unk120;			// 120
 	UInt32							unk124;			// 124
 	BSCubeMapCamera					*cubeMapCam;	// 128
@@ -1199,9 +1217,10 @@ public:
 		kEffect_TextureEffect =		5
 	};
 
-	UInt8			byte9C;			// 9C
+	bool			switchState;	// 9C
 	UInt8			effectType;		// 9D
-	UInt16			lightFlags;		// 9E	JIP only
+	bool			isAttached;		// 9E	JIP only
+	UInt8			pad9F;			// 9F
 	UInt32			unkA0;			// A0
 	UInt32			unkA4;			// A4
 	UInt32			unkA8;			// A8

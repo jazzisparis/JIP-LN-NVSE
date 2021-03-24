@@ -132,6 +132,7 @@ DEFINE_COMMAND_PLUGIN(SetTeammateKillable, , 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(SetNoGunWobble, , 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetHitNode, , 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitExtendedFlag, , 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetBodyPartPartNode, , 0, 2, kParams_JIP_OneInt_OneOptionalActorBase);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -2150,31 +2151,49 @@ bool Cmd_PushActorNoRagdoll_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool Cmd_GetBodyPartVATSTarget_Execute(COMMAND_ARGS)
+UInt8 s_getBodyPartString = 0;
+
+bool GetBodyPartString_Execute(COMMAND_ARGS)
 {
 	const char *resStr = "";
 	UInt32 partID;
 	TESActorBase *actorBase = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &partID, &actorBase) && (partID <= 14))
 	{
-		if (!actorBase)
-		{
-			if (!thisObj || !thisObj->IsActor()) return true;
-			actorBase = ((Actor*)thisObj)->GetActorBase();
-		}
-		if (actorBase)
+		if (actorBase || (thisObj && thisObj->IsActor() && (actorBase = ((Actor *)thisObj)->GetActorBase())))
 		{
 			BGSBodyPartData *bpData = actorBase->GetBodyPartData();
 			if (bpData)
 			{
 				BGSBodyPart *bodyPart = bpData->bodyParts[partID];
-				if (bodyPart && bodyPart->VATSTarget.m_dataLen)
-					resStr = bodyPart->VATSTarget.m_data;
+				if (bodyPart)
+				{
+					String *partStr = s_getBodyPartString ? &bodyPart->partNode : &bodyPart->VATSTarget;
+					if (partStr->m_dataLen) resStr = partStr->m_data;
+				}
 			}
 		}
 	}
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
+}
+
+__declspec(naked) bool Cmd_GetBodyPartVATSTarget_Execute(COMMAND_ARGS)
+{
+	__asm
+	{
+		mov		s_getBodyPartString, 0
+		jmp		GetBodyPartString_Execute
+	}
+}
+
+__declspec(naked) bool Cmd_GetBodyPartPartNode_Execute(COMMAND_ARGS)
+{
+	__asm
+	{
+		mov		s_getBodyPartString, 1
+		jmp		GetBodyPartString_Execute
+	}
 }
 
 bool __fastcall GetInFactionList(Actor *actor, BGSListForm *facList)

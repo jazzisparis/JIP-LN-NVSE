@@ -365,7 +365,7 @@ bool Cmd_BaseRemoveItem_Execute(COMMAND_ARGS)
 			if (formCount->count < 1)
 			{
 				if (thisObj && thisObj->IsActor())
-					((Actor*)thisObj)->UnequipItem(form, 1, NULL, 1, false, 1);
+					((Actor*)thisObj)->UnequipItem(form);
 				if (prev) prev->RemoveNext();
 				else iter->RemoveMe();
 			}

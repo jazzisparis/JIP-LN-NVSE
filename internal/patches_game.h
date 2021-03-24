@@ -40,7 +40,7 @@ __declspec(naked) void GeneratePlayerNodeHook()
 		mov		ecx, [eax+0xC]
 		call	NiNode::CreateCopy
 		mov		[ebp-0x18], eax
-		or		dword ptr [eax+0x30], 0x200000
+		or		byte ptr [eax+0x32], 0x20
 		mov		s_pc1stPersonNode, eax
 		retn
 	}
@@ -145,7 +145,7 @@ __declspec(naked) void TESGlobalLoadFormHook()
 {
 	__asm
 	{
-		test	dword ptr [ecx+8], 0x40
+		test	byte ptr [ecx+8], 0x40
 		jz		contRetn
 		JMP_EAX(0x5A65BD)
 	contRetn:
@@ -308,6 +308,24 @@ __declspec(naked) void GetMouseWheelHook()
 	}
 }
 
+__declspec(naked) void CmdActivateHook()
+{
+	__asm
+	{
+		push	ecx
+		push	kExtraData_Count
+		add		ecx, 0x44
+		call	BaseExtraList::GetByType
+		pop		ecx
+		test	eax, eax
+		jz		done
+		movsx	edx, word ptr [eax+0xC]
+		mov		[esp+0x10], edx
+	done:
+		JMP_EAX(0x573170)
+	}
+}
+
 void RemoveMeHook()
 {
 	if (!FindMainLoopCallback(RefreshItemListBox))
@@ -349,7 +367,7 @@ __declspec(naked) void ResetActorFlagsHook()
 	{
 		mov		ecx, [ebp-0xAC]
 		mov		word ptr [ecx+0x105], 0
-		and		dword ptr [ecx+0x140], 0xBFFFFFFF
+		and		byte ptr [ecx+0x143], 0xBF
 		retn
 	}
 }
@@ -547,7 +565,7 @@ __declspec(naked) void EffectSkillModifiers2Hook()
 		mov		ecx, [ebp-0x74]
 		mov		ecx, [ecx+0xC]
 		mov		edx, [ecx+0x14]
-		test	dword ptr [edx+0x58], 4
+		test	byte ptr [edx+0x58], 4
 		jnz		done
 		mov		edx, [ecx+0x10]
 		mov		[ebp-0x38], edx
@@ -780,7 +798,7 @@ __declspec(naked) void ArmourPenetratedHook()
 		movss	xmm0, [ebp-0xC]
 		comiss	xmm0, [ecx+0x14]
 		ja		done
-		or		dword ptr [ecx+0x58], 0x80000000
+		or		byte ptr [ecx+0x5B], 0x80
 	done:
 		retn
 	}
@@ -849,22 +867,27 @@ __declspec(naked) bool __fastcall GetEntryDataHasModHook(ContChangesEntry *entry
 		test	al, 1
 		jz		check2nd
 		cmp		[ecx+0x180], dl
-		jz		retn1
+		jnz		check2nd
+		mov		al, 1
+		retn	4
+		ALIGN 16
 	check2nd:
 		test	al, 2
 		jz		check3rd
 		cmp		[ecx+0x184], dl
-		jz		retn1
+		jnz		check3rd
+		mov		al, 1
+		retn	4
+		ALIGN 16
 	check3rd:
 		test	al, 4
 		jz		retn0
 		cmp		[ecx+0x188], dl
-		jz		retn1
+		setz	al
+		retn	4
+		ALIGN 16
 	retn0:
 		xor		al, al
-		retn	4
-	retn1:
-		mov		al, 1
 	done:
 		retn	4
 	}
@@ -1045,7 +1068,7 @@ __declspec(naked) const char* __cdecl GetIconPathForItemHook(TESForm *item, TESO
 		add		ecx, 0xFC
 		mov		edx, g_thePlayer
 		mov		edx, [edx+0x20]
-		test	dword ptr [edx+0x34], 1
+		test	byte ptr [edx+0x34], 1
 		jz		notFem
 		cmp		word ptr [ecx+0x14], 0
 		jz		notFem
@@ -1066,7 +1089,7 @@ __declspec(naked) bool __fastcall GetEffectHiddenHook(EffectItem *effItem)
 		jz		retnTrue
 		cmp		ecx, ds:[0x11C33F4]
 		jz		retnTrue
-		test	dword ptr [ecx+0x58], 8
+		test	byte ptr [ecx+0x58], 8
 		setnz	al
 		retn
 	retnTrue:
@@ -1352,28 +1375,90 @@ __declspec(naked) void PlayAttackSoundHook()
 	}
 }
 
-__declspec(naked) void AddProjectileLightHook()
+__declspec(naked) void __fastcall AddProjectileLightHook(Projectile *projRef)
 {
 	__asm
 	{
-		mov		eax, [ebp+8]
+		test	dword ptr [ecx+8], 0x820
+		jnz		done
+		mov		eax, [ecx+0x20]
 		mov		eax, [eax+0x70]
 		test	eax, eax
 		jz		done
-		mov		ecx, [ecx+0x64]
-		test	ecx, ecx
+		mov		edx, [ecx+0x64]
+		test	edx, edx
 		jz		done
-		mov		ecx, [ecx+0x14]
-		test	ecx, ecx
+		mov		edx, [edx+0x14]
+		test	edx, edx
 		jz		done
-		mov		edx, ecx
+		push	ecx
 		mov		ecx, eax
 		call	CreatePointLight
+		pop		ecx
+		mov		[ecx+0x114], eax
 	done:
-		push	dword ptr [ebp-0x14]
-		mov		ecx, ds:[0x11F1958]
-		mov		ecx, [ecx+0x14]
-		CALL_EAX(0x9A52F0)
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall RemoveProjectileLightHook(Projectile *projRef)
+{
+	__asm
+	{
+		mov		eax, [ecx+0x114]
+		test	eax, eax
+		jz		done
+		mov		dword ptr [ecx+0x114], 0
+		mov		ecx, [eax+0x18]
+		test	ecx, ecx
+		jz		done
+		push	eax
+		mov		eax, [ecx]
+		call	dword ptr [eax+0xE8]
+	done:
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall AddExplosionLightHook(Explosion *explosion)
+{
+	__asm
+	{
+		mov		eax, [ecx+0x20]
+		mov		eax, [eax+0x80]
+		test	eax, eax
+		jz		done
+		mov		edx, [ecx+0x64]
+		test	edx, edx
+		jz		done
+		mov		edx, [edx+0x14]
+		test	edx, edx
+		jz		done
+		push	ecx
+		mov		ecx, eax
+		call	CreatePointLight
+		pop		ecx
+		mov		[ecx+0xC4], eax
+	done:
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall RemoveExplosionLightHook(Explosion *explosion)
+{
+	__asm
+	{
+		mov		eax, [ecx+0xC4]
+		test	eax, eax
+		jz		done
+		mov		dword ptr [ecx+0xC4], 0
+		mov		ecx, [eax+0x18]
+		test	ecx, ecx
+		jz		done
+		push	eax
+		mov		eax, [ecx]
+		call	dword ptr [eax+0xE8]
+	done:
 		retn
 	}
 }
@@ -1384,10 +1469,10 @@ __declspec(naked) bool __fastcall KillChallengeFixHook(Actor *killed)
 	{
 		cmp		byte ptr [ecx+0x18D], 0
 		jnz		done
-		test	dword ptr [ecx+0x140], 0x80000000
+		test	byte ptr [ecx+0x143], 0x80
 		jnz		done
 		call	Actor::GetActorBase
-		test	dword ptr [eax+0x34], 2
+		test	byte ptr [eax+0x34], 2
 	done:
 		setnz   al
 		retn
@@ -1617,7 +1702,7 @@ __declspec(naked) float __vectorcall GetFrequencyModifier(TESSound *soundForm)
 	__asm
 	{
 		movss	xmm0, kFltOne
-		test	dword ptr [ecx+0x48], 1
+		test	byte ptr [ecx+0x48], 1
 		jnz		done
 		movsx	edx, byte ptr [ecx+0x46]
 		test	edx, edx
@@ -1876,7 +1961,7 @@ __declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadin
 		mov		eax, [esi]
 		test	bl, bl
 		jz		doneCheck
-		test	dword ptr [eax+8], 0x400
+		test	byte ptr [eax+9], 4
 		jz		iter2Next
 	doneCheck:
 		test	bh, bh
@@ -1970,14 +2055,14 @@ __declspec(naked) ExtraDataList* __fastcall DoOnLoadActorHook(TESObjectREFR *ref
 		call	dword ptr [eax+0x100]
 		test	al, al
 		jz		done
-		test	dword ptr [ecx+0x140], 0x10000000
+		test	byte ptr [ecx+0x143], 0x10
 		jnz		done
 		mov		eax, [ecx+0x68]
 		test	eax, eax
 		jz		done
 		cmp		dword ptr [eax+0x28], 1
 		ja		done
-		or		dword ptr [ecx+0x140], 0x10000000
+		or		byte ptr [ecx+0x143], 0x10
 		cmp		dword ptr [ecx+0x108], 0
 		jnz		done
 		cmp		byte ptr [ecx+0x18D], 0
@@ -1994,7 +2079,7 @@ __declspec(naked) void ResetActorFlagsRespawnHook()
 {
 	__asm
 	{
-		and		dword ptr [ecx+0x140], 0xEFFFFFFF
+		and		byte ptr [ecx+0x143], 0xEF
 		lea		eax, [ecx+0x44]
 		retn
 	}
@@ -2770,7 +2855,7 @@ __declspec(naked) void VoiceModulationFixHook()
 		mov		eax, 0x104
 		mov		ecx, [ebp-0x29C]
 		mov		ecx, [ecx+0x20]
-		test	dword ptr [ecx+8], 0x2000
+		test	byte ptr [ecx+9], 0x20
 		jnz		done
 		mov		eax, 0x80104
 	done:
@@ -3739,6 +3824,8 @@ void InitGamePatches()
 	WriteRelCall(0x70E5FE, (UInt32)ToggleConsoleHook);
 	WriteRelJump(0xEE820A, (UInt32)GamePadRumbleHook);
 	WriteRelJump(0xA23A19, (UInt32)GetMouseWheelHook);
+	WriteRelCall(0x5B5B18, (UInt32)CmdActivateHook);
+	WriteRelCall(0x5B5B48, (UInt32)CmdActivateHook);
 	WriteRelCall(0x5B54E7, (UInt32)RemoveMeHook);
 	WriteRelJump(0x8DAA6F, (UInt32)PackageSetRunHook);
 	WritePushRetRelJump(0x8AB6D9, 0x8AB6F3, (UInt32)ResetActorFlagsHook);
@@ -3779,7 +3866,10 @@ void InitGamePatches()
 	WritePushRetRelJump(0x6061D9, 0x60622F, (UInt32)InitWornObjectHook);
 	WritePushRetRelJump(0x5719ED, 0x571A27, (UInt32)PickWeaponModelHook);
 	WritePushRetRelJump(0x83AD97, 0x83AE4F, (UInt32)PlayAttackSoundHook);
-	WritePushRetRelJump(0x9BD50A, 0x9BD51D, (UInt32)AddProjectileLightHook);
+	WriteRelCall(0x9BDC92, (UInt32)AddProjectileLightHook);
+	WriteRelCall(0x9BC6D9, (UInt32)RemoveProjectileLightHook);
+	WriteRelCall(0x9AD024, (UInt32)AddExplosionLightHook);
+	WriteRelCall(0x9AC6A5, (UInt32)RemoveExplosionLightHook);
 	WriteRelCall(0x89DC0E, (UInt32)KillChallengeFixHook);
 	WriteRelCall(0x72880D, (UInt32)IsDisposableWeaponHook);
 	WriteRelJump(0x984156, (UInt32)DeathResponseFixHook);
