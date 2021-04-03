@@ -28,7 +28,7 @@ bool Cmd_RefToString_Execute(COMMAND_ARGS)
 	{
 		if (form)
 		{
-			if (form->GetIsReference())
+			if IS_REFERENCE(form)
 				form = ((TESObjectREFR*)form)->baseForm;
 		}
 		else form = thisObj;
@@ -403,9 +403,6 @@ bool Cmd_GetOptionalPatch_Execute(COMMAND_ARGS)
 				break;
 			case 9:
 				enabled = HOOK_INSTALLED(QttSelectInventory);
-				break;
-			case 10:
-				enabled = HOOK_INSTALLED(RefreshHPBarDelay);
 				break;
 			case 11:
 				enabled = HOOK_INSTALLED(DamageToWeapon);

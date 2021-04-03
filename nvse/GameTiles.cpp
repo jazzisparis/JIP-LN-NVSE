@@ -187,7 +187,7 @@ __declspec(naked) void Tile::DestroyAllChildren()
 Tile *Tile::GetChild(const char *childName)
 {
 	int childIndex = 0;
-	char *colon = strchr(const_cast<char*>(childName), ':');
+	char *colon = FindChr(childName, ':');
 	if (colon)
 	{
 		if (colon == childName) return NULL;

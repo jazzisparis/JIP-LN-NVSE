@@ -1482,3 +1482,10 @@ ParamInfo kParams_JIP_OneOptionalString_OneOptionalInt[] =
 	{"String", kParamType_String, 1},
 	{"Integer", kParamType_Integer, 1}
 };
+
+ParamInfo kParams_JIP_ThreeScriptVars[] =
+{
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 0}
+};

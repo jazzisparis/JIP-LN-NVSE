@@ -17,25 +17,44 @@ void LightCS::Enter()
 
 #define FAST_SLEEP_COUNT 10000UL
 
-void LightCS::EnterSleep()
+__declspec(naked) void LightCS::EnterSleep()
 {
-	UInt32 threadID = GetCurrentThreadId();
-	if (owningThread == threadID)
+	__asm
 	{
-		enterCount++;
-		return;
+		push	ebx
+		mov		ebx, ecx
+		call	GetCurrentThreadId
+		cmp		[ebx], eax
+		jnz		doSpin
+		inc		dword ptr [ebx+4]
+		pop		ebx
+		retn
+		ALIGN 16
+	doSpin:
+		push	esi
+		push	edi
+		mov		esi, eax
+		mov		edi, FAST_SLEEP_COUNT
+		ALIGN 16
+	spinHead:
+		xor		eax, eax
+		lock cmpxchg [ebx], esi
+		test	eax, eax
+		jz		done
+		xor		edx, edx
+		dec		edi
+		sets	dl
+		push	edx
+		call	Sleep
+		jmp		spinHead
+		ALIGN 16
+	done:
+		mov		dword ptr [ebx+4], 1
+		pop		edi
+		pop		esi
+		pop		ebx
+		retn
 	}
-	UInt32 fastIdx = FAST_SLEEP_COUNT;
-	while (InterlockedCompareExchange(&owningThread, threadID, 0))
-	{
-		if (fastIdx)
-		{
-			fastIdx--;
-			Sleep(0);
-		}
-		else Sleep(1);
-	}
-	enterCount = 1;
 }
 
 void LightCS::Leave()
@@ -502,7 +521,6 @@ __declspec(noinline) char __fastcall StrBeginsCI(const char *lstr, const char *r
 
 __declspec(noinline) void __fastcall FixPath(char *str)
 {
-	if (!str) return;
 	UInt8 curr;
 	while (curr = *str)
 	{
@@ -515,7 +533,6 @@ __declspec(noinline) void __fastcall FixPath(char *str)
 
 __declspec(noinline) void __fastcall StrToLower(char *str)
 {
-	if (!str) return;
 	UInt8 curr;
 	while (curr = *str)
 	{
@@ -526,7 +543,6 @@ __declspec(noinline) void __fastcall StrToLower(char *str)
 
 __declspec(noinline) void __fastcall StrToUpper(char *str)
 {
-	if (!str) return;
 	UInt8 curr;
 	while (curr = *str)
 	{
@@ -535,29 +551,69 @@ __declspec(noinline) void __fastcall StrToUpper(char *str)
 	}
 }
 
-__declspec(noinline) void __fastcall ReplaceChr(char *str, char from, char to)
+__declspec(naked) void __fastcall ReplaceChr(char *str, char from, char to)
 {
-	if (!str) return;
-	char curr;
-	while (curr = *str)
+	__asm
 	{
-		if (curr == from)
-			*str = to;
-		str++;
+	iterHead:
+		mov		al, [ecx]
+		test	al, al
+		jz		done
+		inc		ecx
+		cmp		al, dl
+		jnz		iterHead
+		mov		al, [esp+4]
+		mov		[ecx-1], al
+		jmp		iterHead
+		ALIGN 16
+	done:
+		retn	4
 	}
 }
 
-__declspec(noinline) char* __fastcall FindChrR(const char *str, UInt32 length, char chr)
+__declspec(naked) char* __fastcall FindChr(const char *str, char chr)
 {
-	if (!str) return NULL;
-	char *strEnd = const_cast<char*>(str) + length;
-	while (strEnd > str)
+	__asm
 	{
-		strEnd--;
-		if (*strEnd == chr)
-			return strEnd;
+	iterHead:
+		mov		al, [ecx]
+		test	al, al
+		jz		retnNULL
+		cmp		al, dl
+		jz		found
+		inc		ecx
+		jmp		iterHead
+		ALIGN 16
+	found:
+		mov		eax, ecx
+		retn
+		ALIGN 16
+	retnNULL:
+		xor		eax, eax
+		retn
 	}
-	return NULL;
+}
+
+__declspec(naked) char* __fastcall FindChrR(const char *str, UInt32 length, char chr)
+{
+	__asm
+	{
+		lea		eax, [ecx+edx]
+		mov		dl, [esp+4]
+		ALIGN 16
+	iterHead:
+		cmp		eax, ecx
+		jz		retnNULL
+		dec		eax
+		mov		dh, [eax]
+		cmp		dl, dh
+		jnz		iterHead
+		retn	4
+		ALIGN 16
+	retnNULL:
+		xor		eax, eax
+		retn	4
+	}
 }
 
 __declspec(noinline) char* __fastcall SubStrCI(const char *srcStr, const char *subStr)
@@ -585,30 +641,54 @@ __declspec(noinline) char* __fastcall SubStrCI(const char *srcStr, const char *s
 	return NULL;
 }
 
-__declspec(noinline) char* __fastcall SlashPos(const char *str)
+__declspec(naked) char* __fastcall SlashPos(const char *str)
 {
-	if (!str) return NULL;
-	char curr;
-	while (curr = *str)
+	__asm
 	{
-		if ((curr == '/') || (curr == '\\'))
-			return const_cast<char*>(str);
-		str++;
+	iterHead:
+		mov		dl, [ecx]
+		test	dl, dl
+		jz		retnNULL
+		cmp		dl, '\\'
+		jz		found
+		cmp		dl, '/'
+		jz		found
+		inc		ecx
+		jmp		iterHead
+		ALIGN 16
+	found:
+		mov		eax, ecx
+		retn
+		ALIGN 16
+	retnNULL:
+		xor		eax, eax
+		retn
 	}
-	return NULL;
 }
 
-__declspec(noinline) char* __fastcall SlashPosR(const char *str)
+__declspec(naked) char* __fastcall SlashPosR(const char *str)
 {
-	if (!str) return NULL;
-	char *strEnd = const_cast<char*>(str) + StrLen(str);
-	while (strEnd > str)
+	__asm
 	{
-		strEnd--;
-		if ((*strEnd == '/') || (*strEnd == '\\'))
-			return strEnd;
+		call	StrLen
+		add		eax, ecx
+		ALIGN 16
+	iterHead:
+		cmp		eax, ecx
+		jz		retnNULL
+		dec		eax
+		mov		dl, [eax]
+		cmp		dl, '\\'
+		jz		found
+		cmp		dl, '/'
+		jnz		iterHead
+	found:
+		retn
+		ALIGN 16
+	retnNULL:
+		xor		eax, eax
+		retn
 	}
-	return NULL;
 }
 
 __declspec(noinline) char* __fastcall GetNextToken(char *str, char delim)
@@ -1011,38 +1091,33 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 
 __declspec(naked) char* __fastcall UIntToHex(char *str, UInt32 num)
 {
-	static const char kCharAtlas[] = "0123456789ABCDEF";
+	static const char kCharAtlas[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 	__asm
 	{
+		test	edx, edx
+		jnz		proceed
+		mov		word ptr [ecx], '0'
+		lea		eax, [ecx+1]
+		retn
+		ALIGN 16
+	proceed:
 		push	esi
-		push	edi
-		mov		esi, ecx
-		mov		edi, ecx
+		bsr		eax, edx
+		shr		eax, 2
+		lea		esi, [ecx+eax+1]
+		push	esi
 		xor		eax, eax
 		ALIGN 16
 	workIter:
 		mov		al, dl
 		and		al, 0xF
 		mov		cl, kCharAtlas[eax]
+		dec		esi
 		mov		[esi], cl
-		inc		esi
 		shr		edx, 4
 		jnz		workIter
-		mov		[esi], 0
-		mov		eax, esi
-		ALIGN 16
-	swapIter:
-		dec		esi
-		cmp		esi, edi
-		jbe		done
-		mov		dl, [esi]
-		mov		cl, [edi]
-		mov		[esi], cl
-		mov		[edi], dl
-		inc		edi
-		jmp		swapIter
-	done:
-		pop		edi
+		pop		eax
+		mov		[eax], 0
 		pop		esi
 		retn
 	}

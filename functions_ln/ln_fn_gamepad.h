@@ -42,8 +42,8 @@ bool Cmd_GetController_Execute(COMMAND_ARGS)
 bool Cmd_IsButtonPressed_Execute(COMMAND_ARGS)
 {
 	UInt32 button;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button))
-		*result = (s_gamePad.wButtons & (UInt16)button) ? 1 : 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button) && (s_gamePad.wButtons & (UInt16)button))
+		*result = 1;
 	else *result = 0;
 	return true;
 }
@@ -212,8 +212,8 @@ bool Cmd_DisableButton_Execute(COMMAND_ARGS)
 bool Cmd_IsButtonDisabled_Execute(COMMAND_ARGS)
 {
 	UInt32 button;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button))
-		*result = !(s_XIStateMods.buttonSkip & button);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button) && !(s_XIStateMods.buttonSkip & button))
+		*result = 1;
 	else *result = 0;
 	return true;
 }
@@ -243,8 +243,8 @@ bool Cmd_ReleaseButton_Execute(COMMAND_ARGS)
 bool Cmd_IsButtonHeld_Execute(COMMAND_ARGS)
 {
 	UInt32 button;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button))
-		*result = (s_XIStateMods.buttonHold & button) ? 1 : 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button) && (s_XIStateMods.buttonHold & button))
+		*result = 1;
 	else *result = 0;
 	return true;
 }
@@ -274,8 +274,8 @@ bool Cmd_DisableTrigger_Execute(COMMAND_ARGS)
 bool Cmd_IsTriggerDisabled_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger))
-		*result = (s_XIStateMods.triggerMods & (1 << trigger)) ? 1 : 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (s_XIStateMods.triggerMods & (1 << trigger)))
+		*result = 1;
 	else *result = 0;
 	return true;
 }
@@ -289,7 +289,7 @@ bool Cmd_IsTriggerDisabled_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_HoldTrigger_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger < 2))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger <= 1))
 		s_XIStateMods.triggerMods |= (4 << trigger);
 	return true;
 }
@@ -297,7 +297,7 @@ bool Cmd_HoldTrigger_Execute(COMMAND_ARGS)
 bool Cmd_ReleaseTrigger_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger < 2))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger <= 1))
 		s_XIStateMods.triggerMods &= ~(4 << trigger);
 	return true;
 }
@@ -305,15 +305,15 @@ bool Cmd_ReleaseTrigger_Execute(COMMAND_ARGS)
 bool Cmd_IsTriggerHeld_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger))
-		*result = (s_XIStateMods.triggerMods & (4 << trigger)) ? 1 : 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger <= 1) && (s_XIStateMods.triggerMods & (4 << trigger)))
+		*result = 1;
 	else *result = 0;
 	return true;
 }
 
 bool Cmd_IsTriggerHeld_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (s_XIStateMods.triggerMods & (4 << (UInt8)arg1)) ? 1 : 0;
+	*result = (s_XIStateMods.triggerMods & (4 << (UInt32)arg1)) ? 1 : 0;
 	return true;
 }
 
@@ -328,8 +328,8 @@ bool Cmd_TapButton_Execute(COMMAND_ARGS)
 bool Cmd_TapTrigger_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger < 2))
-		s_XIStateMods.triggerMods |= (16 << trigger);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger <= 1))
+		s_XIStateMods.triggerMods |= (0x10 << trigger);
 	return true;
 }
 
@@ -376,15 +376,15 @@ __declspec(naked) bool Cmd_SetOnTriggerUpEventHandler_Execute(COMMAND_ARGS)
 bool Cmd_IsStickDisabled_Execute(COMMAND_ARGS)
 {
 	UInt32 stick;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &stick) && (stick <= 1))
-		*result = (s_XIStateMods.stickMods & (1 << stick)) ? 1 : 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &stick) && (stick <= 1) && (s_XIStateMods.stickSkip & (0xF << (stick << 2))))
+		*result = 1;
 	else *result = 0;
 	return true;
 }
 
 bool Cmd_IsStickDisabled_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (s_XIStateMods.stickMods & (1 << (UInt8)arg1)) ? 1 : 0;
+	*result = (s_XIStateMods.stickSkip & (0xF << ((UInt32)arg1 << 2))) ? 1 : 0;
 	return true;
 }
 
@@ -393,8 +393,8 @@ bool Cmd_SetStickDisabled_Execute(COMMAND_ARGS)
 	UInt32 stick, doSet;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &stick, &doSet) && (stick <= 1))
 	{
-		if (doSet) s_XIStateMods.stickMods |= (1 << stick);
-		else s_XIStateMods.stickMods &= ~(1 << stick);
+		if (doSet) s_XIStateMods.stickSkip |= (0xF << (stick << 2));
+		else s_XIStateMods.stickSkip &= ~(0xF << (stick << 2));
 	}
 	return true;
 }

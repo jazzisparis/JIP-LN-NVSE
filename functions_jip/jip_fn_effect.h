@@ -212,7 +212,7 @@ bool Cmd_GetNumActorEffects_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = (TESActorBase*)thisObj->baseForm;
 	}
 	*result = (int)actorBase->spellList.spellList.Count();
@@ -227,7 +227,7 @@ bool Cmd_GetNthActorEffect_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &idx, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = (TESActorBase*)thisObj->baseForm;
 	}
 	SpellItem *splItem = actorBase->spellList.spellList.GetNthItem(idx);
@@ -242,7 +242,7 @@ bool Cmd_GetActorUnarmedEffect_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = (TESActorBase*)thisObj->baseForm;
 	}
 	if (actorBase->touchSpell.unarmedEffect) REFR_RES = actorBase->touchSpell.unarmedEffect->refID;
@@ -257,7 +257,7 @@ bool Cmd_SetActorUnarmedEffect_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &effForm, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = (TESActorBase*)thisObj->baseForm;
 	}
 	if IS_ID(effForm, EnchantmentItem)
@@ -323,7 +323,7 @@ bool Cmd_GetActiveEffects_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 filter = 7;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &filter) || !thisObj->IsActor())
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &filter) || NOT_ACTOR(thisObj))
 		return true;
 	filter = ((filter & 1) ? kFormType_EnchantmentItem : 63) & ((filter & 2) ? kFormType_SpellItem : 63) & ((filter & 4) ? kFormType_AlchemyItem : 63);
 	ActiveEffectList *effList = ((Actor*)thisObj)->magicTarget.GetEffectList();
@@ -372,7 +372,7 @@ struct SortEffectsEntry
 bool Cmd_GetTempEffects_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!thisObj->IsActor()) return true;
+	if (NOT_ACTOR(thisObj)) return true;
 	ActiveEffectList *effList = ((Actor*)thisObj)->magicTarget.GetEffectList();
 	if (!effList) return true;
 	Vector<SortEffectsEntry> sortEffects;
@@ -413,7 +413,7 @@ bool Cmd_RemoveNthTempEffect_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 index;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &index) || !thisObj->IsActor()) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &index) || NOT_ACTOR(thisObj)) return true;
 	ActiveEffectList *effList = ((Actor*)thisObj)->magicTarget.GetEffectList();
 	if (!effList) return true;
 	ListNode<ActiveEffect> *iter = effList->Head();
@@ -526,7 +526,7 @@ bool Cmd_SetBaseEffectScript_Execute(COMMAND_ARGS)
 
 bool __fastcall IsSpellTargetAlt(Actor *actor, MagicItem *magicItem)
 {
-	if (!actor->IsActor()) return false;
+	if (NOT_ACTOR(actor)) return false;
 	ActiveEffectList *effList = actor->magicTarget.GetEffectList();
 	if (!effList) return false;
 	ListNode<ActiveEffect> *iter = effList->Head();
@@ -560,7 +560,7 @@ bool Cmd_CastImmediate_Execute(COMMAND_ARGS)
 {
 	MagicItem *magicItem;
 	Actor *target = (Actor*)thisObj, *caster = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &caster) && target->IsActor() && target->parentCell && (magicItem->GetType() != 4))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &caster) && IS_ACTOR(target) && target->parentCell && (magicItem->GetType() != 4))
 	{
 		if (!caster) caster = target;
 		UInt32 *reachMultPtr = (UInt32*)0x11CF1E4, reachMult = *reachMultPtr;

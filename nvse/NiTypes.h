@@ -488,38 +488,43 @@ __declspec(naked) void NiTMapBase<T_Key, T_Data>::FreeBuckets()
 		cmp		dword ptr [ecx+0xC], 0
 		jz		done
 		push	ebx
+		mov		ebx, ecx
+		mov		ecx, 0x11C5F80
+		call	LightCS::EnterSleep
 		push	esi
 		push	edi
-		mov		ebx, ecx
-		mov		esi, [ecx+8]
-		mov		edi, [ecx+4]
+		mov		esi, [ebx+8]
+		mov		edi, [ebx+4]
+		mov		dword ptr [ebx+0xC], 0
+		mov		ebx, 0x11C5F58
+		pxor	xmm0, xmm0
 		ALIGN 16
 	bucketIter:
 		dec		edi
 		js		bucketEnd
-		mov		eax, [esi]
+		mov		ecx, [esi]
 		add		esi, 4
-		test	eax, eax
+		test	ecx, ecx
 		jz		bucketIter
 		ALIGN 16
 	entryIter:
-		push	dword ptr [eax]
-		push	eax
-		push	eax
-		mov		ecx, ebx
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x10]
-		mov		ecx, ebx
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x18]
-		pop		eax
-		test	eax, eax
+		mov		eax, ecx
+		mov		ecx, [ecx]
+		movq	qword ptr [eax+4], xmm0
+		mov		edx, [ebx]
+		mov		[eax], edx
+		mov		[ebx], eax
+		test	ecx, ecx
 		jnz		entryIter
-		mov		[esi-4], eax
+		mov		[esi-4], ecx
 		jmp		bucketIter
 		ALIGN 16
 	bucketEnd:
-		mov		dword ptr [ebx+0xC], 0
+		mov		ecx, 0x11C5F80
+		dec		dword ptr [ecx+4]
+		jnz		inUse
+		mov		dword ptr [ecx], 0
+	inUse:
 		pop		edi
 		pop		esi
 		pop		ebx

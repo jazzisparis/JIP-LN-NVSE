@@ -522,6 +522,7 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			s_gameLoadFlagLN = true;
 			s_pcCurrCell0 = NULL;
 			s_pcCurrCell = NULL;
+			s_lastInterior = NULL;
 			s_pcRootWorld = NULL;
 			HOOK_SET(SynchronizePosition, false);
 			s_syncPositionRef = NULL;

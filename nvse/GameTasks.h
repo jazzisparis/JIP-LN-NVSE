@@ -384,6 +384,7 @@ public:
 };
 
 // 30
+// C'tor: 0x442650
 struct ModelLoader
 {
 	LockFreeMap<const char*, Model*>					*modelMap;			// 00

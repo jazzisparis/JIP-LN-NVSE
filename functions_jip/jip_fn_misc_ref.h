@@ -77,6 +77,8 @@ DEFINE_COMMAND_PLUGIN(GetRayCastMaterial, , 1, 2, kParams_JIP_OneOptionalInt_One
 DEFINE_COMMAND_PLUGIN(GetCollisionNodes, , 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetChildBlocks, , 1, 2, kParams_JIP_OneOptionalString_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetBlockTextureSet, , 1, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(GetPosEx, , 1, 3, kParams_JIP_ThreeScriptVars);
+DEFINE_COMMAND_PLUGIN(GetAngleEx, , 1, 3, kParams_JIP_ThreeScriptVars);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -100,7 +102,7 @@ bool Cmd_GetObjectDimensions_Execute(COMMAND_ARGS)
 	{
 		if (!thisObj) return true;
 		scale = thisObj->scale;
-		if (thisObj->IsActor())
+		if (IS_ACTOR(thisObj))
 		{
 			Actor *actor = (Actor*)thisObj;
 			if (actor->baseProcess && (actor->baseProcess->processLevel <= 1))
@@ -286,7 +288,7 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESObjectCELL *cell;
 	NiVector3 *posVector;
-	if (thisObj->IsActor())
+	if (IS_ACTOR(thisObj))
 	{
 		Actor *actor = (Actor*)thisObj;
 		cell = (TESObjectCELL*)actor->startingWorldOrCell;
@@ -319,7 +321,7 @@ bool Cmd_GetCenterPos_Execute(COMMAND_ARGS)
 	{
 		axis -= 'X';
 		*result = ((float*)&thisObj->posX)[axis];
-		if (thisObj->IsActor())
+		if (IS_ACTOR(thisObj))
 		{
 			Actor *actor = (Actor*)thisObj;
 			if (actor->baseProcess && (actor->baseProcess->processLevel <= 1))
@@ -354,7 +356,7 @@ bool Cmd_GetRefType_Execute(COMMAND_ARGS)
 bool Cmd_ToggleObjectCollision_Execute(COMMAND_ARGS)
 {
 	UInt32 enable;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && !thisObj->IsActor() && !kInventoryType[thisObj->baseForm->typeID] && 
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && NOT_ACTOR(thisObj) && !kInventoryType[thisObj->baseForm->typeID] && 
 		(!enable == !(thisObj->extraDataList.jipRefFlags61 & kHookRefFlag61_DisableCollision)))
 	{
 		thisObj->extraDataList.jipRefFlags61 ^= kHookRefFlag61_DisableCollision;
@@ -442,7 +444,7 @@ bool __fastcall GetHasContact(TESObjectREFR *thisObj, TESForm *form)
 	hkpWorldObject **bodies;
 	UInt32 count;
 	TESObjectREFR *refr;
-	if (thisObj->IsActor())
+	if (IS_ACTOR(thisObj))
 	{
 		if (!((Actor*)thisObj)->baseProcess) return false;
 		bhkCharacterController *charCtrl = ((Actor*)thisObj)->baseProcess->GetCharacterController();
@@ -489,7 +491,7 @@ bool __fastcall GetHasContactBase(TESObjectREFR *thisObj, TESForm *form)
 	hkpWorldObject **bodies;
 	UInt32 count;
 	TESObjectREFR *refr;
-	if (thisObj->IsActor())
+	if (IS_ACTOR(thisObj))
 	{
 		if (!((Actor*)thisObj)->baseProcess) return false;
 		bhkCharacterController *charCtrl = ((Actor*)thisObj)->baseProcess->GetCharacterController();
@@ -535,7 +537,7 @@ bool __fastcall GetHasContactType(TESObjectREFR *thisObj, UInt32 typeID)
 	hkpWorldObject **bodies;
 	UInt32 count;
 	TESObjectREFR *refr;
-	if (thisObj->IsActor())
+	if (IS_ACTOR(thisObj))
 	{
 		if (!((Actor*)thisObj)->baseProcess) return false;
 		bhkCharacterController *charCtrl = ((Actor*)thisObj)->baseProcess->GetCharacterController();
@@ -589,7 +591,7 @@ bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 	hkpWorldObject **bodies;
 	UInt32 count;
 	TESObjectREFR *refr;
-	if (thisObj->IsActor())
+	if (IS_ACTOR(thisObj))
 	{
 		if (!((Actor*)thisObj)->baseProcess) return true;
 		bhkCharacterController *charCtrl = ((Actor*)thisObj)->baseProcess->GetCharacterController();
@@ -628,7 +630,7 @@ bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 
 bool Cmd_GetHasPhantom_Execute(COMMAND_ARGS)
 {
-	if (thisObj->IsActor())
+	if (IS_ACTOR(thisObj))
 	{
 		*result = 1;
 		return true;
@@ -737,7 +739,7 @@ bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	float maxRange = 10000.0F, posXmod = 0, posYmod = 0, posZmod = 0;
+	float maxRange = 12288.0F, posXmod = 0, posYmod = 0, posZmod = 0;
 	UInt8 numArgs = NUM_ARGS;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &posXmod, &posYmod, &posZmod))
 	{
@@ -819,14 +821,14 @@ bool Cmd_SetOnCriticalHitEventHandler_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &target, &source, &weapon) || NOT_ID(script, Script)) return true;
 	if (target)
 	{
-		if (!target->IsActor())
+		if (NOT_ACTOR(target))
 		{
 			if (!source) return true;
 			target = NULL;
 		}
 		if (source)
 		{
-			if (!source->GetIsReference())
+			if NOT_REFERENCE(source)
 			{
 				if (!weapon) return true;
 				source = NULL;
@@ -847,7 +849,7 @@ bool Cmd_MoveToFadeDelay_Execute(COMMAND_ARGS)
 	UInt8 *data = (UInt8*)scriptData + *opcodeOffsetPtr;
 	*(UInt8*)data = 1;
 	Actor *actor = (Actor*)thisObj;
-	if (actor->IsActor() && actor->baseProcess && !actor->baseProcess->processLevel)
+	if (IS_ACTOR(actor) && actor->baseProcess && !actor->baseProcess->processLevel)
 		((HighProcess*)actor->baseProcess)->delayTime = *(double*)(data + 6);
 	static const CommandInfo *cmdInfo = NULL;
 	if (!cmdInfo) cmdInfo = GetCmdByOpcode(0x124F);
@@ -898,7 +900,7 @@ bool Cmd_IsAnimPlayingEx_Execute(COMMAND_ARGS)
 bool Cmd_GetRigidBodyMass_Execute(COMMAND_ARGS)
 {
 	float totalMass = 0;
-	if (!thisObj->IsActor())
+	if (NOT_ACTOR(thisObj))
 	{
 		NiNode *niNode = thisObj->GetNiNode();
 		if (niNode) niNode->GetBodyMass(&totalMass);
@@ -1334,55 +1336,42 @@ __declspec(naked) TESObjectREFR *GetCrosshairRef()
 	{
 		push	ebp
 		mov		ebp, esp
-		sub		esp, 0x60
-		mov		eax, g_thePlayer
-		add		eax, 0xDD4
-		lea		ecx, [ebp-0xC]
-		mov		edx, [eax]
-		mov		[ecx], edx
-		mov		edx, [eax+4]
-		mov		[ecx+4], edx
-		mov		edx, [eax+8]
-		mov		[ecx+8], edx
+		sub		esp, 0x64
 		mov		ecx, g_thePlayer
+		movups	xmm0, [ecx+0xDD4]
 		cmp		byte ptr [ecx+0x64B], 0
 		jz		firstPerson
-		lea		eax, [ebp-0x18]
-		push	eax
-		CALL_EAX(0x70C410)
-		push	eax
-		lea		ecx, [ebp-0xC]
-		CALL_EAX(0x63C8A0)
-		mov		ecx, g_thePlayer
+		movups	xmm1, [ecx+0xD58]
+		addps	xmm0, xmm1
 	firstPerson:
+		movups	[ebp-0x10], xmm0
+		push	dword ptr [ecx+0x24]
 		push	0
 		CALL_EAX(0x953F20)
-		fstp	dword ptr [ebp-0x18]
-		push	dword ptr [ebp-0x18]
-		lea		ecx, [ebp-0x3C]
+		push	ecx
+		fstp	dword ptr [esp]
+		lea		ecx, [ebp-0x40]
 		CALL_EAX(0x4A0C90)
-		mov		eax, g_thePlayer
-		push	dword ptr [eax+0x24]
-		lea		ecx, [ebp-0x60]
+		lea		ecx, [ebp-0x64]
 		CALL_EAX(0x524AC0)
-		lea		eax, [ebp-0x60]
+		lea		eax, [ebp-0x64]
 		push	eax
-		lea		ecx, [ebp-0x3C]
+		lea		ecx, [ebp-0x40]
 		push	ecx
 		CALL_EAX(0x43F8D0)
-		lea		eax, [ebp-0x18]
+		lea		ecx, [ebp-0x1C]
+		mov		edx, [eax+4]
+		mov		[ecx], edx
+		mov		edx, [eax+0x10]
+		mov		[ecx+4], edx
+		mov		edx, [eax+0x1C]
+		mov		[ecx+8], edx
+		lea		edx, [ebp-0x64]
+		push	edx
 		push	eax
-		push	1
-		lea		ecx, [ebp-0x3C]
-		CALL_EAX(0x439F50)
-		lea		eax, [ebp-0x60]
-		push	eax
-		lea		eax, [ebp-0x3C]
-		push	eax
-		push	0x45FE0000
-		lea		eax, [ebp-0x18]
-		push	eax
-		lea		eax, [ebp-0xC]
+		push	0x46400000
+		push	ecx
+		lea		eax, [ebp-0x10]
 		push	eax
 		mov		ecx, g_interfaceManager
 		mov		ecx, [ecx+0x13C]
@@ -1427,18 +1416,9 @@ bool Cmd_AttachLight_Execute(COMMAND_ARGS)
 		NiNode *objNode = thisObj->GetNode(s_strArgBuffer);
 		if (objNode)
 		{
-			NiPointLight *pointLight;
-			for (auto iter = objNode->m_children.Begin(); !iter.End(); ++iter)
-			{
-				if (!(pointLight = (NiPointLight*)*iter) || NOT_TYPE(pointLight, NiPointLight) || !(pointLight->m_flags & 0x20000000) || !pointLight->isAttached)
-					continue;
-				SetLightProperties(pointLight, lightForm);
-				goto done;
-			}
-			pointLight = CreatePointLight(lightForm, objNode);
-			pointLight->isAttached = true;
-		done:
+			NiPointLight *pointLight = CreatePointLight(lightForm, objNode);
 			pointLight->m_localTranslate = offsetMod;
+			pointLight->isAttached = true;
 			*result = 1;
 		}
 	}
@@ -1538,7 +1518,7 @@ bool RegisterInsertObject(COMMAND_ARGS)
 	UInt32 doInsert;
 	if (ExtractFormatStringArgs(2, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_AttachModel.numParams, &form, &doInsert) && (form->modIndex != 0xFF))
 	{
-		if (form->GetIsReference())
+		if IS_REFERENCE(form)
 		{
 			if (kInventoryType[((TESObjectREFR*)form)->baseForm->typeID])
 				return true;
@@ -1546,7 +1526,7 @@ bool RegisterInsertObject(COMMAND_ARGS)
 		else if (!form->IsBoundObject())
 			return true;
 
-		char *nodeName = NULL, *objectName = strrchr(s_strArgBuffer, '|');
+		char *nodeName = NULL, *objectName = FindChrR(s_strArgBuffer, StrLen(s_strArgBuffer), '|');
 		if (objectName)
 		{
 			*objectName++ = 0;
@@ -1564,7 +1544,7 @@ bool RegisterInsertObject(COMMAND_ARGS)
 			if (!insertNode)
 			{
 				StrCopy(StrLenCopy(s_dataPath, "meshes\\", 7), objectName);
-				if (!FileExistsEx(s_dataPathFull))
+				if (!FileExistsEx(s_dataPathFull, false))
 					return true;
 			}
 			NodeNamesMap *namesMap;
@@ -1657,7 +1637,7 @@ bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 	TESForm *form;
 	if (ExtractFormatStringArgs(1, blockName + 1, EXTRACT_ARGS_EX, kCommandInfo_ModelHasBlock.numParams, &form))
 	{
-		TESObjectREFR *refr = form->GetIsReference() ? (TESObjectREFR*)form : NULL;
+		TESObjectREFR *refr = IS_REFERENCE(form) ? (TESObjectREFR*)form : NULL;
 		NiNode *rootNode = refr ? refr->GetNiNode() : NULL;
 		if (rootNode && rootNode->GetBlock(blockName + 1))
 			goto Retn1;
@@ -1752,7 +1732,7 @@ void __fastcall GetCollisionNodes(NiNode *node)
 		}
 	}
 	for (auto iter = node->m_children.Begin(); !iter.End(); ++iter)
-		if (*iter && iter->GetNiNode())
+		if (*iter && IS_NODE(*iter))
 			GetCollisionNodes((NiNode*)*iter);
 }
 
@@ -1777,7 +1757,7 @@ void __fastcall GetChildBlocks(NiNode *node)
 	for (auto iter = node->m_children.Begin(); !iter.End(); ++iter)
 	{
 		if (!(block = *iter)) continue;
-		if (block->GetNiNode())
+		if IS_NODE(block)
 			GetChildBlocks((NiNode*)block);
 		else s_tempElements.Append(block->GetName());
 	}
@@ -1791,7 +1771,7 @@ bool Cmd_GetChildBlocks_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &pcNode))
 	{
 		NiNode *objNode = (NiNode*)GetNifBlock(thisObj, pcNode);
-		if (objNode && objNode->GetNiNode())
+		if (objNode && IS_NODE(objNode))
 		{
 			s_tempElements.Clear();
 			GetChildBlocks(objNode);
@@ -1829,6 +1809,30 @@ bool Cmd_GetBlockTextureSet_Execute(COMMAND_ARGS)
 				AssignCommandResult(CreateArray(elements, 6, scriptObj), result);
 			}
 		}
+	}
+	return true;
+}
+
+bool Cmd_GetPosEx_Execute(COMMAND_ARGS)
+{
+	ScriptVar *outX, *outY, *outZ;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outX, &outY, &outZ))
+	{
+		outX->data.num = thisObj->posX;
+		outY->data.num = thisObj->posY;
+		outZ->data.num = thisObj->posZ;
+	}
+	return true;
+}
+
+bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
+{
+	ScriptVar *outX, *outY, *outZ;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outX, &outY, &outZ))
+	{
+		outX->data.num = thisObj->rotX / kDblPId180;
+		outY->data.num = thisObj->rotY / kDblPId180;
+		outZ->data.num = thisObj->rotZ / kDblPId180;
 	}
 	return true;
 }

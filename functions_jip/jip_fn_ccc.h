@@ -243,7 +243,7 @@ bool Cmd_CCCSetTrait_Execute(COMMAND_ARGS)
 	if (trait == 40)
 	{
 		const char *pathStr = kAvatarMale;
-		if (thisObj && thisObj->IsActor())
+		if (thisObj && IS_ACTOR(thisObj))
 		{
 			TESActorBase *actorBase = (TESActorBase*)thisObj->baseForm;
 			const char *fullName = actorBase->fullName.name.m_data, **findID;
@@ -276,7 +276,7 @@ bool Cmd_CCCSetTrait_Execute(COMMAND_ARGS)
 	}
 	else if (!trait)
 	{
-		if (!thisObj->IsActor()) return true;
+		if (NOT_ACTOR(thisObj)) return true;
 		Actor *actor = (Actor*)thisObj;
 		if (!actor->GetKnockedState())
 		{
@@ -342,7 +342,7 @@ bool Cmd_CCCInFaction_Execute(COMMAND_ARGS)
 {
 	TESFaction *faction;
 	UInt32 inBase = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &faction, &inBase) && thisObj->IsActor() && 
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &faction, &inBase) && IS_ACTOR(thisObj) && 
 		((inBase && (((TESActorBase*)thisObj->baseForm)->baseData.GetFactionRank(faction) >= 0)) || 
 		(thisObj->extraDataList.GetExtraFactionRank(faction) >= 0))) *result = 1;
 	else *result = 0;
@@ -364,7 +364,7 @@ void SetNCCS(TESActorBase *actorBase, bool doSet)
 bool Cmd_CCCSetNCCS_Execute(COMMAND_ARGS)
 {
 	UInt32 doSet = 1;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &doSet) && thisObj->IsActor())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &doSet) && IS_ACTOR(thisObj))
 	{
 		TESActorBase *actorBase = (TESActorBase*)thisObj->baseForm;
 		if (doSet)
@@ -380,7 +380,7 @@ bool Cmd_CCCSetNCCS_Execute(COMMAND_ARGS)
 bool Cmd_GetEncumbranceRate_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (thisObj->IsActor())
+	if (IS_ACTOR(thisObj))
 	{
 		ExtraContainerChanges *xChanges = GetExtraType(&thisObj->extraDataList, ContainerChanges);
 		if (xChanges && xChanges->data)
@@ -514,7 +514,7 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 bool Cmd_CCCGetReputation_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!thisObj->IsActor()) return true;
+	if (NOT_ACTOR(thisObj)) return true;
 	ListNode<FactionListData> *baseFacIt = ((TESActorBase*)thisObj->baseForm)->baseData.factionList.Head();
 	FactionListData *facData;
 	do
@@ -546,7 +546,7 @@ bool Cmd_CCCGetReputation_Execute(COMMAND_ARGS)
 
 bool Cmd_CCCSayTo_Execute(COMMAND_ARGS)
 {
-	if (!thisObj->IsActor()) return true;
+	if (NOT_ACTOR(thisObj)) return true;
 	SayTo(PASS_COMMAND_ARGS);
 	ExtraSayToTopicInfo *xSayTo = GetExtraType(&thisObj->extraDataList, SayToTopicInfo);
 	if (xSayTo)
@@ -560,7 +560,7 @@ bool Cmd_CCCSayTo_Execute(COMMAND_ARGS)
 bool Cmd_CCCRunResultScripts_Execute(COMMAND_ARGS)
 {
 	TESTopic *topic;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &topic) && thisObj->IsActor())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &topic) && IS_ACTOR(thisObj))
 	{
 		Actor *actor = (Actor*)thisObj;
 		bool eval;
@@ -577,7 +577,7 @@ bool Cmd_CCCRunResultScripts_Execute(COMMAND_ARGS)
 bool Cmd_CCCSetFollowState_Execute(COMMAND_ARGS)
 {
 	SInt32 state = -1;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &state) || !thisObj->IsActor()) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &state) || NOT_ACTOR(thisObj)) return true;
 	Actor *actor = (Actor*)thisObj;
 	if (state < 0)
 	{

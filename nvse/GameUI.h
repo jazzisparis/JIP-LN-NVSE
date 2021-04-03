@@ -9,18 +9,36 @@ public:
 	struct HighlightedRef
 	{
 		TESObjectREFR	*refr;
-		BSFadeNode		*node;
+		NiNode			*node;
 
-		void Set(TESObjectREFR *_refr)
+		void Set(TESObjectREFR *_refr, NiNode *_node)
 		{
 			refr = _refr;
-			NiReleaseAddRef((NiRefObject**)&node, _refr->GetNiNode());
+			NiReleaseAddRef((NiRefObject**)&node, _node);
+		}
+
+		void Set(HighlightedRef *hRef)
+		{
+			refr = hRef->refr;
+			NiReleaseAddRef((NiRefObject**)&node, hRef->node);
 		}
 
 		void Clear()
 		{
 			refr = NULL;
 			if (node) NiReleaseAddRef((NiRefObject**)&node, nullptr);
+		}
+
+		void Replace(HighlightedRef *hRef)
+		{
+			Clear();
+			if (hRef)
+			{
+				refr = hRef->refr;
+				node = hRef->node;
+				hRef->refr = nullptr;
+				hRef->node = nullptr;
+			}
 		}
 	};
 
@@ -123,7 +141,8 @@ public:
 	UInt32					unk0F4;				// 0F4
 	UInt32					unk0F8;				// 0F8
 	TESObjectREFR			*crosshairRef;		// 0FC
-	UInt32					unk100[4];			// 100
+	TESObjectREFR			*refr100;			// 100
+	UInt32					unk104[3];			// 104
 	UInt8					byte110;			// 110
 	UInt8					pad111[3];			// 111
 	UInt32					menuStack[10];		// 114
@@ -148,7 +167,7 @@ public:
 	UInt32					highlightState;		// 1DC
 	HighlightedRef			highlightMain;		// 1E0
 	UInt32					numHighlighted;		// 1E8
-	UInt32					unk1EC;				// 1EC
+	SInt32					flashingRefIndex;	// 1EC
 	HighlightedRef			highlightedRefs[32];	// 1F0
 	UInt32					unk2F0[41];			// 2F0
 	NiObject				*unk394;			// 394 seen NiSourceTexture
@@ -176,6 +195,8 @@ public:
 	Tile *GetActiveTile();
 	void ClearHighlights();
 	void AddHighlightedRef(TESObjectREFR *refr);
+	void RemoveHighlightedRef(TESObjectREFR *refr);
+	bool IsRefHighlighted(TESObjectREFR *refr);
 };
 STATIC_ASSERT(sizeof(InterfaceManager) == 0x580);
 

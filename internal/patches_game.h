@@ -87,7 +87,7 @@ __declspec(naked) void __fastcall DoQueuedPlayerHook(QueuedPlayer *queuedPlayer)
 		call	dword ptr [eax+0xE8]
 	done694:
 		pxor	xmm0, xmm0
-		movups	xmmword ptr ds:[0x11E07CC], xmm0
+		movups	ds:[0x11E07CC], xmm0
 		lea		ecx, [ebx+0xD74]
 		movups	[ecx], xmm0
 		movups	[ecx+0x10], xmm0
@@ -1102,7 +1102,7 @@ __declspec(naked) void ProcessGradualSetFloatHook()
 {
 	__asm
 	{
-		call	GetTickCount
+		CALL_EAX(0x457FE0)
 		mov		ecx, [ebp-0x20]
 		mov		ecx, [ecx]
 		mov		edx, eax
@@ -1157,7 +1157,7 @@ __declspec(naked) bool ReactionCooldownCheckHook()
 	static UInt32 lastTickCount = 0;
 	__asm
 	{
-		call	GetTickCount
+		CALL_EAX(0x457FE0)
 		mov		edx, eax
 		sub		eax, lastTickCount
 		cvtsi2ss	xmm0, eax
@@ -1323,9 +1323,8 @@ __declspec(naked) void PlayAttackSoundHook()
 	{
 		mov		ecx, [ebp+0xC]
 		mov		eax, [ecx]
-		call	dword ptr [eax+0x100]
-		test	al, al
-		jz		done
+		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		jnz		done
 		mov		dword ptr [ebp-0x7C], 0x200000
 		mov		ecx, [ecx+0x68]
 		test	ecx, ecx
@@ -1375,28 +1374,58 @@ __declspec(naked) void PlayAttackSoundHook()
 	}
 }
 
+const char *g_attachLightString = NULL;
+
+__declspec(naked) NiNode* __fastcall GetAttachParentNode(TESObjectREFR *refr)
+{
+	__asm
+	{
+		mov		eax, [ecx+0x64]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x14]
+		test	eax, eax
+		jz		done
+		push	eax
+		mov		edx, g_attachLightString
+		mov		ecx, eax
+		call	NiNode::GetBlockByName
+		test	eax, eax
+		jz		useRoot
+		mov		ecx, [eax]
+		cmp		dword ptr [ecx+0xC], kAddr_ReturnThis
+		jnz		useRoot
+		pop		ecx
+		retn
+	useRoot:
+		pop		eax
+	done:
+		retn
+	}
+}
+
 __declspec(naked) void __fastcall AddProjectileLightHook(Projectile *projRef)
 {
 	__asm
 	{
+		push	esi
+		mov		esi, ecx
 		test	dword ptr [ecx+8], 0x820
 		jnz		done
 		mov		eax, [ecx+0x20]
 		mov		eax, [eax+0x70]
 		test	eax, eax
 		jz		done
-		mov		edx, [ecx+0x64]
-		test	edx, edx
-		jz		done
-		mov		edx, [edx+0x14]
-		test	edx, edx
-		jz		done
-		push	ecx
-		mov		ecx, eax
-		call	CreatePointLight
+		push	eax
+		call	GetAttachParentNode
 		pop		ecx
-		mov		[ecx+0x114], eax
+		test	eax, eax
+		jz		done
+		mov		edx, eax
+		call	CreatePointLight
+		mov		[esi+0x114], eax
 	done:
+		pop		esi
 		retn
 	}
 }
@@ -1424,22 +1453,22 @@ __declspec(naked) void __fastcall AddExplosionLightHook(Explosion *explosion)
 {
 	__asm
 	{
+		push	esi
+		mov		esi, ecx
 		mov		eax, [ecx+0x20]
 		mov		eax, [eax+0x80]
 		test	eax, eax
 		jz		done
-		mov		edx, [ecx+0x64]
-		test	edx, edx
-		jz		done
-		mov		edx, [edx+0x14]
-		test	edx, edx
-		jz		done
-		push	ecx
-		mov		ecx, eax
-		call	CreatePointLight
+		push	eax
+		call	GetAttachParentNode
 		pop		ecx
-		mov		[ecx+0xC4], eax
+		test	eax, eax
+		jz		done
+		mov		edx, eax
+		call	CreatePointLight
+		mov		[esi+0xC4], eax
 	done:
+		pop		esi
 		retn
 	}
 }
@@ -2052,9 +2081,8 @@ __declspec(naked) ExtraDataList* __fastcall DoOnLoadActorHook(TESObjectREFR *ref
 	__asm
 	{
 		mov		eax, [ecx]
-		call	dword ptr [eax+0x100]
-		test	al, al
-		jz		done
+		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		jnz		done
 		test	byte ptr [ecx+0x143], 0x10
 		jnz		done
 		mov		eax, [ecx+0x68]
@@ -2107,7 +2135,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 		}
 	}
 	Actor *target = hitData->target;
-	if (!target || !target->IsActor()) return;
+	if (!target || NOT_ACTOR(target)) return;
 	if (target->magicTarget.CannotBeHit())
 	{
 		hitData->healthDmg = 0;
@@ -2828,26 +2856,6 @@ __declspec(naked) void QttSelectBarterHook()
 	}
 }
 
-__declspec(naked) void RefreshHPBarDelayHook()
-{
-	__asm
-	{
-		mov		eax, [ebp-0xC]
-		mov		edx, 0xA
-		cmp		eax, edx
-		jnb		done
-		mov		[ebp-0xC], edx
-		cmp		s_sleepSemaphore, 0
-		jnz		done
-		mov		s_sleepSemaphore, 1
-		sub		edx, eax
-		push	edx
-		call	Sleep
-	done:
-		retn
-	}
-}
-
 __declspec(naked) void VoiceModulationFixHook()
 {
 	__asm
@@ -3334,8 +3342,8 @@ __declspec(naked) void DefaultTextureHook()
 
 UnorderedMap<const char*, UInt32> s_optionalHacks({{"bIgnoreDTDRFix", 1}, {"bEnableFO3Repair", 2}, {"bEnableBigGunsSkill", 3}, {"bProjImpactDmgFix", 4},
 	{"bGameDaysPassedFix", 5}, {"bHardcoreNeedsFix", 6}, {"bNoFailedScriptLocks", 7}, {"bDoublePrecision", 8}, {"bQttSelectShortKeys", 9},
-	{"bMultiProjectileFix", 10}, {"bFO3WpnDegradation", 11}, {"bLocalizedDTDR", 12}, {"bVoiceModulationFix", 13}, {"bSneakBoundingBoxFix", 14},
-	{"bEnableNVACAlerts", 15}, {"bLoadScreenFix", 16}, {"bNPCWeaponMods", 17}, {"uWMChancePerLevel", 18}, {"uWMChanceMin", 19}, {"uWMChanceMax", 20}});
+	{"bFO3WpnDegradation", 11}, {"bLocalizedDTDR", 12}, {"bVoiceModulationFix", 13}, {"bSneakBoundingBoxFix", 14}, {"bEnableNVACAlerts", 15},
+	{"bLoadScreenFix", 16}, {"bNPCWeaponMods", 17}, {"uWMChancePerLevel", 18}, {"uWMChanceMin", 19}, {"uWMChanceMax", 20}});
 
 bool s_bigGunsSkill = false, s_failedScriptLocks = false, s_NVACAlerts = false, s_NPCWeaponMods = false;
 UInt32 s_NVACAddress = 0;
@@ -3417,8 +3425,6 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			SafeWrite16(0x75BF18, bEnable ? 0x63EB : 0x0D8B);
 			return 9;
 		}
-		case 10:
-			return HOOK_SET(RefreshHPBarDelay, bEnable) ? 10 : 0;
 		case 11:
 			return HOOK_SET(DamageToWeapon, bEnable) ? 11 : 0;
 		case 12:
@@ -3774,7 +3780,7 @@ void InitGamePatches()
 	SafeWriteBuf(0x9E6A82, "\x0F\x1F\x44\x00\x00", 5);
 
 	//	Fix SetLevel XP
-	SafeWriteBuf(0x8D535F, "\x0F\x1F\x00", 3);
+	SafeWrite32(0x8D535F, 0x001F0F50);
 
 	//	ScriptRunner::Run skip Script::GetName calls
 	SafeWrite16(0x5E0DD1, 0x39EB);
@@ -3796,6 +3802,12 @@ void InitGamePatches()
 	//	Cap Agility for calculating reload & equip speeds
 	SafeWriteBuf(0x8C17D9, "\xB8\x50\xEF\x66\x00\xFF\xD0\x0F\x1F\x80\x00\x00\x00\x00", 14);
 	SafeWriteBuf(0x8C1959, "\xB8\x50\xEF\x66\x00\xFF\xD0\x0F\x1F\x80\x00\x00\x00\x00", 14);
+
+	//	Inlines
+	SafeWrite32(0x47C850, 0x90C3C030);
+	SafeWrite32(0x6815C0, 0x90C3C889);
+	SafeWrite32(0x8D0360, 0x90C301B0);
+	SafeWrite32(0xACBB70, 0x90C3C031);
 
 	SafeWrite16(0x94E5F6, 0x18EB);
 	WritePushRetRelJump(0x94E4A1, 0x94E4D9, (UInt32)GeneratePlayerNodeHook);
@@ -3908,7 +3920,6 @@ void InitGamePatches()
 	HOOK_INIT_JUMP(QttSelectInventory, 0x780B09);
 	HOOK_INIT_JUMP(QttSelectContainer, 0x75BF97);
 	HOOK_INIT_JUMP(QttSelectBarter, 0x72D8B4);
-	HOOK_INIT_JPRT(RefreshHPBarDelay, 0xAA4FC7, 0xAA4FE9);
 	HOOK_INIT_JPRT(VoiceModulationFix, 0x934AC8, 0x934AD2);
 	HOOK_INIT_CALL(SneakBoundingBoxFix, 0x770B0E);
 	HOOK_INIT_JPRT(InitControllerShape, 0xC72EA3, 0xC72EB3);
@@ -4022,6 +4033,7 @@ void DeferredInit()
 	g_screenHeight = *(UInt32*)0x11C7190;
 	g_shadowSceneNode = *(ShadowSceneNode**)0x11F91C8;
 	g_terminalModelDefault = *g_terminalModelPtr;
+	g_attachLightString = **(const char***)0x11C620C;
 	g_capsItem = (TESObjectMISC*)LookupFormByRefID(0xF);
 	g_getHitIMOD = (TESImageSpaceModifier*)LookupFormByRefID(0x162);
 	g_explosionInFaceIMOD = (TESImageSpaceModifier*)LookupFormByRefID(0x166);
@@ -4089,7 +4101,8 @@ void DeferredInit()
 	JIPScriptRunner::Init();
 
 	s_LIGH_EDID = "LIGH_EDID";
-	ThisCall(0x4AD050, &s_NiObjectCopyInfo, 0x3F800000);
+	ThisCall(0x4AD0C0, &s_NiObjectCopyInfo, 0x97);
+	s_NiObjectCopyInfo.scale = {1, 1, 1};
 
 	UInt8 cccIdx = g_dataHandler->GetModIndex("JIP Companions Command & Control.esp");
 	if (cccIdx != 0xFF)

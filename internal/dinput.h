@@ -49,7 +49,7 @@ public:
 	bool IsKeyHeld(UInt32 keycode);
 	bool IsKeyTapped(UInt32 keycode);
 
-	void SetKeyDisableState(UInt32 keycode, bool bDisable, UInt8 mask);
+	void SetKeyDisableState(UInt32 keycode, bool bDisable);
 	void SetLMBDisabled(bool bDisable);
 	void SetKeyHeldState(UInt32 keycode, bool bHold);
 	void TapKey(UInt32 keycode);
@@ -125,16 +125,13 @@ bool DIHookControl::IsKeyTapped(UInt32 keycode)
 	return (keycode < kMaxMacros) && m_keys[keycode].tap;
 }
 
-void DIHookControl::SetKeyDisableState(UInt32 keycode, bool bDisable, UInt8 mask)
+void DIHookControl::SetKeyDisableState(UInt32 keycode, bool bDisable)
 {
-	if (!mask) mask = kDisable_All;
 	if (keycode < kMaxMacros)
 	{
 		KeyInfo *info = &m_keys[keycode];
-		if (mask & kDisable_User)
-			info->userDisable = bDisable;
-		if (mask & kDisable_Script)
-			info->scriptDisable = bDisable;
+		info->userDisable = bDisable;
+		info->scriptDisable = bDisable;
 	}
 }
 

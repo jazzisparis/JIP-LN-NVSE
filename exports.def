@@ -2,9 +2,3 @@ LIBRARY	"jip_nvse"
 EXPORTS
 NVSEPlugin_Query			@1
 NVSEPlugin_Load				@2
-MainLoopHasCallback			@3
-MainLoopRemoveCallback		@4
-MainLoopAddCallback			@5
-MainLoopAddCallbackArgs		@6
-MainLoopAddCallbackEx		@7
-MainLoopAddCallbackArgsEx	@8

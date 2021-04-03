@@ -31,6 +31,25 @@ enum XboxControlCode
 	kXboxCtrl_LS_LEFT,
 };
 
+enum XboxButtonMask
+{
+	kXboxMask_DPAD_UP = 1,
+	kXboxMask_DPAD_DOWN = 2,
+	kXboxMask_DPAD_LEFT = 4,
+	kXboxMask_DPAD_RIGHT = 8,
+	kXboxMask_START = 0x10,
+	kXboxMask_BACK = 0x20,
+	kXboxMask_LS_BUTTON = 0x40,
+	kXboxMask_RS_BUTTON = 0x80,
+	kXboxMask_LB = 0x100,
+	kXboxMask_RB = 0x200,
+	kXboxMask_GUIDE = 0x400,
+	kXboxMask_BUTTON_A = 0x1000,
+	kXboxMask_BUTTON_B = 0x2000,
+	kXboxMask_BUTTON_X = 0x4000,
+	kXboxMask_BUTTON_Y = 0x8000,
+};
+
 struct _IDirectInput8;
 
 // 1C04
@@ -81,6 +100,11 @@ public:
 	UInt8			controllerBinds[28];	// 1BE8
 };
 STATIC_ASSERT(sizeof(OSInputGlobals) == 0x1C04);
+
+extern OSInputGlobals *g_inputGlobals;
+#define KEYBOARD_BIND(ctrlID) g_inputGlobals->keyBinds[ctrlID]
+#define MOUSE_BIND(ctrlID) g_inputGlobals->mouseBinds[ctrlID]
+#define CONTROLLER_BIND(ctrlID) g_inputGlobals->controllerBinds[ctrlID]
 
 // 20
 struct BSPackedTask

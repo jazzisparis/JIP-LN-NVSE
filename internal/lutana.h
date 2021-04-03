@@ -261,7 +261,7 @@ bool ProcessEventHandler(COMMAND_ARGS)
 			evntData.filterType = 2;
 			evntData.form = formFilter;
 		}
-		else if (formFilter->GetIsReference())
+		else if IS_REFERENCE(formFilter)
 		{
 			evntData.filterType = 1;
 			evntData.form = formFilter;

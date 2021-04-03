@@ -53,6 +53,35 @@ __declspec(naked) void UpdateTileScales()
 float s_cellNorthRotation = 0;
 __m128 s_northRotationMods = {0, 1, -1, 0};
 
+__declspec(naked) void __fastcall GetNorthRotation(TESObjectCELL *cell)
+{
+	__asm
+	{
+		test	byte ptr [ecx+0x24], 1
+		jz		noRotation
+		push	kExtraData_NorthRotation
+		add		ecx, 0x28
+		call	BaseExtraList::GetByType
+		test	eax, eax
+		jz		noRotation
+		fld		dword ptr [eax+0xC]
+		fchs
+		fst		s_cellNorthRotation
+		mov		eax, offset s_northRotationMods
+		fsincos
+		fst		dword ptr [eax]
+		fstp	dword ptr [eax+0xC]
+		fst		dword ptr [eax+4]
+		fchs
+		fstp	dword ptr [eax+8]
+		retn
+		ALIGN 16
+	noRotation:
+		mov		s_cellNorthRotation, 0
+		retn
+	}
+}
+
 __declspec(naked) void __fastcall AdjustInteriorPos(TESObjectREFR *refr, NiPoint2 *outPos)
 {
 	static const __m128 kIntrPosMods = {2048, 2048, 0, 0};
@@ -132,8 +161,8 @@ __declspec(naked) void __fastcall GetWorldPosMods(TESWorldSpace *worldSpc)
 	{
 		add		ecx, 0x90
 		mov		eax, offset s_currWorldPosMods
-		movdqu	xmm0, xmmword ptr [ecx]
-		movdqu	xmmword ptr [eax], xmm0
+		movups	xmm0, [ecx]
+		movups	[eax], xmm0
 		cmp		dword ptr [ecx], 0x3F800000
 		jz		done
 		movss	xmm0, kFltHalf
@@ -329,6 +358,7 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		test	eax, eax
 		jz		done
 		jmp		case1Both
+		ALIGN 16
 	case2Int:
 		test	ecx, ecx
 		jz		noData2Int
@@ -345,6 +375,7 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		test	eax, eax
 		jz		done
 		jmp		case2Both
+		ALIGN 16
 	case3Int:
 		mov		dl, [esi+6]
 		mov		dh, [esi+4]
@@ -384,6 +415,7 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		call	GetBitSeen
 		add		[ebp-4], al
 		jmp		done
+		ALIGN 16
 	isExterior:
 		push	dword ptr [esi+4]
 		call	CellPointerMap::Lookup
@@ -418,6 +450,7 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		jz		case0Both
 		add		[ebp-4], 3
 		jmp		done
+		ALIGN 16
 	case0Both:
 		test	ecx, ecx
 		jz		done
@@ -437,6 +470,7 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		call	GetBitSeen
 		add		[ebp-4], al
 		jmp		done
+		ALIGN 16
 	case1Ext:
 		test	al, al
 		jnz		modRes1
@@ -459,6 +493,7 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		jz		getData1
 		add		[ebp-4], 2
 		jmp		done
+		ALIGN 16
 	getData1:
 		mov		ecx, eax
 		call	GetSeenData
@@ -476,6 +511,7 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		call	GetBitSeen
 		add		[ebp-4], al
 		jmp		done
+		ALIGN 16
 	case2Ext:
 		test	al, al
 		jnz		modRes2
@@ -498,6 +534,7 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		jz		getData2
 		add		[ebp-4], 2
 		jmp		done
+		ALIGN 16
 	getData2:
 		mov		ecx, eax
 		call	GetSeenData
@@ -517,6 +554,7 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		call	GetBitSeen
 		add		[ebp-4], al
 		jmp		done
+		ALIGN 16
 	case3Ext:
 		mov		eax, [esi+4]
 		inc		ax
@@ -844,8 +882,7 @@ __declspec(naked) SeenData* __fastcall AddExtraSeenData(TESObjectCELL *cell)
 		CALL_EAX(kAddr_AddExtraData)
 		push	0x80000000
 		mov		ecx, esi
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x48]
+		CALL_EAX(0x484B60)
 		pop		eax
 		pop		esi
 		retn
@@ -903,24 +940,8 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		cmp		s_pcCurrCell0, esi
 		jz		sameCell
 		mov		s_pcCurrCell0, esi
-		mov		s_cellNorthRotation, 0
-		test	byte ptr [esi+0x24], 1
-		jz		skipPosDiff
-		push	kExtraData_NorthRotation
-		lea		ecx, [esi+0x28]
-		call	BaseExtraList::GetByType
-		test	eax, eax
-		jz		skipPosDiff
-		fld		dword ptr [eax+0xC]
-		fchs
-		fst		s_cellNorthRotation
-		mov		eax, offset s_northRotationMods
-		fsincos
-		fst		dword ptr [eax]
-		fstp	dword ptr [eax+0xC]
-		fst		dword ptr [eax+4]
-		fchs
-		fstp	dword ptr [eax+8]
+		mov		ecx, esi
+		call	GetNorthRotation
 		jmp		skipPosDiff
 	sameCell:
 		movq	xmm1, qword ptr [edi]
@@ -998,12 +1019,10 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		or		byte ptr [esi+0x25], 1
 		push	0x80000000
 		mov		ecx, esi
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x4C]
+		CALL_EAX(0x484BC0)
 		push	2
 		mov		ecx, esi
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x48]
+		CALL_EAX(0x484B60)
 	iterNextExt:
 		inc		word ptr [ebp-0xC]
 		add		dword ptr [ebp-4], 0x10
@@ -1805,7 +1824,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	g_blackPlaneBase = LookupFormByRefID(0x15A1F2);
 	SafeWrite16(0x452736, 0x7705);
 	SafeWriteBuf(0x87A12A, "\x31\xD2\x66\x89\x50\x26\x89\x50\x28\x90", 10);
-	WriteRelCall(0x54B72B, (UInt32)UpdateCellsSeenBitsHook);
+	SafeWrite8(0x555C20, 0xC3);
 	WriteRelCall(0x9438F6, (UInt32)UpdateCellsSeenBitsHook);
 	WriteRelJump(0x54EF70, (UInt32)ExtCaptureBoundsHook);
 	//WriteRelCall(0x54F257, (UInt32)HideExtCellLandNodeHook);
@@ -1874,7 +1893,7 @@ Vector<DoorMarkerVisibility> s_doorMarkerList(0x20);
 Vector<NiNode*> s_hiddenNodes(0x20);
 TESQuest *s_activeQuest = NULL;
 UnorderedMap<TESObjectREFR*, QuestMarkerPos> s_questMarkers(0x10);
-TESObjectCELL *s_currCellGrid[9] = {}, *s_lastInterior = NULL;
+TESObjectCELL *s_currCellGrid[9] = {};
 UInt8 s_currCellQuad = 0;
 bool s_useFogOfWar = false;
 int s_markerRange = 0;
@@ -1898,7 +1917,12 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 	if (!parentCell) return true;
 
 	bool updateTiles = s_pcCurrCell != parentCell;
-	s_pcCurrCell = parentCell;
+	if (updateTiles)
+	{
+		s_pcCurrCell = parentCell;
+		GetNorthRotation(parentCell);
+	}
+
 	if (s_currentMapMode != updateType)
 	{
 		if (updateType >= 2)
@@ -2053,6 +2077,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 	}
 	else
 	{
+		TESObjectCELL *cell;
 		UInt32 gridIdx, lightingPasses;
 		NiNode *hideNode;
 		NiPointLight *pntLight;
@@ -2112,11 +2137,11 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				{
 					gridIdx--;
 					coord = s_currLocalCoords + kGridAdjustCoord[gridIdx];
-					parentCell = parentWorld->cellMap->Lookup(coord);
-					s_currCellGrid[gridIdx] = parentCell;
-					if (!parentCell) continue;
-					s_currCellsSet.Insert(parentCell->refID);
-					if (hideNode = parentCell->Get3DNode(4))
+					cell = parentWorld->cellMap->Lookup(coord);
+					s_currCellGrid[gridIdx] = cell;
+					if (!cell) continue;
+					s_currCellsSet.Insert(cell->refID);
+					if (hideNode = cell->Get3DNode(4))
 						s_hiddenNodes.Append(hideNode);
 					if (useFogOfWar)
 					{
@@ -2175,22 +2200,22 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				do
 				{
 					gridIdx--;
-					parentCell = s_currCellGrid[gridIdx];
-					if (!parentCell || !(updateTiles || (quadrant = updateList[gridIdx])))
+					cell = s_currCellGrid[gridIdx];
+					if (!cell || !(updateTiles || (quadrant = updateList[gridIdx])))
 						continue;
 
-					if (s_renderedExteriors.Insert(parentCell->refID, &exteriorEntry))
+					if (s_renderedExteriors.Insert(cell->refID, &exteriorEntry))
 					{
-						ThisCall(0x54E640, parentCell, exteriorEntry);
-						s_exteriorKeys.Append(parentCell->refID);
+						ThisCall(0x54E640, cell, exteriorEntry);
+						s_exteriorKeys.Append(cell->refID);
 					}
 					else if (updateTiles)
-						s_exteriorKeys.MoveToEnd(parentCell->refID);
+						s_exteriorKeys.MoveToEnd(cell->refID);
 					else if (!(exteriorEntry->regenFlags & quadrant))
 					{
 						if (gridIdx == 4) exteriorEntry->regenFlags = 0xF;
 						else exteriorEntry->regenFlags |= quadrant;
-						ThisCall(0x54E640, parentCell, exteriorEntry);
+						ThisCall(0x54E640, cell, exteriorEntry);
 					}
 					s_tileShaderProps[gridIdx]->srcTexture = exteriorEntry->texture;
 				}
@@ -2237,6 +2262,18 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			}
 			GetLocalMapPosMults(&adjustedPos, &nwXY, &posMult);
 
+			if (s_lastInterior != parentCell)
+			{
+				s_lastInterior = parentCell;
+				if (!s_renderedInterior.Empty())
+				{
+					for (auto clrIter = s_renderedInterior.Begin(); clrIter; ++clrIter)
+						if (*clrIter) ThisCall(0xA7FD30, *clrIter, true);
+					s_renderedInterior.Clear();
+				}
+				updateTiles = true;
+			}
+
 			if (updateTiles)
 			{
 				s_hiddenNodes.Clear();
@@ -2256,18 +2293,6 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					s_doorRefsList.Clear();
 					GetTeleportDoors(parentCell, &s_doorRefsList);
 				}
-			}
-
-			if (s_lastInterior != parentCell)
-			{
-				s_lastInterior = parentCell;
-				if (!s_renderedInterior.Empty())
-				{
-					for (auto clrIter = s_renderedInterior.Begin(); clrIter; ++clrIter)
-						if (*clrIter) ThisCall(0xA7FD30, *clrIter, true);
-					s_renderedInterior.Clear();
-				}
-				updateTiles = true;
 			}
 
 			if (s_currLocalCoords != coord)
@@ -2357,7 +2382,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					markerTile->SetFloat(kTileValue_user0, adjustedPos.x);
 					markerTile->SetFloat(kTileValue_user1, adjustedPos.y);
 					markerTile->SetFloat(kTileValue_depth, depth);
-					if (!doorIter().linkedCell || doorIter().linkedCell->extraDataList.HasType(kExtraData_DetachTime))
+					cell = doorIter().linkedCell;
+					if (!cell || (cell == parentCell) || cell->extraDataList.HasType(kExtraData_DetachTime))
 						markerTile->SetFloat(kTileValue_user2, 1.0F);
 					if (depth >= 27) depth = 18;
 					else depth++;
@@ -2385,7 +2411,6 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				s_lQuestMarkersRect->DestroyAllChildren();
 				s_wQuestMarkersRect->DestroyAllChildren();
 			}
-			parentCell = s_pcCurrCell;
 			if (!worldMap || parentCell->worldSpace)
 			{
 				depth = 29;

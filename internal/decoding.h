@@ -671,8 +671,10 @@ public:
 	const char		*templateName;	// 18
 	UInt16			itemCount;		// 1C
 	UInt16			pad1E;			// 1E
-	float			unk20[3];		// 20
-	UInt16			unk2C;			// 2C
+	float			flt20;			// 20
+	float			listIndex;		// 24
+	float			currValue;		// 28
+	UInt16			word2C;			// 2C
 	UInt16			pad2E;			// 2E
 
 	Item *GetSelected()
@@ -880,6 +882,21 @@ public:
 	UInt32			unk38[6];
 };
 
+struct Timer
+{
+	UInt8		disableCounter;			// 00
+	UInt8		pad01[3];				// 01
+	float		fpsClamp;				// 04
+	float		fpsClampRemainder;		// 08
+	float		secondsPassed;			// 0C
+	float		lastSecondsPassed;		// 10
+	UInt32		msPassed;				// 14
+	UInt32		tickCount;				// 18
+	UInt8		isChangeTimeMultSlowly;	// 1C
+	UInt8		byte1D;					// 1D
+	UInt8		pad1E[2];				// 1E
+};
+
 // 278
 class HUDMainMenu : public Menu			// 1004
 {
@@ -893,21 +910,6 @@ public:
 	};
 
 	struct SubtitleData;
-
-	struct Struct224
-	{
-		UInt8		byte00;		// 00
-		UInt8		pad01[3];	// 01
-		float		flt04;		// 04
-		float		flt08;		// 08
-		float		flt0C;		// 0C
-		float		flt10;		// 10
-		UInt32		unk14;		// 14
-		UInt32		tickCount;	// 18
-		UInt8		byte1C;		// 1C
-		UInt8		byte1D;		// 1D
-		UInt8		pad1E[2];	// 1E
-	};
 
 	struct QueuedQuestText
 	{
@@ -1077,7 +1079,7 @@ public:
 	UInt32							maxCompassAngle;	// 218
 	Actor							*healthTarget;		// 21C
 	UInt32							unk220;				// 220
-	Struct224						unk224;				// 224
+	Timer							timer;				// 224
 	UInt32							unk244;				// 244
 	UInt32							unk248[4];			// 248
 	tList<QueuedQuestText>			queuedQuestTextList;// 258

@@ -74,7 +74,7 @@ bool __fastcall GetINIPath(Script *scriptObj)
 		StrCopy(s_configPath, g_dataHandler->GetNthModName(modIdx));
 	}
 	else ReplaceChr(s_configPath, '/', '\\');
-	char *dotPos = strrchr(s_configPath, '.');
+	char *dotPos = FindChrR(s_configPath, StrLen(s_configPath), '.');
 	if (dotPos) memcpy(dotPos + 1, "ini", 4);
 	else StrCat(s_configPath, ".ini");
 	return true;
@@ -293,7 +293,7 @@ bool Cmd_SortFormsByType_Execute(COMMAND_ARGS)
 		for (auto iter = tempForms.BeginRv(); iter; --iter)
 		{
 			form = *iter;
-			if ((form->typeID != typeID) && (!form->GetIsReference() || (((TESObjectREFR*)form)->baseForm->typeID != typeID)))
+			if ((form->typeID != typeID) && (NOT_REFERENCE(form) || (((TESObjectREFR*)form)->baseForm->typeID != typeID)))
 				continue;
 			s_tempElements.Append(form);
 			iter.Remove(tempForms);

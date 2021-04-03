@@ -44,25 +44,25 @@ bool Cmd_SetWeaponDetectionSoundLevel_Execute(COMMAND_ARGS)
 
 bool Cmd_IsEquippedWeaponSilenced_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = thisObj->IsActor() ? ((Actor*)thisObj)->EquippedWeaponHasMod(11) : 0;
+	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->EquippedWeaponHasMod(11) : 0;
 	return true;
 }
 
 bool Cmd_IsEquippedWeaponSilenced_Execute(COMMAND_ARGS)
 {
-	*result = thisObj->IsActor() ? ((Actor*)thisObj)->EquippedWeaponHasMod(11) : 0;
+	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->EquippedWeaponHasMod(11) : 0;
 	return true;
 }
 
 bool Cmd_IsEquippedWeaponScoped_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = thisObj->IsActor() ? ((Actor*)thisObj)->EquippedWeaponHasMod(14) : 0;
+	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->EquippedWeaponHasMod(14) : 0;
 	return true;
 }
 
 bool Cmd_IsEquippedWeaponScoped_Execute(COMMAND_ARGS)
 {
-	*result = thisObj->IsActor() ? ((Actor*)thisObj)->EquippedWeaponHasMod(14) : 0;
+	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->EquippedWeaponHasMod(14) : 0;
 	return true;
 }
 
@@ -195,7 +195,7 @@ bool Cmd_GetCalculatedWeaponDamage_Execute(COMMAND_ARGS)
 		tempEntry.type = weapon;
 		if (invRef = InventoryRefGetForID(thisObj->refID))
 		{
-			if (invRef->containerRef && invRef->containerRef->IsActor())
+			if (invRef->containerRef && IS_ACTOR(invRef->containerRef))
 				owner = (Actor*)invRef->containerRef;
 			tempEntry.extendData = invRef->entry->extendData;
 		}
@@ -317,7 +317,7 @@ bool Cmd_SetWeaponModel_Execute(COMMAND_ARGS)
 bool Cmd_EquippedWeaponHasModType_Execute(COMMAND_ARGS)
 {
 	UInt32 modType;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &modType) && ((Actor*)thisObj)->EquippedWeaponHasMod(modType))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &modType) && ((Actor*)thisObj)->EquippedWeaponHasMod(modType))
 		*result = 1;
 	else *result = 0;
 	return true;
@@ -325,6 +325,6 @@ bool Cmd_EquippedWeaponHasModType_Execute(COMMAND_ARGS)
 
 bool Cmd_EquippedWeaponHasModType_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (thisObj->IsActor() && ((Actor*)thisObj)->EquippedWeaponHasMod((UInt32)arg1)) ? 1 : 0;
+	*result = (IS_ACTOR(thisObj) && ((Actor*)thisObj)->EquippedWeaponHasMod((UInt32)arg1)) ? 1 : 0;
 	return true;
 }

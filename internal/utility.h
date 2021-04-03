@@ -234,6 +234,8 @@ void __fastcall StrToUpper(char *str);
 
 void __fastcall ReplaceChr(char *str, char from, char to);
 
+char* __fastcall FindChr(const char *str, char chr);
+
 char* __fastcall FindChrR(const char *str, UInt32 length, char chr);
 
 char* __fastcall SubStrCI(const char *srcStr, const char *subStr);

@@ -1,5 +1,7 @@
 #pragma once
 
+struct Sound;
+
 // 68
 class TESObjectREFR : public TESForm
 {
@@ -7,7 +9,7 @@ public:
 	MEMBER_FN_PREFIX(TESObjectREFR);
 
 	virtual void		Unk_4E(void);	// GetStartingPosition(Position, Rotation, WorldOrCell)
-	virtual void		Unk_4F(void);
+	virtual void		SayTopic(Sound *sound, TESTopic *topic, TESObjectREFR *target, UInt8 arg4, UInt8 arg5, UInt8 arg6, UInt8 arg7, UInt8 arg8);
 	virtual void		Unk_50(void);
 	virtual void		Unk_51(void);
 	virtual bool		CastShadows();

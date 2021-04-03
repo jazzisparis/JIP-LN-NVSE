@@ -1147,7 +1147,7 @@ bool Cmd_ClearDeadActors_Execute(COMMAND_ARGS)
 	while (count)
 	{
 		actor = (Actor*)objArray[--count];
-		if (!actor || !actor->IsActor() || (actor->lifeState != 2) || (actor->flags & 0x200000) || (actor->baseForm->flags & 0x400))
+		if (!actor || NOT_ACTOR(actor) || (actor->lifeState != 2) || (actor->flags & 0x200000) || (actor->baseForm->flags & 0x400))
 			continue;
 		hiProcess = (HighProcess*)actor->baseProcess;
 		if (hiProcess && !hiProcess->processLevel && !hiProcess->fadeType && (hiProcess->flt330 < 0) && 

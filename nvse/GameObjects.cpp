@@ -56,7 +56,6 @@ __declspec(naked) void TESObjectREFR::Update3D()
 		jz		done
 		cmp		dword ptr [ecx+0xC], 0x14
 		jz		isPlayer
-		or		byte ptr [ecx+0xB], 8
 		push	ecx
 		push	1
 		push	0
@@ -66,8 +65,8 @@ __declspec(naked) void TESObjectREFR::Update3D()
 	isPlayer:
 		test	byte ptr [ecx+0x61], 1
 		jnz		done
-		or		byte ptr [ecx+0x61], 1
 	doQueue:
+		or		byte ptr [ecx+0x61], 1
 		push	0
 		push	1
 		push	ecx

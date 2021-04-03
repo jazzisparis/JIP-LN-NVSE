@@ -282,7 +282,7 @@ bool Cmd_SetScriptEventDisabled_Execute(COMMAND_ARGS)
 	{
 		form = iter->data;
 		if (!form || IS_ID(form, TESQuest)) continue;
-		if (form->GetIsReference())
+		if IS_REFERENCE(form)
 		{
 			refBase = ((TESObjectREFR*)form)->baseForm;
 			if (kInventoryType[refBase->typeID] || !refBase->HasScript()) continue;

@@ -38,7 +38,7 @@ bool Cmd_LNGetAggroRadius_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	*result = actorBase->ai.aggroRadiusBehavior ? actorBase->ai.aggroRadius : 0;
@@ -52,7 +52,7 @@ bool Cmd_LNSetAggroRadius_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &value, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	actorBase->ai.aggroRadiusBehavior = value ? 1 : 0;
@@ -101,7 +101,7 @@ bool Cmd_GetCreatureType_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &creature)) return true;
 	if (!creature)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		creature = (TESCreature*)((Actor*)thisObj)->GetActorBase();
 	}
 	if IS_ID(creature, TESCreature)
@@ -118,7 +118,7 @@ bool Cmd_GetCombatStyle_Execute(COMMAND_ARGS)
 	TESCombatStyle *combatStyle = NULL;
 	if (actorBase)
 		combatStyle = actorBase->GetCombatStyle();
-	else if (thisObj && thisObj->IsActor())
+	else if (thisObj && IS_ACTOR(thisObj))
 		combatStyle = ((Actor*)thisObj)->GetCombatStyle();
 	if (combatStyle) REFR_RES = combatStyle->refID;
 	return true;
@@ -186,7 +186,7 @@ bool Cmd_GetActorTemplateFlag_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &flag, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	*result = (actorBase->baseData.templateFlags & flag) ? 1 : 0;
@@ -200,7 +200,7 @@ bool Cmd_SetActorTemplateFlag_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &flag, &inval, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	if (inval) actorBase->baseData.templateFlags |= flag;
@@ -215,7 +215,7 @@ bool Cmd_LNSetActorTemplate_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	actorBase->baseData.templateActor = form;
@@ -230,7 +230,7 @@ bool Cmd_GetBaseFactionRank_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &faction, &actorBase) || NOT_ID(faction, TESFaction)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	*result = actorBase->baseData.GetFactionRank(faction);
@@ -245,7 +245,7 @@ bool Cmd_SetBaseFactionRank_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &faction, &rank, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	if (rank < -1) rank = -1;
@@ -257,7 +257,7 @@ bool Cmd_GetEquippedData_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 slot;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &slot) || !thisObj->IsActor())
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &slot) || NOT_ACTOR(thisObj))
 		return true;
 	ExtraContainerChanges *xChanges = GetExtraType(&thisObj->extraDataList, ContainerChanges);
 	if (!xChanges || !xChanges->data || !xChanges->data->objList)
@@ -326,7 +326,7 @@ void SetEquippedData(Actor *actor, TESForm *form, float health, UInt8 flags, boo
 bool Cmd_SetEquippedData_Execute(COMMAND_ARGS)
 {
 	UInt32 arrID, lock = 0, silent = 1;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &arrID, &lock, &silent) || !thisObj->IsActor())
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &arrID, &lock, &silent) || NOT_ACTOR(thisObj))
 		return true;
 	NVSEArrayVar *inArray = LookupArrayByID(arrID);
 	if (!inArray || (GetArraySize(inArray) != 3))
@@ -342,7 +342,7 @@ bool Cmd_EquipItemData_Execute(COMMAND_ARGS)
 	TESForm *form;
 	float health = 0;
 	UInt32 flags = 0, lock = 0, silent = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &health, &flags, &lock, &silent) && thisObj->IsActor())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &health, &flags, &lock, &silent) && IS_ACTOR(thisObj))
 		SetEquippedData((Actor*)thisObj, form, health, flags, lock != 0, silent != 0);
 	return true;
 }
@@ -354,7 +354,7 @@ bool Cmd_GetBaseKarma_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	*result = actorBase->baseData.karma;
@@ -368,7 +368,7 @@ bool Cmd_SetBaseKarma_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &karma, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	actorBase->baseData.karma = karma;
@@ -377,7 +377,7 @@ bool Cmd_SetBaseKarma_Execute(COMMAND_ARGS)
 
 bool __fastcall ActorHasEffect(Actor *actor, EffectSetting *effSetting)
 {
-	if (actor->IsActor())
+	if (IS_ACTOR(actor))
 	{
 		ActiveEffectList *effList = actor->magicTarget.GetEffectList();
 		if (effList)

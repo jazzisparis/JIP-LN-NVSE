@@ -132,7 +132,6 @@ DEFINE_COMMAND_PLUGIN(SetTeammateKillable, , 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(SetNoGunWobble, , 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetHitNode, , 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitExtendedFlag, , 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetBodyPartPartNode, , 0, 2, kParams_JIP_OneInt_OneOptionalActorBase);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -141,7 +140,7 @@ bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	if (actorBase->baseData.templateActor)
@@ -152,7 +151,7 @@ bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 bool Cmd_GetLeveledActorBase_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (thisObj->IsActor())
+	if (IS_ACTOR(thisObj))
 		REFR_RES = ((Actor*)thisObj)->GetActorBase()->refID;
 	return true;
 }
@@ -164,7 +163,7 @@ bool Cmd_GetCreatureDamage_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &creature)) return true;
 	if (!creature)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		creature = (TESCreature*)((Actor*)thisObj)->GetActorBase();
 	}
 	if IS_ID(creature, TESCreature)
@@ -179,7 +178,7 @@ bool Cmd_SetCreatureDamage_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &dmg, &creature)) return true;
 	if (!creature)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		creature = (TESCreature*)((Actor*)thisObj)->GetActorBase();
 	}
 	if IS_ID(creature, TESCreature)
@@ -189,7 +188,7 @@ bool Cmd_SetCreatureDamage_Execute(COMMAND_ARGS)
 
 bool __fastcall GetIsPoisoned(Actor *actor)
 {
-	if (!actor->IsActor()) return false;
+	if (NOT_ACTOR(actor)) return false;
 	ActiveEffectList *effList = actor->magicTarget.GetEffectList();
 	if (!effList) return false;
 	ListNode<ActiveEffect> *iter = effList->Head();
@@ -219,7 +218,7 @@ bool Cmd_GetIsPoisoned_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_GetFollowers_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!thisObj->IsActor()) return true;
+	if (NOT_ACTOR(thisObj)) return true;
 	ExtraFollower *xFollower = GetExtraType(&thisObj->extraDataList, Follower);
 	if (!xFollower || !xFollower->followers) return true;
 	s_tempElements.Clear();
@@ -242,7 +241,7 @@ bool Cmd_GetActorLevelingData_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valID, &actorBase) || (valID > 2)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	if (valID == 1) *result = actorBase->baseData.calcMin;
@@ -260,7 +259,7 @@ bool Cmd_SetActorLevelingData_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valID, &val, &actorBase) || (valID > 2)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	switch (valID)
@@ -300,7 +299,7 @@ bool Cmd_GetActorVoiceType_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	if (actorBase->baseData.voiceType)
@@ -315,7 +314,7 @@ bool Cmd_SetActorVoiceType_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &actorBase) || NOT_ID(form, BGSVoiceType)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	actorBase->baseData.voiceType = form;
@@ -329,7 +328,7 @@ bool Cmd_GetCreatureReach_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &creature)) return true;
 	if (!creature)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		creature = (TESCreature*)((Actor*)thisObj)->GetActorBase();
 	}
 	if IS_ID(creature, TESCreature)
@@ -344,7 +343,7 @@ bool Cmd_GetIsImmobile_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &creature)) return true;
 	if (!creature)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		creature = (TESCreature*)((Actor*)thisObj)->GetActorBase();
 	}
 	if (IS_ID(creature, TESCreature) && (creature->baseData.flags & 0x800000))
@@ -380,7 +379,7 @@ bool Cmd_ToggleCreatureModel_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &enable, &creature)) return true;
 	if (!creature)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		creature = (TESCreature*)((Actor*)thisObj)->GetActorBase();
 	}
 	if (IS_ID(creature, TESCreature) && creature->modelList.ModelListAction(s_strArgBuffer, enable ? 1 : -1))
@@ -395,7 +394,7 @@ bool Cmd_CreatureHasModel_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &creature)) return true;
 	if (!creature)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		creature = (TESCreature*)((Actor*)thisObj)->GetActorBase();
 	}
 	if (IS_ID(creature, TESCreature) && creature->modelList.ModelListAction(s_strArgBuffer, 0))
@@ -410,7 +409,7 @@ bool Cmd_GetCreatureModels_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &creature)) return true;
 	if (!creature)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		creature = (TESCreature*)((Actor*)thisObj)->GetActorBase();
 	}
 	if NOT_ID(creature, TESCreature) return true;
@@ -435,7 +434,7 @@ bool Cmd_ModBaseActorValue_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorVal, &value, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = (TESActorBase*)thisObj->baseForm;
 	}
 	actorBase->ModActorValue(actorVal, value);
@@ -444,7 +443,7 @@ bool Cmd_ModBaseActorValue_Execute(COMMAND_ARGS)
 
 bool Cmd_GetActorProcessingLevel_Execute(COMMAND_ARGS)
 {
-	if (thisObj->IsActor() && ((Actor*)thisObj)->baseProcess)
+	if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->baseProcess)
 		*result = (int)((Actor*)thisObj)->baseProcess->processLevel;
 	else *result = -1;
 	return true;
@@ -463,7 +462,7 @@ bool Cmd_GetActorsByProcessingLevel_Execute(COMMAND_ARGS)
 	for (; objArray != arrEnd; objArray++)
 	{
 		actor = (Actor*)*objArray;
-		if (actor && actor->IsActor())
+		if (actor && IS_ACTOR(actor))
 			s_tempElements.Append(actor);
 	}
 	if (!s_tempElements.Empty())
@@ -473,7 +472,7 @@ bool Cmd_GetActorsByProcessingLevel_Execute(COMMAND_ARGS)
 
 float __fastcall GetActorLightAmount(Actor *actor)
 {
-	return (actor->IsActor() && actor->baseProcess) ? actor->baseProcess->GetLightAmount() : 0;
+	return (IS_ACTOR(actor) && actor->baseProcess) ? actor->baseProcess->GetLightAmount() : 0;
 }
 
 bool Cmd_GetActorLightAmount_Execute(COMMAND_ARGS)
@@ -490,7 +489,7 @@ bool Cmd_GetActorLightAmount_Eval(COMMAND_ARGS_EVAL)
 
 bool Cmd_GetActorAlpha_Execute(COMMAND_ARGS)
 {
-	if (thisObj->IsActor() && ((Actor*)thisObj)->baseProcess)
+	if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->baseProcess)
 		*result = ((Actor*)thisObj)->baseProcess->GetActorAlpha();
 	else *result = 0;
 	return true;
@@ -498,7 +497,7 @@ bool Cmd_GetActorAlpha_Execute(COMMAND_ARGS)
 
 bool Cmd_GetActorDiveBreath_Execute(COMMAND_ARGS)
 {
-	if (thisObj->IsActor() && ((Actor*)thisObj)->baseProcess)
+	if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->baseProcess)
 		*result = ((Actor*)thisObj)->baseProcess->GetDiveBreath();
 	else *result = 0;
 	return true;
@@ -507,7 +506,7 @@ bool Cmd_GetActorDiveBreath_Execute(COMMAND_ARGS)
 bool Cmd_SetActorDiveBreath_Execute(COMMAND_ARGS)
 {
 	float breath;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &breath) && thisObj->IsActor() && ((Actor*)thisObj)->baseProcess)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &breath) && IS_ACTOR(thisObj) && ((Actor*)thisObj)->baseProcess)
 		((Actor*)thisObj)->baseProcess->SetDiveBreath(GetMax(breath, 0));
 	return true;
 }
@@ -544,7 +543,7 @@ void __fastcall GetCombatActors(TESObjectREFR *thisObj, Script *scriptObj, bool 
 	}
 	else
 	{
-		if (!thisObj->IsActor()) return;
+		if (NOT_ACTOR(thisObj)) return;
 		actor = (Actor*)thisObj;
 		Actor **actorsArr = NULL;
 		if (getAllies)
@@ -585,7 +584,7 @@ bool Cmd_GetCombatAllies_Execute(COMMAND_ARGS)
 void __fastcall GetDetectionData(TESObjectREFR *thisObj, Script *scriptObj, bool detecting, double *result)
 {
 	*result = 0;
-	if (!thisObj->IsActor()) return;
+	if (NOT_ACTOR(thisObj)) return;
 	s_tempElements.Clear();
 	Actor *actor = (Actor*)thisObj;
 	if (actor == g_thePlayer)
@@ -597,7 +596,7 @@ void __fastcall GetDetectionData(TESObjectREFR *thisObj, Script *scriptObj, bool
 		for (; objArray != arrEnd; objArray++)
 		{
 			target = (Actor*)*objArray;
-			if (!target || !target->IsActor() || target->GetDead())
+			if (!target || NOT_ACTOR(target) || target->GetDead())
 				continue;
 			if (detecting)
 			{
@@ -641,7 +640,7 @@ bool Cmd_GetDetectingActors_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCombatDisabled_Execute(COMMAND_ARGS)
 {
-	*result = (thisObj->IsActor() && (((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_CombatAIModified)) ? 1 : 0;
+	*result = (IS_ACTOR(thisObj) && (((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_CombatAIModified)) ? 1 : 0;
 	return true;
 }
 
@@ -649,7 +648,7 @@ bool Cmd_SetCombatDisabled_Execute(COMMAND_ARGS)
 {
 	SInt32 disable;
 	Actor *target = NULL;
-	if (!thisObj->IsActor() || !ExtractArgsEx(EXTRACT_ARGS_EX, &disable, &target)) return true;
+	if (NOT_ACTOR(thisObj) || !ExtractArgsEx(EXTRACT_ARGS_EX, &disable, &target)) return true;
 	Actor *actor = (Actor*)thisObj;
 	if (disable <= 0)
 	{
@@ -696,7 +695,7 @@ bool Cmd_ToggleNoHealthReset_Execute(COMMAND_ARGS)
 bool Cmd_GetCurrentStablePackage_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESPackage *package = thisObj->IsActor() ? ((Actor*)thisObj)->GetStablePackage() : NULL;
+	TESPackage *package = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->GetStablePackage() : NULL;
 	if (package) REFR_RES = package->refID;
 	DoConsolePrint(package);
 	return true;
@@ -704,14 +703,14 @@ bool Cmd_GetCurrentStablePackage_Execute(COMMAND_ARGS)
 
 bool Cmd_GetTeammateUsingAmmo_Execute(COMMAND_ARGS)
 {
-	*result = (thisObj->IsActor() && !(((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_InfiniteAmmo)) ? 1 : 0;
+	*result = (IS_ACTOR(thisObj) && !(((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_InfiniteAmmo)) ? 1 : 0;
 	return true;
 }
 
 bool Cmd_SetTeammateUsingAmmo_Execute(COMMAND_ARGS)
 {
 	UInt32 useAmmo;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &useAmmo) && (!useAmmo == !(((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_InfiniteAmmo)))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &useAmmo) && (!useAmmo == !(((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_InfiniteAmmo)))
 	{
 		((Actor*)thisObj)->jipActorFlags1 ^= kHookActorFlag1_InfiniteAmmo;
 		HOOK_MOD(RemoveAmmo, !useAmmo);
@@ -722,7 +721,7 @@ bool Cmd_SetTeammateUsingAmmo_Execute(COMMAND_ARGS)
 bool Cmd_ToggleDetectionFix_Execute(COMMAND_ARGS)
 {
 	UInt32 enable;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && (!enable != !(((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_DetectionFix)))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && (!enable != !(((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_DetectionFix)))
 		((Actor*)thisObj)->jipActorFlags1 ^= kHookActorFlag1_DetectionFix;
 	return true;
 }
@@ -755,7 +754,7 @@ bool Cmd_IsInCombatWith_Execute(COMMAND_ARGS)
 				}
 			}
 		}
-		else if (thisObj->IsActor())
+		else if (IS_ACTOR(thisObj))
 			*result = ((Actor*)thisObj)->IsInCombatWith(target);
 	}
 	return true;
@@ -763,7 +762,7 @@ bool Cmd_IsInCombatWith_Execute(COMMAND_ARGS)
 
 bool __fastcall IsAttacking(Actor *actor)
 {
-	if (!actor->IsActor() || !actor->baseProcess) return false;
+	if (NOT_ACTOR(actor) || !actor->baseProcess) return false;
 	SInt16 currentAction = actor->baseProcess->GetCurrentAction();
 	return (currentAction > 1) && (currentAction < 6);
 }
@@ -782,14 +781,14 @@ bool Cmd_IsAttacking_Eval(COMMAND_ARGS_EVAL)
 
 bool Cmd_StopIdle_Execute(COMMAND_ARGS)
 {
-	if (thisObj->IsActor() && ((Actor*)thisObj)->baseProcess)
+	if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->baseProcess)
 		((Actor*)thisObj)->baseProcess->SetQueuedIdleFlags(0x800);
 	return true;
 }
 
 bool Cmd_HolsterWeapon_Execute(COMMAND_ARGS)
 {
-	if (!thisObj->IsActor()) return true;
+	if (NOT_ACTOR(thisObj)) return true;
 	Actor *actor = (Actor*)thisObj;
 	if (actor->baseProcess && actor->baseProcess->IsWeaponOut())
 		actor->baseProcess->SetWeaponOut(actor, false);
@@ -823,7 +822,7 @@ bool Cmd_ResetFallTime_Execute(COMMAND_ARGS)
 
 float __fastcall GetRadiationLevelAlt(Actor *actor)
 {
-	if (!actor->IsActor() || !actor->baseProcess || actor->baseProcess->processLevel) return 0;
+	if (NOT_ACTOR(actor) || !actor->baseProcess || actor->baseProcess->processLevel) return 0;
 	if (actor == g_thePlayer)
 	{
 		HighProcess *hiProc = (HighProcess*)actor->baseProcess;
@@ -846,20 +845,20 @@ bool Cmd_GetRadiationLevelAlt_Eval(COMMAND_ARGS_EVAL)
 
 bool Cmd_IsInWater_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = thisObj->IsActor() ? ((Actor*)thisObj)->inWater : 0;
+	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->inWater : 0;
 	return true;
 }
 
 bool Cmd_IsInWater_Execute(COMMAND_ARGS)
 {
-	*result = thisObj->IsActor() ? ((Actor*)thisObj)->inWater : 0;
+	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->inWater : 0;
 	return true;
 }
 
 bool Cmd_GetDroppedRefs_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!thisObj->IsActor()) return true;
+	if (NOT_ACTOR(thisObj)) return true;
 	ExtraDroppedItemList *xDropped = GetExtraType(&thisObj->extraDataList, DroppedItemList);
 	if (!xDropped) return true;
 	s_tempElements.Clear();
@@ -876,7 +875,7 @@ bool Cmd_GetDroppedRefs_Execute(COMMAND_ARGS)
 
 bool Cmd_MoveAwayFromPlayer_Execute(COMMAND_ARGS)
 {
-	if (thisObj->IsActor())
+	if (IS_ACTOR(thisObj))
 		((Actor*)thisObj)->AddBackUpPackage(g_thePlayer, thisObj->parentCell, kPackageFlag_ContinueDuringCombat);
 	return true;
 }
@@ -884,7 +883,7 @@ bool Cmd_MoveAwayFromPlayer_Execute(COMMAND_ARGS)
 bool Cmd_FaceObject_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *target;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &target))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &target))
 		((Actor*)thisObj)->TurnToFaceObject(target);
 	return true;
 }
@@ -892,7 +891,7 @@ bool Cmd_FaceObject_Execute(COMMAND_ARGS)
 bool Cmd_Turn_Execute(COMMAND_ARGS)
 {
 	float turnAngle;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &turnAngle))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &turnAngle))
 		((Actor*)thisObj)->TurnAngle(turnAngle);
 	return true;
 }
@@ -954,7 +953,7 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS)
 		if (!(actor = (Actor*)iter->data)) continue;
 		if (addEvnt)
 		{
-			if (!actor->IsActor()) continue;
+			if (NOT_ACTOR(actor)) continue;
 			if (eventMap->Insert(actor, &scriptsMap))
 			{
 				actor->jipActorFlags3 |= flag;
@@ -1056,7 +1055,7 @@ bool SetActorEventHandler_Execute(COMMAND_ARGS)
 		if (!(actor = (Actor*)iter->data)) continue;
 		if (addEvnt)
 		{
-			if (!actor->IsActor()) continue;
+			if (NOT_ACTOR(actor)) continue;
 			if (eventMap->Insert(actor, &callbacks))
 				s_hookInfos[hookID].ModUsers(true);
 			callbacks->Insert(script);
@@ -1066,7 +1065,7 @@ bool SetActorEventHandler_Execute(COMMAND_ARGS)
 		{
 			auto findActor = eventMap->Find(actor);
 			if (!findActor || !findActor().Erase(script)) continue;
-			if (actor->IsActor())
+			if (IS_ACTOR(actor))
 				actor->jipActorFlags3 &= ~flag;
 			if (!findActor().Empty()) continue;
 			findActor.Remove();
@@ -1116,7 +1115,7 @@ __declspec(naked) bool Cmd_SetOnHitEventHandler_Execute(COMMAND_ARGS)
 bool Cmd_GetCurrentAmmo_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (thisObj->IsActor())
+	if (IS_ACTOR(thisObj))
 	{
 		ContChangesEntry *ammoInfo = ((Actor*)thisObj)->GetAmmoInfo();
 		if (ammoInfo && ammoInfo->type) REFR_RES = ammoInfo->type->refID;
@@ -1127,7 +1126,7 @@ bool Cmd_GetCurrentAmmo_Execute(COMMAND_ARGS)
 bool Cmd_GetCurrentAmmoRounds_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (thisObj->IsActor())
+	if (IS_ACTOR(thisObj))
 	{
 		ContChangesEntry *ammoInfo = ((Actor*)thisObj)->GetAmmoInfo();
 		if (ammoInfo) *result = ammoInfo->countDelta;
@@ -1164,7 +1163,7 @@ bool Cmd_SetFullNameAlt_Execute(COMMAND_ARGS)
 bool Cmd_GetDetectionValue_Execute(COMMAND_ARGS)
 {
 	Actor *target;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &target))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &target))
 		*result = ((Actor*)thisObj)->GetDetectionValue(target);
 	else *result = 0;
 	return true;
@@ -1179,7 +1178,7 @@ bool Cmd_GetBaseActorValueAlt_Execute(COMMAND_ARGS)
 	{
 		if (actorBase)
 			*result = actorBase->avOwner.GetActorValue(actorVal);
-		else if (thisObj && thisObj->IsActor())
+		else if (thisObj && IS_ACTOR(thisObj))
 			*result = (int)((Actor*)thisObj)->avOwner.GetBaseActorValue(actorVal);
 	}
 	return true;
@@ -1188,7 +1187,7 @@ bool Cmd_GetBaseActorValueAlt_Execute(COMMAND_ARGS)
 bool Cmd_SetSpeedMult_Execute(COMMAND_ARGS)
 {
 	UInt32 speedMult = 0;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &speedMult))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &speedMult))
 	{
 		if (speedMult) ((Actor*)thisObj)->SetActorValueInt(0x15, speedMult);
 		BaseProcess *baseProc = ((Actor*)thisObj)->baseProcess;
@@ -1200,7 +1199,7 @@ bool Cmd_SetSpeedMult_Execute(COMMAND_ARGS)
 
 bool __fastcall GetIsRagdolled(Actor *actor)
 {
-	return (actor->IsActor() && actor->baseProcess) ? (actor->baseProcess->GetKnockedState() == 1) : false;
+	return (IS_ACTOR(actor) && actor->baseProcess) ? (actor->baseProcess->GetKnockedState() == 1) : false;
 }
 
 bool Cmd_GetIsRagdolled_Execute(COMMAND_ARGS)
@@ -1218,7 +1217,7 @@ bool Cmd_GetIsRagdolled_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_ForceActorDetectionValue_Execute(COMMAND_ARGS)
 {
 	SInt32 detectionValue = 0, oprType = 0;
-	if (!thisObj->IsActor() || !ExtractArgsEx(EXTRACT_ARGS_EX, &detectionValue, &oprType)) return true;
+	if (NOT_ACTOR(thisObj) || !ExtractArgsEx(EXTRACT_ARGS_EX, &detectionValue, &oprType)) return true;
 	Actor *actor = (Actor*)thisObj;
 	if (detectionValue)
 	{
@@ -1285,7 +1284,7 @@ bool Cmd_GetActorValueModifier_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 actorVal, duration = 3;
-	if (!thisObj->IsActor() || !ExtractArgsEx(EXTRACT_ARGS_EX, &actorVal, &duration)) return true;
+	if (NOT_ACTOR(thisObj) || !ExtractArgsEx(EXTRACT_ARGS_EX, &actorVal, &duration)) return true;
 	ActiveEffectList *effList = ((Actor*)thisObj)->magicTarget.GetEffectList();
 	if (!effList) return true;
 	float modifier = 0;
@@ -1313,7 +1312,7 @@ bool Cmd_GetPerkModifier_Execute(COMMAND_ARGS)
 	UInt32 entryPointID;
 	float baseValue;
 	TESForm *filterForm1 = NULL, *filterForm2 = NULL;
-	if (!thisObj->IsActor() || !ExtractArgsEx(EXTRACT_ARGS_EX, &entryPointID, &baseValue, &filterForm1, &filterForm2) || (entryPointID > 73)) return true;
+	if (NOT_ACTOR(thisObj) || !ExtractArgsEx(EXTRACT_ARGS_EX, &entryPointID, &baseValue, &filterForm1, &filterForm2) || (entryPointID > 73)) return true;
 	switch (g_entryPointConditionInfo[entryPointID].numTabs)
 	{
 		case 1:
@@ -1332,14 +1331,14 @@ bool Cmd_GetPerkModifier_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWheelDisabled_Execute(COMMAND_ARGS)
 {
-	*result = (thisObj->IsActor() && (((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_DisableWheel)) ? 1 : 0;
+	*result = (IS_ACTOR(thisObj) && (((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_DisableWheel)) ? 1 : 0;
 	return true;
 }
 
 bool Cmd_SetWheelDisabled_Execute(COMMAND_ARGS)
 {
 	UInt32 disable;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &disable) && (!disable != !(((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_DisableWheel)))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &disable) && (!disable != !(((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_DisableWheel)))
 		((Actor*)thisObj)->jipActorFlags1 ^= kHookActorFlag1_DisableWheel;
 	return true;
 }
@@ -1365,7 +1364,7 @@ __declspec(naked) float __fastcall AdjustDmgByDifficulty(ActorHitData *hitData)
 void __fastcall GetHitData(Actor *target, UInt8 dataType, double *result)
 {
 	*result = 0;
-	if (!target->IsActor() || !target->baseProcess) return;
+	if (NOT_ACTOR(target) || !target->baseProcess) return;
 	ActorHitData *hitData = target->baseProcess->GetHitData();
 	if (!hitData) return;
 	switch (dataType)
@@ -1411,7 +1410,7 @@ bool Cmd_CrippleLimb_Execute(COMMAND_ARGS)
 {
 	UInt32 limbID;
 	Actor *attacker = NULL;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &limbID, &attacker) && (limbID <= 6))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &limbID, &attacker) && (limbID <= 6))
 		((Actor*)thisObj)->DamageActorValue(kAVCode_PerceptionCondition + limbID, -100, attacker);
 	return true;
 }
@@ -1420,7 +1419,7 @@ bool Cmd_PlayIdleEx_Execute(COMMAND_ARGS)
 {
 	TESIdleForm *idleAnim = NULL;
 	Actor *actor = (Actor*)thisObj;
-	if (!actor->IsActor() || !actor->baseProcess || !ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim) || (idleAnim && NOT_ID(idleAnim, TESIdleForm))) return true;
+	if (NOT_ACTOR(actor) || !actor->baseProcess || !ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim) || (idleAnim && NOT_ID(idleAnim, TESIdleForm))) return true;
 	if (!idleAnim) idleAnim = ThisCall<TESIdleForm*>(0x600950, *g_idleAnimsDirectoryMap, actor, actor->baseProcess->GetLowProcess40());
 	else if (idleAnim->children) idleAnim = idleAnim->FindIdle(actor);
 	if (idleAnim) actor->PlayIdle(idleAnim);
@@ -1429,7 +1428,7 @@ bool Cmd_PlayIdleEx_Execute(COMMAND_ARGS)
 
 bool Cmd_GetKillXP_Execute(COMMAND_ARGS)
 {
-	*result = thisObj->IsActor() ? ((Actor*)thisObj)->GetKillXP() : 0;
+	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->GetKillXP() : 0;
 	DoConsolePrint(result);
 	return true;
 }
@@ -1438,7 +1437,7 @@ bool Cmd_GetKiller_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	Actor *actor = (Actor*)thisObj;
-	actor = (actor->IsActor() && actor->HasHealth(0)) ? actor->killer : NULL;
+	actor = (IS_ACTOR(actor) && actor->HasHealth(0)) ? actor->killer : NULL;
 	if (actor) REFR_RES = actor->refID;
 	DoConsolePrint(actor);
 	return true;
@@ -1483,7 +1482,7 @@ bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 bool Cmd_GetPlayedIdle_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (thisObj->IsActor() && ((Actor*)thisObj)->baseProcess)
+	if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->baseProcess)
 	{
 		TESIdleForm *idleAnim = ((Actor*)thisObj)->baseProcess->GetIdleForm350();
 		if (idleAnim) REFR_RES = idleAnim->refID;
@@ -1500,9 +1499,9 @@ __declspec(naked) bool __fastcall IsIdlePlayingEx(Actor *actor, TESIdleForm *idl
 		mov		esi, ecx
 		mov		edi, edx
 		mov		eax, [ecx]
-		call	dword ptr [eax+0x100]
-		test	al, al
-		jz		done
+		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		setz	al
+		jnz		done
 		mov		ecx, esi
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x1E4]
@@ -1541,7 +1540,7 @@ bool Cmd_IsIdlePlayingEx_Execute(COMMAND_ARGS)
 bool Cmd_SetWeaponOut_Execute(COMMAND_ARGS)
 {
 	UInt32 setOut;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &setOut))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &setOut))
 		ThisCall(0x8A6840, thisObj, setOut != 0);
 	return true;
 }
@@ -1553,7 +1552,7 @@ bool Cmd_AddBaseEffectListEffect_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &spell, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	if (!actorBase->spellList.spellList.IsInList(spell))
@@ -1568,7 +1567,7 @@ bool Cmd_RemoveBaseEffectListEffect_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &spell, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	actorBase->spellList.spellList.Remove(spell);
@@ -1608,7 +1607,7 @@ bool Cmd_GetWaterImmersionPerc_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_DismemberLimb_Execute(COMMAND_ARGS)
 {
 	UInt32 bodyPartID, explode = 0;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &bodyPartID, &explode))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &bodyPartID, &explode))
 		((Actor*)thisObj)->DismemberLimb(bodyPartID, explode != 0);
 	return true;
 }
@@ -1616,7 +1615,7 @@ bool Cmd_DismemberLimb_Execute(COMMAND_ARGS)
 bool Cmd_GetInterruptPackage_Execute(COMMAND_ARGS)
 {
 	*result = -1;
-	if (thisObj->IsActor() && ((Actor*)thisObj)->baseProcess)
+	if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->baseProcess)
 	{
 		TESPackage *package = ((Actor*)thisObj)->baseProcess->GetInterruptPackage();
 		if (package) *result = package->type;
@@ -1626,20 +1625,20 @@ bool Cmd_GetInterruptPackage_Execute(COMMAND_ARGS)
 
 bool Cmd_IsFleeing_Execute(COMMAND_ARGS)
 {
-	*result = (thisObj->IsActor() && ((Actor*)thisObj)->IsFleeing()) ? 1 : 0;
+	*result = (IS_ACTOR(thisObj) && ((Actor*)thisObj)->IsFleeing()) ? 1 : 0;
 	return true;
 }
 
 bool Cmd_IsFleeing_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (thisObj->IsActor() && ((Actor*)thisObj)->IsFleeing()) ? 1 : 0;
+	*result = (IS_ACTOR(thisObj) && ((Actor*)thisObj)->IsFleeing()) ? 1 : 0;
 	return true;
 }
 
 bool Cmd_SetCurrentAmmoRounds_Execute(COMMAND_ARGS)
 {
 	SInt32 ammoRounds;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &ammoRounds))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &ammoRounds))
 	{
 		ContChangesEntry *ammoInfo = ((Actor*)thisObj)->GetAmmoInfo();
 		if (ammoInfo) ammoInfo->countDelta = ammoRounds;
@@ -1650,7 +1649,7 @@ bool Cmd_SetCurrentAmmoRounds_Execute(COMMAND_ARGS)
 bool Cmd_AttachAshPileEx_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (form->jipFormFlags6 & kHookFormFlag6_IsAshPile))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (form->jipFormFlags6 & kHookFormFlag6_IsAshPile))
 	{
 		s_altAshPile = form;
 		AttachAshPile(PASS_COMMAND_ARGS);
@@ -1724,21 +1723,21 @@ bool Cmd_SetCRESkeletonModel_Execute(COMMAND_ARGS)
 
 bool Cmd_GetTargetUnreachable_Execute(COMMAND_ARGS)
 {
-	*result = (thisObj->IsActor() && ((Actor*)thisObj)->HasNoPath()) ? 1 : 0;
+	*result = (IS_ACTOR(thisObj) && ((Actor*)thisObj)->HasNoPath()) ? 1 : 0;
 	DoConsolePrint(result);
 	return true;
 }
 
 bool Cmd_GetTargetUnreachable_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (thisObj->IsActor() && ((Actor*)thisObj)->HasNoPath()) ? 1 : 0;
+	*result = (IS_ACTOR(thisObj) && ((Actor*)thisObj)->HasNoPath()) ? 1 : 0;
 	return true;
 }
 
 bool Cmd_SetVATSTargetable_Execute(COMMAND_ARGS)
 {
 	UInt32 targetable;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &targetable) && (!targetable == !(((Actor*)thisObj)->jipActorFlags2 & kHookActorFlag2_NonTargetable)))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &targetable) && (!targetable == !(((Actor*)thisObj)->jipActorFlags2 & kHookActorFlag2_NonTargetable)))
 	{
 		((Actor*)thisObj)->jipActorFlags2 ^= kHookActorFlag2_NonTargetable;
 		HOOK_MOD(AddVATSTarget, !targetable);
@@ -1753,7 +1752,7 @@ bool Cmd_GetCreatureWeaponList_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &creature)) return true;
 	if (!creature)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		creature = (TESCreature*)((Actor*)thisObj)->GetActorBase();
 	}
 	if (IS_ID(creature, TESCreature) && creature->weaponList)
@@ -1768,7 +1767,7 @@ bool Cmd_GetDeathItem_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	if (actorBase->baseData.deathItem)
@@ -1783,7 +1782,7 @@ bool Cmd_SetDeathItem_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &item, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	actorBase->baseData.deathItem = item;
@@ -1793,7 +1792,7 @@ bool Cmd_SetDeathItem_Execute(COMMAND_ARGS)
 bool Cmd_GetActorLeveledList_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (thisObj->IsActor())
+	if (IS_ACTOR(thisObj))
 	{
 		ExtraLeveledCreature *xLvlCre = GetExtraType(&thisObj->extraDataList, LeveledCreature);
 		if (xLvlCre && xLvlCre->baseForm)
@@ -1819,7 +1818,7 @@ bool Cmd_GetImpactMaterialType_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	if IS_ID(actorBase, TESNPC)
@@ -1836,7 +1835,7 @@ bool Cmd_SetImpactMaterialType_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &type, &actorBase) || (type > 11)) return true;
 	if (!actorBase)
 	{
-		if (!thisObj || !thisObj->IsActor()) return true;
+		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		actorBase = ((Actor*)thisObj)->GetActorBase();
 	}
 	if IS_ID(actorBase, TESNPC)
@@ -1851,7 +1850,7 @@ bool Cmd_PushActorAwayAlt_Execute(COMMAND_ARGS)
 	float force;
 	int absPos = 0;
 	NiVector3 posVector(0, 0, 0);
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &force, &posVector.x, &posVector.y, &posVector.z, &absPos))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &force, &posVector.x, &posVector.y, &posVector.z, &absPos))
 	{
 		Actor *actor = (Actor*)thisObj;
 		BaseProcess *process = actor->baseProcess;
@@ -1869,7 +1868,7 @@ bool Cmd_MoveAwayFrom_Execute(COMMAND_ARGS)
 	TESObjectREFR *target;
 	float distance;
 	UInt32 flags = 0;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &target, &distance, &flags))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &target, &distance, &flags))
 	{
 		s_moveAwayDistance = distance;
 		UInt32 flagsMask = kPackageFlag_ContinueDuringCombat;
@@ -1886,7 +1885,7 @@ bool Cmd_TravelToRef_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *target;
 	UInt32 flags = 0;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &target, &flags))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &target, &flags))
 	{
 		TESObjectCELL *actorCell = thisObj->parentCell, *targetCell = target->parentCell;
 		if (!actorCell || !targetCell) return true;
@@ -1910,7 +1909,7 @@ bool Cmd_TravelToRef_Execute(COMMAND_ARGS)
 bool Cmd_DonnerReedKuruParty_Execute(COMMAND_ARGS)
 {
 	UInt32 doSet;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &doSet))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &doSet))
 	{
 		ExtraDismemberedLimbs *xDismembered = GetExtraType(&thisObj->extraDataList, DismemberedLimbs);
 		if (xDismembered)
@@ -1940,7 +1939,7 @@ bool Cmd_GetEquippedEx_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	BGSListForm *listForm;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &listForm))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &listForm))
 	{
 		Actor *actor = (Actor*)thisObj;
 		if NOT_ID(actor, Creature)
@@ -2006,7 +2005,7 @@ bool __fastcall GetFactionList(Actor *actor, TESActorBase *actorBase)
 		actor = NULL;
 	else
 	{
-		if (!actor || !actor->IsActor())
+		if (!actor || NOT_ACTOR(actor))
 			return false;
 		actorBase = actor->GetActorBase();
 	}
@@ -2058,7 +2057,7 @@ bool Cmd_GetHit3DData_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 type;
 	Actor *actor = (Actor*)thisObj;
-	if (actor->IsActor() && actor->baseProcess && ExtractArgsEx(EXTRACT_ARGS_EX, &type))
+	if (IS_ACTOR(actor) && actor->baseProcess && ExtractArgsEx(EXTRACT_ARGS_EX, &type))
 	{
 		ActorHitData *hitData = actor->baseProcess->GetHitData();
 		if (hitData)
@@ -2141,7 +2140,7 @@ bool Cmd_PushActorNoRagdoll_Execute(COMMAND_ARGS)
 	float force, angle;
 	TESObjectREFR *originRef = NULL;
 	UInt32 doAdjust = 1;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &force, &angle, &originRef, &doAdjust))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &force, &angle, &originRef, &doAdjust))
 	{
 		if (originRef == thisObj)
 			originRef = NULL;
@@ -2151,49 +2150,26 @@ bool Cmd_PushActorNoRagdoll_Execute(COMMAND_ARGS)
 	return true;
 }
 
-UInt8 s_getBodyPartString = 0;
-
-bool GetBodyPartString_Execute(COMMAND_ARGS)
+bool Cmd_GetBodyPartVATSTarget_Execute(COMMAND_ARGS)
 {
 	const char *resStr = "";
 	UInt32 partID;
 	TESActorBase *actorBase = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &partID, &actorBase) && (partID <= 14))
 	{
-		if (actorBase || (thisObj && thisObj->IsActor() && (actorBase = ((Actor *)thisObj)->GetActorBase())))
+		if (actorBase || (thisObj && IS_ACTOR(thisObj) && (actorBase = ((Actor *)thisObj)->GetActorBase())))
 		{
 			BGSBodyPartData *bpData = actorBase->GetBodyPartData();
 			if (bpData)
 			{
 				BGSBodyPart *bodyPart = bpData->bodyParts[partID];
-				if (bodyPart)
-				{
-					String *partStr = s_getBodyPartString ? &bodyPart->partNode : &bodyPart->VATSTarget;
-					if (partStr->m_dataLen) resStr = partStr->m_data;
-				}
+				if (bodyPart && bodyPart->VATSTarget.m_dataLen)
+					resStr = bodyPart->VATSTarget.m_data;
 			}
 		}
 	}
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
-}
-
-__declspec(naked) bool Cmd_GetBodyPartVATSTarget_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_getBodyPartString, 0
-		jmp		GetBodyPartString_Execute
-	}
-}
-
-__declspec(naked) bool Cmd_GetBodyPartPartNode_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_getBodyPartString, 1
-		jmp		GetBodyPartString_Execute
-	}
 }
 
 bool __fastcall GetInFactionList(Actor *actor, BGSListForm *facList)
@@ -2260,7 +2236,7 @@ bool Cmd_SetActorTiltAngle_Execute(COMMAND_ARGS)
 bool Cmd_ReloadCharController_Execute(COMMAND_ARGS)
 {
 	Actor *actor = (Actor*)thisObj;
-	if (actor->IsActor() && actor->baseProcess)
+	if (IS_ACTOR(actor) && actor->baseProcess)
 	{
 		MiddleHighProcess *process = (MiddleHighProcess*)actor->baseProcess;
 		if (process->processLevel <= 1)
@@ -2332,7 +2308,7 @@ bool Cmd_FireWeaponEx_Execute(COMMAND_ARGS)
 	static bool hookInstalled = false;
 	TESObjectWEAP *weapon;
 	s_strArgBuffer[0] = 0;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &s_strArgBuffer) && IS_ID(weapon, TESObjectWEAP) && weapon->projectile)
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &s_strArgBuffer) && IS_ID(weapon, TESObjectWEAP) && weapon->projectile)
 	{
 		HighProcess *hiProc = (HighProcess*)((Actor*)thisObj)->baseProcess;
 		if (!hiProc || hiProc->processLevel)
@@ -2381,7 +2357,7 @@ bool Cmd_SetActorGravityMult_Execute(COMMAND_ARGS)
 bool Cmd_SetTeammateKillable_Execute(COMMAND_ARGS)
 {
 	UInt32 doSet;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &doSet))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &doSet))
 	{
 		if (doSet) ((Actor*)thisObj)->jipActorFlags2 |= kHookActorFlag2_TeammateKillable;
 		else ((Actor*)thisObj)->jipActorFlags2 &= ~kHookActorFlag2_TeammateKillable;
@@ -2392,7 +2368,7 @@ bool Cmd_SetTeammateKillable_Execute(COMMAND_ARGS)
 bool Cmd_SetNoGunWobble_Execute(COMMAND_ARGS)
 {
 	UInt32 doSet;
-	if (thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &doSet))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &doSet))
 	{
 		if (doSet) ((Actor*)thisObj)->jipActorFlags2 |= kHookActorFlag2_NoGunWobble;
 		else ((Actor*)thisObj)->jipActorFlags2 &= ~kHookActorFlag2_NoGunWobble;
@@ -2404,7 +2380,7 @@ bool Cmd_GetHitNode_Execute(COMMAND_ARGS)
 {
 	const char *nodeName = "NULL";
 	Actor *actor = (Actor*)thisObj;
-	if (actor->IsActor() && actor->baseProcess)
+	if (IS_ACTOR(actor) && actor->baseProcess)
 	{
 		ActorHitData *hitData = actor->baseProcess->GetHitData();
 		if (hitData && hitData->projectile && hitData->projectile->IsProjectile())
@@ -2434,7 +2410,7 @@ bool Cmd_GetHitExtendedFlag_Execute(COMMAND_ARGS)
 	bool isSet = false;
 	Actor *target = (Actor*)thisObj;
 	UInt32 flagID;
-	if (target->IsActor() && target->baseProcess && ExtractArgsEx(EXTRACT_ARGS_EX, &flagID))
+	if (IS_ACTOR(target) && target->baseProcess && ExtractArgsEx(EXTRACT_ARGS_EX, &flagID))
 	{
 		ActorHitData *hitData = target->baseProcess->GetHitData();
 		if (hitData)

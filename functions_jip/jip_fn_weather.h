@@ -254,7 +254,7 @@ bool Cmd_ResetClouds_Execute(COMMAND_ARGS)
 	__asm
 	{
 		pxor	xmm0, xmm0
-		movdqu	xmmword ptr ds:[0x11FF8B4], xmm0
+		movups	ds:[0x11FF8B4], xmm0
 	}
 	return true;
 }

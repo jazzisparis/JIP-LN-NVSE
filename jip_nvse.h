@@ -155,14 +155,22 @@ enum
 	kAddr_ApplyAmmoEffects =		0x59A030,
 	kAddr_MoveToMarker =			0x5CCB20,
 	kAddr_ApplyPerkModifiers =		0x5E58F0,
+	kAddr_ReturnThis =				0x6815C0,
 	kAddr_PurgeTerminalModel =		0x7FFE00,
 	kAddr_EquipItem =				0x88C650,
 	kAddr_UnequipItem =				0x88C790,
+	kAddr_ReturnTrue =				0x8D0360,
 	kAddr_TileGetFloat =			0xA011B0,
 	kAddr_TileSetFloat =			0xA012D0,
 	kAddr_TileSetString =			0xA01350,
 	kAddr_InitFontInfo =			0xA12020,
 };
+
+#define IS_REFERENCE(form) ((*(UInt32**)form)[0x3C] == kAddr_ReturnTrue)
+#define NOT_REFERENCE(form) ((*(UInt32**)form)[0x3C] != kAddr_ReturnTrue)
+#define IS_ACTOR(form) ((*(UInt32**)form)[0x40] == kAddr_ReturnTrue)
+#define NOT_ACTOR(form) ((*(UInt32**)form)[0x40] != kAddr_ReturnTrue)
+#define IS_NODE(object) ((*(UInt32**)object)[3] == kAddr_ReturnThis)
 
 bool (*IsPipBoyActive)(UInt32 menuID) = (bool (*)(UInt32))0x702450;
 bool (*IsMenuActive)(UInt32 menuID, UInt32 arg2) = (bool (*)(UInt32, UInt32))0x702680;
@@ -451,7 +459,7 @@ bool TESForm::HasScript()
 
 bool TESForm::GetScriptAndEventList(Script **script, ScriptEventList **eventList)
 {
-	if (GetIsReference())
+	if IS_REFERENCE(this)
 	{
 		ExtraScript *xScript = GetExtraType(&((TESObjectREFR*)this)->extraDataList, Script);
 		if (!xScript) return false;
@@ -581,7 +589,7 @@ UInt32 __fastcall StringToRef(char *refStr)
 	UInt32 *findStr;
 	if (!s_strRefs.Insert(refStr, &findStr)) return *findStr;
 	*findStr = 0;
-	char *colon = strchr(refStr, ':');
+	char *colon = FindChr(refStr, ':');
 	if (colon)
 	{
 		UInt8 modIdx;
@@ -1010,9 +1018,8 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 		jz		done
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
-		call	dword ptr [eax+0x100]
-		test	al, al
-		jz		done
+		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		jnz		done
 		call	TESObjectREFR::GetContainerChangesList
 		test	eax, eax
 		jz		done
@@ -1293,9 +1300,8 @@ __declspec(naked) void TESObjectREFR::SetPos(NiVector3 *posVector)
 		CALL_EAX(0x575830)
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
-		call	dword ptr [eax+0x100]
-		test	al, al
-		jz		noCharCtrl
+		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		jnz		noCharCtrl
 		mov		ecx, [ecx+0x68]
 		test	ecx, ecx
 		jz		noCharCtrl
@@ -1357,8 +1363,7 @@ __declspec(naked) void TESObjectREFR::SetAngle(NiVector3 *rotVector)
 		push	0
 		push	ecx
 		push	2
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x48]
+		CALL_EAX(0x484B60)
 		CALL_EAX(0x5C0B10)
 		add		esp, 0xC
 		retn	4
@@ -1471,9 +1476,8 @@ __declspec(naked) bhkCharacterController *TESObjectREFR::GetCharacterController(
 	__asm
 	{
 		mov		eax, [ecx]
-		call	dword ptr [eax+0x100]
-		test	al, al
-		jz		retnNULL
+		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		jnz		retnNULL
 		mov		ecx, [ecx+0x68]
 		test	ecx, ecx
 		jz		retnNULL
@@ -1498,9 +1502,8 @@ __declspec(naked) float TESObjectREFR::GetWaterImmersionPerc()	// result >= 0.87
 	__asm
 	{
 		mov		eax, [ecx]
-		call	dword ptr [eax+0x100]
-		test	al, al
-		jz		invalid
+		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		jnz		invalid
 		cmp		byte ptr [ecx+0x14C], 0
 		jz		invalid
 		mov		eax, [ecx+0x68]
@@ -1520,7 +1523,7 @@ __declspec(naked) float TESObjectREFR::GetWaterImmersionPerc()	// result >= 0.87
 
 bool TESObjectREFR::IsMobile()
 {
-	if (IsActor() || IsProjectile())
+	if (IS_ACTOR(this) || IsProjectile())
 		return true;
 	NiNode *objNode = GetNiNode();
 	return objNode && objNode->IsMovable();
@@ -1594,7 +1597,7 @@ __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const c
 
 bool TESObjectREFR::IsGrabbable()
 {
-	if (IsActor())
+	if IS_ACTOR(this)
 		return *(bool*)0x11E0B20 || HasHealth(0);
 	if (IsProjectile())
 	{
@@ -1607,7 +1610,7 @@ bool TESObjectREFR::IsGrabbable()
 
 bool TESObjectREFR::ValidForHooks()
 {
-	if (IsActor()) return IsPersistent();
+	if IS_ACTOR(this) return IsPersistent();
 	return !kInventoryType[baseForm->typeID] && !IsProjectile();
 }
 
@@ -1644,9 +1647,10 @@ __declspec(naked) NiNode* __fastcall TESObjectREFR::GetNode(const char *nodeName
 		call	NiNode::GetBlock
 		test	eax, eax
 		jz		done
-		mov		ecx, eax
-		mov		eax, [ecx]
-		call	dword ptr [eax+0xC]
+		xor		edx, edx
+		mov		ecx, [eax]
+		cmp		dword ptr [ecx+0xC], kAddr_ReturnThis
+		cmovnz	eax, edx
 	done:
 		retn
 	}
@@ -1822,9 +1826,8 @@ __declspec(naked) int __stdcall GetRayCastMaterial(NiVector3 *posVector, NiMatri
 		jz		isTerrain
 		mov		ecx, eax
 		mov		eax, [ecx]
-		call	dword ptr [eax+0x100]
-		test	al, al
-		jz		notActor
+		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		jnz		notActor
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x218]
 		mov		ecx, [ecx+0x20]
@@ -2409,8 +2412,7 @@ __declspec(naked) void Actor::PlayAnimGroup(UInt32 animGroupID)
 		mov		edi, eax
 		push	0x10000000
 		mov		ecx, esi
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x48]
+		CALL_EAX(0x484B60)
 		mov		edx, [esp+0xC]
 		push	edi
 		push	0
@@ -2709,9 +2711,8 @@ __declspec(naked) int Actor::GetGroundMaterial()
 		push	esi
 		mov		esi, ecx
 		mov		eax, [ecx]
-		call	dword ptr [eax+0x100]
-		test	al, al
-		jz		invalid
+		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		jnz		invalid
 		mov		eax, [esi+0x68]
 		test	eax, eax
 		jz		invalid
@@ -3201,9 +3202,8 @@ __declspec(naked) NiAVObject* __fastcall NiNode::GetBlockByName(const char *objN
 		test	ecx, ecx
 		jz		iterHead
 		mov		eax, [ecx]
-		call	dword ptr [eax+0xC]
-		test	eax, eax
-		jz		notNode
+		cmp		dword ptr [eax+0xC], kAddr_ReturnThis
+		jnz		notNode
 		call	NiNode::GetBlockByName
 		test	eax, eax
 		jz		iterHead
@@ -3257,9 +3257,10 @@ __declspec(naked) NiNode* __fastcall NiNode::GetNode(const char *nodeName)
 		call	NiNode::GetBlock
 		test	eax, eax
 		jz		done
-		mov		ecx, eax
-		mov		eax, [ecx]
-		call	dword ptr [eax+0xC]
+		xor		edx, edx
+		mov		ecx, [eax]
+		cmp		dword ptr [ecx+0xC], kAddr_ReturnThis
+		cmovnz	eax, edx
 	done:
 		retn
 	}
@@ -3619,7 +3620,7 @@ bool NiNode::IsMovable()
 		}
 	}
 	for (auto iter = m_children.Begin(); !iter.End(); ++iter)
-		if (*iter && iter->GetNiNode() && ((NiNode*)*iter)->IsMovable())
+		if (*iter && IS_NODE(*iter) && ((NiNode*)*iter)->IsMovable())
 			return true;
 	return false;
 }
@@ -3653,9 +3654,8 @@ __declspec(naked) void NiNode::RemoveCollision()
 		test	ecx, ecx
 		jz		iterHead
 		mov		eax, [ecx]
-		call	dword ptr [eax+0xC]
-		test	eax, eax
-		jz		iterHead
+		cmp		dword ptr [eax+0xC], kAddr_ReturnThis
+		jnz		iterHead
 		call	NiNode::RemoveCollision
 		jmp		iterHead
 		ALIGN 16
@@ -3783,7 +3783,6 @@ __declspec(naked) void __fastcall NiObjectNET::SetName(const char *newName)
 		test	eax, eax
 		jz		done
 		lock dec dword ptr [eax-8]
-		retn
 	done:
 		retn
 	}
@@ -3821,7 +3820,7 @@ void NiNode::BulkSetMaterialPropertyTraitValue(UInt32 traitID, float value)
 	for (auto iter = m_children.Begin(); !iter.End(); ++iter)
 	{
 		if (!(block = *iter)) continue;
-		if (block->GetNiNode())
+		if IS_NODE(block)
 			((NiNode*)block)->BulkSetMaterialPropertyTraitValue(traitID, value);
 		else if (matProp = (NiMaterialProperty*)block->GetProperty(2))
 			matProp->SetTraitValue(traitID, value);
@@ -3849,7 +3848,7 @@ void NiNode::GetContactObjects(ContactObjects *contactObjs)
 				contactObjs->Append(iter->GetWorldObj());
 	}
 	for (auto iter = m_children.Begin(); !iter.End(); ++iter)
-		if (*iter && iter->GetNiNode()) ((NiNode*)*iter)->GetContactObjects(contactObjs);
+		if (*iter && IS_NODE(*iter)) ((NiNode*)*iter)->GetContactObjects(contactObjs);
 }
 
 bool NiNode::HasPhantom()
@@ -3857,7 +3856,7 @@ bool NiNode::HasPhantom()
 	if (m_collisionObject && m_collisionObject->worldObj && (((hkpWorldObject*)m_collisionObject->worldObj->refObject)->collisionType == 2))
 		return true;
 	for (auto iter = m_children.Begin(); !iter.End(); ++iter)
-		if (*iter && iter->GetNiNode() && ((NiNode*)*iter)->HasPhantom())
+		if (*iter && IS_NODE(*iter) && ((NiNode*)*iter)->HasPhantom())
 			return true;
 	return false;
 }
@@ -3883,7 +3882,7 @@ void NiNode::GetBodyMass(float *totalMass)
 	if (m_collisionObject && m_collisionObject->worldObj)
 		*totalMass += ((hkpRigidBody*)m_collisionObject->worldObj->refObject)->motion.GetBodyMass();
 	for (auto iter = m_children.Begin(); !iter.End(); ++iter)
-		if (*iter && iter->GetNiNode()) ((NiNode*)*iter)->GetBodyMass(totalMass);
+		if (*iter && IS_NODE(*iter)) ((NiNode*)*iter)->GetBodyMass(totalMass);
 }
 
 __declspec(naked) void NiNode::ApplyForce(hkVector4 *forceVector)
@@ -3927,9 +3926,8 @@ __declspec(naked) void NiNode::ApplyForce(hkVector4 *forceVector)
 		test	ecx, ecx
 		jz		iterHead
 		mov		eax, [ecx]
-		call	dword ptr [eax+0xC]
-		test	eax, eax
-		jz		iterHead
+		cmp		dword ptr [eax+0xC], kAddr_ReturnThis
+		jnz		iterHead
 		push	dword ptr [esp+0xC]
 		call	NiNode::ApplyForce
 		jmp		iterHead
@@ -3949,8 +3947,8 @@ __declspec(naked) void bhkWorldObject::ApplyForce(hkVector4 *forceVector)
 		push	ebp
 		mov		ebp, esp
 		and		esp, 0xFFFFFFF0
-		sub		esp, 0x20
-		mov		[esp], ecx
+		sub		esp, 0x1C
+		push	ecx
 		lea		eax, [esp+0x10]
 		push	eax
 		mov		eax, [ecx]
@@ -4310,7 +4308,7 @@ bool EffectItemList::RemoveNthEffect(UInt32 index)
 			for (; objArray != arrEnd; objArray++)
 			{
 				actor = (Actor*)*objArray;
-				if (actor && actor->IsActor())
+				if (actor && IS_ACTOR(actor))
 					actor->magicTarget.RemoveEffect(effItem);
 			}
 			objArray = g_processManager->objects.data;
@@ -4319,7 +4317,7 @@ bool EffectItemList::RemoveNthEffect(UInt32 index)
 			for (; objArray != arrEnd; objArray++)
 			{
 				actor = (Actor*)*objArray;
-				if (actor && actor->IsActor())
+				if (actor && IS_ACTOR(actor))
 					actor->magicTarget.RemoveEffect(effItem);
 			}
 		}
@@ -4371,7 +4369,7 @@ void __fastcall UpdateEffectsAllActors(MagicItem *magicItem, EffectItem *effItem
 	for (; objArray != arrEnd; objArray++)
 	{
 		actor = (Actor*)*objArray;
-		if (actor && actor->IsActor())
+		if (actor && IS_ACTOR(actor))
 			actor->UpdateActiveEffects(magicItem, effItem, callback, addNew);
 	}
 	objArray = g_processManager->objects.data;
@@ -4380,7 +4378,7 @@ void __fastcall UpdateEffectsAllActors(MagicItem *magicItem, EffectItem *effItem
 	for (; objArray != arrEnd; objArray++)
 	{
 		actor = (Actor*)*objArray;
-		if (actor && actor->IsActor())
+		if (actor && IS_ACTOR(actor))
 			actor->UpdateActiveEffects(magicItem, effItem, callback, addNew);
 	}
 }
@@ -4791,27 +4789,63 @@ Tile *InterfaceManager::GetActiveTile()
 
 void InterfaceManager::ClearHighlights()
 {
-	highlightMain.Clear();
-	while (numHighlighted)
-	{
-		numHighlighted--;
-		highlightedRefs[numHighlighted].Clear();
-	}
-	unk1EC = 0xFFFFFFFF;
 	highlightState = 0;
+	for (UInt32 index = numHighlighted; index;)
+		highlightedRefs[--index].Clear();
+	numHighlighted = 0;
+	flashingRefIndex = -1;
+	highlightMain.Clear();
 }
 
 void InterfaceManager::AddHighlightedRef(TESObjectREFR *refr)
 {
+	for (UInt32 index = numHighlighted; index;)
+		if (highlightedRefs[--index].refr == refr) return;
 	if (numHighlighted < 32)
 	{
-		highlightedRefs[numHighlighted].Set(refr);
-		if (!numHighlighted)
-			highlightMain.Set(refr);
-		numHighlighted++;
-		highlightState = 1;
-		byte490 = 0;
+		NiNode *refrNode = refr->GetNiNode();
+		if (refrNode)
+		{
+			highlightedRefs[numHighlighted].Set(refr, refrNode);
+			if (!numHighlighted)
+				highlightMain.Set(&highlightedRefs[0]);
+			highlightState = 1;
+			numHighlighted++;
+			byte490 = 0;
+		}
 	}
+}
+
+void InterfaceManager::RemoveHighlightedRef(TESObjectREFR *refr)
+{
+	for (UInt32 index = numHighlighted; index;)
+	{
+		if (highlightedRefs[--index].refr != refr)
+			continue;
+		if (--numHighlighted)
+		{
+			if (index == numHighlighted)
+				highlightedRefs[index].Clear();
+			else highlightedRefs[index].Replace(&highlightedRefs[numHighlighted]);
+			if (highlightMain.refr == refr)
+				highlightMain.Set(&highlightedRefs[0]);
+		}
+		else
+		{
+			highlightedRefs[0].Clear();
+			highlightMain.Clear();
+			highlightState = 0;
+		}
+		break;
+	}
+}
+
+bool InterfaceManager::IsRefHighlighted(TESObjectREFR *refr)
+{
+	for (UInt32 index = numHighlighted; index;)
+		if (highlightedRefs[--index].refr == refr)
+			return true;
+	return false;
 }
 
 const char kDaysPerMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
@@ -4944,7 +4978,7 @@ bool TESObjectREFR::SetLinkedRef(TESObjectREFR *linkObj = NULL, UInt8 modIdx = 0
 				if (*findDefID)
 				{
 					TESForm *form = LookupFormByRefID(*findDefID);
-					if (form && form->GetIsReference()) xLinkedRef->linkedRef = (TESObjectREFR*)form;
+					if (form && IS_REFERENCE(form)) xLinkedRef->linkedRef = (TESObjectREFR*)form;
 				}
 				else RemoveExtraData(&extraDataList, xLinkedRef, true);
 			}
@@ -4971,10 +5005,10 @@ bool TESObjectREFR::SetLinkedRef(TESObjectREFR *linkObj = NULL, UInt8 modIdx = 0
 bool SetLinkedRefID(UInt32 thisID, UInt32 linkID = 0, UInt8 modIdx = 0xFF)
 {
 	TESObjectREFR *thisObj = (TESObjectREFR*)LookupFormByRefID(thisID);
-	if (!thisObj || !thisObj->GetIsReference()) return false;
+	if (!thisObj || NOT_REFERENCE(thisObj)) return false;
 	if (!linkID) return thisObj->SetLinkedRef();
 	TESObjectREFR *linkObj = (TESObjectREFR*)LookupFormByRefID(linkID);
-	return linkObj && linkObj->GetIsReference() && thisObj->SetLinkedRef(linkObj, modIdx);
+	return linkObj && IS_REFERENCE(linkObj) && thisObj->SetLinkedRef(linkObj, modIdx);
 }
 
 class AuxVariableValue
@@ -5122,7 +5156,7 @@ void __fastcall GetBaseParams(Script *scriptObj, UInt8 type)
 
 UInt32 __fastcall GetSubjectID(TESForm *form, TESObjectREFR *thisObj)
 {
-	if (form) return form->GetIsReference() ? ((TESObjectREFR*)form)->baseForm->refID : form->refID;
+	if (form) return IS_REFERENCE(form) ? ((TESObjectREFR*)form)->baseForm->refID : form->refID;
 	if (thisObj) return thisObj->refID;
 	return 0;
 }
@@ -5992,13 +6026,36 @@ __declspec(naked) bool __fastcall GetFileArchived(const char *filePath)
 	}
 }
 
-UInt8 FileExistsEx(char *filePath, bool isFolder = false)
+__declspec(naked) int __stdcall FileExistsEx(char *filePath, bool isFolder)
 {
-	ReplaceChr(filePath, '/', '\\');
-	UInt32 attr = GetFileAttributes(filePath);
-	if (attr != INVALID_FILE_ATTRIBUTES)
-		return (attr & FILE_ATTRIBUTE_DIRECTORY) ? isFolder : !isFolder;
-	return (!isFolder && GetFileArchived(filePath)) ? 2 : 0;
+	__asm
+	{
+		push	'\\'
+		mov		dl, '/'
+		mov		ecx, [esp+8]
+		call	ReplaceChr
+		push	dword ptr [esp+4]
+		call	GetFileAttributesA
+		test	eax, eax
+		js		notFound
+		test	al, 0x10
+		setnz	dl
+		xor		eax, eax
+		cmp		dl, [esp+8]
+		setz	al
+		retn	8
+		ALIGN 16
+	notFound:
+		xor		eax, eax
+		cmp		[esp+8], 0
+		jnz		done
+		mov		ecx, [esp+4]
+		call	GetFileArchived
+		shl		al, 1
+		movzx	eax, al
+	done:
+		retn	8
+	}
 }
 
 int s_isLAA = -1;
@@ -6036,7 +6093,7 @@ int GetIsLAA()
 	return s_isLAA;
 }
 
-TESObjectCELL *s_pcCurrCell0 = NULL, *s_pcCurrCell = NULL;
+TESObjectCELL *s_pcCurrCell0 = NULL, *s_pcCurrCell = NULL, *s_lastInterior = NULL;
 TESWorldSpace *s_pcRootWorld = NULL;
 
 const char kMenuIDJumpTable[] =

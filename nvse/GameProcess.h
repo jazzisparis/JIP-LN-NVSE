@@ -206,7 +206,7 @@ public:
 	virtual void	Unk_5B(void);
 	virtual void	HandleQueuedEquipItems(Actor *actor);
 	virtual void	Unk_5D(void);	// Called by 5E with count itemExtraList item
-	virtual void	QueueEquipItem(Actor *actor, bool doEquip, TESForm *item, UInt32 count, ExtraDataList *xDataList, bool applyEnchantment, bool noUnequip, UInt8 arg8, UInt8 arg9, bool playSound);	// EquipItem and UnEquipItem doEquip item count itemExtraList bytes = [equipArgC lockUnequip unk unEquipArcC lockEquip arg14 ] (arg as from Actor::(Un)EquipItem)
+	virtual void	QueueEquipItem(Actor *actor, bool doEquip, TESForm *item, UInt32 count, ExtraDataList *xDataList, bool applyEnchantment, bool noUnequip, UInt8 arg8, UInt8 arg9, bool playSound);
 	virtual void	Unk_5F(void);
 	virtual void	Unk_60(void);
 	virtual NiNode	*GetProjectileNode();

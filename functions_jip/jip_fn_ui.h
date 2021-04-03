@@ -324,7 +324,7 @@ bool Cmd_ClickMenuButton_Execute(COMMAND_ARGS)
 	Tile *component = NULL;
 	Menu *parentMenu = NULL;
 	SInt32 tileID = -1;
-	char *hashPos = strchr(s_strArgBuffer, '#');
+	char *hashPos = FindChr(s_strArgBuffer, '#');
 	if (hashPos)
 	{
 		tileID = StrToInt(hashPos + 1);
@@ -766,7 +766,7 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 	if (slashPos) *slashPos = 0;
 	else
 	{
-		hashPos = strchr(s_strArgBuffer, '#');
+		hashPos = FindChr(s_strArgBuffer, '#');
 		if (hashPos) *hashPos = 0;
 	}
 	UInt32 menuID = s_menuNameToID.Get(s_strArgBuffer);
@@ -1150,7 +1150,7 @@ bool Cmd_MessageBoxExAlt_Execute(COMMAND_ARGS)
 			*++buttonPtr = delim;
 		}
 		if (!*buttonPtr) *++buttonPtr = "OK";
-		if ((s_strArgBuffer[0] == '^') && (delim = strchr(s_strArgBuffer + 1, '^')))
+		if ((s_strArgBuffer[0] == '^') && (delim = FindChr(s_strArgBuffer + 1, '^')))
 		{
 			*delim = 0;
 			*msgStrings = s_strArgBuffer + 1;

@@ -79,7 +79,7 @@ bool Hook_IsInList_Eval(TESObjectREFR *thisObj, BGSListForm *formList, void *unu
 bool Hook_GetHitLocation_Execute(COMMAND_ARGS)
 {
 	SInt32 hitLoc = -1;
-	if (thisObj->IsActor() && ((Actor*)thisObj)->baseProcess)
+	if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->baseProcess)
 	{
 		ActorHitData *hitData = ((Actor*)thisObj)->baseProcess->GetHitData();
 		if (hitData) hitLoc = hitData->unk60;
@@ -97,7 +97,7 @@ bool Hook_HasPerk_Execute(COMMAND_ARGS)		// Modifies HasPerk to allow detection 
 	{
 		if (thisObj == g_thePlayer)
 			rank = g_thePlayer->GetPerkRank(perk, false);
-		else if (thisObj->IsActor() && ((Actor*)thisObj)->isTeammate)
+		else if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->isTeammate)
 			rank = g_thePlayer->GetPerkRank(perk, true);
 	}
 	*result = rank ? 1 : 0;
@@ -109,7 +109,7 @@ bool Hook_HasPerk_Eval(Actor *thisObj, BGSPerk *perk, UInt32 useAlt, double *res
 {
 	if (thisObj == g_thePlayer)
 		*result = g_thePlayer->GetPerkRank(perk, false) ? 1 : 0;
-	else if (thisObj->IsActor() && thisObj->isTeammate)
+	else if (IS_ACTOR(thisObj) && thisObj->isTeammate)
 		*result = g_thePlayer->GetPerkRank(perk, true) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -153,30 +153,115 @@ bool Hook_IsKeyPressed_Eval(TESObjectREFR *thisObj, UInt32 keyID, UInt32 flags, 
 
 bool __fastcall IsControlPressed(UInt32 ctrlID, UInt32 flags = 1)
 {
-	if (s_controllerReady)
-		return GetXIControlPressed(g_inputGlobals->controllerBinds[ctrlID], flags);
-	UInt32 keyID = g_inputGlobals->keyBinds[ctrlID];
-	if ((keyID != 0xFF) && g_DIHookCtrl->IsKeyPressed(keyID, flags))
-		return true;
-	else
+	if (!s_controllerReady)
 	{
-		keyID = g_inputGlobals->mouseBinds[ctrlID];
-		return (keyID != 0xFF) && g_DIHookCtrl->IsKeyPressed(keyID + 0x100, flags);
+		UInt32 keyID = KEYBOARD_BIND(ctrlID);
+		if ((keyID != 0xFF) && g_DIHookCtrl->IsKeyPressed(keyID, flags))
+			return true;
+		else
+		{
+			keyID = MOUSE_BIND(ctrlID);
+			return (keyID != 0xFF) && g_DIHookCtrl->IsKeyPressed(keyID + 0x100, flags);
+		}
 	}
+	return GetXIControlPressed((flags & 2) ? &s_gamePad : (XINPUT_GAMEPAD_EX*)0x11F35A8, ctrlID);
 }
 
 bool __fastcall IsControlPressedRaw(UInt32 ctrlID)
 {
-	if (s_controllerReady)
-		return GetXIControlPressed(g_inputGlobals->controllerBinds[ctrlID], 2);
-	UInt32 keyID = g_inputGlobals->keyBinds[ctrlID];
-	if ((keyID != 0xFF) && g_DIHookCtrl->IsKeyPressedRaw(keyID))
-		return true;
-	else
+	if (!s_controllerReady)
 	{
-		keyID = g_inputGlobals->mouseBinds[ctrlID];
-		return (keyID != 0xFF) && g_DIHookCtrl->IsKeyPressedRaw(keyID + 0x100);
+		UInt32 keyID = KEYBOARD_BIND(ctrlID);
+		if ((keyID != 0xFF) && g_DIHookCtrl->IsKeyPressedRaw(keyID))
+			return true;
+		else
+		{
+			keyID = MOUSE_BIND(ctrlID);
+			return (keyID != 0xFF) && g_DIHookCtrl->IsKeyPressedRaw(keyID + 0x100);
+		}
 	}
+	return GetXIControlPressed(&s_gamePad, ctrlID);
+}
+
+void __fastcall SetControlDisabled(UInt32 ctrlID, bool bDisable)
+{
+	if (!s_controllerReady)
+	{
+		UInt32 keyID = KEYBOARD_BIND(ctrlID);
+		if (keyID != 0xFF) g_DIHookCtrl->SetKeyDisableState(keyID, bDisable);
+		keyID = MOUSE_BIND(ctrlID);
+		if (keyID != 0xFF) g_DIHookCtrl->SetKeyDisableState(keyID + 0x100, bDisable);
+	}
+	else SetXIControlDisabled(ctrlID, bDisable);
+}
+
+bool Hook_DisableControl_Execute(COMMAND_ARGS)
+{
+	UInt32 ctrlID, mask;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ctrlID, &mask) && (ctrlID < MAX_CONTROL_BIND))
+		SetControlDisabled(ctrlID, true);
+	return true;
+}
+
+bool Hook_EnableControl_Execute(COMMAND_ARGS)
+{
+	UInt32 ctrlID, mask;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ctrlID, &mask) && (ctrlID < MAX_CONTROL_BIND))
+		SetControlDisabled(ctrlID, false);
+	return true;
+}
+
+bool Hook_TapControl_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	UInt32 ctrlID;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ctrlID) && (ctrlID < MAX_CONTROL_BIND))
+	{
+		if (!s_controllerReady)
+		{
+			UInt32 keyID = KEYBOARD_BIND(ctrlID);
+			if (keyID != 0xFF)
+			{
+				g_DIHookCtrl->TapKey(keyID);
+				*result = 1;
+			}
+			else
+			{
+				keyID = MOUSE_BIND(ctrlID);
+				if (keyID != 0xFF)
+				{
+					g_DIHookCtrl->TapKey(keyID + 0x100);
+					*result = 1;
+				}
+			}
+		}
+		else if (TapXIControl(ctrlID))
+			*result = 1;
+	}
+	return true;
+}
+
+bool Hook_IsControlDisabled_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	UInt32 ctrlID;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ctrlID) && (ctrlID < MAX_CONTROL_BIND))
+	{
+		if (!s_controllerReady)
+		{
+			UInt32 keyID = KEYBOARD_BIND(ctrlID), btnID = MOUSE_BIND(ctrlID);
+			if (keyID != 0xFF)
+			{
+				if (g_DIHookCtrl->IsKeyDisabled(keyID) && ((btnID == 0xFF) || g_DIHookCtrl->IsKeyDisabled(btnID + 0x100)))
+					*result = 1;
+			}
+			else if ((btnID != 0xFF) && g_DIHookCtrl->IsKeyDisabled(btnID + 0x100))
+				*result = 1;
+		}
+		else if (GetXIControlDisabled(ctrlID))
+			*result = 1;
+	}
+	return true;
 }
 
 bool Hook_IsControlPressed_Execute(COMMAND_ARGS)
@@ -317,7 +402,7 @@ bool Hook_SetNumericINISetting_Execute(COMMAND_ARGS)
 SInt32 __fastcall IsRefInList(BGSListForm *listForm, TESForm *form)
 {
 	SInt32 index = listForm->list.GetIndexOf(form);
-	if ((index < 0) && form->GetIsReference())
+	if ((index < 0) && IS_REFERENCE(form))
 		index = listForm->list.GetIndexOf(((TESObjectREFR*)form)->GetBaseForm());
 	return index;
 }
@@ -430,6 +515,14 @@ void InitCmdPatches()
 	cmdInfo = GetCmdByOpcode(0x1453);
 	cmdInfo->execute = Hook_IsKeyPressed_Execute;
 	cmdInfo->eval = (Cmd_Eval)Hook_IsKeyPressed_Eval;
+	cmdInfo = GetCmdByOpcode(0x1462);
+	cmdInfo->execute = Hook_DisableControl_Execute;
+	cmdInfo = GetCmdByOpcode(0x1463);
+	cmdInfo->execute = Hook_EnableControl_Execute;
+	cmdInfo = GetCmdByOpcode(0x1464);
+	cmdInfo->execute = Hook_TapControl_Execute;
+	cmdInfo = GetCmdByOpcode(0x146A);
+	cmdInfo->execute = Hook_IsControlDisabled_Execute;
 	cmdInfo = GetCmdByOpcode(0x146B);
 	cmdInfo->execute = Hook_IsControlPressed_Execute;
 	cmdInfo->eval = (Cmd_Eval)Hook_IsControlPressed_Eval;

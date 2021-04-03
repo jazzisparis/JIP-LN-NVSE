@@ -33,7 +33,7 @@ bool Cmd_IsParentActivateOnly_Execute(COMMAND_ARGS)
 bool Cmd_SetBaseForm_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
-	if (!containingObj && !thisObj->IsActor() && ExtractArgsEx(EXTRACT_ARGS_EX, &form))
+	if (!containingObj && NOT_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
 		thisObj->baseForm = form;
 		thisObj->Update3D();
