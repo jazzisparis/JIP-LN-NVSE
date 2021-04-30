@@ -769,7 +769,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*272B*/REG_CMD(EnableImprovedRecipeMenu);
 	/*272C*/REG_CMD(InitItemFilter);
 	/*272D*/REG_CMD(SetItemFilter);
-	/*272E*/REG_CMD(EmptyCommand);
+	/*272E*/REG_CMD(GetSessionTime);
 	/*272F*/REG_CMD(EmptyCommand);
 	/*2730*/REG_CMD(EmptyCommand);
 	/*2731*/REG_CMD(EmptyCommand);
@@ -1315,6 +1315,11 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v56.10
 	/*28F8*/REG_CMD(GetPosEx);
 	/*28F9*/REG_CMD(GetAngleEx);
+	//	v56.12
+	/*28FA*/REG_CMD(ToggleMouseMovement);
+	/*28FB*/REG_CMD(SetTextureTransformKey);
+	/*28FC*/REG_CMD(AttachExtraCamera);
+	/*28FD*/REG_CMD(ProjectExtraCamera);
 
 	//===========================================================
 

@@ -1,31 +1,5 @@
 #pragma once
 
-struct hkVector4
-{
-	float	x, y, z, w;
-
-	hkVector4() {}
-	hkVector4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
-
-	float& operator[](char axis)
-	{
-		return ((float*)&x)[axis];
-	}
-};
-
-struct alignas(16) AlignedVector4
-{
-	float	x, y, z, w;
-
-	AlignedVector4() {}
-	AlignedVector4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
-
-	float& operator[](char axis)
-	{
-		return ((float*)&x)[axis];
-	}
-};
-
 template <typename T_Data> class hkArray
 {
 public:
@@ -38,6 +12,8 @@ public:
 	T_Data		*data;				// 00
 	UInt32		size;				// 04
 	UInt32		capacityAndFlags;	// 08
+
+	T_Data& operator[](UInt32 index) {return data[index];}
 
 	class Iterator
 	{
@@ -147,20 +123,20 @@ struct CdParentObj
 // 70
 struct hkCdPoint
 {
-	hkVector4		point00;		// 00
-	hkVector4		point10;		// 10
+	NiVector4		point00;		// 00
+	NiVector4		point10;		// 10
 	hkCdBody		*cdBody1;		// 20
 	UInt8			body1Key;		// 24
 	UInt8			pad25[2];		// 25
 	UInt8			obj1Flag;		// 27
-	hkVector4		point28;		// 28
-	hkVector4		point38;		// 38
+	NiVector4		point28;		// 28
+	NiVector4		point38;		// 38
 	hkCdBody		*cdBody2;		// 48
 	UInt8			body2Key;		// 4C
 	UInt8			pad4D[2];		// 4D
 	UInt8			obj2Flag;		// 4F
-	hkVector4		point50;		// 50
-	hkVector4		point60;		// 60
+	NiVector4		point50;		// 50
+	NiVector4		point60;		// 60
 };
 
 // 04
@@ -327,7 +303,7 @@ public:
 
 	UInt32				bodyFlags;		// 10
 
-	void ApplyForce(hkVector4 *forceVector);
+	void ApplyForce(NiVector4 *forceVector);
 };
 
 // 18
@@ -515,7 +491,7 @@ class hkpWorld : public hkReferencedObject
 public:
 	hkpContinuousSimulation				*simulation;				// 008
 	float								flt00C;						// 00C
-	hkVector4							gravity;					// 010
+	NiVector4							gravity;					// 010
 	hkpSimulationIsland					*fixedIsland;				// 020
 	hkpRigidBody						*fixedRigidBody;			// 024
 	hkArray<hkpSimulationIsland*>		activeSimulationIslands;	// 028
@@ -729,12 +705,23 @@ STATIC_ASSERT(sizeof(bhkCharacterProxy) == 0x3E0);
 class hkpCharacterState : public hkReferencedObject
 {
 public:
-	virtual void	Unk_03(void);
+	enum StateType
+	{
+		kState_OnGround,
+		kState_Jumping,
+		kState_InAir,
+		kState_Climbing,
+		kState_Flying,
+		kState_Swimming,
+		kState_Projectile
+	};
+
+	virtual UInt32	GetStateType();
 	virtual void	Unk_04(void);
 	virtual void	Unk_05(void);
 	virtual void	Unk_06(void);
 	virtual void	Unk_07(void);
-	virtual void	Unk_08(void);
+	virtual void	UpdateVelocity(bhkCharacterController *charCtrl);
 };
 
 class bhkCharacterState : public hkpCharacterState
@@ -1219,7 +1206,7 @@ public:
 	virtual void	Unk_18(void);
 	virtual void	Unk_19(void);
 
-	enum
+	enum MotionType
 	{
 		kMotionType_Sphere = 2,
 		kMotionType_Box,

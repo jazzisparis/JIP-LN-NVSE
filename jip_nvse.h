@@ -4,7 +4,7 @@
 #include "internal/dinput.h"
 #include "internal/xinput.h"
 
-DebugLog s_log, s_debug, s_missingTextures;
+DebugLog s_log, s_debug;
 
 bool (*WriteRecord)(UInt32 type, UInt32 version, const void *buffer, UInt32 length);
 bool (*WriteRecordData)(const void *buffer, UInt32 length);
@@ -132,8 +132,10 @@ TileMenu **g_tileMenuArray = NULL;
 HUDMainMenu *g_HUDMainMenu = NULL;
 ConsoleManager *g_consoleManager = NULL;
 SystemColorManager *g_sysColorManager = NULL;
-UInt32 g_screenWidth = 0;
-UInt32 g_screenHeight = 0;
+NiNode *g_cursorNode = NULL;
+float g_screenResConvert = 0;
+float g_screenWidth = 0;
+float g_screenHeight = 0;
 ShadowSceneNode *g_shadowSceneNode = NULL;
 const char *g_terminalModelDefault = NULL;
 TESObjectWEAP *g_fistsWeapon = NULL;
@@ -145,13 +147,13 @@ TESImageSpaceModifier *g_explosionInFaceIMOD = NULL;
 TESObjectREFR *s_tempPosMarker = NULL;
 double *g_condDmgPenalty = NULL;
 double s_condDmgPenalty = 0.67;
+UInt32 s_initialTickCount = 0;
 
 enum
 {
 	kAddr_AddExtraData =			0x40FF60,
 	kAddr_RemoveExtraType =			0x410140,
 	kAddr_LoadModel =				0x447080,
-	kAddr_GetItemHealthPerc =		0x4BCDB0,
 	kAddr_ApplyAmmoEffects =		0x59A030,
 	kAddr_MoveToMarker =			0x5CCB20,
 	kAddr_ApplyPerkModifiers =		0x5E58F0,
@@ -202,12 +204,11 @@ Projectile* (*CreateProjectile)(BGSProjectile *baseProj, TESObjectREFR *sourceRe
 	(Projectile* (*)(BGSProjectile*, TESObjectREFR*, void*, TESObjectWEAP*, float, float, float, float, float, void*, float, bool, bool, float, float, UInt32))0x9BCA60;
 void (*FormatString)(char *destStr, UInt32 size, const char *formatStr, ...) = (void (*)(char*, UInt32, const char*, ...))0x406D00;
 BSFile* (*OpenStream)(const char *filePath, UInt32 openMode, UInt32 bufferSize) = (BSFile* (*)(const char*, UInt32, UInt32))0xAFDF00;
-float (__thiscall *GetItemHealthPerc)(ContChangesEntry *entry, bool arg1) = (float (__thiscall *)(ContChangesEntry*, bool))0x4BCDB0;
 NiNode* (__thiscall *LoadModel)(ModelLoader *modelLoader, const char *nifPath, UInt32 baseClass, bool flag3Cbit0, UInt32 unused, bool flag3Cbit5, bool dontIncCounter) =
 	(NiNode* (__thiscall *)(ModelLoader*, const char*, UInt32, bool, UInt32, bool, bool))0x447080;
 FontInfo* (__thiscall *InitFontInfo)(FontInfo *fontInfo, UInt32 fontID, const char *filePath, bool arg3) = (FontInfo* (__thiscall *)(FontInfo*, UInt32, const char*, bool))0xA12020;
 
-Cmd_Execute SayTo, KillActor, AddNote, AttachAshPile, GetRefs;
+Cmd_Execute SayTo, KillActor, AddNote, AttachAshPile, MoveToFade, GetRefs;
 
 alignas(16) char
 s_strArgBuffer[0x4000],
@@ -616,8 +617,11 @@ __declspec(naked) TESForm *TESObjectREFR::GetBaseForm()
 		jz		done
 		cmp		byte ptr [eax+0xF], 0xFF
 		jnz		done
-		cmp		dword ptr [eax], kVtbl_BGSPlaceableWater
+		mov		edx, [eax]
+		cmp		edx, kVtbl_BGSPlaceableWater
 		jz		isWater
+		cmp		dword ptr [edx+0xF8], kAddr_ReturnTrue
+		jnz		done
 		push	eax
 		push	kExtraData_LeveledCreature
 		add		ecx, 0x44
@@ -644,12 +648,18 @@ __declspec(naked) TESForm *TESObjectREFR::GetBaseForm2()
 		jz		done
 		cmp		byte ptr [eax+0xF], 0xFF
 		jnz		done
+		mov		edx, [eax]
+		cmp		dword ptr [edx+0xF8], kAddr_ReturnTrue
+		jnz		retnNULL
 		push	kExtraData_LeveledCreature
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		done
 		mov		eax, [eax+0x10]
+		retn
+	retnNULL:
+		xor		eax, eax
 	done:
 		retn
 	}
@@ -691,23 +701,6 @@ __declspec(naked) ContChangesEntry* __fastcall ExtraContainerChanges::EntryDataL
 		xor		eax, eax
 		retn
 	}
-}
-
-ExtraContainerChanges *TESObjectREFR::GetOrCreateContainerChanges()
-{
-	ExtraContainerChanges *xChanges = GetExtraType(&extraDataList, ContainerChanges);
-	if (!xChanges)
-	{
-		xChanges = ExtraContainerChanges::Create();
-		AddExtraData(&extraDataList, xChanges);
-	}
-	if (!xChanges->data) xChanges->data = ExtraContainerChanges::Data::Create(this);
-	if (!xChanges->data->objList)
-	{
-		xChanges->data->objList = (ExtraContainerChanges::EntryDataList*)GameHeapAlloc(sizeof(ExtraContainerChanges::EntryDataList));
-		xChanges->data->objList->Init();	
-	}
-	return xChanges;
 }
 
 __declspec(naked) ExtraContainerChanges::EntryDataList *TESObjectREFR::GetContainerChangesList()
@@ -818,7 +811,7 @@ __declspec(naked) SInt32 __fastcall GetFormCount(TESContainer::FormCountList *fo
 		mov		esi, ecx
 		test	edi, edi
 		jz		noCont
-		call	ExtraContainerChanges::EntryData::HasExtraLeveledItem
+		call	ContChangesEntry::HasExtraLeveledItem
 		test	al, al
 		jnz		noCont
 		add		edi, [esi+4]
@@ -1497,7 +1490,7 @@ TESObjectREFR *TESObjectREFR::GetMerchantContainer()
 	return xMerchCont ? xMerchCont->containerRef : NULL;
 }
 
-__declspec(naked) float TESObjectREFR::GetWaterImmersionPerc()	// result >= 0.875 --> actor is diving
+__declspec(naked) double TESObjectREFR::GetWaterImmersionPerc()	// result >= 0.875 --> actor is diving
 {
 	__asm
 	{
@@ -2453,7 +2446,7 @@ __declspec(naked) UInt32 Actor::GetLevel()
 	}
 }
 
-__declspec(naked) float Actor::GetKillXP()
+__declspec(naked) double Actor::GetKillXP()
 {
 	__asm
 	{
@@ -2961,12 +2954,12 @@ __declspec(naked) NiNode* __fastcall TESObjectCELL::Get3DNode(UInt32 index)
 		test	eax, eax
 		jz		done
 		cmp		[eax+0xA6], dx
-		ja		getChild
-		xor		eax, eax
-		retn
-	getChild:
+		jbe		retnNULL
 		mov		ecx, [eax+0xA0]
 		mov		eax, [ecx+edx*4]
+		retn
+	retnNULL:
+		xor		eax, eax
 	done:
 		retn
 	}
@@ -3266,6 +3259,32 @@ __declspec(naked) NiNode* __fastcall NiNode::GetNode(const char *nodeName)
 	}
 }
 
+void __fastcall NiMatrix33::ExtractAngles(NiVector3 *outAngles)
+{
+	double rotY = cr[0][2];
+	if (abs(rotY) < 1)
+	{
+		outAngles->x = -atan2(-cr[1][2], cr[2][2]);
+		outAngles->y = -asin(rotY);
+		outAngles->z = -atan2(-cr[0][1], cr[0][0]);
+	}
+	else
+	{
+		float rotX = atan2(cr[1][0], cr[1][1]);
+		if (rotY > 0)
+		{
+			outAngles->x = rotX;
+			outAngles->y = -1.5707963F;
+		}
+		else
+		{
+			outAngles->x = -rotX;
+			outAngles->y = 1.5707963F;
+		}
+		outAngles->z = 0;
+	}
+}
+
 __declspec(naked) void NiMatrix33::RotationMatrix(float rotX, float rotY, float rotZ)
 {
 	__asm
@@ -3368,7 +3387,7 @@ __declspec(naked) void NiMatrix33::Rotate(float rotX, float rotY, float rotZ)
 	}
 }
 
-__declspec(naked) void NiMatrix33::MultiplyMatrices(NiMatrix33 &matA, NiMatrix33 &matB)
+__declspec(naked) void NiMatrix33::MultiplyMatrices(NiMatrix33 *matA, NiMatrix33 *matB)
 {
 	__asm
 	{
@@ -3456,6 +3475,75 @@ __declspec(naked) void NiMatrix33::MultiplyMatrices(NiMatrix33 &matA, NiMatrix33
 		addss	xmm0, xmm1
 		movss	[ecx+0x20], xmm0
 		retn	8
+	}
+}
+
+__declspec(naked) void __fastcall NiMatrix33::Inverse(NiMatrix33 *mat)
+{
+	__asm
+	{
+		sub		esp, 0x20
+		movups	xmm0, [edx]
+		movups	[esp], xmm0
+		movups	xmm0, [edx+0x10]
+		movups	[esp+0x10], xmm0
+		movss	xmm2, [edx+0x20]
+		movss	xmm0, [esp+0x10]
+		mulss	xmm0, xmm2
+		movss	xmm1, [esp+0x14]
+		mulss	xmm1, [esp+0x1C]
+		subss	xmm0, xmm1
+		movss	[ecx], xmm0
+		movss	xmm0, [esp+8]
+		mulss	xmm0, [esp+0x1C]
+		movss	xmm1, [esp+4]
+		mulss	xmm1, xmm2
+		subss	xmm0, xmm1
+		movss	[ecx+4], xmm0
+		movss	xmm0, [esp+4]
+		mulss	xmm0, [esp+0x14]
+		movss	xmm1, [esp+8]
+		mulss	xmm1, [esp+0x10]
+		subss	xmm0, xmm1
+		movss	[ecx+8], xmm0
+		movss	xmm0, [esp+0x14]
+		mulss	xmm0, [esp+0x18]
+		movss	xmm1, [esp+0xC]
+		mulss	xmm1, xmm2
+		subss	xmm0, xmm1
+		movss	[ecx+0xC], xmm0
+		movss	xmm0, [esp]
+		mulss	xmm0, xmm2
+		movss	xmm1, [esp+8]
+		mulss	xmm1, [esp+0x18]
+		subss	xmm0, xmm1
+		movss	[ecx+0x10], xmm0
+		movss	xmm0, [esp+8]
+		mulss	xmm0, [esp+0xC]
+		movss	xmm1, [esp]
+		mulss	xmm1, [esp+0x14]
+		subss	xmm0, xmm1
+		movss	[ecx+0x14], xmm0
+		movss	xmm0, [esp+0xC]
+		mulss	xmm0, [esp+0x1C]
+		movss	xmm1, [esp+0x10]
+		mulss	xmm1, [esp+0x18]
+		subss	xmm0, xmm1
+		movss	[ecx+0x18], xmm0
+		movss	xmm0, [esp+4]
+		mulss	xmm0, [esp+0x18]
+		movss	xmm1, [esp]
+		mulss	xmm1, [esp+0x1C]
+		subss	xmm0, xmm1
+		movss	[ecx+0x1C], xmm0
+		movss	xmm0, [esp]
+		mulss	xmm0, [esp+0x10]
+		movss	xmm1, [esp+4]
+		mulss	xmm1, [esp+0xC]
+		subss	xmm0, xmm1
+		movss	[ecx+0x20], xmm0
+		add		esp, 0x20
+		retn
 	}
 }
 
@@ -3749,16 +3837,31 @@ __declspec(naked) bool __fastcall NiAVObject::ReplaceObject(NiAVObject *object)
 	}
 }
 
-NiProperty *NiAVObject::GetProperty(UInt32 propID)
+__declspec(naked) NiProperty* __fastcall NiAVObject::GetProperty(UInt32 propID)
 {
-	NiProperty *niProp;
-	for (DListNode<NiProperty> *propNode = m_propertyList.Head(); propNode; propNode = propNode->next)
+	__asm
 	{
-		niProp = propNode->data;
-		if (niProp && (niProp->GetPropertyType() == propID))
-			return niProp;
+		push	esi
+		mov		esi, [ecx+0x24]
+	iterHead:
+		test	esi, esi
+		jz		retnNULL
+		mov		ecx, [esi+8]
+		mov		esi, [esi]
+		test	ecx, ecx
+		jz		iterHead
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x8C]
+		cmp		eax, edx
+		jnz		iterHead
+		mov		eax, ecx
+		pop		esi
+		retn
+	retnNULL:
+		xor		eax, eax
+		pop		esi
+		retn
 	}
-	return NULL;
 }
 
 __declspec(naked) void __fastcall NiObjectNET::SetName(const char *newName)
@@ -3885,7 +3988,7 @@ void NiNode::GetBodyMass(float *totalMass)
 		if (*iter && IS_NODE(*iter)) ((NiNode*)*iter)->GetBodyMass(totalMass);
 }
 
-__declspec(naked) void NiNode::ApplyForce(hkVector4 *forceVector)
+__declspec(naked) void NiNode::ApplyForce(NiVector4 *forceVector)
 {
 	__asm
 	{
@@ -3940,7 +4043,7 @@ __declspec(naked) void NiNode::ApplyForce(hkVector4 *forceVector)
 	}
 }
 
-__declspec(naked) void bhkWorldObject::ApplyForce(hkVector4 *forceVector)
+__declspec(naked) void bhkWorldObject::ApplyForce(NiVector4 *forceVector)
 {
 	__asm
 	{
@@ -4153,6 +4256,115 @@ ExtraDataList *ExtraContainerChanges::EntryData::GetEquippedExtra()
 		while (xdlIter = xdlIter->next);
 	}
 	return NULL;
+}
+
+__declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetWeaponModEffectValue(UInt32 effectType)
+{
+	__asm
+	{
+		push	edx
+		mov		eax, [ecx]
+		test	eax, eax
+		jz		retn0
+		mov		edx, [ecx+8]
+		mov		ecx, [eax]
+		test	ecx, ecx
+		jz		retn0
+		push	edx
+		push	kExtraData_WeaponModFlags
+		call	BaseExtraList::GetByType
+		pop		ecx
+		test	eax, eax
+		jz		retn0
+		mov		dl, [eax+0xC]
+		mov		eax, [esp]
+		test	dl, 1
+		jz		check2nd
+		cmp		[ecx+0x180], eax
+		jnz		check2nd
+		movss	xmm0, [ecx+0x18C]
+		pop		ecx
+		retn
+	check2nd:
+		test	dl, 2
+		jz		check3rd
+		cmp		[ecx+0x184], eax
+		jnz		check3rd
+		movss	xmm0, [ecx+0x190]
+		pop		ecx
+		retn
+	check3rd:
+		test	dl, 4
+		jz		retn0
+		cmp		[ecx+0x188], eax
+		jnz		retn0
+		movss	xmm0, [ecx+0x194]
+		pop		ecx
+		retn
+	retn0:
+		pxor	xmm0, xmm0
+		pop		ecx
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetBaseHealth()
+{
+	__asm
+	{
+		mov		eax, [ecx+8]
+		mov		dl, [eax+4]
+		cmp		dl, kFormType_TESObjectWEAP
+		jnz		notWeapon
+		cvtsi2ss	xmm1, [eax+0x98]
+		mov		edx, 0xA
+		call	ContChangesEntry::GetWeaponModEffectValue
+		addss	xmm0, xmm1
+		mov		al, 1
+		retn
+	notWeapon:
+		cmp		dl, kFormType_TESObjectARMO
+		setz	al
+		jnz		done
+		cvtsi2ss	xmm0, [eax+0x6C]
+		retn
+	done:
+		pxor	xmm0, xmm0
+		retn
+	}
+}
+
+__declspec(naked) float ExtraContainerChanges::EntryData::GetHealthPercent()
+{
+	__asm
+	{
+		push	esi
+		mov		esi, ecx
+		movss	xmm3, kFlt100
+		mov		eax, [ecx]
+		test	eax, eax
+		jz		done
+		mov		ecx, [eax]
+		test	ecx, ecx
+		jz		done
+		push	kExtraData_Health
+		call	BaseExtraList::GetByType
+		test	eax, eax
+		jz		done
+		movss	xmm2, [eax+0xC]
+		mov		ecx, esi
+		call	ContChangesEntry::GetBaseHealth
+		test	al, al
+		jz		done
+		divss	xmm2, xmm0
+		mulss	xmm2, xmm3
+		minss	xmm3, xmm2
+	done:
+		movss	[esp-4], xmm3
+		fld		dword ptr [esp-4]
+		pop		esi
+		retn
+	}
 }
 
 __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(Actor *owner, float condition, TESForm *ammo)
@@ -5641,19 +5853,6 @@ float __fastcall GetModBonuses(TESObjectREFR *wpnRef, UInt32 effectID)
 	return result;
 }
 
-float __fastcall GetModBonuses(InventoryRef *invRef, UInt32 effectID)
-{
-	TESObjectWEAP *weapon = (TESObjectWEAP*)invRef->type;
-	if NOT_ID(weapon, TESObjectWEAP) return 0;
-	ExtraWeaponModFlags *xModFlags = GetExtraType(invRef->xData, WeaponModFlags);
-	if (!xModFlags) return 0;
-	float result = 0;
-	for (UInt32 idx = 0; idx < 3; idx++)
-		if ((xModFlags->flags & (1 << idx)) && (weapon->effectMods[idx] == effectID))
-			result += weapon->value1Mod[idx];
-	return result;
-}
-
 class JIPScriptRunner
 {
 	Script					*script;
@@ -5767,6 +5966,8 @@ bool TESObjectREFR::RunScriptSource(const char *sourceStr)
 	if (eventList) xScript->eventList = eventList;
 	return success;
 }
+
+UnorderedMap<const char*, NiCamera*> s_extraCamerasMap;
 
 bool s_HUDCursorMode = false;
 

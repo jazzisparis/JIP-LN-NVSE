@@ -163,6 +163,8 @@ __declspec(naked) void __fastcall NiReleaseObject(NiRefObject *toRelease)
 {
 	__asm
 	{
+		test	ecx, ecx
+		jz		done
 		lock dec dword ptr [ecx+4]
 		jg		done
 		mov		eax, [ecx]
@@ -1094,15 +1096,9 @@ __declspec(naked) char* __fastcall UIntToHex(char *str, UInt32 num)
 	static const char kCharAtlas[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 	__asm
 	{
-		test	edx, edx
-		jnz		proceed
-		mov		word ptr [ecx], '0'
-		lea		eax, [ecx+1]
-		retn
-		ALIGN 16
-	proceed:
-		push	esi
 		bsr		eax, edx
+		jz		isZero
+		push	esi
 		shr		eax, 2
 		lea		esi, [ecx+eax+1]
 		push	esi
@@ -1119,6 +1115,11 @@ __declspec(naked) char* __fastcall UIntToHex(char *str, UInt32 num)
 		pop		eax
 		mov		[eax], 0
 		pop		esi
+		retn
+		ALIGN 16
+	isZero:
+		mov		word ptr [ecx], '0'
+		lea		eax, [ecx+1]
 		retn
 	}
 }

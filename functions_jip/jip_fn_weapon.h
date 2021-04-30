@@ -204,7 +204,7 @@ bool Cmd_GetCalculatedWeaponDamage_Execute(COMMAND_ARGS)
 			extendData.Init(&thisObj->extraDataList);
 			tempEntry.extendData = &extendData;
 		}
-		condition = GetItemHealthPerc(&tempEntry, true) / 100.0F;
+		condition = tempEntry.GetHealthPercent() / 100.0F;
 	}
 	else if NOT_ID(weapon, TESObjectWEAP)
 		return true;

@@ -296,9 +296,6 @@
     <ClInclude Include="internal\prefix.h">
       <Filter>internal</Filter>
     </ClInclude>
-    <ClInclude Include="internal\type_defs.h">
-      <Filter>internal</Filter>
-    </ClInclude>
     <ClInclude Include="nvse\CommandTable.h">
       <Filter>nvse</Filter>
     </ClInclude>
@@ -366,6 +363,9 @@
       <Filter>internal</Filter>
     </ClInclude>
     <ClInclude Include="internal\xinput.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\class_vtbls.h">
       <Filter>internal</Filter>
     </ClInclude>
   </ItemGroup>

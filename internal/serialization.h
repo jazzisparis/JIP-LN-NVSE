@@ -117,13 +117,24 @@ void DoLoadGameCleanup()
 	}
 
 	for (auto lgtIter = s_activePtLights.Begin(); lgtIter; ++lgtIter)
-		if (lgtIter->isAttached && lgtIter->m_parent)
+		if ((lgtIter->extraFlags & 0x80) && lgtIter->m_parent)
 			lgtIter->m_parent->RemoveObject(*lgtIter);
 
 	if (!s_swapObjLODMap.Empty())
 	{
 		s_swapObjLODMap.Clear();
 		HOOK_SET(MakeObjLODPath, false);
+	}
+
+	if (!s_extraCamerasMap.Empty())
+	{
+		for (auto camIter = s_extraCamerasMap.Begin(); camIter; ++camIter)
+		{
+			if (camIter->m_parent)
+				camIter->m_parent->RemoveObject(*camIter);
+			camIter->Destructor(true);
+		}
+		s_extraCamerasMap.Clear();
 	}
 }
 

@@ -343,10 +343,10 @@ bool Cmd_GetIsImmobile_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &creature)) return true;
 	if (!creature)
 	{
-		if (!thisObj || NOT_ACTOR(thisObj)) return true;
-		creature = (TESCreature*)((Actor*)thisObj)->GetActorBase();
+		if (thisObj && IS_ACTOR(thisObj) && ((Actor*)thisObj)->isImmobileCreature)
+			*result = 1;
 	}
-	if (IS_ID(creature, TESCreature) && (creature->baseData.flags & 0x800000))
+	else if (IS_ID(creature, TESCreature) && (creature->baseData.flags & 0x800000))
 		*result = 1;
 	return true;
 }
@@ -1678,7 +1678,7 @@ __declspec(naked) TESModel* __fastcall GetActorModel(TESActorBase *actorBase)
 		mov		eax, [ecx+0x54]
 		test	eax, eax
 		jz		done
-		test	word ptr [ecx+0x4A], 0x40
+		test	byte ptr [ecx+0x4A], 0x40
 		jz		done
 		mov		dl, [eax+4]
 		cmp		dl, kFormType_TESLevCreature
@@ -2318,7 +2318,7 @@ bool Cmd_FireWeaponEx_Execute(COMMAND_ARGS)
 		{
 			hookInstalled = true;
 			SafeWrite32(0x1087F1C, (UInt32)GetProjectileDataHook);
-			SafeWriteBuf(0x9BAD66, "\xC7\x01\x00\x00\x00\x00\xEB\x0C", 8);
+			SAFE_WRITE_BUF(0x9BAD66, "\xC7\x01\x00\x00\x00\x00\xEB\x0C");
 		}
 
 		NiNode *altProjNode = s_strArgBuffer[0] ? thisObj->GetNode(s_strArgBuffer) : NULL;

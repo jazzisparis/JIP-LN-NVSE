@@ -45,16 +45,16 @@ __declspec(naked) UInt32 __stdcall Hook_XInputGetState(UInt32 index, XINPUT_GAME
 		jmp		done
 	updateState:
 		push	ecx
-		push	dword ptr [esp+8]
+		push	0
 		call	XInputGetStateEx
 		mov		result, eax
-		movzx	edx, byte ptr ds:[0x11D8C50]
-		or		eax, edx
+		or		al, ds:[0x11D8C50]
+		test	eax, eax
 		setz	al
 		mov		s_controllerReady, al
 		jnz		done
 		push	esi
-		mov		esi, 0x11F35A8
+		mov		esi, [esp+0xC]
 		movups	xmm0, [esi]
 		movaps	s_gamePad, xmm0
 		mov		ecx, offset s_XIStateMods

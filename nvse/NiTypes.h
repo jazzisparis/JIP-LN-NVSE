@@ -17,27 +17,27 @@ struct NiPoint2
 
 	NiPoint2() {}
 	NiPoint2(float _x, float _y) : x(_x), y(_y) {}
-	NiPoint2(const NiPoint2 &rhs) {*(double*)this = *(double*)&rhs;}
+	NiPoint2(const NiPoint2 &rhs) {_mm_storeu_si64(this, _mm_loadu_si64(&rhs));}
 
 	inline NiPoint2& operator=(const NiPoint2 &rhs)
 	{
-		*(double*)this = *(double*)&rhs;
+		_mm_storeu_si64(this, _mm_loadu_si64(&rhs));
 		return *this;
 	}
 };
+
+struct NiVector3;
 
 // 24
 struct NiMatrix33
 {
 	float	cr[3][3];
 
-	__forceinline void ExtractAngles(float *rotX, float *rotY, float *rotZ)
-	{
-		ThisCall(0xA592C0, this, rotX, rotY, rotZ);
-	}
+	void __fastcall ExtractAngles(NiVector3 *outAngles);
 	void RotationMatrix(float rotX, float rotY, float rotZ);
 	void Rotate(float rotX, float rotY, float rotZ);
-	void MultiplyMatrices(NiMatrix33 &matA, NiMatrix33 &matB);
+	void MultiplyMatrices(NiMatrix33 *matA, NiMatrix33 *matB);
+	void __fastcall Inverse(NiMatrix33 *mat);
 	void Dump(const char *title = NULL);
 };
 
@@ -75,7 +75,6 @@ struct NiVector3
 	bool RayCastCoords(NiVector3 *posVector, NiMatrix33 *rotMatrix, float maxRange, UInt32 axis = 0, UInt16 filter = 6);
 };
 
-// 10 - always aligned?
 struct NiVector4
 {
 	float	x, y, z, w;
@@ -87,6 +86,21 @@ struct NiVector4
 	{
 		return ((float*)&x)[axis];
 	}
+};
+
+struct alignas(16) AlignedVector4
+{
+	float	x, y, z, w;
+
+	AlignedVector4() {}
+	AlignedVector4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
+
+	float& operator[](char axis)
+	{
+		return ((float*)&x)[axis];
+	}
+
+	AlignedVector4& operator=(float *valPtr) {_mm_store_ps(&x, _mm_loadu_ps(valPtr)); return *this;}
 };
 
 // 10 - always aligned?
@@ -116,19 +130,6 @@ struct NiSphere
 	float	x, y, z, radius;
 };
 
-// 1C
-struct NiFrustum
-{
-	float	l;			// 00
-	float	r;			// 04
-	float	t;			// 08
-	float	b;			// 0C
-	float	n;			// 10
-	float	f;			// 14
-	UInt8	o;			// 18
-	UInt8	pad19[3];	// 19
-};
-
 // 10
 struct NiViewport
 {
@@ -136,6 +137,16 @@ struct NiViewport
 	float	r;
 	float	t;
 	float	b;
+};
+
+// 1C
+struct NiFrustum
+{
+	NiViewport	viewPort;	// 00
+	float		n;			// 10
+	float		f;			// 14
+	UInt8		o;			// 18
+	UInt8		pad19[3];	// 19
 };
 
 // C

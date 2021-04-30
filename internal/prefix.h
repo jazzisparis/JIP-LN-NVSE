@@ -17,7 +17,22 @@
 #include <intrin.h>
 
 #include "internal/version.h"
-#include "internal/type_defs.h"
+
+typedef unsigned char UInt8;
+typedef unsigned short UInt16;
+typedef unsigned long UInt32;
+typedef unsigned long long UInt64;
+typedef signed char SInt8;
+typedef signed short SInt16;
+typedef signed long SInt32;
+typedef signed long long SInt64;
+
+// Based on the boost implementation of static asserts
+template <bool x> struct StaticAssertFailure;
+template <> struct StaticAssertFailure <true> { enum { a = 1 }; };
+template <int x> struct static_assert_test { };
+
+#define STATIC_ASSERT(a) typedef static_assert_test <sizeof(StaticAssertFailure<(bool)(a)>)> static_assert_typedef_ ## __COUNTER__
 
 class BaseFormComponent;
 class TESFullName;
@@ -371,6 +386,7 @@ class bhkLimitedHingeConstraint;
 class bhkRagdollController;
 class bhkRagdollPenetrationUtil;
 
+#include "internal/class_vtbls.h"
 #include "internal/memory_pool.h"
 #include "internal/utility.h"
 #include "internal/containers.h"

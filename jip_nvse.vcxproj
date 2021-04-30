@@ -59,6 +59,7 @@
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <FloatingPointModel>Precise</FloatingPointModel>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>exports.def</ModuleDefinitionFile>
@@ -162,6 +163,7 @@
     <ClInclude Include="functions_ln\ln_fn_terminal.h" />
     <ClInclude Include="functions_ln\ln_fn_utility.h" />
     <ClInclude Include="functions_ln\ln_fn_weapon.h" />
+    <ClInclude Include="internal\class_vtbls.h" />
     <ClInclude Include="internal\debug.h" />
     <ClInclude Include="internal\decoding.h" />
     <ClInclude Include="internal\dinput.h" />
@@ -176,7 +178,6 @@
     <ClInclude Include="internal\prefix.h" />
     <ClInclude Include="internal\serialization.h" />
     <ClInclude Include="internal\containers.h" />
-    <ClInclude Include="internal\type_defs.h" />
     <ClInclude Include="internal\utility.h" />
     <ClInclude Include="internal\version.h" />
     <ClInclude Include="internal\xinput.h" />

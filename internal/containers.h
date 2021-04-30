@@ -602,13 +602,15 @@ template <typename T_Key, typename T_Data> class Map
 		{
 			index = (lBound + uBound) >> 1;
 			cmpr = entries[index].key.Compare(key);
-			if (!cmpr)
+			if (cmpr < 0)
+				uBound = index;
+			else if (cmpr > 0)
+				lBound = index + 1;
+			else
 			{
 				*outIdx = index;
 				return true;
 			}
-			if (cmpr < 0) uBound = index;
-			else lBound = index + 1;
 		}
 		*outIdx = lBound;
 		return false;
@@ -860,13 +862,15 @@ template <typename T_Key> class Set
 		{
 			index = (lBound + uBound) >> 1;
 			cmpr = keys[index].Compare(key);
-			if (!cmpr)
+			if (cmpr < 0)
+				uBound = index;
+			else if (cmpr > 0)
+				lBound = index + 1;
+			else
 			{
 				*outIdx = index;
 				return true;
 			}
-			if (cmpr < 0) uBound = index;
-			else lBound = index + 1;
 		}
 		*outIdx = lBound;
 		return false;
@@ -2148,7 +2152,7 @@ public:
 		UInt32 idx = numItems, rand;
 		while (idx > 1)
 		{
-			rand = GetRandomUInt(idx);
+			rand = GetRandomInt(idx);
 			idx--;
 			if (rand != idx)
 				RawSwap<T_Data>(data[rand], data[idx]);

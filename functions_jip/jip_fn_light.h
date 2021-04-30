@@ -37,36 +37,70 @@ bool Cmd_GetLightTraitNumeric_Execute(COMMAND_ARGS)
 	return true;
 }
 
+__declspec(naked) void __fastcall MarkLightModified(TESObjectLIGH *lightForm)
+{
+	__asm
+	{
+		mov		eax, offset s_activePtLights
+		mov		edx, [eax+4]
+		test	edx, edx
+		jz		done
+		push	esi
+		mov		esi, [eax]
+		ALIGN 16
+	iterHead:
+		dec		edx
+		js		iterEnd
+		mov		eax, [esi]
+		add		esi, 4
+		cmp		[eax+0xE8], ecx
+		jnz		iterHead
+		mov		[eax+0x9E], 1
+		jmp		iterHead
+		ALIGN 16
+	iterEnd:
+		pop		esi
+	done:
+		retn
+	}
+}
+
 bool Cmd_SetLightTraitNumeric_Execute(COMMAND_ARGS)
 {
 	TESObjectLIGH *light;
 	UInt32 traitID;
 	float val;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &light, &traitID, &val) || NOT_ID(light, TESObjectLIGH)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &light, &traitID, &val) || NOT_ID(light, TESObjectLIGH))
+		return true;
 	UInt32 intVal = (int)val;
 	switch (traitID)
 	{
-	case 0:
-		light->radius = intVal;
-		break;
-	case 1:
-		light->red = intVal;
-		break;
-	case 2:
-		light->green = intVal;
-		break;
-	case 3:
-		light->blue = intVal;
-		break;
-	case 4:
-		light->falloffExp = val;
-		break;
-	case 5:
-		light->FOV = val;
-		break;
-	case 6:
-		light->fadeValue = val;
+		case 0:
+			light->radius = intVal;
+			break;
+		case 1:
+			light->red = intVal;
+			break;
+		case 2:
+			light->green = intVal;
+			break;
+		case 3:
+			light->blue = intVal;
+			break;
+		case 4:
+			light->falloffExp = val;
+			goto skipMarkModified;
+		case 5:
+			light->FOV = val;
+			goto skipMarkModified;
+		case 6:
+			light->fadeValue = val;
+			break;
+		default:
+			goto skipMarkModified;
 	}
+	MarkLightModified(light);
+skipMarkModified:
 	return true;
 }
 
@@ -85,6 +119,9 @@ bool Cmd_SetLightFlag_Execute(COMMAND_ARGS)
 	TESObjectLIGH *light;
 	UInt32 flagID, val;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &light, &flagID, &val) && IS_ID(light, TESObjectLIGH) && (flagID <= 10))
+	{
 		light->SetFlag(1 << flagID, val != 0);
+		MarkLightModified(light);
+	}
 	return true;
 }

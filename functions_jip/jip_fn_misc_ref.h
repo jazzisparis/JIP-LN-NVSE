@@ -79,6 +79,9 @@ DEFINE_COMMAND_PLUGIN(GetChildBlocks, , 1, 2, kParams_JIP_OneOptionalString_OneO
 DEFINE_COMMAND_PLUGIN(GetBlockTextureSet, , 1, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(GetPosEx, , 1, 3, kParams_JIP_ThreeScriptVars);
 DEFINE_COMMAND_PLUGIN(GetAngleEx, , 1, 3, kParams_JIP_ThreeScriptVars);
+DEFINE_COMMAND_PLUGIN(SetTextureTransformKey, , 1, 4, kParams_JIP_OneString_TwoInts_OneFloat);
+DEFINE_COMMAND_PLUGIN(AttachExtraCamera, , 1, 6, kParams_JIP_OneString_OneInt_OneOptionalString_ThreeOptionalFloats);
+DEFINE_COMMAND_PLUGIN(ProjectExtraCamera, , 1, 4, kParams_JIP_TwoStrings_OneDouble_OneOptionalInt);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -846,15 +849,12 @@ bool Cmd_SetOnCriticalHitEventHandler_Execute(COMMAND_ARGS)
 
 bool Cmd_MoveToFadeDelay_Execute(COMMAND_ARGS)
 {
-	UInt8 *data = (UInt8*)scriptData + *opcodeOffsetPtr;
-	*(UInt8*)data = 1;
+	UInt8 *data = scriptData + *opcodeOffsetPtr;
+	*data = 1;
 	Actor *actor = (Actor*)thisObj;
 	if (IS_ACTOR(actor) && actor->baseProcess && !actor->baseProcess->processLevel)
 		((HighProcess*)actor->baseProcess)->delayTime = *(double*)(data + 6);
-	static const CommandInfo *cmdInfo = NULL;
-	if (!cmdInfo) cmdInfo = GetCmdByOpcode(0x124F);
-	paramInfo = cmdInfo->params;
-	cmdInfo->execute(PASS_COMMAND_ARGS);
+	MoveToFade(PASS_COMMAND_ARGS);
 	return true;
 }
 
@@ -911,7 +911,7 @@ bool Cmd_GetRigidBodyMass_Execute(COMMAND_ARGS)
 
 bool Cmd_PushObject_Execute(COMMAND_ARGS)
 {
-	hkVector4 forceVector;
+	NiVector4 forceVector;
 	TESObjectREFR *refr = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &forceVector.x, &forceVector.y, &forceVector.z, &forceVector.w, &refr))
 	{
@@ -1026,10 +1026,10 @@ bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
 		if (niBlock)
 		{
-			float rotX, rotY, rotZ;
+			NiVector3 rot;
 			NiMatrix33 &rotMat = getWorld ? niBlock->m_worldRotate : niBlock->m_localRotate;
-			rotMat.ExtractAngles(&rotX, &rotY, &rotZ);
-			ArrayElementL elements[3] = {rotX / kDblPId180, rotY / kDblPId180, rotZ / kDblPId180};
+			rotMat.ExtractAngles(&rot);
+			ArrayElementL elements[3] = {rot.x / kDblPId180, rot.y / kDblPId180, rot.z / kDblPId180};
 			AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
 		}
 	}
@@ -1418,7 +1418,7 @@ bool Cmd_AttachLight_Execute(COMMAND_ARGS)
 		{
 			NiPointLight *pointLight = CreatePointLight(lightForm, objNode);
 			pointLight->m_localTranslate = offsetMod;
-			pointLight->isAttached = true;
+			pointLight->extraFlags |= 0x80;
 			*result = 1;
 		}
 	}
@@ -1435,7 +1435,7 @@ bool Cmd_RemoveLight_Execute(COMMAND_ARGS)
 			NiPointLight *pointLight;
 			for (auto iter = objNode->m_children.Begin(); !iter.End(); ++iter)
 			{
-				if (!(pointLight = (NiPointLight*)*iter) || NOT_TYPE(pointLight, NiPointLight) || !(pointLight->m_flags & 0x20000000) || !pointLight->isAttached)
+				if (!(pointLight = (NiPointLight*)*iter) || NOT_TYPE(pointLight, NiPointLight) || !(pointLight->extraFlags & 0x80))
 					continue;
 				objNode->RemoveObject(pointLight);
 				break;
@@ -1509,7 +1509,7 @@ bool Cmd_SetLinearVelocity_Execute(COMMAND_ARGS)
 	return true;
 }
 
-UInt16 s_insertObjectFlag = 0;
+UInt8 s_insertObjectFlag = 0;
 
 bool RegisterInsertObject(COMMAND_ARGS)
 {
@@ -1612,7 +1612,7 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 			}
 			s_syncPositionRef = targetRef;
 			s_syncPositionFlags = (syncRot != 0);
-			_mm_store_ps(&s_syncPositionPos.x, _mm_loadu_ps(&targetRef->posX));
+			s_syncPositionPos = &targetRef->posX;
 			s_syncPositionNode = s_strArgBuffer;
 			HOOK_SET(SynchronizePosition, true);
 		}
@@ -1833,6 +1833,173 @@ bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 		outX->data.num = thisObj->rotX / kDblPId180;
 		outY->data.num = thisObj->rotY / kDblPId180;
 		outZ->data.num = thisObj->rotZ / kDblPId180;
+	}
+	return true;
+}
+
+bool Cmd_SetTextureTransformKey_Execute(COMMAND_ARGS)
+{
+	UInt32 ctrlIndex, keyIndex;
+	float value;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &ctrlIndex, &keyIndex, &value))
+	{
+		NiAVObject *block = thisObj->GetNiBlock(s_strArgBuffer);
+		if (block && block->GetTriBasedGeom())
+		{
+			NiTexturingProperty *texProp = (NiTexturingProperty*)block->GetProperty(5);
+			if (texProp)
+			{
+				NiTextureTransformController *ctrlr = (NiTextureTransformController*)texProp->m_controller;
+				while (ctrlr && ctrlIndex)
+				{
+					ctrlIndex--;
+					ctrlr = (NiTextureTransformController*)ctrlr->nextCtrl;
+				}
+				if (ctrlr && IS_TYPE(ctrlr, NiTextureTransformController))
+				{
+					NiFloatInterpolator *intrpl = (NiFloatInterpolator*)ctrlr->interpolator;
+					if (intrpl && IS_TYPE(intrpl, NiFloatInterpolator))
+					{
+						NiFloatData *fltData = intrpl->data;
+						if (fltData && IS_TYPE(fltData, NiFloatData) && (keyIndex < fltData->numKeys))
+							fltData->data[keyIndex].value = value;
+					}
+				}
+			}
+		}
+	}
+	return true;
+}
+
+bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char camName[0x40];
+	UInt32 doAttach;
+	s_strArgBuffer[0] = 0;
+	NiVector3 pos(0, 0, 0);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &camName, &doAttach, &s_strArgBuffer, &pos.x, &pos.y, &pos.z))
+	{
+		NiCamera *xCamera;
+		if (doAttach)
+		{
+			NiNode *targetNode = thisObj->GetNode(s_strArgBuffer);
+			if (targetNode)
+			{
+				NiCamera **pCamera;
+				if (s_extraCamerasMap.Insert(camName, &pCamera))
+				{
+					xCamera = ThisCall<NiCamera*>(0xA712F0, NiAllocator(sizeof(NiCamera)));
+					InterlockedIncrement(&xCamera->m_uiRefCount);
+					xCamera->frustum.n = 5.0F;
+					xCamera->frustum.f = 353840.0F;
+					xCamera->minNearPlaneDist = 1.0F;
+					xCamera->maxFarNearRatio = 70768.0F;
+					xCamera->LODAdjust = 0.001F;
+					*pCamera = xCamera;
+				}
+				else xCamera = *pCamera;
+				if (targetNode != xCamera->m_parent)
+				{
+					targetNode->AddObject(xCamera, 1);
+					xCamera->m_localRotate.Inverse(&targetNode->m_localRotate);
+				}
+				xCamera->m_localTranslate = pos;
+				xCamera->Update();
+				*result = 1;
+			}
+		}
+		else
+		{
+			auto findCam = s_extraCamerasMap.Find(camName);
+			if (findCam)
+			{
+				xCamera = *findCam;
+				findCam.Remove();
+				if (xCamera->m_parent)
+					xCamera->m_parent->RemoveObject(xCamera);
+				xCamera->Destructor(true);
+				*result = 1;
+			}
+		}
+	}
+	return true;
+}
+
+extern UInt8 s_useAltFormat;
+void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cell, int EDX, NiCamera *camera, RenderTarget **outTexture);
+
+__declspec(naked) void __fastcall ProjectExtraCamera(NiCamera *camera, BSShaderNoLightingProperty *shaderProp)
+{
+	__asm
+	{
+		push	ebp
+		mov		ebp, esp
+		push	edx
+		sub		esp, 0xC
+		mov		eax, ds:[0x11D5C48]
+		mov		[ebp-0xC], eax
+		mov		byte ptr [eax+0x1B], 1
+		mov		eax, 0x11AD7B4
+		mov		dl, [eax]
+		mov		[ebp-0x10], dl
+		mov		[eax], 0
+		lea		edx, [ebp-8]
+		mov		dword ptr [edx], 0
+		push	edx
+		push	ecx
+		xor		ecx, ecx
+		mov		s_useAltFormat, 2
+		call	GenerateRenderedTextureHook
+		mov		s_useAltFormat, 0
+		mov		dl, [ebp-0x10]
+		mov		byte ptr ds:[0x11AD7B4], dl
+		mov		eax, [ebp-0xC]
+		mov		byte ptr [eax+0x1B], 0
+		push	0
+		mov		ecx, [ebp-8]
+		CALL_EAX(0x4BC320)
+		push	eax
+		mov		ecx, [ebp-4]
+		add		ecx, 0x60
+		push	ecx
+		call	NiReleaseAddRef
+		mov		ecx, [ebp-8]
+		CALL_EAX(0x54E710)
+		mov		ecx, [ebp-8]
+		call	NiReleaseObject
+		leave
+		retn
+	}
+}
+
+UInt32 s_projectPixelSize = 0x100;
+
+bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char camName[0x40];
+	double fov;
+	UInt32 pixelSize = 0x100;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &camName, &s_strArgBuffer, &fov, &pixelSize))
+	{
+		NiCamera *xCamera = s_extraCamerasMap.Get(camName);
+		if (xCamera && xCamera->m_parent)
+		{
+			NiAVObject *targetGeom = thisObj->GetNiBlock(s_strArgBuffer);
+			if (targetGeom && targetGeom->GetTriBasedGeom())
+			{
+				BSShaderNoLightingProperty *shaderProp = (BSShaderNoLightingProperty*)targetGeom->GetProperty(3);
+				if (shaderProp && IS_TYPE(shaderProp, BSShaderNoLightingProperty))
+				{
+					float w = tan(fov * kDblPId180) / 1.5;
+					xCamera->frustum.viewPort = {-w, w, w, -w};
+					s_projectPixelSize = pixelSize;
+					ProjectExtraCamera(xCamera, shaderProp);
+					*result = 1;
+				}
+			}
+		}
 	}
 	return true;
 }

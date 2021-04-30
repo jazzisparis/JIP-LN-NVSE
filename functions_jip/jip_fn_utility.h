@@ -1,6 +1,6 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(RefToString, , 0, 1, kParams_JIP_OptionalForm);
+DEFINE_COMMAND_PLUGIN(RefToString, , 0, 1, kParams_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(StringToRef, , 0, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(GetMinOf, , 0, 5, kParams_JIP_TwoDoubles_ThreeOptionalDoubles);
 DEFINE_COMMAND_PLUGIN(GetMaxOf, , 0, 5, kParams_JIP_TwoDoubles_ThreeOptionalDoubles);
@@ -20,19 +20,15 @@ DEFINE_COMMAND_PLUGIN(GetIsLAA, , 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(Sleep, , 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetArrayValue, , 0, 2, kParams_TwoInts);
 DEFINE_COMMAND_PLUGIN(GetRandomInRange, , 0, 2, kParams_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetSessionTime, , 0, 0, NULL);
 
 bool Cmd_RefToString_Execute(COMMAND_ARGS)
 {
 	TESForm *form = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
-	{
-		if (form)
-		{
-			if IS_REFERENCE(form)
-				form = ((TESObjectREFR*)form)->baseForm;
-		}
-		else form = thisObj;
-	}
+	if (!NUM_ARGS)
+		form = thisObj;
+	else if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && IS_REFERENCE(form))
+		form = ((TESObjectREFR*)form)->baseForm;
 	AssignString(PASS_COMMAND_ARGS, form ? form->RefToString() : NULL);
 	return true;
 }
@@ -507,5 +503,11 @@ bool Cmd_GetRandomInRange_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &minVal, &maxVal))
 		*result = GetRandomIntInRange(minVal, maxVal);
 	else *result = 0;
+	return true;
+}
+
+bool Cmd_GetSessionTime_Execute(COMMAND_ARGS)
+{
+	*result = int(CdeclCall<UInt32>(0x457FE0) - s_initialTickCount) / 1000.0;
 	return true;
 }

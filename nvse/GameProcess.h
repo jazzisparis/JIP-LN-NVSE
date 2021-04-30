@@ -922,8 +922,12 @@ public:
 	UInt8								byte18B;			// 18B
 	UInt8								byte18C;			// 18C
 	UInt8								byte18D[3];			// 18D
-	UInt32								unk190[10];			// 190
-	void								*unk1B8;			// 1B8
+	UInt32								unk190[4];			// 190
+	void								*ptr1A0;			// 1A0
+	UInt32								unk1A4[2];			// 1A4
+	tList<void>							*list1AC;			// 1AC
+	tList<void>							list1B0;			// 1B0
+	tList<void>							*list1B8;			// 1B8
 	MagicTarget							*magicTarget1BC;	// 1BC
 	AnimData							*animData;			// 1C0
 	BSAnimGroupSequence					*animSequence[3];	// 1C4
@@ -931,7 +935,7 @@ public:
 	NiNode								*limbNodes[15];		// 1DC
 	NiNode								*unk218;			// 218
 	NiNode								*unk21C;			// 21C
-	void								*ptr220;			// 220
+	BSShaderProperty					*shaderProp220;		// 220
 	BSBound								*boundingBox;		// 224
 	bool								isAiming;			// 228
 	UInt8								pad229[3];			// 229

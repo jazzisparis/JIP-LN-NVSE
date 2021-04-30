@@ -339,6 +339,9 @@ public:
 		bool __fastcall HasExtraType(UInt8 xType);
 		bool HasExtraLeveledItem();
 		ExtraDataList *GetEquippedExtra();
+		float __vectorcall GetWeaponModEffectValue(UInt32 effectType);
+		float __vectorcall GetBaseHealth();
+		float GetHealthPercent();
 		float CalculateWeaponDamage(Actor *owner, float condition, TESForm *ammo);
 	};
 
@@ -362,8 +365,6 @@ public:
 	};
 
 	Data	*data;	// 0C
-
-	EntryData *GetByType(TESForm * type);
 
 	void DebugDump();
 	void Cleanup();	// clean up unneeded extra data from each EntryData

@@ -96,11 +96,6 @@ ParamInfo kParams_JIP_OneFaction_OneOptionalReputation[] =
 	{"Reputation", kParamType_Reputation, 1}
 };
 
-ParamInfo kParams_JIP_OptionalForm[] =
-{
-	{"Form", kParamType_AnyForm, 1}
-};
-
 ParamInfo kParams_JIP_OneAxis_OneOptionalForm[] =
 {
 	{"Axis", kParamType_Axis, 0},
@@ -856,12 +851,6 @@ ParamInfo kParams_JIP_OneForm_OneInt_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_JIP_TwoOptionalForms[] =
-{
-	{"Form", kParamType_AnyForm, 1},
-	{"Form", kParamType_AnyForm, 1}
-};
-
 ParamInfo kParams_JIP_TwoForms_OneInt[] =
 {
 	{"Form", kParamType_AnyForm, 0},
@@ -1488,4 +1477,30 @@ ParamInfo kParams_JIP_ThreeScriptVars[] =
 	{"Variable", kParamType_ScriptVariable, 0},
 	{"Variable", kParamType_ScriptVariable, 0},
 	{"Variable", kParamType_ScriptVariable, 0}
+};
+
+ParamInfo kParams_JIP_OneString_TwoInts_OneFloat[] =
+{
+	{"String", kParamType_String, 0},
+	{"Integer", kParamType_Integer, 0},
+	{"Integer", kParamType_Integer, 0},
+	{"Float", kParamType_Float, 0}
+};
+
+ParamInfo kParams_JIP_OneString_OneInt_OneOptionalString_ThreeOptionalFloats[] =
+{
+	{"String", kParamType_String, 0},
+	{"Integer", kParamType_Integer, 0},
+	{"String", kParamType_String, 1},
+	{"Float", kParamType_Float, 1},
+	{"Float", kParamType_Float, 1},
+	{"Float", kParamType_Float, 1}
+};
+
+ParamInfo kParams_JIP_TwoStrings_OneDouble_OneOptionalInt[] =
+{
+	{"String", kParamType_String, 0},
+	{"String", kParamType_String, 0},
+	{"Double", kParamType_Double, 0},
+	{"Integer", kParamType_Integer, 1}
 };

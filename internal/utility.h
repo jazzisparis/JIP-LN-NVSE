@@ -39,14 +39,14 @@
 #define GameHeapAlloc(size) ThisCall<void*, UInt32>(0xAA3E40, (void*)0x11F6238, size)
 #define GameHeapFree(ptr) ThisCall<void, void*>(0xAA4060, (void*)0x11F6238, ptr)
 
-#define GetRandomUInt(n) ThisCall<UInt32, UInt32>(0xAA5230, (void*)0x11C4180, n)
-#define GetRandomIntInRange(iMin, iMax) ThisCall<SInt32, SInt32>(0xAA5230, (void*)0x11C4180, iMax - iMin) + iMin
+#define GetRandomInt(n) ThisCall<SInt32, SInt32>(0xAA5230, (void*)0x11C4180, n)
+#define GetRandomIntInRange(iMin, iMax) (GetRandomInt(iMax - iMin) + iMin)
 
 #define LOG_HOOKS 0
 
 static const double
 kDblPId180 = 0.017453292519943295,
-kDblPId2 = 1.5707963267948966;
+kDblPId2 = 1.57079632679489662;
 
 static const float
 kFltPId180 = 0.01745329238F,
@@ -80,8 +80,8 @@ public:
 
 	T& operator()() {return *(T*)&objData;}
 
-	TempObject& operator=(const T &rhs) {objData = *(Buffer*)&rhs;}
-	TempObject& operator=(const TempObject &rhs) {objData = rhs.objData;}
+	TempObject& operator=(const T &rhs) {objData = *(Buffer*)&rhs; return *this;}
+	TempObject& operator=(const TempObject &rhs) {objData = rhs.objData; return *this;}
 };
 
 //	Assign rhs to lhs, bypassing operator=
@@ -526,6 +526,8 @@ void __stdcall SafeWrite8(UInt32 addr, UInt32 data);
 void __stdcall SafeWrite16(UInt32 addr, UInt32 data);
 void __stdcall SafeWrite32(UInt32 addr, UInt32 data);
 void __stdcall SafeWriteBuf(UInt32 addr, void * data, UInt32 len);
+
+#define SAFE_WRITE_BUF(addr, data) SafeWriteBuf(addr, data, sizeof(data) - 1)
 
 // 5 bytes
 void __stdcall WriteRelJump(UInt32 jumpSrc, UInt32 jumpTgt);

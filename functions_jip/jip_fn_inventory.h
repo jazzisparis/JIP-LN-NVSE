@@ -141,10 +141,6 @@ bool Cmd_GetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
-	TESForm *item = invRef ? invRef->type : thisObj->baseForm;
-	if (!item) return true;
-	TESHealthForm *healthForm = DYNAMIC_CAST(item, TESForm, TESHealthForm);
-	if (!healthForm) return true;
 	ExtraDataList *xData = invRef ? invRef->xData : &thisObj->extraDataList;
 	if (xData)
 	{
@@ -155,7 +151,14 @@ bool Cmd_GetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 			return true;
 		}
 	}
-	*result = (int)healthForm->health;
+	TESForm *item = invRef ? invRef->type : thisObj->baseForm;
+	if (item)
+	{
+		if IS_ID(item, TESObjectARMO)
+			*result = (int)((TESObjectARMO*)item)->health.health;
+		else if IS_ID(item, TESObjectWEAP)
+			*result = (int)((TESObjectWEAP*)item)->health.health;
+	}
 	return true;
 }
 
@@ -166,14 +169,12 @@ bool Cmd_SetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &health)) return true;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 	if (!invRef) return true;
-	TESHealthForm *healthForm = DYNAMIC_CAST(invRef->type, TESForm, TESHealthForm);
-	if (!healthForm) return true;
-	float maxHealth = (int)healthForm->health;
+	float baseHealth = invRef->entry->GetBaseHealth();
+	if (baseHealth == 0) return true;
+	if (health > baseHealth) health = baseHealth;
 	ExtraDataList *xData = invRef->xData;
 	if (xData)
 	{
-		maxHealth += GetModBonuses(invRef, 10);
-		if (health > maxHealth) health = maxHealth;
 		ExtraHealth *xHealth = GetExtraType(xData, Health);
 		if (xHealth) xHealth->health = health;
 		else AddExtraData(xData, ExtraHealth::Create(health));
@@ -182,7 +183,7 @@ bool Cmd_SetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 	{
 		xData = invRef->CreateExtraData();
 		if (!xData) return true;
-		AddExtraData(xData, ExtraHealth::Create(GetMin(health, maxHealth)));
+		AddExtraData(xData, ExtraHealth::Create(health));
 	}
 	*result = 1;
 	return true;

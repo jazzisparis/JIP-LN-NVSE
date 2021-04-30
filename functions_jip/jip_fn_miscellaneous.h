@@ -14,7 +14,7 @@ DEFINE_COMMAND_PLUGIN(SetFormDescription, , 0, 22, kParams_JIP_OneForm_OneFormat
 DEFINE_COMMAND_PLUGIN(GetPCFastTravelled, , 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetPCMovedCell, , 0, 0, NULL);
 DEFINE_CMD_ALT_COND_PLUGIN(GetPCDetectionState, , , 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetPipboyRadio, , 0, 0, NULL);
+DEFINE_CMD_ALT_COND_PLUGIN(GetPipboyRadio, , , 0, NULL);
 DEFINE_CMD_ALT_COND_PLUGIN(GetPCUsingScope, , , 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetIdleLoopTimes, , 0, 2, kParams_OneForm_OneInt);
 DEFINE_COMMAND_PLUGIN(SetIdleLoopTimes, , 0, 3, kParams_JIP_OneForm_TwoInts);
@@ -295,6 +295,12 @@ bool Cmd_GetPipboyRadio_Execute(COMMAND_ARGS)
 {
 	if (*g_pipboyRadio && (*g_pipboyRadio)->radioRef) REFR_RES = (*g_pipboyRadio)->radioRef->refID;
 	else *result = 0;
+	return true;
+}
+
+bool Cmd_GetPipboyRadio_Eval(COMMAND_ARGS_EVAL)
+{
+	*result = (*g_pipboyRadio && ((*g_pipboyRadio)->radioRef == thisObj)) ? 1 : 0;
 	return true;
 }
 
@@ -753,7 +759,7 @@ bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 			for (UInt32 index = 0; index < 9; index++)
 			{
 				if (!g_wobbleAnimations[index]) continue;
-				transData = ((NiTransformController*)g_wobbleAnimations[index]->m_controller)->interpolator->transData;
+				transData = ((NiTransformInterpolator*)((NiTransformController*)g_wobbleAnimations[index]->m_controller)->interpolator)->transData;
 				if ((transData->rotationKeyType == 3) && (transData->numRotationKeys == 3))
 					g_wobbleAnimRotations[index] = (QuaternionKey*)transData->rotationKeys;
 			}
@@ -1176,8 +1182,8 @@ bool Cmd_GetCameraMovement_Execute(COMMAND_ARGS)
 		}
 		else
 		{
-			iMovX = g_inputGlobals->mouseMovementX;
-			iMovY = g_inputGlobals->mouseMovementY;
+			iMovX = g_inputGlobals->currMouseMovementX;
+			iMovY = g_inputGlobals->currMouseMovementY;
 		}
 		if (iMovX || iMovY)
 		{

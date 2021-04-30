@@ -1222,15 +1222,10 @@ bool Cmd_SetCursorPos_Execute(COMMAND_ARGS)
 	float posX, posY;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posX, &posY) && GetMenuMode())
 	{
-		NiNode *cursorNode = g_interfaceManager->cursor ? g_interfaceManager->cursor->node : NULL;
-		if (cursorNode)
-		{
-			g_interfaceManager->cursorX = posX;
-			g_interfaceManager->cursorY = posY;
-			double mult = 480.0 / (int)g_screenHeight;
-			cursorNode->m_localTranslate.x = ((posX * 2) - (int)g_screenWidth) * mult;
-			cursorNode->m_localTranslate.z = ((int)g_screenHeight - (posY * 2)) * mult;
-		}
+		g_interfaceManager->cursorX = posX;
+		g_interfaceManager->cursorY = posY;
+		g_cursorNode->m_localTranslate.x = (posX * g_screenResConvert) - g_screenWidth;
+		g_cursorNode->m_localTranslate.z = g_screenHeight - (posY * g_screenResConvert);
 	}
 	return true;
 }
@@ -1313,7 +1308,7 @@ void ToggleQuestMessages()
 	*g_showChallengeUpdates = s_showQuestMessages;
 	if (s_showQuestMessages)
 	{
-		SafeWriteBuf(0x77A480, "\x55\x8B\xEC\x83\xEC", 5);
+		SAFE_WRITE_BUF(0x77A480, "\x55\x8B\xEC\x83\xEC");
 		SafeWrite8(0x77A5B0, 0x55);
 	}
 	else
@@ -1418,7 +1413,7 @@ bool Cmd_EnableImprovedRecipeMenu_Execute(COMMAND_ARGS)
 		enabled = true;
 		SafeWrite32(0x727975, 0x7FFFFFFF);
 		SafeWrite8(0x7274E1, 0xF);
-		SafeWriteBuf(0x727675, "\x03\x03\x03\x03\x03\x03\x01", 7);
+		SAFE_WRITE_BUF(0x727675, "\x03\x03\x03\x03\x03\x03\x01");
 		SafeWrite32(0x727660, (UInt32)RecipeMenuAcceptHook);
 		WriteRelJump(0x728A0C, (UInt32)RecipeMenuCloseHook);
 	}

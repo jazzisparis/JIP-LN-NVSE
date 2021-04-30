@@ -1192,40 +1192,33 @@ __declspec(naked) float* __fastcall GetVtxAlphaPtr(NiPoint2 *posMult)
 }
 
 UInt8 s_useAltFormat = 0;
+const float kFlt80000 = 80000.0F;
 const __m128 kCaptureBounds = {-2048, 2048, 2048, -2048};
 
 __declspec(naked) void ExtCaptureBoundsHook()
 {
-	static const float kFlt4096 = 4096.0F, kFlt12288 = 12288.0F;
 	__asm
 	{
 		cmp		s_useAltFormat, 0
 		jnz		altFormat
-		mov		dword ptr [ebp-0x78], 0x880
 		JMP_EAX(0x54EF77)
 	altFormat:
-		mov		dword ptr [ebp-0x78], 0x800
 		mov		ecx, [ebp-0xD8]
 		mov		ecx, [ecx+0x48]
 		mov		eax, [ecx]
 		shl		eax, 0xC
 		add		eax, 0x800
-		mov		[ebp-0xDC], eax
 		cvtsi2ss	xmm0, eax
 		movss	[ebp-0x3C], xmm0
 		mov		eax, [ecx+4]
 		shl		eax, 0xC
 		add		eax, 0x800
-		mov		[ebp-0xE0], eax
 		cvtsi2ss	xmm0, eax
 		movss	[ebp-0x38], xmm0
 		movaps	xmm0, kCaptureBounds
 		movups	[ebp-0x98], xmm0
-		movss	xmm0, kFlt12288
-		addss	xmm0, [ebp-0x40]
+		movss	xmm0, kFlt80000
 		movss	[ebp-0x34], xmm0
-		addss	xmm0, kFlt4096
-		subss	xmm0, [ebp-0x44]
 		movss	[ebp-0x84], xmm0
 		push	0x114
 		CALL_EAX(0xAA13E0)
@@ -1260,31 +1253,23 @@ __declspec(naked) void HideExtCellLandNodeHook()
 
 __declspec(naked) void IntCaptureBoundsHook()
 {
-	static const float kFlt10000 = 10000.0F, kFlt40000 = 40000.0F;
 	__asm
 	{
 		cmp		s_useAltFormat, 0
 		jnz		altFormat
-		mov		dword ptr [ebp-0x78], 0x880
 		JMP_EAX(0x54F68F)
 	altFormat:
-		mov		dword ptr [ebp-0x78], 0x800
 		lea		ecx, [ebp-0x38]
 		mov		eax, [ebp+8]
 		shl		eax, 0xC
 		add		eax, 0x1000
-		mov		[ebp-0x12C], eax
 		cvtsi2ss	xmm0, eax
 		movss	[ecx], xmm0
 		mov		eax, [ebp+0xC]
 		shl		eax, 0xC
 		add		eax, 0x1000
-		mov		[ebp-0x130], eax
 		cvtsi2ss	xmm0, eax
 		movss	[ecx+4], xmm0
-		movss	xmm0, [ebp-0x3C]
-		addss	xmm0, kFlt40000
-		movss	[ecx+8], xmm0
 		cmp		s_cellNorthRotation, 0
 		jz		noRot
 		movq	xmm0, qword ptr [ecx]
@@ -1297,102 +1282,97 @@ __declspec(naked) void IntCaptureBoundsHook()
 	noRot:
 		movaps	xmm0, kCaptureBounds
 		movups	[ebp-0xA8], xmm0
-		movss	xmm0, [ecx+8]
-		subss	xmm0, [ebp-0x40]
-		addss	xmm0, kFlt10000
+		movss	xmm0, kFlt80000
+		movss	[ecx+8], xmm0
 		movss	[ebp-0x94], xmm0
 		JMP_EAX(0x54F727)
 	}
 }
 
-__declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cell, int EDX, NiCamera *camera, NiRenderedTexture **outTexture)
+__declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cell, int EDX, NiCamera *camera, RenderTarget **outTexture)
 {
 	__asm
 	{
+		cmp		s_useAltFormat, 2
+		jnb		altFormat
+		JMP_EAX(0x54E830)
+	altFormat:
 		push	ebp
 		mov		ebp, esp
-		cmp		s_useAltFormat, 2
-		jz		altFormat
-		push	0xFFFFFFFF
-		JMP_EAX(0x54E835)
-	altFormat:
-		sub		esp, 0x104
-		mov		[ebp-0x100], ecx
+		push	ecx
+		sub		esp, 0xEC
+		test	ecx, ecx
+		jz		noCell_0
 		test	byte ptr [ecx+0x24], 1
-		setnz	al
-		mov		[ebp-0xDD], al
-		push	0x2251
-		push	0x102ED68
-		push	1
-		push	0xE
-		lea		ecx, [ebp-0xE4]
-		CALL_EAX(0x404EB0)
-		push	dword ptr ds:[0x11F95EC]
-		lea		ecx, [ebp-0xF8]
-		CALL_EAX(0x633C90)
+		setnz	cl
+	noCell_0:
+		mov		[ebp-0x21], cl
+		mov		eax, fs:[0x2C]
+		mov		ecx, ds:[0x126FD98]
+		mov		edx, [eax+ecx*4]
+		add		edx, 0x2B4
+		push	dword ptr [edx]
+		mov		dword ptr [edx], 0xE
+		mov		eax, ds:[0x11F95EC]
+		mov		[ebp-0x14], eax
 		push	0
-		lea		ecx, [ebp-0xDC]
+		lea		ecx, [ebp-0xF0]
 		CALL_EAX(0x4A0EB0)
-		mov		dword ptr [ebp-0x10], 0
 		push	0
 		push	0
 		push	0
 		push	0x1E
+		push	0
+		push	0x16
+		push	0
+		cmp		dword ptr [ebp-4], 0
+		mov		edx, s_texturePixelSize
+		cmovz	edx, s_projectPixelSize
+		push	edx
+		push	edx
 		mov		eax, ds:[0x11F9508]
-		mov		[ebp-0xE8], eax
+		mov		[ebp-0x18], eax
 		push	eax
 		mov		ecx, ds:[0x11F91A8]
-		CALL_EAX(0xB6E110)
+		CALL_EAX(0xB6D5E0)
 		test	eax, eax
 		jz		done
-		push	eax
-		lea		ecx, [ebp-0x10]
-		push	ecx
-		call	NiReleaseAddRef
-		mov		ecx, [ebp-0xE8]
+		mov		[ebp-0x10], eax
+		mov		edx, [ebp+0xC]
+		mov		[edx], eax
+		mov		ecx, [ebp-0x18]
 		mov		eax, [ecx+0x5E0]
-		mov		[ebp-0xEC], eax
-		mov		eax, 0xFF1F2F3F
-		xor		edx, edx
-		cmp		byte ptr [ebp-0xDD], 0
-		cmovnz	eax, edx
+		mov		[ebp-0x1C], eax
+		cmp		dword ptr [ebp-4], 0
+		jz		noCell_1
+		movzx	eax, byte ptr [ebp-0x21]
+		dec		eax
+		and		eax, 0x1F2F3F
 		mov		[ecx+0x5E0], eax
-		mov		ecx, ds:[0x11F91C8]
-		mov		[ebp-0xF0], ecx
+	noCell_1:
+		mov		ecx, g_shadowSceneNode
+		mov		[ebp-8], ecx
 		mov		dl, [ecx+0x130]
-		mov		[ebp-0xDE], dl
-		mov		byte ptr [ecx+0x130], 1
-		mov		eax, ds:[0x11F4748]
-		cmp		dword ptr [eax+0x200], 0
-		setz	al
-		mov		[ebp-0xDF], al
-		mov		dword ptr [ebp-0xFC], 0
+		mov		[ebp-0x22], dl
+		mov		[ecx+0x130], 1
+		mov		dword ptr [ebp-0xC], 0
 		mov		eax, ds:[0x11C7C28]
 		test	eax, eax
 		jz		skipHide
-		test	dword ptr [eax+0x30], 1
+		test	byte ptr [eax+0x30], 1
 		jnz		skipHide
-		mov		[ebp-0xFC], eax
-		or		dword ptr [eax+0x30], 1
+		mov		[ebp-0xC], eax
+		or		byte ptr [eax+0x30], 1
 	skipHide:
-		CALL_EAX(0x54EE20)
-		mov		[ebp-0xE0], al
-		push	0
-		CALL_EAX(0x54EE60)
-		pop		ecx
+		mov		eax, ds:[0x11D5C48]
+		mov		[ebp-0x20], eax
+		mov		dl, [eax+0x18]
+		mov		[ebp-0x24], dl
+		mov		[eax+0x18], 0
 		mov		ecx, [ebp-0x10]
-		cmp		[ebp-0xDF], 0
-		jz		bgnScnAlt
-		CALL_EAX(0xB6B260)
-		push	eax
+		push	dword ptr [ecx+8]
 		push	7
 		CALL_EAX(0xB6B8D0)
-		jmp		doneBgnScn
-	bgnScnAlt:
-		push	7
-		push	ecx
-		CALL_EAX(0x54EDE0)
-	doneBgnScn:
 		add		esp, 8
 		push	0x280
 		CALL_EAX(0xAA13E0)
@@ -1402,99 +1382,74 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		push	0x63
 		mov		ecx, eax
 		CALL_EAX(0xB660D0)
-		push	eax
-		lea		ecx, [ebp-0xF4]
-		CALL_EAX(0x633C90)
-		mov		eax, [ebp-0xF0]
-		mov		ecx, [ebp-0xF4]
-		mov		[ecx+0x194], eax
-		push	ecx
-		lea		ecx, [ebp-0x18]
-		push	ecx
-		call	NiReleaseAddRef
-		mov		ecx, [ebp-0xF4]
-		xor		eax, eax
-		mov		edx, 0xC
-		cmp		byte ptr [ebp-0xDD], 0
-		cmovnz	eax, edx
-		mov		[ecx+0x19C], eax
-		push	3
-		lea		ecx, [ebp-0xDC]
-		CALL_EAX(0xC4F270)
-		lea		edx, [ebp-0xDC]
+		lock inc dword ptr [eax+4]
+		mov		[ebp-0x2C], eax
+		mov		edx, [ebp-8]
+		mov		[eax+0x194], edx
+		movzx	edx, byte ptr [ebp-0x21]
+		neg		edx
+		and		edx, 0xC
+		mov		[eax+0x19C], edx
+		mov		eax, [ebp-0x34]
+		mov		ecx, [ebp-0x60]
+		mov		[ebp+eax*4-0x5C], ecx
+		inc		dword ptr [ebp-0x34]
+		mov		dword ptr [ebp-0x60], 3
+		lea		edx, [ebp-0xF0]
 		push	edx
-		push	dword ptr [ebp-0xF0]
+		push	dword ptr [ebp-8]
 		push	dword ptr [ebp+8]
 		CALL_EAX(0xB6BEE0)
 		add		esp, 0xC
-		lea		ecx, [ebp-0xDC]
-		CALL_EAX(0xC4F2D0)
-		push	6
-		mov		ecx, [ebp-0x100]
-		CALL_EAX(0x456FC0)
-		mov		[ebp-0x104], eax
+		mov		ecx, [ebp-4]
+		test	ecx, ecx
+		jz		skipCull
+		mov		edx, 6
+		call	TESObjectCELL::Get3DNode
 		test	eax, eax
-		jz		noNode6
-		push	1
-		lea		ecx, [ebp-0xDC]
-		CALL_EAX(0xC4F270)
-		lea		edx, [ebp-0xDC]
+		jz		skipCull
+		mov		dword ptr [ebp-0x60], 1
+		lea		edx, [ebp-0xF0]
 		push	edx
-		push	dword ptr [ebp-0x104]
+		push	eax
 		push	dword ptr [ebp+8]
 		CALL_EAX(0xB6BEE0)
 		add		esp, 0xC
-		lea		ecx, [ebp-0xDC]
-		CALL_EAX(0xC4F2D0)
-	noNode6:
+	skipCull:
+		mov		eax, [ebp-0x34]
+		dec		eax
+		mov		[ebp-0x34], eax
+		mov		ecx, [ebp+eax*4-0x5C]
+		mov		[ebp-0x60], ecx
 		push	0
-		push	dword ptr [ebp-0xF4]
+		push	dword ptr [ebp-0x2C]
 		push	dword ptr [ebp+8]
 		CALL_EAX(0xB6C0D0)
 		add		esp, 0xC
-		push	0
-		lea		ecx, [ebp-0x18]
-		push	ecx
-		call	NiReleaseAddRef
-		push	0
-		lea		ecx, [ebp-0xF4]
-		push	ecx
-		call	NiReleaseAddRef
-		mov		eax, 0xB6B790
-		mov		ecx, 0xB6B840
-		cmp		byte ptr [ebp-0xDF], 0
-		cmovz	eax, ecx
-		call	eax
-		movzx	eax, byte ptr [ebp-0xE0]
-		push	eax
-		CALL_EAX(0x54EE60)
-		pop		ecx
-		mov		eax, [ebp-0xFC]
+		mov		ecx, [ebp-0x2C]
+		call	NiReleaseObject
+		CALL_EAX(0xB6B790)
+		mov		eax, [ebp-0x20]
+		mov		dl, [ebp-0x24]
+		mov		[eax+0x18], dl
+		mov		eax, [ebp-0xC]
 		test	eax, eax
 		jz		skipUnhide
-		xor		dword ptr [eax+0x30], 1
+		and		byte ptr [eax+0x30], 0xFE
 	skipUnhide:
-		mov		al, [ebp-0xDE]
-		mov		ecx, [ebp-0xF0]
+		mov		al, [ebp-0x22]
+		mov		ecx, [ebp-8]
 		mov		[ecx+0x130], al
-		mov		eax, ds:[0x11F95EC]
-		mov		byte ptr [eax+0x86], 1
-		mov		ecx, [ebp-0xE8]
-		mov		eax, [ebp-0xEC]
+		mov		eax, [ebp-0x14]
+		mov		[eax+0x86], 1
+		mov		ecx, [ebp-0x18]
+		mov		eax, [ebp-0x1C]
 		mov		[ecx+0x5E0], eax
-		lea		ecx, [ebp-0xF4]
-		CALL_EAX(0x45CEC0)
 	done:
-		lea		eax, [ebp-0x10]
-		push	eax
-		mov		ecx, [ebp+0xC]
-		CALL_EAX(0x6E5CC0)
-		lea		ecx, [ebp-0x10]
-		CALL_EAX(0x45CEC0)
-		lea		ecx, [ebp-0xDC]
-		CALL_EAX(0x4A0F60)
-		lea		ecx, [ebp-0xE4]
-		CALL_EAX(0x404EE0)
+		mov		eax, fs:[0x2C]
+		mov		ecx, ds:[0x126FD98]
+		mov		edx, [eax+ecx*4]
+		pop		dword ptr [edx+0x2B4]
 		leave
 		retn	8
 	}
@@ -1504,18 +1459,16 @@ __declspec(naked) void D3DFormatHook()
 {
 	__asm
 	{
-		mov		eax, [esp+0x2C]
 		cmp		s_useAltFormat, 0
-		jz		defaultFmt
-		mov		dword ptr [eax], 0x16
-		mov		ecx, s_texturePixelSize
-		jmp		done
-	defaultFmt:
-		mov		dword ptr [eax], 0x17
-		mov		ecx, 0x80
-	done:
-		mov		[eax+8], ecx
-		mov		[eax+0xC], ecx
+		mov		eax, 0x16
+		mov		ecx, 0x17
+		cmovnz	ecx, eax
+		mov		edx, 0x80
+		cmovnz	edx, s_texturePixelSize
+		mov		eax, [esp+0x2C]
+		mov		[eax], ecx
+		mov		[eax+8], edx
+		mov		[eax+0xC], edx
 		xor		ecx, ecx
 		mov		[ebx], ecx
 		mov		[esi], ecx
@@ -1577,27 +1530,6 @@ __declspec(naked) void SetQuestTargetsHook()
 		mov		[ebp-4], ecx
 		mov		s_updateQuestTargets, 1
 		JMP_EDX(0x60F145)
-	}
-}
-
-__declspec(naked) void WaterToLandClipHook()
-{
-	__asm
-	{
-		mov		eax, [ebp-0x10]
-		mov		eax, [eax+0x28]
-		test	eax, eax
-		jz		noData
-		movss	xmm0, [eax+0xA0]
-		subss	xmm0, kFltOne
-		mov		al, 1
-		jmp		done
-	noData:
-		pxor	xmm0, xmm0
-	done:
-		movss	[ebp-0x20], xmm0
-		mov		[ebp-0x31], al
-		JMP_EAX(0x49CA94)
 	}
 }
 
@@ -1823,17 +1755,18 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	g_particleSysMngr = *(BSParticleSystemManager**)0x11DED58;
 	g_blackPlaneBase = LookupFormByRefID(0x15A1F2);
 	SafeWrite16(0x452736, 0x7705);
-	SafeWriteBuf(0x87A12A, "\x31\xD2\x66\x89\x50\x26\x89\x50\x28\x90", 10);
+	SAFE_WRITE_BUF(0x87A12A, "\x31\xD2\x66\x89\x50\x26\x89\x50\x28\x90");
 	SafeWrite8(0x555C20, 0xC3);
 	WriteRelCall(0x9438F6, (UInt32)UpdateCellsSeenBitsHook);
 	WriteRelJump(0x54EF70, (UInt32)ExtCaptureBoundsHook);
 	//WriteRelCall(0x54F257, (UInt32)HideExtCellLandNodeHook);
 	WriteRelJump(0x54F688, (UInt32)IntCaptureBoundsHook);
-	WriteRelJump(0x54E830, (UInt32)GenerateRenderedTextureHook);
+	WriteRelCall(0x54F362, (UInt32)GenerateRenderedTextureHook);
+	WriteRelCall(0x54FA46, (UInt32)GenerateRenderedTextureHook);
 	SafeWrite32(0xB6D0C0, (UInt32)D3DFormatHook);
 	WriteRelJump(0x779567, (UInt32)DiscoverLocationHook);
 	WriteRelJump(0x60F13D, (UInt32)SetQuestTargetsHook);
-	WriteRelJump(0x49CA5A, (UInt32)WaterToLandClipHook);
+	SAFE_WRITE_BUF(0x49CA5A, "\x8B\x45\xF0\x8B\x40\x28\x85\xC0\x74\x0C\xD9\xE8\xD8\xA8\xA0\x00\x00\x00\xB0\x01\xEB\x02\xD9\xEE\xD9\x5D\xE0\x88\x45\xCF\xEB\x1A");
 	WriteRelJump(0xE7D13A, (UInt32)RendererRecreateHook);
 	return true;
 }
@@ -2090,7 +2023,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			if (!s_exteriorKeys.Empty())
 			{
 				for (auto prgIter = s_renderedExteriors.Begin(); prgIter; ++prgIter)
-					if (prgIter().texture) ThisCall(0xA7FD30, prgIter().texture, true);
+					ThisCall(0xA7FD30, prgIter().texture, true);
 				s_renderedExteriors.Clear();
 				s_exteriorKeys.Clear();
 			}
@@ -2177,9 +2110,9 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					g_sceneLightsLock->EnterSleep();
 					for (auto lgtNode = g_shadowSceneNode->lgtList0B4.Head(); lgtNode; lgtNode = lgtNode->next)
 					{
-						if ((pntLight = (NiPointLight*)lgtNode->data->light) && (pntLight->effectType == 2) && !pntLight->unkEC)
+						if ((pntLight = (NiPointLight*)lgtNode->data->light) && (pntLight->effectType == 2))
 						{
-							pntLight->unkEC = pntLight->radius;
+							pntLight->radiusE4 = pntLight->radius;
 							pntLight->radius = 0;
 						}
 					}
@@ -2231,8 +2164,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 						gridIdx--;
 						findTex.Find(s_exteriorKeys[gridIdx]);
 						if (!findTex) continue;
-						if (findTex().texture)
-							ThisCall(0xA7FD30, findTex().texture, true);
+						ThisCall(0xA7FD30, findTex().texture, true);
 						findTex.Remove();
 					}
 					while (gridIdx);
@@ -2268,7 +2200,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				if (!s_renderedInterior.Empty())
 				{
 					for (auto clrIter = s_renderedInterior.Begin(); clrIter; ++clrIter)
-						if (*clrIter) ThisCall(0xA7FD30, *clrIter, true);
+						ThisCall(0xA7FD30, *clrIter, true);
 					s_renderedInterior.Clear();
 				}
 				updateTiles = true;
@@ -2347,13 +2279,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			{
 				g_sceneLightsLock->EnterSleep();
 				for (auto lgtNode = g_shadowSceneNode->lgtList0B4.Head(); lgtNode; lgtNode = lgtNode->next)
-				{
-					if ((pntLight = (NiPointLight*)lgtNode->data->light) && (pntLight->effectType == 2) && !pntLight->radius)
-					{
-						pntLight->radius = pntLight->unkEC;
-						pntLight->unkEC = 0;
-					}
-				}
+					if ((pntLight = (NiPointLight*)lgtNode->data->light) && (pntLight->effectType == 2))
+						pntLight->radius = pntLight->radiusE4;
 				g_sceneLightsLock->Leave();
 			}
 			else *g_lightingPasses = lightingPasses;

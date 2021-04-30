@@ -361,17 +361,6 @@ __declspec(naked) void PackageSetRunHook()
 	}
 }
 
-__declspec(naked) void ResetActorFlagsHook()
-{
-	__asm
-	{
-		mov		ecx, [ebp-0xAC]
-		mov		word ptr [ecx+0x105], 0
-		and		byte ptr [ecx+0x143], 0xBF
-		retn
-	}
-}
-
 __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *changesData)
 {
 	__asm
@@ -486,24 +475,6 @@ __declspec(naked) void JumpHeightFixHook()
 		addss	xmm0, [esp+0x28]
 		movss	[esi+0x544], xmm0
 		JMP_EAX(0xCD4486)
-	}
-}
-
-__declspec(naked) void AddLightObjectHook()
-{
-	__asm
-	{
-		test	eax, eax
-		jz		done
-		mov		ecx, eax
-		push	1
-		mov		eax, [ebp-0x60]
-		add		eax, 0x48
-		push	dword ptr [eax]
-		mov		eax, [ecx]
-		call	dword ptr [eax+0xDC]
-	done:
-		retn
 	}
 }
 
@@ -680,20 +651,6 @@ __declspec(naked) bool __stdcall TerminalGetLockedHook(TESObjectREFR *terminalRe
 	}
 }
 
-__declspec(naked) void IsCurrentFurnitureObjFixHook()
-{
-	__asm
-	{
-		test	eax, eax
-		jz		done
-		mov		ecx, eax
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x4C8]
-	done:
-		retn
-	}
-}
-
 TESWorldSpace *s_audioMarkerLastWorld = NULL;
 Vector<MusicMarker> s_musicMarkerList(0x100);
 
@@ -786,19 +743,6 @@ __declspec(naked) void RemoveHotkeyFixHook()
 	doRemove:
 		mov		ecx, [ebp+0x18]
 		CALL_EAX(0x42DEC0)
-	done:
-		retn
-	}
-}
-
-__declspec(naked) void ArmourPenetratedHook()
-{
-	__asm
-	{
-		movss	xmm0, [ebp-0xC]
-		comiss	xmm0, [ecx+0x14]
-		ja		done
-		or		byte ptr [ecx+0x5B], 0x80
 	done:
 		retn
 	}
@@ -1576,7 +1520,7 @@ __declspec(naked) void ClearAshPilesHook()
 {
 	__asm
 	{
-		test	word ptr [ecx+6], kHookFormFlag6_IsAshPile
+		test	byte ptr [ecx+6], kHookFormFlag6_IsAshPile
 		jz		done
 		push	kExtraData_AshPileRef
 		mov		ecx, [ebp-0x2C]
@@ -1936,7 +1880,7 @@ __declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadin
 		push	ebx
 		push	esi
 		push	edi
-		test	word ptr [ecx+0x222], 0x20
+		test	byte ptr [ecx+0x222], 0x20
 		setnz	bl
 		mov		bh, byte ptr ds:[0x11D8907]
 		mov		eax, g_OSGlobals
@@ -2053,10 +1997,10 @@ void __fastcall DistributeWeaponMods(Actor *actor)
 		chance = s_uWMChanceMin;
 	else if (chance > s_uWMChanceMax)
 		chance = s_uWMChanceMax;
-	UInt32 rand = GetRandomUInt(100);
+	UInt32 rand = GetRandomInt(100);
 	if (chance <= rand)
 		return;
-	const UInt8 *shuffle = kWeaponModShuffle[GetRandomUInt(6)];
+	const UInt8 *shuffle = kWeaponModShuffle[GetRandomInt(6)];
 	if (modFlags & shuffle[0])
 		chance >>= 1;
 	if (modFlags & shuffle[1])
@@ -2575,9 +2519,8 @@ __declspec(naked) float GetPCRepairSkill()
 		mov		ecx, g_thePlayer
 		add		ecx, 0xA4
 		CALL_EAX(0x93ACB0)
-		push	ecx
-		fstp	dword ptr [esp]
-		movss	xmm0, [esp]
+		fstp	dword ptr [esp-4]
+		movss	xmm0, [esp-4]
 		pxor	xmm1, xmm1
 		maxss	xmm0, xmm1
 		movss	xmm1, ds:[0x11D0FF4]	// fRepairSkillBase
@@ -2590,9 +2533,8 @@ __declspec(naked) float GetPCRepairSkill()
 		divss	xmm0, xmm2
 		addss	xmm0, xmm1
 		minss	xmm0, xmm2
-		movss	[esp], xmm0
-		fld		dword ptr [esp]
-		pop		ecx
+		movss	[esp-4], xmm0
+		fld		dword ptr [esp-4]
 		retn
 	}
 }
@@ -2638,8 +2580,7 @@ __declspec(naked) void PopulateRepairListHook()
 		jnz		done
 		cmp		s_repairedItemModded, 0
 		jnz		done
-		push	1
-		CALL_EAX(kAddr_GetItemHealthPerc)
+		call	ContChangesEntry::GetHealthPercent
 		fld		s_repairedItemHealth
 		fucomip	st, st(1)
 		setnb	al
@@ -2695,14 +2636,12 @@ __declspec(naked) void DoRepairItemHook()
 {
 	__asm
 	{
-		push	1
 		mov		ecx, [ebp+8]
-		CALL_EAX(kAddr_GetItemHealthPerc)
+		call	ContChangesEntry::GetHealthPercent
 		push	ecx
 		fstp	dword ptr [esp]
-		push	1
 		mov		ecx, ds:[0x11DA760]
-		CALL_EAX(kAddr_GetItemHealthPerc)
+		call	ContChangesEntry::GetHealthPercent
 		push	ecx
 		fstp	dword ptr [esp]
 		call	GetRepairAmount
@@ -2715,9 +2654,8 @@ __declspec(naked) void RepairMenuClickHook()
 	__asm
 	{
 		call	GetPCRepairSkill
-		push	1
 		mov		ecx, ds:[0x11DA760]
-		CALL_EAX(kAddr_GetItemHealthPerc)
+		call	ContChangesEntry::GetHealthPercent
 		fucomip	st, st(1)
 		fstp	st
 		setb	ah
@@ -2773,9 +2711,9 @@ __declspec(naked) void InitMissileFlagsHook()
 		cmp		byte ptr [esp+8], 0
 		jz		done
 		mov		eax, [ecx+0x20]
-		test	word ptr [eax+0x60], 0x100
+		test	byte ptr [eax+0x61], 1
 		jz		done
-		or		word ptr [ecx+0xC8], 0x8000
+		or		byte ptr [ecx+0xC9], 0x80
 	done:
 		retn	8
 	}
@@ -2959,10 +2897,9 @@ __declspec(naked) bool __fastcall SneakBoundingBoxFixHook(PlayerCharacter *thePl
 		mov		s_playerIsSneaking, al
 		mov		ecx, [ecx+8]
 		mov		ecx, [ecx+0x40]
-		movzx	eax, al
-		mov		edx, 0x50
-		test	eax, eax
-		cmovz	edx, eax
+		movzx	edx, al
+		neg		edx
+		and		edx, 0x50
 		add		edx, offset s_shapeVerticesZ
 		movaps	xmm0, [edx]
 		movups	[ecx+0x20], xmm0
@@ -3309,34 +3246,6 @@ __declspec(naked) void DoOperatorHook()
 		mov		[ebp-0x10], 0
 		push	0x5948BB
 		jmp		kDoOperatorJumpTable[edx]
-	}
-}
-
-__declspec(naked) void DefaultTextureHook()
-{
-	__asm
-	{
-		CALL_EAX(0xAFE220)
-		mov		[ebp-8], eax
-		test	eax, eax
-		jnz		done
-		cmp		dword ptr [ebp+0x10], 0
-		jz		done
-		lea		ecx, [ebp-0x118]
-		mov		edx, [ebp+0x14]
-		cmp		edx, 2
-		jz		isDDS
-		cmp		edx, 0xFFFF
-		jnz		done
-		call	StrLen
-		cmp		dword ptr [ecx+eax-4], 'sdd.'
-		jnz		done
-	isDDS:
-		push	ecx
-		mov		ecx, offset s_missingTextures
-		call	DebugLog::Message
-	done:
-		JMP_EAX(0xAFE19E)
 	}
 }
 
@@ -3691,8 +3600,8 @@ void InitGamePatches()
 	CdeclCall(0x476C00);
 
 	//	Adds NULL pointer checks
-	SafeWriteBuf(0x559450, "\x8B\xC1\x85\xC0\x74\x02\x8B\x00\xC3", 9);
-	SafeWriteBuf(0x5A8ECF, "\x8B\x45\xFC\x8B\x40\x04\x89\x45\xFC\x85\xD2\x74\x0D\xC7\x42\x04\x00\x00\x00\x00\xEB\xCD", 22);
+	SAFE_WRITE_BUF(0x559450, "\x8B\xC1\x85\xC0\x74\x02\x8B\x00\xC3");
+	SAFE_WRITE_BUF(0x5A8ECF, "\x8B\x45\xFC\x8B\x40\x04\x89\x45\xFC\x85\xD2\x74\x0D\xC7\x42\x04\x00\x00\x00\x00\xEB\xCD");
 
 	//	Earn Steam achievements even if the console has been used
 	SafeWrite16(0x5D3B69, 0x9066);
@@ -3706,8 +3615,8 @@ void InitGamePatches()
 
 	//	Recognize custom ashpile activators
 	for (UInt32 patchAddr : {0x56A30A, 0x573FE8, 0x57445B, 0x576AF0, 0x624958, 0x77765A, 0x95F7FE})
-		SafeWriteBuf(patchAddr, "\x8B\x41\x20\x66\xF7\x40\x06\x20\x00\x0F\x95\xC0\x34\x01\xEB\x0B", 16);
-	SafeWriteBuf(0x573194, "\x8B\x41\x20\x66\xF7\x40\x06\x20\x00\x0F\x95\xC0\x34\x01\xEB\x0E", 16);
+		SAFE_WRITE_BUF(patchAddr, "\x8B\x41\x20\xF6\x40\x06\x20\x0F\x95\xC0\x34\x01\xEB\x0D");
+	SAFE_WRITE_BUF(0x573194, "\x8B\x41\x20\xF6\x40\x06\x20\x0F\x95\xC0\x34\x01\xEB\x10");
 
 	s_NVACAddress = (UInt32)GetModuleHandle("nvac");
 	if (!s_NVACAddress)		//	NVAC already patches those
@@ -3744,7 +3653,7 @@ void InitGamePatches()
 	SafeWrite8(0x5EB79B, 0x23);
 
 	//	Fix item value/weight display in the crafting menu
-	SafeWriteBuf(0x728E10, "\x0F\x1F\x84\x00\x00\x00\x00\x00", 8);
+	SAFE_WRITE_BUF(0x728E10, "\x0F\x1F\x84\x00\x00\x00\x00\x00");
 	SafeWrite32(0x729616, 0x1030018);
 
 	//	Don't play equip sound if item is already equipped
@@ -3772,12 +3681,12 @@ void InitGamePatches()
 	SafeWrite8(0x5248EF, 0x77);
 
 	//	NULL check for perk activation text
-	SafeWriteBuf(0x7AA80F, "\x8B\x01\x8B\x40\x04\x85\xC0\x75\x03\xEB\x68", 11);
+	SAFE_WRITE_BUF(0x7AA80F, "\x8B\x01\x8B\x40\x04\x85\xC0\x75\x03\xEB\x68");
 
 	//	AI Z fix (credits to Stewie)
-	SafeWriteBuf(0x6B10A3, "\x0F\x1F\x44\x00\x00", 5);
-	SafeWriteBuf(0x881A9C, "\x0F\x1F\x44\x00\x00", 5);
-	SafeWriteBuf(0x9E6A82, "\x0F\x1F\x44\x00\x00", 5);
+	SAFE_WRITE_BUF(0x6B10A3, "\x0F\x1F\x44\x00\x00");
+	SAFE_WRITE_BUF(0x881A9C, "\x0F\x1F\x44\x00\x00");
+	SAFE_WRITE_BUF(0x9E6A82, "\x0F\x1F\x44\x00\x00");
 
 	//	Fix SetLevel XP
 	SafeWrite32(0x8D535F, 0x001F0F50);
@@ -3789,19 +3698,23 @@ void InitGamePatches()
 	SafeWrite8(0x468CE7, 0x54);
 	WriteRelCall(0x61CD16, (UInt32)InitTopicInfoHook);
 	WriteRelCall(0x61E086, (UInt32)LoadTopicInfoHook);
-	SafeWriteBuf(0x61A310, "\x8B\x44\x24\x04\x8B\x40\x50\xC3", 8);
-	SafeWriteBuf(0x61D041, "\x8B\x42\x50\x66\x0F\x1F\x44\x00\x00", 9);
+	SAFE_WRITE_BUF(0x61A310, "\x8B\x44\x24\x04\x8B\x40\x50\xC3");
+	SAFE_WRITE_BUF(0x61D041, "\x8B\x42\x50\x66\x0F\x1F\x44\x00\x00");
 
 	//	Ignore disabled MusicMarkers
-	SafeWriteBuf(0x9699C5, "\x8B\x01\xF7\x40\x08\x00\x08\x00\x00\x0F\x85\xC0\x00\x00\x00\x83\xC0\x30\x66\x90", 20);
+	SAFE_WRITE_BUF(0x9699C5, "\x8B\x01\xF7\x40\x08\x00\x08\x00\x00\x0F\x85\xC0\x00\x00\x00\x83\xC0\x30\x66\x90");
 
 	//	Fix source weapon for kPerkEntry_AdjustExplosionRadius conditions
-	SafeWriteBuf(0x47667D, "\x89\xC8\x0F\x1F\x00", 5);
-	SafeWriteBuf(0x9C35F7, "\x89\xC8\x0F\x1F\x00", 5);
+	SAFE_WRITE_BUF(0x47667D, "\x89\xC8\x0F\x1F\x00");
+	SAFE_WRITE_BUF(0x9C35F7, "\x89\xC8\x0F\x1F\x00");
 
 	//	Cap Agility for calculating reload & equip speeds
-	SafeWriteBuf(0x8C17D9, "\xB8\x50\xEF\x66\x00\xFF\xD0\x0F\x1F\x80\x00\x00\x00\x00", 14);
-	SafeWriteBuf(0x8C1959, "\xB8\x50\xEF\x66\x00\xFF\xD0\x0F\x1F\x80\x00\x00\x00\x00", 14);
+	SAFE_WRITE_BUF(0x8C17D9, "\xB8\x50\xEF\x66\x00\xFF\xD0\x0F\x1F\x80\x00\x00\x00\x00");
+	SAFE_WRITE_BUF(0x8C1959, "\xB8\x50\xEF\x66\x00\xFF\xD0\x0F\x1F\x80\x00\x00\x00\x00");
+
+	//	Fix immobile creatures free-falling to the ground
+	SAFE_WRITE_BUF(0x9313EC, "\x80\xB9\xB0\x01\x00\x00\x00\x74\x0D\x8B\x55\x9C\x80\x8A\x17\x04\x00\x00\x40\x0F\x1F\x00");
+	SAFE_WRITE_BUF(0xCD3FDD, "\xA9\x01\x00\x40\x00\x74\x0D\x89\xBE\x20\x05\x00\x00\x80\x8E\x14\x04\x00\x00\x80");
 
 	//	Inlines
 	SafeWrite32(0x47C850, 0x90C3C030);
@@ -3812,14 +3725,14 @@ void InitGamePatches()
 	SafeWrite16(0x94E5F6, 0x18EB);
 	WritePushRetRelJump(0x94E4A1, 0x94E4D9, (UInt32)GeneratePlayerNodeHook);
 	SafeWrite32(0x1016DB8, (UInt32)DoQueuedPlayerHook);
-	SafeWriteBuf(0x601C30, "\x8B\x41\x04\x85\xC0\x74\x01\xC3\x81\xE9\xD8\x00\x00\x00\xF7\x01\x01\x00\x00\x00\xB8\x48\x3E\x1D\x01\xB9\x1C\x27\x1D\x01\x0F\x45\xC1\x8B\x00\xC3", 36);
+	SAFE_WRITE_BUF(0x601C30, "\x8B\x41\x04\x85\xC0\x74\x01\xC3\x81\xE9\xD8\x00\x00\x00\xF7\x01\x01\x00\x00\x00\xB8\x48\x3E\x1D\x01\xB9\x1C\x27\x1D\x01\x0F\x45\xC1\x8B\x00\xC3");
 	SafeWrite32(0x104A1BC, (UInt32)SetNPCModelHook);
 	SafeWrite8(0x40F75B, 0x18);
 
 	SafeWrite32(0x9ED3F8, (UInt32)&s_moveAwayDistance);
 	SafeWrite32(0x9ED528, (UInt32)&s_moveAwayDistance);
 
-	SafeWriteBuf(0x4F15A0, "\x0F\xB6\x44\x24\x04\x89\x41\x04\x3C\x3B\x74\x07\x3C\x3C\x74\x03\xC2\x04\x00\x31\xD2\x89\x91\x04\x01\x00\x00\xC2\x04\x00", 30);
+	SAFE_WRITE_BUF(0x4F15A0, "\x0F\xB6\x44\x24\x04\x89\x41\x04\x3C\x3B\x74\x07\x3C\x3C\x74\x03\xC2\x04\x00\x31\xD2\x89\x91\x04\x01\x00\x00\xC2\x04\x00");
 	WriteRelJump(0x5A64C0, (UInt32)TESGlobalLoadFormHook);
 	WriteRelCall(0x8A0DAB, (UInt32)DetectionTeammateHook);
 	WriteRelCall(0x8A1291, (UInt32)DetectionTeammateHook);
@@ -3840,22 +3753,22 @@ void InitGamePatches()
 	WriteRelCall(0x5B5B48, (UInt32)CmdActivateHook);
 	WriteRelCall(0x5B54E7, (UInt32)RemoveMeHook);
 	WriteRelJump(0x8DAA6F, (UInt32)PackageSetRunHook);
-	WritePushRetRelJump(0x8AB6D9, 0x8AB6F3, (UInt32)ResetActorFlagsHook);
+	SAFE_WRITE_BUF(0x8AB6D9, "\x8B\x8D\x54\xFF\xFF\xFF\x66\xC7\x81\x05\x01\x00\x00\x00\x00\x80\xA1\x43\x01\x00\x00\xBF\x0F\x1F\x40\x00");
 	WriteRelCall(0x73005C, (UInt32)BarterSellFixHook);
 	WriteRelJump(0xCD4468, (UInt32)JumpHeightFixHook);
-	WritePushRetRelJump(0x80ECA8, 0x80ECD2, (UInt32)AddLightObjectHook);
+	SAFE_WRITE_BUF(0x80ECA8, "\x85\xC0\x74\x26\x89\xC1\x6A\x01\x8B\x45\xA0\x83\xC0\x48\xFF\x30\x8B\x01\xFF\x90\xDC\x00\x00\x00\xEB\x10");
 	WritePushRetRelJump(0x4069D4, 0x406A9D, (UInt32)EffectSkillModifiers1Hook);
 	WritePushRetRelJump(0x816519, 0x816627, (UInt32)EffectSkillModifiers2Hook);
 	WriteRelJump(0x7294DC, (UInt32)RecipeMenuAmmoEffectsHook);
 	WriteRelJump(0x7AC179, (UInt32)QttMenuEnableWheelHook);
 	WriteRelCall(0x59D0B3, (UInt32)TerminalGetLockedHook);
-	WritePushRetRelJump(0x59E039, 0x59E04C, (UInt32)IsCurrentFurnitureObjFixHook);
+	SAFE_WRITE_BUF(0x59E034, "\x8B\x41\x68\x85\xC0\x74\x11\x89\xC1\x8B\x01\xFF\x90\xC8\x04\x00\x00\x0F\x1F\x80\x00\x00\x00\x00");
 	WritePushRetRelJump(0x947DD2, 0x947E79, (UInt32)BuildMusicMarkerListHook);
 	WritePushRetRelJump(0x5DBCFD, 0x5DBD23, (UInt32)AttachAshPileHook);
 	WriteRelCall(0x63C4D6, (UInt32)GetWindSpeedHook);
 	WriteRelCall(0x63C52C, (UInt32)GetWindSpeedHook);
 	WritePushRetRelJump(0x4C3998, 0x4C39B0, (UInt32)RemoveHotkeyFixHook);
-	WritePushRetRelJump(0x9B6335, 0x9B6342, (UInt32)ArmourPenetratedHook);
+	SAFE_WRITE_BUF(0x9B6335, "\xF3\x0F\x10\x45\xF4\x0F\x2F\x41\x14\x0F\x87\x8E\x00\x00\x00\x80\x49\x5B\x80\xF3\x0F\x11\x41\x14\x0F\x1F\x40\x00");
 	WritePushRetRelJump(0x5674D5, 0x567554, (UInt32)SetScaleHook);
 	SafeWrite16(0x567709, 0x15EB);
 	WriteRelJump(0x4BD820, (UInt32)GetEntryDataModFlagsHook);
@@ -3865,7 +3778,7 @@ void InitGamePatches()
 	WriteRelCall(0x571FDF, (UInt32)ClearWeaponNodeHook);
 	WritePushRetRelJump(0x782876, 0x7828F8, (UInt32)ConstructItemEntryNameHook);
 	WritePushRetRelJump(0x75D1A5, 0x75D1EB, (UInt32)ConstructItemEntryNameHook);
-	SafeWriteBuf(0x72F337, "\x8B\x85\x70\xFF\xFF\xFF", 6);
+	SAFE_WRITE_BUF(0x72F337, "\x8B\x85\x70\xFF\xFF\xFF");
 	WritePushRetRelJump(0x72F33D, 0x72F37F, (UInt32)ConstructItemEntryNameHook);
 	WriteRelCall(0x48E761, (UInt32)GetIconPathForItemHook);
 	WriteRelCall(0x406720, (UInt32)GetEffectHiddenHook);
@@ -3885,11 +3798,11 @@ void InitGamePatches()
 	WriteRelCall(0x89DC0E, (UInt32)KillChallengeFixHook);
 	WriteRelCall(0x72880D, (UInt32)IsDisposableWeaponHook);
 	WriteRelJump(0x984156, (UInt32)DeathResponseFixHook);
-	SafeWriteBuf(0x9EE367, "\x8B\x8A\xB0\x00\x00\x00\x83\xB9\x08\x01\x00\x00\x02\x0F\x84\x82\x00\x00\x00\xEB\x41", 21);
+	SAFE_WRITE_BUF(0x9EE367, "\x8B\x8A\xB0\x00\x00\x00\x83\xB9\x08\x01\x00\x00\x02\x0F\x84\x82\x00\x00\x00\xEB\x41");
 	SafeWrite16(0x54E421, 0x1EEB);
 	WritePushRetRelJump(0x54E4E1, 0x54E5E6, (UInt32)ClearAshPilesHook);
 	WritePushRetRelJump(0x82D8CA, 0x82D8F4, (UInt32)SetAcousticSpaceFixHook);
-	SafeWriteBuf(0xAEACAA, "\x31\xD2\x89\x90\x34\x01\x00\x00\x89\x90\x9C\x01\x00\x00\x89\x90\xA0\x01\x00\x00\x89\x90\xDC\x01\x00\x00\xC7\x80\x38\x01\x00\x00\x00\x00\x80\x3F\x0F\x1F\x00", 39);
+	SAFE_WRITE_BUF(0xAEACAA, "\x31\xD2\x89\x90\x34\x01\x00\x00\x89\x90\x9C\x01\x00\x00\x89\x90\xA0\x01\x00\x00\x89\x90\xDC\x01\x00\x00\xC7\x80\x38\x01\x00\x00\x00\x00\x80\x3F\x0F\x1F\x00");
 	SafeWrite32(0xAE5648, (UInt32)SetSourceSoundRequestHook);
 	WritePushRetRelJump(0x82D416, 0x82D426, (UInt32)FillGameSoundPropsHook);
 	SafeWrite32(0x10A3C58, (UInt32)AdjustSoundFrequencyHook);
@@ -3927,12 +3840,6 @@ void InitGamePatches()
 	HOOK_INIT_JPRT(PickLoadScreen, 0x78A79B, 0x78A7A5);
 	HOOK_INIT_JUMP(UpdateTimeGlobals, 0x867A40);
 	HOOK_INIT_JUMP(DoOperator, 0x593FBC);
-
-	if (FileExists("data\\textures\\missing_texture.dds"))
-	{
-		s_missingTextures.Create("missing_textures.log");
-		WriteRelJump(0xAFE196, (UInt32)DefaultTextureHook);
-	}
 
 	char *namePtr = StrLenCopy(s_strArgBuffer, "Data\\NVSE\\plugins\\xfonts\\", 25), *dataPtr, *delim;
 	SInt32 lines;
@@ -4029,8 +3936,12 @@ void DeferredInit()
 	g_HUDMainMenu = *(HUDMainMenu**)0x11D96C0;
 	g_consoleManager = ConsoleManager::GetSingleton();
 	g_sysColorManager = *(SystemColorManager**)0x11D8A88;
-	g_screenWidth = *(UInt32*)0x11C73E0;
-	g_screenHeight = *(UInt32*)0x11C7190;
+	g_cursorNode = g_interfaceManager->cursor->node;
+	float converter = g_interfaceManager->menuRoot->GetValue(kTileValue_resolutionconverter)->num;
+	g_screenResConvert = converter;
+	converter *= 0.5F;
+	g_screenWidth = *(int*)0x11C73E0 * converter;
+	g_screenHeight = *(int*)0x11C7190 * converter;
 	g_shadowSceneNode = *(ShadowSceneNode**)0x11F91C8;
 	g_terminalModelDefault = *g_terminalModelPtr;
 	g_attachLightString = **(const char***)0x11C620C;
@@ -4042,6 +3953,8 @@ void DeferredInit()
 	g_gooPileACTI = *(TESObjectACTI**)0x11CA280;
 	g_ashPileACTI->SetJIPFlag(kHookFormFlag6_IsAshPile, true);
 	g_gooPileACTI->SetJIPFlag(kHookFormFlag6_IsAshPile, true);
+
+	s_initialTickCount = CdeclCall<UInt32>(0x457FE0);
 
 	s_tempPosMarker = ThisCall<TESObjectREFR*>(0x55A2F0, GameHeapAlloc(sizeof(TESObjectREFR)));
 	ThisCall(0x484490, s_tempPosMarker);

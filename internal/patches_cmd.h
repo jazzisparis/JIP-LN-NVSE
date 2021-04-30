@@ -341,7 +341,7 @@ bool Hook_GetNumericGameSetting_Execute(COMMAND_ARGS)
 			DoConsolePrint(result);
 		}
 		else if (IsConsoleOpen())
-			Console_Print("GetNumericGameSetting >> SETTING NOT FOUND");
+			Console_Print("SETTING NOT FOUND");
 	}
 	return true;
 }
@@ -359,7 +359,7 @@ bool Hook_SetNumericGameSetting_Execute(COMMAND_ARGS)
 			*result = 1;
 		}
 		else if (IsConsoleOpen())
-			Console_Print("SetNumericGameSetting >> NOT FOUND");
+			Console_Print("SETTING NOT FOUND");
 	}
 	return true;
 }
@@ -376,7 +376,7 @@ bool Hook_GetNumericINISetting_Execute(COMMAND_ARGS)
 			DoConsolePrint(result);
 		}
 		else if (IsConsoleOpen())
-			Console_Print("GetNumericINISetting >> SETTING NOT FOUND");
+			Console_Print("SETTING NOT FOUND");
 	}
 	return true;
 }
@@ -394,7 +394,7 @@ bool Hook_SetNumericINISetting_Execute(COMMAND_ARGS)
 			*result = 1;
 		}
 		else if (IsConsoleOpen())
-			Console_Print("SetNumericINISetting >> NOT FOUND");
+			Console_Print("SETTING NOT FOUND");
 	}
 	return true;
 }
@@ -554,6 +554,7 @@ void InitCmdPatches()
 	KillActor = GetCmdByOpcode(0x108B)->execute;
 	AddNote = GetCmdByOpcode(0x117C)->execute;
 	AttachAshPile = GetCmdByOpcode(0x1211)->execute;
+	MoveToFade = GetCmdByOpcode(0x124F)->execute;
 	GetRefs = GetCmdByOpcode(0x15C7)->execute;
 
 	PrintLog("> Command patches initialized successfully.\n");
