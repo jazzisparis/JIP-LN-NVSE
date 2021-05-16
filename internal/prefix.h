@@ -1,6 +1,6 @@
 #pragma once
 
-#pragma warning(disable: 4018 4221 4244 4267 4288 4302 4305 4311 4312 4733 4838)
+#pragma warning(disable: 4018 4221 4244 4267 4288 4302 4305 4311 4312 4733 4838 4996)
 
 #define WIN32_LEAN_AND_MEAN
 #define _WIN32_WINNT	0x0501

@@ -10,7 +10,7 @@ DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetFirst, RefMapFirst, , 0, 1, kParams_OneS
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetNext, RefMapNext, , 0, 1, kParams_OneString);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetKeys, RefMapKeys, , 0, 1, kParams_OneString);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetAll, RefMapGetAll, , 0, 1, kParams_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetFloat, RefMapSetFlt, , 0, 3, kParams_JIP_OneString_OneFloat_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetFloat, RefMapSetFlt, , 0, 3, kParams_JIP_OneString_OneDouble_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetRef, RefMapSetRef, , 0, 3, kParams_JIP_OneString_OneForm_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetString, RefMapSetStr, , 0, 3, kParams_JIP_TwoStrings_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetValue, RefMapSetVal, , 0, 3, kParams_JIP_OneString_OneInt_OneOptionalForm);
@@ -40,95 +40,80 @@ bool Cmd_RefMapArrayGetSize_Execute(COMMAND_ARGS)
 	return true;
 }
 
-UInt8 s_refMapOperationType = 0;
+AuxVariableValue *RefMapGetValue(Script *scriptObj, TESForm *form, TESObjectREFR *thisObj)
+{
+	GetBaseParams(scriptObj);
+	RefMapIDsMap *idsMap = RMFind();
+	return idsMap ? idsMap->GetPtr(GetSubjectID(form, thisObj)) : NULL;
+}
 
-bool RefMapArrayGet_Execute(COMMAND_ARGS)
+bool Cmd_RefMapArrayGetType_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	TESForm *form = NULL;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &form))
+	{
+		AuxVariableValue *value = RefMapGetValue(scriptObj, form, thisObj);
+		if (value)
+			*result = value->GetType();
+	}
+	return true;
+}
+
+bool Cmd_RefMapArrayGetFloat_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	TESForm *form = NULL;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &form))
+	{
+		AuxVariableValue *value = RefMapGetValue(scriptObj, form, thisObj);
+		if (value)
+			*result = value->GetFlt();
+	}
+	return true;
+}
+
+bool Cmd_RefMapArrayGetRef_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	TESForm *form = NULL;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &form))
+	{
+		AuxVariableValue *value = RefMapGetValue(scriptObj, form, thisObj);
+		if (value)
+			REFR_RES = value->GetRef();
+	}
+	return true;
+}
+
+bool Cmd_RefMapArrayGetString_Execute(COMMAND_ARGS)
 {
 	const char *resStr = NULL;
 	TESForm *form = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &form))
 	{
-		GetBaseParams(scriptObj);
-		RefMapIDsMap *idsMap = RMFind();
-		if (idsMap)
-		{
-			AuxVariableValue *findID = idsMap->GetPtr(GetSubjectID(form, thisObj));
-			if (findID)
-			{
-				switch (s_refMapOperationType)
-				{
-					case 0:
-						*result = findID->GetType();
-						return true;
-					case 1:
-						*result = findID->GetFlt();
-						return true;
-					case 2:
-						*(UInt64*)result = findID->GetRef();
-						return true;
-					case 3:
-						resStr = findID->GetStr();
-						break;
-					case 4:
-					{
-						ArrayElementL element(findID->GetAsElement());
-						AssignCommandResult(CreateArray(&element, 1, scriptObj), result);
-						return true;
-					}
-					default:
-						return true;
-				}
-			}
-		}
+		AuxVariableValue *value = RefMapGetValue(scriptObj, form, thisObj);
+		if (value)
+			resStr = value->GetStr();
 	}
-	if (s_refMapOperationType == 3) AssignString(PASS_COMMAND_ARGS, resStr);
-	else *result = 0;
+	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
 
-__declspec(naked) bool Cmd_RefMapArrayGetType_Execute(COMMAND_ARGS)
+bool Cmd_RefMapArrayGetValue_Execute(COMMAND_ARGS)
 {
-	__asm
+	*result = 0;
+	TESForm *form = NULL;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &form))
 	{
-		mov		s_refMapOperationType, 0
-		jmp		RefMapArrayGet_Execute
+		AuxVariableValue *value = RefMapGetValue(scriptObj, form, thisObj);
+		if (value)
+		{
+			ArrayElementL element(value->GetAsElement());
+			AssignCommandResult(CreateArray(&element, 1, scriptObj), result);
+		}
 	}
-}
-
-__declspec(naked) bool Cmd_RefMapArrayGetFloat_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_refMapOperationType, 1
-		jmp		RefMapArrayGet_Execute
-	}
-}
-
-__declspec(naked) bool Cmd_RefMapArrayGetRef_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_refMapOperationType, 2
-		jmp		RefMapArrayGet_Execute
-	}
-}
-
-__declspec(naked) bool Cmd_RefMapArrayGetString_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_refMapOperationType, 3
-		jmp		RefMapArrayGet_Execute
-	}
-}
-
-__declspec(naked) bool Cmd_RefMapArrayGetValue_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_refMapOperationType, 4
-		jmp		RefMapArrayGet_Execute
-	}
+	return true;
 }
 
 RefMapIDsMap::Iterator s_refMapIterator;
@@ -208,101 +193,78 @@ bool Cmd_RefMapArrayGetAll_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool RefMapArraySet_Execute(COMMAND_ARGS)
+AuxVariableValue* __fastcall RefMapAddValue(TESForm *form, TESObjectREFR *thisObj, Script *scriptObj)
 {
-	TESForm *form = NULL, *refVal;
-	float fltVal;
-	NVSEArrayVar *srcArr;
-	switch (s_refMapOperationType)
+	if (s_strArgBuffer[0])
 	{
-		case 0:
-			if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &fltVal, &form))
-				return true;
-			break;
-		case 1:
-			if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &refVal, &form))
-				return true;
-			break;
-		case 2:
-			if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer, &form))
-				return true;
-			break;
-		case 3:
+		UInt32 keyID = GetSubjectID(form, thisObj);
+		if (keyID)
 		{
-			UInt32 arrID;
-			if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &arrID, &form))
-				return true;
-			srcArr = LookupArrayByID(arrID);
-			if (!srcArr || (GetArraySize(srcArr) != 1))
-				return true;
-			break;
-		}
-		default:
-			return true;
-	}
-	if (!s_strArgBuffer[0]) return true;
-	UInt32 keyID = GetSubjectID(form, thisObj);
-	if (!keyID) return true;
-	GetBaseParams(scriptObj);
-	s_strArgBuffer[255] = 0;
-	AuxVariableValue &var = RM_Map[s_avModIdx][s_strArgBuffer][keyID];
-	switch (s_refMapOperationType)
-	{
-		case 0:
-			var.SetFlt(fltVal);
-			break;
-		case 1:
-			var.SetRef(refVal);
-			break;
-		case 2:
-			var.SetStr(s_strValBuffer);
-			break;
-		case 3:
-		{
-			ArrayElementR element;
-			GetElements(srcArr, &element, NULL);
-			var.SetElem(element);
-			break;
+			GetBaseParams(scriptObj);
+			s_strArgBuffer[255] = 0;
+			if (s_avIsPerm) s_dataChangedFlags |= kChangedFlag_RefMaps;
+			return &RM_Map[s_avModIdx][s_strArgBuffer][keyID];
 		}
 	}
-	if (s_avIsPerm) s_dataChangedFlags |= kChangedFlag_RefMaps;
+	return NULL;
+}
+
+bool Cmd_RefMapArraySetFloat_Execute(COMMAND_ARGS)
+{
+	TESForm *form = NULL;
+	double fltVal;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &fltVal, &form))
+	{
+		AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj);
+		if (value)
+			value->SetFlt(fltVal);
+	}
 	return true;
 }
 
-__declspec(naked) bool Cmd_RefMapArraySetFloat_Execute(COMMAND_ARGS)
+bool Cmd_RefMapArraySetRef_Execute(COMMAND_ARGS)
 {
-	__asm
+	TESForm *form = NULL, *refVal;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &refVal, &form))
 	{
-		mov		s_refMapOperationType, 0
-		jmp		RefMapArraySet_Execute
+		AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj);
+		if (value)
+			value->SetRef(refVal);
 	}
+	return true;
 }
 
-__declspec(naked) bool Cmd_RefMapArraySetRef_Execute(COMMAND_ARGS)
+bool Cmd_RefMapArraySetString_Execute(COMMAND_ARGS)
 {
-	__asm
+	TESForm *form = NULL;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer, &form))
 	{
-		mov		s_refMapOperationType, 1
-		jmp		RefMapArraySet_Execute
+		AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj);
+		if (value)
+			value->SetStr(s_strValBuffer);
 	}
+	return true;
 }
 
-__declspec(naked) bool Cmd_RefMapArraySetString_Execute(COMMAND_ARGS)
+bool Cmd_RefMapArraySetValue_Execute(COMMAND_ARGS)
 {
-	__asm
+	UInt32 arrID;
+	TESForm *form = NULL;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &arrID, &form))
 	{
-		mov		s_refMapOperationType, 2
-		jmp		RefMapArraySet_Execute
+		NVSEArrayVar *srcArr = LookupArrayByID(arrID);
+		if (srcArr && (GetArraySize(srcArr) == 1))
+		{
+			AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj);
+			if (value)
+			{
+				ArrayElementR element;
+				GetElements(srcArr, &element, NULL);
+				value->SetElem(element);
+			}
+		}
 	}
-}
-
-__declspec(naked) bool Cmd_RefMapArraySetValue_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_refMapOperationType, 3
-		jmp		RefMapArraySet_Execute
-	}
+	return true;
 }
 
 bool Cmd_RefMapArrayErase_Execute(COMMAND_ARGS)

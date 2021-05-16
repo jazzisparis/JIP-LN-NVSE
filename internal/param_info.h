@@ -335,10 +335,10 @@ ParamInfo kParams_JIP_OneString_OneOptionalInt_OneOptionalForm[] =
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_JIP_OneString_OneFloat_OneOptionalInt_OneOptionalForm[] =
+ParamInfo kParams_JIP_OneString_OneDouble_OneOptionalInt_OneOptionalForm[] =
 {
 	{"String", kParamType_String, 0},
-	{"Float", kParamType_Float, 0},
+	{"Double", kParamType_Double, 0},
 	{"Integer", kParamType_Integer, 1},
 	{"Form", kParamType_AnyForm, 1}
 };
@@ -372,10 +372,10 @@ ParamInfo kParams_JIP_OneString_OneInt_OneOptionalForm[] =
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_JIP_OneString_OneFloat_OneOptionalForm[] =
+ParamInfo kParams_JIP_OneString_OneDouble_OneOptionalForm[] =
 {
 	{"String", kParamType_String, 0},
-	{"Float", kParamType_Float, 0},
+	{"Double", kParamType_Double, 0},
 	{"Form", kParamType_AnyForm, 1}
 };
 

@@ -2210,7 +2210,7 @@ bool Cmd_GetActorTiltAngle_Execute(COMMAND_ARGS)
 	{
 		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 		if (charCtrl)
-			*result = ((axis == 'X') ? charCtrl->tiltAngleX : charCtrl->tiltAngleY) / kDblPId180;
+			*result = ((axis == 'X') ? charCtrl->tiltAngleX : charCtrl->tiltAngleY) * kDbl180dPI;
 	}
 	return true;
 }

@@ -141,6 +141,10 @@ const char *g_terminalModelDefault = NULL;
 TESObjectWEAP *g_fistsWeapon = NULL;
 TESObjectACTI *g_ashPileACTI = NULL;
 TESObjectACTI *g_gooPileACTI = NULL;
+TESGlobal *g_gameYear = NULL;
+TESGlobal *g_gameMonth = NULL;
+TESGlobal *g_gameDay = NULL;
+TESGlobal *g_gameHour = NULL;
 TESObjectMISC *g_capsItem = NULL;
 TESImageSpaceModifier *g_getHitIMOD = NULL;
 TESImageSpaceModifier *g_explosionInFaceIMOD = NULL;
@@ -191,6 +195,7 @@ float (*GetWeaponDPS)(ActorValueOwner *avOwner, TESObjectWEAP *weapon, float con
 TESTopicInfo* (*GetTopicInfo)(TESTopic *topic, bool *result, Actor *actor, Actor *target, bool arg5, UInt32 *arg6, UInt32 *arg7) = (TESTopicInfo* (*)(TESTopic*, bool*, Actor*, Actor*, bool, UInt32*, UInt32*))0x61A7D0;
 void (*IncPCMiscStat)(UInt32 statID) = (void (*)(UInt32))0x4D5C60;
 bool (*MergeScriptEvent)(TESForm *actionRef, ExtraDataList *xData, UInt32 bitMask) = (bool (*)(TESForm*, ExtraDataList*, UInt32))0x5AC750;
+ImageSpaceModifierInstanceForm* (*ApplyIMOD)(TESImageSpaceModifier *imod, float percent, NiObject *obj10) = (ImageSpaceModifierInstanceForm* (*)(TESImageSpaceModifier*, float, NiObject*))0x5299A0;
 void* (*PurgeTerminalModel)(void) = (void* (*)(void))0x7FFE00;
 TileMenu* (*ShowQuantityMenu)(int maxCount, void (*callback)(int), int defaultCount) = (TileMenu* (*)(int, void (*)(int), int))0x7ABA00;
 BSXFlags* (*GetBSXFlags)(NiNode *niNode) = (BSXFlags* (*)(NiNode*))0xC43490;
@@ -1066,23 +1071,20 @@ void TESObjectREFR::RemoveItemTarget(TESForm *itemForm, TESObjectREFR *target, S
 		if (total < 1) return;
 		if ((quantity > 0) && (quantity < total))
 			total = quantity;
-		if (itemForm->HasScript())
+		ContChangesEntry *entry = GetContainerChangesEntry(itemForm);
+		if (entry && entry->extendData)
 		{
-			ContChangesEntry *entry = GetContainerChangesEntry(itemForm);
-			if (entry && entry->extendData)
+			ExtraDataList *xData;
+			SInt32 subCount;
+			while ((total > 0) && (xData = entry->extendData->GetFirstItem()))
 			{
-				ExtraDataList *xData;
-				SInt32 subCount;
-				while ((total > 0) && (xData = entry->extendData->GetFirstItem()))
-				{
-					subCount = xData->GetCount();
-					if (subCount < 1)
-						continue;
-					if (subCount > total)
-						subCount = total;
-					RemoveItem(itemForm, xData, subCount, keepOwner, 0, target, 0, 0, 1, 0);
-					total -= subCount;
-				}
+				subCount = xData->GetCount();
+				if (subCount < 1)
+					continue;
+				if (subCount > total)
+					subCount = total;
+				RemoveItem(itemForm, xData, subCount, keepOwner, 0, target, 0, 0, 1, 0);
+				total -= subCount;
 			}
 		}
 		if (total > 0)
@@ -2214,7 +2216,7 @@ float Actor::GetRadiationLevel()
 		ExtraRadius *xRadius;
 		ExtraRadiation *xRadiation;
 		float distance;
-		for (auto iter = (*g_loadedRefrMaps)[6].Begin(); !iter.End(); ++iter)
+		for (auto iter = (*g_loadedRefrMaps)[6].Begin(); iter; ++iter)
 		{
 			if (!(refr = iter.Get())) continue;
 			xRadius = GetExtraType(&refr->extraDataList, Radius);
@@ -2463,7 +2465,8 @@ __declspec(naked) double Actor::GetKillXP()
 		push	edx
 		CALL_EAX(0x6705B0)
 		add		esp, 8
-		cvtsi2ss	xmm0, eax
+		movd	xmm0, eax
+		cvtdq2ps	xmm0, xmm0
 		mov		eax, g_thePlayer
 		push	dword ptr [eax+0x7B8]
 		push	ecx
@@ -2968,7 +2971,7 @@ __declspec(naked) NiNode* __fastcall TESObjectCELL::Get3DNode(UInt32 index)
 void TESObjectCELL::ToggleNodes(UInt32 nodeBits, UInt8 doHide)
 {
 	if (!renderData || !renderData->masterNode) return;
-	for (auto childIter = renderData->masterNode->m_children.Begin(); !childIter.End(); ++childIter)
+	for (auto childIter = renderData->masterNode->m_children.Begin(); childIter; ++childIter)
 	{
 		if (!*childIter) break;
 		if ((nodeBits & 1) && ((childIter->m_flags & 1) != doHide))
@@ -3707,7 +3710,7 @@ bool NiNode::IsMovable()
 				return true;
 		}
 	}
-	for (auto iter = m_children.Begin(); !iter.End(); ++iter)
+	for (auto iter = m_children.Begin(); iter; ++iter)
 		if (*iter && IS_NODE(*iter) && ((NiNode*)*iter)->IsMovable())
 			return true;
 	return false;
@@ -3920,7 +3923,7 @@ void NiNode::BulkSetMaterialPropertyTraitValue(UInt32 traitID, float value)
 {
 	NiAVObject *block;
 	NiMaterialProperty *matProp;
-	for (auto iter = m_children.Begin(); !iter.End(); ++iter)
+	for (auto iter = m_children.Begin(); iter; ++iter)
 	{
 		if (!(block = *iter)) continue;
 		if IS_NODE(block)
@@ -3943,14 +3946,14 @@ void NiNode::GetContactObjects(ContactObjects *contactObjs)
 				for (UInt16 count = rigidBody->contactsSize; count; count--, contactsArr++)
 					contactObjs->Append(contactsArr->contactBody);
 			if (rigidBody->constraintInst.data)
-				for (auto iter = rigidBody->constraintInst.Begin(); !iter.End(); ++iter)
+				for (auto iter = rigidBody->constraintInst.Begin(); iter; ++iter)
 					contactObjs->Append(iter->contactBody);
 		}
 		else if IS_TYPE(hWorldObj, hkpSimpleShapePhantom)
-			for (auto iter = ((hkpSimpleShapePhantom*)hWorldObj)->cdBodies.Begin(); !iter.End(); ++iter)
+			for (auto iter = ((hkpSimpleShapePhantom*)hWorldObj)->cdBodies.Begin(); iter; ++iter)
 				contactObjs->Append(iter->GetWorldObj());
 	}
-	for (auto iter = m_children.Begin(); !iter.End(); ++iter)
+	for (auto iter = m_children.Begin(); iter; ++iter)
 		if (*iter && IS_NODE(*iter)) ((NiNode*)*iter)->GetContactObjects(contactObjs);
 }
 
@@ -3958,7 +3961,7 @@ bool NiNode::HasPhantom()
 {
 	if (m_collisionObject && m_collisionObject->worldObj && (((hkpWorldObject*)m_collisionObject->worldObj->refObject)->collisionType == 2))
 		return true;
-	for (auto iter = m_children.Begin(); !iter.End(); ++iter)
+	for (auto iter = m_children.Begin(); iter; ++iter)
 		if (*iter && IS_NODE(*iter) && ((NiNode*)*iter)->HasPhantom())
 			return true;
 	return false;
@@ -3984,7 +3987,7 @@ void NiNode::GetBodyMass(float *totalMass)
 {
 	if (m_collisionObject && m_collisionObject->worldObj)
 		*totalMass += ((hkpRigidBody*)m_collisionObject->worldObj->refObject)->motion.GetBodyMass();
-	for (auto iter = m_children.Begin(); !iter.End(); ++iter)
+	for (auto iter = m_children.Begin(); iter; ++iter)
 		if (*iter && IS_NODE(*iter)) ((NiNode*)*iter)->GetBodyMass(totalMass);
 }
 
@@ -4316,17 +4319,17 @@ __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetBaseHe
 		mov		dl, [eax+4]
 		cmp		dl, kFormType_TESObjectWEAP
 		jnz		notWeapon
-		cvtsi2ss	xmm1, [eax+0x98]
+		movd	xmm1, [eax+0x98]
+		cvtdq2ps	xmm1, xmm1
 		mov		edx, 0xA
 		call	ContChangesEntry::GetWeaponModEffectValue
 		addss	xmm0, xmm1
-		mov		al, 1
 		retn
 	notWeapon:
 		cmp		dl, kFormType_TESObjectARMO
-		setz	al
 		jnz		done
-		cvtsi2ss	xmm0, [eax+0x6C]
+		movd	xmm0, [eax+0x6C]
+		cvtdq2ps	xmm0, xmm0
 		retn
 	done:
 		pxor	xmm0, xmm0
@@ -4338,6 +4341,12 @@ __declspec(naked) float ExtraContainerChanges::EntryData::GetHealthPercent()
 {
 	__asm
 	{
+		mov		eax, [ecx+8]
+		mov		dl, [eax+4]
+		mov		al, dl
+		and		al, 0x38
+		cmp		al, dl
+		jnz		invalid
 		push	esi
 		mov		esi, ecx
 		movss	xmm3, kFlt100
@@ -4354,8 +4363,6 @@ __declspec(naked) float ExtraContainerChanges::EntryData::GetHealthPercent()
 		movss	xmm2, [eax+0xC]
 		mov		ecx, esi
 		call	ContChangesEntry::GetBaseHealth
-		test	al, al
-		jz		done
 		divss	xmm2, xmm0
 		mulss	xmm2, xmm3
 		minss	xmm3, xmm2
@@ -4363,6 +4370,10 @@ __declspec(naked) float ExtraContainerChanges::EntryData::GetHealthPercent()
 		movss	[esp-4], xmm3
 		fld		dword ptr [esp-4]
 		pop		esi
+		retn
+	invalid:
+		fld1
+		fchs
 		retn
 	}
 }
@@ -5060,12 +5071,60 @@ bool InterfaceManager::IsRefHighlighted(TESObjectREFR *refr)
 	return false;
 }
 
+UnorderedMap<const char*, UInt32> s_menuNameToID({{"MessageMenu", kMenuType_Message}, {"InventoryMenu", kMenuType_Inventory}, {"StatsMenu", kMenuType_Stats},
+	{"HUDMainMenu", kMenuType_HUDMain}, {"LoadingMenu", kMenuType_Loading}, {"ContainerMenu", kMenuType_Container}, {"DialogMenu", kMenuType_Dialog},
+	{"SleepWaitMenu", kMenuType_SleepWait}, {"StartMenu", kMenuType_Start}, {"LockpickMenu", kMenuType_LockPick}, {"QuantityMenu", kMenuType_Quantity},
+	{"MapMenu", kMenuType_Map}, {"BookMenu", kMenuType_Book}, {"LevelUpMenu", kMenuType_LevelUp}, {"RepairMenu", kMenuType_Repair},
+	{"RaceSexMenu", kMenuType_RaceSex}, {"CharGenMenu", kMenuType_CharGen}, {"TextEditMenu", kMenuType_TextEdit}, {"BarterMenu", kMenuType_Barter},
+	{"SurgeryMenu", kMenuType_Surgery}, {"HackingMenu", kMenuType_Hacking}, {"VATSMenu", kMenuType_VATS}, {"ComputersMenu", kMenuType_Computers},
+	{"RepairServicesMenu", kMenuType_RepairServices}, {"TutorialMenu", kMenuType_Tutorial}, {"SpecialBookMenu", kMenuType_SpecialBook},
+	{"ItemModMenu", kMenuType_ItemMod}, {"LoveTesterMenu", kMenuType_LoveTester}, {"CompanionWheelMenu", kMenuType_CompanionWheel},
+	{"TraitSelectMenu", kMenuType_TraitSelect}, {"RecipeMenu", kMenuType_Recipe}, {"SlotMachineMenu", kMenuType_SlotMachine},
+	{"BlackjackMenu", kMenuType_Blackjack}, {"RouletteMenu", kMenuType_Roulette}, {"CaravanMenu", kMenuType_Caravan}, {"TraitMenu", kMenuType_Trait}});
+
+TileMenu* __fastcall GetMenuTile(const char *componentPath)
+{
+	UInt32 menuID = s_menuNameToID.Get(componentPath);
+	return menuID ? g_tileMenuArray[menuID - kMenuType_Min] : NULL;
+}
+
+Tile* __fastcall GetTargetComponent(const char *componentPath, Tile::Value **value = NULL)
+{
+	char *slashPos = SlashPos(componentPath);
+	if (!slashPos)
+		return GetMenuTile(componentPath);
+	*slashPos = 0;
+	Tile *component = GetMenuTile(componentPath);
+	if (!component)
+		return NULL;
+	const char *trait = NULL;
+	component = component->GetComponent(slashPos + 1, &trait);
+	if (!component)
+		return NULL;
+	if (trait)
+	{
+		if (!value || !(*value = component->GetValueName(trait)))
+			return NULL;
+	}
+	else if (value)
+		return NULL;
+	return component;
+}
+
+Menu* __fastcall GetMenuByType(UInt32 menuID)
+{
+	menuID -= kMenuType_Min;
+	if (menuID > 83) return NULL;
+	TileMenu *tileMenu = g_tileMenuArray[menuID];
+	return tileMenu ? tileMenu->menu : NULL;
+}
+
 const char kDaysPerMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
-float GameTimeGlobals::GetDaysPassed(int bgnYear, int bgnMonth, int bgnDay)
+float GetDaysPassed(int bgnYear = 2281, int bgnMonth = 9, int bgnDay = 13)
 {
 	int totalDays = 0, iter;
-	int iYear = year->data, iMonth = month->data, iDay = day->data;
+	int iYear = g_gameYear->data, iMonth = g_gameMonth->data, iDay = g_gameDay->data;
 	iYear -= bgnYear;
 	if (iYear > 0)
 	{
@@ -5086,7 +5145,7 @@ float GameTimeGlobals::GetDaysPassed(int bgnYear, int bgnMonth, int bgnDay)
 		totalDays += iDay - 1;
 	}
 	else totalDays = iDay - bgnDay;
-	return (float)totalDays + (hour->data / 24);
+	return (float)totalDays + (g_gameHour->data / 24.0F);
 }
 
 void PlayGameSound(const char *soundEDID)
@@ -5223,15 +5282,18 @@ bool SetLinkedRefID(UInt32 thisID, UInt32 linkID = 0, UInt8 modIdx = 0xFF)
 	return linkObj && IS_REFERENCE(linkObj) && thisObj->SetLinkedRef(linkObj, modIdx);
 }
 
+UInt32 s_serializedVersion = 9;
+
 class AuxVariableValue
 {
 	UInt8		type;
-	UInt8		byte01;
+	UInt8		pad01[3];
 	UInt16		alloc;
+	UInt16		length;
 	union
 	{
-		float	flt;
-		UInt32	ref;
+		double	num;
+		UInt32	refID;
 		char	*str;
 	};
 
@@ -5246,21 +5308,30 @@ class AuxVariableValue
 
 	void ReadValData()
 	{
-		if (type == 4)
+		if (type == 1)
 		{
-			UInt16 size = ReadRecord16();
-			if (size)
+			if (s_serializedVersion < 10)
 			{
-				alloc = AlignNumAlloc<char>(size + 1);
-				str = (char*)Pool_Alloc(alloc);
-				ReadRecordData(str, size);
-				str[size] = 0;
+				refID = ReadRecord32();
+				num = *(float*)&refID;
 			}
+			else ReadRecord64(&num);
+		}
+		else if (type == 2)
+		{
+			refID = ReadRecord32();
+			ResolveRefID(refID, &refID);
 		}
 		else
 		{
-			ref = ReadRecord32();
-			if (type == 2) ResolveRefID(ref, &ref);
+			length = ReadRecord16();
+			if (length)
+			{
+				alloc = AlignNumAlloc<char>(length + 1);
+				str = (char*)Pool_Alloc(alloc);
+				ReadRecordData(str, length);
+				str[length] = 0;
+			}
 		}
 	}
 
@@ -5272,31 +5343,31 @@ public:
 	~AuxVariableValue() {Clear();}
 
 	UInt8 GetType() const {return type;}
-	float GetFlt() const {return (type == 1) ? flt : 0;}
-	UInt32 GetRef() const {return (type == 2) ? ref : 0;}
+	double GetFlt() const {return (type == 1) ? num : 0;}
+	UInt32 GetRef() const {return (type == 2) ? refID : 0;}
 	const char *GetStr() const {return alloc ? str : NULL;}
 
-	void SetFlt(float value)
+	void SetFlt(double value)
 	{
 		Clear();
 		type = 1;
-		flt = value;
+		num = value;
 	}
 
 	void SetRef(TESForm *value)
 	{
 		Clear();
 		type = 2;
-		ref = value ? value->refID : 0;
+		refID = value ? value->refID : 0;
 	}
 
 	void SetStr(const char *value)
 	{
 		type = 4;
-		UInt16 size = StrLen(value);
-		if (size)
+		length = StrLen(value);
+		if (length)
 		{
-			size++;
+			UInt16 size = length + 1;
 			if (alloc < size)
 			{
 				if (alloc) Pool_Free(str, alloc);
@@ -5318,23 +5389,26 @@ public:
 
 	ArrayElementL GetAsElement() const
 	{
-		if (type == 2) return ArrayElementL(LookupFormByRefID(ref));
+		if (type == 2) return ArrayElementL(LookupFormByRefID(refID));
 		if (type == 4) return ArrayElementL(GetStr());
-		return ArrayElementL(flt);
+		return ArrayElementL(num);
 	}
 
 	void WriteValData() const
 	{
 		WriteRecord8(type);
-		if (type == 4)
+		if (type == 1)
+			WriteRecord64(&num);
+		else if (type == 2)
+			WriteRecord32(refID);
+		else
 		{
-			UInt16 size = alloc ? StrLen(str) : 0;
-			WriteRecord16(size);
-			if (size) WriteRecordData(str, size);
+			WriteRecord16(length);
+			if (length) WriteRecordData(str, length);
 		}
-		else WriteRecord32(ref);
 	}
 };
+STATIC_ASSERT(sizeof(AuxVariableValue) == 0x10);
 
 struct AuxVarValsArr : Vector<AuxVariableValue>
 {
@@ -5537,9 +5611,8 @@ class ScriptBlockIterator
 	}
 
 public:
-	bool End() const {return !length;}
-
-	void Next()
+	explicit operator bool() const {return length != 0;}
+	void operator++()
 	{
 		if (currOffset < length)
 		{
@@ -5877,7 +5950,7 @@ void JIPScriptRunner::Init()
 	s_jipScriptRunner.scrContext = g_consoleManager->scriptContext;
 	memcpy(s_scriptsPath, "*.txt", 6);
 	char *fileName;
-	for (DirectoryIterator iter(s_scriptsPathFull); !iter.End(); iter.Next())
+	for (DirectoryIterator iter(s_scriptsPathFull); iter; ++iter)
 	{
 		if (!iter.IsFile()) continue;
 		fileName = (char*)iter.Get();
@@ -6303,17 +6376,6 @@ const char kMenuIDJumpTable[] =
 	-1, -1, -1, -1, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 16, -1, -1, 17, -1, 18, 19, 20, 21, 22, 
 	23, 24, 25, 26, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 27, 28, 29, 30, -1, -1, 31, 32, 33, 34, 35
 };
-
-UnorderedMap<const char*, UInt32> s_menuNameToID({{"MessageMenu", kMenuType_Message}, {"InventoryMenu", kMenuType_Inventory}, {"StatsMenu", kMenuType_Stats},
-	{"HUDMainMenu", kMenuType_HUDMain}, {"LoadingMenu", kMenuType_Loading}, {"ContainerMenu", kMenuType_Container}, {"DialogMenu", kMenuType_Dialog},
-	{"SleepWaitMenu", kMenuType_SleepWait}, {"StartMenu", kMenuType_Start}, {"LockpickMenu", kMenuType_LockPick}, {"QuantityMenu", kMenuType_Quantity},
-	{"MapMenu", kMenuType_Map}, {"BookMenu", kMenuType_Book}, {"LevelUpMenu", kMenuType_LevelUp}, {"RepairMenu", kMenuType_Repair},
-	{"RaceSexMenu", kMenuType_RaceSex}, {"CharGenMenu", kMenuType_CharGen}, {"TextEditMenu", kMenuType_TextEdit}, {"BarterMenu", kMenuType_Barter},
-	{"SurgeryMenu", kMenuType_Surgery}, {"HackingMenu", kMenuType_Hacking}, {"VATSMenu", kMenuType_VATS}, {"ComputersMenu", kMenuType_Computers},
-	{"RepairServicesMenu", kMenuType_RepairServices}, {"TutorialMenu", kMenuType_Tutorial}, {"SpecialBookMenu", kMenuType_SpecialBook},
-	{"ItemModMenu", kMenuType_ItemMod}, {"LoveTesterMenu", kMenuType_LoveTester}, {"CompanionWheelMenu", kMenuType_CompanionWheel},
-	{"TraitSelectMenu", kMenuType_TraitSelect}, {"RecipeMenu", kMenuType_Recipe}, {"SlotMachineMenu", kMenuType_SlotMachine},
-	{"BlackjackMenu", kMenuType_Blackjack}, {"RouletteMenu", kMenuType_Roulette}, {"CaravanMenu", kMenuType_Caravan}, {"TraitMenu", kMenuType_Trait}});
 
 double s_nvseVersion = 0;
 

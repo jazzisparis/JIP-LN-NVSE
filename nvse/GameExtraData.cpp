@@ -148,7 +148,7 @@ void ExtraContainerChanges::DebugDump()
 
 	if (data && data->objList)
 	{
-		for (ExtraContainerChanges::EntryDataList::Iterator entry = data->objList->Begin(); !entry.End(); ++entry)
+		for (ExtraContainerChanges::EntryDataList::Iterator entry = data->objList->Begin(); entry; ++entry)
 		{
 			//_MESSAGE("Type: %s CountDelta: %d [%08X]", GetFullName(entry.Get()->type), entry.Get()->countDelta, entry.Get());
 			//gLog.Indent();
@@ -158,7 +158,7 @@ void ExtraContainerChanges::DebugDump()
 			}
 			else
 			{
-				for (ExtraContainerChanges::ExtendDataList::Iterator extendData = entry.Get()->extendData->Begin(); !extendData.End(); ++extendData)
+				for (ExtraContainerChanges::ExtendDataList::Iterator extendData = entry.Get()->extendData->Begin(); extendData; ++extendData)
 				{
 					//_MESSAGE("Extend Data: [%08X]", extendData.Get());
 					//gLog.Indent();

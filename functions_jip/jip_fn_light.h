@@ -120,7 +120,9 @@ bool Cmd_SetLightFlag_Execute(COMMAND_ARGS)
 	UInt32 flagID, val;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &light, &flagID, &val) && IS_ID(light, TESObjectLIGH) && (flagID <= 10))
 	{
-		light->SetFlag(1 << flagID, val != 0);
+		flagID = 1 << flagID;
+		if (val) light->lightFlags |= flagID;
+		else light->lightFlags &= ~flagID;
 		MarkLightModified(light);
 	}
 	return true;

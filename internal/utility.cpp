@@ -110,7 +110,8 @@ __declspec(naked) double __vectorcall cvtui2d(UInt32 value)
 {
 	__asm
 	{
-		cvtsi2sd	xmm0, ecx
+		movd	xmm0, ecx
+		cvtdq2pd	xmm0, xmm0
 		test	ecx, ecx
 		jns		done
 		addsd	xmm0, kValueBounds
@@ -163,8 +164,6 @@ __declspec(naked) void __fastcall NiReleaseObject(NiRefObject *toRelease)
 {
 	__asm
 	{
-		test	ecx, ecx
-		jz		done
 		lock dec dword ptr [ecx+4]
 		jg		done
 		mov		eax, [ecx]
@@ -1043,7 +1042,8 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 	intEnd:
 		test	eax, eax
 		jz		noInt
-		cvtsi2sd	xmm0, eax
+		movd	xmm0, eax
+		cvtdq2pd	xmm0, xmm0
 		jns		noOverflow
 		addsd	xmm0, kValueBounds
 	noOverflow:
@@ -1067,7 +1067,8 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 	fracEnd:
 		test	eax, eax
 		jz		addSign
-		cvtsi2sd	xmm1, eax
+		movd	xmm1, eax
+		cvtdq2pd	xmm1, xmm1
 		shl		dl, 1
 		mov		cl, dh
 		divsd	xmm1, kFactor10Div[ecx*8]
@@ -1529,17 +1530,34 @@ bool __fastcall FileExists(const char *filePath)
 	return (attr != INVALID_FILE_ATTRIBUTES) && !(attr & FILE_ATTRIBUTE_DIRECTORY);
 }
 
+FileStream::FileStream(const char *filePath)
+{
+	theFile = fopen(filePath, "rb");
+}
+
+FileStream::FileStream(const char *filePath, UInt32 inOffset)
+{
+	theFile = fopen(filePath, "rb");
+	if (theFile)
+	{
+		fseek(theFile, 0, SEEK_END);
+		if (ftell(theFile) < inOffset)
+			Close();
+		else fseek(theFile, inOffset, SEEK_SET);
+	}
+}
+
 bool FileStream::Open(const char *filePath)
 {
 	if (theFile) fclose(theFile);
-	theFile = _fsopen(filePath, "rb", 0x20);
+	theFile = fopen(filePath, "rb");
 	return theFile ? true : false;
 }
 
 bool FileStream::OpenAt(const char *filePath, UInt32 inOffset)
 {
 	if (theFile) fclose(theFile);
-	theFile = _fsopen(filePath, "rb", 0x20);
+	theFile = fopen(filePath, "rb");
 	if (!theFile) return false;
 	fseek(theFile, 0, SEEK_END);
 	if (ftell(theFile) < inOffset)
@@ -1558,7 +1576,7 @@ bool FileStream::OpenWrite(char *filePath, bool append)
 	{
 		if (append)
 		{
-			theFile = _fsopen(filePath, "ab", 0x20);
+			theFile = fopen(filePath, "ab");
 			if (!theFile) return false;
 			fputc('\n', theFile);
 			fflush(theFile);
@@ -1566,14 +1584,7 @@ bool FileStream::OpenWrite(char *filePath, bool append)
 		}
 	}
 	else MakeAllDirs(filePath);
-	theFile = _fsopen(filePath, "wb", 0x20);
-	return theFile ? true : false;
-}
-
-bool FileStream::Create(const char *filePath)
-{
-	if (theFile) fclose(theFile);
-	theFile = _fsopen(filePath, "wb", 0x20);
+	theFile = fopen(filePath, "wb");
 	return theFile ? true : false;
 }
 
@@ -1692,8 +1703,8 @@ void PrintDebug(const char *fmt, ...)
 LineIterator::LineIterator(const char *filePath, char *buffer)
 {
 	dataPtr = buffer;
-	FileStream sourceFile;
-	if (!sourceFile.Open(filePath))
+	FileStream sourceFile(filePath);
+	if (!sourceFile)
 	{
 		*buffer = 3;
 		return;
@@ -1712,7 +1723,7 @@ LineIterator::LineIterator(const char *filePath, char *buffer)
 		dataPtr++;
 }
 
-void LineIterator::Next()
+void LineIterator::operator++()
 {
 	while (*dataPtr)
 		dataPtr++;
@@ -1722,8 +1733,8 @@ void LineIterator::Next()
 
 bool __fastcall FileToBuffer(const char *filePath, char *buffer)
 {
-	FileStream srcFile;
-	if (!srcFile.Open(filePath)) return false;
+	FileStream srcFile(filePath);
+	if (!srcFile) return false;
 	UInt32 length = srcFile.GetLength();
 	if (!length) return false;
 	if (length > kMaxMessageLength)
@@ -1738,7 +1749,7 @@ extern char s_strArgBuffer[0x4000];
 void ClearFolder(char *pathEndPtr)
 {
 	DirectoryIterator dirIter(s_strArgBuffer);
-	while (!dirIter.End())
+	while (dirIter)
 	{
 		if (dirIter.IsFolder())
 			ClearFolder(StrCopy(StrCopy(pathEndPtr - 1, dirIter.Get()), "\\*"));
@@ -1747,7 +1758,7 @@ void ClearFolder(char *pathEndPtr)
 			StrCopy(pathEndPtr - 1, dirIter.Get());
 			remove(s_strArgBuffer);
 		}
-		dirIter.Next();
+		++dirIter;
 	}
 	dirIter.Close();
 	*(pathEndPtr - 1) = 0;

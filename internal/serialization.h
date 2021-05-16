@@ -165,11 +165,11 @@ void LoadGameCallback(void*)
 	UInt8 changedFlags = s_dataChangedFlags;
 	DoLoadGameCleanup();
 
-	UInt32 type, version, length, buffer4, refID;
+	UInt32 type, length, buffer4, refID, skipSize;
 	UInt8 buffer1, modIdx;
 	UInt16 nRecs, nRefs, nVars;
 
-	while (GetNextRecordInfo(&type, &version, &length))
+	while (GetNextRecordInfo(&type, &s_serializedVersion, &length))
 	{
 		switch (type)
 		{
@@ -213,6 +213,7 @@ void LoadGameCallback(void*)
 				AuxVarVarsMap *aVarsMap;
 				AuxVarValsArr *valsArr;
 				UInt16 nElems;
+				skipSize = (s_serializedVersion < 10) ? 4 : 8;
 				nRecs = ReadRecord16();
 				while (nRecs)
 				{
@@ -247,9 +248,11 @@ void LoadGameCallback(void*)
 									if (!valsArr) valsArr = aVarsMap->Emplace(s_strArgBuffer, nElems);
 									valsArr->Append(buffer1);
 								}
-								else if (buffer1 == 4)
-									SkipNBytes(ReadRecord16());
-								else SkipNBytes(4);
+								else if (buffer1 == 1)
+									SkipNBytes(skipSize);
+								else if (buffer1 == 2)
+									SkipNBytes(4);
+								else SkipNBytes(ReadRecord16());
 								nElems--;
 							}
 							nVars--;
@@ -264,6 +267,7 @@ void LoadGameCallback(void*)
 				if (!(changedFlags & kChangedFlag_RefMaps)) continue;
 				RefMapVarsMap *rVarsMap;
 				RefMapIDsMap *idsMap;
+				skipSize = (s_serializedVersion < 10) ? 4 : 8;
 				nRecs = ReadRecord16();
 				while (nRecs)
 				{
@@ -293,9 +297,11 @@ void LoadGameCallback(void*)
 								}
 								idsMap->Emplace(refID, buffer1);
 							}
-							else if (buffer1 == 4)
-								SkipNBytes(ReadRecord16());
-							else SkipNBytes(4);
+							else if (buffer1 == 1)
+								SkipNBytes(skipSize);
+							else if (buffer1 == 2)
+								SkipNBytes(4);
+							else SkipNBytes(ReadRecord16());
 							nRefs--;
 						}
 						nVars--;
@@ -409,7 +415,7 @@ void SaveGameCallback(void*)
 	}
 	if (buffer2 = s_auxVariablesPerm.Size())
 	{
-		WriteRecord('VAPJ', 9, &buffer2, 2);
+		WriteRecord('VAPJ', 10, &buffer2, 2);
 		for (auto avModIt = s_auxVariablesPerm.Begin(); avModIt; ++avModIt)
 		{
 			WriteRecord8(avModIt.Key());
@@ -432,7 +438,7 @@ void SaveGameCallback(void*)
 	}
 	if (buffer2 = s_refMapArraysPerm.Size())
 	{
-		WriteRecord('MRPJ', 9, &buffer2, 2);
+		WriteRecord('MRPJ', 10, &buffer2, 2);
 		for (auto rmModIt = s_refMapArraysPerm.Begin(); rmModIt; ++rmModIt)
 		{
 			WriteRecord8(rmModIt.Key());
@@ -531,6 +537,8 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 		case NVSEMessagingInterface::kMessage_PreLoadGame:
 			CleanMLCallbacks();
 			s_gameLoadFlagLN = true;
+			HOOK_SET(OnRagdoll, false);
+			s_onRagdollEventScripts.Clear();
 			s_pcCurrCell0 = NULL;
 			s_pcCurrCell = NULL;
 			s_lastInterior = NULL;

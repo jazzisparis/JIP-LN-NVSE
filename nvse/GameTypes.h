@@ -176,35 +176,20 @@ public:
 		Node	*m_curr;
 
 	public:
-		Iterator operator++()
-		{
-			if (m_curr) m_curr = m_curr->next;
-			return *this;
-		}
-		bool End() const {return !m_curr || (!m_curr->data && !m_curr->next);}
+		explicit operator bool() const {return m_curr != NULL;}
+		void operator++() {m_curr = m_curr->next;}
+
+		Item *Get() const {return m_curr->data;}
 		Item* operator->() const {return m_curr->data;}
 		Item*& operator*() const {return m_curr->data;}
+
 		const Iterator& operator=(const Iterator &rhs)
 		{
 			m_curr = rhs.m_curr;
 			return *this;
 		}
-		Item *Get() const {return m_curr->data;}
-		void Next() {if (m_curr) m_curr = m_curr->next;}
-		void Find(Item *_item)
-		{
-			while (m_curr)
-			{
-				if (m_curr->data == _item) break;
-				m_curr = m_curr->next;
-			}
-		}
 
 		Iterator(Node *node = NULL) : m_curr(node) {}
-		Iterator(tList &_list) : m_curr(&_list.m_listHead) {}
-		Iterator(tList *_list) : m_curr(&_list->m_listHead) {}
-		Iterator(tList &_list, Item *_item) : m_curr(&_list.m_listHead) {Find(_item);}
-		Iterator(tList *_list, Item *_item) : m_curr(&_list->m_listHead) {Find(_item);}
 	};
 	
 	const Iterator Begin() const {return Iterator(Head());}
@@ -660,7 +645,7 @@ struct BSSimpleArray
 		UInt32		count;
 
 	public:
-		bool End() const {return !count;}
+		explicit operator bool() const {return count != 0;}
 		void operator++()
 		{
 			pData++;

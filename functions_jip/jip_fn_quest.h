@@ -242,7 +242,7 @@ bool Cmd_GetObjectiveTeleportLinks_Execute(COMMAND_ARGS)
 		if (quest != g_thePlayer->activeQuest)
 			ThisCall(0x952D60, g_thePlayer, target->target, &target->data, 1);
 		s_tempElements.Clear();
-		for (auto lnkIter = target->data.teleportLinks.Begin(); !lnkIter.End(); ++lnkIter)
+		for (auto lnkIter = target->data.teleportLinks.Begin(); lnkIter; ++lnkIter)
 			s_tempElements.Append(lnkIter.Get().door);
 		s_tempElements.Append(target->target);
 		AppendElement(linksArr, ArrayElementL(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj)));

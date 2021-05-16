@@ -108,7 +108,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList)
 		}
 		else
 		{
-			for (auto mIter = (*g_allFormsMap)->Begin(); !mIter.End(); ++mIter)
+			for (auto mIter = (*g_allFormsMap)->Begin(); mIter; ++mIter)
 			{
 				form = mIter.Get();
 				if (!form || (form->typeID != formType) || ((index != -1) && (index != form->modIndex))) continue;

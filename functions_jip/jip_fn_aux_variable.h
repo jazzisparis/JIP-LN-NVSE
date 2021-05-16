@@ -7,7 +7,7 @@ DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetRef, AuxVarGetRef, , 0, 3, kParams
 DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetString, AuxVarGetStr, , 0, 3, kParams_JIP_OneString_OneOptionalInt_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetAsArray, AuxVarGetAsArr, , 0, 2, kParams_JIP_OneString_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetAll, AuxVarGetAll, , 0, 2, kParams_JIP_OneInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetFloat, AuxVarSetFlt, , 0, 4, kParams_JIP_OneString_OneFloat_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetFloat, AuxVarSetFlt, , 0, 4, kParams_JIP_OneString_OneDouble_OneOptionalInt_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetRef, AuxVarSetRef, , 0, 4, kParams_JIP_OneString_OneForm_OneOptionalInt_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetString, AuxVarSetStr, , 0, 4, kParams_JIP_TwoStrings_OneOptionalInt_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetFromArray, AuxVarSetFromArr, , 0, 3, kParams_JIP_OneString_OneInt_OneOptionalForm);
@@ -57,9 +57,64 @@ bool Cmd_AuxiliaryVariableGetSize_Execute(COMMAND_ARGS)
 	return true;
 }
 
-UInt8 s_auxVarOperationType = 0;
+bool Cmd_AuxiliaryVariableGetType_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	SInt32 idx = 0;
+	TESForm *form = NULL;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &idx, &form) && (idx >= 0))
+	{
+		UInt32 ownerID = GetSubjectID(form, thisObj);
+		if (ownerID)
+		{
+			GetBaseParams(scriptObj);
+			AuxVariableValue *value = AVGetValue(ownerID, idx);
+			if (value)
+				*result = value->GetType();
+		}
+	}
+	return true;
+}
 
-bool AuxiliaryVariableGet_Execute(COMMAND_ARGS)
+bool Cmd_AuxiliaryVariableGetFloat_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	SInt32 idx = 0;
+	TESForm *form = NULL;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &idx, &form) && (idx >= 0))
+	{
+		UInt32 ownerID = GetSubjectID(form, thisObj);
+		if (ownerID)
+		{
+			GetBaseParams(scriptObj);
+			AuxVariableValue *value = AVGetValue(ownerID, idx);
+			if (value)
+				*result = value->GetFlt();
+		}
+	}
+	return true;
+}
+
+bool Cmd_AuxiliaryVariableGetRef_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	SInt32 idx = 0;
+	TESForm *form = NULL;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &idx, &form) && (idx >= 0))
+	{
+		UInt32 ownerID = GetSubjectID(form, thisObj);
+		if (ownerID)
+		{
+			GetBaseParams(scriptObj);
+			AuxVariableValue *value = AVGetValue(ownerID, idx);
+			if (value)
+				REFR_RES = value->GetRef();
+		}
+	}
+	return true;
+}
+
+bool Cmd_AuxiliaryVariableGetString_Execute(COMMAND_ARGS)
 {
 	const char *resStr = NULL;
 	SInt32 idx = 0;
@@ -72,63 +127,11 @@ bool AuxiliaryVariableGet_Execute(COMMAND_ARGS)
 			GetBaseParams(scriptObj);
 			AuxVariableValue *value = AVGetValue(ownerID, idx);
 			if (value)
-			{
-				switch (s_auxVarOperationType)
-				{
-				case 0:
-					*result = value->GetType();
-					return true;
-				case 1:
-					*result = value->GetFlt();
-					return true;
-				case 2:
-					*(UInt64*)result = value->GetRef();
-					return true;
-				default:
-					resStr = value->GetStr();
-				}
-			}
+				resStr = value->GetStr();
 		}
 	}
-	if (s_auxVarOperationType == 3) AssignString(PASS_COMMAND_ARGS, resStr);
-	else *result = 0;
+	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
-}
-
-__declspec(naked) bool Cmd_AuxiliaryVariableGetType_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_auxVarOperationType, 0
-		jmp		AuxiliaryVariableGet_Execute
-	}
-}
-
-__declspec(naked) bool Cmd_AuxiliaryVariableGetFloat_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_auxVarOperationType, 1
-		jmp		AuxiliaryVariableGet_Execute
-	}
-}
-
-__declspec(naked) bool Cmd_AuxiliaryVariableGetRef_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_auxVarOperationType, 2
-		jmp		AuxiliaryVariableGet_Execute
-	}
-}
-
-__declspec(naked) bool Cmd_AuxiliaryVariableGetString_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_auxVarOperationType, 3
-		jmp		AuxiliaryVariableGet_Execute
-	}
 }
 
 bool Cmd_AuxiliaryVariableGetAsArray_Execute(COMMAND_ARGS)
@@ -174,70 +177,75 @@ bool Cmd_AuxiliaryVariableGetAll_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool AuxiliaryVariableSet_Execute(COMMAND_ARGS)
+AuxVariableValue* __fastcall AuxVarAddValue(TESForm *form, TESObjectREFR *thisObj, Script *scriptObj, SInt32 idx)
+{
+	if (s_strArgBuffer[0])
+	{
+		UInt32 ownerID = GetSubjectID(form, thisObj);
+		if (ownerID)
+		{
+			GetBaseParams(scriptObj);
+			AuxVariableValue *value = AVGetValue(ownerID, idx, true);
+			if (value)
+			{
+				if (s_avIsPerm) s_dataChangedFlags |= kChangedFlag_AuxVars;
+				return value;
+			}
+		}
+	}
+	return NULL;
+}
+
+bool Cmd_AuxiliaryVariableSetFloat_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	float fltVal;
+	double fltVal;
 	SInt32 idx = 0;
-	TESForm *refVal, *form = NULL;
-	switch (s_auxVarOperationType)
+	TESForm *form = NULL;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &fltVal, &idx, &form))
 	{
-	case 0:
-		if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &fltVal, &idx, &form)) return true;
-		break;
-	case 1:
-		if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &refVal, &idx, &form)) return true;
-		break;
-	default:
-		if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer, &idx, &form)) return true;
+		AuxVariableValue *value = AuxVarAddValue(form, thisObj, scriptObj, idx);
+		if (value)
+		{
+			value->SetFlt(fltVal);
+			*result = 1;
+		}
 	}
-	if (!s_strArgBuffer[0]) return true;
-	UInt32 ownerID = GetSubjectID(form, thisObj);
-	if (!ownerID) return true;
-	GetBaseParams(scriptObj);
-	AuxVariableValue *value = AVGetValue(ownerID, idx, true);
-	if (!value) return true;
-	switch (s_auxVarOperationType)
-	{
-	case 0:
-		value->SetFlt(fltVal);
-		break;
-	case 1:
-		value->SetRef(refVal);
-		break;
-	default:
-		value->SetStr(s_strValBuffer);
-	}
-	*result = 1;
-	if (s_avIsPerm) s_dataChangedFlags |= kChangedFlag_AuxVars;
 	return true;
 }
 
-__declspec(naked) bool Cmd_AuxiliaryVariableSetFloat_Execute(COMMAND_ARGS)
+bool Cmd_AuxiliaryVariableSetRef_Execute(COMMAND_ARGS)
 {
-	__asm
+	*result = 0;
+	SInt32 idx = 0;
+	TESForm *refVal, *form = NULL;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &refVal, &idx, &form))
 	{
-		mov		s_auxVarOperationType, 0
-		jmp		AuxiliaryVariableSet_Execute
+		AuxVariableValue *value = AuxVarAddValue(form, thisObj, scriptObj, idx);
+		if (value)
+		{
+			value->SetRef(refVal);
+			*result = 1;
+		}
 	}
+	return true;
 }
 
-__declspec(naked) bool Cmd_AuxiliaryVariableSetRef_Execute(COMMAND_ARGS)
+bool Cmd_AuxiliaryVariableSetString_Execute(COMMAND_ARGS)
 {
-	__asm
+	*result = 0;
+	SInt32 idx = 0;
+	TESForm *form = NULL;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer, &idx, &form) && s_strArgBuffer[0])
 	{
-		mov		s_auxVarOperationType, 1
-		jmp		AuxiliaryVariableSet_Execute
+		AuxVariableValue *value = AuxVarAddValue(form, thisObj, scriptObj, idx);
+		if (value)
+		{
+			value->SetStr(s_strValBuffer);
+			*result = 1;
+		}
 	}
-}
-
-__declspec(naked) bool Cmd_AuxiliaryVariableSetString_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_auxVarOperationType, 2
-		jmp		AuxiliaryVariableSet_Execute
-	}
+	return true;
 }
 
 bool Cmd_AuxiliaryVariableSetFromArray_Execute(COMMAND_ARGS)

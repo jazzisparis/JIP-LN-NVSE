@@ -92,11 +92,11 @@ bool Cmd_ReadArrayFromFile_Execute(COMMAND_ARGS)
 		return true;
 	ReplaceChr(s_strArgBuffer, '/', '\\');
 	LineIterator lineIter(s_strArgBuffer, s_strValBuffer);
-	if (lineIter.End()) return true;
+	if (!lineIter) return true;
 	NVSEArrayVar *mainArr = CreateArray(NULL, 0, scriptObj);
 	char *dataPtr = lineIter.Get(), *pos;
-	lineIter.Next();
-	if (lineIter.End())
+	++lineIter;
+	if (!lineIter)
 	{
 		do
 		{
@@ -124,7 +124,7 @@ bool Cmd_ReadArrayFromFile_Execute(COMMAND_ARGS)
 		do
 		{
 			dataPtr = lineIter.Get();
-			lineIter.Next();
+			++lineIter;
 			for (UInt32 column = 0; column < numColumns; column++)
 			{
 				if (*dataPtr) pos = GetNextToken(dataPtr, '\t');
@@ -132,7 +132,7 @@ bool Cmd_ReadArrayFromFile_Execute(COMMAND_ARGS)
 				dataPtr = pos;
 			}
 		}
-		while (!lineIter.End());
+		while (lineIter);
 	}
 	if (GetArraySize(mainArr)) AssignCommandResult(mainArr, result);
 	return true;
@@ -214,8 +214,8 @@ bool Cmd_ReadStringFromFile_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &startAt, &lineCount))
 	{
 		ReplaceChr(s_strArgBuffer, '/', '\\');
-		FileStream sourceFile;
-		if (sourceFile.Open(s_strArgBuffer))
+		FileStream sourceFile(s_strArgBuffer);
+		if (sourceFile)
 		{
 			if (startAt) startAt--;
 			char data;
@@ -441,8 +441,8 @@ bool Cmd_GetPluginHeaderVersion_Execute(COMMAND_ARGS)
 	*result = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, s_dataPath))
 	{
-		FileStream sourceFile;
-		if (sourceFile.OpenAt(s_dataPathFull, 0x1E))
+		FileStream sourceFile(s_dataPathFull, 0x1E);
+		if (sourceFile)
 		{
 			float version;
 			sourceFile.ReadBuf(&version, 4);

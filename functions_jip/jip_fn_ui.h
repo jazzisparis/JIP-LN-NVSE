@@ -58,43 +58,8 @@ DEFINE_COMMAND_PLUGIN(AddTileFromTemplate, , 0, 21, kParams_FormatString);
 DEFINE_COMMAND_PLUGIN(SetUIFloatGradual, , 0, 5, kParams_JIP_OneString_ThreeOptionalFloats_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(CloseActiveMenu, , 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ShowLevelUpMenuEx, , 0, 1, kParams_OneInt);
-
-TileMenu* __fastcall GetMenuTile(const char *componentPath)
-{
-	UInt32 menuID = s_menuNameToID.Get(componentPath);
-	return menuID ? g_tileMenuArray[menuID - kMenuType_Min] : NULL;
-}
-
-Tile* __fastcall GetTargetComponent(const char *componentPath, Tile::Value **value = NULL)
-{
-	char *slashPos = SlashPos(componentPath);
-	if (!slashPos)
-		return GetMenuTile(componentPath);
-	*slashPos = 0;
-	Tile *component = GetMenuTile(componentPath);
-	if (!component)
-		return NULL;
-	const char *trait = NULL;
-	component = component->GetComponent(slashPos + 1, &trait);
-	if (!component)
-		return NULL;
-	if (trait)
-	{
-		if (!value || !(*value = component->GetValueName(trait)))
-			return NULL;
-	}
-	else if (value)
-		return NULL;
-	return component;
-}
-
-Menu* __fastcall GetMenuByType(UInt32 menuID)
-{
-	menuID -= kMenuType_Min;
-	if (menuID > 83) return NULL;
-	TileMenu *tileMenu = g_tileMenuArray[menuID];
-	return tileMenu ? tileMenu->menu : NULL;
-}
+DEFINE_COMMAND_PLUGIN(AttachUIXML, , 1, 2, kParams_TwoStrings);
+DEFINE_COMMAND_PLUGIN(AttachUIComponent, , 1, 22, kParams_JIP_OneString_OneFormatString);
 
 bool Cmd_IsComponentLoaded_Execute(COMMAND_ARGS)
 {
@@ -115,7 +80,14 @@ bool Cmd_InjectUIXML_Execute(COMMAND_ARGS)
 	return true;
 }
 
-const char kComponentTempXML[] = "jip_temp.xml";
+Tile* __stdcall InjectUIComponent(Tile *parentTile, char *dataStr)
+{
+	FILE *tempXML = fopen("jip_temp.xml", "wb");
+	if (!tempXML) return NULL;
+	fputs(dataStr, tempXML);
+	fclose(tempXML);
+	return parentTile->ReadXML("jip_temp.xml");
+}
 
 bool Cmd_InjectUIComponent_Execute(COMMAND_ARGS)
 {
@@ -123,16 +95,7 @@ bool Cmd_InjectUIComponent_Execute(COMMAND_ARGS)
 	if (ExtractFormatStringArgs(1, s_strValBuffer, EXTRACT_ARGS_EX, kCommandInfo_InjectUIComponent.numParams, &s_strArgBuffer))
 	{
 		Tile *component = GetTargetComponent(s_strArgBuffer);
-		if (component)
-		{
-			FileStream tempFile;
-			if (tempFile.Create(kComponentTempXML))
-			{
-				tempFile.WriteStr(s_strValBuffer);
-				tempFile.Close();
-				*result = component->ReadXML(kComponentTempXML) ? 1 : 0;
-			}
-		}
+		*result = (component && InjectUIComponent(component, s_strValBuffer)) ? 1 : 0;
 	}
 	return true;
 }
@@ -1707,6 +1670,44 @@ bool Cmd_ShowLevelUpMenuEx_Execute(COMMAND_ARGS)
 		{
 			menu->numSkillPointsToAssign = skillPoints;
 			ThisCall(0x785830, menu, 0);
+		}
+	}
+	return true;
+}
+
+bool Cmd_AttachUIXML_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer))
+	{
+		NiNode *targetNode = thisObj->GetNode(s_strArgBuffer);
+		if (targetNode)
+		{
+			Tile *component = g_HUDMainMenu->tile->ReadXML(s_strValBuffer);
+			if (component && component->node)
+			{
+				targetNode->AddObject(component->node, 1);
+				*result = 1;
+			}
+		}
+	}
+	return true;
+}
+
+bool Cmd_AttachUIComponent_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	if (ExtractFormatStringArgs(1, s_strValBuffer, EXTRACT_ARGS_EX, kCommandInfo_AttachUIComponent.numParams, &s_strArgBuffer))
+	{
+		NiNode *targetNode = thisObj->GetNode(s_strArgBuffer);
+		if (targetNode)
+		{
+			Tile *component = InjectUIComponent(g_HUDMainMenu->tile, s_strValBuffer);
+			if (component && component->node)
+			{
+				targetNode->AddObject(component->node, 1);
+				*result = 1;
+			}
 		}
 	}
 	return true;

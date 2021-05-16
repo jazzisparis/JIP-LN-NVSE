@@ -288,7 +288,7 @@ void InitSettingMaps()
 {
 	GameSettingCollection *gameSettings = *(GameSettingCollection**)0x11C8048;
 	Setting *setting;
-	for (auto gstIter = gameSettings->settingMap.Begin(); !gstIter.End(); ++gstIter)
+	for (auto gstIter = gameSettings->settingMap.Begin(); gstIter; ++gstIter)
 	{
 		setting = gstIter.Get();
 		if (setting && setting->name)

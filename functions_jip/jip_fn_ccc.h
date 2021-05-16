@@ -49,10 +49,10 @@ bool Cmd_CCCOnLoad_Execute(COMMAND_ARGS)
 	char *dataPtr, *delim, *pathStr;
 	LineIterator lineIter("Data\\Config\\ccc_avatars.ini", s_strArgBuffer);
 	index = 0;
-	while (!lineIter.End())
+	while (lineIter)
 	{
 		dataPtr = lineIter.Get();
-		lineIter.Next();
+		++lineIter;
 		delim = GetNextToken(dataPtr, '=');
 		pathStr = (char*)malloc(StrLen(delim) + 28);
 		memcpy(StrCopy(StrLenCopy(pathStr, "jazzisparis\\ccc\\avatar_", 23), delim), ".dds", 5);
@@ -61,7 +61,7 @@ bool Cmd_CCCOnLoad_Execute(COMMAND_ARGS)
 		index++;
 	}
 
-	for (DirectoryIterator iter("Data\\textures\\jazzisparis\\ccc\\avatar_*.dds"); !iter.End(); iter.Next())
+	for (DirectoryIterator iter("Data\\textures\\jazzisparis\\ccc\\avatar_*.dds"); iter; ++iter)
 	{
 		if (!iter.IsFile()) continue;
 		delim = const_cast<char*>(iter.Get());

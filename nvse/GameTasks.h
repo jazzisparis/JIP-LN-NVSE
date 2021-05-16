@@ -322,7 +322,7 @@ public:
 	public:
 		Iterator(LockFreeMap &_table) : table(&_table), bucket(table->buckets), entry(NULL) {FindNonEmpty();}
 
-		bool End() const {return !entry;}
+		explicit operator bool() const {return entry != NULL;}
 		void operator++()
 		{
 			entry = entry->next;

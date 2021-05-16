@@ -2012,8 +2012,8 @@ class ImageSpaceModifierInstance : public NiObject
 public:
 	virtual void	Unk_23(void);
 	virtual void	Unk_24(void);
-	virtual void	Unk_25(void);
-	virtual void	Unk_26(UInt32 arg);
+	virtual ImageSpaceModifierInstanceForm	*GetInstanceForm();
+	virtual void	Unk_26(char *buffer);
 
 	UInt8					hidden;			// 08
 	UInt8					pad09[3];		// 09
@@ -3188,8 +3188,6 @@ struct GameTimeGlobals
 	UInt32			unk28;			// 28
 	float			lastUpdHour;	// 2C
 	UInt32			initialized;	// 30
-
-	float GetDaysPassed(int bgnYear = 2281, int bgnMonth = 9, int bgnDay = 13);
 };
 
 // 10

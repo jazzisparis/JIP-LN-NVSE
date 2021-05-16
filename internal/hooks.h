@@ -4229,6 +4229,40 @@ __declspec(naked) int __fastcall GetMouseMovementHook(OSInputGlobals *inputGloba
 	}
 }
 
+__declspec(naked) void __fastcall ClearHUDOrphanedTiles(HUDMainMenu *hudMain)
+{
+	__asm
+	{
+		push	esi
+		push	ecx
+		mov		eax, [ecx+4]
+		mov		esi, [eax+4]
+		ALIGN 16
+	iterHead:
+		test	esi, esi
+		jz		done
+		mov		ecx, [esi+8]
+		mov		esi, [esi]
+		test	ecx, ecx
+		jz		iterHead
+		mov		eax, [ecx+0x2C]
+		test	eax, eax
+		jz		iterHead
+		cmp		dword ptr [eax+0x18], 0
+		jnz		iterHead
+		push	1
+		mov		eax, [ecx]
+		call	dword ptr [eax]
+		jmp		iterHead
+		ALIGN 16
+	done:
+		pop		ecx
+		CALL_EAX(0x77DA60)
+		pop		esi
+		retn
+	}
+}
+
 UnorderedMap<const char*, UInt32> s_eventMasks({{"OnActivate", 0}, {"OnAdd", 1}, {"OnEquip", 2}, {"OnActorEquip", 2}, {"OnDrop", 4}, {"OnUnequip", 8}, {"OnActorUnequip", 8},
 	{"OnDeath", 0x10}, {"OnMurder", 0x20}, {"OnCombatEnd", 0x40}, {"OnHit", 0x80}, {"OnHitWith", 0x100}, {"OnPackageStart", 0x200}, {"OnPackageDone", 0x400},
 	{"OnPackageChange", 0x800}, {"OnLoad", 0x1000}, {"OnMagicEffectHit", 0x2000}, {"OnSell", 0x4000}, {"OnStartCombat", 0x8000}, {"OnOpen", 0x10000}, {"OnClose", 0x20000},
@@ -4320,6 +4354,7 @@ void InitJIPHooks()
 	WriteRelJump(0x87F427, (UInt32)IsActorEssentialHook);
 	WritePushRetRelJump(0x524014, 0x524042, (UInt32)FireWeaponWobbleHook);
 	WriteRelJump(0xA239E0, (UInt32)GetMouseMovementHook);
+	WriteRelCall(0x7704AE, (UInt32)ClearHUDOrphanedTiles);
 
 	PrintLog("> JIP hooks initialized successfully.");
 }

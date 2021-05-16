@@ -2335,12 +2335,6 @@ public:
 	TESSound					*sound;			// 0B8
 	UInt32						padBC[3];		// 0BC
 
-	void SetFlag(UInt32 pFlag, bool bEnable)
-	{
-		if (bEnable) lightFlags |= pFlag;
-		else lightFlags &= ~pFlag;
-	}
-
 	/*__forceinline NiPointLight *CreatePointLight(TESObjectREFR *targetRef, NiNode *targetNode, bool forceDynamic)
 	{
 		return ThisCall<NiPointLight*>(0x50D810, this, targetRef, targetNode, forceDynamic);

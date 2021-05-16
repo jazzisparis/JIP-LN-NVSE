@@ -90,7 +90,7 @@ bool Cmd_SetSoundTraitNumeric_Execute(COMMAND_ARGS)
 			intVal = -100;
 		sound->frequencyAdj = intVal;
 		val = GetFrequencyModifier(sound);
-		for (auto sndIter = g_audioManager->playingSounds.Begin(); !sndIter.End(); ++sndIter)
+		for (auto sndIter = g_audioManager->playingSounds.Begin(); sndIter; ++sndIter)
 		{
 			gameSound = sndIter.Get();
 			if (gameSound && (gameSound->sourceSound == sound))
@@ -106,7 +106,7 @@ bool Cmd_SetSoundTraitNumeric_Execute(COMMAND_ARGS)
 			intVal = 10000;
 		else intVal *= 100;
 		sound->staticAttenuation = intVal;
-		for (auto sndIter = g_audioManager->playingSounds.Begin(); !sndIter.End(); ++sndIter)
+		for (auto sndIter = g_audioManager->playingSounds.Begin(); sndIter; ++sndIter)
 		{
 			gameSound = sndIter.Get();
 			if (gameSound && (gameSound->sourceSound == sound))
@@ -209,7 +209,7 @@ bool Cmd_IsSoundPlaying_Execute(COMMAND_ARGS)
 		{
 			NiAVObject *refNode = refr->GetNiNode();
 			if (!refNode) return true;
-			for (; !sndIter.End(); ++sndIter)
+			for (; sndIter; ++sndIter)
 			{
 				gameSound = sndIter.Get();
 				if (!gameSound || (gameSound->sourceSound != soundForm) || (refNode != g_audioManager->soundPlayingObjects.Lookup(sndIter.Key())))
@@ -220,7 +220,7 @@ bool Cmd_IsSoundPlaying_Execute(COMMAND_ARGS)
 		}
 		else
 		{
-			for (; !sndIter.End(); ++sndIter)
+			for (; sndIter; ++sndIter)
 			{
 				gameSound = sndIter.Get();
 				if (!gameSound || (gameSound->sourceSound != soundForm))
@@ -242,7 +242,7 @@ bool Cmd_GetSoundPlayers_Execute(COMMAND_ARGS)
 		s_tempElements.Clear();
 		BSGameSound *gameSound;
 		BSFadeNode *fadeNode;
-		for (auto sndIter = g_audioManager->playingSounds.Begin(); !sndIter.End(); ++sndIter)
+		for (auto sndIter = g_audioManager->playingSounds.Begin(); sndIter; ++sndIter)
 		{
 			gameSound = sndIter.Get();
 			if (!gameSound || (gameSound->sourceSound != soundForm))
@@ -263,7 +263,7 @@ bool Cmd_StopSound_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm))
 	{
 		BSGameSound *gameSound;
-		for (auto sndIter = g_audioManager->playingSounds.Begin(); !sndIter.End(); ++sndIter)
+		for (auto sndIter = g_audioManager->playingSounds.Begin(); sndIter; ++sndIter)
 		{
 			gameSound = sndIter.Get();
 			if (!gameSound || (gameSound->sourceSound != soundForm))

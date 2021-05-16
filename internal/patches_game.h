@@ -164,6 +164,35 @@ __declspec(naked) bool SetNPCModelHook()
 	}
 }
 
+__declspec(naked) void MarkCreatureNoFallHook()
+{
+	__asm
+	{
+		mov		edx, [ecx+0x20]
+		test	edx, edx
+		jz		done
+		cmp		byte ptr [edx+4], kFormType_TESCreature
+		jnz		skipFlag
+		test	byte ptr [edx+0x36], 0x80
+		jz		skipFlag
+		mov		edx, [ebp-0x64]
+		test	edx, edx
+		jz		skipFlag
+		or		byte ptr [edx+0x417], 0x40
+	skipFlag:
+		cmp		[ecx+0x1B0], 0
+		jnz		done
+		mov		edx, [eax+0x68]
+		cmp		dword ptr [edx+0x434], 0
+		jnz		done
+		push	ecx
+		mov		ecx, edx
+		CALL_EAX(0x8E4E50)
+	done:
+		retn
+	}
+}
+
 __declspec(naked) bool DetectionTeammateHook()
 {
 	__asm
@@ -1051,7 +1080,8 @@ __declspec(naked) void ProcessGradualSetFloatHook()
 		mov		ecx, [ecx]
 		mov		edx, eax
 		sub		eax, [ecx+8]
-		cvtsi2ss	xmm0, eax
+		movd	xmm0, eax
+		cvtdq2ps	xmm0, xmm0
 		divss	xmm0, [ecx+0xC]
 		movss	xmm1, kFltOne
 		comiss	xmm0, xmm1
@@ -1104,7 +1134,8 @@ __declspec(naked) bool ReactionCooldownCheckHook()
 		CALL_EAX(0x457FE0)
 		mov		edx, eax
 		sub		eax, lastTickCount
-		cvtsi2ss	xmm0, eax
+		movd	xmm0, eax
+		cvtdq2ps	xmm0, xmm0
 		divss	xmm0, kFlt1000
 		comiss	xmm0, ds:[0x11CE9B8]
 		seta	al
@@ -1468,7 +1499,7 @@ Actor* __fastcall GetNearestLivingAlly(Actor *actor)
 		return NULL;
 	Actor *result = NULL, *ally;
 	float minDistance = 12800.0F, distance;
-	for (auto iter = actor->combatAllies->Begin(); !iter.End(); ++iter)
+	for (auto iter = actor->combatAllies->Begin(); iter; ++iter)
 	{
 		ally = *iter;
 		if (!ally || (ally == actor) || ally->GetDead() || ThisCall<bool>(0x8A67F0, ally))
@@ -1680,7 +1711,8 @@ __declspec(naked) float __vectorcall GetFrequencyModifier(TESSound *soundForm)
 		movsx	edx, byte ptr [ecx+0x46]
 		test	edx, edx
 		jz		done
-		cvtsi2ss	xmm1, edx
+		movd	xmm1, edx
+		cvtdq2ps	xmm1, xmm1
 		js		isNeg
 		divss	xmm1, kFlt100
 		jmp		doAdd
@@ -1763,7 +1795,8 @@ __declspec(naked) UInt32 __fastcall AdjustSoundFrequencyHook(BSGameSound *gameSo
 		cmp		dword ptr [ecx+0x198], 0
 		jz		done
 		movzx	edx, word ptr [ecx+0x15A]
-		cvtsi2ss	xmm0, edx
+		movd	xmm0, edx
+		cvtdq2ps	xmm0, xmm0
 		mulss	xmm0, [ecx+0x138]
 		mulss	xmm0, [esp+4]
 		cvtss2si	edx, xmm0
@@ -1802,10 +1835,12 @@ __declspec(naked) float __fastcall GetSoundFrequencyPercHook(BSGameSound *gameSo
 		pop		edx
 		test	eax, eax
 		js		retn1
-		cvtsi2ss	xmm0, edx
+		movd	xmm0, edx
+		cvtdq2ps	xmm0, xmm0
 		mov		ecx, [esp]
 		movzx	edx, word ptr [ecx+0x15A]
-		cvtsi2ss	xmm1, edx
+		movd	xmm1, edx
+		cvtdq2ps	xmm1, xmm1
 		mulss	xmm1, [ecx+0x138]
 		divss	xmm0, xmm1
 		movss	[esp], xmm0
@@ -1848,6 +1883,72 @@ __declspec(naked) UInt32 __fastcall GetFactionReactionHook(TESFaction *faction, 
 	{
 		add		ecx, 0x24
 		JMP_EAX(0x48C1B0)
+	}
+}
+
+__declspec(naked) void TileTextApplyScaleHook()
+{
+	static const float kDepthMult = -0.008F;
+	__asm
+	{
+		pxor	xmm0, xmm0
+		push	kTileValue_depth
+		mov		ecx, [ebp-0x1B4]
+		mov		[ebp-0x18], ecx
+		call	Tile::GetValue
+		test	eax, eax
+		jz		noDepth
+		movss	xmm0, [eax+8]
+		mulss	xmm0, kDepthMult
+	noDepth:
+		push	kTileValue_zoom
+		mov		ecx, [ebp-0x18]
+		call	Tile::GetValue
+		mov		ecx, [ebp-0xB0]
+		test	eax, eax
+		jz		noScale
+		test	byte ptr [eax+0xB], 0x80
+		jnz		noScale
+		fld		dword ptr [eax+8]
+		fst		dword ptr [ecx+0x64]
+		fld		st
+		fimul	dword ptr [ebp-0x58]
+		fistp	dword ptr [ebp-0x58]
+		fimul	dword ptr [ebp-0x1C]
+		fistp	dword ptr [ebp-0x1C]
+	noScale:
+		mov		edx, [ebp-0x20]
+		mov		[ecx+0x58], edx
+		movss	[ecx+0x5C], xmm0
+		mov		edx, [ebp-0x50]
+		mov		[ecx+0x60], edx
+		push	1
+		push	ecx
+		mov		eax, [ebp-0x18]
+		mov		ecx, [eax+0x2C]
+		mov		eax, [ecx]
+		call	dword ptr [eax+0xDC]
+		retn
+	}
+}
+
+//	Credits to lStewieAl and TrueCourierSix
+__declspec(naked) void __fastcall LoadIncidentalSoundIDHook(ModInfo *modInfo, int EDX, UInt32 *pRefID)
+{
+	__asm
+	{
+		mov		edx, [esp+4]
+		push	ecx
+		push	edx
+		push	edx
+		CALL_EAX(0x4727F0)
+		mov		edx, [esp]
+		cmp		dword ptr [edx], 0
+		jz		done
+		CALL_EAX(0x485D50)
+	done:
+		add		esp, 8
+		retn	4
 	}
 }
 
@@ -2695,7 +2796,8 @@ __declspec(naked) void DamageToWeaponHook()
 		test	eax, eax
 		js		done
 		movzx	edx, word ptr [ecx+0xA0]
-		cvtsi2ss	xmm0, edx
+		movd	xmm0, edx
+		cvtdq2ps	xmm0, xmm0
 		mulss	xmm0, [ebp-4]
 		mulss	xmm0, kDegrMults[eax*4]
 		movss	[ebp-4], xmm0
@@ -2923,8 +3025,8 @@ void CheckNVACLog()
 {
 	if (!s_NVACLogUpdated) return;
 	s_NVACLogUpdated = false;
-	FileStream srcFile;
-	if (!srcFile.Open("nvac.log")) return;
+	FileStream srcFile("nvac.log");
+	if (!srcFile) return;
 	UInt32 length = srcFile.GetLength();
 	if (s_lastNVACLogSize >= length) return;
 	UInt32 startAt = s_lastNVACLogSize;
@@ -2971,7 +3073,8 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		divsd	xmm1, xmm4
 		mov		eax, [ecx+0x10]
 		cvttss2si	edx, [eax+0x24]
-		cvtsi2sd	xmm3, edx
+		movd	xmm3, edx
+		cvtdq2pd	xmm3, xmm3
 		addsd	xmm1, xmm3
 	proceed:
 		addsd	xmm0, xmm2
@@ -3007,10 +3110,12 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		subsd	xmm0, xmm4
 		comisd	xmm0, xmm4
 		ja		iterHead
-		cvtsi2ss	xmm3, esi
+		movd	xmm3, esi
+		cvtdq2ps	xmm3, xmm3
 		mov		eax, [ecx+4]
 		movss	[eax+0x24], xmm3
-		cvtsi2ss	xmm3, edi
+		movd	xmm3, edi
+		cvtdq2ps	xmm3, xmm3
 		mov		eax, [ecx+8]
 		movss	[eax+0x24], xmm3
 		inc		dword ptr [ecx+0x18]
@@ -3236,10 +3341,12 @@ __declspec(naked) void DoOperatorHook()
 		movq	xmm0, qword ptr [ebp-0x20]
 		test	ah, ah
 		jnz		rValFlt
-		cvtsi2sd	xmm1, [ebp-0x38]
+		movd	xmm1, [ebp-0x38]
+		cvtdq2pd	xmm1, xmm1
 		jmp		doJump
 	lValCvt:
-		cvtsi2sd	xmm0, [ebp-0x20]
+		movd	xmm0, [ebp-0x20]
+		cvtdq2pd	xmm0, xmm0
 	rValFlt:
 		movq	xmm1, qword ptr [ebp-0x38]
 	doJump:
@@ -3713,7 +3820,7 @@ void InitGamePatches()
 	SAFE_WRITE_BUF(0x8C1959, "\xB8\x50\xEF\x66\x00\xFF\xD0\x0F\x1F\x80\x00\x00\x00\x00");
 
 	//	Fix immobile creatures free-falling to the ground
-	SAFE_WRITE_BUF(0x9313EC, "\x80\xB9\xB0\x01\x00\x00\x00\x74\x0D\x8B\x55\x9C\x80\x8A\x17\x04\x00\x00\x40\x0F\x1F\x00");
+	WritePushRetRelJump(0x9313EC, 0x931431, (UInt32)MarkCreatureNoFallHook);
 	SAFE_WRITE_BUF(0xCD3FDD, "\xA9\x01\x00\x40\x00\x74\x0D\x89\xBE\x20\x05\x00\x00\x80\x8E\x14\x04\x00\x00\x80");
 
 	//	Inlines
@@ -3809,7 +3916,10 @@ void InitGamePatches()
 	SafeWrite32(0x10A3C5C, (UInt32)GetSoundFrequencyPercHook);
 	WriteRelJump(0x58E9D0, (UInt32)GetImpactDataHook);
 	WriteRelCall(0x5956BC, (UInt32)GetFactionReactionHook);
+	SAFE_WRITE_BUF(0xA03923, "\x8B\x45\x08\x3D\xB7\x0F\x00\x00\x72\x50\x3D\xF7\x0F\x00\x00\x74\x07\x3D\xBE\x0F\x00\x00\x77\x42\x8B\x45\xCC\xF6\x40\x30\x02\x75\x0B\x80\x48\x30\x02\x50\xE8\x42\x3D\x00\x00\x58\xC9\xC2\x0C\x00");
+	WritePushRetRelJump(0xA22244, 0xA222E7, (UInt32)TileTextApplyScaleHook);
 	*(UInt32*)0x11D0190 = 0x41200000;
+	WriteRelCall(0x4F49AB, (UInt32)LoadIncidentalSoundIDHook);
 	WriteRelJump(0x595560, (UInt32)PickMediaSetHook);
 	WriteRelCall(0x969C41, (UInt32)ModHardcoreNeedsHook);
 	WriteRelCall(0x86AC60, (UInt32)ProcessCustomINI);
@@ -3845,15 +3955,15 @@ void InitGamePatches()
 	SInt32 lines;
 	UInt32 size, index, value;
 	memcpy(namePtr, "*.txt", 6);
-	for (DirectoryIterator dirIter(s_strArgBuffer); !dirIter.End(); dirIter.Next())
+	for (DirectoryIterator dirIter(s_strArgBuffer); dirIter; ++dirIter)
 	{
 		if (!dirIter.IsFile()) continue;
 		StrCopy(namePtr, dirIter.Get());
 		LineIterator lineIter(s_strArgBuffer, s_strValBuffer);
-		while (!lineIter.End())
+		while (lineIter)
 		{
 			dataPtr = lineIter.Get();
-			lineIter.Next();
+			++lineIter;
 			delim = GetNextToken(dataPtr, '=');
 			size = StrLen(delim);
 			if (!size) continue;
@@ -3867,7 +3977,7 @@ void InitGamePatches()
 	WriteRelCall(0x70B285, (UInt32)InitFontManagerHook);
 	SafeWrite8(0xA1B032, 0x59);
 
-	for (DirectoryIterator dirIter("Data\\*.override"); !dirIter.End(); dirIter.Next())
+	for (DirectoryIterator dirIter("Data\\*.override"); dirIter; ++dirIter)
 	{
 		if (dirIter.IsFile())
 		{
@@ -3945,6 +4055,10 @@ void DeferredInit()
 	g_shadowSceneNode = *(ShadowSceneNode**)0x11F91C8;
 	g_terminalModelDefault = *g_terminalModelPtr;
 	g_attachLightString = **(const char***)0x11C620C;
+	g_gameYear = (TESGlobal*)LookupFormByRefID(0x35);
+	g_gameMonth = (TESGlobal*)LookupFormByRefID(0x36);
+	g_gameDay = (TESGlobal*)LookupFormByRefID(0x37);
+	g_gameHour = (TESGlobal*)LookupFormByRefID(0x38);
 	g_capsItem = (TESObjectMISC*)LookupFormByRefID(0xF);
 	g_getHitIMOD = (TESImageSpaceModifier*)LookupFormByRefID(0x162);
 	g_explosionInFaceIMOD = (TESImageSpaceModifier*)LookupFormByRefID(0x166);

@@ -38,7 +38,7 @@ DEFINE_COMMAND_PLUGIN(GetReticlePos, , 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetReticleRange, , 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetOnDialogTopicEventHandler, , 0, 3, kParams_JIP_OneForm_OneInt_OneForm);
 DEFINE_COMMAND_PLUGIN(GetGameDaysPassed, , 0, 3, kParams_JIP_ThreeOptionalInts);
-DEFINE_COMMAND_PLUGIN(IsPCInCombat, , 0, 0, NULL);
+DEFINE_CMD_ALT_COND_PLUGIN(IsPCInCombat, , , 0, NULL);
 DEFINE_COMMAND_PLUGIN(ToggleHardcoreTracking, , 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(SetGameDifficulty, , 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetEnemyHealthTarget, , 0, 0, NULL);
@@ -598,13 +598,19 @@ bool Cmd_GetGameDaysPassed_Execute(COMMAND_ARGS)
 {
 	int bgnYear = 2281, bgnMonth = 10, bgnDay = 13;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bgnYear, &bgnMonth, &bgnDay) && (bgnMonth <= 12))
-		*result = g_gameTimeGlobals->GetDaysPassed(bgnYear, bgnMonth - 1, bgnDay);
+		*result = GetDaysPassed(bgnYear, bgnMonth - 1, bgnDay);
 	else *result = 0;
 	DoConsolePrint(result);
 	return true;
 }
 
 bool Cmd_IsPCInCombat_Execute(COMMAND_ARGS)
+{
+	*result = g_thePlayer->pcInCombat && !g_thePlayer->pcUnseen;
+	return true;
+}
+
+bool Cmd_IsPCInCombat_Eval(COMMAND_ARGS_EVAL)
 {
 	*result = g_thePlayer->pcInCombat && !g_thePlayer->pcUnseen;
 	return true;
@@ -804,11 +810,10 @@ bool Cmd_SetGameHour_Execute(COMMAND_ARGS)
 	float newHour;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &newHour))
 	{
-		float *hour = &g_gameTimeGlobals->hour->data;
-		if (*hour <= newHour)
-			*hour = newHour;
+		if (g_gameHour->data <= newHour)
+			g_gameHour->data = newHour;
 		else if (newHour >= 0)
-			*hour = 24.0 + newHour;
+			g_gameHour->data = 24.0F + newHour;
 	}
 	return true;
 }

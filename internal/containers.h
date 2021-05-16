@@ -2288,6 +2288,8 @@ public:
 		return numItems ? &data[--numItems] : nullptr;
 	}
 
+	void Clear() {numItems = 0;}
+
 	class Iterator
 	{
 		friend FixedTypeArray;
@@ -2310,4 +2312,6 @@ public:
 
 		Iterator(FixedTypeArray &source) : pData(source.data), count(source.numItems) {}
 	};
+
+	Iterator Begin() {return Iterator(*this);}
 };

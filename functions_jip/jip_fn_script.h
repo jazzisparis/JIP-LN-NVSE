@@ -385,7 +385,7 @@ bool Cmd_ScriptWait_Execute(COMMAND_ARGS)
 	if (!owner) return true;
 	*opcodeOffsetPtr += *(UInt16*)(scriptData + *opcodeOffsetPtr - 2);
 	ScriptBlockIterator blockIter(scriptData, *opcodeOffsetPtr);
-	while (!blockIter.End()) blockIter.Next();
+	while (blockIter) ++blockIter;
 	UInt8 *blockType = blockIter.TypePtr();
 	if (!blockType || (*blockType == 0xD)) return true;
 	ScriptWaitInfo *waitInfo;
@@ -459,7 +459,7 @@ bool Cmd_SetScriptBlockDisabled_Execute(COMMAND_ARGS)
 	{
 		if ((blockType < 0) || (disabledBlocks && disabledBlocks->Find(DisabledBlockFinder(blockType)))) return true;
 		UInt8 *typePtr;
-		for (ScriptBlockIterator blockIter(script->data, script->info.dataLength); !blockIter.End(); blockIter.Next())
+		for (ScriptBlockIterator blockIter(script->data, script->info.dataLength); blockIter; ++blockIter)
 		{
 			typePtr = blockIter.TypePtr();
 			if (*typePtr != blockType) continue;
@@ -493,7 +493,7 @@ bool Cmd_HasScriptBlock_Execute(COMMAND_ARGS)
 		if (!script) return true;
 	}
 	UInt8 *typePtr;
-	for (ScriptBlockIterator blockIter(script->data, script->info.dataLength); !blockIter.End(); blockIter.Next())
+	for (ScriptBlockIterator blockIter(script->data, script->info.dataLength); blockIter; ++blockIter)
 	{
 		typePtr = blockIter.TypePtr();
 		if (*typePtr == blockType)

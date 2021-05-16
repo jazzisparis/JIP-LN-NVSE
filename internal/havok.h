@@ -23,7 +23,7 @@ public:
 		UInt32		count;
 
 	public:
-		bool End() const {return !count;}
+		explicit operator bool() const {return count != 0;}
 		void operator++()
 		{
 			pData++;

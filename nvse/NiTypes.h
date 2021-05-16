@@ -38,7 +38,14 @@ struct NiMatrix33
 	void Rotate(float rotX, float rotY, float rotZ);
 	void MultiplyMatrices(NiMatrix33 *matA, NiMatrix33 *matB);
 	void __fastcall Inverse(NiMatrix33 *mat);
-	void Dump(const char *title = NULL);
+	
+	inline NiMatrix33& operator=(const NiMatrix33 &rhs)
+	{
+		_mm_storeu_ps(&cr[0][0], _mm_loadu_ps(&rhs.cr[0][0]));
+		_mm_storeu_ps(&cr[1][1], _mm_loadu_ps(&rhs.cr[1][1]));
+		cr[2][2] = rhs.cr[2][2];
+		return *this;
+	}
 };
 
 struct NiQuaternion;
@@ -218,10 +225,10 @@ struct NiTArray
 		friend NiTArray;
 
 		T_Data		*pData;
-		UInt16		count;
+		UInt32		count;
 
 	public:
-		bool End() const {return !count;}
+		explicit operator bool() const {return count != 0;}
 		void operator++()
 		{
 			pData++;
@@ -281,7 +288,7 @@ public:
 		UInt32		count;
 
 	public:
-		bool End() const {return !count;}
+		explicit operator bool() const {return count != 0;}
 		void operator++()
 		{
 			pData++;
@@ -376,7 +383,7 @@ public:
 	public:
 		Iterator(NiTPointerMap &_table) : table(&_table), bucket(table->m_buckets), entry(NULL) {FindNonEmpty();}
 
-		bool End() const {return !entry;}
+		explicit operator bool() const {return entry != NULL;}
 		void operator++()
 		{
 			entry = entry->next;
@@ -474,7 +481,7 @@ public:
 	public:
 		Iterator(NiTMapBase &_table) : table(&_table), bucket(table->buckets), entry(NULL) {FindNonEmpty();}
 
-		bool End() const {return !entry;}
+		explicit operator bool() const {return entry != NULL;}
 		void operator++()
 		{
 			entry = entry->next;

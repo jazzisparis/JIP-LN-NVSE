@@ -218,7 +218,7 @@ bool Cmd_GetWindDirection_Execute(COMMAND_ARGS)
 {
 	if (g_TES->sky)
 	{
-		*result = g_TES->sky->windDirection / -kDblPId180;
+		*result = g_TES->sky->windDirection * -kDbl180dPI;
 		DoConsolePrint(result);
 	}
 	else *result = 0;

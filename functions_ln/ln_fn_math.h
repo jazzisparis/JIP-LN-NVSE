@@ -92,7 +92,7 @@ bool Cmd_fAsin_Execute(COMMAND_ARGS)
 {
 	double value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		*result = asin(value) / kDblPId180;
+		*result = asin(value) * kDbl180dPI;
 	else *result = 0;
 	return true;
 }
@@ -101,7 +101,7 @@ bool Cmd_fAcos_Execute(COMMAND_ARGS)
 {
 	double value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		*result = acos(value) / kDblPId180;
+		*result = acos(value) * kDbl180dPI;
 	else *result = 0;
 	return true;
 }
@@ -110,7 +110,7 @@ bool Cmd_fAtan_Execute(COMMAND_ARGS)
 {
 	double value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		*result = atan(value) / kDblPId180;
+		*result = atan(value) * kDbl180dPI;
 	else *result = 0;
 	return true;
 }
@@ -119,7 +119,7 @@ bool Cmd_fAtan2_Execute(COMMAND_ARGS)
 {
 	double y, x;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &y, &x))
-		*result = atan2(y, x) / kDblPId180;
+		*result = atan2(y, x) * kDbl180dPI;
 	else *result = 0;
 	return true;
 }

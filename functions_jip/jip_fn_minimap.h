@@ -51,12 +51,13 @@ __declspec(naked) void UpdateTileScales()
 }
 
 float s_cellNorthRotation = 0;
-__m128 s_northRotationMods = {0, 1, -1, 0};
+__m128 s_northRotationMods;
 
-__declspec(naked) void __fastcall GetNorthRotation(TESObjectCELL *cell)
+__declspec(naked) __m128* __fastcall GetNorthRotation(TESObjectCELL *cell)
 {
 	__asm
 	{
+		xor		eax, eax
 		test	byte ptr [ecx+0x24], 1
 		jz		noRotation
 		push	kExtraData_NorthRotation
@@ -77,7 +78,36 @@ __declspec(naked) void __fastcall GetNorthRotation(TESObjectCELL *cell)
 		retn
 		ALIGN 16
 	noRotation:
-		mov		s_cellNorthRotation, 0
+		mov		s_cellNorthRotation, eax
+		retn
+	}
+}
+
+NiCamera *s_localMapCamera = NULL;
+
+__declspec(naked) void __fastcall SetCameraRotation(TESObjectCELL *cell)
+{
+	__asm
+	{
+		call	GetNorthRotation
+		mov		ecx, s_localMapCamera
+		test	eax, eax
+		jz		noRot
+		mov		edx, [eax]
+		mov		[ecx+0x3C], edx
+		mov		[ecx+0x44], edx
+		mov		edx, [eax+4]
+		mov		[ecx+0x38], edx
+		mov		edx, [eax+8]
+		mov		[ecx+0x48], edx
+		retn
+		ALIGN 16
+	noRot:
+		mov		[ecx+0x38], eax
+		mov		[ecx+0x48], eax
+		mov		edx, 0x3F800000
+		mov		[ecx+0x3C], edx
+		mov		[ecx+0x44], edx
 		retn
 	}
 }
@@ -121,9 +151,11 @@ __declspec(naked) void __fastcall GetWorldDimensions(TESWorldSpace *worldSpc)
 		movsx	edx, word ptr [ecx+8]
 		sub		eax, edx
 		shl		edx, 0xC
-		cvtsi2ss	xmm0, edx
+		movd	xmm0, edx
+		cvtdq2ps	xmm0, xmm0
 		shl		eax, 0xC
-		cvtsi2ss	xmm1, eax
+		movd	xmm1, eax
+		cvtdq2ps	xmm1, xmm1
 		mov		edx, 0x3F4C0000
 		movd	xmm2, edx
 		divss	xmm1, xmm2
@@ -135,9 +167,11 @@ __declspec(naked) void __fastcall GetWorldDimensions(TESWorldSpace *worldSpc)
 		inc		edx
 		sub		eax, edx
 		shl		edx, 0xC
-		cvtsi2ss	xmm0, edx
+		movd	xmm0, edx
+		cvtdq2ps	xmm0, xmm0
 		shl		eax, 0xC
-		cvtsi2ss	xmm1, eax
+		movd	xmm1, eax
+		cvtdq2ps	xmm1, xmm1
 		divss	xmm1, xmm2
 		movss	[ecx+4], xmm0
 		movss	[ecx+0xC], xmm1
@@ -1192,102 +1226,6 @@ __declspec(naked) float* __fastcall GetVtxAlphaPtr(NiPoint2 *posMult)
 }
 
 UInt8 s_useAltFormat = 0;
-const float kFlt80000 = 80000.0F;
-const __m128 kCaptureBounds = {-2048, 2048, 2048, -2048};
-
-__declspec(naked) void ExtCaptureBoundsHook()
-{
-	__asm
-	{
-		cmp		s_useAltFormat, 0
-		jnz		altFormat
-		JMP_EAX(0x54EF77)
-	altFormat:
-		mov		ecx, [ebp-0xD8]
-		mov		ecx, [ecx+0x48]
-		mov		eax, [ecx]
-		shl		eax, 0xC
-		add		eax, 0x800
-		cvtsi2ss	xmm0, eax
-		movss	[ebp-0x3C], xmm0
-		mov		eax, [ecx+4]
-		shl		eax, 0xC
-		add		eax, 0x800
-		cvtsi2ss	xmm0, eax
-		movss	[ebp-0x38], xmm0
-		movaps	xmm0, kCaptureBounds
-		movups	[ebp-0x98], xmm0
-		movss	xmm0, kFlt80000
-		movss	[ebp-0x34], xmm0
-		movss	[ebp-0x84], xmm0
-		push	0x114
-		CALL_EAX(0xAA13E0)
-		pop		ecx
-		mov		ecx, eax
-		CALL_EAX(0xA712F0)
-		mov		[ebp-0xC8], eax
-		mov		dword ptr [eax+0x110], 0x3A83126F
-		JMP_EAX(0x54F05B)
-	}
-}
-
-__declspec(naked) void HideExtCellLandNodeHook()
-{
-	__asm
-	{
-		xor		eax, eax
-		cmp		s_useAltFormat, 2
-		jz		done
-		mov		eax, [ecx+0xC4]
-		test	eax, eax
-		jz		done
-		mov		eax, [eax]
-		test	eax, eax
-		jz		done
-		mov		eax, [eax+0xA0]
-		mov		eax, [eax+8]
-	done:
-		retn	4
-	}
-}
-
-__declspec(naked) void IntCaptureBoundsHook()
-{
-	__asm
-	{
-		cmp		s_useAltFormat, 0
-		jnz		altFormat
-		JMP_EAX(0x54F68F)
-	altFormat:
-		lea		ecx, [ebp-0x38]
-		mov		eax, [ebp+8]
-		shl		eax, 0xC
-		add		eax, 0x1000
-		cvtsi2ss	xmm0, eax
-		movss	[ecx], xmm0
-		mov		eax, [ebp+0xC]
-		shl		eax, 0xC
-		add		eax, 0x1000
-		cvtsi2ss	xmm0, eax
-		movss	[ecx+4], xmm0
-		cmp		s_cellNorthRotation, 0
-		jz		noRot
-		movq	xmm0, qword ptr [ecx]
-		unpcklps	xmm0, xmm0
-		pshufd	xmm1, s_northRotationMods, 0xD8
-		mulps	xmm0, xmm1
-		movhlps	xmm1, xmm0
-		addps	xmm0, xmm1
-		movq	qword ptr [ecx], xmm0
-	noRot:
-		movaps	xmm0, kCaptureBounds
-		movups	[ebp-0xA8], xmm0
-		movss	xmm0, kFlt80000
-		movss	[ecx+8], xmm0
-		movss	[ebp-0x94], xmm0
-		JMP_EAX(0x54F727)
-	}
-}
 
 __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cell, int EDX, NiCamera *camera, RenderTarget **outTexture)
 {
@@ -1300,23 +1238,22 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		push	ebp
 		mov		ebp, esp
 		push	ecx
-		sub		esp, 0xEC
+		sub		esp, 0xE8
 		test	ecx, ecx
 		jz		noCell_0
 		test	byte ptr [ecx+0x24], 1
 		setnz	cl
 	noCell_0:
-		mov		[ebp-0x21], cl
+		mov		[ebp-0x1D], cl
 		mov		eax, fs:[0x2C]
 		mov		ecx, ds:[0x126FD98]
 		mov		edx, [eax+ecx*4]
 		add		edx, 0x2B4
-		push	dword ptr [edx]
+		mov		eax, [edx]
+		mov		[ebp-0x10], eax
 		mov		dword ptr [edx], 0xE
-		mov		eax, ds:[0x11F95EC]
-		mov		[ebp-0x14], eax
 		push	0
-		lea		ecx, [ebp-0xF0]
+		lea		ecx, [ebp-0xEC]
 		CALL_EAX(0x4A0EB0)
 		push	0
 		push	0
@@ -1331,21 +1268,21 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		push	edx
 		push	edx
 		mov		eax, ds:[0x11F9508]
-		mov		[ebp-0x18], eax
+		mov		[ebp-0x14], eax
 		push	eax
 		mov		ecx, ds:[0x11F91A8]
 		CALL_EAX(0xB6D5E0)
 		test	eax, eax
 		jz		done
-		mov		[ebp-0x10], eax
+		mov		[ebp-0xC], eax
 		mov		edx, [ebp+0xC]
 		mov		[edx], eax
-		mov		ecx, [ebp-0x18]
+		mov		ecx, [ebp-0x14]
 		mov		eax, [ecx+0x5E0]
-		mov		[ebp-0x1C], eax
+		mov		[ebp-0x18], eax
 		cmp		dword ptr [ebp-4], 0
 		jz		noCell_1
-		movzx	eax, byte ptr [ebp-0x21]
+		movzx	eax, byte ptr [ebp-0x1D]
 		dec		eax
 		and		eax, 0x1F2F3F
 		mov		[ecx+0x5E0], eax
@@ -1353,26 +1290,29 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		mov		ecx, g_shadowSceneNode
 		mov		[ebp-8], ecx
 		mov		dl, [ecx+0x130]
-		mov		[ebp-0x22], dl
+		mov		[ebp-0x1E], dl
 		mov		[ecx+0x130], 1
-		mov		dword ptr [ebp-0xC], 0
-		mov		eax, ds:[0x11C7C28]
-		test	eax, eax
-		jz		skipHide
-		test	byte ptr [eax+0x30], 1
-		jnz		skipHide
-		mov		[ebp-0xC], eax
-		or		byte ptr [eax+0x30], 1
-	skipHide:
 		mov		eax, ds:[0x11D5C48]
-		mov		[ebp-0x20], eax
+		mov		[ebp-0x1C], eax
 		mov		dl, [eax+0x18]
-		mov		[ebp-0x24], dl
+		mov		[ebp-0x1F], dl
 		mov		[eax+0x18], 0
-		mov		ecx, [ebp-0x10]
+		mov		ecx, [ebp-0xC]
+		mov		eax, ds:[0x11F4748]
+		cmp		dword ptr [eax+0x200], 0
+		setz	al
+		mov		[ebp-0x20], al
+		jnz		bgnScnAlt
 		push	dword ptr [ecx+8]
 		push	7
-		CALL_EAX(0xB6B8D0)
+		mov		eax, 0xB6B8D0
+		jmp		doneBgnScn
+	bgnScnAlt:
+		push	7
+		push	ecx
+		mov		eax, 0x54EDE0
+	doneBgnScn:
+		call	eax
 		add		esp, 8
 		push	0x280
 		CALL_EAX(0xAA13E0)
@@ -1383,19 +1323,19 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		mov		ecx, eax
 		CALL_EAX(0xB660D0)
 		lock inc dword ptr [eax+4]
-		mov		[ebp-0x2C], eax
+		mov		[ebp-0x28], eax
 		mov		edx, [ebp-8]
 		mov		[eax+0x194], edx
-		movzx	edx, byte ptr [ebp-0x21]
+		movzx	edx, byte ptr [ebp-0x1D]
 		neg		edx
 		and		edx, 0xC
 		mov		[eax+0x19C], edx
-		mov		eax, [ebp-0x34]
-		mov		ecx, [ebp-0x60]
-		mov		[ebp+eax*4-0x5C], ecx
-		inc		dword ptr [ebp-0x34]
-		mov		dword ptr [ebp-0x60], 3
-		lea		edx, [ebp-0xF0]
+		mov		eax, [ebp-0x30]
+		mov		ecx, [ebp-0x5C]
+		mov		[ebp+eax*4-0x58], ecx
+		inc		dword ptr [ebp-0x30]
+		mov		dword ptr [ebp-0x5C], 3
+		lea		edx, [ebp-0xEC]
 		push	edx
 		push	dword ptr [ebp-8]
 		push	dword ptr [ebp+8]
@@ -1408,48 +1348,47 @@ __declspec(naked) void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cel
 		call	TESObjectCELL::Get3DNode
 		test	eax, eax
 		jz		skipCull
-		mov		dword ptr [ebp-0x60], 1
-		lea		edx, [ebp-0xF0]
+		mov		dword ptr [ebp-0x5C], 1
+		lea		edx, [ebp-0xEC]
 		push	edx
 		push	eax
 		push	dword ptr [ebp+8]
 		CALL_EAX(0xB6BEE0)
 		add		esp, 0xC
 	skipCull:
-		mov		eax, [ebp-0x34]
+		mov		eax, [ebp-0x30]
 		dec		eax
-		mov		[ebp-0x34], eax
-		mov		ecx, [ebp+eax*4-0x5C]
-		mov		[ebp-0x60], ecx
-		push	0
-		push	dword ptr [ebp-0x2C]
+		mov		[ebp-0x30], eax
+		mov		ecx, [ebp+eax*4-0x58]
+		mov		[ebp-0x5C], ecx
+		push	dword ptr [ebp-0x28]
 		push	dword ptr [ebp+8]
 		CALL_EAX(0xB6C0D0)
-		add		esp, 0xC
-		mov		ecx, [ebp-0x2C]
+		add		esp, 8
+		mov		ecx, [ebp-0x28]
 		call	NiReleaseObject
-		CALL_EAX(0xB6B790)
-		mov		eax, [ebp-0x20]
-		mov		dl, [ebp-0x24]
+		mov		eax, 0xB6B790
+		mov		ecx, 0xB6B840
+		cmp		[ebp-0x20], 0
+		cmovz	eax, ecx
+		call	eax
+		mov		eax, [ebp-0x1C]
+		mov		dl, [ebp-0x1F]
 		mov		[eax+0x18], dl
-		mov		eax, [ebp-0xC]
-		test	eax, eax
-		jz		skipUnhide
-		and		byte ptr [eax+0x30], 0xFE
-	skipUnhide:
-		mov		al, [ebp-0x22]
+		mov		al, [ebp-0x1E]
 		mov		ecx, [ebp-8]
 		mov		[ecx+0x130], al
-		mov		eax, [ebp-0x14]
+		mov		eax, ds:[0x11F95EC]
 		mov		[eax+0x86], 1
-		mov		ecx, [ebp-0x18]
-		mov		eax, [ebp-0x1C]
+		mov		ecx, [ebp-0x14]
+		mov		eax, [ebp-0x18]
 		mov		[ecx+0x5E0], eax
 	done:
 		mov		eax, fs:[0x2C]
 		mov		ecx, ds:[0x126FD98]
 		mov		edx, [eax+ecx*4]
-		pop		dword ptr [edx+0x2B4]
+		mov		eax, [ebp-0x10]
+		mov		[edx+0x2B4], eax
 		leave
 		retn	8
 	}
@@ -1481,14 +1420,211 @@ __declspec(naked) void D3DFormatHook()
 	}
 }
 
-typedef Vector<Tile*> DynamicTiles;
+__declspec(naked) void __stdcall GenerateLocalMapExterior(TESObjectCELL *cell, NiRenderedTexture **renderedTexture)
+{
+	__asm
+	{
+		push	ebp
+		mov		ebp, esp
+		mov		ecx, [ebp+8]
+		mov		edx, [ecx+0xC4]
+		test	edx, edx
+		jz		done
+		mov		eax, [ecx+0x48]
+		mov		ecx, [edx]
+		test	ecx, ecx
+		jz		done
+		sub		esp, 0x1C
+		mov		edx, [eax]
+		shl		edx, 0xC
+		add		edx, 0x800
+		mov		[ebp-8], edx
+		mov		edx, [eax+4]
+		shl		edx, 0xC
+		add		edx, 0x800
+		mov		[ebp-4], edx
+		movq	xmm0, qword ptr [ebp-8]
+		cvtdq2ps	xmm0, xmm0
+		mov		eax, [ecx+0xA0]
+		mov		ecx, [eax]
+		mov		[ebp-4], ecx
+		or		byte ptr [ecx+0x30], 1
+		mov		ecx, [eax+4]
+		mov		[ebp-8], ecx
+		or		byte ptr [ecx+0x30], 1
+		mov		ecx, [eax+8]
+		mov		[ebp-0xC], ecx
+		or		byte ptr [ecx+0x30], 1
+		mov		eax, ds:[0x11CCB78]
+		mov		eax, [eax+4]
+		mov		[ebp-0x10], eax
+		or		byte ptr [eax+0x30], 1
+		mov		eax, ds:[0x11DEDA4]
+		mov		[ebp-0x14], eax
+		or		byte ptr [eax+0x30], 1
+		mov		eax, ds:[0x11CA438]
+		mov		[ebp-0x18], eax
+		test	eax, eax
+		jz		noGrass0
+		or		byte ptr [eax+0x30], 1
+	noGrass0:
+		mov		byte ptr ds:[0x11AD7B4], 0
+		mov		eax, ds:[0x11D5C48]
+		mov		[ebp-0x1C], eax
+		mov		byte ptr [eax+0x1B], 1
+		push	0
+		push	esp
+		mov		ecx, s_localMapCamera
+		push	ecx
+		movq	qword ptr [ecx+0x58], xmm0
+		call	NiAVObject::Update
+		mov		ecx, [ebp+8]
+		call	GenerateRenderedTextureHook
+		mov		byte ptr ds:[0x11AD7B4], 1
+		mov		dl, 0xFE
+		mov		ecx, [ebp-4]
+		and		[ecx+0x30], dl
+		mov		ecx, [ebp-8]
+		and		[ecx+0x30], dl
+		mov		ecx, [ebp-0xC]
+		and		[ecx+0x30], dl
+		mov		ecx, [ebp-0x10]
+		and		[ecx+0x30], dl
+		mov		ecx, [ebp-0x14]
+		and		[ecx+0x30], dl
+		mov		ecx, [ebp-0x18]
+		test	ecx, ecx
+		jz		noGrass1
+		and		[ecx+0x30], dl
+	noGrass1:
+		mov		eax, [ebp-0x1C]
+		mov		byte ptr [eax+0x1B], 0
+		mov		ecx, [ebp-0x20]
+		test	ecx, ecx
+		jz		done
+		mov		eax, [ecx+0x30]
+		test	eax, eax
+		jz		doRelease
+		push	eax
+		push	dword ptr [ebp+0xC]
+		call	NiReleaseAddRef
+		mov		ecx, [ebp-0x20]
+	doRelease:
+		call	NiReleaseObject
+	done:
+		leave
+		retn	8
+	}
+}
+
+__declspec(naked) void __stdcall GenerateLocalMapInterior(TESObjectCELL *cell, Coordinate coord, NiRenderedTexture **renderedTexture)
+{
+	__asm
+	{
+		push	ebp
+		mov		ebp, esp
+		mov		ecx, [ebp+8]
+		mov		eax, [ecx+0xC4]
+		test	eax, eax
+		jz		done
+		mov		ecx, [eax]
+		test	ecx, ecx
+		jz		done
+		sub		esp, 8
+		movsx	edx, word ptr [ebp+0xE]
+		shl		edx, 0xC
+		add		edx, 0x1000
+		mov		[ebp-8], edx
+		movsx	edx, word ptr [ebp+0xC]
+		shl		edx, 0xC
+		add		edx, 0x1000
+		mov		[ebp-4], edx
+		movq	xmm0, qword ptr [ebp-8]
+		cvtdq2ps	xmm0, xmm0
+		cmp		s_cellNorthRotation, 0
+		jz		noRot
+		unpcklps	xmm0, xmm0
+		pshufd	xmm1, s_northRotationMods, 0xD8
+		mulps	xmm0, xmm1
+		movhlps	xmm1, xmm0
+		addps	xmm0, xmm1
+	noRot:
+		mov		eax, [ecx+0xA0]
+		mov		ecx, [eax]
+		mov		[ebp-4], ecx
+		or		byte ptr [ecx+0x30], 1
+		mov		ecx, [eax+4]
+		mov		[ebp-8], ecx
+		or		byte ptr [ecx+0x30], 1
+		mov		byte ptr ds:[0x11AD7B4], 0
+		push	0
+		push	esp
+		mov		ecx, s_localMapCamera
+		push	ecx
+		movq	qword ptr [ecx+0x58], xmm0
+		call	NiAVObject::Update
+		mov		ecx, [ebp+8]
+		call	GenerateRenderedTextureHook
+		mov		byte ptr ds:[0x11AD7B4], 1
+		mov		ecx, [ebp-4]
+		and		byte ptr [ecx+0x30], 0xFE
+		mov		ecx, [ebp-8]
+		and		byte ptr [ecx+0x30], 0xFE
+		mov		ecx, [ebp-0xC]
+		test	ecx, ecx
+		jz		done
+		mov		eax, [ecx+0x30]
+		test	eax, eax
+		jz		doRelease
+		push	eax
+		push	dword ptr [ebp+0x10]
+		call	NiReleaseAddRef
+		mov		ecx, [ebp-0xC]
+	doRelease:
+		call	NiReleaseObject
+	done:
+		leave
+		retn	0xC
+	}
+}
+
+struct MapMarkerTile
+{
+	Tile::Value		*visible;
+	Tile::Value		*x;
+	Tile::Value		*y;
+	Tile::Value		*filename;
+	bool			inUse;
+
+	MapMarkerTile(Tile *markerTile);
+
+	void SetInUse(bool bInUse)
+	{
+		inUse = bInUse;
+		visible->SetFloat(inUse);
+	}
+};
+
+Vector<MapMarkerTile> s_mapMarkerTiles(0x40);
+
+MapMarkerTile::MapMarkerTile(Tile *markerTile)
+{
+	visible = markerTile->GetValue(kTileValue_visible);
+	x = markerTile->GetValue(kTileValue_user0);
+	y = markerTile->GetValue(kTileValue_user1);
+	filename = ThisCall<Tile::Value*>(0xA01000, markerTile, kTileValue_filename);
+	markerTile->SetFloat(kTileValue_depth, int((s_mapMarkerTiles.Size() % 10) + 18));
+	inUse = true;
+}
+
+typedef Vector<MapMarkerTile*> DynamicTiles;
 typedef UnorderedMap<UInt32, DynamicTiles> RenderedMapMarkers;
 RenderedMapMarkers s_renderedMapMarkers(0x40);
 
-void __fastcall DestroyCellMarkers(RenderedMapMarkers::Iterator &cmkIter)
+void __fastcall FreeCellMapMarkers(RenderedMapMarkers::Iterator &cmkIter)
 {
 	for (auto dtlIter = cmkIter().Begin(); dtlIter; ++dtlIter)
-		dtlIter->Destroy(true);
+		dtlIter->SetInUse(false);
 	cmkIter.Remove();
 }
 
@@ -1496,27 +1632,29 @@ bool s_discoveredLocation = false;
 
 void __fastcall HandleDiscoverLocation(TESObjectCELL *markerCell)
 {
-	if (markerCell)
+	auto findRendered = s_renderedMapMarkers.Find(Coordinate(&markerCell->coords.exterior->x));
+	if (findRendered)
 	{
-		auto findRendered = s_renderedMapMarkers.Find(Coordinate(&markerCell->coords.exterior->x));
-		if (findRendered)
-		{
-			DestroyCellMarkers(findRendered);
-			s_discoveredLocation = true;
-		}
+		FreeCellMapMarkers(findRendered);
+		s_discoveredLocation = true;
 	}
-	StdCall(0x8D5100, *(int*)0x11D0368);
 }
 
 __declspec(naked) void DiscoverLocationHook()
 {
 	__asm
 	{
+		push	dword ptr ds:[0x11D0368]
+		CALL_EAX(0x8D5100)
+		mov		[ebp-0x8F], 1
 		mov		ecx, [ebp-0x8C]
-		mov		ecx, [ecx+4]
-		mov		ecx, [ecx+0x40]
-		push	0x77958A
-		jmp		HandleDiscoverLocation
+		mov		eax, [ecx+4]
+		mov		ecx, [eax+0x40]
+		test	ecx, ecx
+		jz		done
+		call	HandleDiscoverLocation
+	done:
+		retn
 	}
 }
 
@@ -1529,7 +1667,7 @@ __declspec(naked) void SetQuestTargetsHook()
 		add		ecx, 0x4C
 		mov		[ebp-4], ecx
 		mov		s_updateQuestTargets, 1
-		JMP_EDX(0x60F145)
+		retn
 	}
 }
 
@@ -1543,7 +1681,7 @@ __declspec(naked) void RendererRecreateHook()
 		mov		[edx+8], ecx
 		mov		[edx+0xC], eax
 		mov		s_regenTextures, 1
-		JMP_EDX(0xE7D144)
+		retn
 	}
 }
 
@@ -1673,6 +1811,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 		shapeData = (NiTriShapeData*)sciTriShp->geometryData;
 		s_localMapShapeDatas[index] = shapeData;
 		s_tileShaderProps[index] = localTile->shaderProp;
+		NiReleaseAddRef((NiRefObject**)&localTile->shaderProp->srcTexture, NULL);
 
 		shapeData->numVertices = 289;
 		shapeData->numTriangles = 0x200;
@@ -1706,6 +1845,17 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	s_worldMapTile = (TileImage*)node->data;
 	s_mapMarkersRect = (TileRect*)node->prev->data;
 	s_wQuestMarkersRect = (TileRect*)node->prev->prev->data;
+
+	NiCamera *lmCamera = ThisCall<NiCamera*>(0xA712F0, NiAllocator(sizeof(NiCamera)));
+	s_localMapCamera = lmCamera;
+	lmCamera->m_localRotate = {0, 0, 1.0F, 0, 1.0F, 0, -1.0F, 0, 0};
+	lmCamera->m_localTranslate.z = 65536.0F;
+	lmCamera->frustum.viewPort = {-2048.0F, 2048.0F, 2048.0F, -2048.0F};
+	lmCamera->frustum.n = 100.0F;
+	lmCamera->frustum.f = 131072.0F;
+	lmCamera->frustum.o = 1;
+	lmCamera->LODAdjust = 0.001F;
+	g_shadowSceneNode->AddObject(lmCamera, 1);
 
 	TESForm *markerBase = *(TESForm**)0x11CA224;
 	auto worldIter = g_dataHandler->worldSpaceList.Head();
@@ -1758,16 +1908,13 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	SAFE_WRITE_BUF(0x87A12A, "\x31\xD2\x66\x89\x50\x26\x89\x50\x28\x90");
 	SafeWrite8(0x555C20, 0xC3);
 	WriteRelCall(0x9438F6, (UInt32)UpdateCellsSeenBitsHook);
-	WriteRelJump(0x54EF70, (UInt32)ExtCaptureBoundsHook);
-	//WriteRelCall(0x54F257, (UInt32)HideExtCellLandNodeHook);
-	WriteRelJump(0x54F688, (UInt32)IntCaptureBoundsHook);
 	WriteRelCall(0x54F362, (UInt32)GenerateRenderedTextureHook);
 	WriteRelCall(0x54FA46, (UInt32)GenerateRenderedTextureHook);
 	SafeWrite32(0xB6D0C0, (UInt32)D3DFormatHook);
-	WriteRelJump(0x779567, (UInt32)DiscoverLocationHook);
-	WriteRelJump(0x60F13D, (UInt32)SetQuestTargetsHook);
+	WritePushRetRelJump(0x779567, 0x7795E8, (UInt32)DiscoverLocationHook);
+	WritePushRetRelJump(0x60F13A, 0x60F145, (UInt32)SetQuestTargetsHook);
 	SAFE_WRITE_BUF(0x49CA5A, "\x8B\x45\xF0\x8B\x40\x28\x85\xC0\x74\x0C\xD9\xE8\xD8\xA8\xA0\x00\x00\x00\xB0\x01\xEB\x02\xD9\xEE\xD9\x5D\xE0\x88\x45\xCF\xEB\x1A");
-	WriteRelJump(0xE7D13A, (UInt32)RendererRecreateHook);
+	WritePushRetRelJump(0xE7D13A, 0xE7D144, (UInt32)RendererRecreateHook);
 	return true;
 }
 
@@ -1797,13 +1944,28 @@ struct ExteriorEntry
 	ExteriorEntry() : texture(NULL), regenFlags(0) {}
 };
 
-struct DoorMarkerVisibility
+struct DoorMarkerTile
 {
-	Tile::Value		*visibility;
-	float			*alphaPtr;
+	Tile::Value		*visible;
+	Tile::Value		*x;
+	Tile::Value		*y;
+	Tile::Value		*visited;
+	float			*vtxAlpha;
+	bool			inUse;
 
-	DoorMarkerVisibility(Tile::Value *_visibility, float *_alphaPtr) : visibility(_visibility), alphaPtr(_alphaPtr) {}
+	DoorMarkerTile(Tile *markerTile);
 };
+
+Vector<DoorMarkerTile> s_doorMarkerTiles(0x40);
+
+DoorMarkerTile::DoorMarkerTile(Tile *markerTile)
+{
+	visible = markerTile->GetValue(kTileValue_visible);
+	x = markerTile->GetValue(kTileValue_user0);
+	y = markerTile->GetValue(kTileValue_user1);
+	visited = ThisCall<Tile::Value*>(0xA01000, markerTile, kTileValue_user2);
+	markerTile->SetFloat(kTileValue_depth, int((s_doorMarkerTiles.Size() % 10) + 18));
+}
 
 struct QuestMarkerPos
 {
@@ -1822,7 +1984,6 @@ Vector<UInt32> s_exteriorKeys(0x60);
 UnorderedMap<UInt32, NiRenderedTexture*> s_renderedInterior(0x20);
 UnorderedMap<UInt32, DoorRefsList> s_exteriorDoorRefs(0x20);
 DoorRefsList s_doorRefsList(0x20);
-Vector<DoorMarkerVisibility> s_doorMarkerList(0x20);
 Vector<NiNode*> s_hiddenNodes(0x20);
 TESQuest *s_activeQuest = NULL;
 UnorderedMap<TESObjectREFR*, QuestMarkerPos> s_questMarkers(0x10);
@@ -1853,7 +2014,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 	if (updateTiles)
 	{
 		s_pcCurrCell = parentCell;
-		GetNorthRotation(parentCell);
+		SetCameraRotation(parentCell);
 	}
 
 	if (s_currentMapMode != updateType)
@@ -1876,7 +2037,6 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 	Tile *markerTile;
 	TESObjectREFR *objectRef;
 	HUDMainMenu *hudMain = g_HUDMainMenu;
-	int depth = 18;
 
 	bool useFogOfWar = (showFlags & 0x10) != 0;
 	if (s_useFogOfWar != useFogOfWar)
@@ -1927,7 +2087,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			updateTiles = true;
 			if (showFlags & 1)
 			{
-				s_mapMarkersRect->DestroyAllChildren();
+				for (auto tileIter = s_mapMarkerTiles.Begin(); tileIter; ++tileIter)
+					if (tileIter().inUse) tileIter().SetInUse(false);
 				s_renderedMapMarkers.Clear();
 			}
 		}
@@ -1962,8 +2123,10 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					coord.x -= range;
 					coord.y -= range;
 					range = (range * 2) + 1;
+					auto tileIter = s_mapMarkerTiles.Begin();
 					CellMapMarkers *mapMarkers;
 					DynamicTiles *dynamicTiles;
+					MapMarkerTile *tileData;
 					UInt32 iterX = range, iterY;
 					do
 					{
@@ -1979,15 +2142,24 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 							{
 								if (!(mkIter().data->flags & 1) || (mkIter().refr->flags & 0x800))
 									continue;
-								markerTile = hudMain->AddTileFromTemplate(s_mapMarkersRect, "MiniMapWorldMarkerTemplate");
-								dynamicTiles->Append(markerTile);
+								while (true)
+								{
+									if (!tileIter)
+									{
+										tileData = s_mapMarkerTiles.Append(hudMain->AddTileFromTemplate(s_mapMarkersRect, "MiniMapWorldMarkerTemplate"));
+										break;
+									}
+									tileData = &tileIter();
+									++tileIter;
+									if (tileData->inUse) continue;
+									tileData->SetInUse(true);
+									break;
+								}
+								dynamicTiles->Append(tileData);
+								tileData->x->SetFloat(mkIter().pos.x);
+								tileData->y->SetFloat(mkIter().pos.y);
 								ddsPath = (mkIter().data->flags & 2) ? g_mapMarkerIcons[mkIter().data->type] : (const char*)0x1075030;
-								markerTile->SetString(kTileValue_filename, ddsPath);
-								markerTile->SetFloat(kTileValue_user0, mkIter().pos.x);
-								markerTile->SetFloat(kTileValue_user1, mkIter().pos.y);
-								markerTile->SetFloat(kTileValue_depth, depth);
-								if (depth >= 27) depth = 18;
-								else depth++;
+								tileData->filename->SetString(ddsPath);
 							}
 						iterYnext:
 							coord.y++;
@@ -1999,13 +2171,14 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					while (--iterX);
 				}
 				for (auto cmkIter = s_renderedMapMarkers.Begin(); cmkIter; ++cmkIter)
-					if (!s_currMarkerCells.HasKey(cmkIter.Key())) DestroyCellMarkers(cmkIter);
+					if (!s_currMarkerCells.HasKey(cmkIter.Key())) FreeCellMapMarkers(cmkIter);
 			}
 		}
 		else if (!s_renderedMapMarkers.Empty())
 		{
-			s_mapMarkersRect->DestroyAllChildren();
+			s_mapMarkerTiles.Clear();
 			s_renderedMapMarkers.Clear();
+			s_mapMarkersRect->DestroyAllChildren();
 		}
 	}
 	else
@@ -2023,7 +2196,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			if (!s_exteriorKeys.Empty())
 			{
 				for (auto prgIter = s_renderedExteriors.Begin(); prgIter; ++prgIter)
-					ThisCall(0xA7FD30, prgIter().texture, true);
+					if (prgIter().texture) ThisCall(0xA7FD30, prgIter().texture, true);
 				s_renderedExteriors.Clear();
 				s_exteriorKeys.Clear();
 			}
@@ -2041,13 +2214,15 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				mov		coord.x, cx
 				dec		ecx
 				shl		ecx, 0xC
-				cvtsi2ss	xmm0, ecx
+				movd	xmm0, ecx
+				cvtdq2ps	xmm0, xmm0
 				movss	nwXY.x, xmm0
 				mov		edx, [eax+4]
 				mov		coord.y, dx
 				add		edx, 2
 				shl		edx, 0xC
-				cvtsi2ss	xmm0, edx
+				movd	xmm0, edx
+				cvtdq2ps	xmm0, xmm0
 				movss	nwXY.y, xmm0
 			}
 			GetLocalMapPosMults(thePlayer->PosXY(), &nwXY, &posMult);
@@ -2083,8 +2258,6 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					}
 				}
 				while (gridIdx);
-				s_doorMarkersRect->DestroyAllChildren();
-				s_doorMarkerList.Clear();
 				if (showDoors)
 				{
 					DoorRefsList *listPtr;
@@ -2139,7 +2312,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 
 					if (s_renderedExteriors.Insert(cell->refID, &exteriorEntry))
 					{
-						ThisCall(0x54E640, cell, exteriorEntry);
+						GenerateLocalMapExterior(cell, &exteriorEntry->texture);
 						s_exteriorKeys.Append(cell->refID);
 					}
 					else if (updateTiles)
@@ -2148,7 +2321,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					{
 						if (gridIdx == 4) exteriorEntry->regenFlags = 0xF;
 						else exteriorEntry->regenFlags |= quadrant;
-						ThisCall(0x54E640, cell, exteriorEntry);
+						GenerateLocalMapExterior(cell, &exteriorEntry->texture);
 					}
 					s_tileShaderProps[gridIdx]->srcTexture = exteriorEntry->texture;
 				}
@@ -2164,7 +2337,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 						gridIdx--;
 						findTex.Find(s_exteriorKeys[gridIdx]);
 						if (!findTex) continue;
-						ThisCall(0xA7FD30, findTex().texture, true);
+						if (findTex().texture)
+							ThisCall(0xA7FD30, findTex().texture, true);
 						findTex.Remove();
 					}
 					while (gridIdx);
@@ -2182,14 +2356,16 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				mov		coord.x, cx
 				dec		ecx
 				shl		ecx, 0xC
-				cvtsi2ss	xmm0, ecx
+				movd	xmm0, ecx
+				cvtdq2ps	xmm0, xmm0
 				movss	nwXY.x, xmm0
 				cvttss2si	edx, adjustedPos.y
 				sar		edx, 0xC
 				mov		coord.y, dx
 				add		edx, 2
 				shl		edx, 0xC
-				cvtsi2ss	xmm0, edx
+				movd	xmm0, edx
+				cvtdq2ps	xmm0, xmm0
 				movss	nwXY.y, xmm0
 			}
 			GetLocalMapPosMults(&adjustedPos, &nwXY, &posMult);
@@ -2200,7 +2376,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				if (!s_renderedInterior.Empty())
 				{
 					for (auto clrIter = s_renderedInterior.Begin(); clrIter; ++clrIter)
-						ThisCall(0xA7FD30, *clrIter, true);
+						if (*clrIter) ThisCall(0xA7FD30, *clrIter, true);
 					s_renderedInterior.Clear();
 				}
 				updateTiles = true;
@@ -2255,7 +2431,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					if (s_renderedInterior.Insert(coord, &renderedTexture))
 					{
 						*renderedTexture = NULL;
-						ThisCall(0x54E750, parentCell, (SInt32)coord.x, (SInt32)coord.y, renderedTexture);
+						GenerateLocalMapInterior(parentCell, coord, renderedTexture);
 					}
 					s_tileShaderProps[gridIdx]->srcTexture = *renderedTexture;
 					if (useFogOfWar)
@@ -2265,9 +2441,6 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					}
 				}
 				while (gridIdx);
-
-				s_doorMarkersRect->DestroyAllChildren();
-				s_doorMarkerList.Clear();
 			}
 			else if (updateFogOfWar)
 				DoSelectiveFOWUpdate(&adjustedPos);
@@ -2294,6 +2467,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		{
 			if (updateTiles)
 			{
+				auto markerIter = s_doorMarkerTiles.Begin();
+				DoorMarkerTile *tileData;
 				for (auto doorIter = s_doorRefsList.Begin(); doorIter; ++doorIter)
 				{
 					if (parentWorld)
@@ -2302,26 +2477,48 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					{
 						AdjustInteriorPos(doorIter().doorRef, &adjustedPos);
 						GetLocalMapPosMults(&adjustedPos, &nwXY, &adjustedPos);
-						if ((adjustedPos.x < 0) || (adjustedPos.x >= 1.0F) || (adjustedPos.y < 0) || (adjustedPos.y >= 1.0F))
-							continue;
 					}
-					markerTile = hudMain->AddTileFromTemplate(s_doorMarkersRect, "MiniMapDoorMarkerTemplate");
-					markerTile->SetFloat(kTileValue_user0, adjustedPos.x);
-					markerTile->SetFloat(kTileValue_user1, adjustedPos.y);
-					markerTile->SetFloat(kTileValue_depth, depth);
+					if ((adjustedPos.x < 0) || (adjustedPos.x >= 1.0F) || (adjustedPos.y < 0) || (adjustedPos.y >= 1.0F))
+						continue;
+					if (markerIter)
+					{
+						tileData = &markerIter();
+						++markerIter;
+					}
+					else tileData = s_doorMarkerTiles.Append(hudMain->AddTileFromTemplate(s_doorMarkersRect, "MiniMapDoorMarkerTemplate"));
+					tileData->x->SetFloat(adjustedPos.x);
+					tileData->y->SetFloat(adjustedPos.y);
 					cell = doorIter().linkedCell;
-					if (!cell || (cell == parentCell) || cell->extraDataList.HasType(kExtraData_DetachTime))
-						markerTile->SetFloat(kTileValue_user2, 1.0F);
-					if (depth >= 27) depth = 18;
-					else depth++;
+					tileData->visited->SetFloat(!cell || (cell == parentCell) || cell->extraDataList.HasType(kExtraData_DetachTime));
 					if (useFogOfWar)
-						s_doorMarkerList.Append(markerTile->GetValue(kTileValue_visible), GetVtxAlphaPtr(&adjustedPos));
+						tileData->vtxAlpha = GetVtxAlphaPtr(&adjustedPos);
+					else
+					{
+						tileData->vtxAlpha = NULL;
+						tileData->visible->SetFloat(1.0F);
+					}
+					tileData->inUse = true;
+				}
+
+				for (; markerIter; ++markerIter)
+				{
+					if (!markerIter().inUse) continue;
+					markerIter().inUse = false;
+					markerIter().visible->SetFloat(0);
 				}
 			}
 
-			if (!s_doorMarkerList.Empty() && (updateTiles || updateFogOfWar))
-				for (auto mkrIter = s_doorMarkerList.Begin(); mkrIter; ++mkrIter)
-					mkrIter().visibility->SetFloat(*mkrIter().alphaPtr > 0);
+			if (updateTiles || updateFogOfWar)
+			{
+				for (auto markerIter = s_doorMarkerTiles.Begin(); markerIter; ++markerIter)
+					if (markerIter().inUse && markerIter().vtxAlpha)
+						markerIter().visible->SetFloat(*markerIter().vtxAlpha > 0);
+			}
+		}
+		else if (!s_doorMarkerTiles.Empty())
+		{
+			s_doorMarkerTiles.Clear();
+			s_doorMarkersRect->DestroyAllChildren();
 		}
 	}
 
@@ -2340,7 +2537,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			}
 			if (!worldMap || parentCell->worldSpace)
 			{
-				depth = 29;
+				int depth = 29;
 				auto trgIter = thePlayer->questTargetList.Head();
 				BGSQuestObjective::Target *targetData;
 				TileRect *targetsRect = worldMap ? s_wQuestMarkersRect : s_lQuestMarkersRect;

@@ -12,135 +12,130 @@ const char * TraitIDToName(int id);	// slow
 //		TileText		4C
 //		Tile3D			50
 
-enum
+enum TileTypeID
+{
+	kTileType_rect =	0x385,
+	kTileType_image =	0x386,
+	kTileType_text =	0x387,
+	kTileType_nif =		0x388,
+	kTileType_3D =		kTileType_nif,
+	kTileType_menu =	0x389,
+	kTileType_hotrect =	0x38A,
+	kTileType_window =	0x38B,
+	kTileType_radial =	0x38C
+};
+
+enum TileValueID
 {
 	kTileValue_x =					0xFA1,
-	kTileValue_y,
-	kTileValue_visible,
-	kTileValue_class,
+	kTileValue_y =					0xFA2,
+	kTileValue_visible =			0xFA3,
+	kTileValue_class =				0xFA4,
 	kTileValue_clipwindow =			0xFA6,
-	kTileValue_stackingtype,
-	kTileValue_locus,
-	kTileValue_alpha,
-	kTileValue_id,
-	kTileValue_disablefade,
-	kTileValue_listindex,
-	kTileValue_depth,
-	kTileValue_clips,
-	kTileValue_target,
-	kTileValue_height,
-	kTileValue_width,
-	kTileValue_red,
-	kTileValue_green,
-	kTileValue_blue,
-	kTileValue_tile,
-	kTileValue_childcount,
+	kTileValue_stackingtype =		0xFA7,
+	kTileValue_locus =				0xFA8,
+	kTileValue_alpha =				0xFA9,
+	kTileValue_id =					0xFAA,
+	kTileValue_disablefade =		0xFAB,
+	kTileValue_listindex =			0xFAC,
+	kTileValue_depth =				0xFAD,
+	kTileValue_clips =				0xFAE,
+	kTileValue_target =				0xFAF,
+	kTileValue_height =				0xFB0,
+	kTileValue_width =				0xFB1,
+	kTileValue_red =				0xFB2,
+	kTileValue_green =				0xFB3,
+	kTileValue_blue =				0xFB4,
+	kTileValue_tile =				0xFB5,
+	kTileValue_childcount =			0xFB6,
 	kTileValue_child_count =		kTileValue_childcount,
-	kTileValue_justify,
-	kTileValue_zoom,
-	kTileValue_font,
-	kTileValue_wrapwidth,
-	kTileValue_wraplimit,
-	kTileValue_wraplines,
-	kTileValue_pagenum,
-	kTileValue_ishtml,
-	kTileValue_cropoffsety,
+	kTileValue_justify =			0xFB7,
+	kTileValue_zoom =				0xFB8,
+	kTileValue_font =				0xFB9,
+	kTileValue_wrapwidth =			0xFBA,
+	kTileValue_wraplimit =			0xFBB,
+	kTileValue_wraplines =			0xFBC,
+	kTileValue_pagenum =			0xFBD,
+	kTileValue_ishtml =				0xFBE,
+	kTileValue_cropoffsety =		0xFBF,
 	kTileValue_cropy =				kTileValue_cropoffsety,
-	kTileValue_cropoffsetx,
+	kTileValue_cropoffsetx =		0xFC0,
 	kTileValue_cropx =				kTileValue_cropoffsetx,
-	kTileValue_menufade,
-	kTileValue_explorefade,
-	kTileValue_mouseover,
-	kTileValue_string,
-	kTileValue_shiftclicked,
+	kTileValue_menufade =			0xFC1,
+	kTileValue_explorefade =		0xFC2,
+	kTileValue_mouseover =			0xFC3,
+	kTileValue_string =				0xFC4,
+	kTileValue_shiftclicked =		0xFC5,
 	kTileValue_clicked =			0xFC7,
 	kTileValue_clicksound =			0xFCB,
-	kTileValue_filename,
-	kTileValue_filewidth,
-	kTileValue_fileheight,
-	kTileValue_repeatvertical,
-	kTileValue_repeathorizontal,
+	kTileValue_filename =			0xFCC,
+	kTileValue_filewidth =			0xFCD,
+	kTileValue_fileheight =			0xFCE,
+	kTileValue_repeatvertical =		0xFCF,
+	kTileValue_repeathorizontal =	0xFD0,
 	kTileValue_animation =			0xFD2,
-	kTileValue_linecount =			0xDD4,
-	kTileValue_pagecount,
-	kTileValue_xdefault,
-	kTileValue_xup,
-	kTileValue_xdown,
-	kTileValue_xleft,
-	kTileValue_xright,
+	kTileValue_linecount =			0xFD4,
+	kTileValue_pagecount =			0xFD5,
+	kTileValue_xdefault =			0xFD6,
+	kTileValue_xup =				0xFD7,
+	kTileValue_xdown =				0xFD8,
+	kTileValue_xleft =				0xFD9,
+	kTileValue_xright =				0xFDA,
 	kTileValue_xbuttona =			0xFDD,
-	kTileValue_xbuttonb,
-	kTileValue_xbuttonx,
-	kTileValue_xbuttony,
-	kTileValue_xbuttonlt,
-	kTileValue_xbuttonrt,
-	kTileValue_xbuttonlb,
-	kTileValue_xbuttonrb,
+	kTileValue_xbuttonb =			0xFDE,
+	kTileValue_xbuttonx =			0xFDF,
+	kTileValue_xbuttony =			0xFE0,
+	kTileValue_xbuttonlt =			0xFE1,
+	kTileValue_xbuttonrt =			0xFE2,
+	kTileValue_xbuttonlb =			0xFE3,
+	kTileValue_xbuttonrb =			0xFE4,
 	kTileValue_xbuttonstart =		0xFE7,
-	kTileValue_mouseoversound,
-	kTileValue_draggable,
-	kTileValue_dragstartx,
-	kTileValue_dragstarty,
-	kTileValue_dragoffsetx,
-	kTileValue_dragoffsety,
-	kTileValue_dragdeltax,
-	kTileValue_dragdeltay,
-	kTileValue_dragx,
-	kTileValue_dragy,
-	kTileValue_wheelable,
-	kTileValue_wheelmoved,
-	kTileValue_systemcolor,
-	kTileValue_brightness,
+	kTileValue_mouseoversound =		0xFE8,
+	kTileValue_draggable =			0xFE9,
+	kTileValue_dragstartx =			0xFEA,
+	kTileValue_dragstarty =			0xFEB,
+	kTileValue_dragoffsetx =		0xFEC,
+	kTileValue_dragoffsety =		0xFED,
+	kTileValue_dragdeltax =			0xFEE,
+	kTileValue_dragdeltay =			0xFEF,
+	kTileValue_dragx =				0xFF0,
+	kTileValue_dragy =				0xFF1,
+	kTileValue_wheelable =			0xFF2,
+	kTileValue_wheelmoved =			0xFF3,
+	kTileValue_systemcolor =		0xFF4,
+	kTileValue_brightness =			0xFF5,
 	kTileValue_linegap =			0xFF7,
-	kTileValue_resolutionconverter,
-	kTileValue_texatlas,
-	kTileValue_rotateangle,
-	kTileValue_rotateaxisx,
-	kTileValue_rotateaxisy,
+	kTileValue_resolutionconverter =0xFF8,
+	kTileValue_texatlas =			0xFF9,
+	kTileValue_rotateangle =		0xFFA,
+	kTileValue_rotateaxisx =		0xFFB,
+	kTileValue_rotateaxisy =		0xFFC,
 
 	kTileValue_user0 =				0x1004,
-	kTileValue_user1,
-	kTileValue_user2,
-	kTileValue_user3,
-	kTileValue_user4,
-	kTileValue_user5,
-	kTileValue_user6,
-	kTileValue_user7,
-	kTileValue_user8,
-	kTileValue_user9,
-	kTileValue_user10,
-	kTileValue_user11,
-	kTileValue_user12,
-	kTileValue_user13,
-	kTileValue_user14,
-	kTileValue_user15,
-	kTileValue_user16,
+	kTileValue_user1 =				0x1005,
+	kTileValue_user2 =				0x1006,
+	kTileValue_user3 =				0x1007,
+	kTileValue_user4 =				0x1008,
+	kTileValue_user5 =				0x1009,
+	kTileValue_user6 =				0x100A,
+	kTileValue_user7 =				0x100B,
+	kTileValue_user8 =				0x100C,
+	kTileValue_user9 =				0x100D,
+	kTileValue_user10 =				0x100E,
+	kTileValue_user11 =				0x100F,
+	kTileValue_user12 =				0x1010,
+	kTileValue_user13 =				0x1011,
+	kTileValue_user14 =				0x1012,
+	kTileValue_user15 =				0x1013,
+	kTileValue_user16 =				0x1014,
 
-	kTileValue_max
+	kTileValue_max =				0x1015
 };
 
 // 38+
 class Tile
 {
 public:
-	enum eTileID
-	{
-		kTileID_rect = 0x0385,
-		kTileID_image,
-		kTileID_text,
-		kTileID_3D,
-		kTileID_nif = kTileID_3D,
-		kTileID_menu,
-
-		// Not a Tile descendend
-		kTileID_hotrect,
-		kTileID_window,
-		// This one descend from TileImage
-		kTileID_radial,
-
-		kTileID_max
-	};
-
 	MEMBER_FN_PREFIX(Tile);
 	DEFINE_MEMBER_FN(SetStringValue, void, 0x00A01350, UInt32 valueID, const char* str, bool bPropagate);
 	DEFINE_MEMBER_FN(SetFloatValue, void, 0x00A012D0, UInt32 valueID, float num, bool bPropagate);
@@ -151,10 +146,10 @@ public:
 	virtual UInt32		GetType(void);		// returns one of kTileValue_XXX
 	virtual const char	*GetTypeStr(void);	// 4-byte id
 	virtual bool		Unk_05(UInt32 arg0, UInt32 arg1);
-	virtual UInt32		UpdateField(UInt32 valueID, float floatValue, const char *strValue);
+	virtual Tile		*UpdateField(UInt32 valueID, float floatValue, const char *strValue);
 	virtual void		Unk_07(void);
-	virtual UInt32		Unk_08(void);
-	virtual void		Unk_09(UInt32 arg0, UInt32 arg1, UInt32 arg2);
+	virtual TileShaderProperty	*GetShaderProperty();
+	virtual void		Unk_09(NiNode *niNode, float alpha, NiColorAlpha *color);
 
 	struct Value;
 
@@ -323,7 +318,18 @@ public:
 	UInt8				fill[3];		// 45-47
 };
 
+// 48
+class RadialTile : public TileImage
+{
+public:
+};
+
+// 4C
 class TileText : public Tile
 {
 public:
+	UInt32			unk38;		// 38
+	NiVector3		pos3C;		// 3C
+	UInt8			byte48;		// 48
+	UInt8			pad49[3];	// 49
 };

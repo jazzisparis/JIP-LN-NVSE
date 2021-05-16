@@ -254,7 +254,7 @@ void Tile::Dump()
 	Value *value;
 	const char *traitName;
 	char traitID[9];
-	for (auto iter = values.Begin(); !iter.End(); ++iter)
+	for (auto iter = values.Begin(); iter; ++iter)
 	{
 		value = *iter;
 		traitName = TraitIDToName(value->id);
@@ -284,7 +284,7 @@ void Tile::Dump()
 // also this is slow and sucks
 const char *TraitIDToName(int id)
 {
-	for (auto iter = g_traitNameMap->Begin(); !iter.End(); ++iter)
+	for (auto iter = g_traitNameMap->Begin(); iter; ++iter)
 		if (iter.Get() == id) return iter.Key();
 	return NULL;
 }

@@ -240,7 +240,7 @@ bool Cmd_GetFilesInFolder_Execute(COMMAND_ARGS)
 	if (pathEnd[-1] != '\\') *pathEnd++ = '\\';
 	StrCopy(pathEnd, s_strArgBuffer);
 	NVSEArrayVar *outArray = CreateArray(NULL, 0, scriptObj);
-	for (DirectoryIterator iter(s_dataPathFull); !iter.End(); iter.Next())
+	for (DirectoryIterator iter(s_dataPathFull); iter; ++iter)
 		if (iter.IsFile()) AppendElement(outArray, ArrayElementL(iter.Get()));
 	AssignCommandResult(outArray, result);
 	return true;
@@ -257,7 +257,7 @@ bool Cmd_GetFoldersInFolder_Execute(COMMAND_ARGS)
 	if (pathEnd[-1] != '\\') *pathEnd++ = '\\';
 	StrCopy(pathEnd, s_strArgBuffer);
 	NVSEArrayVar *outArray = CreateArray(NULL, 0, scriptObj);
-	for (DirectoryIterator iter(s_dataPathFull); !iter.End(); iter.Next())
+	for (DirectoryIterator iter(s_dataPathFull); iter; ++iter)
 		if (iter.IsFolder()) AppendElement(outArray, ArrayElementL(iter.Get()));
 	AssignCommandResult(outArray, result);
 	return true;

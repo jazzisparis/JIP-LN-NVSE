@@ -81,7 +81,7 @@ DEFINE_COMMAND_PLUGIN(GetPosEx, , 1, 3, kParams_JIP_ThreeScriptVars);
 DEFINE_COMMAND_PLUGIN(GetAngleEx, , 1, 3, kParams_JIP_ThreeScriptVars);
 DEFINE_COMMAND_PLUGIN(SetTextureTransformKey, , 1, 4, kParams_JIP_OneString_TwoInts_OneFloat);
 DEFINE_COMMAND_PLUGIN(AttachExtraCamera, , 1, 6, kParams_JIP_OneString_OneInt_OneOptionalString_ThreeOptionalFloats);
-DEFINE_COMMAND_PLUGIN(ProjectExtraCamera, , 1, 4, kParams_JIP_TwoStrings_OneDouble_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(ProjectExtraCamera, , 0, 4, kParams_JIP_TwoStrings_OneDouble_OneOptionalInt);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -1029,7 +1029,7 @@ bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 			NiVector3 rot;
 			NiMatrix33 &rotMat = getWorld ? niBlock->m_worldRotate : niBlock->m_localRotate;
 			rotMat.ExtractAngles(&rot);
-			ArrayElementL elements[3] = {rot.x / kDblPId180, rot.y / kDblPId180, rot.z / kDblPId180};
+			ArrayElementL elements[3] = {rot.x * kDbl180dPI, rot.y * kDbl180dPI, rot.z * kDbl180dPI};
 			AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
 		}
 	}
@@ -1244,7 +1244,7 @@ bool Cmd_SetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 			if (ctrlMgr && IS_TYPE(ctrlMgr, NiControllerManager))
 			{
 				if (s_strArgBuffer[0] == '*')
-					for (auto iter = ctrlMgr->sequences.Begin(); !iter.End(); ++iter)
+					for (auto iter = ctrlMgr->sequences.Begin(); iter; ++iter)
 						iter->frequency = frequency;
 				else
 				{
@@ -1433,7 +1433,7 @@ bool Cmd_RemoveLight_Execute(COMMAND_ARGS)
 		if (objNode)
 		{
 			NiPointLight *pointLight;
-			for (auto iter = objNode->m_children.Begin(); !iter.End(); ++iter)
+			for (auto iter = objNode->m_children.Begin(); iter; ++iter)
 			{
 				if (!(pointLight = (NiPointLight*)*iter) || NOT_TYPE(pointLight, NiPointLight) || !(pointLight->extraFlags & 0x80))
 					continue;
@@ -1731,7 +1731,7 @@ void __fastcall GetCollisionNodes(NiNode *node)
 				s_tempElements.Append(node->GetName());
 		}
 	}
-	for (auto iter = node->m_children.Begin(); !iter.End(); ++iter)
+	for (auto iter = node->m_children.Begin(); iter; ++iter)
 		if (*iter && IS_NODE(*iter))
 			GetCollisionNodes((NiNode*)*iter);
 }
@@ -1754,7 +1754,7 @@ void __fastcall GetChildBlocks(NiNode *node)
 {
 	s_tempElements.Append(node->GetName());
 	NiAVObject *block;
-	for (auto iter = node->m_children.Begin(); !iter.End(); ++iter)
+	for (auto iter = node->m_children.Begin(); iter; ++iter)
 	{
 		if (!(block = *iter)) continue;
 		if IS_NODE(block)
@@ -1830,9 +1830,9 @@ bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 	ScriptVar *outX, *outY, *outZ;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outX, &outY, &outZ))
 	{
-		outX->data.num = thisObj->rotX / kDblPId180;
-		outY->data.num = thisObj->rotY / kDblPId180;
-		outZ->data.num = thisObj->rotZ / kDblPId180;
+		outX->data.num = thisObj->rotX * kDbl180dPI;
+		outY->data.num = thisObj->rotY * kDbl180dPI;
+		outZ->data.num = thisObj->rotZ * kDbl180dPI;
 	}
 	return true;
 }
@@ -1889,17 +1889,16 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 				NiCamera **pCamera;
 				if (s_extraCamerasMap.Insert(camName, &pCamera))
 				{
-					xCamera = ThisCall<NiCamera*>(0xA712F0, NiAllocator(sizeof(NiCamera)));
+					*pCamera = xCamera = ThisCall<NiCamera*>(0xA712F0, NiAllocator(sizeof(NiCamera)));
 					InterlockedIncrement(&xCamera->m_uiRefCount);
 					xCamera->frustum.n = 5.0F;
 					xCamera->frustum.f = 353840.0F;
 					xCamera->minNearPlaneDist = 1.0F;
 					xCamera->maxFarNearRatio = 70768.0F;
 					xCamera->LODAdjust = 0.001F;
-					*pCamera = xCamera;
 				}
 				else xCamera = *pCamera;
-				if (targetNode != xCamera->m_parent)
+				if (xCamera->m_parent != targetNode)
 				{
 					targetNode->AddObject(xCamera, 1);
 					xCamera->m_localRotate.Inverse(&targetNode->m_localRotate);
@@ -1929,47 +1928,41 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 extern UInt8 s_useAltFormat;
 void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cell, int EDX, NiCamera *camera, RenderTarget **outTexture);
 
-__declspec(naked) void __fastcall ProjectExtraCamera(NiCamera *camera, BSShaderNoLightingProperty *shaderProp)
+__declspec(naked) void __stdcall ProjectExtraCamera(NiCamera *camera, NiTexture **pTexture)
 {
 	__asm
 	{
 		push	ebp
 		mov		ebp, esp
-		push	edx
-		sub		esp, 0xC
 		mov		eax, ds:[0x11D5C48]
-		mov		[ebp-0xC], eax
+		push	eax
 		mov		byte ptr [eax+0x1B], 1
-		mov		eax, 0x11AD7B4
-		mov		dl, [eax]
-		mov		[ebp-0x10], dl
-		mov		[eax], 0
-		lea		edx, [ebp-8]
-		mov		dword ptr [edx], 0
-		push	edx
-		push	ecx
+		mov		byte ptr ds:[0x11AD7B4], 0
+		push	0
+		push	esp
+		push	dword ptr [ebp+8]
 		xor		ecx, ecx
 		mov		s_useAltFormat, 2
 		call	GenerateRenderedTextureHook
 		mov		s_useAltFormat, 0
-		mov		dl, [ebp-0x10]
-		mov		byte ptr ds:[0x11AD7B4], dl
-		mov		eax, [ebp-0xC]
+		mov		byte ptr ds:[0x11AD7B4], 1
+		mov		eax, [ebp-4]
 		mov		byte ptr [eax+0x1B], 0
-		push	0
 		mov		ecx, [ebp-8]
-		CALL_EAX(0x4BC320)
+		test	ecx, ecx
+		jz		done
+		mov		eax, [ecx+0x30]
+		test	eax, eax
+		jz		doRelease
 		push	eax
-		mov		ecx, [ebp-4]
-		add		ecx, 0x60
-		push	ecx
+		push	dword ptr [ebp+0xC]
 		call	NiReleaseAddRef
 		mov		ecx, [ebp-8]
-		CALL_EAX(0x54E710)
-		mov		ecx, [ebp-8]
+	doRelease:
 		call	NiReleaseObject
+	done:
 		leave
-		retn
+		retn	8
 	}
 }
 
@@ -1986,18 +1979,30 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 		NiCamera *xCamera = s_extraCamerasMap.Get(camName);
 		if (xCamera && xCamera->m_parent)
 		{
-			NiAVObject *targetGeom = thisObj->GetNiBlock(s_strArgBuffer);
-			if (targetGeom && targetGeom->GetTriBasedGeom())
+			NiTexture **pTexture = NULL;
+			if (s_strArgBuffer[0] == '*')
 			{
-				BSShaderNoLightingProperty *shaderProp = (BSShaderNoLightingProperty*)targetGeom->GetProperty(3);
-				if (shaderProp && IS_TYPE(shaderProp, BSShaderNoLightingProperty))
+				TileImage *targetTile = (TileImage*)GetTargetComponent(s_strArgBuffer + 1);
+				if (targetTile && IS_TYPE(targetTile, TileImage) && targetTile->shaderProp)
+					pTexture = &targetTile->shaderProp->srcTexture;
+			}
+			else if (thisObj)
+			{
+				NiAVObject *targetGeom = thisObj->GetNiBlock(s_strArgBuffer);
+				if (targetGeom && targetGeom->GetTriBasedGeom())
 				{
-					float w = tan(fov * kDblPId180) / 1.5;
-					xCamera->frustum.viewPort = {-w, w, w, -w};
-					s_projectPixelSize = pixelSize;
-					ProjectExtraCamera(xCamera, shaderProp);
-					*result = 1;
+					BSShaderNoLightingProperty *shaderProp = (BSShaderNoLightingProperty*)targetGeom->GetProperty(3);
+					if (shaderProp && IS_TYPE(shaderProp, BSShaderNoLightingProperty))
+						pTexture = &shaderProp->srcTexture;
 				}
+			}
+			if (pTexture)
+			{
+				float w = tan(fov * kDblPId180) / 1.5;
+				xCamera->frustum.viewPort = {-w, w, w, -w};
+				s_projectPixelSize = pixelSize;
+				ProjectExtraCamera(xCamera, pTexture);
+				*result = 1;
 			}
 		}
 	}

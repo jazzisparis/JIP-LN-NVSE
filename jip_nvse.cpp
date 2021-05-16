@@ -1318,8 +1318,11 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v56.12
 	/*28FA*/REG_CMD(ToggleMouseMovement);
 	/*28FB*/REG_CMD(SetTextureTransformKey);
+	//	v56.16
 	/*28FC*/REG_CMD(AttachExtraCamera);
 	/*28FD*/REG_CMD(ProjectExtraCamera);
+	/*28FE*/REG_CMD(AttachUIXML);
+	/*28FF*/REG_CMD(AttachUIComponent);
 
 	//===========================================================
 
