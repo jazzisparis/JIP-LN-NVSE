@@ -1910,6 +1910,7 @@ __declspec(naked) void TileTextApplyScaleHook()
 		test	byte ptr [eax+0xB], 0x80
 		jnz		noScale
 		fld		dword ptr [eax+8]
+		fmul	kFlt1d100
 		fst		dword ptr [ecx+0x64]
 		fld		st
 		fimul	dword ptr [ebp-0x58]
