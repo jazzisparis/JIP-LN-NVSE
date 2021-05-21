@@ -1577,19 +1577,18 @@ bool Cmd_ToggleHUDCursor_Execute(COMMAND_ARGS)
 bool Cmd_AddTileFromTemplate_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char dataStr[0x200];
-	if (ExtractFormatStringArgs(0, dataStr, EXTRACT_ARGS_EX, kCommandInfo_AddTileFromTemplate.numParams))
+	if (ExtractFormatStringArgs(0, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_AddTileFromTemplate.numParams))
 	{
-		char *tempName = GetNextToken(dataStr, '|');
+		char *tempName = GetNextToken(s_strArgBuffer, '|');
 		if (!*tempName) return true;
 		char *altName = GetNextToken(tempName, '|');
 		TileMenu *menu;
 		Tile *component = NULL;
-		char *slashPos = SlashPos(dataStr);
+		char *slashPos = SlashPos(s_strArgBuffer);
 		if (slashPos)
 		{
 			*slashPos = 0;
-			menu = GetMenuTile(dataStr);
+			menu = GetMenuTile(s_strArgBuffer);
 			if (!menu) return true;
 			const char *trait = NULL;
 			component = menu->GetComponent(slashPos + 1, &trait);
@@ -1597,7 +1596,7 @@ bool Cmd_AddTileFromTemplate_Execute(COMMAND_ARGS)
 		}
 		else
 		{
-			menu = GetMenuTile(dataStr);
+			menu = GetMenuTile(s_strArgBuffer);
 			component = menu;
 		}
 		if (component)

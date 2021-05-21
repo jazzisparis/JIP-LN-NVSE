@@ -82,6 +82,7 @@ DEFINE_COMMAND_PLUGIN(GetAngleEx, , 1, 3, kParams_JIP_ThreeScriptVars);
 DEFINE_COMMAND_PLUGIN(SetTextureTransformKey, , 1, 4, kParams_JIP_OneString_TwoInts_OneFloat);
 DEFINE_COMMAND_PLUGIN(AttachExtraCamera, , 1, 3, kParams_JIP_OneString_OneInt_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(ProjectExtraCamera, , 0, 4, kParams_JIP_TwoStrings_OneDouble_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(RenameNifBlock, , 1, 3, kParams_JIP_TwoStrings_OneOptionalInt);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -1537,10 +1538,9 @@ UInt8 s_insertObjectFlag = 0;
 bool RegisterInsertObject(COMMAND_ARGS)
 {
 	*result = 0;
-	char dataStr[0x80];
 	TESForm *form;
 	UInt32 doInsert;
-	if (ExtractFormatStringArgs(2, dataStr, EXTRACT_ARGS_EX, kCommandInfo_AttachModel.numParams, &form, &doInsert) && (form->modIndex != 0xFF))
+	if (ExtractFormatStringArgs(2, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_AttachModel.numParams, &form, &doInsert) && (form->modIndex != 0xFF))
 	{
 		if IS_REFERENCE(form)
 		{
@@ -1550,13 +1550,13 @@ bool RegisterInsertObject(COMMAND_ARGS)
 		else if (!form->IsBoundObject())
 			return true;
 
-		char *nodeName = NULL, *objectName = FindChrR(dataStr, StrLen(dataStr), '|');
+		char *nodeName = NULL, *objectName = FindChrR(s_strArgBuffer, StrLen(s_strArgBuffer), '|');
 		if (objectName)
 		{
 			*objectName++ = 0;
-			nodeName = dataStr;
+			nodeName = s_strArgBuffer;
 		}
-		else objectName = dataStr;
+		else objectName = s_strArgBuffer;
 
 		if (!*objectName) return true;
 
@@ -1657,20 +1657,20 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 
 bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 {
-	char blockName[0x40];
-	blockName[0] = '^';
+	char *namePtr = s_strArgBuffer;
+	*namePtr = '^';
 	TESForm *form;
-	if (ExtractFormatStringArgs(1, blockName + 1, EXTRACT_ARGS_EX, kCommandInfo_ModelHasBlock.numParams, &form))
+	if (ExtractFormatStringArgs(1, namePtr + 1, EXTRACT_ARGS_EX, kCommandInfo_ModelHasBlock.numParams, &form))
 	{
 		TESObjectREFR *refr = IS_REFERENCE(form) ? (TESObjectREFR*)form : NULL;
 		NiNode *rootNode = refr ? refr->GetNiNode() : NULL;
-		if (rootNode && rootNode->GetBlock(blockName + 1))
+		if (rootNode && rootNode->GetBlock(namePtr + 1))
 			goto Retn1;
 		NodeNamesMap *namesMap = s_insertNodeMap.GetPtr(form);
 		if (namesMap)
 		{
 			for (auto iter = namesMap->Begin(); iter; ++iter)
-				if (iter().HasKey(blockName + 1) || iter().HasKey(blockName))
+				if (iter().HasKey(namePtr + 1) || iter().HasKey(namePtr))
 					goto Retn1;
 		}
 		if (refr)
@@ -1681,7 +1681,7 @@ bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 			if (namesMap)
 			{
 				for (auto iter = namesMap->Begin(); iter; ++iter)
-					if (iter().HasKey(blockName + 1) || iter().HasKey(blockName))
+					if (iter().HasKey(namePtr + 1) || iter().HasKey(namePtr))
 						goto Retn1;
 			}
 		}
@@ -1691,7 +1691,7 @@ bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 			if (modelPath)
 			{
 				rootNode = LoadModel(g_modelLoader, modelPath, 0, 1, 0, 0, 1);
-				if (rootNode && rootNode->GetBlock(blockName + 1))
+				if (rootNode && rootNode->GetBlock(namePtr + 1))
 					goto Retn1;
 			}
 		}
@@ -2032,6 +2032,23 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 				ProjectExtraCamera(xCamera, pTexture);
 				*result = 1;
 			}
+		}
+	}
+	return true;
+}
+
+bool Cmd_RenameNifBlock_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char blockName[0x40], newName[0x40];
+	UInt32 pcNode = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &newName, &pcNode))
+	{
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
+		if (niBlock)
+		{
+			niBlock->SetName(newName);
+			*result = 1;
 		}
 	}
 	return true;

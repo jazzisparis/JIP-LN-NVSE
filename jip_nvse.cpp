@@ -1323,6 +1323,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*28FD*/REG_CMD(ProjectExtraCamera);
 	/*28FE*/REG_CMD(AttachUIXML);
 	/*28FF*/REG_CMD(AttachUIComponent);
+	//	v56.18
+	/*2900*/REG_CMD(RenameNifBlock);
 
 	//===========================================================
 

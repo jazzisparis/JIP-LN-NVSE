@@ -1494,3 +1494,10 @@ ParamInfo kParams_JIP_TwoStrings_OneDouble_OneOptionalInt[] =
 	{"Double", kParamType_Double, 0},
 	{"Integer", kParamType_Integer, 1}
 };
+
+ParamInfo kParams_JIP_TwoStrings_OneOptionalInt[] =
+{
+	{"String", kParamType_String, 0},
+	{"String", kParamType_String, 0},
+	{"Integer", kParamType_Integer, 1}
+};
