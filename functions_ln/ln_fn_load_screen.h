@@ -21,8 +21,9 @@ bool Cmd_GetLoadScreenTexture_Execute(COMMAND_ARGS)
 bool Cmd_SetLoadScreenTexture_Execute(COMMAND_ARGS)
 {
 	TESLoadScreen *loadScreen;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &loadScreen, &s_strArgBuffer) && IS_ID(loadScreen, TESLoadScreen))
-		loadScreen->texture.ddsPath.Set(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &loadScreen, &path) && IS_ID(loadScreen, TESLoadScreen))
+		loadScreen->texture.ddsPath.Set(path);
 	return true;
 }
 

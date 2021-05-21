@@ -3824,6 +3824,13 @@ void InitGamePatches()
 	WritePushRetRelJump(0x9313EC, 0x931431, (UInt32)MarkCreatureNoFallHook);
 	SAFE_WRITE_BUF(0xCD3FDD, "\xA9\x01\x00\x40\x00\x74\x0D\x89\xBE\x20\x05\x00\x00\x80\x8E\x14\x04\x00\x00\x80");
 
+	//	Nuke HUDMainMenu/HardcoreMode/ set texts <zoom>
+	SafeWrite16(0x76F688, 0x20EB);
+	SafeWrite16(0x76F742, 0x1FEB);
+	SafeWrite16(0x76F824, 0x1FEB);
+	SafeWrite16(0x76F92D, 0x20EB);
+	SafeWrite16(0x76FA5E, 0x1FEB);
+
 	//	Inlines
 	SafeWrite32(0x47C850, 0x90C3C030);
 	SafeWrite32(0x6815C0, 0x90C3C889);

@@ -80,7 +80,7 @@ DEFINE_COMMAND_PLUGIN(GetBlockTextureSet, , 1, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(GetPosEx, , 1, 3, kParams_JIP_ThreeScriptVars);
 DEFINE_COMMAND_PLUGIN(GetAngleEx, , 1, 3, kParams_JIP_ThreeScriptVars);
 DEFINE_COMMAND_PLUGIN(SetTextureTransformKey, , 1, 4, kParams_JIP_OneString_TwoInts_OneFloat);
-DEFINE_COMMAND_PLUGIN(AttachExtraCamera, , 1, 6, kParams_JIP_OneString_OneInt_OneOptionalString_ThreeOptionalFloats);
+DEFINE_COMMAND_PLUGIN(AttachExtraCamera, , 1, 3, kParams_JIP_OneString_OneInt_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(ProjectExtraCamera, , 0, 4, kParams_JIP_TwoStrings_OneDouble_OneOptionalInt);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
@@ -371,9 +371,10 @@ bool Cmd_ToggleObjectCollision_Execute(COMMAND_ARGS)
 bool Cmd_GetMaterialPropertyValue_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char blockName[0x40];
 	UInt32 traitID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &traitID) || (traitID > 8)) return true;
-	NiAVObject *block = thisObj->GetNiBlock(s_strArgBuffer);
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &traitID) || (traitID > 8)) return true;
+	NiAVObject *block = thisObj->GetNiBlock(blockName);
 	if (!block) return true;
 	NiMaterialProperty *matProp = (NiMaterialProperty*)block->GetProperty(2);
 	if (!matProp) return true;
@@ -403,18 +404,19 @@ bool Cmd_GetMaterialPropertyValue_Execute(COMMAND_ARGS)
 
 bool Cmd_SetMaterialPropertyValue_Execute(COMMAND_ARGS)
 {
+	char blockName[0x40];
 	UInt32 traitID;
 	float value;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &traitID, &value) && (traitID <= 8) && (value >= 0))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &traitID, &value) && (traitID <= 8) && (value >= 0))
 	{
 		NiNode *niNode = thisObj->GetNiNode();
 		if (niNode)
 		{
-			if ((s_strArgBuffer[0] == '*') && !s_strArgBuffer[1])
+			if ((blockName[0] == '*') && !blockName[1])
 				niNode->BulkSetMaterialPropertyTraitValue(traitID, value);
 			else
 			{
-				NiAVObject *block = niNode->GetBlock(s_strArgBuffer);
+				NiAVObject *block = niNode->GetBlock(blockName);
 				if (block)
 				{
 					NiMaterialProperty *matProp = (NiMaterialProperty*)block->GetProperty(2);
@@ -768,8 +770,9 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 
 bool Cmd_SetRefName_Execute(COMMAND_ARGS)
 {
+	char name[0x40];
 	UInt8 numArgs = NUM_ARGS;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer) || !thisObj->ValidForHooks()) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &name) || !thisObj->ValidForHooks()) return true;
 	if (numArgs)
 	{
 		char **namePtr;
@@ -779,7 +782,7 @@ bool Cmd_SetRefName_Execute(COMMAND_ARGS)
 			HOOK_MOD(GetRefName, true);
 		}
 		else free(*namePtr);
-		*namePtr = CopyString(s_strArgBuffer);
+		*namePtr = CopyString(name);
 	}
 	else
 	{
@@ -950,7 +953,7 @@ bool Cmd_MoveToContainer_Execute(COMMAND_ARGS)
 	return true;
 }
 
-__declspec(naked) NiAVObject* __fastcall GetNifBlock(TESObjectREFR *thisObj, UInt32 pcNode)
+__declspec(naked) NiAVObject* __fastcall GetNifBlock(TESObjectREFR *thisObj, UInt32 pcNode, char *blockName)
 {
 	__asm
 	{
@@ -974,23 +977,24 @@ __declspec(naked) NiAVObject* __fastcall GetNifBlock(TESObjectREFR *thisObj, UIn
 	gotRoot:
 		test	eax, eax
 		jz		done
-		mov		edx, offset s_strArgBuffer
+		mov		edx, [esp+4]
 		cmp		[edx], 0
 		jz		done
 		mov		ecx, eax
 		call	NiNode::GetBlock
 	done:
-		retn
+		retn	4
 	}
 }
 
 bool Cmd_GetNifBlockTranslation_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char blockName[0x40];
 	UInt32 getWorld = 0, pcNode = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &getWorld, &pcNode))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &getWorld, &pcNode))
 	{
-		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
 			NiVector3 &transltn = getWorld ? niBlock->m_worldTranslate : niBlock->m_localTranslate;
@@ -1003,11 +1007,12 @@ bool Cmd_GetNifBlockTranslation_Execute(COMMAND_ARGS)
 
 bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 {
+	char blockName[0x40];
 	NiVector3 transltn;
 	UInt32 pcNode = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &transltn.x, &transltn.y, &transltn.z, &pcNode))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &transltn.x, &transltn.y, &transltn.z, &pcNode))
 	{
-		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
 			niBlock->m_localTranslate = transltn;
@@ -1020,10 +1025,11 @@ bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char blockName[0x40];
 	UInt32 getWorld = 0, pcNode = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &getWorld, &pcNode))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &getWorld, &pcNode))
 	{
-		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
 			NiVector3 rot;
@@ -1038,18 +1044,21 @@ bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 
 bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 {
-	float rotX, rotY, rotZ;
-	UInt32 rotate = 0, pcNode = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &rotX, &rotY, &rotZ, &rotate, &pcNode))
+	char blockName[0x40];
+	NiVector3 rot;
+	UInt32 transform = 0, pcNode = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &rot.x, &rot.y, &rot.z, &transform, &pcNode))
 	{
-		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
-			rotX *= kFltPId180;
-			rotY *= kFltPId180;
-			rotZ *= kFltPId180;
-			if (rotate) niBlock->m_localRotate.Rotate(rotX, rotY, rotZ);
-			else niBlock->m_localRotate.RotationMatrix(rotX, rotY, rotZ);
+			rot *= kFltPId180;
+			if (!transform)
+				niBlock->m_localRotate.RotationMatrix(&rot);
+			else if (transform == 1)
+				niBlock->m_localRotate.Rotate(&rot);
+			else
+				niBlock->m_localRotate.RotationMatrix(&rot)->Inverse();
 			niBlock->Update();
 		}
 	}
@@ -1059,10 +1068,11 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 bool Cmd_GetNifBlockScale_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char blockName[0x40];
 	UInt32 pcNode = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &pcNode))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &pcNode))
 	{
-		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock) *result = niBlock->m_localScale;
 	}
 	return true;
@@ -1070,11 +1080,12 @@ bool Cmd_GetNifBlockScale_Execute(COMMAND_ARGS)
 
 bool Cmd_SetNifBlockScale_Execute(COMMAND_ARGS)
 {
+	char blockName[0x40];
 	float newScale;
 	UInt32 pcNode = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &newScale, &pcNode))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &newScale, &pcNode))
 	{
-		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
 			niBlock->m_localScale = newScale;
@@ -1087,10 +1098,11 @@ bool Cmd_SetNifBlockScale_Execute(COMMAND_ARGS)
 bool Cmd_GetNifBlockFlag_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char blockName[0x40];
 	UInt32 flagID, pcNode = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &flagID, &pcNode) && (flagID <= 31))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &flagID, &pcNode) && (flagID <= 31))
 	{
-		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock) *result = (niBlock->m_flags & (1 << flagID)) != 0;
 	}
 	return true;
@@ -1098,10 +1110,11 @@ bool Cmd_GetNifBlockFlag_Execute(COMMAND_ARGS)
 
 bool Cmd_SetNifBlockFlag_Execute(COMMAND_ARGS)
 {
+	char blockName[0x40];
 	UInt32 flagID, doSet, pcNode = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &flagID, &doSet, &pcNode) && (flagID <= 26))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &flagID, &doSet, &pcNode) && (flagID <= 26))
 	{
-		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode);
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
 			if (doSet) niBlock->m_flags |= (1 << flagID);
@@ -1139,10 +1152,11 @@ bool Cmd_GetObjectVelocity_Execute(COMMAND_ARGS)
 bool Cmd_GetAngularVelocity_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char blockName[0x40];
 	char axis;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &axis))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &axis))
 	{
-		hkpRigidBody *rigidBody = thisObj->GetRigidBody(s_strArgBuffer);
+		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
 		if (rigidBody) *result = rigidBody->motion.angVelocity[axis - 'X'];
 	}
 	return true;
@@ -1150,11 +1164,12 @@ bool Cmd_GetAngularVelocity_Execute(COMMAND_ARGS)
 
 bool Cmd_SetAngularVelocity_Execute(COMMAND_ARGS)
 {
+	char blockName[0x40];
 	char axis;
 	float velocity;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &axis, &velocity))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &axis, &velocity))
 	{
-		hkpRigidBody *rigidBody = thisObj->GetRigidBody(s_strArgBuffer);
+		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
 		if (rigidBody)
 		{
 			rigidBody->motion.angVelocity[axis - 'X'] = velocity;
@@ -1192,10 +1207,11 @@ bool Cmd_GetRayCastPos_Execute(COMMAND_ARGS)
 	TESGlobal *outX, *outY, *outZ;
 	float posZmod = 0;
 	UInt32 filter = 6;
-	s_strArgBuffer[0] = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outX, &outY, &outZ, &posZmod, &filter, &s_strArgBuffer))
+	char nodeName[0x40];
+	nodeName[0] = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outX, &outY, &outZ, &posZmod, &filter, &nodeName))
 	{
-		NiNode *objNode = thisObj->GetNode(s_strArgBuffer);
+		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
 		{
 			NiVector3 coords, posVector = objNode->m_worldTranslate;
@@ -1216,7 +1232,8 @@ bool Cmd_GetRayCastPos_Execute(COMMAND_ARGS)
 bool Cmd_GetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 {
 	*result = -1;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	char seqName[0x40];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &seqName))
 	{
 		NiNode *rootNode = thisObj->GetNiNode();
 		if (rootNode)
@@ -1224,7 +1241,7 @@ bool Cmd_GetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 			NiControllerManager *ctrlMgr = (NiControllerManager*)rootNode->m_controller;
 			if (ctrlMgr && IS_TYPE(ctrlMgr, NiControllerManager))
 			{
-				NiControllerSequence *sequence = ctrlMgr->seqStrMap.Lookup(s_strArgBuffer);
+				NiControllerSequence *sequence = ctrlMgr->seqStrMap.Lookup(seqName);
 				if (sequence) *result = sequence->frequency;
 			}
 		}
@@ -1234,8 +1251,9 @@ bool Cmd_GetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 
 bool Cmd_SetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 {
+	char seqName[0x40];
 	float frequency;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &frequency))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &seqName, &frequency))
 	{
 		NiNode *rootNode = thisObj->GetNiNode();
 		if (rootNode)
@@ -1243,12 +1261,12 @@ bool Cmd_SetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 			NiControllerManager *ctrlMgr = (NiControllerManager*)rootNode->m_controller;
 			if (ctrlMgr && IS_TYPE(ctrlMgr, NiControllerManager))
 			{
-				if (s_strArgBuffer[0] == '*')
+				if (seqName[0] == '*')
 					for (auto iter = ctrlMgr->sequences.Begin(); iter; ++iter)
 						iter->frequency = frequency;
 				else
 				{
-					NiControllerSequence *sequence = ctrlMgr->seqStrMap.Lookup(s_strArgBuffer);
+					NiControllerSequence *sequence = ctrlMgr->seqStrMap.Lookup(seqName);
 					if (sequence) sequence->frequency = frequency;
 				}
 			}
@@ -1261,13 +1279,14 @@ bool Cmd_MoveToNode_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectREFR *targetRef;
+	char nodeName[0x40];
 	NiVector3 posMods(0, 0, 0);
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &targetRef, &s_strArgBuffer, &posMods.x, &posMods.y, &posMods.z))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &targetRef, &nodeName, &posMods.x, &posMods.y, &posMods.z))
 	{
 		TESObjectCELL *cell = targetRef->GetParentCell();
 		if (cell)
 		{
-			NiNode *targetNode = targetRef->GetNode(s_strArgBuffer);
+			NiNode *targetNode = targetRef->GetNode(nodeName);
 			if (targetNode)
 			{
 				posMods.x += targetNode->m_worldTranslate.x;
@@ -1304,8 +1323,9 @@ bool Cmd_GetPlayerPerks_Execute(COMMAND_ARGS)
 bool Cmd_GetNifBlockParentNodes_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char blockName[0x40];
 	UInt32 pcNode = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &pcNode))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &pcNode))
 	{
 		NiNode *rootNode;
 		if (pcNode && (thisObj->refID == 0x14))
@@ -1317,7 +1337,7 @@ bool Cmd_GetNifBlockParentNodes_Execute(COMMAND_ARGS)
 		else rootNode = thisObj->GetNiNode();
 		if (rootNode)
 		{
-			NiAVObject *niBlock = rootNode->GetBlock(s_strArgBuffer);
+			NiAVObject *niBlock = rootNode->GetBlock(blockName);
 			if (niBlock)
 			{
 				s_tempElements.Clear();
@@ -1409,11 +1429,12 @@ bool Cmd_IsGrabbable_Execute(COMMAND_ARGS)
 bool Cmd_AttachLight_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char nodeName[0x40];
 	TESObjectLIGH *lightForm;
 	NiVector3 offsetMod(0, 0, 0);
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &lightForm, &offsetMod.x, &offsetMod.y, &offsetMod.z) && IS_ID(lightForm, TESObjectLIGH))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &nodeName, &lightForm, &offsetMod.x, &offsetMod.y, &offsetMod.z) && IS_ID(lightForm, TESObjectLIGH))
 	{
-		NiNode *objNode = thisObj->GetNode(s_strArgBuffer);
+		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
 		{
 			NiPointLight *pointLight = CreatePointLight(lightForm, objNode);
@@ -1427,9 +1448,10 @@ bool Cmd_AttachLight_Execute(COMMAND_ARGS)
 
 bool Cmd_RemoveLight_Execute(COMMAND_ARGS)
 {
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	char nodeName[0x40];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &nodeName))
 	{
-		NiNode *objNode = thisObj->GetNode(s_strArgBuffer);
+		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
 		{
 			NiPointLight *pointLight;
@@ -1495,10 +1517,11 @@ bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
 
 bool Cmd_SetLinearVelocity_Execute(COMMAND_ARGS)
 {
+	char blockName[0x40];
 	AlignedVector4 velocity;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &velocity.x, &velocity.y, &velocity.z))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &velocity.x, &velocity.y, &velocity.z))
 	{
-		hkpRigidBody *rigidBody = thisObj->GetRigidBody(s_strArgBuffer);
+		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
 		if (rigidBody)
 		{
 			velocity.w = 0;
@@ -1514,9 +1537,10 @@ UInt8 s_insertObjectFlag = 0;
 bool RegisterInsertObject(COMMAND_ARGS)
 {
 	*result = 0;
+	char dataStr[0x80];
 	TESForm *form;
 	UInt32 doInsert;
-	if (ExtractFormatStringArgs(2, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_AttachModel.numParams, &form, &doInsert) && (form->modIndex != 0xFF))
+	if (ExtractFormatStringArgs(2, dataStr, EXTRACT_ARGS_EX, kCommandInfo_AttachModel.numParams, &form, &doInsert) && (form->modIndex != 0xFF))
 	{
 		if IS_REFERENCE(form)
 		{
@@ -1526,13 +1550,13 @@ bool RegisterInsertObject(COMMAND_ARGS)
 		else if (!form->IsBoundObject())
 			return true;
 
-		char *nodeName = NULL, *objectName = FindChrR(s_strArgBuffer, StrLen(s_strArgBuffer), '|');
+		char *nodeName = NULL, *objectName = FindChrR(dataStr, StrLen(dataStr), '|');
 		if (objectName)
 		{
 			*objectName++ = 0;
-			nodeName = s_strArgBuffer;
+			nodeName = dataStr;
 		}
-		else objectName = s_strArgBuffer;
+		else objectName = dataStr;
 
 		if (!*objectName) return true;
 
@@ -1599,8 +1623,9 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 	TESObjectREFR *targetRef = NULL;
 	UInt32 syncRot = 0;
 	s_syncPositionMods.z = 0;
-	s_strArgBuffer[0] = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &targetRef, &syncRot, &s_syncPositionMods.z, &s_strArgBuffer))
+	char nodeName[0x40];
+	nodeName[0] = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &targetRef, &syncRot, &s_syncPositionMods.z, &nodeName))
 	{
 		TESObjectCELL *cell;
 		if (targetRef)
@@ -1613,7 +1638,7 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 			s_syncPositionRef = targetRef;
 			s_syncPositionFlags = (syncRot != 0);
 			s_syncPositionPos = &targetRef->posX;
-			s_syncPositionNode = s_strArgBuffer;
+			s_syncPositionNode = nodeName;
 			HOOK_SET(SynchronizePosition, true);
 		}
 		else
@@ -1632,8 +1657,8 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 
 bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 {
-	char *blockName = s_strArgBuffer;
-	*blockName = '^';
+	char blockName[0x40];
+	blockName[0] = '^';
 	TESForm *form;
 	if (ExtractFormatStringArgs(1, blockName + 1, EXTRACT_ARGS_EX, kCommandInfo_ModelHasBlock.numParams, &form))
 	{
@@ -1683,10 +1708,11 @@ bool Cmd_GetRayCastRef_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 filter = 6;
-	s_strArgBuffer[0] = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filter, &s_strArgBuffer))
+	char nodeName[0x40];
+	nodeName[0] = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filter, &nodeName))
 	{
-		NiNode *objNode = thisObj->GetNode(s_strArgBuffer);
+		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
 		{
 			filter &= 0x3F;
@@ -1705,10 +1731,11 @@ bool Cmd_GetRayCastMaterial_Execute(COMMAND_ARGS)
 {
 	*result = -1;
 	UInt32 filter = 6;
-	s_strArgBuffer[0] = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filter, &s_strArgBuffer))
+	char nodeName[0x40];
+	nodeName[0] = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filter, &nodeName))
 	{
-		NiNode *objNode = thisObj->GetNode(s_strArgBuffer);
+		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
 		{
 			filter &= 0x3F;
@@ -1766,11 +1793,12 @@ void __fastcall GetChildBlocks(NiNode *node)
 bool Cmd_GetChildBlocks_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	s_strArgBuffer[0] = 0;
+	char blockName[0x40];
+	blockName[0] = 0;
 	UInt32 pcNode = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &pcNode))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &pcNode))
 	{
-		NiNode *objNode = (NiNode*)GetNifBlock(thisObj, pcNode);
+		NiNode *objNode = (NiNode*)GetNifBlock(thisObj, pcNode, blockName);
 		if (objNode && IS_NODE(objNode))
 		{
 			s_tempElements.Clear();
@@ -1786,9 +1814,10 @@ bool Cmd_GetChildBlocks_Execute(COMMAND_ARGS)
 bool Cmd_GetBlockTextureSet_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	char blockName[0x40];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName))
 	{
-		NiAVObject *block = thisObj->GetNiBlock(s_strArgBuffer);
+		NiAVObject *block = thisObj->GetNiBlock(blockName);
 		if (block && block->GetTriBasedGeom())
 		{
 			BSShaderPPLightingProperty *shaderProp = (BSShaderPPLightingProperty*)block->GetProperty(3);
@@ -1839,11 +1868,12 @@ bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 
 bool Cmd_SetTextureTransformKey_Execute(COMMAND_ARGS)
 {
+	char blockName[0x40];
 	UInt32 ctrlIndex, keyIndex;
 	float value;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &ctrlIndex, &keyIndex, &value))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &ctrlIndex, &keyIndex, &value))
 	{
-		NiAVObject *block = thisObj->GetNiBlock(s_strArgBuffer);
+		NiAVObject *block = thisObj->GetNiBlock(blockName);
 		if (block && block->GetTriBasedGeom())
 		{
 			NiTexturingProperty *texProp = (NiTexturingProperty*)block->GetProperty(5);
@@ -1874,16 +1904,15 @@ bool Cmd_SetTextureTransformKey_Execute(COMMAND_ARGS)
 bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char camName[0x40];
+	char camName[0x40], nodeName[0x40];
 	UInt32 doAttach;
-	s_strArgBuffer[0] = 0;
-	NiVector3 pos(0, 0, 0);
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &camName, &doAttach, &s_strArgBuffer, &pos.x, &pos.y, &pos.z))
+	nodeName[0] = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &camName, &doAttach, &nodeName))
 	{
 		NiCamera *xCamera;
 		if (doAttach)
 		{
-			NiNode *targetNode = thisObj->GetNode(s_strArgBuffer);
+			NiNode *targetNode = thisObj->GetNode(nodeName);
 			if (targetNode)
 			{
 				NiCamera **pCamera;
@@ -1891,6 +1920,7 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 				{
 					*pCamera = xCamera = ThisCall<NiCamera*>(0xA712F0, NiAllocator(sizeof(NiCamera)));
 					InterlockedIncrement(&xCamera->m_uiRefCount);
+					xCamera->SetName(camName);
 					xCamera->frustum.n = 5.0F;
 					xCamera->frustum.f = 353840.0F;
 					xCamera->minNearPlaneDist = 1.0F;
@@ -1901,10 +1931,8 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 				if (xCamera->m_parent != targetNode)
 				{
 					targetNode->AddObject(xCamera, 1);
-					xCamera->m_localRotate.Inverse(&targetNode->m_localRotate);
+					xCamera->Update();
 				}
-				xCamera->m_localTranslate = pos;
-				xCamera->Update();
 				*result = 1;
 			}
 		}
@@ -1971,24 +1999,24 @@ UInt32 s_projectPixelSize = 0x100;
 bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char camName[0x40];
+	char camName[0x40], nodeName[0x40];
 	double fov;
 	UInt32 pixelSize = 0x100;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &camName, &s_strArgBuffer, &fov, &pixelSize))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &camName, &nodeName, &fov, &pixelSize))
 	{
 		NiCamera *xCamera = s_extraCamerasMap.Get(camName);
 		if (xCamera && xCamera->m_parent)
 		{
 			NiTexture **pTexture = NULL;
-			if (s_strArgBuffer[0] == '*')
+			if (nodeName[0] == '*')
 			{
-				TileImage *targetTile = (TileImage*)GetTargetComponent(s_strArgBuffer + 1);
+				TileImage *targetTile = (TileImage*)GetTargetComponent(nodeName + 1);
 				if (targetTile && IS_TYPE(targetTile, TileImage) && targetTile->shaderProp)
 					pTexture = &targetTile->shaderProp->srcTexture;
 			}
 			else if (thisObj)
 			{
-				NiAVObject *targetGeom = thisObj->GetNiBlock(s_strArgBuffer);
+				NiAVObject *targetGeom = thisObj->GetNiBlock(nodeName);
 				if (targetGeom && targetGeom->GetTriBasedGeom())
 				{
 					BSShaderNoLightingProperty *shaderProp = (BSShaderNoLightingProperty*)targetGeom->GetProperty(3);

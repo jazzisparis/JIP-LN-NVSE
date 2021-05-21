@@ -253,14 +253,15 @@ bool Cmd_SetNthPerkEntryString_Execute(COMMAND_ARGS)
 {
 	BGSPerk *perk;
 	UInt32 index;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index, &s_strArgBuffer) || NOT_ID(perk, BGSPerk)) return true;
+	char labelStr[0x80];
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index, &labelStr) || NOT_ID(perk, BGSPerk)) return true;
 	BGSPerkEntry *entry = perk->entries.GetNthItem(index);
 	if (!entry) return true;
 	if (entry && IS_TYPE(entry, BGSEntryPointPerkEntry))
 	{
 		BGSEntryPointFunctionData *data = ((BGSEntryPointPerkEntry*)entry)->data;
 		if IS_TYPE(data, BGSEntryPointFunctionDataActivateChoice)
-			((BGSEntryPointFunctionDataActivateChoice*)data)->label.Set(s_strArgBuffer);
+			((BGSEntryPointFunctionDataActivateChoice*)data)->label.Set(labelStr);
 	}
 	return true;
 }

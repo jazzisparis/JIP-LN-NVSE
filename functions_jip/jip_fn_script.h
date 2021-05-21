@@ -29,20 +29,20 @@ UInt8 s_scriptVarActionType = 0;
 bool ScriptVariableAction_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char varName[0x50];
 	TESForm *form = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &form) || !s_strArgBuffer[0]) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form) || !varName[0]) return true;
 	if (!form)
 	{
 		if (!thisObj) return true;
 		form = thisObj;
 	}
-	s_strArgBuffer[255] = 0;
 	if (s_scriptVarActionType == 2)
 	{
 		auto findOwner = s_scriptVariablesBuffer.Find(form->refID);
 		if (findOwner)
 		{
-			auto findVar = findOwner().Find(s_strArgBuffer);
+			auto findVar = findOwner().Find(varName);
 			if (findVar)
 			{
 				findVar.Remove();
@@ -57,15 +57,15 @@ bool ScriptVariableAction_Execute(COMMAND_ARGS)
 	if (!form->GetScriptAndEventList(&pScript, &pEventList)) return true;
 	if (s_scriptVarActionType)
 	{
-		if (pScript->AddVariable(pEventList, form->refID, scriptObj->GetOverridingModIdx()))
+		if (pScript->AddVariable(varName, pEventList, form->refID, scriptObj->GetOverridingModIdx()))
 			*result = 1;
 	}
-	else if (GetVariableAdded(pScript->refID))
+	else if (GetVariableAdded(pScript->refID, varName))
 	{
 		auto findOwner = s_scriptVariablesBuffer.Find(form->refID);
-		if (findOwner && findOwner().HasKey(s_strArgBuffer))
+		if (findOwner && findOwner().HasKey(varName))
 		{
-			VariableInfo *varInfo = pScript->GetVariableByName(s_strArgBuffer);
+			VariableInfo *varInfo = pScript->GetVariableByName(varName);
 			if (varInfo && pEventList->GetVariable(varInfo->idx)) *result = 1;
 		}
 	}
@@ -209,8 +209,9 @@ bool Cmd_GetScriptEventDisabled_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &s_strArgBuffer)) return true;
-	UInt32 *inMask = s_eventMasks.GetPtr(s_strArgBuffer);
+	char evtName[0x40];
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &evtName)) return true;
+	UInt32 *inMask = s_eventMasks.GetPtr(evtName);
 	if (!inMask) return true;
 	if (*inMask)
 	{
@@ -257,10 +258,11 @@ void __fastcall SetScriptEventDisabled(TESForm *form, UInt32 inMask, bool onActi
 bool Cmd_SetScriptEventDisabled_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
+	char evtName[0x40];
 	UInt32 disable;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &s_strArgBuffer, &disable)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &evtName, &disable)) return true;
 	bool bDisable = (disable != 0), onActivate = false;
-	char *posPtr = s_strArgBuffer, *delim;
+	char *posPtr = evtName, *delim;
 	UInt32 *evntMask, inMask = 0;
 	do
 	{
@@ -297,9 +299,10 @@ bool Cmd_SetScriptEventDisabled_Execute(COMMAND_ARGS)
 bool Cmd_FakeScriptEvent_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char evtName[0x40];
 	TESForm *filterForm = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &filterForm)) return true;
-	UInt32 inMask = s_eventMasks.Get(s_strArgBuffer);
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &evtName, &filterForm)) return true;
+	UInt32 inMask = s_eventMasks.Get(evtName);
 	if (!inMask) return true;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 	ExtraDataList *xData = invRef ? invRef->xData : &thisObj->extraDataList;

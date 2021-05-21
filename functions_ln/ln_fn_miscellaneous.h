@@ -88,13 +88,14 @@ bool Cmd_GetArmorClass_Eval(COMMAND_ARGS_EVAL)
 
 bool Cmd_SetGlobalValue_Execute(COMMAND_ARGS)
 {
+	char varName[0x40];
 	float value;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &value)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &value)) return true;
 	ListNode<TESGlobal> *iter = g_dataHandler->globalList.Head();
 	TESGlobal *global;
 	do
 	{
-		if ((global = iter->data) && !StrCompare(global->name.m_data, s_strArgBuffer))
+		if ((global = iter->data) && !StrCompare(global->name.m_data, varName))
 		{
 			global->data = value;
 			break;
@@ -176,8 +177,9 @@ bool Cmd_GetIdleAnimPath_Execute(COMMAND_ARGS)
 bool Cmd_SetIdleAnimPath_Execute(COMMAND_ARGS)
 {
 	TESIdleForm *idle;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idle, &s_strArgBuffer) && IS_ID(idle, TESIdleForm))
-		idle->anim.SetModelPath(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idle, &path) && IS_ID(idle, TESIdleForm))
+		idle->anim.SetModelPath(path);
 	return true;
 }
 
@@ -196,15 +198,16 @@ bool Cmd_LNGetName_Execute(COMMAND_ARGS)
 
 bool Cmd_LNSetName_Execute(COMMAND_ARGS)
 {
+	char nameStr[0x80];
 	TESForm *form = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &nameStr, &form)) return true;
 	if (!form)
 	{
 		if (!thisObj) return true;
 		form = thisObj->baseForm;
 	}
 	TESFullName *fullName = DYNAMIC_CAST(form, TESForm, TESFullName);
-	if (fullName) fullName->name.Set(s_strArgBuffer);
+	if (fullName) fullName->name.Set(nameStr);
 	return true;
 }
 

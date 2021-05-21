@@ -199,7 +199,8 @@ bool Cmd_SetNthDestructionStageReplacement_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESForm *object;
 	UInt32 idx;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &object, &idx, &s_strArgBuffer)) return true;
+	char path[0x80];
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &object, &idx, &path)) return true;
 	BGSDestructibleObjectForm *destructible = DYNAMIC_CAST(object, TESForm, BGSDestructibleObjectForm);
 	if (!destructible || !destructible->data || !destructible->data->stages || (idx >= destructible->data->stageCount)) return true;
 	TESModelTextureSwap *rplc = destructible->data->stages[idx]->replacement;
@@ -209,7 +210,7 @@ bool Cmd_SetNthDestructionStageReplacement_Execute(COMMAND_ARGS)
 		MemZero(rplc, sizeof(TESModelTextureSwap));
 		*(UInt32*)rplc = kVtbl_TESModelTextureSwap;
 	}
-	rplc->SetModelPath(s_strArgBuffer);
+	rplc->SetModelPath(path);
 	*result = 1;
 	return true;
 }

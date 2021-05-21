@@ -59,9 +59,10 @@ bool Cmd_ListToArray_Execute(COMMAND_ARGS)
 
 bool Cmd_GetTimeStamp_Execute(COMMAND_ARGS)
 {
-	GetTimeStamp(s_strArgBuffer);
-	if (IsConsoleOpen()) Console_Print(s_strArgBuffer);
-	AssignString(PASS_COMMAND_ARGS, s_strArgBuffer);
+	char buffer[0x20];
+	GetTimeStamp(buffer);
+	if (IsConsoleOpen()) Console_Print(buffer);
+	AssignString(PASS_COMMAND_ARGS, buffer);
 	return true;
 }
 

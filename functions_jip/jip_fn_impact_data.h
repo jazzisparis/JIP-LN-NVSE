@@ -22,8 +22,9 @@ bool Cmd_GetImpactDataModel_Execute(COMMAND_ARGS)
 bool Cmd_SetImpactDataModel_Execute(COMMAND_ARGS)
 {
 	BGSImpactData *impactData;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &impactData, &s_strArgBuffer) && IS_ID(impactData, BGSImpactData))
-		impactData->model.SetModelPath(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &impactData, &path) && IS_ID(impactData, BGSImpactData))
+		impactData->model.SetModelPath(path);
 	return true;
 }
 

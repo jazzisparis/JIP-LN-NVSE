@@ -23,8 +23,9 @@ bool Cmd_SetTextureSetTexture_Execute(COMMAND_ARGS)
 {
 	BGSTextureSet *texSet;
 	UInt32 mapID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &texSet, &mapID, &s_strArgBuffer) && IS_ID(texSet, BGSTextureSet) && (mapID <= 5))
-		texSet->textures[mapID].ddsPath.Set(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &texSet, &mapID, &path) && IS_ID(texSet, BGSTextureSet) && (mapID <= 5))
+		texSet->textures[mapID].ddsPath.Set(path);
 	return true;
 }
 

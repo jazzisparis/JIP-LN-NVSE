@@ -191,8 +191,9 @@ bool Cmd_GetSoundSourceFile_Execute(COMMAND_ARGS)
 bool Cmd_SetSoundSourceFile_Execute(COMMAND_ARGS)
 {
 	TESSound *sound;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &s_strArgBuffer))
-		sound->soundFile.Set(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &path))
+		sound->soundFile.Set(path);
 	return true;
 }
 

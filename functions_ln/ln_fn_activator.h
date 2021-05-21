@@ -54,15 +54,16 @@ bool Cmd_GetActivatorPrompt_Execute(COMMAND_ARGS)
 
 bool Cmd_SetActivatorPrompt_Execute(COMMAND_ARGS)
 {
+	char prompt[0x80];
 	TESObjectACTI *activator = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &activator)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &prompt, &activator)) return true;
 	if (!activator)
 	{
 		if (!thisObj) return true;
 		activator = (TESObjectACTI*)thisObj->baseForm;
 	}
 	if IS_ID(activator, TESObjectACTI)
-		activator->activationPrompt.Set(s_strArgBuffer);
+		activator->activationPrompt.Set(prompt);
 	return true;
 }
 

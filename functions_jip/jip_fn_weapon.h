@@ -155,16 +155,18 @@ bool Cmd_GetWeaponShellCasingModel_Execute(COMMAND_ARGS)
 bool Cmd_SetWeaponShellCasingModel_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &s_strArgBuffer) && IS_ID(weapon, TESObjectWEAP))
-		weapon->shellCasingModel.SetModelPath(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &path) && IS_ID(weapon, TESObjectWEAP))
+		weapon->shellCasingModel.SetModelPath(path);
 	return true;
 }
 
 bool Cmd_SetEmbeddedWeaponNode_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &s_strArgBuffer) && IS_ID(weapon, TESObjectWEAP))
-		weapon->embeddedNodeName.Set(s_strArgBuffer);
+	char nodeName[0x40];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &nodeName) && IS_ID(weapon, TESObjectWEAP))
+		weapon->embeddedNodeName.Set(nodeName);
 	return true;
 }
 
@@ -294,21 +296,22 @@ bool Cmd_SetWeaponModel_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
 	UInt32 modFlags;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &modFlags, &s_strArgBuffer) && IS_ID(weapon, TESObjectWEAP) && (modFlags <= 7))
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &modFlags, &path) && IS_ID(weapon, TESObjectWEAP) && (modFlags <= 7))
 	{
 		switch (modFlags)
 		{
 		case 0:
-			weapon->textureSwap.SetModelPath(s_strArgBuffer);
+			weapon->textureSwap.SetModelPath(path);
 			break;
 		case 3:
-			weapon->modModels[3].SetModelPath(s_strArgBuffer);
+			weapon->modModels[3].SetModelPath(path);
 			break;
 		case 4:
-			weapon->modModels[2].SetModelPath(s_strArgBuffer);
+			weapon->modModels[2].SetModelPath(path);
 			break;
 		default:
-			weapon->modModels[modFlags - 1].SetModelPath(s_strArgBuffer);
+			weapon->modModels[modFlags - 1].SetModelPath(path);
 		}
 	}
 	return true;

@@ -67,8 +67,9 @@ bool Cmd_GetCellNoiseTexture_Execute(COMMAND_ARGS)
 bool Cmd_SetCellNoiseTexture_Execute(COMMAND_ARGS)
 {
 	TESObjectCELL *cell;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &s_strArgBuffer))
-		cell->noiseTexture.ddsPath.Set(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &path))
+		cell->noiseTexture.ddsPath.Set(path);
 	return true;
 }
 

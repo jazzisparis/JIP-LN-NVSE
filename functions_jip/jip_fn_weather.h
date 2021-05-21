@@ -55,8 +55,9 @@ bool Cmd_SetWeatherTexture_Execute(COMMAND_ARGS)
 {
 	TESWeather *weather;
 	UInt32 layer;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &layer, &s_strArgBuffer) && (layer <= 3))
-		weather->layerTextures[layer].ddsPath.Set(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &layer, &path) && (layer <= 3))
+		weather->layerTextures[layer].ddsPath.Set(path);
 	return true;
 }
 
@@ -74,8 +75,9 @@ bool Cmd_GetWeatherPrecipitationModel_Execute(COMMAND_ARGS)
 bool Cmd_SetWeatherPrecipitationModel_Execute(COMMAND_ARGS)
 {
 	TESWeather *weather;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &s_strArgBuffer))
-		weather->model.SetModelPath(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &path))
+		weather->model.SetModelPath(path);
 	return true;
 }
 

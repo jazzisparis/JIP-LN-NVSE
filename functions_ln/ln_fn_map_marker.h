@@ -29,10 +29,11 @@ bool Cmd_GetMapMarkerName_Execute(COMMAND_ARGS)
 
 bool Cmd_SetMapMarkerName_Execute(COMMAND_ARGS)
 {
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	char nameStr[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &nameStr))
 	{
 		ExtraMapMarker *xMarker = GetExtraType(&thisObj->extraDataList, MapMarker);
-		if (xMarker) xMarker->data->fullName.name.Set(s_strArgBuffer);
+		if (xMarker) xMarker->data->fullName.name.Set(nameStr);
 	}
 	return true;
 }

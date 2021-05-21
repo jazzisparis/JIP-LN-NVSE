@@ -224,6 +224,9 @@ s_scriptsPathFull[0x100] = "Data\\NVSE\\plugins\\scripts\\",
 s_modLogPathFull[0x100] = "Mod Logs\\";
 char *s_dataPath, *s_configPath, *s_scriptsPath, *s_modLogPath;
 
+UnorderedSet<TESForm*> s_tempFormList(0x40);
+Vector<ArrayElementL> s_tempElements(0x100);
+
 enum
 {
 	kSerializedFlag_NoHardcoreTracking =	1 << 0,
@@ -250,10 +253,6 @@ struct QueuedCmdCall
 };
 
 #define AddQueuedCmdCall(qCall) ThisCall(0x87D160, g_scrapHeapQueue, &qCall)
-
-UnorderedSet<TESForm*> s_tempFormList(0x40);
-
-Vector<ArrayElementL> s_tempElements(0x100);
 
 void Sky::RefreshMoon()
 {
@@ -1080,8 +1079,8 @@ void TESObjectREFR::RemoveItemTarget(TESForm *itemForm, TESObjectREFR *target, S
 			{
 				subCount = xData->GetCount();
 				if (subCount < 1)
-					continue;
-				if (subCount > total)
+					subCount = 1;
+				else if (subCount > total)
 					subCount = total;
 				RemoveItem(itemForm, xData, subCount, keepOwner, 0, target, 0, 0, 1, 0);
 				total -= subCount;
@@ -3288,24 +3287,24 @@ void __fastcall NiMatrix33::ExtractAngles(NiVector3 *outAngles)
 	}
 }
 
-__declspec(naked) void NiMatrix33::RotationMatrix(float rotX, float rotY, float rotZ)
+__declspec(naked) NiMatrix33* __fastcall NiMatrix33::RotationMatrix(NiVector3 *rot)
 {
 	__asm
 	{
 		push	ecx
-		fld		dword ptr [esp+8]
+		fld		dword ptr [edx]
 		fsincos
 		fstp	dword ptr [esp]
 		movss	xmm1, [esp]
 		fstp	dword ptr [esp]
 		movss	xmm0, [esp]
-		fld		dword ptr [esp+0xC]
+		fld		dword ptr [edx+4]
 		fsincos
 		fstp	dword ptr [esp]
 		movss	xmm3, [esp]
 		fstp	dword ptr [esp]
 		movss	xmm2, [esp]
-		fld		dword ptr [esp+0x10]
+		fld		dword ptr [edx+8]
 		fsincos
 		fstp	dword ptr [esp]
 		movss	xmm5, [esp]
@@ -3354,43 +3353,13 @@ __declspec(naked) void NiMatrix33::RotationMatrix(float rotX, float rotY, float 
 		movss	xmm6, xmm1
 		mulss	xmm6, xmm3
 		movss	[ecx+0x20], xmm6
+		mov		eax, ecx
 		pop		ecx
-		retn	0xC
+		retn
 	}
 }
 
-__declspec(naked) void NiMatrix33::Rotate(float rotX, float rotY, float rotZ)
-{
-	__asm
-	{
-		push	ebp
-		mov		ebp, esp
-		push	ecx
-		sub		esp, 0x48
-		lea		eax, [ebp-0x28]
-		movups	xmm0, [ecx]
-		movups	[eax], xmm0
-		movups	xmm0, [ecx+0x10]
-		movups	[eax+0x10], xmm0
-		mov		edx, [ecx+0x20]
-		mov		[eax+0x20], edx
-		push	dword ptr [ebp+0x10]
-		push	dword ptr [ebp+0xC]
-		push	dword ptr [ebp+8]
-		lea		ecx, [ebp-0x4C]
-		call	NiMatrix33::RotationMatrix
-		lea		eax, [ebp-0x4C]
-		push	eax
-		lea		eax, [ebp-0x28]
-		push	eax
-		mov		ecx, [ebp-4]
-		call	NiMatrix33::MultiplyMatrices
-		leave
-		retn	0xC
-	}
-}
-
-__declspec(naked) void NiMatrix33::MultiplyMatrices(NiMatrix33 *matA, NiMatrix33 *matB)
+__declspec(naked) NiMatrix33 *NiMatrix33::MultiplyMatrices(NiMatrix33 *matA, NiMatrix33 *matB)
 {
 	__asm
 	{
@@ -3477,7 +3446,106 @@ __declspec(naked) void NiMatrix33::MultiplyMatrices(NiMatrix33 *matA, NiMatrix33
 		mulss	xmm1, [edx+0x20]
 		addss	xmm0, xmm1
 		movss	[ecx+0x20], xmm0
+		mov		eax, ecx
 		retn	8
+	}
+}
+
+__declspec(naked) void __fastcall NiMatrix33::Rotate(NiVector3 *rot)
+{
+	__asm
+	{
+		push	ebp
+		mov		ebp, esp
+		sub		esp, 0x48
+		push	esi
+		mov		esi, edx
+		fld1
+		cmp		dword ptr [esi+8], 0
+		jz		doneZ
+		lea		eax, [ebp-0x48]
+		fld		dword ptr [esi+8]
+		fsincos
+		fst		dword ptr [eax]
+		fstp	dword ptr [eax+0x10]
+		fst		dword ptr [eax+4]
+		fchs
+		fstp	dword ptr [eax+0xC]
+		fst		dword ptr [eax+0x20]
+		xor		edx, edx
+		mov		[eax+8], edx
+		mov		[eax+0x14], edx
+		mov		[eax+0x18], edx
+		mov		[eax+0x1C], edx
+		push	eax
+		lea		eax, [ebp-0x24]
+		movups	xmm0, [ecx]
+		movups	[eax], xmm0
+		movups	xmm0, [ecx+0x10]
+		movups	[eax+0x10], xmm0
+		mov		edx, [ecx+0x20]
+		mov		[eax+0x20], edx
+		push	eax
+		call	NiMatrix33::MultiplyMatrices
+	doneZ:
+		cmp		dword ptr [esi+4], 0
+		jz		doneY
+		lea		eax, [ebp-0x48]
+		fld		dword ptr [esi+4]
+		fsincos
+		fst		dword ptr [eax]
+		fstp	dword ptr [eax+0x20]
+		fst		dword ptr [eax+0x18]
+		fchs
+		fstp	dword ptr [eax+8]
+		fst		dword ptr [eax+0x10]
+		xor		edx, edx
+		mov		[eax+4], edx
+		mov		[eax+0xC], edx
+		mov		[eax+0x14], edx
+		mov		[eax+0x1C], edx
+		push	eax
+		lea		eax, [ebp-0x24]
+		movups	xmm0, [ecx]
+		movups	[eax], xmm0
+		movups	xmm0, [ecx+0x10]
+		movups	[eax+0x10], xmm0
+		mov		edx, [ecx+0x20]
+		mov		[eax+0x20], edx
+		push	eax
+		call	NiMatrix33::MultiplyMatrices
+	doneY:
+		cmp		dword ptr [esi], 0
+		jz		doneX
+		lea		eax, [ebp-0x48]
+		fld		dword ptr [esi]
+		fsincos
+		fst		dword ptr [eax+0x10]
+		fstp	dword ptr [eax+0x20]
+		fst		dword ptr [eax+0x14]
+		fchs
+		fstp	dword ptr [eax+0x1C]
+		fst		dword ptr [eax]
+		xor		edx, edx
+		mov		[eax+4], edx
+		mov		[eax+8], edx
+		mov		[eax+0xC], edx
+		mov		[eax+0x18], edx
+		push	eax
+		lea		eax, [ebp-0x24]
+		movups	xmm0, [ecx]
+		movups	[eax], xmm0
+		movups	xmm0, [ecx+0x10]
+		movups	[eax+0x10], xmm0
+		mov		edx, [ecx+0x20]
+		mov		[eax+0x20], edx
+		push	eax
+		call	NiMatrix33::MultiplyMatrices
+	doneX:
+		fstp	st
+		pop		esi
+		leave
+		retn
 	}
 }
 
@@ -3485,6 +3553,8 @@ __declspec(naked) void __fastcall NiMatrix33::Inverse(NiMatrix33 *mat)
 {
 	__asm
 	{
+		test	edx, edx
+		cmovz	edx, ecx
 		sub		esp, 0x20
 		movups	xmm0, [edx]
 		movups	[esp], xmm0
@@ -5172,26 +5242,26 @@ UnorderedMap<UInt32, ScriptVariablesMap> s_scriptVariablesBuffer;
 typedef UnorderedSet<const char*> VariableNames;
 UnorderedMap<UInt32, VariableNames> s_addedVariables;
 
-bool __fastcall GetVariableAdded(UInt32 ownerID)
+bool __fastcall GetVariableAdded(UInt32 ownerID, char *varName)
 {
 	VariableNames *findOwner = s_addedVariables.GetPtr(ownerID);
 	if (!findOwner) return false;
-	return findOwner->HasKey(s_strArgBuffer);
+	return findOwner->HasKey(varName);
 }
 
-ScriptVar *Script::AddVariable(ScriptEventList *eventList, UInt32 ownerID, UInt8 modIdx)
+ScriptVar *Script::AddVariable(char *varName, ScriptEventList *eventList, UInt32 ownerID, UInt8 modIdx)
 {
-	VariableInfo *varInfo = GetVariableByName(s_strArgBuffer);
+	VariableInfo *varInfo = GetVariableByName(varName);
 	if (!varInfo)
 	{
 		varInfo = (VariableInfo*)GameHeapAlloc(sizeof(VariableInfo));
 		MemZero(varInfo, sizeof(VariableInfo));
 		varInfo->idx = ++info.varCount;
-		varInfo->name.Set(s_strArgBuffer);
+		varInfo->name.Set(varName);
 		varList.Append(varInfo);
-		s_addedVariables[refID].Insert(s_strArgBuffer);
+		s_addedVariables[refID].Insert(varName);
 	}
-	else if (!GetVariableAdded(refID)) return NULL;
+	else if (!GetVariableAdded(refID, varName)) return NULL;
 
 	ScriptVar *var = eventList->GetVariable(varInfo->idx);
 	if (!var)
@@ -5203,8 +5273,8 @@ ScriptVar *Script::AddVariable(ScriptEventList *eventList, UInt32 ownerID, UInt8
 		eventList->m_vars->Append(var);
 	}
 
-	if (s_strArgBuffer[0] != '*')
-		s_scriptVariablesBuffer[ownerID][s_strArgBuffer].Set(var, modIdx);
+	if (varName[0] != '*')
+		s_scriptVariablesBuffer[ownerID][varName].Set(var, modIdx);
 	return var;
 }
 
@@ -5424,28 +5494,70 @@ typedef UnorderedMap<char*, RefMapIDsMap> RefMapVarsMap;
 typedef UnorderedMap<UInt32, RefMapVarsMap> RefMapModsMap;
 RefMapModsMap s_refMapArraysPerm, s_refMapArraysTemp;
 
-bool s_avIsPerm = false;
-UInt32 s_avModIdx = 0xFF;
-UInt8 s_dataChangedFlags = 0;
-
-void __fastcall GetBaseParams(Script *scriptObj)
-{
-	s_avIsPerm = (s_strArgBuffer[0] != '*');
-	s_avModIdx = (s_strArgBuffer[!s_avIsPerm] == '_') ? 0xFF : scriptObj->GetOverridingModIdx();
-}
-
-void __fastcall GetBaseParams(Script *scriptObj, UInt8 type)
-{
-	s_avIsPerm = !(type & 1);
-	s_avModIdx = (type > 1) ? 0xFF : scriptObj->GetOverridingModIdx();
-}
-
 UInt32 __fastcall GetSubjectID(TESForm *form, TESObjectREFR *thisObj)
 {
 	if (form) return IS_REFERENCE(form) ? ((TESObjectREFR*)form)->baseForm->refID : form->refID;
 	if (thisObj) return thisObj->refID;
 	return 0;
 }
+
+struct AuxVarInfo
+{
+	UInt32		ownerID;
+	UInt32		modIndex;
+	char		*varName;
+	bool		isPerm;
+
+	AuxVarInfo(TESForm *form, TESObjectREFR *thisObj, Script *scriptObj, char *pVarName)
+	{
+		if (!pVarName[0])
+		{
+			ownerID = 0;
+			return;
+		}
+		ownerID = GetSubjectID(form, thisObj);
+		if (ownerID)
+		{
+			varName = pVarName;
+			isPerm = (varName[0] != '*');
+			modIndex = (varName[!isPerm] == '_') ? 0xFF : scriptObj->GetOverridingModIdx();
+		}
+	}
+
+	AuxVarInfo(TESForm *form, TESObjectREFR *thisObj, Script *scriptObj, UInt8 type)
+	{
+		ownerID = GetSubjectID(form, thisObj);
+		if (ownerID)
+		{
+			isPerm = !(type & 1);
+			modIndex = (type > 1) ? 0xFF : scriptObj->GetOverridingModIdx();
+		}
+	}
+
+	AuxVarModsMap& ModsMap() {return isPerm ? s_auxVariablesPerm : s_auxVariablesTemp;}
+};
+
+struct RefMapInfo
+{
+	UInt32		modIndex;
+	bool		isPerm;
+
+	RefMapInfo(Script *scriptObj, char *varName)
+	{
+		isPerm = (varName[0] != '*');
+		modIndex = (varName[!isPerm] == '_') ? 0xFF : scriptObj->GetOverridingModIdx();
+	}
+
+	RefMapInfo(Script *scriptObj, UInt8 type)
+	{
+		isPerm = !(type & 1);
+		modIndex = (type > 1) ? 0xFF : scriptObj->GetOverridingModIdx();
+	}
+
+	RefMapModsMap& ModsMap() {return isPerm ? s_refMapArraysPerm : s_refMapArraysTemp;}
+};
+
+UInt8 s_dataChangedFlags = 0;
 
 struct EventCallbackScripts : Set<Script*>
 {

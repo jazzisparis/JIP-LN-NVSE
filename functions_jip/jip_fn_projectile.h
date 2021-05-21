@@ -248,8 +248,9 @@ bool Cmd_GetProjectileMuzzleFlash_Execute(COMMAND_ARGS)
 bool Cmd_SetProjectileMuzzleFlash_Execute(COMMAND_ARGS)
 {
 	BGSProjectile *projectile;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile, &s_strArgBuffer) && IS_ID(projectile, BGSProjectile))
-		projectile->muzzleFlash.SetModelPath(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile, &path) && IS_ID(projectile, BGSProjectile))
+		projectile->muzzleFlash.SetModelPath(path);
 	return true;
 }
 

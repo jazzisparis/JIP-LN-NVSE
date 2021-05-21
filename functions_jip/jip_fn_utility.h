@@ -36,8 +36,9 @@ bool Cmd_RefToString_Execute(COMMAND_ARGS)
 bool Cmd_StringToRef_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
-		REFR_RES = StringToRef(s_strArgBuffer);
+	char refStr[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &refStr))
+		REFR_RES = StringToRef(refStr);
 	return true;
 }
 
@@ -368,10 +369,11 @@ bool Cmd_ModLogPrint_Execute(COMMAND_ARGS)
 
 bool Cmd_GetOptionalPatch_Execute(COMMAND_ARGS)
 {
+	char patchName[0x40];
 	bool enabled = false;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &patchName))
 	{
-		switch (s_optionalHacks.Get(s_strArgBuffer))
+		switch (s_optionalHacks.Get(patchName))
 		{
 			case 1:
 				enabled = HOOK_INSTALLED(CalculateHitDamage);
@@ -430,9 +432,10 @@ bool Cmd_GetOptionalPatch_Execute(COMMAND_ARGS)
 
 bool Cmd_SetOptionalPatch_Execute(COMMAND_ARGS)
 {
+	char patchName[0x40];
 	UInt32 enable;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &enable))
-		SetOptionalPatch(s_optionalHacks.Get(s_strArgBuffer), enable != 0);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &patchName, &enable))
+		SetOptionalPatch(s_optionalHacks.Get(patchName), enable != 0);
 	return true;
 }
 

@@ -360,12 +360,13 @@ bool Cmd_GetPCLastExteriorDoor_Execute(COMMAND_ARGS)
 bool Cmd_SwapTextureEx_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *refr;
+	char blockName[0x40], path[0x80];
 	UInt32 texIdx = 0;
-	char *pathBgn = StrLenCopy(s_strValBuffer, "Textures\\", 9);
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &refr, &s_strArgBuffer, pathBgn, &texIdx))
+	char *pathBgn = StrLenCopy(path, "Textures\\", 9);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &refr, &blockName, pathBgn, &texIdx))
 	{
 		StrCat(pathBgn, ".dds");
-		refr->SwapTexture(s_strArgBuffer, s_strValBuffer, texIdx);
+		refr->SwapTexture(blockName, path, texIdx);
 	}
 	return true;
 }
@@ -401,8 +402,9 @@ bool Cmd_SetMoonTexture_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 textureID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &textureID, &s_strArgBuffer) || (textureID > 7) || !*g_currentSky) return true;
-	const char *newTexture = CopyString(s_strArgBuffer);
+	char path[0x80];
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &textureID, &path) || (textureID > 7) || !*g_currentSky) return true;
+	const char *newTexture = CopyString(path);
 	for (UInt8 idx = 0; idx < 8; idx++)
 	{
 		if (idx != textureID)
@@ -823,7 +825,8 @@ UnorderedMap<const char*, UInt32> s_actorValueIDsMap(0x80);
 bool Cmd_StringToActorValue_Execute(COMMAND_ARGS)
 {
 	*result = -1;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	char avStr[0x40];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &avStr))
 	{
 		if (s_actorValueIDsMap.Empty())
 		{
@@ -834,7 +837,7 @@ bool Cmd_StringToActorValue_Execute(COMMAND_ARGS)
 				s_actorValueIDsMap[avInfo->infoName] = avCode;
 			}
 		}
-		UInt32 *idPtr = s_actorValueIDsMap.GetPtr(s_strArgBuffer);
+		UInt32 *idPtr = s_actorValueIDsMap.GetPtr(avStr);
 		if (idPtr) *result = (int)*idPtr;
 	}
 	return true;

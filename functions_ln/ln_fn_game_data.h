@@ -176,23 +176,24 @@ void SearchForm::Add(TESForm *pForm)
 
 bool Cmd_Search_Execute(COMMAND_ARGS)
 {
-	s_strValBuffer[0] = 0;
-	if (!IsConsoleOpen() || !ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer))
+	char toFind[0x40], typeStr[0x10];
+	typeStr[0] = 0;
+	if (!IsConsoleOpen() || !ExtractArgsEx(EXTRACT_ARGS_EX, &toFind, &typeStr))
 		return true;
 	UInt32 filter = 0;
-	char first = s_strValBuffer[0];
+	char first = typeStr[0];
 	if (first)
 	{
 		if ((first >= '0') && (first <= '9'))
 		{
-			filter = StrToInt(s_strValBuffer);
+			filter = StrToInt(typeStr);
 			if (filter > 120) filter = 0;
 		}
 		else
 		{
 			for (UInt32 idx = 3; idx <= 120; idx++)
 			{
-				if (StrCompare(s_strValBuffer, g_typeSignatures[idx].signature) != 0)
+				if (StrCompare(typeStr, g_typeSignatures[idx].signature) != 0)
 					continue;
 				filter = 120 - idx;
 				break;
@@ -229,21 +230,22 @@ bool Cmd_Search_Execute(COMMAND_ARGS)
 
 	for (auto srch = s_searchForms.Begin(); srch; ++srch)
 		if (!filter || (srch().form->typeID == filter))
-			srch().PrintIfMatch(s_strArgBuffer);
+			srch().PrintIfMatch(toFind);
 
 	return true;
 }
 
 bool Cmd_GetModName_Execute(COMMAND_ARGS)
 {
-	s_strValBuffer[0] = 0;
+	char modName[0x80];
+	modName[0] = 0;
 	UInt32 index, keepExt = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &index, &keepExt))
 	{
-		StrCopy(s_strValBuffer, g_dataHandler->GetNthModName(index));
-		if (s_strValBuffer[0] && !keepExt) GetNextToken(s_strValBuffer, '.');
+		StrCopy(modName, g_dataHandler->GetNthModName(index));
+		if (modName[0] && !keepExt) GetNextToken(modName, '.');
 	}
-	AssignString(PASS_COMMAND_ARGS, s_strValBuffer);
+	AssignString(PASS_COMMAND_ARGS, modName);
 	return true;
 }
 
@@ -329,25 +331,27 @@ bool Cmd_IsFormOverridden_Execute(COMMAND_ARGS)
 bool Cmd_GetFormFromMod_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer)) return true;
+	char modName[0x80], refIDStr[0x10];
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &modName, &refIDStr)) return true;
 	UInt8 modIndex;
-	if (StrCompare(s_strArgBuffer, "NONE") != 0)
+	if (StrCompare(modName, "NONE") != 0)
 	{
-		modIndex = g_dataHandler->GetModIndex(s_strArgBuffer);
+		modIndex = g_dataHandler->GetModIndex(modName);
 		if (modIndex == 0xFF) return true;
 	}
 	else modIndex = 0xFF;
-	UInt32 refID = (HexToUInt(s_strValBuffer) & 0xFFFFFF) | (modIndex << 24);
+	UInt32 refID = (HexToUInt(refIDStr) & 0xFFFFFF) | (modIndex << 24);
 	if (LookupFormByRefID(refID)) REFR_RES = refID;
 	return true;
 }
 
 bool Cmd_GetStringSetting_Execute(COMMAND_ARGS)
 {
+	char settingName[0x80];
 	const char *resStr = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer) && ((s_strArgBuffer[0] | 0x20) == 's'))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName) && ((settingName[0] | 0x20) == 's'))
 	{
-		Setting *setting = s_gameSettingsMap.Get(s_strArgBuffer);
+		Setting *setting = s_gameSettingsMap.Get(settingName);
 		if (setting)
 			resStr = setting->data.str;
 	}
@@ -357,9 +361,10 @@ bool Cmd_GetStringSetting_Execute(COMMAND_ARGS)
 
 bool Cmd_SetStringSetting_Execute(COMMAND_ARGS)
 {
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer) && ((s_strArgBuffer[0] | 0x20) == 's'))
+	char settingName[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName, &s_strValBuffer) && ((settingName[0] | 0x20) == 's'))
 	{
-		Setting *setting = s_gameSettingsMap.Get(s_strArgBuffer);
+		Setting *setting = s_gameSettingsMap.Get(settingName);
 		if (setting)
 			setting->Set(s_strValBuffer, true);
 	}

@@ -33,8 +33,9 @@ bool Cmd_GetClimateSunTexture_Execute(COMMAND_ARGS)
 bool Cmd_SetClimateSunTexture_Execute(COMMAND_ARGS)
 {
 	TESClimate *climate;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &s_strArgBuffer) && IS_ID(climate, TESClimate))
-		climate->sunTexture.ddsPath.Set(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &path) && IS_ID(climate, TESClimate))
+		climate->sunTexture.ddsPath.Set(path);
 	return true;
 }
 
@@ -52,8 +53,9 @@ bool Cmd_GetClimateSunGlareTexture_Execute(COMMAND_ARGS)
 bool Cmd_SetClimateSunGlareTexture_Execute(COMMAND_ARGS)
 {
 	TESClimate *climate;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &s_strArgBuffer) && IS_ID(climate, TESClimate))
-		climate->sunGlareTexture.ddsPath.Set(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &path) && IS_ID(climate, TESClimate))
+		climate->sunGlareTexture.ddsPath.Set(path);
 	return true;
 }
 
@@ -71,8 +73,9 @@ bool Cmd_GetClimateNightSkyModel_Execute(COMMAND_ARGS)
 bool Cmd_SetClimateNightSkyModel_Execute(COMMAND_ARGS)
 {
 	TESClimate *climate;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &s_strArgBuffer) && IS_ID(climate, TESClimate))
-		climate->nightSkyModel.SetModelPath(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &path) && IS_ID(climate, TESClimate))
+		climate->nightSkyModel.SetModelPath(path);
 	return true;
 }
 

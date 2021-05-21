@@ -332,9 +332,10 @@ void InitSettingMaps()
 bool Hook_GetNumericGameSetting_Execute(COMMAND_ARGS)
 {
 	*result = -1;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer) && ((s_strArgBuffer[0] | 0x20) != 's'))
+	char settingName[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName) && ((settingName[0] | 0x20) != 's'))
 	{
-		Setting *setting = s_gameSettingsMap.Get(s_strArgBuffer);
+		Setting *setting = s_gameSettingsMap.Get(settingName);
 		if (setting)
 		{
 			setting->Get(result);
@@ -349,10 +350,11 @@ bool Hook_GetNumericGameSetting_Execute(COMMAND_ARGS)
 bool Hook_SetNumericGameSetting_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char settingName[0x80];
 	double newVal;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &newVal) && ((s_strArgBuffer[0] | 0x20) != 's'))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName, &newVal) && ((settingName[0] | 0x20) != 's'))
 	{
-		Setting *setting = s_gameSettingsMap.Get(s_strArgBuffer);
+		Setting *setting = s_gameSettingsMap.Get(settingName);
 		if (setting)
 		{
 			setting->Set(newVal);
@@ -367,9 +369,10 @@ bool Hook_SetNumericGameSetting_Execute(COMMAND_ARGS)
 bool Hook_GetNumericINISetting_Execute(COMMAND_ARGS)
 {
 	*result = -1;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer) && ((s_strArgBuffer[0] | 0x20) != 's'))
+	char settingName[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName) && ((settingName[0] | 0x20) != 's'))
 	{
-		Setting *setting = s_INISettingsMap.Get(s_strArgBuffer);
+		Setting *setting = s_INISettingsMap.Get(settingName);
 		if (setting)
 		{
 			setting->Get(result);
@@ -384,10 +387,11 @@ bool Hook_GetNumericINISetting_Execute(COMMAND_ARGS)
 bool Hook_SetNumericINISetting_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char settingName[0x80];
 	double newVal;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &newVal) && ((s_strArgBuffer[0] | 0x20) != 's'))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName, &newVal) && ((settingName[0] | 0x20) != 's'))
 	{
-		Setting *setting = s_INISettingsMap.Get(s_strArgBuffer);
+		Setting *setting = s_INISettingsMap.Get(settingName);
 		if (setting)
 		{
 			setting->Set(newVal);
@@ -466,9 +470,10 @@ bool __fastcall IsJIPAlias(const char *pluginName)
 
 bool Hook_IsPluginInstalled_Execute(COMMAND_ARGS)
 {
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	char pluginName[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pluginName))
 	{
-		if (IsJIPAlias(s_strArgBuffer))
+		if (IsJIPAlias(pluginName))
 			*result = 1;
 		else IsPluginInstalled(PASS_COMMAND_ARGS);
 	}
@@ -479,9 +484,10 @@ bool Hook_IsPluginInstalled_Execute(COMMAND_ARGS)
 
 bool Hook_GetPluginVersion_Execute(COMMAND_ARGS)
 {
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	char pluginName[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pluginName))
 	{
-		if (IsJIPAlias(s_strArgBuffer))
+		if (IsJIPAlias(pluginName))
 			*result = JIP_LN_VERSION;
 		else GetPluginVersion(PASS_COMMAND_ARGS);
 	}

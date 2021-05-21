@@ -63,7 +63,8 @@ DEFINE_COMMAND_PLUGIN(AttachUIComponent, , 1, 22, kParams_JIP_OneString_OneForma
 
 bool Cmd_IsComponentLoaded_Execute(COMMAND_ARGS)
 {
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer) && GetTargetComponent(s_strArgBuffer))
+	char tilePath[0x100];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &tilePath) && GetTargetComponent(tilePath))
 		*result = 1;
 	else *result = 0;
 	return true;
@@ -72,10 +73,11 @@ bool Cmd_IsComponentLoaded_Execute(COMMAND_ARGS)
 bool Cmd_InjectUIXML_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer))
+	char tilePath[0x100], xmlPath[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &tilePath, &xmlPath))
 	{
-		Tile *component = GetTargetComponent(s_strArgBuffer);
-		if (component) *result = component->ReadXML(s_strValBuffer) ? 1 : 0;
+		Tile *component = GetTargetComponent(tilePath);
+		if (component) *result = component->ReadXML(xmlPath) ? 1 : 0;
 	}
 	return true;
 }
@@ -92,9 +94,10 @@ Tile* __stdcall InjectUIComponent(Tile *parentTile, char *dataStr)
 bool Cmd_InjectUIComponent_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractFormatStringArgs(1, s_strValBuffer, EXTRACT_ARGS_EX, kCommandInfo_InjectUIComponent.numParams, &s_strArgBuffer))
+	char tilePath[0x100];
+	if (ExtractFormatStringArgs(1, s_strValBuffer, EXTRACT_ARGS_EX, kCommandInfo_InjectUIComponent.numParams, &tilePath))
 	{
-		Tile *component = GetTargetComponent(s_strArgBuffer);
+		Tile *component = GetTargetComponent(tilePath);
 		*result = (component && InjectUIComponent(component, s_strValBuffer)) ? 1 : 0;
 	}
 	return true;
@@ -112,10 +115,11 @@ bool Cmd_GetCursorPos_Execute(COMMAND_ARGS)
 bool Cmd_GetUIString_Execute(COMMAND_ARGS)
 {
 	const char *resStr = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	char tilePath[0x100];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &tilePath))
 	{
 		Tile::Value *value = NULL;
-		if (GetTargetComponent(s_strArgBuffer, &value) && value)
+		if (GetTargetComponent(tilePath, &value) && value)
 			resStr = value->str;
 	}
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -134,8 +138,9 @@ bool Cmd_GetActiveUIComponentName_Execute(COMMAND_ARGS)
 	Tile *activeTile = g_interfaceManager->GetActiveTile();
 	if (activeTile)
 	{
-		activeTile->GetComponentFullName(s_strValBuffer);
-		tileName = SlashPosR(s_strValBuffer);
+		char tilePath[0x100];
+		activeTile->GetComponentFullName(tilePath);
+		tileName = SlashPosR(tilePath);
 		if (tileName) tileName++;
 	}
 	AssignString(PASS_COMMAND_ARGS, tileName);
@@ -144,10 +149,11 @@ bool Cmd_GetActiveUIComponentName_Execute(COMMAND_ARGS)
 
 bool Cmd_GetActiveUIComponentFullName_Execute(COMMAND_ARGS)
 {
-	s_strValBuffer[0] = 0;
+	char tilePath[0x100];
+	tilePath[0] = 0;
 	Tile *activeTile = g_interfaceManager->GetActiveTile();
-	if (activeTile) activeTile->GetComponentFullName(s_strValBuffer);
-	AssignString(PASS_COMMAND_ARGS, s_strValBuffer);
+	if (activeTile) activeTile->GetComponentFullName(tilePath);
+	AssignString(PASS_COMMAND_ARGS, tilePath);
 	return true;
 }
 
@@ -282,25 +288,26 @@ bool Cmd_GetMenuItemFilter_Execute(COMMAND_ARGS)
 bool Cmd_ClickMenuButton_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char tilePath[0x100];
 	UInt32 times = 1;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &times) || !GetMenuMode() || !times) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &tilePath, &times) || !GetMenuMode() || !times) return true;
 	Tile *component = NULL;
 	Menu *parentMenu = NULL;
 	SInt32 tileID = -1;
-	char *hashPos = FindChr(s_strArgBuffer, '#');
+	char *hashPos = FindChr(tilePath, '#');
 	if (hashPos)
 	{
 		tileID = StrToInt(hashPos + 1);
 		if (tileID >= 0)
 		{
 			*hashPos = 0;
-			TileMenu *tileMenu = GetMenuTile(s_strArgBuffer);
+			TileMenu *tileMenu = GetMenuTile(tilePath);
 			if (tileMenu) parentMenu = tileMenu->menu;
 		}
 	}
 	else
 	{
-		component = GetTargetComponent(s_strArgBuffer);
+		component = GetTargetComponent(tilePath);
 		if (!component) return true;
 		parentMenu = component->GetParentMenu();
 		Tile::Value *tileVal = component->GetValue(kTileValue_id);
@@ -724,15 +731,16 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &s_strArgBuffer) || NOT_ID(script, Script)) return true;
-	char *slashPos = SlashPos(s_strArgBuffer), *hashPos = NULL;
+	char tilePath[0x100];
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &tilePath) || NOT_ID(script, Script)) return true;
+	char *slashPos = SlashPos(tilePath), *hashPos = NULL;
 	if (slashPos) *slashPos = 0;
 	else
 	{
-		hashPos = FindChr(s_strArgBuffer, '#');
+		hashPos = FindChr(tilePath, '#');
 		if (hashPos) *hashPos = 0;
 	}
-	UInt32 menuID = s_menuNameToID.Get(s_strArgBuffer);
+	UInt32 menuID = s_menuNameToID.Get(tilePath);
 	if (!menuID) return true;
 	MenuClickEvent &clickEvent = s_menuClickEventMap[kMenuIDJumpTable[menuID - kMenuType_Min]];
 	if (slashPos) *slashPos = '/';
@@ -759,22 +767,22 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 		}
 		return true;
 	}
-	FixPath(s_strArgBuffer);
+	FixPath(tilePath);
 	if (addEvnt)
 	{
 		bool match = false;
 		if (!clickEvent.filtersMap.Empty())
 		{
-			for (auto filterb = clickEvent.filtersMap.FindOpDir(s_strArgBuffer, false); filterb; --filterb)
+			for (auto filterb = clickEvent.filtersMap.FindOpDir(tilePath, false); filterb; --filterb)
 			{
-				if (!StrBeginsCS(s_strArgBuffer, filterb.Key())) break;
+				if (!StrBeginsCS(tilePath, filterb.Key())) break;
 				if (filterb().HasKey(script))
 					return true;
 			}
 			char cmpr;
-			for (auto filterf = clickEvent.filtersMap.FindOpDir(s_strArgBuffer, true); filterf; ++filterf)
+			for (auto filterf = clickEvent.filtersMap.FindOpDir(tilePath, true); filterf; ++filterf)
 			{
-				cmpr = StrBeginsCS(filterf.Key(), s_strArgBuffer);
+				cmpr = StrBeginsCS(filterf.Key(), tilePath);
 				if (!cmpr) break;
 				if (cmpr == 2)
 				{
@@ -789,14 +797,14 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 		{
 			if (clickEvent.Empty())
 				clickEvent.SetHook(true);
-			clickEvent.filtersMap[s_strArgBuffer].Insert(script);
+			clickEvent.filtersMap[tilePath].Insert(script);
 		}
 	}
 	else if (!clickEvent.filtersMap.Empty())
 	{
-		for (auto filterf = clickEvent.filtersMap.FindOpDir(s_strArgBuffer, true); filterf; ++filterf)
+		for (auto filterf = clickEvent.filtersMap.FindOpDir(tilePath, true); filterf; ++filterf)
 		{
-			if (!StrBeginsCS(filterf.Key(), s_strArgBuffer)) break;
+			if (!StrBeginsCS(filterf.Key(), tilePath)) break;
 			filterf().Erase(script);
 			if (filterf().Empty()) filterf.Remove(clickEvent.filtersMap);
 		}
@@ -982,9 +990,10 @@ void DoPurgePath(char *path)
 bool Cmd_SetTerminalUIModel_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
-	s_strArgBuffer[0] = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &s_strArgBuffer)) return true;
-	bool bRemove = !s_strArgBuffer[0];
+	char modelPath[0x80];
+	modelPath[0] = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &modelPath)) return true;
+	bool bRemove = !modelPath[0];
 	tList<TESForm> tempList(form);
 	if IS_ID(form, BGSListForm)
 		tempList = ((BGSListForm*)form)->list;
@@ -999,7 +1008,7 @@ bool Cmd_SetTerminalUIModel_Execute(COMMAND_ARGS)
 		else
 		{
 			if (!s_terminalAltModelsMap.Insert(terminal, &pathPtr)) DoPurgePath(*pathPtr);
-			*pathPtr = CopyString(s_strArgBuffer);
+			*pathPtr = CopyString(modelPath);
 		}
 	}
 	while (lstIter = lstIter->next);
@@ -1195,9 +1204,10 @@ bool Cmd_SetCursorPos_Execute(COMMAND_ARGS)
 
 bool Cmd_UnloadUIComponent_Execute(COMMAND_ARGS)
 {
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	char tilePath[0x100];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &tilePath))
 	{
-		Tile *component = GetTargetComponent(s_strArgBuffer);
+		Tile *component = GetTargetComponent(tilePath);
 		if (component) component->Destroy(true);
 	}
 	return true;
@@ -1386,9 +1396,10 @@ bool Cmd_EnableImprovedRecipeMenu_Execute(COMMAND_ARGS)
 bool Cmd_ClickMenuTile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer) && GetMenuMode())
+	char tilePath[0x100];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &tilePath) && GetMenuMode())
 	{
-		Tile *component = GetTargetComponent(s_strArgBuffer);
+		Tile *component = GetTargetComponent(tilePath);
 		if (component && (component->GetValueFloat(kTileValue_target) > 0))
 		{
 			component->FakeClick();
@@ -1566,18 +1577,19 @@ bool Cmd_ToggleHUDCursor_Execute(COMMAND_ARGS)
 bool Cmd_AddTileFromTemplate_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractFormatStringArgs(0, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_AddTileFromTemplate.numParams))
+	char dataStr[0x200];
+	if (ExtractFormatStringArgs(0, dataStr, EXTRACT_ARGS_EX, kCommandInfo_AddTileFromTemplate.numParams))
 	{
-		char *tempName = GetNextToken(s_strArgBuffer, '|');
+		char *tempName = GetNextToken(dataStr, '|');
 		if (!*tempName) return true;
 		char *altName = GetNextToken(tempName, '|');
 		TileMenu *menu;
 		Tile *component = NULL;
-		char *slashPos = SlashPos(s_strArgBuffer);
+		char *slashPos = SlashPos(dataStr);
 		if (slashPos)
 		{
 			*slashPos = 0;
-			menu = GetMenuTile(s_strArgBuffer);
+			menu = GetMenuTile(dataStr);
 			if (!menu) return true;
 			const char *trait = NULL;
 			component = menu->GetComponent(slashPos + 1, &trait);
@@ -1585,7 +1597,7 @@ bool Cmd_AddTileFromTemplate_Execute(COMMAND_ARGS)
 		}
 		else
 		{
-			menu = GetMenuTile(s_strArgBuffer);
+			menu = GetMenuTile(dataStr);
 			component = menu;
 		}
 		if (component)
@@ -1605,13 +1617,14 @@ bool Cmd_AddTileFromTemplate_Execute(COMMAND_ARGS)
 bool Cmd_SetUIFloatGradual_Execute(COMMAND_ARGS)
 {
 	static const UInt8 kChangeModeMatch[] = {0, 4, 1, 5};
+	char tilePath[0x100];
 	float startVal, endVal, timer;
 	UInt32 changeMode = 0;
 	UInt8 numArgs = NUM_ARGS;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &startVal, &endVal, &timer, &changeMode))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &tilePath, &startVal, &endVal, &timer, &changeMode))
 	{
 		Tile::Value *tileVal = NULL;
-		Tile *component = GetTargetComponent(s_strArgBuffer, &tileVal);
+		Tile *component = GetTargetComponent(tilePath, &tileVal);
 		if (component)
 		{
 			if (numArgs >= 4)
@@ -1678,12 +1691,13 @@ bool Cmd_ShowLevelUpMenuEx_Execute(COMMAND_ARGS)
 bool Cmd_AttachUIXML_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer))
+	char nodeName[0x40], xmlPath[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &nodeName, &xmlPath))
 	{
-		NiNode *targetNode = thisObj->GetNode(s_strArgBuffer);
+		NiNode *targetNode = thisObj->GetNode(nodeName);
 		if (targetNode)
 		{
-			Tile *component = g_HUDMainMenu->tile->ReadXML(s_strValBuffer);
+			Tile *component = g_HUDMainMenu->tile->ReadXML(xmlPath);
 			if (component && component->node)
 			{
 				targetNode->AddObject(component->node, 1);
@@ -1697,9 +1711,10 @@ bool Cmd_AttachUIXML_Execute(COMMAND_ARGS)
 bool Cmd_AttachUIComponent_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractFormatStringArgs(1, s_strValBuffer, EXTRACT_ARGS_EX, kCommandInfo_AttachUIComponent.numParams, &s_strArgBuffer))
+	char nodeName[0x40];
+	if (ExtractFormatStringArgs(1, s_strValBuffer, EXTRACT_ARGS_EX, kCommandInfo_AttachUIComponent.numParams, &nodeName))
 	{
-		NiNode *targetNode = thisObj->GetNode(s_strArgBuffer);
+		NiNode *targetNode = thisObj->GetNode(nodeName);
 		if (targetNode)
 		{
 			Tile *component = InjectUIComponent(g_HUDMainMenu->tile, s_strValBuffer);

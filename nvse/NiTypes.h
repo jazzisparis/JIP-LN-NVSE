@@ -34,10 +34,10 @@ struct NiMatrix33
 	float	cr[3][3];
 
 	void __fastcall ExtractAngles(NiVector3 *outAngles);
-	void RotationMatrix(float rotX, float rotY, float rotZ);
-	void Rotate(float rotX, float rotY, float rotZ);
-	void MultiplyMatrices(NiMatrix33 *matA, NiMatrix33 *matB);
-	void __fastcall Inverse(NiMatrix33 *mat);
+	NiMatrix33* __fastcall RotationMatrix(NiVector3 *rot);
+	NiMatrix33 *MultiplyMatrices(NiMatrix33 *matA, NiMatrix33 *matB);
+	void __fastcall Rotate(NiVector3 *rot);
+	void __fastcall Inverse(NiMatrix33 *mat = NULL);
 	
 	inline NiMatrix33& operator=(const NiMatrix33 &rhs)
 	{
@@ -74,6 +74,12 @@ struct NiVector3
 		x -= rhs.x;
 		y -= rhs.y;
 		z -= rhs.z;
+	}
+	void operator*=(float value)
+	{
+		x *= value;
+		y *= value;
+		z *= value;
 	}
 
 	void ToQuaternion(NiQuaternion &quaternion);

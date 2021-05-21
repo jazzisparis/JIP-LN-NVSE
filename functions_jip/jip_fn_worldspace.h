@@ -80,8 +80,9 @@ bool Cmd_GetWorldspaceNoiseTexture_Execute(COMMAND_ARGS)
 bool Cmd_SetWorldspaceNoiseTexture_Execute(COMMAND_ARGS)
 {
 	TESWorldSpace *wspc;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc, &s_strArgBuffer) && IS_ID(wspc, TESWorldSpace))
-		wspc->waterNoiseTexture.ddsPath.Set(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc, &path) && IS_ID(wspc, TESWorldSpace))
+		wspc->waterNoiseTexture.ddsPath.Set(path);
 	return true;
 }
 

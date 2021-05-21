@@ -1487,16 +1487,6 @@ ParamInfo kParams_JIP_OneString_TwoInts_OneFloat[] =
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_JIP_OneString_OneInt_OneOptionalString_ThreeOptionalFloats[] =
-{
-	{"String", kParamType_String, 0},
-	{"Integer", kParamType_Integer, 0},
-	{"String", kParamType_String, 1},
-	{"Float", kParamType_Float, 1},
-	{"Float", kParamType_Float, 1},
-	{"Float", kParamType_Float, 1}
-};
-
 ParamInfo kParams_JIP_TwoStrings_OneDouble_OneOptionalInt[] =
 {
 	{"String", kParamType_String, 0},

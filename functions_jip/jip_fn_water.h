@@ -20,8 +20,9 @@ bool Cmd_GetWaterNoiseTexture_Execute(COMMAND_ARGS)
 bool Cmd_SetWaterNoiseTexture_Execute(COMMAND_ARGS)
 {
 	TESWaterForm *water;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &water, &s_strArgBuffer) && IS_ID(water, TESWaterForm))
-		water->noiseMap.ddsPath.Set(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &water, &path) && IS_ID(water, TESWaterForm))
+		water->noiseMap.ddsPath.Set(path);
 	return true;
 }
 

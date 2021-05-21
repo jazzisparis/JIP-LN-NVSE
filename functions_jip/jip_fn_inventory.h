@@ -302,8 +302,8 @@ bool Cmd_DropAlt_Execute(COMMAND_ARGS)
 			{
 				subCount = xData->GetCount();
 				if (subCount < 1)
-					continue;
-				if (subCount > 1)
+					subCount = 1;
+				else if (subCount > 1)
 				{
 					if (hasScript && xData->HasType(kExtraData_Script))
 					{
@@ -625,8 +625,8 @@ bool Cmd_GetEquippedArmorRefs_Execute(COMMAND_ARGS)
 			ExtraContainerChanges::EntryDataList *entryList = thisObj->GetContainerChangesList();
 			if (entryList)
 			{
-				s_tempElements.Clear();
 				s_tempFormList.Clear();
+				s_tempElements.Clear();
 				ValidBip01Names::Data *slotData = equipment->slotData;
 				TESForm *item;
 				ContChangesEntry *entry;

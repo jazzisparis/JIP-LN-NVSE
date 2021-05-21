@@ -374,15 +374,16 @@ bool Cmd_PickFromList_Execute(COMMAND_ARGS)
 bool Cmd_ToggleCreatureModel_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char path[0x100];
 	UInt32 enable;
 	TESCreature *creature = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &enable, &creature)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &path, &enable, &creature)) return true;
 	if (!creature)
 	{
 		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		creature = (TESCreature*)((Actor*)thisObj)->GetActorBase();
 	}
-	if (IS_ID(creature, TESCreature) && creature->modelList.ModelListAction(s_strArgBuffer, enable ? 1 : -1))
+	if (IS_ID(creature, TESCreature) && creature->modelList.ModelListAction(path, enable ? 1 : -1))
 		*result = 1;
 	return true;
 }
@@ -390,14 +391,15 @@ bool Cmd_ToggleCreatureModel_Execute(COMMAND_ARGS)
 bool Cmd_CreatureHasModel_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char path[0x100];
 	TESCreature *creature = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &creature)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &path, &creature)) return true;
 	if (!creature)
 	{
 		if (!thisObj || NOT_ACTOR(thisObj)) return true;
 		creature = (TESCreature*)((Actor*)thisObj)->GetActorBase();
 	}
-	if (IS_ID(creature, TESCreature) && creature->modelList.ModelListAction(s_strArgBuffer, 0))
+	if (IS_ID(creature, TESCreature) && creature->modelList.ModelListAction(path, 0))
 		*result = 1;
 	return true;
 }
@@ -514,9 +516,9 @@ bool Cmd_SetActorDiveBreath_Execute(COMMAND_ARGS)
 void __fastcall GetCombatActors(TESObjectREFR *thisObj, Script *scriptObj, bool getAllies, double *result)
 {
 	*result = 0;
-	s_tempElements.Clear();
 	UInt32 count;
 	Actor *actor;
+	s_tempElements.Clear();
 	if (thisObj == g_thePlayer)
 	{
 		CombatActors *cmbActors = g_thePlayer->combatActors;
@@ -1136,8 +1138,9 @@ bool Cmd_GetCurrentAmmoRounds_Execute(COMMAND_ARGS)
 
 bool Cmd_SetFullNameAlt_Execute(COMMAND_ARGS)
 {
+	char name[0x100];
 	TESForm *form = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &form)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &name, &form)) return true;
 	if (!form)
 	{
 		if (!thisObj) return true;
@@ -1155,7 +1158,7 @@ bool Cmd_SetFullNameAlt_Execute(COMMAND_ARGS)
 	else if IS_ID(form, TESObjectCELL)
 		fullName = &((TESObjectCELL*)form)->fullName;
 	else return true;
-	fullName->name.Set(s_strArgBuffer);
+	fullName->name.Set(name);
 	form->MarkAsModified(modFlag);
 	return true;
 }
@@ -1706,18 +1709,20 @@ bool Cmd_GetSkeletonModel_Execute(COMMAND_ARGS)
 
 bool Cmd_SetNPCSkeletonModel_Execute(COMMAND_ARGS)
 {
+	char path[0x100];
 	TESNPC *npc;
-	s_strArgBuffer[0] = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &npc, &s_strArgBuffer) && IS_ID(npc, TESNPC))
-		GetActorModel(npc)->nifPath.Set(s_strArgBuffer);
+	path[0] = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &npc, &path) && IS_ID(npc, TESNPC))
+		GetActorModel(npc)->nifPath.Set(path);
 	return true;
 }
 
 bool Cmd_SetCRESkeletonModel_Execute(COMMAND_ARGS)
 {
+	char path[0x100];
 	TESCreature *creature;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &creature, &s_strArgBuffer) && IS_ID(creature, TESCreature))
-		GetActorModel(creature)->nifPath.Set(s_strArgBuffer);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &creature, &path) && IS_ID(creature, TESCreature))
+		GetActorModel(creature)->nifPath.Set(path);
 	return true;
 }
 
@@ -2001,6 +2006,7 @@ bool Cmd_TestEquippedSlots_Execute(COMMAND_ARGS)
 
 bool __fastcall GetFactionList(Actor *actor, TESActorBase *actorBase)
 {
+	s_tempFormList.Clear();
 	if (actorBase)
 		actor = NULL;
 	else
@@ -2009,7 +2015,6 @@ bool __fastcall GetFactionList(Actor *actor, TESActorBase *actorBase)
 			return false;
 		actorBase = actor->GetActorBase();
 	}
-	s_tempFormList.Clear();
 	ListNode<FactionListData> *traverse = actorBase->baseData.factionList.Head();
 	FactionListData	*data;
 	do
@@ -2307,8 +2312,9 @@ bool Cmd_FireWeaponEx_Execute(COMMAND_ARGS)
 {
 	static bool hookInstalled = false;
 	TESObjectWEAP *weapon;
-	s_strArgBuffer[0] = 0;
-	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &s_strArgBuffer) && IS_ID(weapon, TESObjectWEAP) && weapon->projectile)
+	char nodeName[0x40];
+	nodeName[0] = 0;
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &nodeName) && IS_ID(weapon, TESObjectWEAP) && weapon->projectile)
 	{
 		HighProcess *hiProc = (HighProcess*)((Actor*)thisObj)->baseProcess;
 		if (!hiProc || hiProc->processLevel)
@@ -2321,7 +2327,7 @@ bool Cmd_FireWeaponEx_Execute(COMMAND_ARGS)
 			SAFE_WRITE_BUF(0x9BAD66, "\xC7\x01\x00\x00\x00\x00\xEB\x0C");
 		}
 
-		NiNode *altProjNode = s_strArgBuffer[0] ? thisObj->GetNode(s_strArgBuffer) : NULL;
+		NiNode *altProjNode = nodeName[0] ? thisObj->GetNode(nodeName) : NULL;
 		if (altProjNode)
 			hiProc->projectileNode = altProjNode;
 

@@ -168,6 +168,7 @@ void LoadGameCallback(void*)
 	UInt32 type, length, buffer4, refID, skipSize;
 	UInt8 buffer1, modIdx;
 	UInt16 nRecs, nRefs, nVars;
+	char varName[0x50];
 
 	while (GetNextRecordInfo(&type, &s_serializedVersion, &length))
 	{
@@ -192,11 +193,11 @@ void LoadGameCallback(void*)
 						nVars--;
 						modIdx = ReadRecord8();
 						buffer1 = ReadRecord8();
-						ReadRecordData(s_strArgBuffer, buffer1);
-						s_strArgBuffer[buffer1] = 0;
+						ReadRecordData(varName, buffer1);
+						varName[buffer1] = 0;
 						ReadRecord64(&varData);
 						if (!ResolveRefID(modIdx << 24, &buffer4)) continue;
-						if (var = script->AddVariable(eventList, refID, buffer4 >> 24))
+						if (var = script->AddVariable(varName, eventList, refID, buffer4 >> 24))
 						{
 							if (varData.refID && !varData.pad && !ResolveRefID(varData.refID, &varData.refID))
 								varData.refID = 0;
@@ -237,15 +238,15 @@ void LoadGameCallback(void*)
 						{
 							valsArr = NULL;
 							buffer1 = ReadRecord8();
-							ReadRecordData(s_strArgBuffer, buffer1);
-							s_strArgBuffer[buffer1] = 0;
+							ReadRecordData(varName, buffer1);
+							varName[buffer1] = 0;
 							nElems = ReadRecord16();
 							while (nElems)
 							{
 								buffer1 = ReadRecord8();
 								if (aVarsMap)
 								{
-									if (!valsArr) valsArr = aVarsMap->Emplace(s_strArgBuffer, nElems);
+									if (!valsArr) valsArr = aVarsMap->Emplace(varName, nElems);
 									valsArr->Append(buffer1);
 								}
 								else if (buffer1 == 1)
@@ -281,8 +282,8 @@ void LoadGameCallback(void*)
 					{
 						idsMap = NULL;
 						buffer1 = ReadRecord8();
-						ReadRecordData(s_strArgBuffer, buffer1);
-						s_strArgBuffer[buffer1] = 0;
+						ReadRecordData(varName, buffer1);
+						varName[buffer1] = 0;
 						nRefs = ReadRecord16();
 						while (nRefs)
 						{
@@ -293,7 +294,7 @@ void LoadGameCallback(void*)
 								if (!idsMap)
 								{
 									if (!rVarsMap) rVarsMap = s_refMapArraysPerm.Emplace(modIdx, nVars);
-									idsMap = rVarsMap->Emplace(s_strArgBuffer, nRefs);
+									idsMap = rVarsMap->Emplace(varName, nRefs);
 								}
 								idsMap->Emplace(refID, buffer1);
 							}

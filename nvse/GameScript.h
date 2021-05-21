@@ -77,7 +77,7 @@ public:
 
 	VariableInfo	*GetVariableByName(const char *varName);
 	//UInt32			GetVariableType(VariableInfo *var);
-	ScriptVar		*AddVariable(ScriptEventList *eventList, UInt32 ownerID, UInt8 modIdx);
+	ScriptVar		*AddVariable(char *varName, ScriptEventList *eventList, UInt32 ownerID, UInt8 modIdx);
 	UInt32			GetDataLength();
 
 	static bool	RunScriptLine(const char *text, TESObjectREFR *object = NULL);

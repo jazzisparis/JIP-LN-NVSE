@@ -102,7 +102,8 @@ bool Cmd_GetGrassModel_Execute(COMMAND_ARGS)
 bool Cmd_SetGrassModel_Execute(COMMAND_ARGS)
 {
 	TESGrass *grass;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &grass, &s_strArgBuffer) && IS_ID(grass, TESGrass))
-		grass->model.SetModelPath(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &grass, &path) && IS_ID(grass, TESGrass))
+		grass->model.SetModelPath(path);
 	return true;
 }

@@ -30,8 +30,9 @@ bool Cmd_GetBodyPartDataSkeleton_Execute(COMMAND_ARGS)
 bool Cmd_SetBodyPartDataSkeleton_Execute(COMMAND_ARGS)
 {
 	BGSBodyPartData *bpData;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &s_strArgBuffer) && IS_ID(bpData, BGSBodyPartData))
-		bpData->model.SetModelPath(s_strArgBuffer);
+	char path[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &path) && IS_ID(bpData, BGSBodyPartData))
+		bpData->model.SetModelPath(path);
 	return true;
 }
 
@@ -265,9 +266,10 @@ bool Cmd_SetBodyPartName_Execute(COMMAND_ARGS)
 {
 	BGSBodyPartData *bpData;
 	UInt32 partID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &s_strArgBuffer) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14)) return true;
+	char nameStr[0x40];
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &nameStr) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14)) return true;
 	BGSBodyPart *bodyPart = bpData->bodyParts[partID];
-	if (bodyPart) bodyPart->partName.Set(s_strArgBuffer);
+	if (bodyPart) bodyPart->partName.Set(nameStr);
 	return true;
 }
 
@@ -289,9 +291,10 @@ bool Cmd_SetBodyPartReplacementModel_Execute(COMMAND_ARGS)
 {
 	BGSBodyPartData *bpData;
 	UInt32 partID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &s_strArgBuffer) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14)) return true;
+	char path[0x80];
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &path) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14)) return true;
 	BGSBodyPart *bodyPart = bpData->bodyParts[partID];
-	if (bodyPart) bodyPart->limbReplacement.SetModelPath(s_strArgBuffer);
+	if (bodyPart) bodyPart->limbReplacement.SetModelPath(path);
 	return true;
 }
 

@@ -1834,7 +1834,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 		shapeData->triangles = shapeTriangles;
 
 		NiReleaseAddRef((NiRefObject**)&sciTriShp->m_propertyList.Head()->data, alphaProp);
-		sciTriShp->alphaProp = alphaProp;
+		NiReleaseAddRef((NiRefObject**)&sciTriShp->alphaProp, alphaProp);
 	}
 	while (++index < 9);
 	UpdateTileScales();
