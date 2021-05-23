@@ -7,7 +7,7 @@ DEFINE_COMMAND_PLUGIN(CCCSetTrait, , 0, 3, kParams_JIP_TwoInts_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(CCCGetDistance, , 1, 2, kParams_JIP_OneObjectRef_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(CCCInFaction, , 1, 2, kParams_JIP_OneFaction_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(CCCSetNCCS, , 1, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetEncumbranceRate, , 1, 0, NULL);
+DEFINE_CMD_ALT_COND_PLUGIN(GetEncumbranceRate, , "Returns the ratio between the actor's inventory weight and their max carry weight as a percentage", 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(CCCLoadNCCS, , 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(CCCSavedForm, , 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(CCCLocationName, , 1, 0, NULL);
@@ -373,6 +373,18 @@ bool Cmd_CCCSetNCCS_Execute(COMMAND_ARGS)
 		}
 		else if (!s_NCCSActors.Erase(actorBase)) return true;
 		SetNCCS(actorBase, doSet != 0);
+	}
+	return true;
+}
+
+bool Cmd_GetEncumbranceRate_Eval(COMMAND_ARGS_EVAL)
+{
+	*result = 0;
+	if (IS_ACTOR(thisObj))
+	{
+		ExtraContainerChanges *xChanges = GetExtraType(&thisObj->extraDataList, ContainerChanges);
+		if (xChanges && xChanges->data)
+			*result = 100 * xChanges->data->GetInventoryWeight() / GetMax(((Actor*)thisObj)->avOwner.GetActorValue(kAVCode_CarryWeight), 1.0F);
 	}
 	return true;
 }
