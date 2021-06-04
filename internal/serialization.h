@@ -109,13 +109,6 @@ void DoLoadGameCleanup()
 		else flagsIter.Remove();
 	}
 
-	if (!s_effectItemFree.Empty())
-	{
-		for (auto effIter = s_effectItemFree.Begin(); effIter; ++effIter)
-			GameHeapFree(*effIter);
-		s_effectItemFree.Clear();
-	}
-
 	for (auto lgtIter = s_activePtLights.Begin(); lgtIter; ++lgtIter)
 		if ((lgtIter->extraFlags & 0x80) && lgtIter->m_parent)
 			lgtIter->m_parent->RemoveObject(*lgtIter);
@@ -154,6 +147,24 @@ void __fastcall RestoreLinkedRefs(UnorderedMap<UInt32, UInt32> *tempMap = NULL)
 
 char s_lastLoadedPath[MAX_PATH];
 
+UInt8 *s_loadGameBuffer = NULL;
+UInt32 s_loadGameBufferSize = 0x10000;
+
+UInt8* __fastcall GetLoadGameBuffer(UInt32 length)
+{
+	if (s_loadGameBufferSize < length)
+	{
+		s_loadGameBufferSize = length;
+		if (s_loadGameBuffer)
+			_aligned_free(s_loadGameBuffer);
+		s_loadGameBuffer = (UInt8*)_aligned_malloc(length, 0x10);
+	}
+	else if (!s_loadGameBuffer)
+		s_loadGameBuffer = (UInt8*)_aligned_malloc(s_loadGameBufferSize, 0x10);
+	ReadRecordData(s_loadGameBuffer, length);
+	return s_loadGameBuffer;
+}
+
 void LoadGameCallback(void*)
 {
 	const char *currentPath = GetSavePath();
@@ -168,7 +179,7 @@ void LoadGameCallback(void*)
 	UInt32 type, length, buffer4, refID, skipSize;
 	UInt8 buffer1, modIdx;
 	UInt16 nRecs, nRefs, nVars;
-	char varName[0x50];
+	UInt8 *bufPos, *namePos;
 
 	while (GetNextRecordInfo(&type, &s_serializedVersion, &length))
 	{
@@ -176,32 +187,51 @@ void LoadGameCallback(void*)
 		{
 			case 'VSPJ':
 			{
+				bufPos = GetLoadGameBuffer(length);
 				TESForm *form;
 				Script *script;
 				ScriptEventList *eventList;
 				ScriptVar *var;
-				VarData varData;
-				nRecs = ReadRecord16();
+				VarData *varData;
+				nRecs = *(UInt16*)bufPos;
+				bufPos += 2;
 				while (nRecs)
 				{
 					nRecs--;
-					refID = ReadRecord32();
-					if (!ResolveRefID(refID, &refID) || !(form = LookupFormByRefID(refID)) || !form->GetScriptAndEventList(&script, &eventList)) continue;
-					nVars = ReadRecord16();
-					while (nVars)
+					refID = *(UInt32*)bufPos;
+					bufPos += 4;
+					nVars = *(UInt16*)bufPos;
+					bufPos += 2;
+					if (ResolveRefID(refID, &refID) && (form = LookupFormByRefID(refID)) && form->GetScriptAndEventList(&script, &eventList))
 					{
-						nVars--;
-						modIdx = ReadRecord8();
-						buffer1 = ReadRecord8();
-						ReadRecordData(varName, buffer1);
-						varName[buffer1] = 0;
-						ReadRecord64(&varData);
-						if (!ResolveRefID(modIdx << 24, &buffer4)) continue;
-						if (var = script->AddVariable(varName, eventList, refID, buffer4 >> 24))
+						while (nVars)
 						{
-							if (varData.refID && !varData.pad && !ResolveRefID(varData.refID, &varData.refID))
-								varData.refID = 0;
-							var->data.num = varData.num;
+							nVars--;
+							modIdx = *bufPos++;
+							buffer1 = *bufPos++;
+							namePos = bufPos;
+							bufPos += buffer1;
+							buffer1 = *bufPos;
+							*bufPos = 0;
+							varData = (VarData*)bufPos;
+							bufPos += 8;
+							if (!ResolveRefID(modIdx << 24, &buffer4)) continue;
+							if (var = script->AddVariable((char*)namePos, eventList, refID, buffer4 >> 24))
+							{
+								*(UInt8*)varData = buffer1;
+								if (varData->refID && !varData->pad && !ResolveRefID(varData->refID, &varData->refID))
+									varData->refID = 0;
+								var->data.num = varData->num;
+							}
+						}
+					}
+					else
+					{
+						while (nVars)
+						{
+							nVars--;
+							buffer1 = *++bufPos + 8;
+							bufPos += buffer1;
 						}
 					}
 				}
@@ -210,117 +240,223 @@ void LoadGameCallback(void*)
 			case 'VAPJ':
 			{
 				if (!(changedFlags & kChangedFlag_AuxVars)) continue;
+				bufPos = GetLoadGameBuffer(length);
 				AuxVarOwnersMap *ownersMap;
 				AuxVarVarsMap *aVarsMap;
 				AuxVarValsArr *valsArr;
 				UInt16 nElems;
 				skipSize = (s_serializedVersion < 10) ? 4 : 8;
-				nRecs = ReadRecord16();
+				nRecs = *(UInt16*)bufPos;
+				bufPos += 2;
 				while (nRecs)
 				{
+					buffer1 = *bufPos++;
+					if (buffer1 <= 5)
+						goto auxVarReadError;
 					nRecs--;
-					buffer1 = ReadRecord8();
-					if (!ResolveRefID(buffer1 << 24, &buffer4)) continue;
-					ownersMap = NULL;
-					modIdx = buffer4 >> 24;
-					nRefs = ReadRecord16();
-					while (nRefs)
+					if (ResolveRefID(buffer1 << 24, &buffer4))
 					{
-						refID = ReadRecord32();
-						nVars = ReadRecord16();
-						if (ResolveRefID(refID, &refID) && LookupFormByRefID(refID))
+						ownersMap = NULL;
+						modIdx = buffer4 >> 24;
+						nRefs = *(UInt16*)bufPos;
+						bufPos += 2;
+						while (nRefs)
 						{
-							if (!ownersMap) ownersMap = s_auxVariablesPerm.Emplace(modIdx, nRefs);
-							aVarsMap = ownersMap->Emplace(refID, nVars);
-						}
-						else aVarsMap = NULL;
-						while (nVars)
-						{
-							valsArr = NULL;
-							buffer1 = ReadRecord8();
-							ReadRecordData(varName, buffer1);
-							varName[buffer1] = 0;
-							nElems = ReadRecord16();
-							while (nElems)
+							refID = *(UInt32*)bufPos;
+							bufPos += 4;
+							nVars = *(UInt16*)bufPos;
+							bufPos += 2;
+							if (ResolveRefID(refID, &refID) && LookupFormByRefID(refID))
 							{
-								buffer1 = ReadRecord8();
-								if (aVarsMap)
+								if (!ownersMap) ownersMap = s_auxVariablesPerm.Emplace(modIdx, nRefs);
+								aVarsMap = ownersMap->Emplace(refID, nVars);
+								while (nVars)
 								{
-									if (!valsArr) valsArr = aVarsMap->Emplace(varName, nElems);
-									valsArr->Append(buffer1);
+									buffer1 = *bufPos++;
+									if (!buffer1)
+										goto auxVarReadError;
+									namePos = bufPos;
+									bufPos += buffer1;
+									nElems = *(UInt16*)bufPos;
+									*bufPos = 0;
+									bufPos += 2;
+									valsArr = aVarsMap->Emplace((char*)namePos, nElems);
+									while (nElems)
+									{
+										buffer1 = *bufPos++;
+										bufPos = valsArr->Append(buffer1)->ReadValData(bufPos);
+										nElems--;
+									}
+									nVars--;
 								}
-								else if (buffer1 == 1)
-									SkipNBytes(skipSize);
-								else if (buffer1 == 2)
-									SkipNBytes(4);
-								else SkipNBytes(ReadRecord16());
-								nElems--;
 							}
-							nVars--;
+							else
+							{
+								while (nVars)
+								{
+									buffer1 = *bufPos++;
+									if (!buffer1)
+										goto auxVarReadError;
+									bufPos += buffer1;
+									nElems = *(UInt16*)bufPos;
+									bufPos += 2;
+									while (nElems)
+									{
+										buffer1 = *bufPos++;
+										if (buffer1 == 1)
+											bufPos += skipSize;
+										else if (buffer1 == 2)
+											bufPos += 4;
+										else bufPos += *(UInt16*)bufPos + 2;
+										nElems--;
+									}
+									nVars--;
+								}
+							}
+							nRefs--;
 						}
-						nRefs--;
+					}
+					else
+					{
+						nRefs = *(UInt16*)bufPos;
+						bufPos += 2;
+						while (nRefs)
+						{
+							bufPos += 4;
+							nVars = *(UInt16*)bufPos;
+							bufPos += 2;
+							while (nVars)
+							{
+								buffer1 = *bufPos++;
+								if (!buffer1)
+									goto auxVarReadError;
+								bufPos += buffer1;
+								nElems = *(UInt16*)bufPos;
+								bufPos += 2;
+								while (nElems)
+								{
+									buffer1 = *bufPos++;
+									if (buffer1 == 1)
+										bufPos += skipSize;
+									else if (buffer1 == 2)
+										bufPos += 4;
+									else bufPos += *(UInt16*)bufPos + 2;
+									nElems--;
+								}
+								nVars--;
+							}
+							nRefs--;
+						}
 					}
 				}
+				break;
+auxVarReadError:
+				s_auxVariablesPerm.Clear();
+				PrintLog("LOAD GAME: AuxVar map corrupted > Skipping records.");
 				break;
 			}
 			case 'MRPJ':
 			{
 				if (!(changedFlags & kChangedFlag_RefMaps)) continue;
+				bufPos = GetLoadGameBuffer(length);
 				RefMapVarsMap *rVarsMap;
 				RefMapIDsMap *idsMap;
 				skipSize = (s_serializedVersion < 10) ? 4 : 8;
-				nRecs = ReadRecord16();
+				nRecs = *(UInt16*)bufPos;
+				bufPos += 2;
 				while (nRecs)
 				{
+					buffer1 = *bufPos++;
+					if (buffer1 <= 5)
+						goto refMapReadError;
 					nRecs--;
-					buffer1 = ReadRecord8();
-					if (!ResolveRefID(buffer1 << 24, &buffer4)) continue;
-					rVarsMap = NULL;
-					modIdx = buffer4 >> 24;
-					nVars = ReadRecord16();
-					while (nVars)
+					nVars = *(UInt16*)bufPos;
+					bufPos += 2;
+					if (ResolveRefID(buffer1 << 24, &buffer4))
 					{
-						idsMap = NULL;
-						buffer1 = ReadRecord8();
-						ReadRecordData(varName, buffer1);
-						varName[buffer1] = 0;
-						nRefs = ReadRecord16();
-						while (nRefs)
+						rVarsMap = NULL;
+						modIdx = buffer4 >> 24;
+						while (nVars)
 						{
-							refID = ReadRecord32();
-							buffer1 = ReadRecord8();
-							if (ResolveRefID(refID, &refID))
+							buffer1 = *bufPos++;
+							if (!buffer1)
+								goto refMapReadError;
+							namePos = bufPos;
+							bufPos += buffer1;
+							nRefs = *(UInt16*)bufPos;
+							*bufPos = 0;
+							bufPos += 2;
+							idsMap = NULL;
+							while (nRefs)
 							{
-								if (!idsMap)
+								refID = *(UInt32*)bufPos;
+								bufPos += 4;
+								buffer1 = *bufPos++;
+								if (ResolveRefID(refID, &refID))
 								{
-									if (!rVarsMap) rVarsMap = s_refMapArraysPerm.Emplace(modIdx, nVars);
-									idsMap = rVarsMap->Emplace(varName, nRefs);
+									if (!idsMap)
+									{
+										if (!rVarsMap) rVarsMap = s_refMapArraysPerm.Emplace(modIdx, nVars);
+										idsMap = rVarsMap->Emplace((char*)namePos, nRefs);
+									}
+									bufPos = idsMap->Emplace(refID, buffer1)->ReadValData(bufPos);
 								}
-								idsMap->Emplace(refID, buffer1);
+								else if (buffer1 == 1)
+									bufPos += skipSize;
+								else if (buffer1 == 2)
+									bufPos += 4;
+								else bufPos += *(UInt16*)bufPos + 2;
+								nRefs--;
 							}
-							else if (buffer1 == 1)
-								SkipNBytes(skipSize);
-							else if (buffer1 == 2)
-								SkipNBytes(4);
-							else SkipNBytes(ReadRecord16());
-							nRefs--;
+							nVars--;
 						}
-						nVars--;
+					}
+					else
+					{
+						while (nVars)
+						{
+							buffer1 = *bufPos++;
+							if (!buffer1)
+								goto refMapReadError;
+							bufPos += buffer1;
+							nRefs = *(UInt16*)bufPos;
+							bufPos += 2;
+							while (nRefs)
+							{
+								bufPos += 4;
+								buffer1 = *bufPos++;
+								if (buffer1 == 1)
+									bufPos += skipSize;
+								else if (buffer1 == 2)
+									bufPos += 4;
+								else bufPos += *(UInt16*)bufPos + 2;
+								nRefs--;
+							}
+							nVars--;
+						}
 					}
 				}
+				break;
+refMapReadError:
+				s_refMapArraysPerm.Clear();
+				PrintLog("LOAD GAME: RefMap map corrupted > Skipping records.");
 				break;
 			}
 			case 'RLPJ':
 			{
 				if (!(changedFlags & kChangedFlag_LinkedRefs)) continue;
+				bufPos = GetLoadGameBuffer(length);
 				UInt32 lnkID;
-				nRecs = ReadRecord16();
+				nRecs = *(UInt16*)bufPos;
+				bufPos += 2;
 				while (nRecs)
 				{
 					nRecs--;
-					refID = ReadRecord32();
-					lnkID = ReadRecord32();
-					buffer1 = ReadRecord8();
+					refID = *(UInt32*)bufPos;
+					bufPos += 4;
+					lnkID = *(UInt32*)bufPos;
+					bufPos += 4;
+					buffer1 = *bufPos++;
 					if (ResolveRefID(refID, &refID) && ResolveRefID(lnkID, &lnkID) &&
 						ResolveRefID(buffer1 << 24, &buffer4) && SetLinkedRefID(refID, lnkID, buffer4 >> 24))
 						s_linkedRefsTemp[refID] = lnkID;

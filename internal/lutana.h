@@ -1,6 +1,6 @@
 #pragma once
 
-enum
+enum LNEvents
 {
 	kLNEventID_OnCellEnter,
 	kLNEventID_OnCellExit,
@@ -152,23 +152,23 @@ const bool kValidFilterForm[] =
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0
 };
 
-UInt32 s_DInputEventClear = 0;
+UInt32 s_inputEventClear = 0;
 
-bool SetDInputEventHandler(UInt32 eventMask, Script *script, SInt32 keyID, bool doAdd)
+bool SetInputEventHandler(UInt32 eventMask, Script *script, UInt32 keyID, bool doAdd)
 {
 	bool onKey = (eventMask & kLNEventMask_OnKey) ? true : false;
 	bool onUp = (eventMask == kLNEventMask_OnKeyUp) || (eventMask == kLNEventMask_OnControlUp);
 	eventMask = onKey ? kLNEventMask_OnKey : kLNEventMask_OnControl;
 	LNDInputEventsMap &events = onKey ? s_LNOnKeyEvents : s_LNOnControlEvents;
 	bool result = false;
-	if (keyID < 0)
+	if (!keyID)
 	{
 		if (doAdd) return false;
 		for (auto iter = events.Begin(); iter; ++iter)
 		{
 			result |= onUp ? iter().onUp.Erase(script) : iter().onDown.Erase(script);
 			if (iter().Empty())
-				s_DInputEventClear |= eventMask;
+				s_inputEventClear |= eventMask;
 		}
 		return result;
 	}
@@ -192,15 +192,94 @@ bool SetDInputEventHandler(UInt32 eventMask, Script *script, SInt32 keyID, bool 
 		{
 			result = onUp ? callbacks->onUp.Erase(script) : callbacks->onDown.Erase(script);
 			if (callbacks->Empty())
-				s_DInputEventClear |= eventMask;
+				s_inputEventClear |= eventMask;
 		}
 	}
 	return result;
 }
 
+UInt32 __stdcall GetLNEventMask(const char *eventName)
+{
+	return s_LNEventNames.Get(eventName);
+}
+
+bool __stdcall ProcessLNEventHandler(UInt32 eventMask, Script *udfScript, bool addEvt, TESForm *formFilter, UInt32 numFilter)
+{
+	if (eventMask >= kLNEventMask_OnKeyDown)
+		return SetInputEventHandler(eventMask, udfScript, numFilter, addEvt);
+
+	UInt8 eventID = 0;
+	while (!((eventMask >> eventID) & 1)) eventID++;
+
+	LNEventData evntData(eventID, udfScript, !addEvt);
+
+	if (formFilter)
+	{
+		if IS_ID(formFilter, BGSListForm)
+		{
+			evntData.list = &((BGSListForm*)formFilter)->list;
+			if (evntData.list->Empty())
+				return false;
+			evntData.filterType = 3;
+		}
+		else if (eventID <= kLNEventID_OnCellExit)
+		{
+			if NOT_ID(formFilter, TESObjectCELL)
+				return false;
+			evntData.filterType = 2;
+			evntData.form = formFilter;
+		}
+		else if IS_REFERENCE(formFilter)
+		{
+			evntData.filterType = 1;
+			evntData.form = formFilter;
+		}
+		else
+		{
+			if (!kValidFilterForm[formFilter->typeID])
+				return false;
+			evntData.filterType = 2;
+			evntData.form = formFilter;
+		}
+	}
+	else if (eventID >= kLNEventID_OnCrosshairOn)
+	{
+		if (numFilter)
+		{
+			evntData.typeID = numFilter;
+			if (eventID <= kLNEventID_OnCrosshairOff)
+			{
+				if ((evntData.typeID > kFormType_TESCaravanMoney) || !kValidFilterForm[evntData.typeID])
+					return false;
+			}
+			else if (!s_controllerReady || (evntData.typeID > 0xFFFF))
+				return false;
+			evntData.filterType = 4;
+		}
+		else if ((eventID >= kLNEventID_OnButtonDown) && addEvt)
+			return false;
+	}
+
+	LNEventCallbacks &callbacks = s_LNEvents[eventID];
+	if (addEvt)
+	{
+		if (callbacks.Find(LNEventFinder(evntData)))
+			return false;
+		callbacks.Append(evntData);
+		s_LNEventFlags |= eventMask;
+	}
+	else
+	{
+		if (!callbacks.Remove(LNEventFinder(evntData)))
+			return false;
+		if (callbacks.Empty()) s_LNEventFlags ^= eventMask;
+	}
+	return true;
+}
+
 bool s_processEventAdd = false;
 
-bool ProcessEventHandler(COMMAND_ARGS)
+bool ProcessEventHandler_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	if (!scriptObj) return true;
@@ -229,79 +308,13 @@ bool ProcessEventHandler(COMMAND_ARGS)
 	}
 
 	char *delim = GetNextToken(evnName, ':');
-	UInt32 eventMask = s_LNEventNames.Get(evnName);
+	UInt32 eventMask = GetLNEventMask(evnName);
 
-	bool doAdd = s_processEventAdd;
+	if (!eventMask) return s_processEventAdd ? SetEventHandler(PASS_COMMAND_ARGS) : RemoveEventHandler(PASS_COMMAND_ARGS);
 
-	if (!eventMask) return doAdd ? SetEventHandler(PASS_COMMAND_ARGS) : RemoveEventHandler(PASS_COMMAND_ARGS);
-
-	if (eventMask >= kLNEventMask_OnKeyDown)
-	{
-		if (SetDInputEventHandler(eventMask, script, *delim ? StrToInt(delim) : -1, doAdd))
-			*result = 1;
-		return true;
-	}
-
-	UInt8 eventID = 0;
-	while (!((eventMask >> eventID) & 1)) eventID++;
-
-	LNEventData evntData(eventID, script, !doAdd);
-
-	if (formFilter)
-	{
-		if IS_ID(formFilter, BGSListForm)
-		{
-			evntData.list = &((BGSListForm*)formFilter)->list;
-			if (evntData.list->Empty()) return true;
-			evntData.filterType = 3;
-		}
-		else if (eventID <= kLNEventID_OnCellExit)
-		{
-			if NOT_ID(formFilter, TESObjectCELL) return true;
-			evntData.filterType = 2;
-			evntData.form = formFilter;
-		}
-		else if IS_REFERENCE(formFilter)
-		{
-			evntData.filterType = 1;
-			evntData.form = formFilter;
-		}
-		else
-		{
-			if (!kValidFilterForm[formFilter->typeID]) return true;
-			evntData.filterType = 2;
-			evntData.form = formFilter;
-		}
-	}
-	else if (eventID >= kLNEventID_OnCrosshairOn)
-	{
-		if (*delim)
-		{
-			evntData.typeID = StrToInt(delim);
-			if (eventID <= kLNEventID_OnCrosshairOff)
-			{
-				if ((evntData.typeID > kFormType_TESCaravanMoney) || !kValidFilterForm[evntData.typeID]) return true;
-			}
-			else if (!s_controllerReady || (evntData.typeID > 0xFFFF)) return true;
-			evntData.filterType = 4;
-		}
-		else if ((eventID >= kLNEventID_OnButtonDown) && doAdd)
-			return true;
-	}
-
-	LNEventCallbacks &callbacks = s_LNEvents[eventID];
-	if (doAdd)
-	{
-		if (callbacks.Find(LNEventFinder(evntData))) return true;
-		callbacks.Append(evntData);
-		s_LNEventFlags |= eventMask;
+	UInt32 numFilter = *delim ? StrToInt(delim) : 0;
+	if (ProcessLNEventHandler(eventMask, script, s_processEventAdd, formFilter, numFilter))
 		*result = 1;
-	}
-	else if (callbacks.Remove(LNEventFinder(evntData)))
-	{
-		if (callbacks.Empty()) s_LNEventFlags ^= eventMask;
-		*result = 1;
-	}
 	return true;
 }
 
@@ -310,7 +323,7 @@ __declspec(naked) bool Hook_SetEventHandler_Execute(COMMAND_ARGS)
 	__asm
 	{
 		mov		s_processEventAdd, 1
-		jmp		ProcessEventHandler
+		jmp		ProcessEventHandler_Execute
 	}
 }
 
@@ -319,7 +332,7 @@ __declspec(naked) bool Hook_RemoveEventHandler_Execute(COMMAND_ARGS)
 	__asm
 	{
 		mov		s_processEventAdd, 0
-		jmp		ProcessEventHandler
+		jmp		ProcessEventHandler_Execute
 	}
 }
 
@@ -331,9 +344,9 @@ void LN_ProcessEvents()
 
 	if (s_LNEventFlags & kLNEventMask_OnKey)
 	{
-		if (s_DInputEventClear & kLNEventMask_OnKey)
+		if (s_inputEventClear & kLNEventMask_OnKey)
 		{
-			s_DInputEventClear ^= kLNEventMask_OnKey;
+			s_inputEventClear ^= kLNEventMask_OnKey;
 			for (auto onKeyClr = s_LNOnKeyEvents.BeginOp(); onKeyClr; ++onKeyClr)
 				if (onKeyClr().Empty()) onKeyClr.Remove(s_LNOnKeyEvents);
 			if (s_LNOnKeyEvents.Empty())
@@ -490,9 +503,9 @@ void LN_ProcessEvents()
 
 	if (s_LNEventFlags & kLNEventMask_OnControl)
 	{
-		if (s_DInputEventClear & kLNEventMask_OnControl)
+		if (s_inputEventClear & kLNEventMask_OnControl)
 		{
-			s_DInputEventClear ^= kLNEventMask_OnControl;
+			s_inputEventClear ^= kLNEventMask_OnControl;
 			for (auto onCtrlClr = s_LNOnControlEvents.BeginOp(); onCtrlClr; ++onCtrlClr)
 				if (onCtrlClr().Empty()) onCtrlClr.Remove(s_LNOnControlEvents);
 			if (s_LNOnControlEvents.Empty())
@@ -516,12 +529,15 @@ void LN_ProcessEvents()
 
 void InitLNHooks()
 {
-	CommandInfo *cmdInfo = GetCmdByOpcode(0x15E9);
-	SetEventHandler = cmdInfo->execute;
-	cmdInfo->execute = Hook_SetEventHandler_Execute;
-	cmdInfo = GetCmdByOpcode(0x15EA);
-	RemoveEventHandler = cmdInfo->execute;
-	cmdInfo->execute = Hook_RemoveEventHandler_Execute;
+	if (s_nvseVersion < 6.1)
+	{
+		CommandInfo *cmdInfo = GetCmdByOpcode(0x15E9);
+		SetEventHandler = cmdInfo->execute;
+		cmdInfo->execute = Hook_SetEventHandler_Execute;
+		cmdInfo = GetCmdByOpcode(0x15EA);
+		RemoveEventHandler = cmdInfo->execute;
+		cmdInfo->execute = Hook_RemoveEventHandler_Execute;
 
-	PrintLog("> LN hooks initialized successfully.");
+		PrintLog("> LN hooks initialized successfully.");
+	}
 }

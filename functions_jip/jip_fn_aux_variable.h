@@ -141,11 +141,12 @@ bool Cmd_AuxiliaryVariableGetAsArray_Execute(COMMAND_ARGS)
 	if (!varInfo.ownerID) return true;
 	AuxVarValsArr *valsArr = AVGetArray(&varInfo);
 	if (!valsArr) return true;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	for (auto value = valsArr->Begin(); value; ++value)
-		s_tempElements.Append(value().GetAsElement());
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+		tmpElements->Append(value().GetAsElement());
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -162,12 +163,13 @@ bool Cmd_AuxiliaryVariableGetAll_Execute(COMMAND_ARGS)
 	AuxVarVarsMap *findOwner = findMod->GetPtr(varInfo.ownerID);
 	if (!findOwner) return true;
 	NVSEArrayVar *varsMap = CreateStringMap(NULL, NULL, 0, scriptObj);
+	TempElements *tmpElements = GetTempElements();
 	for (auto varIter = findOwner->Begin(); varIter; ++varIter)
 	{
-		s_tempElements.Clear();
+		tmpElements->Clear();
 		for (auto value = varIter().Begin(); value; ++value)
-			s_tempElements.Append(value().GetAsElement());
-		SetElement(varsMap, ArrayElementL(varIter.Key()), ArrayElementL(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj)));
+			tmpElements->Append(value().GetAsElement());
+		SetElement(varsMap, ArrayElementL(varIter.Key()), ArrayElementL(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj)));
 	}
 	if (GetArraySize(varsMap)) AssignCommandResult(varsMap, result);
 	return true;
@@ -225,10 +227,10 @@ bool Cmd_AuxiliaryVariableSetRef_Execute(COMMAND_ARGS)
 bool Cmd_AuxiliaryVariableSetString_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char varName[0x50];
+	char varName[0x50], *buffer = GetStrArgBuffer();
 	SInt32 idx = 0;
 	TESForm *form = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &s_strValBuffer, &idx, &form))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, buffer, &idx, &form))
 	{
 		AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
 		if (varInfo.ownerID)
@@ -236,7 +238,7 @@ bool Cmd_AuxiliaryVariableSetString_Execute(COMMAND_ARGS)
 			AuxVariableValue *value = AVGetValue(&varInfo, idx, true);
 			if (value)
 			{
-				value->SetStr(s_strValBuffer);
+				value->SetStr(buffer);
 				if (varInfo.isPerm)
 					s_dataChangedFlags |= kChangedFlag_AuxVars;
 				*result = 1;

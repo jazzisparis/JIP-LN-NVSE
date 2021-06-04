@@ -315,28 +315,6 @@ __declspec(naked) UInt32 GamePadRumbleHook()
 	}
 }
 
-__declspec(naked) void GetMouseWheelHook()
-{
-	__asm
-	{
-		mov		eax, [ecx+0x1B2C]
-		test	eax, eax
-		jz		done
-		mov		ecx, g_DIHookCtrl
-		jns		wheelUp
-		cmp		word ptr [ecx+0x748], 0
-		jnz		retnZero
-		jmp		done
-	wheelUp:
-		cmp		word ptr [ecx+0x741], 0
-		jz		done
-	retnZero:
-		xor		eax, eax
-	done:
-		JMP_EDX(0xA23A26)
-	}
-}
-
 __declspec(naked) void CmdActivateHook()
 {
 	__asm
@@ -3035,10 +3013,10 @@ void CheckNVACLog()
 	if (!startAt) return;
 	srcFile.SetOffset(startAt);
 	length -= startAt + 2;
-	char *buffer = StrLenCopy(s_strValBuffer, "\n>>>>>>>>>>> BEGIN NVAC REPORT >>>>>>>>>>>\n", 43);
-	srcFile.ReadBuf(buffer, length);
-	memcpy(buffer + length, "\n<<<<<<<<<<<< END NVAC REPORT <<<<<<<<<<<<\n", 44);
-	Console_Print(s_strValBuffer);
+	char *buffer = GetStrArgBuffer(), *endPtr = StrLenCopy(buffer, "\n>>>>>>>>>>> BEGIN NVAC REPORT >>>>>>>>>>>\n", 43);
+	srcFile.ReadBuf(endPtr, length);
+	memcpy(endPtr + length, "\n<<<<<<<<<<<< END NVAC REPORT <<<<<<<<<<<<\n", 44);
+	Console_Print(buffer);
 	QueueUIMessage("NVAC log updated (see console print).", 0, (const char*)0x1049638, NULL, 2.5F, 0);
 }
 
@@ -3616,13 +3594,14 @@ bool ProcessCustomINI()
 	memcpy(StrCopy(customINIPath, (char*)0x1202FA0), "FalloutCustom.ini", 18);
 	if (FileExists(customINIPath))
 	{
-		SInt32 namesLen = GetPrivateProfileSectionNames(s_strArgBuffer, kMaxMessageLength, customINIPath), sectionLen, nameSize, pairSize;
-		char *currName = s_strArgBuffer, *currPair, *delim, settingName[0x100], *endPtr;
+		char *buffer = GetStrArgBuffer();
+		SInt32 namesLen = GetPrivateProfileSectionNames(buffer, kMaxMessageLength, customINIPath), sectionLen, nameSize, pairSize;
+		char *currName = buffer, *section = buffer + namesLen, *currPair, *delim, settingName[0x100], *endPtr;
 		Setting *setting;
 		while (namesLen > 0)
 		{
-			sectionLen = GetPrivateProfileSection(currName, s_strValBuffer, kMaxMessageLength, customINIPath);
-			currPair = s_strValBuffer;
+			sectionLen = GetPrivateProfileSection(currName, section, kMaxMessageLength, customINIPath);
+			currPair = section;
 			while (sectionLen > 0)
 			{
 				sectionLen -= pairSize = StrLen(currPair) + 1;
@@ -3863,7 +3842,6 @@ void InitGamePatches()
 	WriteRelCall(0x512FAF, (UInt32)InitArmorFormHook);
 	WriteRelCall(0x70E5FE, (UInt32)ToggleConsoleHook);
 	WriteRelJump(0xEE820A, (UInt32)GamePadRumbleHook);
-	WriteRelJump(0xA23A19, (UInt32)GetMouseWheelHook);
 	WriteRelCall(0x5B5B18, (UInt32)CmdActivateHook);
 	WriteRelCall(0x5B5B48, (UInt32)CmdActivateHook);
 	WriteRelCall(0x5B54E7, (UInt32)RemoveMeHook);
@@ -3959,15 +3937,14 @@ void InitGamePatches()
 	HOOK_INIT_JUMP(UpdateTimeGlobals, 0x867A40);
 	HOOK_INIT_JUMP(DoOperator, 0x593FBC);
 
-	char *namePtr = StrLenCopy(s_strArgBuffer, "Data\\NVSE\\plugins\\xfonts\\", 25), *dataPtr, *delim;
+	char filePath[0x80] = "Data\\NVSE\\plugins\\xfonts\\*.txt", dataPath[0x80] = "data\\", *namePtr = filePath + 25, *buffer = GetStrArgBuffer(), *dataPtr, *delim;
 	SInt32 lines;
 	UInt32 size, index, value;
-	memcpy(namePtr, "*.txt", 6);
-	for (DirectoryIterator dirIter(s_strArgBuffer); dirIter; ++dirIter)
+	for (DirectoryIterator dirIter(filePath); dirIter; ++dirIter)
 	{
 		if (!dirIter.IsFile()) continue;
 		StrCopy(namePtr, dirIter.Get());
-		LineIterator lineIter(s_strArgBuffer, s_strValBuffer);
+		LineIterator lineIter(filePath, buffer);
 		while (lineIter)
 		{
 			dataPtr = lineIter.Get();
@@ -3977,8 +3954,8 @@ void InitGamePatches()
 			if (!size) continue;
 			index = StrToInt(dataPtr) - 10;
 			if ((index > 79) || s_extraFontsPaths[index]) continue;
-			StrCopy(s_dataPath, delim);
-			if (FileExists(s_dataPathFull))
+			StrCopy(dataPath + 5, delim);
+			if (FileExists(dataPath))
 				s_extraFontsPaths[index] = (char*)memcpy(malloc(size + 1), delim, size + 1);
 		}
 	}
@@ -3989,15 +3966,15 @@ void InitGamePatches()
 	{
 		if (dirIter.IsFile())
 		{
-			memcpy(StrCopy(StrLenCopy(s_strArgBuffer, "Data\\", 5), dirIter.Get()) - 8, "bsa", 4);
-			s_overrideBSAFiles.Insert(s_strArgBuffer);
+			memcpy(StrCopy(dataPath + 5, dirIter.Get()) - 8, "bsa", 4);
+			s_overrideBSAFiles.Insert(dataPath);
 		}
 	}
 	if (!s_overrideBSAFiles.Empty())
 		WriteRelCall(0x463855, (UInt32)LoadBSAFileHook);
 
-	lines = GetPrivateProfileSection("GamePatches", s_strValBuffer, 0x10000, "Data\\NVSE\\plugins\\jip_nvse.ini");
-	dataPtr = s_strValBuffer;
+	lines = GetPrivateProfileSection("GamePatches", buffer, 0x10000, "Data\\NVSE\\plugins\\jip_nvse.ini");
+	dataPtr = buffer;
 	while (lines > 0)
 	{
 		lines -= size = StrLen(dataPtr) + 1;
@@ -4076,6 +4053,7 @@ void DeferredInit()
 	g_ashPileACTI->SetJIPFlag(kHookFormFlag6_IsAshPile, true);
 	g_gooPileACTI->SetJIPFlag(kHookFormFlag6_IsAshPile, true);
 
+	s_mainThreadID = g_OSGlobals->mainThreadID;
 	s_initialTickCount = CdeclCall<UInt32>(0x457FE0);
 
 	s_tempPosMarker = ThisCall<TESObjectREFR*>(0x55A2F0, GameHeapAlloc(sizeof(TESObjectREFR)));
@@ -4117,15 +4095,16 @@ void DeferredInit()
 
 	(*g_BSWin32Audio)->PickSoundFileFromFolder = PickSoundFileFromFolderHook;
 
-	GetModuleFileName(GetModuleHandle(NULL), s_strArgBuffer, MAX_PATH);
-	char *delim = SlashPosR(s_strArgBuffer) + 1;
+	char filePath[MAX_PATH];
+	GetModuleFileName(GetModuleHandle(NULL), filePath, MAX_PATH);
+	char *delim = SlashPosR(filePath) + 1;
 	memcpy(delim, "d3d9.dll", 9);
-	HMODULE handle = GetModuleHandle(s_strArgBuffer);
+	HMODULE handle = GetModuleHandle(filePath);
 	if (handle) ReloadENB = (_ReloadENB)GetProcAddress(handle, "DirtyHack");
 	if (!ReloadENB)
 	{
 		memcpy(delim, "enbseries.dll", 14);
-		handle = GetModuleHandle(s_strArgBuffer);
+		handle = GetModuleHandle(filePath);
 		if (handle) ReloadENB = (_ReloadENB)GetProcAddress(handle, "DirtyHack");
 	}
 
@@ -4136,8 +4115,6 @@ void DeferredInit()
 	JIPScriptRunner::Init();
 
 	s_LIGH_EDID = "LIGH_EDID";
-	ThisCall(0x4AD0C0, &s_NiObjectCopyInfo, 0x97);
-	s_NiObjectCopyInfo.scale = {1, 1, 1};
 
 	UInt8 cccIdx = g_dataHandler->GetModIndex("JIP Companions Command & Control.esp");
 	if (cccIdx != 0xFF)

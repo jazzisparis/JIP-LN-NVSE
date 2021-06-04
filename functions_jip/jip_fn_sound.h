@@ -240,7 +240,8 @@ bool Cmd_GetSoundPlayers_Execute(COMMAND_ARGS)
 	TESSound *soundForm;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm))
 	{
-		s_tempElements.Clear();
+		TempElements *tmpElements = GetTempElements();
+		tmpElements->Clear();
 		BSGameSound *gameSound;
 		BSFadeNode *fadeNode;
 		for (auto sndIter = g_audioManager->playingSounds.Begin(); sndIter; ++sndIter)
@@ -250,10 +251,10 @@ bool Cmd_GetSoundPlayers_Execute(COMMAND_ARGS)
 				continue;
 			fadeNode = (BSFadeNode*)g_audioManager->soundPlayingObjects.Lookup(gameSound->mapKey);
 			if (fadeNode && fadeNode->GetFadeNode() && fadeNode->linkedObj)
-				s_tempElements.Append(fadeNode->linkedObj);
+				tmpElements->Append(fadeNode->linkedObj);
 		}
-		if (!s_tempElements.Empty())
-			AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+		if (!tmpElements->Empty())
+			AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	}
 	return true;
 }

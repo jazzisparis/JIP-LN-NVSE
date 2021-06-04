@@ -830,7 +830,7 @@ public:
 			if (count = source.numEntries)
 			{
 				UInt32 size = count * sizeof(Entry);
-				pEntry = (Entry*)memcpy(GetAuxBuffer(s_auxBuffers[0], size), source.entries, size);
+				pEntry = (Entry*)memcpy(AuxBuffer::Get(0, size), source.entries, size);
 			}
 		}
 	};
@@ -997,7 +997,7 @@ public:
 			if (count = source.numKeys)
 			{
 				UInt32 size = count * sizeof(M_Key);
-				pKey = (M_Key*)memcpy(GetAuxBuffer(s_auxBuffers[1], size), source.keys, size);
+				pKey = (M_Key*)memcpy(AuxBuffer::Get(1, size), source.keys, size);
 			}
 		}
 	};
@@ -1827,9 +1827,9 @@ public:
 		}
 		else if (numAlloc < newCount)
 		{
-			newCount = AlignNumAlloc<T_Data>(newCount);
-			POOL_REALLOC(data, numAlloc, newCount, T_Data);
-			numAlloc = newCount;
+			UInt32 newAlloc = AlignNumAlloc<T_Data>(newCount);
+			POOL_REALLOC(data, numAlloc, newAlloc, T_Data);
+			numAlloc = newAlloc;
 		}
 		memcpy(data + numItems, source.data, sizeof(T_Data) * source.numItems);
 		numItems = newCount;
@@ -2246,7 +2246,7 @@ public:
 			if (count = source.numItems)
 			{
 				UInt32 size = count * sizeof(T_Data);
-				pData = (T_Data*)memcpy(GetAuxBuffer(s_auxBuffers[2], size), source.data, size);
+				pData = (T_Data*)memcpy(AuxBuffer::Get(2, size), source.data, size);
 			}
 		}
 	};

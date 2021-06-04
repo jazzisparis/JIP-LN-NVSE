@@ -274,8 +274,9 @@ bool Cmd_LeveledListHasFormDeep_Execute(COMMAND_ARGS)
 	TESLeveledList *lvlList;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &list, &form) && (lvlList = list->GetLvlList()))
 	{
-		s_tempFormList.Clear();
-		*result = lvlList->HasFormDeep(form);
+		TempFormList *tmpFormLst = GetTempFormList();
+		tmpFormLst->Clear();
+		*result = LeveledListHasFormDeep(lvlList, form, tmpFormLst);
 	}
 	else *result = 0;
 	return true;

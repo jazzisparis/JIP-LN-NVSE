@@ -3,21 +3,47 @@
 
 memcpy_t MemCopy = memcpy, MemMove = memmove;
 
-void LightCS::Enter()
-{
-	UInt32 threadID = GetCurrentThreadId();
-	if (owningThread == threadID)
-	{
-		enterCount++;
-		return;
-	}
-	while (InterlockedCompareExchange(&owningThread, threadID, 0));
-	enterCount = 1;
-}
-
 #define FAST_SLEEP_COUNT 10000UL
 
-__declspec(naked) void LightCS::EnterSleep()
+__declspec(naked) void PrimitiveCS::Enter()
+{
+	__asm
+	{
+		push	ebx
+		mov		ebx, ecx
+		call	GetCurrentThreadId
+		cmp		[ebx], eax
+		jnz		doSpin
+		pop		ebx
+		retn
+		ALIGN 16
+	doSpin:
+		push	esi
+		push	edi
+		mov		esi, eax
+		mov		edi, FAST_SLEEP_COUNT
+		ALIGN 16
+	spinHead:
+		xor		eax, eax
+		lock cmpxchg [ebx], esi
+		test	eax, eax
+		jz		done
+		xor		edx, edx
+		dec		edi
+		sets	dl
+		push	edx
+		call	Sleep
+		jmp		spinHead
+		ALIGN 16
+	done:
+		pop		edi
+		pop		esi
+		pop		ebx
+		retn
+	}
+}
+
+__declspec(naked) void LightCS::Enter()
 {
 	__asm
 	{
@@ -55,12 +81,6 @@ __declspec(naked) void LightCS::EnterSleep()
 		pop		ebx
 		retn
 	}
-}
-
-void LightCS::Leave()
-{
-	if (!--enterCount)
-		owningThread = 0;
 }
 
 __declspec(naked) TESForm* __stdcall LookupFormByRefID(UInt32 refID)
@@ -158,6 +178,14 @@ __declspec(naked) int __vectorcall iceil(float value)
 		cvttss2si	eax, xmm0
 		retn
 	}
+}
+
+__declspec(noinline) char *GetStrArgBuffer()
+{
+	thread_local char *s_strBuffer = NULL;
+	if (!s_strBuffer)
+		s_strBuffer = (char*)_aligned_malloc(0x20000, 0x10);
+	return s_strBuffer;
 }
 
 __declspec(naked) void __fastcall NiReleaseObject(NiRefObject *toRelease)
@@ -1162,40 +1190,20 @@ __declspec(naked) UInt32 __fastcall HexToUInt(const char *str)
 	}
 }
 
-AuxBuffer s_auxBuffers[3];
-
-__declspec(naked) UInt8* __fastcall GetAuxBuffer(AuxBuffer &buffer, UInt32 reqSize)
+__declspec(noinline) UInt8 *AuxBuffer::Get(UInt32 bufIdx, UInt32 reqSize)
 {
-	__asm
+	thread_local AuxBuffer s_auxBuffers[3];
+	AuxBuffer *auxBuf = &s_auxBuffers[bufIdx];
+	if (auxBuf->size < reqSize)
 	{
-		mov		eax, [ecx]
-		cmp		[ecx+4], edx
-		jb		doRealloc
-		test	eax, eax
-		jz		doInit
-		retn
-	doInit:
-		push	ecx
-		push	0x10
-		push	dword ptr [ecx+4]
-		jmp		doAlloc
-	doRealloc:
-		mov		[ecx+4], edx
-		push	ecx
-		push	0x10
-		push	edx
-		test	eax, eax
-		jz		doAlloc
-		push	eax
-		call	_aligned_free
-		pop		ecx
-	doAlloc:
-		call	_aligned_malloc
-		add		esp, 8
-		pop		ecx
-		mov		[ecx], eax
-		retn
+		auxBuf->size = reqSize;
+		if (auxBuf->ptr)
+			_aligned_free(auxBuf->ptr);
+		auxBuf->ptr = (UInt8*)_aligned_malloc(reqSize, 0x10);
 	}
+	else if (!auxBuf->ptr)
+		auxBuf->ptr = (UInt8*)_aligned_malloc(auxBuf->size, 0x10);
+	return auxBuf->ptr;
 }
 
 DString::DString(const char *from)
@@ -1579,7 +1587,7 @@ bool FileStream::OpenWrite(char *filePath, bool append)
 			theFile = fopen(filePath, "ab");
 			if (!theFile) return false;
 			fputc('\n', theFile);
-			fflush(theFile);
+			//fflush(theFile);
 			return true;
 		}
 	}
@@ -1616,19 +1624,19 @@ void FileStream::ReadBuf(void *outData, UInt32 inLength)
 void FileStream::WriteChar(char chr)
 {
 	fputc(chr, theFile);
-	fflush(theFile);
+	//fflush(theFile);
 }
 
 void FileStream::WriteStr(const char *inStr)
 {
 	fputs(inStr, theFile);
-	fflush(theFile);
+	//fflush(theFile);
 }
 
 void FileStream::WriteBuf(const void *inData, UInt32 inLength)
 {
 	fwrite(inData, inLength, 1, theFile);
-	fflush(theFile);
+	//fflush(theFile);
 }
 
 int FileStream::WriteFmtStr(const char *fmt, ...)
@@ -1637,7 +1645,7 @@ int FileStream::WriteFmtStr(const char *fmt, ...)
 	va_start(args, fmt);
 	int iWritten = vfprintf(theFile, fmt, args);
 	va_end(args);
-	fflush(theFile);
+	//fflush(theFile);
 	return iWritten;
 }
 
@@ -1731,38 +1739,19 @@ void LineIterator::operator++()
 		dataPtr++;
 }
 
-bool __fastcall FileToBuffer(const char *filePath, char *buffer)
+UInt32 __fastcall FileToBuffer(const char *filePath, char *buffer)
 {
 	FileStream srcFile(filePath);
-	if (!srcFile) return false;
+	if (!srcFile) return 0;
 	UInt32 length = srcFile.GetLength();
-	if (!length) return false;
-	if (length > kMaxMessageLength)
-		length = kMaxMessageLength;
-	srcFile.ReadBuf(buffer, length);
-	buffer[length] = 0;
-	return true;
-}
-
-extern char s_strArgBuffer[0x4000];
-
-void ClearFolder(char *pathEndPtr)
-{
-	DirectoryIterator dirIter(s_strArgBuffer);
-	while (dirIter)
+	if (length)
 	{
-		if (dirIter.IsFolder())
-			ClearFolder(StrCopy(StrCopy(pathEndPtr - 1, dirIter.Get()), "\\*"));
-		else
-		{
-			StrCopy(pathEndPtr - 1, dirIter.Get());
-			remove(s_strArgBuffer);
-		}
-		++dirIter;
+		if (length > kMaxMessageLength)
+			length = kMaxMessageLength;
+		srcFile.ReadBuf(buffer, length);
+		buffer[length] = 0;
 	}
-	dirIter.Close();
-	*(pathEndPtr - 1) = 0;
-	RemoveDirectory(s_strArgBuffer);
+	return length;
 }
 
 __declspec(naked) void __stdcall SafeWrite8(UInt32 addr, UInt32 data)

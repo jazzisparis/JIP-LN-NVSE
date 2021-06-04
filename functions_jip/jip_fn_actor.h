@@ -221,15 +221,16 @@ bool Cmd_GetFollowers_Execute(COMMAND_ARGS)
 	if (NOT_ACTOR(thisObj)) return true;
 	ExtraFollower *xFollower = GetExtraType(&thisObj->extraDataList, Follower);
 	if (!xFollower || !xFollower->followers) return true;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<Actor> *iter = xFollower->followers->Head();
 	do
 	{
-		if (iter->data) s_tempElements.Append(iter->data);
+		if (iter->data) tmpElements->Append(iter->data);
 	}
 	while (iter = iter->next);
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -415,16 +416,17 @@ bool Cmd_GetCreatureModels_Execute(COMMAND_ARGS)
 		creature = (TESCreature*)((Actor*)thisObj)->GetActorBase();
 	}
 	if NOT_ID(creature, TESCreature) return true;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<char> *iter = creature->modelList.modelList.Head();
 	do
 	{
 		if (iter->data)
-			s_tempElements.Append(iter->data);
+			tmpElements->Append(iter->data);
 	}
 	while (iter = iter->next);
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -456,7 +458,8 @@ bool Cmd_GetActorsByProcessingLevel_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 procLevel;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &procLevel) || (procLevel > 3)) return true;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	MobileObject **objArray = g_processManager->objects.data, **arrEnd = objArray;
 	objArray += g_processManager->beginOffsets[procLevel];
 	arrEnd += g_processManager->endOffsets[procLevel];
@@ -465,10 +468,10 @@ bool Cmd_GetActorsByProcessingLevel_Execute(COMMAND_ARGS)
 	{
 		actor = (Actor*)*objArray;
 		if (actor && IS_ACTOR(actor))
-			s_tempElements.Append(actor);
+			tmpElements->Append(actor);
 	}
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -518,7 +521,8 @@ void __fastcall GetCombatActors(TESObjectREFR *thisObj, Script *scriptObj, bool 
 	*result = 0;
 	UInt32 count;
 	Actor *actor;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	if (thisObj == g_thePlayer)
 	{
 		CombatActors *cmbActors = g_thePlayer->combatActors;
@@ -530,7 +534,7 @@ void __fastcall GetCombatActors(TESObjectREFR *thisObj, Script *scriptObj, bool 
 			{
 				actor = allies->ally;
 				if (actor && (actor != thisObj))
-					s_tempElements.Append(actor);
+					tmpElements->Append(actor);
 			}
 		}
 		else
@@ -539,7 +543,7 @@ void __fastcall GetCombatActors(TESObjectREFR *thisObj, Script *scriptObj, bool 
 			for (count = cmbActors->targets.size; count; count--, targets++)
 			{
 				actor = targets->target;
-				if (actor) s_tempElements.Append(actor);
+				if (actor) tmpElements->Append(actor);
 			}
 		}
 	}
@@ -564,11 +568,11 @@ void __fastcall GetCombatActors(TESObjectREFR *thisObj, Script *scriptObj, bool 
 		{
 			actor = *actorsArr;
 			if (actor && (actor != thisObj))
-				s_tempElements.Append(actor);
+				tmpElements->Append(actor);
 		}
 	}
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 }
 
 bool Cmd_GetCombatTargets_Execute(COMMAND_ARGS)
@@ -587,7 +591,8 @@ void __fastcall GetDetectionData(TESObjectREFR *thisObj, Script *scriptObj, bool
 {
 	*result = 0;
 	if (NOT_ACTOR(thisObj)) return;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	Actor *actor = (Actor*)thisObj;
 	if (actor == g_thePlayer)
 	{
@@ -607,7 +612,7 @@ void __fastcall GetDetectionData(TESObjectREFR *thisObj, Script *scriptObj, bool
 			}
 			else if (!actor->GetLOS(target))
 				continue;
-			s_tempElements.Append(target);
+			tmpElements->Append(target);
 		}
 	}
 	else
@@ -620,12 +625,12 @@ void __fastcall GetDetectionData(TESObjectREFR *thisObj, Script *scriptObj, bool
 		{
 			if (!(data = iter->data)) continue;
 			if ((data->detectionValue > 0) && !data->actor->GetDead())
-				s_tempElements.Append(data->actor);
+				tmpElements->Append(data->actor);
 		}
 		while (iter = iter->next);
 	}
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 }
 
 bool Cmd_GetDetectedActors_Execute(COMMAND_ARGS)
@@ -863,15 +868,16 @@ bool Cmd_GetDroppedRefs_Execute(COMMAND_ARGS)
 	if (NOT_ACTOR(thisObj)) return true;
 	ExtraDroppedItemList *xDropped = GetExtraType(&thisObj->extraDataList, DroppedItemList);
 	if (!xDropped) return true;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<TESObjectREFR> *iter = xDropped->itemRefs.Head();
 	do
 	{
-		if (iter->data) s_tempElements.Append(iter->data);
+		if (iter->data) tmpElements->Append(iter->data);
 	}
 	while (iter = iter->next);
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -1297,7 +1303,7 @@ bool Cmd_GetActorValueModifier_Execute(COMMAND_ARGS)
 	do
 	{
 		activeEff = iter->data;
-		if (!activeEff || !activeEff->bApplied || !activeEff->effectItem) continue;
+		if (!activeEff || !activeEff->bActive || activeEff->bTerminated || !activeEff->effectItem) continue;
 		effSetting = activeEff->effectItem->setting;
 		if (!effSetting || effSetting->archtype || (effSetting->actorVal != actorVal) || 
 			!(effSetting->effectFlags & 2) || !((activeEff->duration ? 2 : 1) & duration)) continue;
@@ -1952,18 +1958,19 @@ bool Cmd_GetEquippedEx_Execute(COMMAND_ARGS)
 			ValidBip01Names *validBip = actor->GetValidBip01Names();
 			if (validBip)
 			{
-				s_tempFormList.Clear();
+				TempFormList *tmpFormLst = GetTempFormList();
+				tmpFormLst->Clear();
 				TESForm *item;
 				for (ValidBip01Names::Data &slotData : validBip->slotData)
 					if ((item = slotData.item) && !item->IsArmorAddon())
-						s_tempFormList.Insert(item);
-				if (!s_tempFormList.Empty())
+						tmpFormLst->Insert(item);
+				if (!tmpFormLst->Empty())
 				{
 					ListNode<TESForm> *traverse = listForm->list.Head();
 					do
 					{
 						item = traverse->data;
-						if (!s_tempFormList.HasKey(item)) continue;
+						if (!tmpFormLst->HasKey(item)) continue;
 						REFR_RES = item->refID;
 						break;
 					}
@@ -2004,9 +2011,9 @@ bool Cmd_TestEquippedSlots_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool __fastcall GetFactionList(Actor *actor, TESActorBase *actorBase)
+bool GetFactionList(Actor *actor, TESActorBase *actorBase, TempFormList *tmpFormLst)
 {
-	s_tempFormList.Clear();
+	tmpFormLst->Clear();
 	if (actorBase)
 		actor = NULL;
 	else
@@ -2020,7 +2027,7 @@ bool __fastcall GetFactionList(Actor *actor, TESActorBase *actorBase)
 	do
 	{
 		data = traverse->data;
-		if (data) s_tempFormList.Insert(data->faction);
+		if (data) tmpFormLst->Insert(data->faction);
 	}
 	while (traverse = traverse->next);
 	if (actor)
@@ -2034,24 +2041,26 @@ bool __fastcall GetFactionList(Actor *actor, TESActorBase *actorBase)
 				data = traverse->data;
 				if (!data) continue;
 				if (data->rank >= 0)
-					s_tempFormList.Insert(data->faction);
-				else s_tempFormList.Erase(data->faction);
+					tmpFormLst->Insert(data->faction);
+				else tmpFormLst->Erase(data->faction);
 			}
 			while (traverse = traverse->next);
 		}
 	}
-	return !s_tempFormList.Empty();
+	return !tmpFormLst->Empty();
 }
 
 bool Cmd_GetFactions_Execute(COMMAND_ARGS)
 {
 	TESActorBase *actorBase = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase) && GetFactionList((Actor*)thisObj, actorBase))
+	TempFormList *tmpFormLst = GetTempFormList();
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase) && GetFactionList((Actor*)thisObj, actorBase, tmpFormLst))
 	{
-		s_tempElements.Clear();
-		for (auto lstIter = s_tempFormList.Begin(); lstIter; ++lstIter)
-			s_tempElements.Append(*lstIter);
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+		TempElements *tmpElements = GetTempElements();
+		tmpElements->Clear();
+		for (auto lstIter = tmpFormLst->Begin(); lstIter; ++lstIter)
+			tmpElements->Append(*lstIter);
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	}
 	else *result = 0;
 	return true;
@@ -2179,12 +2188,13 @@ bool Cmd_GetBodyPartVATSTarget_Execute(COMMAND_ARGS)
 
 bool __fastcall GetInFactionList(Actor *actor, BGSListForm *facList)
 {
-	if (GetFactionList(actor, NULL))
+	TempFormList *tmpFormLst = GetTempFormList();
+	if (GetFactionList(actor, NULL, tmpFormLst))
 	{
 		ListNode<TESForm> *listIter = facList->list.Head();
 		do
 		{
-			if (s_tempFormList.HasKey(listIter->data))
+			if (tmpFormLst->HasKey(listIter->data))
 				return true;
 		}
 		while (listIter = listIter->next);

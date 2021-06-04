@@ -146,7 +146,6 @@ public:
 	SInt32 GetItemCount(TESForm *form);
 	void AddItemAlt(TESForm *item, UInt32 count, float condition, bool doEquip);
 	void RemoveItemTarget(TESForm *itemForm, TESObjectREFR *target, SInt32 quantity, bool keepOwner);
-	bool GetInventoryItems(UInt8 typeID);
 	TESObjectCELL *GetParentCell();
 	TESWorldSpace *GetParentWorld();
 	bool __fastcall GetInSameCellOrWorld(TESObjectREFR *target);
@@ -167,7 +166,7 @@ public:
 	NiAVObject* __fastcall GetNiBlock(const char *blockName);
 	NiNode* __fastcall GetNode(const char *nodeName);
 	hkpRigidBody *GetRigidBody(const char *nodeName);
-	bool RunScriptSource(const char *sourceStr);
+	bool RunScriptSource(char *sourceStr, bool doFree);
 
 	static TESObjectREFR* __stdcall Create(bool bTemp = false);
 
@@ -255,12 +254,12 @@ typedef tList<ActiveEffect> ActiveEffectList;
 class MagicCaster
 {
 public:
-	virtual void	Unk_00(void);
-	virtual void	Unk_01(void);
-	virtual void	Unk_02(void);
+	virtual void	AddAbility(SpellItem *splItem, bool arg2);
+	virtual void	AddAddiction(SpellItem *splItem, bool arg2);
+	virtual void	AddEffect(SpellItem *splItem, bool arg2);
 	virtual void	CastSpell(MagicItem *spell, bool arg2, MagicTarget *target, float arg4, bool arg5);
-	virtual void	Unk_04(void);
-	virtual void	AddEffect(MagicItem *magItem, TESForm *itemForm, bool arg3);
+	virtual void	AddDisease(SpellItem *splItem, MagicTarget *target, bool arg3);
+	virtual void	AddFormEffects(MagicItem *magItem, MagicItemForm *itemForm, bool arg3);
 	virtual void	Unk_06(void);
 	virtual void	Unk_07(void);
 	virtual void	Unk_08(void);
@@ -274,7 +273,7 @@ public:
 	virtual void	Unk_10(MagicItem *spell);
 	virtual void	Unk_11(void);
 	virtual void	Unk_12(MagicTarget *magicTarget);
-	virtual void	Unk_13(void);
+	virtual ActiveEffect	*CreateActiveEffect(MagicItem *magicItem, EffectItem *effItem, MagicItemForm *itemForm);
 
 	UInt32	unk04[2];	// 04
 };
@@ -287,7 +286,7 @@ public:
 	virtual bool	ApplyEffect(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect, bool arg4);
 	virtual Actor	*GetActor(void);
 	virtual ActiveEffectList	*GetEffectList(void);
-	virtual void	Unk_03(void);
+	virtual bool	Unk_03(void);
 	virtual bool	CannotBeHit(void);
 	virtual void	Unk_05(void);
 	virtual void	Unk_06(void);
@@ -440,8 +439,8 @@ public:
 	virtual void		Unk_F5(void);
 	virtual void		Unk_F6(void);
 	virtual void		Unk_F7(void);
-	virtual void		Unk_F8(void);
-	virtual void		Unk_F9(void);
+	virtual bool		AddActorEffect(SpellItem *actorEffect);
+	virtual bool		RemoveActorEffect(SpellItem *actorEffect);
 	virtual void		Unk_FA(void);
 	virtual void		Unk_FB(TESForm *form, UInt32 arg2, UInt8 arg3, UInt8 arg4);
 	virtual void		DecreaseAmmo();
@@ -664,7 +663,7 @@ public:
 	TESCombatStyle *GetCombatStyle();
 	bool GetKnockedState();
 	bool IsWeaponOut();
-	void UpdateActiveEffects(MagicItem *magicItem, EffectItem *effItem, ActiveEffectCreate callback, bool addNew);
+	void UpdateActiveEffects(MagicItem *magicItem, EffectItem *effItem, bool addNew);
 	bool GetIsGhost();
 	float GetRadiationLevel();
 	BackUpPackage *AddBackUpPackage(TESObjectREFR *targetRef, TESObjectCELL *targetCell, UInt32 flags);

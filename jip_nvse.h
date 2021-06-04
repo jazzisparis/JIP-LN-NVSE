@@ -151,6 +151,7 @@ TESImageSpaceModifier *g_explosionInFaceIMOD = NULL;
 TESObjectREFR *s_tempPosMarker = NULL;
 double *g_condDmgPenalty = NULL;
 double s_condDmgPenalty = 0.67;
+UInt32 s_mainThreadID = 0;
 UInt32 s_initialTickCount = 0;
 
 enum
@@ -215,18 +216,6 @@ FontInfo* (__thiscall *InitFontInfo)(FontInfo *fontInfo, UInt32 fontID, const ch
 
 Cmd_Execute SayTo, KillActor, AddNote, AttachAshPile, MoveToFade, GetRefs;
 
-alignas(16) char
-s_strArgBuffer[0x4000],
-s_strValBuffer[0x10000],
-s_dataPathFull[0x100] = "Data\\",
-s_configPathFull[0x100] = "Data\\Config\\",
-s_scriptsPathFull[0x100] = "Data\\NVSE\\plugins\\scripts\\",
-s_modLogPathFull[0x100] = "Mod Logs\\";
-char *s_dataPath, *s_configPath, *s_scriptsPath, *s_modLogPath;
-
-UnorderedSet<TESForm*> s_tempFormList(0x40);
-Vector<ArrayElementL> s_tempElements(0x100);
-
 enum
 {
 	kSerializedFlag_NoHardcoreTracking =	1 << 0,
@@ -253,6 +242,20 @@ struct QueuedCmdCall
 };
 
 #define AddQueuedCmdCall(qCall) ThisCall(0x87D160, g_scrapHeapQueue, &qCall)
+
+typedef UnorderedSet<TESForm*> TempFormList;
+__declspec(noinline) TempFormList *GetTempFormList()
+{
+	thread_local TempFormList s_tempFormList(0x40);
+	return &s_tempFormList;
+}
+
+typedef Vector<ArrayElementL> TempElements;
+__declspec(noinline) TempElements *GetTempElements()
+{
+	thread_local TempElements s_tempElements(0x100);
+	return &s_tempElements;
+}
 
 void Sky::RefreshMoon()
 {
@@ -559,7 +562,7 @@ const char *TESForm::GetModelPath()
 	TESModel *baseModel = DYNAMIC_CAST(this, TESForm, TESModel);
 	if (baseModel)
 	{
-		const char *modelPath = baseModel->GetModelPath();
+		const char *modelPath = baseModel->nifPath.m_data;
 		if (modelPath && *modelPath)
 			return modelPath;
 	}
@@ -1100,15 +1103,20 @@ struct InventoryItemData
 };
 
 typedef UnorderedMap<TESForm*, InventoryItemData> InventoryItemsMap;
-InventoryItemsMap s_inventoryItemsMap(0x40);
 
-bool TESObjectREFR::GetInventoryItems(UInt8 typeID)
+__declspec(noinline) InventoryItemsMap *GetInventoryItemsMap()
 {
-	TESContainer *container = GetContainer();
+	thread_local InventoryItemsMap s_inventoryItemsMap(0x40);
+	return &s_inventoryItemsMap;
+}
+
+bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *invItemsMap)
+{
+	TESContainer *container = refr->GetContainer();
 	if (!container) return false;
-	ExtraContainerChanges::EntryDataList *entryList = GetContainerChangesList();
+	ExtraContainerChanges::EntryDataList *entryList = refr->GetContainerChangesList();
 	if (!entryList) return false;
-	s_inventoryItemsMap.Clear();
+	invItemsMap->Clear();
 
 	TESContainer::FormCount *formCount;
 	TESForm *item;
@@ -1120,7 +1128,7 @@ bool TESObjectREFR::GetInventoryItems(UInt8 typeID)
 	{
 		if (!(formCount = contIter->data)) continue;
 		item = formCount->form;
-		if ((typeID && (item->typeID != typeID)) || (item->typeID == kFormType_TESLevItem) || s_inventoryItemsMap.HasKey(item))
+		if ((typeID && (item->typeID != typeID)) || (item->typeID == kFormType_TESLevItem) || invItemsMap->HasKey(item))
 			continue;
 		contCount = container->GetCountForForm(item);
 		if (entry = entryList->FindForItem(item))
@@ -1131,7 +1139,7 @@ bool TESObjectREFR::GetInventoryItems(UInt8 typeID)
 			else contCount += countDelta;
 		}
 		if (contCount > 0)
-			s_inventoryItemsMap.Emplace(item, contCount, entry);
+			invItemsMap->Emplace(item, contCount, entry);
 	}
 	while (contIter = contIter->next);
 
@@ -1140,15 +1148,15 @@ bool TESObjectREFR::GetInventoryItems(UInt8 typeID)
 	{
 		if (!(entry = xtraIter->data)) continue;
 		item = entry->type;
-		if ((typeID && (item->typeID != typeID)) || s_inventoryItemsMap.HasKey(item))
+		if ((typeID && (item->typeID != typeID)) || invItemsMap->HasKey(item))
 			continue;
 		countDelta = entry->countDelta;
 		if (countDelta > 0)
-			s_inventoryItemsMap.Emplace(item, countDelta, entry);
+			invItemsMap->Emplace(item, countDelta, entry);
 	}
 	while (xtraIter = xtraIter->next);
 
-	return !s_inventoryItemsMap.Empty();
+	return !invItemsMap->Empty();
 }
 
 __declspec(naked) TESObjectCELL *TESObjectREFR::GetParentCell()
@@ -3111,7 +3119,7 @@ __declspec(naked) NiExtraData* __fastcall NiObjectNET::GetExtraData(UInt32 vtbl)
 	}
 }
 
-__declspec(naked) NiNode* __stdcall NiNode::Create(const char *nodeName)
+__declspec(naked) NiNode* __stdcall NiNode::Create(const char *nameStr)	//	str of NiString
 {
 	__asm
 	{
@@ -3121,19 +3129,22 @@ __declspec(naked) NiNode* __stdcall NiNode::Create(const char *nodeName)
 		push	0
 		mov		ecx, eax
 		CALL_EAX(0xA5ECB0)
-		push	eax
-		push	dword ptr [esp+8]
-		CALL_EAX(0xA5B690)
-		pop		ecx
-		pop		ecx
-		mov		[ecx+8], eax
-		mov		eax, ecx
+		mov		ecx, [esp+4]
+		test	ecx, ecx
+		jz		done
+		lock inc dword ptr [ecx-8]
+		mov		[eax+8], ecx
+	done:
 		retn	4
 	}
 }
 
-LightCS s_NiNodeCopyLock;
-NiObjectCopyInfo s_NiObjectCopyInfo;
+__declspec(noinline) NiObjectCopyInfo *GetNiObjectCopyInfo()
+{
+	thread_local NiObjectCopyInfo s_NiObjectCopyInfo(0x97);
+	return &s_NiObjectCopyInfo;
+}
+
 void NiTMapBase<int, int>::FreeBuckets();
 
 __declspec(naked) NiNode *NiNode::CreateCopy()
@@ -3141,15 +3152,15 @@ __declspec(naked) NiNode *NiNode::CreateCopy()
 	__asm
 	{
 		push	esi
+		push	edi
 		mov		esi, ecx
-		mov		ecx, offset s_NiNodeCopyLock
-		call	LightCS::EnterSleep
-		mov		eax, offset s_NiObjectCopyInfo
-		push	eax
+		call	GetNiObjectCopyInfo
+		mov		edi, eax
 		push	eax
 		mov		ecx, esi
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x48]
+		push	edi
 		mov		ecx, esi
 		mov		esi, eax
 		mov		eax, [ecx]
@@ -3160,27 +3171,21 @@ __declspec(naked) NiNode *NiNode::CreateCopy()
 		movups	[esi+0x34], xmm0
 		movups	[esi+0x44], xmm0
 		movups	[esi+0x54], xmm0
-		mov		ecx, s_NiObjectCopyInfo.map00
+		mov		ecx, [edi]
 		call	NiTMapBase<int, int>::FreeBuckets
-		mov		ecx, s_NiObjectCopyInfo.map04
+		mov		ecx, [edi+4]
 		call	NiTMapBase<int, int>::FreeBuckets
-		mov		ecx, offset s_NiNodeCopyLock
-		dec		dword ptr [ecx+4]
-		jnz		done
-		mov		dword ptr [ecx], 0
-	done:
 		mov		eax, esi
+		pop		edi
 		pop		esi
 		retn
 	}
 }
 
-__declspec(naked) NiAVObject* __fastcall NiNode::GetBlockByName(const char *objName)
+__declspec(naked) NiAVObject* __fastcall NiNode::GetBlockByName(const char *nameStr)	//	str of NiString
 {
 	__asm
 	{
-		cmp		[ecx+8], edx
-		jz		found
 		movzx	eax, word ptr [ecx+0xA6]
 		test	eax, eax
 		jz		done
@@ -3192,27 +3197,22 @@ __declspec(naked) NiAVObject* __fastcall NiNode::GetBlockByName(const char *objN
 	iterHead:
 		dec		edi
 		js		iterEnd
-		mov		ecx, [esi]
+		mov		eax, [esi]
 		add		esi, 4
-		test	ecx, ecx
+		test	eax, eax
 		jz		iterHead
-		mov		eax, [ecx]
-		cmp		dword ptr [eax+0xC], kAddr_ReturnThis
-		jnz		notNode
+		cmp		[eax+8], edx
+		jz		found
+		mov		ecx, [eax]
+		cmp		dword ptr [ecx+0xC], kAddr_ReturnThis
+		jnz		iterHead
+		mov		ecx, eax
 		call	NiNode::GetBlockByName
 		test	eax, eax
 		jz		iterHead
-		pop		edi
-		pop		esi
-		retn
-		ALIGN 16
-	notNode:
-		cmp		[ecx+8], edx
-		jnz		iterHead
-		pop		edi
-		pop		esi
 	found:
-		mov		eax, ecx
+		pop		edi
+		pop		esi
 		retn
 		ALIGN 16
 	iterEnd:
@@ -3228,6 +3228,8 @@ __declspec(naked) NiAVObject* __fastcall NiNode::GetBlock(const char *blockName)
 {
 	__asm
 	{
+		cmp		[edx], 0
+		jz		retnNULL
 		push	ecx
 		push	edx
 		CALL_EAX(0xA5B690)
@@ -3235,11 +3237,18 @@ __declspec(naked) NiAVObject* __fastcall NiNode::GetBlock(const char *blockName)
 		pop		ecx
 		test	eax, eax
 		jz		done
-		push	eax
+		lock dec dword ptr [eax-8]
+		jz		retnNULL
+		cmp		[ecx+8], eax
+		jz		found
 		mov		edx, eax
 		call	NiNode::GetBlockByName
-		pop		ecx
-		lock dec dword ptr [ecx-8]
+		retn
+	found:
+		mov		eax, ecx
+		retn
+	retnNULL:
+		xor		eax, eax
 	done:
 		retn
 	}
@@ -3263,8 +3272,8 @@ __declspec(naked) NiNode* __fastcall NiNode::GetNode(const char *nodeName)
 
 void __fastcall NiMatrix33::ExtractAngles(NiVector3 *outAngles)
 {
-	double rotY = cr[0][2];
-	if (abs(rotY) < 1)
+	float rotY = cr[0][2];
+	if (abs(rotY) < 1.0F)
 	{
 		outAngles->x = -atan2(-cr[1][2], cr[2][2]);
 		outAngles->y = -asin(rotY);
@@ -4575,8 +4584,6 @@ void MagicTarget::RemoveEffect(EffectItem *effItem)
 	while (iter);
 }
 
-UnorderedSet<void*> s_effectItemFree;
-
 bool EffectItemList::RemoveNthEffect(UInt32 index)
 {
 	if (!list.GetNthItem(1)) return false;
@@ -4592,7 +4599,6 @@ bool EffectItemList::RemoveNthEffect(UInt32 index)
 		EffectItem *effItem = iter->data;
 		if (effItem)
 		{
-			s_effectItemFree.Insert(effItem);
 			g_thePlayer->magicTarget.RemoveEffect(effItem);
 			MobileObject **objArray = g_processManager->objects.data, **arrEnd = objArray;
 			objArray += g_processManager->beginOffsets[0];
@@ -4616,45 +4622,51 @@ bool EffectItemList::RemoveNthEffect(UInt32 index)
 		}
 		if (prev) prev->RemoveNext();
 		else iter->RemoveMe();
+		GameHeapFree(effItem);
 		return true;
 	}
 	while (iter = iter->next);
 	return false;
 }
 
-void Actor::UpdateActiveEffects(MagicItem *magicItem, EffectItem *effItem, ActiveEffectCreate callback, bool addNew)
+void Actor::UpdateActiveEffects(MagicItem *magicItem, EffectItem *effItem, bool addNew)
 {
 	ActiveEffectList *effList = magicTarget.GetEffectList();
 	if (!effList) return;
-	ActiveEffect *activeEff, *newEff;
+	ActiveEffect *activeEff;
 	ListNode<ActiveEffect> *iter = effList->Head();
 	do
 	{
-		activeEff = iter->data;
-		if (activeEff && (activeEff->magicItem == magicItem) && (addNew || (activeEff->effectItem == effItem)))
+		if (!(activeEff = iter->data) || (activeEff->magicItem != magicItem))
+			continue;
+		if (!addNew)
 		{
-			newEff = callback(activeEff->caster, magicItem, effItem);
-			if (newEff)
-			{
-				newEff->target = activeEff->target;
-				if (addNew) effList->Prepend(newEff);
-				else
-				{
-					activeEff->Remove(true);
-					iter->data = newEff;
-				}
-			}
-			break;
+			if (activeEff->effectItem != effItem) continue;
+			if (activeEff->bTerminated) break;
 		}
+		ActiveEffect *newEff = g_effectArchTypeArray[effItem->setting->archtype].callback(activeEff->caster, magicItem, effItem);
+		if (newEff)
+		{
+			iter->Insert(newEff);
+			newEff->target = activeEff->target;
+			newEff->enchantObject = activeEff->enchantObject;
+			if (!addNew)
+			{
+				newEff->bActive = activeEff->bActive;
+				newEff->flags = activeEff->flags;
+				activeEff->Remove(true);
+			}
+			else if (newEff->enchantObject && IS_ID(newEff->enchantObject, TESObjectARMO))
+				newEff->flags |= 0x100;
+		}
+		break;
 	}
 	while (iter = iter->next);
 }
 
 void __fastcall UpdateEffectsAllActors(MagicItem *magicItem, EffectItem *effItem, bool addNew = false)
 {
-	ActiveEffectCreate callback = g_effectArchTypeArray[effItem->setting->archtype].callback;
-	if (!callback) return;
-	g_thePlayer->UpdateActiveEffects(magicItem, effItem, callback, addNew);
+	g_thePlayer->UpdateActiveEffects(magicItem, effItem, addNew);
 	MobileObject **objArray = g_processManager->objects.data, **arrEnd = objArray;
 	objArray += g_processManager->beginOffsets[0];
 	arrEnd += g_processManager->endOffsets[0];
@@ -4662,8 +4674,8 @@ void __fastcall UpdateEffectsAllActors(MagicItem *magicItem, EffectItem *effItem
 	for (; objArray != arrEnd; objArray++)
 	{
 		actor = (Actor*)*objArray;
-		if (actor && IS_ACTOR(actor))
-			actor->UpdateActiveEffects(magicItem, effItem, callback, addNew);
+		if (actor && actor->IsActor())
+			actor->UpdateActiveEffects(magicItem, effItem, addNew);
 	}
 	objArray = g_processManager->objects.data;
 	arrEnd = objArray + g_processManager->endOffsets[1];
@@ -4671,8 +4683,8 @@ void __fastcall UpdateEffectsAllActors(MagicItem *magicItem, EffectItem *effItem
 	for (; objArray != arrEnd; objArray++)
 	{
 		actor = (Actor*)*objArray;
-		if (actor && IS_ACTOR(actor))
-			actor->UpdateActiveEffects(magicItem, effItem, callback, addNew);
+		if (actor && actor->IsActor())
+			actor->UpdateActiveEffects(magicItem, effItem, addNew);
 	}
 }
 
@@ -4772,16 +4784,17 @@ WeatherEntry *TESClimate::GetWeatherEntry(TESWeather *weather, bool remove = fal
 
 void *TESRecipe::ComponentList::GetComponents(Script *scriptObj)
 {
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	Node *iter = Head();
 	RecipeComponent *component;
 	do
 	{
 		if (component = iter->data)
-			s_tempElements.Append(component->item);
+			tmpElements->Append(component->item);
 	}
 	while (iter = iter->next);
-	NVSEArrayVar *outArray = CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj);
+	NVSEArrayVar *outArray = CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return outArray;
 }
 
@@ -4956,10 +4969,10 @@ void TESLeveledList::Dump()
 	while (iter = iter->next);
 }
 
-bool TESLeveledList::HasFormDeep(TESForm *form)
+bool LeveledListHasFormDeep(TESLeveledList *pLvlList, TESForm *form, TempFormList *tmpFormLst)
 {
-	ListNode<ListData> *iter = list.Head();
-	ListData *data;
+	ListNode<TESLeveledList::ListData> *iter = pLvlList->list.Head();
+	TESLeveledList::ListData *data;
 	TESLeveledList *lvlList;
 	do
 	{
@@ -4967,7 +4980,7 @@ bool TESLeveledList::HasFormDeep(TESForm *form)
 		if (data->form == form)
 			return true;
 		lvlList = data->form->GetLvlList();
-		if (lvlList && s_tempFormList.Insert(data->form) && lvlList->HasFormDeep(form))
+		if (lvlList && tmpFormLst->Insert(data->form) && LeveledListHasFormDeep(lvlList, form, tmpFormLst))
 			return true;
 	}
 	while (iter = iter->next);
@@ -5376,38 +5389,9 @@ class AuxVariableValue
 		}
 	}
 
-	void ReadValData()
-	{
-		if (type == 1)
-		{
-			if (s_serializedVersion < 10)
-			{
-				refID = ReadRecord32();
-				num = *(float*)&refID;
-			}
-			else ReadRecord64(&num);
-		}
-		else if (type == 2)
-		{
-			refID = ReadRecord32();
-			ResolveRefID(refID, &refID);
-		}
-		else
-		{
-			length = ReadRecord16();
-			if (length)
-			{
-				alloc = AlignNumAlloc<char>(length + 1);
-				str = (char*)Pool_Alloc(alloc);
-				ReadRecordData(str, length);
-				str[length] = 0;
-			}
-		}
-	}
-
 public:
 	AuxVariableValue() : alloc(0) {}
-	AuxVariableValue(UInt8 _type) : type(_type), alloc(0) {ReadValData();}
+	AuxVariableValue(UInt8 _type) : type(_type), alloc(0) {}
 	AuxVariableValue(NVSEArrayElement &elem) : alloc(0) {SetElem(elem);}
 
 	~AuxVariableValue() {Clear();}
@@ -5462,6 +5446,43 @@ public:
 		if (type == 2) return ArrayElementL(LookupFormByRefID(refID));
 		if (type == 4) return ArrayElementL(GetStr());
 		return ArrayElementL(num);
+	}
+
+	UInt8 *ReadValData(UInt8 *bufPos)
+	{
+		if (type == 1)
+		{
+			if (s_serializedVersion < 10)
+			{
+				num = *(float*)bufPos;
+				bufPos += 4;
+			}
+			else
+			{
+				num = *(double*)bufPos;
+				bufPos += 8;
+			}
+		}
+		else if (type == 2)
+		{
+			refID = *(UInt32*)bufPos;
+			bufPos += 4;
+			ResolveRefID(refID, &refID);
+		}
+		else
+		{
+			length = *(UInt16*)bufPos;
+			bufPos += 2;
+			if (length)
+			{
+				alloc = AlignNumAlloc<char>(length + 1);
+				str = (char*)Pool_Alloc(alloc);
+				memcpy(str, bufPos, length);
+				bufPos += length;
+				str[length] = 0;
+			}
+		}
+		return bufPos;
 	}
 
 	void WriteValData() const
@@ -5784,7 +5805,7 @@ ArrayElementR* __fastcall GetArrayData(NVSEArrayVar *srcArr, UInt32 *size)
 {
 	*size = GetArraySize(srcArr);
 	if (!*size) return NULL;
-	ArrayElementR *data = (ArrayElementR*)GetAuxBuffer(s_auxBuffers[2], *size * sizeof(ArrayElementR));
+	ArrayElementR *data = (ArrayElementR*)AuxBuffer::Get(2, *size * sizeof(ArrayElementR));
 	MemZero(data, *size * sizeof(ArrayElementR));
 	GetElements(srcArr, data, NULL);
 	return data;
@@ -6060,9 +6081,8 @@ void JIPScriptRunner::Init()
 	s_jipScriptRunner.script = (Script*)malloc(sizeof(Script));
 	MemZero(s_jipScriptRunner.script, sizeof(Script));
 	s_jipScriptRunner.scrContext = g_consoleManager->scriptContext;
-	memcpy(s_scriptsPath, "*.txt", 6);
 	char *fileName;
-	for (DirectoryIterator iter(s_scriptsPathFull); iter; ++iter)
+	for (DirectoryIterator iter("Data\\NVSE\\plugins\\scripts\\*.txt"); iter; ++iter)
 	{
 		if (!iter.IsFile()) continue;
 		fileName = (char*)iter.Get();
@@ -6117,8 +6137,9 @@ __declspec(naked) bool __stdcall JIPScriptRunner::RunScript(const char *scriptTe
 
 void __stdcall JIPScriptRunner::RunFile(const char *fileName)
 {
-	StrCopy(s_scriptsPath, fileName);
-	bool success = FileToBuffer(s_scriptsPathFull, s_strValBuffer) && RunScript(s_strValBuffer);
+	char scriptsPath[0x80] = "Data\\NVSE\\plugins\\scripts\\", *buffer = GetStrArgBuffer();
+	StrCopy(scriptsPath + 26, fileName);
+	bool success = FileToBuffer(scriptsPath, buffer) && RunScript(buffer);
 	PrintLog("Run Script : %s >> %s", fileName, success ? "SUCCESS" : "FAILED");
 }
 
@@ -6136,7 +6157,7 @@ void __stdcall JIPScriptRunner::RunScriptFiles(UInt16 type)
 	}
 }
 
-bool TESObjectREFR::RunScriptSource(const char *sourceStr)
+bool TESObjectREFR::RunScriptSource(char *sourceStr, bool doFree)
 {
 	ExtraScript *xScript = GetExtraType(&extraDataList, Script);
 	ScriptEventList *eventList = xScript ? xScript->eventList : NULL;
@@ -6147,7 +6168,7 @@ bool TESObjectREFR::RunScriptSource(const char *sourceStr)
 		if (StrLen(sourceStr) > 0x80) const_cast<char*>(sourceStr)[0x80] = 0;
 		Console_Print("ERROR: Failed to execute script source:\n%s (...)", sourceStr);
 	}
-	if (sourceStr != s_strValBuffer) free(const_cast<char*>(sourceStr));
+	if (doFree) free(sourceStr);
 	if (eventList) xScript->eventList = eventList;
 	return success;
 }
@@ -6492,8 +6513,10 @@ const char kMenuIDJumpTable[] =
 double s_nvseVersion = 0;
 
 #define REG_CMD(name) nvse->RegisterCommand(&kCommandInfo_##name)
+#define REG_CMD_FRM(name) nvse->RegisterTypedCommand(&kCommandInfo_##name, kRetnType_Form)
 #define REG_CMD_STR(name) nvse->RegisterTypedCommand(&kCommandInfo_##name, kRetnType_String)
 #define REG_CMD_ARR(name) nvse->RegisterTypedCommand(&kCommandInfo_##name, kRetnType_Array)
+#define REG_CMD_AMB(name) nvse->RegisterTypedCommand(&kCommandInfo_##name, kRetnType_Ambiguous)
 
 #define REFR_RES *(UInt32*)result
 #define NUM_ARGS scriptData[*opcodeOffsetPtr]

@@ -514,7 +514,7 @@ __declspec(naked) void NiTMapBase<T_Key, T_Data>::FreeBuckets()
 		push	ebx
 		mov		ebx, ecx
 		mov		ecx, 0x11C5F80
-		call	LightCS::EnterSleep
+		call	LightCS::Enter
 		push	esi
 		push	edi
 		mov		esi, [ebx+8]

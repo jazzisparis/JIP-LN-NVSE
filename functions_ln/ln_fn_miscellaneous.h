@@ -480,14 +480,15 @@ bool Cmd_SetContainerCloseSound_Execute(COMMAND_ARGS)
 
 bool Cmd_GetPlayerRegions_Execute(COMMAND_ARGS)
 {
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<TESRegion> *iter = g_thePlayer->regionsList.list.Head();
 	do
 	{
-		if (iter->data) s_tempElements.Append(iter->data);
+		if (iter->data) tmpElements->Append(iter->data);
 	}
 	while (iter = iter->next);
-	AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 

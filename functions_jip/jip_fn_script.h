@@ -365,16 +365,17 @@ bool Cmd_SetOnQuestStageEventHandler_Execute(COMMAND_ARGS)
 bool Cmd_RunScriptSnippet_Execute(COMMAND_ARGS)
 {
 	UInt32 delayTime;
-	if (ExtractFormatStringArgs(1, s_strValBuffer, EXTRACT_ARGS_EX, kCommandInfo_RunScriptSnippet.numParams, &delayTime))
+	char *buffer = GetStrArgBuffer();
+	if (ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_RunScriptSnippet.numParams, &delayTime))
 	{
 		TESObjectREFR *callingRef = thisObj ? thisObj : g_thePlayer;
-		ReplaceChr(s_strValBuffer, '\n', '\r');
+		ReplaceChr(buffer, '\n', '\r');
 		if (delayTime)
 		{
-			bool (TESObjectREFR::*FuncPtr)(const char*) = &TESObjectREFR::RunScriptSource;
-			MainLoopAddCallbackArgsEx((void*&)FuncPtr, callingRef, 1, delayTime, 1, CopyString(s_strValBuffer));
+			bool (TESObjectREFR::*FuncPtr)(char*, bool) = &TESObjectREFR::RunScriptSource;
+			MainLoopAddCallbackArgsEx((void*&)FuncPtr, callingRef, 1, delayTime, 2, CopyString(buffer), true);
 		}
-		else callingRef->RunScriptSource(s_strValBuffer);
+		else callingRef->RunScriptSource(buffer, false);
 	}
 	return true;
 }
@@ -551,10 +552,12 @@ bool Cmd_DisableScriptedActivate_Execute(COMMAND_ARGS)
 
 bool Cmd_RunBatchScript_Execute(COMMAND_ARGS)
 {
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	char filePath[0x80];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filePath))
 	{
+		char *buffer = GetStrArgBuffer();
 		TESObjectREFR *callingRef = thisObj ? thisObj : g_thePlayer;
-		*result = FileToBuffer(s_strArgBuffer, s_strValBuffer) && callingRef->RunScriptSource(s_strValBuffer);
+		*result = FileToBuffer(filePath, buffer) && callingRef->RunScriptSource(buffer, false);
 	}
 	else *result = 0;
 	return true;

@@ -30,7 +30,7 @@ tList<TESForm> *GetSourceList(UInt8 formType)
 	return &((tList<TESForm>*)&g_dataHandler->packageList)[listIdx];
 }
 
-void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList)
+void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList, TempElements *tmpElements)
 {
 	if (formType == kFormType_TESObjectCELL)
 	{
@@ -39,7 +39,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList)
 		{
 			if ((index != -1) && (index != (*cells)->modIndex)) continue;
 			if (outList) outList->Prepend(*cells);
-			else s_tempElements.Append(*cells);
+			else tmpElements->Append(*cells);
 		}
 	}
 	else if (formType == 301)
@@ -57,7 +57,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList)
 				refr = refrIter->data;
 				if (!refr || !refr->extraDataList.HasType(kExtraData_MapMarker) || ((index != -1) && (index != refr->modIndex))) continue;
 				if (outList) outList->Prepend(refr);
-				else s_tempElements.Append(refr);
+				else tmpElements->Append(refr);
 			}
 			while (refrIter = refrIter->next);
 		}
@@ -76,7 +76,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList)
 				refr = refrIter->data;
 				if (!refr || !refr->extraDataList.HasType(kExtraData_RadioData) || ((index != -1) && (index != refr->modIndex))) continue;
 				if (outList) outList->Prepend(refr);
-				else s_tempElements.Append(refr);
+				else tmpElements->Append(refr);
 			}
 			while (refrIter = refrIter->next);
 		}
@@ -93,7 +93,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList)
 				form = iter->data;
 				if (!form || ((index != -1) && (index != form->modIndex))) continue;
 				if (outList) outList->Prepend(form);
-				else s_tempElements.Append(form);
+				else tmpElements->Append(form);
 			}
 			while (iter = iter->next);
 		}
@@ -103,7 +103,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList)
 			{
 				if ((object->typeID != formType) || ((index != -1) && (index != object->modIndex))) continue;
 				if (outList) outList->Prepend(object);
-				else s_tempElements.Append(object);
+				else tmpElements->Append(object);
 			}
 		}
 		else
@@ -113,7 +113,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList)
 				form = mIter.Get();
 				if (!form || (form->typeID != formType) || ((index != -1) && (index != form->modIndex))) continue;
 				if (outList) outList->Prepend(form);
-				else s_tempElements.Append(form);
+				else tmpElements->Append(form);
 			}
 		}
 	}
@@ -127,7 +127,7 @@ bool Cmd_GetLoadedType_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &listForm, &formType, &index, &noClear))
 	{
 		if (!noClear) listForm->list.RemoveAll();
-		GetLoadedType(formType, index, &listForm->list);
+		GetLoadedType(formType, index, &listForm->list, NULL);
 	}
 	return true;
 }
@@ -139,9 +139,10 @@ bool Cmd_GetLoadedTypeArray_Execute(COMMAND_ARGS)
 	int index = -1;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &formType, &index))
 	{
-		s_tempElements.Clear();
-		GetLoadedType(formType, index, NULL);
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+		TempElements *tmpElements = GetTempElements();
+		tmpElements->Clear();
+		GetLoadedType(formType, index, NULL, tmpElements);
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	}
 	return true;
 }
@@ -259,14 +260,15 @@ bool Cmd_GetFormMods_Execute(COMMAND_ARGS)
 		if (!thisObj) return true;
 		form = thisObj->baseForm;
 	}
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<ModInfo> *iter = form->mods.Head();
 	do
 	{
-		if (iter->data) s_tempElements.Append(iter->data->name);
+		if (iter->data) tmpElements->Append(iter->data->name);
 	}
 	while (iter = iter->next);
-	AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -275,7 +277,8 @@ bool Cmd_GetFormRefs_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESForm *form;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form)) return true;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<TESWorldSpace> *wspcIter = g_dataHandler->worldSpaceList.Head();
 	TESWorldSpace *wspc;
 	ListNode<TESObjectREFR> *refrIter;
@@ -288,7 +291,7 @@ bool Cmd_GetFormRefs_Execute(COMMAND_ARGS)
 		{
 			refr = refrIter->data;
 			if (refr && (refr->baseForm == form))
-				s_tempElements.Append(refr);
+				tmpElements->Append(refr);
 		}
 		while (refrIter = refrIter->next);
 	}
@@ -302,11 +305,11 @@ bool Cmd_GetFormRefs_Execute(COMMAND_ARGS)
 		{
 			refr = refrIter->data;
 			if (refr && (refr->baseForm == form))
-				s_tempElements.Append(refr);
+				tmpElements->Append(refr);
 		}
 		while (refrIter = refrIter->next);
 	}
-	AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -362,11 +365,12 @@ bool Cmd_GetStringSetting_Execute(COMMAND_ARGS)
 bool Cmd_SetStringSetting_Execute(COMMAND_ARGS)
 {
 	char settingName[0x80];
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName, &s_strValBuffer) && ((settingName[0] | 0x20) == 's'))
+	char *buffer = GetStrArgBuffer();
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName, buffer) && ((settingName[0] | 0x20) == 's'))
 	{
 		Setting *setting = s_gameSettingsMap.Get(settingName);
 		if (setting)
-			setting->Set(s_strValBuffer, true);
+			setting->Set(buffer, true);
 	}
 	return true;
 }

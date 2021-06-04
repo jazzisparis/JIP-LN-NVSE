@@ -33,9 +33,12 @@ bool Cmd_GetLNVersion_Execute(COMMAND_ARGS)
 
 bool Cmd_FileExists_Execute(COMMAND_ARGS)
 {
+	char dataPath[0x80];
+	*(UInt32*)dataPath = 'atad';
+	dataPath[4] = '\\';
 	UInt32 checkDir = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, s_dataPath, &checkDir))
-		*result = FileExistsEx(s_dataPathFull, checkDir != 0);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, dataPath + 5, &checkDir))
+		*result = FileExistsEx(dataPath, checkDir != 0);
 	else *result = 0;
 	DoConsolePrint(result);
 	return true;
@@ -46,14 +49,15 @@ bool Cmd_ListToArray_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSListForm *listForm;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &listForm)) return true;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<TESForm> *iter = listForm->list.Head();
 	do
 	{
-		if (iter->data) s_tempElements.Append(iter->data);
+		if (iter->data) tmpElements->Append(iter->data);
 	}
 	while (iter = iter->next);
-	AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -66,71 +70,85 @@ bool Cmd_GetTimeStamp_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool __fastcall GetINIPath(Script *scriptObj)
+bool __fastcall GetINIPath(char *iniPath, Script *scriptObj)
 {
-	if (!*s_configPath)
+	if (!*iniPath)
 	{
 		UInt8 modIdx = scriptObj->GetOverridingModIdx();
 		if (modIdx == 0xFF) return false;
-		StrCopy(s_configPath, g_dataHandler->GetNthModName(modIdx));
+		StrCopy(iniPath, g_dataHandler->GetNthModName(modIdx));
 	}
-	else ReplaceChr(s_configPath, '/', '\\');
-	char *dotPos = FindChrR(s_configPath, StrLen(s_configPath), '.');
-	if (dotPos) memcpy(dotPos + 1, "ini", 4);
-	else StrCat(s_configPath, ".ini");
+	else ReplaceChr(iniPath, '/', '\\');
+	UInt32 length = StrLen(iniPath);
+	char *dotPos = FindChrR(iniPath, length, '.');
+	if (dotPos) *(UInt32*)(dotPos + 1) = 'ini';
+	else
+	{
+		*(UInt32*)(iniPath + length) = 'ini.';
+		iniPath[length + 4] = 0;
+	}
+	*(UInt32*)(iniPath - 12) = 'atad';
+	*(UInt32*)(iniPath - 8) = 'noc\\';
+	*(UInt32*)(iniPath - 4) = '\\gif';
 	return true;
 }
 
 bool Cmd_GetINIFloat_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	*s_configPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, s_configPath) || !GetINIPath(scriptObj)) return true;
-	char *delim = GetNextToken(s_strArgBuffer, ":\\/");
+	char configPath[0x80], valueName[0x80], *iniPath = configPath + 12;
+	*iniPath = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) || !GetINIPath(iniPath, scriptObj)) return true;
+	char *delim = GetNextToken(valueName, ":\\/");
 	if (!*delim) return true;
-	s_strValBuffer[0] = 0;
-	if (GetPrivateProfileString(s_strArgBuffer, delim, NULL, s_strValBuffer, 0x100, s_configPathFull) && s_strValBuffer[0])
-		*result = StrToDbl(s_strValBuffer);
+	char valStr[0x20];
+	valStr[0] = 0;
+	if (GetPrivateProfileString(valueName, delim, NULL, valStr, 0x20, configPath) && valStr[0])
+		*result = StrToDbl(valStr);
 	return true;
 }
 
 bool Cmd_SetINIFloat_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char configPath[0x80], valueName[0x80], *iniPath = configPath + 12;
 	double value;
-	*s_configPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &value, s_configPath) || !GetINIPath(scriptObj)) return true;
-	char *delim = GetNextToken(s_strArgBuffer, ":\\/");
+	*iniPath = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, &value, iniPath) || !GetINIPath(iniPath, scriptObj)) return true;
+	char *delim = GetNextToken(valueName, ":\\/");
 	if (!*delim) return true;
-	if (!FileExists(s_configPathFull)) FileStream::MakeAllDirs(s_configPathFull);
-	FltToStr(s_strValBuffer, value);
-	if (WritePrivateProfileString(s_strArgBuffer, delim, s_strValBuffer, s_configPathFull))
+	if (!FileExists(configPath)) FileStream::MakeAllDirs(configPath);
+	char valStr[0x20];
+	FltToStr(valStr, value);
+	if (WritePrivateProfileString(valueName, delim, valStr, configPath))
 		*result = 1;
 	return true;
 }
 
 bool Cmd_GetINIString_Execute(COMMAND_ARGS)
 {
-	s_strValBuffer[0] = 0;
-	*s_configPath = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, s_configPath) && GetINIPath(scriptObj))
+	char configPath[0x80], valueName[0x80], *iniPath = configPath + 12, *buffer = GetStrArgBuffer();
+	buffer[0] = 0;
+	*iniPath = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) && GetINIPath(iniPath, scriptObj))
 	{
-		char *delim = GetNextToken(s_strArgBuffer, ":\\/");
-		if (*delim) GetPrivateProfileString(s_strArgBuffer, delim, NULL, s_strValBuffer, kMaxMessageLength, s_configPathFull);
+		char *delim = GetNextToken(valueName, ":\\/");
+		if (*delim) GetPrivateProfileString(valueName, delim, NULL, buffer, kMaxMessageLength, configPath);
 	}
-	AssignString(PASS_COMMAND_ARGS, s_strValBuffer);
+	AssignString(PASS_COMMAND_ARGS, buffer);
 	return true;
 }
 
 bool Cmd_SetINIString_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	*s_configPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer, s_configPath) || !GetINIPath(scriptObj)) return true;
-	char *delim = GetNextToken(s_strArgBuffer, ":\\/");
+	char configPath[0x80], valueName[0x80], *iniPath = configPath + 12, *buffer = GetStrArgBuffer();
+	*iniPath = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, buffer, iniPath) || !GetINIPath(iniPath, scriptObj)) return true;
+	char *delim = GetNextToken(valueName, ":\\/");
 	if (!*delim) return true;
-	if (!FileExists(s_configPathFull)) FileStream::MakeAllDirs(s_configPathFull);
-	if (WritePrivateProfileString(s_strArgBuffer, delim, s_strValBuffer, s_configPathFull))
+	if (!FileExists(configPath)) FileStream::MakeAllDirs(configPath);
+	if (WritePrivateProfileString(valueName, delim, buffer, configPath))
 		*result = 1;
 	return true;
 }
@@ -138,12 +156,13 @@ bool Cmd_SetINIString_Execute(COMMAND_ARGS)
 bool Cmd_GetINISection_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	*s_configPath = 0;
+	char configPath[0x80], secName[0x40], *iniPath = configPath + 12;
+	*iniPath = 0;
 	UInt32 getNumeric = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, s_configPath, &getNumeric) || !GetINIPath(scriptObj)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &secName, iniPath, &getNumeric) || !GetINIPath(iniPath, scriptObj)) return true;
 	NVSEArrayVar *outArray = CreateStringMap(NULL, NULL, 0, scriptObj);
-	char *buffer = s_strValBuffer, *delim;
-	SInt32 length = GetPrivateProfileSection(s_strArgBuffer, s_strValBuffer, 0x10000, s_configPathFull), size;
+	char *buffer = GetStrArgBuffer(), *delim;
+	SInt32 length = GetPrivateProfileSection(secName, buffer, 0x10000, configPath), size;
 	while (length > 0)
 	{
 		length -= size = StrLen(buffer) + 1;
@@ -159,18 +178,19 @@ bool Cmd_GetINISection_Execute(COMMAND_ARGS)
 bool Cmd_SetINISection_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char configPath[0x80], secName[0x40], *iniPath = configPath + 12;
 	UInt32 arrID;
-	*s_configPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &arrID, s_configPath) || !GetINIPath(scriptObj)) return true;
+	*iniPath = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &secName, &arrID, iniPath) || !GetINIPath(iniPath, scriptObj)) return true;
 	NVSEArrayVar *srcArray = LookupArrayByID(arrID);
 	if (!srcArray) return true;
 	UInt32 size = GetArraySize(srcArray);
 	if (!size) return true;
-	if (!FileExists(s_configPathFull)) FileStream::MakeAllDirs(s_configPathFull);
-	ArrayElementR *vals = (ArrayElementR*)GetAuxBuffer(s_auxBuffers[2], size * 2 * sizeof(ArrayElementR)), *keys = vals + size;
+	if (!FileExists(configPath)) FileStream::MakeAllDirs(configPath);
+	ArrayElementR *vals = (ArrayElementR*)AuxBuffer::Get(2, size * 2 * sizeof(ArrayElementR)), *keys = vals + size;
 	MemZero(vals, size * 2 * sizeof(ArrayElementR));
 	GetElements(srcArray, vals, keys);
-	char *posPtr = s_strValBuffer;
+	char *buffer = GetStrArgBuffer(), *posPtr = buffer;
 	for (UInt32 idx = 0; idx < size; idx++)
 	{
 		posPtr = StrCopy(posPtr, keys[idx].String());
@@ -187,7 +207,7 @@ bool Cmd_SetINISection_Execute(COMMAND_ARGS)
 		vals++;
 	}
 	while (--size);
-	if (WritePrivateProfileSection(s_strArgBuffer, s_strValBuffer, s_configPathFull))
+	if (WritePrivateProfileSection(secName, buffer, configPath))
 		*result = 1;
 	return true;
 }
@@ -195,37 +215,41 @@ bool Cmd_SetINISection_Execute(COMMAND_ARGS)
 bool Cmd_GetINISectionNames_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	*s_configPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, s_configPath) || !GetINIPath(scriptObj)) return true;
-	s_tempElements.Clear();
-	SInt32 length = GetPrivateProfileSectionNames(s_strValBuffer, kMaxMessageLength, s_configPathFull), size;
-	char *name = s_strValBuffer;
+	char configPath[0x80], *iniPath = configPath + 12;
+	*iniPath = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, iniPath) || !GetINIPath(iniPath, scriptObj)) return true;
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
+	char *buffer = GetStrArgBuffer();
+	SInt32 length = GetPrivateProfileSectionNames(buffer, kMaxMessageLength, configPath), size;
 	while (length > 0)
 	{
-		s_tempElements.Append(name);
-		length -= size = StrLen(name) + 1;
-		name += size;
+		tmpElements->Append(buffer);
+		length -= size = StrLen(buffer) + 1;
+		buffer += size;
 	}
-	AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
 bool Cmd_RemoveINIKey_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	*s_configPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, s_configPath) || !GetINIPath(scriptObj) || !FileExists(s_configPathFull)) return true;
-	char *key = GetNextToken(s_strArgBuffer, ":\\/");
-	if (*key && WritePrivateProfileString(s_strArgBuffer, key, NULL, s_configPathFull))
+	char configPath[0x80], valueName[0x80], *iniPath = configPath + 12;
+	*iniPath = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) || !GetINIPath(iniPath, scriptObj) || !FileExists(configPath)) return true;
+	char *key = GetNextToken(valueName, ":\\/");
+	if (*key && WritePrivateProfileString(valueName, key, NULL, configPath))
 		*result = 1;
 	return true;
 }
 
 bool Cmd_RemoveINISection_Execute(COMMAND_ARGS)
 {
-	*s_configPath = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, s_configPath) && GetINIPath(scriptObj) && FileExists(s_configPathFull) && 
-		WritePrivateProfileStruct(s_strArgBuffer, NULL, NULL, 0, s_configPathFull)) *result = 1;
+	char configPath[0x80], secName[0x40], *iniPath = configPath + 12;
+	*iniPath = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &secName, iniPath) && GetINIPath(iniPath, scriptObj) && FileExists(configPath) && 
+		WritePrivateProfileStruct(secName, NULL, NULL, 0, configPath)) *result = 1;
 	else *result = 0;
 	return true;
 }
@@ -233,15 +257,17 @@ bool Cmd_RemoveINISection_Execute(COMMAND_ARGS)
 bool Cmd_GetFilesInFolder_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	s_strArgBuffer[0] = '*';
-	s_strArgBuffer[1] = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, s_dataPath, &s_strArgBuffer)) return true;
-	ReplaceChr(s_dataPath, '/', '\\');
-	char *pathEnd = s_dataPath + StrLen(s_dataPath);
+	char dataPathFull[0x80], filter[0x40], *dataPath = dataPathFull + 5;
+	*(UInt32*)dataPathFull = 'atad';
+	dataPathFull[4] = '\\';
+	*(UInt16*)filter = '*';
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, dataPath, &filter)) return true;
+	ReplaceChr(dataPath, '/', '\\');
+	char *pathEnd = dataPath + StrLen(dataPath);
 	if (pathEnd[-1] != '\\') *pathEnd++ = '\\';
-	StrCopy(pathEnd, s_strArgBuffer);
+	StrCopy(pathEnd, filter);
 	NVSEArrayVar *outArray = CreateArray(NULL, 0, scriptObj);
-	for (DirectoryIterator iter(s_dataPathFull); iter; ++iter)
+	for (DirectoryIterator iter(dataPathFull); iter; ++iter)
 		if (iter.IsFile()) AppendElement(outArray, ArrayElementL(iter.Get()));
 	AssignCommandResult(outArray, result);
 	return true;
@@ -250,15 +276,17 @@ bool Cmd_GetFilesInFolder_Execute(COMMAND_ARGS)
 bool Cmd_GetFoldersInFolder_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	s_strArgBuffer[0] = '*';
-	s_strArgBuffer[1] = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, s_dataPath, &s_strArgBuffer)) return true;
-	ReplaceChr(s_dataPath, '/', '\\');
-	char *pathEnd = s_dataPath + StrLen(s_dataPath);
+	char dataPathFull[0x80], filter[0x40], *dataPath = dataPathFull + 5;
+	*(UInt32*)dataPathFull = 'atad';
+	dataPathFull[4] = '\\';
+	*(UInt16*)filter = '*';
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, dataPath, &filter)) return true;
+	ReplaceChr(dataPath, '/', '\\');
+	char *pathEnd = dataPath + StrLen(dataPath);
 	if (pathEnd[-1] != '\\') *pathEnd++ = '\\';
-	StrCopy(pathEnd, s_strArgBuffer);
+	StrCopy(pathEnd, filter);
 	NVSEArrayVar *outArray = CreateArray(NULL, 0, scriptObj);
-	for (DirectoryIterator iter(s_dataPathFull); iter; ++iter)
+	for (DirectoryIterator iter(dataPathFull); iter; ++iter)
 		if (iter.IsFolder()) AppendElement(outArray, ArrayElementL(iter.Get()));
 	AssignCommandResult(outArray, result);
 	return true;
@@ -274,10 +302,11 @@ bool Cmd_SortFormsByType_Execute(COMMAND_ARGS)
 	if (!formArray || !typeArray) return true;
 	UInt32 nForms = GetArraySize(formArray), nTypes = GetArraySize(typeArray);
 	if (!nForms || !nTypes) return true;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	Vector<TESForm*> tempForms(nForms);
 	UInt32 size = GetMax(nForms, nTypes) * sizeof(ArrayElementL);
-	ArrayElementL *elements = (ArrayElementL*)GetAuxBuffer(s_auxBuffers[2], size);
+	ArrayElementL *elements = (ArrayElementL*)AuxBuffer::Get(2, size);
 	MemZero(elements, size);
 	GetElements(formArray, elements, NULL);
 	TESForm *form;
@@ -296,15 +325,15 @@ bool Cmd_SortFormsByType_Execute(COMMAND_ARGS)
 			form = *iter;
 			if ((form->typeID != typeID) && (NOT_REFERENCE(form) || (((TESObjectREFR*)form)->baseForm->typeID != typeID)))
 				continue;
-			s_tempElements.Append(form);
+			tmpElements->Append(form);
 			iter.Remove(tempForms);
 		}
 		if (tempForms.Empty()) break;
 	}
 	if (!tempForms.Empty())
 		for (auto iter = tempForms.Begin(); iter; ++iter)
-			s_tempElements.Append(*iter);
-	AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+			tmpElements->Append(*iter);
+	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -346,8 +375,9 @@ bool Cmd_SetDefaultMessageTime_Execute(COMMAND_ARGS)
 
 bool Cmd_Console_Execute(COMMAND_ARGS)
 {
-	if (ExtractFormatStringArgs(0, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_Console.numParams))
-		*result = JIPScriptRunner::RunScript(s_strArgBuffer);
+	char *buffer = GetStrArgBuffer();
+	if (ExtractFormatStringArgs(0, buffer, EXTRACT_ARGS_EX, kCommandInfo_Console.numParams))
+		*result = JIPScriptRunner::RunScript(buffer);
 	else *result = 0;
 	return true;
 }
@@ -355,11 +385,12 @@ bool Cmd_Console_Execute(COMMAND_ARGS)
 bool Cmd_GetENBFloat_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer) || !FileExists(s_strArgBuffer)) return true;
-	char *delim = GetNextToken(s_strValBuffer, ":\\/");
+	char fileName[0x40], valueName[0x80];
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fileName, &valueName) || !FileExists(fileName)) return true;
+	char *delim = GetNextToken(valueName, ":\\/");
 	if (!*delim) return true;
 	char strVal[0x20];
-	if (GetPrivateProfileString(s_strValBuffer, delim, NULL, strVal, 0x20, s_strArgBuffer) && *strVal)
+	if (GetPrivateProfileString(valueName, delim, NULL, strVal, 0x20, fileName) && *strVal)
 		*result = StrToDbl(strVal);
 	return true;
 }
@@ -367,13 +398,14 @@ bool Cmd_GetENBFloat_Execute(COMMAND_ARGS)
 bool Cmd_SetENBFloat_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char fileName[0x40], valueName[0x80];
 	float value;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &s_strValBuffer, &value) || !FileExists(s_strArgBuffer)) return true;
-	char *delim = GetNextToken(s_strValBuffer, ":\\/");
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fileName, &valueName, &value) || !FileExists(fileName)) return true;
+	char *delim = GetNextToken(valueName, ":\\/");
 	if (!*delim) return true;
 	char strVal[0x20];
 	FltToStr(strVal, value);
-	if (WritePrivateProfileString(s_strValBuffer, delim, strVal, s_strArgBuffer))
+	if (WritePrivateProfileString(valueName, delim, strVal, fileName))
 		*result = 1;
 	return true;
 }

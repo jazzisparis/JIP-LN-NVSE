@@ -1084,9 +1084,9 @@ public:
 	bhkCapsuleShape			*capsuleShape;		// 5A4
 	bhkCharControllerShape	*charCtrlShape;		// 5A8
 	float					unk5AC[17];			// 5AC
-	float					flt5F0;				// 5F0
-	float					flt5F4;				// 5F4
-	float					flt5F8;				// 5F8
+	float					shapeDefaultRadius;	// 5F0
+	float					shapeHeight;		// 5F4
+	float					shapeRadius;		// 5F8
 	float					flt5FC;				// 5FC
 	UInt32					unk600[2];			// 600
 	UInt8					byte608;			// 608

@@ -122,6 +122,17 @@ public:
 	bool TryEnter() {return TryEnterCriticalSection(&critSection) != 0;}
 };
 
+class PrimitiveCS
+{
+	UInt32	owningThread;
+
+public:
+	PrimitiveCS() : owningThread(0) {}
+
+	void Enter();
+	void Leave() {owningThread = 0;}
+};
+
 class LightCS
 {
 	UInt32	owningThread;
@@ -131,8 +142,20 @@ public:
 	LightCS() : owningThread(0), enterCount(0) {}
 
 	void Enter();
-	void EnterSleep();
-	void Leave();
+	void Leave()
+	{
+		if (!--enterCount)
+			owningThread = 0;
+	}
+};
+
+template <typename T_CS> class ScopedLock
+{
+	T_CS		*cs;
+
+public:
+	ScopedLock(T_CS *_cs) : cs(_cs) {cs->Enter();}
+	~ScopedLock() {cs->Leave();}
 };
 
 TESForm* __stdcall LookupFormByRefID(UInt32 refID);
@@ -202,6 +225,8 @@ __forceinline int iround(float value)
 {
 	return _mm_cvt_ss2si(_mm_load_ss(&value));
 }
+
+char *GetStrArgBuffer();
 
 void __fastcall NiReleaseObject(NiRefObject *toRelease);
 
@@ -413,11 +438,9 @@ class AuxBuffer
 
 public:
 	AuxBuffer() : ptr(NULL), size(AUX_BUFFER_INIT_SIZE) {}
+
+	static UInt8 *Get(UInt32 bufIdx, UInt32 reqSize);
 };
-
-extern AuxBuffer s_auxBuffers[3];
-
-UInt8* __fastcall GetAuxBuffer(AuxBuffer &buffer, UInt32 reqSize);
 
 bool __fastcall FileExists(const char *filePath);
 
@@ -525,9 +548,7 @@ public:
 	void operator++() {if (!FindNextFile(handle, &fndData)) Close();}
 };
 
-bool __fastcall FileToBuffer(const char *filePath, char *buffer);
-
-void ClearFolder(char *pathEndPtr);
+UInt32 __fastcall FileToBuffer(const char *filePath, char *buffer);
 
 void __stdcall StoreOriginalData(UInt32 addr, UInt8 size);
 

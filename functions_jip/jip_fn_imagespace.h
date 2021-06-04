@@ -103,7 +103,8 @@ bool Cmd_SetImageSpaceModTrait_Execute(COMMAND_ARGS)
 bool Cmd_GetActiveIMODs_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<ImageSpaceModifierInstance> *traverse = g_TES->activeIMODs.Head();
 	ImageSpaceModifierInstance *imodInstance;
 	TESImageSpaceModifier *imod;
@@ -112,10 +113,10 @@ bool Cmd_GetActiveIMODs_Execute(COMMAND_ARGS)
 		imodInstance = traverse->data;
 		if (!imodInstance || NOT_TYPE(imodInstance, ImageSpaceModifierInstanceForm) || imodInstance->hidden) continue;
 		imod = ((ImageSpaceModifierInstanceForm*)imodInstance)->imageSpace;
-		if (imod) s_tempElements.Append(imod);
+		if (imod) tmpElements->Append(imod);
 	}
 	while (traverse = traverse->next);
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }

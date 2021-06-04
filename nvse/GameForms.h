@@ -302,6 +302,27 @@ public:
 };
 STATIC_ASSERT(sizeof(TESForm) == 0x18);
 
+// 0C
+struct Sound
+{
+	UInt32		unk00;		// 00
+	UInt8		byte04;		// 04
+	UInt8		pad05[3];	// 05
+	UInt32		unk08;		// 08
+
+	Sound() : unk00(0xFFFFFFFF), byte04(0), unk08(0) {}
+
+	Sound(const char *soundEDID, UInt32 flags)
+	{
+		ThisCall(0xAD7550, *(BSWin32Audio**)0x11F6D98, this, soundEDID, flags);
+	}
+
+	void Play()
+	{
+		ThisCall(0xAD8830, this, 0);
+	}
+};
+
 struct Condition
 {
 	UInt8			type;				// 00
@@ -3027,7 +3048,6 @@ public:
 	bool RemoveNthItem(UInt32 itemIndex);
 	SInt32 GetItemIndexByForm(TESForm *form);
 	SInt32 GetItemIndexByLevel(UInt32 level);
-	bool HasFormDeep(TESForm *form);
 };
 
 // TESLevCreature (68)
@@ -3484,7 +3504,7 @@ public:
 
 	void RefLockEnter()
 	{
-		refLock.EnterSleep();
+		refLock.Enter();
 	}
 	void RefLockLeave()
 	{

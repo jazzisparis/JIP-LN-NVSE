@@ -215,13 +215,14 @@ bool Cmd_SaveHotkeys_Execute(COMMAND_ARGS)
 		}
 		while (entryIter = entryIter->next);
 	}
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	for (HotkeyInfo hotkey : s_savedHotkeys)
 	{
 		ArrayElementL elements[3] = {hotkey.form, hotkey.health, hotkey.modFlags};
-		s_tempElements.Append(CreateArray(elements, 3, scriptObj));
+		tmpElements->Append(CreateArray(elements, 3, scriptObj));
 	}
-	AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 

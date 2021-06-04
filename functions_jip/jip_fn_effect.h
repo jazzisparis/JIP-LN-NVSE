@@ -2,10 +2,10 @@
 
 DEFINE_COMMAND_PLUGIN(GetNumEffects, , 0, 1, kParams_OneForm);
 DEFINE_COMMAND_PLUGIN(GetNthEffectBase, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetNthEffectBase, , 0, 3, kParams_JIP_OneForm_OneInt_OneMagicEffect);
+DEFINE_COMMAND_PLUGIN(SetNthEffectBase, , 0, 3, kParams_JIP_OneMagicItem_OneInt_OneMagicEffect);
 DEFINE_COMMAND_PLUGIN(GetNthEffectTraitNumeric, , 0, 3, kParams_JIP_OneForm_TwoInts);
 DEFINE_COMMAND_PLUGIN(SetNthEffectTraitNumeric, , 0, 4, kParams_JIP_OneForm_ThreeInts);
-DEFINE_COMMAND_PLUGIN(AddNewEffect, , 0, 6, kParams_JIP_OneForm_OneEffect_TwoInts_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(AddNewEffect, , 0, 7, kParams_JIP_OneMagicItem_OneEffect_TwoInts_ThreeOptionalInts);
 DEFINE_COMMAND_PLUGIN(RemoveNthEffect, , 0, 2, kParams_OneForm_OneInt);
 DEFINE_COMMAND_PLUGIN(SetObjectEffect, , 0, 2, kParams_JIP_OneForm_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(GetNumActorEffects, , 0, 1, kParams_OneOptionalActorBase);
@@ -61,21 +61,17 @@ bool Cmd_GetNthEffectBase_Execute(COMMAND_ARGS)
 
 bool Cmd_SetNthEffectBase_Execute(COMMAND_ARGS)
 {
-	TESForm *form;
+	MagicItem *magicItem;
 	UInt32 idx;
 	EffectSetting *effSetting;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &idx, &effSetting))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &idx, &effSetting))
 	{
-		MagicItem *magicItem = DYNAMIC_CAST(form, TESForm, MagicItem);
-		if (magicItem)
+		EffectItem *effItem = magicItem->list.list.GetNthItem(idx);
+		if (effItem)
 		{
-			EffectItem *effItem = magicItem->list.list.GetNthItem(idx);
-			if (effItem)
-			{
-				effItem->setting = effSetting;
-				effItem->actorValueOrOther = effSetting->actorVal;
-				UpdateEffectsAllActors(magicItem, effItem);
-			}
+			effItem->setting = effSetting;
+			effItem->actorValueOrOther = effSetting->actorVal;
+			UpdateEffectsAllActors(magicItem, effItem);
 		}
 	}
 	return true;
@@ -135,25 +131,28 @@ bool Cmd_SetNthEffectTraitNumeric_Execute(COMMAND_ARGS)
 bool Cmd_AddNewEffect_Execute(COMMAND_ARGS)
 {
 	*result = -1;
-	TESForm *form;
+	MagicItem *magicItem;
 	EffectSetting *effSetting;
-	UInt32 duration, magnitude, range = 0, area = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &effSetting, &duration, &magnitude, &range, &area) || (range > 2)) return true;
-	MagicItem *magicItem = DYNAMIC_CAST(form, TESForm, MagicItem);
-	if (!magicItem) return true;
-	if IS_ID(form, AlchemyItem) area = range = 0;
-	else if IS_ID(form, EnchantmentItem)
+	UInt32 duration, magnitude, range = 0, area = 0, append = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &effSetting, &duration, &magnitude, &range, &area, &append) || (range > 2))
+		return true;
+	UInt32 type = magicItem->GetType();
+	if (type == 6)
 	{
-		if (((EnchantmentItem*)form)->type == 2) range = 1;
+		EnchantmentItem *enchItem = (EnchantmentItem*)((UInt8*)magicItem - 0x18);
+		if (enchItem->type == 2) range = 1;
 		else area = range = 0;
 	}
+	else if (type == 7)
+		area = range = 0;
 	else
 	{
-		SpellItem *spelItem = (SpellItem*)form;
-		if ((spelItem->type == 1) || (spelItem->type == 4) || (spelItem->type == 10)) range = 0;
+		if ((type == 1) || (type == 4) || (type == 10))
+			range = 0;
 		if (!range) area = 0;
 	}
-	if (!(effSetting->effectFlags & (16 << range))) return true;
+	if (!(effSetting->effectFlags & (16 << range)))
+		return true;
 	EffectItem *effItem = (EffectItem*)GameHeapAlloc(sizeof(EffectItem));
 	effItem->magnitude = magnitude;
 	effItem->area = area;
@@ -163,8 +162,13 @@ bool Cmd_AddNewEffect_Execute(COMMAND_ARGS)
 	effItem->setting = effSetting;
 	effItem->cost = 0;
 	effItem->conditions.Init();
-	magicItem->list.list.Append(effItem);
-	*result = (int)magicItem->list.list.Count();
+	if (append)
+		*result = magicItem->list.list.Append(effItem) + 1;
+	else
+	{
+		magicItem->list.list.Prepend(effItem);
+		*result = (int)magicItem->list.list.Count();
+	}
 	UpdateEffectsAllActors(magicItem, effItem, true);
 	return true;
 }
@@ -328,26 +332,28 @@ bool Cmd_GetActiveEffects_Execute(COMMAND_ARGS)
 	filter = ((filter & 1) ? kFormType_EnchantmentItem : 63) & ((filter & 2) ? kFormType_SpellItem : 63) & ((filter & 4) ? kFormType_AlchemyItem : 63);
 	ActiveEffectList *effList = ((Actor*)thisObj)->magicTarget.GetEffectList();
 	if (!effList) return true;
-	s_tempFormList.Clear();
+	TempFormList *tmpFormLst = GetTempFormList();
+	tmpFormLst->Clear();
 	ActiveEffect *activeEff;
 	TESForm *form;
 	ListNode<ActiveEffect> *iter = effList->Head();
 	do
 	{
 		activeEff = iter->data;
-		if (!activeEff || !activeEff->bApplied || !activeEff->magicItem || (activeEff->magnitude == 0))
+		if (!activeEff || !activeEff->bActive || activeEff->bTerminated || !activeEff->magicItem || (activeEff->magnitude == 0))
 			continue;
 		form = DYNAMIC_CAST(activeEff->magicItem, MagicItem, TESForm);
 		if (form && (!filter || ((form->typeID & filter) == filter)))
-			s_tempFormList.Insert(form);
+			tmpFormLst->Insert(form);
 	}
 	while (iter = iter->next);
-	if (!s_tempFormList.Empty())
+	if (!tmpFormLst->Empty())
 	{
-		s_tempElements.Clear();
-		for (auto refIter = s_tempFormList.Begin(); refIter; ++refIter)
-			s_tempElements.Append(*refIter);
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+		TempElements *tmpElements = GetTempElements();
+		tmpElements->Clear();
+		for (auto refIter = tmpFormLst->Begin(); refIter; ++refIter)
+			tmpElements->Append(*refIter);
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	}
 	return true;
 }
@@ -383,7 +389,7 @@ bool Cmd_GetTempEffects_Execute(COMMAND_ARGS)
 	do
 	{
 		activeEff = iter->data;
-		if (!activeEff || !activeEff->bApplied || !ValidTempEffect(activeEff->effectItem) || !activeEff->magicItem) continue;
+		if (!activeEff || !activeEff->bActive || activeEff->bTerminated || !ValidTempEffect(activeEff->effectItem) || !activeEff->magicItem) continue;
 		form = DYNAMIC_CAST(activeEff->magicItem, MagicItem, TESForm);
 		if (!form) continue;
 		timeLeft = activeEff->duration - activeEff->timeElapsed;
@@ -401,10 +407,11 @@ bool Cmd_GetTempEffects_Execute(COMMAND_ARGS)
 	while (iter = iter->next);
 	if (!sortEffects.Empty())
 	{
-		s_tempElements.Clear();
+		TempElements *tmpElements = GetTempElements();
+		tmpElements->Clear();
 		for (auto entry = sortEffects.Begin(); entry; ++entry)
-			s_tempElements.Append(entry().valuesArr);
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+			tmpElements->Append(entry().valuesArr);
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	}
 	return true;
 }
@@ -421,7 +428,7 @@ bool Cmd_RemoveNthTempEffect_Execute(COMMAND_ARGS)
 	do
 	{
 		activeEff = iter->data;
-		if (!activeEff || !activeEff->bApplied || !ValidTempEffect(activeEff->effectItem) || !activeEff->magicItem ||
+		if (!activeEff || !activeEff->bActive || activeEff->bTerminated || !ValidTempEffect(activeEff->effectItem) || !activeEff->magicItem ||
 			!DYNAMIC_CAST(activeEff->magicItem, MagicItem, TESForm)) continue;
 		if (!index--)
 		{
@@ -534,7 +541,7 @@ bool __fastcall IsSpellTargetAlt(Actor *actor, MagicItem *magicItem)
 	do
 	{
 		activeEff = iter->data;
-		if (activeEff && (activeEff->magicItem == magicItem) && activeEff->bApplied)
+		if (activeEff && (activeEff->magicItem == magicItem) && activeEff->bActive && !activeEff->bTerminated)
 			return true;
 	}
 	while (iter = iter->next);

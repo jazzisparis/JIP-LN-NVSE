@@ -359,26 +359,34 @@ bool Cmd_GetAllItems_Execute(COMMAND_ARGS)
 	BGSListForm *listForm = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &typeID, &noNonPlayable, &noQuestItem, &noEquipped, &listForm))
 		return true;
-	if ((typeID && !kInventoryType[typeID]) || !thisObj->GetInventoryItems(typeID))
+	if (typeID && !kInventoryType[typeID])
+		return true;
+	InventoryItemsMap *invItemsMap = GetInventoryItemsMap();
+	if (!GetInventoryItems(thisObj, typeID, invItemsMap))
 		return true;
 	if (NOT_ACTOR(thisObj)) noEquipped = 0;
 	TESForm *item;
+	TempElements *tmpElements;
 	if (listForm) listForm->RemoveAll();
-	else s_tempElements.Clear();
+	else
+	{
+		tmpElements = GetTempElements();
+		tmpElements->Clear();
+	}
 	int count = 0;
-	for (auto itemIter = s_inventoryItemsMap.Begin(); itemIter; ++itemIter)
+	for (auto itemIter = invItemsMap->Begin(); itemIter; ++itemIter)
 	{
 		item = itemIter.Key();
 		if ((noNonPlayable && !item->IsItemPlayable()) || (noQuestItem && item->IsQuestItem()) || (noEquipped && ((Actor*)thisObj)->IsItemEquipped(item)))
 			continue;
 		if (listForm) listForm->list.Prepend(item);
-		else s_tempElements.Append(item);
+		else tmpElements->Append(item);
 		count++;
 	}
 	if (count)
 	{
 		if (listForm) *result = count;
-		else AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+		else AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	}
 	return true;
 }
@@ -390,7 +398,10 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 	BGSListForm *listForm = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &typeID, &noNonPlayable, &noQuestItem, &noEquipped, &listForm))
 		return true;
-	if ((typeID && !kInventoryType[typeID]) || !thisObj->GetInventoryItems(typeID))
+	if (typeID && !kInventoryType[typeID])
+		return true;
+	InventoryItemsMap *invItemsMap = GetInventoryItemsMap();
+	if (!GetInventoryItems(thisObj, typeID, invItemsMap))
 		return true;
 	if (NOT_ACTOR(thisObj)) noEquipped = 0;
 	TESForm *item;
@@ -399,10 +410,15 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 	ListNode<ExtraDataList> *xdlIter;
 	ExtraDataList *xData;
 	TESObjectREFR *invRef;
+	TempElements *tmpElements;
 	if (listForm) listForm->RemoveAll();
-	else s_tempElements.Clear();
+	else
+	{
+		tmpElements = GetTempElements();
+		tmpElements->Clear();
+	}
 	int count = 0;
-	for (auto dataIter = s_inventoryItemsMap.Begin(); dataIter; ++dataIter)
+	for (auto dataIter = invItemsMap->Begin(); dataIter; ++dataIter)
 	{
 		item = dataIter.Key();
 		if ((noNonPlayable && !item->IsItemPlayable()) || (noQuestItem && item->IsQuestItem()))
@@ -425,7 +441,7 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 					continue;
 				invRef = CreateInventoryRef(thisObj, item, xCount, xData);
 				if (listForm) listForm->list.Prepend(invRef);
-				else s_tempElements.Append(invRef);
+				else tmpElements->Append(invRef);
 				count++;
 			}
 			while (baseCount && (xdlIter = xdlIter->next));
@@ -434,14 +450,14 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 		{
 			invRef = CreateInventoryRef(thisObj, item, baseCount, NULL);
 			if (listForm) listForm->list.Prepend(invRef);
-			else s_tempElements.Append(invRef);
+			else tmpElements->Append(invRef);
 			count++;
 		}
 	}
 	if (count)
 	{
 		if (listForm) *result = count;
-		else AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+		else AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	}
 	return true;
 }
@@ -560,18 +576,19 @@ bool Cmd_GetBaseItems_Execute(COMMAND_ARGS)
 	}
 	TESContainer *container = DYNAMIC_CAST(baseForm, TESForm, TESContainer);
 	if (!container) return true;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<TESContainer::FormCount> *traverse = container->formCountList.Head();
 	TESContainer::FormCount *formCount;
 	do
 	{
 		formCount = traverse->data;
 		if (formCount)
-			s_tempElements.Append(formCount->form);
+			tmpElements->Append(formCount->form);
 	}
 	while (traverse = traverse->next);
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -625,8 +642,10 @@ bool Cmd_GetEquippedArmorRefs_Execute(COMMAND_ARGS)
 			ExtraContainerChanges::EntryDataList *entryList = thisObj->GetContainerChangesList();
 			if (entryList)
 			{
-				s_tempFormList.Clear();
-				s_tempElements.Clear();
+				TempFormList *tmpFormLst = GetTempFormList();
+				tmpFormLst->Clear();
+				TempElements *tmpElements = GetTempElements();
+				tmpElements->Clear();
 				ValidBip01Names::Data *slotData = equipment->slotData;
 				TESForm *item;
 				ContChangesEntry *entry;
@@ -635,12 +654,12 @@ bool Cmd_GetEquippedArmorRefs_Execute(COMMAND_ARGS)
 				for (UInt32 count = 20; count; count--, slotData++)
 				{
 					item = slotData->item;
-					if (!item || NOT_TYPE(item, TESObjectARMO) || !s_tempFormList.Insert(item) || !(entry = entryList->FindForItem(item)) || !(xData = entry->GetEquippedExtra()))
+					if (!item || NOT_TYPE(item, TESObjectARMO) || !tmpFormLst->Insert(item) || !(entry = entryList->FindForItem(item)) || !(xData = entry->GetEquippedExtra()))
 						continue;
 					invRef = CreateInventoryRef(thisObj, item, entry->countDelta, xData);
-					if (invRef) s_tempElements.Append(invRef);
+					if (invRef) tmpElements->Append(invRef);
 				}
-				AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+				AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 			}
 		}
 	}

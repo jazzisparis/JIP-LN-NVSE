@@ -183,11 +183,12 @@ bool Cmd_RefMapArrayGetKeys_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName)) return true;
 	RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
 	if (!idsMap) return true;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	for (auto idIter = idsMap->Begin(); idIter; ++idIter)
-		s_tempElements.Append(LookupFormByRefID(idIter.Key()));
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+		tmpElements->Append(LookupFormByRefID(idIter.Key()));
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -200,12 +201,13 @@ bool Cmd_RefMapArrayGetAll_Execute(COMMAND_ARGS)
 	RefMapVarsMap *findMod = varInfo.ModsMap().GetPtr(varInfo.modIndex);
 	if (!findMod || findMod->Empty()) return true;
 	NVSEArrayVar *varsMap = CreateStringMap(NULL, NULL, 0, scriptObj);
+	TempElements *tmpElements = GetTempElements();
 	for (auto varIter = findMod->Begin(); varIter; ++varIter)
 	{
-		s_tempElements.Clear();
+		tmpElements->Clear();
 		for (auto idIter = varIter().Begin(); idIter; ++idIter)
-			s_tempElements.Append(LookupFormByRefID(idIter.Key()));
-		SetElement(varsMap, ArrayElementL(varIter.Key()), ArrayElementL(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj)));
+			tmpElements->Append(LookupFormByRefID(idIter.Key()));
+		SetElement(varsMap, ArrayElementL(varIter.Key()), ArrayElementL(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj)));
 	}
 	AssignCommandResult(varsMap, result);
 	return true;
@@ -256,13 +258,13 @@ bool Cmd_RefMapArraySetRef_Execute(COMMAND_ARGS)
 
 bool Cmd_RefMapArraySetString_Execute(COMMAND_ARGS)
 {
-	char varName[0x50];
+	char varName[0x50], *buffer = GetStrArgBuffer();
 	TESForm *form = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &s_strValBuffer, &form))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, buffer, &form))
 	{
 		AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName);
 		if (value)
-			value->SetStr(s_strValBuffer);
+			value->SetStr(buffer);
 	}
 	return true;
 }

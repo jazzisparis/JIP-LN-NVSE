@@ -28,7 +28,7 @@ __declspec(naked) BSExtraData *BaseExtraList::GetByType(UInt32 xType) const
 		jnc		retnNULL
 		push	ecx
 		mov		ecx, 0x11C3920
-		call	LightCS::EnterSleep
+		call	LightCS::Enter
 		pop		ecx
 		mov		eax, [ecx+4]
 		mov		edx, [esp+4]

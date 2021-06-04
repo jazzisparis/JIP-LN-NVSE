@@ -386,6 +386,8 @@ class bhkLimitedHingeConstraint;
 class bhkRagdollController;
 class bhkRagdollPenetrationUtil;
 
+class BSWin32Audio;
+
 #include "internal/class_vtbls.h"
 #include "internal/memory_pool.h"
 #include "internal/utility.h"

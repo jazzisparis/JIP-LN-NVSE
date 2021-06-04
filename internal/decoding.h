@@ -634,27 +634,6 @@ public:
 };
 STATIC_ASSERT(sizeof(Explosion) == 0x104);
 
-// 0C (from Stewie)
-struct Sound
-{
-	UInt32		unk00;		// 00
-	UInt8		byte04;		// 04
-	UInt8		pad05[3];	// 05
-	UInt32		unk08;		// 08
-
-	Sound() : unk00(0xFFFFFFFF), byte04(0), unk08(0) {}
-
-	Sound(const char *soundEDID, UInt32 flags)
-	{
-		ThisCall(0xAD7550, *(BSWin32Audio**)0x11F6D98, this, soundEDID, flags);
-	}
-
-	void Play()
-	{
-		ThisCall(0xAD8830, this, 0);
-	}
-};
-
 template <typename Item> struct ListBoxItem
 {
 	Tile	*tile;

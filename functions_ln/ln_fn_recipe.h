@@ -28,7 +28,8 @@ bool Cmd_GetFormRecipes_Execute(COMMAND_ARGS)
 {
 	TESForm *form, *filter = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &filter)) return true;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	if (filter && NOT_ID(filter, TESRecipeCategory)) filter = NULL;
 	ListNode<TESRecipe> *rcpeIter = g_dataHandler->recipeList.Head();
 	TESRecipe *recipe;
@@ -43,12 +44,12 @@ bool Cmd_GetFormRecipes_Execute(COMMAND_ARGS)
 		{
 			component = entryIter->data;
 			if (component && (component->item == form))
-				s_tempElements.Append(recipe);
+				tmpElements->Append(recipe);
 		}
 		while (entryIter = entryIter->next);
 	}
 	while (rcpeIter = rcpeIter->next);
-	AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -57,7 +58,8 @@ bool Cmd_GetFormRecipeOutputs_Execute(COMMAND_ARGS)
 	TESForm *form, *filter;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &filter))
 		return true;
-	s_tempFormList.Clear();
+	TempFormList *tmpFormLst = GetTempFormList();
+	tmpFormLst->Clear();
 	if (filter && NOT_ID(filter, TESRecipeCategory)) filter = NULL;
 	ListNode<TESRecipe> *rcpeIter = g_dataHandler->recipeList.Head();
 	TESRecipe *recipe;
@@ -76,19 +78,20 @@ bool Cmd_GetFormRecipeOutputs_Execute(COMMAND_ARGS)
 			do
 			{
 				if (component = outputIter->data)
-					s_tempFormList.Insert(component->item);
+					tmpFormLst->Insert(component->item);
 			}
 			while (outputIter = outputIter->next);
 		}
 		while (inputIter = inputIter->next);
 	}
 	while (rcpeIter = rcpeIter->next);
-	if (!s_tempFormList.Empty())
+	if (!tmpFormLst->Empty())
 	{
-		s_tempElements.Clear();
-		for (auto refIter = s_tempFormList.Begin(); refIter; ++refIter)
-			s_tempElements.Append(*refIter);
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+		TempElements *tmpElements = GetTempElements();
+		tmpElements->Clear();
+		for (auto refIter = tmpFormLst->Begin(); refIter; ++refIter)
+			tmpElements->Append(*refIter);
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	}
 	return true;
 }

@@ -28,7 +28,20 @@ class NiString
 {
 	const char		*str;
 
-	UInt32 *RefCount() const {return (UInt32*)(str - 8);}
+	void Set(const char *inStr)
+	{
+		str = inStr;
+		if (str) InterlockedIncrement((UInt32*)(str - 8));
+	}
+
+	void Unset()
+	{
+		if (str)
+		{
+			InterlockedDecrement((UInt32*)(str - 8));
+			str = nullptr;
+		}
+	}
 
 public:
 	NiString() : str(nullptr) {}
@@ -36,35 +49,33 @@ public:
 	{
 		str = (inStr && *inStr) ? CdeclCall<const char*>(0xA5B690, inStr) : nullptr;
 	}
-	NiString(const NiString &inStr)
-	{
-		str = inStr.str;
-		if (str) InterlockedIncrement(RefCount());
-	}
-	~NiString()
-	{
-		if (str) InterlockedDecrement(RefCount());
-	}
+	NiString(const NiString &inStr) {Set(inStr.str);}
+	~NiString() {Unset();}
 
 	const char *Get() const {return str;}
 
 	UInt32 Length() const {return str ? *(UInt32*)(str - 4) : 0;}
 
+	explicit operator bool() const {return str != nullptr;}
+
 	inline NiString& operator=(const char *inStr)
 	{
-		if (str) InterlockedDecrement(RefCount());
-		str = (inStr && *inStr) ? CdeclCall<const char*>(0xA5B690, inStr) : nullptr;
+		Unset();
+		if (inStr && *inStr)
+			str = CdeclCall<const char*>(0xA5B690, inStr);
 		return *this;
 	}
 	inline NiString& operator=(const NiString &inStr)
 	{
-		str = inStr.str;
-		if (str) InterlockedIncrement(RefCount());
+		if (str != inStr.str)
+			Set(inStr.str);
 		return *this;
 	}
 
 	inline bool operator==(const NiString &rhs) const {return str == rhs.str;}
 	inline bool operator<(const NiString &rhs) const {return str < rhs.str;}
+
+	UInt32 RefCount() const {return str ? *(UInt32*)(str - 8) : 0;}
 };
 
 class NiMemObject {};
@@ -103,8 +114,12 @@ struct NiObjectCopyInfo
 	UInt8								pad0D[3];	// 0D
 	NiVector3							scale;		// 10	Appears to be unused
 
-	/*NiObjectCopyInfo(float _scale) {ThisCall(0x4AD050, this, _scale);}
-	~NiObjectCopyInfo() {ThisCall(0x4AD1D0, this);}*/
+	NiObjectCopyInfo(UInt32 bucketCount)
+	{
+		ThisCall(0x4AD0C0, this, bucketCount);
+		scale = {1.0F, 1.0F, 1.0F};
+	}
+	//~NiObjectCopyInfo() {ThisCall(0x4AD1D0, this);}
 };
 
 // 08
@@ -552,6 +567,14 @@ class BSBound : public NiExtraData
 public:
 	NiVector3		centre;			// 0C
 	NiVector3		dimensions;		// 18
+};
+
+// 14
+class NiBinaryExtraData : public NiExtraData
+{
+public:
+	UInt32		unk0C;		// 0C
+	UInt32		unk10;		// 10
 };
 
 // 10
@@ -1092,9 +1115,9 @@ public:
 
 	NiTArray<NiAVObject*>	m_children;		// 9C
 
-	static NiNode* __stdcall Create(const char *nodeName);
+	static NiNode* __stdcall Create(const char *nameStr);		//	str of NiString
 	NiNode* CreateCopy();
-	NiAVObject* __fastcall GetBlockByName(const char *objName);
+	NiAVObject* __fastcall GetBlockByName(const char *nameStr);	//	str of NiString
 	NiAVObject* __fastcall GetBlock(const char *blockName);
 	NiNode* __fastcall GetNode(const char *nodeName);
 	bool IsMovable();

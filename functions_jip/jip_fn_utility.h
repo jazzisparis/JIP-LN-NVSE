@@ -89,10 +89,12 @@ void __fastcall CreateForType(NVSEArrayVar *arr, char *dataStr)
 bool Cmd_ReadArrayFromFile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	char filePath[0x80];
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &filePath))
 		return true;
-	ReplaceChr(s_strArgBuffer, '/', '\\');
-	LineIterator lineIter(s_strArgBuffer, s_strValBuffer);
+	ReplaceChr(filePath, '/', '\\');
+	char *buffer = GetStrArgBuffer();
+	LineIterator lineIter(filePath, buffer);
 	if (!lineIter) return true;
 	NVSEArrayVar *mainArr = CreateArray(NULL, 0, scriptObj);
 	char *dataPtr = lineIter.Get(), *pos;
@@ -142,8 +144,9 @@ bool Cmd_ReadArrayFromFile_Execute(COMMAND_ARGS)
 bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char filePath[0x80];
 	UInt32 apnd, arrID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &apnd, &arrID))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &filePath, &apnd, &arrID))
 		return true;
 	NVSEArrayVar *mainArray = LookupArrayByID(arrID), *column;
 	if (!mainArray) return true;
@@ -164,9 +167,11 @@ bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 		}
 		else columnBuffer.Append(elem);
 	}
+	ReplaceChr(filePath, '/', '\\');
 	FileStream outputFile;
-	if (outputFile.OpenWrite(s_strArgBuffer, apnd != 0))
+	if (outputFile.OpenWrite(filePath, apnd != 0))
 	{
+		char valStr[0x20];
 		for (idx = 0; idx < numLines; idx++)
 		{
 			for (cnt = 0; cnt < topLine.size; cnt++)
@@ -177,8 +182,8 @@ bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 					switch (elem->GetType())
 					{
 						case 1:
-							FltToStr(s_strValBuffer, elem->Number());
-							outputFile.WriteStr(s_strValBuffer);
+							FltToStr(valStr, elem->Number());
+							outputFile.WriteStr(valStr);
 							break;
 						case 2:
 							if (elem->Form())
@@ -210,49 +215,53 @@ bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 
 bool Cmd_ReadStringFromFile_Execute(COMMAND_ARGS)
 {
+	char filePath[0x80], *buffer = GetStrArgBuffer(), *startPtr = buffer;
 	UInt32 startAt = 0, lineCount = 0;
-	char *resStr = s_strValBuffer;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &startAt, &lineCount))
+	*startPtr = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filePath, &startAt, &lineCount))
 	{
-		ReplaceChr(s_strArgBuffer, '/', '\\');
-		FileStream sourceFile(s_strArgBuffer);
-		if (sourceFile)
+		ReplaceChr(filePath, '/', '\\');
+		if (FileToBuffer(filePath, buffer) && (startAt || lineCount))
 		{
 			if (startAt) startAt--;
 			char data;
-			UInt32 length = 0;
-			do
+			while (data = *buffer)
 			{
-				data = sourceFile.ReadChar();
-				if (data <= 0) break;
-				if (data == '\r') continue;
-				if (startAt)
+				if (data == '\n')
 				{
-					if (data == '\n') startAt--;
-					continue;
+					if (startAt)
+					{
+						startAt--;
+						startPtr = buffer + 1;
+					}
+					else if (!--lineCount)
+					{
+						if (buffer[-1] == '\r')
+							buffer[-1] = 0;
+						else *buffer = 0;
+						break;
+					}
 				}
-				if ((++length == kMaxMessageLength) || ((data == '\n') && !--lineCount))
-					break;
-				*resStr++ = data;
+				buffer++;
 			}
-			while (true);
 		}
 	}
-	*resStr = 0;
-	AssignString(PASS_COMMAND_ARGS, s_strValBuffer);
+	AssignString(PASS_COMMAND_ARGS, startPtr);
 	return true;
 }
 
 bool Cmd_WriteStringToFile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char filePath[0x80], *buffer = GetStrArgBuffer();
 	UInt32 apnd;
-	if (!ExtractFormatStringArgs(2, s_strValBuffer, EXTRACT_ARGS_EX, kCommandInfo_WriteStringToFile.numParams, &s_strArgBuffer, &apnd))
+	if (!ExtractFormatStringArgs(2, buffer, EXTRACT_ARGS_EX, kCommandInfo_WriteStringToFile.numParams, &filePath, &apnd))
 		return true;
+	ReplaceChr(filePath, '/', '\\');
 	FileStream outputFile;
-	if (outputFile.OpenWrite(s_strArgBuffer, apnd != 0))
+	if (outputFile.OpenWrite(filePath, apnd != 0))
 	{
-		outputFile.WriteStr(s_strValBuffer);
+		outputFile.WriteStr(buffer);
 		*result = 1;
 	}
 	return true;
@@ -348,12 +357,19 @@ bool Cmd_ModLogPrint_Execute(COMMAND_ARGS)
 {
 	UInt32 modIdx = scriptObj ? scriptObj->modIndex : 0xFF;
 	if (modIdx == 0xFF) return true;
+	char *buffer = GetStrArgBuffer();
 	UInt32 indentLevel;
-	if (!ExtractFormatStringArgs(1, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_ModLogPrint.numParams, &indentLevel))
+	if (!ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_ModLogPrint.numParams, &indentLevel))
 		return true;
-	StrCopy(StrCopy(s_modLogPath, g_dataHandler->GetNthModName(modIdx)), ".log");
+	char modLogPath[0x80];
+	*(UInt32*)modLogPath = ' doM';
+	*(UInt32*)(modLogPath + 4) = 'sgoL';
+	modLogPath[8] = '\\';
+	char *endPtr = StrCopy(modLogPath + 9, g_dataHandler->GetNthModName(modIdx));
+	*(UInt32*)endPtr = 'gol.';
+	endPtr[4] = 0;
 	FileStream outputFile;
-	if (outputFile.OpenWrite(s_modLogPathFull, !s_openLogs.Insert(modIdx)))
+	if (outputFile.OpenWrite(modLogPath, !s_openLogs.Insert(modIdx)))
 	{
 		if (indentLevel)
 		{
@@ -362,7 +378,7 @@ bool Cmd_ModLogPrint_Execute(COMMAND_ARGS)
 			else indentLevel = 40 - indentLevel;
 			outputFile.WriteStr(kIndentLevelStr + indentLevel);
 		}
-		outputFile.WriteStr(s_strArgBuffer);
+		outputFile.WriteStr(buffer);
 	}
 	return true;
 }
@@ -442,9 +458,12 @@ bool Cmd_SetOptionalPatch_Execute(COMMAND_ARGS)
 bool Cmd_GetPluginHeaderVersion_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, s_dataPath))
+	char dataPath[0x80];
+	*(UInt32*)dataPath = 'atad';
+	dataPath[4] = '\\';
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, dataPath + 5))
 	{
-		FileStream sourceFile(s_dataPathFull, 0x1E);
+		FileStream sourceFile(dataPath, 0x1E);
 		if (sourceFile)
 		{
 			float version;

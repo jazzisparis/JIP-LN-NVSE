@@ -94,11 +94,11 @@ Tile* __stdcall InjectUIComponent(Tile *parentTile, char *dataStr)
 bool Cmd_InjectUIComponent_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char tilePath[0x100];
-	if (ExtractFormatStringArgs(1, s_strValBuffer, EXTRACT_ARGS_EX, kCommandInfo_InjectUIComponent.numParams, &tilePath))
+	char tilePath[0x100], *buffer = GetStrArgBuffer();
+	if (ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_InjectUIComponent.numParams, &tilePath))
 	{
 		Tile *component = GetTargetComponent(tilePath);
-		*result = (component && InjectUIComponent(component, s_strValBuffer)) ? 1 : 0;
+		*result = (component && InjectUIComponent(component, buffer)) ? 1 : 0;
 	}
 	return true;
 }
@@ -399,16 +399,17 @@ bool Cmd_GetBarterItems_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &sold) || !*g_barterMenu || !(*g_barterMenu)->merchantRef) return true;
 	BarterMenu *brtMenu = *g_barterMenu;
 	TESObjectREFR *target = sold ? brtMenu->merchantRef->GetMerchantContainer() : g_thePlayer, *itemRef;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<ContChangesEntry> *iter = sold ? brtMenu->rightBarter.Head() : brtMenu->leftBarter.Head();
 	do
 	{
 		if (itemRef = CreateRefForStack(target, iter->data))
-			s_tempElements.Append(itemRef);
+			tmpElements->Append(itemRef);
 	}
 	while (iter = iter->next);
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -450,17 +451,18 @@ const UInt32 kMsgIconsPathAddr[] = {0x10208A0, 0x10208E0, 0x1025CDC, 0x1030E78, 
 bool Cmd_MessageExAlt_Execute(COMMAND_ARGS)
 {
 	float displayTime;
-	if (!ExtractFormatStringArgs(1, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_MessageExAlt.numParams, &displayTime))
+	char *buffer = GetStrArgBuffer();
+	if (!ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_MessageExAlt.numParams, &displayTime))
 		return true;
-	char *msgPtr = GetNextToken(s_strArgBuffer, '|');
+	char *msgPtr = GetNextToken(buffer, '|');
 	msgPtr[0x203] = 0;
 	if (*msgPtr)
 	{
-		if ((s_strArgBuffer[0] == '#') && (s_strArgBuffer[1] >= '0') && (s_strArgBuffer[1] <= '6') && !s_strArgBuffer[2])
-			QueueUIMessage(msgPtr, 0, (const char*)kMsgIconsPathAddr[s_strArgBuffer[1] - '0'], NULL, displayTime, 0);
-		else QueueUIMessage(msgPtr, 0, s_strArgBuffer, NULL, displayTime, 0);
+		if ((buffer[0] == '#') && (buffer[1] >= '0') && (buffer[1] <= '6') && !buffer[2])
+			QueueUIMessage(msgPtr, 0, (const char*)kMsgIconsPathAddr[buffer[1] - '0'], NULL, displayTime, 0);
+		else QueueUIMessage(msgPtr, 0, buffer, NULL, displayTime, 0);
 	}
-	else QueueUIMessage(s_strArgBuffer, 0, NULL, NULL, displayTime, 0);
+	else QueueUIMessage(buffer, 0, NULL, NULL, displayTime, 0);
 	return true;
 }
 
@@ -481,26 +483,29 @@ bool Cmd_SetFontFile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 fontID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fontID, s_dataPath) || !fontID || (fontID > 89) || (fontID == 9) || !*s_dataPath) return true;
-	FontInfo *fontInfo = s_fontInfosMap.Get(s_dataPath);
+	char dataPathFull[0x100], *dataPath = dataPathFull + 5;
+	*(UInt32*)dataPathFull = 'atad';
+	dataPathFull[4] = '\\';
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fontID, dataPath) || !fontID || (fontID > 89) || (fontID == 9) || !*dataPath) return true;
+	FontInfo *fontInfo = s_fontInfosMap.Get(dataPath);
 	if (!fontInfo)
 	{
-		if (!FileExists(s_dataPathFull)) return true;
+		if (!FileExists(dataPathFull)) return true;
 		fontInfo = (FontInfo*)GameHeapAlloc(sizeof(FontInfo));
-		InitFontInfo(fontInfo, fontID, s_dataPath, true);
+		InitFontInfo(fontInfo, fontID, dataPath, true);
 		if (!fontInfo->bufferData)
 		{
 			GameHeapFree(fontInfo);
 			return true;
 		}
-		s_fontInfosMap[s_dataPath] = fontInfo;
+		s_fontInfosMap[dataPath] = fontInfo;
 	}
 	g_fontManager->fontInfos[fontID - 1] = fontInfo;
 	*result = 1;
 	return true;
 }
 
-__declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float height, Script *callback)
+__declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float height, char *msgTitle, Script *callback)
 {
 	static const char altXMLPath[] = "Data\\NVSE\\plugins\\textinput\\texteditmenu.xml";
 	__asm
@@ -553,7 +558,7 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		push	kTileValue_user1
 		mov		ecx, [edi+4]
 		CALL_EAX(kAddr_TileSetFloat)
-		mov		esi, offset s_strArgBuffer
+		mov		esi, [esp+0x14]
 		mov		[esi+0x50], 0
 		cmp		[esi], 0
 		jnz		hasTitle
@@ -605,7 +610,7 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		mov		eax, [eax+0x28]
 		mov		[edi+0x4C], eax
 		mov		dword ptr [edi+0x54], 0x00000100
-		mov		eax, [esp+0x14]
+		mov		eax, [esp+0x18]
 		mov		[edi+0x58], eax
 		mov		ecx, edi
 		call	TextInputRefreshHook
@@ -625,7 +630,7 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		mov		eax, edi
 		pop		edi
 		pop		esi
-		retn	0xC
+		retn	0x10
 	}
 }
 
@@ -633,8 +638,9 @@ bool Cmd_ShowTextInputMenu_Execute(COMMAND_ARGS)
 {
 	Script *callback;
 	float width, height;
-	if (!*g_textEditMenu && ExtractFormatStringArgs(3, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_ShowTextInputMenu.numParams,
-		&callback, &width, &height) && IS_ID(callback, Script) && ShowTextEditMenu(width, height, callback))
+	char *msgTitle = GetStrArgBuffer();;
+	if (!*g_textEditMenu && ExtractFormatStringArgs(3, msgTitle, EXTRACT_ARGS_EX, kCommandInfo_ShowTextInputMenu.numParams,
+		&callback, &width, &height) && IS_ID(callback, Script) && ShowTextEditMenu(width, height, msgTitle, callback))
 		*result = 1;
 	else *result = 0;
 	return true;
@@ -664,11 +670,15 @@ bool Cmd_SetTextInputExtendedProps_Execute(COMMAND_ARGS)
 bool Cmd_SetTextInputString_Execute(COMMAND_ARGS)
 {
 	TextEditMenu *textMenu = *g_textEditMenu;
-	if (textMenu && HOOK_INSTALLED(TextInputClose) && ExtractFormatStringArgs(0, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_SetTextInputString.numParams))
+	if (textMenu && HOOK_INSTALLED(TextInputClose))
 	{
-		textMenu->currentText.Set(s_strArgBuffer);
-		textMenu->cursorIndex = 0;
-		textMenu->HandleKeyboardInput(0x80000006);
+		char *buffer = GetStrArgBuffer();
+		if (ExtractFormatStringArgs(0, buffer, EXTRACT_ARGS_EX, kCommandInfo_SetTextInputString.numParams))
+		{
+			textMenu->currentText.Set(buffer);
+			textMenu->cursorIndex = 0;
+			textMenu->HandleKeyboardInput(0x80000006);
+		}
 	}
 	return true;
 }
@@ -1110,10 +1120,11 @@ __declspec(naked) void __fastcall MessageBoxExAlt(char **msgStrings)
 bool Cmd_MessageBoxExAlt_Execute(COMMAND_ARGS)
 {
 	Script *callback;
-	if (!s_messageBoxScript && ExtractFormatStringArgs(1, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_MessageBoxExAlt.numParams, &callback))
+	char *buffer = GetStrArgBuffer();
+	if (!s_messageBoxScript && ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_MessageBoxExAlt.numParams, &callback))
 	{
 		s_messageBoxScript = callback;
-		char *msgStrings[0x102], **buttonPtr = msgStrings + 2, *delim = s_strArgBuffer;
+		char *msgStrings[0x102], **buttonPtr = msgStrings + 2, *delim = buffer;
 		*buttonPtr = NULL;
 		for (UInt32 count = 0xFF; count; count--)
 		{
@@ -1122,16 +1133,16 @@ bool Cmd_MessageBoxExAlt_Execute(COMMAND_ARGS)
 			*++buttonPtr = delim;
 		}
 		if (!*buttonPtr) *++buttonPtr = "OK";
-		if ((s_strArgBuffer[0] == '^') && (delim = FindChr(s_strArgBuffer + 1, '^')))
+		if ((buffer[0] == '^') && (delim = FindChr(buffer + 1, '^')))
 		{
 			*delim = 0;
-			*msgStrings = s_strArgBuffer + 1;
+			*msgStrings = buffer + 1;
 			msgStrings[1] = delim + 1;
 		}
 		else
 		{
 			*msgStrings = NULL;
-			msgStrings[1] = s_strArgBuffer;
+			msgStrings[1] = buffer;
 		}
 		MessageBoxExAlt(buttonPtr);
 	}
@@ -1142,18 +1153,19 @@ bool Cmd_GetVATSTargets_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	if (!*g_VATSMenu) return true;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<VATSTargetInfo> *iter = g_VATSTargetList->Head();
 	VATSTargetInfo *targetInfo;
 	do
 	{
 		targetInfo = iter->data;
 		if (targetInfo && targetInfo->targetRef)
-			s_tempElements.Append(targetInfo->targetRef);
+			tmpElements->Append(targetInfo->targetRef);
 	}
 	while (iter = iter->next);
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -1577,18 +1589,19 @@ bool Cmd_ToggleHUDCursor_Execute(COMMAND_ARGS)
 bool Cmd_AddTileFromTemplate_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractFormatStringArgs(0, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_AddTileFromTemplate.numParams))
+	char *buffer = GetStrArgBuffer();
+	if (ExtractFormatStringArgs(0, buffer, EXTRACT_ARGS_EX, kCommandInfo_AddTileFromTemplate.numParams))
 	{
-		char *tempName = GetNextToken(s_strArgBuffer, '|');
+		char *tempName = GetNextToken(buffer, '|');
 		if (!*tempName) return true;
 		char *altName = GetNextToken(tempName, '|');
 		TileMenu *menu;
 		Tile *component = NULL;
-		char *slashPos = SlashPos(s_strArgBuffer);
+		char *slashPos = SlashPos(buffer);
 		if (slashPos)
 		{
 			*slashPos = 0;
-			menu = GetMenuTile(s_strArgBuffer);
+			menu = GetMenuTile(buffer);
 			if (!menu) return true;
 			const char *trait = NULL;
 			component = menu->GetComponent(slashPos + 1, &trait);
@@ -1596,7 +1609,7 @@ bool Cmd_AddTileFromTemplate_Execute(COMMAND_ARGS)
 		}
 		else
 		{
-			menu = GetMenuTile(s_strArgBuffer);
+			menu = GetMenuTile(buffer);
 			component = menu;
 		}
 		if (component)
@@ -1710,13 +1723,13 @@ bool Cmd_AttachUIXML_Execute(COMMAND_ARGS)
 bool Cmd_AttachUIComponent_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char nodeName[0x40];
-	if (ExtractFormatStringArgs(1, s_strValBuffer, EXTRACT_ARGS_EX, kCommandInfo_AttachUIComponent.numParams, &nodeName))
+	char nodeName[0x40], *buffer = GetStrArgBuffer();
+	if (ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_AttachUIComponent.numParams, &nodeName))
 	{
 		NiNode *targetNode = thisObj->GetNode(nodeName);
 		if (targetNode)
 		{
-			Tile *component = InjectUIComponent(g_HUDMainMenu->tile, s_strValBuffer);
+			Tile *component = InjectUIComponent(g_HUDMainMenu->tile, buffer);
 			if (component && component->node)
 			{
 				targetNode->AddObject(component->node, 1);
