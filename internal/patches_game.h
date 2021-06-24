@@ -2171,9 +2171,9 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	TESObjectWEAP *hitWeapon = hitData->weapon;
 	hitData->wpnBaseDmg = hitData->healthDmg;
 	tList<TESAmmoEffect> *ammoEffects = NULL;
+	TESAmmo* ammo = NULL;
 	if (hitWeapon && hitWeapon->ammo.ammo)
 	{
-		TESAmmo *ammo = NULL;
 		if (source)
 		{
 			ContChangesEntry *ammoInfo = source->GetAmmoInfo();
@@ -2195,7 +2195,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	if (target->isTeammate)
 		flagPCTM |= 8;
 	float dmgResist, dmgThreshold, cpyThreshold, hitLocDT = 0, hitLocDR = 0, valueMod1, valueMod2;
-	if (hitWeapon && (hitWeapon->weaponFlags1 & 1))
+	if ((hitWeapon && (hitWeapon->weaponFlags1 & 1)) || (ammo && (ammo->flags & 1)))
 	{
 		dmgResist = 1.0F;
 		dmgThreshold = 0;
