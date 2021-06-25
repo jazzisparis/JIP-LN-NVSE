@@ -1329,6 +1329,9 @@ public:
 	SInt32 GetTargetIndex(TESObjectREFR *refr);
 };
 
+typedef BGSQuestObjective::Target ObjectiveTarget;
+typedef BGSQuestObjective::Target::Data ObjectiveTargetData;
+
 class BGSOpenCloseForm
 {
 public:
@@ -3257,7 +3260,7 @@ public:
 	UInt8				phaseLength;		// 55
 	UInt8				pad56[2];			// 56
 
-	WeatherEntry *GetWeatherEntry(TESWeather *weather, bool remove);
+	WeatherEntry *GetWeatherEntry(TESWeather *weather, bool remove = false);
 };
 
 STATIC_ASSERT(sizeof(TESClimate) == 0x58);

@@ -332,7 +332,7 @@ STATIC_ASSERT(sizeof(NiTransformInterpolator) == 0x48);
 class NiControllerSequence : public NiObject
 {
 public:
-	virtual void	Unk_23(void);
+	virtual bool	Unk_23(float arg1, UInt8 arg2);
 
 	struct ControlledBlock
 	{
@@ -371,6 +371,8 @@ public:
 	UInt16				word70;					// 70
 	UInt8				byte72;					// 72
 	UInt8				byte73;					// 73	Pad
+
+	bool Play();
 };
 STATIC_ASSERT(sizeof(NiControllerSequence) == 0x74);
 
@@ -1317,7 +1319,7 @@ public:
 	UInt8							pad1DD[3];		// 1DD
 	BSPortalGraph					*portalGraph;	// 1E0
 	UInt32							unk1E4[3];		// 1E4
-	float							flt1F0[3];		// 1F0
+	NiVector3						cameraPos;		// 1F0
 	UInt8							byte1FC;		// 1FC
 	UInt8							pad1FD[3];		// 1FD
 };
@@ -1755,6 +1757,8 @@ public:
 };
 STATIC_ASSERT(sizeof(NiDX9Renderer) == 0xB80);
 
+class IDirect3DBaseTexture9;
+
 // 70
 class NiDX9TextureData : public NiObject
 {
@@ -1770,14 +1774,14 @@ public:
 	virtual void	Unk_2B(void);
 	virtual void	Unk_2C(void);
 
-	NiTexture			*owningTexture;	// 08
-	UInt32				unk0C[6];		// 0C
-	UInt32				unk24;			// 24
-	UInt32				unk28[14];		// 28
-	NiDX9Renderer		*renderer;		// 60
-	UInt32				unk64;			// 64
-	UInt32				unk68;			// 68
-	UInt32				unk6C;			// 6C
+	NiTexture				*owningTexture;	// 08
+	UInt32					unk0C[6];		// 0C
+	UInt32					unk24;			// 24
+	UInt32					unk28[14];		// 28
+	NiDX9Renderer			*renderer;		// 60
+	IDirect3DBaseTexture9	*d3dInterface;	// 64
+	UInt32					unk68;			// 68
+	UInt32					unk6C;			// 6C
 };
 
 // 30

@@ -1114,7 +1114,7 @@ __declspec(naked) bool ReactionCooldownCheckHook()
 		sub		eax, lastTickCount
 		movd	xmm0, eax
 		cvtdq2ps	xmm0, xmm0
-		divss	xmm0, kFlt1000
+		mulss	xmm0, kFlt1d1000
 		comiss	xmm0, ds:[0x11CE9B8]
 		seta	al
 		jbe		done
@@ -1692,10 +1692,10 @@ __declspec(naked) float __vectorcall GetFrequencyModifier(TESSound *soundForm)
 		movd	xmm1, edx
 		cvtdq2ps	xmm1, xmm1
 		js		isNeg
-		divss	xmm1, kFlt100
+		mulss	xmm1, kFlt1d100
 		jmp		doAdd
 	isNeg:
-		divss	xmm1, kFlt200
+		mulss	xmm1, kFlt1d200
 	doAdd:
 		addss	xmm0, xmm1
 	done:
@@ -1908,6 +1908,29 @@ __declspec(naked) void TileTextApplyScaleHook()
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xDC]
 		retn
+	}
+}
+
+__declspec(naked) void __fastcall MarkRefAsModifiedHook(TESObjectREFR *refr, int EDX, UInt32 flag)
+{
+	__asm
+	{
+		mov		eax, [esp+4]
+		cmp		eax, 4
+		jnz		proceed
+		mov		edx, [ecx+0x40]
+		test	edx, edx
+		jz		proceed
+		test	byte ptr [edx+0xA], 0x40
+		jz		proceed
+		retn	4
+	proceed:
+		push	0
+		push	eax
+		push	ecx
+		mov		ecx, ds:[0x11DDF38]
+		CALL_EAX(0x84A690)
+		retn	4
 	}
 }
 
@@ -2170,10 +2193,10 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	Actor *source = hitData->source;
 	TESObjectWEAP *hitWeapon = hitData->weapon;
 	hitData->wpnBaseDmg = hitData->healthDmg;
+	TESAmmo *ammo = NULL;
 	tList<TESAmmoEffect> *ammoEffects = NULL;
 	if (hitWeapon && hitWeapon->ammo.ammo)
 	{
-		TESAmmo *ammo = NULL;
 		if (source)
 		{
 			ContChangesEntry *ammoInfo = source->GetAmmoInfo();
@@ -2388,7 +2411,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 		if (flagPCTM & 2)
 			CdeclCall(0x8D5CB0, source, 9);
 	}
-	if (hitWeapon && (hitWeapon->resistType != -1))
+	if (hitWeapon && (hitWeapon->resistType != -1) && (!ammo || !(ammo->flags & 1)))
 	{
 		valueMod1 = target->avOwner.GetActorValue(hitWeapon->resistType);
 		if (valueMod1 > 0)
@@ -2609,10 +2632,9 @@ __declspec(naked) float GetPCRepairSkill()
 		mulss	xmm2, ds:[0x11D0190]	// fRepairSkillMax
 		subss	xmm2, xmm1
 		mulss	xmm0, xmm2
-		movss	xmm2, kFlt100
-		divss	xmm0, xmm2
+		mulss	xmm0, kFlt1d100
 		addss	xmm0, xmm1
-		minss	xmm0, xmm2
+		minss	xmm0, kFlt100
 		movss	[esp-4], xmm0
 		fld		dword ptr [esp-4]
 		retn
@@ -2676,12 +2698,12 @@ __declspec(naked) float __stdcall GetRepairAmount(float itemToRepairHealth, floa
 	{
 		call	GetPCRepairSkill
 		fstp	st
-		divss	xmm0, kFlt100
-		movss	xmm5, kFlt10
+		mulss	xmm0, kFlt1d100
+		movss	xmm5, kFlt1d10
 		movss	xmm1, [esp+4]
-		divss	xmm1, xmm5
+		mulss	xmm1, xmm5
 		movss	xmm3, [esp+8]
-		divss	xmm3, xmm5
+		mulss	xmm3, xmm5
 		movss	xmm2, xmm1
 		minss	xmm2, xmm3
 		mulss	xmm2, ds:[0x11D074C]	// fRepairScavengeMult
@@ -2693,7 +2715,7 @@ __declspec(naked) float __stdcall GetRepairAmount(float itemToRepairHealth, floa
 		addss	xmm4, xmm1
 		addss	xmm4, xmm2
 		addss	xmm4, xmm3
-		divss	xmm4, xmm5
+		mulss	xmm4, xmm5
 		minss	xmm0, xmm4
 		movss	[esp+4], xmm0
 		fld		dword ptr [esp+4]
@@ -3904,6 +3926,7 @@ void InitGamePatches()
 	WriteRelCall(0x5956BC, (UInt32)GetFactionReactionHook);
 	SAFE_WRITE_BUF(0xA03923, "\x8B\x45\x08\x3D\xB7\x0F\x00\x00\x72\x50\x3D\xF7\x0F\x00\x00\x74\x07\x3D\xBE\x0F\x00\x00\x77\x42\x8B\x45\xCC\xF6\x40\x30\x02\x75\x0B\x80\x48\x30\x02\x50\xE8\x42\x3D\x00\x00\x58\xC9\xC2\x0C\x00");
 	WritePushRetRelJump(0xA22244, 0xA222E7, (UInt32)TileTextApplyScaleHook);
+	SafeWrite32(0x102F5A4, (UInt32)MarkRefAsModifiedHook);
 	*(UInt32*)0x11D0190 = 0x41200000;
 	WriteRelCall(0x4F49AB, (UInt32)LoadIncidentalSoundIDHook);
 	WriteRelJump(0x595560, (UInt32)PickMediaSetHook);
@@ -3937,7 +3960,9 @@ void InitGamePatches()
 	HOOK_INIT_JUMP(UpdateTimeGlobals, 0x867A40);
 	HOOK_INIT_JUMP(DoOperator, 0x593FBC);
 
-	char filePath[0x80] = "Data\\NVSE\\plugins\\xfonts\\*.txt", dataPath[0x80] = "data\\", *namePtr = filePath + 25, *buffer = GetStrArgBuffer(), *dataPtr, *delim;
+	char filePath[0x80], dataPath[0x80], *namePtr = filePath + 25, *buffer = GetStrArgBuffer(), *dataPtr, *delim;
+	memcpy(filePath, "Data\\NVSE\\plugins\\xfonts\\*.txt", 31);
+	memcpy(dataPath, "data\\", 5);
 	SInt32 lines;
 	UInt32 size, index, value;
 	for (DirectoryIterator dirIter(filePath); dirIter; ++dirIter)

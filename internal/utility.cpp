@@ -5,7 +5,7 @@ memcpy_t MemCopy = memcpy, MemMove = memmove;
 
 #define FAST_SLEEP_COUNT 10000UL
 
-__declspec(naked) void PrimitiveCS::Enter()
+__declspec(naked) PrimitiveCS *PrimitiveCS::Enter()
 {
 	__asm
 	{
@@ -14,30 +14,34 @@ __declspec(naked) void PrimitiveCS::Enter()
 		call	GetCurrentThreadId
 		cmp		[ebx], eax
 		jnz		doSpin
+	done:
+		mov		eax, ebx
 		pop		ebx
 		retn
-		ALIGN 16
+		NOP_0xA
 	doSpin:
+		mov		ecx, eax
+		xor		eax, eax
+		lock cmpxchg [ebx], ecx
+		test	eax, eax
+		jz		done
 		push	esi
 		push	edi
-		mov		esi, eax
+		mov		esi, ecx
 		mov		edi, FAST_SLEEP_COUNT
-		ALIGN 16
 	spinHead:
+		dec		edi
+		mov		edx, edi
+		shr		edx, 0x1F
+		push	edx
+		call	Sleep
 		xor		eax, eax
 		lock cmpxchg [ebx], esi
 		test	eax, eax
-		jz		done
-		xor		edx, edx
-		dec		edi
-		sets	dl
-		push	edx
-		call	Sleep
-		jmp		spinHead
-		ALIGN 16
-	done:
+		jnz		spinHead
 		pop		edi
 		pop		esi
+		mov		eax, ebx
 		pop		ebx
 		retn
 	}
@@ -55,29 +59,31 @@ __declspec(naked) void LightCS::Enter()
 		inc		dword ptr [ebx+4]
 		pop		ebx
 		retn
-		ALIGN 16
+		NOP_0x9
 	doSpin:
+		mov		ecx, eax
+		xor		eax, eax
+		lock cmpxchg [ebx], ecx
+		test	eax, eax
+		jz		done
 		push	esi
 		push	edi
-		mov		esi, eax
+		mov		esi, ecx
 		mov		edi, FAST_SLEEP_COUNT
-		ALIGN 16
 	spinHead:
+		dec		edi
+		mov		edx, edi
+		shr		edx, 0x1F
+		push	edx
+		call	Sleep
 		xor		eax, eax
 		lock cmpxchg [ebx], esi
 		test	eax, eax
-		jz		done
-		xor		edx, edx
-		dec		edi
-		sets	dl
-		push	edx
-		call	Sleep
-		jmp		spinHead
-		ALIGN 16
-	done:
-		mov		dword ptr [ebx+4], 1
+		jnz		spinHead
 		pop		edi
 		pop		esi
+	done:
+		mov		dword ptr [ebx+4], 1
 		pop		ebx
 		retn
 	}
@@ -324,6 +330,24 @@ __declspec(naked) UInt32 __fastcall StrLen(const char *str)
 	nullPtr:
 		xor		eax, eax
 		retn
+	}
+}
+
+__declspec(naked) bool __fastcall MemCmp(const void *ptr1, const void *ptr2, UInt32 bsize)
+{
+	__asm
+	{
+		push	esi
+		push	edi
+		mov		esi, ecx
+		mov		edi, edx
+		mov		ecx, [esp+0xC]
+		shr		ecx, 2
+		repe cmpsd
+		setz	al
+		pop		edi
+		pop		esi
+		retn	4
 	}
 }
 
@@ -1037,7 +1061,7 @@ __declspec(naked) UInt32 __fastcall StrToUInt(const char *str)
 
 __declspec(naked) double __vectorcall StrToDbl(const char *str)
 {
-	static const double kFactor10Div[] = {1000000000, 100000000, 10000000, 1000000, 100000, 10000, 1000, 100, 10};
+	static const double kFactor10Div[] = {1.0e-09, 1.0e-08, 1.0e-07, 1.0e-06, 1.0e-05, 0.0001, 0.001, 0.01, 0.1};
 	__asm
 	{
 		push	esi
@@ -1099,7 +1123,7 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 		cvtdq2pd	xmm1, xmm1
 		shl		dl, 1
 		mov		cl, dh
-		divsd	xmm1, kFactor10Div[ecx*8]
+		mulsd	xmm1, kFactor10Div[ecx*8]
 		addsd	xmm0, xmm1
 	addSign:
 		test	dl, 6
@@ -1691,6 +1715,8 @@ void DebugLog::FmtMessage(const char *fmt, va_list args)
 	fputc('\n', theFile);
 	fflush(theFile);
 }
+
+DebugLog s_log, s_debug;
 
 void PrintLog(const char *fmt, ...)
 {

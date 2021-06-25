@@ -149,7 +149,7 @@ public:
 	virtual Tile		*UpdateField(UInt32 valueID, float floatValue, const char *strValue);
 	virtual void		Unk_07(void);
 	virtual TileShaderProperty	*GetShaderProperty();
-	virtual void		Unk_09(NiNode *niNode, float alpha, NiColorAlpha *color);
+	virtual void		SetAlphaAndOverlayColor(NiNode *niNode, float alpha, NiColorAlpha *color);
 
 	struct Value;
 

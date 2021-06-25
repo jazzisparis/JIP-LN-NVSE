@@ -39,7 +39,7 @@ public:
 	{
 		Node *newNode = ALLOC_NODE(Node);
 		T_Data *data = &newNode->data;
-		RawAssign<T_Data>(*data, item);
+		memcpy(data, &item, sizeof(T_Data));
 		newNode->next = head;
 		head = newNode;
 		return data;
@@ -208,7 +208,7 @@ public:
 	{
 		Node *newNode = PrependNew();
 		T_Data *data = &newNode->data;
-		RawAssign<T_Data>(*data, item);
+		memcpy(data, &item, sizeof(T_Data));
 		return data;
 	}
 
@@ -225,7 +225,7 @@ public:
 	{
 		Node *newNode = AppendNew();
 		T_Data *data = &newNode->data;
-		RawAssign<T_Data>(*data, item);
+		memcpy(data, &item, sizeof(T_Data));
 		return data;
 	}
 
@@ -248,7 +248,7 @@ public:
 	{
 		Node *newNode = InsertNew(index);
 		T_Data *data = &newNode->data;
-		RawAssign<T_Data>(*data, item);
+		memcpy(data, &item, sizeof(T_Data));
 		return data;
 	}
 
@@ -955,6 +955,32 @@ public:
 		numKeys = 0;
 	}
 
+	void CopyFrom(const Set &source)
+	{
+		Clear();
+		numKeys = source.numKeys;
+		if (!numKeys) return;
+		if (!keys)
+		{
+			if (numAlloc < numKeys) numAlloc = numKeys;
+			numAlloc = AlignNumAlloc<M_Key>(numAlloc);
+			keys = POOL_ALLOC(numAlloc, M_Key);
+		}
+		else if (numAlloc < numKeys)
+		{
+			UInt32 newAlloc = AlignNumAlloc<M_Key>(numKeys);
+			POOL_REALLOC(keys, numAlloc, newAlloc, M_Key);
+			numAlloc = newAlloc;
+		}
+		memcpy(keys, source.keys, sizeof(M_Key) * numKeys);
+	}
+
+	bool operator==(const Set &rhs) const
+	{
+		return (numKeys == rhs.numKeys) && (!numKeys || MemCmp(keys, rhs.keys, sizeof(M_Key) * numKeys));
+	}
+	bool operator!=(const Set &rhs) const {return !(*this == rhs);}
+
 	class Iterator
 	{
 		friend Set;
@@ -1263,7 +1289,7 @@ public:
 	{
 		T_Data *outData;
 		if (InsertKey(key, &outData))
-			RawAssign<T_Data>(*outData, value);
+			memcpy(outData, &value, sizeof(T_Data));
 		return value;
 	}
 
@@ -1766,7 +1792,7 @@ public:
 	T_Data* Append(Data_Arg item)
 	{
 		T_Data *pData = AllocateData();
-		RawAssign<T_Data>(*pData, item);
+		memcpy(pData, &item, sizeof(T_Data));
 		return pData;
 	}
 
@@ -1795,7 +1821,7 @@ public:
 			pData = data + index;
 			memmove(pData + 1, pData, sizeof(T_Data) * size);
 		}
-		RawAssign<T_Data>(*pData, item);
+		memcpy(pData, &item, sizeof(T_Data));
 		return pData;
 	}
 
@@ -1854,7 +1880,7 @@ public:
 			pData = data + lBound;
 			memmove(pData + 1, pData, sizeof(T_Data) * uBound);
 		}
-		RawAssign<T_Data>(*pData, item);
+		memcpy(pData, &item, sizeof(T_Data));
 		return lBound;
 	}
 
@@ -1876,7 +1902,7 @@ public:
 			pData = data + lBound;
 			memmove(pData + 1, pData, sizeof(T_Data) * uBound);
 		}
-		RawAssign<T_Data>(*pData, item);
+		memcpy(pData, &item, sizeof(T_Data));
 		return lBound;
 	}
 
@@ -1890,7 +1916,7 @@ public:
 				if (*pData == item)
 				{
 					memcpy(pData, pData + 1, (UInt32)pEnd - (UInt32)pData);
-					RawAssign<T_Data>(*pEnd, item);
+					memcpy(pEnd, &item, sizeof(T_Data));
 					return;
 				}
 				pData++;
@@ -2020,6 +2046,26 @@ public:
 		numItems -= count;
 	}
 
+	void CopyFrom(const Vector &source)
+	{
+		Clear();
+		numItems = source.numItems;
+		if (!numItems) return;
+		if (!data)
+		{
+			if (numAlloc < numItems) numAlloc = numItems;
+			numAlloc = AlignNumAlloc<T_Data>(numAlloc);
+			data = POOL_ALLOC(numAlloc, T_Data);
+		}
+		else if (numAlloc < numItems)
+		{
+			UInt32 newAlloc = AlignNumAlloc<T_Data>(numItems);
+			POOL_REALLOC(data, numAlloc, newAlloc, T_Data);
+			numAlloc = newAlloc;
+		}
+		memcpy(data, source.data, sizeof(T_Data) * numItems);
+	}
+
 	void Resize(UInt32 newSize)
 	{
 		if (numItems == newSize)
@@ -2069,6 +2115,12 @@ public:
 		pEnd->~T_Data();
 		return *pEnd;
 	}
+
+	bool operator==(const Vector &rhs) const
+	{
+		return (numItems == rhs.numItems) && (!numItems || MemCmp(data, rhs.data, sizeof(T_Data) * numItems));
+	}
+	bool operator!=(const Vector &rhs) const {return !(*this == rhs);}
 
 	void Clear()
 	{
@@ -2277,7 +2329,7 @@ public:
 	{
 		if (numItems < size)
 		{
-			RawAssign<T_Data>(data[numItems++], item);
+			memcpy(&data[numItems++], &item, sizeof(T_Data));
 			return true;
 		}
 		return false;

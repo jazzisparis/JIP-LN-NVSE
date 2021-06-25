@@ -35,6 +35,8 @@ enum
 	kInterface_Max
 };
 
+struct ExpressionEvaluatorUtils;
+
 struct NVSEInterface
 {
 	UInt32	nvseVersion;
@@ -57,6 +59,8 @@ struct NVSEInterface
 
 	// Allows checking for nogore edition
 	UInt32	isNogore;
+
+	void		(*InitExpressionEvaluatorUtils)(ExpressionEvaluatorUtils *utils);
 };
 
 struct NVSEConsoleInterface
@@ -217,7 +221,11 @@ struct NVSEMessagingInterface
 		kMessage_RenameGameName,
 		kMessage_RenameNewGameName,
 
+// added for kVersion == 4 (xNVSE)
 		kMessage_DeferredInit,
+		kMessage_ClearScriptDataCache,
+		kMessage_MainGameLoop,
+		kMessage_ScriptCompile
 	};
 
 	UInt32	version;
@@ -505,6 +513,8 @@ struct NVSEScriptInterface
 		ScriptEventList * eventList, ...);
 	bool	(* ExtractFormatStringArgs)(UInt32 fmtStringPos, char* buffer, ParamInfo * paramInfo, UInt8 * scriptDataIn, 
 		UInt32 * scriptDataOffset, Script * scriptObj, ScriptEventList * eventList, UInt32 maxParams, ...);
+
+	bool	(*CallFunctionAlt)(Script *funcScript, TESObjectREFR *callingObj, UInt8 numArgs, ...);
 };
 
 #endif
@@ -534,7 +544,8 @@ struct NVSEDataInterface
 		kNVSEData_InventoryReferenceGetRefBySelf,
 		kNVSEData_ArrayVarMapDeleteBySelf,
 		kNVSEData_StringVarMapDeleteBySelf,
-
+		kNVSEData_LambdaDeleteAllForScript,
+		kNVSEData_InventoryReferenceCreateEntry,
 		kNVSEData_FuncMax,
 	};
 	void * (* GetFunc)(UInt32 funcID);
@@ -739,3 +750,205 @@ typedef bool (* _NVSEPlugin_Load)(const NVSEInterface * nvse);
  *	previous implementations.
  *	
  ******************************************************************************/
+
+enum Token_Type : UInt8
+{
+	kTokenType_Number	= 0,
+	kTokenType_Boolean,
+	kTokenType_String,
+	kTokenType_Form,
+	kTokenType_Ref,
+	kTokenType_Global,
+	kTokenType_Array,
+	kTokenType_ArrayElement,
+	kTokenType_Slice,
+	kTokenType_Command,
+	kTokenType_Variable,
+	kTokenType_NumericVar,
+	kTokenType_RefVar,
+	kTokenType_StringVar,
+	kTokenType_ArrayVar,
+	kTokenType_Ambiguous,
+	kTokenType_Operator,
+	kTokenType_ForEachContext,
+
+	// numeric literals can optionally be encoded as one of the following
+	// all are converted to _Number on evaluation
+	kTokenType_Byte,
+	kTokenType_Short,		// 2 bytes
+	kTokenType_Int,			// 4 bytes
+
+	kTokenType_Pair,
+	kTokenType_AssignableString,
+	// xNVSE 6.1.0
+	kTokenType_Lambda,
+
+	kTokenType_Invalid,
+	kTokenType_Max = kTokenType_Invalid,
+
+	// sigil value, returned when an empty expression is parsed
+	kTokenType_Empty = kTokenType_Max + 1,
+};
+
+enum NVSEParamTypes
+{
+	kNVSEParamType_Number =		(1 << kTokenType_Number) | (1 << kTokenType_Ambiguous),
+	kNVSEParamType_Boolean =	(1 << kTokenType_Boolean) | (1 << kTokenType_Ambiguous),
+	kNVSEParamType_String =		(1 << kTokenType_String) | (1 << kTokenType_Ambiguous),
+	kNVSEParamType_Form =		(1 << kTokenType_Form) | (1 << kTokenType_Ambiguous),
+	kNVSEParamType_Array =		(1 << kTokenType_Array) | (1 << kTokenType_Ambiguous),
+	kNVSEParamType_ArrayElement = 1 << (kTokenType_ArrayElement) | (1 << kTokenType_Ambiguous),
+	kNVSEParamType_Slice =		1 << kTokenType_Slice,
+	kNVSEParamType_Command =	1 << kTokenType_Command,
+	kNVSEParamType_Variable =	1 << kTokenType_Variable,
+	kNVSEParamType_NumericVar =	1 << kTokenType_NumericVar,
+	kNVSEParamType_RefVar =		1 << kTokenType_RefVar,
+	kNVSEParamType_StringVar =	1 << kTokenType_StringVar,
+	kNVSEParamType_ArrayVar =	1 << kTokenType_ArrayVar,
+	kNVSEParamType_ForEachContext = 1 << kTokenType_ForEachContext,
+
+	kNVSEParamType_Collection = kNVSEParamType_Array | kNVSEParamType_String,
+	kNVSEParamType_ArrayVarOrElement = kNVSEParamType_ArrayVar | kNVSEParamType_ArrayElement,
+	kNVSEParamType_ArrayIndex = kNVSEParamType_String | kNVSEParamType_Number,
+	kNVSEParamType_BasicType = kNVSEParamType_Array | kNVSEParamType_String | kNVSEParamType_Number | kNVSEParamType_Form,
+	kNVSEParamType_NoTypeCheck = 0,
+
+	kNVSEParamType_FormOrNumber = kNVSEParamType_Form | kNVSEParamType_Number,
+	kNVSEParamType_StringOrNumber = kNVSEParamType_String | kNVSEParamType_Number,
+	kNVSEParamType_Pair	=	1 << kTokenType_Pair,
+};
+
+struct PluginScriptToken;
+struct PluginTokenPair;
+struct PluginTokenSlice;
+
+struct ExpressionEvaluatorUtils
+{
+	void*					(__stdcall *CreateExpressionEvaluator)(COMMAND_ARGS);
+	void					(__fastcall *DestroyExpressionEvaluator)(void *expEval);
+	bool					(__fastcall *ExtractArgsEval)(void *expEval);
+	UInt8					(__fastcall *GetNumArgs)(void *expEval);
+	PluginScriptToken*		(__fastcall *GetNthArg)(void *expEval, UInt32 argIdx);
+
+	Token_Type				(__fastcall *ScriptTokenGetType)(PluginScriptToken *scrToken);
+	double					(__fastcall *ScriptTokenGetFloat)(PluginScriptToken *scrToken);
+	bool					(__fastcall *ScriptTokenGetBool)(PluginScriptToken *scrToken);
+	UInt32					(__fastcall *ScriptTokenGetFormID)(PluginScriptToken *scrToken);
+	TESForm*				(__fastcall *ScriptTokenGetTESForm)(PluginScriptToken *scrToken);
+	const char*				(__fastcall *ScriptTokenGetString)(PluginScriptToken *scrToken);
+	UInt32					(__fastcall *ScriptTokenGetArrayID)(PluginScriptToken *scrToken);
+	UInt32					(__fastcall *ScriptTokenGetActorValue)(PluginScriptToken *scrToken);
+	ScriptVar*				(__fastcall *ScriptTokenGetScriptVar)(PluginScriptToken *scrToken);
+	const PluginTokenPair*	(__fastcall *ScriptTokenGetPair)(PluginScriptToken *scrToken);
+	const PluginTokenSlice*	(__fastcall *ScriptTokenGetSlice)(PluginScriptToken *scrToken);
+};
+
+extern ExpressionEvaluatorUtils s_expEvalUtils;
+
+class PluginExpressionEvaluator
+{
+	void		*expEval;
+
+public:
+	PluginExpressionEvaluator(COMMAND_ARGS)
+	{
+		expEval = s_expEvalUtils.CreateExpressionEvaluator(PASS_COMMAND_ARGS);
+	}
+	~PluginExpressionEvaluator()
+	{
+		if (expEval) s_expEvalUtils.DestroyExpressionEvaluator(expEval);
+	}
+
+	bool ExtractArgs()
+	{
+		return expEval && s_expEvalUtils.ExtractArgsEval(expEval);
+	}
+
+	UInt8 NumArgs()
+	{
+		return s_expEvalUtils.GetNumArgs(expEval);
+	}
+
+	PluginScriptToken *GetNthArg(UInt32 argIdx)
+	{
+		return s_expEvalUtils.GetNthArg(expEval, argIdx);
+	}
+};
+
+struct PluginScriptToken
+{
+	Token_Type GetType()
+	{
+		return s_expEvalUtils.ScriptTokenGetType(this);
+	}
+
+	double GetFloat()
+	{
+		return s_expEvalUtils.ScriptTokenGetFloat(this);
+	}
+
+	int GetInt()
+	{
+		return int(s_expEvalUtils.ScriptTokenGetFloat(this));
+	}
+
+	bool GetBool()
+	{
+		return s_expEvalUtils.ScriptTokenGetBool(this);
+	}
+
+	UInt32 GetFormID()
+	{
+		return s_expEvalUtils.ScriptTokenGetFormID(this);
+	}
+
+	TESForm *GetTESForm()
+	{
+		return s_expEvalUtils.ScriptTokenGetTESForm(this);
+	}
+
+	const char *GetString()
+	{
+		return s_expEvalUtils.ScriptTokenGetString(this);
+	}
+
+	NVSEArrayVar *GetArrayVar()
+	{
+		return (NVSEArrayVar*)s_expEvalUtils.ScriptTokenGetArrayID(this);
+	}
+
+	UInt32 GetActorValue()
+	{
+		return s_expEvalUtils.ScriptTokenGetActorValue(this);
+	}
+
+	ScriptVar *GetScriptVar()
+	{
+		return s_expEvalUtils.ScriptTokenGetScriptVar(this);
+	}
+
+	const PluginTokenPair *GetPair()
+	{
+		return s_expEvalUtils.ScriptTokenGetPair(this);
+	}
+
+	const PluginTokenSlice *GetSlice()
+	{
+		return s_expEvalUtils.ScriptTokenGetSlice(this);
+	}
+};
+
+struct PluginTokenPair
+{
+	PluginScriptToken	*left;
+	PluginScriptToken	*right;
+};
+
+struct PluginTokenSlice
+{
+	bool			bIsString;
+	double			m_upper;
+	double			m_lower;
+	std::string		m_lowerStr;
+	std::string		m_upperStr;
+};

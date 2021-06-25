@@ -709,33 +709,26 @@ class AnimSequenceBase
 {
 public:
 	virtual void	Destroy(bool deFree);
-	virtual void	Unk_01(void);
-	virtual void	Unk_02(void);
-	virtual void	Unk_03(void);
-	virtual void	Unk_04(void);
-	virtual void	Unk_05(void);
-	virtual void	Unk_06(void);
+	virtual void	AddAnimGroupSequence(BSAnimGroupSequence *sequence, UInt32 arg2);
+	virtual bool	RemoveAnimGroupSequence(BSAnimGroupSequence *sequence, UInt32 arg2);
+	virtual bool	IsSingle();
+	virtual BSAnimGroupSequence	*GetSequenceByIndex(UInt8 index);
+	virtual BSAnimGroupSequence	*GetSequenceByGroup(TESAnimGroup *animGroup);
+	virtual char	GetSequenceIndexByName(const char *seqName);
 };
 
 // 08
 class AnimSequenceSingle : public AnimSequenceBase
 {
 public:
-	UInt32		unk04;		// 04
+	BSAnimGroupSequence		*animSequence;	// 04
 };
 
 // 08
 class AnimSequenceMultiple : public AnimSequenceBase
 {
 public:
-	struct Struct04
-	{
-		UInt32		unk00;
-		UInt32		unk04;
-		UInt32		unk08;
-	};
-
-	Struct04	*ptr04;		// 04
+	DList<BSAnimGroupSequence>	*sequenceList;	// 04
 };
 
 enum AnimAction
@@ -761,30 +754,24 @@ enum AnimAction
 	kAnimAction_ReloadLoop
 };
 
-// 100+
+struct KFModel;
+class AnimIdle;
+
+// 13C
 struct AnimData
 {
-	struct Unk124
+	enum SequenceTypes
 	{
-		struct Unk18
-		{
-			UInt32			unk00[9];
-			UInt32			unk24;
-		};
-
-		UInt32			unk00;
-		UInt32			unk04;
-		UInt32			unk08;
-		UInt32			unk0C;
-		UInt32			unk10;
-		UInt32			unk14;
-		Unk18			*unk18;
-	};
-
-	struct Unk128
-	{
-		UInt32			unk00[11];
-		TESIdleForm		*idle2C;
+		kSequence_None =		-1,
+		kSequence_Idle =		0,
+		kSequence_Movement =	1,
+		kSequence_LeftArm =		2,
+		kSequence_LeftHand =	3,
+		kSequence_Weapon =		4,
+		kSequence_WeaponUp =	5,
+		kSequence_WeaponDown =	6,
+		kSequence_SpecialIdle =	7,
+		kSequence_Death =		0x14
 	};
 
 	UInt32							unk000;				// 000
@@ -794,9 +781,7 @@ struct AnimData
 	UInt32							unk010;				// 010
 	float							flt014;				// 014
 	float							flt018;				// 018
-	UInt32							unk01C;				// 01C
-	float							flt020;				// 020
-	UInt32							unk024;				// 024
+	NiVector3						pos01C;				// 01C
 	NiNode							*nPelvis;			// 028
 	NiNode							*nBip01Copy;		// 02C
 	NiNode							*nLForearm;			// 030
@@ -804,33 +789,38 @@ struct AnimData
 	NiNode							*nWeapon;			// 038
 	UInt32							unk03C[2];			// 03C
 	NiNode							*nNeck1;			// 044
-	UInt32							unk048;				// 048
+	float							flt048;				// 048
 	UInt16							animGroupIDs[8];	// 04C
 	SInt32							sequenceState1[8];	// 05C
 	SInt32							sequenceState2[8];	// 07C
 	UInt16							word09C[8];			// 09C
 	UInt32							unk0AC[8];			// 0AC
-	float							flt0CC;				// 0CC
-	float							flt0D0;				// 0D0
+	UInt8							byte0CC;			// 0CC
+	UInt8							byte0CD;			// 0CD
+	UInt8							byte0CE;			// 0CE
+	UInt8							byte0CF;			// 0CF
+	float							timePassed;			// 0D0
 	UInt32							unk0D4;				// 0D4
 	NiControllerManager				*unk0D8;			// 0D8
-	NiTPointerMap<AnimSequenceBase>	*unk0DC;			// 0DC
+	NiTPointerMap<AnimSequenceBase>	*sequenceBaseMap;	// 0DC
 	BSAnimGroupSequence				*animSequence[8];	// 0E0
 	BSAnimGroupSequence				*animSeq100;		// 100
-	UInt32							unk104;				// 104
-	UInt32							unk108;				// 108
-	float							flt10C;				// 10C
-	float							flt110;				// 110
-	float							flt114;				// 114
-	float							flt118;				// 118
-	float							flt11C;				// 11C
+	tList<KFModel>					loadingAnims;		// 104
+	float							movementSpeedMult;	// 10C
+	float							rateOfFire;			// 110
+	float							turboSpeedMult;		// 114
+	float							weaponReloadSpeed;	// 118
+	float							equipSpeed;			// 11C
 	UInt8							byte120;			// 120
 	UInt8							byte121;			// 121
 	UInt16							word122;			// 122
-	Unk124							*unk124;			// 124
-	Unk128							*unk128;			// 128
+	AnimIdle						*idleAnim;			// 124
+	AnimIdle						*queuedIdleAnim;	// 128
+	NiObject						*object12C;			// 12C
+	NiObject						*object130;			// 130
+	tList<void>						list134;			// 134
 };
-STATIC_ASSERT(sizeof(AnimData) == 0x12C);
+STATIC_ASSERT(sizeof(AnimData) == 0x13C);
 
 class QueuedFile;
 class BSFaceGenAnimationData;

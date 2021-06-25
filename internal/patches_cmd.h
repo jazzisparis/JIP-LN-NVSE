@@ -437,30 +437,6 @@ bool Hook_Update3D_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool Hook_ActorValueToStringC_Execute(COMMAND_ARGS)
-{
-	const char *resStr = NULL;
-	UInt32 avCode, nameType = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &avCode, &nameType) && (avCode <= kAVCode_DamageThreshold))
-	{
-		ActorValueInfo *avInfo = g_actorValueInfoArray[avCode];
-		switch (nameType)
-		{
-		case 0:
-			resStr = avInfo->infoName;
-			break;
-		case 1:
-			resStr = avInfo->fullName.name.m_data;
-			break;
-		case 2:
-			resStr = avInfo->avName.m_data;
-			break;
-		}
-	}
-	AssignString(PASS_COMMAND_ARGS, resStr);
-	return true;
-}
-
 Cmd_Execute IsPluginInstalled, GetPluginVersion;
 
 bool __fastcall IsJIPAlias(const char *pluginName)
@@ -547,8 +523,6 @@ void InitCmdPatches()
 	cmdInfo->eval = (Cmd_Eval)Hook_IsRefInList_Eval;
 	cmdInfo = GetCmdByOpcode(0x152D);
 	cmdInfo->execute = Hook_Update3D_Execute;
-	cmdInfo = GetCmdByOpcode(0x158D);
-	cmdInfo->execute = Hook_ActorValueToStringC_Execute;
 	cmdInfo = GetCmdByOpcode(0x15DF);
 	IsPluginInstalled = cmdInfo->execute;
 	cmdInfo->execute = Hook_IsPluginInstalled_Execute;

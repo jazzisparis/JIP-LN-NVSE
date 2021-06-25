@@ -1,8 +1,5 @@
 #pragma once
 
-#define MAX_CACHED_BLOCK_SIZE 0x400
-#define MEMORY_POOL_SIZE 0x1000
-
 void* __fastcall Pool_Alloc(UInt32 size);
 void __fastcall Pool_Free(void *pBlock, UInt32 size);
 void* __fastcall Pool_Realloc(void *pBlock, UInt32 curSize, UInt32 reqSize);

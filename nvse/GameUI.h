@@ -110,8 +110,8 @@ public:
 	BSShaderAccumulator		*shaderAccum090;	// 090
 	ShadowSceneNode			*shadowScene094;	// 094
 	ShadowSceneNode			*shadowScene098;	// 098
-	Tile					*menuRoot;			// 09C
-	Tile					*globalsTile;		// 0A0	globals.xml
+	TileRect				*menuRoot;			// 09C
+	TileRect				*globalsTile;		// 0A0	globals.xml
 	NiNode					*niNode0A4;			// 0A4
 	UInt32					unk0A8;				// 0A8
 	NiObject				*unk0AC;			// 0AC seen NiAlphaProperty
@@ -283,20 +283,24 @@ public:
 	virtual void	HandleControllerConnectOrDisconnect(bool isControllerConnected);
 
 	// 14
-	struct TemplateInstance
+	struct ParsedXMLTag
 	{
-		UInt32		unk00;		// 00
-		float		flt04;		// 04
-		String		tileName;	// 08
-		Tile		*tile;		// 10
+		UInt32		tagType;	// 00
+		float		value;		// 04
+		String		nameOrSrc;	// 08
+		union					// 10
+		{
+			UInt32	valueID;
+			Tile	*tmplTile;
+		};
 	};
 
 	// 14
 	struct TemplateData
 	{
-		const char				*templateName;	// 00
+		NiString				templateName;	// 00
 		TileExtra				*tileExtra;		// 04
-		DList<TemplateInstance>	instances;		// 08
+		DList<ParsedXMLTag>		parsedTags;		// 08
 	};
 
 	TileMenu			*tile;			// 04

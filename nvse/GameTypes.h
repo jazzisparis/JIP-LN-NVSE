@@ -627,6 +627,7 @@ template <typename T_Data>
 struct BSSimpleArray
 {
 	virtual void	Destroy(bool doFree);
+	virtual T_Data	*Allocate(UInt32 size);
 
 	T_Data		*data;			// 04
 	UInt32		size;			// 08
@@ -660,6 +661,11 @@ struct BSSimpleArray
 	};
 
 	Iterator Begin() {return Iterator(*this);}
+
+	__forceinline void Append(T_Data *item)
+	{
+		ThisCall(0x7CB2E0, this, item);
+	}
 };
 
 //// this is a NiTPointerMap <UInt32, T_Data>

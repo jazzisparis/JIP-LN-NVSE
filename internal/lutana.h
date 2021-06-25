@@ -130,8 +130,6 @@ UnorderedMap<const char*, UInt32> s_LNEventNames({{"OnCellEnter", kLNEventMask_O
 	{"OnButtonDown", kLNEventMask_OnButtonDown}, {"OnButtonUp", kLNEventMask_OnButtonUp}, {"OnKeyDown", kLNEventMask_OnKeyDown},
 	{"OnKeyUp", kLNEventMask_OnKeyUp}, {"OnControlDown", kLNEventMask_OnControlDown}, {"OnControlUp", kLNEventMask_OnControlUp}});
 
-Cmd_Execute SetEventHandler, RemoveEventHandler;
-
 const bool kValidKeyCode[] =
 {
 	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -152,6 +150,7 @@ const bool kValidFilterForm[] =
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0
 };
 
+UInt32 s_LNEventFlags = 0;
 UInt32 s_inputEventClear = 0;
 
 bool SetInputEventHandler(UInt32 eventMask, Script *script, UInt32 keyID, bool doAdd)
@@ -198,11 +197,13 @@ bool SetInputEventHandler(UInt32 eventMask, Script *script, UInt32 keyID, bool d
 	return result;
 }
 
+//	Called by xNVSE
 UInt32 __stdcall GetLNEventMask(const char *eventName)
 {
 	return s_LNEventNames.Get(eventName);
 }
 
+//	Called by xNVSE
 bool __stdcall ProcessLNEventHandler(UInt32 eventMask, Script *udfScript, bool addEvt, TESForm *formFilter, UInt32 numFilter)
 {
 	if (eventMask >= kLNEventMask_OnKeyDown)
@@ -277,65 +278,6 @@ bool __stdcall ProcessLNEventHandler(UInt32 eventMask, Script *udfScript, bool a
 	return true;
 }
 
-bool s_processEventAdd = false;
-
-bool ProcessEventHandler_Execute(COMMAND_ARGS)
-{
-	*result = 0;
-	if (!scriptObj) return true;
-	UInt8 *data = scriptData + *opcodeOffsetPtr;
-	UInt8 numArgs = *data;
-	data += 4;
-	UInt16 argLen = *(UInt16*)data;
-	data += 2;
-	char evnName[0x40];
-	evnName[argLen] = 0;
-	memcpy(evnName, data, argLen);
-	data += argLen + 3;
-	Script::RefVariable *scrVar = scriptObj->GetVariable(*(UInt16*)data);
-	if (!scrVar) return true;
-	Script *script = (Script*)scrVar->form;
-	if (!script || NOT_ID(script, Script)) return true;
-
-	TESForm *formFilter = NULL;
-	if (numArgs > 2)
-	{
-		data += 5;
-		argLen = *(UInt16*)data;
-		data += argLen + 3;
-		scrVar = scriptObj->GetVariable(*(UInt16*)data);
-		if (scrVar) formFilter = scrVar->form;
-	}
-
-	char *delim = GetNextToken(evnName, ':');
-	UInt32 eventMask = GetLNEventMask(evnName);
-
-	if (!eventMask) return s_processEventAdd ? SetEventHandler(PASS_COMMAND_ARGS) : RemoveEventHandler(PASS_COMMAND_ARGS);
-
-	UInt32 numFilter = *delim ? StrToInt(delim) : 0;
-	if (ProcessLNEventHandler(eventMask, script, s_processEventAdd, formFilter, numFilter))
-		*result = 1;
-	return true;
-}
-
-__declspec(naked) bool Hook_SetEventHandler_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_processEventAdd, 1
-		jmp		ProcessEventHandler_Execute
-	}
-}
-
-__declspec(naked) bool Hook_RemoveEventHandler_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_processEventAdd, 0
-		jmp		ProcessEventHandler_Execute
-	}
-}
-
 bool s_gameLoadFlagLN = true;
 
 void LN_ProcessEvents()
@@ -378,7 +320,7 @@ void LN_ProcessEvents()
 				for (auto data = s_LNEvents[kLNEventID_OnButtonDown].BeginCp(); data; ++data)
 				{
 					outMask = cmprMask & data().typeID;
-					if (outMask) CallFunction(data().script, NULL, NULL, &s_callRes, 1, outMask);
+					if (outMask) CallFunction(data().script, NULL, 1, outMask);
 				}
 			}
 			cmprMask = changes & lastButtonState;
@@ -387,7 +329,7 @@ void LN_ProcessEvents()
 				for (auto data = s_LNEvents[kLNEventID_OnButtonUp].BeginCp(); data; ++data)
 				{
 					outMask = cmprMask & data().typeID;
-					if (outMask) CallFunction(data().script, NULL, NULL, &s_callRes, 1, outMask);
+					if (outMask) CallFunction(data().script, NULL, 1, outMask);
 				}
 			}
 			lastButtonState = currButtonState;
@@ -426,14 +368,14 @@ void LN_ProcessEvents()
 				s_evalRefr = NULL;
 				s_evalBase = lastCell;
 				for (auto data = s_LNEvents[kLNEventID_OnCellExit].BeginCp(); data; ++data)
-					if (data().EvalFilter()) CallFunction(data().script, NULL, NULL, &s_callRes, 1, lastCell);
+					if (data().EvalFilter()) CallFunction(data().script, NULL, 1, lastCell);
 			}
 			if (s_LNEventFlags & kLNEventMask_OnCellEnter)
 			{
 				s_evalRefr = NULL;
 				s_evalBase = currCell;
 				for (auto data = s_LNEvents[kLNEventID_OnCellEnter].BeginCp(); data; ++data)
-					if (data().EvalFilter()) CallFunction(data().script, NULL, NULL, &s_callRes, 1, currCell);
+					if (data().EvalFilter()) CallFunction(data().script, NULL, 1, currCell);
 			}
 		}
 		lastCell = currCell;
@@ -454,7 +396,7 @@ void LN_ProcessEvents()
 					s_evalRefr = lastGrabbed;
 					s_evalBase = lastGrabbed->baseForm;
 					for (auto data = s_LNEvents[kLNEventID_OnPlayerRelease].BeginCp(); data; ++data)
-						if (data().EvalFilter()) CallFunction(data().script, NULL, NULL, &s_callRes, 1, lastGrabbed);
+						if (data().EvalFilter()) CallFunction(data().script, NULL, 1, lastGrabbed);
 				}
 			}
 			if (currGrabbed && (s_LNEventFlags & kLNEventMask_OnPlayerGrab))
@@ -462,7 +404,7 @@ void LN_ProcessEvents()
 				s_evalRefr = currGrabbed;
 				s_evalBase = currGrabbed->baseForm;
 				for (auto data = s_LNEvents[kLNEventID_OnPlayerGrab].BeginCp(); data; ++data)
-					if (data().EvalFilter()) CallFunction(data().script, NULL, NULL, &s_callRes, 1, currGrabbed);
+					if (data().EvalFilter()) CallFunction(data().script, NULL, 1, currGrabbed);
 			}
 		}
 		lastGrabbed = currGrabbed;
@@ -484,7 +426,7 @@ void LN_ProcessEvents()
 					s_evalRefr = lastCrosshair;
 					s_evalBase = lastCrosshair->GetBaseForm();
 					for (auto data = s_LNEvents[kLNEventID_OnCrosshairOff].BeginCp(); data; ++data)
-						if (data().EvalFilter()) CallFunction(data().script, NULL, NULL, &s_callRes, 1, lastCrosshair);
+						if (data().EvalFilter()) CallFunction(data().script, NULL, 1, lastCrosshair);
 				}
 			}
 			if (currCrosshair && (s_LNEventFlags & kLNEventMask_OnCrosshairOn))
@@ -492,7 +434,7 @@ void LN_ProcessEvents()
 				s_evalRefr = currCrosshair;
 				s_evalBase = currCrosshair->GetBaseForm();
 				for (auto data = s_LNEvents[kLNEventID_OnCrosshairOn].BeginCp(); data; ++data)
-					if (data().EvalFilter()) CallFunction(data().script, NULL, NULL, &s_callRes, 1, currCrosshair);
+					if (data().EvalFilter()) CallFunction(data().script, NULL, 1, currCrosshair);
 			}
 		}
 		lastCrosshair = currCrosshair;
@@ -525,19 +467,4 @@ void LN_ProcessEvents()
 	}
 
 	s_gameLoadFlagLN = false;
-}
-
-void InitLNHooks()
-{
-	if (s_nvseVersion < 6.1)
-	{
-		CommandInfo *cmdInfo = GetCmdByOpcode(0x15E9);
-		SetEventHandler = cmdInfo->execute;
-		cmdInfo->execute = Hook_SetEventHandler_Execute;
-		cmdInfo = GetCmdByOpcode(0x15EA);
-		RemoveEventHandler = cmdInfo->execute;
-		cmdInfo->execute = Hook_RemoveEventHandler_Execute;
-
-		PrintLog("> LN hooks initialized successfully.");
-	}
 }

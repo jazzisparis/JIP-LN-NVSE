@@ -771,7 +771,12 @@ public:
 		UInt8		pad09[3];
 	};
 
-	UInt32								unk1C8[17];				// 1C8	208 could be a DialogPackage
+	UInt32								unk1C8[15];				// 1C8	208 could be a DialogPackage
+	UInt8								byte204;				// 204
+	UInt8								byte205;				// 205
+	UInt8								byte206;				// 206
+	UInt8								byte207;				// 207
+	UInt32								unk208;					// 208
 	void								*unk20C;				// 20C
 	tList<ActiveEffect>					*activeEffects;			// 210
 	UInt32								unk214[2];				// 214
@@ -848,16 +853,15 @@ public:
 	UInt32								unk6B0[2];				// 6B0
 	TESQuest							*activeQuest;			// 6B8
 	tList<BGSQuestObjective>			questObjectiveList;		// 6BC
-	tList<BGSQuestObjective::Target>	questTargetList;		// 6C4
+	tList<ObjectiveTarget>				questTargetList;		// 6C4
 	UInt32								unk6CC[5];				// 6CC
 	float								sortActorDistanceListTimer;	// 6E0
 	float								seatedRotation;			// 6E4
-	UInt32								unk6E8[2];				// 6E8
+	UInt32								unk6E8;					// 6E8
+	UInt32								unk6EC;					// 6EC
 	UInt32								playerSpell;			// 6F0
-	TESObjectREFR						*placedMarker;			// 6F4
-	BSSimpleArray<ParentSpaceNode>		parentSpaceNodes;		// 6F8
-	BSSimpleArray<TeleportLink>			teleportLinks;			// 708
-	UInt32								unk718[6];				// 718
+	TESObjectREFR						*placedMarkerRef;		// 6F4
+	ObjectiveTargetData					placedMarkerData;		// 6F8
 	float 								timeGrenadeHeld;		// 730
 	UInt32								unk734[10];				// 734
 	bool								inCharGen;				// 75C

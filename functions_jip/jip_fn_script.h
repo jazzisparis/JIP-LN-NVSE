@@ -518,32 +518,31 @@ bool Cmd_DisableScriptedActivate_Execute(COMMAND_ARGS)
 	Script *script = xScript->script;
 	UInt8 *dataPtr = script->data, *endPtr = dataPtr + script->info.dataLength;
 	dataPtr += 4;
-	UInt16 lookFor = disable ? 0x100D : 0x2210, replace = disable ? 0x2210 : 0x100D, *opcode, length;
+	UInt16 lookFor = disable ? 0x100D : 0x2210, replace = disable ? 0x2210 : 0x100D, *opcodePtr, length;
+	bool onActivate = false;
 	while (dataPtr < endPtr)
 	{
-		opcode = (UInt16*)dataPtr;
+		opcodePtr = (UInt16*)dataPtr;
 		dataPtr += 2;
 		length = *(UInt16*)dataPtr;
 		dataPtr += 2;
-		if (*opcode == 0x10)
+		if (*opcodePtr == 0x11)
 		{
-			if (*(UInt16*)dataPtr != 2)
-			{
-				dataPtr += 2;
-				length = *(UInt16*)dataPtr + 6;
-			}
+			if (onActivate) break;
 		}
+		else if (*opcodePtr == 0x10)
+			onActivate = (*(UInt16*)dataPtr == 2);
 		else
 		{
-			if (*opcode == 0x1C)
+			if (*opcodePtr == 0x1C)
 			{
-				opcode = (UInt16*)dataPtr;
+				opcodePtr = (UInt16*)dataPtr;
 				dataPtr += 2;
 				length = *(UInt16*)dataPtr;
 				dataPtr += 2;
 			}
-			if (*opcode == lookFor)
-				*opcode = replace;
+			if (onActivate && (*opcodePtr == lookFor))
+				*opcodePtr = replace;
 		}
 		dataPtr += length;
 	}

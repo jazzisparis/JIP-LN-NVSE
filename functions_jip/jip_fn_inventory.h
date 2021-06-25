@@ -439,7 +439,7 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 				baseCount -= xCount;
 				if (noEquipped && xData->HasType(kExtraData_Worn))
 					continue;
-				invRef = CreateInventoryRef(thisObj, item, xCount, xData);
+				invRef = InventoryRefCreate(thisObj, item, xCount, xData);
 				if (listForm) listForm->list.Prepend(invRef);
 				else tmpElements->Append(invRef);
 				count++;
@@ -448,7 +448,7 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 		}
 		if (baseCount > 0)
 		{
-			invRef = CreateInventoryRef(thisObj, item, baseCount, NULL);
+			invRef = InventoryRefCreate(thisObj, item, baseCount, NULL);
 			if (listForm) listForm->list.Prepend(invRef);
 			else tmpElements->Append(invRef);
 			count++;
@@ -642,8 +642,6 @@ bool Cmd_GetEquippedArmorRefs_Execute(COMMAND_ARGS)
 			ExtraContainerChanges::EntryDataList *entryList = thisObj->GetContainerChangesList();
 			if (entryList)
 			{
-				TempFormList *tmpFormLst = GetTempFormList();
-				tmpFormLst->Clear();
 				TempElements *tmpElements = GetTempElements();
 				tmpElements->Clear();
 				ValidBip01Names::Data *slotData = equipment->slotData;
@@ -654,9 +652,9 @@ bool Cmd_GetEquippedArmorRefs_Execute(COMMAND_ARGS)
 				for (UInt32 count = 20; count; count--, slotData++)
 				{
 					item = slotData->item;
-					if (!item || NOT_TYPE(item, TESObjectARMO) || !tmpFormLst->Insert(item) || !(entry = entryList->FindForItem(item)) || !(xData = entry->GetEquippedExtra()))
+					if (!item || NOT_TYPE(item, TESObjectARMO) || !(entry = entryList->FindForItem(item)) || !(xData = entry->GetEquippedExtra()))
 						continue;
-					invRef = CreateInventoryRef(thisObj, item, entry->countDelta, xData);
+					invRef = InventoryRefCreate(thisObj, item, entry->countDelta, xData);
 					if (invRef) tmpElements->Append(invRef);
 				}
 				AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
@@ -703,7 +701,7 @@ bool Cmd_GetHotkeyItemRef_Execute(COMMAND_ARGS)
 		ContChangesEntry *entry = GetHotkeyItemEntry(keyNum - 1, &xData);
 		if (entry)
 		{
-			TESObjectREFR *invRef = CreateInventoryRef(g_thePlayer, entry->type, xData->GetCount(), xData);
+			TESObjectREFR *invRef = InventoryRefCreate(g_thePlayer, entry->type, xData->GetCount(), xData);
 			REFR_RES = invRef->refID;
 		}
 	}

@@ -60,6 +60,7 @@
       <StringPooling>true</StringPooling>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <FloatingPointModel>Precise</FloatingPointModel>
+      <ExceptionHandling>false</ExceptionHandling>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>exports.def</ModuleDefinitionFile>

@@ -634,16 +634,29 @@ public:
 };
 STATIC_ASSERT(sizeof(Explosion) == 0x104);
 
-template <typename Item> struct ListBoxItem
-{
-	Tile	*tile;
-	Item	*object;
-};
-
 // 30
-template <typename Item> class ListBox : public BSSimpleList<ListBoxItem<Item>>
+template <typename Item> class ListBox
 {
 public:
+	struct ListItem
+	{
+		Tile	*tile;
+		Item	item;
+	};
+
+	typedef int (*CompareItems)(ListItem *item1, ListItem *item2);
+
+	virtual bool	SetSelectedTile(Tile *tile);
+	virtual Tile	*GetSelectedTile();
+	virtual Tile	*HandleKeyboardInput(int inputCode);
+	virtual bool	IsParentMenu(Menu *menu);
+	virtual void	ScrollToHighlight();
+	virtual Tile	*GetItemTile(int index, bool countFromTop);	//	If countFromTop is 0, looks for a tile with kTileValue_listindex == index
+	virtual void	Destroy(bool doFree);
+	virtual void	ClearList();
+	virtual void	Sort(CompareItems cmpFunc);
+
+	tList<ListItem>	list;			// 04
 	Tile			*parentTile;	// 0C
 	Tile			*selected;		// 10
 	Tile			*scrollBar;		// 14
@@ -656,36 +669,21 @@ public:
 	UInt16			word2C;			// 2C
 	UInt16			pad2E;			// 2E
 
-	Item *GetSelected()
+	Item GetSelected()
 	{
-		ListNode<ListBoxItem<Item>> *iter = list.Head();
-		ListBoxItem<Item> *item;
-		do
+		if (selected)
 		{
-			item = iter->data;
-			if (item && (item->tile == selected))
-				return item->object;
+			auto iter = list.Head();
+			ListItem *listItem;
+			do
+			{
+				listItem = iter->data;
+				if (listItem && (listItem->tile == selected))
+					return listItem->item;
+			}
+			while (iter = iter->next);
 		}
-		while (iter = iter->next);
 		return NULL;
-	}
-
-	void Clear()
-	{
-		ListNode<ListBoxItem<Item>> *iter = list.Head();
-		ListBoxItem<Item> *item;
-		do
-		{
-			item = iter->data;
-			if (!item) continue;
-			if (item->tile)
-				item->tile->Destroy(true);
-			GameHeapFree(item);
-		}
-		while (iter = iter->next);
-		list.RemoveAll();
-		selected = NULL;
-		itemCount = 0;
 	}
 };
 
@@ -711,7 +709,7 @@ public:
 	UInt32				unk90;			// 90
 };
 
-typedef ListBox<ContChangesEntry> MenuItemEntryList;
+typedef ListBox<ContChangesEntry*> MenuItemEntryList;
 
 struct HotKeyWheel
 {
@@ -846,10 +844,10 @@ public:
 	TileImage						*tile17C;			// 17C
 	ListBox<UInt32>					SPECIALList;		// 180
 	ListBox<UInt32>					skillList;			// 1B0
-	ListBox<PerkRank>				perkRankList;		// 1E0
+	ListBox<PerkRank*>				perkRankList;		// 1E0
 	ListBox<UInt32>					miscStatIDList;		// 210
-	ListBox<StatusEffect>			statusEffListBox;	// 240
-	ListBox<TESReputation>			reputationList;		// 270
+	ListBox<StatusEffect*>			statusEffListBox;	// 240
+	ListBox<TESReputation*>			reputationList;		// 270
 	UInt8							isInHealLimbSelect;	// 2A0
 	UInt8							pad2A0[3];			// 2A1
 };
@@ -1307,12 +1305,12 @@ public:
 	TileText						*tile078;		// 078
 	TileImage						*tile07C;		// 07C
 	TileText						*tile080;		// 080
-	ListBox<Option>					options084;		// 084
-	ListBox<Option>					options0B4;		// 0B4
-	ListBox<Option>					options0E4;		// 0E4
-	ListBox<Option>					options114;		// 114
+	ListBox<Option*>				options084;		// 084
+	ListBox<Option*>				options0B4;		// 0B4
+	ListBox<Option*>				options0E4;		// 0E4
+	ListBox<Option*>				options114;		// 114
 	ListBox<int>					listBox144;		// 144
-	ListBox<BGSSaveLoadFileEntry>	listBox174;		// 174
+	ListBox<BGSSaveLoadFileEntry*>	listBox174;		// 174
 	UInt32							unk1A4;			// 1A4
 	UInt32							flags;			// 1A8
 	UInt32							unk1AC;			// 1AC
@@ -1445,9 +1443,10 @@ public:
 	float							flt0EC;			// 0EC
 	float							flt0F0;			// 0F0
 	float							flt0F4;			// 0F4
-	UInt32							unk0F8[4];		// 0F8
+	TESForm							*markerForm;	// 0F8
+	NiVector3						markerPos;		// 0FC
 	TESObjectCELL					*cell108;		// 108
-	TESWorldSpace					*wspc10C;		// 10C
+	TESWorldSpace					*mapWorldSpace;	// 10C
 	UInt32							unk110;			// 110
 	TESObjectREFR					*lastExtDoor;	// 114
 	TESObjectREFR					*selectedMarker;// 118
@@ -1457,11 +1456,11 @@ public:
 	UInt32							unk128;			// 128
 	bool							fogOfWar;		// 12C
 	UInt8							pad12D[3];		// 12D
-	ListBox<TESQuest>				questList;		// 130
-	ListBox<BGSNote>				noteList;		// 160
-	ListBox<TESObjectREFR>			radioRefList;	// 190
-	ListBox<BGSQuestObjective>		objectiveList;	// 1C0
-	ListBox<TESChallenge>			challengeList;	// 1F0
+	ListBox<TESQuest*>				questList;		// 130
+	ListBox<BGSNote*>				noteList;		// 160
+	ListBox<TESObjectREFR*>			radioRefList;	// 190
+	ListBox<BGSQuestObjective*>		objectiveList;	// 1C0
+	ListBox<TESChallenge*>			challengeList;	// 1F0
 	BSSimpleArray<Tile>				arr220;			// 220
 };
 STATIC_ASSERT(sizeof(MapMenu) == 0x230);
@@ -1486,7 +1485,7 @@ public:
 	UInt32				numSkillPointsToAssign;	// 5C
 	UInt32				numPerksToAssign;		// 60
 	ListBox<int>		skillListBox;			// 64
-	ListBox<BGSPerk>	perkListBox;			// 94
+	ListBox<BGSPerk*>	perkListBox;			// 94
 	tList<BGSPerk>		availablePerks;			// C4	Perks to show in the perk listBox
 };
 STATIC_ASSERT(sizeof(LevelUpMenu) == 0xCC);
@@ -1875,10 +1874,10 @@ public:
 	TESObjectREFR				*sourceRef;		// 060
 	TESRecipeCategory			*category;		// 064
 	UInt32						unk068;			// 068
-	ListBox<TESRecipe>			recipeList;		// 06C
-	ListBox<TESRecipe>			*unk09C;		// 09C
-	ListBox<RecipeComponent>	componentList;	// 0A0
-	ListBox<Condition>			conditionList;	// 0D0
+	ListBox<TESRecipe*>			recipeList;		// 06C
+	ListBox<TESRecipe*>			*unk09C;		// 09C
+	ListBox<RecipeComponent*>	componentList;	// 0A0
+	ListBox<Condition*>			conditionList;	// 0D0
 	UInt32						unk100;			// 100
 };
 
@@ -1908,7 +1907,7 @@ public:
 	TileImage			*tile48;		// 48	TM_DescriptionScrollbar
 	UInt32				numSelected;	// 4C
 	UInt32				maxSelect;		// 50
-	ListBox<BGSPerk>	perkListBox;	// 54
+	ListBox<BGSPerk*>	perkListBox;	// 54
 	tList<BGSPerk>		perkList;		// 84
 };
 
@@ -3192,7 +3191,8 @@ struct EntryPointConditionInfo
 struct AnimGroupInfo
 {
 	const char	*name;			// 00
-	UInt32		unk04;			// 04
+	UInt8		byte04;			// 04
+	UInt8		pad05[3];		// 05
 	UInt32		sequenceType;	// 08
 	UInt32		unk0C;			// 0C
 	UInt32		unk10;			// 10

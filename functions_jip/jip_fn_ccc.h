@@ -421,7 +421,7 @@ bool Cmd_CCCSavedForm_Execute(COMMAND_ARGS)
 }
 
 typedef UnorderedMap<UInt32, TESObjectREFR*> MapMarkersGrid;
-UnorderedMap<TESWorldSpace*, MapMarkersGrid> s_worldspaceMap;
+Map<TESWorldSpace*, MapMarkersGrid> s_worldspaceMap;
 
 bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 {

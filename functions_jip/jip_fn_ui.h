@@ -60,6 +60,7 @@ DEFINE_COMMAND_PLUGIN(CloseActiveMenu, , 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ShowLevelUpMenuEx, , 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(AttachUIXML, , 1, 2, kParams_TwoStrings);
 DEFINE_COMMAND_PLUGIN(AttachUIComponent, , 1, 22, kParams_JIP_OneString_OneFormatString);
+DEFINE_COMMAND_PLUGIN(GetWorldMapPosMults, , 0, 4, kParams_JIP_TwoFloats_TwoScriptVars);
 
 bool Cmd_IsComponentLoaded_Execute(COMMAND_ARGS)
 {
@@ -925,7 +926,8 @@ __declspec(naked) void __fastcall RefreshRecipeMenu(RecipeMenu *menu)
 		push	edi
 		mov		esi, ecx
 		add		ecx, 0x6C
-		call	ListBox<TESRecipe>::Clear
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x1C]
 		mov		ecx, esi
 		push	dword ptr [ecx+0x64]
 		push	0
@@ -958,9 +960,35 @@ __declspec(naked) void __fastcall RefreshRecipeMenu(RecipeMenu *menu)
 
 bool Cmd_RefreshItemsList_Execute(COMMAND_ARGS)
 {
-	if (*g_recipeMenu)
-		RefreshRecipeMenu(*g_recipeMenu);
-	else RefreshItemListBox();
+	switch (g_interfaceManager->GetTopVisibleMenuID())
+	{
+		case kMenuType_Inventory:
+			CdeclCall(0x782A90);
+			break;
+		case kMenuType_Stats:
+			ThisCall(0x7DF230, *g_statsMenu, 4);
+			break;
+		case kMenuType_Container:
+			ThisCall(0x75C280, *g_containerMenu, 0);
+			break;
+		case kMenuType_Map:
+		{
+			MapMenu *mapMenu = *g_mapMenu;
+			if (mapMenu->currentTab == 0x21)
+			{
+				WriteRelJump(0x79DF73, 0x79E053);
+				ThisCall(0x79DBB0, mapMenu);
+				SAFE_WRITE_BUF(0x79DF73, "\x6A\x00\x68\xB1\x0F");
+			}
+			break;
+		}
+		case kMenuType_Barter:
+			CdeclCall(0x730690, 1);
+			break;
+		case kMenuType_Recipe:
+			RefreshRecipeMenu(*g_recipeMenu);
+			break;
+	}
 	return true;
 }
 
@@ -1039,12 +1067,10 @@ __declspec(naked) void QuantityMenuCallback(int count)
 		mov		ecx, [esp+4]
 		push	ecx
 		push	1
-		push	offset s_callRes
-		push	0
 		push	0
 		push	eax
 		call	CallFunction
-		add		esp, 0x18
+		add		esp, 0x10
 	done:
 		retn
 	}
@@ -1077,12 +1103,10 @@ __declspec(naked) void MessageBoxCallback()
 		jnz		done
 		push	edx
 		push	1
-		push	offset s_callRes
-		push	0
 		push	0
 		push	eax
 		call	CallFunction
-		add		esp, 0x18
+		add		esp, 0x10
 	done:
 		retn
 	}
@@ -1736,6 +1760,43 @@ bool Cmd_AttachUIComponent_Execute(COMMAND_ARGS)
 				*result = 1;
 			}
 		}
+	}
+	return true;
+}
+
+bool Cmd_GetWorldMapPosMults_Execute(COMMAND_ARGS)
+{
+	static TESWorldSpace *currWorldSpace = NULL, *mapWorldSpace = NULL;
+	static alignas(16) WorldDimensions worldDimensions;
+	PlayerCharacter *thePlayer = g_thePlayer;
+	TESObjectCELL *parentCell = thePlayer->parentCell;
+	if (!parentCell) return true;
+	TESWorldSpace *parentWorld = parentCell->worldSpace;
+	if (!parentWorld)
+	{
+		TESObjectREFR *lastDoor = thePlayer->lastExteriorDoor;
+		if (!lastDoor) return true;
+		parentWorld = lastDoor->GetParentWorld();
+		if (!parentWorld) return true;
+	}
+	NiPoint2 inPos;
+	ScriptVar *outX, *outY;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &inPos.x, &inPos.y, &outX, &outY))
+	{
+		if (currWorldSpace != parentWorld)
+		{
+			currWorldSpace = parentWorld;
+			worldDimensions.GetPosMods(parentWorld);
+			TESWorldSpace *rootWorld = parentWorld->GetRootMapWorld();
+			if (mapWorldSpace != rootWorld)
+			{
+				mapWorldSpace = rootWorld;
+				worldDimensions.GetDimensions(rootWorld);
+			}
+		}
+		GetWorldMapPosMults(&inPos, &worldDimensions, &inPos);
+		outX->data.num = inPos.x;
+		outY->data.num = inPos.y;
 	}
 	return true;
 }

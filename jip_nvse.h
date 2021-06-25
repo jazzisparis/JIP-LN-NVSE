@@ -4,7 +4,7 @@
 #include "internal/dinput.h"
 #include "internal/xinput.h"
 
-DebugLog s_log, s_debug;
+ExpressionEvaluatorUtils s_expEvalUtils;
 
 bool (*WriteRecord)(UInt32 type, UInt32 version, const void *buffer, UInt32 length);
 bool (*WriteRecordData)(const void *buffer, UInt32 length);
@@ -20,7 +20,6 @@ UInt8 (*ReadRecord8)();
 UInt16 (*ReadRecord16)();
 UInt32 (*ReadRecord32)();
 void (*ReadRecord64)(void *outData);
-void (*SkipNBytes)(UInt32 byteNum);
 CommandInfo* (*GetCmdByOpcode)(UInt32 opcode);
 const char* (*GetStringVar)(UInt32 stringID);
 bool (*AssignString)(COMMAND_ARGS, const char *newValue);
@@ -35,7 +34,7 @@ bool (*GetElement)(NVSEArrayVar *arr, const NVSEArrayElement &key, NVSEArrayElem
 bool (*GetElements)(NVSEArrayVar *arr, NVSEArrayElement *elements, NVSEArrayElement *keys);
 bool (*ExtractArgsEx)(COMMAND_ARGS_EX, ...);
 bool (*ExtractFormatStringArgs)(UInt32 fmtStringPos, char *buffer, COMMAND_ARGS_EX, UInt32 maxParams, ...);
-bool (*CallFunction)(Script *funcScript, TESObjectREFR *callingObj, TESObjectREFR *container, NVSEArrayElement *result, UInt8 numArgs, ...);
+bool (*CallFunction)(Script *funcScript, TESObjectREFR *callingObj, UInt8 numArgs, ...);
 
 DIHookControl *g_DIHookCtrl = NULL;
 UInt8 *g_numPreloadMods = NULL;
@@ -84,6 +83,7 @@ NiCamera *g_masterCamera = (NiCamera*)0x11E0C20;
 NiNode **g_1stPersonCameraNode = (NiNode**)0x11E07D0;
 NiNode **g_3rdPersonCameraNode = (NiNode**)0x11E07D4;
 NiNode **g_1stPersonCameraBipedNode = (NiNode**)0x11E07D8;
+tList<ListBox<int>> *g_activeListBoxes = (tList<ListBox<int>>*)0x11D8B54;
 tList<GradualSetFloat> *g_queuedGradualSetFloat = (tList<GradualSetFloat>*)0x11F3348;
 
 RecipeMenu **g_recipeMenu = (RecipeMenu**)0x11D8E90;
@@ -212,6 +212,7 @@ void (*FormatString)(char *destStr, UInt32 size, const char *formatStr, ...) = (
 BSFile* (*OpenStream)(const char *filePath, UInt32 openMode, UInt32 bufferSize) = (BSFile* (*)(const char*, UInt32, UInt32))0xAFDF00;
 NiNode* (__thiscall *LoadModel)(ModelLoader *modelLoader, const char *nifPath, UInt32 baseClass, bool flag3Cbit0, UInt32 unused, bool flag3Cbit5, bool dontIncCounter) =
 	(NiNode* (__thiscall *)(ModelLoader*, const char*, UInt32, bool, UInt32, bool, bool))0x447080;
+KFModel* (__thiscall *LoadKFModel)(ModelLoader *modelLoader, const char *kfPath) = (KFModel* (__thiscall *)(ModelLoader*, const char*))0x4471C0;
 FontInfo* (__thiscall *InitFontInfo)(FontInfo *fontInfo, UInt32 fontID, const char *filePath, bool arg3) = (FontInfo* (__thiscall *)(FontInfo*, UInt32, const char*, bool))0xA12020;
 
 Cmd_Execute SayTo, KillActor, AddNote, AttachAshPile, MoveToFade, GetRefs;
@@ -243,7 +244,7 @@ struct QueuedCmdCall
 
 #define AddQueuedCmdCall(qCall) ThisCall(0x87D160, g_scrapHeapQueue, &qCall)
 
-typedef UnorderedSet<TESForm*> TempFormList;
+typedef Set<TESForm*> TempFormList;
 __declspec(noinline) TempFormList *GetTempFormList()
 {
 	thread_local TempFormList s_tempFormList(0x40);
@@ -845,30 +846,31 @@ __declspec(naked) SInt32 TESObjectREFR::GetItemCount(TESForm *form)
 	{
 		push	ebp
 		mov		ebp, esp
-		push	ecx
-		push	ecx
 		call	TESObjectREFR::GetContainer
 		test	eax, eax
 		jz		done
-		mov		ecx, [ebp-4]
 		add		eax, 4
-		mov		[ebp-4], eax
+		push	eax
 		call	TESObjectREFR::GetContainerChangesList
-		mov		edx, [ebp+8]
-		cmp		byte ptr [edx+4], kFormType_BGSListForm
-		jz		itemList
-		push	edx
 		mov		edx, eax
+		mov		eax, [ebp+8]
+		test	eax, eax
+		jz		done
+		cmp		byte ptr [eax+4], kFormType_BGSListForm
+		jz		itemList
+		push	eax
 		mov		ecx, [ebp-4]
 		call	GetFormCount
-		jmp		done
+	done:
+		leave
+		retn	4
+		NOP_0x7
 	itemList:
-		mov		[ebp-8], eax
+		push	edx
 		push	esi
 		push	edi
-		lea		esi, [edx+0x18]
-		mov		edi, 0
-		ALIGN 16
+		lea		esi, [eax+0x18]
+		xor		edi, edi
 	iterHead:
 		test	esi, esi
 		jz		iterEnd
@@ -887,7 +889,6 @@ __declspec(naked) SInt32 TESObjectREFR::GetItemCount(TESForm *form)
 		mov		eax, edi
 		pop		edi
 		pop		esi
-	done:
 		leave
 		retn	4
 	}
@@ -2628,7 +2629,7 @@ __declspec(naked) float Actor::AdjustPushForce(float baseForce)
 
 __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR *originRef, bool adjustForce)
 {
-	static const float kFltFive = 5.0F, kPushTime = 96.0F;
+	static const float kFltFive = 5.0F, kPushTime = 1.0F / 96.0F;
 	__asm
 	{
 		push	esi
@@ -2666,12 +2667,12 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		movss	xmm3, xmm1
 		mulss	xmm3, xmm3
 		addss	xmm2, xmm3
-		sqrtss	xmm2, xmm2
+		rsqrtss	xmm2, xmm2
 		pxor	xmm3, xmm3
 		comiss	xmm2, xmm3
 		jz		done
-		divss	xmm0, xmm2
-		divss	xmm1, xmm2
+		mulss	xmm0, xmm2
+		mulss	xmm1, xmm2
 	doneAngle:
 		cmp		[esp+0x14], 0
 		jz		doneForce
@@ -2686,7 +2687,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		mulss	xmm2, ds:[0x1267BCC]
 		and		edx, 0x7FFFFFFF
 		movd	xmm3, edx
-		divss	xmm3, kPushTime
+		mulss	xmm3, kPushTime
 		mulss	xmm2, xmm3
 		mulss	xmm0, xmm2
 		mulss	xmm1, xmm2
@@ -3735,12 +3736,12 @@ __declspec(naked) void NiVector3::Normalize()
 		addss	xmm2, xmm1
 		psrlq	xmm1, 0x20
 		addss	xmm2, xmm1
-		sqrtss	xmm1, xmm2
+		rsqrtss	xmm1, xmm2
 		pxor	xmm2, xmm2
 		comiss	xmm1, xmm2
         jz		zeroLen
 		shufps	xmm1, xmm1, 0
-		divps	xmm0, xmm1
+		mulps	xmm0, xmm1
 		movhlps	xmm1, xmm0
 		movq	qword ptr [ecx], xmm0
 		movss	[ecx+8], xmm1
@@ -4044,6 +4045,31 @@ bool NiNode::HasPhantom()
 		if (*iter && IS_NODE(*iter) && ((NiNode*)*iter)->HasPhantom())
 			return true;
 	return false;
+}
+
+__declspec(naked) bool NiControllerSequence::Play()
+{
+	__asm
+	{
+		push	ecx
+		push	0
+		push	0
+		push	0
+		push	0x3F800000
+		push	0
+		push	0
+		CALL_EAX(0xA34F20)
+		pop		ecx
+		test	al, al
+		jz		done
+		mov		dword ptr [ecx+0x48], 0xFF7FFFFF
+		mov		edx, [ecx+0x40]
+		test	edx, edx
+		jz		done
+		or		byte ptr [edx+8], 8
+	done:
+		retn
+	}
 }
 
 NiTransformInterpolator *NiTransformInterpolator::Create()
@@ -4757,7 +4783,7 @@ void TESModelList::CopyFrom(TESModelList *source)
 	while (currNode = currNode->next);
 }
 
-WeatherEntry *TESClimate::GetWeatherEntry(TESWeather *weather, bool remove = false)
+WeatherEntry *TESClimate::GetWeatherEntry(TESWeather *weather, bool remove)
 {
 	ListNode<WeatherEntry> *iter = weatherTypes.Head(), *prev = NULL;
 	WeatherEntry *entry;
@@ -5237,8 +5263,6 @@ void PlayGameSound(const char *soundEDID)
 	sound.Play();
 }
 
-ArrayElementL s_callRes;
-
 struct ScriptVariableEntry
 {
 	ScriptVar	*value;
@@ -5594,31 +5618,31 @@ struct EventCallbackScripts : Set<Script*>
 void EventCallbackScripts::InvokeEvents(UInt32 arg)
 {
 	for (auto script = BeginCp(); script; ++script)
-		CallFunction(*script, NULL, NULL, &s_callRes, 1, arg);
+		CallFunction(*script, NULL, 1, arg);
 }
 
 void EventCallbackScripts::InvokeEvents2(UInt32 arg1, UInt32 arg2)
 {
 	for (auto script = BeginCp(); script; ++script)
-		CallFunction(*script, NULL, NULL, &s_callRes, 2, arg1, arg2);
+		CallFunction(*script, NULL, 2, arg1, arg2);
 }
 
 void EventCallbackScripts::InvokeEventsThis(TESObjectREFR *thisObj)
 {
 	for (auto script = BeginCp(); script; ++script)
-		CallFunction(*script, thisObj, NULL, &s_callRes, 0);
+		CallFunction(*script, thisObj, 0);
 }
 
 void EventCallbackScripts::InvokeEventsThis1(TESObjectREFR *thisObj, UInt32 arg)
 {
 	for (auto script = BeginCp(); script; ++script)
-		CallFunction(*script, thisObj, NULL, &s_callRes, 1, arg);
+		CallFunction(*script, thisObj, 1, arg);
 }
 
 void EventCallbackScripts::InvokeEventsThis2(TESObjectREFR *thisObj, UInt32 arg1, UInt32 arg2)
 {
 	for (auto script = BeginCp(); script; ++script)
-		CallFunction(*script, thisObj, NULL, &s_callRes, 2, arg1, arg2);
+		CallFunction(*script, thisObj, 2, arg1, arg2);
 }
 
 typedef Map<char*, EventCallbackScripts> MenuClickFiltersMap;
@@ -5811,28 +5835,6 @@ ArrayElementR* __fastcall GetArrayData(NVSEArrayVar *srcArr, UInt32 *size)
 	return data;
 }
 
-UnorderedSet<ContChangesEntry*> s_tempContChangesEntries(0x40);
-
-void DoDeferredFreeEntries()
-{
-	for (auto iter = s_tempContChangesEntries.Begin(); iter; ++iter)
-	{
-		if (iter->extendData)
-			GameHeapFree(iter->extendData);
-		GameHeapFree(*iter);
-	}
-	s_tempContChangesEntries.Clear();
-}
-
-struct InventoryRefData
-{
-	TESForm				*type;
-	ContChangesEntry	*entry;
-	ExtraDataList		*xData;
-
-	InventoryRefData(TESForm *_type, ContChangesEntry *_entry, ExtraDataList *_xData) : type(_type), entry(_entry), xData(_xData) {}
-};
-
 // 30
 struct InventoryRef
 {
@@ -5846,30 +5848,14 @@ struct InventoryRef
 	bool				removed;		// 2D
 	UInt8				pad2E[2];		// 2E
 
-	SInt32 GetCount();
+	SInt32 GetCount() {return entry->countDelta;}
 	ExtraDataList *CreateExtraData();
 };
 
-SInt32 InventoryRef::GetCount()
-{
-	if (s_tempContChangesEntries.HasKey(entry))
-		return entry->countDelta;
-	return xData ? xData->GetCount() : 1;
-}
-
 ExtraDataList *InventoryRef::CreateExtraData()
 {
-	ExtraContainerChanges::EntryDataList *entryList = containerRef->GetContainerChangesList();
-	if (!entryList) return NULL;
-	ContChangesEntry *pEntry = entryList->FindForItem(type);
-	if (!pEntry)
-	{
-		pEntry = (ContChangesEntry*)GameHeapAlloc(sizeof(ContChangesEntry));
-		pEntry->extendData = NULL;
-		pEntry->countDelta = 0;
-		pEntry->type = type;
-		entryList->Prepend(pEntry);
-	}
+	ContChangesEntry *pEntry = containerRef->GetContainerChangesEntry(type);
+	if (!pEntry) return NULL;
 	xData = ExtraDataList::Create();
 	if (pEntry->extendData)
 		pEntry->extendData->Prepend(xData);
@@ -5882,31 +5868,12 @@ ExtraDataList *InventoryRef::CreateExtraData()
 	return xData;
 }
 
-InventoryRef* (*InventoryRefCreate)(TESObjectREFR *container, const InventoryRefData &data, bool bValidate);
+TESObjectREFR* (__stdcall *InventoryRefCreate)(TESObjectREFR *container, TESForm *itemForm, SInt32 countDelta, ExtraDataList *xData);
 InventoryRef* (*InventoryRefGetForID)(UInt32 refID);
-
-TESObjectREFR* __fastcall CreateInventoryRef(TESObjectREFR *container, TESForm *itemForm, SInt32 countDelta, ExtraDataList *xData)
-{
-	ContChangesEntry *entry = (ContChangesEntry*)GameHeapAlloc(sizeof(ContChangesEntry));
-	if (xData)
-	{
-		entry->extendData = (ExtraContainerChanges::ExtendDataList*)GameHeapAlloc(8);
-		entry->extendData->Init(xData);
-	}
-	else entry->extendData = NULL;
-	entry->countDelta = countDelta;
-	entry->type = itemForm;
-	s_tempContChangesEntries.Insert(entry);
-	InventoryRef *invRef = InventoryRefCreate(container, InventoryRefData(itemForm, entry, xData), false);
-	return invRef->tempRef;
-}
 
 TESObjectREFR* __fastcall CreateRefForStack(TESObjectREFR *container, ContChangesEntry *menuEntry)
 {
-	if (!container || !menuEntry)
-		return NULL;
-	ExtraDataList *xData = menuEntry->extendData ? menuEntry->extendData->GetFirstItem() : NULL;
-	return CreateInventoryRef(container, menuEntry->type, menuEntry->countDelta, xData);
+	return (container && menuEntry) ? InventoryRefCreate(container, menuEntry->type, menuEntry->countDelta, menuEntry->extendData ? menuEntry->extendData->GetFirstItem() : NULL) : NULL;
 }
 
 ExtraDataList* __fastcall SplitFromStack(ContChangesEntry *entry, ExtraDataList *xDataIn)
@@ -5943,7 +5910,7 @@ TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 		{
 			entry = actor->GetWeaponInfo();
 			if (entry && entry->extendData)
-				return CreateInventoryRef(actor, entry->type, entry->countDelta, entry->extendData->GetFirstItem());
+				return InventoryRefCreate(actor, entry->type, entry->countDelta, entry->extendData->GetFirstItem());
 		}
 		else
 		{
@@ -5958,7 +5925,7 @@ TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 						continue;
 					if (!(entry = entryList->FindForItem(item)) || !(xData = entry->GetEquippedExtra()))
 						break;
-					return CreateInventoryRef(actor, item, entry->countDelta, xData);
+					return InventoryRefCreate(actor, item, entry->countDelta, xData);
 				}
 			}
 		}
@@ -5980,7 +5947,7 @@ TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 			else if (NOT_TYPE(item, TESObjectARMO) || !(((TESObjectARMO*)item)->bipedModel.partMask & partMask))
 				continue;
 			if (xData = entry->GetEquippedExtra())
-				return CreateInventoryRef(actor, item, entry->countDelta, xData);
+				return InventoryRefCreate(actor, item, entry->countDelta, xData);
 		}
 		while (listIter = listIter->next);
 	}
@@ -6137,7 +6104,8 @@ __declspec(naked) bool __stdcall JIPScriptRunner::RunScript(const char *scriptTe
 
 void __stdcall JIPScriptRunner::RunFile(const char *fileName)
 {
-	char scriptsPath[0x80] = "Data\\NVSE\\plugins\\scripts\\", *buffer = GetStrArgBuffer();
+	char scriptsPath[0x80], *buffer = GetStrArgBuffer();
+	memcpy(scriptsPath, "Data\\NVSE\\plugins\\scripts\\", 26);
 	StrCopy(scriptsPath + 26, fileName);
 	bool success = FileToBuffer(scriptsPath, buffer) && RunScript(buffer);
 	PrintLog("Run Script : %s >> %s", fileName, success ? "SUCCESS" : "FAILED");
@@ -6500,9 +6468,6 @@ int GetIsLAA()
 	return s_isLAA;
 }
 
-TESObjectCELL *s_pcCurrCell0 = NULL, *s_pcCurrCell = NULL, *s_lastInterior = NULL;
-TESWorldSpace *s_pcRootWorld = NULL;
-
 const char kMenuIDJumpTable[] =
 {
 	0, 1, 2, 3, -1, -1, 4, 5, 6, -1, -1, 7, 8, 9, -1, 10, -1, -1, -1, -1, -1, -1, 11, -1, -1, 12, 13, -1, -1, -1, 
@@ -6512,11 +6477,11 @@ const char kMenuIDJumpTable[] =
 
 double s_nvseVersion = 0;
 
-#define REG_CMD(name) nvse->RegisterCommand(&kCommandInfo_##name)
-#define REG_CMD_FRM(name) nvse->RegisterTypedCommand(&kCommandInfo_##name, kRetnType_Form)
-#define REG_CMD_STR(name) nvse->RegisterTypedCommand(&kCommandInfo_##name, kRetnType_String)
-#define REG_CMD_ARR(name) nvse->RegisterTypedCommand(&kCommandInfo_##name, kRetnType_Array)
-#define REG_CMD_AMB(name) nvse->RegisterTypedCommand(&kCommandInfo_##name, kRetnType_Ambiguous)
+#define REG_CMD(name) RegisterCommand(&kCommandInfo_##name)
+#define REG_CMD_FRM(name) RegisterTypedCommand(&kCommandInfo_##name, kRetnType_Form)
+#define REG_CMD_STR(name) RegisterTypedCommand(&kCommandInfo_##name, kRetnType_String)
+#define REG_CMD_ARR(name) RegisterTypedCommand(&kCommandInfo_##name, kRetnType_Array)
+#define REG_CMD_AMB(name) RegisterTypedCommand(&kCommandInfo_##name, kRetnType_Ambiguous)
 
 #define REFR_RES *(UInt32*)result
 #define NUM_ARGS scriptData[*opcodeOffsetPtr]

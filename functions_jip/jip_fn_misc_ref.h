@@ -84,6 +84,7 @@ DEFINE_COMMAND_PLUGIN(AttachExtraCamera, , 1, 3, kParams_JIP_OneString_OneInt_On
 DEFINE_COMMAND_PLUGIN(ProjectExtraCamera, , 0, 4, kParams_JIP_TwoStrings_OneDouble_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(RenameNifBlock, , 1, 3, kParams_JIP_TwoStrings_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(RemoveNifBlock, , 1, 2, kParams_JIP_OneString_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(PlayAnimSequence, , 1, 2, kParams_JIP_OneString_OneOptionalString);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -952,12 +953,29 @@ bool Cmd_MoveToContainer_Execute(COMMAND_ARGS)
 		{
 			ExtraCount *xCount = GetExtraType(&thisObj->extraDataList, Count);
 			if (xCount) quantity = xCount->count;
+			ExtraItemDropper *xDropper = GetExtraType(&thisObj->extraDataList, ItemDropper);
+			if (xDropper)
+			{
+				TESObjectREFR *dropperRef = xDropper->dropper;
+				RemoveExtraData(&thisObj->extraDataList, xDropper, true);
+				if (dropperRef)
+				{
+					ExtraDroppedItemList *xDroppedList = GetExtraType(&dropperRef->extraDataList, DroppedItemList);
+					if (xDroppedList && xDroppedList->itemRefs.Remove(thisObj) && xDroppedList->itemRefs.Empty())
+						RemoveExtraData(&dropperRef->extraDataList, xDroppedList, true);
+				}
+			}
 			if (clrOwner) RemoveExtraType(&thisObj->extraDataList, kExtraData_Ownership);
-			xDataList = thisObj->extraDataList.CreateCopy();
-			ClearExtraDataList(&thisObj->extraDataList, true);
+			if (thisObj->extraDataList.m_data)
+			{
+				xDataList = thisObj->extraDataList.CreateCopy();
+				ClearExtraDataList(&thisObj->extraDataList, true);
+			}
 		}
 		target->AddItem(thisObj->baseForm, xDataList, quantity);
-		thisObj->DeleteReference();
+		if (thisObj->modIndex == 0xFF)
+			thisObj->DeleteReference();
+		else thisObj->Disable();
 	}
 	return true;
 }
@@ -1552,13 +1570,19 @@ bool RegisterInsertObject(COMMAND_ARGS)
 	TESForm *form;
 	UInt32 doInsert;
 	char *buffer = GetStrArgBuffer();
-	if (ExtractFormatStringArgs(2, buffer, EXTRACT_ARGS_EX, kCommandInfo_AttachModel.numParams, &form, &doInsert) && (form->modIndex != 0xFF))
+	if (ExtractFormatStringArgs(2, buffer, EXTRACT_ARGS_EX, kCommandInfo_AttachModel.numParams, &form, &doInsert))
 	{
 		TESObjectREFR *refr = IS_REFERENCE(form) ? (TESObjectREFR*)form : NULL;
+		NiNode *rootNode = (refr && refr->renderState) ? refr->renderState->niNode14 : NULL;
+		bool modifyMap = true;
 		if (refr)
 		{
-			if (kInventoryType[refr->baseForm->typeID])
-				return true;
+			if ((refr->modIndex == 0xFF) || kInventoryType[refr->baseForm->typeID])
+			{
+				if ((doInsert != 3) || !rootNode)
+					return true;
+				modifyMap = false;
+			}
 		}
 		else if (!form->IsBoundObject())
 			return true;
@@ -1576,8 +1600,6 @@ bool RegisterInsertObject(COMMAND_ARGS)
 		bool insertNode = s_insertObjectFlag == kHookFormFlag6_InsertNode;
 		auto formsMap = insertNode ? &s_insertNodeMap : &s_attachModelMap;
 
-		NiNode *rootNode = (refr && refr->renderState) ? refr->renderState->niNode14 : NULL;
-
 		if (doInsert & 1)
 		{
 			if (!insertNode)
@@ -1594,15 +1616,19 @@ bool RegisterInsertObject(COMMAND_ARGS)
 					return true;
 			}
 
-			NodeNamesMap *namesMap;
-			if (formsMap->Insert(form, &namesMap))
-				form->SetJIPFlag(s_insertObjectFlag, true);
-			NiString blockName(nodeName), *dataStr;
-			if (!(*namesMap)[blockName].Insert(objectName, &dataStr))
-				return true;
+			NiString blockName(nodeName), dataStr, *pDataStr;
+			if (modifyMap)
+			{
+				NodeNamesMap *namesMap;
+				if (formsMap->Insert(form, &namesMap))
+					form->SetJIPFlag(s_insertObjectFlag, true);
+				if (!(*namesMap)[blockName].Insert(objectName, &pDataStr))
+					return true;
+			}
+			else pDataStr = &dataStr;
 
 			if (insertNode)
-				*dataStr = objectName + (*objectName == '^');
+				*pDataStr = objectName + (*objectName == '^');
 
 			if (rootNode && (doInsert & 2))
 			{
@@ -1611,8 +1637,8 @@ bool RegisterInsertObject(COMMAND_ARGS)
 				if (targetObj)
 				{
 					if (insertNode)
-						DoInsertNode(targetObj, objectName, dataStr->Get(), rootNode);
-					else if ((rootNode = DoAttachModel(targetObj, objectName, dataStr, rootNode)) && (rootNode->m_flags & 0x20000000))
+						DoInsertNode(targetObj, objectName, pDataStr->Get(), rootNode);
+					else if ((rootNode = DoAttachModel(targetObj, objectName, pDataStr, rootNode)) && (rootNode->m_flags & 0x20000000))
 						AddPointLights(rootNode);
 				}
 				if ((refr == g_thePlayer) && (rootNode = g_thePlayer->node1stPerson))
@@ -1621,8 +1647,8 @@ bool RegisterInsertObject(COMMAND_ARGS)
 					if (targetObj)
 					{
 						if (insertNode)
-							DoInsertNode(targetObj, objectName, dataStr->Get(), rootNode);
-						else DoAttachModel(targetObj, objectName, dataStr, rootNode);
+							DoInsertNode(targetObj, objectName, pDataStr->Get(), rootNode);
+						else DoAttachModel(targetObj, objectName, pDataStr, rootNode);
 					}
 				}
 			}
@@ -2019,8 +2045,7 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 	return true;
 }
 
-extern UInt8 s_useAltFormat;
-void __fastcall GenerateRenderedTextureHook(TESObjectCELL *cell, int EDX, NiCamera *camera, RenderTarget **outTexture);
+void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, int EDX, NiCamera *camera, RenderTarget **outTexture);
 
 __declspec(naked) void __stdcall ProjectExtraCamera(NiCamera *camera, NiTexture **pTexture)
 {
@@ -2036,9 +2061,7 @@ __declspec(naked) void __stdcall ProjectExtraCamera(NiCamera *camera, NiTexture 
 		push	esp
 		push	dword ptr [ebp+8]
 		xor		ecx, ecx
-		mov		s_useAltFormat, 2
-		call	GenerateRenderedTextureHook
-		mov		s_useAltFormat, 0
+		call	GenerateRenderedTexture
 		mov		byte ptr ds:[0x11AD7B4], 1
 		mov		eax, [ebp-4]
 		mov		byte ptr [eax+0x1B], 0
@@ -2132,6 +2155,38 @@ bool Cmd_RemoveNifBlock_Execute(COMMAND_ARGS)
 		{
 			niBlock->m_parent->RemoveObject(niBlock);
 			*result = 1;
+		}
+	}
+	return true;
+}
+
+bool Cmd_PlayAnimSequence_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char sequenceName[0x40], nodeName[0x40];
+	nodeName[0] = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sequenceName, &nodeName))
+	{
+		NiNode *targetNode = thisObj->GetNode(nodeName);
+		if (targetNode)
+		{
+			NiControllerManager *ctrlMgr = (NiControllerManager*)targetNode->m_controller;
+			if (ctrlMgr && IS_TYPE(ctrlMgr, NiControllerManager))
+			{
+				NiControllerSequence *sequence = ctrlMgr->seqStrMap.Lookup(sequenceName);
+				if (sequence)
+				{
+					for (auto iter = ctrlMgr->sequences.Begin(); iter; ++iter)
+						if (*iter && iter->sequenceName && (*(UInt32*)iter->sequenceName != 'eldI'))
+							iter->Unk_23(0, 0);
+					if (sequence->Play())
+					{
+						thisObj->Unk_32(1);
+						thisObj->MarkAsModified(0x10000000);
+						*result = 1;
+					}
+				}
+			}
 		}
 	}
 	return true;

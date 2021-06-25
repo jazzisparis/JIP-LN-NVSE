@@ -50,8 +50,11 @@ kDblPId2 = 1.57079632679489662,
 kDbl180dPI = 57.29577951308232088;
 
 static const float
+kFlt1d1000 = 0.001F,
+kFlt1d200 = 0.005F,
 kFlt1d100 = 0.01F,
 kFltPId180 = 0.01745329238F,
+kFlt1d10 = 0.1F,
 kFltHalf = 0.5F,
 kFltOne = 1.0F,
 kFlt10 = 10.0F,
@@ -77,36 +80,31 @@ template <typename T> class TempObject
 
 public:
 	TempObject() {Reset();}
-	TempObject(const T &src) {objData = *(Buffer*)&src;}
+	TempObject(const T &src) {memcpy((void*)&objData, (const void*)&src, sizeof(T));}
 
 	void Reset() {new ((T*)&objData) T();}
 
 	T& operator()() {return *(T*)&objData;}
 
-	TempObject& operator=(const T &rhs) {objData = *(Buffer*)&rhs; return *this;}
-	TempObject& operator=(const TempObject &rhs) {objData = rhs.objData; return *this;}
-};
-
-//	Assign rhs to lhs, bypassing operator=
-template <typename T> __forceinline void RawAssign(const T &lhs, const T &rhs)
-{
-	struct Helper
+	TempObject& operator=(const T &rhs)
 	{
-		UInt8	bytes[sizeof(T)];
-	};
-	*(Helper*)&lhs = *(Helper*)&rhs;
-}
+		memcpy((void*)&objData, (const void*)&rhs, sizeof(T));
+		return *this;
+	}
+	TempObject& operator=(const TempObject &rhs)
+	{
+		memcpy((void*)&objData, (const void*)&rhs.objData, sizeof(T));
+		return *this;
+	}
+};
 
 //	Swap lhs and rhs, bypassing operator=
 template <typename T> __forceinline void RawSwap(const T &lhs, const T &rhs)
 {
-	struct Helper
-	{
-		UInt8	bytes[sizeof(T)];
-	}
-	temp = *(Helper*)&lhs;
-	*(Helper*)&lhs = *(Helper*)&rhs;
-	*(Helper*)&rhs = temp;
+	UInt8 buffer[sizeof(T)];
+	memcpy((void*)buffer, (const void*)&lhs, sizeof(T));
+	memcpy((void*)&lhs, (const void*)&rhs, sizeof(T));
+	memcpy((void*)&rhs, (const void*)buffer, sizeof(T));
 }
 
 class CriticalSection
@@ -129,8 +127,8 @@ class PrimitiveCS
 public:
 	PrimitiveCS() : owningThread(0) {}
 
-	void Enter();
-	void Leave() {owningThread = 0;}
+	PrimitiveCS *Enter();
+	__forceinline void Leave() {owningThread = 0;}
 };
 
 class LightCS
@@ -142,7 +140,7 @@ public:
 	LightCS() : owningThread(0), enterCount(0) {}
 
 	void Enter();
-	void Leave()
+	__forceinline void Leave()
 	{
 		if (!--enterCount)
 			owningThread = 0;
@@ -237,6 +235,8 @@ UInt32 __fastcall RGBHexToDec(UInt32 rgb);
 UInt32 __fastcall RGBDecToHex(UInt32 rgb);
 
 UInt32 __fastcall StrLen(const char *str);
+
+bool __fastcall MemCmp(const void *ptr1, const void *ptr2, UInt32 bsize);
 
 void __fastcall MemZero(void *dest, UInt32 bsize);
 

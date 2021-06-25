@@ -4,7 +4,7 @@ DEFINE_COMMAND_PLUGIN(RefToString, , 0, 1, kParams_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(StringToRef, , 0, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(GetMinOf, , 0, 5, kParams_JIP_TwoDoubles_ThreeOptionalDoubles);
 DEFINE_COMMAND_PLUGIN(GetMaxOf, , 0, 5, kParams_JIP_TwoDoubles_ThreeOptionalDoubles);
-DEFINE_COMMAND_PLUGIN(ReadArrayFromFile, , 0, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(ReadArrayFromFile, , 0, 2, kParams_JIP_OneString_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(WriteArrayToFile, , 0, 3, kParams_JIP_OneString_TwoInts);
 DEFINE_COMMAND_PLUGIN(ReadStringFromFile, , 0, 3, kParams_JIP_OneString_TwoOptionalInts);
 DEFINE_COMMAND_PLUGIN(WriteStringToFile, , 0, 23, kParams_JIP_OneString_OneInt_OneFormatString);
@@ -76,68 +76,90 @@ bool Cmd_GetMaxOf_Execute(COMMAND_ARGS)
 	return true;
 }
 
-void __fastcall CreateForType(NVSEArrayVar *arr, char *dataStr)
-{
-	if (*dataStr == '@')
-		AppendElement(arr, ArrayElementL(LookupFormByRefID(StringToRef(dataStr + 1))));
-	else if (*dataStr == '$')
-		AppendElement(arr, ArrayElementL(dataStr + 1));
-	else
-		AppendElement(arr, ArrayElementL(StrToDbl(dataStr)));
-}
-
 bool Cmd_ReadArrayFromFile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char filePath[0x80];
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &filePath))
+	UInt32 transpose = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &filePath, &transpose))
 		return true;
 	ReplaceChr(filePath, '/', '\\');
-	char *buffer = GetStrArgBuffer();
-	LineIterator lineIter(filePath, buffer);
+	LineIterator lineIter(filePath, GetStrArgBuffer());
 	if (!lineIter) return true;
-	NVSEArrayVar *mainArr = CreateArray(NULL, 0, scriptObj);
+	TempElements *tempElems = GetTempElements();
+	tempElems->Clear();
 	char *dataPtr = lineIter.Get(), *pos;
 	++lineIter;
-	if (!lineIter)
+	while (true)
 	{
+		pos = GetNextToken(dataPtr, '\t');
+		if (!*dataPtr) break;
+		if (*dataPtr == '@')
+			tempElems->Append(LookupFormByRefID(StringToRef(dataPtr + 1)));
+		else if (*dataPtr == '$')
+			tempElems->Append(dataPtr + 1);
+		else
+			tempElems->Append(StrToDbl(dataPtr));
+		dataPtr = pos;
+	}
+	UInt32 numColumns = tempElems->Size();
+	if (!numColumns) return true;
+	UInt32 numLines = 1, count;
+	while (lineIter)
+	{
+		dataPtr = lineIter.Get();
+		++lineIter;
+		numLines++;
+		count = numColumns;
 		do
 		{
-			pos = GetNextToken(dataPtr, '\t');
-			CreateForType(mainArr, dataPtr);
-			dataPtr = pos;
+			if (*dataPtr)
+			{
+				pos = GetNextToken(dataPtr, '\t');
+				if (*dataPtr == '@')
+					tempElems->Append(LookupFormByRefID(StringToRef(dataPtr + 1)));
+				else if (*dataPtr == '$')
+					tempElems->Append(dataPtr + 1);
+				else
+					tempElems->Append(StrToDbl(dataPtr));
+				dataPtr = pos;
+			}
+			else tempElems->Append(0.0);
 		}
-		while (*dataPtr);
+		while (--count);
+	}
+	ArrayElementL *elemPtr = tempElems->Data();
+	if (numLines == 1)
+	{
+		AssignCommandResult(CreateArray(elemPtr, numColumns, scriptObj), result);
+		return true;
+	}
+	NVSEArrayVar *mainArr = CreateArray(NULL, 0, scriptObj);
+	if (transpose)
+	{
+		count = numLines;
+		do
+		{
+			AppendElement(mainArr, ArrayElementL(CreateArray(elemPtr, numColumns, scriptObj)));
+			elemPtr += numColumns;
+		}
+		while (--count);
 	}
 	else
 	{
-		Vector<NVSEArrayVar*> columnList(0x10);
-		NVSEArrayVar *columnArr;
+		TempElements transElems(numLines);
+		count = numColumns;
 		do
 		{
-			pos = GetNextToken(dataPtr, '\t');
-			columnArr = CreateArray(NULL, 0, scriptObj);
-			columnList.Append(columnArr);
-			CreateForType(columnArr, dataPtr);
-			AppendElement(mainArr, ArrayElementL(columnArr));
-			dataPtr = pos;
+			for (UInt32 lineIdx = 0; lineIdx < numLines; lineIdx++)
+				transElems.Append(elemPtr[lineIdx * numColumns]);
+			AppendElement(mainArr, ArrayElementL(CreateArray(transElems.Data(), numLines, scriptObj)));
+			transElems.Clear();
+			elemPtr++;
 		}
-		while (*dataPtr);
-		UInt32 numColumns = columnList.Size();
-		do
-		{
-			dataPtr = lineIter.Get();
-			++lineIter;
-			for (UInt32 column = 0; column < numColumns; column++)
-			{
-				if (*dataPtr) pos = GetNextToken(dataPtr, '\t');
-				CreateForType(columnList[column], dataPtr);
-				dataPtr = pos;
-			}
-		}
-		while (lineIter);
+		while (--count);
 	}
-	if (GetArraySize(mainArr)) AssignCommandResult(mainArr, result);
+	AssignCommandResult(mainArr, result);
 	return true;
 }
 

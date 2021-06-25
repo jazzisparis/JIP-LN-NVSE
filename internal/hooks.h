@@ -417,14 +417,14 @@ void MainLoopAddCallbackArgsEx(void *cmdPtr, void *thisObj, UInt32 callCount, UI
 	va_end(args);
 }
 
-__declspec(naked) void CycleMainLoopCallbacks()
+__declspec(naked) void __fastcall CycleMainLoopCallbacks(Vector<MainLoopCallback*> *mlCallbacks)
 {
 	__asm
 	{
 		push	ebx
 		push	esi
 		push	edi
-		mov		ebx, offset s_mainLoopCallbacks
+		mov		ebx, ecx
 		mov		esi, [ebx]
 		mov		edi, [ebx+4]
 		ALIGN 16
@@ -475,12 +475,10 @@ __declspec(naked) void CycleMainLoopCallbacks()
 		mov		edx, [ecx+0x10]
 		mov		[ecx+0x14], edx
 		push	0
-		push	offset s_callRes
-		push	0
 		push	dword ptr [ecx+4]
 		push	dword ptr [ecx]
 		call	CallFunction
-		add		esp, 0x14
+		add		esp, 0xC
 		jmp		cycleHead
 		ALIGN 16
 	cycleEnd:
@@ -514,43 +512,6 @@ __declspec(naked) void CycleMainLoopCallbacks()
 		pop		edi
 		pop		esi
 		pop		ebx
-		retn
-	}
-}
-
-UInt32 s_LNEventFlags = 0;
-void LN_ProcessEvents();
-
-__declspec(naked) void GameMainLoopHook()
-{
-	__asm
-	{
-		mov		ecx, [eax+0x288]
-		push	ecx
-		mov		eax, [ecx]
-		call	dword ptr [eax+0xC]
-		mov		[ebp-0x2EC], eax
-		cmp		s_mainLoopCallbacks.numItems, 0
-		jz		doneCallbacks
-		call	CycleMainLoopCallbacks
-	doneCallbacks:
-		cmp		s_LNEventFlags, 0
-		jz		doneEvents
-		call	LN_ProcessEvents
-	doneEvents:
-		cmp		s_tempContChangesEntries.numEntries, 0
-		jz		doneEntries
-		call	DoDeferredFreeEntries
-	doneEntries:
-		cmp		s_HUDCursorMode, 0
-		jz		doneCursor
-		mov		ecx, g_interfaceManager
-		cmp		dword ptr [ecx+0xC], 1
-		jz		doneCursor
-		mov		s_HUDCursorMode, 0
-		mov		ecx, g_DIHookCtrl
-		mov		byte ptr [ecx+0x709], 0
-	doneCursor:
 		retn
 	}
 }
@@ -879,12 +840,10 @@ __declspec(naked) void TextInputCloseHook()
 		cmovz	eax, edx
 		push	eax
 		push	1
-		push	offset s_callRes
-		push	0
 		push	0
 		push	dword ptr [esi+0x58]
 		call	CallFunction
-		add		esp, 0x18
+		add		esp, 0x10
 		pop		esi
 		CALL_EAX(0x7E65B0)
 	done:
@@ -936,7 +895,7 @@ void __fastcall MenuHandleClickHook(Menu *menu, int EDX, int tileID, Tile *click
 		{
 			if (!StrBeginsCS(lastClickedTilePath, filter.Key())) break;
 			for (auto script = filter().BeginCp(); script; ++script)
-				CallFunction(*script, NULL, NULL, &s_callRes, 3, menu->id, tileID, clickedTile->name.m_data);
+				CallFunction(*script, NULL, 3, menu->id, tileID, clickedTile->name.m_data);
 		}
 	}
 	if (!clickEvent.idsMap.Empty())
@@ -946,7 +905,7 @@ void __fastcall MenuHandleClickHook(Menu *menu, int EDX, int tileID, Tile *click
 		{
 			const char *tileName = clickedTile ? clickedTile->name.m_data : "";
 			for (auto script = callbacks->BeginCp(); script; ++script)
-				CallFunction(*script, NULL, NULL, &s_callRes, 3, menu->id, tileID, tileName);
+				CallFunction(*script, NULL, 3, menu->id, tileID, tileName);
 		}
 	}
 	return clickEvent.funcPtr(menu, tileID, clickedTile);
@@ -2048,12 +2007,10 @@ __declspec(naked) bool __fastcall HandleSetQuestStage(TESQuest *quest, UInt8 sta
 		push	edx
 		push	dword ptr [ebp-4]
 		push	2
-		push	offset s_callRes
-		push	0
 		push	0
 		push	dword ptr [ecx+4]
 		call	CallFunction
-		add		esp, 0x1C
+		add		esp, 0x14
 		or		bl, [esi-7]
 		jmp		iterHead
 		ALIGN 16
@@ -2140,7 +2097,7 @@ void __fastcall InvokeActorHitEvents(ActorHitData *hitData)
 {
 	for (auto iter = s_criticalHitEvents.BeginCp(); iter; ++iter)
 		if ((!iter().target || (iter().target == hitData->target)) && (!iter().source || (iter().source == hitData->source)) && (!iter().weapon || (iter().weapon == hitData->weapon)))
-			CallFunction(iter().callback, hitData->target, NULL, &s_callRes, 2, hitData->source, hitData->weapon);
+			CallFunction(iter().callback, hitData->target, 2, hitData->source, hitData->weapon);
 }
 
 __declspec(naked) void __fastcall CopyHitDataHook(MiddleHighProcess *process, int EDX, ActorHitData *copyFrom)
@@ -2929,28 +2886,31 @@ __declspec(naked) NiPointLight* __fastcall CreatePointLight(TESObjectLIGH *light
 
 __declspec(naked) void __fastcall SetLightProperties(NiPointLight *ptLight, TESObjectLIGH *lightForm)
 {
-	static const __m128 kColourDivisors = {255, 255, 255, 1};
+	static const __m128 kColourMults = {1.0 / 255, 1.0 / 255, 1.0 / 255, 1};
 	__asm
 	{
-		mov		eax, [edx+0xB4]
-		mov		[ecx+0xC4], eax
+		add		ecx, 0xC4
+		add		edx, 0xA0
+		mov		eax, [edx+0x14]
+		mov		[ecx], eax
 		pxor	xmm0, xmm0
-		movups	[ecx+0xC8], xmm0
-		movups	[ecx+0xEC], xmm0
+		movups	[ecx+4], xmm0
+		movups	[ecx+0x28], xmm0
 		xor		eax, eax
-		mov		al, [edx+0xA4]
-		movd	xmm0, eax
-		mov		al, [edx+0xA5]
-		movd	xmm1, eax
-		unpcklps	xmm0, xmm1
-		mov		al, [edx+0xA6]
-		movd	xmm1, eax
-		movd	xmm2, [edx+0xA0]
-		unpcklps	xmm1, xmm2
-		movlhps	xmm0, xmm1
+		mov		al, [edx+4]
+		mov		[ecx+0x10], eax
+		mov		al, [edx+5]
+		mov		[ecx+0x14], eax
+		mov		al, [edx+6]
+		mov		[ecx+0x18], eax
+		mov		eax, [edx]
+		mov		[ecx+0x1C], eax
+		movups	xmm0, [ecx+0x10]
 		cvtdq2ps	xmm0, xmm0
-		divps	xmm0, kColourDivisors
-		movups	[ecx+0xD4], xmm0
+		mulps	xmm0, kColourMults
+		movups	[ecx+0x10], xmm0
+		sub		ecx, 0xC4
+		sub		edx, 0xA0
 		retn
 	}
 }
@@ -3986,6 +3946,51 @@ __declspec(naked) void SynchronizePositionHook()
 	}
 }
 
+void HandleFramePreRender()
+{
+	
+}
+
+void __fastcall DoRenderFrameHook(OSGlobals *osGlobals, int EDX, NiObject *renderer, UInt8 arg2, UInt8 arg3)
+{
+	__asm
+	{
+		push	ecx
+		cmp		dword ptr [esp+8], 0
+		jnz		skipHandle
+		call	HandleFramePreRender
+	skipHandle:
+		mov		eax, ds:[0x11F91C8]
+		mov		ecx, ds:[0x11DEB7C]
+		mov		ecx, [ecx+0xAC]
+		mov		edx, [ecx+0x8C]
+		mov		[eax+0x1F0], edx
+		mov		edx, [ecx+0x90]
+		mov		[eax+0x1F4], edx
+		mov		edx, [ecx+0x94]
+		mov		[eax+0x1F8], edx
+		mov		dl, [eax+0x131]
+		cmp		[esp+0xC], 0
+		jz		notMenu
+		cmp		byte ptr ds:[0x11F3484], 0
+		jnz		notMenu
+		mov		[esp+0x10], dl
+		mov		eax, 0x8707C0
+		jmp		doCall
+	notMenu:
+		mov		eax, 0x870A00
+		mov		ecx, 0x870BD0
+		test	dl, dl
+		cmovz	eax, ecx
+	doCall:
+		pop		ecx
+		push	dword ptr [esp+0xC]
+		push	dword ptr [esp+8]
+		call	eax
+		retn	0xC
+	}
+}
+
 bool s_lastLMBState = false;
 
 __declspec(naked) void ProcessHUDMainUI()
@@ -4480,7 +4485,6 @@ UnorderedMap<const char*, UInt32> s_eventMasks({{"OnActivate", 0}, {"OnAdd", 1},
 
 void InitJIPHooks()
 {
-	WritePushRetRelJump(0x86B38B, 0x86B3B2, (UInt32)GameMainLoopHook);
 	SafeWrite32(0x87CE34, (UInt32)DoQueuedCmdCallHook);
 	WriteRelCall(0x9459ED, (UInt32)GetVanityDisabledHook);
 
@@ -4554,6 +4558,7 @@ void InitJIPHooks()
 	WriteRelJump(0x50DE20, (UInt32)UpdateAnimatedLightHook);
 	WriteRelCall(0x8C7C4E, (UInt32)UpdateAnimatedLightsHook);
 	WriteRelCall(0x8C7E18, (UInt32)UpdateAnimatedLightsHook);
+	//WriteRelJump(0x8706B0, (UInt32)DoRenderFrameHook);
 	SafeWrite32(0x1087FD8, (UInt32)CopyHitDataHook);
 	SafeWrite32(0x10897C0, (UInt32)CopyHitDataHook);
 	SAFE_WRITE_BUF(0x92C4A0, "\x8B\x81\x40\x02\x00\x00\x85\xC0\x74\x07\xC7\x40\x10\xFF\xFF\xFF\xFF\xC3");

@@ -41,6 +41,7 @@
 #include "functions_jip/jip_fn_sound.h"
 #include "functions_jip/jip_fn_string.h"
 #include "functions_jip/jip_fn_texture_set.h"
+#include "functions_jip/jip_fn_minimap.h"
 #include "functions_jip/jip_fn_ui.h"
 #include "functions_jip/jip_fn_utility.h"
 #include "functions_jip/jip_fn_water.h"
@@ -48,7 +49,6 @@
 #include "functions_jip/jip_fn_weather.h"
 #include "functions_jip/jip_fn_worldspace.h"
 #include "functions_jip/jip_fn_ccc.h"
-#include "functions_jip/jip_fn_minimap.h"
 
 #include "functions_ln/ln_fn_activator.h"
 #include "functions_ln/ln_fn_actor.h"
@@ -93,17 +93,22 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 	}
 	int version = nvse->nvseVersion;
 	s_nvseVersion = (version >> 24) + (((version >> 16) & 0xFF) * 0.1) + (((version & 0xFF) >> 4) * 0.01);
-	if (version < 0x6000050)
+	if (version < 0x6010030)
 	{
-		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.05 minimum.", s_nvseVersion);
+		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.13 minimum.", s_nvseVersion);
 		return false;
 	}
 	PrintLog("NVSE version:\t%.2f\nJIP LN version:\t%.2f\n", s_nvseVersion, JIP_LN_VERSION);
 	return true;
 }
 
+void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg);
+
 bool NVSEPlugin_Load(const NVSEInterface *nvse)
 {
+	bool (*RegisterCommand)(CommandInfo *info) = nvse->RegisterCommand;
+	bool (*RegisterTypedCommand)(CommandInfo *info, CommandReturnType retnType) = nvse->RegisterTypedCommand;
+
 	//____________________FUNCTIONS_LN____________________
 	nvse->SetOpcodeBase(0x2200);
 	//	v1.00
@@ -770,8 +775,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*272C*/REG_CMD(InitItemFilter);
 	/*272D*/REG_CMD(SetItemFilter);
 	/*272E*/REG_CMD(GetSessionTime);
-	/*272F*/REG_CMD(EmptyCommand);
-	/*2730*/REG_CMD(EmptyCommand);
+	/*272F*/REG_CMD(GetQuestTargetsChanged);
+	/*2730*/REG_CMD(GetWorldMapPosMults);
 	/*2731*/REG_CMD(EmptyCommand);
 	/*2732*/REG_CMD(EmptyCommand);
 	//	v20.00
@@ -1329,23 +1334,18 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2901*/REG_CMD(RemoveNifBlock);
 	/*2902*/REG_CMD(SetInternalMarker);
 	/*2903*/REG_CMD(FailQuest);
+	//	v56.22
+	/*2904*/REG_CMD(PlayAnimSequence);
 
 	//===========================================================
-
-	NVSECommandTableInterface *cmdTable = (NVSECommandTableInterface*)nvse->QueryInterface(kInterface_CommandTable);
-	GetCmdByOpcode = cmdTable->GetByOpcode;
-	CommandInfo *cmdInfo = GetCmdByOpcode(0x146B);
-	cmdInfo->numParams = 2;
-	cmdInfo->params = kParams_OneInt_OneOptionalInt;
-	cmdInfo = GetCmdByOpcode(0x158D);
-	cmdInfo->numParams = 2;
-	cmdInfo->params = kParams_OneInt_OneOptionalInt;
 
 	if (nvse->isEditor)
 	{
 		InitEditorPatches();
 		return true;
 	}
+
+	nvse->InitExpressionEvaluatorUtils(&s_expEvalUtils);
 
 	PluginHandle pluginHandle = nvse->GetPluginHandle();
 	NVSESerializationInterface *serialization = (NVSESerializationInterface*)nvse->QueryInterface(kInterface_Serialization);
@@ -1363,10 +1363,11 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	ReadRecord16 = serialization->ReadRecord16;
 	ReadRecord32 = serialization->ReadRecord32;
 	ReadRecord64 = serialization->ReadRecord64;
-	SkipNBytes = serialization->SkipNBytes;
 	serialization->SetLoadCallback(pluginHandle, LoadGameCallback);
 	serialization->SetSaveCallback(pluginHandle, SaveGameCallback);
 	serialization->SetNewGameCallback(pluginHandle, NewGameCallback);
+	((NVSEMessagingInterface*)nvse->QueryInterface(kInterface_Messaging))->RegisterListener(pluginHandle, "NVSE", NVSEMessageHandler);
+	GetCmdByOpcode = ((NVSECommandTableInterface*)nvse->QueryInterface(kInterface_CommandTable))->GetByOpcode;
 	NVSEStringVarInterface *strInterface = (NVSEStringVarInterface*)nvse->QueryInterface(kInterface_StringVar);
 	GetStringVar = strInterface->GetString;
 	AssignString = strInterface->Assign;
@@ -1383,15 +1384,102 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	NVSEScriptInterface *scrInterface = (NVSEScriptInterface*)nvse->QueryInterface(kInterface_Script);
 	ExtractArgsEx = scrInterface->ExtractArgsEx;
 	ExtractFormatStringArgs = scrInterface->ExtractFormatStringArgs;
-	CallFunction = scrInterface->CallFunction;
+	CallFunction = scrInterface->CallFunctionAlt;
 
 	NVSEDataInterface *nvseData = (NVSEDataInterface*)nvse->QueryInterface(kInterface_Data);
 	g_DIHookCtrl = (DIHookControl*)nvseData->GetSingleton(NVSEDataInterface::kNVSEData_DIHookControl);
-	InventoryRefCreate = (InventoryRef* (*)(TESObjectREFR*, const InventoryRefData&, bool))nvseData->GetFunc(NVSEDataInterface::kNVSEData_InventoryReferenceCreate);
+	InventoryRefCreate = (TESObjectREFR* (__stdcall *)(TESObjectREFR*, TESForm*, SInt32, ExtraDataList*))nvseData->GetFunc(NVSEDataInterface::kNVSEData_InventoryReferenceCreateEntry);
 	InventoryRefGetForID = (InventoryRef* (*)(UInt32))nvseData->GetFunc(NVSEDataInterface::kNVSEData_InventoryReferenceGetForRefID);
 	g_numPreloadMods = (UInt8*)nvseData->GetData(NVSEDataInterface::kNVSEData_NumPreloadMods);
 
-	((NVSEMessagingInterface*)nvse->QueryInterface(kInterface_Messaging))->RegisterListener(pluginHandle, "NVSE", NVSEMessageHandler);
-
 	return true;
+}
+
+void CleanMLCallbacks()
+{
+	for (auto iter = s_mainLoopCallbacks.Begin(); iter; ++iter)
+		if (iter->flags & 8) iter->bRemove = true;
+}
+
+void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
+{
+	switch (nvseMsg->type)
+	{
+		case NVSEMessagingInterface::kMessage_PostLoad:
+		{
+			MemCopy = memcpy;
+			MemMove = memmove;
+
+			InitJIPHooks();
+			InitGamePatches();
+			InitCmdPatches();
+			break;
+		}
+		case NVSEMessagingInterface::kMessage_ExitGame:
+			JIPScriptRunner::RunScriptFiles('xg');
+			break;
+		case NVSEMessagingInterface::kMessage_ExitToMainMenu:
+			CleanMLCallbacks();
+			JIPScriptRunner::RunScriptFiles('mx');
+			break;
+		case NVSEMessagingInterface::kMessage_LoadGame:
+			JIPScriptRunner::RunScriptFiles('lg');
+			break;
+		case NVSEMessagingInterface::kMessage_SaveGame:
+			JIPScriptRunner::RunScriptFiles('sg');
+			break;
+		case NVSEMessagingInterface::kMessage_Precompile:
+			break;
+		case NVSEMessagingInterface::kMessage_PreLoadGame:
+		{
+			CleanMLCallbacks();
+			s_gameLoadFlagLN = true;
+			HOOK_SET(OnRagdoll, false);
+			s_onRagdollEventScripts.Clear();
+			MiniMapLoadGame();
+			HOOK_SET(SynchronizePosition, false);
+			s_syncPositionRef = NULL;
+			break;
+		}
+		case NVSEMessagingInterface::kMessage_ExitGame_Console:
+			JIPScriptRunner::RunScriptFiles('xg');
+			break;
+		case NVSEMessagingInterface::kMessage_PostLoadGame:
+			break;
+		case NVSEMessagingInterface::kMessage_PostPostLoad:
+			break;
+		case NVSEMessagingInterface::kMessage_RuntimeScriptError:
+			break;
+		case NVSEMessagingInterface::kMessage_DeleteGame:
+			break;
+		case NVSEMessagingInterface::kMessage_RenameGame:
+			break;
+		case NVSEMessagingInterface::kMessage_RenameNewGame:
+			break;
+		case NVSEMessagingInterface::kMessage_NewGame:
+			JIPScriptRunner::RunScriptFiles('ng');
+			break;
+		case NVSEMessagingInterface::kMessage_DeleteGameName:
+			break;
+		case NVSEMessagingInterface::kMessage_RenameGameName:
+			break;
+		case NVSEMessagingInterface::kMessage_RenameNewGameName:
+			break;
+		case NVSEMessagingInterface::kMessage_DeferredInit:
+			DeferredInit();
+			break;
+		case NVSEMessagingInterface::kMessage_MainGameLoop:
+		{
+			if (!s_mainLoopCallbacks.Empty())
+				CycleMainLoopCallbacks(&s_mainLoopCallbacks);
+			if (s_LNEventFlags)
+				LN_ProcessEvents();
+			if (s_HUDCursorMode && (g_interfaceManager->currentMode > 1))
+			{
+				s_HUDCursorMode = 0;
+				g_DIHookCtrl->SetLMBDisabled(false);
+			}
+			break;
+		}
+	}
 }
