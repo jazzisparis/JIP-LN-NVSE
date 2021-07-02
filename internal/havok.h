@@ -594,6 +594,8 @@ public:
 };
 STATIC_ASSERT(sizeof(bhkWorldM) == 0xD0);
 
+extern bhkWorldM **g_bhkWorldM;
+
 // 0C
 class NiCollisionObject : public NiObject
 {

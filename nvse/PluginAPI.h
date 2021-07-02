@@ -841,6 +841,15 @@ struct ExpressionEvaluatorUtils
 	ScriptVar*				(__fastcall *ScriptTokenGetScriptVar)(PluginScriptToken *scrToken);
 	const PluginTokenPair*	(__fastcall *ScriptTokenGetPair)(PluginScriptToken *scrToken);
 	const PluginTokenSlice*	(__fastcall *ScriptTokenGetSlice)(PluginScriptToken *scrToken);
+
+	void					(*Reserved_1)(void) = nullptr;
+	void					(*Reserved_2)(void) = nullptr;
+	void					(*Reserved_3)(void) = nullptr;
+	void					(*Reserved_4)(void) = nullptr;
+	void					(*Reserved_5)(void) = nullptr;
+	void					(*Reserved_6)(void) = nullptr;
+	void					(*Reserved_7)(void) = nullptr;
+	void					(*Reserved_8)(void) = nullptr;
 };
 
 extern ExpressionEvaluatorUtils s_expEvalUtils;

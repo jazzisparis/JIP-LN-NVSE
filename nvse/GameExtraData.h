@@ -735,3 +735,486 @@ public:
 		else data->flags &= ~kFlag_Hidden;
 	}
 };
+
+// 14
+class ExtraHavok : public BSExtraData
+{
+public:
+	bhkWorld		*world;			// 0C
+	UInt32			unk10;			// 10
+};
+
+// 10
+class ExtraRegionList : public BSExtraData
+{
+public:
+	TESRegionList	*regionList;	// 0C
+};
+
+// 24
+class SeenData
+{
+public:
+	virtual void	Destroy(bool doFree);
+	virtual void	Unk_01(UInt32 arg1, UInt32 arg2, UInt32 arg3);
+	virtual void	Unk_02(UInt32 arg1);
+	virtual void	SaveGame(UInt32 arg1);
+	virtual void	DoSave(UInt32 arg1);
+	virtual void	LoadGame(UInt32 arg1);
+	virtual void	DoLoad(UInt32 arg1);
+
+	UInt8			seenBits[32];	// 04	256 bitfield
+};
+
+// 2C
+class IntSeenData : public SeenData
+{
+public:
+	SInt8			segmentX;		// 24
+	SInt8			segmentY;		// 25
+	bool			fullySeen;		// 26	MiniMap only!
+	UInt8			pad27;			// 27
+	IntSeenData		*nextSegment;	// 28
+};
+
+// 10
+class ExtraSeenData : public BSExtraData
+{
+public:
+	SeenData		*data;		// 0C
+};
+
+// 10
+class ExtraDetachTime : public BSExtraData
+{
+public:
+	int		detachTime;		// 0C
+};
+
+// 10
+class ExtraCellWaterType : public BSExtraData
+{
+public:
+	TESWaterForm	*waterForm;		// 0C
+
+	static ExtraCellWaterType* __stdcall Create(TESWaterForm *_waterForm);
+};
+
+// 10
+class ExtraCellMusicType : public BSExtraData
+{
+public:
+	BGSMusicType	*musicType;
+
+	static ExtraCellMusicType* __stdcall Create(BGSMusicType *_musicType);
+};
+
+// 10
+class ExtraCellClimate : public BSExtraData
+{
+public:
+	TESClimate		*climate;		// 0C
+
+	static ExtraCellClimate* __stdcall Create(TESClimate *_climate);
+};
+
+// 10
+class ExtraPersistentCell : public BSExtraData
+{
+public:
+	TESObjectCELL	*persistentCell;	// 0C
+};
+
+// 24
+class ExtraStartingPosition : public BSExtraData
+{
+public:
+	NiVector3	posVector;	// 0C
+	NiVector3	rotVector;	// 18
+};
+
+// 10
+class ExtraAnim : public BSExtraData
+{
+public:
+	AnimData		*animData;	// 0C
+};
+
+// 1C
+class ExtraPackage : public BSExtraData
+{
+public:
+	TESPackage		*package;	// 0C
+	UInt32			unk10[3];	// 10
+};
+
+// 10
+class ExtraFollower : public BSExtraData
+{
+public:
+	tList<Actor>	*followers;		// 0C
+};
+
+// 10
+class ExtraOriginalReference : public BSExtraData
+{
+public:
+	TESObjectREFR	*originalRef;		// 0C
+
+	static ExtraOriginalReference* __stdcall Create(TESObjectREFR *_originalRef);
+};
+
+// 10
+class ExtraUses : public BSExtraData
+{
+public:
+	UInt8		uses;		// 0C
+
+	static ExtraUses *Create();
+};
+
+// 10
+class ExtraTimeLeft : public BSExtraData
+{
+public:
+	float		timeLeft;		// 0C
+
+	static ExtraTimeLeft *Create();
+};
+
+// 10
+class ExtraCharge : public BSExtraData
+{
+public:
+	float		charge;		// 0C
+
+	static ExtraCharge *Create(float _charge);
+};
+
+// 10
+class ExtraLight : public BSExtraData
+{
+public:
+	struct Data
+	{
+		NiPointLight	*pointLight;
+		float			fadeValue;
+	};
+
+	Data		*data;		// 0C
+};
+
+// 14
+class ExtraLeveledItem : public BSExtraData
+{
+public:
+	UInt32		unk0C;		// 0C
+	UInt8		byte10;		// 10
+	UInt8		pad11[3];	// 11
+};
+
+// 14
+class ExtraEnableStateChildren : public BSExtraData
+{
+public:
+	tList<TESObjectREFR>	children;	// 0C
+};
+
+// 10
+class ExtraItemDropper : public BSExtraData
+{
+public:
+	TESObjectREFR		*dropper;	// 0C
+};
+
+// 14
+class ExtraDroppedItemList : public BSExtraData
+{
+public:
+	tList<TESObjectREFR>	itemRefs;	// 0C
+};
+
+// 10
+class ExtraMerchantContainer : public BSExtraData
+{
+public:
+	TESObjectREFR	*containerRef;	// 0C
+};
+
+// 10
+class ExtraRefractionProperty : public BSExtraData
+{
+public:
+	float			refraction;		// 0C
+};
+
+// 10
+class ExtraPoison : public BSExtraData
+{
+public:
+	AlchemyItem		*poisonEffect;	// 0C
+};
+
+// 10
+class ExtraNorthRotation : public BSExtraData
+{
+public:
+	float		rotation;		// 0C
+};
+
+// 10
+class ExtraStartingWorldOrCell : public BSExtraData
+{
+public:
+	TESForm			*worldOrCell;	// 0C
+};
+
+// 10
+class ExtraTerminalState : public BSExtraData
+{
+public:
+	UInt8			lockedOut;	// 0C
+	UInt8			lockLevel;	// 0D unlocked: 0xFE
+	UInt16			pad;
+
+	static ExtraTerminalState *Create();
+};
+
+// 10
+class ExtraLinkedRef : public BSExtraData
+{
+public:
+	TESObjectREFR	*linkedRef;		// 0C
+
+	static ExtraLinkedRef* __stdcall Create(TESObjectREFR *_linkedRef = NULL);
+};
+
+// 14
+class ExtraLinkedRefChildren : public BSExtraData
+{
+public:
+	tList<TESObjectREFR>	children;	// 0C
+};
+
+// 18
+class ExtraActivateRef : public BSExtraData
+{
+public:
+	struct parentRef
+	{
+		TESObjectREFR*	ref;
+		float			delay;
+	};
+	tList<parentRef>	parentRefs;
+	UInt32				flags;
+};
+
+// 10
+class ExtraTalkingActor : public BSExtraData
+{
+public:
+	Actor			*actor;		// 0C
+};
+
+// 10
+class ExtraObjectHealth : public BSExtraData
+{
+public:
+	float			health;		// 0C
+
+	static ExtraObjectHealth* __stdcall Create(float _health);
+};
+
+// 10
+class ExtraCellImageSpace : public BSExtraData
+{
+public:
+	TESImageSpace	*imageSpace;	// 0C
+
+	static ExtraCellImageSpace* __stdcall Create(TESImageSpace *_imgSpace);
+};
+
+// 10
+class ExtraRadius : public BSExtraData
+{
+public:
+	float			radius;		// 0C
+
+	static ExtraRadius* __stdcall Create(float _radius);
+};
+
+// 10
+class ExtraRadiation : public BSExtraData
+{
+public:
+	float			radiation;	// 0C
+};
+
+// 30
+class ExtraDismemberedLimbs : public BSExtraData
+{
+public:
+	struct DismemberedLimb
+	{
+		UInt8				bodyPartID;
+		UInt8				explodeChance;
+		bool				explodeOnly;
+		UInt8				byte03;
+		BSSimpleArray<void>	*array04;
+	};
+
+	UInt16							dismemberedMask;	// 0C
+	UInt8							pad0E[2];			// 0E
+	int								unk10;				// 10
+	TESObjectWEAP					*weapon;			// 14
+	int								unk18;				// 18
+	bool							wasEaten;			// 1C
+	UInt8							pad1D[3];			// 1D
+	BSSimpleArray<DismemberedLimb>	dismemberedLimbs;	// 20
+};
+
+// 1C
+class ExtraRadioData : public BSExtraData
+{
+public:
+	float				radius;			// 0C
+	UInt32				rangeType;		// 10
+	float				staticPerc;		// 14
+	TESObjectREFR		*positionRef;	// 18
+};
+
+// 34
+class BGSPrimitive
+{
+public:
+	virtual void	Destructor(bool doFree);
+	virtual void	Unk_01(void);
+	virtual void	Unk_02(void);
+	virtual void	Unk_03(void);
+	virtual void	Unk_04(void);
+	virtual void	Unk_05(void);
+
+	UInt32			type;		// 04
+	float			unk08[4];	// 08
+	float			bounds[3];	// 18
+	NiRefObject		*unk24;		// 24
+	NiRefObject		*unk28;		// 28
+	NiRefObject		*unk2C;		// 2C
+	UInt32			unk30;		// 30
+};
+
+// 34
+class BGSPrimitivePlane : public BGSPrimitive
+{
+public:
+};
+
+// 4C
+class BGSPrimitiveBox : public BGSPrimitive
+{
+public:
+	UInt32		unk34[6];	// 34
+};
+
+// 34
+class BGSPrimitiveSphere : public BGSPrimitive
+{
+public:
+};
+
+// 10
+class ExtraPrimitive : public BSExtraData
+{
+public:
+	BGSPrimitive	*primitive;		// 0C
+
+	static ExtraPrimitive* __stdcall Create(BGSPrimitive *_primitive = NULL);
+};
+
+// 10
+class ExtraCollisionData : public BSExtraData
+{
+public:
+	UInt32			unk0C;			// 0C
+};
+
+// 10
+class ExtraEncounterZone : public BSExtraData
+{
+public:
+	BGSEncounterZone	*zone;		// 0C
+};
+
+// 1C
+class ExtraSayToTopicInfo : public BSExtraData
+{
+public:
+	TESTopicInfo	*info;		// 0C
+	TESTopic		*topic;		// 10
+	TESQuest		*quest;		// 14
+	Actor			*speaker;	// 18
+};
+
+// 10
+class ExtraCellAcousticSpace : public BSExtraData
+{
+public:
+	BGSAcousticSpace	*acousticSpace;		// 0C
+
+	static ExtraCellAcousticSpace* __stdcall Create(BGSAcousticSpace *_acousticSpace = NULL);
+};
+
+// 10
+class ExtraAshPileRef : public BSExtraData
+{
+public:
+	TESObjectREFR		*sourceRef;		// 0C
+};
+
+// 28
+class ExtraFollowerSwimBreadcrumbs : public BSExtraData
+{
+public:
+	UInt32			unk0C;
+	float			unk10;
+	float			unk14;
+	float			unk18;
+	UInt32			unk1C;
+	tList<void>		list20;
+};
+
+// 10
+class ExtraCellImpactSwap : public BSExtraData
+{
+public:
+	ImpactDataSwap		*impactSwap;	// 0C
+};
+
+// 10
+class ExtraAudioMarker : public BSExtraData
+{
+public:
+	// 34
+	struct Data
+	{
+		TESFullName		fullName;
+		float			layer2TriggerPerc;
+		float			layer3TriggerPerc;
+		UInt32			unk14[4];
+		UInt32			mediaLocCtrlID;
+		UInt32			flags;
+		UInt32			unk2C[2];
+	};
+
+	Data		*data;		// 0C
+};
+
+// 14
+class ExtraSpecialRenderFlags : public BSExtraData
+{
+public:
+	UInt32		flags;		// 0C
+	UInt32		unk10;		// 10
+
+	static ExtraSpecialRenderFlags* __stdcall Create(UInt32 _flags = 0);
+};

@@ -273,3 +273,481 @@ public:
 	TESQuest* GetQuestByName(const char* questName);
 };
 STATIC_ASSERT(sizeof(DataHandler) == 0x63C);
+
+extern DataHandler *g_dataHandler;
+
+// 1C
+class ImageSpaceModifierInstance : public NiObject
+{
+public:
+	virtual void	Unk_23(void);
+	virtual void	Unk_24(void);
+	virtual ImageSpaceModifierInstanceForm	*GetInstanceForm();
+	virtual void	Unk_26(char *buffer);
+
+	UInt8					hidden;			// 08
+	UInt8					pad09[3];		// 09
+	float					percent;		// 0C
+	NiObject				*obj10;			// 10
+	float					flt14;			// 14
+	UInt32					unk18;			// 18
+};
+
+// 30
+class ImageSpaceModifierInstanceForm : public ImageSpaceModifierInstance
+{
+public:
+	TESImageSpaceModifier	*imageSpace;	// 1C
+	void					*ptr20;			// 20
+	float					flt24;			// 24
+	NiObject				*obj28;			// 28
+	float					flt2C;			// 2C
+};
+
+// 30
+class ImageSpaceModifierInstanceDOF : public ImageSpaceModifierInstance
+{
+public:
+	float					flt1C;			// 1C
+	float					flt20;			// 20
+	float					flt24;			// 24
+	float					flt28;			// 28
+	UInt32					unk2C;			// 2C
+};
+
+// 44
+class ImageSpaceModifierInstanceDRB : public ImageSpaceModifierInstance
+{
+public:
+	float					flt1C;			// 1C
+	float					flt20;			// 20
+	float					flt24;			// 24
+	float					flt28;			// 28
+	float					flt2C;			// 2C
+	UInt32					unk30;			// 30
+	UInt32					unk34;			// 34
+	float					flt38;			// 38
+	float					flt3C;			// 3C
+	UInt32					unk40;			// 40
+};
+
+// 08
+class SkyObject
+{
+public:
+	virtual SkyObject	*Destroy(bool doFree);
+	virtual NiNode		*GetNiNode(void);
+	virtual void		InitNiNode(NiNode *skyNode04);
+	virtual void		Update(Sky *sky, float value);
+
+	NiNode				*node04;	// 04
+};
+
+// 1C
+class Atmosphere : public SkyObject
+{
+public:
+	virtual void		Init(NiNode *niNode, BSFogProperty *_fogProp);
+
+	NiNode				*node08;	// 08
+	BSFogProperty		*fogProp;	// 0C	Same as *0x11DEB00
+	NiRefObject			*object10;	// 10
+	NiRefObject			*object14;	// 14
+	UInt8				byte18;		// 18
+	UInt8				pad19[3];	// 19
+};
+
+// 10
+class Stars : public SkyObject
+{
+public:
+	NiNode			*node08;	// 08
+	float			flt0C;		// 0C
+};
+
+// 2C
+class Sun : public SkyObject
+{
+public:
+	NiBillboardNode		*node08;		// 08
+	NiBillboardNode		*node0C;		// 0C
+	NiTriShape			*shape10;		// 10
+	NiTriShape			*shape14;		// 14
+	UInt32				unk18;			// 18
+	NiDirectionalLight	*sunLight;		// 1C	Same as g_TES->directionalLight
+	float				flt20;			// 20
+	UInt8				byte24;			// 24
+	UInt8				byte25;			// 25
+	UInt8				byte26;			// 26
+	UInt8				byte27;			// 27
+	BSShaderAccumulator	*shaderAccum;	// 28
+};
+
+// 5C
+class Clouds : public SkyObject
+{
+public:
+	NiTriStrips			*layers[4];		// 08
+	NiSourceTexture		*textures[4];	// 18
+	NiVector3			layerPos[4];	// 28
+	UInt16				numLayers;		// 58
+	UInt8				byte5A;			// 5A
+	UInt8				byte5B;			// 5B
+};
+
+// 7C
+class Moon : public SkyObject
+{
+public:
+	virtual void	Refresh(NiNode *niNode, const char *moonStr);
+
+	NiNode			*node08;			// 08
+	NiNode			*node0C;			// 0C
+	NiTriShape		*shape10;			// 10
+	NiTriShape		*shape14;			// 14
+	String			moonTexture[8];		// 18
+					//	0	Full Moon
+					//	1	Three Wan
+					//	2	Half Wan
+					//	3	One Wan
+					//	4	No Moon
+					//	5	One Wax
+					//	6	Half Wax
+					//	7	Three Wax
+	float			flt58;				// 58
+	float			flt5C;				// 5C
+	float			flt60;				// 60
+	float			flt64;				// 64
+	float			flt68;				// 68
+	UInt32			unk6C;				// 6C
+	UInt32			unk70;				// 70
+	float			flt74;				// 74
+	float			flt78;				// 78
+};
+
+// 18
+class Precipitation
+{
+public:
+	virtual Precipitation	*Destroy(bool doFree);
+
+	NiNode		*node04;	// 04
+	NiNode		*node08;	// 08
+	UInt32		unk0C;		// 0C
+	float		unk10;		// 10
+	UInt32		unk14;		// 14
+};
+
+// 138
+class Sky
+{
+public:
+	virtual Sky *Destructor(bool doFree);
+
+	struct SkySound
+	{
+		UInt32		unk00;		// 00
+		UInt32		unk04;		// 04
+		UInt32		unk08;		// 08
+		TESWeather	*weather;	// 0C
+		UInt32		type;		// 10
+		UInt32		soundID;	// 14
+	};
+
+	NiNode							*niNode004;			// 004
+	NiNode							*niNode008;			// 008
+	TESClimate						*currClimate;		// 00C
+	TESWeather						*currWeather;		// 010
+	TESWeather						*transWeather;		// 014	Previous weather, gradually fading, on weather transition
+	TESWeather						*defaultWeather;	// 018	Picked from currClimate weathers list. currClimate is set to this unless there's a regional weather
+	TESWeather						*overrideWeather;	// 01C
+	Atmosphere						*atmosphere;		// 020
+	Stars							*stars;				// 024
+	Sun								*sun;				// 028
+	Clouds							*clouds;			// 02C
+	Moon							*masserMoon;		// 030
+	Moon							*secundaMoon;		// 034
+	Precipitation					*precipitation;		// 038
+	NiVector3						vector03C;			// 03C
+	NiColor							waterReflection;	// 048
+	NiVector3						vector054;			// 054
+	NiColor							sunAmbient;			// 060
+	NiColor							sunDirectional;		// 06C
+	NiVector3						vector078;			// 078
+	NiVector3						vector084;			// 084
+	NiVector3						vector090;			// 090
+	NiVector3						vector09C;			// 09C
+	NiVector3						vector0A8;			// 0A8
+	NiVector3						vector0B4;			// 0B4
+	NiColor							sunFog;				// 0C0
+	float							windSpeed;			// 0CC
+	float							windDirection;		// 0D0
+	UInt32							unk0D4[6];			// 0D4
+	float							gameHour;			// 0EC
+	float							lastUpdateHour;		// 0F0
+	float							weatherPercent;		// 0F4
+	UInt32							unk0F8;				// 0F8
+	tList<SkySound>					*skySounds;			// 0FC
+	float							lightningFxPerc;	// 100
+	UInt32							unk104;				// 104
+	float							flt108;				// 108
+	float							flt10C;				// 10C
+	float							flt110;				// 110
+	UInt32							unk114;				// 114
+	UInt32							flags;				// 118
+	ImageSpaceModifierInstanceForm	*currFadeInIMOD;	// 11C
+	ImageSpaceModifierInstanceForm	*currFadeOutIMOD;	// 120
+	ImageSpaceModifierInstanceForm	*transFadeInIMOD;	// 124	On weather transition, set to the previuos weather fadeIn/OutIMODs
+	ImageSpaceModifierInstanceForm	*transFadeOutIMOD;	// 128		"			"
+	float							flt12C;				// 12C	Always 12.0
+	float							flt130;				// 130	Always 23.99
+	float							flt134;				// 134	Always 0
+
+	void RefreshMoon();
+	__forceinline void RefreshClimate(TESClimate *climate, bool immediate = true)
+	{
+		ThisCall(0x63C8F0, this, climate, immediate);
+	}
+	bool GetIsRaining();
+};
+STATIC_ASSERT(sizeof(Sky) == 0x138);
+
+extern Sky **g_tempSky, **g_currentSky;
+
+// 04
+class GridArray
+{
+public:
+	virtual void	*Destroy(bool doFree);
+	virtual void	Fn_01(void);
+	virtual void	Fn_02(void);
+	virtual void	Fn_03(void);
+	virtual bool	Fn_04(UInt32 arg1, UInt32 arg2);
+	virtual void	Fn_05(UInt32 arg1, UInt32 arg2);
+};
+
+// 28
+class GridCellArray : public GridArray
+{
+public:
+	virtual void	UnloadCellAtGridXY(UInt32 gridX, UInt32 gridY);
+	virtual void	SetGridAtXYToNull(UInt32 gridX, UInt32 gridY);
+	virtual void	CopyCellAtGridXYTo(UInt32 gridX1, UInt32 gridY1, UInt32 gridX2, UInt32 gridY2);
+	virtual void	SwapCellsAtGridXYs(UInt32 gridX1, UInt32 gridY1, UInt32 gridX2, UInt32 gridY2);
+
+	SInt32			worldX;			// 04	X coord of current cell within worldspace
+	SInt32			worldY;			// 08	Y coord "
+	UInt32			gridSize;		// 0C	Init'd to uGridsToLoad
+	TESObjectCELL	**gridCells;	// 10	Size is gridSize^2
+	float			posX;			// 14	worldX * 4096
+	float			posY;			// 18	worldY * 4096
+	UInt32			unk1C;			// 1C
+	UInt8			byte20;			// 20
+	UInt8			pad21[3];		// 21
+	UInt32			unk24;			// 24
+};
+
+// 44
+class LoadedAreaBound : public NiRefObject
+{
+public:
+	bhkPhantom							*phantoms[6];	// 08	Seen bhkAabbPhantom
+	TESObjectCELL						*cell;			// 20
+	NiTMapBase<bhkRigidBody*, UInt32>	boundsMap;		// 24
+	float								flt34;			// 34
+	float								flt38;			// 38
+	float								flt3C;			// 3C
+	float								flt40;			// 40
+};
+STATIC_ASSERT(sizeof(LoadedAreaBound) == 0x44);
+
+// A0
+struct WaterSurfaceManager
+{
+	// 30
+	struct WaterGroup
+	{
+		TESWaterForm			*waterForm;		// 00
+		UInt32					unk04;			// 04
+		UInt32					unk08;			// 08
+		float					flt0C;			// 0C	Always 1.0 ?
+		float					waterHeight;	// 10
+		UInt32					unk14;			// 14
+		UInt32					unk18;			// 18
+		float					flt1C;			// 1C	-flt0C
+		float					flt20;			// 20	-waterHeight
+		DList<TESObjectREFR>	waterPlanes;	// 24
+	};
+
+	struct Struct8C
+	{
+		UInt32		unk00;
+		UInt32		unk04;
+		UInt32		unk08;
+	};
+
+	UInt32								unk00;			// 00
+	UInt32								unk04;			// 04
+	NiObject							*object08;		// 08
+	NiObject							*object0C;		// 0C
+	NiObject							*object10;		// 10
+	NiObject							*object14;		// 14
+	NiObject							*object18;		// 18
+	NiObject							*object1C;		// 1C	Seen NiSourceTexture
+	NiObject							*object20;		// 20
+	UInt32								unk24;			// 24
+	UInt32								unk28;			// 28
+	UInt32								unk2C;			// 2C
+	UInt32								unk30;			// 30
+	UInt32								unk34;			// 34
+	UInt32								unk38;			// 38
+	DList<WaterGroup>					waterGroups;	// 3C
+	WaterGroup							*waterLOD;		// 48	(Assumed)
+	NiTPointerMap<TESObjectREFR>		map4C;			// 4C
+	NiTPointerMap<TESObjectREFR>		map5C;			// 5C
+	NiTPointerMap<TESWaterForm>			map6C;			// 6C
+	NiTMapBase<TESObjectREFR*, void*>	map7C;			// 7C
+	Struct8C							unk8C;			// 8C
+	float								flt98;			// 98
+	UInt32								unk9C;			// 9C
+};
+STATIC_ASSERT(sizeof(WaterSurfaceManager) == 0xA0);
+
+class BSTempNodeManager;
+
+// C4
+class TES
+{
+public:
+	virtual void Fn_00(UInt32 arg1, UInt32 arg2, UInt32 arg3, UInt32 arg4, UInt32 arg5);
+
+	UInt32								unk04;				// 04
+	GridCellArray						*gridCellArray;		// 08
+	NiNode								*niNode0C;			// 0C
+	NiNode								*niNode10;			// 10
+	NiNode								*niNode14;			// 14
+	BSTempNodeManager					*tempNodeMgr;		// 18
+	NiDirectionalLight					*directionalLight;	// 1C
+	void								*ptr20;				// 20
+	SInt32								extGridX;			// 24
+	SInt32								extGridY;			// 28
+	SInt32								extCoordX;			// 2C
+	SInt32								extCoordY;			// 30
+	TESObjectCELL						*currentInterior;	// 34
+	TESObjectCELL						**interiorsBuffer;	// 38
+	TESObjectCELL						**exteriorsBuffer;	// 3C
+	UInt32								unk40[9];			// 40
+	WaterSurfaceManager					*waterManager;		// 64
+	Sky									*sky;				// 68
+	tList<ImageSpaceModifierInstance>	activeIMODs;		// 6C
+	UInt32								unk74[3];			// 74
+	float								flt80;				// 80	Abs X distance from centre of grid.
+	float								flt84;				// 84	Abs Y distance from centre of grid.
+	TESWorldSpace						*currentWrldspc;	// 88
+	tList<UInt32>						list8C;				// 8C
+	tList<UInt32>						list94;				// 94
+	tList<UInt32>						list9C;				// 9C
+	QueuedFile							*unkA4;				// A4
+	NiSourceTexture						*unkA8;				// A8
+	QueuedFile							*unkAC;				// AC
+	void								*ptrB0;				// B0
+	UInt32								unkB4[2];			// B4
+	NavMeshInfoMap						*navMeshInfoMap;	// BC
+	LoadedAreaBound						*areaBound;			// C0
+
+	__forceinline bool GetTerrainHeight(float *posXY, float *result)
+	{
+		return ThisCall<bool>(0x4572E0, this, posXY, result);
+	}
+};
+STATIC_ASSERT(sizeof(TES) == 0xC4);
+
+extern TES *g_TES;
+
+// 34
+struct GameTimeGlobals
+{
+	TESGlobal		*year;			// 00
+	TESGlobal		*month;			// 04
+	TESGlobal		*day;			// 08
+	TESGlobal		*hour;			// 0C
+	TESGlobal		*daysPassed;	// 10
+	TESGlobal		*timeScale;		// 14
+	UInt32			unk18;			// 18
+	bool			gameLoaded;		// 1C
+	UInt8			pad1D[3];		// 1D
+	UInt32			unk20;			// 20
+	UInt32			unk24;			// 24
+	UInt32			unk28;			// 28
+	float			lastUpdHour;	// 2C
+	UInt32			initialized;	// 30
+};
+extern GameTimeGlobals *g_gameTimeGlobals;
+
+// 18
+class LoadedReferenceMap : public NiTPointerMap<TESObjectREFR>
+{
+public:
+	UInt32			unk10;		// 10
+	UInt32			unk14;		// 14
+};
+extern LoadedReferenceMap **g_loadedRefrMaps;
+
+// 24
+struct RadioEntry
+{
+	TESObjectREFR	*radioRef;
+	void			*ptr04;
+	UInt32			unk08[7];
+};
+extern RadioEntry **g_pipboyRadio;
+
+typedef ActiveEffect *(*ActiveEffectCreate)(MagicCaster *magCaster, MagicItem *magItem, EffectItem *effItem);
+
+// 10
+struct EffectArchTypeEntry
+{
+	const char				*name;
+	ActiveEffectCreate		callback;
+	UInt32					unk08[2];
+};
+extern EffectArchTypeEntry *g_effectArchTypeArray;
+
+// 10
+struct EntryPointConditionInfo
+{
+	const char		*entryPoint;	// 00
+	UInt8			numTabs;		// 04
+	UInt8			pad01[3];		// 05
+	const char		**runOn;		// 08
+	UInt8			byte0C;			// 0C
+	UInt8			pad0D[3];		// 0D
+};
+extern EntryPointConditionInfo *g_entryPointConditionInfo;
+
+// 24
+struct AnimGroupInfo
+{
+	const char	*name;			// 00
+	UInt8		byte04;			// 04
+	UInt8		pad05[3];		// 05
+	UInt32		sequenceType;	// 08
+	UInt32		unk0C;			// 0C
+	UInt32		unk10;			// 10
+	UInt32		unk14[4];		// 14
+};
+extern AnimGroupInfo *g_animGroupInfoArray;
+
+struct PCMiscStat
+{
+	const char	*name;
+	UInt32		level;
+};
+extern PCMiscStat **g_miscStatData;
+
+// 08
+struct TypeSignature
+{
+	char	signature[8];
+};
+extern TypeSignature *g_typeSignatures;

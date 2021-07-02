@@ -619,7 +619,7 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		mov		ecx, edi
 		CALL_EAX(0xA1DC20)
 		push	1
-		mov		ecx, offset s_hookInfos+kHook_TextInputClose*0x10
+		mov		ecx, offset s_hookInfos+kHook_TextInputClose*kHookInfoSize
 		call	HookInfo::Set
 		push	TextInputRefreshHook
 		push	0x1070060
@@ -1009,7 +1009,7 @@ bool Cmd_SetBarterPriceMult_Execute(COMMAND_ARGS)
 	{
 		if (sellMult) (*g_barterMenu)->sellValueMult = valueMult;
 		else (*g_barterMenu)->buyValueMult = valueMult;
-		RefreshItemListBox();
+		CdeclCall(0x730690, 1);
 	}
 	return true;
 }
@@ -1768,20 +1768,10 @@ bool Cmd_GetWorldMapPosMults_Execute(COMMAND_ARGS)
 {
 	static TESWorldSpace *currWorldSpace = NULL, *mapWorldSpace = NULL;
 	static alignas(16) WorldDimensions worldDimensions;
-	PlayerCharacter *thePlayer = g_thePlayer;
-	TESObjectCELL *parentCell = thePlayer->parentCell;
-	if (!parentCell) return true;
-	TESWorldSpace *parentWorld = parentCell->worldSpace;
-	if (!parentWorld)
-	{
-		TESObjectREFR *lastDoor = thePlayer->lastExteriorDoor;
-		if (!lastDoor) return true;
-		parentWorld = lastDoor->GetParentWorld();
-		if (!parentWorld) return true;
-	}
 	NiPoint2 inPos;
 	ScriptVar *outX, *outY;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &inPos.x, &inPos.y, &outX, &outY))
+	TESWorldSpace *parentWorld = g_TES->currentWrldspc;
+	if (parentWorld && ExtractArgsEx(EXTRACT_ARGS_EX, &inPos.x, &inPos.y, &outX, &outY))
 	{
 		if (currWorldSpace != parentWorld)
 		{

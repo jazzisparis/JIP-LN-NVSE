@@ -275,6 +275,8 @@ public:
 	void Dump();
 };
 
+Tile* __fastcall GetTargetComponent(const char *componentPath, Tile::Value **value = NULL);
+
 // 1C
 struct GradualSetFloat
 {

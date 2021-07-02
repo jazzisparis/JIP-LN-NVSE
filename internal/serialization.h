@@ -93,7 +93,7 @@ void DoLoadGameCleanup()
 	{
 		for (auto waitIter = s_scriptWaitInfoMap.Begin(); waitIter; ++waitIter)
 		{
-			form = LookupFormByRefID(waitIter.Key());
+			form = LookupFormByRefID(waitIter().refID);
 			if (form) form->jipFormFlags5 = 0;
 		}
 		s_scriptWaitInfoMap.Clear();

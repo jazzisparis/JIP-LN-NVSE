@@ -214,6 +214,7 @@ extern const UInt8 kLwrCaseConverter[], kUprCaseConverter[];
 UInt32 __vectorcall cvtd2ui(double value);
 
 double __vectorcall cvtui2d(UInt32 value);
+void __fastcall cvtui2d(UInt32 value, double *result);
 
 int __vectorcall ifloor(float value);
 
@@ -228,7 +229,7 @@ char *GetStrArgBuffer();
 
 void __fastcall NiReleaseObject(NiRefObject *toRelease);
 
-NiRefObject** __stdcall NiReleaseAddRef(NiRefObject **toRelease, NiRefObject *toAdd);
+NiRefObject** __stdcall NiReleaseAddRef(void *toRelease, NiRefObject *toAdd);
 
 UInt32 __fastcall RGBHexToDec(UInt32 rgb);
 

@@ -1954,7 +1954,7 @@ __declspec(naked) void __fastcall LoadIncidentalSoundIDHook(ModInfo *modInfo, in
 	}
 }
 
-typedef Vector<MediaSet*> MediaSetArray;
+typedef Vector<MediaSet*, 4> MediaSetArray;
 UnorderedMap<ListNode<MediaSet>*, MediaSetArray> s_pickMediaSetMap(0x40);
 
 MediaSet* __stdcall PickMediaSetHook(ListNode<MediaSet> *listHead)
@@ -4084,8 +4084,9 @@ void DeferredInit()
 	s_tempPosMarker = ThisCall<TESObjectREFR*>(0x55A2F0, GameHeapAlloc(sizeof(TESObjectREFR)));
 	ThisCall(0x484490, s_tempPosMarker);
 
-	g_eventCmdInfos[1].execute = Hook_MenuMode_Execute;
-	g_eventCmdInfos[0xE].execute = Cmd_EmptyCommand_Execute;
+	CommandInfo *eventCmdInfos = (CommandInfo*)0x118E2F0;
+	eventCmdInfos[1].execute = Hook_MenuMode_Execute;
+	eventCmdInfos[0xE].execute = Cmd_EmptyCommand_Execute;
 
 	g_condDmgPenalty = *(double**)0x646D25;
 	if ((UInt32)g_condDmgPenalty == 0x1051680)

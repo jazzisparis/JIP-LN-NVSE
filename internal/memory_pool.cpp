@@ -12,7 +12,9 @@ struct MemoryPool
 	};
 
 	PrimitiveCS		m_cs;
-	BlockNode		*m_pools[MAX_BLOCK_SIZE >> 4] = {nullptr};
+	BlockNode		*m_pools[MAX_BLOCK_SIZE >> 4];
+
+	MemoryPool() {MemZero(m_pools, sizeof(m_pools));}
 };
 
 alignas(16) MemoryPool s_memoryPool;
@@ -21,11 +23,9 @@ __declspec(naked) void* __fastcall Pool_Alloc(UInt32 size)
 {
 	__asm
 	{
-		cmp		ecx, 0x10
-		jbe		minSize
 		test	cl, 0xF
 		jz		isAligned
-		and		ecx, 0xFFFFFFF0
+		and		cl, 0xF0
 		add		ecx, 0x10
 	isAligned:
 		cmp		ecx, MAX_BLOCK_SIZE
@@ -35,8 +35,6 @@ __declspec(naked) void* __fastcall Pool_Alloc(UInt32 size)
 		call	_aligned_malloc
 		add		esp, 8
 		retn
-	minSize:
-		mov		ecx, 0x10
 	doCache:
 		push	ecx
 		mov		ecx, offset s_memoryPool.m_cs
@@ -53,7 +51,7 @@ __declspec(naked) void* __fastcall Pool_Alloc(UInt32 size)
 		xor		edx, edx
 		mov		s_memoryPool.m_cs.owningThread, edx
 		retn
-		NOP_0x8
+		NOP_0x2
 	allocPool:
 		push	esi
 		mov		esi, ecx
@@ -95,7 +93,7 @@ __declspec(naked) void __fastcall Pool_Free(void *pBlock, UInt32 size)
 		jz		nullPtr
 		test	dl, 0xF
 		jz		isAligned
-		and		edx, 0xFFFFFFF0
+		and		dl, 0xF0
 		add		edx, 0x10
 		ALIGN 16
 	isAligned:

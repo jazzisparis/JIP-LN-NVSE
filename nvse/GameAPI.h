@@ -359,6 +359,8 @@ public:
 };
 STATIC_ASSERT(sizeof(ConsoleManager) == 0x914);
 
+extern ConsoleManager *g_consoleManager;
+
 // A plugin author requested the ability to use OBSE format specifiers to format strings with the args
 // coming from a source other than script.
 // So changed ExtractFormattedString to take an object derived from following class, containing the args

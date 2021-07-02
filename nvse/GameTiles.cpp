@@ -242,6 +242,29 @@ Tile *Tile::GetComponentTile(const char *componentPath)
 	return (tile && !trait) ? tile : NULL;
 }
 
+Tile* __fastcall GetTargetComponent(const char *componentPath, Tile::Value **value)
+{
+	char *slashPos = SlashPos(componentPath);
+	if (!slashPos)
+		return GetMenuTile(componentPath);
+	*slashPos = 0;
+	Tile *component = GetMenuTile(componentPath);
+	if (!component)
+		return NULL;
+	const char *trait = NULL;
+	component = component->GetComponent(slashPos + 1, &trait);
+	if (!component)
+		return NULL;
+	if (trait)
+	{
+		if (!value || !(*value = component->GetValueName(trait)))
+			return NULL;
+	}
+	else if (value)
+		return NULL;
+	return component;
+}
+
 void Tile::Dump()
 {
 	PrintDebug("%08X\t%s", this, name.m_data);

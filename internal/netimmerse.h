@@ -682,6 +682,7 @@ public:
 	float				emitMult;		// 40
 	UInt32				unk44[2];		// 44
 
+	__forceinline static NiMaterialProperty *Create() {return CdeclCall<NiMaterialProperty*>(0xA756D0);}
 	void SetTraitValue(UInt32 traitID, float value);
 };
 
@@ -718,6 +719,8 @@ public:
 	UInt16				flags;		// 18
 	UInt8				threshold;	// 1A
 	UInt8				byte1B;		// 1B
+
+	__forceinline static NiAlphaProperty *Create() {return CdeclCall<NiAlphaProperty*>(0xA5CEB0);}
 };
 
 // 48
@@ -1325,6 +1328,8 @@ public:
 };
 STATIC_ASSERT(sizeof(ShadowSceneNode) == 0x200);
 
+extern ShadowSceneNode *g_shadowSceneNode;
+
 // 114
 class NiCamera : public NiAVObject
 {
@@ -1335,6 +1340,8 @@ public:
 	float			maxFarNearRatio;	// 0FC
 	NiViewport		viewPort;			// 100
 	float			LODAdjust;			// 110
+
+	__forceinline static NiCamera *Create() {return CdeclCall<NiCamera*>(0xA71430);}
 };
 STATIC_ASSERT(sizeof(NiCamera) == 0x114);
 
@@ -1380,6 +1387,8 @@ public:
 	TESObjectLIGH	*baseLight;		// E8	JIP only
 	UInt32			unkEC;			// EC
 	NiVector3		vectorF0;		// F0	Used for animated lights
+
+	__forceinline static NiPointLight *Create() {return CdeclCall<NiPointLight*>(0xA7D6E0);}
 };
 STATIC_ASSERT(sizeof(NiPointLight) == 0xFC);
 
@@ -1438,6 +1447,8 @@ public:
 	UInt32				isMinFarPlaneDist;	// B8 The farplane is set to 20480.0 when the flag is true. Probably used for interiors.
 	float				cameraFOV;			// BC
 };
+
+extern SceneGraph *g_sceneGraph;
 
 // 3C
 class TESAnimGroup : public NiRefObject
@@ -2299,3 +2310,45 @@ public:
 	UInt32					unkC8;			// C8
 };
 STATIC_ASSERT(sizeof(BSCullingProcess) == 0xCC);
+
+// 34
+class NiPick
+{
+public:
+	NiPick(UInt32 capacity = 0, UInt32 growSize = 8) {ThisCall(0xE98F20, this, capacity, growSize);}
+	~NiPick() {ThisCall(0xE98FA0, this);}
+
+	// 10
+	struct Results
+	{
+		struct Result
+		{
+			NiAVObject	*object;
+			UInt32		unk04;
+			NiVector3	pos;
+		};
+
+		UInt32		**_vtbl;		// 00
+		Result		**data;			// 04
+		UInt16		capacity;		// 08
+		UInt16		firstFreeEntry;	// 0A
+		UInt16		numObjs;		// 0C
+		UInt16		growSize;		// 0E
+	};
+
+	UInt32			unk00;		// 00	If non-zero, returns only one result
+	UInt32			unk04;		// 04
+	UInt32			unk08;		// 08
+	UInt32			unk0C;		// 0C
+	UInt8			byte10;		// 10
+	UInt8			byte11;		// 11
+	UInt8			pad12[2];	// 12
+	NiRefObject		*object14;	// 14
+	Results			results;	// 18
+	UInt32			numResults;	// 28
+	UInt32			unk2C;		// 2C
+	UInt8			byte30;		// 30
+	UInt8			byte31;		// 31
+	UInt8			byte32;		// 32
+	UInt8			byte33;		// 33
+};

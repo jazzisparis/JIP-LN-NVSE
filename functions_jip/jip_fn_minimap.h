@@ -158,19 +158,17 @@ __declspec(naked) void __fastcall WorldDimensions::GetDimensions(TESWorldSpace *
 		movsx	ecx, word ptr [edx+0xC]
 		inc		ecx
 		sub		ecx, eax
-		shl		eax, 0xC
-		shl		ecx, 0xC
 		mov		[esi], eax
 		mov		[esi+8], ecx
 		movsx	eax, word ptr [edx+0xA]
 		movsx	ecx, word ptr [edx+0xE]
 		inc		eax
 		sub		ecx, eax
-		shl		eax, 0xC
-		shl		ecx, 0xC
 		mov		[esi+4], eax
 		mov		[esi+0xC], ecx
-		cvtdq2ps	xmm0, [esi]
+		movaps	xmm0, [esi]
+		pslld	xmm0, 0xC
+		cvtdq2ps	xmm0, xmm0
 		movq	qword ptr [esi], xmm0
 		movaps	xmm1, kSizeMults
 		divps	xmm1, xmm0
@@ -207,7 +205,7 @@ __declspec(naked) void __fastcall WorldDimensions::GetPosMods(TESWorldSpace *wor
 
 __declspec(naked) void __fastcall GetWorldMapPosMults(NiPoint2 *inPos, WorldDimensions *worldDimensions, NiPoint2 *outMults, Coordinate *outCoord = nullptr)
 {
-	static const __m128 kPosMultMods = {0.1015625, 0.1015625, 0, 0}, kCellCoordMults = {1.0 / 4096, 1.0 / 4096, 0, 0};
+	static const __m128 kPosMultMods = {0.1015625, 0.1015625, 0, 0};
 	__asm
 	{
 		movq	xmm0, qword ptr [ecx]
@@ -230,20 +228,16 @@ __declspec(naked) void __fastcall GetWorldMapPosMults(NiPoint2 *inPos, WorldDime
 		addps	xmm0, kPosMultMods
 		mov		ecx, [esp+4]
 		movq	qword ptr [ecx], xmm0
-		mov		ecx, [esp+8]
-		test	ecx, ecx
+		mov		eax, [esp+8]
+		test	eax, eax
 		jz		done
-		mulps	xmm1, kCellCoordMults
-		push	0x3FA0
-		ldmxcsr	[esp]
-		cvtps2dq	xmm0, xmm1
-		mov		dword ptr [esp], 0x1FA0
-		ldmxcsr	[esp]
-		push	ecx
-		movq	qword ptr [esp], xmm0
+		cvtps2dq	xmm1, xmm1
+		psrad	xmm1, 0xC
+		sub		esp, 8
+		movq	qword ptr [esp], xmm1
 		pop		edx
-		pop		dword ptr [ecx]
-		mov		[ecx+2], dx
+		pop		dword ptr [eax]
+		mov		[eax+2], dx
 	done:
 		retn	8
 	}
@@ -323,8 +317,6 @@ struct SectionSeenInfo
 	UInt8				row;
 	UInt8				col;
 };
-
-TESObjectCELL *CellPointerMap::Lookup(UInt32 key) const;
 
 __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInfo)
 {
@@ -950,7 +942,7 @@ __declspec(naked) IntSeenData* __fastcall AddIntSeenData(IntSeenData *seenData, 
 
 __declspec(naked) void UpdateCellsSeenBitsHook()
 {
-	static const UInt32 kFlt1d80 = 0x3C4CCCCD;
+	static const float kFlt1d80 = 0.0125F;
 	__asm
 	{
 		push	ebp
@@ -1656,7 +1648,7 @@ MapMarkerTile::MapMarkerTile(Tile *markerTile)
 	inUse = true;
 }
 
-typedef Vector<MapMarkerTile*> DynamicTiles;
+typedef Vector<MapMarkerTile*, 4> DynamicTiles;
 typedef UnorderedMap<UInt32, DynamicTiles> RenderedMapMarkers;
 RenderedMapMarkers s_renderedMapMarkers(0x40);
 
@@ -1739,6 +1731,7 @@ TileImage *s_worldMapTile;
 Tile::Value *s_miniMapMode, *s_pcMarkerRotate, *s_miniMapPosX, *s_miniMapPosY, *s_worldMapZoom;
 TileShaderProperty *s_tileShaderProps[9];
 bool s_defaultGridSize;
+NiColor *g_directionalLightColor;
 BSFogProperty *g_shadowFogProperty;
 BSParticleSystemManager *g_particleSysMngr;
 TESForm *g_blackPlaneBase;
@@ -1752,7 +1745,7 @@ struct MapMarkerInfo
 	MapMarkerInfo(TESObjectREFR *_refr, ExtraMapMarker::MarkerData *_data, NiPoint2 &posXY) :
 		refr(_refr), data(_data), pos(posXY) {}
 };
-typedef Vector<MapMarkerInfo> CellMapMarkers;
+typedef Vector<MapMarkerInfo, 2> CellMapMarkers;
 typedef UnorderedMap<UInt32, CellMapMarkers> WorldMapMarkers;
 Map<TESWorldSpace*, WorldMapMarkers> s_worldMapMarkers;
 
@@ -1767,19 +1760,10 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	Tile *tile = g_HUDMainMenu->tile->GetComponentTile("JIPMiniMap");
 	if (!tile) return true;
 
-	if (tile->GetValueFloat(kTileValue_user0) < 1.4F)
-	{
-		ShowMessageBox("Please be advised:\n\nJIP MiniMap versions older than 1.4 will NOT work with JIP LN NVSE.\n\nYou MUST update JIP MiniMap to the latest version.", MSGBOX_ARGS);
-		return true;
-	}
 	s_miniMapIndex = modIndex;
-
 	s_miniMapVisible = tile->GetValue(kTileValue_visible);
 	s_miniMapScale = tile->GetValue(kTileValue_user1);
-	auto node = tile->children.Tail();
-	node->data->SetFloat(kTileValue_depth, 39);
-	node = node->prev;
-	node->data->SetFloat(kTileValue_depth, 28);
+	auto node = tile->children.Tail()->prev;
 	s_pcMarkerRotate = node->data->GetValue(kTileValue_rotateangle);
 	tile = node->prev->data;
 	s_miniMapMode = tile->GetValue(kTileValue_user0);
@@ -1844,7 +1828,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	while (vtx2 < 0x120);
 	shapeTriangles -= 512;
 
-	NiAlphaProperty *alphaProp = CdeclCall<NiAlphaProperty*>(0xA5CEB0);
+	NiAlphaProperty *alphaProp = NiAlphaProperty::Create();
 	alphaProp->flags = 0x8D;
 
 	TileImage *localTile;
@@ -1860,7 +1844,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 		shapeData = (NiTriShapeData*)sciTriShp->geometryData;
 		s_localMapShapeDatas[index] = shapeData;
 		s_tileShaderProps[index] = localTile->shaderProp;
-		NiReleaseAddRef((NiRefObject**)&localTile->shaderProp->srcTexture, NULL);
+		NiReleaseAddRef(&localTile->shaderProp->srcTexture, NULL);
 
 		shapeData->numVertices = 289;
 		shapeData->numTriangles = 0x200;
@@ -1882,8 +1866,8 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 		GameHeapFree(shapeData->triangles);
 		shapeData->triangles = shapeTriangles;
 
-		NiReleaseAddRef((NiRefObject**)&sciTriShp->m_propertyList.Head()->data, alphaProp);
-		NiReleaseAddRef((NiRefObject**)&sciTriShp->alphaProp, alphaProp);
+		NiReleaseAddRef(&sciTriShp->m_propertyList.Head()->data, alphaProp);
+		NiReleaseAddRef(&sciTriShp->alphaProp, alphaProp);
 	}
 	while (++index < 9);
 	UpdateTileScales();
@@ -1895,7 +1879,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	s_mapMarkersRect = (TileRect*)node->prev->data;
 	s_wQuestMarkersRect = (TileRect*)node->prev->prev->data;
 
-	NiCamera *lmCamera = ThisCall<NiCamera*>(0xA712F0, NiAllocator(sizeof(NiCamera)));
+	NiCamera *lmCamera = NiCamera::Create();
 	s_localMapCamera = lmCamera;
 	lmCamera->m_localRotate = {0, 0, 1.0F, 0, 1.0F, 0, -1.0F, 0, 0};
 	lmCamera->m_localTranslate.z = 65536.0F;
@@ -1927,7 +1911,6 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 			s_rootWorldDimensions.GetDimensions(rootWorld);
 			worldMarkers = NULL;
 		}
-		rootCell->RefLockEnter();
 		auto refrIter = rootCell->objectList.Head();
 		do
 		{
@@ -1942,11 +1925,11 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 			(*worldMarkers)[coord].Append(markerRef, xMarker->data, posXY);
 		}
 		while (refrIter = refrIter->next);
-		rootCell->RefLockLeave();
 	}
 	while (worldIter = worldIter->next);
 
 	s_defaultGridSize = *(UInt8*)0x11C63D0 <= 5;
+	g_directionalLightColor = &g_TES->directionalLight->ambientColor;
 	g_shadowFogProperty = *(BSFogProperty**)0x11DEB00;
 	g_particleSysMngr = *(BSParticleSystemManager**)0x11DED58;
 	g_blackPlaneBase = LookupFormByRefID(0x15A1F2);
@@ -1964,9 +1947,9 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 }
 
 const __m128 kVertexAlphaMults = {0.25, 0.5, 0.75, 1};
-alignas(16) const UInt32
-kDirectionalLightValues[] = {0x3F59D9DA, 0x3F59D9DA, 0x3F59D9DA, 0x3E4CCCCD, 0x3E4CCCCD, 0x3E4CCCCD, 0, 0, 0, 0, 0xBFC90FDB, 0, 0},
-kFogPropertyValues[] = {0x3DF8F8F9, 0x3E3CBCBD, 0x3E7CFCFD, 0x48F42400, 0x48F42400};
+alignas(16) const float
+kDirectionalLightValues[] = {217 / 255.0F, 217 / 255.0F, 217 / 255.0F, 0.2F, 0.2F, 0.2F, 0, 0, 0, 0, -1.570796F, 0, 0},
+kFogPropertyValues[] = {31 / 255.0F, 47 / 255.0F, 63 / 255.0F, 500000.0F, 500000.0F};
 const UInt8 kSelectImgUpdate[][9] =
 {
 	{8, 2, 0, 4, 1, 0, 0, 0, 0},
@@ -2111,7 +2094,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				movss	xmm0, [eax+0x78]
 				shufps	xmm0, xmm0, 0
 				mulps	xmm0, kVertexAlphaMults
-				movups	ds:[s_vertexAlphaLevel+4], xmm0
+				movups	s_vertexAlphaLevel+4, xmm0
 			}
 		}
 	}
@@ -2122,10 +2105,10 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			objectRef = thePlayer;
 		else
 		{
+			parentWorld = g_TES->currentWrldspc;
+			if (!parentWorld) return true;
 			objectRef = thePlayer->lastExteriorDoor;
 			if (!objectRef) return true;
-			parentWorld = objectRef->GetParentWorld();
-			if (!parentWorld) return true;
 		}
 
 		if (s_pcCurrWorld != parentWorld)
@@ -2264,20 +2247,18 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			{
 				mov		eax, parentCell
 				mov		eax, [eax+0x48]
-				mov		ecx, [eax]
-				mov		coord.x, cx
-				dec		ecx
-				shl		ecx, 0xC
-				movd	xmm0, ecx
-				cvtdq2ps	xmm0, xmm0
-				movss	nwXY.x, xmm0
+				mov		edx, [eax]
+				mov		coord.x, dx
+				dec		edx
+				mov		nwXY.x, edx
 				mov		edx, [eax+4]
 				mov		coord.y, dx
 				add		edx, 2
-				shl		edx, 0xC
-				movd	xmm0, edx
+				mov		nwXY.y, edx
+				movq	xmm0, qword ptr nwXY
+				pslld	xmm0, 0xC
 				cvtdq2ps	xmm0, xmm0
-				movss	nwXY.y, xmm0
+				movq	qword ptr nwXY, xmm0
 			}
 			GetLocalMapPosMults(thePlayer->PosXY(), &nwXY, &posMult);
 
@@ -2344,7 +2325,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 						}
 					}
 					g_sceneLightsLock->Leave();
-					memcpy(&g_TES->directionalLight->ambientColor, kDirectionalLightValues, sizeof(kDirectionalLightValues));
+					memcpy(g_directionalLightColor, kDirectionalLightValues, sizeof(kDirectionalLightValues));
 					memcpy(&g_shadowFogProperty->color, kFogPropertyValues, sizeof(kFogPropertyValues));
 					g_shadowFogProperty->power = 1;
 					*(UInt8*)0x11FF104 = 1;
@@ -2404,22 +2385,20 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			AdjustInteriorPos(thePlayer, &adjustedPos);
 			__asm
 			{
-				cvttss2si	ecx, adjustedPos.x
-				sar		ecx, 0xC
-				mov		coord.x, cx
-				dec		ecx
-				shl		ecx, 0xC
-				movd	xmm0, ecx
-				cvtdq2ps	xmm0, xmm0
-				movss	nwXY.x, xmm0
-				cvttss2si	edx, adjustedPos.y
-				sar		edx, 0xC
+				movq	xmm0, qword ptr adjustedPos
+				cvtps2dq	xmm0, xmm0
+				psrad	xmm0, 0xC
+				movq	qword ptr nwXY, xmm0
+				mov		edx, nwXY.x
+				mov		coord.x, dx
+				dec		nwXY.x
+				mov		edx, nwXY.y
 				mov		coord.y, dx
-				add		edx, 2
-				shl		edx, 0xC
-				movd	xmm0, edx
+				add		nwXY.y, 2
+				movq	xmm0, qword ptr nwXY
+				pslld	xmm0, 0xC
 				cvtdq2ps	xmm0, xmm0
-				movss	nwXY.y, xmm0
+				movq	qword ptr nwXY, xmm0
 			}
 			GetLocalMapPosMults(&adjustedPos, &nwXY, &posMult);
 

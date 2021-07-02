@@ -1,7 +1,7 @@
 #define JIP_DEBUG 0
 
+#include "internal/jip_core.h"
 #include "internal/param_info.h"
-#include "jip_nvse.h"
 #include "internal/hooks.h"
 #include "internal/patches_cmd.h"
 #include "internal/patches_game.h"
@@ -1345,7 +1345,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 		return true;
 	}
 
-	nvse->InitExpressionEvaluatorUtils(&s_expEvalUtils);
+	//nvse->InitExpressionEvaluatorUtils(&s_expEvalUtils);
 
 	PluginHandle pluginHandle = nvse->GetPluginHandle();
 	NVSESerializationInterface *serialization = (NVSESerializationInterface*)nvse->QueryInterface(kInterface_Serialization);
@@ -1388,8 +1388,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 
 	NVSEDataInterface *nvseData = (NVSEDataInterface*)nvse->QueryInterface(kInterface_Data);
 	g_DIHookCtrl = (DIHookControl*)nvseData->GetSingleton(NVSEDataInterface::kNVSEData_DIHookControl);
-	InventoryRefCreate = (TESObjectREFR* (__stdcall *)(TESObjectREFR*, TESForm*, SInt32, ExtraDataList*))nvseData->GetFunc(NVSEDataInterface::kNVSEData_InventoryReferenceCreateEntry);
-	InventoryRefGetForID = (InventoryRef* (*)(UInt32))nvseData->GetFunc(NVSEDataInterface::kNVSEData_InventoryReferenceGetForRefID);
+	InventoryRefCreate = (_InventoryRefCreate)nvseData->GetFunc(NVSEDataInterface::kNVSEData_InventoryReferenceCreateEntry);
+	InventoryRefGetForID = (_InventoryRefGetForID)nvseData->GetFunc(NVSEDataInterface::kNVSEData_InventoryReferenceGetForRefID);
 	g_numPreloadMods = (UInt8*)nvseData->GetData(NVSEDataInterface::kNVSEData_NumPreloadMods);
 
 	return true;

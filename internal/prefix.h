@@ -307,6 +307,7 @@ class TraitMenu;
 class RaceSexMenu;
 class FORenderedMenu;
 class FOPipboyManager;
+struct FontInfo;
 class ImageSpaceModifierInstance;
 class ImageSpaceModifierInstanceForm;
 class ImageSpaceModifierInstanceDOF;
@@ -330,6 +331,7 @@ struct CommandInfo;
 struct PluginInfo;
 class BSFile;
 class QueuedFile;
+struct KFModel;
 struct ModelLoader;
 struct InventoryRef;
 class AuxVariableValue;
@@ -387,11 +389,13 @@ class bhkConstraint;
 class bhkLimitedHingeConstraint;
 class bhkRagdollController;
 class bhkRagdollPenetrationUtil;
+struct hkCdBody;
 
 class BSWin32Audio;
 
 #include "internal/class_vtbls.h"
 #include "internal/memory_pool.h"
+#include "internal/misc_consts.h"
 #include "internal/utility.h"
 #include "internal/containers.h"
 
@@ -404,6 +408,7 @@ class BSWin32Audio;
 #include "internal/netimmerse.h"
 #include "internal/havok.h"
 #include "nvse/PluginAPI.h"
+#include "nvse/GameSound.h"
 #include "nvse/GameData.h"
 #include "nvse/GameForms.h"
 #include "nvse/GameExtraData.h"

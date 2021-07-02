@@ -384,22 +384,20 @@ bool Cmd_ScriptWait_Execute(COMMAND_ARGS)
 {
 	if (_ReturnAddress() != (void*)0x5E234B) return true;
 	UInt32 iterNum;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &iterNum) || !scriptObj->refID || (scriptObj->info.type > 1) || !iterNum) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &iterNum) || !scriptObj->refID || (scriptObj->info.type > 1) || !iterNum)
+		return true;
 	TESForm *owner = scriptObj->info.type ? scriptObj->quest : (TESForm*)thisObj;
 	if (!owner) return true;
 	*opcodeOffsetPtr += *(UInt16*)(scriptData + *opcodeOffsetPtr - 2);
 	ScriptBlockIterator blockIter(scriptData, *opcodeOffsetPtr);
 	while (blockIter) ++blockIter;
 	UInt8 *blockType = blockIter.TypePtr();
-	if (!blockType || (*blockType == 0xD)) return true;
-	ScriptWaitInfo *waitInfo;
-	if (s_scriptWaitInfoMap.Insert(owner->refID, &waitInfo))
-	{
-		owner->jipFormFlags5 |= kHookFormFlag5_ScriptOnWait;
-		HOOK_MOD(ScriptRunner, true);
-		HOOK_MOD(EvalEventBlock, true);
-	}
-	waitInfo->Init(owner, iterNum, blockIter.NextOpOffset(), opcodeOffsetPtr);
+	if (!blockType || (*blockType == 0xD))
+		return true;
+	s_scriptWaitInfoMap[owner].Init(owner, iterNum, blockIter.NextOpOffset(), opcodeOffsetPtr);
+	owner->jipFormFlags5 |= kHookFormFlag5_ScriptOnWait;
+	HOOK_SET(ScriptRunner, true);
+	HOOK_SET(EvalEventBlock, true);
 	UInt32 *callerArgs = opcodeOffsetPtr + 6;
 	*(UInt32*)callerArgs[3] = blockIter.NextBlockOffset() - 4 - callerArgs[4];
 	return true;
@@ -416,7 +414,7 @@ bool Cmd_IsScriptWaiting_Execute(COMMAND_ARGS)
 			if (!thisObj) return true;
 			owner = thisObj;
 		}
-		if (s_scriptWaitInfoMap.HasKey(owner->refID))
+		if (owner->jipFormFlags5 & kHookFormFlag5_ScriptOnWait)
 			*result = 1;
 	}
 	return true;
@@ -432,8 +430,11 @@ bool Cmd_StopScriptWaiting_Execute(COMMAND_ARGS)
 			if (!thisObj) return true;
 			owner = thisObj;
 		}
-		ScriptWaitInfo *waitInfo = s_scriptWaitInfoMap.GetPtr(owner->refID);
-		if (waitInfo) waitInfo->iterNum = 1;
+		if (owner->jipFormFlags5 & kHookFormFlag5_ScriptOnWait)
+		{
+			ScriptWaitInfo *waitInfo = s_scriptWaitInfoMap.GetPtr(owner);
+			if (waitInfo) waitInfo->iterNum = 1;
+		}
 	}
 	return true;
 }

@@ -1,5 +1,17 @@
 #include "nvse/GameData.h"
 
+DataHandler *g_dataHandler = NULL;
+Sky **g_tempSky = (Sky**)0x11CCB78, **g_currentSky = (Sky**)0x11DEA20;
+TES *g_TES = NULL;
+GameTimeGlobals *g_gameTimeGlobals = (GameTimeGlobals*)0x11DE7B8;
+LoadedReferenceMap **g_loadedRefrMaps = (LoadedReferenceMap**)0x11C95C8;
+RadioEntry **g_pipboyRadio = (RadioEntry**)0x11DD42C;
+EffectArchTypeEntry *g_effectArchTypeArray = (EffectArchTypeEntry*)0x1183320;				//	Array size = 0x25
+EntryPointConditionInfo *g_entryPointConditionInfo = (EntryPointConditionInfo*)0x1196EE0;	//	Array size = 0x49
+AnimGroupInfo *g_animGroupInfoArray = (AnimGroupInfo*)0x11977D8;							//	Array size = 0xF5
+PCMiscStat **g_miscStatData = (PCMiscStat**)0x11C6D50;										//	Array size = 0x2B
+TypeSignature *g_typeSignatures = (TypeSignature*)0x101C2AC;								//	Array size = 0x79; order is reversed.
+
 DataHandler* DataHandler::Get() {
 	DataHandler** g_dataHandler = (DataHandler**)0x011C3F2C;
 	return *g_dataHandler;
@@ -83,3 +95,37 @@ ModInfo::ModInfo() {
 ModInfo::~ModInfo() {
 	//
 };
+
+void Sky::RefreshMoon()
+{
+	if (masserMoon) masserMoon->Destroy(true);
+	masserMoon = (Moon*)GameHeapAlloc(sizeof(Moon));
+	ThisCall(0x634A70, masserMoon, (const char*)0x104EEB0, *(UInt32*)0x11CCCBC, *(UInt32*)0x11CCC98, *(UInt32*)0x11CCBA8, *(UInt32*)0x11CCC00, *(UInt32*)0x11CCC58, *(UInt32*)0x11CCC1C);
+	masserMoon->Refresh(niNode008, (const char*)0x104EEB0);
+}
+
+__declspec(naked) bool Sky::GetIsRaining()
+{
+	__asm
+	{
+		mov		eax, [ecx+0x10]
+		test	eax, eax
+		jz		checkSecond
+		cmp		byte ptr [eax+0xEB], 4
+		jz		weatherPerc
+	checkSecond:
+		mov		eax, [ecx+0x14]
+		test	eax, eax
+		jz		retnFalse
+		cmp		byte ptr [eax+0xEB], 4
+		jnz		retnFalse
+	weatherPerc:
+		movss	xmm0, kFltOne
+		comiss	xmm0, [ecx+0xF4]
+		setbe	al
+		retn
+	retnFalse:
+		xor		al, al
+		retn
+	}
+}

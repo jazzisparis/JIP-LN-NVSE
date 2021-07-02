@@ -1,8 +1,9 @@
 #pragma once
 
 #define MAP_DEFAULT_ALLOC			8
-#define MAP_DEFAULT_BUCKET_COUNT	8
+#define MAP_MIN_BUCKET_COUNT		4
 #define MAP_MAX_BUCKET_COUNT		0x40000
+#define MAP_DEFAULT_BUCKET_COUNT	8
 #define VECTOR_DEFAULT_ALLOC		8
 
 void* __fastcall Pool_Alloc_Buckets(UInt32 numBuckets);
@@ -37,7 +38,7 @@ public:
 
 	T_Data *Push(Data_Arg item)
 	{
-		Node *newNode = ALLOC_NODE(Node);
+		Node *newNode = POOL_ALLOC(1, Node);
 		T_Data *data = &newNode->data;
 		memcpy(data, &item, sizeof(T_Data));
 		newNode->next = head;
@@ -48,7 +49,7 @@ public:
 	template <typename ...Args>
 	T_Data *Push(Args && ...args)
 	{
-		Node *newNode = ALLOC_NODE(Node);
+		Node *newNode = POOL_ALLOC(1, Node);
 		T_Data *data = &newNode->data;
 		new (data) T_Data(std::forward<Args>(args)...);
 		newNode->next = head;
@@ -63,7 +64,7 @@ public:
 		Node *toRemove = head;
 		head = head->next;
 		toRemove->Clear();
-		Pool_Free(toRemove, sizeof(Node));
+		POOL_FREE(toRemove, 1, Node);
 		return frontItem;
 	}
 
@@ -76,7 +77,7 @@ public:
 			pNode = head;
 			head = head->next;
 			pNode->Clear();
-			Pool_Free(pNode, sizeof(Node));
+			POOL_FREE(pNode, 1, Node);
 		}
 		while (head);
 	}
@@ -112,7 +113,7 @@ template <typename T_Data> class LinkedList
 
 	Node *PrependNew()
 	{
-		Node *newNode = ALLOC_NODE(Node);
+		Node *newNode = POOL_ALLOC(1, Node);
 		newNode->next = head;
 		newNode->prev = nullptr;
 		if (head) head->prev = newNode;
@@ -123,7 +124,7 @@ template <typename T_Data> class LinkedList
 
 	Node *AppendNew()
 	{
-		Node *newNode = ALLOC_NODE(Node);
+		Node *newNode = POOL_ALLOC(1, Node);
 		newNode->next = nullptr;
 		newNode->prev = tail;
 		if (tail) tail->next = newNode;
@@ -136,7 +137,7 @@ template <typename T_Data> class LinkedList
 	{
 		Node *pNode = GetNthNode(index);
 		if (!pNode) return AppendNew();
-		Node *prev = pNode->prev, *newNode = ALLOC_NODE(Node);
+		Node *prev = pNode->prev, *newNode = POOL_ALLOC(1, Node);
 		newNode->next = pNode;
 		newNode->prev = prev;
 		pNode->prev = newNode;
@@ -184,7 +185,7 @@ template <typename T_Data> class LinkedList
 		if (next) next->prev = prev;
 		else tail = prev;
 		toRemove->Clear();
-		Pool_Free(toRemove, sizeof(Node));
+		POOL_FREE(toRemove, 1, Node);
 	}
 
 public:
@@ -402,7 +403,7 @@ public:
 			pNode = head;
 			head = head->next;
 			pNode->Clear();
-			Pool_Free(pNode, sizeof(Node));
+			POOL_FREE(pNode, 1, Node);
 		}
 		while (head);
 		tail = nullptr;
@@ -520,25 +521,35 @@ template <typename T_Key> class MapKey
 
 public:
 	__forceinline Key_Arg Get() const {return key;}
-	__forceinline void Set(Key_Arg inKey)
-	{
-		if (std::is_same_v<T_Key, char*>)
-			*(char**)&key = CopyString(*(const char**)&inKey);
-		else key = inKey;
-	}
+	__forceinline void Set(Key_Arg inKey) {key = inKey;}
 	__forceinline char Compare(Key_Arg inKey) const
 	{
-		if (std::is_same_v<T_Key, char*> || std::is_same_v<T_Key, const char*>)
-			return StrCompare(*(const char**)&inKey, *(const char**)&key);
 		if (inKey < key) return -1;
 		return (key < inKey) ? 1 : 0;
 	}
-	__forceinline void Clear()
-	{
-		if (std::is_same_v<T_Key, char*>)
-			free(*(char**)&key);
-		else key.~T_Key();
-	}
+	__forceinline void Clear() {key.~T_Key();}
+};
+
+template <> class MapKey<const char*>
+{
+	const char	*key;
+
+public:
+	__forceinline const char *Get() const {return key;}
+	__forceinline void Set(const char *inKey) {key = inKey;}
+	__forceinline char Compare(const char *inKey) const {return StrCompare(inKey, key);}
+	__forceinline void Clear() {}
+};
+
+template <> class MapKey<char*>
+{
+	char		*key;
+
+public:
+	__forceinline char *Get() const {return key;}
+	__forceinline void Set(const char *inKey) {key = CopyString(inKey);}
+	__forceinline char Compare(const char *inKey) const {return StrCompare(inKey, key);}
+	__forceinline void Clear() {free(key);}
 };
 
 template <typename T_Data> class MapValue
@@ -559,7 +570,7 @@ template <typename T_Data> class MapValue_p
 public:
 	__forceinline T_Data *Init()
 	{
-		value = ALLOC_NODE(T_Data);
+		value = POOL_ALLOC(1, T_Data);
 		return value;
 	}
 	__forceinline T_Data& Get() {return *value;}
@@ -567,11 +578,11 @@ public:
 	__forceinline void Clear()
 	{
 		value->~T_Data();
-		Pool_Free(value, sizeof(T_Data));
+		POOL_FREE(value, 1, T_Data);
 	}
 };
 
-template <typename T_Key, typename T_Data> class Map
+template <typename T_Key, typename T_Data, const UInt32 _default_alloc = MAP_DEFAULT_ALLOC> class Map
 {
 	using M_Key = MapKey<T_Key>;
 	using M_Value = std::conditional_t<(sizeof(T_Data) <= 8) || (sizeof(T_Data) <= alignof(T_Key)), MapValue<T_Data>, MapValue_p<T_Data>>;
@@ -632,7 +643,7 @@ template <typename T_Key, typename T_Data> class Map
 		else if (numAlloc <= numEntries)
 		{
 			UInt32 newAlloc = numAlloc << 1;
-			POOL_REALLOC(entries, numAlloc, newAlloc, Entry);
+			entries = POOL_REALLOC(entries, numAlloc, newAlloc, Entry);
 			numAlloc = newAlloc;
 		}
 		Entry *pEntry = entries + index;
@@ -647,7 +658,7 @@ template <typename T_Key, typename T_Data> class Map
 	Entry *End() const {return entries + numEntries;}
 
 public:
-	Map(UInt32 _alloc = MAP_DEFAULT_ALLOC) : entries(nullptr), numEntries(0), numAlloc(_alloc) {}
+	Map(UInt32 _alloc = _default_alloc) : entries(nullptr), numEntries(0), numAlloc(_alloc) {}
 	Map(std::initializer_list<MappedPair<T_Key, T_Data>> inList) : entries(nullptr), numEntries(0), numAlloc(inList.size()) {InsertList(inList);}
 	~Map()
 	{
@@ -845,7 +856,7 @@ public:
 	CpIterator BeginCp() {return CpIterator(*this);}
 };
 
-template <typename T_Key> class Set
+template <typename T_Key, const UInt32 _default_alloc = MAP_DEFAULT_ALLOC> class Set
 {
 	using M_Key = MapKey<T_Key>;
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
@@ -879,7 +890,7 @@ template <typename T_Key> class Set
 	M_Key *End() const {return keys + numKeys;}
 
 public:
-	Set(UInt32 _alloc = MAP_DEFAULT_ALLOC) : keys(nullptr), numKeys(0), numAlloc(_alloc) {}
+	Set(UInt32 _alloc = _default_alloc) : keys(nullptr), numKeys(0), numAlloc(_alloc) {}
 	Set(std::initializer_list<T_Key> inList) : keys(nullptr), numKeys(0), numAlloc(inList.size()) {InsertList(inList);}
 	~Set()
 	{
@@ -905,7 +916,7 @@ public:
 		else if (numAlloc <= numKeys)
 		{
 			UInt32 newAlloc = numAlloc << 1;
-			POOL_REALLOC(keys, numAlloc, newAlloc, M_Key);
+			keys = POOL_REALLOC(keys, numAlloc, newAlloc, M_Key);
 			numAlloc = newAlloc;
 		}
 		M_Key *pKey = keys + index;
@@ -969,7 +980,7 @@ public:
 		else if (numAlloc < numKeys)
 		{
 			UInt32 newAlloc = AlignNumAlloc<M_Key>(numKeys);
-			POOL_REALLOC(keys, numAlloc, newAlloc, M_Key);
+			keys = POOL_REALLOC(keys, numAlloc, newAlloc, M_Key);
 			numAlloc = newAlloc;
 		}
 		memcpy(keys, source.keys, sizeof(M_Key) * numKeys);
@@ -1106,7 +1117,7 @@ public:
 	__forceinline void Clear() {free(key);}
 };
 
-template <typename T_Key, typename T_Data> class UnorderedMap
+template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = MAP_DEFAULT_BUCKET_COUNT> class UnorderedMap
 {
 	using H_Key = HashedKey<T_Key>;
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
@@ -1140,7 +1151,7 @@ template <typename T_Key, typename T_Data> class UnorderedMap
 			if (prev) prev->next = entry->next;
 			else entries = entry->next;
 			entry->Clear();
-			Pool_Free(entry, sizeof(Entry));
+			POOL_FREE(entry, 1, Entry);
 		}
 
 		void Clear()
@@ -1152,7 +1163,7 @@ template <typename T_Key, typename T_Data> class UnorderedMap
 				pEntry = entries;
 				entries = entries->next;
 				pEntry->Clear();
-				Pool_Free(pEntry, sizeof(Entry));
+				POOL_FREE(pEntry, 1, Entry);
 			}
 			while (entries);
 		}
@@ -1191,7 +1202,7 @@ template <typename T_Key, typename T_Data> class UnorderedMap
 			pBucket++;
 		}
 		while (pBucket != pEnd);
-		Pool_Free(buckets, numBuckets * sizeof(Bucket));
+		POOL_FREE(buckets, numBuckets, Bucket);
 		buckets = newBuckets;
 		numBuckets = newCount + 1;
 	}
@@ -1225,7 +1236,7 @@ template <typename T_Key, typename T_Data> class UnorderedMap
 			return false;
 		}
 		numEntries++;
-		Entry *newEntry = ALLOC_NODE(Entry);
+		Entry *newEntry = POOL_ALLOC(1, Entry);
 		newEntry->key.Set(key, hashVal);
 		pBucket->Insert(newEntry);
 		*outData = &newEntry->value;
@@ -1233,13 +1244,13 @@ template <typename T_Key, typename T_Data> class UnorderedMap
 	}
 
 public:
-	UnorderedMap(UInt32 _numBuckets = MAP_DEFAULT_BUCKET_COUNT) : buckets(nullptr), numBuckets(_numBuckets), numEntries(0) {}
+	UnorderedMap(UInt32 _numBuckets = _default_bucket_count) : buckets(nullptr), numBuckets(_numBuckets), numEntries(0) {}
 	UnorderedMap(std::initializer_list<MappedPair<T_Key, T_Data>> inList) : buckets(nullptr), numBuckets(inList.size()), numEntries(0) {InsertList(inList);}
 	~UnorderedMap()
 	{
 		if (!buckets) return;
 		Clear();
-		Pool_Free(buckets, numBuckets * sizeof(Bucket));
+		POOL_FREE(buckets, numBuckets, Bucket);
 		buckets = nullptr;
 	}
 
@@ -1492,7 +1503,7 @@ public:
 	Iterator Find(Key_Arg key) {return Iterator(*this, key);}
 };
 
-template <typename T_Key> class UnorderedSet
+template <typename T_Key, const UInt32 _default_bucket_count = MAP_DEFAULT_BUCKET_COUNT> class UnorderedSet
 {
 	using H_Key = HashedKey<T_Key>;
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
@@ -1520,7 +1531,7 @@ template <typename T_Key> class UnorderedSet
 			if (prev) prev->next = entry->next;
 			else entries = entry->next;
 			entry->Clear();
-			Pool_Free(entry, sizeof(Entry));
+			POOL_FREE(entry, 1, Entry);
 		}
 
 		void Clear()
@@ -1532,7 +1543,7 @@ template <typename T_Key> class UnorderedSet
 				pEntry = entries;
 				entries = entries->next;
 				pEntry->Clear();
-				Pool_Free(pEntry, sizeof(Entry));
+				POOL_FREE(pEntry, 1, Entry);
 			}
 			while (entries);
 		}
@@ -1571,19 +1582,19 @@ template <typename T_Key> class UnorderedSet
 			pBucket++;
 		}
 		while (pBucket != pEnd);
-		Pool_Free(buckets, numBuckets * sizeof(Bucket));
+		POOL_FREE(buckets, numBuckets, Bucket);
 		buckets = newBuckets;
 		numBuckets = newCount + 1;
 	}
 
 public:
-	UnorderedSet(UInt32 _numBuckets = MAP_DEFAULT_BUCKET_COUNT) : buckets(nullptr), numBuckets(_numBuckets), numEntries(0) {}
+	UnorderedSet(UInt32 _numBuckets = _default_bucket_count) : buckets(nullptr), numBuckets(_numBuckets), numEntries(0) {}
 	UnorderedSet(std::initializer_list<T_Key> inList) : buckets(nullptr), numBuckets(inList.size()), numEntries(0) {InsertList(inList);}
 	~UnorderedSet()
 	{
 		if (!buckets) return;
 		Clear();
-		Pool_Free(buckets, numBuckets * sizeof(Bucket));
+		POOL_FREE(buckets, numBuckets, Bucket);
 		buckets = nullptr;
 	}
 
@@ -1619,7 +1630,7 @@ public:
 		for (Entry *pEntry = pBucket->entries; pEntry; pEntry = pEntry->next)
 			if (pEntry->key.Match(key, hashVal)) return false;
 		numEntries++;
-		Entry *newEntry = ALLOC_NODE(Entry);
+		Entry *newEntry = POOL_ALLOC(1, Entry);
 		newEntry->key.Set(key, hashVal);
 		pBucket->Insert(newEntry);
 		return true;
@@ -1741,7 +1752,7 @@ public:
 	Iterator Begin() {return Iterator(*this);}
 };
 
-template <typename T_Data> class Vector
+template <typename T_Data, const UInt32 _default_alloc = VECTOR_DEFAULT_ALLOC> class Vector
 {
 	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 
@@ -1759,7 +1770,7 @@ template <typename T_Data> class Vector
 		else if (numAlloc <= numItems)
 		{
 			UInt32 newAlloc = numAlloc << 1;
-			POOL_REALLOC(data, numAlloc, newAlloc, T_Data);
+			data = POOL_REALLOC(data, numAlloc, newAlloc, T_Data);
 			numAlloc = newAlloc;
 		}
 		return data + numItems++;
@@ -1768,7 +1779,7 @@ template <typename T_Data> class Vector
 	T_Data *End() const {return data + numItems;}
 
 public:
-	Vector(UInt32 _alloc = VECTOR_DEFAULT_ALLOC) : data(nullptr), numItems(0), numAlloc(_alloc) {}
+	Vector(UInt32 _alloc = _default_alloc) : data(nullptr), numItems(0), numAlloc(_alloc) {}
 	Vector(std::initializer_list<T_Data> inList) : data(nullptr), numItems(0), numAlloc(inList.size()) {AppendList(inList);}
 	~Vector()
 	{
@@ -1854,7 +1865,7 @@ public:
 		else if (numAlloc < newCount)
 		{
 			UInt32 newAlloc = AlignNumAlloc<T_Data>(newCount);
-			POOL_REALLOC(data, numAlloc, newAlloc, T_Data);
+			data = POOL_REALLOC(data, numAlloc, newAlloc, T_Data);
 			numAlloc = newAlloc;
 		}
 		memcpy(data + numItems, source.data, sizeof(T_Data) * source.numItems);
@@ -2060,7 +2071,7 @@ public:
 		else if (numAlloc < numItems)
 		{
 			UInt32 newAlloc = AlignNumAlloc<T_Data>(numItems);
-			POOL_REALLOC(data, numAlloc, newAlloc, T_Data);
+			data = POOL_REALLOC(data, numAlloc, newAlloc, T_Data);
 			numAlloc = newAlloc;
 		}
 		memcpy(data, source.data, sizeof(T_Data) * numItems);
@@ -2081,7 +2092,7 @@ public:
 			else if (numAlloc < newSize)
 			{
 				newSize = AlignNumAlloc<T_Data>(newSize);
-				POOL_REALLOC(data, numAlloc, newSize, T_Data);
+				data = POOL_REALLOC(data, numAlloc, newSize, T_Data);
 				numAlloc = newSize;
 			}
 			pData = data + numItems;
@@ -2311,7 +2322,7 @@ public:
 	CpIterator BeginCp() {return CpIterator(*this);}
 };
 
-template <typename T_Data, UInt32 size> class FixedTypeArray
+template <typename T_Data, const UInt32 size> class FixedTypeArray
 {
 	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 

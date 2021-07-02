@@ -1,5 +1,7 @@
 #include "nvse/GameTasks.h"
 
+ModelLoader *g_modelLoader = NULL;
+
 // IOManager** g_ioManager = (IOManager**)0x00B33A10;
 UInt32 * kBSTaskCounter = (UInt32*) 0x0011C3B38;
 

@@ -71,7 +71,7 @@ bool Cmd_SetNthEffectBase_Execute(COMMAND_ARGS)
 		{
 			effItem->setting = effSetting;
 			effItem->actorValueOrOther = effSetting->actorVal;
-			UpdateEffectsAllActors(magicItem, effItem);
+			magicItem->UpdateEffectsAllActors(effItem);
 		}
 	}
 	return true;
@@ -124,7 +124,7 @@ bool Cmd_SetNthEffectTraitNumeric_Execute(COMMAND_ARGS)
 	case 2:
 		effItem->duration = val;
 	}
-	UpdateEffectsAllActors(magicItem, effItem);
+	magicItem->UpdateEffectsAllActors(effItem);
 	return true;
 }
 
@@ -169,7 +169,7 @@ bool Cmd_AddNewEffect_Execute(COMMAND_ARGS)
 		magicItem->list.list.Prepend(effItem);
 		*result = (int)magicItem->list.list.Count();
 	}
-	UpdateEffectsAllActors(magicItem, effItem, true);
+	magicItem->UpdateEffectsAllActors(effItem, true);
 	return true;
 }
 

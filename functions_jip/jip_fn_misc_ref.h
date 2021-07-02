@@ -898,7 +898,7 @@ bool Cmd_IsAnimPlayingEx_Execute(COMMAND_ARGS)
 			{
 				animID = groupID & 0xFF;
 				if (animID >= 245) continue;
-				classify = &s_animGroupClassify[animID];
+				classify = &kAnimGroupClassify[animID];
 				if ((classify->category == category) && ((category >= 4) || ((!subType || (classify->subType == subType)) && (!flags || (classify->flags & flags)))))
 				{
 					*result = 1;
@@ -2010,7 +2010,7 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 				NiCamera **pCamera;
 				if (s_extraCamerasMap.Insert(camName, &pCamera))
 				{
-					*pCamera = xCamera = ThisCall<NiCamera*>(0xA712F0, NiAllocator(sizeof(NiCamera)));
+					*pCamera = xCamera = NiCamera::Create();
 					InterlockedIncrement(&xCamera->m_uiRefCount);
 					xCamera->SetName(camName);
 					xCamera->frustum.n = 5.0F;

@@ -117,8 +117,6 @@ __declspec(naked) TESForm* __stdcall LookupFormByRefID(UInt32 refID)
 	}
 }
 
-alignas(16) static const double kValueBounds[] = {4294967296, -4294967296};
-
 __declspec(naked) UInt32 __vectorcall cvtd2ui(double value)
 {
 	__asm
@@ -136,12 +134,24 @@ __declspec(naked) double __vectorcall cvtui2d(UInt32 value)
 {
 	__asm
 	{
-		movd	xmm0, ecx
-		cvtdq2pd	xmm0, xmm0
-		test	ecx, ecx
-		jns		done
-		addsd	xmm0, kValueBounds
-	done:
+		push	0
+		push	ecx
+		fild	qword ptr [esp]
+		fstp	qword ptr [esp]
+		movq	xmm0, qword ptr [esp]
+		add		esp, 8
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall cvtui2d(UInt32 value, double *result)
+{
+	__asm
+	{
+		mov		[edx], ecx
+		mov		dword ptr [edx+4], 0
+		fild	qword ptr [edx]
+		fstp	qword ptr [edx]
 		retn
 	}
 }
@@ -207,7 +217,7 @@ __declspec(naked) void __fastcall NiReleaseObject(NiRefObject *toRelease)
 	}
 }
 
-__declspec(naked) NiRefObject** __stdcall NiReleaseAddRef(NiRefObject **toRelease, NiRefObject *toAdd)
+__declspec(naked) NiRefObject** __stdcall NiReleaseAddRef(void *toRelease, NiRefObject *toAdd)
 {
 	__asm
 	{
@@ -1061,7 +1071,7 @@ __declspec(naked) UInt32 __fastcall StrToUInt(const char *str)
 
 __declspec(naked) double __vectorcall StrToDbl(const char *str)
 {
-	static const double kFactor10Div[] = {1.0e-09, 1.0e-08, 1.0e-07, 1.0e-06, 1.0e-05, 0.0001, 0.001, 0.01, 0.1};
+	static const double kValueBounds[] = {4294967296, -4294967296}, kFactor10Div[] = {1.0e-09, 1.0e-08, 1.0e-07, 1.0e-06, 1.0e-05, 0.0001, 0.001, 0.01, 0.1};
 	__asm
 	{
 		push	esi
@@ -1583,7 +1593,7 @@ bool FileStream::Open(const char *filePath)
 {
 	if (theFile) fclose(theFile);
 	theFile = fopen(filePath, "rb");
-	return theFile ? true : false;
+	return theFile != NULL;
 }
 
 bool FileStream::OpenAt(const char *filePath, UInt32 inOffset)
@@ -1617,7 +1627,7 @@ bool FileStream::OpenWrite(char *filePath, bool append)
 	}
 	else MakeAllDirs(filePath);
 	theFile = fopen(filePath, "wb");
-	return theFile ? true : false;
+	return theFile != NULL;
 }
 
 UInt32 FileStream::GetLength()
@@ -1691,7 +1701,7 @@ void FileStream::MakeAllDirs(char *fullPath)
 bool DebugLog::Create(const char *filePath)
 {
 	theFile = _fsopen(filePath, "wb", 0x20);
-	return theFile ? true : false;
+	return theFile != NULL;
 }
 
 const char kIndentLevelStr[] = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";

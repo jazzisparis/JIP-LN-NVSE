@@ -362,22 +362,6 @@ struct ConditionList : tList<Condition>
 	}
 };
 
-enum MaterialType
-{
-	kMaterial_Stone,
-	kMaterial_Dirt,
-	kMaterial_Grass,
-	kMaterial_Glass,
-	kMaterial_Metal,
-	kMaterial_Wood,
-	kMaterial_Organic,
-	kMaterial_Cloth,
-	kMaterial_Water,
-	kMaterial_HollowMetal,
-	kMaterial_OrganicBug,
-	kMaterial_OrganicGlow
-};
-
 class TESObject : public TESForm
 {
 public:
@@ -587,6 +571,8 @@ public:
 		kType_Ingredient = 4,
 	};
 	EType Type() const;
+
+	void __fastcall UpdateEffectsAllActors(EffectItem *effItem, bool addNew = false);
 };
 
 STATIC_ASSERT(sizeof(MagicItem) == 0x1C);
@@ -3053,6 +3039,8 @@ public:
 	SInt32 GetItemIndexByLevel(UInt32 level);
 };
 
+extern UInt8 s_dumpLvlListIndent;
+
 // TESLevCreature (68)
 class TESLevCreature : public TESBoundObject
 {
@@ -3399,11 +3387,6 @@ public:
 	UInt8			pad0D[3];	// 0D
 };
 
-// NavMeshInfoMap (40)
-class NavMeshInfoMap;
-
-class NavMesh;
-
 // E0
 class TESObjectCELL : public TESForm
 {
@@ -3501,7 +3484,7 @@ public:
 	BGSLightingTemplate		*lightingTemplate;		// D8
 	UInt32					inheritFlags;			// DC
 
-	bool IsInterior() { return worldSpace == NULL; }
+	bool IsInterior() {return (cellFlags & kCellFlag_IsInterior) != 0;}
 	NiNode* __fastcall Get3DNode(UInt32 index);
 	void ToggleNodes(UInt32 nodeBits, UInt8 doHide);
 
@@ -3679,6 +3662,61 @@ class TESChildCell
 public:
 	virtual TESObjectCELL	*GetPersistentCell();
 };
+
+// NavMeshInfoMap (40)
+class NavMeshInfoMap;
+
+struct NavMeshInfo;
+
+// 8C
+class ObstacleData : public NiRefObject
+{
+public:
+	UInt32						unk08;			// 08
+	NiRefObject					*object0C;		// 0C
+	UInt32						unk10[25];		// 10
+	UInt8						byte74;			// 74
+	UInt8						byte75[3];		// 75
+	BSSimpleArray<NavMeshInfo>	navMeshInfos;	// 78
+	NiRefObject					*object88;		// 88
+};
+
+struct NavMeshVertex;
+struct NavMeshTriangle;
+struct EdgeExtraInfo;
+struct NavMeshTriangleDoorPortal;
+struct NavMeshClosedDoorInfo;
+struct NavMeshPOVData;
+struct ObstacleUndoData;
+struct NavMeshStaticAvoidNode;
+
+// 108
+class NavMesh : public TESForm
+{
+public:
+	virtual void		Unk_4E(void);
+
+	TESChildCell								childCell;			// 018
+	NiRefObject									refObject;			// 01C
+	TESObjectCELL								*parentCell;		// 024
+	BSSimpleArray<NavMeshVertex>				vertexArr;			// 028
+	BSSimpleArray<NavMeshTriangle>				triangleArr;		// 038
+	BSSimpleArray<EdgeExtraInfo>				edgeInfoArr;		// 048
+	BSSimpleArray<NavMeshTriangleDoorPortal>	doorPortalArr;		// 058
+	BSSimpleArray<NavMeshClosedDoorInfo>		closedDorrArr;		// 068
+	BSSimpleArray<UInt16>						unk078Arr;			// 078
+	NiTMapBase<UInt16, NavMeshPOVData*>			povDataMap;			// 088
+	BSSimpleArray<UInt16>						unk098Arr;			// 098
+	UInt32										unk0A8;				// 0A8
+	float										unk0AC[8];			// 0AC
+	BSSimpleArray<UInt16>						*arrPtr0CC;			// 0CC
+	BSSimpleArray<ObstacleUndoData>				obstacleUndoArr;	// 0D0
+	NiTMapBase<UInt16, ObstacleData*>			*obstacleDataMap;	// 0E0
+	BSSimpleArray<UInt16>						unk0E4Arr;			// 0E4
+	BSSimpleArray<NavMeshStaticAvoidNode>		avoidNodeArr;		// 0F4
+	UInt32										*ptr104;			// 104
+};
+STATIC_ASSERT(sizeof(NavMesh) == 0x108);
 
 // 2C
 class TESObjectLAND : public TESForm
@@ -4360,6 +4398,15 @@ public:
 	UInt8			unk0A9;		// 0A9
 	UInt8			pad0AA[2];	// 0AA
 };	// 0AC
+
+// 8C
+class BackUpPackage : public TESPackage
+{
+public:
+	virtual void	Unk_58(void);
+
+	NiVector3		destPos;	// 80
+};
 
 class TressPassPackage : public TESPackage
 {

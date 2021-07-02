@@ -114,7 +114,9 @@ struct ScriptRunner
 	UInt32				unk1C;				// 1C	Set to Expression::errorCode
 	UInt32				ifStackDepth;		// 20
 	UInt32				ifStackFlags[10];	// 24
-	UInt32				unk4C[21];			// 4C
+	UInt32				ifStack2Depth;		// 4C
+	UInt32				ifStack2Flags[10];	// 50
+	UInt32				ifStack3Flags[10];	// 78
 	UInt8				invalidRefs;		// A0	Set when the dot operator fails to resolve a reference (inside the error message handler)
 	UInt8				byteA1;				// A1	Set when the executing CommandInfo's 2nd flag bit (+0x25) is set
 	UInt8				padA2[2];			// A2
