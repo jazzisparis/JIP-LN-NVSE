@@ -503,6 +503,8 @@ public:
 	float							flt130;				// 130	Always 23.99
 	float							flt134;				// 134	Always 0
 
+	__forceinline static Sky *Get() {return *(Sky**)0x11DEA20;}
+
 	void RefreshMoon();
 	__forceinline void RefreshClimate(TESClimate *climate, bool immediate = true)
 	{
@@ -511,8 +513,6 @@ public:
 	bool GetIsRaining();
 };
 STATIC_ASSERT(sizeof(Sky) == 0x138);
-
-extern Sky **g_tempSky, **g_currentSky;
 
 // 04
 class GridArray
@@ -681,8 +681,9 @@ struct GameTimeGlobals
 	UInt32			unk28;			// 28
 	float			lastUpdHour;	// 2C
 	UInt32			initialized;	// 30
+
+	__forceinline static GameTimeGlobals *Get() {return (GameTimeGlobals*)0x11DE7B8;}
 };
-extern GameTimeGlobals *g_gameTimeGlobals;
 
 // 18
 class LoadedReferenceMap : public NiTPointerMap<TESObjectREFR>
@@ -691,7 +692,22 @@ public:
 	UInt32			unk10;		// 10
 	UInt32			unk14;		// 14
 };
-extern LoadedReferenceMap **g_loadedRefrMaps;
+
+// C0
+struct LoadedReferenceCollection
+{
+	LoadedReferenceMap	map00;					// 00	Unused?
+	LoadedReferenceMap	allInventoryObjects;	// 18
+	LoadedReferenceMap	weaponObjects;			// 30
+	LoadedReferenceMap	ammoObjects;			// 48
+	LoadedReferenceMap	containers;				// 60
+	LoadedReferenceMap	actors;					// 78
+	LoadedReferenceMap	radiationEmitters;		// 90
+	LoadedReferenceMap	teleportDoors;			// A8
+
+	__forceinline static LoadedReferenceCollection *Get() {return *(LoadedReferenceCollection**)0x11C95C8;}
+};
+extern LoadedReferenceCollection *g_loadedReferences;
 
 // 24
 struct RadioEntry

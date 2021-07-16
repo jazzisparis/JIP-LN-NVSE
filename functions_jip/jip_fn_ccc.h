@@ -736,7 +736,7 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 		character->ModActorValue(kAVCode_DamageThreshold, 0, 0);
 		return true;
 	}
-	ContainerMenu *containerMenu = *g_containerMenu;
+	ContainerMenu *containerMenu = ContainerMenu::Get();
 	ContChangesEntry *menuEntry = *g_containerMenuSelection;
 	if (!menuEntry || !containerMenu || !containerMenu->rightItems.selected || (GetActiveTileID() != 20))
 		return true;
@@ -787,7 +787,7 @@ bool Cmd_CCCSMS_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *objRefr = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &objRefr) || !objRefr) return true;
-	ListNode<BSTempEffect> *effIter = g_processManager->tempEffects.Head();
+	ListNode<BSTempEffect> *effIter = ProcessManager::Get()->tempEffects.Head();
 	MagicShaderHitEffect *mshEff;
 	do
 	{

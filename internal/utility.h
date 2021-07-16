@@ -156,6 +156,35 @@ public:
 	~ScopedLock() {cs->Leave();}
 };
 
+union FunctionArg
+{
+	void		*pVal;
+	float		fVal;
+	UInt32		uVal;
+	SInt32		iVal;
+
+	FunctionArg& operator=(void *other)
+	{
+		pVal = other;
+		return *this;
+	}
+	FunctionArg& operator=(float other)
+	{
+		fVal = other;
+		return *this;
+	}
+	FunctionArg& operator=(UInt32 other)
+	{
+		uVal = other;
+		return *this;
+	}
+	FunctionArg& operator=(SInt32 other)
+	{
+		iVal = other;
+		return *this;
+	}
+};
+
 TESForm* __stdcall LookupFormByRefID(UInt32 refID);
 
 union Coordinate

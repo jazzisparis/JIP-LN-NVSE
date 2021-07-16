@@ -1,35 +1,6 @@
 #include "nvse/GameUI.h"
 
-InterfaceManager *g_interfaceManager = NULL;
 bool *g_menuVisibility = (bool*)0x11F308F;
-TileMenu **g_tileMenuArray = NULL;
-
-HUDMainMenu *g_HUDMainMenu = NULL;
-RecipeMenu **g_recipeMenu = (RecipeMenu**)0x11D8E90;
-BarterMenu **g_barterMenu = (BarterMenu**)0x11D8FA4;
-CaravanMenu **g_caravanMenu = (CaravanMenu**)0x11D917C;
-CompanionWheelMenu **g_companionWheelMenu = (CompanionWheelMenu**)0x11D92B8;
-ComputersMenu **g_computersMenu = (ComputersMenu**)0x11D9334;
-ContainerMenu **g_containerMenu = (ContainerMenu**)0x11D93F8;
-DialogMenu **g_dialogMenu = (DialogMenu**)0x11D9510;
-HackingMenu **g_hackingMenu = (HackingMenu**)0x11D95B8;
-InventoryMenu **g_inventoryMenu = (InventoryMenu**)0x11D9EA4;
-ItemModMenu **g_itemModMenu = (ItemModMenu**)0x11D9F54;
-LockPickMenu **g_lockPickMenu = (LockPickMenu**)0x11DA204;
-MapMenu **g_mapMenu = (MapMenu**)0x11DA368;
-MessageMenu **g_messageMenu = (MessageMenu**)0x11DA4F0;
-QuantityMenu **g_quantityMenu = (QuantityMenu**)0x11DA618;
-RaceSexMenu **g_raceSexMenu = (RaceSexMenu**)0x11DA634;
-RepairMenu **g_repairMenu = (RepairMenu**)0x11DA75C;
-RepairServicesMenu **g_repairServicesMenu = (RepairServicesMenu**)0x11DA7F0;
-SleepWaitMenu **g_sleepWaitMenu = (SleepWaitMenu**)0x11DA920;
-StartMenu **g_startMenu = (StartMenu**)0x11DAAC0;
-StatsMenu **g_statsMenu = (StatsMenu**)0x11DACE0;
-TextEditMenu **g_textEditMenu = (TextEditMenu**)0x11DAEC4;
-VATSMenu **g_VATSMenu = (VATSMenu**)0x11DB0D4;
-TraitMenu **g_traitMenu = (TraitMenu**)0x11DAF74;
-TraitSelectMenu **g_traitSelectMenu = (TraitSelectMenu**)0x11DB00C;
-
 ContChangesEntry **g_barterMenuSelection = (ContChangesEntry**)0x11D8FA8;
 ContChangesEntry **g_containerMenuSelection = (ContChangesEntry**)0x11D93FC;
 ContChangesEntry **g_inventoryMenuSelection = (ContChangesEntry**)0x11D9EA8;
@@ -38,9 +9,6 @@ ContChangesEntry **g_repairMenuTarget = (ContChangesEntry**)0x11DA760;
 TESObjectREFR **g_VATSTargetRef = (TESObjectREFR**)0x11F21CC;
 VATSCameraData *g_VATSCameraData = (VATSCameraData*)0x11F2250;
 TESRecipe **g_recipeMenuSelection = (TESRecipe**)0x11D8E94;
-
-FontManager *g_fontManager = NULL;
-SystemColorManager *g_sysColorManager = NULL;
 
 UnorderedMap<const char*, UInt32> s_menuNameToID({{"MessageMenu", kMenuType_Message}, {"InventoryMenu", kMenuType_Inventory}, {"StatsMenu", kMenuType_Stats},
 	{"HUDMainMenu", kMenuType_HUDMain}, {"LoadingMenu", kMenuType_Loading}, {"ContainerMenu", kMenuType_Container}, {"DialogMenu", kMenuType_Dialog},
@@ -68,25 +36,47 @@ Menu* __fastcall GetMenuByType(UInt32 menuID)
 	return tileMenu ? tileMenu->menu : NULL;
 }
 
-UInt32 InterfaceManager::GetTopVisibleMenuID()
+__declspec(naked) UInt32 InterfaceManager::GetTopVisibleMenuID()
 {
-	if (currentMode < 2) return 0;
-	if (activeMenu) return activeMenu->id;
-	UInt32 *mnStack = &menuStack[1];
-	while (*mnStack) mnStack++;
-	UInt32 menuID = *(mnStack - 1);
-	if (menuID != 1) return menuID;
-	if (g_menuVisibility[kMenuType_Inventory])
-		return kMenuType_Inventory;
-	if (g_menuVisibility[kMenuType_Map])
-		return kMenuType_Map;
-	if (g_menuVisibility[kMenuType_Stats])
-		return kMenuType_Stats;
-	if (g_menuVisibility[kMenuType_Repair])
-		return kMenuType_Repair;
-	if (g_menuVisibility[kMenuType_ItemMod])
-		return kMenuType_ItemMod;
-	return 0;
+	__asm
+	{
+		cmp		byte ptr [ecx+0xC], 2
+		jb		retn0
+		mov		eax, [ecx+0xD0]
+		add		ecx, 0x114
+		test	eax, eax
+		jz		stackIter
+		mov		eax, [eax+0x20]
+		retn
+		ALIGN 16
+	stackIter:
+		add		ecx, 4
+		cmp		[ecx], 0
+		jnz		stackIter
+		mov		eax, [ecx-4]
+		cmp		eax, 1
+		jnz		done
+		mov		ecx, 0x11F3479
+		mov		eax, 0x3EA
+		cmp		[ecx], 0
+		jnz		done
+		mov		al, 0xFF
+		cmp		[ecx+0x15], 0
+		jnz		done
+		mov		al, 0xEB
+		cmp		[ecx+1], 0
+		jnz		done
+		mov		eax, 0x40B
+		cmp		[ecx+0x21], 0
+		jnz		done
+		mov		al, 0x25
+		cmp		[ecx+0x3B], 0
+		jnz		done
+	retn0:
+		xor		eax, eax
+	done:
+		retn
+	}
 }
 
 Tile *InterfaceManager::GetActiveTile()

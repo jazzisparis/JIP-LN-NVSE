@@ -90,7 +90,7 @@ bool Cmd_SetSoundTraitNumeric_Execute(COMMAND_ARGS)
 			intVal = -100;
 		sound->frequencyAdj = intVal;
 		val = GetFrequencyModifier(sound);
-		for (auto sndIter = g_audioManager->playingSounds.Begin(); sndIter; ++sndIter)
+		for (auto sndIter = BSAudioManager::Get()->playingSounds.Begin(); sndIter; ++sndIter)
 		{
 			gameSound = sndIter.Get();
 			if (gameSound && (gameSound->sourceSound == sound))
@@ -106,7 +106,7 @@ bool Cmd_SetSoundTraitNumeric_Execute(COMMAND_ARGS)
 			intVal = 10000;
 		else intVal *= 100;
 		sound->staticAttenuation = intVal;
-		for (auto sndIter = g_audioManager->playingSounds.Begin(); sndIter; ++sndIter)
+		for (auto sndIter = BSAudioManager::Get()->playingSounds.Begin(); sndIter; ++sndIter)
 		{
 			gameSound = sndIter.Get();
 			if (gameSound && (gameSound->sourceSound == sound))
@@ -204,7 +204,8 @@ bool Cmd_IsSoundPlaying_Execute(COMMAND_ARGS)
 	TESObjectREFR *refr = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm, &refr))
 	{
-		auto sndIter = g_audioManager->playingSounds.Begin();
+		BSAudioManager *audioMngr = BSAudioManager::Get();
+		auto sndIter = audioMngr->playingSounds.Begin();
 		BSGameSound *gameSound;
 		if (refr)
 		{
@@ -213,7 +214,7 @@ bool Cmd_IsSoundPlaying_Execute(COMMAND_ARGS)
 			for (; sndIter; ++sndIter)
 			{
 				gameSound = sndIter.Get();
-				if (!gameSound || (gameSound->sourceSound != soundForm) || (refNode != g_audioManager->soundPlayingObjects.Lookup(sndIter.Key())))
+				if (!gameSound || (gameSound->sourceSound != soundForm) || (refNode != audioMngr->soundPlayingObjects.Lookup(sndIter.Key())))
 					continue;
 				*result = 1;
 				break;
@@ -242,14 +243,15 @@ bool Cmd_GetSoundPlayers_Execute(COMMAND_ARGS)
 	{
 		TempElements *tmpElements = GetTempElements();
 		tmpElements->Clear();
+		BSAudioManager *audioMngr = BSAudioManager::Get();
 		BSGameSound *gameSound;
 		BSFadeNode *fadeNode;
-		for (auto sndIter = g_audioManager->playingSounds.Begin(); sndIter; ++sndIter)
+		for (auto sndIter = audioMngr->playingSounds.Begin(); sndIter; ++sndIter)
 		{
 			gameSound = sndIter.Get();
 			if (!gameSound || (gameSound->sourceSound != soundForm))
 				continue;
-			fadeNode = (BSFadeNode*)g_audioManager->soundPlayingObjects.Lookup(gameSound->mapKey);
+			fadeNode = (BSFadeNode*)audioMngr->soundPlayingObjects.Lookup(gameSound->mapKey);
 			if (fadeNode && fadeNode->GetFadeNode() && fadeNode->linkedObj)
 				tmpElements->Append(fadeNode->linkedObj);
 		}
@@ -265,7 +267,7 @@ bool Cmd_StopSound_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm))
 	{
 		BSGameSound *gameSound;
-		for (auto sndIter = g_audioManager->playingSounds.Begin(); sndIter; ++sndIter)
+		for (auto sndIter = BSAudioManager::Get()->playingSounds.Begin(); sndIter; ++sndIter)
 		{
 			gameSound = sndIter.Get();
 			if (!gameSound || (gameSound->sourceSound != soundForm))
@@ -283,15 +285,16 @@ bool Cmd_IsMusicPlaying_Execute(COMMAND_ARGS)
 	TESForm *form = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
-		UInt8 flags = g_playingMusic->track1Active ? g_playingMusic->track1Flags : g_playingMusic->track2Flags;
+		PlayingMusic *playingMus = PlayingMusic::Get();
+		UInt8 flags = playingMus->track1Active ? playingMus->track1Flags : playingMus->track2Flags;
 		if (flags & kMusicState_Play)
 		{
-			if (!form || (form == g_playingMusic->medLocCtrl))
+			if (!form || (form == playingMus->medLocCtrl))
 				playState = (flags & kMusicState_Pause) ? 1 : 2;
 			else if IS_ID(form, BGSMusicType)
 			{
 				String *filePath = &((BGSMusicType*)form)->soundFile.path;
-				if (filePath->m_dataLen && StrBeginsCI(g_playingMusic->track1Active ? g_playingMusic->track1Path : g_playingMusic->track2Path, filePath->m_data))
+				if (filePath->m_dataLen && StrBeginsCI(playingMus->track1Active ? playingMus->track1Path : playingMus->track2Path, filePath->m_data))
 					playState = (flags & kMusicState_Pause) ? 1 : 2;
 			}
 		}
@@ -305,7 +308,8 @@ bool Cmd_SetMusicState_Execute(COMMAND_ARGS)
 	UInt32 state;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &state))
 	{
-		UInt8 *flagsPtr = g_playingMusic->track1Active ? &g_playingMusic->track1Flags : &g_playingMusic->track2Flags;
+		PlayingMusic *playingMus = PlayingMusic::Get();
+		UInt8 *flagsPtr = playingMus->track1Active ? &playingMus->track1Flags : &playingMus->track2Flags;
 		if (*flagsPtr & kMusicState_Play)
 		{
 			switch (state)
@@ -329,7 +333,7 @@ bool Cmd_GetGameVolume_Execute(COMMAND_ARGS)
 {
 	UInt32 volType;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &volType) && (volType <= 5))
-		*result = g_audioManager->volumes[volType] * 100;
+		*result = BSAudioManager::Get()->volumes[volType] * 100;
 	else *result = 0;
 	return true;
 }
@@ -339,6 +343,6 @@ bool Cmd_SetGameVolume_Execute(COMMAND_ARGS)
 	UInt32 volType;
 	int volLevel = -1;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &volType, &volLevel) && (volType <= 5) && (volLevel <= 100))
-		g_audioManager->volumes[volType] = (volLevel < 0) ? *(float*)(0x11F6E18 + volType * 0xC) : (volLevel / 100.0);
+		BSAudioManager::Get()->volumes[volType] = (volLevel < 0) ? *(float*)(0x11F6E18 + volType * 0xC) : (volLevel / 100.0);
 	return true;
 }

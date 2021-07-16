@@ -71,3 +71,5 @@ private:
 	KeyInfo		m_keys[kMaxMacros];
 };
 STATIC_ASSERT(sizeof(DIHookControl) == 0x74C);
+
+extern DIHookControl *g_DIHookCtrl;

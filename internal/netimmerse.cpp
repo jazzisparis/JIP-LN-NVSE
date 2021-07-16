@@ -1,17 +1,5 @@
 #include "internal/netimmerse.h"
 
-SceneGraph *g_sceneGraph = NULL;
-ShadowSceneNode *g_shadowSceneNode = NULL;
-
-extern void* (*NiAllocator)(UInt32 size);
-
-NiTransformInterpolator *NiTransformInterpolator::Create()
-{
-	NiTransformInterpolator *interpolator = (NiTransformInterpolator*)NiAllocator(sizeof(NiTransformInterpolator));
-	ThisCall(0xA3FA30, interpolator, 0);
-	return interpolator;
-}
-
 __declspec(naked) bool NiControllerSequence::Play()
 {
 	__asm
@@ -39,8 +27,7 @@ __declspec(naked) bool NiControllerSequence::Play()
 
 NiTransformController *NiTransformController::Create(NiNode *pTarget, NiTransformInterpolator *pInterpolator)
 {
-	NiTransformController *controller = (NiTransformController*)NiAllocator(sizeof(NiTransformController));
-	ThisCall(0xA36560, controller);
+	NiTransformController *controller = CdeclCall<NiTransformController*>(0xA36810);
 	controller->SetTarget(pTarget);
 	controller->SetInterpolator(pInterpolator, 0);
 	return controller;

@@ -203,7 +203,8 @@ enum PerkEntryPointID
 	kPerkEntry_HasImprovedSpotting,
 	kPerkEntry_HasImprovedItemDetection,
 	kPerkEntry_AdjustExplosionRadius,
-	kPerkEntry_AdjustHeavyWeaponWeight
+	kPerkEntry_AdjustHeavyWeaponWeight,
+	kPerkEntry_Max
 };
 
 enum SpecialInputCode
@@ -265,3 +266,4 @@ enum
 extern const bool kInventoryType[];
 extern const UInt8 kMaterialConvert[];
 extern const char kDaysPerMonth[], kMenuIDJumpTable[];
+extern bool s_NPCWeaponMods, s_NPCPerks;

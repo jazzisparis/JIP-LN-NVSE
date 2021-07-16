@@ -408,7 +408,7 @@ bool Cmd_ModLogPrint_Execute(COMMAND_ARGS)
 bool Cmd_GetOptionalPatch_Execute(COMMAND_ARGS)
 {
 	char patchName[0x40];
-	bool enabled = false;
+	int enabled = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &patchName))
 	{
 		switch (s_optionalHacks.Get(patchName))
@@ -460,6 +460,9 @@ bool Cmd_GetOptionalPatch_Execute(COMMAND_ARGS)
 				break;
 			case 17:
 				enabled = s_NPCWeaponMods;
+				break;
+			case 18:
+				enabled = s_NPCPerks + s_NPCPerksAutoAdd;
 				break;
 		}
 	}

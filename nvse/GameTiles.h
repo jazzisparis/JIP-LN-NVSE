@@ -335,3 +335,13 @@ public:
 	UInt8			byte48;		// 48
 	UInt8			pad49[3];	// 49
 };
+
+// 50
+class Tile3D : public Tile
+{
+public:
+	UInt32			unk38;		// 38
+	UInt32			unk3C;		// 3C
+	String			string40;	// 40
+	String			fileName;	// 48
+};

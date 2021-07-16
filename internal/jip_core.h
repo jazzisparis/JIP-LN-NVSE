@@ -1,8 +1,5 @@
 #pragma once
 
-#include "internal/dinput.h"
-#include "internal/xinput.h"
-
 extern ExpressionEvaluatorUtils s_expEvalUtils;
 
 typedef bool (*_WriteRecord)(UInt32 type, UInt32 version, const void *buffer, UInt32 length);
@@ -64,7 +61,6 @@ extern _ExtractFormatStringArgs ExtractFormatStringArgs;
 typedef bool (*_CallFunction)(Script *funcScript, TESObjectREFR *callingObj, UInt8 numArgs, ...);
 extern _CallFunction CallFunction;
 
-extern DIHookControl *g_DIHookCtrl;
 extern UInt8 *g_numPreloadMods;
 
 #define MSGBOX_ARGS 0, 0, ShowMessageBox_Callback, 0, 0x17, 0, 0, "OK", NULL
@@ -102,37 +98,37 @@ extern double s_condDmgPenalty;
 extern UInt32 s_mainThreadID, s_initialTickCount;
 
 typedef TESObjectREFR* (*_PlaceAtMe)(TESObjectREFR *refr, TESForm *form, UInt32 count, UInt32 distance, UInt32 direction, float health);
-extern _PlaceAtMe PlaceAtMe;
+extern const _PlaceAtMe PlaceAtMe;
 typedef NiNode* (*_GetCdBodyNode)(hkCdBody *cdBody);
-extern _GetCdBodyNode GetCdBodyNode;
+extern const _GetCdBodyNode GetCdBodyNode;
 typedef TESObjectREFR* (*_GetCdBodyRef)(hkCdBody *cdBody);
-extern _GetCdBodyRef GetCdBodyRef;
+extern const _GetCdBodyRef GetCdBodyRef;
 typedef void (*_RefreshItemListBox)(void);
-extern _RefreshItemListBox RefreshItemListBox;
+extern const _RefreshItemListBox RefreshItemListBox;
 typedef void (__thiscall *_DoRefreshContainerMenu)(ContainerMenu *menu, TESForm *itemForm);
-extern _DoRefreshContainerMenu DoRefreshContainerMenu;
+extern const _DoRefreshContainerMenu DoRefreshContainerMenu;
 typedef void (*_ApplyPerkModifiers)(UInt32 entryPointID, TESObjectREFR *perkOwner, void *arg3, ...);
-extern _ApplyPerkModifiers ApplyPerkModifiers;
+extern const _ApplyPerkModifiers ApplyPerkModifiers;
 typedef float (*_ApplyAmmoEffects)(UInt32 effType, tList<TESAmmoEffect> *effList, float baseValue);
-extern _ApplyAmmoEffects ApplyAmmoEffects;
+extern const _ApplyAmmoEffects ApplyAmmoEffects;
 typedef TESTopicInfo* (*_GetTopicInfo)(TESTopic *topic, bool *result, Actor *actor, Actor *target, bool arg5, UInt32 *arg6, UInt32 *arg7);
-extern _GetTopicInfo GetTopicInfo;
+extern const _GetTopicInfo GetTopicInfo;
 typedef ImageSpaceModifierInstanceForm* (*_ApplyIMOD)(TESImageSpaceModifier *imod, float percent, NiObject *obj10);
-extern _ApplyIMOD ApplyIMOD;
+extern const _ApplyIMOD ApplyIMOD;
 typedef void* (*_PurgeTerminalModel)(void);
-extern _PurgeTerminalModel PurgeTerminalModel;
+extern const _PurgeTerminalModel PurgeTerminalModel;
 typedef TileMenu* (*_ShowQuantityMenu)(int maxCount, void (*callback)(int), int defaultCount);
-extern _ShowQuantityMenu ShowQuantityMenu;
+extern const _ShowQuantityMenu ShowQuantityMenu;
 typedef void* (*_NiAllocator)(UInt32 size);
-extern _NiAllocator NiAllocator;
+extern const _NiAllocator NiAllocator;
 typedef void* (*_NiDeallocator)(void *blockPtr, UInt32 size);
-extern _NiDeallocator NiDeallocator;
+extern const _NiDeallocator NiDeallocator;
 typedef NiNode* (__thiscall *_LoadModel)(ModelLoader *modelLoader, const char *nifPath, UInt32 baseClass, bool flag3Cbit0, UInt32 unused, bool flag3Cbit5, bool dontIncCounter);
-extern _LoadModel LoadModel;
+extern const _LoadModel LoadModel;
 typedef KFModel* (__thiscall *_LoadKFModel)(ModelLoader *modelLoader, const char *kfPath);
-extern _LoadKFModel LoadKFModel;
+extern const _LoadKFModel LoadKFModel;
 typedef FontInfo* (__thiscall *_InitFontInfo)(FontInfo *fontInfo, UInt32 fontID, const char *filePath, bool arg3);
-extern _InitFontInfo InitFontInfo;
+extern const _InitFontInfo InitFontInfo;
 
 extern Cmd_Execute SayTo, KillActor, AddNote, AttachAshPile, MoveToFade, GetRefs;
 

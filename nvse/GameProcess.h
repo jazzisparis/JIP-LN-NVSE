@@ -1276,14 +1276,14 @@ struct ProcessManager
 	float									removeDeadActorsTime;	// 103BC
 	UInt32									unk103C0[3];		// 103C0
 
+	__forceinline static ProcessManager *Get() {return (ProcessManager*)0x11E0E80;}
+
 	__forceinline int GetTotalDetectionValue(Actor *actor, bool arg2 = false)
 	{
 		return ThisCall<int>(0x973710, this, actor, arg2);
 	}
 };
 STATIC_ASSERT(sizeof(ProcessManager) == 0x103CC);
-
-extern ProcessManager *g_processManager;
 
 class CombatGoal;
 struct CombatSearchLocation;

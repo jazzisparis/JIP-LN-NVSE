@@ -188,35 +188,6 @@ enum AudioRequestTypes
 	kRequestType_Speed =										0x42
 };
 
-union FunctionArg
-{
-	void		*pVal;
-	float		fVal;
-	UInt32		uVal;
-	SInt32		iVal;
-
-	FunctionArg& operator=(void *other)
-	{
-		pVal = other;
-		return *this;
-	}
-	FunctionArg& operator=(float other)
-	{
-		fVal = other;
-		return *this;
-	}
-	FunctionArg& operator=(UInt32 other)
-	{
-		uVal = other;
-		return *this;
-	}
-	FunctionArg& operator=(SInt32 other)
-	{
-		iVal = other;
-		return *this;
-	}
-};
-
 // 20
 struct AudioRequestData
 {
@@ -289,10 +260,10 @@ public:
 	UInt32						nextMapKey;			// 180
 	UInt8						byte184;			// 184
 	UInt8						pad185[3];			// 185
+
+	__forceinline static BSAudioManager *Get() {return (BSAudioManager*)0x11F6EF0;}
 };
 STATIC_ASSERT(sizeof(BSAudioManager) == 0x188);
-
-extern BSAudioManager *g_audioManager;
 
 class BSAudioListener
 {
@@ -367,10 +338,10 @@ public:
 	IDirectSoundBuffer		*ptr3C;					// 3C
 	UInt32					unk40[24];				// 40
 	HWND					window;					// A0
+
+	__forceinline static BSWin32Audio *Get() {return *(BSWin32Audio**)0x11F6D98;}
 };
 STATIC_ASSERT(sizeof(BSWin32Audio) == 0xA4);
-
-extern BSWin32Audio **g_BSWin32Audio;
 
 // 30
 class BSThread
@@ -423,7 +394,7 @@ struct PlayingMusic
 	UInt32					track1Active;			// 27C
 	UInt32					unk280;					// 280
 	MediaLocationController	*medLocCtrl;			// 284
+
+	__forceinline static PlayingMusic *Get() {return (PlayingMusic*)0x11DD0F0;}
 };
 STATIC_ASSERT(sizeof(PlayingMusic) == 0x288);
-
-extern PlayingMusic *g_playingMusic;

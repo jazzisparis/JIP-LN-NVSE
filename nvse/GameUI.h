@@ -406,6 +406,8 @@ public:
 	UInt8				unk8D;			// 8D
 	UInt8				pad8E[2];		// 8E
 	UInt32				unk90;			// 90
+
+	__forceinline static MessageMenu *Get() {return *(MessageMenu**)0x11DA4F0;}
 };
 
 typedef ListBox<ContChangesEntry*> MenuItemEntryList;
@@ -460,6 +462,8 @@ public:
 	MenuItemEntryList		itemList;		// 0B8
 	HotKeyWheel				hotKeyWheel;	// 0E8
 	tList<ContChangesEntry>	changedItemsList;	// 11C
+
+	__forceinline static InventoryMenu *Get() {return *(InventoryMenu**)0x11D9EA4;}
 };
 STATIC_ASSERT(sizeof(InventoryMenu) == 0x124);
 
@@ -549,16 +553,8 @@ public:
 	ListBox<TESReputation*>			reputationList;		// 270
 	UInt8							isInHealLimbSelect;	// 2A0
 	UInt8							pad2A0[3];			// 2A1
-};
 
-// 50
-class Tile3D : public Tile
-{
-public:
-	UInt32			unk38;		// 38
-	UInt32			unk3C;		// 3C
-	String			string40;	// 40
-	String			fileName;	// 48
+	__forceinline static StatsMenu *Get() {return *(StatsMenu**)0x11DACE0;}
 };
 
 struct Timer
@@ -878,6 +874,8 @@ public:
 	MenuItemEntryList	rightItems;			// 0C8
 	MenuItemEntryList	*currentItems;		// 0F8
 	UInt32				unk0FC[4];			// 0FC
+
+	__forceinline static ContainerMenu *Get() {return *(ContainerMenu**)0x11D93F8;}
 };
 STATIC_ASSERT(sizeof(ContainerMenu) == 0x10C);
 
@@ -911,6 +909,8 @@ public:
 	UInt32				unk130[2];			// 130
 	UInt8				isBarterMenuShown;	// 138
 	UInt8				byte139[3];			// 139
+
+	__forceinline static DialogMenu *Get() {return *(DialogMenu**)0x11D9510;}
 };
 STATIC_ASSERT(sizeof(DialogMenu) == 0x13C);
 
@@ -927,6 +927,8 @@ public:
 	UInt32				unk40;			// 40
 	float				flt44;			// 44
 	float				selectedHours;	// 48
+
+	__forceinline static SleepWaitMenu *Get() {return *(SleepWaitMenu**)0x11DA920;}
 };
 STATIC_ASSERT(sizeof(SleepWaitMenu) == 0x4C);
 
@@ -1022,6 +1024,8 @@ public:
 	UInt32							controlsDevice;	// 1C8
 	UInt32							unk1CC;			// 1CC
 	UInt32							unk1D0;			// 1D0
+
+	__forceinline static StartMenu *Get() {return *(StartMenu**)0x11DAAC0;}
 };
 STATIC_ASSERT(sizeof(StartMenu) == 0x1D4);
 
@@ -1069,6 +1073,8 @@ public:
 	NiQuaternion			quaternionB4;	// B4
 	NiQuaternion			quaternionC4;	// C4
 	NiQuaternion			quaternionD4;	// D4
+
+	__forceinline static LockPickMenu *Get() {return *(LockPickMenu**)0x11DA204;}
 };
 STATIC_ASSERT(sizeof(LockPickMenu) == 0xE4);
 
@@ -1085,6 +1091,8 @@ public:
 	TileImage			*tile38;		// 38
 	TileImage			*tile3C;		// 3C
 	float				currentQtt;		// 40
+
+	__forceinline static QuantityMenu *Get() {return *(QuantityMenu**)0x11DA618;}
 };
 
 // 230
@@ -1161,6 +1169,8 @@ public:
 	ListBox<BGSQuestObjective*>		objectiveList;	// 1C0
 	ListBox<TESChallenge*>			challengeList;	// 1F0
 	BSSimpleArray<Tile>				arr220;			// 220
+
+	__forceinline static MapMenu *Get() {return *(MapMenu**)0x11DA368;}
 };
 STATIC_ASSERT(sizeof(MapMenu) == 0x230);
 
@@ -1207,6 +1217,8 @@ public:
 	TileImage				*tile54;		// 54
 	TileImage				*tile58;		// 58
 	MenuItemEntryList		repairItems;	// 5C
+
+	__forceinline static RepairMenu *Get() {return *(RepairMenu**)0x11DA75C;}
 };
 
 // 1A4
@@ -1216,6 +1228,8 @@ public:
 	UInt32				unk028[44];		// 028
 	TESNPC				*npc;			// 0D8
 	UInt32				unk0DC[50];		// 0DC
+
+	__forceinline static RaceSexMenu *Get() {return *(RaceSexMenu**)0x11DA634;}
 };
 STATIC_ASSERT(sizeof(RaceSexMenu) == 0x1A4);
 
@@ -1255,6 +1269,8 @@ public:
 		bool			(*menuCallback)(char*);	// 58
 		Script			*scriptCallback;		// 58
 	};
+
+	__forceinline static TextEditMenu *Get() {return *(TextEditMenu**)0x11DAEC4;}
 };
 STATIC_ASSERT(sizeof(TextEditMenu) == 0x5C);
 
@@ -1302,6 +1318,8 @@ public:
 	BarterItemList		leftBarter;		// 10C
 	BarterItemList		rightBarter;	// 114
 	UInt32				unk11C;			// 11C
+
+	__forceinline static BarterMenu *Get() {return *(BarterMenu**)0x11D8FA4;}
 };
 
 // 1DC (from Stewie)
@@ -1366,6 +1384,8 @@ public:
 	UInt8				hasAllowanceReplenished;	// 1D9
 	UInt8				byte1DA;			// 1DA
 	UInt8				byte1DB;			// 1DB
+
+	__forceinline static HackingMenu *Get() {return *(HackingMenu**)0x11D95B8;}
 };
 STATIC_ASSERT(sizeof(HackingMenu) == 0x1DC);
 
@@ -1462,6 +1482,8 @@ public:
 	float				apCost;			// 13C
 	UInt8				isMissFortuneVisit;	// 140
 	UInt8				pad141[3];		// 141
+
+	__forceinline static VATSMenu *Get() {return *(VATSMenu**)0x11DB0D4;}
 };
 STATIC_ASSERT(sizeof(VATSMenu) == 0x144);
 
@@ -1501,6 +1523,8 @@ public:
 	BGSTerminal			*baseTerminal;	// A8
 	TESObjectREFR		*targetRef;		// AC
 	UInt32				unkB0[19];		// B0
+
+	__forceinline static ComputersMenu *Get() {return *(ComputersMenu**)0x11D9334;}
 };
 STATIC_ASSERT(sizeof(ComputersMenu) == 0xFC);
 
@@ -1528,6 +1552,8 @@ public:
 	UInt32				unk98;			// 98
 	UInt8				skill;			// 9C
 	UInt8				pad9D[3];		// 9D
+
+	__forceinline static RepairServicesMenu *Get() {return *(RepairServicesMenu**)0x11DA7F0;}
 };
 STATIC_ASSERT(sizeof(RepairServicesMenu) == 0xA0);
 
@@ -1550,6 +1576,8 @@ public:
 	TileImage			*tile58;		// 58
 	TileText			*tile5C;		// 5C
 	MenuItemEntryList	itemModList;	// 60
+
+	__forceinline static ItemModMenu *Get() {return *(ItemModMenu**)0x11D9F54;}
 };
 STATIC_ASSERT(sizeof(ItemModMenu) == 0x90);
 
@@ -1570,6 +1598,8 @@ public:
 	UInt8				pad75[3];					// 75
 	UInt32				time78;						// 78
 	Sound				sound7C;					// 7C
+
+	__forceinline static CompanionWheelMenu *Get() {return *(CompanionWheelMenu**)0x11D92B8;}
 };
 STATIC_ASSERT(sizeof(CompanionWheelMenu) == 0x88);
 
@@ -1578,6 +1608,8 @@ class TraitSelectMenu : public Menu		// 1076
 {
 public:
 	UInt32				unk28[24];		// 28
+
+	__forceinline static TraitSelectMenu *Get() {return *(TraitSelectMenu**)0x11DB00C;}
 };
 
 // 104
@@ -1606,6 +1638,8 @@ public:
 	ListBox<RecipeComponent*>	componentList;	// 0A0
 	ListBox<Condition*>			conditionList;	// 0D0
 	UInt32						unk100;			// 100
+
+	__forceinline static RecipeMenu *Get() {return *(RecipeMenu**)0x11D8E90;}
 };
 
 // E88
@@ -1615,6 +1649,8 @@ public:
 	UInt32					unk028[54];		// 028
 	TESObjectREFR			*opponentRef;	// 100
 	UInt32					unk104[865];	// 104
+
+	__forceinline static CaravanMenu *Get() {return *(CaravanMenu**)0x11D917C;}
 };
 
 // 8C
@@ -1636,33 +1672,11 @@ public:
 	UInt32				maxSelect;		// 50
 	ListBox<BGSPerk*>	perkListBox;	// 54
 	tList<BGSPerk>		perkList;		// 84
+
+	__forceinline static TraitMenu *Get() {return *(TraitMenu**)0x11DAF74;}
 };
 
 extern HUDMainMenu *g_HUDMainMenu;
-extern RecipeMenu **g_recipeMenu;
-extern BarterMenu **g_barterMenu;
-extern CaravanMenu **g_caravanMenu;
-extern CompanionWheelMenu **g_companionWheelMenu;
-extern ComputersMenu **g_computersMenu;
-extern ContainerMenu **g_containerMenu;
-extern DialogMenu **g_dialogMenu;
-extern HackingMenu **g_hackingMenu;
-extern InventoryMenu **g_inventoryMenu;
-extern ItemModMenu **g_itemModMenu;
-extern LockPickMenu **g_lockPickMenu;
-extern MapMenu **g_mapMenu;
-extern MessageMenu **g_messageMenu;
-extern QuantityMenu **g_quantityMenu;
-extern RaceSexMenu **g_raceSexMenu;
-extern RepairMenu **g_repairMenu;
-extern RepairServicesMenu **g_repairServicesMenu;
-extern SleepWaitMenu **g_sleepWaitMenu;
-extern StartMenu **g_startMenu;
-extern StatsMenu **g_statsMenu;
-extern TextEditMenu **g_textEditMenu;
-extern VATSMenu **g_VATSMenu;
-extern TraitMenu **g_traitMenu;
-extern TraitSelectMenu **g_traitSelectMenu;
 
 extern ContChangesEntry **g_barterMenuSelection, **g_containerMenuSelection, **g_inventoryMenuSelection, **g_modMenuTarget, **g_repairMenuTarget;
 extern TESObjectREFR **g_VATSTargetRef;

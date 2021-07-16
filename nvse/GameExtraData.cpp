@@ -1016,6 +1016,8 @@ __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(
 		fmul	kSplitBeamMult
 	noMod:
 		mov		ecx, [esp+8]
+		cmp		s_NPCPerks, 0
+		jnz		perkMod
 		cmp		dword ptr [ecx+0xC], 0x14
 		jz		perkMod
 		cmp		byte ptr [ecx+0x18D], 0
@@ -1028,7 +1030,7 @@ __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(
 		push	dword ptr [esi+8]
 		push	ecx
 		push	kPerkEntry_CalculateWeaponDamage
-		CALL_EAX(0x5E58F0)
+		CALL_EAX(kAddr_ApplyPerkModifiers)
 		add		esp, 0x14
 		fld		dword ptr [esp]
 		pop		ecx

@@ -155,7 +155,7 @@ public:
 	UInt32		unk10;		// 10	Paired : 10 and 14 for a 64 bit integer
 	UInt32		unk14;		// 14
 
-	static UInt32 *GetCounterSingleton();
+	static UInt32 *GetCounterSingleton() {return (UInt32*)0x11C3B38;}
 };
 
 // 18
@@ -546,7 +546,6 @@ struct ModelLoader
 	UInt8												byte2C;				// 2C
 	UInt8												pad2D[3];			// 2D
 
-	static ModelLoader *GetSingleton();
 	__forceinline void QueueReference(TESObjectREFR *refr)
 	{
 		ThisCall(0x444850, this, refr, 1, false);

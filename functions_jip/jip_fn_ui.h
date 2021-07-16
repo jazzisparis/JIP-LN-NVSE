@@ -60,7 +60,7 @@ DEFINE_COMMAND_PLUGIN(CloseActiveMenu, , 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ShowLevelUpMenuEx, , 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(AttachUIXML, , 1, 2, kParams_TwoStrings);
 DEFINE_COMMAND_PLUGIN(AttachUIComponent, , 1, 22, kParams_JIP_OneString_OneFormatString);
-DEFINE_COMMAND_PLUGIN(GetWorldMapPosMults, , 0, 4, kParams_JIP_TwoFloats_TwoScriptVars);
+DEFINE_COMMAND_PLUGIN(GetWorldMapPosMults, , 1, 2, kParams_JIP_TwoScriptVars);
 
 bool Cmd_IsComponentLoaded_Execute(COMMAND_ARGS)
 {
@@ -205,14 +205,14 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 		case kMenuType_Quantity:
 		{
 			if (g_menuVisibility[kMenuType_Inventory]) menuRef = CreateRefForStack(g_thePlayer, *g_inventoryMenuSelection);
-			else if (*g_containerMenu)
+			else if (ContainerMenu::Get())
 			{
-				ContainerMenu *cntMenu = *g_containerMenu;
+				ContainerMenu *cntMenu = ContainerMenu::Get();
 				menuRef = CreateRefForStack((cntMenu->currentItems == &cntMenu->leftItems) ? g_thePlayer : cntMenu->containerRef, *g_containerMenuSelection);
 			}
-			else if (*g_barterMenu)
+			else if (BarterMenu::Get())
 			{
-				BarterMenu *brtMenu = *g_barterMenu;
+				BarterMenu *brtMenu = BarterMenu::Get();
 				menuRef = CreateRefForStack((brtMenu->currentItems == &brtMenu->leftItems) ? g_thePlayer : brtMenu->merchantRef->GetMerchantContainer(), *g_barterMenuSelection);
 			}
 			break;
@@ -275,13 +275,13 @@ bool Cmd_GetMenuItemFilter_Execute(COMMAND_ARGS)
 	switch (menuID)
 	{
 		case kMenuType_Inventory:
-			if (*g_inventoryMenu) *result = (int)(*g_inventoryMenu)->filter + 1;
+			if (InventoryMenu::Get()) *result = (int)InventoryMenu::Get()->filter + 1;
 			break;
 		case kMenuType_Container:
-			if (*g_containerMenu) *result = useRef ? (int)(*g_containerMenu)->rightFilter : (int)(*g_containerMenu)->leftFilter;
+			if (ContainerMenu::Get()) *result = useRef ? (int)ContainerMenu::Get()->rightFilter : (int)ContainerMenu::Get()->leftFilter;
 			break;
 		case kMenuType_Barter:
-			if (*g_barterMenu) *result = useRef ? (int)(*g_barterMenu)->rightFilter : (int)(*g_barterMenu)->leftFilter;
+			if (BarterMenu::Get()) *result = useRef ? (int)BarterMenu::Get()->rightFilter : (int)BarterMenu::Get()->leftFilter;
 	}
 	return true;
 }
@@ -331,28 +331,28 @@ bool Cmd_GetSelectedItemRef_Execute(COMMAND_ARGS)
 	{
 		case kMenuType_Inventory:
 		{
-			InventoryMenu *invMenu = *g_inventoryMenu;
+			InventoryMenu *invMenu = InventoryMenu::Get();
 			if (invMenu->itemList.selected)
 				itemRef = CreateRefForStack(g_thePlayer, *g_inventoryMenuSelection);
 			break;
 		}
 		case kMenuType_Stats:
 		{
-			StatsMenu *statsMenu = *g_statsMenu;
+			StatsMenu *statsMenu = StatsMenu::Get();
 			if (statsMenu->perkRankList.selected)
 				itemRef = statsMenu->perkRankList.GetSelected()->perk;
 			break;
 		}
 		case kMenuType_Container:
 		{
-			ContainerMenu *cntMenu = *g_containerMenu;
+			ContainerMenu *cntMenu = ContainerMenu::Get();
 			if (cntMenu->leftItems.selected || cntMenu->rightItems.selected)
 				itemRef = CreateRefForStack(cntMenu->leftItems.selected ? g_thePlayer : cntMenu->containerRef, *g_containerMenuSelection);
 			break;
 		}
 		case kMenuType_Map:
 		{
-			MapMenu *mapMenu = *g_mapMenu;
+			MapMenu *mapMenu = MapMenu::Get();
 			if (mapMenu->questList.selected)
 				itemRef = mapMenu->questList.GetSelected();
 			else if (mapMenu->noteList.selected)
@@ -363,28 +363,28 @@ bool Cmd_GetSelectedItemRef_Execute(COMMAND_ARGS)
 		}
 		case kMenuType_Repair:
 		{
-			RepairMenu *rprMenu = *g_repairMenu;
+			RepairMenu *rprMenu = RepairMenu::Get();
 			if (rprMenu->repairItems.selected)
 				itemRef = CreateRefForStack(g_thePlayer, rprMenu->repairItems.GetSelected());
 			break;
 		}
 		case kMenuType_Barter:
 		{
-			BarterMenu *brtMenu = *g_barterMenu;
+			BarterMenu *brtMenu = BarterMenu::Get();
 			if (brtMenu->leftItems.selected || brtMenu->rightItems.selected)
 				itemRef = CreateRefForStack(brtMenu->leftItems.selected ? g_thePlayer : brtMenu->merchantRef->GetMerchantContainer(), *g_barterMenuSelection);
 			break;
 		}
 		case kMenuType_RepairServices:
 		{
-			RepairServicesMenu *rpsMenu = *g_repairServicesMenu;
+			RepairServicesMenu *rpsMenu = RepairServicesMenu::Get();
 			if (rpsMenu->itemList.selected)
 				itemRef = CreateRefForStack(g_thePlayer, rpsMenu->itemList.GetSelected());
 			break;
 		}
 		case kMenuType_ItemMod:
 		{
-			ItemModMenu *modMenu = *g_itemModMenu;
+			ItemModMenu *modMenu = ItemModMenu::Get();
 			if (modMenu->itemModList.selected)
 				itemRef = CreateRefForStack(g_thePlayer, modMenu->itemModList.GetSelected());
 		}
@@ -397,8 +397,8 @@ bool Cmd_GetBarterItems_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 sold;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &sold) || !*g_barterMenu || !(*g_barterMenu)->merchantRef) return true;
-	BarterMenu *brtMenu = *g_barterMenu;
+	BarterMenu *brtMenu = BarterMenu::Get();
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &sold) || !brtMenu || !brtMenu->merchantRef) return true;
 	TESObjectREFR *target = sold ? brtMenu->merchantRef->GetMerchantContainer() : g_thePlayer, *itemRef;
 	TempElements *tmpElements = GetTempElements();
 	tmpElements->Clear();
@@ -416,21 +416,21 @@ bool Cmd_GetBarterItems_Execute(COMMAND_ARGS)
 
 bool Cmd_GetBarterGoldAlt_Execute(COMMAND_ARGS)
 {
-	*result = *g_barterMenu ? (int)(*g_barterMenu)->merchantGold : 0;
+	*result = BarterMenu::Get() ? (int)BarterMenu::Get()->merchantGold : 0;
 	return true;
 }
 
 bool Cmd_GetRecipeMenuSelection_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (*g_recipeMenu && *g_recipeMenuSelection) REFR_RES = (*g_recipeMenuSelection)->refID;
+	if (RecipeMenu::Get() && *g_recipeMenuSelection) REFR_RES = (*g_recipeMenuSelection)->refID;
 	return true;
 }
 
 bool Cmd_GetRecipeMenuCategory_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (*g_recipeMenu) REFR_RES = (*g_recipeMenu)->category->refID;
+	if (RecipeMenu::Get()) REFR_RES = RecipeMenu::Get()->category->refID;
 	return true;
 }
 
@@ -640,7 +640,7 @@ bool Cmd_ShowTextInputMenu_Execute(COMMAND_ARGS)
 	Script *callback;
 	float width, height;
 	char *msgTitle = GetStrArgBuffer();;
-	if (!*g_textEditMenu && ExtractFormatStringArgs(3, msgTitle, EXTRACT_ARGS_EX, kCommandInfo_ShowTextInputMenu.numParams,
+	if (!TextEditMenu::Get() && ExtractFormatStringArgs(3, msgTitle, EXTRACT_ARGS_EX, kCommandInfo_ShowTextInputMenu.numParams,
 		&callback, &width, &height) && IS_ID(callback, Script) && ShowTextEditMenu(width, height, msgTitle, callback))
 		*result = 1;
 	else *result = 0;
@@ -651,7 +651,7 @@ bool Cmd_SetTextInputExtendedProps_Execute(COMMAND_ARGS)
 {
 	float posX, posY;
 	UInt32 minLength = 1, maxLength = 0, miscFlags = 0;
-	TextEditMenu *textMenu = *g_textEditMenu;
+	TextEditMenu *textMenu = TextEditMenu::Get();
 	if (textMenu && HOOK_INSTALLED(TextInputClose) && ExtractArgsEx(EXTRACT_ARGS_EX, &posX, &posY, &minLength, &maxLength, &miscFlags))
 	{
 		if (posX > 0)
@@ -670,7 +670,7 @@ bool Cmd_SetTextInputExtendedProps_Execute(COMMAND_ARGS)
 
 bool Cmd_SetTextInputString_Execute(COMMAND_ARGS)
 {
-	TextEditMenu *textMenu = *g_textEditMenu;
+	TextEditMenu *textMenu = TextEditMenu::Get();
 	if (textMenu && HOOK_INSTALLED(TextInputClose))
 	{
 		char *buffer = GetStrArgBuffer();
@@ -966,14 +966,14 @@ bool Cmd_RefreshItemsList_Execute(COMMAND_ARGS)
 			CdeclCall(0x782A90);
 			break;
 		case kMenuType_Stats:
-			ThisCall(0x7DF230, *g_statsMenu, 4);
+			ThisCall(0x7DF230, StatsMenu::Get(), 4);
 			break;
 		case kMenuType_Container:
-			ThisCall(0x75C280, *g_containerMenu, 0);
+			ThisCall(0x75C280, ContainerMenu::Get(), 0);
 			break;
 		case kMenuType_Map:
 		{
-			MapMenu *mapMenu = *g_mapMenu;
+			MapMenu *mapMenu = MapMenu::Get();
 			if (mapMenu->currentTab == 0x21)
 			{
 				WriteRelJump(0x79DF73, 0x79E053);
@@ -986,7 +986,7 @@ bool Cmd_RefreshItemsList_Execute(COMMAND_ARGS)
 			CdeclCall(0x730690, 1);
 			break;
 		case kMenuType_Recipe:
-			RefreshRecipeMenu(*g_recipeMenu);
+			RefreshRecipeMenu(RecipeMenu::Get());
 			break;
 	}
 	return true;
@@ -995,8 +995,9 @@ bool Cmd_RefreshItemsList_Execute(COMMAND_ARGS)
 bool Cmd_GetBarterPriceMult_Execute(COMMAND_ARGS)
 {
 	UInt32 sellMult;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sellMult) && *g_barterMenu)
-		*result = sellMult ? (*g_barterMenu)->sellValueMult : (*g_barterMenu)->buyValueMult;
+	BarterMenu *brtMenu = BarterMenu::Get();
+	if (brtMenu && ExtractArgsEx(EXTRACT_ARGS_EX, &sellMult))
+		*result = sellMult ? brtMenu->sellValueMult : brtMenu->buyValueMult;
 	else *result = 0;
 	return true;
 }
@@ -1005,10 +1006,11 @@ bool Cmd_SetBarterPriceMult_Execute(COMMAND_ARGS)
 {
 	UInt32 sellMult;
 	float valueMult;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sellMult, &valueMult) && *g_barterMenu)
+	BarterMenu *brtMenu = BarterMenu::Get();
+	if (brtMenu && ExtractArgsEx(EXTRACT_ARGS_EX, &sellMult, &valueMult))
 	{
-		if (sellMult) (*g_barterMenu)->sellValueMult = valueMult;
-		else (*g_barterMenu)->buyValueMult = valueMult;
+		if (sellMult) brtMenu->sellValueMult = valueMult;
+		else brtMenu->buyValueMult = valueMult;
 		CdeclCall(0x730690, 1);
 	}
 	return true;
@@ -1080,7 +1082,7 @@ bool Cmd_ShowQuantityMenu_Execute(COMMAND_ARGS)
 {
 	Script *callback;
 	int maxCount;
-	if (!*g_quantityMenu && !s_quantityMenuScript && ExtractArgsEx(EXTRACT_ARGS_EX, &callback, &maxCount) && 
+	if (!QuantityMenu::Get() && !s_quantityMenuScript && ExtractArgsEx(EXTRACT_ARGS_EX, &callback, &maxCount) && 
 		IS_ID(callback, Script) && ShowQuantityMenu(maxCount, QuantityMenuCallback, maxCount))
 		s_quantityMenuScript = callback;
 	return true;
@@ -1176,7 +1178,7 @@ bool Cmd_MessageBoxExAlt_Execute(COMMAND_ARGS)
 bool Cmd_GetVATSTargets_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!*g_VATSMenu) return true;
+	if (!VATSMenu::Get()) return true;
 	TempElements *tmpElements = GetTempElements();
 	tmpElements->Clear();
 	ListNode<VATSTargetInfo> *iter = g_VATSTargetList->Head();
@@ -1768,25 +1770,28 @@ bool Cmd_GetWorldMapPosMults_Execute(COMMAND_ARGS)
 {
 	static TESWorldSpace *currWorldSpace = NULL, *mapWorldSpace = NULL;
 	static alignas(16) WorldDimensions worldDimensions;
-	NiPoint2 inPos;
 	ScriptVar *outX, *outY;
-	TESWorldSpace *parentWorld = g_TES->currentWrldspc;
-	if (parentWorld && ExtractArgsEx(EXTRACT_ARGS_EX, &inPos.x, &inPos.y, &outX, &outY))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outX, &outY))
 	{
-		if (currWorldSpace != parentWorld)
+		TESWorldSpace *parentWorld = thisObj->GetParentWorld();
+		if (parentWorld)
 		{
-			currWorldSpace = parentWorld;
-			worldDimensions.GetPosMods(parentWorld);
-			TESWorldSpace *rootWorld = parentWorld->GetRootMapWorld();
-			if (mapWorldSpace != rootWorld)
+			if (currWorldSpace != parentWorld)
 			{
-				mapWorldSpace = rootWorld;
-				worldDimensions.GetDimensions(rootWorld);
+				currWorldSpace = parentWorld;
+				worldDimensions.GetPosMods(parentWorld);
+				TESWorldSpace *rootWorld = parentWorld->GetRootMapWorld();
+				if (mapWorldSpace != rootWorld)
+				{
+					mapWorldSpace = rootWorld;
+					worldDimensions.GetDimensions(rootWorld);
+				}
 			}
+			NiPoint2 outPos;
+			GetWorldMapPosMults(thisObj->PosXY(), &worldDimensions, &outPos);
+			outX->data.num = outPos.x;
+			outY->data.num = outPos.y;
 		}
-		GetWorldMapPosMults(&inPos, &worldDimensions, &inPos);
-		outX->data.num = inPos.x;
-		outY->data.num = inPos.y;
 	}
 	return true;
 }

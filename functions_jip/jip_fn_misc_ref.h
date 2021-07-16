@@ -366,9 +366,9 @@ bool Cmd_ToggleObjectCollision_Execute(COMMAND_ARGS)
 {
 	UInt32 enable;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && NOT_ACTOR(thisObj) && !kInventoryType[thisObj->baseForm->typeID] && 
-		(!enable == !(thisObj->extraDataList.jipRefFlags61 & kHookRefFlag61_DisableCollision)))
+		(!enable == !(thisObj->extraDataList.jipRefFlags5F & kHookRefFlag61_DisableCollision)))
 	{
-		thisObj->extraDataList.jipRefFlags61 ^= kHookRefFlag61_DisableCollision;
+		thisObj->extraDataList.jipRefFlags5F ^= kHookRefFlag61_DisableCollision;
 		thisObj->Update3D();
 	}
 	return true;

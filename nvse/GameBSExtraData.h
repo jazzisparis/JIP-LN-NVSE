@@ -22,16 +22,17 @@ public:
 	BSExtraData		*next;		// 08
 };
 
+struct NPCPerksInfo;
+
 // 020
 struct BaseExtraList
 {
 	virtual void	Destroy(bool doFree);
 
 	BSExtraData		*m_data;					// 04
-	UInt8			m_presenceBitfield[0x15];	// 08 - if a bit is set, then the extralist should contain that extradata
-	UInt8			jipRefFlags61;				// 1D	0x61 in TESObjectREFR
-	UInt8			byte1E;						// 1E
-	UInt8			byte1F;						// 1F
+	UInt8			m_presenceBitfield[0x13];	// 08 - if a bit is set, then the extralist should contain that extradata
+	UInt8			jipRefFlags5F;				// 1B	0x5F in TESObjectREFR
+	NPCPerksInfo	*perksInfo;					// 1C	JIP only!
 
 	bool HasType(UInt32 type) const;
 	BSExtraData *GetByType(UInt32 xType) const;

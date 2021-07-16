@@ -2,9 +2,6 @@
 #include "nvse/GameExtraData.h"
 #include "nvse/GameTasks.h"
 
-PlayerCharacter *g_thePlayer = NULL;
-TESObjectREFR *s_tempPosMarker = NULL;
-
 __declspec(naked) float __vectorcall GetDistance3D(TESObjectREFR *ref1, TESObjectREFR *ref2)
 {
 	__asm
@@ -105,10 +102,10 @@ __declspec(naked) void TESObjectREFR::Update3D()
 		pop		ecx
 		jmp		doQueue
 	isPlayer:
-		test	byte ptr [ecx+0x61], 1
+		test	byte ptr [ecx+0x5F], 1
 		jnz		done
 	doQueue:
-		or		byte ptr [ecx+0x61], 1
+		or		byte ptr [ecx+0x5F], 1
 		push	0
 		push	1
 		push	ecx
@@ -1314,22 +1311,19 @@ float Actor::GetRadiationLevel()
 		else waterForm = ThisCall<TESWaterForm*>(0x547770, parentCell);
 		if (waterForm && waterForm->radiation) result = waterForm->radiation * (isSwimming ? *(float*)0x11D0464 : *(float*)0x11D1468);
 	}
-	if (*g_loadedRefrMaps)
+	TESObjectREFR *refr;
+	ExtraRadius *xRadius;
+	ExtraRadiation *xRadiation;
+	float distance;
+	for (auto iter = g_loadedReferences->radiationEmitters.Begin(); iter; ++iter)
 	{
-		TESObjectREFR *refr;
-		ExtraRadius *xRadius;
-		ExtraRadiation *xRadiation;
-		float distance;
-		for (auto iter = (*g_loadedRefrMaps)[6].Begin(); iter; ++iter)
-		{
-			if (!(refr = iter.Get())) continue;
-			xRadius = GetExtraType(&refr->extraDataList, Radius);
-			if (!xRadius) continue;
-			distance = xRadius->radius - GetDistance(refr);
-			if (distance <= 0) continue;
-			xRadiation = GetExtraType(&refr->extraDataList, Radiation);
-			if (xRadiation) result += xRadiation->radiation * distance / xRadius->radius;
-		}
+		if (!(refr = iter.Get())) continue;
+		xRadius = GetExtraType(&refr->extraDataList, Radius);
+		if (!xRadius) continue;
+		distance = xRadius->radius - GetDistance(refr);
+		if (distance <= 0) continue;
+		xRadiation = GetExtraType(&refr->extraDataList, Radiation);
+		if (xRadiation) result += xRadiation->radiation * distance / xRadius->radius;
 	}
 	return result ? ((1.0 - (avOwner.GetActorValue(kAVCode_RadResist) / 100.0)) * result) : 0;
 }
@@ -1940,7 +1934,7 @@ char PlayerCharacter::GetDetectionState()
 	if (!parentCell) return -1;
 	if (pcUnseen || byte5F8) return 1;	// CAUTION
 	if (pcInCombat) return 3;			// DANGER
-	if (g_processManager->GetTotalDetectionValue(this) <= 0)
+	if (ProcessManager::Get()->GetTotalDetectionValue(this) <= 0)
 		return 0;						// HIDDEN
 	return 2;							// DETECTED
 }

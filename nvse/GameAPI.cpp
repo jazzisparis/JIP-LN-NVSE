@@ -30,8 +30,6 @@ const _MarkBaseExtraListScriptEvent MarkBaseExtraListScriptEvent = (_MarkBaseExt
 
 SaveGameManager ** g_saveGameManager = (SaveGameManager**)0x011DE134;
 
-ConsoleManager *g_consoleManager = NULL;
-
 #if RUNTIME
 
 struct TLSData

@@ -1,10 +1,5 @@
 #include "nvse/GameData.h"
 
-DataHandler *g_dataHandler = NULL;
-Sky **g_tempSky = (Sky**)0x11CCB78, **g_currentSky = (Sky**)0x11DEA20;
-TES *g_TES = NULL;
-GameTimeGlobals *g_gameTimeGlobals = (GameTimeGlobals*)0x11DE7B8;
-LoadedReferenceMap **g_loadedRefrMaps = (LoadedReferenceMap**)0x11C95C8;
 RadioEntry **g_pipboyRadio = (RadioEntry**)0x11DD42C;
 EffectArchTypeEntry *g_effectArchTypeArray = (EffectArchTypeEntry*)0x1183320;				//	Array size = 0x25
 EntryPointConditionInfo *g_entryPointConditionInfo = (EntryPointConditionInfo*)0x1196EE0;	//	Array size = 0x49

@@ -88,30 +88,32 @@ bool Hook_GetHitLocation_Execute(COMMAND_ARGS)
 	return true;
 }
 
+bool __fastcall GetHasPerk(Actor *actor, BGSPerk *perk)
+{
+	if IS_ACTOR(actor)
+	{
+		if ((actor == g_thePlayer) || s_NPCPerks)
+			return actor->GetPerkRank(perk, false) != 0;
+		if (actor->isTeammate)
+			return g_thePlayer->GetPerkRank(perk, true) != 0;
+	}
+	return false;
+}
+
 bool Hook_HasPerk_Execute(COMMAND_ARGS)		// Modifies HasPerk to allow detection of follower perks on followers.
 {
 	BGSPerk *perk;
-	UInt32 useAlt = 0;
-	UInt8 rank = 0;
+	UInt32 useAlt;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &useAlt))
-	{
-		if (thisObj == g_thePlayer)
-			rank = g_thePlayer->GetPerkRank(perk, false);
-		else if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->isTeammate)
-			rank = g_thePlayer->GetPerkRank(perk, true);
-	}
-	*result = rank ? 1 : 0;
+		*result = GetHasPerk((Actor*)thisObj, perk);
+	else *result = 0;
 	DoConsolePrint(result);
 	return true;
 }
 
 bool Hook_HasPerk_Eval(Actor *thisObj, BGSPerk *perk, UInt32 useAlt, double *result)
 {
-	if (thisObj == g_thePlayer)
-		*result = g_thePlayer->GetPerkRank(perk, false) ? 1 : 0;
-	else if (IS_ACTOR(thisObj) && thisObj->isTeammate)
-		*result = g_thePlayer->GetPerkRank(perk, true) ? 1 : 0;
-	else *result = 0;
+	*result = GetHasPerk(thisObj, perk);
 	return true;
 }
 

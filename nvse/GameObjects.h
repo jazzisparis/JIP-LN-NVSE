@@ -384,6 +384,8 @@ public:
 	UInt32			unk9C;				// 9C
 };
 
+typedef tList<BGSEntryPointPerkEntry> PerkEntryPointList;
+
 class Actor : public MobileObject
 {
 public:
@@ -491,9 +493,9 @@ public:
 	virtual void		SetPerkRank(BGSPerk *perk, UInt8 rank, bool alt);
 	virtual void		RemovePerk(BGSPerk *perk, bool alt);
 	virtual UInt8		GetPerkRank(BGSPerk *perk, bool alt);
-	virtual void		Unk_129(void);
-	virtual void		Unk_12A(void);
-	virtual void		Unk_12B(void);
+	virtual void		AddPerkEntryPoint(BGSEntryPointPerkEntry *perkEntry, bool alt);
+	virtual void		RemovePerkEntryPoint(BGSEntryPointPerkEntry *perkEntry, bool alt);
+	virtual PerkEntryPointList	*GetPerkEntryPointList(UInt8 entryPointID, bool alt);
 	virtual void		Unk_12C(void);
 	virtual bool		GetIsImmobileCreature();
 	virtual void		DoHealthDamage(Actor *attacker, float damage);
@@ -735,6 +737,24 @@ struct PerkRank
 	UInt8		pad05[3];
 };
 
+struct PerkEntryPointLists
+{
+	PerkEntryPointList		perkEntries[kPerkEntry_Max];
+
+	static PerkEntryPointLists *Create()
+	{
+		PerkEntryPointLists *lists = POOL_ALLOC(1, PerkEntryPointLists);
+		MemZero(lists, sizeof(PerkEntryPointLists));
+		return lists;
+	}
+
+	void Clear()
+	{
+		for (auto &iter : perkEntries)
+			iter.RemoveAll();
+	}
+};
+
 struct CasinoStats
 {
 	UInt32		casinoRefID;
@@ -760,7 +780,7 @@ public:
 	};
 
 	virtual void		Unk_139(void);
-	virtual void		Unk_13A(void);
+	virtual tList<PerkRank>	*GetPerkRankList(bool forTeammates);
 
 	struct MapMarkerInfo
 	{
@@ -916,9 +936,9 @@ public:
 	UInt32								unk7F4[33];				// 7F4
 	PCLevelData							*pcLevelData;			// 878
 	tList<PerkRank>						perkRanksPC;			// 87C
-	tList<BGSEntryPointPerkEntry>		perkEntriesPC[74];		// 884
+	PerkEntryPointLists					perkEntriesPC;			// 884
 	tList<PerkRank>						perkRanksTM;			// AD4
-	tList<BGSEntryPointPerkEntry>		perkEntriesTM[74];		// ADC
+	PerkEntryPointLists					perkEntriesTM;			// ADC
 	UInt32								unkD2C[4];				// D2C
 	NiObject							*unkD3C;				// D3C
 	UInt32								unkD40;					// D40

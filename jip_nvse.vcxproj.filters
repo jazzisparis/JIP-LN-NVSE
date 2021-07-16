@@ -44,9 +44,6 @@
     <ClCompile Include="nvse\GameSettings.cpp">
       <Filter>nvse</Filter>
     </ClCompile>
-    <ClCompile Include="nvse\GameTasks.cpp">
-      <Filter>nvse</Filter>
-    </ClCompile>
     <ClCompile Include="nvse\GameTiles.cpp">
       <Filter>nvse</Filter>
     </ClCompile>
@@ -72,15 +69,6 @@
       <Filter>nvse</Filter>
     </ClCompile>
     <ClCompile Include="nvse\GameUI.cpp">
-      <Filter>nvse</Filter>
-    </ClCompile>
-    <ClCompile Include="nvse\GameOSDepend.cpp">
-      <Filter>nvse</Filter>
-    </ClCompile>
-    <ClCompile Include="nvse\GameSound.cpp">
-      <Filter>nvse</Filter>
-    </ClCompile>
-    <ClCompile Include="nvse\GameProcess.cpp">
       <Filter>nvse</Filter>
     </ClCompile>
     <ClCompile Include="internal\jip_core.cpp">

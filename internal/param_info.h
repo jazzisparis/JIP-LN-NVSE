@@ -1502,11 +1502,3 @@ ParamInfo kParams_JIP_TwoStrings_OneOptionalInt[] =
 	{"String", kParamType_String, 0},
 	{"Integer", kParamType_Integer, 1}
 };
-
-ParamInfo kParams_JIP_TwoFloats_TwoScriptVars[] =
-{
-	{"Float", kParamType_Float, 0},
-	{"Float", kParamType_Float, 0},
-	{"Variable", kParamType_ScriptVariable, 0},
-	{"Variable", kParamType_ScriptVariable, 0}
-};

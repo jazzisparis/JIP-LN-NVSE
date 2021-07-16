@@ -4940,12 +4940,12 @@ public:
 	virtual void	Fn_05(void);
 	virtual void	Fn_06(void);
 	virtual void	Fn_07(void);
-	virtual void	Fn_08(void);
+	virtual void	CopyRankAndPriority(BGSPerkEntry *source);
 	virtual void	Fn_09(void);
 	virtual void	Fn_0A(void);
 	virtual void	Fn_0B(void);
-	virtual void	Fn_0C(void);
-	virtual void	Fn_0D(void);
+	virtual void	AddEntry(Actor *actor, bool forTeammates);
+	virtual void	RemoveEntry(Actor *actor, bool forTeammates);
 
 	UInt8				rank;				// 04 +1 for value shown in GECK
 	UInt8				priority;			// 05
@@ -4956,8 +4956,6 @@ public:
 class BGSQuestPerkEntry : public BGSPerkEntry
 {
 public:
-	virtual void	Fn_0E(void);
-
 	TESQuest			*quest;				// 08
 	UInt8				stage;				// 0C
 	UInt8				pad[3];				// 0D
@@ -4967,8 +4965,6 @@ public:
 class BGSAbilityPerkEntry : public BGSPerkEntry
 {
 public:
-	virtual void	Fn_0E(void);
-
 	SpellItem			*ability;			// 08
 };
 
@@ -5025,8 +5021,6 @@ struct EntryPointConditions
 class BGSEntryPointPerkEntry : public BGSPerkEntry
 {
 public:
-	virtual void	Fn_0E(void);
-
 	UInt8						entryPoint;		// 08
 	UInt8						function;		// 09
 	UInt8						conditionTabs;	// 0A

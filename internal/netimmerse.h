@@ -324,7 +324,7 @@ public:
 	UInt8			byte44;		// 44
 	UInt8			pad45[3];	// 45
 
-	static NiTransformInterpolator *Create();
+	__forceinline static NiTransformInterpolator *Create() {return CdeclCall<NiTransformInterpolator*>(0xA403F0);}
 };
 STATIC_ASSERT(sizeof(NiTransformInterpolator) == 0x48);
 
@@ -2249,6 +2249,50 @@ class BSSegmentedTriShape : public NiTriShape
 public:
 	UInt32		unkC4[3];		// C4
 };
+
+// 18
+class NiPSysModifier : public NiObject
+{
+public:
+	virtual void	Unk_23(void);
+	virtual void	Unk_24(void);
+	virtual void	Unk_25(void);
+	virtual void	Unk_26(void);
+	virtual void	Unk_27(void);
+	virtual void	Unk_28(void);
+
+	NiString		name;		// 08
+	UInt32			unk0C;		// 0C
+	UInt32			unk10;		// 10
+	UInt8			byte14;		// 14
+	UInt8			pad15[3];	// 15
+};
+
+// C4
+class NiParticles : public NiGeometry
+{
+public:
+	virtual void	Unk_3C(void);
+};
+
+// 110
+class NiParticleSystem : public NiParticles
+{
+public:
+	virtual void	Unk_3D(void);
+
+	UInt8					byte0C4;	// 0C4
+	UInt8					pad0C5[3];	// 0C5
+	DList<NiPSysModifier>	modifiers;	// 0C8
+	float					flt0D4;		// 0D4
+	UInt8					byte0D8;	// 0D8
+	UInt8					byte0D9;	// 0D9
+	UInt8					pad0DA[2];	// 0DA
+	UInt32					unk0DC[13];	// 0DC
+
+	__forceinline static NiParticleSystem *Create() {return CdeclCall<NiParticleSystem*>(0xC1B7F0);}
+};
+STATIC_ASSERT(sizeof(NiParticleSystem) == 0x110);
 
 // 14C
 class ParticleShaderProperty : public BSShaderProperty

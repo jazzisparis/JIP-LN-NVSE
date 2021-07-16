@@ -392,6 +392,7 @@ class bhkRagdollPenetrationUtil;
 struct hkCdBody;
 
 class BSWin32Audio;
+class DIHookControl;
 
 #include "internal/class_vtbls.h"
 #include "internal/memory_pool.h"

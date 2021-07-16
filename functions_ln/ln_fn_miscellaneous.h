@@ -617,9 +617,10 @@ bool Cmd_GetZone_Execute(COMMAND_ARGS)
 
 bool Cmd_AddNoteNS_Execute(COMMAND_ARGS)
 {
+	UInt8 savedByte = *(UInt8*)QueueUIMessage;
 	SafeWrite8((UInt32)QueueUIMessage, 0xC3);	// RETN
 	AddNote(PASS_COMMAND_ARGS);
-	SafeWrite8((UInt32)QueueUIMessage, 0x55);	// PUSH EBP
+	SafeWrite8((UInt32)QueueUIMessage, savedByte);
 	return true;
 }
 

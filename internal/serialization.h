@@ -129,6 +129,8 @@ void DoLoadGameCleanup()
 		}
 		s_extraCamerasMap.Clear();
 	}
+
+	s_NPCPerksInfoMap.Clear();
 }
 
 void __fastcall RestoreLinkedRefs(UnorderedMap<UInt32, UInt32> *tempMap = NULL)
@@ -176,9 +178,8 @@ void LoadGameCallback(void*)
 	UInt8 changedFlags = s_dataChangedFlags;
 	DoLoadGameCleanup();
 
-	UInt32 type, length, buffer4, refID, skipSize;
+	UInt32 type, length, nRecs, nRefs, nVars, buffer4, refID, skipSize;
 	UInt8 buffer1, modIdx;
-	UInt16 nRecs, nRefs, nVars;
 	UInt8 *bufPos, *namePos;
 
 	while (GetNextRecordInfo(&type, &s_serializedVersion, &length))
@@ -392,7 +393,7 @@ auxVarReadError:
 								refID = *(UInt32*)bufPos;
 								bufPos += 4;
 								buffer1 = *bufPos++;
-								if (ResolveRefID(refID, &refID))
+								if (ResolveRefID(refID, &refID) && LookupFormByRefID(refID))
 								{
 									if (!idsMap)
 									{
@@ -502,17 +503,53 @@ refMapReadError:
 				s_appearanceUndoMap[(TESNPC*)g_thePlayer->baseForm] = aprUndo;
 				break;
 			}
+			case 'PNPJ':
+			{
+				if (!s_NPCPerks) continue;
+				bufPos = GetLoadGameBuffer(length);
+				nRecs = *(UInt16*)bufPos;
+				bufPos += 2;
+				Actor *actor;
+				NPCPerksInfo *perksInfo;
+				UInt8 rank;
+				BGSPerk *perk;
+				while (nRecs)
+				{
+					nRecs--;
+					refID = *(UInt32*)bufPos;
+					bufPos += 4;
+					buffer1 = *bufPos++;
+					if (!ResolveRefID(refID, &refID) || !(actor = (Actor*)LookupFormByRefID(refID)) || NOT_ACTOR(actor))
+					{
+						bufPos += buffer1 * 5;
+						continue;
+					}
+					perksInfo = NULL;
+					while (buffer1)
+					{
+						buffer1--;
+						buffer4 = *(UInt32*)bufPos;
+						bufPos += 4;
+						rank = *bufPos++;
+						if (!ResolveRefID(buffer4, &buffer4) || !(perk = (BGSPerk*)LookupFormByRefID(buffer4)))
+							continue;
+						if (!perksInfo)
+							perksInfo = &s_NPCPerksInfoMap[refID];
+						perksInfo->perkRanks[perk] = rank;
+					}
+				}
+			}
 			default:
 				break;
 		}
 	}
 	if (changedFlags & kChangedFlag_LinkedRefs)
 		RestoreLinkedRefs(&s_linkedRefsTemp);
+	Actor *actor;
 	if (s_NPCWeaponMods && !(g_thePlayer->actorFlags & 0x10000000))
 	{
 		g_thePlayer->actorFlags |= 0x10000000;
-		auto actorIter = g_processManager->highActors.Head();
-		Actor *actor;
+		auto actorIter = ProcessManager::Get()->highActors.Head();
 		do
 		{
 			if (!(actor = actorIter->data) || (actor->actorFlags & 0x10000000))
@@ -520,6 +557,16 @@ refMapReadError:
 			actor->actorFlags |= 0x10000000;
 			if (!actor->isTeammate)
 				DistributeWeaponMods(actor);
+		}
+		while (actorIter = actorIter->next);
+	}
+	if (s_NPCPerks)
+	{
+		auto actorIter = ProcessManager::Get()->highActors.Head();
+		do
+		{
+			if (actor = actorIter->data)
+				InitNPCPerks(actor);
 		}
 		while (actorIter = actorIter->next);
 	}
@@ -624,6 +671,34 @@ void SaveGameCallback(void*)
 				ptr++;
 			}
 			while (--buffer1);
+		}
+	}
+	if (!s_NPCPerksInfoMap.Empty())
+	{
+		Actor *actor;
+		for (auto refIter = s_NPCPerksInfoMap.Begin(); refIter; ++refIter)
+		{
+			if ((actor = (Actor*)LookupFormByRefID(refIter.Key())) && IS_ACTOR(actor))
+			{
+				if (!refIter().perkRanks.Empty() && (actor->isTeammate || !(((TESActorBase*)actor->baseForm)->baseData.flags & 8) || actor->GetNiNode()))
+					continue;
+				actor->extraDataList.perksInfo = NULL;
+			}
+			refIter.Remove();
+		}
+		if (buffer2 = s_NPCPerksInfoMap.Size())
+		{
+			WriteRecord('PNPJ', 10, &buffer2, 2);
+			for (auto refIter = s_NPCPerksInfoMap.Begin(); refIter; ++refIter)
+			{
+				WriteRecord32(refIter.Key());
+				WriteRecord8(refIter().perkRanks.Size());
+				for (auto perkIter = refIter().perkRanks.Begin(); perkIter; ++perkIter)
+				{
+					WriteRecord32(perkIter.Key()->refID);
+					WriteRecord8(perkIter());
+				}
+			}
 		}
 	}
 }

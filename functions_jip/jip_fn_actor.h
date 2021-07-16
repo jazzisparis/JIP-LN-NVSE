@@ -460,9 +460,10 @@ bool Cmd_GetActorsByProcessingLevel_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &procLevel) || (procLevel > 3)) return true;
 	TempElements *tmpElements = GetTempElements();
 	tmpElements->Clear();
-	MobileObject **objArray = g_processManager->objects.data, **arrEnd = objArray;
-	objArray += g_processManager->beginOffsets[procLevel];
-	arrEnd += g_processManager->endOffsets[procLevel];
+	ProcessManager *procMngr = ProcessManager::Get();
+	MobileObject **objArray = procMngr->objects.data, **arrEnd = objArray;
+	objArray += procMngr->beginOffsets[procLevel];
+	arrEnd += procMngr->endOffsets[procLevel];
 	Actor *actor;
 	for (; objArray != arrEnd; objArray++)
 	{
@@ -596,9 +597,10 @@ void __fastcall GetDetectionData(TESObjectREFR *thisObj, Script *scriptObj, bool
 	Actor *actor = (Actor*)thisObj;
 	if (actor == g_thePlayer)
 	{
-		MobileObject **objArray = g_processManager->objects.data, **arrEnd = objArray;
-		objArray += g_processManager->beginOffsets[0];
-		arrEnd += g_processManager->endOffsets[0];
+		ProcessManager *procMngr = ProcessManager::Get();
+		MobileObject **objArray = procMngr->objects.data, **arrEnd = objArray;
+		objArray += procMngr->beginOffsets[0];
+		arrEnd += procMngr->endOffsets[0];
 		Actor *target;
 		for (; objArray != arrEnd; objArray++)
 		{

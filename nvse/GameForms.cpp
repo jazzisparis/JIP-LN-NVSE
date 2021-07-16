@@ -742,9 +742,10 @@ bool EffectItemList::RemoveNthEffect(UInt32 index)
 		if (effItem)
 		{
 			g_thePlayer->magicTarget.RemoveEffect(effItem);
-			MobileObject **objArray = g_processManager->objects.data, **arrEnd = objArray;
-			objArray += g_processManager->beginOffsets[0];
-			arrEnd += g_processManager->endOffsets[0];
+			ProcessManager *procMngr = ProcessManager::Get();
+			MobileObject **objArray = procMngr->objects.data, **arrEnd = objArray;
+			objArray += procMngr->beginOffsets[0];
+			arrEnd += procMngr->endOffsets[0];
 			Actor *actor;
 			for (; objArray != arrEnd; objArray++)
 			{
@@ -752,9 +753,9 @@ bool EffectItemList::RemoveNthEffect(UInt32 index)
 				if (actor && IS_ACTOR(actor))
 					actor->magicTarget.RemoveEffect(effItem);
 			}
-			objArray = g_processManager->objects.data;
-			arrEnd = objArray + g_processManager->endOffsets[1];
-			objArray += g_processManager->beginOffsets[1];
+			objArray = procMngr->objects.data;
+			arrEnd = objArray + procMngr->endOffsets[1];
+			objArray += procMngr->beginOffsets[1];
 			for (; objArray != arrEnd; objArray++)
 			{
 				actor = (Actor*)*objArray;
@@ -774,9 +775,10 @@ bool EffectItemList::RemoveNthEffect(UInt32 index)
 void __fastcall MagicItem::UpdateEffectsAllActors(EffectItem *effItem, bool addNew)
 {
 	g_thePlayer->UpdateActiveEffects(this, effItem, addNew);
-	MobileObject **objArray = g_processManager->objects.data, **arrEnd = objArray;
-	objArray += g_processManager->beginOffsets[0];
-	arrEnd += g_processManager->endOffsets[0];
+	ProcessManager *procMngr = ProcessManager::Get();
+	MobileObject **objArray = procMngr->objects.data, **arrEnd = objArray;
+	objArray += procMngr->beginOffsets[0];
+	arrEnd += procMngr->endOffsets[0];
 	Actor *actor;
 	for (; objArray != arrEnd; objArray++)
 	{
@@ -784,9 +786,9 @@ void __fastcall MagicItem::UpdateEffectsAllActors(EffectItem *effItem, bool addN
 		if (actor && actor->IsActor())
 			actor->UpdateActiveEffects(this, effItem, addNew);
 	}
-	objArray = g_processManager->objects.data;
-	arrEnd = objArray + g_processManager->endOffsets[1];
-	objArray += g_processManager->beginOffsets[1];
+	objArray = procMngr->objects.data;
+	arrEnd = objArray + procMngr->endOffsets[1];
+	objArray += procMngr->beginOffsets[1];
 	for (; objArray != arrEnd; objArray++)
 	{
 		actor = (Actor*)*objArray;

@@ -55,13 +55,18 @@ bool Cmd_SetWorldspaceClimate_Execute(COMMAND_ARGS)
 	TESClimate *climate = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wldSpc, &climate) && (!climate || IS_ID(climate, TESClimate)))
 	{
-		if (wldSpc->parent && (wldSpc->parentFlags & 16)) wldSpc->parentFlags -= 16;
+		if (wldSpc->parent && (wldSpc->parentFlags & 16))
+			wldSpc->parentFlags -= 16;
 		wldSpc->climate = climate;
-		if (!*g_currentSky || !g_thePlayer->parentCell) return true;
+		Sky *currSky = Sky::Get();
+		if (!currSky || !g_thePlayer->parentCell)
+			return true;
 		TESWorldSpace *pcWspc = g_thePlayer->parentCell->worldSpace;
 		if (!pcWspc) return true;
-		while (pcWspc->parent && (pcWspc->parentFlags & 16)) pcWspc = pcWspc->parent;
-		if (pcWspc == wldSpc) (*g_currentSky)->currClimate = climate;
+		while (pcWspc->parent && (pcWspc->parentFlags & 16))
+			pcWspc = pcWspc->parent;
+		if (pcWspc == wldSpc)
+			currSky->currClimate = climate;
 	}
 	return true;
 }

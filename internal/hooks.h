@@ -3464,7 +3464,7 @@ __declspec(naked) void CreateObjectNodeHook()
 		jz		contRetn
 		test	byte ptr [eax+6], kHookFormFlag6_InsertObject
 		jnz		skipRetn
-		test	byte ptr [eax+0x61], kHookRefFlag61_DisableCollision
+		test	byte ptr [eax+0x5F], kHookRefFlag61_DisableCollision
 		jnz		skipRetn
 	contRetn:
 		movzx	eax, byte ptr [ecx+4]
@@ -3545,9 +3545,9 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		test	ecx, ecx
 		jz		cellUnlock
 		mov		esi, ecx
-		test	byte ptr [edi+0x61], kHookRefFlag61_Update3D
+		test	byte ptr [edi+0x5F], kHookRefFlag61_Update3D
 		jz		doneFade
-		and		byte ptr [edi+0x61], ~kHookRefFlag61_Update3D
+		and		byte ptr [edi+0x5F], ~kHookRefFlag61_Update3D
 		mov		eax, [ecx]
 		cmp		dword ptr [eax+0x10], kAddr_ReturnThis
 		jnz		doneFade
@@ -3556,7 +3556,7 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		fstp	dword ptr [ecx+0xB8]
 		or		byte ptr [ecx+0x31], 0x40
 	doneFade:
-		test	byte ptr [edi+0x61], kHookRefFlag61_DisableCollision
+		test	byte ptr [edi+0x5F], kHookRefFlag61_DisableCollision
 		jz		doneCollision
 		call	NiNode::RemoveCollision
 	doneCollision:

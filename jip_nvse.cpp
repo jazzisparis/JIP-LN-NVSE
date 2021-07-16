@@ -1,5 +1,7 @@
 #define JIP_DEBUG 0
 
+#include "internal/dinput.h"
+#include "internal/xinput.h"
 #include "internal/jip_core.h"
 #include "internal/param_info.h"
 #include "internal/hooks.h"
@@ -1430,6 +1432,8 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			break;
 		case NVSEMessagingInterface::kMessage_Precompile:
 			break;
+		case NVSEMessagingInterface::kMessage_NewGame:
+			JIPScriptRunner::RunScriptFiles('ng');
 		case NVSEMessagingInterface::kMessage_PreLoadGame:
 		{
 			CleanMLCallbacks();
@@ -1455,9 +1459,6 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 		case NVSEMessagingInterface::kMessage_RenameGame:
 			break;
 		case NVSEMessagingInterface::kMessage_RenameNewGame:
-			break;
-		case NVSEMessagingInterface::kMessage_NewGame:
-			JIPScriptRunner::RunScriptFiles('ng');
 			break;
 		case NVSEMessagingInterface::kMessage_DeleteGameName:
 			break;

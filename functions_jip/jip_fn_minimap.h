@@ -1161,20 +1161,16 @@ typedef Vector<DoorRef> DoorRefsList;
 
 void __fastcall GetTeleportDoors(TESObjectCELL *cell, DoorRefsList *doorRefsList)
 {
-	cell->RefLockEnter();
-	auto refsIter = cell->objectList.Head();
 	TESObjectREFR *refr;
 	ExtraTeleport *xTeleport;
-	do
+	for (auto iter = g_loadedReferences->teleportDoors.Begin(); iter; ++iter)
 	{
-		if (!(refr = refsIter->data) || (refr->flags & 0x860) || NOT_ID(refr->baseForm, TESObjectDOOR))
+		if (!(refr = iter.Get()) || (refr->flags & 0x860) || (refr->parentCell != cell))
 			continue;
 		xTeleport = GetExtraType(&refr->extraDataList, Teleport);
 		if (xTeleport && xTeleport->data && xTeleport->data->linkedDoor)
 			doorRefsList->Append(refr, xTeleport->data->linkedDoor->parentCell);
 	}
-	while (refsIter = refsIter->next);
-	cell->RefLockLeave();
 }
 
 __declspec(naked) float* __fastcall GetVtxAlphaPtr(NiPoint2 *posMult)
