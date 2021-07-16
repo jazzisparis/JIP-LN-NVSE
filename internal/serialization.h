@@ -130,7 +130,14 @@ void DoLoadGameCleanup()
 		s_extraCamerasMap.Clear();
 	}
 
-	s_NPCPerksInfoMap.Clear();
+	if (!s_NPCPerksInfoMap.Empty())
+	{
+		Actor *actor;
+		for (auto refIter = s_NPCPerksInfoMap.Begin(); refIter; ++refIter)
+			if ((actor = (Actor*)LookupFormByRefID(refIter.Key())) && IS_ACTOR(actor))
+				actor->extraDataList.perksInfo = NULL;
+		s_NPCPerksInfoMap.Clear();
+	}
 }
 
 void __fastcall RestoreLinkedRefs(UnorderedMap<UInt32, UInt32> *tempMap = NULL)

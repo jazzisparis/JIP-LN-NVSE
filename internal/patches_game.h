@@ -2177,7 +2177,7 @@ struct NPCPerksInfo
 	}
 };
 
-UnorderedMap<UInt32, NPCPerksInfo> s_NPCPerksInfoMap(0x100);
+UnorderedMap<UInt32, NPCPerksInfo> s_NPCPerksInfoMap(0x80);
 
 void AddPerkEntries(Actor *actor, BGSPerk *perk, UInt8 currRank, UInt8 newRank, PerkEntryPointLists *entryLists)
 {
@@ -2433,7 +2433,12 @@ void __fastcall InitNPCPerks(Actor *actor)
 		}
 		while (perkIter = perkIter->next);
 	}
-	if (!perksInfo->perkRanks.Empty())
+	if (perksInfo->perkRanks.Empty())
+	{
+		actor->extraDataList.perksInfo = NULL;
+		s_NPCPerksInfoMap.Erase(actor->refID);
+	}
+	else
 	{
 		actor->extraDataList.perksInfo = perksInfo;
 		if (!perksInfo->perkEntries)
@@ -2446,7 +2451,6 @@ void __fastcall InitNPCPerks(Actor *actor)
 			}
 		}
 	}
-	else s_NPCPerksInfoMap.Erase(actor->refID);
 }
 
 __declspec(naked) ExtraDataList* __fastcall DoOnLoadActorHook(TESObjectREFR *refr)
@@ -3906,7 +3910,6 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			SafeWrite32(0x108754C, (UInt32)GetPerkRankHook);
 			SafeWrite32(0x1087558, (UInt32)GetPerkEntryPointListHook);
 			SAFE_WRITE_BUF(0x5E592F, "\x0F\x1F\x84\x00\x00\x00\x00\x00");
-			SAFE_WRITE_BUF(0x8ABBFC, "\x31\xD2\x8B\x8D\x54\xFF\xFF\xFF\x89\x51\x60\x8B\x81\x08\x01\x00\x00\x84\xC0\x74\x0A\x3C\x02\x77\x06\x89\x91\x0C\x01\x00\x00\xC9\xC2\x04\x00");
 			return 18;
 		}
 	}
