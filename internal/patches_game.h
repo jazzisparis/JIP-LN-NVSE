@@ -2308,6 +2308,7 @@ NPCPerksInfo* __fastcall AddStartingPerks(Actor *actor, NPCPerksInfo *perksInfo)
 
 void __fastcall SetPerkRankHook(Actor *actor, int EDX, BGSPerk *perk, UInt8 newRank, bool forTeammates)
 {
+	if (actor->lifeState) return;
 	NPCPerksInfo *perksInfo = actor->extraDataList.perksInfo;
 	if (!perksInfo)
 		perksInfo = AddStartingPerks(actor, &s_NPCPerksInfoMap[actor->refID]);
@@ -2316,12 +2317,13 @@ void __fastcall SetPerkRankHook(Actor *actor, int EDX, BGSPerk *perk, UInt8 newR
 	{
 		*rankPtr = newRank;
 		s_dataChangedFlags |= kChangedFlag_NPCPerks;
-		if (actor->GetNiNode())
+		NPCPerkEntryPoints *entryPoints = perksInfo->entryPoints;
+		if (!entryPoints)
 		{
-			if (!perksInfo->entryPoints)
-				perksInfo->entryPoints = NPCPerkEntryPoints::Create();
-			AddPerkEntries(actor, perk, newRank, perksInfo->entryPoints);
+			if (!actor->GetNiNode()) return;
+			perksInfo->entryPoints = entryPoints = NPCPerkEntryPoints::Create();
 		}
+		AddPerkEntries(actor, perk, newRank, entryPoints);
 	}
 }
 
