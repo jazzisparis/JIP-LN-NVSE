@@ -9,7 +9,7 @@ bool Cmd_GetPackageFlag_Execute(COMMAND_ARGS)
 	TESPackage *package;
 	UInt32 flagID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &package, &flagID) && (flagID <= 31))
-		*result = package->IsFlagSet(1 << flagID);
+		*result = (package->packageFlags & (1 << flagID)) != 0;
 	return true;
 }
 

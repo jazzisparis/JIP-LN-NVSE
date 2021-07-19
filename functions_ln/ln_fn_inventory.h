@@ -56,7 +56,7 @@ void SetHotkey(UInt8 index, HotkeyInfo &hotkey)
 			{
 				if ((hotkey.health >= 0) || (hotkey.modFlags > 0)) continue;
 				xData = ExtraDataList::Create();
-				AddExtraData(xData, ExtraHotkey::Create(index));
+				xData->AddExtra(ExtraHotkey::Create(index));
 				entry->extendData = (ExtraContainerChanges::ExtendDataList*)GameHeapAlloc(8);
 				entry->extendData->Init(xData);
 				continue;
@@ -65,7 +65,7 @@ void SetHotkey(UInt8 index, HotkeyInfo &hotkey)
 			{
 				if ((hotkey.health >= 0) || (hotkey.modFlags > 0)) continue;
 				xData = ExtraDataList::Create();
-				AddExtraData(xData, ExtraHotkey::Create(index));
+				xData->AddExtra(ExtraHotkey::Create(index));
 				entry->extendData->Prepend(xData);
 				continue;
 			}
@@ -98,12 +98,12 @@ void SetHotkey(UInt8 index, HotkeyInfo &hotkey)
 						xHotkey->index = index;
 					}
 					else if (xHotkey->index == index)
-						RemoveExtraData(xData, xHotkey, true);
+						xData->RemoveExtra(xHotkey, true);
 				}
 				else if (matching && !found)
 				{
 					found = true;
-					AddExtraData(xData, ExtraHotkey::Create(index));
+					xData->AddExtra(ExtraHotkey::Create(index));
 				}
 			}
 			while (xdlIter = xdlIter->next);
@@ -117,7 +117,7 @@ void SetHotkey(UInt8 index, HotkeyInfo &hotkey)
 				if (!(xData = xdlIter->data)) continue;
 				xHotkey = GetExtraType(xData, Hotkey);
 				if (!xHotkey || (xHotkey->index != index)) continue;
-				RemoveExtraData(xData, xHotkey, true);
+				xData->RemoveExtra(xHotkey, true);
 				if (!xData->m_data)
 				{
 					entry->extendData->Remove(xData);
@@ -163,7 +163,7 @@ bool Cmd_ClearAllHotkeys_Execute(COMMAND_ARGS)
 			if (!(xData = xdlIter->data)) continue;
 			xHotkey = GetExtraType(xData, Hotkey);
 			if (!xHotkey) continue;
-			RemoveExtraData(xData, xHotkey, true);
+			xData->RemoveExtra(xHotkey, true);
 			if (!xData->m_data)
 			{
 				entry->extendData->Remove(xData);

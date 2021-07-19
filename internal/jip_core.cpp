@@ -37,24 +37,6 @@ _InventoryRefGetForID InventoryRefGetForID;
 DIHookControl *g_DIHookCtrl;
 UInt8 *g_numPreloadMods;
 
-const char **g_terminalModelPtr = (const char**)0x11A0BB0;
-TESDescription **g_currentDescription = (TESDescription**)0x11C5490;
-String *g_currentDescriptionText = (String*)0x11C5498;
-NiTPointerMap<TESForm> **g_allFormsMap = (NiTPointerMap<TESForm>**)0x11C54C0;
-NiTStringPointerMap<TESForm> **g_formEditorIDs = (NiTStringPointerMap<TESForm>**)0x11C54C8;
-BSTCaseInsensitiveStringMap<void*> **g_idleAnimsDirectoryMap = (BSTCaseInsensitiveStringMap<void*>**)0x11CB6A0;
-ActorValueInfo **g_actorValueInfoArray = (ActorValueInfo**)0x11D61C8;
-BSSimpleArray<TESRecipeCategory> *g_recipeMenuCategories = (BSSimpleArray<TESRecipeCategory>*)0x11D8F08;
-TESObjectWEAP **g_playerWeapon = (TESObjectWEAP**)0x11D98D4;
-tList<VATSTargetInfo> *g_VATSTargetList = (tList<VATSTargetInfo>*)0x11DB150;
-NiNode **g_objectLODRoot = (NiNode**)0x11DEA18;
-bool *g_gamePadRumble = (bool*)0x11E0854;
-UInt32 *g_tickCount = (UInt32*)0x11F63A8;
-tList<Archive> **g_archivesList = (tList<Archive>**)0x11F8160;
-LightCS *g_sceneLightsLock = (LightCS*)0x11F9EA0;
-tList<ListBox<int>> *g_activeListBoxes = (tList<ListBox<int>>*)0x11D8B54;
-tList<GradualSetFloat> *g_queuedGradualSetFloat = (tList<GradualSetFloat>*)0x11F3348;
-
 SpellItem *g_pipBoyLight;
 ModelLoader *g_modelLoader;
 DataHandler *g_dataHandler;
@@ -85,23 +67,6 @@ double *g_condDmgPenalty;
 double s_condDmgPenalty = 0.67;
 UInt32 s_mainThreadID;
 UInt32 s_initialTickCount;
-
-const _PlaceAtMe PlaceAtMe = (_PlaceAtMe)0x5C4B30;
-const _GetCdBodyNode GetCdBodyNode = (_GetCdBodyNode)0xC7FA90;
-const _GetCdBodyRef GetCdBodyRef = (_GetCdBodyRef)0x62B4E0;
-const _RefreshItemListBox RefreshItemListBox = (_RefreshItemListBox)0x704AF0;
-const _DoRefreshContainerMenu DoRefreshContainerMenu = (_DoRefreshContainerMenu)0x75C280;
-const _ApplyPerkModifiers ApplyPerkModifiers = (_ApplyPerkModifiers)0x5E58F0;
-const _ApplyAmmoEffects ApplyAmmoEffects = (_ApplyAmmoEffects)0x59A030;
-const _GetTopicInfo GetTopicInfo = (_GetTopicInfo)0x61A7D0;
-const _ApplyIMOD ApplyIMOD = (_ApplyIMOD)0x5299A0;
-const _PurgeTerminalModel PurgeTerminalModel = (_PurgeTerminalModel)0x7FFE00;
-const _ShowQuantityMenu ShowQuantityMenu = (_ShowQuantityMenu)0x7ABA00;
-const _NiAllocator NiAllocator = (_NiAllocator)0xAA13E0;
-const _NiDeallocator NiDeallocator = (_NiDeallocator)0xAA1460;
-const _LoadModel LoadModel = (_LoadModel)0x447080;
-const _LoadKFModel LoadKFModel = (_LoadKFModel)0x4471C0;
-const _InitFontInfo InitFontInfo = (_InitFontInfo)0xA12020;
 
 Cmd_Execute SayTo, KillActor, AddNote, AttachAshPile, MoveToFade, GetRefs;
 
@@ -594,7 +559,7 @@ bool TESObjectREFR::SetLinkedRef(TESObjectREFR *linkObj = NULL, UInt8 modIdx)
 					TESForm *form = LookupFormByRefID(*findDefID);
 					if (form && IS_REFERENCE(form)) xLinkedRef->linkedRef = (TESObjectREFR*)form;
 				}
-				else RemoveExtraData(&extraDataList, xLinkedRef, true);
+				else extraDataList.RemoveExtra(xLinkedRef, true);
 			}
 			findDefID.Remove();
 		}
@@ -603,7 +568,7 @@ bool TESObjectREFR::SetLinkedRef(TESObjectREFR *linkObj = NULL, UInt8 modIdx)
 	}
 	if (!xLinkedRef)
 	{
-		AddExtraData(&extraDataList, ExtraLinkedRef::Create(linkObj));
+		extraDataList.AddExtra(ExtraLinkedRef::Create(linkObj));
 		s_linkedRefDefault[refID] = 0;
 	}
 	else
@@ -710,11 +675,11 @@ ExtraDataList* __fastcall SplitFromStack(ContChangesEntry *entry, ExtraDataList 
 	ExtraCount *xCount = GetExtraType(xDataIn, Count);
 	if (!xCount) return xDataIn;
 	ExtraDataList *xDataOut = xDataIn->CreateCopy();
-	RemoveExtraType(xDataOut, kExtraData_Count);
-	RemoveExtraType(xDataOut, kExtraData_Hotkey);
+	xDataOut->RemoveByType(kExtraData_Count);
+	xDataOut->RemoveByType(kExtraData_Hotkey);
 	if (--xCount->count < 2)
 	{
-		RemoveExtraData(xDataIn, xCount, true);
+		xDataIn->RemoveExtra(xCount, true);
 		if (!xDataIn->m_data)
 		{
 			entry->extendData->Remove(xDataIn);
@@ -822,7 +787,7 @@ bool __fastcall ClearHotkey(UInt8 index)
 	ContChangesEntry *entry = GetHotkeyItemEntry(index, &xData);
 	if (entry)
 	{
-		RemoveExtraType(xData, kExtraData_Hotkey);
+		xData->RemoveByType(kExtraData_Hotkey);
 		if (!xData->m_data)
 		{
 			entry->extendData->Remove(xData);

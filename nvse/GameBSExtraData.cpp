@@ -1,13 +1,6 @@
 #include "nvse/GameBSExtraData.h"
 #include "nvse/GameExtraData.h"
 
-const _GetExtraData GetExtraData = (_GetExtraData)0x410220;
-const _AddExtraData AddExtraData = (_AddExtraData)0x40FF60;
-const _RemoveExtraData RemoveExtraData = (_RemoveExtraData)0x410020;
-const _RemoveExtraType RemoveExtraType = (_RemoveExtraType)0x410140;
-const _ClearExtraDataList ClearExtraDataList = (_ClearExtraDataList)0x40FAE0;
-const _CopyExtraDataList CopyExtraDataList = (_CopyExtraDataList)0x411EC0;
-
 bool BaseExtraList::HasType(UInt32 type) const
 {
 	return (m_presenceBitfield[type >> 3] & (1 << (type & 7))) != 0;
@@ -73,11 +66,6 @@ __declspec(naked) ExtraDataList* __stdcall ExtraDataList::Create(BSExtraData *xB
 	done:
 		retn	4
 	}
-}
-
-bool BaseExtraList::IsWorn() const
-{
-	return HasType(kExtraData_Worn);
 }
 
 char BaseExtraList::GetExtraFactionRank(TESFaction *faction) const
@@ -148,9 +136,4 @@ void BaseExtraList::DebugDump() const
 		Console_Print("No data in list");
 	}
 	s_debug.Outdent();
-}
-
-bool BaseExtraList::MarkScriptEvent(UInt32 eventMask, TESForm* eventTarget)
-{
-	return MarkBaseExtraListScriptEvent(eventTarget, this, eventMask);
 }

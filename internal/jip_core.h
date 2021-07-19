@@ -65,23 +65,26 @@ extern UInt8 *g_numPreloadMods;
 
 #define MSGBOX_ARGS 0, 0, ShowMessageBox_Callback, 0, 0x17, 0, 0, "OK", NULL
 
-extern const char **g_terminalModelPtr;
-extern TESDescription **g_currentDescription;
-extern String *g_currentDescriptionText;
-extern NiTPointerMap<TESForm> **g_allFormsMap;
-extern NiTStringPointerMap<TESForm> **g_formEditorIDs;
-extern BSTCaseInsensitiveStringMap<void*> **g_idleAnimsDirectoryMap;
-extern ActorValueInfo **g_actorValueInfoArray;
-extern BSSimpleArray<TESRecipeCategory> *g_recipeMenuCategories;
-extern TESObjectWEAP **g_playerWeapon;
-extern tList<VATSTargetInfo> *g_VATSTargetList;
-extern NiNode **g_objectLODRoot;
-extern bool *g_gamePadRumble;
-extern UInt32 *g_tickCount;
-extern tList<Archive> **g_archivesList;
-extern LightCS *g_sceneLightsLock;
-extern tList<ListBox<int>> *g_activeListBoxes;
-extern tList<GradualSetFloat> *g_queuedGradualSetFloat;
+struct GameGlobals
+{
+	__forceinline static const char **TerminalModelPtr() {return (const char**)0x11A0BB0;}
+	__forceinline static TESDescription **CurrentDescription() {return (TESDescription**)0x11C5490;}
+	__forceinline static String *CurrentDescriptionText() {return (String*)0x11C5498;}
+	__forceinline static NiTPointerMap<TESForm> *AllFormsMap() {return *(NiTPointerMap<TESForm>**)0x11C54C0;}
+	__forceinline static NiTStringPointerMap<TESForm> *EditorIDsMap() {return *(NiTStringPointerMap<TESForm>**)0x11C54C8;}
+	__forceinline static BSTCaseInsensitiveStringMap<void*> *IdleAnimsDirectoryMap() {return *(BSTCaseInsensitiveStringMap<void*>**)0x11CB6A0;}
+	__forceinline static BSSimpleArray<TESRecipeCategory> *RecipeMenuCategories() {return (BSSimpleArray<TESRecipeCategory>*)0x11D8F08;}
+	__forceinline static TESObjectWEAP *PlayerWeapon() {return *(TESObjectWEAP**)0x11D98D4;}
+	__forceinline static tList<VATSTargetInfo> *VATSTargetList() {return (tList<VATSTargetInfo>*)0x11DB150;}
+	__forceinline static NiNode *ObjectLODRoot() {return *(NiNode**)0x11DEA18;}
+	__forceinline static bool *GamePadRumble() {return (bool*)0x11E0854;}
+	__forceinline static UInt32 TickCount() {return *(UInt32*)0x11F63A8;}
+	__forceinline static tList<Archive> *ArchivesList() {return *(tList<Archive>**)0x11F8160;}
+	__forceinline static LightCS *SceneLightsLock() {return (LightCS*)0x11F9EA0;}
+	__forceinline static tList<ListBox<int>> *ActiveListBoxes() {return (tList<ListBox<int>>*)0x11D8B54;}
+	__forceinline static tList<GradualSetFloat> *QueuedGradualSetFloat() {return (tList<GradualSetFloat>*)0x11F3348;}
+	__forceinline static RadioEntry *PipboyRadio() {return *(RadioEntry**)0x11DD42C;}
+};
 
 extern SpellItem *g_pipBoyLight;
 extern void *g_scrapHeapQueue;
@@ -97,43 +100,74 @@ extern double *g_condDmgPenalty;
 extern double s_condDmgPenalty;
 extern UInt32 s_mainThreadID, s_initialTickCount;
 
-typedef TESObjectREFR* (*_PlaceAtMe)(TESObjectREFR *refr, TESForm *form, UInt32 count, UInt32 distance, UInt32 direction, float health);
-extern const _PlaceAtMe PlaceAtMe;
-typedef NiNode* (*_GetCdBodyNode)(hkCdBody *cdBody);
-extern const _GetCdBodyNode GetCdBodyNode;
-typedef TESObjectREFR* (*_GetCdBodyRef)(hkCdBody *cdBody);
-extern const _GetCdBodyRef GetCdBodyRef;
-typedef void (*_RefreshItemListBox)(void);
-extern const _RefreshItemListBox RefreshItemListBox;
-typedef void (__thiscall *_DoRefreshContainerMenu)(ContainerMenu *menu, TESForm *itemForm);
-extern const _DoRefreshContainerMenu DoRefreshContainerMenu;
-typedef void (*_ApplyPerkModifiers)(UInt32 entryPointID, TESObjectREFR *perkOwner, void *arg3, ...);
-extern const _ApplyPerkModifiers ApplyPerkModifiers;
-typedef float (*_ApplyAmmoEffects)(UInt32 effType, tList<TESAmmoEffect> *effList, float baseValue);
-extern const _ApplyAmmoEffects ApplyAmmoEffects;
-typedef TESTopicInfo* (*_GetTopicInfo)(TESTopic *topic, bool *result, Actor *actor, Actor *target, bool arg5, UInt32 *arg6, UInt32 *arg7);
-extern const _GetTopicInfo GetTopicInfo;
-typedef ImageSpaceModifierInstanceForm* (*_ApplyIMOD)(TESImageSpaceModifier *imod, float percent, NiObject *obj10);
-extern const _ApplyIMOD ApplyIMOD;
-typedef void* (*_PurgeTerminalModel)(void);
-extern const _PurgeTerminalModel PurgeTerminalModel;
-typedef TileMenu* (*_ShowQuantityMenu)(int maxCount, void (*callback)(int), int defaultCount);
-extern const _ShowQuantityMenu ShowQuantityMenu;
-typedef void* (*_NiAllocator)(UInt32 size);
-extern const _NiAllocator NiAllocator;
-typedef void* (*_NiDeallocator)(void *blockPtr, UInt32 size);
-extern const _NiDeallocator NiDeallocator;
-typedef NiNode* (__thiscall *_LoadModel)(ModelLoader *modelLoader, const char *nifPath, UInt32 baseClass, bool flag3Cbit0, UInt32 unused, bool flag3Cbit5, bool dontIncCounter);
-extern const _LoadModel LoadModel;
-typedef KFModel* (__thiscall *_LoadKFModel)(ModelLoader *modelLoader, const char *kfPath);
-extern const _LoadKFModel LoadKFModel;
-typedef FontInfo* (__thiscall *_InitFontInfo)(FontInfo *fontInfo, UInt32 fontID, const char *filePath, bool arg3);
-extern const _InitFontInfo InitFontInfo;
+__forceinline TESObjectREFR *PlaceAtMe(TESObjectREFR *refr, TESForm *form, UInt32 count, UInt32 distance, UInt32 direction, float health)
+{
+	return CdeclCall<TESObjectREFR*>(0x5C4B30, refr, form, count, distance, direction, health);
+}
+__forceinline NiNode *GetCdBodyNode(hkCdBody *cdBody)
+{
+	return CdeclCall<NiNode*>(0xC7FA90, cdBody);
+}
+__forceinline TESObjectREFR *GetCdBodyRef(hkCdBody *cdBody)
+{
+	return CdeclCall<TESObjectREFR*>(0x62B4E0, cdBody);
+}
+__forceinline void RefreshItemListBox()
+{
+	CdeclCall(0x704AF0);
+}
+__forceinline float ApplyAmmoEffects(UInt32 effType, tList<TESAmmoEffect> *effList, float baseValue)
+{
+	return CdeclCall<float>(0x59A030, effType, effList, baseValue);
+}
+__forceinline void ApplyPerkModifiers(UInt32 entryPointID, TESObjectREFR *perkOwner, float *baseValue)
+{
+	CdeclCall(0x5E58F0, entryPointID, perkOwner, baseValue);
+}
+__forceinline void ApplyPerkModifiers(UInt32 entryPointID, TESObjectREFR *perkOwner, TESForm *filter1, float *baseValue)
+{
+	CdeclCall(0x5E58F0, entryPointID, perkOwner, filter1, baseValue);
+}
+__forceinline void ApplyPerkModifiers(UInt32 entryPointID, TESObjectREFR *perkOwner, TESForm *filter1, TESForm *filter2, float *baseValue)
+{
+	CdeclCall(0x5E58F0, entryPointID, perkOwner, filter1, filter2, baseValue);
+}
+__forceinline TESTopicInfo *GetTopicInfo(TESTopic *topic, bool *result, Actor *actor, Actor *target)
+{
+	return CdeclCall<TESTopicInfo*>(0x61A7D0, topic, result, actor, target, true, NULL, NULL);
+}
+__forceinline ImageSpaceModifierInstanceForm *ApplyIMOD(TESImageSpaceModifier *imod, float percent, NiObject *obj10)
+{
+	return CdeclCall<ImageSpaceModifierInstanceForm*>(0x5299A0, imod, percent, obj10);
+}
+__forceinline void *PurgeTerminalModel()
+{
+	return CdeclCall<void*>(0x7FFE00);
+}
+__forceinline TileMenu *ShowQuantityMenu(int maxCount, void (*callback)(int), int defaultCount)
+{
+	return CdeclCall<TileMenu*>(0x7ABA00, maxCount, callback, defaultCount);
+}
+__forceinline void *NiAllocator(UInt32 size)
+{
+	return CdeclCall<void*>(0xAA13E0, size);
+}
+__forceinline void *NiDeallocator(void *blockPtr, UInt32 size)
+{
+	return CdeclCall<void*>(0xAA1460, blockPtr, size);
+}
 
 extern Cmd_Execute SayTo, KillActor, AddNote, AttachAshPile, MoveToFade, GetRefs;
 
 enum
 {
+	kChangedFlag_AuxVars =		1 << 0,
+	kChangedFlag_RefMaps =		1 << 1,
+	kChangedFlag_LinkedRefs =	1 << 2,
+	kChangedFlag_NPCPerks =		1 << 3,
+
+	kChangedFlag_All =			kChangedFlag_AuxVars | kChangedFlag_RefMaps | kChangedFlag_LinkedRefs | kChangedFlag_NPCPerks,
+
 	kSerializedFlag_NoHardcoreTracking =	1 << 0,
 };
 

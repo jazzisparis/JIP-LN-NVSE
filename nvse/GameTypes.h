@@ -27,15 +27,6 @@ enum
 	eListCount =	-3,
 };
 
-typedef void* (*_FormHeap_Allocate)(UInt32 size);
-extern const _FormHeap_Allocate FormHeap_Allocate;
-
-typedef void (*_FormHeap_Free)(void *ptr);
-extern const _FormHeap_Free FormHeap_Free;
-
-typedef TESForm* (*_LookupFormByID)(UInt32 id);
-extern const _LookupFormByID LookupFormByID;
-
 template <typename T_Data> struct ListNode
 {
 	T_Data		*data;
@@ -459,18 +450,21 @@ public:
 		return replaced;
 	}
 
-	UInt32 Replace(Item *item, Item *replace)
+	SInt32 Replace(Item *item, Item *replace)
 	{
-		UInt32 replaced = 0;
+		SInt32 index = 0;
 		Node *curr = Head();
 		do
 		{
-			if (curr->data != item) continue;
-			curr->data = replace;
-			replaced++;
+			if (curr->data == item)
+			{
+				curr->data = replace;
+				return index;
+			}
+			index++;
 		}
 		while (curr = curr->next);
-		return replaced;
+		return -1;
 	}
 
 	template <class Op>

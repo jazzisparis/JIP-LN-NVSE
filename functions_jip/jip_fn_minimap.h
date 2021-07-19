@@ -2311,7 +2311,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				if (fullColour)
 				{
 					restore = true;
-					g_sceneLightsLock->Enter();
+					GameGlobals::SceneLightsLock()->Enter();
 					for (auto lgtNode = g_shadowSceneNode->lgtList0B4.Head(); lgtNode; lgtNode = lgtNode->next)
 					{
 						if ((pntLight = (NiPointLight*)lgtNode->data->light) && (pntLight->effectType == 2))
@@ -2320,7 +2320,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 							pntLight->radius = 0;
 						}
 					}
-					g_sceneLightsLock->Leave();
+					GameGlobals::SceneLightsLock()->Leave();
 					memcpy(g_directionalLightColor, kDirectionalLightValues, sizeof(kDirectionalLightValues));
 					memcpy(&g_shadowFogProperty->color, kFogPropertyValues, sizeof(kFogPropertyValues));
 					g_shadowFogProperty->power = 1;
@@ -2477,11 +2477,11 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		{
 			if (parentWorld)
 			{
-				g_sceneLightsLock->Enter();
+				GameGlobals::SceneLightsLock()->Enter();
 				for (auto lgtNode = g_shadowSceneNode->lgtList0B4.Head(); lgtNode; lgtNode = lgtNode->next)
 					if ((pntLight = (NiPointLight*)lgtNode->data->light) && (pntLight->effectType == 2))
 						pntLight->radius = pntLight->radiusE4;
-				g_sceneLightsLock->Leave();
+				GameGlobals::SceneLightsLock()->Leave();
 			}
 			else *g_lightingPasses = lightingPasses;
 			g_particleSysMngr->m_flags &= ~1;

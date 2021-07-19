@@ -1,11 +1,5 @@
 #include "nvse/GameSettings.h"
 
-GameSettingCollection **g_GameSettingCollection = (GameSettingCollection**)0x11C8048;
-IniSettingCollection **g_INISettingCollection = (IniSettingCollection**)0x11F96A0;
-IniSettingCollection **g_INIPrefCollection = (IniSettingCollection**)0x11F35A0;
-IniSettingCollection **g_INIBlendSettingCollection = (IniSettingCollection**)0x11CC694;
-IniSettingCollection **g_INIRendererSettingCollection = (IniSettingCollection**)0x11F35A4;
-
 UInt32 Setting::GetType()
 {
 	if (name)
@@ -111,15 +105,15 @@ __declspec(naked) bool GameSettingCollection::GetGameSetting(char *settingName, 
 
 GameSettingCollection *GameSettingCollection::GetSingleton()
 {
-	return *g_GameSettingCollection;
+	return *(GameSettingCollection**)0x11C8048;
 }
 
 IniSettingCollection *IniSettingCollection::GetIniSettings()
 {
-	return *g_INISettingCollection;
+	return *(IniSettingCollection**)0x11F96A0;
 }
 
 IniSettingCollection *IniSettingCollection::GetIniPrefs()
 {
-	return *g_INIPrefCollection;
+	return *(IniSettingCollection**)0x11F35A0;
 }

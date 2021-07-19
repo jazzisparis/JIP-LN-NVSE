@@ -8,33 +8,10 @@ struct ChunkAndFormType {
 	const char	* formName;	// ie 'NPC_'
 };
 
-static const UInt32 _ModInfo_GetNextChunk = 0x004726B0; // args: none retn: UInt32 subrecordType (third call in TESObjectARMO_LoadForm)
-static const UInt32 _ModInfo_GetChunkData = 0x00472890;	// args: void* buf, UInt32 bufSize retn: bool readSucceeded (fifth call in TESObjectARMO_LoadForm)
-static const UInt32 _ModInfo_Read32		  =	0x004727F0;	// args: void* buf retn: void (find 'LPER', then next call, still in TESObjectARMO_LoadForm)
-static const UInt32 _ModInfo_HasMoreSubrecords = 0x004726F0;	// Last call before "looping" to GetNextChunk in TESObjectARMO_LoadForm.
-static const UInt32 _ModInfo_InitializeForm = 0x00472F60;	// args: TESForm* retn: void (second call in TESObjectARMO_LoadForm)
-
-// addresses of static ModInfo members holding type info about currently loading form
-static UInt32* s_ModInfo_CurrentChunkTypeCode = (UInt32*)0x011C54F4;
-static UInt32* s_ModInfo_CurrentFormTypeEnum = (UInt32*)0x011C54F0;
-// in last call (SetStaticFieldsAndGetFormTypeEnum) of first call (ModInfo__GetFormInfoTypeID) from _ModInfo_InitializeForm
-		//		s_ModInfo_CurrentChunkTypeCode is first cmp
-		//		s_ModInfo_CurrentChunkTypeEnum is next mov
-static const ChunkAndFormType* s_ModInfo_ChunkAndFormTypes = (const ChunkAndFormType*)0x01187008;	// Array used in the loop in SetStaticFieldsAndGetFormTypeEnum, starts under dd offset aNone
-
-static UInt8** g_CreatedObjectData = (UInt8**)0x011C54CC;	// pointer to FormInfo + form data, filled out by TESForm::SaveForm()
-static UInt32* g_CreatedObjectSize = (UInt32*)0x011C54D0;
-		// in first call (Form_startSaveForm) in TESObjectARMO__SaveForm:
-		//		g_CreatedObjectSize is set to 18h
-		//		g_CreatedObjectData is set to the eax result of the next call
-
 // 10
 class BoundObjectListHead
 {
 public:
-	BoundObjectListHead();
-	~BoundObjectListHead();
-
 	UInt32			boundObjectCount;	// 0
 	TESBoundObject	* first;			// 4
 	TESBoundObject	* last;				// 8
@@ -56,9 +33,6 @@ struct ChunkHeader
 
 struct ModInfo		// referred to by game as TESFile
 {
-	ModInfo();
-	~ModInfo();
-
 	// 18 info about currently loading form
 	struct FormInfo  // Record Header in FNVEdit
 	{
@@ -149,14 +123,12 @@ struct ModInfo		// referred to by game as TESFile
 
 	// In Editor: 430 = ONAM array and 434 ONAM array count. Allocated at 0438
 	
-	bool IsLoaded() const { return true; }
-
 	/*** used by TESForm::LoadForm() among others ***/
 	MEMBER_FN_PREFIX(ModInfo);
-	DEFINE_MEMBER_FN(GetNextChunk, UInt32, _ModInfo_GetNextChunk);	// returns chunk type
-	DEFINE_MEMBER_FN(GetChunkData, bool, _ModInfo_GetChunkData, UInt8* buf, UInt32 bufSize); // max size, not num to read
-	DEFINE_MEMBER_FN(Read32, void, _ModInfo_Read32, void* out);
-	DEFINE_MEMBER_FN(HasMoreSubrecords, bool, _ModInfo_HasMoreSubrecords);
+	DEFINE_MEMBER_FN(GetNextChunk, UInt32, 0x004726B0);	// returns chunk type
+	DEFINE_MEMBER_FN(GetChunkData, bool, 0x00472890, UInt8* buf, UInt32 bufSize); // max size, not num to read
+	DEFINE_MEMBER_FN(Read32, void, 0x004727F0, void* out);
+	DEFINE_MEMBER_FN(HasMoreSubrecords, bool, 0x004726F0);
 };
 STATIC_ASSERT(sizeof(WIN32_FIND_DATA) == 0x140);
 STATIC_ASSERT(sizeof(ModInfo) == 0x42C);
@@ -173,9 +145,6 @@ STATIC_ASSERT(sizeof(ModList) == 0x408);
 class DataHandler
 {
 public:
-	DataHandler();
-	~DataHandler();
-
 	UInt32							unk00;					// 000
 	BoundObjectListHead				*boundObjectList;		// 004
 	tList<TESPackage>				packageList;			// 008
@@ -260,17 +229,15 @@ public:
 	UInt32							unk634;					// 634
 	UInt32							unk638;					// 638
 
-	static DataHandler* Get();
+	__forceinline static DataHandler *Get() {return *(DataHandler**)0x11C3F2C;}
 	const ModInfo ** GetActiveModList();		// returns array of modEntry* corresponding to loaded mods sorted by mod index
 	const ModInfo* LookupModByName(const char* modName);
 	UInt8 GetModIndex(const char* modName);
-	UInt8 GetActiveModCount() const;
+	UInt8 GetActiveModCount() const {return modList.modInfoList.Count();}
 	const char* GetNthModName(UInt32 modIndex);
 
 	MEMBER_FN_PREFIX(DataHandler);
 	DEFINE_MEMBER_FN(DoAddForm, UInt32, 0x004603B0, TESForm * pForm);	// stupid name is because AddForm is redefined in windows header files
-
-	TESQuest* GetQuestByName(const char* questName);
 };
 STATIC_ASSERT(sizeof(DataHandler) == 0x63C);
 
@@ -716,7 +683,6 @@ struct RadioEntry
 	void			*ptr04;
 	UInt32			unk08[7];
 };
-extern RadioEntry **g_pipboyRadio;
 
 typedef ActiveEffect *(*ActiveEffectCreate)(MagicCaster *magCaster, MagicItem *magItem, EffectItem *effItem);
 
@@ -726,8 +692,9 @@ struct EffectArchTypeEntry
 	const char				*name;
 	ActiveEffectCreate		callback;
 	UInt32					unk08[2];
+
+	__forceinline static EffectArchTypeEntry *Array() {return (EffectArchTypeEntry*)0x1183320;}	//	Array size = 0x25
 };
-extern EffectArchTypeEntry *g_effectArchTypeArray;
 
 // 10
 struct EntryPointConditionInfo
@@ -738,8 +705,9 @@ struct EntryPointConditionInfo
 	const char		**runOn;		// 08
 	UInt8			byte0C;			// 0C
 	UInt8			pad0D[3];		// 0D
+
+	__forceinline static EntryPointConditionInfo *Array() {return (EntryPointConditionInfo*)0x1196EE0;}	//	Array size = 0x49
 };
-extern EntryPointConditionInfo *g_entryPointConditionInfo;
 
 // 24
 struct AnimGroupInfo
@@ -751,19 +719,22 @@ struct AnimGroupInfo
 	UInt32		unk0C;			// 0C
 	UInt32		unk10;			// 10
 	UInt32		unk14[4];		// 14
+
+	__forceinline static AnimGroupInfo *Array() {return (AnimGroupInfo*)0x11977D8;}	//	Array size = 0xF5
 };
-extern AnimGroupInfo *g_animGroupInfoArray;
 
 struct PCMiscStat
 {
 	const char	*name;
 	UInt32		level;
+
+	__forceinline static PCMiscStat **Array() {return (PCMiscStat**)0x11C6D50;}	//	Array size = 0x2B
 };
-extern PCMiscStat **g_miscStatData;
 
 // 08
 struct TypeSignature
 {
 	char	signature[8];
+
+	__forceinline static TypeSignature *Array() {return (TypeSignature*)0x101C2AC;}	//	Array size = 0x79; order is reversed.
 };
-extern TypeSignature *g_typeSignatures;

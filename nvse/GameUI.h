@@ -1,10 +1,8 @@
 #pragma once
 
-extern bool *g_menuVisibility;
+#define MENU_VISIBILITY ((bool*)0x11F308F)
 extern TileMenu **g_tileMenuArray;
 extern UnorderedMap<const char*, UInt32> s_menuNameToID;
-
-NiRefObject** __stdcall NiReleaseAddRef(void *toRelease, NiRefObject *toAdd);
 
 // 584
 class InterfaceManager
@@ -269,24 +267,24 @@ enum MenuSpecialKeyboardInputCode
 class Menu
 {
 public:
-	virtual void	Destructor(bool doFree);
-	virtual void	SetTile(UInt32 idx, Tile *value);
-	virtual void	HandleLeftClickPress(UInt32 tileID, Tile *activeTile);	// called when the mouse has moved and left click is pressed
-	virtual void	HandleClick(SInt32 tileID, Tile *clickedTile);
-	virtual void	HandleMouseover(UInt32 arg0, Tile *activeTile);	//    Called on mouseover, activeTile is moused-over Tile
-	virtual void	HandleMouseoverTileAlt(UInt32 arg0, Tile *tile);
-	virtual void	Unk_06(UInt32 arg0, UInt32 arg1, UInt32 arg2);	// unused?
-	virtual void	Unk_07(UInt32 arg0, UInt32 arg1, UInt32 arg2);	// unused?
-	virtual void	HandleActiveMenuClick(UInt32 tileID, Tile *activeTile); // StartMenu, RaceSexMenu, VATSMenu, BookMenu
-	virtual void	Unk_09(UInt32 arg0, UInt32 arg1); // unused?
-	virtual void	HandleMousewheel(UInt32 tileID, Tile *tile);
-	virtual void	Update();	// Called every frame while the menu is active
-	virtual bool	HandleKeyboardInput(UInt32 inputChar);	// Return false for handling keyboard shortcuts
-	virtual UInt32	GetID();
-	virtual bool	HandleSpecialKeyInput(MenuSpecialKeyboardInputCode code, UInt32 arg1);
-	virtual bool	HandleControllerInput(int arg0, Tile *tile);
-	virtual void	Unk_10();	// unused?
-	virtual void	HandleControllerConnectOrDisconnect(bool isControllerConnected);
+	/*000*/virtual void	Destructor(bool doFree);
+	/*004*/virtual void	SetTile(UInt32 idx, Tile *value);
+	/*008*/virtual void	HandleLeftClickPress(UInt32 tileID, Tile *activeTile);	// called when the mouse has moved and left click is pressed
+	/*00C*/virtual void	HandleClick(SInt32 tileID, Tile *clickedTile);
+	/*010*/virtual void	HandleMouseover(UInt32 arg0, Tile *activeTile);	//    Called on mouseover, activeTile is moused-over Tile
+	/*014*/virtual void	HandleMouseoverTileAlt(UInt32 arg0, Tile *tile);
+	/*018*/virtual void	Unk_06(UInt32 arg0, UInt32 arg1, UInt32 arg2);	// unused?
+	/*01C*/virtual void	Unk_07(UInt32 arg0, UInt32 arg1, UInt32 arg2);	// unused?
+	/*020*/virtual void	HandleActiveMenuClick(UInt32 tileID, Tile *activeTile); // StartMenu, RaceSexMenu, VATSMenu, BookMenu
+	/*024*/virtual void	Unk_09(UInt32 arg0, UInt32 arg1); // unused?
+	/*028*/virtual void	HandleMousewheel(UInt32 tileID, Tile *tile);
+	/*02C*/virtual void	Update();	// Called every frame while the menu is active
+	/*030*/virtual bool	HandleKeyboardInput(UInt32 inputChar);	// Return false for handling keyboard shortcuts
+	/*034*/virtual UInt32	GetID();
+	/*038*/virtual bool	HandleSpecialKeyInput(MenuSpecialKeyboardInputCode code, UInt32 arg1);
+	/*03C*/virtual bool	HandleControllerInput(int arg0, Tile *tile);
+	/*040*/virtual void	Unk_10();	// unused?
+	/*044*/virtual void	HandleControllerConnectOrDisconnect(bool isControllerConnected);
 
 	// 14
 	struct ParsedXMLTag
@@ -464,6 +462,7 @@ public:
 	tList<ContChangesEntry>	changedItemsList;	// 11C
 
 	__forceinline static InventoryMenu *Get() {return *(InventoryMenu**)0x11D9EA4;}
+	__forceinline static ContChangesEntry *Selection() {return *(ContChangesEntry**)0x11D9EA8;}
 };
 STATIC_ASSERT(sizeof(InventoryMenu) == 0x124);
 
@@ -876,6 +875,11 @@ public:
 	UInt32				unk0FC[4];			// 0FC
 
 	__forceinline static ContainerMenu *Get() {return *(ContainerMenu**)0x11D93F8;}
+	__forceinline static ContChangesEntry *Selection() {return *(ContChangesEntry**)0x11D93FC;}
+	__forceinline void Refresh(TESForm *itemForm)
+	{
+		ThisCall(0x75C280, this, itemForm);
+	}
 };
 STATIC_ASSERT(sizeof(ContainerMenu) == 0x10C);
 
@@ -1099,6 +1103,15 @@ public:
 class MapMenu : public Menu				// 1023
 {
 public:
+	enum MapMenuTabs
+	{
+		kTab_LocalMap = 0x20,
+		kTab_WorldMap,
+		kTab_Quests,
+		kTab_Misc,
+		kTab_Radio
+	};
+
 	TileText						*tile028;		// 028	MM_MainRect\MM_HeadlineRect\MM_Headline_LocationInfo
 	TileText						*tile02C;		// 02C	MM_MainRect\MM_HeadlineRect\MM_Headline_TimeDateInfo
 	TileImage						*tile030;		// 030	MM_MainRect\MM_LocalMap_ClipWindow\MM_LocalMap_ParentImage
@@ -1219,6 +1232,7 @@ public:
 	MenuItemEntryList		repairItems;	// 5C
 
 	__forceinline static RepairMenu *Get() {return *(RepairMenu**)0x11DA75C;}
+	__forceinline static ContChangesEntry *Target() {return *(ContChangesEntry**)0x11DA760;}
 };
 
 // 1A4
@@ -1320,6 +1334,7 @@ public:
 	UInt32				unk11C;			// 11C
 
 	__forceinline static BarterMenu *Get() {return *(BarterMenu**)0x11D8FA4;}
+	__forceinline static ContChangesEntry *Selection() {return *(ContChangesEntry**)0x11D8FA8;}
 };
 
 // 1DC (from Stewie)
@@ -1484,6 +1499,7 @@ public:
 	UInt8				pad141[3];		// 141
 
 	__forceinline static VATSMenu *Get() {return *(VATSMenu**)0x11DB0D4;}
+	__forceinline static TESObjectREFR *Target() {return *(TESObjectREFR**)0x11F21CC;}
 };
 STATIC_ASSERT(sizeof(VATSMenu) == 0x144);
 
@@ -1510,10 +1526,10 @@ struct VATSCameraData
 	UInt32							unk3C;			// 3C
 	UInt32							unk40;			// 40
 	UInt32							unk44;			// 44
+
+	__forceinline static VATSCameraData *Get() {return (VATSCameraData*)0x11F2250;}
 };
 STATIC_ASSERT(sizeof(VATSCameraData) == 0x48);
-
-extern VATSCameraData *g_VATSCameraData;
 
 // FC
 class ComputersMenu : public Menu		// 1057
@@ -1578,6 +1594,7 @@ public:
 	MenuItemEntryList	itemModList;	// 60
 
 	__forceinline static ItemModMenu *Get() {return *(ItemModMenu**)0x11D9F54;}
+	__forceinline static ContChangesEntry *Target() {return *(ContChangesEntry**)0x11D9F58;}
 };
 STATIC_ASSERT(sizeof(ItemModMenu) == 0x90);
 
@@ -1640,6 +1657,7 @@ public:
 	UInt32						unk100;			// 100
 
 	__forceinline static RecipeMenu *Get() {return *(RecipeMenu**)0x11D8E90;}
+	__forceinline static TESRecipe *Selection() {return *(TESRecipe**)0x11D8E94;}
 };
 
 // E88
@@ -1677,10 +1695,6 @@ public:
 };
 
 extern HUDMainMenu *g_HUDMainMenu;
-
-extern ContChangesEntry **g_barterMenuSelection, **g_containerMenuSelection, **g_inventoryMenuSelection, **g_modMenuTarget, **g_repairMenuTarget;
-extern TESObjectREFR **g_VATSTargetRef;
-extern TESRecipe **g_recipeMenuSelection;
 
 // D8
 class FORenderedMenu
@@ -1790,6 +1804,11 @@ struct FontInfo
 	BufferData					*bufferData;// 38
 	UInt32						unk3C[2];	// 3C
 	BSSimpleArray<ButtonIcon>	arr44;		// 44
+
+	__forceinline FontInfo *Init(UInt32 fontID, const char *filePath, bool arg3)
+	{
+		return ThisCall<FontInfo*>(0xA12020, this, fontID, filePath, arg3);
+	}
 };
 STATIC_ASSERT(sizeof(FontInfo) == 0x54);
 

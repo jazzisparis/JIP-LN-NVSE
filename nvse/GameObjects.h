@@ -8,74 +8,73 @@ class TESObjectREFR : public TESForm
 public:
 	MEMBER_FN_PREFIX(TESObjectREFR);
 
-	virtual void		Unk_4E(void);	// GetStartingPosition(Position, Rotation, WorldOrCell)
-	virtual void		SayTopic(Sound *sound, TESTopic *topic, TESObjectREFR *target, UInt8 arg4, UInt8 arg5, UInt8 arg6, UInt8 arg7, UInt8 arg8);
-	virtual void		Unk_50(void);
-	virtual void		Unk_51(void);
-	virtual bool		CastShadows();
-	virtual void		Unk_53(void);
-	virtual void		Unk_54(void);
-	virtual void		Unk_55(void);
-	virtual void		Unk_56(void);
-	virtual bool		IsObstacle();
-	virtual bool		BaseIsQuestItem();
-	virtual void		Unk_59(void);
-	virtual void		Unk_5A(void);
-	virtual void		Unk_5B(void);
-	virtual void		Unk_5C(void);
-	virtual void		Unk_5D(void);
-	virtual void		RefreshDynamicLight();
-	virtual TESObjectREFR	*RemoveItem(TESForm *toRemove, BaseExtraList *extraList, UInt32 quantity, bool keepOwner, bool drop, TESObjectREFR *destRef,
-		UInt32 unk6, UInt32 unk7, bool unk8, bool unk9);
-	virtual void		Unk_60(void);
-	virtual bool		LoadEquipedItem3D(TESForm *item, UInt32 count, ExtraDataList *xData, bool lockEquip);
-	virtual void		Unk_62(void);
-	virtual void		Unk_63(void);
-	virtual void		AddItem(TESForm *item, ExtraDataList *xDataList, UInt32 quantity);
-	virtual void		Unk_65(void);
-	virtual void		Unk_66(void);
-	virtual void		Unk_67(void);					// Actor: GetMagicEffectList
-	virtual bool		GetIsChildSize(bool checkHeight);		// 068 Actor: GetIsChildSize
-	virtual UInt32		GetActorUnk0148();			// result can be interchanged with baseForm, so TESForm* ?
-	virtual void		SetActorUnk0148(UInt32 arg0);
-	virtual void		Unk_6B(void);
-	virtual void		Unk_6C(void);	// REFR: GetBSFaceGenNiNodeSkinned
-	virtual void		Unk_6D(void);	// REFR: calls 006C
-	virtual void		Unk_6E(void);	// MobileActor: calls 006D then NiNode::Func0040
-	virtual void		Unk_6F(void);
-	virtual bool		Unload3D();
-	virtual void		AnimateNiNode();
-	virtual NiNode		*GenerateNiNode(bool arg1);
-	virtual void		Set3D(NiNode* niNode, bool unloadArt);
-	virtual NiNode		*GetNiNode();
-	virtual void		Unk_75(void);
-	virtual void		Unk_76(void);
-	virtual void		Unk_77(void);
-	virtual void		Unk_78(void);
-	virtual AnimData	*GetAnimData();			// 0079
-	virtual ValidBip01Names * GetValidBip01Names(void);	// 007A	Character only
-	virtual ValidBip01Names * CallGetValidBip01Names(void);
-	virtual void		SetValidBip01Names(ValidBip01Names *validBip01Names);
-	virtual NiVector3	*GetPos();
-	virtual void		Unk_7E(UInt32 arg0);
-	virtual void		Unk_7F(void);
-	virtual void		Unk_80(UInt32 arg0);
-	virtual void		Unk_81(UInt32 arg0);
-	virtual void		Unk_82(void);
-	virtual NiNode		*GetProjectileNode();
-	virtual void		Unk_84(UInt32 arg0);
-	virtual UInt32		Unk_85(void);			
-	virtual bool		IsCharacter();			// return false for Actor and Creature, true for character and PlayerCharacter
-	virtual bool		IsCreature();
-	virtual bool		IsExplosion();
-	virtual bool		IsProjectile();
-	virtual void		SetParentCell(TESObjectCELL *cell);			// SetParentCell (Interior only ?)
-	virtual bool		HasHealth(bool arg0);	// HasHealth (baseForm health > 0 or Flags bit23 set)
-	virtual bool		GetHasKnockedState();
-	virtual bool		GetIsParalyzed();
-	virtual void		Unk_8E(void);
-	virtual void		Unk_8F(void);
-	virtual void		Unk_90(void);
+	/*138*/virtual void		Unk_4E(void);	// GetStartingPosition(Position, Rotation, WorldOrCell)
+	/*13C*/virtual void		SayTopic(Sound *sound, TESTopic *topic, TESObjectREFR *target, UInt8 arg4, UInt8 arg5, UInt8 arg6, UInt8 arg7, UInt8 arg8);
+	/*140*/virtual void		Unk_50(void);
+	/*144*/virtual void		Unk_51(void);
+	/*148*/virtual bool		CastShadows();
+	/*14C*/virtual void		Unk_53(void);
+	/*150*/virtual void		Unk_54(void);
+	/*154*/virtual void		Unk_55(void);
+	/*158*/virtual void		Unk_56(void);
+	/*15C*/virtual bool		IsObstacle();
+	/*160*/virtual bool		BaseIsQuestItem();
+	/*164*/virtual void		Unk_59(void);
+	/*168*/virtual void		Unk_5A(void);
+	/*16C*/virtual void		Unk_5B(void);
+	/*170*/virtual void		Unk_5C(void);
+	/*174*/virtual void		Unk_5D(void);
+	/*178*/virtual void		RefreshDynamicLight();
+	/*17C*/virtual TESObjectREFR	*RemoveItem(TESForm *toRemove, BaseExtraList *extraList, UInt32 quantity, bool keepOwner, bool drop, TESObjectREFR *destRef, UInt32 unk6, UInt32 unk7, bool unk8, bool unk9);
+	/*180*/virtual void		Unk_60(void);
+	/*184*/virtual bool		LoadEquipedItem3D(TESForm *item, UInt32 count, ExtraDataList *xData, bool lockEquip);
+	/*188*/virtual void		Unk_62(void);
+	/*18C*/virtual void		Unk_63(void);
+	/*190*/virtual void		AddItem(TESForm *item, ExtraDataList *xDataList, UInt32 quantity);
+	/*194*/virtual void		Unk_65(void);
+	/*198*/virtual void		Unk_66(void);
+	/*19C*/virtual void		Unk_67(void);					// Actor: GetMagicEffectList
+	/*1A0*/virtual bool		GetIsChildSize(bool checkHeight);		// 068 Actor: GetIsChildSize
+	/*1A4*/virtual UInt32		GetActorUnk0148();			// result can be interchanged with baseForm, so TESForm* ?
+	/*1A8*/virtual void		SetActorUnk0148(UInt32 arg0);
+	/*1AC*/virtual void		Unk_6B(void);
+	/*1B0*/virtual void		Unk_6C(void);	// REFR: GetBSFaceGenNiNodeSkinned
+	/*1B4*/virtual void		Unk_6D(void);	// REFR: calls 006C
+	/*1B8*/virtual void		Unk_6E(void);	// MobileActor: calls 006D then NiNode::Func0040
+	/*1BC*/virtual void		Unk_6F(void);
+	/*1C0*/virtual bool		Unload3D();
+	/*1C4*/virtual void		AnimateNiNode();
+	/*1C8*/virtual NiNode		*GenerateNiNode(bool arg1);
+	/*1CC*/virtual void		Set3D(NiNode* niNode, bool unloadArt);
+	/*1D0*/virtual NiNode		*GetNiNode();
+	/*1D4*/virtual void		Unk_75(void);
+	/*1D8*/virtual void		Unk_76(void);
+	/*1DC*/virtual void		Unk_77(void);
+	/*1E0*/virtual void		Unk_78(void);
+	/*1E4*/virtual AnimData	*GetAnimData();			// 0079
+	/*1E8*/virtual ValidBip01Names * GetValidBip01Names(void);	// 007A	Character only
+	/*1EC*/virtual ValidBip01Names * CallGetValidBip01Names(void);
+	/*1F0*/virtual void		SetValidBip01Names(ValidBip01Names *validBip01Names);
+	/*1F4*/virtual NiVector3	*GetPos();
+	/*1F8*/virtual void		Unk_7E(UInt32 arg0);
+	/*1FC*/virtual void		Unk_7F(void);
+	/*200*/virtual void		Unk_80(UInt32 arg0);
+	/*204*/virtual void		Unk_81(UInt32 arg0);
+	/*208*/virtual void		Unk_82(void);
+	/*20C*/virtual NiNode		*GetProjectileNode();
+	/*210*/virtual void		Unk_84(UInt32 arg0);
+	/*214*/virtual UInt32		Unk_85(void);			
+	/*218*/virtual bool		IsCharacter();			// return false for Actor and Creature, true for character and PlayerCharacter
+	/*21C*/virtual bool		IsCreature();
+	/*220*/virtual bool		IsExplosion();
+	/*224*/virtual bool		IsProjectile();
+	/*228*/virtual void		SetParentCell(TESObjectCELL *cell);			// SetParentCell (Interior only ?)
+	/*22C*/virtual bool		HasHealth(bool arg0);	// HasHealth (baseForm health > 0 or Flags bit23 set)
+	/*230*/virtual bool		GetHasKnockedState();
+	/*234*/virtual bool		GetIsParalyzed();
+	/*238*/virtual void		Unk_8E(void);
+	/*23C*/virtual void		Unk_8F(void);
+	/*240*/virtual void		Unk_90(void);
 
 	enum {
 		kFlags_Unk00000002			= 0x00000002,
@@ -136,7 +135,7 @@ public:
 
 	void Update3D();
 	TESContainer *GetContainer();
-	bool IsMapMarker();
+	bool IsMapMarker() const {return baseForm->refID == 0x10;}
 
 	TESForm *GetBaseForm();
 	TESForm *GetBaseForm2();
@@ -184,54 +183,54 @@ float __vectorcall GetDistance2D(TESObjectREFR *ref1, TESObjectREFR *ref2);
 class MobileObject : public TESObjectREFR
 {
 public:
-	virtual void		Unk_91(void);
-	virtual void		Unk_92(void);
-	virtual void		Unk_93(void);
-	virtual void		Move(float scale, NiVector3 *vec, int movementFlags);
-	virtual void		Jump();
-	virtual void		Unk_96(void);
-	virtual void		Unk_97(void);
-	virtual void		Unk_98(void);
-	virtual void		Unk_99(void);
-	virtual void		Unk_9A(void);
-	virtual void		Unk_9B(void);
-	virtual void		Unk_9C(void);
-	virtual bool		IsInCombat(bool notSearching);
-	virtual void		Unk_9E(void);
-	virtual void		Unk_9F(void);
-	virtual void		Unk_A0(void);
-	virtual void		Unk_A1(void);
-	virtual void		Unk_A2(void);
-	virtual void		Unk_A3(void);
-	virtual bool		HasStartingWorldOrCell();
-	virtual TESWorldSpace	*GetStartingWorld();
-	virtual TESObjectCELL	*GetStartingCell();
-	virtual NiVector3	*GetStartingPos(NiVector3 *outPos);
-	virtual void		Unk_A8(void);
-	virtual void		Unk_A9(void);
-	virtual void		Unk_AA(void);
-	virtual void		Unk_AB(void);
-	virtual void		Unk_AC(void);
-	virtual void		Unk_AD(void);
-	virtual void		Unk_AE(void);
-	virtual float		AdjustRot(UInt32 arg1);
-	virtual void		Unk_B0(void);
-	virtual void		Unk_B1(void);
-	virtual void		Unk_B2(void);
-	virtual void		Unk_B3(void);
-	virtual void		Unk_B4(void);
-	virtual void		Unk_B5(void);
-	virtual void		Unk_B6(void);
-	virtual void		Unk_B7(void);
-	virtual void		Unk_B8(void);
-	virtual void		Unk_B9(void);
-	virtual void		Unk_BA(void);
-	virtual void		Unk_BB(void);
-	virtual void		Unk_BC(void);
-	virtual void		Unk_BD(void);
-	virtual void		Unk_BE(void);
-	virtual void		Unk_BF(void);
-	virtual void		Unk_C0(void);
+	/*244*/virtual void		Unk_91(void);
+	/*248*/virtual void		Unk_92(void);
+	/*24C*/virtual void		Unk_93(void);
+	/*250*/virtual void		Move(float scale, NiVector3 *vec, int movementFlags);
+	/*254*/virtual void		Jump();
+	/*258*/virtual void		Unk_96(void);
+	/*25C*/virtual void		Unk_97(void);
+	/*260*/virtual void		Unk_98(void);
+	/*264*/virtual void		Unk_99(void);
+	/*268*/virtual void		Unk_9A(void);
+	/*26C*/virtual void		Unk_9B(void);
+	/*270*/virtual void		Unk_9C(void);
+	/*274*/virtual bool		IsInCombat(bool notSearching);
+	/*278*/virtual void		Unk_9E(void);
+	/*27C*/virtual void		Unk_9F(void);
+	/*280*/virtual void		Unk_A0(void);
+	/*284*/virtual void		Unk_A1(void);
+	/*288*/virtual void		Unk_A2(void);
+	/*28C*/virtual void		Unk_A3(void);
+	/*290*/virtual bool		HasStartingWorldOrCell();
+	/*294*/virtual TESWorldSpace	*GetStartingWorld();
+	/*298*/virtual TESObjectCELL	*GetStartingCell();
+	/*29C*/virtual NiVector3	*GetStartingPos(NiVector3 *outPos);
+	/*2A0*/virtual void		Unk_A8(void);
+	/*2A4*/virtual void		Unk_A9(void);
+	/*2A8*/virtual void		Unk_AA(void);
+	/*2AC*/virtual void		Unk_AB(void);
+	/*2B0*/virtual void		Unk_AC(void);
+	/*2B4*/virtual void		Unk_AD(void);
+	/*2B8*/virtual void		Unk_AE(void);
+	/*2BC*/virtual float		AdjustRot(UInt32 arg1);
+	/*2C0*/virtual void		Unk_B0(void);
+	/*2C4*/virtual void		Unk_B1(void);
+	/*2C8*/virtual void		Unk_B2(void);
+	/*2CC*/virtual void		Unk_B3(void);
+	/*2D0*/virtual void		Unk_B4(void);
+	/*2D4*/virtual void		Unk_B5(void);
+	/*2D8*/virtual void		Unk_B6(void);
+	/*2DC*/virtual void		Unk_B7(void);
+	/*2E0*/virtual void		Unk_B8(void);
+	/*2E4*/virtual void		Unk_B9(void);
+	/*2E8*/virtual void		Unk_BA(void);
+	/*2EC*/virtual void		Unk_BB(void);
+	/*2F0*/virtual void		Unk_BC(void);
+	/*2F4*/virtual void		Unk_BD(void);
+	/*2F8*/virtual void		Unk_BE(void);
+	/*2FC*/virtual void		Unk_BF(void);
+	/*300*/virtual void		Unk_C0(void);
 	
 	BaseProcess		*baseProcess;	// 68
 	UInt32			unk6C;			// 6C - loaded
@@ -386,127 +385,134 @@ public:
 
 typedef tList<BGSEntryPointPerkEntry> PerkEntryPointList;
 
+struct ActorValueMod
+{
+	UInt8		avCode;
+	UInt8		pad01[3];
+	float		mod;
+};
+
 class Actor : public MobileObject
 {
 public:
-	virtual void		Unk_C1(void);
-	virtual void		Unk_C2(void);
-	virtual void		Unk_C3(void);
-	virtual void		Unk_C4(void);
-	virtual void		Unk_C5(void);
-	virtual void		Unk_C6(void);
-	virtual void		SetIgnoreCrime(bool ignoreCrime);
-	virtual bool		GetIgnoreCrime();
-	virtual void		Unk_C9(void);
-	virtual void		Unk_CA(void);
-	virtual void		Unk_CB(void);
-	virtual void		Unk_CC(void);
-	virtual void		Unk_CD(void);
-	virtual void		Unk_CE(void);
-	virtual void		DamageActionPoints(float amount); // checks GetIsGodMode before decreasing
-	virtual void		Unk_D0(void);
-	virtual void		Unk_D1(void);
-	virtual void		Unk_D2(void);
-	virtual void		Unk_D3(void);
-	virtual void		Unk_D4(void);
-	virtual float		GetDefaultTurningSpeed();
-	virtual bool		IsOverencumbered();
-	virtual void		Unk_D7(void);
-	virtual bool		IsPlayerRef();
-	virtual void		Unk_D9(void);
-	virtual void		Unk_DA(void);
-	virtual void		Unk_DB(void);
-	virtual void		Unk_DC(void);
-	virtual void		Unk_DD(void);
-	virtual void		Unk_DE(void);
-	virtual TESRace		*GetRace();
-	virtual void		Unk_E0(void);
-	virtual void		Unk_E1(void);
-	virtual void		Unk_E2(void);
-	virtual bool		IsPushable();
-	virtual UInt32		GetActorType();	// Creature = 0, Character = 1, PlayerCharacter = 2
-	virtual void		SetActorValue(UInt32 avCode, float value);
-	virtual void		SetActorValueInt(UInt32 avCode, UInt32 value);
-	virtual void		Unk_E7(void);
-	virtual void		Unk_E8(void);
-	virtual void		Unk_E9(void);
-	virtual void		ModActorValue(UInt32 avCode, int modifier, UInt32 arg3);
-	virtual void		DamageActorValue(UInt32 avCode, float damage, Actor *attacker);
-	virtual void		Unk_EC(void);
-	virtual void		Unk_ED(void);
-	virtual void		Unk_EE(void);
-	virtual ExtraContainerChanges::EntryData *GetPreferedWeapon(UInt32 unk);
-	virtual void		Unk_F0(void);
-	virtual void		ResetArmorDRDT();
-	virtual void		Unk_F2(void);
-	virtual void		Unk_F3(void);
-	virtual void		Unk_F4(void);
-	virtual void		Unk_F5(void);
-	virtual void		Unk_F6(void);
-	virtual void		Unk_F7(void);
-	virtual bool		AddActorEffect(SpellItem *actorEffect);
-	virtual bool		RemoveActorEffect(SpellItem *actorEffect);
-	virtual void		Unk_FA(void);
-	virtual void		Unk_FB(TESForm *form, UInt32 arg2, UInt8 arg3, UInt8 arg4);
-	virtual void		DecreaseAmmo();
-	virtual void		Unk_FD(void);
-	virtual void		Unk_FE(void);
-	virtual void		Unk_FF(void);
-	virtual void		Unk_100(void);
-	virtual void		Unk_101(void);
-	virtual void		Unk_102(void);
-	virtual void		Unk_103(void);
-	virtual void		Unk_104(void);
-	virtual void		Unk_105(void);
-	virtual void		Unk_106(void);
-	virtual void		SetAlpha(float alpha);
-	virtual float		GetAlpha();
-	virtual void		Unk_109(void);
-	virtual CombatController	*GetCombatController(void);
-	virtual Actor		*GetCombatTarget(void);
-	virtual void		Unk_10C(void);
-	virtual void		Unk_10D(void);
-	virtual void		Unk_10E(void);
-	virtual float		GetTotalArmorDR(void);
-	virtual float		GetTotalArmorDT(void);
-	virtual UInt32		Unk_111(void);
-	virtual void		Unk_112(void);
-	virtual void		Unk_113(void);
-	virtual void		Unk_114(void);
-	virtual void		Unk_115(void);
-	virtual float		CalculateMoveSpeed();
-	virtual float		CalculateRunSpeed();
-	virtual void		Unk_118(void);
-	virtual void		Unk_119(void);
-	virtual void		Unk_11A(void);
-	virtual void		Unk_11B(void);
-	virtual void		Unk_11C(void);
-	virtual void		Unk_11D(void);
-	virtual void		Unk_11E(void);
-	virtual void		Unk_11F(void);
-	virtual void		Unk_120(void);
-	virtual void		Unk_121(void);
-	virtual void		RewardXP(UInt32 amount);
-	virtual void		Unk_123(void);
-	virtual void		Unk_124(void);
-	virtual void		Unk_125(void);
-	virtual void		SetPerkRank(BGSPerk *perk, UInt8 rank, bool alt);
-	virtual void		RemovePerk(BGSPerk *perk, bool alt);
-	virtual UInt8		GetPerkRank(BGSPerk *perk, bool alt);
-	virtual void		AddPerkEntryPoint(BGSEntryPointPerkEntry *perkEntry, bool alt);
-	virtual void		RemovePerkEntryPoint(BGSEntryPointPerkEntry *perkEntry, bool alt);
-	virtual PerkEntryPointList	*GetPerkEntryPointList(UInt8 entryPointID, bool alt);
-	virtual void		Unk_12C(void);
-	virtual bool		GetIsImmobileCreature();
-	virtual void		DoHealthDamage(Actor *attacker, float damage);
-	virtual void		Unk_12F(void);
-	virtual void		Unk_130(void);
-	virtual float		Unk_131(void);
-	virtual void		Unk_132(void);
-	virtual void		Unk_133(void);
-	virtual void		Unk_134(void);
-	virtual void		Unk_135(void);
-	virtual void		Unk_136(void);
+	/*304*/virtual void		Unk_C1(void);
+	/*308*/virtual void		Unk_C2(void);
+	/*30C*/virtual void		Unk_C3(void);
+	/*310*/virtual void		Unk_C4(void);
+	/*314*/virtual void		Unk_C5(void);
+	/*318*/virtual void		Unk_C6(void);
+	/*31C*/virtual void		SetIgnoreCrime(bool ignoreCrime);
+	/*320*/virtual bool		GetIgnoreCrime();
+	/*324*/virtual void		Unk_C9(void);
+	/*328*/virtual void		Unk_CA(void);
+	/*32C*/virtual void		Unk_CB(void);
+	/*330*/virtual void		Unk_CC(void);
+	/*334*/virtual void		Unk_CD(void);
+	/*338*/virtual void		Unk_CE(void);
+	/*33C*/virtual void		DamageActionPoints(float amount); // checks GetIsGodMode before decreasing
+	/*340*/virtual void		Unk_D0(void);
+	/*344*/virtual void		Unk_D1(void);
+	/*348*/virtual void		Unk_D2(void);
+	/*34C*/virtual void		Unk_D3(void);
+	/*350*/virtual void		Unk_D4(void);
+	/*354*/virtual float		GetDefaultTurningSpeed();
+	/*358*/virtual bool		IsOverencumbered();
+	/*35C*/virtual void		Unk_D7(void);
+	/*360*/virtual bool		IsPlayerRef();
+	/*364*/virtual void		Unk_D9(void);
+	/*368*/virtual void		Unk_DA(void);
+	/*36C*/virtual void		Unk_DB(void);
+	/*370*/virtual void		Unk_DC(void);
+	/*374*/virtual void		Unk_DD(void);
+	/*378*/virtual void		Unk_DE(void);
+	/*37C*/virtual TESRace		*GetRace();
+	/*380*/virtual void		Unk_E0(void);
+	/*384*/virtual void		Unk_E1(void);
+	/*388*/virtual void		Unk_E2(void);
+	/*38C*/virtual bool		IsPushable();
+	/*390*/virtual UInt32		GetActorType();	// Creature = 0, Character = 1, PlayerCharacter = 2
+	/*394*/virtual void		SetActorValue(UInt32 avCode, float value);
+	/*398*/virtual void		SetActorValueInt(UInt32 avCode, UInt32 value);
+	/*39C*/virtual void		Unk_E7(void);
+	/*3A0*/virtual void		Unk_E8(void);
+	/*3A4*/virtual void		Unk_E9(void);
+	/*3A8*/virtual void		ModActorValue(UInt32 avCode, int modifier, UInt32 arg3);
+	/*3AC*/virtual void		DamageActorValue(UInt32 avCode, float damage, Actor *attacker);
+	/*3B0*/virtual void		Unk_EC(void);
+	/*3B4*/virtual void		Unk_ED(void);
+	/*3B8*/virtual void		Unk_EE(void);
+	/*3BC*/virtual ExtraContainerChanges::EntryData *GetPreferedWeapon(UInt32 unk);
+	/*3C0*/virtual void		Unk_F0(void);
+	/*3C4*/virtual void		ResetArmorDRDT();
+	/*3C8*/virtual void		Unk_F2(void);
+	/*3CC*/virtual void		Unk_F3(void);
+	/*3D0*/virtual void		Unk_F4(void);
+	/*3D4*/virtual void		Unk_F5(void);
+	/*3D8*/virtual void		Unk_F6(void);
+	/*3DC*/virtual void		Unk_F7(void);
+	/*3E0*/virtual bool		AddActorEffect(SpellItem *actorEffect);
+	/*3E4*/virtual bool		RemoveActorEffect(SpellItem *actorEffect);
+	/*3E8*/virtual void		Unk_FA(void);
+	/*3EC*/virtual void		Unk_FB(TESForm *form, UInt32 arg2, UInt8 arg3, UInt8 arg4);
+	/*3F0*/virtual void		DecreaseAmmo();
+	/*3F4*/virtual void		Unk_FD(void);
+	/*3F8*/virtual void		Unk_FE(void);
+	/*3FC*/virtual void		Unk_FF(void);
+	/*400*/virtual void		Unk_100(void);
+	/*404*/virtual void		Unk_101(void);
+	/*408*/virtual void		Unk_102(void);
+	/*40C*/virtual void		Unk_103(void);
+	/*410*/virtual void		Unk_104(void);
+	/*414*/virtual void		Unk_105(void);
+	/*418*/virtual void		Unk_106(void);
+	/*41C*/virtual void		SetAlpha(float alpha);
+	/*420*/virtual float		GetAlpha();
+	/*424*/virtual void		Unk_109(void);
+	/*428*/virtual CombatController	*GetCombatController(void);
+	/*42C*/virtual Actor		*GetCombatTarget(void);
+	/*430*/virtual void		Unk_10C(void);
+	/*434*/virtual void		Unk_10D(void);
+	/*438*/virtual void		Unk_10E(void);
+	/*43C*/virtual float		GetTotalArmorDR(void);
+	/*440*/virtual float		GetTotalArmorDT(void);
+	/*444*/virtual UInt32		Unk_111(void);
+	/*448*/virtual void		Unk_112(void);
+	/*44C*/virtual void		Unk_113(void);
+	/*450*/virtual void		Unk_114(void);
+	/*454*/virtual void		Unk_115(void);
+	/*458*/virtual float		CalculateMoveSpeed();
+	/*45C*/virtual float		CalculateRunSpeed();
+	/*460*/virtual void		Unk_118(void);
+	/*464*/virtual void		Unk_119(void);
+	/*468*/virtual void		Unk_11A(void);
+	/*46C*/virtual void		Unk_11B(void);
+	/*470*/virtual void		Unk_11C(void);
+	/*474*/virtual void		Unk_11D(void);
+	/*478*/virtual void		Unk_11E(void);
+	/*47C*/virtual void		Unk_11F(void);
+	/*480*/virtual void		Unk_120(void);
+	/*484*/virtual void		Unk_121(void);
+	/*488*/virtual void		RewardXP(UInt32 amount);
+	/*48C*/virtual void		Unk_123(void);
+	/*490*/virtual void		Unk_124(void);
+	/*494*/virtual void		Unk_125(void);
+	/*498*/virtual void		SetPerkRank(BGSPerk *perk, UInt8 rank, bool alt);
+	/*49C*/virtual void		RemovePerk(BGSPerk *perk, bool alt);
+	/*4A0*/virtual UInt8		GetPerkRank(BGSPerk *perk, bool alt);
+	/*4A4*/virtual void		AddPerkEntryPoint(BGSEntryPointPerkEntry *perkEntry, bool alt);
+	/*4A8*/virtual void		RemovePerkEntryPoint(BGSEntryPointPerkEntry *perkEntry, bool alt);
+	/*4AC*/virtual PerkEntryPointList	*GetPerkEntryPointList(UInt8 entryPointID, bool alt);
+	/*4B0*/virtual void		Unk_12C(void);
+	/*4B4*/virtual bool		GetIsImmobileCreature();
+	/*4B8*/virtual void		DoHealthDamage(Actor *attacker, float damage);
+	/*4BC*/virtual void		Unk_12F(void);
+	/*4C0*/virtual void		Unk_130(void);
+	/*4C4*/virtual float		Unk_131(void);
+	/*4C8*/virtual void		Unk_132(void);
+	/*4CC*/virtual void		Unk_133(void);
+	/*4D0*/virtual void		Unk_134(void);
+	/*4D4*/virtual void		Unk_135(void);
+	/*4D8*/virtual void		Unk_136(void);
 
 	enum LifeStates
 	{
@@ -538,7 +544,7 @@ public:
 	UInt8								byte0C7;					// 0C7
 	float								flt0C8;						// 0C8
 	float								flt0CC;						// 0CC
-	tList<void>							list0D0;					// 0D0
+	tList<ActorValueMod>				list0D0;					// 0D0
 	UInt8								byte0D8;					// 0D8
 	UInt8								byte0D9;					// 0D9
 	UInt8								byte0DA;					// 0DA
@@ -693,7 +699,7 @@ extern float s_moveAwayDistance;
 class Creature : public Actor
 {
 public:
-	virtual void	Unk_137(void);
+	/*4DC*/virtual void	Unk_137(void);
 
 	UInt8			byte1B4;			// 1B4
 	UInt8			pad1B5[3];			// 1B5
@@ -704,8 +710,8 @@ public:
 class Character : public Actor
 {
 public:
-	virtual void	Unk_137(void);
-	virtual void	Unk_138(void);
+	/*4DC*/virtual void	Unk_137(void);
+	/*4E0*/virtual void	Unk_138(void);
 
 	ValidBip01Names	*validBip01Names;	// 1B4
 	float			totalArmorDR;		// 1B8
@@ -737,24 +743,6 @@ struct PerkRank
 	UInt8		pad05[3];
 };
 
-struct PerkEntryPointLists
-{
-	PerkEntryPointList		perkEntries[kPerkEntry_Max];
-
-	static PerkEntryPointLists *Create()
-	{
-		PerkEntryPointLists *lists = POOL_ALLOC(1, PerkEntryPointLists);
-		MemZero(lists, sizeof(PerkEntryPointLists));
-		return lists;
-	}
-
-	void Clear()
-	{
-		for (auto &iter : perkEntries)
-			iter.RemoveAll();
-	}
-};
-
 struct CasinoStats
 {
 	UInt32		casinoRefID;
@@ -779,8 +767,8 @@ public:
 		kControlFlag_Sneak			= 1 << 6,
 	};
 
-	virtual void		Unk_139(void);
-	virtual tList<PerkRank>	*GetPerkRankList(bool forTeammates);
+	/*4E4*/virtual void		Unk_139(void);
+	/*4E8*/virtual tList<PerkRank>	*GetPerkRankList(bool forTeammates);
 
 	struct MapMarkerInfo
 	{
@@ -936,9 +924,9 @@ public:
 	UInt32								unk7F4[33];				// 7F4
 	PCLevelData							*pcLevelData;			// 878
 	tList<PerkRank>						perkRanksPC;			// 87C
-	PerkEntryPointLists					perkEntriesPC;			// 884
+	PerkEntryPointList					perkEntriesPC[74];		// 884
 	tList<PerkRank>						perkRanksTM;			// AD4
-	PerkEntryPointLists					perkEntriesTM;			// ADC
+	PerkEntryPointList					perkEntriesTM[74];		// ADC
 	UInt32								unkD2C[4];				// D2C
 	NiObject							*unkD3C;				// D3C
 	UInt32								unkD40;					// D40
@@ -995,9 +983,7 @@ public:
 	UInt32 GetMovementFlags() { return actorMover->GetMovementFlags(); }	// 11: IsSwimming, 9: IsSneaking, 8: IsRunning, 7: IsWalking, 0: keep moving
 	bool IsPlayerSwimming() { return (actorMover->GetMovementFlags() & 0x800) ? true : false; }
 
-	static PlayerCharacter*	GetSingleton();
-	bool SetSkeletonPath(const char* newPath);
-	static void UpdateHead(void);
+	__forceinline static PlayerCharacter *GetSingleton() {return *(PlayerCharacter**)0x11DEA3C;}
 
 	__forceinline bool ToggleFirstPerson(bool toggleON)
 	{
@@ -1022,17 +1008,17 @@ public:
 		kProjType_ContinuousBeam
 	};
 
-	virtual UInt32	GetProjectileType();
-	virtual void	Unk_C2(void);
-	virtual void	Unk_C3(void);
-	virtual void	Unk_C4(void);
-	virtual bool	ProcessImpact();
-	virtual bool	IsProximityTriggered();
-	virtual void	Unk_C7(void);
-	virtual bool	DisarmPlacedExplosives(TESObjectREFR *refr, bool unk);
-	virtual void	Unk_C9(void);
-	virtual void	Unk_CA(void);
-	virtual void	Unk_CB(void);
+	/*304*/virtual UInt32	GetProjectileType();
+	/*308*/virtual void	Unk_C2(void);
+	/*30C*/virtual void	Unk_C3(void);
+	/*310*/virtual void	Unk_C4(void);
+	/*314*/virtual bool	ProcessImpact();
+	/*318*/virtual bool	IsProximityTriggered();
+	/*31C*/virtual void	Unk_C7(void);
+	/*320*/virtual bool	DisarmPlacedExplosives(TESObjectREFR *refr, bool unk);
+	/*324*/virtual void	Unk_C9(void);
+	/*328*/virtual void	Unk_CA(void);
+	/*32C*/virtual void	Unk_CB(void);
 
 	enum
 	{

@@ -237,7 +237,7 @@ bool Cmd_AddPrimitive_Execute(COMMAND_ARGS)
 		!thisObj->extraDataList.HasType(kExtraData_Primitive))
 	{
 		ExtraPrimitive *xPrimitive = ExtraPrimitive::Create();
-		AddExtraData(&thisObj->extraDataList, xPrimitive);
+		thisObj->extraDataList.AddExtra(xPrimitive);
 		UInt8 size = (type == 1) ? 0x4C : 0x34;
 		BGSPrimitive *primitive = (BGSPrimitive*)GameHeapAlloc(size);
 		MemZero(primitive, size);
@@ -957,19 +957,19 @@ bool Cmd_MoveToContainer_Execute(COMMAND_ARGS)
 			if (xDropper)
 			{
 				TESObjectREFR *dropperRef = xDropper->dropper;
-				RemoveExtraData(&thisObj->extraDataList, xDropper, true);
+				thisObj->extraDataList.RemoveExtra(xDropper, true);
 				if (dropperRef)
 				{
 					ExtraDroppedItemList *xDroppedList = GetExtraType(&dropperRef->extraDataList, DroppedItemList);
 					if (xDroppedList && xDroppedList->itemRefs.Remove(thisObj) && xDroppedList->itemRefs.Empty())
-						RemoveExtraData(&dropperRef->extraDataList, xDroppedList, true);
+						dropperRef->extraDataList.RemoveExtra(xDroppedList, true);
 				}
 			}
-			if (clrOwner) RemoveExtraType(&thisObj->extraDataList, kExtraData_Ownership);
+			if (clrOwner) thisObj->extraDataList.RemoveByType(kExtraData_Ownership);
 			if (thisObj->extraDataList.m_data)
 			{
 				xDataList = thisObj->extraDataList.CreateCopy();
-				ClearExtraDataList(&thisObj->extraDataList, true);
+				thisObj->extraDataList.RemoveAll(true);
 			}
 		}
 		target->AddItem(thisObj->baseForm, xDataList, quantity);
@@ -1529,8 +1529,8 @@ bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
 				{
 					SInt32 count = invRef->GetCount();
 					if (count > 1)
-						AddExtraData(xData, ExtraCount::Create(count));
-					AddExtraData(xData, ExtraCharge::Create(fltVal));
+						xData->AddExtra(ExtraCount::Create(count));
+					xData->AddExtra(ExtraCharge::Create(fltVal));
 				}
 				return true;
 			}
@@ -1539,7 +1539,7 @@ bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
 		ExtraCharge *xCharge = GetExtraType(xData, Charge);
 		if (xCharge)
 			xCharge->charge = fltVal;
-		else AddExtraData(xData, ExtraCharge::Create(fltVal));
+		else xData->AddExtra(ExtraCharge::Create(fltVal));
 	}
 	return true;
 }
@@ -1641,7 +1641,7 @@ bool RegisterInsertObject(COMMAND_ARGS)
 					else if ((rootNode = DoAttachModel(targetObj, objectName, pDataStr, rootNode)) && (rootNode->m_flags & 0x20000000))
 						AddPointLights(rootNode);
 				}
-				if ((refr == g_thePlayer) && (rootNode = g_thePlayer->node1stPerson))
+				if ((refr->refID == 0x14) && (rootNode = g_thePlayer->node1stPerson))
 				{
 					targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName.Get());
 					if (targetObj)
@@ -1666,7 +1666,7 @@ bool RegisterInsertObject(COMMAND_ARGS)
 				NiAVObject *object = rootNode->GetBlockByName(findData().Get());
 				if (object)
 					object->m_parent->RemoveObject(object);
-				if ((refr == g_thePlayer) && (rootNode = g_thePlayer->node1stPerson))
+				if ((refr->refID == 0x14) && (rootNode = g_thePlayer->node1stPerson))
 				{
 					object = rootNode->GetBlockByName(findData().Get());
 					if (object)
@@ -1780,7 +1780,7 @@ bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 			const char *modelPath = form->GetModelPath();
 			if (modelPath)
 			{
-				rootNode = LoadModel(g_modelLoader, modelPath, 0, 1, 0, 0, 1);
+				rootNode = g_modelLoader->LoadModel(modelPath, 0, 1, 0, 1);
 				if (rootNode && rootNode->GetBlock(buffer + 1))
 					goto Retn1;
 			}

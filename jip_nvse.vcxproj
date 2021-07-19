@@ -210,7 +210,6 @@
     <ClInclude Include="nvse\NiTypes.h" />
     <ClInclude Include="nvse\ParamInfos.h" />
     <ClInclude Include="nvse\PluginAPI.h" />
-    <ClInclude Include="nvse\Utilities.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="exports.def" />

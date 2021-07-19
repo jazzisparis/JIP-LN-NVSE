@@ -17,9 +17,9 @@ bool Cmd_SetCellWaterForm_Execute(COMMAND_ARGS)
 		if (xCellWater)
 		{
 			if (water) xCellWater->waterForm = water;
-			else RemoveExtraData(&cell->extraDataList, xCellWater, true);
+			else cell->extraDataList.RemoveExtra(xCellWater, true);
 		}
-		else if (water) AddExtraData(&cell->extraDataList, ExtraCellWaterType::Create(water));
+		else if (water) cell->extraDataList.AddExtra(ExtraCellWaterType::Create(water));
 	}
 	return true;
 }
@@ -46,9 +46,9 @@ bool Cmd_SetCellClimate_Execute(COMMAND_ARGS)
 		if (xCellClimate)
 		{
 			if (climate) xCellClimate->climate = climate;
-			else RemoveExtraData(&cell->extraDataList, xCellClimate, true);
+			else cell->extraDataList.RemoveExtra(xCellClimate, true);
 		}
-		else if (climate) AddExtraData(&cell->extraDataList, ExtraCellClimate::Create(climate));
+		else if (climate) cell->extraDataList.AddExtra(ExtraCellClimate::Create(climate));
 	}
 	return true;
 }

@@ -333,10 +333,17 @@ __declspec(naked) void CmdActivateHook()
 	}
 }
 
-void RemoveMeHook()
+bool s_doRefreshItemListBox = false;
+
+__declspec(naked) void RemoveMeHook()
 {
-	if (!FindMainLoopCallback(RefreshItemListBox))
-		MainLoopAddCallback(RefreshItemListBox);
+	__asm
+	{
+		mov		s_doRefreshItemListBox, 1
+		xor		al, al
+		leave
+		retn
+	}
 }
 
 __declspec(naked) void PackageSetRunHook()
@@ -2119,14 +2126,14 @@ void __fastcall DistributeWeaponMods(Actor *actor)
 		modFlags ^= shuffle[2];
 doneFlags:
 	ExtraDataList *xData = weaponInfo->extendData->GetFirstItem();
-	AddExtraData(xData, ExtraWeaponModFlags::Create(modFlags));
+	xData->AddExtra(ExtraWeaponModFlags::Create(modFlags));
 	ThisCall(0x88DB20, actor, weapon, 1, xData, false);
 }
 
-const bool kValidEntryPoints[] =
+const UInt8 kValidEntryPoints[] =
 {
-	1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1,
-	1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0
+	1, 2, 3, 0, 4, 0, 5, 0, 0, 0, 0, 0, 6, 0, 7, 8, 0, 0, 0, 0, 0, 0, 9, 10, 11, 12, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 14, 15,
+	16, 0, 0, 0, 17, 18, 0, 0, 0, 0, 0, 0, 0, 0, 19, 0, 0, 0, 20, 0, 21, 22, 0, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 24, 0
 };
 
 Set<BGSPerk*> s_ValidNPCPerks(0x40);
@@ -2136,24 +2143,24 @@ void BuildValidNPCPerks()
 	auto perkIter = g_dataHandler->perkList.Head();
 	BGSPerk *perk;
 	BGSEntryPointPerkEntry *entryPt;
-	bool bValid;
+	UInt8 isValid;
 	do
 	{
 		if (!(perk = perkIter->data) || perk->entries.Empty() || perk->data.isTrait || !perk->data.isPlayable || perk->data.isHidden)
 			continue;
 		auto entryIter = perk->entries.Head();
-		bValid = false;
+		isValid = 0;
 		do
 		{
 			if (!(entryPt = (BGSEntryPointPerkEntry*)entryIter->data) || NOT_TYPE(entryPt, BGSEntryPointPerkEntry))
 			{
-				bValid = false;
+				isValid = 0;
 				break;
 			}
-			bValid |= kValidEntryPoints[entryPt->entryPoint];
+			isValid |= kValidEntryPoints[entryPt->entryPoint];
 		}
 		while (entryIter = entryIter->next);
-		if (bValid)
+		if (isValid)
 			s_ValidNPCPerks.Insert(perk);
 	}
 	while (perkIter = perkIter->next);
@@ -2161,76 +2168,160 @@ void BuildValidNPCPerks()
 
 typedef Map<BGSPerk*, UInt8> PerkRanksMap;
 
+class NPCPerkEntryPoints
+{
+	PerkEntryPointList		perkEntries[24];
+
+public:
+	static NPCPerkEntryPoints *Create()
+	{
+		NPCPerkEntryPoints *lists = POOL_ALLOC(1, NPCPerkEntryPoints);
+		MemZero(lists, sizeof(NPCPerkEntryPoints));
+		return lists;
+	}
+
+	PerkEntryPointList* operator[](UInt8 entryPt)
+	{
+		UInt32 index = kValidEntryPoints[entryPt];
+		return index ? &perkEntries[index - 1] : nullptr;
+	}
+
+	void Clear()
+	{
+		for (auto &iter : perkEntries)
+			iter.RemoveAll();
+	}
+};
+
 struct NPCPerksInfo
 {
 	PerkRanksMap			perkRanks;
-	PerkEntryPointLists		*perkEntries;
+	NPCPerkEntryPoints		*entryPoints;
 
-	NPCPerksInfo() : perkEntries(nullptr) {}
+	NPCPerksInfo() : entryPoints(nullptr) {}
 	~NPCPerksInfo()
 	{
-		if (perkEntries)
+		if (entryPoints)
 		{
-			perkEntries->Clear();
-			POOL_FREE(perkEntries, 1, PerkEntryPointLists);
+			entryPoints->Clear();
+			POOL_FREE(entryPoints, 1, NPCPerkEntryPoints);
 		}
 	}
 };
 
 UnorderedMap<UInt32, NPCPerksInfo> s_NPCPerksInfoMap(0x80);
 
-void AddPerkEntries(Actor *actor, BGSPerk *perk, UInt8 currRank, UInt8 newRank, PerkEntryPointLists *entryLists)
+void AddPerkEntries(Actor *actor, BGSPerk *perk, UInt8 newRank, NPCPerkEntryPoints *entryPoints)
 {
 	auto entryIter = perk->entries.Head();
 	BGSEntryPointPerkEntry *entryPt;
-	UInt8 rank;
+	PerkEntryPointList *entryList;
 	bool bUpdReload = false;
 	do
 	{
 		if (!(entryPt = (BGSEntryPointPerkEntry*)entryIter->data))
 			continue;
-		rank = entryPt->rank + 1;
 		if IS_TYPE(entryPt, BGSEntryPointPerkEntry)
 		{
-			if (rank == currRank)
-				entryLists->perkEntries[entryPt->entryPoint].Remove(entryPt);
-			else if (rank == newRank)
-				entryLists->perkEntries[entryPt->entryPoint].AppendNotIn(entryPt);
-			else continue;
+			if (!(entryList = (*entryPoints)[entryPt->entryPoint]))
+				continue;
+			if ((entryPt->rank + 1) != newRank)
+			{
+				if (!entryList->Remove(entryPt))
+					continue;
+			}
+			else if (!entryList->AppendNotIn(entryPt))
+				continue;
 			if (entryPt->entryPoint == kPerkEntry_ReloadSpeed)
 				bUpdReload = true;
 		}
-		else if (rank == currRank)
+		else if ((entryPt->rank + 1) != newRank)
 			entryPt->RemoveEntry(actor, 0);
-		else if (rank == newRank)
-			entryPt->AddEntry(actor, 0);
+		else entryPt->AddEntry(actor, 0);
 	}
 	while (entryIter = entryIter->next);
 	if (bUpdReload)
 		ThisCall(0x8C17C0, actor);
 }
 
+bool s_NPCPerksAutoAdd = false;
+Vector<BGSPerk*> s_NPCPerksPick(0x40);
+
+NPCPerksInfo* __fastcall AddStartingPerks(Actor *actor, NPCPerksInfo *perksInfo)
+{
+	UInt8 *rankPtr;
+	if (s_NPCPerksAutoAdd && IS_ID(actor, Character))
+	{
+		UInt32 level = actor->GetLevel();
+		if (level >= 3)
+		{
+			s_NPCPerksPick.Clear();
+			BGSPerk *perk;
+			UInt8 minLevel = (level * 3) / 2;
+			for (auto rstIter = s_ValidNPCPerks.Begin(); rstIter; ++rstIter)
+			{
+				perk = *rstIter;
+				if (perk->data.minLevel > minLevel) continue;
+				for (UInt8 ranks = perk->data.numRanks; ranks; ranks--)
+					s_NPCPerksPick.Append(perk);
+			}
+			UInt32 size = s_NPCPerksPick.Size();
+			if (size)
+			{
+				if (!perksInfo)
+					perksInfo = &s_NPCPerksInfoMap[actor->refID];
+				s_NPCPerksPick.Shuffle();
+				if (level >= 30) level = 10;
+				else level /= 3;
+				if (level > size) level = size;
+				do
+				{
+					perk = s_NPCPerksPick[--level];
+					if (perksInfo->perkRanks.Insert(perk, &rankPtr))
+						*rankPtr = 1;
+					else *rankPtr++;
+				}
+				while (level);
+			}
+		}
+	}
+	if (actor->isTeammate && !g_thePlayer->perkRanksTM.Empty())
+	{
+		if (!perksInfo)
+			perksInfo = &s_NPCPerksInfoMap[actor->refID];
+		auto perkIter = g_thePlayer->perkRanksTM.Head();
+		PerkRank *perkRank;
+		do
+		{
+			if ((perkRank = perkIter->data) && perksInfo->perkRanks.Insert(perkRank->perk, &rankPtr))
+				*rankPtr = perkRank->rank;
+		}
+		while (perkIter = perkIter->next);
+	}
+	if (perksInfo)
+	{
+		actor->extraDataList.perksInfo = perksInfo;
+		s_dataChangedFlags |= kChangedFlag_NPCPerks;
+	}
+	return perksInfo;
+}
+
 void __fastcall SetPerkRankHook(Actor *actor, int EDX, BGSPerk *perk, UInt8 newRank, bool forTeammates)
 {
 	NPCPerksInfo *perksInfo = actor->extraDataList.perksInfo;
 	if (!perksInfo)
-		actor->extraDataList.perksInfo = perksInfo = &s_NPCPerksInfoMap[actor->refID];
-	UInt8 *rankPtr, currRank;
-	if (perksInfo->perkRanks.Insert(perk, &rankPtr))
+		perksInfo = AddStartingPerks(actor, &s_NPCPerksInfoMap[actor->refID]);
+	UInt8 *rankPtr;
+	if (perksInfo->perkRanks.Insert(perk, &rankPtr) || (*rankPtr < newRank))
 	{
-		currRank = 0;
 		*rankPtr = newRank;
-	}
-	else
-	{
-		currRank = *rankPtr;
-		if (currRank >= newRank) return;
-	}
-	if (actor->GetNiNode())
-	{
-		if (!perksInfo->perkEntries)
-			perksInfo->perkEntries = PerkEntryPointLists::Create();
-		AddPerkEntries(actor, perk, currRank, newRank, perksInfo->perkEntries);
+		s_dataChangedFlags |= kChangedFlag_NPCPerks;
+		if (actor->GetNiNode())
+		{
+			if (!perksInfo->entryPoints)
+				perksInfo->entryPoints = NPCPerkEntryPoints::Create();
+			AddPerkEntries(actor, perk, newRank, perksInfo->entryPoints);
+		}
 	}
 }
 
@@ -2253,15 +2344,12 @@ void __fastcall AddPerkEntriesHook(BGSPerk *perk, int EDX, Actor *actor, UInt8 c
 	{
 		auto entryIter = perk->entries.Head();
 		BGSPerkEntry *entry;
-		UInt8 rank;
 		do
 		{
 			if (!(entry = entryIter->data)) continue;
-			rank = entry->rank + 1;
-			if (rank == currRank)
+			if ((entry->rank + 1) != newRank)
 				entry->RemoveEntry(thePlayer, 0);
-			else if (rank == newRank)
-				entry->AddEntry(thePlayer, 0);
+			else entry->AddEntry(thePlayer, 0);
 		}
 		while (entryIter = entryIter->next);
 	}
@@ -2272,9 +2360,11 @@ void __fastcall RemovePerkHook(Actor *actor, int EDX, BGSPerk *perk, bool forTea
 	NPCPerksInfo *perksInfo = actor->extraDataList.perksInfo;
 	if (!perksInfo || !perksInfo->perkRanks.Erase(perk))
 		return;
-	PerkEntryPointLists *entryLists = perksInfo->perkEntries;
+	s_dataChangedFlags |= kChangedFlag_NPCPerks;
+	NPCPerkEntryPoints *entryPoints = perksInfo->entryPoints;
 	auto entryIter = perk->entries.Head();
 	BGSEntryPointPerkEntry *entry;
+	PerkEntryPointList *entryList;
 	bool bUpdReload = false;
 	do
 	{
@@ -2282,7 +2372,7 @@ void __fastcall RemovePerkHook(Actor *actor, int EDX, BGSPerk *perk, bool forTea
 			continue;
 		if IS_TYPE(entry, BGSEntryPointPerkEntry)
 		{
-			if (entryLists && entryLists->perkEntries[entry->entryPoint].Remove(entry) && (entry->entryPoint == kPerkEntry_ReloadSpeed))
+			if (entryPoints && (entryList = (*entryPoints)[entry->entryPoint]) && entryList->Remove(entry) && (entry->entryPoint == kPerkEntry_ReloadSpeed))
 				bUpdReload = true;
 		}
 		else entry->RemoveEntry(actor, 0);
@@ -2330,14 +2420,18 @@ __declspec(naked) PerkEntryPointList* __fastcall GetPerkEntryPointListHook(Actor
 {
 	__asm
 	{
-		mov		eax, [ecx+0x60]
-		test	eax, eax
+		xor		eax, eax
+		mov		edx, [ecx+0x60]
+		test	edx, edx
 		jz		done
-		mov		eax, [eax+0xC]
-		test	eax, eax
+		mov		ecx, [edx+0xC]
+		test	ecx, ecx
 		jz		done
 		mov		edx, [esp+4]
-		lea		eax, [eax+edx*8]
+		mov		al, kValidEntryPoints[edx]
+		test	al, al
+		jz		done
+		lea		eax, [ecx+eax*8-8]
 	done:
 		retn	8
 	}
@@ -2382,73 +2476,18 @@ void __fastcall SetPlayerTeammateHook(Actor *actor, int EDX, bool doSet)
 	}
 }
 
-bool s_NPCPerksAutoAdd = false;
-Vector<BGSPerk*> s_NPCPerksPick(0x40);
-
 void __fastcall InitNPCPerks(Actor *actor)
 {
-	NPCPerksInfo *perksInfo;
-	UInt8 *rankPtr;
-	if (s_NPCPerksInfoMap.Insert(actor->refID, &perksInfo) && s_NPCPerksAutoAdd && IS_ID(actor, Character))
+	NPCPerksInfo *perksInfo = actor->extraDataList.perksInfo;
+	if (!perksInfo)
+		perksInfo = AddStartingPerks(actor, nullptr);
+	if (perksInfo && !perksInfo->entryPoints)
 	{
-		UInt32 level = actor->GetLevel();
-		if (level >= 3)
+		perksInfo->entryPoints = NPCPerkEntryPoints::Create();
+		for (auto perkIter = perksInfo->perkRanks.Begin(); perkIter; ++perkIter)
 		{
-			s_NPCPerksPick.Clear();
-			BGSPerk *perk;
-			UInt8 minLevel = (level * 3) / 2;
-			for (auto rstIter = s_ValidNPCPerks.Begin(); rstIter; ++rstIter)
-			{
-				perk = *rstIter;
-				if (perk->data.minLevel > minLevel) continue;
-				for (UInt8 ranks = perk->data.numRanks; ranks; ranks--)
-					s_NPCPerksPick.Append(perk);
-			}
-			UInt32 size = s_NPCPerksPick.Size();
-			if (size)
-			{
-				s_NPCPerksPick.Shuffle();
-				if (level >= 30) level = 10;
-				else level /= 3;
-				if (level > size) level = size;
-				do
-				{
-					perk = s_NPCPerksPick[--level];
-					if (perksInfo->perkRanks.Insert(perk, &rankPtr))
-						*rankPtr = 1;
-					else *rankPtr++;
-				}
-				while (level);
-			}
-		}
-	}
-	if (actor->isTeammate)
-	{
-		auto perkIter = g_thePlayer->perkRanksTM.Head();
-		PerkRank *perkRank;
-		do
-		{
-			if ((perkRank = perkIter->data) && perksInfo->perkRanks.Insert(perkRank->perk, &rankPtr))
-				*rankPtr = perkRank->rank;
-		}
-		while (perkIter = perkIter->next);
-	}
-	if (perksInfo->perkRanks.Empty())
-	{
-		actor->extraDataList.perksInfo = NULL;
-		s_NPCPerksInfoMap.Erase(actor->refID);
-	}
-	else
-	{
-		actor->extraDataList.perksInfo = perksInfo;
-		if (!perksInfo->perkEntries)
-		{
-			perksInfo->perkEntries = PerkEntryPointLists::Create();
-			for (auto perkIter = perksInfo->perkRanks.Begin(); perkIter; ++perkIter)
-			{
-				AddPerkEntries(actor, perkIter.Key(), 0, perkIter(), perksInfo->perkEntries);
-				//PrintLog("%08X\t%d\t%s", actor->refID, perkIter(), perkIter.Key()->GetEditorID());
-			}
+			AddPerkEntries(actor, perkIter.Key(), perkIter(), perksInfo->entryPoints);
+			//PrintLog("%08X\t%d\t%s", actor->refID, perkIter(), perkIter.Key()->GetEditorID());
 		}
 	}
 }
@@ -2460,13 +2499,8 @@ __declspec(naked) ExtraDataList* __fastcall DoOnLoadActorHook(TESObjectREFR *ref
 		mov		eax, [ecx]
 		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
 		jnz		done
-		mov		eax, [ecx+0x68]
-		test	eax, eax
-		jz		done
-		cmp		dword ptr [eax+0x28], 1
-		ja		done
 		cmp		dword ptr [ecx+0x108], 0
-		jnz		donePerks
+		jnz		done
 		cmp		s_NPCPerks, 0
 		jz		donePerks
 		cmp		dword ptr [ecx+0xC], 0x14
@@ -2549,15 +2583,17 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 			hitData->fatigueDmg = ApplyAmmoEffects(kAmmoEffect_FatigueMod, ammoEffects, hitData->fatigueDmg);
 		}
 	}
-	UInt8 flagPCTM = source == g_thePlayer;
+	UInt8 flagPCTM = 0;
 	if (source)
 	{
-		if (source->isTeammate)
-			flagPCTM |= 2;
+		if (source->refID == 0x14)
+			flagPCTM = 1;
+		else if (source->isTeammate)
+			flagPCTM = 2;
 		else if (s_NPCPerks)
-			flagPCTM |= 4;
+			flagPCTM = 4;
 	}
-	if (target == g_thePlayer)
+	if (target->refID == 0x14)
 		flagPCTM |= 8;
 	else if (target->isTeammate)
 		flagPCTM |= 0x10;
@@ -2770,7 +2806,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	}
 	if ((hitData->fatigueDmg > 0) && (hitData->wpnBaseDmg > 0))
 		hitData->fatigueDmg *= hitData->healthDmg / hitData->wpnBaseDmg;
-	if ((flagPCTM & 8) && g_VATSCameraData->mode)
+	if ((flagPCTM & 8) && VATSCameraData::Get()->mode)
 	{
 		valueMod1 = *(float*)0x11CE9F4;		//	fVATSPlayerDamageMult
 		hitData->healthDmg *= valueMod1;
@@ -3770,7 +3806,7 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			if (s_bigGunsSkill == bEnable)
 				return 0;
 			s_bigGunsSkill = bEnable;
-			ActorValueInfo *avInfo = g_actorValueInfoArray[kAVCode_BigGuns];
+			ActorValueInfo *avInfo = ActorValueInfo::Array()[kAVCode_BigGuns];
 			if (bEnable)
 			{
 				avInfo->avFlags = 0x410;
@@ -3902,14 +3938,15 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			WriteRelCall(0x96398C, (UInt32)RemovePerkEntriesHook);
 			WriteRelJump(0x8BCA90, (UInt32)SetPlayerTeammateHook);
 			SafeWrite32(0x1086F04, (UInt32)SetPerkRankHook);
-			SafeWrite32(0x1086F08, (UInt32)RemovePerkHook);
-			SafeWrite32(0x1086F0C, (UInt32)GetPerkRankHook);
-			SafeWrite32(0x1086F18, (UInt32)GetPerkEntryPointListHook);
 			SafeWrite32(0x1087544, (UInt32)SetPerkRankHook);
+			SafeWrite32(0x1086F08, (UInt32)RemovePerkHook);
 			SafeWrite32(0x1087548, (UInt32)RemovePerkHook);
+			SafeWrite32(0x1086F0C, (UInt32)GetPerkRankHook);
 			SafeWrite32(0x108754C, (UInt32)GetPerkRankHook);
+			SafeWrite32(0x1086F18, (UInt32)GetPerkEntryPointListHook);
 			SafeWrite32(0x1087558, (UInt32)GetPerkEntryPointListHook);
 			SAFE_WRITE_BUF(0x5E592F, "\x0F\x1F\x84\x00\x00\x00\x00\x00");
+			SafeWrite32(0x64570F, 0x401F0F);
 			return 18;
 		}
 	}
@@ -4266,7 +4303,7 @@ void InitGamePatches()
 	WriteRelJump(0xEE820A, (UInt32)GamePadRumbleHook);
 	WriteRelCall(0x5B5B18, (UInt32)CmdActivateHook);
 	WriteRelCall(0x5B5B48, (UInt32)CmdActivateHook);
-	WriteRelCall(0x5B54E7, (UInt32)RemoveMeHook);
+	WriteRelJump(0x5B54E7, (UInt32)RemoveMeHook);
 	WriteRelJump(0x8DAA6F, (UInt32)PackageSetRunHook);
 	SAFE_WRITE_BUF(0x8AB6D9, "\x8B\x8D\x54\xFF\xFF\xFF\x66\xC7\x81\x05\x01\x00\x00\x00\x00\x80\xA1\x43\x01\x00\x00\xBF\x0F\x1F\x40\x00");
 	WriteRelCall(0x73005C, (UInt32)BarterSellFixHook);
@@ -4467,7 +4504,7 @@ void DeferredInit()
 	g_screenWidth = *(int*)0x11C73E0 * converter;
 	g_screenHeight = *(int*)0x11C7190 * converter;
 	g_shadowSceneNode = *(ShadowSceneNode**)0x11F91C8;
-	g_terminalModelDefault = *g_terminalModelPtr;
+	g_terminalModelDefault = *GameGlobals::TerminalModelPtr();
 	g_attachLightString = **(const char***)0x11C620C;
 	g_gameYear = (TESGlobal*)LookupFormByRefID(0x35);
 	g_gameMonth = (TESGlobal*)LookupFormByRefID(0x36);
@@ -4538,7 +4575,7 @@ void DeferredInit()
 		if (handle) ReloadENB = (_ReloadENB)GetProcAddress(handle, "DirtyHack");
 	}
 
-	ActorValueInfo *avInfo = g_actorValueInfoArray[kAVCode_BigGuns];
+	ActorValueInfo *avInfo = ActorValueInfo::Array()[kAVCode_BigGuns];
 	avInfo->fullName.name = avInfo->avName;
 	avInfo->callback4C = 0x643BD0;
 

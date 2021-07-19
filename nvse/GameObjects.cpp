@@ -41,11 +41,6 @@ ScriptEventList *TESObjectREFR::GetEventList() const
 	return xScript ? xScript->eventList : NULL;
 }
 
-PlayerCharacter *PlayerCharacter::GetSingleton()
-{
-	return g_thePlayer;
-}
-
 __declspec(naked) TESContainer *TESObjectREFR::GetContainer()
 {
 	__asm
@@ -67,11 +62,6 @@ __declspec(naked) TESContainer *TESObjectREFR::GetContainer()
 		xor		eax, eax
 		retn
 	}
-}
-
-bool TESObjectREFR::IsMapMarker()
-{
-	return baseForm->refID == 0x10;
 }
 
 void __fastcall HidePointLights(NiNode *objNode);
@@ -1236,7 +1226,7 @@ void Actor::UpdateActiveEffects(MagicItem *magicItem, EffectItem *effItem, bool 
 			if (activeEff->effectItem != effItem) continue;
 			if (activeEff->bTerminated) break;
 		}
-		ActiveEffect *newEff = g_effectArchTypeArray[effItem->setting->archtype].callback(activeEff->caster, magicItem, effItem);
+		ActiveEffect *newEff = EffectArchTypeEntry::Array()[effItem->setting->archtype].callback(activeEff->caster, magicItem, effItem);
 		if (newEff)
 		{
 			iter->Insert(newEff);

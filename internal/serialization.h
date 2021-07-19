@@ -1,14 +1,5 @@
 #pragma once
 
-enum
-{
-	kChangedFlag_AuxVars =		1 << 0,
-	kChangedFlag_RefMaps =		1 << 1,
-	kChangedFlag_LinkedRefs =	1 << 2,
-
-	kChangedFlag_All =			kChangedFlag_AuxVars | kChangedFlag_RefMaps | kChangedFlag_LinkedRefs,
-};
-
 void DoLoadGameCleanup()
 {
 	if (g_thePlayer->teammateCount)
@@ -30,6 +21,19 @@ void DoLoadGameCleanup()
 	if (s_dataChangedFlags & kChangedFlag_RefMaps) s_refMapArraysPerm.Clear();
 	if (s_dataChangedFlags & kChangedFlag_LinkedRefs) s_linkedRefModified.Clear();
 	s_linkedRefsTemp.Clear();
+
+	UInt32 size = s_NPCPerksInfoMap.Size();
+	if (size && (s_dataChangedFlags & kChangedFlag_NPCPerks))
+	{
+		Actor *actor;
+		for (auto refIter = s_NPCPerksInfoMap.Begin(); refIter; ++refIter)
+		{
+			if ((actor = (Actor*)LookupFormByRefID(refIter.Key())) && IS_ACTOR(actor))
+				actor->extraDataList.perksInfo = NULL;
+			if (!--size) break;
+		}
+		s_NPCPerksInfoMap.Clear();
+	}
 
 	if ((s_dataChangedFlags == kChangedFlag_All) && !s_resolvedGlobals.Empty())
 	{
@@ -128,15 +132,6 @@ void DoLoadGameCleanup()
 			camIter->Destructor(true);
 		}
 		s_extraCamerasMap.Clear();
-	}
-
-	if (!s_NPCPerksInfoMap.Empty())
-	{
-		Actor *actor;
-		for (auto refIter = s_NPCPerksInfoMap.Begin(); refIter; ++refIter)
-			if ((actor = (Actor*)LookupFormByRefID(refIter.Key())) && IS_ACTOR(actor))
-				actor->extraDataList.perksInfo = NULL;
-		s_NPCPerksInfoMap.Clear();
 	}
 }
 
@@ -247,7 +242,7 @@ void LoadGameCallback(void*)
 			}
 			case 'VAPJ':
 			{
-				if (!(changedFlags & kChangedFlag_AuxVars)) continue;
+				if (!(changedFlags & kChangedFlag_AuxVars)) break;
 				bufPos = GetLoadGameBuffer(length);
 				AuxVarOwnersMap *ownersMap;
 				AuxVarVarsMap *aVarsMap;
@@ -358,14 +353,14 @@ void LoadGameCallback(void*)
 					}
 				}
 				break;
-auxVarReadError:
+			auxVarReadError:
 				s_auxVariablesPerm.Clear();
 				PrintLog("LOAD GAME: AuxVar map corrupted > Skipping records.");
 				break;
 			}
 			case 'MRPJ':
 			{
-				if (!(changedFlags & kChangedFlag_RefMaps)) continue;
+				if (!(changedFlags & kChangedFlag_RefMaps)) break;
 				bufPos = GetLoadGameBuffer(length);
 				RefMapVarsMap *rVarsMap;
 				RefMapIDsMap *idsMap;
@@ -445,14 +440,14 @@ auxVarReadError:
 					}
 				}
 				break;
-refMapReadError:
+			refMapReadError:
 				s_refMapArraysPerm.Clear();
 				PrintLog("LOAD GAME: RefMap map corrupted > Skipping records.");
 				break;
 			}
 			case 'RLPJ':
 			{
-				if (!(changedFlags & kChangedFlag_LinkedRefs)) continue;
+				if (!(changedFlags & kChangedFlag_LinkedRefs)) break;
 				bufPos = GetLoadGameBuffer(length);
 				UInt32 lnkID;
 				nRecs = *(UInt16*)bufPos;
@@ -512,7 +507,7 @@ refMapReadError:
 			}
 			case 'PNPJ':
 			{
-				if (!s_NPCPerks) continue;
+				if (!s_NPCPerks || !(changedFlags & kChangedFlag_NPCPerks)) break;
 				bufPos = GetLoadGameBuffer(length);
 				nRecs = *(UInt16*)bufPos;
 				bufPos += 2;
@@ -538,12 +533,15 @@ refMapReadError:
 						buffer4 = *(UInt32*)bufPos;
 						bufPos += 4;
 						rank = *bufPos++;
-						if (!ResolveRefID(buffer4, &buffer4) || !(perk = (BGSPerk*)LookupFormByRefID(buffer4)))
+						if (!ResolveRefID(buffer4, &buffer4) || !(perk = (BGSPerk*)LookupFormByRefID(buffer4)) || NOT_ID(perk, BGSPerk))
 							continue;
+						if (rank > perk->data.numRanks)
+							rank = perk->data.numRanks;
 						if (!perksInfo)
 							perksInfo = &s_NPCPerksInfoMap[refID];
 						perksInfo->perkRanks[perk] = rank;
 					}
+					actor->extraDataList.perksInfo = perksInfo;
 				}
 			}
 			default:
@@ -567,7 +565,7 @@ refMapReadError:
 		}
 		while (actorIter = actorIter->next);
 	}
-	if (s_NPCPerks)
+	if (s_NPCPerks && (changedFlags & kChangedFlag_NPCPerks))
 	{
 		auto actorIter = ProcessManager::Get()->highActors.Head();
 		do
@@ -576,13 +574,14 @@ refMapReadError:
 				InitNPCPerks(actor);
 		}
 		while (actorIter = actorIter->next);
+		//PrintLog("\n================\n");
 	}
 }
 
 void SaveGameCallback(void*)
 {
 	UInt8 buffer1;
-	UInt16 buffer2;
+	UInt32 buffer2;
 
 	StrCopy(s_lastLoadedPath, GetSavePath());
 	s_dataChangedFlags = 0;
@@ -680,18 +679,20 @@ void SaveGameCallback(void*)
 			while (--buffer1);
 		}
 	}
-	if (!s_NPCPerksInfoMap.Empty())
+	if (buffer2 = s_NPCPerksInfoMap.Size())
 	{
 		Actor *actor;
 		for (auto refIter = s_NPCPerksInfoMap.Begin(); refIter; ++refIter)
 		{
 			if ((actor = (Actor*)LookupFormByRefID(refIter.Key())) && IS_ACTOR(actor))
 			{
-				if (!refIter().perkRanks.Empty() && (actor->isTeammate || !(((TESActorBase*)actor->baseForm)->baseData.flags & 8) || actor->GetNiNode()))
-					continue;
+				if (!refIter().perkRanks.Empty() && !actor->lifeState && (actor->isTeammate || !(((TESActorBase*)actor->baseForm)->baseData.flags & 8) || actor->GetNiNode()))
+					goto isValid;
 				actor->extraDataList.perksInfo = NULL;
 			}
 			refIter.Remove();
+		isValid:
+			if (!--buffer2) break;
 		}
 		if (buffer2 = s_NPCPerksInfoMap.Size())
 		{
@@ -705,6 +706,7 @@ void SaveGameCallback(void*)
 					WriteRecord32(perkIter.Key()->refID);
 					WriteRecord8(perkIter());
 				}
+				if (!--buffer2) break;
 			}
 		}
 	}

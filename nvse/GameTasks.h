@@ -550,6 +550,14 @@ struct ModelLoader
 	{
 		ThisCall(0x444850, this, refr, 1, false);
 	}
+	__forceinline NiNode *LoadModel(const char *nifPath, UInt32 baseClass, bool flag3Cbit0, bool flag3Cbit5, bool dontIncCounter)
+	{
+		return ThisCall<NiNode*>(0x447080, this, nifPath, baseClass, flag3Cbit0, 0, flag3Cbit5, dontIncCounter);
+	}
+	__forceinline KFModel *LoadKFModel(const char *kfPath)
+	{
+		return ThisCall<KFModel*>(0x4471C0, this, kfPath);
+	}
 };
 
 extern ModelLoader *g_modelLoader;

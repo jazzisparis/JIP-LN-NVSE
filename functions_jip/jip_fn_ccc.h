@@ -565,7 +565,7 @@ bool Cmd_CCCSayTo_Execute(COMMAND_ARGS)
 	if (xSayTo)
 	{
 		if (xSayTo->info) xSayTo->info->RunResultScript(1, (Actor*)thisObj);
-		RemoveExtraData(&thisObj->extraDataList, xSayTo, true);
+		thisObj->extraDataList.RemoveExtra(xSayTo, true);
 	}
 	return true;
 }
@@ -577,7 +577,7 @@ bool Cmd_CCCRunResultScripts_Execute(COMMAND_ARGS)
 	{
 		Actor *actor = (Actor*)thisObj;
 		bool eval;
-		TESTopicInfo *topicInfo = GetTopicInfo(topic, &eval, actor, g_thePlayer, 1, NULL, NULL);
+		TESTopicInfo *topicInfo = GetTopicInfo(topic, &eval, actor, g_thePlayer);
 		if (topicInfo)
 		{
 			topicInfo->RunResultScript(0, actor);
@@ -737,7 +737,7 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 		return true;
 	}
 	ContainerMenu *containerMenu = ContainerMenu::Get();
-	ContChangesEntry *menuEntry = *g_containerMenuSelection;
+	ContChangesEntry *menuEntry = ContainerMenu::Selection();
 	if (!menuEntry || !containerMenu || !containerMenu->rightItems.selected || (GetActiveTileID() != 20))
 		return true;
 	item = menuEntry->type;
@@ -779,7 +779,7 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 	ThisCall(doEquip ? 0x88C830 : 0x88D7D0, character, item, eqpCount, xData, 1, 0, 0);
 	s_forceEquipCall = false;
 	ThisCall(0x8ADED0, g_thePlayer, item, doEquip, doEquip);
-	DoRefreshContainerMenu(containerMenu, item);
+	containerMenu->Refresh(item);
 	return true;
 }
 

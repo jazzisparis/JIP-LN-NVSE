@@ -113,7 +113,7 @@ bool Cmd_SetWeaponRefModFlags_Execute(COMMAND_ARGS)
 			if (flags) xModFlags->flags = flags;
 			else
 			{
-				RemoveExtraData(xData, xModFlags, true);
+				xData->RemoveExtra(xModFlags, true);
 				if (!xData->m_data)
 				{
 					entry->extendData->Remove(xData);
@@ -124,14 +124,14 @@ bool Cmd_SetWeaponRefModFlags_Execute(COMMAND_ARGS)
 		else if (flags)
 		{
 			xData = SplitFromStack(entry, xData);
-			AddExtraData(xData, ExtraWeaponModFlags::Create(flags));
+			xData->AddExtra(ExtraWeaponModFlags::Create(flags));
 		}
 	}
 	else if (flags)
 	{
 		xData = invRef->CreateExtraData();
 		if (!xData) return true;
-		AddExtraData(xData, ExtraWeaponModFlags::Create(flags));
+		xData->AddExtra(ExtraWeaponModFlags::Create(flags));
 	}
 	*result = 1;
 	return true;
@@ -177,13 +177,13 @@ bool Cmd_SetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 	{
 		ExtraHealth *xHealth = GetExtraType(xData, Health);
 		if (xHealth) xHealth->health = health;
-		else AddExtraData(xData, ExtraHealth::Create(health));
+		else xData->AddExtra(ExtraHealth::Create(health));
 	}
 	else
 	{
 		xData = invRef->CreateExtraData();
 		if (!xData) return true;
-		AddExtraData(xData, ExtraHealth::Create(health));
+		xData->AddExtra(ExtraHealth::Create(health));
 	}
 	*result = 1;
 	return true;
@@ -203,7 +203,7 @@ bool Cmd_SetHotkeyItemRef_Execute(COMMAND_ARGS)
 		return true;
 	if (!keyNum)
 	{
-		if (invRef->xData) RemoveExtraType(invRef->xData, kExtraData_Hotkey);
+		if (invRef->xData) invRef->xData->RemoveByType(kExtraData_Hotkey);
 		return true;
 	}
 	keyNum--;
@@ -215,7 +215,7 @@ bool Cmd_SetHotkeyItemRef_Execute(COMMAND_ARGS)
 		{
 			if (!ClearHotkey(keyNum))
 				return true;
-			AddExtraData(xData, ExtraHotkey::Create(keyNum));
+			xData->AddExtra(ExtraHotkey::Create(keyNum));
 		}
 		else if ((xHotkey->index == keyNum) || !ClearHotkey(keyNum))
 			return true;
@@ -225,7 +225,7 @@ bool Cmd_SetHotkeyItemRef_Execute(COMMAND_ARGS)
 	{
 		if (!ClearHotkey(keyNum) || !(xData = invRef->CreateExtraData()))
 			return true;
-		AddExtraData(xData, ExtraHotkey::Create(keyNum));
+		xData->AddExtra(ExtraHotkey::Create(keyNum));
 	}
 	*result = 1;
 	return true;
@@ -307,7 +307,7 @@ bool Cmd_DropAlt_Execute(COMMAND_ARGS)
 				{
 					if (hasScript && xData->HasType(kExtraData_Script))
 					{
-						RemoveExtraType(xData, kExtraData_Count);
+						xData->RemoveByType(kExtraData_Count);
 						subCount = 1;
 					}
 					else if (subCount > total)
@@ -509,9 +509,9 @@ bool Cmd_SetNoUnequip_Execute(COMMAND_ARGS)
 		if (xData)
 		{
 			if (!noUnequip)
-				RemoveExtraType(xData, kExtraData_CannotWear);
+				xData->RemoveByType(kExtraData_CannotWear);
 			else if (xData->HasType(kExtraData_Worn) && !xData->HasType(kExtraData_CannotWear))
-				AddExtraData(xData, ExtraCannotWear::Create());
+				xData->AddExtra(ExtraCannotWear::Create());
 		}
 	}
 	return true;

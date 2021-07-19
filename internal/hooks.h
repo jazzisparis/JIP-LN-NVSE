@@ -1385,8 +1385,7 @@ __declspec(naked) void MenuStateOpenHook()
 	__asm
 	{
 		mov		dl, [ebp-0x11]
-		mov		ecx, g_menuVisibility
-		add		ecx, eax
+		lea		ecx, [eax+0x11F308F]
 		cmp		[ecx], dl
 		jz		done
 		mov		[ecx], dl
@@ -1419,8 +1418,7 @@ __declspec(naked) void MenuStateCloseHook()
 {
 	__asm
 	{
-		mov		ecx, g_menuVisibility
-		add		ecx, edx
+		lea		ecx, [edx+0x11F308F]
 		cmp		byte ptr [ecx], 0
 		jz		done
 		mov		byte ptr [ecx], 0

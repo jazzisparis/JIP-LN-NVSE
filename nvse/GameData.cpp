@@ -1,17 +1,5 @@
 #include "nvse/GameData.h"
 
-RadioEntry **g_pipboyRadio = (RadioEntry**)0x11DD42C;
-EffectArchTypeEntry *g_effectArchTypeArray = (EffectArchTypeEntry*)0x1183320;				//	Array size = 0x25
-EntryPointConditionInfo *g_entryPointConditionInfo = (EntryPointConditionInfo*)0x1196EE0;	//	Array size = 0x49
-AnimGroupInfo *g_animGroupInfoArray = (AnimGroupInfo*)0x11977D8;							//	Array size = 0xF5
-PCMiscStat **g_miscStatData = (PCMiscStat**)0x11C6D50;										//	Array size = 0x2B
-TypeSignature *g_typeSignatures = (TypeSignature*)0x101C2AC;								//	Array size = 0x79; order is reversed.
-
-DataHandler* DataHandler::Get() {
-	DataHandler** g_dataHandler = (DataHandler**)0x011C3F2C;
-	return *g_dataHandler;
-}
-
 class LoadedModFinder
 {
 	const char * m_stringToFind;
@@ -32,17 +20,17 @@ const ModInfo * DataHandler::LookupModByName(const char * modName)
 
 const ModInfo ** DataHandler::GetActiveModList()
 {
-	static const ModInfo* activeModList[0x100] = { 0 };
+	static const ModInfo *activeModList[0x100] = {NULL};
 
-	if (!(*activeModList))
+	if (!activeModList[0])
 	{
-		UInt16 index = 0;
-		for (index = 0  ; index < DataHandler::Get()->modList.modInfoList.Count() ; index++)
+		UInt32 index = 0;
+		auto iter = modList.modInfoList.Head();
+		do
 		{
-			ModInfo* entry = DataHandler::Get()->modList.modInfoList.GetNthItem(index);
-			if (entry->IsLoaded())
-				activeModList[index] = entry;
+			activeModList[index++] = iter->data;
 		}
+		while (iter = iter->next);
 	}
 
 	return activeModList;
@@ -70,26 +58,6 @@ const char* DataHandler::GetNthModName(UInt32 modIndex)
 	else
 		return "";
 }
-
-struct IsModLoaded
-{
-	bool Accept(ModInfo* pModInfo) const {
-		return pModInfo->IsLoaded();
-	}
-};
-
-UInt8 DataHandler::GetActiveModCount() const
-{
-	return modList.modInfoList.Count();
-}
-
-ModInfo::ModInfo() {
-	//
-};
-
-ModInfo::~ModInfo() {
-	//
-};
 
 void Sky::RefreshMoon()
 {

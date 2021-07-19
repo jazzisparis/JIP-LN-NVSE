@@ -1338,6 +1338,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2903*/REG_CMD(FailQuest);
 	//	v56.22
 	/*2904*/REG_CMD(PlayAnimSequence);
+	//	v56.26
+	/*2905*/REG_CMD(RemoveAllPerks);
 
 	//===========================================================
 
@@ -1479,6 +1481,11 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			{
 				s_HUDCursorMode = 0;
 				g_DIHookCtrl->SetLMBDisabled(false);
+			}
+			if (s_doRefreshItemListBox)
+			{
+				s_doRefreshItemListBox = false;
+				RefreshItemListBox();
 			}
 			break;
 		}

@@ -36,6 +36,44 @@
 #define GAME_HEAP_ALLOC __asm mov ecx, 0x11F6238 CALL_EAX(0xAA3E40)
 #define GAME_HEAP_FREE  __asm mov ecx, 0x11F6238 CALL_EAX(0xAA4060)
 
+#define MEMBER_FN_PREFIX(className)	\
+	typedef className _MEMBER_FN_BASE_TYPE
+
+#define DEFINE_MEMBER_FN_LONG(className, functionName, retnType, address, ...)		\
+	typedef retnType (className::* _##functionName##_type)(__VA_ARGS__);			\
+																					\
+	inline _##functionName##_type * _##functionName##_GetPtr(void)					\
+	{																				\
+		static const UInt32 _address = address;										\
+		return (_##functionName##_type *)&_address;									\
+	}
+
+#define DEFINE_MEMBER_FN(functionName, retnType, address, ...)	\
+	DEFINE_MEMBER_FN_LONG(_MEMBER_FN_BASE_TYPE, functionName, retnType, address, __VA_ARGS__)
+
+#define CALL_MEMBER_FN(obj, fn)	\
+	((*(obj)).*(*((obj)->_##fn##_GetPtr())))
+
+#define SIZEOF_ARRAY(arrayName, elementType) (sizeof(arrayName) / sizeof(elementType))
+
+template <typename T_Ret = void, typename ...Args>
+__forceinline T_Ret ThisCall(UInt32 _addr, void *_this, Args ...args)
+{
+	return ((T_Ret (__thiscall *)(void*, Args...))_addr)(_this, std::forward<Args>(args)...);
+}
+
+template <typename T_Ret = void, typename ...Args>
+__forceinline T_Ret StdCall(UInt32 _addr, Args ...args)
+{
+	return ((T_Ret (__stdcall *)(Args...))_addr)(std::forward<Args>(args)...);
+}
+
+template <typename T_Ret = void, typename ...Args>
+__forceinline T_Ret CdeclCall(UInt32 _addr, Args ...args)
+{
+	return ((T_Ret (__cdecl *)(Args...))_addr)(std::forward<Args>(args)...);
+}
+
 #define GameHeapAlloc(size) ThisCall<void*, UInt32>(0xAA3E40, (void*)0x11F6238, size)
 #define GameHeapFree(ptr) ThisCall<void, void*>(0xAA4060, (void*)0x11F6238, ptr)
 

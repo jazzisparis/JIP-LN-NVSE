@@ -108,7 +108,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList, TempElem
 		}
 		else
 		{
-			for (auto mIter = (*g_allFormsMap)->Begin(); mIter; ++mIter)
+			for (auto mIter = GameGlobals::AllFormsMap()->Begin(); mIter; ++mIter)
 			{
 				form = mIter.Get();
 				if (!form || (form->typeID != formType) || ((index != -1) && (index != form->modIndex))) continue;
@@ -160,7 +160,7 @@ struct SearchForm
 	void PrintIfMatch(const char *subStr)
 	{
 		if ((name && SubStrCI(name, subStr)) || (EDID && SubStrCI(EDID, subStr)))
-			Console_Print("[%08X]  %s  %s  %s", form->refID, g_typeSignatures[120 - form->typeID].signature, EDID ? EDID : "", name ? name : "");
+			Console_Print("[%08X]  %s  %s  %s", form->refID, TypeSignature::Array()[120 - form->typeID].signature, EDID ? EDID : "", name ? name : "");
 	}
 };
 
@@ -194,7 +194,7 @@ bool Cmd_Search_Execute(COMMAND_ARGS)
 		{
 			for (UInt32 idx = 3; idx <= 120; idx++)
 			{
-				if (StrCompare(typeStr, g_typeSignatures[idx].signature) != 0)
+				if (StrCompare(typeStr, TypeSignature::Array()[idx].signature) != 0)
 					continue;
 				filter = 120 - idx;
 				break;

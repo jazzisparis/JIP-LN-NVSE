@@ -140,158 +140,158 @@
 
 enum
 {
-	kExtraData_Unknown00,
-	kExtraData_Havok,
-	kExtraData_Cell3D,
-	kExtraData_CellWaterType,
-	kExtraData_RegionList,
-	kExtraData_SeenData,
-	kExtraData_EditorID,
-	kExtraData_CellMusicType,
-	kExtraData_CellClimate,
-	kExtraData_ProcessMiddleLow,
-	kExtraData_CellCanopyShadowMask,
-	kExtraData_DetachTime,
-	kExtraData_PersistentCell,
-	kExtraData_Script,
-	kExtraData_Action,
-	kExtraData_StartingPosition,
-	kExtraData_Anim,
-	kExtraData_Unknown11,
-	kExtraData_UsedMarkers,
-	kExtraData_DistantData,
-	kExtraData_RagdollData,
-	kExtraData_ContainerChanges,
-	kExtraData_Worn,
-	kExtraData_WornLeft,
-	kExtraData_PackageStartLocation,
-	kExtraData_Package,
-	kExtraData_TrespassPackage,
-	kExtraData_RunOncePacks,
-	kExtraData_ReferencePointer,
-	kExtraData_Follower,
-	kExtraData_LevCreaModifier,
-	kExtraData_Ghost,
-	kExtraData_OriginalReference,
-	kExtraData_Ownership,
-	kExtraData_Global,
-	kExtraData_Rank,
-	kExtraData_Count,
-	kExtraData_Health,
-	kExtraData_Uses,
-	kExtraData_TimeLeft,
-	kExtraData_Charge,
-	kExtraData_Light,
-	kExtraData_Lock,
-	kExtraData_Teleport,
-	kExtraData_MapMarker,
-	kExtraData_Unknown2D,
-	kExtraData_LeveledCreature,
-	kExtraData_LeveledItem,
-	kExtraData_Scale,
-	kExtraData_Seed,
-	kExtraData_NonActorMagicCaster,
-	kExtraData_NonActorMagicTarget,
-	kExtraData_Unknown34,
-	kExtraData_PlayerCrimeList,
-	kExtraData_Unknown36,
-	kExtraData_EnableStateParent,
-	kExtraData_EnableStateChildren,
-	kExtraData_ItemDropper,
-	kExtraData_DroppedItemList,
-	kExtraData_RandomTeleportMarker,
-	kExtraData_MerchantContainer,
-	kExtraData_SavedHavokData,
-	kExtraData_CannotWear,
-	kExtraData_Poison,
-	kExtraData_Unknown40,
-	kExtraData_LastFinishedSequence,
-	kExtraData_SavedAnimation,
-	kExtraData_NorthRotation,
-	kExtraData_XTarget,
-	kExtraData_FriendHits,
-	kExtraData_HeadingTarget,
-	kExtraData_Unknown47,
-	kExtraData_RefractionProperty,
-	kExtraData_StartingWorldOrCell,
-	kExtraData_Hotkey,
-	kExtraData_Unknown4B,
-	kExtraData_EditorRefMovedData,
-	kExtraData_InfoGeneralTopic,
-	kExtraData_HasNoRumors,
-	kExtraData_Sound,
-	kExtraData_TerminalState,
-	kExtraData_LinkedRef,
-	kExtraData_LinkedRefChildren,
-	kExtraData_ActivateRef,
-	kExtraData_ActivateRefChildren,
-	kExtraData_TalkingActor,
-	kExtraData_ObjectHealth,
-	kExtraData_DecalRefs,
-	kExtraData_Unknown58,
-	kExtraData_CellImageSpace,
-	kExtraData_NavMeshPortal,
-	kExtraData_ModelSwap,
-	kExtraData_Radius,
-	kExtraData_Radiation,
-	kExtraData_FactionChanges,
-	kExtraData_DismemberedLimbs,
-	kExtraData_ActorCause,
-	kExtraData_MultiBound,
-	kExtraData_MultiBoundData,
-	kExtraData_MultiBoundRef,
-	kExtraData_Unknown64,
-	kExtraData_ReflectedRefs,
-	kExtraData_ReflectorRefs,
-	kExtraData_EmittanceSource,
-	kExtraData_RadioData,
-	kExtraData_CombatStyle,
-	kExtraData_Unknown6A,
-	kExtraData_Primitive,
-	kExtraData_OpenCloseActivateRef,
-	kExtraData_AnimNoteReciever,
-	kExtraData_Ammo,
-	kExtraData_PatrolRefData,
-	kExtraData_PackageData,
-	kExtraData_OcclusionPlane,
-	kExtraData_CollisionData,
-	kExtraData_SayTopicInfoOnceADay,
-	kExtraData_EncounterZone,
-	kExtraData_SayToTopicInfo,
-	kExtraData_OcclusionPlaneRefData,
-	kExtraData_PortalRefData,
-	kExtraData_Portal,
-	kExtraData_Room,
-	kExtraData_HealthPerc,
-	kExtraData_RoomRefData,
-	kExtraData_GuardedRefData,
-	kExtraData_CreatureAwakeSound,
-	kExtraData_WaterZoneMap,
-	kExtraData_Unknown7F,
-	kExtraData_IgnoredBySandbox,
-	kExtraData_CellAcousticSpace,
-	kExtraData_ReservedMarkers,
-	kExtraData_WeaponIdleSound,
-	kExtraData_WaterLightRefs,
-	kExtraData_LitWaterRefs,
-	kExtraData_WeaponAttackSound,
-	kExtraData_ActivateLoopSound,
-	kExtraData_PatrolRefInUseData,
-	kExtraData_AshPileRef,
-	kExtraData_CreatureMovementSound,
-	kExtraData_FollowerSwimBreadcrumbs,
-	kExtraData_CellImpactSwap,
-	kExtraData_WeaponModFlags,
-	kExtraData_ModdingItem,
-	kExtraData_SecuritronFace,
-	kExtraData_AudioMarker,
-	kExtraData_AudioBuoyMarker,
-	kExtraData_SpecialRenderFlags,
+	/*00*/kExtraData_Unknown00,
+	/*01*/kExtraData_Havok,
+	/*02*/kExtraData_Cell3D,
+	/*03*/kExtraData_CellWaterType,
+	/*04*/kExtraData_RegionList,
+	/*05*/kExtraData_SeenData,
+	/*06*/kExtraData_EditorID,
+	/*07*/kExtraData_CellMusicType,
+	/*08*/kExtraData_CellClimate,
+	/*09*/kExtraData_ProcessMiddleLow,
+	/*0A*/kExtraData_CellCanopyShadowMask,
+	/*0B*/kExtraData_DetachTime,
+	/*0C*/kExtraData_PersistentCell,
+	/*0D*/kExtraData_Script,
+	/*0E*/kExtraData_Action,
+	/*0F*/kExtraData_StartingPosition,
+	/*10*/kExtraData_Anim,
+	/*11*/kExtraData_Unknown11,
+	/*12*/kExtraData_UsedMarkers,
+	/*13*/kExtraData_DistantData,
+	/*14*/kExtraData_RagdollData,
+	/*15*/kExtraData_ContainerChanges,
+	/*16*/kExtraData_Worn,
+	/*17*/kExtraData_WornLeft,
+	/*18*/kExtraData_PackageStartLocation,
+	/*19*/kExtraData_Package,
+	/*1A*/kExtraData_TrespassPackage,
+	/*1B*/kExtraData_RunOncePacks,
+	/*1C*/kExtraData_ReferencePointer,
+	/*1D*/kExtraData_Follower,
+	/*1E*/kExtraData_LevCreaModifier,
+	/*1F*/kExtraData_Ghost,
+	/*20*/kExtraData_OriginalReference,
+	/*21*/kExtraData_Ownership,
+	/*22*/kExtraData_Global,
+	/*23*/kExtraData_Rank,
+	/*24*/kExtraData_Count,
+	/*25*/kExtraData_Health,
+	/*26*/kExtraData_Uses,
+	/*27*/kExtraData_TimeLeft,
+	/*28*/kExtraData_Charge,
+	/*29*/kExtraData_Light,
+	/*2A*/kExtraData_Lock,
+	/*2B*/kExtraData_Teleport,
+	/*2C*/kExtraData_MapMarker,
+	/*2D*/kExtraData_Unknown2D,
+	/*2E*/kExtraData_LeveledCreature,
+	/*2F*/kExtraData_LeveledItem,
+	/*30*/kExtraData_Scale,
+	/*31*/kExtraData_Seed,
+	/*32*/kExtraData_NonActorMagicCaster,
+	/*33*/kExtraData_NonActorMagicTarget,
+	/*34*/kExtraData_Unknown34,
+	/*35*/kExtraData_PlayerCrimeList,
+	/*36*/kExtraData_Unknown36,
+	/*37*/kExtraData_EnableStateParent,
+	/*38*/kExtraData_EnableStateChildren,
+	/*39*/kExtraData_ItemDropper,
+	/*3A*/kExtraData_DroppedItemList,
+	/*3B*/kExtraData_RandomTeleportMarker,
+	/*3C*/kExtraData_MerchantContainer,
+	/*3D*/kExtraData_SavedHavokData,
+	/*3E*/kExtraData_CannotWear,
+	/*3F*/kExtraData_Poison,
+	/*40*/kExtraData_Unknown40,
+	/*41*/kExtraData_LastFinishedSequence,
+	/*42*/kExtraData_SavedAnimation,
+	/*43*/kExtraData_NorthRotation,
+	/*44*/kExtraData_XTarget,
+	/*45*/kExtraData_FriendHits,
+	/*46*/kExtraData_HeadingTarget,
+	/*47*/kExtraData_Unknown47,
+	/*48*/kExtraData_RefractionProperty,
+	/*49*/kExtraData_StartingWorldOrCell,
+	/*4A*/kExtraData_Hotkey,
+	/*4B*/kExtraData_Unknown4B,
+	/*4C*/kExtraData_EditorRefMovedData,
+	/*4D*/kExtraData_InfoGeneralTopic,
+	/*4E*/kExtraData_HasNoRumors,
+	/*4F*/kExtraData_Sound,
+	/*50*/kExtraData_TerminalState,
+	/*51*/kExtraData_LinkedRef,
+	/*52*/kExtraData_LinkedRefChildren,
+	/*53*/kExtraData_ActivateRef,
+	/*54*/kExtraData_ActivateRefChildren,
+	/*55*/kExtraData_TalkingActor,
+	/*56*/kExtraData_ObjectHealth,
+	/*57*/kExtraData_DecalRefs,
+	/*58*/kExtraData_Unknown58,
+	/*59*/kExtraData_CellImageSpace,
+	/*5A*/kExtraData_NavMeshPortal,
+	/*5B*/kExtraData_ModelSwap,
+	/*5C*/kExtraData_Radius,
+	/*5D*/kExtraData_Radiation,
+	/*5E*/kExtraData_FactionChanges,
+	/*5F*/kExtraData_DismemberedLimbs,
+	/*60*/kExtraData_ActorCause,
+	/*61*/kExtraData_MultiBound,
+	/*62*/kExtraData_MultiBoundData,
+	/*63*/kExtraData_MultiBoundRef,
+	/*64*/kExtraData_Unknown64,
+	/*65*/kExtraData_ReflectedRefs,
+	/*66*/kExtraData_ReflectorRefs,
+	/*67*/kExtraData_EmittanceSource,
+	/*68*/kExtraData_RadioData,
+	/*69*/kExtraData_CombatStyle,
+	/*6A*/kExtraData_Unknown6A,
+	/*6B*/kExtraData_Primitive,
+	/*6C*/kExtraData_OpenCloseActivateRef,
+	/*6D*/kExtraData_AnimNoteReciever,
+	/*6E*/kExtraData_Ammo,
+	/*6F*/kExtraData_PatrolRefData,
+	/*70*/kExtraData_PackageData,
+	/*71*/kExtraData_OcclusionPlane,
+	/*72*/kExtraData_CollisionData,
+	/*73*/kExtraData_SayTopicInfoOnceADay,
+	/*74*/kExtraData_EncounterZone,
+	/*75*/kExtraData_SayToTopicInfo,
+	/*76*/kExtraData_OcclusionPlaneRefData,
+	/*77*/kExtraData_PortalRefData,
+	/*78*/kExtraData_Portal,
+	/*79*/kExtraData_Room,
+	/*7A*/kExtraData_HealthPerc,
+	/*7B*/kExtraData_RoomRefData,
+	/*7C*/kExtraData_GuardedRefData,
+	/*7D*/kExtraData_CreatureAwakeSound,
+	/*7E*/kExtraData_WaterZoneMap,
+	/*7F*/kExtraData_Unknown7F,
+	/*80*/kExtraData_IgnoredBySandbox,
+	/*81*/kExtraData_CellAcousticSpace,
+	/*82*/kExtraData_ReservedMarkers,
+	/*83*/kExtraData_WeaponIdleSound,
+	/*84*/kExtraData_WaterLightRefs,
+	/*85*/kExtraData_LitWaterRefs,
+	/*86*/kExtraData_WeaponAttackSound,
+	/*87*/kExtraData_ActivateLoopSound,
+	/*88*/kExtraData_PatrolRefInUseData,
+	/*89*/kExtraData_AshPileRef,
+	/*8A*/kExtraData_CreatureMovementSound,
+	/*8B*/kExtraData_FollowerSwimBreadcrumbs,
+	/*8C*/kExtraData_CellImpactSwap,
+	/*8D*/kExtraData_WeaponModFlags,
+	/*8E*/kExtraData_ModdingItem,
+	/*8F*/kExtraData_SecuritronFace,
+	/*90*/kExtraData_AudioMarker,
+	/*91*/kExtraData_AudioBuoyMarker,
+	/*92*/kExtraData_SpecialRenderFlags,
 	kExtraData_Max
 };
 
 #define GetExtraType(xDataList, Type) (Extra ## Type*)(xDataList)->GetByType(kExtraData_ ## Type)
-extern const char *GetExtraDataName(UInt8 extraDataType);
+const char *GetExtraDataName(UInt8 extraDataType);
 
 // 14
 class ExtraAction : public BSExtraData
@@ -335,6 +335,10 @@ public:
 		EntryData(ExtendDataList *extend, SInt32 count, TESForm *item) :
 			extendData(extend), countDelta(count), type(item) {}
 
+		__forceinline void Destroy()
+		{
+			ThisCall(0x4459E0, this, 1);
+		}
 		void Cleanup();
 		bool __fastcall HasExtraType(UInt8 xType);
 		bool HasExtraLeveledItem();
@@ -366,7 +370,6 @@ public:
 
 	Data	*data;	// 0C
 
-	void DebugDump();
 	void Cleanup();	// clean up unneeded extra data from each EntryData
 
 	static ExtraContainerChanges* Create();
@@ -374,119 +377,6 @@ public:
 	EntryDataList *GetEntryDataList() const {return data ? data->objList : NULL;}
 };
 typedef ExtraContainerChanges::EntryData ContChangesEntry;
-
-// Finds an ExtraDataList in an ExtendDataList
-class ExtraDataListInExtendDataListMatcher
-{
-	ExtraDataList* m_toMatch;
-public:
-	ExtraDataListInExtendDataListMatcher(ExtraDataList* match) : m_toMatch(match) { }
-
-	bool Accept(ExtraDataList* match)
-	{
-		return (m_toMatch == match);
-	}
-};
-
-// Finds an ExtraDataList in an ExtendDataList embedded in one of the EntryData from an EntryDataList
-class ExtraDataListInEntryDataListMatcher
-{
-	ExtraDataList* m_toMatch;
-public:
-	ExtraDataListInEntryDataListMatcher(ExtraDataList* match) : m_toMatch(match) { }
-
-	bool Accept(ExtraContainerChanges::EntryData* match)
-	{
-		if (match && match->extendData)
-			return match->extendData->GetIndexOf(ExtraDataListInExtendDataListMatcher(m_toMatch))>=0;
-		else
-			return false;
-	}
-};
-
-// Finds an ExtendDataList in an EntryDataList
-class ExtendDataListInEntryDataListMatcher
-{
-	ExtraContainerChanges::ExtendDataList* m_toMatch;
-public:
-	ExtendDataListInEntryDataListMatcher(ExtraContainerChanges::ExtendDataList* match) : m_toMatch(match) { }
-
-	bool Accept(ExtraContainerChanges::EntryData* match)
-	{
-		if (match && match->extendData)
-			return (match->extendData == m_toMatch);
-		else
-			return false;
-	}
-};
-
-// Finds an EntryData in an EntryDataList
-class EntryDataInEntryDataListMatcher
-{
-	ExtraContainerChanges::EntryData* m_toMatch;
-public:
-	EntryDataInEntryDataListMatcher(ExtraContainerChanges::EntryData* match) : m_toMatch(match) { }
-
-	bool Accept(ExtraContainerChanges::EntryData* match)
-	{
-		return (m_toMatch == match);
-	}
-};
-
-// Finds an Item (type) in an EntryDataList
-class ItemInEntryDataListMatcher
-{
-	TESForm* m_toMatch;
-public:
-	ItemInEntryDataListMatcher(TESForm* match) : m_toMatch(match) { }
-
-	bool Accept(ExtraContainerChanges::EntryData* match)
-	{
-		return (match && m_toMatch == match->type);
-	}
-};
-
-// Finds an Item from its base form in an EntryDataList
-class BaseInEntryDataLastMatcher
-{
-	TESForm* m_toMatch;
-public:
-	BaseInEntryDataLastMatcher(TESForm* match) : m_toMatch(match) { }
-
-	bool Accept(ExtraContainerChanges::EntryData* match)
-	{
-		return (match && match->type && m_toMatch == match->type->TryGetREFRParent());
-	}
-};
-
-// Finds an item by refID in an EntryDataList
-class RefIDInEntryDataListMatcher
-{
-	UInt32 m_toMatch;
-public:
-	RefIDInEntryDataListMatcher(UInt32 match) : m_toMatch(match) { }
-
-	bool Accept(ExtraContainerChanges::EntryData* match)
-	{
-		return (match && match->type && m_toMatch == match->type->refID);
-	}
-};
-
-// Finds an item by the refID of its base form in an EntryDataList
-class BaseIDInEntryDataListMatcher
-{
-	UInt32 m_toMatch;
-public:
-	BaseIDInEntryDataListMatcher(UInt32 match) : m_toMatch(match) { }
-
-	bool Accept(ExtraContainerChanges::EntryData* match)
-	{
-		return (match && match->type && match->type->TryGetREFRParent() && m_toMatch == match->type->TryGetREFRParent()->refID);
-	}
-};
-
-extern ExtraContainerChanges::ExtendDataList* ExtraContainerChangesExtendDataListCreate(ExtraDataList* pExtraDataList = NULL);
-extern void ExtraContainerChangesExtendDataListFree(ExtraContainerChanges::ExtendDataList* xData, bool bFreeList = false);
 
 // 10
 class ExtraHealth : public BSExtraData
@@ -635,8 +525,6 @@ public:
 	typedef tList<FactionListData> FactionListEntry;
 	FactionListEntry	*data;		// 0C
 
-	void DebugDump();
-
 	static ExtraFactionChanges* Create();
 };
 
@@ -650,9 +538,6 @@ public:
 		return (data->faction == pFaction) ? true : false;
 	}
 };
-
-ExtraFactionChanges::FactionListEntry* GetExtraFactionList(BaseExtraList& xDataList);
-void SetExtraFactionRank(BaseExtraList& xDataList, TESFaction * faction, char rank);
 
 // 14
 class ExtraLeveledCreature : public BSExtraData

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "nvse/Utilities.h"
-
 // 08
 struct NiRTTI
 {
@@ -130,7 +128,6 @@ struct NiQuaternion
 
 	void EulerYPR(NiVector3 &ypr);
 	void RotationMatrix(NiMatrix33 &rotMatrix);
-	void Dump();
 };
 
 // 34

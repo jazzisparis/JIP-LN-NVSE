@@ -1,15 +1,5 @@
 #include "nvse/GameUI.h"
 
-bool *g_menuVisibility = (bool*)0x11F308F;
-ContChangesEntry **g_barterMenuSelection = (ContChangesEntry**)0x11D8FA8;
-ContChangesEntry **g_containerMenuSelection = (ContChangesEntry**)0x11D93FC;
-ContChangesEntry **g_inventoryMenuSelection = (ContChangesEntry**)0x11D9EA8;
-ContChangesEntry **g_modMenuTarget = (ContChangesEntry**)0x11D9F58;
-ContChangesEntry **g_repairMenuTarget = (ContChangesEntry**)0x11DA760;
-TESObjectREFR **g_VATSTargetRef = (TESObjectREFR**)0x11F21CC;
-VATSCameraData *g_VATSCameraData = (VATSCameraData*)0x11F2250;
-TESRecipe **g_recipeMenuSelection = (TESRecipe**)0x11D8E94;
-
 UnorderedMap<const char*, UInt32> s_menuNameToID({{"MessageMenu", kMenuType_Message}, {"InventoryMenu", kMenuType_Inventory}, {"StatsMenu", kMenuType_Stats},
 	{"HUDMainMenu", kMenuType_HUDMain}, {"LoadingMenu", kMenuType_Loading}, {"ContainerMenu", kMenuType_Container}, {"DialogMenu", kMenuType_Dialog},
 	{"SleepWaitMenu", kMenuType_SleepWait}, {"StartMenu", kMenuType_Start}, {"LockpickMenu", kMenuType_LockPick}, {"QuantityMenu", kMenuType_Quantity},
@@ -222,7 +212,7 @@ bool __fastcall IsMenuMode(UInt32 menuID)
 			return g_interfaceManager->currentMode != 1;
 		case 1:
 			if (*(bool*)0x11CAB24)
-				return g_menuVisibility[kMenuType_Inventory] || g_menuVisibility[kMenuType_Stats] || g_menuVisibility[kMenuType_Map];
+				return MENU_VISIBILITY[kMenuType_Inventory] || MENU_VISIBILITY[kMenuType_Stats] || MENU_VISIBILITY[kMenuType_Map];
 			return g_interfaceManager->pipBoyMode == 3;
 		case 2:
 		{
@@ -236,10 +226,10 @@ bool __fastcall IsMenuMode(UInt32 menuID)
 		case 3:
 			return *(bool*)0x11DEA2E;
 		case 4:
-			return g_menuVisibility[kMenuType_Loading] && g_menuVisibility[kMenuType_Start] && g_menuVisibility[kMenuType_HUDMain];
+			return MENU_VISIBILITY[kMenuType_Loading] && MENU_VISIBILITY[kMenuType_Start] && MENU_VISIBILITY[kMenuType_HUDMain];
 		default:
 			if ((menuID >= kMenuType_Min) && (menuID <= kMenuType_Max))
-				return g_menuVisibility[menuID];
+				return MENU_VISIBILITY[menuID];
 			return false;
 	}
 }

@@ -402,7 +402,6 @@ class DIHookControl;
 
 #include "nvse/NiTypes.h"
 #include "nvse/GameTypes.h"
-#include "nvse/Utilities.h"
 #include "nvse/GameRTTI.h"
 #include "nvse/CommandTable.h"
 #include "nvse/GameBSExtraData.h"

@@ -370,9 +370,6 @@
     <ClInclude Include="nvse\PluginAPI.h">
       <Filter>nvse</Filter>
     </ClInclude>
-    <ClInclude Include="nvse\Utilities.h">
-      <Filter>nvse</Filter>
-    </ClInclude>
     <ClInclude Include="internal\memory_pool.h">
       <Filter>internal</Filter>
     </ClInclude>

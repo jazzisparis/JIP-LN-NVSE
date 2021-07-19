@@ -204,16 +204,16 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 			break;
 		case kMenuType_Quantity:
 		{
-			if (g_menuVisibility[kMenuType_Inventory]) menuRef = CreateRefForStack(g_thePlayer, *g_inventoryMenuSelection);
+			if (MENU_VISIBILITY[kMenuType_Inventory]) menuRef = CreateRefForStack(g_thePlayer, InventoryMenu::Selection());
 			else if (ContainerMenu::Get())
 			{
 				ContainerMenu *cntMenu = ContainerMenu::Get();
-				menuRef = CreateRefForStack((cntMenu->currentItems == &cntMenu->leftItems) ? g_thePlayer : cntMenu->containerRef, *g_containerMenuSelection);
+				menuRef = CreateRefForStack((cntMenu->currentItems == &cntMenu->leftItems) ? g_thePlayer : cntMenu->containerRef, ContainerMenu::Selection());
 			}
 			else if (BarterMenu::Get())
 			{
 				BarterMenu *brtMenu = BarterMenu::Get();
-				menuRef = CreateRefForStack((brtMenu->currentItems == &brtMenu->leftItems) ? g_thePlayer : brtMenu->merchantRef->GetMerchantContainer(), *g_barterMenuSelection);
+				menuRef = CreateRefForStack((brtMenu->currentItems == &brtMenu->leftItems) ? g_thePlayer : brtMenu->merchantRef->GetMerchantContainer(), BarterMenu::Selection());
 			}
 			break;
 		}
@@ -230,7 +230,7 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 			break;
 		}
 		case kMenuType_Repair:
-			menuRef = CreateRefForStack(g_thePlayer, *g_repairMenuTarget);
+			menuRef = CreateRefForStack(g_thePlayer, RepairMenu::Target());
 			break;
 		case kMenuType_Barter:
 			menuRef = ((BarterMenu*)menu)->merchantRef;
@@ -239,13 +239,13 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 			menuRef = GetHackingMenuRef((HackingMenu*)menu);
 			break;
 		case kMenuType_VATS:
-			menuRef = *g_VATSTargetRef;
+			menuRef = VATSMenu::Target();
 			break;
 		case kMenuType_Computers:
 			menuRef = ((ComputersMenu*)menu)->targetRef;
 			break;
 		case kMenuType_ItemMod:
-			menuRef = CreateRefForStack(g_thePlayer, *g_modMenuTarget);
+			menuRef = CreateRefForStack(g_thePlayer, ItemModMenu::Target());
 			break;
 		case kMenuType_CompanionWheel:
 			menuRef = ((CompanionWheelMenu*)menu)->companionRef;
@@ -333,7 +333,7 @@ bool Cmd_GetSelectedItemRef_Execute(COMMAND_ARGS)
 		{
 			InventoryMenu *invMenu = InventoryMenu::Get();
 			if (invMenu->itemList.selected)
-				itemRef = CreateRefForStack(g_thePlayer, *g_inventoryMenuSelection);
+				itemRef = CreateRefForStack(g_thePlayer, InventoryMenu::Selection());
 			break;
 		}
 		case kMenuType_Stats:
@@ -347,7 +347,7 @@ bool Cmd_GetSelectedItemRef_Execute(COMMAND_ARGS)
 		{
 			ContainerMenu *cntMenu = ContainerMenu::Get();
 			if (cntMenu->leftItems.selected || cntMenu->rightItems.selected)
-				itemRef = CreateRefForStack(cntMenu->leftItems.selected ? g_thePlayer : cntMenu->containerRef, *g_containerMenuSelection);
+				itemRef = CreateRefForStack(cntMenu->leftItems.selected ? g_thePlayer : cntMenu->containerRef, ContainerMenu::Selection());
 			break;
 		}
 		case kMenuType_Map:
@@ -372,7 +372,7 @@ bool Cmd_GetSelectedItemRef_Execute(COMMAND_ARGS)
 		{
 			BarterMenu *brtMenu = BarterMenu::Get();
 			if (brtMenu->leftItems.selected || brtMenu->rightItems.selected)
-				itemRef = CreateRefForStack(brtMenu->leftItems.selected ? g_thePlayer : brtMenu->merchantRef->GetMerchantContainer(), *g_barterMenuSelection);
+				itemRef = CreateRefForStack(brtMenu->leftItems.selected ? g_thePlayer : brtMenu->merchantRef->GetMerchantContainer(), BarterMenu::Selection());
 			break;
 		}
 		case kMenuType_RepairServices:
@@ -423,7 +423,7 @@ bool Cmd_GetBarterGoldAlt_Execute(COMMAND_ARGS)
 bool Cmd_GetRecipeMenuSelection_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (RecipeMenu::Get() && *g_recipeMenuSelection) REFR_RES = (*g_recipeMenuSelection)->refID;
+	if (RecipeMenu::Get() && RecipeMenu::Selection()) REFR_RES = RecipeMenu::Selection()->refID;
 	return true;
 }
 
@@ -443,7 +443,7 @@ bool Cmd_UnlockRecipeMenuQuantity_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRecipeMenuNumSubcategories_Execute(COMMAND_ARGS)
 {
-	*result = (int)g_recipeMenuCategories->size;
+	*result = (int)GameGlobals::RecipeMenuCategories()->size;
 	return true;
 }
 
@@ -493,7 +493,7 @@ bool Cmd_SetFontFile_Execute(COMMAND_ARGS)
 	{
 		if (!FileExists(dataPathFull)) return true;
 		fontInfo = (FontInfo*)GameHeapAlloc(sizeof(FontInfo));
-		InitFontInfo(fontInfo, fontID, dataPath, true);
+		fontInfo->Init(fontID, dataPath, true);
 		if (!fontInfo->bufferData)
 		{
 			GameHeapFree(fontInfo);
@@ -960,35 +960,26 @@ __declspec(naked) void __fastcall RefreshRecipeMenu(RecipeMenu *menu)
 
 bool Cmd_RefreshItemsList_Execute(COMMAND_ARGS)
 {
-	switch (g_interfaceManager->GetTopVisibleMenuID())
+	if (MENU_VISIBILITY[kMenuType_Inventory])
+		CdeclCall(0x782A90);
+	else if (MENU_VISIBILITY[kMenuType_Stats])
+		ThisCall(0x7DF230, StatsMenu::Get(), 4);
+	else if (MENU_VISIBILITY[kMenuType_Container])
+		ContainerMenu::Get()->Refresh(NULL);
+	else if (MENU_VISIBILITY[kMenuType_Map])
 	{
-		case kMenuType_Inventory:
-			CdeclCall(0x782A90);
-			break;
-		case kMenuType_Stats:
-			ThisCall(0x7DF230, StatsMenu::Get(), 4);
-			break;
-		case kMenuType_Container:
-			ThisCall(0x75C280, ContainerMenu::Get(), 0);
-			break;
-		case kMenuType_Map:
+		MapMenu *mapMenu = MapMenu::Get();
+		if (mapMenu->currentTab == MapMenu::kTab_WorldMap)
 		{
-			MapMenu *mapMenu = MapMenu::Get();
-			if (mapMenu->currentTab == 0x21)
-			{
-				WriteRelJump(0x79DF73, 0x79E053);
-				ThisCall(0x79DBB0, mapMenu);
-				SAFE_WRITE_BUF(0x79DF73, "\x6A\x00\x68\xB1\x0F");
-			}
-			break;
+			WriteRelJump(0x79DF73, 0x79E053);
+			ThisCall(0x79DBB0, mapMenu);
+			SAFE_WRITE_BUF(0x79DF73, "\x6A\x00\x68\xB1\x0F");
 		}
-		case kMenuType_Barter:
-			CdeclCall(0x730690, 1);
-			break;
-		case kMenuType_Recipe:
-			RefreshRecipeMenu(RecipeMenu::Get());
-			break;
 	}
+	else if (MENU_VISIBILITY[kMenuType_Barter])
+		CdeclCall(0x730690, 1);
+	else if (MENU_VISIBILITY[kMenuType_Recipe])
+		RefreshRecipeMenu(RecipeMenu::Get());
 	return true;
 }
 
@@ -1019,10 +1010,10 @@ bool Cmd_SetBarterPriceMult_Execute(COMMAND_ARGS)
 void DoPurgePath(char *path)
 {
 	if (!path) return;
-	if (*g_terminalModelPtr == path)
+	if (*GameGlobals::TerminalModelPtr() == path)
 	{
 		PurgeTerminalModel();
-		*g_terminalModelPtr = g_terminalModelDefault;
+		*GameGlobals::TerminalModelPtr() = g_terminalModelDefault;
 	}
 	free(path);
 }
@@ -1181,7 +1172,7 @@ bool Cmd_GetVATSTargets_Execute(COMMAND_ARGS)
 	if (!VATSMenu::Get()) return true;
 	TempElements *tmpElements = GetTempElements();
 	tmpElements->Clear();
-	ListNode<VATSTargetInfo> *iter = g_VATSTargetList->Head();
+	ListNode<VATSTargetInfo> *iter = GameGlobals::VATSTargetList()->Head();
 	VATSTargetInfo *targetInfo;
 	do
 	{
