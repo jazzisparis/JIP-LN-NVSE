@@ -300,7 +300,8 @@ struct MainLoopCallback
 		FunctionArg	arg;
 		FunctionArg	*pArgs;
 	};
-
+	LambdaVariableContext lambdaVariableContext;
+	
 	static MainLoopCallback *Create(void *_cmdPtr, void *_thisObj, UInt32 _callCount = 1, UInt32 _callDelay = 1, UInt8 _numArgs = 0);
 
 	void Execute();

@@ -236,6 +236,7 @@ __declspec(naked) bool WheelTeammateHook()
 }
 
 Script *s_messageBoxScript = NULL;
+LambdaVariableContext s_messageBoxScriptVariableContext(nullptr);
 
 __declspec(naked) float MaxMessageWidthHook()
 {

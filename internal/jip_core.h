@@ -60,6 +60,10 @@ typedef bool (*_ExtractFormatStringArgs)(UInt32 fmtStringPos, char *buffer, COMM
 extern _ExtractFormatStringArgs ExtractFormatStringArgs;
 typedef bool (*_CallFunction)(Script *funcScript, TESObjectREFR *callingObj, UInt8 numArgs, ...);
 extern _CallFunction CallFunction;
+typedef void (*_CaptureLambdaVars)(Script* scriptLambda);
+extern _CaptureLambdaVars CaptureLambdaVars;
+typedef void (*_UncaptureLambdaVars)(Script* scriptLambda);
+extern _UncaptureLambdaVars UncaptureLambdaVars;
 
 extern UInt8 *g_numPreloadMods;
 
@@ -185,6 +189,43 @@ struct QueuedCmdCall
 };
 
 #define AddQueuedCmdCall(qCall) ThisCall(0x87D160, g_scrapHeapQueue, &qCall)
+
+class LambdaVariableContext
+{
+	Script* scriptLambda;
+public:
+
+	LambdaVariableContext(const LambdaVariableContext& other) = delete;
+	LambdaVariableContext& operator=(const LambdaVariableContext& other) = delete;
+
+	explicit LambdaVariableContext::LambdaVariableContext(Script* scriptLambda) : scriptLambda(scriptLambda)
+	{
+		if (scriptLambda)
+			CaptureLambdaVars(scriptLambda);
+	}
+
+	LambdaVariableContext::LambdaVariableContext(LambdaVariableContext&& other) noexcept : scriptLambda(other.scriptLambda)
+	{
+		other.scriptLambda = nullptr;
+	}
+
+	LambdaVariableContext& LambdaVariableContext::operator=(LambdaVariableContext&& other) noexcept
+	{
+		if (this == &other)
+			return *this;
+		if (this->scriptLambda)
+			UncaptureLambdaVars(this->scriptLambda);
+		scriptLambda = other.scriptLambda;
+		other.scriptLambda = nullptr;
+		return *this;
+	}
+
+	LambdaVariableContext::~LambdaVariableContext()
+	{
+		if (this->scriptLambda)
+			UncaptureLambdaVars(this->scriptLambda);
+	}
+};
 
 typedef Set<TESForm*> TempFormList;
 TempFormList *GetTempFormList();
