@@ -310,6 +310,8 @@ struct MainLoopCallback
 	{
 		if (numArgs > 1)
 			POOL_FREE(pArgs, numArgs, FunctionArg);
+		if (isScript)
+			lambdaVariableContext = LambdaVariableContext(nullptr);
 		POOL_FREE(this, 1, MainLoopCallback);
 	}
 };
