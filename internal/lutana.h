@@ -267,12 +267,14 @@ bool __stdcall ProcessLNEventHandler(UInt32 eventMask, Script *udfScript, bool a
 		if (callbacks.Find(LNEventFinder(evntData)))
 			return false;
 		callbacks.Append(evntData);
+		CaptureLambdaVars(udfScript);
 		s_LNEventFlags |= eventMask;
 	}
 	else
 	{
 		if (!callbacks.Remove(LNEventFinder(evntData)))
 			return false;
+		UncaptureLambdaVars(udfScript);
 		if (callbacks.Empty()) s_LNEventFlags ^= eventMask;
 	}
 	return true;

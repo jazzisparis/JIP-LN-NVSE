@@ -854,9 +854,14 @@ bool Cmd_SetOnCriticalHitEventHandler_Execute(COMMAND_ARGS)
 		}
 	}
 	CriticalHitEventData evntData(target, source, weapon, script);
-	if (addEvnt && s_criticalHitEvents.Find(CriticalHitEventFind(evntData))) return true;
+	if (addEvnt && s_criticalHitEvents.Find(CriticalHitEventFind(evntData)))
+		return true;
 	s_criticalHitEvents.Remove(CriticalHitEventRemove(evntData));
-	if (addEvnt) s_criticalHitEvents.Append(evntData);
+	if (addEvnt)
+	{
+		s_criticalHitEvents.Append(evntData);
+		evntData.callback.ClearScript();
+	}
 	return true;
 }
 

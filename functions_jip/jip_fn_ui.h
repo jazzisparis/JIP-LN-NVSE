@@ -613,6 +613,9 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		mov		dword ptr [edi+0x54], 0x00000100
 		mov		eax, [esp+0x18]
 		mov		[edi+0x58], eax
+		push	eax
+		call	CaptureLambdaVars
+		pop		ecx
 		mov		ecx, edi
 		call	TextInputRefreshHook
 		push	0
@@ -1063,6 +1066,7 @@ __declspec(naked) void QuantityMenuCallback(int count)
 		push	0
 		push	eax
 		call	CallFunction
+		call	UncaptureLambdaVars
 		add		esp, 0x10
 	done:
 		retn
@@ -1075,13 +1079,11 @@ bool Cmd_ShowQuantityMenu_Execute(COMMAND_ARGS)
 	int maxCount;
 	if (!QuantityMenu::Get() && !s_quantityMenuScript && ExtractArgsEx(EXTRACT_ARGS_EX, &callback, &maxCount) && 
 		IS_ID(callback, Script) && ShowQuantityMenu(maxCount, QuantityMenuCallback, maxCount))
+	{
 		s_quantityMenuScript = callback;
+		CaptureLambdaVars(callback);
+	}
 	return true;
-}
-
-void ResetMessageBoxLambdaVars()
-{
-	s_messageBoxScriptVariableContext = LambdaVariableContext(nullptr);
 }
 
 __declspec(naked) void MessageBoxCallback()
@@ -1104,8 +1106,8 @@ __declspec(naked) void MessageBoxCallback()
 		push	0
 		push	eax
 		call	CallFunction
+		call	UncaptureLambdaVars
 		add		esp, 0x10
-		call	ResetMessageBoxLambdaVars
 	done:
 		retn
 	}
@@ -1147,7 +1149,7 @@ bool Cmd_MessageBoxExAlt_Execute(COMMAND_ARGS)
 	if (!s_messageBoxScript && ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_MessageBoxExAlt.numParams, &callback))
 	{
 		s_messageBoxScript = callback;
-		s_messageBoxScriptVariableContext = LambdaVariableContext(callback);
+		CaptureLambdaVars(callback);
 		
 		char *msgStrings[0x102], **buttonPtr = msgStrings + 2, *delim = buffer;
 		*buttonPtr = NULL;

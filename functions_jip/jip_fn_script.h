@@ -154,8 +154,6 @@ bool Cmd_SetGameMainLoopCallback_Execute(COMMAND_ARGS)
 			else
 			{
 				callback = MainLoopCallback::Create(script, callingRef, 0, callDelay);
-				callback->isScript = true;
-				callback->lambdaVariableContext = LambdaVariableContext(script);
 				callback->arg.uVal = callingRef->refID;
 			}
 			callback->flags = (modeFlag & 0xB);
@@ -345,6 +343,7 @@ bool Cmd_SetOnQuestStageEventHandler_Execute(COMMAND_ARGS)
 		else if (callbacks->Find(QuestStageEventFinder(pCallback)))
 			return true;
 		callbacks->Append(pCallback);
+		pCallback.callback.ClearScript();
 		*result = 1;
 	}
 	else

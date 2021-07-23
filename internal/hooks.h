@@ -286,21 +286,24 @@ UnorderedSet<UInt32> s_eventInformedObjects;
 
 struct MainLoopCallback
 {
-	void			*cmdPtr;		// 00
-	void			*thisObj;		// 04
-	UInt8			numArgs;		// 08
-	bool			bRemove;		// 09
-	bool			isScript;		// 0A
-	UInt8			flags;			// 0B
-	UInt32			callCount;		// 0C
-	UInt32			callDelay;		// 10
-	UInt32			cycleCount;		// 14
-	union							// 18
+	union								// 00
 	{
-		FunctionArg	arg;
-		FunctionArg	*pArgs;
+		void			*cmdPtr;
+		Script			*script;
 	};
-	LambdaVariableContext lambdaVariableContext;
+	void				*thisObj;		// 04
+	UInt8				numArgs;		// 08
+	bool				bRemove;		// 09
+	bool				isScript;		// 0A
+	UInt8				flags;			// 0B
+	UInt32				callCount;		// 0C
+	UInt32				callDelay;		// 10
+	UInt32				cycleCount;		// 14
+	union								// 18
+	{
+		FunctionArg		arg;
+		FunctionArg		*pArgs;
+	};
 	
 	static MainLoopCallback *Create(void *_cmdPtr, void *_thisObj, UInt32 _callCount = 1, UInt32 _callDelay = 1, UInt8 _numArgs = 0);
 
@@ -308,11 +311,14 @@ struct MainLoopCallback
 
 	void Destroy()
 	{
+		if (isScript)
+			UncaptureLambdaVars(script);
 		if (numArgs > 1)
 			POOL_FREE(pArgs, numArgs, FunctionArg);
 		POOL_FREE(this, 1, MainLoopCallback);
 	}
 };
+STATIC_ASSERT(sizeof(MainLoopCallback) == 0x1C);
 
 Vector<MainLoopCallback*> s_mainLoopCallbacks(0x50);
 
@@ -322,6 +328,11 @@ MainLoopCallback *MainLoopCallback::Create(void *_cmdPtr, void *_thisObj, UInt32
 	callback->cmdPtr = _cmdPtr;
 	callback->thisObj = _thisObj;
 	*(UInt32*)&callback->numArgs = _numArgs;
+	if IS_TYPE(_cmdPtr, Script)
+	{
+		callback->isScript = true;
+		CaptureLambdaVars((Script*)_cmdPtr);
+	}
 	callback->callCount = _callCount;
 	callback->callDelay = _callDelay;
 	callback->cycleCount = _callDelay;
@@ -848,6 +859,7 @@ __declspec(naked) void TextInputCloseHook()
 		push	0
 		push	dword ptr [esi+0x58]
 		call	CallFunction
+		call	UncaptureLambdaVars
 		add		esp, 0x10
 		pop		esi
 		CALL_EAX(0x7E65B0)

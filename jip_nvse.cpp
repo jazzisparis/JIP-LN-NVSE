@@ -95,9 +95,9 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 	}
 	int version = nvse->nvseVersion;
 	s_nvseVersion = (version >> 24) + (((version >> 16) & 0xFF) * 0.1) + (((version & 0xFF) >> 4) * 0.01);
-	if (version < 0x6010030)
+	if (version < 0x6010070)
 	{
-		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.13 minimum.", s_nvseVersion);
+		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.17 minimum.", s_nvseVersion);
 		return false;
 	}
 	PrintLog("NVSE version:\t%.2f\nJIP LN version:\t%.2f\n", s_nvseVersion, JIP_LN_VERSION);
@@ -1397,7 +1397,6 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	g_numPreloadMods = (UInt8*)nvseData->GetData(NVSEDataInterface::kNVSEData_NumPreloadMods);
 	CaptureLambdaVars = (_CaptureLambdaVars)nvseData->GetFunc(NVSEDataInterface::kNVSEData_LambdaSaveVariableList);
 	UncaptureLambdaVars = (_UncaptureLambdaVars)nvseData->GetFunc(NVSEDataInterface::kNVSEData_LambdaUnsaveVariableList);
-	
 	
 	return true;
 }
