@@ -1079,6 +1079,11 @@ bool Cmd_ShowQuantityMenu_Execute(COMMAND_ARGS)
 	return true;
 }
 
+void ResetMessageBoxLambdaVars()
+{
+	s_messageBoxScriptVariableContext = LambdaVariableContext(nullptr);
+}
+
 __declspec(naked) void MessageBoxCallback()
 {
 	__asm
@@ -1100,6 +1105,7 @@ __declspec(naked) void MessageBoxCallback()
 		push	eax
 		call	CallFunction
 		add		esp, 0x10
+		call	ResetMessageBoxLambdaVars
 	done:
 		retn
 	}
@@ -1141,6 +1147,8 @@ bool Cmd_MessageBoxExAlt_Execute(COMMAND_ARGS)
 	if (!s_messageBoxScript && ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_MessageBoxExAlt.numParams, &callback))
 	{
 		s_messageBoxScript = callback;
+		s_messageBoxScriptVariableContext = LambdaVariableContext(callback);
+		
 		char *msgStrings[0x102], **buttonPtr = msgStrings + 2, *delim = buffer;
 		*buttonPtr = NULL;
 		for (UInt32 count = 0xFF; count; count--)

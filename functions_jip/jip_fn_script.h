@@ -155,6 +155,7 @@ bool Cmd_SetGameMainLoopCallback_Execute(COMMAND_ARGS)
 			{
 				callback = MainLoopCallback::Create(script, callingRef, 0, callDelay);
 				callback->isScript = true;
+				callback->lambdaVariableContext = LambdaVariableContext(script);
 				callback->arg.uVal = callingRef->refID;
 			}
 			callback->flags = (modeFlag & 0xB);

@@ -31,6 +31,8 @@ _GetElements GetElements;
 _ExtractArgsEx ExtractArgsEx;
 _ExtractFormatStringArgs ExtractFormatStringArgs;
 _CallFunction CallFunction;
+_CaptureLambdaVars CaptureLambdaVars;
+_UncaptureLambdaVars UncaptureLambdaVars;
 _InventoryRefCreate InventoryRefCreate;
 _InventoryRefGetForID InventoryRefGetForID;
 
