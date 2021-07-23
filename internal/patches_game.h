@@ -3935,9 +3935,8 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			s_NPCPerks = true;
 			BuildValidNPCPerks();
 			WriteRelCall(0x452220, (UInt32)DoOnLoadActorHook);
-			WriteRelCall(0x96380E, (UInt32)AddPerkEntriesHook);
-			WriteRelCall(0x9638D2, (UInt32)AddPerkEntriesHook);
-			WriteRelCall(0x96398C, (UInt32)RemovePerkEntriesHook);
+			WriteRelJump(0x5EB6A0, (UInt32)AddPerkEntriesHook);
+			WriteRelJump(0x5EB800, (UInt32)RemovePerkEntriesHook);
 			WriteRelJump(0x8BCA90, (UInt32)SetPlayerTeammateHook);
 			SafeWrite32(0x1086F04, (UInt32)SetPerkRankHook);
 			SafeWrite32(0x1087544, (UInt32)SetPerkRankHook);
@@ -4151,7 +4150,7 @@ void InitGamePatches()
 	SafeWrite16(0x5D3B69, 0x9066);
 
 	//	Don't reset Actor::actorFlags for creatures, upon LoadGame
-	SafeWrite16(0x8D5003, 0x0BEB);
+	SafeWrite32(0x8D5003, 0x0004C2C9);
 
 	//	Increase expression-parser buffer size to 0x400
 	SafeWrite8(0x593DB6, 7);
