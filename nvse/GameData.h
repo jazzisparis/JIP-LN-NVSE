@@ -725,7 +725,7 @@ struct AnimGroupInfo
 
 struct PCMiscStat
 {
-	const char	*name;
+	Setting		*name;
 	UInt32		level;
 
 	__forceinline static PCMiscStat **Array() {return (PCMiscStat**)0x11C6D50;}	//	Array size = 0x2B
