@@ -132,6 +132,7 @@ DEFINE_COMMAND_PLUGIN(SetTeammateKillable, , 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(SetNoGunWobble, , 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetHitNode, , 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitExtendedFlag, , 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(RemoveAllPerks, , 1, 1, kParams_OneOptionalInt);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -221,15 +222,16 @@ bool Cmd_GetFollowers_Execute(COMMAND_ARGS)
 	if (NOT_ACTOR(thisObj)) return true;
 	ExtraFollower *xFollower = GetExtraType(&thisObj->extraDataList, Follower);
 	if (!xFollower || !xFollower->followers) return true;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<Actor> *iter = xFollower->followers->Head();
 	do
 	{
-		if (iter->data) s_tempElements.Append(iter->data);
+		if (iter->data) tmpElements->Append(iter->data);
 	}
 	while (iter = iter->next);
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -415,16 +417,17 @@ bool Cmd_GetCreatureModels_Execute(COMMAND_ARGS)
 		creature = (TESCreature*)((Actor*)thisObj)->GetActorBase();
 	}
 	if NOT_ID(creature, TESCreature) return true;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<char> *iter = creature->modelList.modelList.Head();
 	do
 	{
 		if (iter->data)
-			s_tempElements.Append(iter->data);
+			tmpElements->Append(iter->data);
 	}
 	while (iter = iter->next);
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -456,19 +459,21 @@ bool Cmd_GetActorsByProcessingLevel_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 procLevel;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &procLevel) || (procLevel > 3)) return true;
-	s_tempElements.Clear();
-	MobileObject **objArray = g_processManager->objects.data, **arrEnd = objArray;
-	objArray += g_processManager->beginOffsets[procLevel];
-	arrEnd += g_processManager->endOffsets[procLevel];
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
+	ProcessManager *procMngr = ProcessManager::Get();
+	MobileObject **objArray = procMngr->objects.data, **arrEnd = objArray;
+	objArray += procMngr->beginOffsets[procLevel];
+	arrEnd += procMngr->endOffsets[procLevel];
 	Actor *actor;
 	for (; objArray != arrEnd; objArray++)
 	{
 		actor = (Actor*)*objArray;
 		if (actor && IS_ACTOR(actor))
-			s_tempElements.Append(actor);
+			tmpElements->Append(actor);
 	}
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -518,8 +523,9 @@ void __fastcall GetCombatActors(TESObjectREFR *thisObj, Script *scriptObj, bool 
 	*result = 0;
 	UInt32 count;
 	Actor *actor;
-	s_tempElements.Clear();
-	if (thisObj == g_thePlayer)
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
+	if (thisObj->refID == 0x14)
 	{
 		CombatActors *cmbActors = g_thePlayer->combatActors;
 		if (!cmbActors) return;
@@ -530,7 +536,7 @@ void __fastcall GetCombatActors(TESObjectREFR *thisObj, Script *scriptObj, bool 
 			{
 				actor = allies->ally;
 				if (actor && (actor != thisObj))
-					s_tempElements.Append(actor);
+					tmpElements->Append(actor);
 			}
 		}
 		else
@@ -539,7 +545,7 @@ void __fastcall GetCombatActors(TESObjectREFR *thisObj, Script *scriptObj, bool 
 			for (count = cmbActors->targets.size; count; count--, targets++)
 			{
 				actor = targets->target;
-				if (actor) s_tempElements.Append(actor);
+				if (actor) tmpElements->Append(actor);
 			}
 		}
 	}
@@ -564,11 +570,11 @@ void __fastcall GetCombatActors(TESObjectREFR *thisObj, Script *scriptObj, bool 
 		{
 			actor = *actorsArr;
 			if (actor && (actor != thisObj))
-				s_tempElements.Append(actor);
+				tmpElements->Append(actor);
 		}
 	}
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 }
 
 bool Cmd_GetCombatTargets_Execute(COMMAND_ARGS)
@@ -587,13 +593,15 @@ void __fastcall GetDetectionData(TESObjectREFR *thisObj, Script *scriptObj, bool
 {
 	*result = 0;
 	if (NOT_ACTOR(thisObj)) return;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	Actor *actor = (Actor*)thisObj;
-	if (actor == g_thePlayer)
+	if (actor->refID == 0x14)
 	{
-		MobileObject **objArray = g_processManager->objects.data, **arrEnd = objArray;
-		objArray += g_processManager->beginOffsets[0];
-		arrEnd += g_processManager->endOffsets[0];
+		ProcessManager *procMngr = ProcessManager::Get();
+		MobileObject **objArray = procMngr->objects.data, **arrEnd = objArray;
+		objArray += procMngr->beginOffsets[0];
+		arrEnd += procMngr->endOffsets[0];
 		Actor *target;
 		for (; objArray != arrEnd; objArray++)
 		{
@@ -607,7 +615,7 @@ void __fastcall GetDetectionData(TESObjectREFR *thisObj, Script *scriptObj, bool
 			}
 			else if (!actor->GetLOS(target))
 				continue;
-			s_tempElements.Append(target);
+			tmpElements->Append(target);
 		}
 	}
 	else
@@ -620,12 +628,12 @@ void __fastcall GetDetectionData(TESObjectREFR *thisObj, Script *scriptObj, bool
 		{
 			if (!(data = iter->data)) continue;
 			if ((data->detectionValue > 0) && !data->actor->GetDead())
-				s_tempElements.Append(data->actor);
+				tmpElements->Append(data->actor);
 		}
 		while (iter = iter->next);
 	}
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 }
 
 bool Cmd_GetDetectedActors_Execute(COMMAND_ARGS)
@@ -742,7 +750,7 @@ bool Cmd_IsInCombatWith_Execute(COMMAND_ARGS)
 	Actor *target;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &target))
 	{
-		if (thisObj == g_thePlayer)
+		if (thisObj->refID == 0x14)
 		{
 			CombatActors *cmbActors = g_thePlayer->combatActors;
 			if (!cmbActors) return true;
@@ -825,7 +833,7 @@ bool Cmd_ResetFallTime_Execute(COMMAND_ARGS)
 float __fastcall GetRadiationLevelAlt(Actor *actor)
 {
 	if (NOT_ACTOR(actor) || !actor->baseProcess || actor->baseProcess->processLevel) return 0;
-	if (actor == g_thePlayer)
+	if (actor->refID == 0x14)
 	{
 		HighProcess *hiProc = (HighProcess*)actor->baseProcess;
 		return hiProc->waterRadsSec + hiProc->rads238 + hiProc->GetRadsSec();
@@ -863,15 +871,16 @@ bool Cmd_GetDroppedRefs_Execute(COMMAND_ARGS)
 	if (NOT_ACTOR(thisObj)) return true;
 	ExtraDroppedItemList *xDropped = GetExtraType(&thisObj->extraDataList, DroppedItemList);
 	if (!xDropped) return true;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<TESObjectREFR> *iter = xDropped->itemRefs.Head();
 	do
 	{
-		if (iter->data) s_tempElements.Append(iter->data);
+		if (iter->data) tmpElements->Append(iter->data);
 	}
 	while (iter = iter->next);
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -1297,7 +1306,7 @@ bool Cmd_GetActorValueModifier_Execute(COMMAND_ARGS)
 	do
 	{
 		activeEff = iter->data;
-		if (!activeEff || !activeEff->bApplied || !activeEff->effectItem) continue;
+		if (!activeEff || !activeEff->bActive || activeEff->bTerminated || !activeEff->effectItem) continue;
 		effSetting = activeEff->effectItem->setting;
 		if (!effSetting || effSetting->archtype || (effSetting->actorVal != actorVal) || 
 			!(effSetting->effectFlags & 2) || !((activeEff->duration ? 2 : 1) & duration)) continue;
@@ -1316,7 +1325,7 @@ bool Cmd_GetPerkModifier_Execute(COMMAND_ARGS)
 	float baseValue;
 	TESForm *filterForm1 = NULL, *filterForm2 = NULL;
 	if (NOT_ACTOR(thisObj) || !ExtractArgsEx(EXTRACT_ARGS_EX, &entryPointID, &baseValue, &filterForm1, &filterForm2) || (entryPointID > 73)) return true;
-	switch (g_entryPointConditionInfo[entryPointID].numTabs)
+	switch (EntryPointConditionInfo::Array()[entryPointID].numTabs)
 	{
 		case 1:
 			ApplyPerkModifiers(entryPointID, thisObj, &baseValue);
@@ -1423,7 +1432,7 @@ bool Cmd_PlayIdleEx_Execute(COMMAND_ARGS)
 	TESIdleForm *idleAnim = NULL;
 	Actor *actor = (Actor*)thisObj;
 	if (NOT_ACTOR(actor) || !actor->baseProcess || !ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim) || (idleAnim && NOT_ID(idleAnim, TESIdleForm))) return true;
-	if (!idleAnim) idleAnim = ThisCall<TESIdleForm*>(0x600950, *g_idleAnimsDirectoryMap, actor, actor->baseProcess->GetLowProcess40());
+	if (!idleAnim) idleAnim = ThisCall<TESIdleForm*>(0x600950, GameGlobals::IdleAnimsDirectoryMap(), actor, actor->baseProcess->GetLowProcess40());
 	else if (idleAnim->children) idleAnim = idleAnim->FindIdle(actor);
 	if (idleAnim) actor->PlayIdle(idleAnim);
 	return true;
@@ -1456,7 +1465,7 @@ bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 	Character *character = (Character*)thisObj;
 	if (character->IsCharacter() && character->GetNiNode() && character->validBip01Names)
 	{
-		bool isPlayer = character == g_thePlayer;
+		bool isPlayer = character->refID == 0x14;
 		ValidBip01Names::Data *slotData = character->validBip01Names->slotData;
 		UInt32 slotIdx;
 	Do1stPerson:
@@ -1923,7 +1932,7 @@ bool Cmd_DonnerReedKuruParty_Execute(COMMAND_ARGS)
 			if (xDismembered->wasEaten != wasEaten)
 			{
 				if (!wasEaten && !xDismembered->dismemberedMask)
-					RemoveExtraData(&thisObj->extraDataList, xDismembered, true);
+					thisObj->extraDataList.RemoveExtra(xDismembered, true);
 				else xDismembered->wasEaten = wasEaten;
 				thisObj->MarkAsModified(0x20000);
 			}
@@ -1933,7 +1942,7 @@ bool Cmd_DonnerReedKuruParty_Execute(COMMAND_ARGS)
 			xDismembered = (ExtraDismemberedLimbs*)GameHeapAlloc(sizeof(ExtraDismemberedLimbs));
 			ThisCall(0x430200, xDismembered);
 			xDismembered->wasEaten = true;
-			AddExtraData(&thisObj->extraDataList, xDismembered);
+			thisObj->extraDataList.AddExtra(xDismembered);
 			thisObj->MarkAsModified(0x20000);
 		}
 	}
@@ -1952,18 +1961,19 @@ bool Cmd_GetEquippedEx_Execute(COMMAND_ARGS)
 			ValidBip01Names *validBip = actor->GetValidBip01Names();
 			if (validBip)
 			{
-				s_tempFormList.Clear();
+				TempFormList *tmpFormLst = GetTempFormList();
+				tmpFormLst->Clear();
 				TESForm *item;
 				for (ValidBip01Names::Data &slotData : validBip->slotData)
 					if ((item = slotData.item) && !item->IsArmorAddon())
-						s_tempFormList.Insert(item);
-				if (!s_tempFormList.Empty())
+						tmpFormLst->Insert(item);
+				if (!tmpFormLst->Empty())
 				{
 					ListNode<TESForm> *traverse = listForm->list.Head();
 					do
 					{
 						item = traverse->data;
-						if (!s_tempFormList.HasKey(item)) continue;
+						if (!tmpFormLst->HasKey(item)) continue;
 						REFR_RES = item->refID;
 						break;
 					}
@@ -2004,9 +2014,9 @@ bool Cmd_TestEquippedSlots_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool __fastcall GetFactionList(Actor *actor, TESActorBase *actorBase)
+bool GetFactionList(Actor *actor, TESActorBase *actorBase, TempFormList *tmpFormLst)
 {
-	s_tempFormList.Clear();
+	tmpFormLst->Clear();
 	if (actorBase)
 		actor = NULL;
 	else
@@ -2020,7 +2030,7 @@ bool __fastcall GetFactionList(Actor *actor, TESActorBase *actorBase)
 	do
 	{
 		data = traverse->data;
-		if (data) s_tempFormList.Insert(data->faction);
+		if (data) tmpFormLst->Insert(data->faction);
 	}
 	while (traverse = traverse->next);
 	if (actor)
@@ -2034,24 +2044,26 @@ bool __fastcall GetFactionList(Actor *actor, TESActorBase *actorBase)
 				data = traverse->data;
 				if (!data) continue;
 				if (data->rank >= 0)
-					s_tempFormList.Insert(data->faction);
-				else s_tempFormList.Erase(data->faction);
+					tmpFormLst->Insert(data->faction);
+				else tmpFormLst->Erase(data->faction);
 			}
 			while (traverse = traverse->next);
 		}
 	}
-	return !s_tempFormList.Empty();
+	return !tmpFormLst->Empty();
 }
 
 bool Cmd_GetFactions_Execute(COMMAND_ARGS)
 {
 	TESActorBase *actorBase = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase) && GetFactionList((Actor*)thisObj, actorBase))
+	TempFormList *tmpFormLst = GetTempFormList();
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase) && GetFactionList((Actor*)thisObj, actorBase, tmpFormLst))
 	{
-		s_tempElements.Clear();
-		for (auto lstIter = s_tempFormList.Begin(); lstIter; ++lstIter)
-			s_tempElements.Append(*lstIter);
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+		TempElements *tmpElements = GetTempElements();
+		tmpElements->Clear();
+		for (auto lstIter = tmpFormLst->Begin(); lstIter; ++lstIter)
+			tmpElements->Append(*lstIter);
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	}
 	else *result = 0;
 	return true;
@@ -2179,12 +2191,13 @@ bool Cmd_GetBodyPartVATSTarget_Execute(COMMAND_ARGS)
 
 bool __fastcall GetInFactionList(Actor *actor, BGSListForm *facList)
 {
-	if (GetFactionList(actor, NULL))
+	TempFormList *tmpFormLst = GetTempFormList();
+	if (GetFactionList(actor, NULL, tmpFormLst))
 	{
 		ListNode<TESForm> *listIter = facList->list.Head();
 		do
 		{
-			if (s_tempFormList.HasKey(listIter->data))
+			if (tmpFormLst->HasKey(listIter->data))
 				return true;
 		}
 		while (listIter = listIter->next);
@@ -2452,5 +2465,37 @@ bool Cmd_GetHitExtendedFlag_Execute(COMMAND_ARGS)
 		}
 	}
 	*result = isSet;
+	return true;
+}
+
+bool Cmd_RemoveAllPerks_Execute(COMMAND_ARGS)
+{
+	UInt32 forTeammates = 0;
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &forTeammates))
+	{
+		Actor *actor = (Actor*)thisObj;
+		PerkRank *perkRank;
+		if (actor->refID == 0x14)
+		{
+			auto perkIter = forTeammates ? g_thePlayer->perkRanksTM.Head() : g_thePlayer->perkRanksPC.Head();
+			do
+			{
+				if (perkRank = perkIter->data)
+					actor->RemovePerk(perkRank->perk, forTeammates);
+			}
+			while (perkIter = perkIter->next);
+		}
+		else if (s_NPCPerks)
+		{
+			NPCPerksInfo *perksInfo = actor->extraDataList.perksInfo;
+			if (perksInfo)
+			{
+				for (auto perkIter = perksInfo->perkRanks.Begin(); perkIter; ++perkIter)
+					RemovePerkHook(actor, 0, perkIter.Key(), 0);
+				actor->extraDataList.perksInfo = NULL;
+				s_NPCPerksInfoMap.Erase(actor->refID);
+			}
+		}
+	}
 	return true;
 }

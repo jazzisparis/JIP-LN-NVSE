@@ -23,9 +23,9 @@ __declspec(naked) UInt32 __fastcall AlignBucketCount(UInt32 count)
 {
 	__asm
 	{
-		cmp		ecx, MAP_DEFAULT_BUCKET_COUNT
+		cmp		ecx, MAP_MIN_BUCKET_COUNT
 		ja		gtMin
-		mov		eax, MAP_DEFAULT_BUCKET_COUNT
+		mov		eax, MAP_MIN_BUCKET_COUNT
 		retn
 	gtMin:
 		cmp		ecx, MAP_MAX_BUCKET_COUNT

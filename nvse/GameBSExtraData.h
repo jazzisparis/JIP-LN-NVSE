@@ -22,22 +22,41 @@ public:
 	BSExtraData		*next;		// 08
 };
 
+struct NPCPerksInfo;
+
 // 020
 struct BaseExtraList
 {
 	virtual void	Destroy(bool doFree);
 
 	BSExtraData		*m_data;					// 04
-	UInt8			m_presenceBitfield[0x15];	// 08 - if a bit is set, then the extralist should contain that extradata
-	UInt8			jipRefFlags61;				// 1D	0x61 in TESObjectREFR
-	UInt8			byte1E;						// 1E
-	UInt8			byte1F;						// 1F
+	UInt8			m_presenceBitfield[0x13];	// 08 - if a bit is set, then the extralist should contain that extradata
+	UInt8			jipRefFlags5F;				// 1B	0x5F in TESObjectREFR
+	NPCPerksInfo	*perksInfo;					// 1C	JIP only!
 
 	bool HasType(UInt32 type) const;
 	BSExtraData *GetByType(UInt32 xType) const;
-	bool MarkScriptEvent(UInt32 eventMask, TESForm *eventTarget);
+	__forceinline BSExtraData *AddExtra(BSExtraData *toAdd)
+	{
+		return ThisCall<BSExtraData*>(0x40FF60, this, toAdd);
+	}
+	__forceinline void RemoveExtra(BSExtraData *toRemove, bool doFree)
+	{
+		ThisCall(0x410020, this, toRemove, doFree);
+	}
+	__forceinline void RemoveByType(UInt8 xType)
+	{
+		ThisCall(0x410140, this, xType);
+	}
+	__forceinline void RemoveAll(bool doFree)
+	{
+		ThisCall(0x40FAE0, this, doFree);
+	}
+	__forceinline void CopyFrom(const BaseExtraList *sourceList)
+	{
+		ThisCall(0x411EC0, this, sourceList);
+	}
 	void DebugDump() const;
-	bool IsWorn() const;
 	char GetExtraFactionRank(TESFaction *faction) const;
 	SInt32 GetCount() const;
 };
@@ -48,21 +67,3 @@ struct ExtraDataList : public BaseExtraList
 	static ExtraDataList* __stdcall Create(BSExtraData *xBSData = NULL);
 };
 STATIC_ASSERT(sizeof(ExtraDataList) == 0x020);
-
-typedef BSExtraData* (__thiscall *_GetExtraData)(const BaseExtraList*, UInt8);
-extern const _GetExtraData GetExtraData;
-
-typedef BSExtraData* (__thiscall *_AddExtraData)(BaseExtraList*, BSExtraData*);
-extern const _AddExtraData AddExtraData;
-
-typedef void (__thiscall *_RemoveExtraData)(BaseExtraList*, BSExtraData*, bool);
-extern const _RemoveExtraData RemoveExtraData;
-
-typedef void (__thiscall *_RemoveExtraType)(BaseExtraList*, UInt8);
-extern const _RemoveExtraType RemoveExtraType;
-
-typedef void (__thiscall *_ClearExtraDataList)(BaseExtraList*, bool);
-extern const _ClearExtraDataList ClearExtraDataList;
-
-typedef void (__thiscall *_CopyExtraDataList)(BaseExtraList*, const BaseExtraList*);
-extern const _CopyExtraDataList CopyExtraDataList;

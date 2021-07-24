@@ -60,6 +60,7 @@
       <StringPooling>true</StringPooling>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <FloatingPointModel>Precise</FloatingPointModel>
+      <ExceptionHandling>false</ExceptionHandling>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>exports.def</ModuleDefinitionFile>
@@ -84,8 +85,13 @@
       </ForcedIncludeFiles>
     </ClCompile>
     <ClCompile Include="internal\containers.cpp" />
+    <ClCompile Include="internal\dinput.cpp" />
+    <ClCompile Include="internal\havok.cpp" />
+    <ClCompile Include="internal\jip_core.cpp" />
     <ClCompile Include="internal\memory_pool.cpp" />
+    <ClCompile Include="internal\netimmerse.cpp" />
     <ClCompile Include="internal\utility.cpp" />
+    <ClCompile Include="internal\xinput.cpp" />
     <ClCompile Include="jip_nvse.cpp" />
     <ClCompile Include="nvse\GameAPI.cpp" />
     <ClCompile Include="nvse\GameBSExtraData.cpp" />
@@ -96,9 +102,10 @@
     <ClCompile Include="nvse\GameRTTI.cpp" />
     <ClCompile Include="nvse\GameScript.cpp" />
     <ClCompile Include="nvse\GameSettings.cpp" />
-    <ClCompile Include="nvse\GameTasks.cpp" />
     <ClCompile Include="nvse\GameTiles.cpp" />
     <ClCompile Include="nvse\GameTypes.cpp" />
+    <ClCompile Include="nvse\GameUI.cpp" />
+    <ClCompile Include="nvse\NiTypes.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="functions_jip\jip_fn_actor.h" />
@@ -165,12 +172,13 @@
     <ClInclude Include="functions_ln\ln_fn_weapon.h" />
     <ClInclude Include="internal\class_vtbls.h" />
     <ClInclude Include="internal\debug.h" />
-    <ClInclude Include="internal\decoding.h" />
     <ClInclude Include="internal\dinput.h" />
     <ClInclude Include="internal\havok.h" />
     <ClInclude Include="internal\hooks.h" />
+    <ClInclude Include="internal\jip_core.h" />
     <ClInclude Include="internal\lutana.h" />
     <ClInclude Include="internal\memory_pool.h" />
+    <ClInclude Include="internal\misc_consts.h" />
     <ClInclude Include="internal\netimmerse.h" />
     <ClInclude Include="internal\param_info.h" />
     <ClInclude Include="internal\patches_cmd.h" />
@@ -181,7 +189,6 @@
     <ClInclude Include="internal\utility.h" />
     <ClInclude Include="internal\version.h" />
     <ClInclude Include="internal\xinput.h" />
-    <ClInclude Include="jip_nvse.h" />
     <ClInclude Include="nvse\CommandTable.h" />
     <ClInclude Include="nvse\GameAPI.h" />
     <ClInclude Include="nvse\GameBSExtraData.h" />
@@ -195,6 +202,7 @@
     <ClInclude Include="nvse\GameRTTI.h" />
     <ClInclude Include="nvse\GameScript.h" />
     <ClInclude Include="nvse\GameSettings.h" />
+    <ClInclude Include="nvse\GameSound.h" />
     <ClInclude Include="nvse\GameTasks.h" />
     <ClInclude Include="nvse\GameTiles.h" />
     <ClInclude Include="nvse\GameTypes.h" />
@@ -202,7 +210,6 @@
     <ClInclude Include="nvse\NiTypes.h" />
     <ClInclude Include="nvse\ParamInfos.h" />
     <ClInclude Include="nvse\PluginAPI.h" />
-    <ClInclude Include="nvse\Utilities.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="exports.def" />

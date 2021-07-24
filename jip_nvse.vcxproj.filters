@@ -44,9 +44,6 @@
     <ClCompile Include="nvse\GameSettings.cpp">
       <Filter>nvse</Filter>
     </ClCompile>
-    <ClCompile Include="nvse\GameTasks.cpp">
-      <Filter>nvse</Filter>
-    </ClCompile>
     <ClCompile Include="nvse\GameTiles.cpp">
       <Filter>nvse</Filter>
     </ClCompile>
@@ -62,12 +59,29 @@
     <ClCompile Include="internal\memory_pool.cpp">
       <Filter>internal</Filter>
     </ClCompile>
+    <ClCompile Include="internal\netimmerse.cpp">
+      <Filter>internal</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\havok.cpp">
+      <Filter>internal</Filter>
+    </ClCompile>
+    <ClCompile Include="nvse\NiTypes.cpp">
+      <Filter>nvse</Filter>
+    </ClCompile>
+    <ClCompile Include="nvse\GameUI.cpp">
+      <Filter>nvse</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\jip_core.cpp">
+      <Filter>internal</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\dinput.cpp">
+      <Filter>internal</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\xinput.cpp">
+      <Filter>internal</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="jip_nvse.h" />
-    <ClInclude Include="internal\decoding.h">
-      <Filter>internal</Filter>
-    </ClInclude>
     <ClInclude Include="internal\param_info.h">
       <Filter>internal</Filter>
     </ClInclude>
@@ -356,9 +370,6 @@
     <ClInclude Include="nvse\PluginAPI.h">
       <Filter>nvse</Filter>
     </ClInclude>
-    <ClInclude Include="nvse\Utilities.h">
-      <Filter>nvse</Filter>
-    </ClInclude>
     <ClInclude Include="internal\memory_pool.h">
       <Filter>internal</Filter>
     </ClInclude>
@@ -366,6 +377,15 @@
       <Filter>internal</Filter>
     </ClInclude>
     <ClInclude Include="internal\class_vtbls.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="nvse\GameSound.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\misc_consts.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\jip_core.h">
       <Filter>internal</Filter>
     </ClInclude>
   </ItemGroup>

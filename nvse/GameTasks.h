@@ -44,6 +44,101 @@ class RefNiRefObject;
 class RefNiObject;
 struct BSAData;
 
+class BSArchiveHeader
+{
+public:
+};
+
+// 70
+class BSArchive : public BSArchiveHeader
+{
+public:
+	UInt32		unk00;			// 00	160
+	UInt32		unk04;			// 04	164
+	UInt32		unk08;			// 08	168
+	UInt32		unk0C;			// 0C	16C
+	UInt32		unk10;			// 10	170
+	UInt32		unk14;			// 14	174
+	UInt32		unk18;			// 18	178
+	UInt32		unk1C;			// 1C	17C
+	UInt16		fileTypesMask;	// 20	180
+	UInt16		word22;			// 22	182
+	UInt32		unk24[19];		// 24	184
+};
+STATIC_ASSERT(sizeof(BSArchive) == 0x70);
+
+// 1D0
+class Archive : public BSFile
+{
+public:
+	NiRefObject			refObject;		// 158
+	BSArchive			archive;		// 160
+};
+STATIC_ASSERT(sizeof(Archive) == 0x1D0);
+
+// 160
+class ArchiveFile : public BSFile
+{
+public:
+	UInt32			unk158;		// 158
+	UInt32			unk15C;		// 15C
+};
+STATIC_ASSERT(sizeof(ArchiveFile) == 0x160);
+
+// 178
+class CompressedArchiveFile : public ArchiveFile
+{
+public:
+	void			*ptr160;		// 160
+	void			*ptr164;		// 164
+	UInt32			streamLength;	// 168
+	UInt32			unk16C;			// 16C
+	UInt32			streamOffset;	// 170
+	UInt32			unk174;			// 174
+};
+STATIC_ASSERT(sizeof(CompressedArchiveFile) == 0x178);
+
+// 5C8 (?)
+class NiStream
+{
+public:
+	virtual void	Destroy(bool doFree);
+	virtual void	Unk_01(void);
+	virtual void	Unk_02(void);
+	virtual void	Unk_03(void);
+	virtual void	Unk_04(void);
+	virtual void	Unk_05(void);
+	virtual void	Unk_06(void);
+	virtual void	Unk_07(void);
+	virtual void	Unk_08(void);
+	virtual void	Unk_09(void);
+	virtual void	Unk_0A(void);
+	virtual void	Unk_0B(void);
+	virtual void	Unk_0C(void);
+	virtual void	Unk_0D(void);
+	virtual void	Unk_0E(void);
+	virtual void	Unk_0F(void);
+	virtual void	Unk_10(void);
+	virtual void	Unk_11(void);
+	virtual void	Unk_12(void);
+	virtual void	Unk_13(void);
+	virtual void	Unk_14(void);
+	virtual void	Unk_15(void);
+	virtual void	Unk_16(void);
+	virtual void	Unk_17(void);
+
+	UInt32			unk004[369];
+};
+
+// 5D4 (?)
+class BSStream : public NiStream
+{
+public:
+	virtual void	Unk_18(void);
+
+	UInt32			unk5C8[3];		// 5C8
+};
+
 // 18
 class BSTask
 {
@@ -60,7 +155,7 @@ public:
 	UInt32		unk10;		// 10	Paired : 10 and 14 for a 64 bit integer
 	UInt32		unk14;		// 14
 
-	static UInt32 *GetCounterSingleton();
+	static UInt32 *GetCounterSingleton() {return (UInt32*)0x11C3B38;}
 };
 
 // 18
@@ -205,14 +300,62 @@ public:
 	void	* niTexture;	// 030
 };
 
-// 014
-class KFModel
+// 58
+class BGSDistantObjectBlockLoadTask : public QueuedFileEntry
 {
-	const char			* path;					// 000
-	BSAnimGroupSequence	* controllerSequence;	// 004
-	TESAnimGroup		* animGroup;			// 008
-	UInt32				unk0C;					// 00C
-	UInt32				unk10;					// 010
+public:
+	virtual void	Unk_0C(void);
+
+	UInt8			byte30;			// 30
+	UInt8			byte31;			// 31
+	UInt8			byte32;			// 32
+	UInt8			byte33;			// 33
+	int				cellX;			// 34
+	int				cellY;			// 38
+	UInt32			lodLevel;		// 3C
+	void			*lodNode14;		// 40
+	TESWorldSpace	*worldSpc;		// 44
+	NiRefObject		*object48;		// 48
+	NiRefObject		*object4C;		// 4C
+	UInt8			byte50;			// 50
+	UInt8			byte51;			// 51
+	UInt8			byte52;			// 52
+	UInt8			byte53;			// 53
+	UInt32			unk54;			// 54
+};
+STATIC_ASSERT(sizeof(BGSDistantObjectBlockLoadTask) == 0x58);
+
+// 14
+struct KFModel
+{
+	const char			*path;					// 00
+	BSAnimGroupSequence	*controllerSequence;	// 04
+	TESAnimGroup		*animGroup;				// 08
+	UInt32				counter1;				// 0C
+	UInt32				counter2;				// 10
+
+	__forceinline KFModel *Init(const char *kfPath, BSStream *stream)
+	{
+		return ThisCall<KFModel*>(0x43B640, this, kfPath, stream);
+	}
+};
+
+// 38
+class AnimIdle : public NiRefObject
+{
+public:
+	UInt32					unk08;			// 08
+	UInt32					unk0C;			// 0C
+	UInt32					unk10;			// 10
+	UInt32					sequenceID;		// 14
+	BSAnimGroupSequence		*agSequence;	// 18
+	NiObject				*object1C;		// 1C
+	NiObject				*object20;		// 20
+	NiObject				*object24;		// 24
+	NiObject				*object28;		// 28
+	TESIdleForm				*idleForm;		// 2C
+	UInt32					unk30;			// 30
+	Actor					*actor;			// 34
 };
 
 // 30
@@ -260,8 +403,15 @@ public:
 };
 */
 
+class InterfacedClass
+{
+public:
+	/*00*/virtual void		Destroy(bool doFree);
+	/*04*/virtual void		*AllocTLSValue(UInt32 arg);
+};
+
 // 40
-template <typename T_Key, typename T_Data> class LockFreeMap
+template <typename T_Key, typename T_Data> class LockFreeMap : public InterfacedClass
 {
 public:
 	struct Entry
@@ -276,8 +426,6 @@ public:
 		Entry		*entries;
 	};
 
-	/*00*/virtual void		Destroy(bool doFree);
-	/*04*/virtual void		*Unk_01(UInt32 arg);
 	/*08*/virtual bool		Lookup(T_Key key, T_Data *result);
 	/*0C*/virtual bool		Unk_03(UInt32 arg1, UInt32 arg2, UInt32 arg3, UInt8 arg4);
 	/*10*/virtual bool		Insert(T_Key key, T_Data *dataPtr, UInt8 arg3);
@@ -340,7 +488,6 @@ public:
 };
 STATIC_ASSERT(sizeof(LockFreeMap<int, int>) == 0x40);
 
-class AnimIdle;
 class Animation;
 class QueuedReplacementKFList;
 class QueuedHelmet;
@@ -348,11 +495,9 @@ class BSFileEntry;
 class LoadedFile;
 
 // 40
-template <typename T_Data> class LockFreeQueue
+template <typename T_Data> class LockFreeQueue : public InterfacedClass
 {
 public:
-	virtual void	Destroy(bool doFree);
-	virtual void	*Unk_01(UInt32 arg);
 	virtual UInt32	IncNumItems();
 	virtual UInt32	DecNumItems();
 	virtual UInt32	GetNumItems();
@@ -401,12 +546,21 @@ struct ModelLoader
 	UInt8												byte2C;				// 2C
 	UInt8												pad2D[3];			// 2D
 
-	static ModelLoader *GetSingleton();
 	__forceinline void QueueReference(TESObjectREFR *refr)
 	{
 		ThisCall(0x444850, this, refr, 1, false);
 	}
+	__forceinline NiNode *LoadModel(const char *nifPath, UInt32 baseClass, bool flag3Cbit0, bool flag3Cbit5, bool dontIncCounter)
+	{
+		return ThisCall<NiNode*>(0x447080, this, nifPath, baseClass, flag3Cbit0, 0, flag3Cbit5, dontIncCounter);
+	}
+	__forceinline KFModel *LoadKFModel(const char *kfPath)
+	{
+		return ThisCall<KFModel*>(0x4471C0, this, kfPath);
+	}
 };
+
+extern ModelLoader *g_modelLoader;
 
 // A0
 class IOManager

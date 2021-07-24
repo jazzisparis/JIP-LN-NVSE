@@ -387,7 +387,7 @@ bool __fastcall ActorHasEffect(Actor *actor, EffectSetting *effSetting)
 			do
 			{
 				effect = iter->data;
-				if (effect && (effect->effectItem->setting == effSetting) && effect->bApplied && effect->magicItem)
+				if (effect && (effect->effectItem->setting == effSetting) && effect->bActive && !effect->bTerminated && effect->magicItem)
 					return true;
 			}
 			while (iter = iter->next);

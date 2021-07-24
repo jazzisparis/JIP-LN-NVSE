@@ -220,3 +220,5 @@ public:
 	NiCamera						*cameraA0;		// A0
 };
 STATIC_ASSERT(sizeof(OSGlobals) == 0xA4);
+
+extern OSGlobals *g_OSGlobals;

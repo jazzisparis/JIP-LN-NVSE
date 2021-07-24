@@ -88,30 +88,34 @@ bool Hook_GetHitLocation_Execute(COMMAND_ARGS)
 	return true;
 }
 
+UInt8 __fastcall DoGetPerkRank(Actor *actor, BGSPerk *perk, bool forTeammates)
+{
+	if IS_ACTOR(actor)
+	{
+		if (actor->refID == 0x14)
+			return actor->GetPerkRank(perk, forTeammates);
+		if (s_NPCPerks)
+			return actor->GetPerkRank(perk, false);
+		if (actor->isTeammate)
+			return g_thePlayer->GetPerkRank(perk, true);
+	}
+	return 0;
+}
+
 bool Hook_HasPerk_Execute(COMMAND_ARGS)		// Modifies HasPerk to allow detection of follower perks on followers.
 {
 	BGSPerk *perk;
 	UInt32 useAlt = 0;
-	UInt8 rank = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &useAlt))
-	{
-		if (thisObj == g_thePlayer)
-			rank = g_thePlayer->GetPerkRank(perk, false);
-		else if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->isTeammate)
-			rank = g_thePlayer->GetPerkRank(perk, true);
-	}
-	*result = rank ? 1 : 0;
+		*result = DoGetPerkRank((Actor*)thisObj, perk, useAlt) != 0;
+	else *result = 0;
 	DoConsolePrint(result);
 	return true;
 }
 
 bool Hook_HasPerk_Eval(Actor *thisObj, BGSPerk *perk, UInt32 useAlt, double *result)
 {
-	if (thisObj == g_thePlayer)
-		*result = g_thePlayer->GetPerkRank(perk, false) ? 1 : 0;
-	else if (IS_ACTOR(thisObj) && thisObj->isTeammate)
-		*result = g_thePlayer->GetPerkRank(perk, true) ? 1 : 0;
-	else *result = 0;
+	*result = DoGetPerkRank(thisObj, perk, useAlt) != 0;
 	return true;
 }
 
@@ -437,30 +441,6 @@ bool Hook_Update3D_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool Hook_ActorValueToStringC_Execute(COMMAND_ARGS)
-{
-	const char *resStr = NULL;
-	UInt32 avCode, nameType = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &avCode, &nameType) && (avCode <= kAVCode_DamageThreshold))
-	{
-		ActorValueInfo *avInfo = g_actorValueInfoArray[avCode];
-		switch (nameType)
-		{
-		case 0:
-			resStr = avInfo->infoName;
-			break;
-		case 1:
-			resStr = avInfo->fullName.name.m_data;
-			break;
-		case 2:
-			resStr = avInfo->avName.m_data;
-			break;
-		}
-	}
-	AssignString(PASS_COMMAND_ARGS, resStr);
-	return true;
-}
-
 Cmd_Execute IsPluginInstalled, GetPluginVersion;
 
 bool __fastcall IsJIPAlias(const char *pluginName)
@@ -547,8 +527,6 @@ void InitCmdPatches()
 	cmdInfo->eval = (Cmd_Eval)Hook_IsRefInList_Eval;
 	cmdInfo = GetCmdByOpcode(0x152D);
 	cmdInfo->execute = Hook_Update3D_Execute;
-	cmdInfo = GetCmdByOpcode(0x158D);
-	cmdInfo->execute = Hook_ActorValueToStringC_Execute;
 	cmdInfo = GetCmdByOpcode(0x15DF);
 	IsPluginInstalled = cmdInfo->execute;
 	cmdInfo->execute = Hook_IsPluginInstalled_Execute;

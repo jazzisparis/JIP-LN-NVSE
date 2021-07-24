@@ -7,7 +7,7 @@ DEFINE_COMMAND_PLUGIN(CCCSetTrait, , 0, 3, kParams_JIP_TwoInts_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(CCCGetDistance, , 1, 2, kParams_JIP_OneObjectRef_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(CCCInFaction, , 1, 2, kParams_JIP_OneFaction_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(CCCSetNCCS, , 1, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetEncumbranceRate, , 1, 0, NULL);
+DEFINE_CMD_ALT_COND_PLUGIN(GetEncumbranceRate, , , 1, NULL);
 DEFINE_COMMAND_PLUGIN(CCCLoadNCCS, , 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(CCCSavedForm, , 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(CCCLocationName, , 1, 0, NULL);
@@ -46,8 +46,8 @@ bool Cmd_CCCOnLoad_Execute(COMMAND_ARGS)
 		return false;
 	}
 
-	char *dataPtr, *delim, *pathStr;
-	LineIterator lineIter("Data\\Config\\ccc_avatars.ini", s_strArgBuffer);
+	char *buffer = GetStrArgBuffer(), *dataPtr, *delim, *pathStr;
+	LineIterator lineIter("Data\\Config\\ccc_avatars.ini", buffer);
 	index = 0;
 	while (lineIter)
 	{
@@ -228,8 +228,9 @@ bool Cmd_CCCSetFloat_Execute(COMMAND_ARGS)
 bool Cmd_CCCSetString_Execute(COMMAND_ARGS)
 {
 	UInt32 trait;
-	if (s_UILoaded && ExtractFormatStringArgs(1, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_CCCSetString.numParams, &trait))
-		s_UIelements[trait]->SetString(s_strArgBuffer);
+	char *buffer = GetStrArgBuffer();
+	if (s_UILoaded && ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_CCCSetString.numParams, &trait))
+		s_UIelements[trait]->SetString(buffer);
 	return true;
 }
 
@@ -377,15 +378,26 @@ bool Cmd_CCCSetNCCS_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool Cmd_GetEncumbranceRate_Execute(COMMAND_ARGS)
+double __fastcall GetEncumbranceRate(TESObjectREFR *thisObj)
 {
-	*result = 0;
 	if (IS_ACTOR(thisObj))
 	{
 		ExtraContainerChanges *xChanges = GetExtraType(&thisObj->extraDataList, ContainerChanges);
 		if (xChanges && xChanges->data)
-			*result = 100 * xChanges->data->GetInventoryWeight() / GetMax(((Actor*)thisObj)->avOwner.GetActorValue(kAVCode_CarryWeight), 1.0F);
+			return 100 * xChanges->data->GetInventoryWeight() / GetMax(((Actor*)thisObj)->avOwner.GetActorValue(kAVCode_CarryWeight), 1.0F);
 	}
+	return 0;
+}
+
+bool Cmd_GetEncumbranceRate_Execute(COMMAND_ARGS)
+{
+	*result = GetEncumbranceRate(thisObj);
+	return true;
+}
+
+bool Cmd_GetEncumbranceRate_Eval(COMMAND_ARGS_EVAL)
+{
+	*result = GetEncumbranceRate(thisObj);
 	return true;
 }
 
@@ -409,7 +421,7 @@ bool Cmd_CCCSavedForm_Execute(COMMAND_ARGS)
 }
 
 typedef UnorderedMap<UInt32, TESObjectREFR*> MapMarkersGrid;
-UnorderedMap<TESWorldSpace*, MapMarkersGrid> s_worldspaceMap;
+Map<TESWorldSpace*, MapMarkersGrid> s_worldspaceMap;
 
 bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 {
@@ -419,11 +431,12 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 		AssignString(PASS_COMMAND_ARGS, "at an unknown location");
 		return true;
 	}
+	char locName[0x80];
 	TESWorldSpace *currentWspc = cell->worldSpace;
 	if (!currentWspc)
 	{
-		memcpy(StrLenCopy(s_strValBuffer, "in ", 3), cell->fullName.name.m_data, cell->fullName.name.m_dataLen + 1);
-		AssignString(PASS_COMMAND_ARGS, s_strValBuffer);
+		memcpy(StrLenCopy(locName, "in ", 3), cell->fullName.name.m_data, cell->fullName.name.m_dataLen + 1);
+		AssignString(PASS_COMMAND_ARGS, locName);
 		return true;
 	}
 	TESObjectREFR *mkRefr;
@@ -493,21 +506,21 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 				{
 					distTmp = (thisObj->posX - mkRefr->posX) / distMin;
 					distMin = thisObj->posY - mkRefr->posY;
-					if ((distTmp >= 0.97F) && (distTmp <= 1)) memcpy(s_strValBuffer, "East of ", 9);
-					else if ((distTmp >= -1) && (distTmp <= -0.97F)) memcpy(s_strValBuffer, "West of ", 9);
-					else if ((distTmp >= -0.26F) && (distTmp <= 0.26F)) StrCopy(s_strValBuffer, (distMin > 0) ? "North of " : "South of ");
-					else if (distTmp > 0) StrCopy(s_strValBuffer, (distMin > 0) ? "NE of " : "SE of ");
-					else StrCopy(s_strValBuffer, (distMin > 0) ? "NW of " : "SW of ");
+					if ((distTmp >= 0.97F) && (distTmp <= 1)) memcpy(locName, "East of ", 9);
+					else if ((distTmp >= -1) && (distTmp <= -0.97F)) memcpy(locName, "West of ", 9);
+					else if ((distTmp >= -0.26F) && (distTmp <= 0.26F)) StrCopy(locName, (distMin > 0) ? "North of " : "South of ");
+					else if (distTmp > 0) StrCopy(locName, (distMin > 0) ? "NE of " : "SE of ");
+					else StrCopy(locName, (distMin > 0) ? "NW of " : "SW of ");
 				}
-				else memcpy(s_strValBuffer, "at ", 4);
-				StrCat(s_strValBuffer, xMarker->data->fullName.name.m_data);
-				AssignString(PASS_COMMAND_ARGS, s_strValBuffer);
+				else memcpy(locName, "at ", 4);
+				StrCat(locName, xMarker->data->fullName.name.m_data);
+				AssignString(PASS_COMMAND_ARGS, locName);
 				return true;
 			}
 		}
 	}
-	memcpy(StrLenCopy(s_strValBuffer, "at ", 3), currentWspc->fullName.name.m_data, currentWspc->fullName.name.m_dataLen + 1);
-	AssignString(PASS_COMMAND_ARGS, s_strValBuffer);
+	memcpy(StrLenCopy(locName, "at ", 3), currentWspc->fullName.name.m_data, currentWspc->fullName.name.m_dataLen + 1);
+	AssignString(PASS_COMMAND_ARGS, locName);
 	return true;
 }
 
@@ -552,7 +565,7 @@ bool Cmd_CCCSayTo_Execute(COMMAND_ARGS)
 	if (xSayTo)
 	{
 		if (xSayTo->info) xSayTo->info->RunResultScript(1, (Actor*)thisObj);
-		RemoveExtraData(&thisObj->extraDataList, xSayTo, true);
+		thisObj->extraDataList.RemoveExtra(xSayTo, true);
 	}
 	return true;
 }
@@ -564,7 +577,7 @@ bool Cmd_CCCRunResultScripts_Execute(COMMAND_ARGS)
 	{
 		Actor *actor = (Actor*)thisObj;
 		bool eval;
-		TESTopicInfo *topicInfo = GetTopicInfo(topic, &eval, actor, g_thePlayer, 1, NULL, NULL);
+		TESTopicInfo *topicInfo = GetTopicInfo(topic, &eval, actor, g_thePlayer);
 		if (topicInfo)
 		{
 			topicInfo->RunResultScript(0, actor);
@@ -601,10 +614,11 @@ bool Cmd_CCCSetFollowState_Execute(COMMAND_ARGS)
 
 bool Cmd_RefToPosStr_Execute(COMMAND_ARGS)
 {
+	char posStr[0x40];
 	TESObjectCELL *cell = thisObj->GetParentCell();
 	if (cell)
 	{
-		char *pos = UIntToHex(s_strValBuffer, cell->worldSpace ? cell->worldSpace->refID : cell->refID);
+		char *pos = UIntToHex(posStr, cell->worldSpace ? cell->worldSpace->refID : cell->refID);
 		*pos++ = ' ';
 		pos = IntToStr(pos, ifloor(thisObj->posX));
 		*pos++ = ' ';
@@ -612,16 +626,17 @@ bool Cmd_RefToPosStr_Execute(COMMAND_ARGS)
 		*pos++ = ' ';
 		IntToStr(pos, iceil(thisObj->posZ));
 	}
-	else s_strValBuffer[0] = 0;
-	AssignString(PASS_COMMAND_ARGS, s_strValBuffer);
+	else posStr[0] = 0;
+	AssignString(PASS_COMMAND_ARGS, posStr);
 	return true;
 }
 
 bool Cmd_MoveToPosStr_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer)) return true;
-	char *pos = s_strArgBuffer, *delim = GetNextToken(pos, ' ');
+	char posStr[0x40];
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &posStr)) return true;
+	char *pos = posStr, *delim = GetNextToken(pos, ' ');
 	UInt32 refID = HexToUInt(pos);
 	if (!refID || !*delim || !ResolveRefID(refID, &refID)) return true;
 	TESObjectCELL *cell = (TESObjectCELL*)LookupFormByRefID(refID);
@@ -678,11 +693,12 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 	{
 		if NOT_TYPE(thisObj, Character) return true;
 		character = (Character*)thisObj;
-		if (!character->GetEquippedWeapon() && character->GetInventoryItems(kFormType_TESObjectWEAP))
+		InventoryItemsMap *invItemsMap = GetInventoryItemsMap();
+		if (!character->GetEquippedWeapon() && GetInventoryItems(character, kFormType_TESObjectWEAP, invItemsMap))
 		{
 			cmbStyle = character->GetCombatStyle();
 			restrictions = cmbStyle ? cmbStyle->weaponRestrictions : 0;
-			for (auto wpnIter = s_inventoryItemsMap.Begin(); wpnIter; ++wpnIter)
+			for (auto wpnIter = invItemsMap->Begin(); wpnIter; ++wpnIter)
 			{
 				weapon = (TESObjectWEAP*)wpnIter.Key();
 				if (weapon->IsPlayable() || (restrictions && ((restrictions == 1) != (weapon->eWeaponType < 3))))
@@ -693,7 +709,7 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 				break;
 			}
 		}
-		if (!character->validBip01Names || !character->GetInventoryItems(kFormType_TESObjectARMO))
+		if (!character->validBip01Names || !GetInventoryItems(character, kFormType_TESObjectARMO, invItemsMap))
 			return true;
 		UInt32 usedSlots = 0;
 		for (ValidBip01Names::Data &slotData : character->validBip01Names->slotData)
@@ -701,11 +717,11 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 			item = slotData.item;
 			if (!item || NOT_TYPE(item, TESObjectARMO))
 				continue;
-			s_inventoryItemsMap.Erase(item);
+			invItemsMap->Erase(item);
 			usedSlots |= ((TESObjectARMO*)item)->bipedModel.partMask;
 		}
 		TESBipedModelForm *biped;
-		for (auto armIter = s_inventoryItemsMap.Begin(); armIter; ++armIter)
+		for (auto armIter = invItemsMap->Begin(); armIter; ++armIter)
 		{
 			item = armIter.Key();
 			biped = &((TESObjectARMO*)item)->bipedModel;
@@ -720,8 +736,8 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 		character->ModActorValue(kAVCode_DamageThreshold, 0, 0);
 		return true;
 	}
-	ContainerMenu *containerMenu = *g_containerMenu;
-	ContChangesEntry *menuEntry = *g_containerMenuSelection;
+	ContainerMenu *containerMenu = ContainerMenu::Get();
+	ContChangesEntry *menuEntry = ContainerMenu::Selection();
 	if (!menuEntry || !containerMenu || !containerMenu->rightItems.selected || (GetActiveTileID() != 20))
 		return true;
 	item = menuEntry->type;
@@ -763,7 +779,7 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 	ThisCall(doEquip ? 0x88C830 : 0x88D7D0, character, item, eqpCount, xData, 1, 0, 0);
 	s_forceEquipCall = false;
 	ThisCall(0x8ADED0, g_thePlayer, item, doEquip, doEquip);
-	DoRefreshContainerMenu(containerMenu, item);
+	containerMenu->Refresh(item);
 	return true;
 }
 
@@ -771,7 +787,7 @@ bool Cmd_CCCSMS_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *objRefr = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &objRefr) || !objRefr) return true;
-	ListNode<BSTempEffect> *effIter = g_processManager->tempEffects.Head();
+	ListNode<BSTempEffect> *effIter = ProcessManager::Get()->tempEffects.Head();
 	MagicShaderHitEffect *mshEff;
 	do
 	{

@@ -1,7 +1,9 @@
 #define JIP_DEBUG 0
 
+#include "internal/dinput.h"
+#include "internal/xinput.h"
+#include "internal/jip_core.h"
 #include "internal/param_info.h"
-#include "jip_nvse.h"
 #include "internal/hooks.h"
 #include "internal/patches_cmd.h"
 #include "internal/patches_game.h"
@@ -41,6 +43,7 @@
 #include "functions_jip/jip_fn_sound.h"
 #include "functions_jip/jip_fn_string.h"
 #include "functions_jip/jip_fn_texture_set.h"
+#include "functions_jip/jip_fn_minimap.h"
 #include "functions_jip/jip_fn_ui.h"
 #include "functions_jip/jip_fn_utility.h"
 #include "functions_jip/jip_fn_water.h"
@@ -48,7 +51,6 @@
 #include "functions_jip/jip_fn_weather.h"
 #include "functions_jip/jip_fn_worldspace.h"
 #include "functions_jip/jip_fn_ccc.h"
-#include "functions_jip/jip_fn_minimap.h"
 
 #include "functions_ln/ln_fn_activator.h"
 #include "functions_ln/ln_fn_actor.h"
@@ -93,17 +95,22 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 	}
 	int version = nvse->nvseVersion;
 	s_nvseVersion = (version >> 24) + (((version >> 16) & 0xFF) * 0.1) + (((version & 0xFF) >> 4) * 0.01);
-	if (version < 0x6000050)
+	if (version < 0x6010070)
 	{
-		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.05 minimum.", s_nvseVersion);
+		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.17 minimum.", s_nvseVersion);
 		return false;
 	}
 	PrintLog("NVSE version:\t%.2f\nJIP LN version:\t%.2f\n", s_nvseVersion, JIP_LN_VERSION);
 	return true;
 }
 
+void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg);
+
 bool NVSEPlugin_Load(const NVSEInterface *nvse)
 {
+	bool (*RegisterCommand)(CommandInfo *info) = nvse->RegisterCommand;
+	bool (*RegisterTypedCommand)(CommandInfo *info, CommandReturnType retnType) = nvse->RegisterTypedCommand;
+
 	//____________________FUNCTIONS_LN____________________
 	nvse->SetOpcodeBase(0x2200);
 	//	v1.00
@@ -130,12 +137,12 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2212*/REG_CMD_ARR(ListToArray);
 	/*2213*/REG_CMD(EmptyCommand);
 	//	v4.00
-	/*2214*/REG_CMD_FORM(GetCombatStyle);
+	/*2214*/REG_CMD_FRM(GetCombatStyle);
 	/*2215*/REG_CMD_ARR(GetCellRefs);
 	/*2216*/REG_CMD_ARR(SaveHotkeys);
 	/*2217*/REG_CMD(RestoreHotkeys);
 	//	v5.00
-	/*2218*/REG_CMD_FORM(GetBipedModelList);
+	/*2218*/REG_CMD_FRM(GetBipedModelList);
 	/*2219*/REG_CMD(SetBipedModelList);
 	/*221A*/REG_CMD_STR(GetModName);
 	/*221B*/REG_CMD(HasPerkRank);
@@ -149,7 +156,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2222*/REG_CMD(GetChanceNone);
 	/*2223*/REG_CMD(SetChanceNone);
 	/*2224*/REG_CMD(GetNumLevItems);
-	/*2225*/REG_CMD_FORM(GetNthLevItem);
+	/*2225*/REG_CMD_FRM(GetNthLevItem);
 	/*2226*/REG_CMD(GetNthLevItemLevel);
 	/*2227*/REG_CMD(GetNthLevItemCount);
 	/*2228*/REG_CMD(RemoveNthLevItem);
@@ -158,7 +165,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*222B*/REG_CMD(GetChanceNoneGlobal);
 	/*222C*/REG_CMD(ClearAllHotkeys);
 	//	v7.00
-	/*222D*/REG_CMD_FORM(GetMapMarkerRep);
+	/*222D*/REG_CMD_FRM(GetMapMarkerRep);
 	/*222E*/REG_CMD(SetMapMarkerRep);
 	/*222F*/REG_CMD_STR(GetMapMarkerName);
 	/*2230*/REG_CMD(SetMapMarkerName);
@@ -173,7 +180,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2239*/REG_CMD_ARR(GetFormMods);
 	/*223A*/REG_CMD(IsFormOverridden);
 	/*223B*/REG_CMD(SetPerkRank);
-	/*223C*/REG_CMD_FORM(GetMerchantContainer);
+	/*223C*/REG_CMD_FRM(GetMerchantContainer);
 	//	v8.00
 	/*223D*/REG_CMD(GetRadioBroadcastType);
 	/*223E*/REG_CMD(SetRadioBroadcastType);
@@ -195,10 +202,10 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*224D*/REG_CMD(GetCreatureType);
 	//	v10.00
 	/*224E*/REG_CMD_ARR(GetLoadedTypeArray);
-	/*224F*/REG_CMD_FORM(GetPasswordNote);
+	/*224F*/REG_CMD_FRM(GetPasswordNote);
 	/*2250*/REG_CMD(SetPasswordNote);
 	/*2251*/REG_CMD_ARR(GetFormRefs);
-	/*2252*/REG_CMD_FORM(GetCellLightingTemplate);
+	/*2252*/REG_CMD_FRM(GetCellLightingTemplate);
 	/*2253*/REG_CMD(SetCellLightingTemplate);
 	/*2254*/REG_CMD_ARR(GetRecipeInputForms);
 	/*2255*/REG_CMD_ARR(GetRecipeOutputForms);
@@ -215,30 +222,30 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v11.00
 	/*2260*/REG_CMD_ARR(GetFormRecipes);
 	/*2261*/REG_CMD_ARR(GetFormRecipeOutputs);
-	/*2262*/REG_CMD_FORM(GetWorldspaceParentWorldspace);
+	/*2262*/REG_CMD_FRM(GetWorldspaceParentWorldspace);
 	/*2263*/REG_CMD(GetTerminalLock);
 	/*2264*/REG_CMD(GetArmorClass);
 	/*2265*/REG_CMD(IsRaceInList);
-	/*2266*/REG_CMD_FORM(GetFormFromMod);
+	/*2266*/REG_CMD_FRM(GetFormFromMod);
 	/*2267*/REG_CMD(GetPerkEntryCount);
 	/*2268*/REG_CMD(GetNthPerkEntryType);
 	/*2269*/REG_CMD(GetNthPerkEntryFunction);
 	/*226A*/REG_CMD(SetNthPerkEntryFunction);
-	/*226B*/REG_CMD_FORM(GetNthPerkEntryForm);
-	/*226C*/REG_CMD_FORM(SetNthPerkEntryForm);
+	/*226B*/REG_CMD_FRM(GetNthPerkEntryForm);
+	/*226C*/REG_CMD(SetNthPerkEntryForm);
 	/*226D*/REG_CMD(GetNthPerkEntryValue1);
 	/*226E*/REG_CMD(SetNthPerkEntryValue1);
 	/*226F*/REG_CMD(GetNthPerkEntryValue2);
 	/*2270*/REG_CMD(SetNthPerkEntryValue2);
 	/*2271*/REG_CMD_STR(GetNthPerkEntryString);
 	/*2272*/REG_CMD(SetNthPerkEntryString);
-	/*2273*/REG_CMD_FORM(GetActivatorRadioStation);
+	/*2273*/REG_CMD_FRM(GetActivatorRadioStation);
 	/*2274*/REG_CMD(SetActivatorRadioStation);
 	/*2275*/REG_CMD_STR(GetActivatorPrompt);
 	/*2276*/REG_CMD(SetActivatorPrompt);
-	/*2277*/REG_CMD_FORM(GetActivatorWaterType);
+	/*2277*/REG_CMD_FRM(GetActivatorWaterType);
 	/*2278*/REG_CMD(SetActivatorWaterType);
-	/*2279*/REG_CMD_FORM(GetActiveQuest);
+	/*2279*/REG_CMD_FRM(GetActiveQuest);
 	/*227A*/REG_CMD(GetINIFloat);
 	/*227B*/REG_CMD_STR(GetINIString);
 	/*227C*/REG_CMD(SetINIFloat);
@@ -262,9 +269,9 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*228D*/REG_CMD(EmptyCommand);
 	/*228E*/REG_CMD(GetLeveledListFlags);
 	/*228F*/REG_CMD(SetLeveledListFlags);
-	/*2290*/REG_CMD_FORM(GetActivatorSoundLooping);
+	/*2290*/REG_CMD_FRM(GetActivatorSoundLooping);
 	/*2291*/REG_CMD(SetActivatorSoundLooping);
-	/*2292*/REG_CMD_FORM(GetActivatorSoundActivate);
+	/*2292*/REG_CMD_FRM(GetActivatorSoundActivate);
 	/*2293*/REG_CMD(SetActivatorSoundActivate);
 	/*2294*/REG_CMD(EnableButton);
 	/*2295*/REG_CMD(DisableButton);
@@ -275,7 +282,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*229A*/REG_CMD(IsTrait);
 	/*229B*/REG_CMD_STR(GetLoadScreenTexture);
 	/*229C*/REG_CMD(SetLoadScreenTexture);
-	/*229D*/REG_CMD_FORM(GetLoadScreenType);
+	/*229D*/REG_CMD_FRM(GetLoadScreenType);
 	/*229E*/REG_CMD(SetLoadScreenType);
 	/*229F*/REG_CMD_ARR(GetLoadScreenTypeTextRGB);
 	/*22A0*/REG_CMD(SetLoadScreenTypeTextRGB);
@@ -311,8 +318,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*22BC*/REG_CMD(SetCasinoReelStops);
 	/*22BD*/REG_CMD(AddNoteNS);
 	//	v15.00
-	/*22BE*/REG_CMD_FORM(GetCellWaterForm);
-	/*22BF*/REG_CMD_FORM(GetWaterFormEffect);
+	/*22BE*/REG_CMD_FRM(GetCellWaterForm);
+	/*22BF*/REG_CMD_FRM(GetWaterFormEffect);
 	/*22C0*/REG_CMD(ar_Cat);
 	/*22C1*/REG_CMD(GetInventoryWeight);
 	/*22C2*/REG_CMD(GetChallengeType);
@@ -326,13 +333,13 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*22CA*/REG_CMD(SetChallengeValue2);
 	/*22CB*/REG_CMD(GetChallengeValue3);
 	/*22CC*/REG_CMD(SetChallengeValue3);
-	/*22CD*/REG_CMD_FORM(GetChallengeForm1);
+	/*22CD*/REG_CMD_FRM(GetChallengeForm1);
 	/*22CE*/REG_CMD(SetChallengeForm1);
-	/*22CF*/REG_CMD_FORM(GetChallengeForm2);
+	/*22CF*/REG_CMD_FRM(GetChallengeForm2);
 	/*22D0*/REG_CMD(SetChallengeForm2);
-	/*22D1*/REG_CMD_FORM(GetRecipeCategory);
+	/*22D1*/REG_CMD_FRM(GetRecipeCategory);
 	/*22D2*/REG_CMD(SetRecipeCategory);
-	/*22D3*/REG_CMD_FORM(GetRecipeSubcategory);
+	/*22D3*/REG_CMD_FRM(GetRecipeSubcategory);
 	/*22D4*/REG_CMD(SetRecipeSubcategory);
 	/*22D5*/REG_CMD(EmptyCommand);
 	/*22D6*/REG_CMD(GetReferenceFlag);
@@ -356,7 +363,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*22E8*/REG_CMD(LeveledListReplaceForm);
 	/*22E9*/REG_CMD(EmptyCommand);
 	//	v16.00
-	/*22EA*/REG_CMD_FORM(GetCellImageSpace);
+	/*22EA*/REG_CMD_FRM(GetCellImageSpace);
 	/*22EB*/REG_CMD(PlayerHasKey);
 	/*22EC*/REG_CMD(GetCellFlag);
 	/*22ED*/REG_CMD(SetCellFlag);
@@ -365,7 +372,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*22F0*/REG_CMD(fsqrt);
 	/*22F1*/REG_CMD(GetCellWaterHeight);
 	/*22F2*/REG_CMD(SetCellWaterHeight);
-	/*22F3*/REG_CMD_FORM(GetAnimObjectIdle);
+	/*22F3*/REG_CMD_FRM(GetAnimObjectIdle);
 	/*22F4*/REG_CMD(SetAnimObjectIdle);
 	/*22F5*/REG_CMD(GetActorTemplateFlag);
 	/*22F6*/REG_CMD(SetActorTemplateFlag);
@@ -380,13 +387,13 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*22FE*/REG_CMD(fCos);
 	/*22FF*/REG_CMD_ARR(SortFormsByType);
 	/*2300*/REG_CMD(GetFormCountType);
-	/*2301*/REG_CMD_FORM(GetPickupSound);
+	/*2301*/REG_CMD_FRM(GetPickupSound);
 	/*2302*/REG_CMD(SetPickupSound);
-	/*2303*/REG_CMD_FORM(GetPutdownSound);
+	/*2303*/REG_CMD_FRM(GetPutdownSound);
 	/*2304*/REG_CMD(SetPutdownSound);
-	/*2305*/REG_CMD_FORM(GetContainerOpenSound);
+	/*2305*/REG_CMD_FRM(GetContainerOpenSound);
 	/*2306*/REG_CMD(SetContainerOpenSound);
-	/*2307*/REG_CMD_FORM(GetContainerCloseSound);
+	/*2307*/REG_CMD_FRM(GetContainerCloseSound);
 	/*2308*/REG_CMD(SetContainerCloseSound);
 	/*2309*/REG_CMD(EmptyCommand);
 	/*230A*/REG_CMD_ARR(GetPlayerRegions);
@@ -402,7 +409,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2313*/REG_CMD(SetNthLevItemCount);
 	/*2314*/REG_CMD(GetBaseFactionRank);
 	/*2315*/REG_CMD(SetBaseFactionRank);
-	/*2316*/REG_CMD_FORM(GetImpactDataSet);
+	/*2316*/REG_CMD_FRM(GetImpactDataSet);
 	/*2317*/REG_CMD(SetImpactDataSet);
 	/*2318*/REG_CMD(HasActionRef);
 	/*2319*/REG_CMD(SetHotkey);
@@ -427,11 +434,11 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*232C*/REG_CMD(SetWeaponKillImpulse);
 	/*232D*/REG_CMD(GetWeaponImpulseDistance);
 	/*232E*/REG_CMD(SetWeaponImpulseDistance);
-	/*232F*/REG_CMD_FORM(GetWeaponVATSEffect);
+	/*232F*/REG_CMD_FRM(GetWeaponVATSEffect);
 	/*2330*/REG_CMD(SetWeaponVATSEffect);
 	/*2331*/REG_CMD(GetWeaponCritFlags);
 	/*2332*/REG_CMD(SetWeaponCritFlags);
-	/*2333*/REG_CMD_FORM(GetBodyPartData);
+	/*2333*/REG_CMD_FRM(GetBodyPartData);
 	//	v19.00
 	/*2334*/REG_CMD(GetRadius);
 	/*2335*/REG_CMD(SetRadius);
@@ -449,8 +456,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	nvse->SetOpcodeBase(0x2600);
 	//	v1.00
 	/*2600*/REG_CMD(SetPersistent);
-	/*2601*/REG_CMD_FORM(GetActorTemplate);
-	/*2602*/REG_CMD_FORM(GetLeveledActorBase);
+	/*2601*/REG_CMD_FRM(GetActorTemplate);
+	/*2602*/REG_CMD_FRM(GetLeveledActorBase);
 	/*2603*/REG_CMD(GetCreatureDamage);
 	/*2604*/REG_CMD(SetCreatureDamage);
 	/*2605*/REG_CMD(GetIsPoisoned);
@@ -461,10 +468,10 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*260A*/REG_CMD(InjectUIComponent);
 	/*260B*/REG_CMD(GetAmmoTraitNumeric);
 	/*260C*/REG_CMD(SetAmmoTraitNumeric);
-	/*260D*/REG_CMD_FORM(GetAmmoProjectile);
+	/*260D*/REG_CMD_FRM(GetAmmoProjectile);
 	/*260E*/REG_CMD(SetAmmoProjectile);
 	/*260F*/REG_CMD(GetNumAmmoEffects);
-	/*2610*/REG_CMD_FORM(GetNthAmmoEffect);
+	/*2610*/REG_CMD_FRM(GetNthAmmoEffect);
 	/*2611*/REG_CMD(AddAmmoEffect);
 	/*2612*/REG_CMD(RemoveAmmoEffect);
 	/*2613*/REG_CMD(GetAmmoEffectTraitNumeric);
@@ -473,11 +480,11 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2616*/REG_CMD(SetProjectileTraitNumeric);
 	/*2617*/REG_CMD(GetProjectileFlag);
 	/*2618*/REG_CMD(SetProjectileFlag);
-	/*2619*/REG_CMD_FORM(GetProjectileExplosion);
+	/*2619*/REG_CMD_FRM(GetProjectileExplosion);
 	/*261A*/REG_CMD(SetProjectileExplosion);
 	/*261B*/REG_CMD(GetExplosionTraitNumeric);
 	/*261C*/REG_CMD(SetExplosionTraitNumeric);
-	/*261D*/REG_CMD_FORM(GetExplosionTraitForm);
+	/*261D*/REG_CMD_FRM(GetExplosionTraitForm);
 	/*261E*/REG_CMD(SetExplosionTraitForm);
 	/*261F*/REG_CMD(GetExplosionFlag);
 	/*2620*/REG_CMD(SetExplosionFlag);
@@ -488,7 +495,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2625*/REG_CMD(SetPackageFlag);
 	/*2626*/REG_CMD(GetGlobalVariable);
 	/*2627*/REG_CMD(SetGlobalVariable);
-	/*2628*/REG_CMD_FORM(GetFactionReputationType);
+	/*2628*/REG_CMD_FRM(GetFactionReputationType);
 	/*2629*/REG_CMD(SetFactionReputationType);
 	/*262A*/REG_CMD_STR(RefToString);
 	/*262B*/REG_CMD(StringToRef);
@@ -529,12 +536,12 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*264B*/REG_CMD(SetWeaponDetectionSoundLevel);
 	/*264C*/REG_CMD(IsEquippedWeaponSilenced);
 	/*264D*/REG_CMD(IsEquippedWeaponScoped);
-	/*264E*/REG_CMD_FORM(GetWeaponSound);
+	/*264E*/REG_CMD_FRM(GetWeaponSound);
 	/*264F*/REG_CMD(SetWeaponSound);
 	/*2650*/REG_CMD(SetWeaponItemMod);
 	/*2651*/REG_CMD(SetWeaponItemModEffect);
 	/*2652*/REG_CMD(SetWeaponItemModValue);
-	/*2653*/REG_CMD_FORM(GetWeatherImageSpaceMod);
+	/*2653*/REG_CMD_FRM(GetWeatherImageSpaceMod);
 	/*2654*/REG_CMD(SetWeatherImageSpaceMod);
 	/*2655*/REG_CMD_STR(GetWeatherTexture);
 	/*2656*/REG_CMD(SetWeatherTexture);
@@ -544,12 +551,12 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*265A*/REG_CMD(SetWeatherTraitNumeric);
 	/*265B*/REG_CMD(GetWeatherRGBColor);
 	/*265C*/REG_CMD(SetWeatherRGBColor);
-	/*265D*/REG_CMD_FORM(GetLandTextureTextureSet);
+	/*265D*/REG_CMD_FRM(GetLandTextureTextureSet);
 	/*265E*/REG_CMD(SetLandTextureTextureSet);
 	/*265F*/REG_CMD(GetLandTextureTraitNumeric);
 	/*2660*/REG_CMD(SetLandTextureTraitNumeric);
 	/*2661*/REG_CMD(GetLandTextureNumGrasses);
-	/*2662*/REG_CMD_FORM(GetLandTextureNthGrass);
+	/*2662*/REG_CMD_FRM(GetLandTextureNthGrass);
 	/*2663*/REG_CMD(LandTextureAddGrass);
 	/*2664*/REG_CMD(LandTextureRemoveGrass);
 	/*2665*/REG_CMD_STR(GetTextureSetTexture);
@@ -567,16 +574,16 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2671*/REG_CMD(GetClimateTraitNumeric);
 	/*2672*/REG_CMD(SetClimateTraitNumeric);
 	/*2673*/REG_CMD(GetClimateNumWeatherTypes);
-	/*2674*/REG_CMD_FORM(GetClimateNthWeatherType);
+	/*2674*/REG_CMD_FRM(GetClimateNthWeatherType);
 	/*2675*/REG_CMD(GetClimateNthWeatherChance);
-	/*2676*/REG_CMD_FORM(GetClimateNthWeatherGlobal);
+	/*2676*/REG_CMD_FRM(GetClimateNthWeatherGlobal);
 	/*2677*/REG_CMD(ClimateAddWeatherType);
 	/*2678*/REG_CMD(ClimateRemoveWeatherType);
 	//	v5.00
 	/*2679*/REG_CMD(GetPrimitiveBound);
 	/*267A*/REG_CMD(SetPrimitiveBound);
 	/*267B*/REG_CMD(GetNumEffects);
-	/*267C*/REG_CMD_FORM(GetNthEffectBase);
+	/*267C*/REG_CMD_FRM(GetNthEffectBase);
 	/*267D*/REG_CMD(GetNthEffectTraitNumeric);
 	/*267E*/REG_CMD(SetNthEffectTraitNumeric);
 	/*267F*/REG_CMD(GetNumActorEffects);
@@ -586,7 +593,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2682*/REG_CMD_STR(GetActiveUIComponentName);
 	/*2683*/REG_CMD_STR(GetActiveUIComponentFullName);
 	/*2684*/REG_CMD(GetActiveUIComponentID);
-	/*2685*/REG_CMD_FORM(GetMenuTargetRef);
+	/*2685*/REG_CMD_FRM(GetMenuTargetRef);
 	/*2686*/REG_CMD(GetMenuItemFilter);
 	/*2687*/REG_CMD(ClickMenuButton);
 	//	v7.00
@@ -605,7 +612,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2692*/REG_CMD(AuxiliaryVariableGetType);
 	/*2693*/REG_CMD(AuxiliaryVariableGetFloat);
 	/*2694*/REG_CMD(AuxiliaryVariableSetFloat);
-	/*2695*/REG_CMD_FORM(AuxiliaryVariableGetRef);
+	/*2695*/REG_CMD_FRM(AuxiliaryVariableGetRef);
 	/*2696*/REG_CMD(AuxiliaryVariableSetRef);
 	/*2697*/REG_CMD_STR(AuxiliaryVariableGetString);
 	/*2698*/REG_CMD(AuxiliaryVariableSetString);
@@ -622,7 +629,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*26A3*/REG_CMD(RefMapArrayDestroy);
 	/*26A4*/REG_CMD(RefMapArrayGetFloat);
 	/*26A5*/REG_CMD(RefMapArraySetFloat);
-	/*26A6*/REG_CMD_FORM(RefMapArrayGetRef);
+	/*26A6*/REG_CMD_FRM(RefMapArrayGetRef);
 	/*26A7*/REG_CMD(RefMapArraySetRef);
 	/*26A8*/REG_CMD_STR(RefMapArrayGetString);
 	/*26A9*/REG_CMD(RefMapArraySetString);
@@ -632,12 +639,12 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v10.00
 	/*26AC*/REG_CMD_STR(GetBodyPartDataSkeleton);
 	/*26AD*/REG_CMD(SetBodyPartDataSkeleton);
-	/*26AE*/REG_CMD_FORM(GetBodyPartDataRagdoll);
+	/*26AE*/REG_CMD_FRM(GetBodyPartDataRagdoll);
 	/*26AF*/REG_CMD(SetBodyPartDataRagdoll);
 	/*26B0*/REG_CMD(GetBodyPartDataHasPart);
 	/*26B1*/REG_CMD(GetBodyPartTraitNumeric);
 	/*26B2*/REG_CMD(SetBodyPartTraitNumeric);
-	/*26B3*/REG_CMD_FORM(GetBodyPartTraitForm);
+	/*26B3*/REG_CMD_FRM(GetBodyPartTraitForm);
 	/*26B4*/REG_CMD(SetBodyPartTraitForm);
 	/*26B5*/REG_CMD_STR(GetBodyPartName);
 	/*26B6*/REG_CMD(SetBodyPartName);
@@ -659,21 +666,21 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*26C5*/REG_CMD(GetDestructionDataNumStages);
 	/*26C6*/REG_CMD(GetNthDestructionStageTrait);
 	/*26C7*/REG_CMD(SetNthDestructionStageTrait);
-	/*26C8*/REG_CMD_FORM(GetNthDestructionStageExplosion);
+	/*26C8*/REG_CMD_FRM(GetNthDestructionStageExplosion);
 	/*26C9*/REG_CMD(SetNthDestructionStageExplosion);
-	/*26CA*/REG_CMD_FORM(GetNthDestructionStageDebris);
+	/*26CA*/REG_CMD_FRM(GetNthDestructionStageDebris);
 	/*26CB*/REG_CMD(SetNthDestructionStageDebris);
 	/*26CC*/REG_CMD_STR(GetNthDestructionStageReplacement);
 	/*26CD*/REG_CMD(SetNthDestructionStageReplacement);
 	//	v12.00
 	/*26CE*/REG_CMD_ARR(GetTeammates);
-	/*26CF*/REG_CMD_FORM(GetCurrentWeather);
-	/*26D0*/REG_CMD_FORM(GetCurrentClimate);
+	/*26CF*/REG_CMD_FRM(GetCurrentWeather);
+	/*26D0*/REG_CMD_FRM(GetCurrentClimate);
 	/*26D1*/REG_CMD(SetCurrentClimate);
 	/*26D2*/REG_CMD(RefreshCurrentClimate);
-	/*26D3*/REG_CMD_FORM(GetWorldspaceClimate);
+	/*26D3*/REG_CMD_FRM(GetWorldspaceClimate);
 	/*26D4*/REG_CMD(SetWorldspaceClimate);
-	/*26D5*/REG_CMD_FORM(GetActorVoiceType);
+	/*26D5*/REG_CMD_FRM(GetActorVoiceType);
 	/*26D6*/REG_CMD(SetActorVoiceType);
 	//	v13.00
 	/*26D7*/REG_CMD(GetCreatureReach);
@@ -681,9 +688,9 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*26D9*/REG_CMD(PickFromList);
 	/*26DA*/REG_CMD(SetStageAlt);
 	/*26DB*/REG_CMD(EmptyCommand);
-	/*26DC*/REG_CMD_FORM(GetProjectileRefSource);
+	/*26DC*/REG_CMD_FRM(GetProjectileRefSource);
 	/*26DD*/REG_CMD(SetProjectileRefSource);
-	/*26DE*/REG_CMD_FORM(GetProjectileRefWeapon);
+	/*26DE*/REG_CMD_FRM(GetProjectileRefWeapon);
 	/*26DF*/REG_CMD(SetProjectileRefWeapon);
 	/*26E0*/REG_CMD(GetProjectileRefLifeTime);
 	/*26E1*/REG_CMD(GetProjectileRefDistanceTraveled);
@@ -712,7 +719,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*26F7*/REG_CMD(AddNewEffect);
 	/*26F8*/REG_CMD(RemoveNthEffect);
 	/*26F9*/REG_CMD(SetObjectEffect);
-	/*26FA*/REG_CMD_FORM(GetActorUnarmedEffect);
+	/*26FA*/REG_CMD_FRM(GetActorUnarmedEffect);
 	/*26FB*/REG_CMD(SetActorUnarmedEffect);
 	//	v15.00
 	/*26FC*/REG_CMD(IsPCInCombat);
@@ -727,11 +734,11 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2705*/REG_CMD(CCCSetNCCS);
 	/*2706*/REG_CMD(GetEncumbranceRate);
 	/*2707*/REG_CMD(CCCLoadNCCS);
-	/*2708*/REG_CMD(CCCSavedForm);
+	/*2708*/REG_CMD_FRM(CCCSavedForm);
 	/*2709*/REG_CMD_STR(CCCLocationName);
-	/*270A*/REG_CMD(CCCGetReputation);
+	/*270A*/REG_CMD_FRM(CCCGetReputation);
 	//	v16.00
-	/*270B*/REG_CMD_FORM(GetSelectedItemRef);
+	/*270B*/REG_CMD_FRM(GetSelectedItemRef);
 	/*270C*/REG_CMD(GetWeaponRefModFlags);
 	/*270D*/REG_CMD(SetWeaponRefModFlags);
 	/*270E*/REG_CMD_ARR(GetBarterItems);
@@ -739,8 +746,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2710*/REG_CMD(SetItemRefCurrentHealth);
 	/*2711*/REG_CMD(GetBarterGoldAlt);
 	//	v17.00
-	/*2712*/REG_CMD_FORM(GetRecipeMenuSelection);
-	/*2713*/REG_CMD_FORM(GetRecipeMenuCategory);
+	/*2712*/REG_CMD_FRM(GetRecipeMenuSelection);
+	/*2713*/REG_CMD_FRM(GetRecipeMenuCategory);
 	/*2714*/REG_CMD(UnlockRecipeMenuQuantity);
 	//	v18.00
 	/*2715*/REG_CMD(GetRecipeMenuNumSubcategories);
@@ -751,7 +758,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2719*/REG_CMD(DropAlt);
 	/*271A*/REG_CMD(DropMeAlt);
 	/*271B*/REG_CMD_STR(GetFormDescription);
-	/*271C*/REG_CMD_FORM(GetAddictionEffect);
+	/*271C*/REG_CMD_FRM(GetAddictionEffect);
 	/*271D*/REG_CMD(SetAddictionEffect);
 	/*271E*/REG_CMD(GetAddictionChance);
 	/*271F*/REG_CMD(SetAddictionChance);
@@ -765,20 +772,20 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2727*/REG_CMD(SetGrassModel);
 	/*2728*/REG_CMD(GetWheelDisabled);
 	/*2729*/REG_CMD(SetWheelDisabled);
-	/*272A*/REG_CMD_FORM(GetInterruptPackage);
+	/*272A*/REG_CMD_FRM(GetInterruptPackage);
 	/*272B*/REG_CMD(EnableImprovedRecipeMenu);
 	/*272C*/REG_CMD(InitItemFilter);
 	/*272D*/REG_CMD(SetItemFilter);
 	/*272E*/REG_CMD(GetSessionTime);
-	/*272F*/REG_CMD(EmptyCommand);
-	/*2730*/REG_CMD(EmptyCommand);
+	/*272F*/REG_CMD(GetQuestTargetsChanged);
+	/*2730*/REG_CMD(GetWorldMapPosMults);
 	/*2731*/REG_CMD(EmptyCommand);
 	/*2732*/REG_CMD(EmptyCommand);
 	//	v20.00
 	/*2733*/REG_CMD_ARR(GetActiveEffects);
 	/*2734*/REG_CMD(GetActorProcessingLevel);
 	/*2735*/REG_CMD_ARR(GetActorsByProcessingLevel);
-	/*2736*/REG_CMD_FORM(GetExteriorCell);
+	/*2736*/REG_CMD_FRM(GetExteriorCell);
 	/*2737*/REG_CMD(GetCellBuffered);
 	/*2738*/REG_CMD(MessageExAlt);
 	//	v21.00
@@ -808,14 +815,14 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*274E*/REG_CMD(EmptyCommand);
 	/*274F*/REG_CMD(EmptyCommand);
 	/*2750*/REG_CMD(EmptyCommand);
-	/*2751*/REG_CMD_FORM(GetPipboyRadio);
+	/*2751*/REG_CMD_FRM(GetPipboyRadio);
 	/*2752*/REG_CMD(CCCSayTo);
 	/*2753*/REG_CMD(CCCRunResultScripts);
 	//	v24.00
 	/*2754*/REG_CMD(GetCombatDisabled);
 	/*2755*/REG_CMD(SetCombatDisabled);
 	/*2756*/REG_CMD(ToggleNoHealthReset);
-	/*2757*/REG_CMD_FORM(GetCurrentStablePackage);
+	/*2757*/REG_CMD_FRM(GetCurrentStablePackage);
 	/*2758*/REG_CMD(MoveToCell);
 	/*2759*/REG_CMD(MoveToEditorPosition);
 	/*275A*/REG_CMD(GetTeammateUsingAmmo);
@@ -854,7 +861,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2779*/REG_CMD(SetBaseEffectFlag);
 	//	v27.00
 	/*277A*/REG_CMD(GetPCUsingIronSights);
-	/*277B*/REG_CMD(GetPCLastExteriorDoor);
+	/*277B*/REG_CMD_FRM(GetPCLastExteriorDoor);
 	/*277C*/REG_CMD(GetRadiationLevelAlt);
 	/*277D*/REG_CMD(IsInWater);
 	/*277E*/REG_CMD(SetEmbeddedWeaponNode);
@@ -867,7 +874,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2784*/REG_CMD(SetMessageDisabled);
 	/*2785*/REG_CMD(GetMessageDisabled);
 	//	v29.00
-	/*2786*/REG_CMD_FORM(GetAshPileSource);
+	/*2786*/REG_CMD_FRM(GetAshPileSource);
 	//	v30.00
 	/*2787*/REG_CMD(GetMessageFlags);
 	/*2788*/REG_CMD(SetMessageFlags);
@@ -898,7 +905,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*279E*/REG_CMD(SetOnHealthDamageEventHandler);
 	/*279F*/REG_CMD(SetOnCrippledLimbEventHandler);
 	/*27A0*/REG_CMD(SetOnFireWeaponEventHandler);
-	/*27A1*/REG_CMD_FORM(GetCurrentAmmo);
+	/*27A1*/REG_CMD_FRM(GetCurrentAmmo);
 	/*27A2*/REG_CMD(GetCurrentAmmoRounds);
 	//	v34.00
 	/*27A3*/REG_CMD_STR(GetMoonTexture);
@@ -927,7 +934,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v36.50
 	/*27B8*/REG_CMD(GetHasContactBase);
 	/*27B9*/REG_CMD(GetHasContactType);
-	/*27BA*/REG_CMD_FORM(GetObjectUnderFeet);
+	/*27BA*/REG_CMD_FRM(GetObjectUnderFeet);
 	//	v40.00
 	/*27BB*/REG_CMD(GetHasPhantom);
 	/*27BC*/REG_CMD_STR(GetArmorRCT);
@@ -936,12 +943,12 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*27BF*/REG_CMD(SetPerkFlag);
 	/*27C0*/REG_CMD(ModLogPrint);
 	//	v41.00
-	/*27C1*/REG_CMD_FORM(GetBaseEffectScript);
+	/*27C1*/REG_CMD_FRM(GetBaseEffectScript);
 	/*27C2*/REG_CMD(SetBaseEffectScript);
 	/*27C3*/REG_CMD_STR(GetWaterNoiseTexture);
 	/*27C4*/REG_CMD(SetWaterNoiseTexture);
-	/*27C5*/REG_CMD_FORM(SetWaterFormEffect);
-	/*27C6*/REG_CMD_FORM(GetWaterSound);
+	/*27C5*/REG_CMD_FRM(SetWaterFormEffect);
+	/*27C6*/REG_CMD_FRM(GetWaterSound);
 	/*27C7*/REG_CMD(SetWaterSound);
 	//	v42.00
 	/*27C8*/REG_CMD(GetInteractionDisabled);
@@ -960,17 +967,17 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*27D3*/REG_CMD(SetOnControlUpEventHandler);
 	//	v44.00
 	/*27D4*/REG_CMD(SetGameMainLoopCallback);
-	/*27D5*/REG_CMD_FORM(GetGlobalRef);
+	/*27D5*/REG_CMD_FRM(GetGlobalRef);
 	/*27D6*/REG_CMD(SetGlobalRef);
 	/*27D7*/REG_CMD_STR(GetWorldspaceNoiseTexture);
 	/*27D8*/REG_CMD(SetWorldspaceNoiseTexture);
-	/*27D9*/REG_CMD_FORM(GetWorldspaceWaterType);
+	/*27D9*/REG_CMD_FRM(GetWorldspaceWaterType);
 	/*27DA*/REG_CMD(SetWorldspaceWaterType);
-	/*27DB*/REG_CMD_FORM(GetWorldspaceImagespace);
+	/*27DB*/REG_CMD_FRM(GetWorldspaceImagespace);
 	/*27DC*/REG_CMD(SetWorldspaceImagespace);
 	//	v45.00
 	/*27DD*/REG_CMD(SetCellWaterForm);
-	/*27DE*/REG_CMD_FORM(GetCellClimate);
+	/*27DE*/REG_CMD_FRM(GetCellClimate);
 	/*27DF*/REG_CMD(SetCellClimate);
 	/*27E0*/REG_CMD_STR(GetCellNoiseTexture);
 	/*27E1*/REG_CMD(SetCellNoiseTexture);
@@ -1002,7 +1009,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*27F6*/REG_CMD(GetPerkModifier);
 	/*27F7*/REG_CMD(SetOnQuestStageEventHandler);
 	/*27F8*/REG_CMD(SetAngleEx);
-	/*27F9*/REG_CMD_FORM(GetTeleportDoor);
+	/*27F9*/REG_CMD_FRM(GetTeleportDoor);
 	/*27FA*/REG_CMD(GetBarterPriceMult);
 	/*27FB*/REG_CMD(SetBarterPriceMult);
 	//	v48.80
@@ -1024,7 +1031,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2808*/REG_CMD(SetBipedModelPathAlt);
 	/*2809*/REG_CMD(GetKillXP);
 	/*280A*/REG_CMD(EmptyCommand);
-	/*280B*/REG_CMD(GetKiller);
+	/*280B*/REG_CMD_FRM(GetKiller);
 	/*280C*/REG_CMD(KillActorAlt);
 	/*280D*/REG_CMD(ReloadEquippedModels);
 	/*280E*/REG_CMD(MoveToFadeDelay);
@@ -1032,11 +1039,11 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2810*/REG_CMD(ScriptWait);
 	/*2811*/REG_CMD(IsScriptWaiting);
 	/*2812*/REG_CMD(StopScriptWaiting);
-	/*2813*/REG_CMD_FORM(GetCrosshairWater);
+	/*2813*/REG_CMD_FRM(GetCrosshairWater);
 	//	v50.50
 	/*2814*/REG_CMD(GetScriptBlockDisabled);
 	/*2815*/REG_CMD(SetScriptBlockDisabled);
-	/*2816*/REG_CMD_FORM(GetPlayedIdle);
+	/*2816*/REG_CMD_FRM(GetPlayedIdle);
 	/*2817*/REG_CMD(IsIdlePlayingEx);
 	/*2818*/REG_CMD_ARR(GetObjectiveTargets);
 	/*2819*/REG_CMD(SetObjectiveNthTarget);
@@ -1046,7 +1053,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*281D*/REG_CMD_STR(GetObjectiveText);
 	/*281E*/REG_CMD(SetObjectiveText);
 	//	v50.80
-	/*281F*/REG_CMD_FORM(GetArmorAudioTemplate);
+	/*281F*/REG_CMD_FRM(GetArmorAudioTemplate);
 	/*2820*/REG_CMD(SetArmorAudioTemplate);
 	/*2821*/REG_CMD(SetWeaponOut);
 	//	v51.00
@@ -1063,9 +1070,9 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*282A*/REG_CMD(IsInCharGen);
 	/*282B*/REG_CMD(DisableScriptedActivate);
 	//	v51.60
-	/*282C*/REG_CMD_FORM(GetHitAttacker);
-	/*282D*/REG_CMD_FORM(GetHitProjectile);
-	/*282E*/REG_CMD_FORM(GetHitWeapon);
+	/*282C*/REG_CMD_FRM(GetHitAttacker);
+	/*282D*/REG_CMD_FRM(GetHitProjectile);
+	/*282E*/REG_CMD_FRM(GetHitWeapon);
 	/*282F*/REG_CMD(GetGameDaysPassed);
 	//	v51.80
 	/*2830*/REG_CMD(GetWaterImmersionPerc);
@@ -1080,11 +1087,11 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2836*/REG_CMD(ToggleCraftingMessages);
 	/*2837*/REG_CMD(ToggleHardcoreTracking);
 	/*2838*/REG_CMD(SetGameDifficulty);
-	/*2839*/REG_CMD_FORM(GetEquippedItemRef);
+	/*2839*/REG_CMD_FRM(GetEquippedItemRef);
 	/*283A*/REG_CMD(ExecuteScript);
 	/*283B*/REG_CMD(ReloadENB);
 	/*283C*/REG_CMD(IsFleeing);
-	/*283D*/REG_CMD_FORM(GetEnemyHealthTarget);
+	/*283D*/REG_CMD_FRM(GetEnemyHealthTarget);
 	/*283E*/REG_CMD(SetCurrentAmmoRounds);
 	/*283F*/REG_CMD(IsAnimPlayingEx);
 	//	v52.60
@@ -1114,7 +1121,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2854*/REG_CMD(SetVATSTargetable);
 	/*2855*/REG_CMD(GetWindDirection);
 	/*2856*/REG_CMD(SetWindDirection);
-	/*2857*/REG_CMD_FORM(GetCreatureWeaponList);
+	/*2857*/REG_CMD_FRM(GetCreatureWeaponList);
 	/*2858*/REG_CMD(SetWindSpeedMult);
 	/*2859*/REG_CMD(TriggerLightningFX);
 	/*285A*/REG_CMD(GetObjectVelocity);
@@ -1133,9 +1140,9 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2865*/REG_CMD(SetNoUnequip);
 	/*2866*/REG_CMD(SetCursorPos);
 	/*2867*/REG_CMD(MoveToNode);
-	/*2868*/REG_CMD_FORM(GetDeathItem);
+	/*2868*/REG_CMD_FRM(GetDeathItem);
 	/*2869*/REG_CMD(SetDeathItem);
-	/*286A*/REG_CMD_FORM(GetActorLeveledList);
+	/*286A*/REG_CMD_FRM(GetActorLeveledList);
 	/*286B*/REG_CMD_ARR(GetPlayerPerks);
 	//	v53.80
 	/*286C*/REG_CMD(UnloadUIComponent);
@@ -1148,7 +1155,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2873*/REG_CMD(InitMiniMap);
 	/*2874*/REG_CMD(UpdateMiniMap);
 	//	v54.20
-	/*2875*/REG_CMD_FORM(GetCrosshairRefEx);
+	/*2875*/REG_CMD_FRM(GetCrosshairRefEx);
 	/*2876*/REG_CMD(IsMobile);
 	/*2877*/REG_CMD(IsGrabbable);
 	/*2878*/REG_CMD(SetOnLocationDiscoverEventHandler);
@@ -1169,7 +1176,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2883*/REG_CMD(GetArmourPenetrated);
 	/*2884*/REG_CMD(GetImpactMaterialType);
 	/*2885*/REG_CMD(SetImpactMaterialType);
-	/*2886*/REG_CMD_FORM(GetImpactDataSetForm);
+	/*2886*/REG_CMD_FRM(GetImpactDataSetForm);
 	/*2887*/REG_CMD(SetImpactDataSetForm);
 	//	v54.50
 	/*2888*/REG_CMD(SetQuestFlag);
@@ -1180,7 +1187,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*288C*/REG_CMD(GetGameVolume);
 	/*288D*/REG_CMD(SetGameVolume);
 	/*288E*/REG_CMD(MoveAwayFrom);
-	/*288F*/REG_CMD_FORM(GetEquippedWeaponPoison);
+	/*288F*/REG_CMD_FRM(GetEquippedWeaponPoison);
 	/*2890*/REG_CMD(SuppressQuestMessages);
 	/*2891*/REG_CMD(TravelToRef);
 	//	v54.65
@@ -1190,7 +1197,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v54.70
 	/*2895*/REG_CMD(DonnerReedKuruParty);
 	/*2896*/REG_CMD(SetArmorClass);
-	/*2897*/REG_CMD_FORM(GetEquippedEx);
+	/*2897*/REG_CMD_FRM(GetEquippedEx);
 	/*2898*/REG_CMD(TestEquippedSlots);
 	/*2899*/REG_CMD(GetWeaponOnHitSetting);
 	/*289A*/REG_CMD(SetWeaponOnHitSetting);
@@ -1213,12 +1220,12 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*28A8*/REG_CMD_ARR(GetHit3DData);
 	/*28A9*/REG_CMD_STR(GetWeaponModel);
 	/*28AA*/REG_CMD(SetWeaponModel);
-	/*28AB*/REG_CMD_FORM(GetOwnerOfCell);
+	/*28AB*/REG_CMD_FRM(GetOwnerOfCell);
 	/*28AC*/REG_CMD(TogglePipBoyLight);
 	/*28AD*/REG_CMD(GetHardcoreTracking);
 	//	v54.90
 	/*28AE*/REG_CMD(SetPerkLevel);
-	/*28AF*/REG_CMD(GetProjectileRefImpactRef);
+	/*28AF*/REG_CMD_FRM(GetProjectileRefImpactRef);
 	/*28B0*/REG_CMD(SetOnProjectileImpactEventHandler);
 	/*28B1*/REG_CMD(GetNoteRead);
 	/*28B2*/REG_CMD(SetOnNoteAddedEventHandler);
@@ -1230,10 +1237,10 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v55.05
 	/*28B6*/REG_CMD(GetHardcoreStageThreshold);
 	/*28B7*/REG_CMD(SetHardcoreStageThreshold);
-	/*28B8*/REG_CMD_FORM(GetHardcoreStageEffect);
+	/*28B8*/REG_CMD_FRM(GetHardcoreStageEffect);
 	/*28B9*/REG_CMD(SetHardcoreStageEffect);
 	/*28BA*/REG_CMD(ClearModelAltTextures);
-	/*28BB*/REG_CMD_FORM(GetCreatureSoundsTemplate);
+	/*28BB*/REG_CMD_FRM(GetCreatureSoundsTemplate);
 	/*28BC*/REG_CMD(SetCreatureSoundsTemplate);
 	//	v55.10
 	/*28BD*/REG_CMD(GetDebugModeState);
@@ -1282,7 +1289,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*28DF*/REG_CMD(ModelHasBlock);
 	/*28E0*/REG_CMD(GetGroundMaterial);
 	/*28E1*/REG_CMD(ShowLevelUpMenuEx);
-	/*28E2*/REG_CMD_FORM(GetRayCastRef);
+	/*28E2*/REG_CMD_FRM(GetRayCastRef);
 	/*28E3*/REG_CMD(GetRayCastMaterial);
 	//	v55.65
 	/*28E4*/REG_CMD(FireWeaponEx);
@@ -1302,7 +1309,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*28EE*/REG_CMD(GetHitExtendedFlag);
 	/*28EF*/REG_CMD(ClearDeadActors);
 	/*28F0*/REG_CMD(GetCameraMovement);
-	/*28F1*/REG_CMD(GetHotkeyItemRef);
+	/*28F1*/REG_CMD_FRM(GetHotkeyItemRef);
 	//	v56.02
 	/*28F2*/REG_CMD_ARR(GetCollisionNodes);
 	//	v56.05
@@ -1325,23 +1332,24 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*28FF*/REG_CMD(AttachUIComponent);
 	//	v56.18
 	/*2900*/REG_CMD(RenameNifBlock);
+	//	v56.20
+	/*2901*/REG_CMD(RemoveNifBlock);
+	/*2902*/REG_CMD(SetInternalMarker);
+	/*2903*/REG_CMD(FailQuest);
+	//	v56.22
+	/*2904*/REG_CMD(PlayAnimSequence);
+	//	v56.26
+	/*2905*/REG_CMD(RemoveAllPerks);
 
 	//===========================================================
-
-	NVSECommandTableInterface *cmdTable = (NVSECommandTableInterface*)nvse->QueryInterface(kInterface_CommandTable);
-	GetCmdByOpcode = cmdTable->GetByOpcode;
-	CommandInfo *cmdInfo = GetCmdByOpcode(0x146B);
-	cmdInfo->numParams = 2;
-	cmdInfo->params = kParams_OneInt_OneOptionalInt;
-	cmdInfo = GetCmdByOpcode(0x158D);
-	cmdInfo->numParams = 2;
-	cmdInfo->params = kParams_OneInt_OneOptionalInt;
 
 	if (nvse->isEditor)
 	{
 		InitEditorPatches();
 		return true;
 	}
+
+	//nvse->InitExpressionEvaluatorUtils(&s_expEvalUtils);
 
 	PluginHandle pluginHandle = nvse->GetPluginHandle();
 	NVSESerializationInterface *serialization = (NVSESerializationInterface*)nvse->QueryInterface(kInterface_Serialization);
@@ -1359,10 +1367,11 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	ReadRecord16 = serialization->ReadRecord16;
 	ReadRecord32 = serialization->ReadRecord32;
 	ReadRecord64 = serialization->ReadRecord64;
-	SkipNBytes = serialization->SkipNBytes;
 	serialization->SetLoadCallback(pluginHandle, LoadGameCallback);
 	serialization->SetSaveCallback(pluginHandle, SaveGameCallback);
 	serialization->SetNewGameCallback(pluginHandle, NewGameCallback);
+	((NVSEMessagingInterface*)nvse->QueryInterface(kInterface_Messaging))->RegisterListener(pluginHandle, "NVSE", NVSEMessageHandler);
+	GetCmdByOpcode = ((NVSECommandTableInterface*)nvse->QueryInterface(kInterface_CommandTable))->GetByOpcode;
 	NVSEStringVarInterface *strInterface = (NVSEStringVarInterface*)nvse->QueryInterface(kInterface_StringVar);
 	GetStringVar = strInterface->GetString;
 	AssignString = strInterface->Assign;
@@ -1379,20 +1388,108 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	NVSEScriptInterface *scrInterface = (NVSEScriptInterface*)nvse->QueryInterface(kInterface_Script);
 	ExtractArgsEx = scrInterface->ExtractArgsEx;
 	ExtractFormatStringArgs = scrInterface->ExtractFormatStringArgs;
-	CallFunction = scrInterface->CallFunction;
+	CallFunction = scrInterface->CallFunctionAlt;
 
 	NVSEDataInterface *nvseData = (NVSEDataInterface*)nvse->QueryInterface(kInterface_Data);
 	g_DIHookCtrl = (DIHookControl*)nvseData->GetSingleton(NVSEDataInterface::kNVSEData_DIHookControl);
-	InventoryRefCreate = (InventoryRef* (*)(TESObjectREFR*, const InventoryRefData&, bool))nvseData->GetFunc(NVSEDataInterface::kNVSEData_InventoryReferenceCreate);
-	InventoryRefGetForID = (InventoryRef* (*)(UInt32))nvseData->GetFunc(NVSEDataInterface::kNVSEData_InventoryReferenceGetForRefID);
+	InventoryRefCreate = (_InventoryRefCreate)nvseData->GetFunc(NVSEDataInterface::kNVSEData_InventoryReferenceCreateEntry);
+	InventoryRefGetForID = (_InventoryRefGetForID)nvseData->GetFunc(NVSEDataInterface::kNVSEData_InventoryReferenceGetForRefID);
 	g_numPreloadMods = (UInt8*)nvseData->GetData(NVSEDataInterface::kNVSEData_NumPreloadMods);
-
-	((NVSEMessagingInterface*)nvse->QueryInterface(kInterface_Messaging))->RegisterListener(pluginHandle, "NVSE", NVSEMessageHandler);
-
-	s_dataPath = s_dataPathFull + 5;
-	s_configPath = s_configPathFull + 12;
-	s_scriptsPath = s_scriptsPathFull + 26;
-	s_modLogPath = s_modLogPathFull + 9;
-
+	CaptureLambdaVars = (_CaptureLambdaVars)nvseData->GetFunc(NVSEDataInterface::kNVSEData_LambdaSaveVariableList);
+	UncaptureLambdaVars = (_UncaptureLambdaVars)nvseData->GetFunc(NVSEDataInterface::kNVSEData_LambdaUnsaveVariableList);
+	
 	return true;
+}
+
+void CleanMLCallbacks()
+{
+	for (auto iter = s_mainLoopCallbacks.Begin(); iter; ++iter)
+		if (iter->flags & 8) iter->bRemove = true;
+}
+
+void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
+{
+	switch (nvseMsg->type)
+	{
+		case NVSEMessagingInterface::kMessage_PostLoad:
+		{
+			MemCopy = memcpy;
+			MemMove = memmove;
+
+			InitJIPHooks();
+			InitGamePatches();
+			InitCmdPatches();
+			break;
+		}
+		case NVSEMessagingInterface::kMessage_ExitGame:
+			JIPScriptRunner::RunScriptFiles('xg');
+			break;
+		case NVSEMessagingInterface::kMessage_ExitToMainMenu:
+			CleanMLCallbacks();
+			JIPScriptRunner::RunScriptFiles('mx');
+			break;
+		case NVSEMessagingInterface::kMessage_LoadGame:
+			JIPScriptRunner::RunScriptFiles('lg');
+			break;
+		case NVSEMessagingInterface::kMessage_SaveGame:
+			JIPScriptRunner::RunScriptFiles('sg');
+			break;
+		case NVSEMessagingInterface::kMessage_Precompile:
+			break;
+		case NVSEMessagingInterface::kMessage_NewGame:
+			JIPScriptRunner::RunScriptFiles('ng');
+		case NVSEMessagingInterface::kMessage_PreLoadGame:
+		{
+			CleanMLCallbacks();
+			s_gameLoadFlagLN = true;
+			HOOK_SET(OnRagdoll, false);
+			s_onRagdollEventScripts.Clear();
+			MiniMapLoadGame();
+			HOOK_SET(SynchronizePosition, false);
+			s_syncPositionRef = NULL;
+			break;
+		}
+		case NVSEMessagingInterface::kMessage_ExitGame_Console:
+			JIPScriptRunner::RunScriptFiles('xg');
+			break;
+		case NVSEMessagingInterface::kMessage_PostLoadGame:
+			break;
+		case NVSEMessagingInterface::kMessage_PostPostLoad:
+			break;
+		case NVSEMessagingInterface::kMessage_RuntimeScriptError:
+			break;
+		case NVSEMessagingInterface::kMessage_DeleteGame:
+			break;
+		case NVSEMessagingInterface::kMessage_RenameGame:
+			break;
+		case NVSEMessagingInterface::kMessage_RenameNewGame:
+			break;
+		case NVSEMessagingInterface::kMessage_DeleteGameName:
+			break;
+		case NVSEMessagingInterface::kMessage_RenameGameName:
+			break;
+		case NVSEMessagingInterface::kMessage_RenameNewGameName:
+			break;
+		case NVSEMessagingInterface::kMessage_DeferredInit:
+			DeferredInit();
+			break;
+		case NVSEMessagingInterface::kMessage_MainGameLoop:
+		{
+			if (!s_mainLoopCallbacks.Empty())
+				CycleMainLoopCallbacks(&s_mainLoopCallbacks);
+			if (s_LNEventFlags)
+				LN_ProcessEvents();
+			if (s_HUDCursorMode && (g_interfaceManager->currentMode > 1))
+			{
+				s_HUDCursorMode = 0;
+				g_DIHookCtrl->SetLMBDisabled(false);
+			}
+			if (s_doRefreshItemListBox)
+			{
+				s_doRefreshItemListBox = false;
+				RefreshItemListBox();
+			}
+			break;
+		}
+	}
 }

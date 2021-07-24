@@ -3,27 +3,27 @@
 DEFINE_COMMAND_PLUGIN(HasPerkRank, , 1, 2, kParams_JIP_OneForm_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetPerkRank, , 1, 3, kParams_JIP_OneForm_OneInt_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetPerkEntryCount, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(GetNthPerkEntryType, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetNthPerkEntryFunction, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetNthPerkEntryFunction, , 0, 3, kParams_JIP_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetNthPerkEntryForm, , 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetNthPerkEntryType, , 0, 2, kParams_JIP_OnePerk_OneInt);
+DEFINE_COMMAND_PLUGIN(GetNthPerkEntryFunction, , 0, 2, kParams_JIP_OnePerk_OneInt);
+DEFINE_COMMAND_PLUGIN(SetNthPerkEntryFunction, , 0, 3, kParams_JIP_OnePerk_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetNthPerkEntryForm, , 0, 2, kParams_JIP_OnePerk_OneInt);
 DEFINE_COMMAND_PLUGIN(SetNthPerkEntryForm, , 0, 3, kParams_JIP_OneForm_OneInt_OneForm);
-DEFINE_COMMAND_PLUGIN(GetNthPerkEntryValue1, , 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetNthPerkEntryValue1, , 0, 2, kParams_JIP_OnePerk_OneInt);
 DEFINE_COMMAND_PLUGIN(SetNthPerkEntryValue1, , 0, 3, kParams_JIP_OneForm_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetNthPerkEntryValue2, , 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetNthPerkEntryValue2, , 0, 2, kParams_JIP_OnePerk_OneInt);
 DEFINE_COMMAND_PLUGIN(SetNthPerkEntryValue2, , 0, 3, kParams_JIP_OneForm_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetNthPerkEntryString, , 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetNthPerkEntryString, , 0, 2, kParams_JIP_OnePerk_OneInt);
 DEFINE_COMMAND_PLUGIN(SetNthPerkEntryString, , 0, 3, kParams_JIP_OneForm_OneInt_OneString);
 DEFINE_COMMAND_PLUGIN(IsTrait, , 0, 1, kParams_OneForm);
 DEFINE_COMMAND_PLUGIN(GetPerkLevel, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetPerkLevel, , 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetPerkLevel, , 0, 2, kParams_JIP_OnePerk_OneInt);
 
 bool Cmd_HasPerkRank_Execute(COMMAND_ARGS)
 {
 	BGSPerk *perk;
 	UInt32 useAlt = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &useAlt) && (thisObj->refID == 0x14) && IS_ID(perk, BGSPerk))
-		*result = g_thePlayer->GetPerkRank(perk, useAlt != 0);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &useAlt) && IS_ID(perk, BGSPerk))
+		*result = DoGetPerkRank((Actor*)thisObj, perk, useAlt);
 	else *result = 0;
 	DoConsolePrint(result);
 	return true;
@@ -33,8 +33,12 @@ bool Cmd_SetPerkRank_Execute(COMMAND_ARGS)
 {
 	BGSPerk *perk;
 	UInt32 rank, useAlt = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &rank, &useAlt) && (thisObj->refID == 0x14) && IS_ID(perk, BGSPerk) && rank)
-		g_thePlayer->SetPerkRank(perk, GetMin(rank, perk->data.numRanks), useAlt != 0);
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &rank, &useAlt) && IS_ID(perk, BGSPerk) && rank)
+	{
+		if (rank > perk->data.numRanks)
+			rank = perk->data.numRanks;
+		((Actor*)thisObj)->SetPerkRank(perk, rank, useAlt);
+	}
 	return true;
 }
 
@@ -52,7 +56,7 @@ bool Cmd_GetNthPerkEntryType_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSPerk *perk;
 	UInt32 index;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index) || NOT_ID(perk, BGSPerk)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index)) return true;
 	BGSPerkEntry *entry = perk->entries.GetNthItem(index);
 	if (!entry) return true;
 	if IS_TYPE(entry, BGSEntryPointPerkEntry)
@@ -81,7 +85,7 @@ bool Cmd_GetNthPerkEntryFunction_Execute(COMMAND_ARGS)
 	*result = -1;
 	BGSPerk *perk;
 	UInt32 index;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index) && IS_ID(perk, BGSPerk))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index))
 	{
 		BGSEntryPointPerkEntry *entry = (BGSEntryPointPerkEntry*)perk->entries.GetNthItem(index);
 		if (entry && IS_TYPE(entry, BGSEntryPointPerkEntry))
@@ -94,7 +98,7 @@ bool Cmd_SetNthPerkEntryFunction_Execute(COMMAND_ARGS)
 {
 	BGSPerk *perk;
 	UInt32 index, func;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index, &func) && IS_ID(perk, BGSPerk))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index, &func))
 	{
 		BGSEntryPointPerkEntry *entry = (BGSEntryPointPerkEntry*)perk->entries.GetNthItem(index);
 		if (entry && IS_TYPE(entry, BGSEntryPointPerkEntry))
@@ -108,7 +112,7 @@ bool Cmd_GetNthPerkEntryForm_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSPerk *perk;
 	UInt32 index;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index) || NOT_ID(perk, BGSPerk)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index)) return true;
 	BGSPerkEntry *entry = perk->entries.GetNthItem(index);
 	if (!entry) return true;
 	switch (*(UInt32*)entry)
@@ -161,7 +165,7 @@ bool Cmd_GetNthPerkEntryValue1_Execute(COMMAND_ARGS)
 	*result = -1;
 	BGSPerk *perk;
 	UInt32 index;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index) || NOT_ID(perk, BGSPerk)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index)) return true;
 	BGSPerkEntry *entry = perk->entries.GetNthItem(index);
 	if (!entry) return true;
 	if IS_TYPE(entry, BGSEntryPointPerkEntry)
@@ -203,7 +207,7 @@ bool Cmd_GetNthPerkEntryValue2_Execute(COMMAND_ARGS)
 	*result = -1;
 	BGSPerk *perk;
 	UInt32 index;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index) || NOT_ID(perk, BGSPerk)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index)) return true;
 	BGSPerkEntry *entry = perk->entries.GetNthItem(index);
 	if (entry && IS_TYPE(entry, BGSEntryPointPerkEntry))
 	{
@@ -235,7 +239,7 @@ bool Cmd_GetNthPerkEntryString_Execute(COMMAND_ARGS)
 	const char *resStr = NULL;
 	BGSPerk *perk;
 	UInt32 index;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index) && IS_ID(perk, BGSPerk))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index))
 	{
 		BGSPerkEntry *entry = perk->entries.GetNthItem(index);
 		if (entry && IS_TYPE(entry, BGSEntryPointPerkEntry))
@@ -288,7 +292,7 @@ bool Cmd_SetPerkLevel_Execute(COMMAND_ARGS)
 {
 	BGSPerk *perk;
 	UInt32 level;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &level) && IS_ID(perk, BGSPerk))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &level))
 		perk->data.minLevel = level;
 	return true;
 }

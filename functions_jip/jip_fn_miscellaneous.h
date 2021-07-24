@@ -72,6 +72,7 @@ DEFINE_COMMAND_PLUGIN(RewardXPExact, , 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(ClearDeadActors, , 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetCameraMovement, , 0, 2, kParams_JIP_TwoScriptVars);
 DEFINE_COMMAND_PLUGIN(GetReticleNode, , 0, 2, kParams_JIP_OneOptionalFloat_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetInternalMarker, , 0, 2, kParams_JIP_OneForm_OneOptionalInt);
 
 bool Cmd_DisableNavMeshAlt_Execute(COMMAND_ARGS)
 {
@@ -209,11 +210,12 @@ bool Cmd_SetFormDescription_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form;
-	if (!ExtractFormatStringArgs(1, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_SetFormDescription.numParams, &form))
+	char *buffer = GetStrArgBuffer();
+	if (!ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_SetFormDescription.numParams, &form))
 		return true;
 	TESDescription *description = DYNAMIC_CAST(form, TESForm, TESDescription);
 	if (!description && (NOT_ID(form, BGSNote) || !(description = ((BGSNote*)form)->noteText))) return true;
-	UInt16 newLen = StrLen(s_strArgBuffer);
+	UInt16 newLen = StrLen(buffer);
 	char **findDesc, *newDesc;
 	if (!s_descriptionChanges.Insert(description, &findDesc))
 	{
@@ -226,8 +228,8 @@ bool Cmd_SetFormDescription_Execute(COMMAND_ARGS)
 		}
 	}
 	else *findDesc = newDesc = (char*)GameHeapAlloc(newLen + 1);
-	StrCopy(newDesc, s_strArgBuffer);
-	*g_currentDescription = NULL;
+	StrCopy(newDesc, buffer);
+	*GameGlobals::CurrentDescription() = NULL;
 	HOOK_SET(GetDescription, true);
 	*result = 1;
 	return true;
@@ -293,14 +295,16 @@ bool Cmd_GetPCDetectionState_Execute(COMMAND_ARGS)
 
 bool Cmd_GetPipboyRadio_Execute(COMMAND_ARGS)
 {
-	if (*g_pipboyRadio && (*g_pipboyRadio)->radioRef) REFR_RES = (*g_pipboyRadio)->radioRef->refID;
+	RadioEntry *pipboyRadio = GameGlobals::PipboyRadio();
+	if (pipboyRadio && pipboyRadio->radioRef) REFR_RES = pipboyRadio->radioRef->refID;
 	else *result = 0;
 	return true;
 }
 
 bool Cmd_GetPipboyRadio_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (*g_pipboyRadio && ((*g_pipboyRadio)->radioRef == thisObj)) ? 1 : 0;
+	RadioEntry *pipboyRadio = GameGlobals::PipboyRadio();
+	*result = (pipboyRadio && (pipboyRadio->radioRef == thisObj)) ? 1 : 0;
 	return true;
 }
 
@@ -390,7 +394,7 @@ bool Cmd_GetMoonTexture_Execute(COMMAND_ARGS)
 {
 	UInt32 textureID;
 	const char *texturePath;
-	Sky *currSky = *g_currentSky;
+	Sky *currSky = Sky::Get();
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &textureID) && (textureID <= 7) && currSky && currSky->masserMoon)
 		texturePath = currSky->masserMoon->moonTexture[textureID].m_data;
 	else texturePath = NULL;
@@ -403,7 +407,8 @@ bool Cmd_SetMoonTexture_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 textureID;
 	char path[0x80];
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &textureID, &path) || (textureID > 7) || !*g_currentSky) return true;
+	Sky *currSky = Sky::Get();
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &textureID, &path) || (textureID > 7) || !currSky) return true;
 	const char *newTexture = CopyString(path);
 	for (UInt8 idx = 0; idx < 8; idx++)
 	{
@@ -417,7 +422,7 @@ bool Cmd_SetMoonTexture_Execute(COMMAND_ARGS)
 		}
 	}
 	HOOK_SET(InitMoon, true);
-	(*g_currentSky)->RefreshMoon();
+	currSky->RefreshMoon();
 	HOOK_SET(InitMoon, false);
 	*result = 1;
 	return true;
@@ -494,9 +499,9 @@ bool SetOnKeyEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt;
-	SInt32 keyID = -1;
+	UInt32 keyID = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &keyID) && IS_ID(script, Script))
-		SetDInputEventHandler(s_onKeyEventMask, script, keyID, addEvnt != 0);
+		SetInputEventHandler(s_onKeyEventMask, script, keyID, addEvnt != 0);
 	return true;
 }
 
@@ -679,7 +684,8 @@ bool Cmd_GetBufferedCells_Execute(COMMAND_ARGS)
 	UInt32 interiors;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &interiors))
 	{
-		s_tempElements.Clear();
+		TempElements *tmpElements = GetTempElements();
+		tmpElements->Clear();
 		TESObjectCELL **cellsBuffer = interiors ? g_TES->interiorsBuffer : g_TES->exteriorsBuffer, *cell;
 		if (cellsBuffer)
 		{
@@ -687,12 +693,12 @@ bool Cmd_GetBufferedCells_Execute(COMMAND_ARGS)
 			while (maxVal && (cell = *cellsBuffer))
 			{
 				
-				s_tempElements.Append(cell);
+				tmpElements->Append(cell);
 				cellsBuffer++;
 				maxVal--;
 			}
 		}
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	}
 	return true;
 }
@@ -729,13 +735,13 @@ bool Cmd_SetOnCraftingEventHandler_Execute(COMMAND_ARGS)
 
 bool Cmd_IsInKillCam_Execute(COMMAND_ARGS)
 {
-	*result = (g_VATSCameraData->mode == 4) && (g_thePlayer->killCamCooldown > 0);
+	*result = (VATSCameraData::Get()->mode == 4) && (g_thePlayer->killCamCooldown > 0);
 	return true;
 }
 
 bool Cmd_IsInKillCam_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (g_VATSCameraData->mode == 4) && (g_thePlayer->killCamCooldown > 0);
+	*result = (VATSCameraData::Get()->mode == 4) && (g_thePlayer->killCamCooldown > 0);
 	return true;
 }
 
@@ -833,7 +839,7 @@ bool Cmd_StringToActorValue_Execute(COMMAND_ARGS)
 			ActorValueInfo *avInfo;
 			for (UInt32 avCode = 0; avCode < 77; avCode++)
 			{
-				avInfo = g_actorValueInfoArray[avCode];
+				avInfo = ActorValueInfo::Array()[avCode];
 				s_actorValueIDsMap[avInfo->infoName] = avCode;
 			}
 		}
@@ -1153,9 +1159,10 @@ bool Cmd_RewardXPExact_Execute(COMMAND_ARGS)
 
 bool Cmd_ClearDeadActors_Execute(COMMAND_ARGS)
 {
-	UInt32 count = g_processManager->beginOffsets[0];
-	MobileObject **objArray = g_processManager->objects.data + count;
-	count = g_processManager->endOffsets[0] - count;
+	ProcessManager *procMngr = ProcessManager::Get();
+	UInt32 count = procMngr->beginOffsets[0];
+	MobileObject **objArray = procMngr->objects.data + count;
+	count = procMngr->endOffsets[0] - count;
 	Actor *actor;
 	HighProcess *hiProcess;
 	while (count)
@@ -1230,5 +1237,23 @@ bool Cmd_GetReticleNode_Execute(COMMAND_ARGS)
 		if (rtclObject) nodeName = rtclObject->GetName();
 	}
 	AssignString(PASS_COMMAND_ARGS, nodeName);
+	return true;
+}
+
+bool Cmd_SetInternalMarker_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	TESForm *form;
+	int toggle = -1;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &toggle))
+	{
+		if IS_REFERENCE(form)
+			form = ((TESObjectREFR*)form)->baseForm;
+		if (toggle < 0)
+			*result = s_internalMarkerIDs.HasKey(form->refID);
+		else if (toggle)
+			s_internalMarkerIDs.Insert(form->refID);
+		else s_internalMarkerIDs.Erase(form->refID);
+	}
 	return true;
 }

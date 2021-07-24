@@ -221,6 +221,8 @@ bool Cmd_GetCalculatedWeaponDamage_Execute(COMMAND_ARGS)
 			ammo = midHiProc->ammoInfo->type;
 	}
 	if (!ammo) ammo = weapon->GetAmmo();
+	if (ammo && NOT_TYPE(ammo, TESAmmo))
+		ammo = NULL;
 	*result = tempEntry.CalculateWeaponDamage(owner, condition, ammo);
 	if (weaponInfo)
 		midHiProc->weaponInfo = weaponInfo;

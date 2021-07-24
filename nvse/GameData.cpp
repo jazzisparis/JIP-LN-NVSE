@@ -1,10 +1,5 @@
 #include "nvse/GameData.h"
 
-DataHandler* DataHandler::Get() {
-	DataHandler** g_dataHandler = (DataHandler**)0x011C3F2C;
-	return *g_dataHandler;
-}
-
 class LoadedModFinder
 {
 	const char * m_stringToFind;
@@ -25,17 +20,17 @@ const ModInfo * DataHandler::LookupModByName(const char * modName)
 
 const ModInfo ** DataHandler::GetActiveModList()
 {
-	static const ModInfo* activeModList[0x100] = { 0 };
+	static const ModInfo *activeModList[0x100] = {NULL};
 
-	if (!(*activeModList))
+	if (!activeModList[0])
 	{
-		UInt16 index = 0;
-		for (index = 0  ; index < DataHandler::Get()->modList.modInfoList.Count() ; index++)
+		UInt32 index = 0;
+		auto iter = modList.modInfoList.Head();
+		do
 		{
-			ModInfo* entry = DataHandler::Get()->modList.modInfoList.GetNthItem(index);
-			if (entry->IsLoaded())
-				activeModList[index] = entry;
+			activeModList[index++] = iter->data;
 		}
+		while (iter = iter->next);
 	}
 
 	return activeModList;
@@ -64,22 +59,36 @@ const char* DataHandler::GetNthModName(UInt32 modIndex)
 		return "";
 }
 
-struct IsModLoaded
+void Sky::RefreshMoon()
 {
-	bool Accept(ModInfo* pModInfo) const {
-		return pModInfo->IsLoaded();
-	}
-};
-
-UInt8 DataHandler::GetActiveModCount() const
-{
-	return modList.modInfoList.Count();
+	if (masserMoon) masserMoon->Destroy(true);
+	masserMoon = (Moon*)GameHeapAlloc(sizeof(Moon));
+	ThisCall(0x634A70, masserMoon, (const char*)0x104EEB0, *(UInt32*)0x11CCCBC, *(UInt32*)0x11CCC98, *(UInt32*)0x11CCBA8, *(UInt32*)0x11CCC00, *(UInt32*)0x11CCC58, *(UInt32*)0x11CCC1C);
+	masserMoon->Refresh(niNode008, (const char*)0x104EEB0);
 }
 
-ModInfo::ModInfo() {
-	//
-};
-
-ModInfo::~ModInfo() {
-	//
-};
+__declspec(naked) bool Sky::GetIsRaining()
+{
+	__asm
+	{
+		mov		eax, [ecx+0x10]
+		test	eax, eax
+		jz		checkSecond
+		cmp		byte ptr [eax+0xEB], 4
+		jz		weatherPerc
+	checkSecond:
+		mov		eax, [ecx+0x14]
+		test	eax, eax
+		jz		retnFalse
+		cmp		byte ptr [eax+0xEB], 4
+		jnz		retnFalse
+	weatherPerc:
+		movss	xmm0, kFltOne
+		comiss	xmm0, [ecx+0xF4]
+		setbe	al
+		retn
+	retnFalse:
+		xor		al, al
+		retn
+	}
+}

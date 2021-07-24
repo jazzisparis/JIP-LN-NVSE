@@ -5,17 +5,7 @@
 
 static const UInt32 s_Console__Print = 0x0071D0A0;
 
-extern bool extraTraces;
-
 void Console_Print(const char * fmt, ...);
-
-//typedef void * (* _FormHeap_Allocate)(UInt32 size);
-//extern const _FormHeap_Allocate FormHeap_Allocate;
-//
-//typedef void (* _FormHeap_Free)(void * ptr);
-//extern const _FormHeap_Free FormHeap_Free;
-
-#if RUNTIME
 
 typedef bool (* _ExtractArgs)(ParamInfo * paramInfo, void * scriptData, UInt32 * arg2, TESObjectREFR * arg3, TESObjectREFR * arg4, Script * script, ScriptEventList * eventList, ...);
 extern const _ExtractArgs ExtractArgs;
@@ -23,16 +13,8 @@ extern const _ExtractArgs ExtractArgs;
 typedef TESForm * (* _CreateFormInstance)(UInt8 type);
 extern const _CreateFormInstance CreateFormInstance;
 
-bool IsConsoleMode();
 bool GetConsoleEcho();
 void SetConsoleEcho(bool doEcho);
-const char * GetFullName(TESForm * baseForm);
-const char* GetActorValueString(UInt32 actorValue); // should work now
-UInt32 GetActorValueForString(const char* strActorVal, bool bForScript = false);
-
-typedef char * (* _GetActorValueName)(UInt32 actorValueCode);
-extern const _GetActorValueName GetActorValueName;
-UInt32 GetActorValueMax(UInt32 actorValueCode);
 
 typedef void (* _ShowMessageBox_Callback)(void);
 extern const _ShowMessageBox_Callback ShowMessageBox_Callback;
@@ -67,31 +49,6 @@ enum
 {
 	kMaxMessageLength = 0x4000
 };
-
-#if NVSE_CORE
-bool ExtractArgsEx(ParamInfo * paramInfo, void * scriptData, UInt32 * scriptDataOffset, Script * scriptObj, ScriptEventList * eventList, ...);
-extern bool ExtractFormatStringArgs(UInt32 fmtStringPos, char* buffer, ParamInfo * paramInfo, void * scriptDataIn, UInt32 * scriptDataOffset, Script * scriptObj, ScriptEventList * eventList, UInt32 maxParams, ...);
-#endif
-
-void ShowCompilerError(ScriptLineBuffer* lineBuf, const char* fmt, ...);
-
-#else
-
-typedef TESForm * (__cdecl * _GetFormByID)(const char* editorID);
-extern const _GetFormByID GetFormByID;
-
-typedef void (__cdecl *_ShowCompilerError)(ScriptBuffer* Buffer, const char* format, ...);
-extern const _ShowCompilerError		ShowCompilerError;
-
-#endif
-
-struct NVSEStringVarInterface;
-	// Problem: plugins may want to use %z specifier in format strings, but don't have access to StringVarMap
-	// Could change params to ExtractFormatStringArgs to include an NVSEStringVarInterface* but
-	//  this would break existing plugins
-	// Instead allow plugins to register their NVSEStringVarInterface for use
-	// I'm sure there is a better way to do this but I haven't found it
-void RegisterStringVarInterface(NVSEStringVarInterface* intfc);
 
 union VarData
 {
@@ -180,150 +137,6 @@ struct ScriptEventList
 	UInt32 ResetAllVariables();
 };
 
-ScriptEventList* EventListFromForm(TESForm* form);
-
-typedef bool (* _MarkBaseExtraListScriptEvent)(TESForm* target, BaseExtraList* extraList, UInt32 eventMask);
-extern const _MarkBaseExtraListScriptEvent MarkBaseExtraListScriptEvent;
-
-struct ExtractedParam
-{
-	// float/double types are kept as pointers
-	// this avoids problems with storing invalid floats/doubles in to the fp registers which has a side effect
-	// of corrupting data
-
-	enum
-	{
-		kType_Unknown = 0,
-		kType_String,		// str
-		kType_Imm32,		// imm
-		kType_Imm16,		// imm
-		kType_Imm8,			// imm
-		kType_ImmDouble,	// immDouble
-		kType_Form,			// form
-	};
-
-	UInt8	type;
-	bool	isVar;	// if true, data is stored in var, otherwise it's immediate
-
-	union
-	{
-		// immediate
-		UInt32			imm;
-		const double	* immDouble;
-		TESForm			* form;
-		struct
-		{
-			const char	* buf;
-			UInt32		len;
-		} str;
-
-		// variable
-		struct 
-		{
-			ScriptVar			*var;
-			ScriptEventList		*parent;
-		} var;
-	} data;
-};
-
-bool ExtractArgsRaw(ParamInfo * paramInfo, void * scriptDataIn, UInt32 * scriptDataOffset, Script * scriptObj, ScriptEventList * eventList, ...);
-
-enum EActorVals {
-	eActorVal_Aggression			= 0,
-	eActorVal_Confidence			= 1,
-	eActorVal_Energy				= 2,
-	eActorVal_Responsibility		= 3,
-	eActorVal_Mood					= 4,
-
-	eActorVal_Strength				= 5,
-	eActorVal_Perception			= 6,
-	eActorVal_Endurance				= 7,
-	eActorVal_Charisma				= 8,
-	eActorVal_Intelligence			= 9,
-	eActorVal_Agility				= 10,
-	eActorVal_Luck					= 11,
-	eActorVal_SpecialStart = eActorVal_Strength,
-	eActorVal_SpecialEnd = eActorVal_Luck,
-
-	eActorVal_ActionPoints			= 12,
-	eActorVal_CarryWeight			= 13,
-	eActorVal_CritChance			= 14,
-	eActorVal_HealRate				= 15,
-	eActorVal_Health				= 16,
-	eActorVal_MeleeDamage			= 17,
-	eActorVal_DamageResistance		= 18,
-	eActorVal_PoisonResistance		= 19,
-	eActorVal_RadResistance			= 20,
-	eActorVal_SpeedMultiplier		= 21,
-	eActorVal_Fatigue				= 22,
-	eActorVal_Karma					= 23,
-	eActorVal_XP					= 24,
-
-	eActorVal_Head					= 25,
-	eActorVal_Torso					= 26,
-	eActorVal_LeftArm				= 27,
-	eActorVal_RightArm				= 28,
-	eActorVal_LeftLeg				= 29,
-	eActorVal_RightLeg				= 30,
-	eActorVal_Brain					= 31,
-	eActorVal_BodyPartStart = eActorVal_Head,
-	eActorVal_BodyPartEnd = eActorVal_Brain,
-
-	eActorVal_Barter				= 32,
-	eActorVal_BigGuns				= 33,
-	eActorVal_EnergyWeapons			= 34,
-	eActorVal_Explosives			= 35,
-	eActorVal_Lockpick				= 36,
-	eActorVal_Medicine				= 37,
-	eActorVal_MeleeWeapons			= 38,
-	eActorVal_Repair				= 39,
-	eActorVal_Science				= 40,
-	eActorVal_Guns					= 41,
-	eActorVal_Sneak					= 42,
-	eActorVal_Speech				= 43,
-	eActorVal_Survival				= 44,
-	eActorVal_Unarmed				= 45,
-	eActorVal_SkillsStart = eActorVal_Barter,
-	eActorVal_SkillsEnd = eActorVal_Unarmed,
-
-	eActorVal_InventoryWeight		= 46,
-	eActorVal_Paralysis				= 47,
-	eActorVal_Invisibility			= 48,
-	eActorVal_Chameleon				= 49,
-	eActorVal_NightEye				= 50,
-	eActorVal_Turbo					= 51,
-	eActorVal_FireResistance		= 52,
-	eActorVal_WaterBreathing		= 53,
-	eActorVal_RadLevel				= 54,
-	eActorVal_BloodyMess			= 55,
-	eActorVal_UnarmedDamage			= 56,
-	eActorVal_Assistance			= 57,
-
-	eActorVal_ElectricResistance	= 58,
-	eActorVal_FrostResistance		= 59,
-
-	eActorVal_EnergyResistance		= 60,
-	eActorVal_EMPResistance			= 61,
-	eActorVal_Var1Medical			= 62,
-	eActorVal_Var2					= 63,
-	eActorVal_Var3					= 64,
-	eActorVal_Var4					= 65,
-	eActorVal_Var5					= 66,
-	eActorVal_Var6					= 67,
-	eActorVal_Var7					= 68,
-	eActorVal_Var8					= 69,
-	eActorVal_Var9					= 70,
-	eActorVal_Var10					= 71,
-
-	eActorVal_IgnoreCrippledLimbs	= 72,
-	eActorVal_Dehydration			= 73,
-	eActorVal_Hunger				= 74,
-	eActorVal_Sleepdeprevation		= 75,
-	eActorVal_Damagethreshold		= 76,
-	eActorVal_FalloutMax = eActorVal_Damagethreshold,
-	eActorVal_NoActorValue = 256,
-};
-
 // 914
 class ConsoleManager
 {
@@ -359,48 +172,7 @@ public:
 };
 STATIC_ASSERT(sizeof(ConsoleManager) == 0x914);
 
-// A plugin author requested the ability to use OBSE format specifiers to format strings with the args
-// coming from a source other than script.
-// So changed ExtractFormattedString to take an object derived from following class, containing the args
-// Probably doesn't belong in GameAPI.h but utilizes a bunch of stuff defined here and can't think of a better place for it
-class FormatStringArgs
-{
-public:
-	enum argType {
-		kArgType_Float,
-		kArgType_Form		// TESForm*
-	};
-
-	virtual bool Arg(argType asType, void * outResult) = 0;	// retrieve next arg
-	virtual bool SkipArgs(UInt32 numToSkip) = 0;			// skip specified # of args
-	virtual bool HasMoreArgs() = 0;
-	virtual std::string GetFormatString() = 0;						// return format string
-};
-
-// concrete class used for extracting script args
-class ScriptFormatStringArgs : public FormatStringArgs
-{
-public:
-	virtual bool Arg(argType asType, void* outResult);
-	virtual bool SkipArgs(UInt32 numToSkip);
-	virtual bool HasMoreArgs();
-	virtual std::string GetFormatString();
-
-	ScriptFormatStringArgs(UInt32 _numArgs, UInt8* _scriptData, Script* _scriptObj, ScriptEventList* _eventList);
-	UInt32 GetNumArgs();
-	UInt8* GetScriptData();
-
-private:
-	UInt32			numArgs;
-	UInt8			* scriptData;
-	Script			* scriptObj;
-	ScriptEventList	* eventList;
-	std::string fmtString;
-};
-bool SCRIPT_ASSERT(bool expr, Script* script, const char * errorMsg, ...);
-
-bool ExtractSetStatementVar(Script* script, ScriptEventList* eventList, void* scriptDataIn, double* outVarData, UInt8* outModIndex = NULL, bool shortPath = false);
-bool ExtractFormattedString(FormatStringArgs& args, char* buffer);
+extern ConsoleManager *g_consoleManager;
 
 class ChangesMap;
 class InteriorCellNewReferencesMap;
@@ -467,130 +239,6 @@ public:
 	UInt32		m_unk14C;				// 14C
 	UInt32		m_fileSize;				// 150
 	UInt32		m_unk154;				// 154
-};
-
-//
-struct ToBeNamed
-{
-	char		m_path[0x104];	// 0000
-	BSFile*		m_file;			// 0104
-	UInt32		m_unk0108;		// 0108
-	UInt32		m_offset;		// 010C
-};
-
-// Form type class: use to preload some information for created objects (?) refr and Cells
-struct formTypeClassData
-{
-	typedef UInt8 EncodedID[3];	// Codes the refID on 3 bytes, as used in changed forms and save refID mapping
-
-	struct Data01 // Applies to CELL where changeFlags bit30 (Detached CELL) and bit29 (CHANGE_CELL_EXTERIOR_CHAR) are set
-	{
-		UInt16	worldspaceIndex;	// 00 Index into visitedWorldspaces		goes into unk000
-		UInt8	coordX;				// 02	goes into unk004
-		UInt8	coordY;				// 03	goes into unk008, paired with 002
-		UInt8	detachTime;			// 04	goes into unk00C
-	};
-
-	struct Data02 // Applies to CELL where changeFlags bit30 (Detached CELL) and bit 28 (CHANGE_CELL_EXTERIOR_SHORT) are set and changeFlags bit29 is clear
-	{
-		UInt16	worldspaceIndex;	// 00 Index into visitedWorldspaces		goes into unk000
-		UInt16	coordX;				// 02	goes into unk004
-		UInt16	coordY;				// 03	goes into unk008, paired with 002
-		UInt32	detachTime;			// 04	goes into unk00C
-	};
-
-	// The difference between the two preceding case seems to be how big the data (coordinates?) are
-
-	struct Data03 // Applies to CELL where changeFlags bit30 (Detached CELL) is set and changeFlags bit28 and bit29 are clear
-	{
-		UInt32	detachTime;	// 00	goes into unk00C. Null goes into unk000, 004 and 008
-	};
-
-	struct Data04 // Applies to references where changeFlags bit3 (CHANGE_REFR_CELL_CHANGED) is clear and
-					// either bit1 (CHANGE_REFR_MOVE) or bit2 (CHANGE_REFR_HAVOK_MOVE) is set
-	{
-		EncodedID	cellOrWorldspaceID;	// 000	goes into unk000, Null goes into unk004, 008, 00C, 010 and byt02C
-		float		posX;	// 003	goes into unk014
-		float		posY;	// 007	goes into unk018, associated with unk003
-		float		posZ;	// 00B	goes into unk01C, associated with unk003	(pos?)
-		float		rotX;	// 00F	goes into unk020
-		float		rotY;	// 013	goes into unk024, associated with unk00F
-		float		rotZ;	// 017	goes into unk028, associated with unk00F	(rot?)
-	};
-
-	struct Data05 // Applies to created objects (ie 0xFFnnnnnn)
-	{
-		EncodedID	cellOrWorldspaceID;	// 000	goes into unk000
-		float		posX;	// 003	goes into unk014
-		float		posY;	// 007	goes into unk018, associated with unk003
-		float		posZ;	// 00B	goes into unk01C, associated with unk003	(pos?)
-		float		rotX;	// 00F	goes into unk020
-		float		rotY;	// 013	goes into unk024, associated with unk024
-		float		rotZ;	// 017	goes into unk028, associated with unk028	(rot?)
-		UInt8		flags;	// 01B	goes into unk02C	bit0 always set, bit1 = ESP or persistent, bit2 = Byt081 true
-		EncodedID	baseFormID;	// 01C	goes into unk004, Null goes into unk008, 00C and 010
-	};
-
-	struct Data06 // Applies to references whose changeFlags bit3 (CHANGE_REFR_CELL_CHANGED) is set
-	{
-		EncodedID	cellOrWorldspace;		// 000	goes into unk000
-		float		posX;					// 003	goes into unk014
-		float		posY;					// 007	goes into unk018, associated with unk003
-		float		posZ;					// 00B	goes into unk01C, associated with unk003	(pos?)
-		float		rotX;					// 00F	goes into unk020
-		float		rotY;					// 013	goes into unk024, associated with unk00F
-		float		rotZ;					// 017	goes into unk028, associated with unk00F	(rot?)
-		EncodedID	newCellOrWorldspaceID;	// 01C	goes into unk008
-		SInt16		coordX;					// 01E	goes into unk00C
-		SInt16		coordY;					// 020	goes into unk010, Null goes into unk004 and byt02C
-	};
-
-	struct Data00  // Every other cases (no data)
-	{
-	};
-
-	union Data
-	{
-		Data00	data00;
-		Data01	data01;
-		Data02	data02;
-		Data03	data03;
-		Data04	data04;
-		Data05	data05;
-		Data06	data06;
-	};
-
-	Data data;	// 00
-};
-
-struct PreloadCELLdata	// Unpacked and decoded version of Data01, 02 end 03
-{
-	UInt32	worldspaceID;	// 000
-	SInt32	coordX;			// 004
-	SInt32	coordY;			// 008
-	UInt32	detachTime;		// 00C
-};
-
-struct PreloadREFRdata	// Unpacked and decoded version of Data04, 05 and 06
-{
-	UInt32	cellOrWorldspaceID;		// 000
-	UInt32	baseFormID;				// 004
-	UInt32	newCellOrWorldspaceID;	// 008
-	SInt32	coordX;					// 00C
-	SInt32	coordY;					// 010
-	float	posXcoordX;				// 014
-	float	posYcoordY;				// 018
-	float	posZ;					// 01C
-	float	rotX;					// 020
-	float	rotY;					// 024
-	float	rotZ;					// 028
-	UInt8	flg02C;					// 02C
-};
-
-union preloadData
-{
-	PreloadCELLdata	cell;
-	PreloadREFRdata	refr;
 };
 
 class BGSLoadGameBuffer
@@ -831,8 +479,6 @@ public:
 	UInt32					unk28;			// 28
 */
 };
-
-std::string GetSavegamePath();
 
 #endif
 

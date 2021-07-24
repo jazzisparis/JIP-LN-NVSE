@@ -91,7 +91,7 @@ bool Cmd_SetLockedOut_Execute(COMMAND_ARGS)
 		if (!xTerm)
 		{
 			xTerm = ExtraTerminalState::Create();
-			AddExtraData(&refr->extraDataList, xTerm);
+			refr->extraDataList.AddExtra(xTerm);
 		}
 		xTerm->lockedOut = state;
 	}
@@ -101,7 +101,7 @@ bool Cmd_SetLockedOut_Execute(COMMAND_ARGS)
 		if (!xLock)
 		{
 			xLock = ExtraLock::Create();
-			AddExtraData(&refr->extraDataList, xLock);
+			refr->extraDataList.AddExtra(xLock);
 		}
 		xLock->data->unk0C = state;
 	}

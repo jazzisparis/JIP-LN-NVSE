@@ -51,7 +51,7 @@ __declspec(naked) void __fastcall DoQueuedPlayerHook(QueuedPlayer *queuedPlayer)
 	__asm
 	{
 		mov		eax, [ecx+0x28]
-		test	byte ptr [eax+0x61], kHookRefFlag61_Update3D
+		test	byte ptr [eax+0x5F], kHookRefFlag61_Update3D
 		jnz		proceed
 		jmp		DoQueuedReferenceHook
 	proceed:
@@ -95,7 +95,7 @@ __declspec(naked) void __fastcall DoQueuedPlayerHook(QueuedPlayer *queuedPlayer)
 		movups	[ecx+0x30], xmm0
 		movups	[ecx+0x40], xmm0
 		movups	[ecx+0x50], xmm0
-		and		byte ptr [ebx+0x61], ~kHookRefFlag61_Update3D
+		and		byte ptr [ebx+0x5F], ~kHookRefFlag61_Update3D
 		pop		ecx
 		call	DoQueuedReferenceHook
 		mov		eax, [ebx+0x64]
@@ -315,28 +315,6 @@ __declspec(naked) UInt32 GamePadRumbleHook()
 	}
 }
 
-__declspec(naked) void GetMouseWheelHook()
-{
-	__asm
-	{
-		mov		eax, [ecx+0x1B2C]
-		test	eax, eax
-		jz		done
-		mov		ecx, g_DIHookCtrl
-		jns		wheelUp
-		cmp		word ptr [ecx+0x748], 0
-		jnz		retnZero
-		jmp		done
-	wheelUp:
-		cmp		word ptr [ecx+0x741], 0
-		jz		done
-	retnZero:
-		xor		eax, eax
-	done:
-		JMP_EDX(0xA23A26)
-	}
-}
-
 __declspec(naked) void CmdActivateHook()
 {
 	__asm
@@ -355,10 +333,17 @@ __declspec(naked) void CmdActivateHook()
 	}
 }
 
-void RemoveMeHook()
+bool s_doRefreshItemListBox = false;
+
+__declspec(naked) void RemoveMeHook()
 {
-	if (!FindMainLoopCallback(RefreshItemListBox))
-		MainLoopAddCallback(RefreshItemListBox);
+	__asm
+	{
+		mov		s_doRefreshItemListBox, 1
+		xor		al, al
+		leave
+		retn
+	}
 }
 
 __declspec(naked) void PackageSetRunHook()
@@ -542,7 +527,7 @@ __declspec(naked) void EffectSkillModifiers1Hook()
 		push	eax
 		push	g_thePlayer
 		push	kPerkEntry_ModifyRecoveredHealth
-		CALL_EAX(0x5E58F0)
+		CALL_EAX(kAddr_ApplyPerkModifiers)
 		add		esp, 0xC
 	skipPerkMod:
 		cvttss2si	eax, dword ptr [ebp-0xC0]
@@ -594,7 +579,7 @@ __declspec(naked) void EffectSkillModifiers2Hook()
 		push	eax
 		push	ecx
 		push	kPerkEntry_ModifyRecoveredHealth
-		CALL_EAX(0x5E58F0)
+		CALL_EAX(kAddr_ApplyPerkModifiers)
 		add		esp, 0xC
 	skipPerkMod:
 		push	dword ptr [ebp-0x50]
@@ -1136,7 +1121,7 @@ __declspec(naked) bool ReactionCooldownCheckHook()
 		sub		eax, lastTickCount
 		movd	xmm0, eax
 		cvtdq2ps	xmm0, xmm0
-		divss	xmm0, kFlt1000
+		mulss	xmm0, kFlt1d1000
 		comiss	xmm0, ds:[0x11CE9B8]
 		seta	al
 		jbe		done
@@ -1714,10 +1699,10 @@ __declspec(naked) float __vectorcall GetFrequencyModifier(TESSound *soundForm)
 		movd	xmm1, edx
 		cvtdq2ps	xmm1, xmm1
 		js		isNeg
-		divss	xmm1, kFlt100
+		mulss	xmm1, kFlt1d100
 		jmp		doAdd
 	isNeg:
-		divss	xmm1, kFlt200
+		mulss	xmm1, kFlt1d200
 	doAdd:
 		addss	xmm0, xmm1
 	done:
@@ -1933,6 +1918,29 @@ __declspec(naked) void TileTextApplyScaleHook()
 	}
 }
 
+__declspec(naked) void __fastcall MarkRefAsModifiedHook(TESObjectREFR *refr, int EDX, UInt32 flag)
+{
+	__asm
+	{
+		mov		eax, [esp+4]
+		cmp		eax, 4
+		jnz		proceed
+		mov		edx, [ecx+0x40]
+		test	edx, edx
+		jz		proceed
+		test	byte ptr [edx+0xA], 0x40
+		jz		proceed
+		retn	4
+	proceed:
+		push	0
+		push	eax
+		push	ecx
+		mov		ecx, ds:[0x11DDF38]
+		CALL_EAX(0x84A690)
+		retn	4
+	}
+}
+
 //	Credits to lStewieAl and TrueCourierSix
 __declspec(naked) void __fastcall LoadIncidentalSoundIDHook(ModInfo *modInfo, int EDX, UInt32 *pRefID)
 {
@@ -1953,7 +1961,7 @@ __declspec(naked) void __fastcall LoadIncidentalSoundIDHook(ModInfo *modInfo, in
 	}
 }
 
-typedef Vector<MediaSet*> MediaSetArray;
+typedef Vector<MediaSet*, 4> MediaSetArray;
 UnorderedMap<ListNode<MediaSet>*, MediaSetArray> s_pickMediaSetMap(0x40);
 
 MediaSet* __stdcall PickMediaSetHook(ListNode<MediaSet> *listHead)
@@ -2118,8 +2126,372 @@ void __fastcall DistributeWeaponMods(Actor *actor)
 		modFlags ^= shuffle[2];
 doneFlags:
 	ExtraDataList *xData = weaponInfo->extendData->GetFirstItem();
-	AddExtraData(xData, ExtraWeaponModFlags::Create(modFlags));
+	xData->AddExtra(ExtraWeaponModFlags::Create(modFlags));
 	ThisCall(0x88DB20, actor, weapon, 1, xData, false);
+}
+
+const UInt8 kValidEntryPoints[] =
+{
+	1, 2, 3, 0, 4, 0, 5, 0, 0, 0, 0, 0, 6, 0, 7, 8, 0, 0, 0, 0, 0, 0, 9, 10, 11, 12, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 14, 15,
+	16, 0, 0, 0, 17, 18, 0, 0, 0, 0, 0, 0, 0, 0, 19, 0, 0, 0, 20, 0, 21, 22, 0, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 24, 0
+};
+
+Set<BGSPerk*> s_ValidNPCPerks(0x40);
+
+void BuildValidNPCPerks()
+{
+	auto perkIter = g_dataHandler->perkList.Head();
+	BGSPerk *perk;
+	BGSEntryPointPerkEntry *entryPt;
+	UInt8 isValid;
+	do
+	{
+		if (!(perk = perkIter->data) || perk->entries.Empty() || perk->data.isTrait || !perk->data.isPlayable || perk->data.isHidden)
+			continue;
+		auto entryIter = perk->entries.Head();
+		isValid = 0;
+		do
+		{
+			if (!(entryPt = (BGSEntryPointPerkEntry*)entryIter->data) || NOT_TYPE(entryPt, BGSEntryPointPerkEntry))
+			{
+				isValid = 0;
+				break;
+			}
+			isValid |= kValidEntryPoints[entryPt->entryPoint];
+		}
+		while (entryIter = entryIter->next);
+		if (isValid)
+			s_ValidNPCPerks.Insert(perk);
+	}
+	while (perkIter = perkIter->next);
+}
+
+typedef Map<BGSPerk*, UInt8> PerkRanksMap;
+
+class NPCPerkEntryPoints
+{
+	PerkEntryPointList		perkEntries[24];
+
+public:
+	static NPCPerkEntryPoints *Create()
+	{
+		NPCPerkEntryPoints *lists = POOL_ALLOC(1, NPCPerkEntryPoints);
+		MemZero(lists, sizeof(NPCPerkEntryPoints));
+		return lists;
+	}
+
+	PerkEntryPointList* operator[](UInt8 entryPt)
+	{
+		UInt32 index = kValidEntryPoints[entryPt];
+		return index ? &perkEntries[index - 1] : nullptr;
+	}
+
+	void Clear()
+	{
+		for (auto &iter : perkEntries)
+			iter.RemoveAll();
+	}
+};
+
+struct NPCPerksInfo
+{
+	PerkRanksMap			perkRanks;
+	NPCPerkEntryPoints		*entryPoints;
+
+	NPCPerksInfo() : entryPoints(nullptr) {}
+	~NPCPerksInfo()
+	{
+		if (entryPoints)
+		{
+			entryPoints->Clear();
+			POOL_FREE(entryPoints, 1, NPCPerkEntryPoints);
+		}
+	}
+};
+
+UnorderedMap<UInt32, NPCPerksInfo> s_NPCPerksInfoMap(0x80);
+
+void AddPerkEntries(Actor *actor, BGSPerk *perk, UInt8 newRank, NPCPerkEntryPoints *entryPoints)
+{
+	auto entryIter = perk->entries.Head();
+	BGSEntryPointPerkEntry *entryPt;
+	PerkEntryPointList *entryList;
+	bool bUpdReload = false;
+	do
+	{
+		if (!(entryPt = (BGSEntryPointPerkEntry*)entryIter->data))
+			continue;
+		if IS_TYPE(entryPt, BGSEntryPointPerkEntry)
+		{
+			if (!(entryList = (*entryPoints)[entryPt->entryPoint]))
+				continue;
+			if ((entryPt->rank + 1) != newRank)
+			{
+				if (!entryList->Remove(entryPt))
+					continue;
+			}
+			else if (!entryList->AppendNotIn(entryPt))
+				continue;
+			if (entryPt->entryPoint == kPerkEntry_ReloadSpeed)
+				bUpdReload = true;
+		}
+		else if ((entryPt->rank + 1) != newRank)
+			entryPt->RemoveEntry(actor, 0);
+		else entryPt->AddEntry(actor, 0);
+	}
+	while (entryIter = entryIter->next);
+	if (bUpdReload)
+		ThisCall(0x8C17C0, actor);
+}
+
+bool s_NPCPerksAutoAdd = false;
+Vector<BGSPerk*> s_NPCPerksPick(0x40);
+
+NPCPerksInfo* __fastcall AddStartingPerks(Actor *actor, NPCPerksInfo *perksInfo)
+{
+	UInt8 *rankPtr;
+	if (s_NPCPerksAutoAdd && IS_ID(actor, Character))
+	{
+		UInt32 level = actor->GetLevel();
+		if (level >= 3)
+		{
+			s_NPCPerksPick.Clear();
+			BGSPerk *perk;
+			UInt8 minLevel = (level * 3) / 2;
+			for (auto rstIter = s_ValidNPCPerks.Begin(); rstIter; ++rstIter)
+			{
+				perk = *rstIter;
+				if (perk->data.minLevel > minLevel) continue;
+				for (UInt8 ranks = perk->data.numRanks; ranks; ranks--)
+					s_NPCPerksPick.Append(perk);
+			}
+			UInt32 size = s_NPCPerksPick.Size();
+			if (size)
+			{
+				if (!perksInfo)
+					perksInfo = &s_NPCPerksInfoMap[actor->refID];
+				s_NPCPerksPick.Shuffle();
+				if (level >= 30) level = 10;
+				else level /= 3;
+				if (level > size) level = size;
+				do
+				{
+					perk = s_NPCPerksPick[--level];
+					if (perksInfo->perkRanks.Insert(perk, &rankPtr))
+						*rankPtr = 1;
+					else *rankPtr++;
+				}
+				while (level);
+			}
+		}
+	}
+	if (actor->isTeammate && !g_thePlayer->perkRanksTM.Empty())
+	{
+		if (!perksInfo)
+			perksInfo = &s_NPCPerksInfoMap[actor->refID];
+		auto perkIter = g_thePlayer->perkRanksTM.Head();
+		PerkRank *perkRank;
+		do
+		{
+			if ((perkRank = perkIter->data) && perksInfo->perkRanks.Insert(perkRank->perk, &rankPtr))
+				*rankPtr = perkRank->rank;
+		}
+		while (perkIter = perkIter->next);
+	}
+	if (perksInfo)
+	{
+		actor->extraDataList.perksInfo = perksInfo;
+		s_dataChangedFlags |= kChangedFlag_NPCPerks;
+	}
+	return perksInfo;
+}
+
+void __fastcall SetPerkRankHook(Actor *actor, int EDX, BGSPerk *perk, UInt8 newRank, bool forTeammates)
+{
+	if (actor->lifeState) return;
+	NPCPerksInfo *perksInfo = actor->extraDataList.perksInfo;
+	if (!perksInfo)
+		perksInfo = AddStartingPerks(actor, &s_NPCPerksInfoMap[actor->refID]);
+	UInt8 *rankPtr;
+	if (perksInfo->perkRanks.Insert(perk, &rankPtr) || (*rankPtr < newRank))
+	{
+		*rankPtr = newRank;
+		s_dataChangedFlags |= kChangedFlag_NPCPerks;
+		NPCPerkEntryPoints *entryPoints = perksInfo->entryPoints;
+		if (!entryPoints)
+		{
+			if (!actor->GetNiNode()) return;
+			perksInfo->entryPoints = entryPoints = NPCPerkEntryPoints::Create();
+		}
+		AddPerkEntries(actor, perk, newRank, entryPoints);
+	}
+}
+
+void __fastcall AddPerkEntriesHook(BGSPerk *perk, int EDX, Actor *actor, UInt8 currRank, UInt8 newRank, bool forTeammates)
+{
+	PlayerCharacter *thePlayer = g_thePlayer;
+	if (actor != thePlayer) return;
+	if (forTeammates)
+	{
+		auto tmmIter = thePlayer->teammates.Head();
+		Actor *teammate;
+		do
+		{
+			if (teammate = (Actor*)tmmIter->data)
+				SetPerkRankHook(teammate, 0, perk, newRank, 0);
+		}
+		while (tmmIter = tmmIter->next);
+	}
+	else
+	{
+		auto entryIter = perk->entries.Head();
+		BGSPerkEntry *entry;
+		do
+		{
+			if (!(entry = entryIter->data)) continue;
+			if ((entry->rank + 1) != newRank)
+				entry->RemoveEntry(thePlayer, 0);
+			else entry->AddEntry(thePlayer, 0);
+		}
+		while (entryIter = entryIter->next);
+	}
+}
+
+void __fastcall RemovePerkHook(Actor *actor, int EDX, BGSPerk *perk, bool forTeammates)
+{
+	NPCPerksInfo *perksInfo = actor->extraDataList.perksInfo;
+	if (!perksInfo || !perksInfo->perkRanks.Erase(perk))
+		return;
+	s_dataChangedFlags |= kChangedFlag_NPCPerks;
+	NPCPerkEntryPoints *entryPoints = perksInfo->entryPoints;
+	auto entryIter = perk->entries.Head();
+	BGSEntryPointPerkEntry *entry;
+	PerkEntryPointList *entryList;
+	bool bUpdReload = false;
+	do
+	{
+		if (!(entry = (BGSEntryPointPerkEntry*)entryIter->data))
+			continue;
+		if IS_TYPE(entry, BGSEntryPointPerkEntry)
+		{
+			if (entryPoints && (entryList = (*entryPoints)[entry->entryPoint]) && entryList->Remove(entry) && (entry->entryPoint == kPerkEntry_ReloadSpeed))
+				bUpdReload = true;
+		}
+		else entry->RemoveEntry(actor, 0);
+	}
+	while (entryIter = entryIter->next);
+	if (bUpdReload)
+		ThisCall(0x8C17C0, actor);
+}
+
+void __fastcall RemovePerkEntriesHook(BGSPerk *perk, int EDX, Actor *actor, bool forTeammates)
+{
+	PlayerCharacter *thePlayer = g_thePlayer;
+	if (actor != thePlayer) return;
+	if (forTeammates)
+	{
+		auto tmmIter = thePlayer->teammates.Head();
+		Actor *teammate;
+		do
+		{
+			if (teammate = (Actor*)tmmIter->data)
+				RemovePerkHook(teammate, 0, perk, 0);
+		}
+		while (tmmIter = tmmIter->next);
+	}
+	else
+	{
+		auto entryIter = perk->entries.Head();
+		BGSPerkEntry *entry;
+		do
+		{
+			if (entry = entryIter->data)
+				entry->RemoveEntry(thePlayer, 0);
+		}
+		while (entryIter = entryIter->next);
+	}
+}
+
+UInt8 __fastcall GetPerkRankHook(Actor *actor, int EDX, BGSPerk *perk, bool forTeammates)
+{
+	NPCPerksInfo *perksInfo = actor->extraDataList.perksInfo;
+	return perksInfo ? perksInfo->perkRanks.Get(perk) : 0;
+}
+
+__declspec(naked) PerkEntryPointList* __fastcall GetPerkEntryPointListHook(Actor *actor, int EDX, UInt8 entryPointID, bool forTeammates)
+{
+	__asm
+	{
+		xor		eax, eax
+		mov		edx, [ecx+0x60]
+		test	edx, edx
+		jz		done
+		mov		ecx, [edx+0xC]
+		test	ecx, ecx
+		jz		done
+		mov		edx, [esp+4]
+		mov		al, kValidEntryPoints[edx]
+		test	al, al
+		jz		done
+		lea		eax, [ecx+eax*8-8]
+	done:
+		retn	8
+	}
+}
+
+void __fastcall SetPlayerTeammateHook(Actor *actor, int EDX, bool doSet)
+{
+	PlayerCharacter *thePlayer = g_thePlayer;
+	if ((actor == thePlayer) || (actor->isTeammate == doSet))
+		return;
+	actor->isTeammate = doSet;
+	PerkRank *perkRank;
+	if (doSet)
+	{
+		thePlayer->teammateCount++;
+		thePlayer->teammates.Prepend(actor);
+		if (!thePlayer->perkRanksTM.Empty())
+		{
+			auto perkIter = thePlayer->perkRanksTM.Head();
+			do
+			{
+				if (perkRank = perkIter->data)
+					SetPerkRankHook(actor, 0, perkRank->perk, perkRank->rank, 0);
+			}
+			while (perkIter = perkIter->next);
+		}
+	}
+	else
+	{
+		thePlayer->teammateCount--;
+		thePlayer->teammates.Remove(actor);
+		if (!thePlayer->perkRanksTM.Empty() && actor->extraDataList.perksInfo)
+		{
+			auto perkIter = thePlayer->perkRanksTM.Head();
+			do
+			{
+				if (perkRank = perkIter->data)
+					RemovePerkHook(actor, 0, perkRank->perk, 0);
+			}
+			while (perkIter = perkIter->next);
+		}
+	}
+}
+
+void __fastcall InitNPCPerks(Actor *actor)
+{
+	NPCPerksInfo *perksInfo = actor->extraDataList.perksInfo;
+	if (!perksInfo)
+		perksInfo = AddStartingPerks(actor, nullptr);
+	if (perksInfo && !perksInfo->entryPoints)
+	{
+		perksInfo->entryPoints = NPCPerkEntryPoints::Create();
+		for (auto perkIter = perksInfo->perkRanks.Begin(); perkIter; ++perkIter)
+		{
+			AddPerkEntries(actor, perkIter.Key(), perkIter(), perksInfo->entryPoints);
+			//PrintLog("%08X\t%d\t%s", actor->refID, perkIter(), perkIter.Key()->GetEditorID());
+		}
+	}
 }
 
 __declspec(naked) ExtraDataList* __fastcall DoOnLoadActorHook(TESObjectREFR *refr)
@@ -2129,16 +2501,20 @@ __declspec(naked) ExtraDataList* __fastcall DoOnLoadActorHook(TESObjectREFR *ref
 		mov		eax, [ecx]
 		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
 		jnz		done
-		test	byte ptr [ecx+0x143], 0x10
-		jnz		done
-		mov		eax, [ecx+0x68]
-		test	eax, eax
-		jz		done
-		cmp		dword ptr [eax+0x28], 1
-		ja		done
-		or		byte ptr [ecx+0x143], 0x10
 		cmp		dword ptr [ecx+0x108], 0
 		jnz		done
+		cmp		s_NPCPerks, 0
+		jz		donePerks
+		cmp		dword ptr [ecx+0xC], 0x14
+		jz		done
+		call	InitNPCPerks
+		mov		ecx, [ebp+8]
+	donePerks:
+		cmp		s_NPCWeaponMods, 0
+		jz		done
+		test	byte ptr [ecx+0x143], 0x10
+		jnz		done
+		or		byte ptr [ecx+0x143], 0x10
 		cmp		byte ptr [ecx+0x18D], 0
 		jnz		done
 		call	DistributeWeaponMods
@@ -2192,10 +2568,10 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	Actor *source = hitData->source;
 	TESObjectWEAP *hitWeapon = hitData->weapon;
 	hitData->wpnBaseDmg = hitData->healthDmg;
+	TESAmmo *ammo = NULL;
 	tList<TESAmmoEffect> *ammoEffects = NULL;
 	if (hitWeapon && hitWeapon->ammo.ammo)
 	{
-		TESAmmo *ammo = NULL;
 		if (source)
 		{
 			ContChangesEntry *ammoInfo = source->GetAmmoInfo();
@@ -2209,13 +2585,22 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 			hitData->fatigueDmg = ApplyAmmoEffects(kAmmoEffect_FatigueMod, ammoEffects, hitData->fatigueDmg);
 		}
 	}
-	UInt8 flagPCTM = source == g_thePlayer;
-	if (source && source->isTeammate)
-		flagPCTM |= 2;
-	if (target == g_thePlayer)
-		flagPCTM |= 4;
-	if (target->isTeammate)
+	UInt8 flagPCTM = 0;
+	if (source)
+	{
+		if (source->refID == 0x14)
+			flagPCTM = 1;
+		else if (source->isTeammate)
+			flagPCTM = 2;
+		else if (s_NPCPerks)
+			flagPCTM = 4;
+	}
+	if (target->refID == 0x14)
 		flagPCTM |= 8;
+	else if (target->isTeammate)
+		flagPCTM |= 0x10;
+	else if (s_NPCPerks)
+		flagPCTM |= 0x20;
 	float dmgResist, dmgThreshold, cpyThreshold, hitLocDT = 0, hitLocDR = 0, valueMod1, valueMod2;
 	if (hitWeapon && (hitWeapon->weaponFlags1 & 1))
 	{
@@ -2262,7 +2647,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 			s_VATSHitLocDT = hitLocDT;
 		}
 		valueMod1 = 1.0F;
-		if (flagPCTM & 8)
+		if (flagPCTM & 0x10)
 			valueMod1 += ThisCall<float>(0x66EF50, &g_thePlayer->avOwner, kAVCode_Charisma) / 20.0F;
 		dmgResist = (target->avOwner.GetActorValue(kAVCode_DamageResist) - hitLocDR) * valueMod1;
 		if (dmgResist > 100.0F)
@@ -2291,7 +2676,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 		bool noInfo = !weaponInfo;
 		TESObjectWEAP *pWeapon = weaponInfo ? (TESObjectWEAP*)weaponInfo->type : NULL;
 		hitData->flags |= 1;
-		if (flagPCTM & 4)
+		if (flagPCTM & 8)
 			g_thePlayer->counterAttackTimer = *(float*)0x11D0BE8;	// fCounterAttackTimer
 		if (noInfo)
 		{
@@ -2324,7 +2709,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	{
 		if (ammoEffects)
 			hitData->healthDmg = ApplyAmmoEffects(kAmmoEffect_DamageMod, ammoEffects, hitData->healthDmg);
-		if (flagPCTM & 3)
+		if (flagPCTM & 7)
 			ApplyPerkModifiers(kPerkEntry_CalculateWeaponDamage, source, hitWeapon, target, &hitData->healthDmg);
 	}
 	else if (source)
@@ -2335,12 +2720,12 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	valueMod2 = hitData->healthDmg;
 	hitData->healthDmg *= dmgResist;
 	valueMod1 = 0;
-	if (flagPCTM & 3)
+	if (flagPCTM & 7)
 	{
 		ApplyPerkModifiers(kPerkEntry_ModifyDamageThresholdAttacker, source, hitWeapon, target, &valueMod1);
 		dmgThreshold -= valueMod1;
 	}
-	else if (flagPCTM & 0xC)
+	else if (flagPCTM & 0x38)
 	{
 		ApplyPerkModifiers(kPerkEntry_ModifyDamageThresholdDefender, target, source, hitWeapon ? hitWeapon : g_fistsWeapon, &valueMod1);
 		dmgThreshold += valueMod1;
@@ -2379,7 +2764,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	hitData->armorDmg = 0;
 	if (valueMod2 > 0)
 	{
-		if ((flagPCTM & 4) && (hitData->fatigueDmg <= 0))
+		if ((flagPCTM & 8) && (hitData->fatigueDmg <= 0))
 		{
 			hitLocDT *= dmgResist;
 			valueMod2 -= hitLocDT;
@@ -2394,7 +2779,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 		hitData->flags |= 0x80000000;
 		if (flagArg)
 		{
-			if (flagPCTM & 4)
+			if (flagPCTM & 8)
 				CdeclCall(0x77F420, true);
 			else if ((flagPCTM & 1) && !target->HasHealth(0))
 				CdeclCall(0x77F490, true);
@@ -2403,14 +2788,14 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	else
 	{
 		hitData->healthDmg = valueMod1;
-		if (flagPCTM & 4)
+		if (flagPCTM & 8)
 			CdeclCall(0x77F420, flagArg);
 		else if ((flagPCTM & 1) && !target->HasHealth(0))
 			CdeclCall(0x77F490, flagArg);
 		if (flagPCTM & 2)
 			CdeclCall(0x8D5CB0, source, 9);
 	}
-	if (hitWeapon && (hitWeapon->resistType != -1))
+	if (hitWeapon && (hitWeapon->resistType != -1) && (!ammo || !(ammo->flags & 1)))
 	{
 		valueMod1 = target->avOwner.GetActorValue(hitWeapon->resistType);
 		if (valueMod1 > 0)
@@ -2423,7 +2808,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	}
 	if ((hitData->fatigueDmg > 0) && (hitData->wpnBaseDmg > 0))
 		hitData->fatigueDmg *= hitData->healthDmg / hitData->wpnBaseDmg;
-	if ((flagPCTM & 4) && g_VATSCameraData->mode)
+	if ((flagPCTM & 8) && VATSCameraData::Get()->mode)
 	{
 		valueMod1 = *(float*)0x11CE9F4;		//	fVATSPlayerDamageMult
 		hitData->healthDmg *= valueMod1;
@@ -2613,6 +2998,34 @@ __declspec(naked) bool __fastcall GetControlFlagHook(PlayerCharacter *thePlayer,
 	}
 }
 
+__declspec(naked) void MineExplodeChanceHook()
+{
+	__asm
+	{
+		test	al, al
+		jz		retnLoop
+		lea		edx, [ebp-0x34]
+		mov		dword ptr [edx], 0x42C80000
+		push	edx
+		mov		edx, [ebp-0x50]
+		push	dword ptr [edx+0x20]
+		push	dword ptr [ebp-0x28]
+		push	4
+		CALL_EAX(kAddr_ApplyPerkModifiers)
+		add		esp, 0x10
+		push	0x64
+		mov		ecx, 0x11C4180
+		CALL_EAX(0xAA5230)
+		cvtss2si	edx, [ebp-0x34]
+		cmp		eax, edx
+		jnb		retnLoop
+		mov		[ebp-1], 1
+		JMP_EAX(0x9C3CFA)
+	retnLoop:
+		JMP_EAX(0x9C3AC0)
+	}
+}
+
 __declspec(naked) float GetPCRepairSkill()
 {
 	__asm
@@ -2631,10 +3044,9 @@ __declspec(naked) float GetPCRepairSkill()
 		mulss	xmm2, ds:[0x11D0190]	// fRepairSkillMax
 		subss	xmm2, xmm1
 		mulss	xmm0, xmm2
-		movss	xmm2, kFlt100
-		divss	xmm0, xmm2
+		mulss	xmm0, kFlt1d100
 		addss	xmm0, xmm1
-		minss	xmm0, xmm2
+		minss	xmm0, kFlt100
 		movss	[esp-4], xmm0
 		fld		dword ptr [esp-4]
 		retn
@@ -2698,12 +3110,12 @@ __declspec(naked) float __stdcall GetRepairAmount(float itemToRepairHealth, floa
 	{
 		call	GetPCRepairSkill
 		fstp	st
-		divss	xmm0, kFlt100
-		movss	xmm5, kFlt10
+		mulss	xmm0, kFlt1d100
+		movss	xmm5, kFlt1d10
 		movss	xmm1, [esp+4]
-		divss	xmm1, xmm5
+		mulss	xmm1, xmm5
 		movss	xmm3, [esp+8]
-		divss	xmm3, xmm5
+		mulss	xmm3, xmm5
 		movss	xmm2, xmm1
 		minss	xmm2, xmm3
 		mulss	xmm2, ds:[0x11D074C]	// fRepairScavengeMult
@@ -2715,7 +3127,7 @@ __declspec(naked) float __stdcall GetRepairAmount(float itemToRepairHealth, floa
 		addss	xmm4, xmm1
 		addss	xmm4, xmm2
 		addss	xmm4, xmm3
-		divss	xmm4, xmm5
+		mulss	xmm4, xmm5
 		minss	xmm0, xmm4
 		movss	[esp+4], xmm0
 		fld		dword ptr [esp+4]
@@ -3035,10 +3447,10 @@ void CheckNVACLog()
 	if (!startAt) return;
 	srcFile.SetOffset(startAt);
 	length -= startAt + 2;
-	char *buffer = StrLenCopy(s_strValBuffer, "\n>>>>>>>>>>> BEGIN NVAC REPORT >>>>>>>>>>>\n", 43);
-	srcFile.ReadBuf(buffer, length);
-	memcpy(buffer + length, "\n<<<<<<<<<<<< END NVAC REPORT <<<<<<<<<<<<\n", 44);
-	Console_Print(s_strValBuffer);
+	char *buffer = GetStrArgBuffer(), *endPtr = StrLenCopy(buffer, "\n>>>>>>>>>>> BEGIN NVAC REPORT >>>>>>>>>>>\n", 43);
+	srcFile.ReadBuf(endPtr, length);
+	memcpy(endPtr + length, "\n<<<<<<<<<<<< END NVAC REPORT <<<<<<<<<<<<\n", 44);
+	Console_Print(buffer);
 	QueueUIMessage("NVAC log updated (see console print).", 0, (const char*)0x1049638, NULL, 2.5F, 0);
 }
 
@@ -3360,9 +3772,9 @@ __declspec(naked) void DoOperatorHook()
 UnorderedMap<const char*, UInt32> s_optionalHacks({{"bIgnoreDTDRFix", 1}, {"bEnableFO3Repair", 2}, {"bEnableBigGunsSkill", 3}, {"bProjImpactDmgFix", 4},
 	{"bGameDaysPassedFix", 5}, {"bHardcoreNeedsFix", 6}, {"bNoFailedScriptLocks", 7}, {"bDoublePrecision", 8}, {"bQttSelectShortKeys", 9},
 	{"bFO3WpnDegradation", 11}, {"bLocalizedDTDR", 12}, {"bVoiceModulationFix", 13}, {"bSneakBoundingBoxFix", 14}, {"bEnableNVACAlerts", 15},
-	{"bLoadScreenFix", 16}, {"bNPCWeaponMods", 17}, {"uWMChancePerLevel", 18}, {"uWMChanceMin", 19}, {"uWMChanceMax", 20}});
+	{"bLoadScreenFix", 16}, {"bNPCWeaponMods", 17}, {"uNPCPerks", 18}, {"uWMChancePerLevel", 19}, {"uWMChanceMin", 20}, {"uWMChanceMax", 21}});
 
-bool s_bigGunsSkill = false, s_failedScriptLocks = false, s_NVACAlerts = false, s_NPCWeaponMods = false;
+bool s_bigGunsSkill = false, s_failedScriptLocks = false, s_NVACAlerts = false, s_NPCWeaponMods = false, s_NPCPerks = false;
 UInt32 s_NVACAddress = 0;
 char *s_bigGunsDescription = "The Big Guns skill determines your combat effectiveness with all oversized weapons such as the Fat Man, Missile Launcher, Flamer, Minigun, Gatling Laser, etc.";
 
@@ -3396,7 +3808,7 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			if (s_bigGunsSkill == bEnable)
 				return 0;
 			s_bigGunsSkill = bEnable;
-			ActorValueInfo *avInfo = g_actorValueInfoArray[kAVCode_BigGuns];
+			ActorValueInfo *avInfo = ActorValueInfo::Array()[kAVCode_BigGuns];
 			if (bEnable)
 			{
 				avInfo->avFlags = 0x410;
@@ -3516,6 +3928,28 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			WriteRelCall(0x54E2A4, (UInt32)ResetActorFlagsRespawnHook);
 			return 17;
 		}
+		case 18:
+		{
+			if (!bEnable || s_NPCPerks)
+				return 0;
+			s_NPCPerks = true;
+			BuildValidNPCPerks();
+			WriteRelCall(0x452220, (UInt32)DoOnLoadActorHook);
+			WriteRelJump(0x5EB6A0, (UInt32)AddPerkEntriesHook);
+			WriteRelJump(0x5EB800, (UInt32)RemovePerkEntriesHook);
+			WriteRelJump(0x8BCA90, (UInt32)SetPlayerTeammateHook);
+			SafeWrite32(0x1086F04, (UInt32)SetPerkRankHook);
+			SafeWrite32(0x1087544, (UInt32)SetPerkRankHook);
+			SafeWrite32(0x1086F08, (UInt32)RemovePerkHook);
+			SafeWrite32(0x1087548, (UInt32)RemovePerkHook);
+			SafeWrite32(0x1086F0C, (UInt32)GetPerkRankHook);
+			SafeWrite32(0x108754C, (UInt32)GetPerkRankHook);
+			SafeWrite32(0x1086F18, (UInt32)GetPerkEntryPointListHook);
+			SafeWrite32(0x1087558, (UInt32)GetPerkEntryPointListHook);
+			SAFE_WRITE_BUF(0x5E592F, "\x0F\x1F\x84\x00\x00\x00\x00\x00");
+			SafeWrite32(0x64570F, 0x401F0F);
+			return 18;
+		}
 	}
 }
 
@@ -3616,13 +4050,14 @@ bool ProcessCustomINI()
 	memcpy(StrCopy(customINIPath, (char*)0x1202FA0), "FalloutCustom.ini", 18);
 	if (FileExists(customINIPath))
 	{
-		SInt32 namesLen = GetPrivateProfileSectionNames(s_strArgBuffer, kMaxMessageLength, customINIPath), sectionLen, nameSize, pairSize;
-		char *currName = s_strArgBuffer, *currPair, *delim, settingName[0x100], *endPtr;
+		char *buffer = GetStrArgBuffer();
+		SInt32 namesLen = GetPrivateProfileSectionNames(buffer, kMaxMessageLength, customINIPath), sectionLen, nameSize, pairSize;
+		char *currName = buffer, *section = buffer + namesLen, *currPair, *delim, settingName[0x100], *endPtr;
 		Setting *setting;
 		while (namesLen > 0)
 		{
-			sectionLen = GetPrivateProfileSection(currName, s_strValBuffer, kMaxMessageLength, customINIPath);
-			currPair = s_strValBuffer;
+			sectionLen = GetPrivateProfileSection(currName, section, kMaxMessageLength, customINIPath);
+			currPair = section;
 			while (sectionLen > 0)
 			{
 				sectionLen -= pairSize = StrLen(currPair) + 1;
@@ -3715,7 +4150,7 @@ void InitGamePatches()
 	SafeWrite16(0x5D3B69, 0x9066);
 
 	//	Don't reset Actor::actorFlags for creatures, upon LoadGame
-	SafeWrite16(0x8D5003, 0x0BEB);
+	SafeWrite32(0x8D5003, 0x0004C2C9);
 
 	//	Increase expression-parser buffer size to 0x400
 	SafeWrite8(0x593DB6, 7);
@@ -3831,6 +4266,10 @@ void InitGamePatches()
 	SafeWrite16(0x76F92D, 0x20EB);
 	SafeWrite16(0x76FA5E, 0x1FEB);
 
+	//	AdjustExplosionRadius perk entry point affects NPCs
+	SAFE_WRITE_BUF(0x9ACA31, "\x85\xC0\x74\x46\x8B\x08\x81\xB9\x00\x01\x00\x00\x60\x03\x8D\x00\x75\x38\x0F\x1F\x00");
+	SAFE_WRITE_BUF(0x9ACA6A, "\xFF\x75\xE8\x0F\x1F\x40\x00");
+
 	//	Inlines
 	SafeWrite32(0x47C850, 0x90C3C030);
 	SafeWrite32(0x6815C0, 0x90C3C889);
@@ -3863,10 +4302,9 @@ void InitGamePatches()
 	WriteRelCall(0x512FAF, (UInt32)InitArmorFormHook);
 	WriteRelCall(0x70E5FE, (UInt32)ToggleConsoleHook);
 	WriteRelJump(0xEE820A, (UInt32)GamePadRumbleHook);
-	WriteRelJump(0xA23A19, (UInt32)GetMouseWheelHook);
 	WriteRelCall(0x5B5B18, (UInt32)CmdActivateHook);
 	WriteRelCall(0x5B5B48, (UInt32)CmdActivateHook);
-	WriteRelCall(0x5B54E7, (UInt32)RemoveMeHook);
+	WriteRelJump(0x5B54E7, (UInt32)RemoveMeHook);
 	WriteRelJump(0x8DAA6F, (UInt32)PackageSetRunHook);
 	SAFE_WRITE_BUF(0x8AB6D9, "\x8B\x8D\x54\xFF\xFF\xFF\x66\xC7\x81\x05\x01\x00\x00\x00\x00\x80\xA1\x43\x01\x00\x00\xBF\x0F\x1F\x40\x00");
 	WriteRelCall(0x73005C, (UInt32)BarterSellFixHook);
@@ -3926,6 +4364,7 @@ void InitGamePatches()
 	WriteRelCall(0x5956BC, (UInt32)GetFactionReactionHook);
 	SAFE_WRITE_BUF(0xA03923, "\x8B\x45\x08\x3D\xB7\x0F\x00\x00\x72\x50\x3D\xF7\x0F\x00\x00\x74\x07\x3D\xBE\x0F\x00\x00\x77\x42\x8B\x45\xCC\xF6\x40\x30\x02\x75\x0B\x80\x48\x30\x02\x50\xE8\x42\x3D\x00\x00\x58\xC9\xC2\x0C\x00");
 	WritePushRetRelJump(0xA22244, 0xA222E7, (UInt32)TileTextApplyScaleHook);
+	SafeWrite32(0x102F5A4, (UInt32)MarkRefAsModifiedHook);
 	*(UInt32*)0x11D0190 = 0x41200000;
 	WriteRelCall(0x4F49AB, (UInt32)LoadIncidentalSoundIDHook);
 	WriteRelJump(0x595560, (UInt32)PickMediaSetHook);
@@ -3939,6 +4378,7 @@ void InitGamePatches()
 	WriteRelCall(0x9ACEC6, (UInt32)GetExplosionInFaceIMODHook);
 	WriteRelJump(0x9AD2C5, (UInt32)ExplosionScreenShakeHook);
 	WriteRelCall(0x8A04B2, (UInt32)GetControlFlagHook);
+	WriteRelJump(0x9C3BD6, (UInt32)MineExplodeChanceHook);
 
 	HOOK_INIT_JUMP(CalculateHitDamage, 0x9B5A30);
 	HOOK_INIT_JPRT(EnableRepairButton, 0x7818C8, 0x7818D3);
@@ -3959,15 +4399,16 @@ void InitGamePatches()
 	HOOK_INIT_JUMP(UpdateTimeGlobals, 0x867A40);
 	HOOK_INIT_JUMP(DoOperator, 0x593FBC);
 
-	char *namePtr = StrLenCopy(s_strArgBuffer, "Data\\NVSE\\plugins\\xfonts\\", 25), *dataPtr, *delim;
+	char filePath[0x80], dataPath[0x80], *namePtr = filePath + 25, *buffer = GetStrArgBuffer(), *dataPtr, *delim;
+	memcpy(filePath, "Data\\NVSE\\plugins\\xfonts\\*.txt", 31);
+	memcpy(dataPath, "data\\", 5);
 	SInt32 lines;
 	UInt32 size, index, value;
-	memcpy(namePtr, "*.txt", 6);
-	for (DirectoryIterator dirIter(s_strArgBuffer); dirIter; ++dirIter)
+	for (DirectoryIterator dirIter(filePath); dirIter; ++dirIter)
 	{
 		if (!dirIter.IsFile()) continue;
 		StrCopy(namePtr, dirIter.Get());
-		LineIterator lineIter(s_strArgBuffer, s_strValBuffer);
+		LineIterator lineIter(filePath, buffer);
 		while (lineIter)
 		{
 			dataPtr = lineIter.Get();
@@ -3977,8 +4418,8 @@ void InitGamePatches()
 			if (!size) continue;
 			index = StrToInt(dataPtr) - 10;
 			if ((index > 79) || s_extraFontsPaths[index]) continue;
-			StrCopy(s_dataPath, delim);
-			if (FileExists(s_dataPathFull))
+			StrCopy(dataPath + 5, delim);
+			if (FileExists(dataPath))
 				s_extraFontsPaths[index] = (char*)memcpy(malloc(size + 1), delim, size + 1);
 		}
 	}
@@ -3989,15 +4430,15 @@ void InitGamePatches()
 	{
 		if (dirIter.IsFile())
 		{
-			memcpy(StrCopy(StrLenCopy(s_strArgBuffer, "Data\\", 5), dirIter.Get()) - 8, "bsa", 4);
-			s_overrideBSAFiles.Insert(s_strArgBuffer);
+			memcpy(StrCopy(dataPath + 5, dirIter.Get()) - 8, "bsa", 4);
+			s_overrideBSAFiles.Insert(dataPath);
 		}
 	}
 	if (!s_overrideBSAFiles.Empty())
 		WriteRelCall(0x463855, (UInt32)LoadBSAFileHook);
 
-	lines = GetPrivateProfileSection("GamePatches", s_strValBuffer, 0x10000, "Data\\NVSE\\plugins\\jip_nvse.ini");
-	dataPtr = s_strValBuffer;
+	lines = GetPrivateProfileSection("GamePatches", buffer, 0x10000, "Data\\NVSE\\plugins\\jip_nvse.ini");
+	dataPtr = buffer;
 	while (lines > 0)
 	{
 		lines -= size = StrLen(dataPtr) + 1;
@@ -4005,24 +4446,26 @@ void InitGamePatches()
 		index = s_optionalHacks.Get(dataPtr);
 		dataPtr += size;
 		if (!index) continue;
-		if (index >= 18)
+		if (index >= 19)
 		{
 			value = StrToInt(delim);
 			switch (index)
 			{
-			case 18:
+			case 19:
 				s_uWMChancePerLevel = value;
 				break;
-			case 19:
+			case 20:
 				s_uWMChanceMin = value;
 				break;
-			case 20:
+			case 21:
 				s_uWMChanceMax = value;
 				break;
 			}
 		}
-		else if (*delim == '1')
+		else if (*delim != '0')
 		{
+			if ((index == 18) && (*delim == '2'))
+				s_NPCPerksAutoAdd = true;
 			if ((index == 3) || (index >= 15))
 				s_deferrSetOptional |= 1 << index;
 			else SetOptionalPatch(index, true);
@@ -4042,6 +4485,7 @@ void DeferredInit()
 	g_pipBoyLight = *(SpellItem**)0x11C358C;
 	g_modelLoader = *(ModelLoader**)0x11C3B3C;
 	g_dataHandler = *(DataHandler**)0x11C3F2C;
+	g_loadedReferences = LoadedReferenceCollection::Get();
 	g_interfaceManager = *(InterfaceManager**)0x11D8A80;
 	g_OSGlobals = *(OSGlobals**)0x11DEA0C;
 	g_TES = *(TES**)0x11DEA10;
@@ -4061,7 +4505,7 @@ void DeferredInit()
 	g_screenWidth = *(int*)0x11C73E0 * converter;
 	g_screenHeight = *(int*)0x11C7190 * converter;
 	g_shadowSceneNode = *(ShadowSceneNode**)0x11F91C8;
-	g_terminalModelDefault = *g_terminalModelPtr;
+	g_terminalModelDefault = *GameGlobals::TerminalModelPtr();
 	g_attachLightString = **(const char***)0x11C620C;
 	g_gameYear = (TESGlobal*)LookupFormByRefID(0x35);
 	g_gameMonth = (TESGlobal*)LookupFormByRefID(0x36);
@@ -4076,13 +4520,15 @@ void DeferredInit()
 	g_ashPileACTI->SetJIPFlag(kHookFormFlag6_IsAshPile, true);
 	g_gooPileACTI->SetJIPFlag(kHookFormFlag6_IsAshPile, true);
 
+	s_mainThreadID = g_OSGlobals->mainThreadID;
 	s_initialTickCount = CdeclCall<UInt32>(0x457FE0);
 
 	s_tempPosMarker = ThisCall<TESObjectREFR*>(0x55A2F0, GameHeapAlloc(sizeof(TESObjectREFR)));
 	ThisCall(0x484490, s_tempPosMarker);
 
-	g_eventCmdInfos[1].execute = Hook_MenuMode_Execute;
-	g_eventCmdInfos[0xE].execute = Cmd_EmptyCommand_Execute;
+	CommandInfo *eventCmdInfos = (CommandInfo*)0x118E2F0;
+	eventCmdInfos[1].execute = Hook_MenuMode_Execute;
+	eventCmdInfos[0xE].execute = Cmd_EmptyCommand_Execute;
 
 	g_condDmgPenalty = *(double**)0x646D25;
 	if ((UInt32)g_condDmgPenalty == 0x1051680)
@@ -4091,7 +4537,7 @@ void DeferredInit()
 		g_condDmgPenalty = &s_condDmgPenalty;
 	}
 
-	for (UInt32 index = 0; index <= 17; index++)
+	for (UInt32 index = 0; index <= 18; index++)
 		if (s_deferrSetOptional & (1 << index))
 			SetOptionalPatch(index, true);
 
@@ -4115,29 +4561,28 @@ void DeferredInit()
 	s_fontHeightDatas[6].heightwGap += 4.0F;
 	s_fontHeightDatas[7].heightwGap += 2.0F;
 
-	(*g_BSWin32Audio)->PickSoundFileFromFolder = PickSoundFileFromFolderHook;
+	BSWin32Audio::Get()->PickSoundFileFromFolder = PickSoundFileFromFolderHook;
 
-	GetModuleFileName(GetModuleHandle(NULL), s_strArgBuffer, MAX_PATH);
-	char *delim = SlashPosR(s_strArgBuffer) + 1;
+	char filePath[MAX_PATH];
+	GetModuleFileName(GetModuleHandle(NULL), filePath, MAX_PATH);
+	char *delim = SlashPosR(filePath) + 1;
 	memcpy(delim, "d3d9.dll", 9);
-	HMODULE handle = GetModuleHandle(s_strArgBuffer);
+	HMODULE handle = GetModuleHandle(filePath);
 	if (handle) ReloadENB = (_ReloadENB)GetProcAddress(handle, "DirtyHack");
 	if (!ReloadENB)
 	{
 		memcpy(delim, "enbseries.dll", 14);
-		handle = GetModuleHandle(s_strArgBuffer);
+		handle = GetModuleHandle(filePath);
 		if (handle) ReloadENB = (_ReloadENB)GetProcAddress(handle, "DirtyHack");
 	}
 
-	ActorValueInfo *avInfo = g_actorValueInfoArray[kAVCode_BigGuns];
+	ActorValueInfo *avInfo = ActorValueInfo::Array()[kAVCode_BigGuns];
 	avInfo->fullName.name = avInfo->avName;
 	avInfo->callback4C = 0x643BD0;
 
 	JIPScriptRunner::Init();
 
 	s_LIGH_EDID = "LIGH_EDID";
-	ThisCall(0x4AD0C0, &s_NiObjectCopyInfo, 0x97);
-	s_NiObjectCopyInfo.scale = {1, 1, 1};
 
 	UInt8 cccIdx = g_dataHandler->GetModIndex("JIP Companions Command & Control.esp");
 	if (cccIdx != 0xFF)

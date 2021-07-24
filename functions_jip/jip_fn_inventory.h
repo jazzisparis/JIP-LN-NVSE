@@ -113,7 +113,7 @@ bool Cmd_SetWeaponRefModFlags_Execute(COMMAND_ARGS)
 			if (flags) xModFlags->flags = flags;
 			else
 			{
-				RemoveExtraData(xData, xModFlags, true);
+				xData->RemoveExtra(xModFlags, true);
 				if (!xData->m_data)
 				{
 					entry->extendData->Remove(xData);
@@ -124,14 +124,14 @@ bool Cmd_SetWeaponRefModFlags_Execute(COMMAND_ARGS)
 		else if (flags)
 		{
 			xData = SplitFromStack(entry, xData);
-			AddExtraData(xData, ExtraWeaponModFlags::Create(flags));
+			xData->AddExtra(ExtraWeaponModFlags::Create(flags));
 		}
 	}
 	else if (flags)
 	{
 		xData = invRef->CreateExtraData();
 		if (!xData) return true;
-		AddExtraData(xData, ExtraWeaponModFlags::Create(flags));
+		xData->AddExtra(ExtraWeaponModFlags::Create(flags));
 	}
 	*result = 1;
 	return true;
@@ -177,13 +177,13 @@ bool Cmd_SetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 	{
 		ExtraHealth *xHealth = GetExtraType(xData, Health);
 		if (xHealth) xHealth->health = health;
-		else AddExtraData(xData, ExtraHealth::Create(health));
+		else xData->AddExtra(ExtraHealth::Create(health));
 	}
 	else
 	{
 		xData = invRef->CreateExtraData();
 		if (!xData) return true;
-		AddExtraData(xData, ExtraHealth::Create(health));
+		xData->AddExtra(ExtraHealth::Create(health));
 	}
 	*result = 1;
 	return true;
@@ -203,7 +203,7 @@ bool Cmd_SetHotkeyItemRef_Execute(COMMAND_ARGS)
 		return true;
 	if (!keyNum)
 	{
-		if (invRef->xData) RemoveExtraType(invRef->xData, kExtraData_Hotkey);
+		if (invRef->xData) invRef->xData->RemoveByType(kExtraData_Hotkey);
 		return true;
 	}
 	keyNum--;
@@ -215,7 +215,7 @@ bool Cmd_SetHotkeyItemRef_Execute(COMMAND_ARGS)
 		{
 			if (!ClearHotkey(keyNum))
 				return true;
-			AddExtraData(xData, ExtraHotkey::Create(keyNum));
+			xData->AddExtra(ExtraHotkey::Create(keyNum));
 		}
 		else if ((xHotkey->index == keyNum) || !ClearHotkey(keyNum))
 			return true;
@@ -225,7 +225,7 @@ bool Cmd_SetHotkeyItemRef_Execute(COMMAND_ARGS)
 	{
 		if (!ClearHotkey(keyNum) || !(xData = invRef->CreateExtraData()))
 			return true;
-		AddExtraData(xData, ExtraHotkey::Create(keyNum));
+		xData->AddExtra(ExtraHotkey::Create(keyNum));
 	}
 	*result = 1;
 	return true;
@@ -307,7 +307,7 @@ bool Cmd_DropAlt_Execute(COMMAND_ARGS)
 				{
 					if (hasScript && xData->HasType(kExtraData_Script))
 					{
-						RemoveExtraType(xData, kExtraData_Count);
+						xData->RemoveByType(kExtraData_Count);
 						subCount = 1;
 					}
 					else if (subCount > total)
@@ -359,26 +359,34 @@ bool Cmd_GetAllItems_Execute(COMMAND_ARGS)
 	BGSListForm *listForm = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &typeID, &noNonPlayable, &noQuestItem, &noEquipped, &listForm))
 		return true;
-	if ((typeID && !kInventoryType[typeID]) || !thisObj->GetInventoryItems(typeID))
+	if (typeID && !kInventoryType[typeID])
+		return true;
+	InventoryItemsMap *invItemsMap = GetInventoryItemsMap();
+	if (!GetInventoryItems(thisObj, typeID, invItemsMap))
 		return true;
 	if (NOT_ACTOR(thisObj)) noEquipped = 0;
 	TESForm *item;
+	TempElements *tmpElements;
 	if (listForm) listForm->RemoveAll();
-	else s_tempElements.Clear();
+	else
+	{
+		tmpElements = GetTempElements();
+		tmpElements->Clear();
+	}
 	int count = 0;
-	for (auto itemIter = s_inventoryItemsMap.Begin(); itemIter; ++itemIter)
+	for (auto itemIter = invItemsMap->Begin(); itemIter; ++itemIter)
 	{
 		item = itemIter.Key();
 		if ((noNonPlayable && !item->IsItemPlayable()) || (noQuestItem && item->IsQuestItem()) || (noEquipped && ((Actor*)thisObj)->IsItemEquipped(item)))
 			continue;
 		if (listForm) listForm->list.Prepend(item);
-		else s_tempElements.Append(item);
+		else tmpElements->Append(item);
 		count++;
 	}
 	if (count)
 	{
 		if (listForm) *result = count;
-		else AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+		else AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	}
 	return true;
 }
@@ -390,7 +398,10 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 	BGSListForm *listForm = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &typeID, &noNonPlayable, &noQuestItem, &noEquipped, &listForm))
 		return true;
-	if ((typeID && !kInventoryType[typeID]) || !thisObj->GetInventoryItems(typeID))
+	if (typeID && !kInventoryType[typeID])
+		return true;
+	InventoryItemsMap *invItemsMap = GetInventoryItemsMap();
+	if (!GetInventoryItems(thisObj, typeID, invItemsMap))
 		return true;
 	if (NOT_ACTOR(thisObj)) noEquipped = 0;
 	TESForm *item;
@@ -399,10 +410,15 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 	ListNode<ExtraDataList> *xdlIter;
 	ExtraDataList *xData;
 	TESObjectREFR *invRef;
+	TempElements *tmpElements;
 	if (listForm) listForm->RemoveAll();
-	else s_tempElements.Clear();
+	else
+	{
+		tmpElements = GetTempElements();
+		tmpElements->Clear();
+	}
 	int count = 0;
-	for (auto dataIter = s_inventoryItemsMap.Begin(); dataIter; ++dataIter)
+	for (auto dataIter = invItemsMap->Begin(); dataIter; ++dataIter)
 	{
 		item = dataIter.Key();
 		if ((noNonPlayable && !item->IsItemPlayable()) || (noQuestItem && item->IsQuestItem()))
@@ -423,25 +439,25 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 				baseCount -= xCount;
 				if (noEquipped && xData->HasType(kExtraData_Worn))
 					continue;
-				invRef = CreateInventoryRef(thisObj, item, xCount, xData);
+				invRef = InventoryRefCreate(thisObj, item, xCount, xData);
 				if (listForm) listForm->list.Prepend(invRef);
-				else s_tempElements.Append(invRef);
+				else tmpElements->Append(invRef);
 				count++;
 			}
 			while (baseCount && (xdlIter = xdlIter->next));
 		}
 		if (baseCount > 0)
 		{
-			invRef = CreateInventoryRef(thisObj, item, baseCount, NULL);
+			invRef = InventoryRefCreate(thisObj, item, baseCount, NULL);
 			if (listForm) listForm->list.Prepend(invRef);
-			else s_tempElements.Append(invRef);
+			else tmpElements->Append(invRef);
 			count++;
 		}
 	}
 	if (count)
 	{
 		if (listForm) *result = count;
-		else AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+		else AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	}
 	return true;
 }
@@ -493,9 +509,9 @@ bool Cmd_SetNoUnequip_Execute(COMMAND_ARGS)
 		if (xData)
 		{
 			if (!noUnequip)
-				RemoveExtraType(xData, kExtraData_CannotWear);
+				xData->RemoveByType(kExtraData_CannotWear);
 			else if (xData->HasType(kExtraData_Worn) && !xData->HasType(kExtraData_CannotWear))
-				AddExtraData(xData, ExtraCannotWear::Create());
+				xData->AddExtra(ExtraCannotWear::Create());
 		}
 	}
 	return true;
@@ -560,18 +576,19 @@ bool Cmd_GetBaseItems_Execute(COMMAND_ARGS)
 	}
 	TESContainer *container = DYNAMIC_CAST(baseForm, TESForm, TESContainer);
 	if (!container) return true;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<TESContainer::FormCount> *traverse = container->formCountList.Head();
 	TESContainer::FormCount *formCount;
 	do
 	{
 		formCount = traverse->data;
 		if (formCount)
-			s_tempElements.Append(formCount->form);
+			tmpElements->Append(formCount->form);
 	}
 	while (traverse = traverse->next);
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -625,8 +642,8 @@ bool Cmd_GetEquippedArmorRefs_Execute(COMMAND_ARGS)
 			ExtraContainerChanges::EntryDataList *entryList = thisObj->GetContainerChangesList();
 			if (entryList)
 			{
-				s_tempFormList.Clear();
-				s_tempElements.Clear();
+				TempElements *tmpElements = GetTempElements();
+				tmpElements->Clear();
 				ValidBip01Names::Data *slotData = equipment->slotData;
 				TESForm *item;
 				ContChangesEntry *entry;
@@ -635,12 +652,12 @@ bool Cmd_GetEquippedArmorRefs_Execute(COMMAND_ARGS)
 				for (UInt32 count = 20; count; count--, slotData++)
 				{
 					item = slotData->item;
-					if (!item || NOT_TYPE(item, TESObjectARMO) || !s_tempFormList.Insert(item) || !(entry = entryList->FindForItem(item)) || !(xData = entry->GetEquippedExtra()))
+					if (!item || NOT_TYPE(item, TESObjectARMO) || !(entry = entryList->FindForItem(item)) || !(xData = entry->GetEquippedExtra()))
 						continue;
-					invRef = CreateInventoryRef(thisObj, item, entry->countDelta, xData);
-					if (invRef) s_tempElements.Append(invRef);
+					invRef = InventoryRefCreate(thisObj, item, entry->countDelta, xData);
+					if (invRef) tmpElements->Append(invRef);
 				}
-				AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+				AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 			}
 		}
 	}
@@ -684,7 +701,7 @@ bool Cmd_GetHotkeyItemRef_Execute(COMMAND_ARGS)
 		ContChangesEntry *entry = GetHotkeyItemEntry(keyNum - 1, &xData);
 		if (entry)
 		{
-			TESObjectREFR *invRef = CreateInventoryRef(g_thePlayer, entry->type, xData->GetCount(), xData);
+			TESObjectREFR *invRef = InventoryRefCreate(g_thePlayer, entry->type, xData->GetCount(), xData);
 			REFR_RES = invRef->refID;
 		}
 	}

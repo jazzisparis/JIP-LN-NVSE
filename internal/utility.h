@@ -36,6 +36,44 @@
 #define GAME_HEAP_ALLOC __asm mov ecx, 0x11F6238 CALL_EAX(0xAA3E40)
 #define GAME_HEAP_FREE  __asm mov ecx, 0x11F6238 CALL_EAX(0xAA4060)
 
+#define MEMBER_FN_PREFIX(className)	\
+	typedef className _MEMBER_FN_BASE_TYPE
+
+#define DEFINE_MEMBER_FN_LONG(className, functionName, retnType, address, ...)		\
+	typedef retnType (className::* _##functionName##_type)(__VA_ARGS__);			\
+																					\
+	inline _##functionName##_type * _##functionName##_GetPtr(void)					\
+	{																				\
+		static const UInt32 _address = address;										\
+		return (_##functionName##_type *)&_address;									\
+	}
+
+#define DEFINE_MEMBER_FN(functionName, retnType, address, ...)	\
+	DEFINE_MEMBER_FN_LONG(_MEMBER_FN_BASE_TYPE, functionName, retnType, address, __VA_ARGS__)
+
+#define CALL_MEMBER_FN(obj, fn)	\
+	((*(obj)).*(*((obj)->_##fn##_GetPtr())))
+
+#define SIZEOF_ARRAY(arrayName, elementType) (sizeof(arrayName) / sizeof(elementType))
+
+template <typename T_Ret = void, typename ...Args>
+__forceinline T_Ret ThisCall(UInt32 _addr, void *_this, Args ...args)
+{
+	return ((T_Ret (__thiscall *)(void*, Args...))_addr)(_this, std::forward<Args>(args)...);
+}
+
+template <typename T_Ret = void, typename ...Args>
+__forceinline T_Ret StdCall(UInt32 _addr, Args ...args)
+{
+	return ((T_Ret (__stdcall *)(Args...))_addr)(std::forward<Args>(args)...);
+}
+
+template <typename T_Ret = void, typename ...Args>
+__forceinline T_Ret CdeclCall(UInt32 _addr, Args ...args)
+{
+	return ((T_Ret (__cdecl *)(Args...))_addr)(std::forward<Args>(args)...);
+}
+
 #define GameHeapAlloc(size) ThisCall<void*, UInt32>(0xAA3E40, (void*)0x11F6238, size)
 #define GameHeapFree(ptr) ThisCall<void, void*>(0xAA4060, (void*)0x11F6238, ptr)
 
@@ -50,8 +88,11 @@ kDblPId2 = 1.57079632679489662,
 kDbl180dPI = 57.29577951308232088;
 
 static const float
+kFlt1d1000 = 0.001F,
+kFlt1d200 = 0.005F,
 kFlt1d100 = 0.01F,
 kFltPId180 = 0.01745329238F,
+kFlt1d10 = 0.1F,
 kFltHalf = 0.5F,
 kFltOne = 1.0F,
 kFlt10 = 10.0F,
@@ -77,36 +118,31 @@ template <typename T> class TempObject
 
 public:
 	TempObject() {Reset();}
-	TempObject(const T &src) {objData = *(Buffer*)&src;}
+	TempObject(const T &src) {memcpy((void*)&objData, (const void*)&src, sizeof(T));}
 
 	void Reset() {new ((T*)&objData) T();}
 
 	T& operator()() {return *(T*)&objData;}
 
-	TempObject& operator=(const T &rhs) {objData = *(Buffer*)&rhs; return *this;}
-	TempObject& operator=(const TempObject &rhs) {objData = rhs.objData; return *this;}
-};
-
-//	Assign rhs to lhs, bypassing operator=
-template <typename T> __forceinline void RawAssign(const T &lhs, const T &rhs)
-{
-	struct Helper
+	TempObject& operator=(const T &rhs)
 	{
-		UInt8	bytes[sizeof(T)];
-	};
-	*(Helper*)&lhs = *(Helper*)&rhs;
-}
+		memcpy((void*)&objData, (const void*)&rhs, sizeof(T));
+		return *this;
+	}
+	TempObject& operator=(const TempObject &rhs)
+	{
+		memcpy((void*)&objData, (const void*)&rhs.objData, sizeof(T));
+		return *this;
+	}
+};
 
 //	Swap lhs and rhs, bypassing operator=
 template <typename T> __forceinline void RawSwap(const T &lhs, const T &rhs)
 {
-	struct Helper
-	{
-		UInt8	bytes[sizeof(T)];
-	}
-	temp = *(Helper*)&lhs;
-	*(Helper*)&lhs = *(Helper*)&rhs;
-	*(Helper*)&rhs = temp;
+	UInt8 buffer[sizeof(T)];
+	memcpy((void*)buffer, (const void*)&lhs, sizeof(T));
+	memcpy((void*)&lhs, (const void*)&rhs, sizeof(T));
+	memcpy((void*)&rhs, (const void*)buffer, sizeof(T));
 }
 
 class CriticalSection
@@ -122,6 +158,17 @@ public:
 	bool TryEnter() {return TryEnterCriticalSection(&critSection) != 0;}
 };
 
+class PrimitiveCS
+{
+	UInt32	owningThread;
+
+public:
+	PrimitiveCS() : owningThread(0) {}
+
+	PrimitiveCS *Enter();
+	__forceinline void Leave() {owningThread = 0;}
+};
+
 class LightCS
 {
 	UInt32	owningThread;
@@ -131,8 +178,49 @@ public:
 	LightCS() : owningThread(0), enterCount(0) {}
 
 	void Enter();
-	void EnterSleep();
-	void Leave();
+	__forceinline void Leave()
+	{
+		if (!--enterCount)
+			owningThread = 0;
+	}
+};
+
+template <typename T_CS> class ScopedLock
+{
+	T_CS		*cs;
+
+public:
+	ScopedLock(T_CS *_cs) : cs(_cs) {cs->Enter();}
+	~ScopedLock() {cs->Leave();}
+};
+
+union FunctionArg
+{
+	void		*pVal;
+	float		fVal;
+	UInt32		uVal;
+	SInt32		iVal;
+
+	FunctionArg& operator=(void *other)
+	{
+		pVal = other;
+		return *this;
+	}
+	FunctionArg& operator=(float other)
+	{
+		fVal = other;
+		return *this;
+	}
+	FunctionArg& operator=(UInt32 other)
+	{
+		uVal = other;
+		return *this;
+	}
+	FunctionArg& operator=(SInt32 other)
+	{
+		iVal = other;
+		return *this;
+	}
 };
 
 TESForm* __stdcall LookupFormByRefID(UInt32 refID);
@@ -193,6 +281,7 @@ extern const UInt8 kLwrCaseConverter[], kUprCaseConverter[];
 UInt32 __vectorcall cvtd2ui(double value);
 
 double __vectorcall cvtui2d(UInt32 value);
+void __fastcall cvtui2d(UInt32 value, double *result);
 
 int __vectorcall ifloor(float value);
 
@@ -203,15 +292,19 @@ __forceinline int iround(float value)
 	return _mm_cvt_ss2si(_mm_load_ss(&value));
 }
 
+char *GetStrArgBuffer();
+
 void __fastcall NiReleaseObject(NiRefObject *toRelease);
 
-NiRefObject** __stdcall NiReleaseAddRef(NiRefObject **toRelease, NiRefObject *toAdd);
+NiRefObject** __stdcall NiReleaseAddRef(void *toRelease, NiRefObject *toAdd);
 
 UInt32 __fastcall RGBHexToDec(UInt32 rgb);
 
 UInt32 __fastcall RGBDecToHex(UInt32 rgb);
 
 UInt32 __fastcall StrLen(const char *str);
+
+bool __fastcall MemCmp(const void *ptr1, const void *ptr2, UInt32 bsize);
 
 void __fastcall MemZero(void *dest, UInt32 bsize);
 
@@ -413,11 +506,9 @@ class AuxBuffer
 
 public:
 	AuxBuffer() : ptr(NULL), size(AUX_BUFFER_INIT_SIZE) {}
+
+	static UInt8 *Get(UInt32 bufIdx, UInt32 reqSize);
 };
-
-extern AuxBuffer s_auxBuffers[3];
-
-UInt8* __fastcall GetAuxBuffer(AuxBuffer &buffer, UInt32 reqSize);
 
 bool __fastcall FileExists(const char *filePath);
 
@@ -525,9 +616,7 @@ public:
 	void operator++() {if (!FindNextFile(handle, &fndData)) Close();}
 };
 
-bool __fastcall FileToBuffer(const char *filePath, char *buffer);
-
-void ClearFolder(char *pathEndPtr);
+UInt32 __fastcall FileToBuffer(const char *filePath, char *buffer);
 
 void __stdcall StoreOriginalData(UInt32 addr, UInt8 size);
 

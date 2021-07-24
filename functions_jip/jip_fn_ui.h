@@ -60,6 +60,7 @@ DEFINE_COMMAND_PLUGIN(CloseActiveMenu, , 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ShowLevelUpMenuEx, , 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(AttachUIXML, , 1, 2, kParams_TwoStrings);
 DEFINE_COMMAND_PLUGIN(AttachUIComponent, , 1, 22, kParams_JIP_OneString_OneFormatString);
+DEFINE_COMMAND_PLUGIN(GetWorldMapPosMults, , 1, 2, kParams_JIP_TwoScriptVars);
 
 bool Cmd_IsComponentLoaded_Execute(COMMAND_ARGS)
 {
@@ -94,11 +95,11 @@ Tile* __stdcall InjectUIComponent(Tile *parentTile, char *dataStr)
 bool Cmd_InjectUIComponent_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char tilePath[0x100];
-	if (ExtractFormatStringArgs(1, s_strValBuffer, EXTRACT_ARGS_EX, kCommandInfo_InjectUIComponent.numParams, &tilePath))
+	char tilePath[0x100], *buffer = GetStrArgBuffer();
+	if (ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_InjectUIComponent.numParams, &tilePath))
 	{
 		Tile *component = GetTargetComponent(tilePath);
-		*result = (component && InjectUIComponent(component, s_strValBuffer)) ? 1 : 0;
+		*result = (component && InjectUIComponent(component, buffer)) ? 1 : 0;
 	}
 	return true;
 }
@@ -203,16 +204,16 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 			break;
 		case kMenuType_Quantity:
 		{
-			if (g_menuVisibility[kMenuType_Inventory]) menuRef = CreateRefForStack(g_thePlayer, *g_inventoryMenuSelection);
-			else if (*g_containerMenu)
+			if (MENU_VISIBILITY[kMenuType_Inventory]) menuRef = CreateRefForStack(g_thePlayer, InventoryMenu::Selection());
+			else if (ContainerMenu::Get())
 			{
-				ContainerMenu *cntMenu = *g_containerMenu;
-				menuRef = CreateRefForStack((cntMenu->currentItems == &cntMenu->leftItems) ? g_thePlayer : cntMenu->containerRef, *g_containerMenuSelection);
+				ContainerMenu *cntMenu = ContainerMenu::Get();
+				menuRef = CreateRefForStack((cntMenu->currentItems == &cntMenu->leftItems) ? g_thePlayer : cntMenu->containerRef, ContainerMenu::Selection());
 			}
-			else if (*g_barterMenu)
+			else if (BarterMenu::Get())
 			{
-				BarterMenu *brtMenu = *g_barterMenu;
-				menuRef = CreateRefForStack((brtMenu->currentItems == &brtMenu->leftItems) ? g_thePlayer : brtMenu->merchantRef->GetMerchantContainer(), *g_barterMenuSelection);
+				BarterMenu *brtMenu = BarterMenu::Get();
+				menuRef = CreateRefForStack((brtMenu->currentItems == &brtMenu->leftItems) ? g_thePlayer : brtMenu->merchantRef->GetMerchantContainer(), BarterMenu::Selection());
 			}
 			break;
 		}
@@ -229,7 +230,7 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 			break;
 		}
 		case kMenuType_Repair:
-			menuRef = CreateRefForStack(g_thePlayer, *g_repairMenuTarget);
+			menuRef = CreateRefForStack(g_thePlayer, RepairMenu::Target());
 			break;
 		case kMenuType_Barter:
 			menuRef = ((BarterMenu*)menu)->merchantRef;
@@ -238,13 +239,13 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 			menuRef = GetHackingMenuRef((HackingMenu*)menu);
 			break;
 		case kMenuType_VATS:
-			menuRef = *g_VATSTargetRef;
+			menuRef = VATSMenu::Target();
 			break;
 		case kMenuType_Computers:
 			menuRef = ((ComputersMenu*)menu)->targetRef;
 			break;
 		case kMenuType_ItemMod:
-			menuRef = CreateRefForStack(g_thePlayer, *g_modMenuTarget);
+			menuRef = CreateRefForStack(g_thePlayer, ItemModMenu::Target());
 			break;
 		case kMenuType_CompanionWheel:
 			menuRef = ((CompanionWheelMenu*)menu)->companionRef;
@@ -274,13 +275,13 @@ bool Cmd_GetMenuItemFilter_Execute(COMMAND_ARGS)
 	switch (menuID)
 	{
 		case kMenuType_Inventory:
-			if (*g_inventoryMenu) *result = (int)(*g_inventoryMenu)->filter + 1;
+			if (InventoryMenu::Get()) *result = (int)InventoryMenu::Get()->filter + 1;
 			break;
 		case kMenuType_Container:
-			if (*g_containerMenu) *result = useRef ? (int)(*g_containerMenu)->rightFilter : (int)(*g_containerMenu)->leftFilter;
+			if (ContainerMenu::Get()) *result = useRef ? (int)ContainerMenu::Get()->rightFilter : (int)ContainerMenu::Get()->leftFilter;
 			break;
 		case kMenuType_Barter:
-			if (*g_barterMenu) *result = useRef ? (int)(*g_barterMenu)->rightFilter : (int)(*g_barterMenu)->leftFilter;
+			if (BarterMenu::Get()) *result = useRef ? (int)BarterMenu::Get()->rightFilter : (int)BarterMenu::Get()->leftFilter;
 	}
 	return true;
 }
@@ -330,28 +331,28 @@ bool Cmd_GetSelectedItemRef_Execute(COMMAND_ARGS)
 	{
 		case kMenuType_Inventory:
 		{
-			InventoryMenu *invMenu = *g_inventoryMenu;
+			InventoryMenu *invMenu = InventoryMenu::Get();
 			if (invMenu->itemList.selected)
-				itemRef = CreateRefForStack(g_thePlayer, *g_inventoryMenuSelection);
+				itemRef = CreateRefForStack(g_thePlayer, InventoryMenu::Selection());
 			break;
 		}
 		case kMenuType_Stats:
 		{
-			StatsMenu *statsMenu = *g_statsMenu;
+			StatsMenu *statsMenu = StatsMenu::Get();
 			if (statsMenu->perkRankList.selected)
 				itemRef = statsMenu->perkRankList.GetSelected()->perk;
 			break;
 		}
 		case kMenuType_Container:
 		{
-			ContainerMenu *cntMenu = *g_containerMenu;
+			ContainerMenu *cntMenu = ContainerMenu::Get();
 			if (cntMenu->leftItems.selected || cntMenu->rightItems.selected)
-				itemRef = CreateRefForStack(cntMenu->leftItems.selected ? g_thePlayer : cntMenu->containerRef, *g_containerMenuSelection);
+				itemRef = CreateRefForStack(cntMenu->leftItems.selected ? g_thePlayer : cntMenu->containerRef, ContainerMenu::Selection());
 			break;
 		}
 		case kMenuType_Map:
 		{
-			MapMenu *mapMenu = *g_mapMenu;
+			MapMenu *mapMenu = MapMenu::Get();
 			if (mapMenu->questList.selected)
 				itemRef = mapMenu->questList.GetSelected();
 			else if (mapMenu->noteList.selected)
@@ -362,28 +363,28 @@ bool Cmd_GetSelectedItemRef_Execute(COMMAND_ARGS)
 		}
 		case kMenuType_Repair:
 		{
-			RepairMenu *rprMenu = *g_repairMenu;
+			RepairMenu *rprMenu = RepairMenu::Get();
 			if (rprMenu->repairItems.selected)
 				itemRef = CreateRefForStack(g_thePlayer, rprMenu->repairItems.GetSelected());
 			break;
 		}
 		case kMenuType_Barter:
 		{
-			BarterMenu *brtMenu = *g_barterMenu;
+			BarterMenu *brtMenu = BarterMenu::Get();
 			if (brtMenu->leftItems.selected || brtMenu->rightItems.selected)
-				itemRef = CreateRefForStack(brtMenu->leftItems.selected ? g_thePlayer : brtMenu->merchantRef->GetMerchantContainer(), *g_barterMenuSelection);
+				itemRef = CreateRefForStack(brtMenu->leftItems.selected ? g_thePlayer : brtMenu->merchantRef->GetMerchantContainer(), BarterMenu::Selection());
 			break;
 		}
 		case kMenuType_RepairServices:
 		{
-			RepairServicesMenu *rpsMenu = *g_repairServicesMenu;
+			RepairServicesMenu *rpsMenu = RepairServicesMenu::Get();
 			if (rpsMenu->itemList.selected)
 				itemRef = CreateRefForStack(g_thePlayer, rpsMenu->itemList.GetSelected());
 			break;
 		}
 		case kMenuType_ItemMod:
 		{
-			ItemModMenu *modMenu = *g_itemModMenu;
+			ItemModMenu *modMenu = ItemModMenu::Get();
 			if (modMenu->itemModList.selected)
 				itemRef = CreateRefForStack(g_thePlayer, modMenu->itemModList.GetSelected());
 		}
@@ -396,39 +397,40 @@ bool Cmd_GetBarterItems_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 sold;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &sold) || !*g_barterMenu || !(*g_barterMenu)->merchantRef) return true;
-	BarterMenu *brtMenu = *g_barterMenu;
+	BarterMenu *brtMenu = BarterMenu::Get();
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &sold) || !brtMenu || !brtMenu->merchantRef) return true;
 	TESObjectREFR *target = sold ? brtMenu->merchantRef->GetMerchantContainer() : g_thePlayer, *itemRef;
-	s_tempElements.Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<ContChangesEntry> *iter = sold ? brtMenu->rightBarter.Head() : brtMenu->leftBarter.Head();
 	do
 	{
 		if (itemRef = CreateRefForStack(target, iter->data))
-			s_tempElements.Append(itemRef);
+			tmpElements->Append(itemRef);
 	}
 	while (iter = iter->next);
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
 bool Cmd_GetBarterGoldAlt_Execute(COMMAND_ARGS)
 {
-	*result = *g_barterMenu ? (int)(*g_barterMenu)->merchantGold : 0;
+	*result = BarterMenu::Get() ? (int)BarterMenu::Get()->merchantGold : 0;
 	return true;
 }
 
 bool Cmd_GetRecipeMenuSelection_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (*g_recipeMenu && *g_recipeMenuSelection) REFR_RES = (*g_recipeMenuSelection)->refID;
+	if (RecipeMenu::Get() && RecipeMenu::Selection()) REFR_RES = RecipeMenu::Selection()->refID;
 	return true;
 }
 
 bool Cmd_GetRecipeMenuCategory_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (*g_recipeMenu) REFR_RES = (*g_recipeMenu)->category->refID;
+	if (RecipeMenu::Get()) REFR_RES = RecipeMenu::Get()->category->refID;
 	return true;
 }
 
@@ -441,7 +443,7 @@ bool Cmd_UnlockRecipeMenuQuantity_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRecipeMenuNumSubcategories_Execute(COMMAND_ARGS)
 {
-	*result = (int)g_recipeMenuCategories->size;
+	*result = (int)GameGlobals::RecipeMenuCategories()->size;
 	return true;
 }
 
@@ -450,17 +452,18 @@ const UInt32 kMsgIconsPathAddr[] = {0x10208A0, 0x10208E0, 0x1025CDC, 0x1030E78, 
 bool Cmd_MessageExAlt_Execute(COMMAND_ARGS)
 {
 	float displayTime;
-	if (!ExtractFormatStringArgs(1, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_MessageExAlt.numParams, &displayTime))
+	char *buffer = GetStrArgBuffer();
+	if (!ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_MessageExAlt.numParams, &displayTime))
 		return true;
-	char *msgPtr = GetNextToken(s_strArgBuffer, '|');
+	char *msgPtr = GetNextToken(buffer, '|');
 	msgPtr[0x203] = 0;
 	if (*msgPtr)
 	{
-		if ((s_strArgBuffer[0] == '#') && (s_strArgBuffer[1] >= '0') && (s_strArgBuffer[1] <= '6') && !s_strArgBuffer[2])
-			QueueUIMessage(msgPtr, 0, (const char*)kMsgIconsPathAddr[s_strArgBuffer[1] - '0'], NULL, displayTime, 0);
-		else QueueUIMessage(msgPtr, 0, s_strArgBuffer, NULL, displayTime, 0);
+		if ((buffer[0] == '#') && (buffer[1] >= '0') && (buffer[1] <= '6') && !buffer[2])
+			QueueUIMessage(msgPtr, 0, (const char*)kMsgIconsPathAddr[buffer[1] - '0'], NULL, displayTime, 0);
+		else QueueUIMessage(msgPtr, 0, buffer, NULL, displayTime, 0);
 	}
-	else QueueUIMessage(s_strArgBuffer, 0, NULL, NULL, displayTime, 0);
+	else QueueUIMessage(buffer, 0, NULL, NULL, displayTime, 0);
 	return true;
 }
 
@@ -481,26 +484,29 @@ bool Cmd_SetFontFile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 fontID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fontID, s_dataPath) || !fontID || (fontID > 89) || (fontID == 9) || !*s_dataPath) return true;
-	FontInfo *fontInfo = s_fontInfosMap.Get(s_dataPath);
+	char dataPathFull[0x100], *dataPath = dataPathFull + 5;
+	*(UInt32*)dataPathFull = 'atad';
+	dataPathFull[4] = '\\';
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fontID, dataPath) || !fontID || (fontID > 89) || (fontID == 9) || !*dataPath) return true;
+	FontInfo *fontInfo = s_fontInfosMap.Get(dataPath);
 	if (!fontInfo)
 	{
-		if (!FileExists(s_dataPathFull)) return true;
+		if (!FileExists(dataPathFull)) return true;
 		fontInfo = (FontInfo*)GameHeapAlloc(sizeof(FontInfo));
-		InitFontInfo(fontInfo, fontID, s_dataPath, true);
+		fontInfo->Init(fontID, dataPath, true);
 		if (!fontInfo->bufferData)
 		{
 			GameHeapFree(fontInfo);
 			return true;
 		}
-		s_fontInfosMap[s_dataPath] = fontInfo;
+		s_fontInfosMap[dataPath] = fontInfo;
 	}
 	g_fontManager->fontInfos[fontID - 1] = fontInfo;
 	*result = 1;
 	return true;
 }
 
-__declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float height, Script *callback)
+__declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float height, char *msgTitle, Script *callback)
 {
 	static const char altXMLPath[] = "Data\\NVSE\\plugins\\textinput\\texteditmenu.xml";
 	__asm
@@ -553,7 +559,7 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		push	kTileValue_user1
 		mov		ecx, [edi+4]
 		CALL_EAX(kAddr_TileSetFloat)
-		mov		esi, offset s_strArgBuffer
+		mov		esi, [esp+0x14]
 		mov		[esi+0x50], 0
 		cmp		[esi], 0
 		jnz		hasTitle
@@ -605,15 +611,18 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		mov		eax, [eax+0x28]
 		mov		[edi+0x4C], eax
 		mov		dword ptr [edi+0x54], 0x00000100
-		mov		eax, [esp+0x14]
+		mov		eax, [esp+0x18]
 		mov		[edi+0x58], eax
+		push	eax
+		call	CaptureLambdaVars
+		pop		ecx
 		mov		ecx, edi
 		call	TextInputRefreshHook
 		push	0
 		mov		ecx, edi
 		CALL_EAX(0xA1DC20)
 		push	1
-		mov		ecx, offset s_hookInfos+kHook_TextInputClose*0x10
+		mov		ecx, offset s_hookInfos+kHook_TextInputClose*kHookInfoSize
 		call	HookInfo::Set
 		push	TextInputRefreshHook
 		push	0x1070060
@@ -625,7 +634,7 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		mov		eax, edi
 		pop		edi
 		pop		esi
-		retn	0xC
+		retn	0x10
 	}
 }
 
@@ -633,8 +642,9 @@ bool Cmd_ShowTextInputMenu_Execute(COMMAND_ARGS)
 {
 	Script *callback;
 	float width, height;
-	if (!*g_textEditMenu && ExtractFormatStringArgs(3, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_ShowTextInputMenu.numParams,
-		&callback, &width, &height) && IS_ID(callback, Script) && ShowTextEditMenu(width, height, callback))
+	char *msgTitle = GetStrArgBuffer();;
+	if (!TextEditMenu::Get() && ExtractFormatStringArgs(3, msgTitle, EXTRACT_ARGS_EX, kCommandInfo_ShowTextInputMenu.numParams,
+		&callback, &width, &height) && IS_ID(callback, Script) && ShowTextEditMenu(width, height, msgTitle, callback))
 		*result = 1;
 	else *result = 0;
 	return true;
@@ -644,7 +654,7 @@ bool Cmd_SetTextInputExtendedProps_Execute(COMMAND_ARGS)
 {
 	float posX, posY;
 	UInt32 minLength = 1, maxLength = 0, miscFlags = 0;
-	TextEditMenu *textMenu = *g_textEditMenu;
+	TextEditMenu *textMenu = TextEditMenu::Get();
 	if (textMenu && HOOK_INSTALLED(TextInputClose) && ExtractArgsEx(EXTRACT_ARGS_EX, &posX, &posY, &minLength, &maxLength, &miscFlags))
 	{
 		if (posX > 0)
@@ -663,12 +673,16 @@ bool Cmd_SetTextInputExtendedProps_Execute(COMMAND_ARGS)
 
 bool Cmd_SetTextInputString_Execute(COMMAND_ARGS)
 {
-	TextEditMenu *textMenu = *g_textEditMenu;
-	if (textMenu && HOOK_INSTALLED(TextInputClose) && ExtractFormatStringArgs(0, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_SetTextInputString.numParams))
+	TextEditMenu *textMenu = TextEditMenu::Get();
+	if (textMenu && HOOK_INSTALLED(TextInputClose))
 	{
-		textMenu->currentText.Set(s_strArgBuffer);
-		textMenu->cursorIndex = 0;
-		textMenu->HandleKeyboardInput(0x80000006);
+		char *buffer = GetStrArgBuffer();
+		if (ExtractFormatStringArgs(0, buffer, EXTRACT_ARGS_EX, kCommandInfo_SetTextInputString.numParams))
+		{
+			textMenu->currentText.Set(buffer);
+			textMenu->cursorIndex = 0;
+			textMenu->HandleKeyboardInput(0x80000006);
+		}
 	}
 	return true;
 }
@@ -915,7 +929,8 @@ __declspec(naked) void __fastcall RefreshRecipeMenu(RecipeMenu *menu)
 		push	edi
 		mov		esi, ecx
 		add		ecx, 0x6C
-		call	ListBox<TESRecipe>::Clear
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x1C]
 		mov		ecx, esi
 		push	dword ptr [ecx+0x64]
 		push	0
@@ -948,17 +963,35 @@ __declspec(naked) void __fastcall RefreshRecipeMenu(RecipeMenu *menu)
 
 bool Cmd_RefreshItemsList_Execute(COMMAND_ARGS)
 {
-	if (*g_recipeMenu)
-		RefreshRecipeMenu(*g_recipeMenu);
-	else RefreshItemListBox();
+	if (MENU_VISIBILITY[kMenuType_Inventory])
+		CdeclCall(0x782A90);
+	else if (MENU_VISIBILITY[kMenuType_Stats])
+		ThisCall(0x7DF230, StatsMenu::Get(), 4);
+	else if (MENU_VISIBILITY[kMenuType_Container])
+		ContainerMenu::Get()->Refresh(NULL);
+	else if (MENU_VISIBILITY[kMenuType_Map])
+	{
+		MapMenu *mapMenu = MapMenu::Get();
+		if (mapMenu->currentTab == MapMenu::kTab_WorldMap)
+		{
+			WriteRelJump(0x79DF73, 0x79E053);
+			ThisCall(0x79DBB0, mapMenu);
+			SAFE_WRITE_BUF(0x79DF73, "\x6A\x00\x68\xB1\x0F");
+		}
+	}
+	else if (MENU_VISIBILITY[kMenuType_Barter])
+		CdeclCall(0x730690, 1);
+	else if (MENU_VISIBILITY[kMenuType_Recipe])
+		RefreshRecipeMenu(RecipeMenu::Get());
 	return true;
 }
 
 bool Cmd_GetBarterPriceMult_Execute(COMMAND_ARGS)
 {
 	UInt32 sellMult;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sellMult) && *g_barterMenu)
-		*result = sellMult ? (*g_barterMenu)->sellValueMult : (*g_barterMenu)->buyValueMult;
+	BarterMenu *brtMenu = BarterMenu::Get();
+	if (brtMenu && ExtractArgsEx(EXTRACT_ARGS_EX, &sellMult))
+		*result = sellMult ? brtMenu->sellValueMult : brtMenu->buyValueMult;
 	else *result = 0;
 	return true;
 }
@@ -967,11 +1000,12 @@ bool Cmd_SetBarterPriceMult_Execute(COMMAND_ARGS)
 {
 	UInt32 sellMult;
 	float valueMult;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sellMult, &valueMult) && *g_barterMenu)
+	BarterMenu *brtMenu = BarterMenu::Get();
+	if (brtMenu && ExtractArgsEx(EXTRACT_ARGS_EX, &sellMult, &valueMult))
 	{
-		if (sellMult) (*g_barterMenu)->sellValueMult = valueMult;
-		else (*g_barterMenu)->buyValueMult = valueMult;
-		RefreshItemListBox();
+		if (sellMult) brtMenu->sellValueMult = valueMult;
+		else brtMenu->buyValueMult = valueMult;
+		CdeclCall(0x730690, 1);
 	}
 	return true;
 }
@@ -979,10 +1013,10 @@ bool Cmd_SetBarterPriceMult_Execute(COMMAND_ARGS)
 void DoPurgePath(char *path)
 {
 	if (!path) return;
-	if (*g_terminalModelPtr == path)
+	if (*GameGlobals::TerminalModelPtr() == path)
 	{
 		PurgeTerminalModel();
-		*g_terminalModelPtr = g_terminalModelDefault;
+		*GameGlobals::TerminalModelPtr() = g_terminalModelDefault;
 	}
 	free(path);
 }
@@ -1029,12 +1063,11 @@ __declspec(naked) void QuantityMenuCallback(int count)
 		mov		ecx, [esp+4]
 		push	ecx
 		push	1
-		push	offset s_callRes
-		push	0
 		push	0
 		push	eax
 		call	CallFunction
-		add		esp, 0x18
+		call	UncaptureLambdaVars
+		add		esp, 0x10
 	done:
 		retn
 	}
@@ -1044,9 +1077,12 @@ bool Cmd_ShowQuantityMenu_Execute(COMMAND_ARGS)
 {
 	Script *callback;
 	int maxCount;
-	if (!*g_quantityMenu && !s_quantityMenuScript && ExtractArgsEx(EXTRACT_ARGS_EX, &callback, &maxCount) && 
+	if (!QuantityMenu::Get() && !s_quantityMenuScript && ExtractArgsEx(EXTRACT_ARGS_EX, &callback, &maxCount) && 
 		IS_ID(callback, Script) && ShowQuantityMenu(maxCount, QuantityMenuCallback, maxCount))
+	{
 		s_quantityMenuScript = callback;
+		CaptureLambdaVars(callback);
+	}
 	return true;
 }
 
@@ -1067,12 +1103,11 @@ __declspec(naked) void MessageBoxCallback()
 		jnz		done
 		push	edx
 		push	1
-		push	offset s_callRes
-		push	0
 		push	0
 		push	eax
 		call	CallFunction
-		add		esp, 0x18
+		call	UncaptureLambdaVars
+		add		esp, 0x10
 	done:
 		retn
 	}
@@ -1110,10 +1145,13 @@ __declspec(naked) void __fastcall MessageBoxExAlt(char **msgStrings)
 bool Cmd_MessageBoxExAlt_Execute(COMMAND_ARGS)
 {
 	Script *callback;
-	if (!s_messageBoxScript && ExtractFormatStringArgs(1, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_MessageBoxExAlt.numParams, &callback))
+	char *buffer = GetStrArgBuffer();
+	if (!s_messageBoxScript && ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_MessageBoxExAlt.numParams, &callback))
 	{
 		s_messageBoxScript = callback;
-		char *msgStrings[0x102], **buttonPtr = msgStrings + 2, *delim = s_strArgBuffer;
+		CaptureLambdaVars(callback);
+		
+		char *msgStrings[0x102], **buttonPtr = msgStrings + 2, *delim = buffer;
 		*buttonPtr = NULL;
 		for (UInt32 count = 0xFF; count; count--)
 		{
@@ -1122,16 +1160,16 @@ bool Cmd_MessageBoxExAlt_Execute(COMMAND_ARGS)
 			*++buttonPtr = delim;
 		}
 		if (!*buttonPtr) *++buttonPtr = "OK";
-		if ((s_strArgBuffer[0] == '^') && (delim = FindChr(s_strArgBuffer + 1, '^')))
+		if ((buffer[0] == '^') && (delim = FindChr(buffer + 1, '^')))
 		{
 			*delim = 0;
-			*msgStrings = s_strArgBuffer + 1;
+			*msgStrings = buffer + 1;
 			msgStrings[1] = delim + 1;
 		}
 		else
 		{
 			*msgStrings = NULL;
-			msgStrings[1] = s_strArgBuffer;
+			msgStrings[1] = buffer;
 		}
 		MessageBoxExAlt(buttonPtr);
 	}
@@ -1141,19 +1179,20 @@ bool Cmd_MessageBoxExAlt_Execute(COMMAND_ARGS)
 bool Cmd_GetVATSTargets_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!*g_VATSMenu) return true;
-	s_tempElements.Clear();
-	ListNode<VATSTargetInfo> *iter = g_VATSTargetList->Head();
+	if (!VATSMenu::Get()) return true;
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
+	ListNode<VATSTargetInfo> *iter = GameGlobals::VATSTargetList()->Head();
 	VATSTargetInfo *targetInfo;
 	do
 	{
 		targetInfo = iter->data;
 		if (targetInfo && targetInfo->targetRef)
-			s_tempElements.Append(targetInfo->targetRef);
+			tmpElements->Append(targetInfo->targetRef);
 	}
 	while (iter = iter->next);
-	if (!s_tempElements.Empty())
-		AssignCommandResult(CreateArray(s_tempElements.Data(), s_tempElements.Size(), scriptObj), result);
+	if (!tmpElements->Empty())
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
@@ -1577,18 +1616,19 @@ bool Cmd_ToggleHUDCursor_Execute(COMMAND_ARGS)
 bool Cmd_AddTileFromTemplate_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractFormatStringArgs(0, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_AddTileFromTemplate.numParams))
+	char *buffer = GetStrArgBuffer();
+	if (ExtractFormatStringArgs(0, buffer, EXTRACT_ARGS_EX, kCommandInfo_AddTileFromTemplate.numParams))
 	{
-		char *tempName = GetNextToken(s_strArgBuffer, '|');
+		char *tempName = GetNextToken(buffer, '|');
 		if (!*tempName) return true;
 		char *altName = GetNextToken(tempName, '|');
 		TileMenu *menu;
 		Tile *component = NULL;
-		char *slashPos = SlashPos(s_strArgBuffer);
+		char *slashPos = SlashPos(buffer);
 		if (slashPos)
 		{
 			*slashPos = 0;
-			menu = GetMenuTile(s_strArgBuffer);
+			menu = GetMenuTile(buffer);
 			if (!menu) return true;
 			const char *trait = NULL;
 			component = menu->GetComponent(slashPos + 1, &trait);
@@ -1596,7 +1636,7 @@ bool Cmd_AddTileFromTemplate_Execute(COMMAND_ARGS)
 		}
 		else
 		{
-			menu = GetMenuTile(s_strArgBuffer);
+			menu = GetMenuTile(buffer);
 			component = menu;
 		}
 		if (component)
@@ -1710,18 +1750,48 @@ bool Cmd_AttachUIXML_Execute(COMMAND_ARGS)
 bool Cmd_AttachUIComponent_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char nodeName[0x40];
-	if (ExtractFormatStringArgs(1, s_strValBuffer, EXTRACT_ARGS_EX, kCommandInfo_AttachUIComponent.numParams, &nodeName))
+	char nodeName[0x40], *buffer = GetStrArgBuffer();
+	if (ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_AttachUIComponent.numParams, &nodeName))
 	{
 		NiNode *targetNode = thisObj->GetNode(nodeName);
 		if (targetNode)
 		{
-			Tile *component = InjectUIComponent(g_HUDMainMenu->tile, s_strValBuffer);
+			Tile *component = InjectUIComponent(g_HUDMainMenu->tile, buffer);
 			if (component && component->node)
 			{
 				targetNode->AddObject(component->node, 1);
 				*result = 1;
 			}
+		}
+	}
+	return true;
+}
+
+bool Cmd_GetWorldMapPosMults_Execute(COMMAND_ARGS)
+{
+	static TESWorldSpace *currWorldSpace = NULL, *mapWorldSpace = NULL;
+	static alignas(16) WorldDimensions worldDimensions;
+	ScriptVar *outX, *outY;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outX, &outY))
+	{
+		TESWorldSpace *parentWorld = thisObj->GetParentWorld();
+		if (parentWorld)
+		{
+			if (currWorldSpace != parentWorld)
+			{
+				currWorldSpace = parentWorld;
+				worldDimensions.GetPosMods(parentWorld);
+				TESWorldSpace *rootWorld = parentWorld->GetRootMapWorld();
+				if (mapWorldSpace != rootWorld)
+				{
+					mapWorldSpace = rootWorld;
+					worldDimensions.GetDimensions(rootWorld);
+				}
+			}
+			NiPoint2 outPos;
+			GetWorldMapPosMults(thisObj->PosXY(), &worldDimensions, &outPos);
+			outX->data.num = outPos.x;
+			outY->data.num = outPos.y;
 		}
 	}
 	return true;

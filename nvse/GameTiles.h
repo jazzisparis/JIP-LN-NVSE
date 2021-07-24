@@ -140,16 +140,16 @@ public:
 	DEFINE_MEMBER_FN(SetStringValue, void, 0x00A01350, UInt32 valueID, const char* str, bool bPropagate);
 	DEFINE_MEMBER_FN(SetFloatValue, void, 0x00A012D0, UInt32 valueID, float num, bool bPropagate);
 
-	virtual Tile		*Destroy(bool doFree);
-	virtual void		Init(Tile *parent, const char *name, Tile *replacedChild);
-	virtual NiNode		*CalcNode(void);
-	virtual UInt32		GetType(void);		// returns one of kTileValue_XXX
-	virtual const char	*GetTypeStr(void);	// 4-byte id
-	virtual bool		Unk_05(UInt32 arg0, UInt32 arg1);
-	virtual Tile		*UpdateField(UInt32 valueID, float floatValue, const char *strValue);
-	virtual void		Unk_07(void);
-	virtual TileShaderProperty	*GetShaderProperty();
-	virtual void		Unk_09(NiNode *niNode, float alpha, NiColorAlpha *color);
+	/*000*/virtual Tile		*Destroy(bool doFree);
+	/*004*/virtual void		Init(Tile *parent, const char *name, Tile *replacedChild);
+	/*008*/virtual NiNode		*CalcNode(void);
+	/*00C*/virtual UInt32		GetType(void);		// returns one of kTileValue_XXX
+	/*010*/virtual const char	*GetTypeStr(void);	// 4-byte id
+	/*014*/virtual bool		Unk_05(UInt32 arg0, UInt32 arg1);
+	/*018*/virtual Tile		*UpdateField(UInt32 valueID, float floatValue, const char *strValue);
+	/*01C*/virtual void		Unk_07(void);
+	/*020*/virtual TileShaderProperty	*GetShaderProperty();
+	/*024*/virtual void		SetAlphaAndOverlayColor(NiNode *niNode, float alpha, NiColorAlpha *color);
 
 	struct Value;
 
@@ -275,6 +275,8 @@ public:
 	void Dump();
 };
 
+Tile* __fastcall GetTargetComponent(const char *componentPath, Tile::Value **value = NULL);
+
 // 1C
 struct GradualSetFloat
 {
@@ -332,4 +334,14 @@ public:
 	NiVector3		pos3C;		// 3C
 	UInt8			byte48;		// 48
 	UInt8			pad49[3];	// 49
+};
+
+// 50
+class Tile3D : public Tile
+{
+public:
+	UInt32			unk38;		// 38
+	UInt32			unk3C;		// 3C
+	String			string40;	// 40
+	String			fileName;	// 48
 };

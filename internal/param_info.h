@@ -310,9 +310,9 @@ ParamInfo kParams_JIP_OneInt_OneFloat_OneOptionalActorBase[] =
 	{"Actor Base", kParamType_ActorBase, 1}
 };
 
-ParamInfo kParams_JIP_OneForm_OneInt_OneMagicEffect[] =
+ParamInfo kParams_JIP_OneMagicItem_OneInt_OneMagicEffect[] =
 {
-	{"Form", kParamType_AnyForm, 0},
+	{"Magic Item", kParamType_MagicItem, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Magic Effect", kParamType_MagicEffect, 0}
 };
@@ -534,12 +534,13 @@ ParamInfo kParams_JIP_OneInt_ThreeFloats[] =
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_JIP_OneForm_OneEffect_TwoInts_TwoOptionalInts[] =
+ParamInfo kParams_JIP_OneMagicItem_OneEffect_TwoInts_ThreeOptionalInts[] =
 {
-	{"Form", kParamType_AnyForm, 0},
+	{"Magic Item", kParamType_MagicItem, 0},
 	{"Magic Effect", kParamType_MagicEffect, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 0},
+	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1}
 };

@@ -112,11 +112,7 @@ bool Cmd_SetRadius_Execute(COMMAND_ARGS)
 		{
 			ExtraRadius *xRadius = GetExtraType(&thisObj->extraDataList, Radius);
 			if (xRadius) xRadius->radius = value;
-			else
-			{
-				xRadius = ExtraRadius::Create(value);
-				AddExtraData(&thisObj->extraDataList, xRadius);
-			}
+			else thisObj->extraDataList.AddExtra(ExtraRadius::Create(value));
 		}
 		return true;
 	}

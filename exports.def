@@ -2,3 +2,5 @@ LIBRARY	"jip_nvse"
 EXPORTS
 NVSEPlugin_Query			@1
 NVSEPlugin_Load				@2
+GetLNEventMask				@10
+ProcessLNEventHandler		@11

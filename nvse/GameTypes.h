@@ -27,15 +27,6 @@ enum
 	eListCount =	-3,
 };
 
-typedef void* (*_FormHeap_Allocate)(UInt32 size);
-extern const _FormHeap_Allocate FormHeap_Allocate;
-
-typedef void (*_FormHeap_Free)(void *ptr);
-extern const _FormHeap_Free FormHeap_Free;
-
-typedef TESForm* (*_LookupFormByID)(UInt32 id);
-extern const _LookupFormByID LookupFormByID;
-
 template <typename T_Data> struct ListNode
 {
 	T_Data		*data;
@@ -278,6 +269,27 @@ public:
 		}
 	}
 
+	bool AppendNotIn(Item *item)
+	{
+		Node *curr = Head(), *prev;
+		do
+		{
+			if (curr->data == item)
+				return false;
+			prev = curr;
+		}
+		while (curr = curr->next);
+		if (prev->data)
+		{
+			Node *newNode = (Node*)GameHeapAlloc(sizeof(Node));
+			newNode->data = item;
+			newNode->next = NULL;
+			prev->next = newNode;
+		}
+		else prev->data = item;
+		return true;
+	}
+
 	void CopyFrom(tList &sourceList)
 	{
 		Node *target = Head(), *source = sourceList.Head();
@@ -401,25 +413,22 @@ public:
 		return removed;
 	};
 
-	UInt32 Remove(Item *item)
+	bool Remove(Item *item)
 	{
-		UInt32 removed = 0;
 		Node *curr = Head(), *prev = NULL;
 		do
 		{
 			if (curr->data == item)
 			{
-				curr = prev ? prev->RemoveNext() : curr->RemoveMe();
-				removed++;
+				if (prev) prev->RemoveNext();
+				else curr->RemoveMe();
+				return true;
 			}
-			else
-			{
-				prev = curr;
-				curr = curr->next;
-			}
+			prev = curr;
+			curr = curr->next;
 		}
 		while (curr);
-		return removed;
+		return false;
 	}
 
 	Item *ReplaceNth(SInt32 index, Item *item)
@@ -441,18 +450,21 @@ public:
 		return replaced;
 	}
 
-	UInt32 Replace(Item *item, Item *replace)
+	SInt32 Replace(Item *item, Item *replace)
 	{
-		UInt32 replaced = 0;
+		SInt32 index = 0;
 		Node *curr = Head();
 		do
 		{
-			if (curr->data != item) continue;
-			curr->data = replace;
-			replaced++;
+			if (curr->data == item)
+			{
+				curr->data = replace;
+				return index;
+			}
+			index++;
 		}
 		while (curr = curr->next);
-		return replaced;
+		return -1;
 	}
 
 	template <class Op>
@@ -627,6 +639,7 @@ template <typename T_Data>
 struct BSSimpleArray
 {
 	virtual void	Destroy(bool doFree);
+	virtual T_Data	*Allocate(UInt32 size);
 
 	T_Data		*data;			// 04
 	UInt32		size;			// 08
@@ -660,6 +673,11 @@ struct BSSimpleArray
 	};
 
 	Iterator Begin() {return Iterator(*this);}
+
+	__forceinline void Append(T_Data *item)
+	{
+		ThisCall(0x7CB2E0, this, item);
+	}
 };
 
 //// this is a NiTPointerMap <UInt32, T_Data>

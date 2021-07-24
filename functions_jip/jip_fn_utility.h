@@ -4,7 +4,7 @@ DEFINE_COMMAND_PLUGIN(RefToString, , 0, 1, kParams_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(StringToRef, , 0, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(GetMinOf, , 0, 5, kParams_JIP_TwoDoubles_ThreeOptionalDoubles);
 DEFINE_COMMAND_PLUGIN(GetMaxOf, , 0, 5, kParams_JIP_TwoDoubles_ThreeOptionalDoubles);
-DEFINE_COMMAND_PLUGIN(ReadArrayFromFile, , 0, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(ReadArrayFromFile, , 0, 2, kParams_JIP_OneString_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(WriteArrayToFile, , 0, 3, kParams_JIP_OneString_TwoInts);
 DEFINE_COMMAND_PLUGIN(ReadStringFromFile, , 0, 3, kParams_JIP_OneString_TwoOptionalInts);
 DEFINE_COMMAND_PLUGIN(WriteStringToFile, , 0, 23, kParams_JIP_OneString_OneInt_OneFormatString);
@@ -76,74 +76,99 @@ bool Cmd_GetMaxOf_Execute(COMMAND_ARGS)
 	return true;
 }
 
-void __fastcall CreateForType(NVSEArrayVar *arr, char *dataStr)
-{
-	if (*dataStr == '@')
-		AppendElement(arr, ArrayElementL(LookupFormByRefID(StringToRef(dataStr + 1))));
-	else if (*dataStr == '$')
-		AppendElement(arr, ArrayElementL(dataStr + 1));
-	else
-		AppendElement(arr, ArrayElementL(StrToDbl(dataStr)));
-}
-
 bool Cmd_ReadArrayFromFile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer))
+	char filePath[0x80];
+	UInt32 transpose = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &filePath, &transpose))
 		return true;
-	ReplaceChr(s_strArgBuffer, '/', '\\');
-	LineIterator lineIter(s_strArgBuffer, s_strValBuffer);
+	ReplaceChr(filePath, '/', '\\');
+	LineIterator lineIter(filePath, GetStrArgBuffer());
 	if (!lineIter) return true;
-	NVSEArrayVar *mainArr = CreateArray(NULL, 0, scriptObj);
+	TempElements *tempElems = GetTempElements();
+	tempElems->Clear();
 	char *dataPtr = lineIter.Get(), *pos;
 	++lineIter;
-	if (!lineIter)
+	while (true)
 	{
+		pos = GetNextToken(dataPtr, '\t');
+		if (!*dataPtr) break;
+		if (*dataPtr == '@')
+			tempElems->Append(LookupFormByRefID(StringToRef(dataPtr + 1)));
+		else if (*dataPtr == '$')
+			tempElems->Append(dataPtr + 1);
+		else
+			tempElems->Append(StrToDbl(dataPtr));
+		dataPtr = pos;
+	}
+	UInt32 numColumns = tempElems->Size();
+	if (!numColumns) return true;
+	UInt32 numLines = 1, count;
+	while (lineIter)
+	{
+		dataPtr = lineIter.Get();
+		++lineIter;
+		numLines++;
+		count = numColumns;
 		do
 		{
-			pos = GetNextToken(dataPtr, '\t');
-			CreateForType(mainArr, dataPtr);
-			dataPtr = pos;
+			if (*dataPtr)
+			{
+				pos = GetNextToken(dataPtr, '\t');
+				if (*dataPtr == '@')
+					tempElems->Append(LookupFormByRefID(StringToRef(dataPtr + 1)));
+				else if (*dataPtr == '$')
+					tempElems->Append(dataPtr + 1);
+				else
+					tempElems->Append(StrToDbl(dataPtr));
+				dataPtr = pos;
+			}
+			else tempElems->Append(0.0);
 		}
-		while (*dataPtr);
+		while (--count);
+	}
+	ArrayElementL *elemPtr = tempElems->Data();
+	if (numLines == 1)
+	{
+		AssignCommandResult(CreateArray(elemPtr, numColumns, scriptObj), result);
+		return true;
+	}
+	NVSEArrayVar *mainArr = CreateArray(NULL, 0, scriptObj);
+	if (transpose)
+	{
+		count = numLines;
+		do
+		{
+			AppendElement(mainArr, ArrayElementL(CreateArray(elemPtr, numColumns, scriptObj)));
+			elemPtr += numColumns;
+		}
+		while (--count);
 	}
 	else
 	{
-		Vector<NVSEArrayVar*> columnList(0x10);
-		NVSEArrayVar *columnArr;
+		TempElements transElems(numLines);
+		count = numColumns;
 		do
 		{
-			pos = GetNextToken(dataPtr, '\t');
-			columnArr = CreateArray(NULL, 0, scriptObj);
-			columnList.Append(columnArr);
-			CreateForType(columnArr, dataPtr);
-			AppendElement(mainArr, ArrayElementL(columnArr));
-			dataPtr = pos;
+			for (UInt32 lineIdx = 0; lineIdx < numLines; lineIdx++)
+				transElems.Append(elemPtr[lineIdx * numColumns]);
+			AppendElement(mainArr, ArrayElementL(CreateArray(transElems.Data(), numLines, scriptObj)));
+			transElems.Clear();
+			elemPtr++;
 		}
-		while (*dataPtr);
-		UInt32 numColumns = columnList.Size();
-		do
-		{
-			dataPtr = lineIter.Get();
-			++lineIter;
-			for (UInt32 column = 0; column < numColumns; column++)
-			{
-				if (*dataPtr) pos = GetNextToken(dataPtr, '\t');
-				CreateForType(columnList[column], dataPtr);
-				dataPtr = pos;
-			}
-		}
-		while (lineIter);
+		while (--count);
 	}
-	if (GetArraySize(mainArr)) AssignCommandResult(mainArr, result);
+	AssignCommandResult(mainArr, result);
 	return true;
 }
 
 bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char filePath[0x80];
 	UInt32 apnd, arrID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &apnd, &arrID))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &filePath, &apnd, &arrID))
 		return true;
 	NVSEArrayVar *mainArray = LookupArrayByID(arrID), *column;
 	if (!mainArray) return true;
@@ -164,9 +189,11 @@ bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 		}
 		else columnBuffer.Append(elem);
 	}
+	ReplaceChr(filePath, '/', '\\');
 	FileStream outputFile;
-	if (outputFile.OpenWrite(s_strArgBuffer, apnd != 0))
+	if (outputFile.OpenWrite(filePath, apnd != 0))
 	{
+		char valStr[0x20];
 		for (idx = 0; idx < numLines; idx++)
 		{
 			for (cnt = 0; cnt < topLine.size; cnt++)
@@ -177,8 +204,8 @@ bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 					switch (elem->GetType())
 					{
 						case 1:
-							FltToStr(s_strValBuffer, elem->Number());
-							outputFile.WriteStr(s_strValBuffer);
+							FltToStr(valStr, elem->Number());
+							outputFile.WriteStr(valStr);
 							break;
 						case 2:
 							if (elem->Form())
@@ -210,49 +237,53 @@ bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 
 bool Cmd_ReadStringFromFile_Execute(COMMAND_ARGS)
 {
+	char filePath[0x80], *buffer = GetStrArgBuffer(), *startPtr = buffer;
 	UInt32 startAt = 0, lineCount = 0;
-	char *resStr = s_strValBuffer;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &s_strArgBuffer, &startAt, &lineCount))
+	*startPtr = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filePath, &startAt, &lineCount))
 	{
-		ReplaceChr(s_strArgBuffer, '/', '\\');
-		FileStream sourceFile(s_strArgBuffer);
-		if (sourceFile)
+		ReplaceChr(filePath, '/', '\\');
+		if (FileToBuffer(filePath, buffer) && (startAt || lineCount))
 		{
 			if (startAt) startAt--;
 			char data;
-			UInt32 length = 0;
-			do
+			while (data = *buffer)
 			{
-				data = sourceFile.ReadChar();
-				if (data <= 0) break;
-				if (data == '\r') continue;
-				if (startAt)
+				if (data == '\n')
 				{
-					if (data == '\n') startAt--;
-					continue;
+					if (startAt)
+					{
+						startAt--;
+						startPtr = buffer + 1;
+					}
+					else if (!--lineCount)
+					{
+						if (buffer[-1] == '\r')
+							buffer[-1] = 0;
+						else *buffer = 0;
+						break;
+					}
 				}
-				if ((++length == kMaxMessageLength) || ((data == '\n') && !--lineCount))
-					break;
-				*resStr++ = data;
+				buffer++;
 			}
-			while (true);
 		}
 	}
-	*resStr = 0;
-	AssignString(PASS_COMMAND_ARGS, s_strValBuffer);
+	AssignString(PASS_COMMAND_ARGS, startPtr);
 	return true;
 }
 
 bool Cmd_WriteStringToFile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	char filePath[0x80], *buffer = GetStrArgBuffer();
 	UInt32 apnd;
-	if (!ExtractFormatStringArgs(2, s_strValBuffer, EXTRACT_ARGS_EX, kCommandInfo_WriteStringToFile.numParams, &s_strArgBuffer, &apnd))
+	if (!ExtractFormatStringArgs(2, buffer, EXTRACT_ARGS_EX, kCommandInfo_WriteStringToFile.numParams, &filePath, &apnd))
 		return true;
+	ReplaceChr(filePath, '/', '\\');
 	FileStream outputFile;
-	if (outputFile.OpenWrite(s_strArgBuffer, apnd != 0))
+	if (outputFile.OpenWrite(filePath, apnd != 0))
 	{
-		outputFile.WriteStr(s_strValBuffer);
+		outputFile.WriteStr(buffer);
 		*result = 1;
 	}
 	return true;
@@ -348,12 +379,19 @@ bool Cmd_ModLogPrint_Execute(COMMAND_ARGS)
 {
 	UInt32 modIdx = scriptObj ? scriptObj->modIndex : 0xFF;
 	if (modIdx == 0xFF) return true;
+	char *buffer = GetStrArgBuffer();
 	UInt32 indentLevel;
-	if (!ExtractFormatStringArgs(1, s_strArgBuffer, EXTRACT_ARGS_EX, kCommandInfo_ModLogPrint.numParams, &indentLevel))
+	if (!ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_ModLogPrint.numParams, &indentLevel))
 		return true;
-	StrCopy(StrCopy(s_modLogPath, g_dataHandler->GetNthModName(modIdx)), ".log");
+	char modLogPath[0x80];
+	*(UInt32*)modLogPath = ' doM';
+	*(UInt32*)(modLogPath + 4) = 'sgoL';
+	modLogPath[8] = '\\';
+	char *endPtr = StrCopy(modLogPath + 9, g_dataHandler->GetNthModName(modIdx));
+	*(UInt32*)endPtr = 'gol.';
+	endPtr[4] = 0;
 	FileStream outputFile;
-	if (outputFile.OpenWrite(s_modLogPathFull, !s_openLogs.Insert(modIdx)))
+	if (outputFile.OpenWrite(modLogPath, !s_openLogs.Insert(modIdx)))
 	{
 		if (indentLevel)
 		{
@@ -362,7 +400,7 @@ bool Cmd_ModLogPrint_Execute(COMMAND_ARGS)
 			else indentLevel = 40 - indentLevel;
 			outputFile.WriteStr(kIndentLevelStr + indentLevel);
 		}
-		outputFile.WriteStr(s_strArgBuffer);
+		outputFile.WriteStr(buffer);
 	}
 	return true;
 }
@@ -370,7 +408,7 @@ bool Cmd_ModLogPrint_Execute(COMMAND_ARGS)
 bool Cmd_GetOptionalPatch_Execute(COMMAND_ARGS)
 {
 	char patchName[0x40];
-	bool enabled = false;
+	int enabled = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &patchName))
 	{
 		switch (s_optionalHacks.Get(patchName))
@@ -423,6 +461,9 @@ bool Cmd_GetOptionalPatch_Execute(COMMAND_ARGS)
 			case 17:
 				enabled = s_NPCWeaponMods;
 				break;
+			case 18:
+				enabled = s_NPCPerks + s_NPCPerksAutoAdd;
+				break;
 		}
 	}
 	*result = enabled;
@@ -442,9 +483,12 @@ bool Cmd_SetOptionalPatch_Execute(COMMAND_ARGS)
 bool Cmd_GetPluginHeaderVersion_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, s_dataPath))
+	char dataPath[0x80];
+	*(UInt32*)dataPath = 'atad';
+	dataPath[4] = '\\';
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, dataPath + 5))
 	{
-		FileStream sourceFile(s_dataPathFull, 0x1E);
+		FileStream sourceFile(dataPath, 0x1E);
 		if (sourceFile)
 		{
 			float version;
