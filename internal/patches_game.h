@@ -2136,34 +2136,67 @@ const UInt8 kValidEntryPoints[] =
 	16, 0, 0, 0, 17, 18, 0, 0, 0, 0, 0, 0, 0, 0, 19, 0, 0, 0, 20, 0, 21, 22, 0, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 24, 0
 };
 
-Set<BGSPerk*> s_ValidNPCPerks(0x40);
+Vector<BGSPerk*> s_validNPCPerks(0x40), s_validNPCTraits(0x20), s_NPCPerksPick(0x40);
 
 void BuildValidNPCPerks()
 {
 	auto perkIter = g_dataHandler->perkList.Head();
 	BGSPerk *perk;
-	BGSEntryPointPerkEntry *entryPt;
+	BGSPerkEntry *entry;
+	SpellItem *ability;
+	EffectItem *effItem;
 	UInt8 isValid;
 	do
 	{
-		if (!(perk = perkIter->data) || perk->entries.Empty() || perk->data.isTrait || !perk->data.isPlayable || perk->data.isHidden)
-			continue;
+		if (!(perk = perkIter->data) || perk->entries.Empty() || !perk->data.isPlayable || perk->data.isHidden)
+			goto isInvalid;
 		auto entryIter = perk->entries.Head();
 		isValid = 0;
 		do
 		{
-			if (!(entryPt = (BGSEntryPointPerkEntry*)entryIter->data) || NOT_TYPE(entryPt, BGSEntryPointPerkEntry))
+			if (!(entry = entryIter->data))
+				goto isInvalid;
+			switch (entry->GetType())
 			{
-				isValid = 0;
-				break;
+				default:
+				case 0:
+					goto isInvalid;
+				case 1:
+				{
+					ability = ((BGSAbilityPerkEntry*)entry)->ability;
+					if (!ability) goto isInvalid;
+					auto effIter = ability->magicItem.list.list.Head();
+					do
+					{
+						if (!(effItem = effIter->data) || !effItem->setting || (effItem->setting->archtype == EffectSetting::kArchType_Script))
+							goto isInvalid;
+					}
+					while (effIter = effIter->next);
+					break;
+				}
+				case 2:
+					isValid |= kValidEntryPoints[((BGSEntryPointPerkEntry*)entry)->entryPoint];
+					break;
 			}
-			isValid |= kValidEntryPoints[entryPt->entryPoint];
 		}
 		while (entryIter = entryIter->next);
 		if (isValid)
-			s_ValidNPCPerks.Insert(perk);
+		{
+			if (perk->data.isTrait)
+				s_validNPCTraits.Append(perk);
+			else s_validNPCPerks.Append(perk);
+		}
+	isInvalid:
+		continue;
 	}
 	while (perkIter = perkIter->next);
+
+	/*for (auto trtIter = s_validNPCTraits.Begin(); trtIter; ++trtIter)
+		PrintLog("%08X\t%s", trtIter->refID, trtIter->GetEditorID());
+	PrintLog("\n================\n");
+	for (auto prkIter = s_validNPCPerks.Begin(); prkIter; ++prkIter)
+		PrintLog("%08X\t%s", prkIter->refID, prkIter->GetEditorID());
+	PrintLog("\n================\n");*/
 }
 
 typedef Map<BGSPerk*, UInt8> PerkRanksMap;
@@ -2210,55 +2243,22 @@ struct NPCPerksInfo
 };
 
 UnorderedMap<UInt32, NPCPerksInfo> s_NPCPerksInfoMap(0x80);
-
-void AddPerkEntries(Actor *actor, BGSPerk *perk, UInt8 newRank, NPCPerkEntryPoints *entryPoints)
-{
-	auto entryIter = perk->entries.Head();
-	BGSEntryPointPerkEntry *entryPt;
-	PerkEntryPointList *entryList;
-	bool bUpdReload = false;
-	do
-	{
-		if (!(entryPt = (BGSEntryPointPerkEntry*)entryIter->data))
-			continue;
-		if IS_TYPE(entryPt, BGSEntryPointPerkEntry)
-		{
-			if (!(entryList = (*entryPoints)[entryPt->entryPoint]))
-				continue;
-			if ((entryPt->rank + 1) != newRank)
-			{
-				if (!entryList->Remove(entryPt))
-					continue;
-			}
-			else if (!entryList->AppendNotIn(entryPt))
-				continue;
-			if (entryPt->entryPoint == kPerkEntry_ReloadSpeed)
-				bUpdReload = true;
-		}
-		else if ((entryPt->rank + 1) != newRank)
-			entryPt->RemoveEntry(actor, 0);
-		else entryPt->AddEntry(actor, 0);
-	}
-	while (entryIter = entryIter->next);
-	if (bUpdReload)
-		ThisCall(0x8C17C0, actor);
-}
-
 bool s_NPCPerksAutoAdd = false;
-Vector<BGSPerk*> s_NPCPerksPick(0x40);
 
 NPCPerksInfo* __fastcall AddStartingPerks(Actor *actor, NPCPerksInfo *perksInfo)
 {
-	UInt8 *rankPtr;
 	if (s_NPCPerksAutoAdd && IS_ID(actor, Character))
 	{
+		if (!perksInfo)
+			perksInfo = &s_NPCPerksInfoMap[actor->refID];
+		perksInfo->perkRanks.Emplace(s_validNPCTraits[GetRandomInt(s_validNPCTraits.Size())], 1);
 		UInt32 level = actor->GetLevel();
 		if (level >= 3)
 		{
 			s_NPCPerksPick.Clear();
 			BGSPerk *perk;
 			UInt8 minLevel = (level * 3) / 2;
-			for (auto rstIter = s_ValidNPCPerks.Begin(); rstIter; ++rstIter)
+			for (auto rstIter = s_validNPCPerks.Begin(); rstIter; ++rstIter)
 			{
 				perk = *rstIter;
 				if (perk->data.minLevel > minLevel) continue;
@@ -2268,18 +2268,13 @@ NPCPerksInfo* __fastcall AddStartingPerks(Actor *actor, NPCPerksInfo *perksInfo)
 			UInt32 size = s_NPCPerksPick.Size();
 			if (size)
 			{
-				if (!perksInfo)
-					perksInfo = &s_NPCPerksInfoMap[actor->refID];
 				s_NPCPerksPick.Shuffle();
 				if (level >= 30) level = 10;
 				else level /= 3;
 				if (level > size) level = size;
 				do
 				{
-					perk = s_NPCPerksPick[--level];
-					if (perksInfo->perkRanks.Insert(perk, &rankPtr))
-						*rankPtr = 1;
-					else *rankPtr++;
+					perksInfo->perkRanks[s_NPCPerksPick[--level]]++;
 				}
 				while (level);
 			}
@@ -2291,9 +2286,10 @@ NPCPerksInfo* __fastcall AddStartingPerks(Actor *actor, NPCPerksInfo *perksInfo)
 			perksInfo = &s_NPCPerksInfoMap[actor->refID];
 		auto perkIter = g_thePlayer->perkRanksTM.Head();
 		PerkRank *perkRank;
+		UInt8 *rankPtr;
 		do
 		{
-			if ((perkRank = perkIter->data) && perksInfo->perkRanks.Insert(perkRank->perk, &rankPtr))
+			if ((perkRank = perkIter->data) && (perksInfo->perkRanks.Insert(perkRank->perk, &rankPtr) || (*rankPtr < perkRank->rank)))
 				*rankPtr = perkRank->rank;
 		}
 		while (perkIter = perkIter->next);
@@ -2304,6 +2300,41 @@ NPCPerksInfo* __fastcall AddStartingPerks(Actor *actor, NPCPerksInfo *perksInfo)
 		s_dataChangedFlags |= kChangedFlag_NPCPerks;
 	}
 	return perksInfo;
+}
+
+void __fastcall AddPerkEntries(Actor *actor, BGSPerk *perk, UInt8 newRank, NPCPerkEntryPoints *entryPoints)
+{
+	newRank--;
+	auto entryIter = perk->entries.Head();
+	BGSPerkEntry *entry;
+	BGSEntryPointPerkEntry *entryPt;
+	PerkEntryPointList *entryList;
+	bool bUpdReload = false;
+	do
+	{
+		if (!(entry = entryIter->data))
+			continue;
+		if IS_TYPE(entry, BGSEntryPointPerkEntry)
+		{
+			entryPt = (BGSEntryPointPerkEntry*)entry;
+			if (!(entryList = (*entryPoints)[entryPt->entryPoint]))
+				continue;
+			if (entryPt->rank != newRank)
+			{
+				if (!entryList->Remove(entryPt))
+					continue;
+			}
+			else if (!entryList->AppendNotIn(entryPt))
+				continue;
+			bUpdReload |= (entryPt->entryPoint == kPerkEntry_ReloadSpeed);
+		}
+		else if (entry->rank != newRank)
+			entry->RemoveEntry(actor, 0);
+		else entry->AddEntry(actor, 0);
+	}
+	while (entryIter = entryIter->next);
+	if (bUpdReload)
+		ThisCall(0x8C17C0, actor);
 }
 
 void __fastcall SetPerkRankHook(Actor *actor, int EDX, BGSPerk *perk, UInt8 newRank, bool forTeammates)
@@ -2327,11 +2358,23 @@ void __fastcall SetPerkRankHook(Actor *actor, int EDX, BGSPerk *perk, UInt8 newR
 	}
 }
 
-void __fastcall AddPerkEntriesHook(BGSPerk *perk, int EDX, Actor *actor, UInt8 currRank, UInt8 newRank, bool forTeammates)
+void __fastcall AddPerkEntriesHook(BGSPerk *perk, int EDX, PlayerCharacter *thePlayer, UInt8 currRank, UInt8 newRank, bool forTeammates)
 {
-	PlayerCharacter *thePlayer = g_thePlayer;
-	if (actor != thePlayer) return;
-	if (forTeammates)
+	if (!forTeammates)
+	{
+		newRank--;
+		auto entryIter = perk->entries.Head();
+		BGSPerkEntry *entry;
+		do
+		{
+			if (!(entry = entryIter->data)) continue;
+			if (entry->rank != newRank)
+				entry->RemoveEntry(thePlayer, 0);
+			else entry->AddEntry(thePlayer, 0);
+		}
+		while (entryIter = entryIter->next);
+	}
+	else
 	{
 		auto tmmIter = thePlayer->teammates.Head();
 		Actor *teammate;
@@ -2341,19 +2384,6 @@ void __fastcall AddPerkEntriesHook(BGSPerk *perk, int EDX, Actor *actor, UInt8 c
 				SetPerkRankHook(teammate, 0, perk, newRank, 0);
 		}
 		while (tmmIter = tmmIter->next);
-	}
-	else
-	{
-		auto entryIter = perk->entries.Head();
-		BGSPerkEntry *entry;
-		do
-		{
-			if (!(entry = entryIter->data)) continue;
-			if ((entry->rank + 1) != newRank)
-				entry->RemoveEntry(thePlayer, 0);
-			else entry->AddEntry(thePlayer, 0);
-		}
-		while (entryIter = entryIter->next);
 	}
 }
 
@@ -2365,16 +2395,18 @@ void __fastcall RemovePerkHook(Actor *actor, int EDX, BGSPerk *perk, bool forTea
 	s_dataChangedFlags |= kChangedFlag_NPCPerks;
 	NPCPerkEntryPoints *entryPoints = perksInfo->entryPoints;
 	auto entryIter = perk->entries.Head();
-	BGSEntryPointPerkEntry *entry;
+	BGSPerkEntry *entry;
+	BGSEntryPointPerkEntry *entryPt;
 	PerkEntryPointList *entryList;
 	bool bUpdReload = false;
 	do
 	{
-		if (!(entry = (BGSEntryPointPerkEntry*)entryIter->data))
+		if (!(entry = entryIter->data))
 			continue;
 		if IS_TYPE(entry, BGSEntryPointPerkEntry)
 		{
-			if (entryPoints && (entryList = (*entryPoints)[entry->entryPoint]) && entryList->Remove(entry) && (entry->entryPoint == kPerkEntry_ReloadSpeed))
+			entryPt = (BGSEntryPointPerkEntry*)entry;
+			if (entryPoints && (entryList = (*entryPoints)[entryPt->entryPoint]) && entryList->Remove(entryPt) && (entryPt->entryPoint == kPerkEntry_ReloadSpeed))
 				bUpdReload = true;
 		}
 		else entry->RemoveEntry(actor, 0);
@@ -2384,22 +2416,9 @@ void __fastcall RemovePerkHook(Actor *actor, int EDX, BGSPerk *perk, bool forTea
 		ThisCall(0x8C17C0, actor);
 }
 
-void __fastcall RemovePerkEntriesHook(BGSPerk *perk, int EDX, Actor *actor, bool forTeammates)
+void __fastcall RemovePerkEntriesHook(BGSPerk *perk, int EDX, PlayerCharacter *thePlayer, bool forTeammates)
 {
-	PlayerCharacter *thePlayer = g_thePlayer;
-	if (actor != thePlayer) return;
-	if (forTeammates)
-	{
-		auto tmmIter = thePlayer->teammates.Head();
-		Actor *teammate;
-		do
-		{
-			if (teammate = (Actor*)tmmIter->data)
-				RemovePerkHook(teammate, 0, perk, 0);
-		}
-		while (tmmIter = tmmIter->next);
-	}
-	else
+	if (!forTeammates)
 	{
 		auto entryIter = perk->entries.Head();
 		BGSPerkEntry *entry;
@@ -2409,6 +2428,17 @@ void __fastcall RemovePerkEntriesHook(BGSPerk *perk, int EDX, Actor *actor, bool
 				entry->RemoveEntry(thePlayer, 0);
 		}
 		while (entryIter = entryIter->next);
+	}
+	else
+	{
+		auto tmmIter = thePlayer->teammates.Head();
+		Actor *teammate;
+		do
+		{
+			if (teammate = (Actor*)tmmIter->data)
+				RemovePerkHook(teammate, 0, perk, 0);
+		}
+		while (tmmIter = tmmIter->next);
 	}
 }
 
@@ -3454,6 +3484,28 @@ void CheckNVACLog()
 	QueueUIMessage("NVAC log updated (see console print).", 0, (const char*)0x1049638, NULL, 2.5F, 0);
 }
 
+__declspec(naked) bool __fastcall CreatureSpreadFixHook(Actor *actor)
+{
+    __asm
+    {
+        cmp     byte ptr [ecx+4], kFormType_Creature
+        jz      retn1
+        mov     ecx, [ecx+0x68]
+        test    ecx, ecx
+        jz      retn0
+		cmp		byte ptr [ecx+0x28], 0
+		jnz		retn0
+		mov		al, [ecx+0x228]
+        retn
+    retn1:
+        mov     al, 1
+        retn
+    retn0:
+        xor     al, al
+        retn
+    }
+}
+
 __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlobals, int EDX, float secPassed)
 {
 	static const double kDbl0dot1 = 0.1, kDbl24dot0 = 24.0, kDbl3600dot0 = 3600.0;
@@ -3769,44 +3821,45 @@ __declspec(naked) void DoOperatorHook()
 	}
 }
 
-UnorderedMap<const char*, UInt32> s_optionalHacks({{"bIgnoreDTDRFix", 1}, {"bEnableFO3Repair", 2}, {"bEnableBigGunsSkill", 3}, {"bProjImpactDmgFix", 4},
-	{"bGameDaysPassedFix", 5}, {"bHardcoreNeedsFix", 6}, {"bNoFailedScriptLocks", 7}, {"bDoublePrecision", 8}, {"bQttSelectShortKeys", 9},
-	{"bFO3WpnDegradation", 11}, {"bLocalizedDTDR", 12}, {"bVoiceModulationFix", 13}, {"bSneakBoundingBoxFix", 14}, {"bEnableNVACAlerts", 15},
-	{"bLoadScreenFix", 16}, {"bNPCWeaponMods", 17}, {"uNPCPerks", 18}, {"uWMChancePerLevel", 19}, {"uWMChanceMin", 20}, {"uWMChanceMax", 21}});
+UnorderedMap<const char*, UInt32> s_optionalHacks({{"bIgnoreDTDRFix", 1}, {"bEnableFO3Repair", 2}, {"bEnableBigGunsSkill", 3},
+	{"bProjImpactDmgFix", 4}, {"bGameDaysPassedFix", 5}, {"bHardcoreNeedsFix", 6}, {"bNoFailedScriptLocks", 7}, {"bDoublePrecision", 8},
+	{"bQttSelectShortKeys", 9}, {"bFO3WpnDegradation", 11}, {"bLocalizedDTDR", 12}, {"bVoiceModulationFix", 13}, {"bSneakBoundingBoxFix", 14},
+	{"bEnableNVACAlerts", 15}, {"bLoadScreenFix", 16}, {"bNPCWeaponMods", 17}, {"uNPCPerks", 18}, {"bCreatureSpreadFix", 19},
+	{"uWMChancePerLevel", 20}, {"uWMChanceMin", 21}, {"uWMChanceMax", 22}});
 
 bool s_bigGunsSkill = false, s_failedScriptLocks = false, s_NVACAlerts = false, s_NPCWeaponMods = false, s_NPCPerks = false;
 UInt32 s_NVACAddress = 0;
 char *s_bigGunsDescription = "The Big Guns skill determines your combat effectiveness with all oversized weapons such as the Fat Man, Missile Launcher, Flamer, Minigun, Gatling Laser, etc.";
 
-char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
+bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 {
 	switch (patchID)
 	{
 		default:
 		case 0:
-			return 0;
+			return false;
 		case 1:
 			if (HOOK_SET(CalculateHitDamage, bEnable))
 			{
 				if (!bEnable) s_localizedDTDR = false;
-				return 1;
+				return true;
 			}
-			return 0;
+			return false;
 		case 2:
 		{
 			if (!HOOK_SET(EnableRepairButton, bEnable))
-				return 0;
+				return false;
 			SafeWrite8(0x7818D3, bEnable ? 0x77 : 0x7A);
 			HOOK_SET(PopulateRepairList, bEnable);
 			HOOK_SET(SetRepairListValues, bEnable);
 			HOOK_SET(DoRepairItem, bEnable);
 			HOOK_SET(RepairMenuClick, bEnable);
-			return 2;
+			return true;
 		}
 		case 3:
 		{
 			if (s_bigGunsSkill == bEnable)
-				return 0;
+				return false;
 			s_bigGunsSkill = bEnable;
 			ActorValueInfo *avInfo = ActorValueInfo::Array()[kAVCode_BigGuns];
 			if (bEnable)
@@ -3820,65 +3873,65 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 				s_descriptionChanges.Erase(&avInfo->description);
 			}
 			HOOK_SET(GetDescription, !s_descriptionChanges.Empty());
-			return 3;
+			return true;
 		}
 		case 4:
-			return HOOK_SET(InitMissileFlags, bEnable) ? 4 : 0;
+			return HOOK_SET(InitMissileFlags, bEnable);
 		case 5:
-			return HOOK_SET(UpdateTimeGlobals, bEnable) ? 5 : 0;
+			return HOOK_SET(UpdateTimeGlobals, bEnable);
 		case 6:
 		{
 			if (s_hardcoreNeedsFix == bEnable)
-				return 0;
+				return false;
 			s_hardcoreNeedsFix = bEnable;
-			return 6;
+			return true;
 		}
 		case 7:
 		{
 			if (!bEnable || s_failedScriptLocks)
-				return 0;
+				return false;
 			s_failedScriptLocks = true;
 			SafeWrite16(0x5E0FBE, 0x7AEB);
 			SafeWrite16(0x5E1A23, 0x0DEB);
 			SafeWrite16(0x5E1F0B, 0x0DEB);
-			return 7;
+			return true;
 		}
 		case 8:
-			return HOOK_SET(DoOperator, bEnable) ? 8 : 0;
+			return HOOK_SET(DoOperator, bEnable);
 		case 9:
 		{
 			if (!HOOK_SET(QttSelectInventory, bEnable))
-				return 0;
+				return false;
 			HOOK_SET(QttSelectContainer, bEnable);
 			HOOK_SET(QttSelectBarter, bEnable);
 			SafeWrite16(0x75BF18, bEnable ? 0x63EB : 0x0D8B);
-			return 9;
+			return true;
 		}
 		case 11:
-			return HOOK_SET(DamageToWeapon, bEnable) ? 11 : 0;
+			return HOOK_SET(DamageToWeapon, bEnable);
 		case 12:
 			if ((s_localizedDTDR == bEnable) || !HOOK_INSTALLED(CalculateHitDamage))
-				return 0;
+				return false;
 			s_localizedDTDR = bEnable;
-			return 12;
+			return true;
 		case 13:
 			if (!HOOK_SET(VoiceModulationFix, bEnable))
-				return 0;
+				return false;
 			SafeWrite8(0x578E16, bEnable ? 8 : 0);
 			SafeWrite8(0x7974CC, bEnable ? 8 : 0);
-			return 13;
+			return true;
 		case 14:
 			if (!HOOK_SET(InitControllerShape, bEnable))
-				return 0;
+				return false;
 			HOOK_SET(SneakBoundingBoxFix, bEnable);
-			return 14;
+			return true;
 		case 15:
 		{
 			if (!s_NVACAddress || (s_NVACAlerts == bEnable))
-				return 0;
+				return false;
 			UInt32 patchAddr = s_NVACAddress + 0x14B0;
 			if (*(UInt32*)patchAddr != 0xFF102474)
-				return 0;
+				return false;
 			s_NVACAlerts = bEnable;
 			patchAddr += 0x10;
 			if (bEnable)
@@ -3896,12 +3949,12 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 				SafeWrite32(patchAddr, 0x8C2);
 				MainLoopRemoveCallback(CheckNVACLog);
 			}
-			return 15;
+			return true;
 		}
 		case 16:
 		{
 			if (!HOOK_SET(GetSuitableLoadScreens, bEnable))
-				return 0;
+				return false;
 			HOOK_SET(PickLoadScreen, bEnable);
 			if (bEnable && s_locationLoadScreens.Empty())
 			{
@@ -3917,26 +3970,27 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 				}
 				while (lscrIter = lscrIter->next);
 			}
-			return 16;
+			return true;
 		}
 		case 17:
 		{
 			if (!bEnable || s_NPCWeaponMods || !s_uWMChancePerLevel || !s_uWMChanceMin || !s_uWMChanceMax)
-				return 0;
+				return false;
 			s_NPCWeaponMods = true;
 			WriteRelCall(0x452220, (UInt32)DoOnLoadActorHook);
 			WriteRelCall(0x54E2A4, (UInt32)ResetActorFlagsRespawnHook);
-			return 17;
+			return true;
 		}
 		case 18:
 		{
 			if (!bEnable || s_NPCPerks)
-				return 0;
+				return false;
 			s_NPCPerks = true;
 			BuildValidNPCPerks();
 			WriteRelCall(0x452220, (UInt32)DoOnLoadActorHook);
-			WriteRelJump(0x5EB6A0, (UInt32)AddPerkEntriesHook);
-			WriteRelJump(0x5EB800, (UInt32)RemovePerkEntriesHook);
+			WriteRelCall(0x96380E, (UInt32)AddPerkEntriesHook);
+			WriteRelCall(0x9638D2, (UInt32)AddPerkEntriesHook);
+			WriteRelCall(0x96398C, (UInt32)RemovePerkEntriesHook);
 			WriteRelJump(0x8BCA90, (UInt32)SetPlayerTeammateHook);
 			SafeWrite32(0x1086F04, (UInt32)SetPerkRankHook);
 			SafeWrite32(0x1087544, (UInt32)SetPerkRankHook);
@@ -3948,8 +4002,10 @@ char __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			SafeWrite32(0x1087558, (UInt32)GetPerkEntryPointListHook);
 			SAFE_WRITE_BUF(0x5E592F, "\x0F\x1F\x84\x00\x00\x00\x00\x00");
 			SafeWrite32(0x64570F, 0x401F0F);
-			return 18;
+			return true;
 		}
+		case 19:
+			return HOOK_SET(CreatureSpreadFix, bEnable);
 	}
 }
 
@@ -4136,6 +4192,8 @@ void PatchDisplayTime(bool enable = true)
 		SafeWrite32(patchAddr, valueAddr);
 }
 
+const char s_varTypeNameTokens[] = "array_var\0string_var";
+
 UInt32 s_deferrSetOptional = 0;
 
 void InitGamePatches()
@@ -4270,6 +4328,10 @@ void InitGamePatches()
 	SAFE_WRITE_BUF(0x9ACA31, "\x85\xC0\x74\x46\x8B\x08\x81\xB9\x00\x01\x00\x00\x60\x03\x8D\x00\x75\x38\x0F\x1F\x00");
 	SAFE_WRITE_BUF(0x9ACA6A, "\xFF\x75\xE8\x0F\x1F\x40\x00");
 
+	//	Runtime script compiler recognize NVSE var types
+	SafeWrite32(0x118CBF4, (UInt32)&s_varTypeNameTokens);
+	SafeWrite32(0x118CBCC, (UInt32)&s_varTypeNameTokens[10]);
+
 	//	Inlines
 	SafeWrite32(0x47C850, 0x90C3C030);
 	SafeWrite32(0x6815C0, 0x90C3C889);
@@ -4396,6 +4458,7 @@ void InitGamePatches()
 	HOOK_INIT_JPRT(InitControllerShape, 0xC72EA3, 0xC72EB3);
 	HOOK_INIT_JUMP(GetSuitableLoadScreens, 0x78AC60);
 	HOOK_INIT_JPRT(PickLoadScreen, 0x78A79B, 0x78A7A5);
+	HOOK_INIT_CALL(CreatureSpreadFix, 0x8B0FBF);
 	HOOK_INIT_JUMP(UpdateTimeGlobals, 0x867A40);
 	HOOK_INIT_JUMP(DoOperator, 0x593FBC);
 
@@ -4446,18 +4509,18 @@ void InitGamePatches()
 		index = s_optionalHacks.Get(dataPtr);
 		dataPtr += size;
 		if (!index) continue;
-		if (index >= 19)
+		if (index >= 20)
 		{
 			value = StrToInt(delim);
 			switch (index)
 			{
-			case 19:
+			case 20:
 				s_uWMChancePerLevel = value;
 				break;
-			case 20:
+			case 21:
 				s_uWMChanceMin = value;
 				break;
-			case 21:
+			case 22:
 				s_uWMChanceMax = value;
 				break;
 			}
@@ -4537,7 +4600,7 @@ void DeferredInit()
 		g_condDmgPenalty = &s_condDmgPenalty;
 	}
 
-	for (UInt32 index = 0; index <= 18; index++)
+	for (UInt32 index = 0; index <= 19; index++)
 		if (s_deferrSetOptional & (1 << index))
 			SetOptionalPatch(index, true);
 

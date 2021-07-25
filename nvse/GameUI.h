@@ -267,24 +267,24 @@ enum MenuSpecialKeyboardInputCode
 class Menu
 {
 public:
-	/*000*/virtual void	Destructor(bool doFree);
-	/*004*/virtual void	SetTile(UInt32 idx, Tile *value);
-	/*008*/virtual void	HandleLeftClickPress(UInt32 tileID, Tile *activeTile);	// called when the mouse has moved and left click is pressed
-	/*00C*/virtual void	HandleClick(SInt32 tileID, Tile *clickedTile);
-	/*010*/virtual void	HandleMouseover(UInt32 arg0, Tile *activeTile);	//    Called on mouseover, activeTile is moused-over Tile
-	/*014*/virtual void	HandleMouseoverTileAlt(UInt32 arg0, Tile *tile);
-	/*018*/virtual void	Unk_06(UInt32 arg0, UInt32 arg1, UInt32 arg2);	// unused?
-	/*01C*/virtual void	Unk_07(UInt32 arg0, UInt32 arg1, UInt32 arg2);	// unused?
-	/*020*/virtual void	HandleActiveMenuClick(UInt32 tileID, Tile *activeTile); // StartMenu, RaceSexMenu, VATSMenu, BookMenu
-	/*024*/virtual void	Unk_09(UInt32 arg0, UInt32 arg1); // unused?
-	/*028*/virtual void	HandleMousewheel(UInt32 tileID, Tile *tile);
-	/*02C*/virtual void	Update();	// Called every frame while the menu is active
-	/*030*/virtual bool	HandleKeyboardInput(UInt32 inputChar);	// Return false for handling keyboard shortcuts
+	/*000*/virtual void		Destructor(bool doFree);
+	/*004*/virtual void		SetTile(UInt32 idx, Tile *value);
+	/*008*/virtual void		HandleLeftClickPress(UInt32 tileID, Tile *activeTile);	// called when the mouse has moved and left click is pressed
+	/*00C*/virtual void		HandleClick(SInt32 tileID, Tile *clickedTile);
+	/*010*/virtual void		HandleMouseover(UInt32 arg0, Tile *activeTile);	//    Called on mouseover, activeTile is moused-over Tile
+	/*014*/virtual void		HandleMouseoverTileAlt(UInt32 arg0, Tile *tile);
+	/*018*/virtual void		Unk_06(UInt32 arg0, UInt32 arg1, UInt32 arg2);	// unused?
+	/*01C*/virtual void		Unk_07(UInt32 arg0, UInt32 arg1, UInt32 arg2);	// unused?
+	/*020*/virtual void		HandleActiveMenuClick(UInt32 tileID, Tile *activeTile); // StartMenu, RaceSexMenu, VATSMenu, BookMenu
+	/*024*/virtual void		Unk_09(UInt32 arg0, UInt32 arg1); // unused?
+	/*028*/virtual void		HandleMousewheel(UInt32 tileID, Tile *tile);
+	/*02C*/virtual void		Update();	// Called every frame while the menu is active
+	/*030*/virtual bool		HandleKeyboardInput(UInt32 inputChar);	// Return false for handling keyboard shortcuts
 	/*034*/virtual UInt32	GetID();
-	/*038*/virtual bool	HandleSpecialKeyInput(MenuSpecialKeyboardInputCode code, UInt32 arg1);
-	/*03C*/virtual bool	HandleControllerInput(int arg0, Tile *tile);
-	/*040*/virtual void	Unk_10();	// unused?
-	/*044*/virtual void	HandleControllerConnectOrDisconnect(bool isControllerConnected);
+	/*038*/virtual bool		HandleSpecialKeyInput(MenuSpecialKeyboardInputCode code, UInt32 arg1);
+	/*03C*/virtual bool		HandleControllerInput(int arg0, Tile *tile);
+	/*040*/virtual void		Unk_10();	// unused?
+	/*044*/virtual void		HandleControllerConnectOrDisconnect(bool isControllerConnected);
 
 	// 14
 	struct ParsedXMLTag

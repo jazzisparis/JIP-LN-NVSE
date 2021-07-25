@@ -72,6 +72,7 @@ enum
 	kHook_InitControllerShape,
 	kHook_GetSuitableLoadScreens,
 	kHook_PickLoadScreen,
+	kHook_CreatureSpreadFix,
 	kHook_UpdateTimeGlobals,
 	kHook_DoOperator,
 #if JIP_DEBUG
@@ -318,7 +319,6 @@ struct MainLoopCallback
 		POOL_FREE(this, 1, MainLoopCallback);
 	}
 };
-STATIC_ASSERT(sizeof(MainLoopCallback) == 0x1C);
 
 Vector<MainLoopCallback*> s_mainLoopCallbacks(0x50);
 

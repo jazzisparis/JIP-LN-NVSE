@@ -350,7 +350,7 @@ bool SetOnTriggerEventHandler_Execute(COMMAND_ARGS)
 	else if (s_LNOnTriggerEvents[idx + s_onTriggerEventType].Erase(script))
 	{
 		if (s_LNOnTriggerEvents[s_onTriggerEventType].Empty() && s_LNOnTriggerEvents[s_onTriggerEventType + 2].Empty())
-			s_LNEventFlags ^= eventMask;
+			s_LNEventFlags &= ~eventMask;
 	}
 	return true;
 }

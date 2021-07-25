@@ -35,7 +35,7 @@ public:
 	/*198*/virtual void		Unk_66(void);
 	/*19C*/virtual void		Unk_67(void);					// Actor: GetMagicEffectList
 	/*1A0*/virtual bool		GetIsChildSize(bool checkHeight);		// 068 Actor: GetIsChildSize
-	/*1A4*/virtual UInt32		GetActorUnk0148();			// result can be interchanged with baseForm, so TESForm* ?
+	/*1A4*/virtual UInt32	GetActorUnk0148();			// result can be interchanged with baseForm, so TESForm* ?
 	/*1A8*/virtual void		SetActorUnk0148(UInt32 arg0);
 	/*1AC*/virtual void		Unk_6B(void);
 	/*1B0*/virtual void		Unk_6C(void);	// REFR: GetBSFaceGenNiNodeSkinned
@@ -44,9 +44,9 @@ public:
 	/*1BC*/virtual void		Unk_6F(void);
 	/*1C0*/virtual bool		Unload3D();
 	/*1C4*/virtual void		AnimateNiNode();
-	/*1C8*/virtual NiNode		*GenerateNiNode(bool arg1);
+	/*1C8*/virtual NiNode	*GenerateNiNode(bool arg1);
 	/*1CC*/virtual void		Set3D(NiNode* niNode, bool unloadArt);
-	/*1D0*/virtual NiNode		*GetNiNode();
+	/*1D0*/virtual NiNode	*GetNiNode();
 	/*1D4*/virtual void		Unk_75(void);
 	/*1D8*/virtual void		Unk_76(void);
 	/*1DC*/virtual void		Unk_77(void);
@@ -61,9 +61,9 @@ public:
 	/*200*/virtual void		Unk_80(UInt32 arg0);
 	/*204*/virtual void		Unk_81(UInt32 arg0);
 	/*208*/virtual void		Unk_82(void);
-	/*20C*/virtual NiNode		*GetProjectileNode();
+	/*20C*/virtual NiNode	*GetProjectileNode();
 	/*210*/virtual void		Unk_84(UInt32 arg0);
-	/*214*/virtual UInt32		Unk_85(void);			
+	/*214*/virtual UInt32	Unk_85(void);			
 	/*218*/virtual bool		IsCharacter();			// return false for Actor and Creature, true for character and PlayerCharacter
 	/*21C*/virtual bool		IsCreature();
 	/*220*/virtual bool		IsExplosion();
@@ -213,7 +213,7 @@ public:
 	/*2B0*/virtual void		Unk_AC(void);
 	/*2B4*/virtual void		Unk_AD(void);
 	/*2B8*/virtual void		Unk_AE(void);
-	/*2BC*/virtual float		AdjustRot(UInt32 arg1);
+	/*2BC*/virtual float	AdjustRot(UInt32 arg1);
 	/*2C0*/virtual void		Unk_B0(void);
 	/*2C4*/virtual void		Unk_B1(void);
 	/*2C8*/virtual void		Unk_B2(void);
@@ -415,7 +415,7 @@ public:
 	/*348*/virtual void		Unk_D2(void);
 	/*34C*/virtual void		Unk_D3(void);
 	/*350*/virtual void		Unk_D4(void);
-	/*354*/virtual float		GetDefaultTurningSpeed();
+	/*354*/virtual float	GetDefaultTurningSpeed();
 	/*358*/virtual bool		IsOverencumbered();
 	/*35C*/virtual void		Unk_D7(void);
 	/*360*/virtual bool		IsPlayerRef();
@@ -425,12 +425,12 @@ public:
 	/*370*/virtual void		Unk_DC(void);
 	/*374*/virtual void		Unk_DD(void);
 	/*378*/virtual void		Unk_DE(void);
-	/*37C*/virtual TESRace		*GetRace();
+	/*37C*/virtual TESRace	*GetRace();
 	/*380*/virtual void		Unk_E0(void);
 	/*384*/virtual void		Unk_E1(void);
 	/*388*/virtual void		Unk_E2(void);
 	/*38C*/virtual bool		IsPushable();
-	/*390*/virtual UInt32		GetActorType();	// Creature = 0, Character = 1, PlayerCharacter = 2
+	/*390*/virtual UInt32	GetActorType();	// Creature = 0, Character = 1, PlayerCharacter = 2
 	/*394*/virtual void		SetActorValue(UInt32 avCode, float value);
 	/*398*/virtual void		SetActorValueInt(UInt32 avCode, UInt32 value);
 	/*39C*/virtual void		Unk_E7(void);
@@ -466,22 +466,22 @@ public:
 	/*414*/virtual void		Unk_105(void);
 	/*418*/virtual void		Unk_106(void);
 	/*41C*/virtual void		SetAlpha(float alpha);
-	/*420*/virtual float		GetAlpha();
+	/*420*/virtual float	GetAlpha();
 	/*424*/virtual void		Unk_109(void);
 	/*428*/virtual CombatController	*GetCombatController(void);
-	/*42C*/virtual Actor		*GetCombatTarget(void);
+	/*42C*/virtual Actor	*GetCombatTarget(void);
 	/*430*/virtual void		Unk_10C(void);
 	/*434*/virtual void		Unk_10D(void);
 	/*438*/virtual void		Unk_10E(void);
-	/*43C*/virtual float		GetTotalArmorDR(void);
-	/*440*/virtual float		GetTotalArmorDT(void);
-	/*444*/virtual UInt32		Unk_111(void);
+	/*43C*/virtual float	GetTotalArmorDR(void);
+	/*440*/virtual float	GetTotalArmorDT(void);
+	/*444*/virtual UInt32	Unk_111(void);
 	/*448*/virtual void		Unk_112(void);
 	/*44C*/virtual void		Unk_113(void);
 	/*450*/virtual void		Unk_114(void);
 	/*454*/virtual void		Unk_115(void);
-	/*458*/virtual float		CalculateMoveSpeed();
-	/*45C*/virtual float		CalculateRunSpeed();
+	/*458*/virtual float	CalculateMoveSpeed();
+	/*45C*/virtual float	CalculateRunSpeed();
 	/*460*/virtual void		Unk_118(void);
 	/*464*/virtual void		Unk_119(void);
 	/*468*/virtual void		Unk_11A(void);
@@ -498,7 +498,7 @@ public:
 	/*494*/virtual void		Unk_125(void);
 	/*498*/virtual void		SetPerkRank(BGSPerk *perk, UInt8 rank, bool alt);
 	/*49C*/virtual void		RemovePerk(BGSPerk *perk, bool alt);
-	/*4A0*/virtual UInt8		GetPerkRank(BGSPerk *perk, bool alt);
+	/*4A0*/virtual UInt8	GetPerkRank(BGSPerk *perk, bool alt);
 	/*4A4*/virtual void		AddPerkEntryPoint(BGSEntryPointPerkEntry *perkEntry, bool alt);
 	/*4A8*/virtual void		RemovePerkEntryPoint(BGSEntryPointPerkEntry *perkEntry, bool alt);
 	/*4AC*/virtual PerkEntryPointList	*GetPerkEntryPointList(UInt8 entryPointID, bool alt);
@@ -507,7 +507,7 @@ public:
 	/*4B8*/virtual void		DoHealthDamage(Actor *attacker, float damage);
 	/*4BC*/virtual void		Unk_12F(void);
 	/*4C0*/virtual void		Unk_130(void);
-	/*4C4*/virtual float		Unk_131(void);
+	/*4C4*/virtual float	Unk_131(void);
 	/*4C8*/virtual void		Unk_132(void);
 	/*4CC*/virtual void		Unk_133(void);
 	/*4D0*/virtual void		Unk_134(void);
@@ -614,9 +614,9 @@ public:
 	UInt8								byte176;					// 176
 	UInt8								byte177;					// 177
 	float								flt178;						// 178
-	float								flt17C;						// 17C
-	float								flt180;						// 180
-	float								flt184;						// 184
+	float								weaponSpread1;				// 17C
+	float								weaponSpread2;				// 180
+	float								weaponSpread3;				// 184
 	float								flt188;						// 188
 	UInt8								byte18C;					// 18C-
 	bool								isTeammate;					// 18D
