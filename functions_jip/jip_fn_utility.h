@@ -464,6 +464,9 @@ bool Cmd_GetOptionalPatch_Execute(COMMAND_ARGS)
 			case 18:
 				enabled = s_NPCPerks + s_NPCPerksAutoAdd;
 				break;
+			case 19:
+				enabled = HOOK_INSTALLED(CreatureSpreadFix);
+				break;
 		}
 	}
 	*result = enabled;

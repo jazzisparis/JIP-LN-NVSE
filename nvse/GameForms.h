@@ -362,18 +362,18 @@ class TESObject : public TESForm
 {
 public:
 	/*138*/virtual UInt32	Unk_4E(void);
-	/*13C*/virtual bool	Unk_4F(void);
+	/*13C*/virtual bool		Unk_4F(void);
 	/*140*/virtual UInt32	Unk_50(void);
-	/*144*/virtual bool	Unk_51(void);
-	/*148*/virtual void	Unk_52(void * arg);
+	/*144*/virtual bool		Unk_51(void);
+	/*148*/virtual void		Unk_52(void * arg);
 	/*14C*/virtual NiNode	*_CreateNiNode(TESObjectREFR *refr, bool arg1);
-	/*150*/virtual void	Unk_54(void * arg);
-	/*154*/virtual bool	IsInternal(void);
-	/*158*/virtual bool	IsInternalMarker(void);
-	/*15C*/virtual void	Unk_57(void);
-	/*160*/virtual bool	Unk_58(void);	// BoundObject: Calls Unk_5F on the object model
-	/*164*/virtual bool	Unk_59(void * arg);
-	/*168*/virtual void	Unk_5A(void * arg0, void * arg1);
+	/*150*/virtual void		Unk_54(void * arg);
+	/*154*/virtual bool		IsInternal(void);
+	/*158*/virtual bool		IsInternalMarker(void);
+	/*15C*/virtual void		Unk_57(void);
+	/*160*/virtual bool		Unk_58(void);	// BoundObject: Calls Unk_5F on the object model
+	/*164*/virtual bool		Unk_59(void * arg);
+	/*168*/virtual void		Unk_5A(void * arg0, void * arg1);
 	/*16C*/virtual UInt32	Unk_5B(void);
 	/*170*/virtual UInt32	Unk_5C(void);
 	/*174*/virtual NiNode	*CreateNiNode(TESObjectREFR *refr);
@@ -384,7 +384,7 @@ class TESBoundObject : public TESObject
 {
 public:
 	/*178*/virtual NiNode	*Create3DModel(TESObjectREFR *refr);	// calls Fn53, for NPC calls ReadBones, for LevelledActor level them if necessary
-	/*17C*/virtual bool	Unk_5F(void);
+	/*17C*/virtual bool		Unk_5F(void);
 
 	BoundObjectListHead		*head;		// 018
 	TESBoundObject			*prev;		// 01C

@@ -342,8 +342,7 @@ bool Cmd_SetOnQuestStageEventHandler_Execute(COMMAND_ARGS)
 		}
 		else if (callbacks->Find(QuestStageEventFinder(pCallback)))
 			return true;
-		callbacks->Append(pCallback);
-		pCallback.callback.ClearScript();
+		*callbacks->Append() = pCallback;
 		*result = 1;
 	}
 	else

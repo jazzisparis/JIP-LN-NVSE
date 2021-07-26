@@ -143,21 +143,21 @@ public:
 	/*040*/virtual bhkRigidBody	*GetRigidBody();	// Returns this
 	/*044*/virtual bhkLimitedHingeConstraint	*GetLimitedHingeConstraint();	// Returns this
 	/*048*/virtual NiObject	*Clone(NiObjectCopyInfo *copyInfo);
-	/*04C*/virtual void	Load(UInt32 arg);
-	/*050*/virtual void	Unk_14(UInt32 arg);
-	/*054*/virtual void	Unk_15(UInt32 arg);
-	/*058*/virtual void	Unk_16(UInt32 arg);
-	/*05C*/virtual void	Unk_17(UInt32 arg);
-	/*060*/virtual void	Unk_18(UInt32 arg);
-	/*064*/virtual void	Unk_19(UInt32 arg);
-	/*068*/virtual void	Unk_1A(NiObjectCopyInfo *copyInfo);
-	/*06C*/virtual void	Unk_1B(UInt32 arg);
-	/*070*/virtual void	Unk_1C(void);
-	/*074*/virtual void	Unk_1D(void);
-	/*078*/virtual void	SetWorldBound(NiSphere *worldBound);
+	/*04C*/virtual void		Load(UInt32 arg);
+	/*050*/virtual void		Unk_14(UInt32 arg);
+	/*054*/virtual void		Unk_15(UInt32 arg);
+	/*058*/virtual void		Unk_16(UInt32 arg);
+	/*05C*/virtual void		Unk_17(UInt32 arg);
+	/*060*/virtual void		Unk_18(UInt32 arg);
+	/*064*/virtual void		Unk_19(UInt32 arg);
+	/*068*/virtual void		Unk_1A(NiObjectCopyInfo *copyInfo);
+	/*06C*/virtual void		Unk_1B(UInt32 arg);
+	/*070*/virtual void		Unk_1C(void);
+	/*074*/virtual void		Unk_1D(void);
+	/*078*/virtual void		SetWorldBound(NiSphere *worldBound);
 	/*07C*/virtual UInt32	Unk_1F(void);
-	/*080*/virtual void	Unk_20(void);
-	/*084*/virtual void	Unk_21(UInt32 arg);
+	/*080*/virtual void		Unk_20(void);
+	/*084*/virtual void		Unk_21(UInt32 arg);
 	/*088*/virtual NiControllerManager	*GetControllerManager();	// Returns this
 };
 
@@ -1026,26 +1026,26 @@ struct UpdateParams
 class NiAVObject : public NiObjectNET
 {
 public:
-	/*08C*/virtual void	Unk_23(UInt32 arg1);
-	/*090*/virtual void	Unk_24(NiMatrix33 *arg1, NiVector3 *arg2, bool arg3);
-	/*094*/virtual void	Unk_25(UInt32 arg1);
-	/*098*/virtual void	Unk_26(UInt32 arg1);
+	/*08C*/virtual void		Unk_23(UInt32 arg1);
+	/*090*/virtual void		Unk_24(NiMatrix33 *arg1, NiVector3 *arg2, bool arg3);
+	/*094*/virtual void		Unk_25(UInt32 arg1);
+	/*098*/virtual void		Unk_26(UInt32 arg1);
 	/*09C*/virtual NiAVObject	*GetObjectByName(NiString *objName);
-	/*0A0*/virtual void	Unk_28(UInt32 arg1, UInt32 arg2, UInt32 arg3);
-	/*0A4*/virtual void	Unk_29(UpdateParams *updParams, UInt32 arg2);
-	/*0A8*/virtual void	Unk_2A(UInt32 arg1, UInt32 arg2);
-	/*0AC*/virtual void	Unk_2B(UInt32 arg1, UInt32 arg2);
-	/*0B0*/virtual void	Unk_2C(UInt32 arg1);
-	/*0B4*/virtual void	Unk_2D(UInt32 arg1);
-	/*0B8*/virtual void	UpdateTransform(UpdateInfo *updInfo);
-	/*0BC*/virtual void	Unk_2F(void);
-	/*0C0*/virtual void	UpdateBounds(UpdateInfo *updInfo);
-	/*0C4*/virtual void	Unk_31(UInt32 arg1, UInt32 arg2);
-	/*0C8*/virtual void	Unk_32(UInt32 arg1);
-	/*0CC*/virtual void	Unk_33(UInt32 arg1);
-	/*0D0*/virtual void	Unk_34(void);
-	/*0D4*/virtual void	Unk_35(UInt32 arg1);
-	/*0D8*/virtual void	Unk_36(UInt32 arg1);
+	/*0A0*/virtual void		Unk_28(UInt32 arg1, UInt32 arg2, UInt32 arg3);
+	/*0A4*/virtual void		Unk_29(UpdateParams *updParams, UInt32 arg2);
+	/*0A8*/virtual void		Unk_2A(UInt32 arg1, UInt32 arg2);
+	/*0AC*/virtual void		Unk_2B(UInt32 arg1, UInt32 arg2);
+	/*0B0*/virtual void		Unk_2C(UInt32 arg1);
+	/*0B4*/virtual void		Unk_2D(UInt32 arg1);
+	/*0B8*/virtual void		UpdateTransform(UpdateInfo *updInfo);
+	/*0BC*/virtual void		Unk_2F(void);
+	/*0C0*/virtual void		UpdateBounds(UpdateInfo *updInfo);
+	/*0C4*/virtual void		Unk_31(UInt32 arg1, UInt32 arg2);
+	/*0C8*/virtual void		Unk_32(UInt32 arg1);
+	/*0CC*/virtual void		Unk_33(UInt32 arg1);
+	/*0D0*/virtual void		Unk_34(void);
+	/*0D4*/virtual void		Unk_35(UInt32 arg1);
+	/*0D8*/virtual void		Unk_36(UInt32 arg1);
 
 	enum NiFlags
 	{
@@ -1108,15 +1108,15 @@ public:
 class NiNode : public NiAVObject
 {
 public:
-	/*0DC*/virtual void	AddObject(NiAVObject *object, bool arg2);
-	/*0E0*/virtual void	AddObjectAt(UInt32 index, NiAVObject *object);
-	/*0E4*/virtual void	RemoveObject2(NiAVObject *toRemove, NiAVObject **arg2);
-	/*0E8*/virtual void	RemoveObject(NiAVObject *toRemove);	//	Calls RemoveObject2 with arg2 as ptr to NULL
-	/*0EC*/virtual void	RemoveNthObject2(UInt32 index, NiAVObject **arg2);
-	/*0F0*/virtual void	RemoveNthObject(UInt32 index);			//	Calls RemoveNthObject2 with arg2 as ptr to NULL
-	/*0F4*/virtual void	Unk_3D(UInt32 arg1, UInt32 arg2, UInt32 arg3);
-	/*0F8*/virtual void	Unk_3E(UInt32 arg1, UInt32 arg2);
-	/*0FC*/virtual void	Unk_3F(void);
+	/*0DC*/virtual void		AddObject(NiAVObject *object, bool arg2);
+	/*0E0*/virtual void		AddObjectAt(UInt32 index, NiAVObject *object);
+	/*0E4*/virtual void		RemoveObject2(NiAVObject *toRemove, NiAVObject **arg2);
+	/*0E8*/virtual void		RemoveObject(NiAVObject *toRemove);	//	Calls RemoveObject2 with arg2 as ptr to NULL
+	/*0EC*/virtual void		RemoveNthObject2(UInt32 index, NiAVObject **arg2);
+	/*0F0*/virtual void		RemoveNthObject(UInt32 index);			//	Calls RemoveNthObject2 with arg2 as ptr to NULL
+	/*0F4*/virtual void		Unk_3D(UInt32 arg1, UInt32 arg2, UInt32 arg3);
+	/*0F8*/virtual void		Unk_3E(UInt32 arg1, UInt32 arg2);
+	/*0FC*/virtual void		Unk_3F(void);
 
 	NiTArray<NiAVObject*>	m_children;		// 9C
 

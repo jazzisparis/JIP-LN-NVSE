@@ -142,8 +142,8 @@ public:
 
 	/*000*/virtual Tile		*Destroy(bool doFree);
 	/*004*/virtual void		Init(Tile *parent, const char *name, Tile *replacedChild);
-	/*008*/virtual NiNode		*CalcNode(void);
-	/*00C*/virtual UInt32		GetType(void);		// returns one of kTileValue_XXX
+	/*008*/virtual NiNode	*CalcNode(void);
+	/*00C*/virtual UInt32	GetType(void);		// returns one of kTileValue_XXX
 	/*010*/virtual const char	*GetTypeStr(void);	// 4-byte id
 	/*014*/virtual bool		Unk_05(UInt32 arg0, UInt32 arg1);
 	/*018*/virtual Tile		*UpdateField(UInt32 valueID, float floatValue, const char *strValue);

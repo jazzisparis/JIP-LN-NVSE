@@ -33,11 +33,13 @@ bool Cmd_SetPerkRank_Execute(COMMAND_ARGS)
 {
 	BGSPerk *perk;
 	UInt32 rank, useAlt = 0;
-	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &rank, &useAlt) && IS_ID(perk, BGSPerk) && rank)
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &rank, &useAlt) && rank && IS_ID(perk, BGSPerk))
 	{
 		if (rank > perk->data.numRanks)
 			rank = perk->data.numRanks;
-		((Actor*)thisObj)->SetPerkRank(perk, rank, useAlt);
+		Actor *actor = (Actor*)thisObj;
+		if (DoGetPerkRank(actor, perk, useAlt) != rank)
+			actor->SetPerkRank(perk, rank, useAlt);
 	}
 	return true;
 }

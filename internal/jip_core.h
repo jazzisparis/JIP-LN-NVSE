@@ -194,47 +194,26 @@ class LambdaVarContext
 {
 	Script		*scriptLambda;
 
+	void Set(Script *script)
+	{
+		scriptLambda = script;
+		CaptureLambdaVars(script);
+	}
+
 public:
-	LambdaVarContext(const LambdaVarContext &other) = delete;
-	LambdaVarContext& operator=(const LambdaVarContext& other) = delete;
-
 	LambdaVarContext() : scriptLambda(nullptr) {}
-	LambdaVarContext(Script *script) : scriptLambda(script)
-	{
-		if (scriptLambda)
-			CaptureLambdaVars(scriptLambda);
-	}
+	LambdaVarContext(Script *script) {Set(script);}
+	LambdaVarContext(const LambdaVarContext &other) {Set(other.scriptLambda);}
 
-	LambdaVarContext(LambdaVarContext&& other) : scriptLambda(other.scriptLambda)
-	{
-		other.scriptLambda = nullptr;
-	}
+	~LambdaVarContext() {UncaptureLambdaVars(scriptLambda);}
 
-	~LambdaVarContext()
-	{
-		if (scriptLambda)
-			UncaptureLambdaVars(scriptLambda);
-	}
-
-	inline LambdaVarContext& operator=(LambdaVarContext&& other)
-	{
-		if (this != &other)
-		{
-			/*if (scriptLambda)
-				UncaptureLambdaVars(scriptLambda);*/
-			scriptLambda = other.scriptLambda;
-			other.scriptLambda = nullptr;
-		}
-		return *this;
-	}
+	inline LambdaVarContext& operator=(const LambdaVarContext &other) {Set(other.scriptLambda); return *this;}
 
 	inline operator Script*() const {return scriptLambda;}
 
 	inline bool operator==(const LambdaVarContext &rhs) const {return scriptLambda == rhs.scriptLambda;}
 	inline bool operator!=(const LambdaVarContext &rhs) const {return scriptLambda != rhs.scriptLambda;}
 	inline bool operator<(const LambdaVarContext &rhs) const {return scriptLambda < rhs.scriptLambda;}
-
-	void ClearScript() {scriptLambda = nullptr;}
 };
 
 typedef Set<TESForm*> TempFormList;
@@ -607,6 +586,7 @@ struct QuestStageEventCallback
 	UInt8				pad02[2];
 	LambdaVarContext	callback;
 
+	QuestStageEventCallback() {}
 	QuestStageEventCallback(UInt8 _stageID, UInt8 _flags, Script *_callback) : stageID(_stageID), flags(_flags), callback(_callback) {}
 };
 typedef Vector<QuestStageEventCallback, 2> QuestStageCallbacks;
@@ -633,6 +613,7 @@ struct CriticalHitEventData
 	TESObjectWEAP		*weapon;	// 08
 	LambdaVarContext	callback;	// 0C
 
+	CriticalHitEventData() {}
 	CriticalHitEventData(Actor *_target, TESObjectREFR *_source, TESObjectWEAP *_weapon, Script *_callback) :
 		target(_target), source(_source), weapon(_weapon), callback(_callback) {}
 };

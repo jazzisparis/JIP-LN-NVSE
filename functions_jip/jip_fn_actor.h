@@ -684,7 +684,7 @@ bool Cmd_SetCombatDisabled_Execute(COMMAND_ARGS)
 		if (!target) s_forceCombatTargetMap.Erase(actor);
 		HOOK_MOD(StartCombat, !target);
 		HOOK_MOD(SetCombatTarget, target != NULL);
-		actor->jipActorFlags1 ^= kHookActorFlag1_CombatAIModified;
+		actor->jipActorFlags1 &= ~kHookActorFlag1_CombatAIModified;
 	}
 	if (target) s_forceCombatTargetMap[actor] = target;
 	else actor->StopCombat();
@@ -722,7 +722,7 @@ bool Cmd_SetTeammateUsingAmmo_Execute(COMMAND_ARGS)
 	UInt32 useAmmo;
 	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &useAmmo) && (!useAmmo == !(((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_InfiniteAmmo)))
 	{
-		((Actor*)thisObj)->jipActorFlags1 ^= kHookActorFlag1_InfiniteAmmo;
+		((Actor*)thisObj)->jipActorFlags1 &= ~kHookActorFlag1_InfiniteAmmo;
 		HOOK_MOD(RemoveAmmo, !useAmmo);
 	}
 	return true;
@@ -732,7 +732,7 @@ bool Cmd_ToggleDetectionFix_Execute(COMMAND_ARGS)
 {
 	UInt32 enable;
 	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && (!enable != !(((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_DetectionFix)))
-		((Actor*)thisObj)->jipActorFlags1 ^= kHookActorFlag1_DetectionFix;
+		((Actor*)thisObj)->jipActorFlags1 &= ~kHookActorFlag1_DetectionFix;
 	return true;
 }
 
@@ -1244,7 +1244,7 @@ bool Cmd_ForceActorDetectionValue_Execute(COMMAND_ARGS)
 	}
 	else if (s_forceDetectionValueMap.Erase(actor))
 	{
-		actor->jipActorFlags2 ^= kHookActorFlag2_ForceDetectionVal;
+		actor->jipActorFlags2 &= ~kHookActorFlag2_ForceDetectionVal;
 		HOOK_MOD(GetDetectionValue, false);
 	}
 	return true;
@@ -1351,7 +1351,7 @@ bool Cmd_SetWheelDisabled_Execute(COMMAND_ARGS)
 {
 	UInt32 disable;
 	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &disable) && (!disable != !(((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_DisableWheel)))
-		((Actor*)thisObj)->jipActorFlags1 ^= kHookActorFlag1_DisableWheel;
+		((Actor*)thisObj)->jipActorFlags1 &= ~kHookActorFlag1_DisableWheel;
 	return true;
 }
 
@@ -1753,7 +1753,7 @@ bool Cmd_SetVATSTargetable_Execute(COMMAND_ARGS)
 	UInt32 targetable;
 	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &targetable) && (!targetable == !(((Actor*)thisObj)->jipActorFlags2 & kHookActorFlag2_NonTargetable)))
 	{
-		((Actor*)thisObj)->jipActorFlags2 ^= kHookActorFlag2_NonTargetable;
+		((Actor*)thisObj)->jipActorFlags2 &= ~kHookActorFlag2_NonTargetable;
 		HOOK_MOD(AddVATSTarget, !targetable);
 	}
 	return true;
@@ -1955,37 +1955,20 @@ bool Cmd_GetEquippedEx_Execute(COMMAND_ARGS)
 	BGSListForm *listForm;
 	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &listForm))
 	{
-		Actor *actor = (Actor*)thisObj;
-		if NOT_ID(actor, Creature)
+		ExtraContainerChanges::EntryDataList *entryList = thisObj->GetContainerChangesList();
+		if (entryList)
 		{
-			ValidBip01Names *validBip = actor->GetValidBip01Names();
-			if (validBip)
+			auto listIter = listForm->list.Head();
+			TESForm *item;
+			ContChangesEntry *entry;
+			do
 			{
-				TempFormList *tmpFormLst = GetTempFormList();
-				tmpFormLst->Clear();
-				TESForm *item;
-				for (ValidBip01Names::Data &slotData : validBip->slotData)
-					if ((item = slotData.item) && !item->IsArmorAddon())
-						tmpFormLst->Insert(item);
-				if (!tmpFormLst->Empty())
-				{
-					ListNode<TESForm> *traverse = listForm->list.Head();
-					do
-					{
-						item = traverse->data;
-						if (!tmpFormLst->HasKey(item)) continue;
-						REFR_RES = item->refID;
-						break;
-					}
-					while (traverse = traverse->next);
-				}
+				if (!(item = listIter->data) || !(entry = entryList->FindForItem(item)) || !entry->GetEquippedExtra())
+					continue;
+				REFR_RES = item->refID;
+				break;
 			}
-		}
-		else
-		{
-			ContChangesEntry *weaponInfo = actor->GetWeaponInfo();
-			if (weaponInfo && listForm->list.IsInList(weaponInfo->type))
-				REFR_RES = weaponInfo->type->refID;
+			while (listIter = listIter->next);
 		}
 	}
 	return true;

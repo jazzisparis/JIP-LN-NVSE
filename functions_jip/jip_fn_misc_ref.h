@@ -368,7 +368,7 @@ bool Cmd_ToggleObjectCollision_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && NOT_ACTOR(thisObj) && !kInventoryType[thisObj->baseForm->typeID] && 
 		(!enable == !(thisObj->extraDataList.jipRefFlags5F & kHookRefFlag61_DisableCollision)))
 	{
-		thisObj->extraDataList.jipRefFlags5F ^= kHookRefFlag61_DisableCollision;
+		thisObj->extraDataList.jipRefFlags5F &= ~kHookRefFlag61_DisableCollision;
 		thisObj->Update3D();
 	}
 	return true;
@@ -858,10 +858,7 @@ bool Cmd_SetOnCriticalHitEventHandler_Execute(COMMAND_ARGS)
 		return true;
 	s_criticalHitEvents.Remove(CriticalHitEventRemove(evntData));
 	if (addEvnt)
-	{
-		s_criticalHitEvents.Append(evntData);
-		evntData.callback.ClearScript();
-	}
+		*s_criticalHitEvents.Append() = evntData;
 	return true;
 }
 

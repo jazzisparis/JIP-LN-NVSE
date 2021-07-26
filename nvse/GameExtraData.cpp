@@ -426,7 +426,7 @@ ExtraDataList *ExtraDataList::CreateCopy()
 	return xDataList;
 }
 
-__declspec(naked) float ExtraContainerChanges::Data::GetInventoryWeight()
+__declspec(naked) double ExtraContainerChanges::Data::GetInventoryWeight()
 {
 	__asm
 	{
