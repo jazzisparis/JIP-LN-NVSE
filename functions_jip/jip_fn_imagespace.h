@@ -1,10 +1,10 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetImageSpaceTrait, , 0, 2, kParams_JIP_OneImageSpace_OneInt);
-DEFINE_COMMAND_PLUGIN(SetImageSpaceTrait, , 0, 3, kParams_JIP_OneImageSpace_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetImageSpaceModTrait, , 0, 2, kParams_JIP_OneIMOD_OneInt);
-DEFINE_COMMAND_PLUGIN(SetImageSpaceModTrait, , 0, 3, kParams_JIP_OneIMOD_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetActiveIMODs, , 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetImageSpaceTrait, 0, 2, kParams_OneImageSpace_OneInt);
+DEFINE_COMMAND_PLUGIN(SetImageSpaceTrait, 0, 3, kParams_OneImageSpace_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetImageSpaceModTrait, 0, 2, kParams_OneIMOD_OneInt);
+DEFINE_COMMAND_PLUGIN(SetImageSpaceModTrait, 0, 3, kParams_OneIMOD_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetActiveIMODs, 0, 0, NULL);
 
 bool Cmd_GetImageSpaceTrait_Execute(COMMAND_ARGS)
 {

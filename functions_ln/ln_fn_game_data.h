@@ -1,17 +1,17 @@
 #pragma once
 
-DEFINE_COMMAND_ALT_PLUGIN(GetLoadedType, GLT, , 0, 4, kParams_JIP_OneList_OneInt_TwoOptionalInts);
-DEFINE_COMMAND_ALT_PLUGIN(GetLoadedTypeArray, GLTA, , 0, 2, kParams_JIP_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(Search, , 0, 2, kParams_JIP_OneString_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(GetModName, , 0, 2, kParams_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetFormMods, , 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetFormRefs, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(GetSelfModIndex, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(IsFormOverridden, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_ALT_PLUGIN(GetFormFromMod, GFFM, , 0, 2, kParams_TwoStrings);
-DEFINE_COMMAND_PLUGIN(GetStringSetting, , 0, 1, kParams_OneString);
-DEFINE_COMMAND_PLUGIN(SetStringSetting, , 0, 2, kParams_TwoStrings);
-DEFINE_COMMAND_PLUGIN(GetGameSettings, , 0, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_ALT_PLUGIN(GetLoadedType, GLT, 0, 4, kParams_OneList_OneInt_TwoOptionalInts);
+DEFINE_COMMAND_ALT_PLUGIN(GetLoadedTypeArray, GLTA, 0, 2, kParams_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(Search, 0, 2, kParams_OneString_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(GetModName, 0, 2, kParams_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetFormMods, 0, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetFormRefs, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(GetSelfModIndex, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(IsFormOverridden, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_ALT_PLUGIN(GetFormFromMod, GFFM, 0, 2, kParams_TwoStrings);
+DEFINE_COMMAND_PLUGIN(GetStringSetting, 0, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(SetStringSetting, 0, 2, kParams_TwoStrings);
+DEFINE_COMMAND_PLUGIN(GetGameSettings, 0, 1, kParams_OneOptionalInt);
 
 const UInt8 kTypeListJmpTbl[] =
 {

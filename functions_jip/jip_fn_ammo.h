@@ -1,9 +1,9 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetAmmoTraitNumeric, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetAmmoTraitNumeric, , 0, 3, kParams_JIP_OneForm_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetAmmoProjectile, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetAmmoProjectile, , 0, 2, kParams_JIP_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetAmmoTraitNumeric, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetAmmoTraitNumeric, 0, 3, kParams_OneForm_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetAmmoProjectile, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetAmmoProjectile, 0, 2, kParams_OneForm_OneOptionalForm);
 
 bool Cmd_GetAmmoTraitNumeric_Execute(COMMAND_ARGS)
 {

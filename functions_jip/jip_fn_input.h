@@ -1,9 +1,9 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(HoldControl, , 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(ReleaseControl, , 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(ToggleVanityWheel, , 0, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(ToggleMouseMovement, , 0, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(HoldControl, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(ReleaseControl, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(ToggleVanityWheel, 0, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(ToggleMouseMovement, 0, 1, kParams_OneOptionalInt);
 
 void __fastcall SetCtrlHeldState(UInt32 ctrlID, bool bHold)
 {

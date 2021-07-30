@@ -1,12 +1,12 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetImpactDataModel, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetImpactDataModel, , 0, 2, kParams_JIP_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(GetImpactDataTrait, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetImpactDataTraitNumeric, , 0, 3, kParams_JIP_OneForm_OneInt_OneDouble);
-DEFINE_COMMAND_PLUGIN(SetImpactDataTraitForm, , 0, 3, kParams_JIP_OneForm_OneInt_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetImpactDataSetForm, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetImpactDataSetForm, , 0, 3, kParams_JIP_OneForm_OneInt_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetImpactDataModel, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetImpactDataModel, 0, 2, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetImpactDataTrait, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetImpactDataTraitNumeric, 0, 3, kParams_OneForm_OneInt_OneDouble);
+DEFINE_COMMAND_PLUGIN(SetImpactDataTraitForm, 0, 3, kParams_OneForm_OneInt_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetImpactDataSetForm, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetImpactDataSetForm, 0, 3, kParams_OneForm_OneInt_OneOptionalForm);
 
 bool Cmd_GetImpactDataModel_Execute(COMMAND_ARGS)
 {

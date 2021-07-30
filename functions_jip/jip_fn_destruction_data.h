@@ -1,20 +1,20 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetDestructionDataHealth, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetDestructionDataHealth, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetDestructionDataTargetable, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetDestructionDataTargetable, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetDestructionDataNumStages, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(GetNthDestructionStageTrait, , 0, 3, kParams_JIP_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(SetNthDestructionStageTrait, , 0, 4, kParams_JIP_OneForm_ThreeInts);
-DEFINE_COMMAND_PLUGIN(GetNthDestructionStageExplosion, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetNthDestructionStageExplosion, , 0, 3, kParams_JIP_OneForm_OneInt_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetNthDestructionStageDebris, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetNthDestructionStageDebris, , 0, 3, kParams_JIP_OneForm_OneInt_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetNthDestructionStageReplacement, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetNthDestructionStageReplacement, , 0, 3, kParams_JIP_OneForm_OneInt_OneString);
-DEFINE_COMMAND_PLUGIN(AddDestructionStage, , 0, 4, kParams_JIP_OneForm_ThreeInts);
-DEFINE_COMMAND_PLUGIN(RemoveDestructionStage, , 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetDestructionDataHealth, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetDestructionDataHealth, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetDestructionDataTargetable, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetDestructionDataTargetable, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetDestructionDataNumStages, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(GetNthDestructionStageTrait, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(SetNthDestructionStageTrait, 0, 4, kParams_OneForm_ThreeInts);
+DEFINE_COMMAND_PLUGIN(GetNthDestructionStageExplosion, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetNthDestructionStageExplosion, 0, 3, kParams_OneForm_OneInt_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetNthDestructionStageDebris, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetNthDestructionStageDebris, 0, 3, kParams_OneForm_OneInt_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetNthDestructionStageReplacement, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetNthDestructionStageReplacement, 0, 3, kParams_OneForm_OneInt_OneString);
+DEFINE_COMMAND_PLUGIN(AddDestructionStage, 0, 4, kParams_OneForm_ThreeInts);
+DEFINE_COMMAND_PLUGIN(RemoveDestructionStage, 0, 2, kParams_OneForm_OneInt);
 
 bool Cmd_GetDestructionDataHealth_Execute(COMMAND_ARGS)
 {

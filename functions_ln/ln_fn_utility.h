@@ -1,28 +1,28 @@
 #pragma once
 
-DEFINE_COMMAND_ALT_PLUGIN(GetLNVersion, GetJIPLNVersion, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(FileExists, , 0, 2, kParams_JIP_OneString_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(ListToArray, , 0, 1, kParams_FormList);
-DEFINE_COMMAND_PLUGIN(GetTimeStamp, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetINIFloat, , 0, 2, kParams_JIP_OneString_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(SetINIFloat, , 0, 3, kParams_JIP_OneString_OneDouble_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(GetINIString, , 0, 2, kParams_JIP_OneString_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(SetINIString, , 0, 3, kParams_JIP_TwoString_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(GetINISection, , 0, 3, kParams_JIP_OneString_OneOptionalString_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetINISection, , 0, 3, kParams_JIP_OneString_OneInt_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(GetINISectionNames, , 0, 1, kParams_JIP_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(RemoveINIKey, , 0, 2, kParams_JIP_OneString_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(RemoveINISection, , 0, 2, kParams_JIP_OneString_OneOptionalString);
-DEFINE_COMMAND_ALT_PLUGIN(GetFilesInFolder, GetFiles, , 0, 2, kParams_JIP_OneString_OneOptionalString);
-DEFINE_COMMAND_ALT_PLUGIN(GetFoldersInFolder, GetFolders, , 0, 2, kParams_JIP_OneString_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(SortFormsByType, , 0, 2, kParams_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetFormCountType, , 0, 2, kParams_TwoInts);
-DEFINE_COMMAND_ALT_PLUGIN(GetDefaultMessageTime, GetDMT, , 0, 0, NULL);
-DEFINE_COMMAND_ALT_PLUGIN(SetDefaultMessageTime, SetDMT, , 0, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(Console, , 0, 21, kParams_FormatString);
-DEFINE_COMMAND_PLUGIN(GetENBFloat, , 0, 2, kParams_TwoStrings);
-DEFINE_COMMAND_PLUGIN(SetENBFloat, , 0, 3, kParams_JIP_TwoStrings_OneFloat);
-DEFINE_COMMAND_PLUGIN(ReloadENB, , 0, 0, NULL);
+DEFINE_COMMAND_ALT_PLUGIN(GetLNVersion, GetJIPLNVersion, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(FileExists, 0, 2, kParams_OneString_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(ListToArray, 0, 1, kParams_FormList);
+DEFINE_COMMAND_PLUGIN(GetTimeStamp, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetINIFloat, 0, 2, kParams_OneString_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(SetINIFloat, 0, 3, kParams_OneString_OneDouble_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(GetINIString, 0, 2, kParams_OneString_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(SetINIString, 0, 3, kParams_TwoString_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(GetINISection, 0, 3, kParams_OneString_OneOptionalString_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetINISection, 0, 3, kParams_OneString_OneInt_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(GetINISectionNames, 0, 1, kParams_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(RemoveINIKey, 0, 2, kParams_OneString_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(RemoveINISection, 0, 2, kParams_OneString_OneOptionalString);
+DEFINE_COMMAND_ALT_PLUGIN(GetFilesInFolder, GetFiles, 0, 2, kParams_OneString_OneOptionalString);
+DEFINE_COMMAND_ALT_PLUGIN(GetFoldersInFolder, GetFolders, 0, 2, kParams_OneString_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(SortFormsByType, 0, 2, kParams_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetFormCountType, 0, 2, kParams_TwoInts);
+DEFINE_COMMAND_ALT_PLUGIN(GetDefaultMessageTime, GetDMT, 0, 0, NULL);
+DEFINE_COMMAND_ALT_PLUGIN(SetDefaultMessageTime, SetDMT, 0, 1, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(Console, 0, 21, kParams_FormatString);
+DEFINE_COMMAND_PLUGIN(GetENBFloat, 0, 2, kParams_TwoStrings);
+DEFINE_COMMAND_PLUGIN(SetENBFloat, 0, 3, kParams_TwoStrings_OneFloat);
+DEFINE_COMMAND_PLUGIN(ReloadENB, 0, 0, NULL);
 
 bool Cmd_GetLNVersion_Execute(COMMAND_ARGS)
 {

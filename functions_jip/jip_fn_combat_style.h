@@ -1,9 +1,9 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetCombatStyleTraitNumeric, , 0, 2, kParams_JIP_OneCombatStyle_OneInt);
-DEFINE_COMMAND_PLUGIN(SetCombatStyleTraitNumeric, , 0, 3, kParams_JIP_OneCombatStyle_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetCombatStyleFlag, , 0, 2, kParams_JIP_OneCombatStyle_OneInt);
-DEFINE_COMMAND_PLUGIN(SetCombatStyleFlag, , 0, 3, kParams_JIP_OneCombatStyle_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetCombatStyleTraitNumeric, 0, 2, kParams_OneCombatStyle_OneInt);
+DEFINE_COMMAND_PLUGIN(SetCombatStyleTraitNumeric, 0, 3, kParams_OneCombatStyle_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetCombatStyleFlag, 0, 2, kParams_OneCombatStyle_OneInt);
+DEFINE_COMMAND_PLUGIN(SetCombatStyleFlag, 0, 3, kParams_OneCombatStyle_TwoInts);
 
 bool Cmd_GetCombatStyleTraitNumeric_Execute(COMMAND_ARGS)
 {

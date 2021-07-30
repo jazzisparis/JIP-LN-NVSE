@@ -1274,9 +1274,12 @@ public:
 
 	bool Insert(Key_Arg key, T_Data **outData)
 	{
-		if (!InsertKey(key, outData)) return false;
-		new (*outData) T_Data();
-		return true;
+		if (InsertKey(key, outData))
+		{
+			new (*outData) T_Data();
+			return true;
+		}
+		return false;
 	}
 
 	T_Data& operator[](Key_Arg key)
@@ -1300,7 +1303,7 @@ public:
 	{
 		T_Data *outData;
 		if (InsertKey(key, &outData))
-			memcpy(outData, &value, sizeof(T_Data));
+			*outData = value;
 		return value;
 	}
 

@@ -1,36 +1,36 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetController, , 0, 0, NULL);
-DEFINE_CMD_ALT_COND_PLUGIN(IsButtonPressed, , , 0, kParams_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(GetPressedButtons, GetButtons, , 0, 0, NULL);
-DEFINE_CMD_ALT_COND_PLUGIN(GetLeftStickX, GetLSX, , 0, NULL);
-DEFINE_CMD_ALT_COND_PLUGIN(GetLeftStickY, GetLSY, , 0, NULL);
-DEFINE_CMD_ALT_COND_PLUGIN(GetRightStickX, GetRSX, , 0, NULL);
-DEFINE_CMD_ALT_COND_PLUGIN(GetRightStickY, GetRSY, , 0, NULL);
-DEFINE_CMD_ALT_COND_PLUGIN(GetLeftTrigger, GetLTr, , 0, NULL);
-DEFINE_CMD_ALT_COND_PLUGIN(GetRightTrigger, GetRTr, , 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetDeadZoneLS, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetDeadZoneRS, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetDeadZoneLS, , 0, 1, kParams_JIP_OneDouble);
-DEFINE_COMMAND_PLUGIN(SetDeadZoneRS, , 0, 1, kParams_JIP_OneDouble);
-DEFINE_COMMAND_PLUGIN(EnableButton, , 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(DisableButton, , 0, 1, kParams_OneInt);
-DEFINE_CMD_ALT_COND_PLUGIN(IsButtonDisabled, , , 0, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(HoldButton, , 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(ReleaseButton, , 0, 1, kParams_OneInt);
-DEFINE_CMD_ALT_COND_PLUGIN(IsButtonHeld, , , 0, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(EnableTrigger, , 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(DisableTrigger, , 0, 1, kParams_OneInt);
-DEFINE_CMD_ALT_COND_PLUGIN(IsTriggerDisabled, , , 0, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(HoldTrigger, , 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(ReleaseTrigger, , 0, 1, kParams_OneInt);
-DEFINE_CMD_ALT_COND_PLUGIN(IsTriggerHeld, , , 0, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(TapButton, , 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(TapTrigger, , 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(SetOnTriggerDownEventHandler, , 0, 3, kParams_JIP_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(SetOnTriggerUpEventHandler, , 0, 3, kParams_JIP_OneForm_TwoInts);
-DEFINE_CMD_ALT_COND_PLUGIN(IsStickDisabled, , , 0, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(SetStickDisabled, , 0, 2, kParams_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetController, 0, 0, NULL);
+DEFINE_CMD_COND_PLUGIN(IsButtonPressed, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(GetPressedButtons, GetButtons, 0, 0, NULL);
+DEFINE_CMD_ALT_COND_PLUGIN(GetLeftStickX, GetLSX, 0, 0, NULL);
+DEFINE_CMD_ALT_COND_PLUGIN(GetLeftStickY, GetLSY, 0, 0, NULL);
+DEFINE_CMD_ALT_COND_PLUGIN(GetRightStickX, GetRSX, 0, 0, NULL);
+DEFINE_CMD_ALT_COND_PLUGIN(GetRightStickY, GetRSY, 0, 0, NULL);
+DEFINE_CMD_ALT_COND_PLUGIN(GetLeftTrigger, GetLTr, 0, 0, NULL);
+DEFINE_CMD_ALT_COND_PLUGIN(GetRightTrigger, GetRTr, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetDeadZoneLS, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetDeadZoneRS, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetDeadZoneLS, 0, 1, kParams_OneDouble);
+DEFINE_COMMAND_PLUGIN(SetDeadZoneRS, 0, 1, kParams_OneDouble);
+DEFINE_COMMAND_PLUGIN(EnableButton, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(DisableButton, 0, 1, kParams_OneInt);
+DEFINE_CMD_COND_PLUGIN(IsButtonDisabled, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(HoldButton, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(ReleaseButton, 0, 1, kParams_OneInt);
+DEFINE_CMD_COND_PLUGIN(IsButtonHeld, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(EnableTrigger, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(DisableTrigger, 0, 1, kParams_OneInt);
+DEFINE_CMD_COND_PLUGIN(IsTriggerDisabled, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(HoldTrigger, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(ReleaseTrigger, 0, 1, kParams_OneInt);
+DEFINE_CMD_COND_PLUGIN(IsTriggerHeld, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(TapButton, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(TapTrigger, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(SetOnTriggerDownEventHandler, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(SetOnTriggerUpEventHandler, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_CMD_COND_PLUGIN(IsStickDisabled, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(SetStickDisabled, 0, 2, kParams_TwoInts);
 
 bool Cmd_GetController_Execute(COMMAND_ARGS)
 {

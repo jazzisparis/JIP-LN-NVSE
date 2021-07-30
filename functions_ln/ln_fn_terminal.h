@@ -1,10 +1,10 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetTerminalLock, , 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetPasswordNote, , 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetPasswordNote, , 0, 2, kParams_JIP_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetLockedOut, , 0, 1, kParams_OneOptionalObjectRef);
-DEFINE_COMMAND_PLUGIN(SetLockedOut, , 0, 2, kParams_JIP_OneInt_OneOptionalObjectRef);
+DEFINE_COMMAND_PLUGIN(GetTerminalLock, 0, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetPasswordNote, 0, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetPasswordNote, 0, 2, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetLockedOut, 0, 1, kParams_OneOptionalObjectRef);
+DEFINE_COMMAND_PLUGIN(SetLockedOut, 0, 2, kParams_OneInt_OneOptionalObjectRef);
 
 bool Cmd_GetTerminalLock_Execute(COMMAND_ARGS)
 {

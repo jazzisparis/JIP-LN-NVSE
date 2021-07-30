@@ -1,9 +1,9 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetLightTraitNumeric, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetLightTraitNumeric, , 0, 3, kParams_JIP_OneForm_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetLightFlag, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetLightFlag, , 0, 3, kParams_JIP_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetLightTraitNumeric, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetLightTraitNumeric, 0, 3, kParams_OneForm_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetLightFlag, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetLightFlag, 0, 3, kParams_OneForm_TwoInts);
 
 bool Cmd_GetLightTraitNumeric_Execute(COMMAND_ARGS)
 {

@@ -1,11 +1,11 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetTextureSetTexture, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetTextureSetTexture, , 0, 3, kParams_JIP_OneForm_OneInt_OneString);
-DEFINE_COMMAND_PLUGIN(GetTextureSetTraitNumeric, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetTextureSetTraitNumeric, , 0, 3, kParams_JIP_OneForm_OneInt_OneDouble);
-DEFINE_COMMAND_PLUGIN(GetTextureSetFlag, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetTextureSetFlag, , 0, 3, kParams_JIP_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetTextureSetTexture, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetTextureSetTexture, 0, 3, kParams_OneForm_OneInt_OneString);
+DEFINE_COMMAND_PLUGIN(GetTextureSetTraitNumeric, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetTextureSetTraitNumeric, 0, 3, kParams_OneForm_OneInt_OneDouble);
+DEFINE_COMMAND_PLUGIN(GetTextureSetFlag, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetTextureSetFlag, 0, 3, kParams_OneForm_TwoInts);
 
 bool Cmd_GetTextureSetTexture_Execute(COMMAND_ARGS)
 {

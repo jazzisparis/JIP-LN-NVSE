@@ -51,7 +51,7 @@ __declspec(naked) void __fastcall DoQueuedPlayerHook(QueuedPlayer *queuedPlayer)
 	__asm
 	{
 		mov		eax, [ecx+0x28]
-		test	byte ptr [eax+0x5F], kHookRefFlag61_Update3D
+		test	byte ptr [eax+0x5F], kHookRefFlag5F_Update3D
 		jnz		proceed
 		jmp		DoQueuedReferenceHook
 	proceed:
@@ -95,7 +95,7 @@ __declspec(naked) void __fastcall DoQueuedPlayerHook(QueuedPlayer *queuedPlayer)
 		movups	[ecx+0x30], xmm0
 		movups	[ecx+0x40], xmm0
 		movups	[ecx+0x50], xmm0
-		and		byte ptr [ebx+0x5F], ~kHookRefFlag61_Update3D
+		and		byte ptr [ebx+0x5F], ~kHookRefFlag5F_Update3D
 		pop		ecx
 		call	DoQueuedReferenceHook
 		mov		eax, [ebx+0x64]
@@ -116,7 +116,7 @@ __declspec(naked) void __fastcall DoQueuedPlayerHook(QueuedPlayer *queuedPlayer)
 		mov		ecx, [ebx+0x68]
 		test	ecx, ecx
 		jz		done
-		cmp		dword ptr [ecx+0x28], 0
+		cmp		byte ptr [ecx+0x28], 0
 		jnz		done
 		cmp		dword ptr [ecx+0x114], 0
 		setnz	al
@@ -1220,7 +1220,7 @@ __declspec(naked) void InitWornObjectHook()
 		mov		ecx, [ecx+0x68]
 		test	ecx, ecx
 		jz		done
-		cmp		dword ptr [ecx+0x28], 1
+		cmp		byte ptr [ecx+0x28], 1
 		ja		done
 		mov		ecx, [ecx+0x114]
 		test	ecx, ecx
@@ -1252,7 +1252,7 @@ __declspec(naked) void PickWeaponModelHook()
 		mov		ecx, [ecx+0x68]
 		test	ecx, ecx
 		jz		doCall
-		cmp		dword ptr [ecx+0x28], 1
+		cmp		byte ptr [ecx+0x28], 1
 		ja		doCall
 		mov		ecx, [ecx+0x114]
 		test	ecx, ecx
@@ -1289,7 +1289,7 @@ __declspec(naked) void PlayAttackSoundHook()
 		mov		ecx, [ecx+0x68]
 		test	ecx, ecx
 		jz		done
-		cmp		dword ptr [ecx+0x28], 1
+		cmp		byte ptr [ecx+0x28], 1
 		ja		done
 		mov		eax, [ecx+0x114]
 		test	eax, eax
@@ -1941,6 +1941,78 @@ __declspec(naked) void __fastcall MarkRefAsModifiedHook(TESObjectREFR *refr, int
 	}
 }
 
+bool s_FO3WpnDegradation = false;
+
+__declspec(naked) float __cdecl GetDamageToWeaponHook(Actor *actor)
+{
+	static const char kSkillMatcher[] = {3, 1, 3, -1, -1, 2, -1, -1, 0, -1, -1, -1, 2};
+	static const float kDegrMults[] = {0.15F, 0.2F, 0.25F, 0.3F};
+	__asm
+	{
+		mov		eax, [esp+4]
+		mov		ecx, [eax+0x68]
+		mov		edx, 0x11CF154
+		test	ecx, ecx
+		jz		noWeapon
+		cmp		byte ptr [ecx+0x28], 1
+		ja		noWeapon
+		mov		eax, [ecx+0x114]
+		test	eax, eax
+		jz		noWeapon
+		mov		ecx, [eax+8]
+		lea		eax, [ecx+0x148]
+		test	byte ptr [ecx+0x12C], 0x80
+		cmovnz	edx, eax
+		movss	xmm0, [edx]
+		cmp		s_FO3WpnDegradation, 0
+		jz		skipFO3
+		xor		edx, edx
+		mov		dl, [ecx+0x15C]
+		sub		dl, kAVCode_BigGuns
+		js		skipFO3
+		cmp		dl, 0xC
+		ja		skipFO3
+		mov		dl, kSkillMatcher[edx]
+		test	dl, dl
+		js		skipFO3
+		mulss	xmm0, kDegrMults[edx*4]
+		mov		dx, [ecx+0xA0]
+		movd	xmm1, edx
+		cvtdq2ps	xmm1, xmm1
+		mulss	xmm0, xmm1
+	skipFO3:
+		movd	eax, xmm0
+		push	eax
+		cmp		dword ptr [ecx+0xA8], 0
+		jz		noAmmo
+		mov		eax, [esp+8]
+		mov		ecx, [eax+0x68]
+		mov		eax, [ecx+0x118]
+		test	eax, eax
+		jz		noAmmo
+		mov		ecx, [eax+8]
+		test	ecx, ecx
+		jz		noAmmo
+		cmp		dword ptr [ecx], kVtbl_TESAmmo
+		jnz		noAmmo
+		add		ecx, 0xD4
+		cmp		dword ptr [ecx], 0
+		jz		noAmmo
+		push	ecx
+		push	4
+		CALL_EAX(kAddr_ApplyAmmoEffects)
+		add		esp, 0xC
+		retn
+	noAmmo:
+		fld		dword ptr [esp]
+		pop		ecx
+		retn
+	noWeapon:
+		fld		dword ptr [edx]
+		retn
+	}
+}
+
 //	Credits to lStewieAl and TrueCourierSix
 __declspec(naked) void __fastcall LoadIncidentalSoundIDHook(ModInfo *modInfo, int EDX, UInt32 *pRefID)
 {
@@ -2302,7 +2374,7 @@ NPCPerksInfo* __fastcall AddStartingPerks(Actor *actor, NPCPerksInfo *perksInfo)
 	return perksInfo;
 }
 
-void __fastcall AddPerkEntries(Actor *actor, BGSPerk *perk, UInt8 newRank, NPCPerkEntryPoints *entryPoints)
+void __fastcall AddPerkEntriesNPC(Actor *actor, BGSPerk *perk, UInt8 newRank, NPCPerkEntryPoints *entryPoints)
 {
 	newRank--;
 	auto entryIter = perk->entries.Head();
@@ -2337,7 +2409,7 @@ void __fastcall AddPerkEntries(Actor *actor, BGSPerk *perk, UInt8 newRank, NPCPe
 		ThisCall(0x8C17C0, actor);
 }
 
-void __fastcall SetPerkRankHook(Actor *actor, int EDX, BGSPerk *perk, UInt8 newRank, bool forTeammates)
+void __fastcall SetPerkRankNPCHook(Actor *actor, int EDX, BGSPerk *perk, UInt8 newRank, bool forTeammates)
 {
 	if (actor->lifeState) return;
 	NPCPerksInfo *perksInfo = actor->extraDataList.perksInfo;
@@ -2354,12 +2426,23 @@ void __fastcall SetPerkRankHook(Actor *actor, int EDX, BGSPerk *perk, UInt8 newR
 			if (!actor->GetNiNode()) return;
 			perksInfo->entryPoints = entryPoints = NPCPerkEntryPoints::Create();
 		}
-		AddPerkEntries(actor, perk, newRank, entryPoints);
+		AddPerkEntriesNPC(actor, perk, newRank, entryPoints);
 	}
 }
 
-void __fastcall AddPerkEntriesHook(BGSPerk *perk, int EDX, PlayerCharacter *thePlayer, UInt8 currRank, UInt8 newRank, bool forTeammates)
+void __fastcall SetPerkRankPlayerHook(PlayerCharacter *thePlayer, int EDX, BGSPerk *perk, UInt8 newRank, bool forTeammates)
 {
+	auto perkList = forTeammates ? &thePlayer->perkRanksTM : &thePlayer->perkRanksPC;
+	PerkRank *perkRank = perkList->Find(PerkRankFinder(perk));
+	if (!perkRank)
+	{
+		perkRank = (PerkRank*)GameHeapAlloc(sizeof(PerkRank));
+		perkRank->perk = perk;
+		perkList->Prepend(perkRank);
+	}
+	else if (perkRank->rank == newRank)
+		return;
+	perkRank->rank = newRank;
 	if (!forTeammates)
 	{
 		newRank--;
@@ -2373,6 +2456,8 @@ void __fastcall AddPerkEntriesHook(BGSPerk *perk, int EDX, PlayerCharacter *theP
 			else entry->AddEntry(thePlayer, 0);
 		}
 		while (entryIter = entryIter->next);
+		CdeclCall(0x7DD710);
+		ThisCall(0x8C17C0, thePlayer);
 	}
 	else
 	{
@@ -2381,13 +2466,13 @@ void __fastcall AddPerkEntriesHook(BGSPerk *perk, int EDX, PlayerCharacter *theP
 		do
 		{
 			if (teammate = (Actor*)tmmIter->data)
-				SetPerkRankHook(teammate, 0, perk, newRank, 0);
+				SetPerkRankNPCHook(teammate, 0, perk, newRank, 0);
 		}
 		while (tmmIter = tmmIter->next);
 	}
 }
 
-void __fastcall RemovePerkHook(Actor *actor, int EDX, BGSPerk *perk, bool forTeammates)
+void __fastcall RemovePerkNPCHook(Actor *actor, int EDX, BGSPerk *perk, bool forTeammates)
 {
 	NPCPerksInfo *perksInfo = actor->extraDataList.perksInfo;
 	if (!perksInfo || !perksInfo->perkRanks.Erase(perk))
@@ -2416,39 +2501,45 @@ void __fastcall RemovePerkHook(Actor *actor, int EDX, BGSPerk *perk, bool forTea
 		ThisCall(0x8C17C0, actor);
 }
 
-void __fastcall RemovePerkEntriesHook(BGSPerk *perk, int EDX, PlayerCharacter *thePlayer, bool forTeammates)
+void __fastcall RemovePerkPlayerHook(PlayerCharacter *thePlayer, int EDX, BGSPerk *perk, bool forTeammates)
 {
+	PerkRankFinder prFinder(perk);
 	if (!forTeammates)
 	{
-		auto entryIter = perk->entries.Head();
-		BGSPerkEntry *entry;
-		do
+		if (thePlayer->perkRanksPC.RemoveIf(prFinder))
 		{
-			if (entry = entryIter->data)
-				entry->RemoveEntry(thePlayer, 0);
+			auto entryIter = perk->entries.Head();
+			BGSPerkEntry *entry;
+			do
+			{
+				if (entry = entryIter->data)
+					entry->RemoveEntry(thePlayer, 0);
+			}
+			while (entryIter = entryIter->next);
+			CdeclCall(0x7DD710);
+			ThisCall(0x8C17C0, thePlayer);
 		}
-		while (entryIter = entryIter->next);
 	}
-	else
+	else if (thePlayer->perkRanksTM.RemoveIf(prFinder))
 	{
 		auto tmmIter = thePlayer->teammates.Head();
 		Actor *teammate;
 		do
 		{
 			if (teammate = (Actor*)tmmIter->data)
-				RemovePerkHook(teammate, 0, perk, 0);
+				RemovePerkNPCHook(teammate, 0, perk, 0);
 		}
 		while (tmmIter = tmmIter->next);
 	}
 }
 
-UInt8 __fastcall GetPerkRankHook(Actor *actor, int EDX, BGSPerk *perk, bool forTeammates)
+UInt8 __fastcall GetPerkRankNPCHook(Actor *actor, int EDX, BGSPerk *perk, bool forTeammates)
 {
 	NPCPerksInfo *perksInfo = actor->extraDataList.perksInfo;
 	return perksInfo ? perksInfo->perkRanks.Get(perk) : 0;
 }
 
-__declspec(naked) PerkEntryPointList* __fastcall GetPerkEntryPointListHook(Actor *actor, int EDX, UInt8 entryPointID, bool forTeammates)
+__declspec(naked) PerkEntryPointList* __fastcall GetPerkEntryPointListNPCHook(Actor *actor, int EDX, UInt8 entryPointID, bool forTeammates)
 {
 	__asm
 	{
@@ -2486,7 +2577,7 @@ void __fastcall SetPlayerTeammateHook(Actor *actor, int EDX, bool doSet)
 			do
 			{
 				if (perkRank = perkIter->data)
-					SetPerkRankHook(actor, 0, perkRank->perk, perkRank->rank, 0);
+					SetPerkRankNPCHook(actor, 0, perkRank->perk, perkRank->rank, 0);
 			}
 			while (perkIter = perkIter->next);
 		}
@@ -2501,7 +2592,7 @@ void __fastcall SetPlayerTeammateHook(Actor *actor, int EDX, bool doSet)
 			do
 			{
 				if (perkRank = perkIter->data)
-					RemovePerkHook(actor, 0, perkRank->perk, 0);
+					RemovePerkNPCHook(actor, 0, perkRank->perk, 0);
 			}
 			while (perkIter = perkIter->next);
 		}
@@ -2518,7 +2609,7 @@ void __fastcall InitNPCPerks(Actor *actor)
 		perksInfo->entryPoints = NPCPerkEntryPoints::Create();
 		for (auto perkIter = perksInfo->perkRanks.Begin(); perkIter; ++perkIter)
 		{
-			AddPerkEntries(actor, perkIter.Key(), perkIter(), perksInfo->entryPoints);
+			AddPerkEntriesNPC(actor, perkIter.Key(), perkIter(), perksInfo->entryPoints);
 			//PrintLog("%08X\t%d\t%s", actor->refID, perkIter(), perkIter.Key()->GetEditorID());
 		}
 	}
@@ -2846,7 +2937,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 		hitData->fatigueDmg *= valueMod1;
 		hitData->limbDmg *= valueMod1;
 		hitData->armorDmg *= valueMod1;
-		hitData->flt2C *= valueMod1;
+		hitData->weaponDmg *= valueMod1;
 	}
 }
 
@@ -3203,48 +3294,6 @@ __declspec(naked) void RepairMenuClickHook()
 		fucomip	st, st(1)
 		fstp	st
 		setb	ah
-		retn
-	}
-}
-
-__declspec(naked) void DamageToWeaponHook()
-{
-	static const char kSkillMatcher[] = {3, 1, 3, -1, -1, 2, -1, -1, 0, -1, -1, -1, 2};
-	static const float kDegrMults[] = {0.15F, 0.2F, 0.25F, 0.3F};
-	__asm
-	{
-		mov		eax, ds:[0x11CF154]
-		mov		[ebp-4], eax
-		xor		edx, edx
-		mov		[ebp-8], edx
-		mov		ecx, [ebp+8]
-		mov		ecx, [ecx+0x68]
-		test	ecx, ecx
-		jz		done
-		cmp		dword ptr [ecx+0x28], 1
-		ja		done
-		mov		eax, [ecx+0x114]
-		test	eax, eax
-		jz		done
-		mov		ecx, [eax+8]
-		test	ecx, ecx
-		jz		done
-		mov		[ebp-8], ecx
-		mov		dl, [ecx+0x15C]
-		sub		dl, kAVCode_BigGuns
-		js		done
-		cmp		dl, 0xC
-		ja		done
-		movsx	eax, kSkillMatcher[edx]
-		test	eax, eax
-		js		done
-		movzx	edx, word ptr [ecx+0xA0]
-		movd	xmm0, edx
-		cvtdq2ps	xmm0, xmm0
-		mulss	xmm0, [ebp-4]
-		mulss	xmm0, kDegrMults[eax*4]
-		movss	[ebp-4], xmm0
-	done:
 		retn
 	}
 }
@@ -3908,7 +3957,10 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			return true;
 		}
 		case 11:
-			return HOOK_SET(DamageToWeapon, bEnable);
+			if (s_FO3WpnDegradation == bEnable)
+				return false;
+			s_FO3WpnDegradation = bEnable;
+			return true;
 		case 12:
 			if ((s_localizedDTDR == bEnable) || !HOOK_INSTALLED(CalculateHitDamage))
 				return false;
@@ -3988,18 +4040,17 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			s_NPCPerks = true;
 			BuildValidNPCPerks();
 			WriteRelCall(0x452220, (UInt32)DoOnLoadActorHook);
-			WriteRelCall(0x96380E, (UInt32)AddPerkEntriesHook);
-			WriteRelCall(0x9638D2, (UInt32)AddPerkEntriesHook);
-			WriteRelCall(0x96398C, (UInt32)RemovePerkEntriesHook);
 			WriteRelJump(0x8BCA90, (UInt32)SetPlayerTeammateHook);
-			SafeWrite32(0x1086F04, (UInt32)SetPerkRankHook);
-			SafeWrite32(0x1087544, (UInt32)SetPerkRankHook);
-			SafeWrite32(0x1086F08, (UInt32)RemovePerkHook);
-			SafeWrite32(0x1087548, (UInt32)RemovePerkHook);
-			SafeWrite32(0x1086F0C, (UInt32)GetPerkRankHook);
-			SafeWrite32(0x108754C, (UInt32)GetPerkRankHook);
-			SafeWrite32(0x1086F18, (UInt32)GetPerkEntryPointListHook);
-			SafeWrite32(0x1087558, (UInt32)GetPerkEntryPointListHook);
+			SafeWrite32(0x1086F04, (UInt32)SetPerkRankNPCHook);
+			SafeWrite32(0x1087544, (UInt32)SetPerkRankNPCHook);
+			SafeWrite32(0x1086F08, (UInt32)RemovePerkNPCHook);
+			SafeWrite32(0x1087548, (UInt32)RemovePerkNPCHook);
+			SafeWrite32(0x1086F0C, (UInt32)GetPerkRankNPCHook);
+			SafeWrite32(0x108754C, (UInt32)GetPerkRankNPCHook);
+			SafeWrite32(0x1086F18, (UInt32)GetPerkEntryPointListNPCHook);
+			SafeWrite32(0x1087558, (UInt32)GetPerkEntryPointListNPCHook);
+			SafeWrite32(0x108AED4, (UInt32)SetPerkRankPlayerHook);
+			SafeWrite32(0x108AED8, (UInt32)RemovePerkPlayerHook);
 			SAFE_WRITE_BUF(0x5E592F, "\x0F\x1F\x84\x00\x00\x00\x00\x00");
 			SafeWrite32(0x64570F, 0x401F0F);
 			return true;
@@ -4427,6 +4478,7 @@ void InitGamePatches()
 	SAFE_WRITE_BUF(0xA03923, "\x8B\x45\x08\x3D\xB7\x0F\x00\x00\x72\x50\x3D\xF7\x0F\x00\x00\x74\x07\x3D\xBE\x0F\x00\x00\x77\x42\x8B\x45\xCC\xF6\x40\x30\x02\x75\x0B\x80\x48\x30\x02\x50\xE8\x42\x3D\x00\x00\x58\xC9\xC2\x0C\x00");
 	WritePushRetRelJump(0xA22244, 0xA222E7, (UInt32)TileTextApplyScaleHook);
 	SafeWrite32(0x102F5A4, (UInt32)MarkRefAsModifiedHook);
+	WriteRelJump(0x646260, (UInt32)GetDamageToWeaponHook);
 	*(UInt32*)0x11D0190 = 0x41200000;
 	WriteRelCall(0x4F49AB, (UInt32)LoadIncidentalSoundIDHook);
 	WriteRelJump(0x595560, (UInt32)PickMediaSetHook);
@@ -4448,7 +4500,6 @@ void InitGamePatches()
 	HOOK_INIT_JPRT(SetRepairListValues, 0x7B58DB, 0x7B5927);
 	HOOK_INIT_JPRT(DoRepairItem, 0x7B5DAD, 0x7B5E08);
 	HOOK_INIT_JPRT(RepairMenuClick, 0x7B5CED, 0x7B5D02);
-	HOOK_INIT_JPRT(DamageToWeapon, 0x646266, 0x64629A);
 	HOOK_INIT_CALL(InitMissileFlags, 0x9B7E14);
 	HOOK_INIT_JUMP(QttSelectInventory, 0x780B09);
 	HOOK_INIT_JUMP(QttSelectContainer, 0x75BF97);

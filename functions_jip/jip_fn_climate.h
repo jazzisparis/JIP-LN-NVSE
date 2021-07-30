@@ -1,23 +1,23 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetClimateSunTexture, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetClimateSunTexture, , 0, 2, kParams_JIP_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(GetClimateSunGlareTexture, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetClimateSunGlareTexture, , 0, 2, kParams_JIP_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(GetClimateNightSkyModel, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetClimateNightSkyModel, , 0, 2, kParams_JIP_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(GetClimateTraitNumeric, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetClimateTraitNumeric, , 0, 3, kParams_JIP_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetClimateNumWeatherTypes, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(GetClimateNthWeatherType, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetClimateNthWeatherChance, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetClimateNthWeatherGlobal, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(ClimateAddWeatherType, , 0, 4, kParams_JIP_OneForm_OneWeatherID_OneInt_OneOptionalGlobal);
-DEFINE_COMMAND_PLUGIN(ClimateRemoveWeatherType, , 0, 2, kParams_JIP_OneForm_OneWeatherID);
-DEFINE_COMMAND_PLUGIN(GetCurrentClimate, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetCurrentClimate, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(RefreshCurrentClimate, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(ForceClimate, , 0, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetClimateSunTexture, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetClimateSunTexture, 0, 2, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetClimateSunGlareTexture, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetClimateSunGlareTexture, 0, 2, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetClimateNightSkyModel, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetClimateNightSkyModel, 0, 2, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetClimateTraitNumeric, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetClimateTraitNumeric, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetClimateNumWeatherTypes, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(GetClimateNthWeatherType, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetClimateNthWeatherChance, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetClimateNthWeatherGlobal, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(ClimateAddWeatherType, 0, 4, kParams_OneForm_OneWeatherID_OneInt_OneOptionalGlobal);
+DEFINE_COMMAND_PLUGIN(ClimateRemoveWeatherType, 0, 2, kParams_OneForm_OneWeatherID);
+DEFINE_COMMAND_PLUGIN(GetCurrentClimate, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetCurrentClimate, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(RefreshCurrentClimate, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(ForceClimate, 0, 1, kParams_OneOptionalForm);
 
 bool Cmd_GetClimateSunTexture_Execute(COMMAND_ARGS)
 {

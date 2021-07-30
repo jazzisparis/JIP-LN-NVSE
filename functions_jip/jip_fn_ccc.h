@@ -1,26 +1,26 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(CCCOnLoad, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(CCCSetFloat, , 0, 2, kParams_JIP_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(CCCSetString, , 0, 22, kParams_JIP_OneInt_OneFormatString);
-DEFINE_COMMAND_PLUGIN(CCCSetTrait, , 0, 3, kParams_JIP_TwoInts_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(CCCGetDistance, , 1, 2, kParams_JIP_OneObjectRef_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(CCCInFaction, , 1, 2, kParams_JIP_OneFaction_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(CCCSetNCCS, , 1, 1, kParams_OneOptionalInt);
-DEFINE_CMD_ALT_COND_PLUGIN(GetEncumbranceRate, , , 1, NULL);
-DEFINE_COMMAND_PLUGIN(CCCLoadNCCS, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(CCCSavedForm, , 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(CCCLocationName, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(CCCGetReputation, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(CCCSayTo, , 1, 4, kParams_JIP_OneActor_OneTopic_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(CCCRunResultScripts, , 1, 1, kParams_JIP_OneTopic);
-DEFINE_COMMAND_PLUGIN(CCCSetFollowState, , 1, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(RefToPosStr, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(MoveToPosStr, , 1, 1, kParams_OneString);
-DEFINE_COMMAND_PLUGIN(LockEquipment, , 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(CCCSetEquipped, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(CCCSMS, , 0, 1, kParams_OneOptionalObjectRef);
-DEFINE_COMMAND_PLUGIN(CCCTaskPackageFlags, , 0, 4, kParams_JIP_OneAIPackage_ThreeInts);
+DEFINE_COMMAND_PLUGIN(CCCOnLoad, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(CCCSetFloat, 0, 2, kParams_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(CCCSetString, 0, 22, kParams_OneInt_OneFormatString);
+DEFINE_COMMAND_PLUGIN(CCCSetTrait, 0, 3, kParams_TwoInts_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(CCCGetDistance, 1, 2, kParams_OneObjectRef_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(CCCInFaction, 1, 2, kParams_OneFaction_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(CCCSetNCCS, 1, 1, kParams_OneOptionalInt);
+DEFINE_CMD_COND_PLUGIN(GetEncumbranceRate, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(CCCLoadNCCS, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(CCCSavedForm, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(CCCLocationName, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(CCCGetReputation, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(CCCSayTo, 1, 4, kParams_OneActor_OneTopic_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(CCCRunResultScripts, 1, 1, kParams_OneTopic);
+DEFINE_COMMAND_PLUGIN(CCCSetFollowState, 1, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(RefToPosStr, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(MoveToPosStr, 1, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(LockEquipment, 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(CCCSetEquipped, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(CCCSMS, 0, 1, kParams_OneOptionalObjectRef);
+DEFINE_COMMAND_PLUGIN(CCCTaskPackageFlags, 0, 4, kParams_OneAIPackage_ThreeInts);
 
 UInt8 s_CCCModIdx = 0;
 UnorderedMap<const char*, const char*> s_avatarPaths(0x100);

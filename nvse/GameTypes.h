@@ -431,6 +431,25 @@ public:
 		return false;
 	}
 
+	template <class Op>
+	bool RemoveIf(Op &op)
+	{
+		Node *curr = Head(), *prev = NULL;
+		do
+		{
+			if (curr->data && op.Accept(curr->data))
+			{
+				if (prev) prev->RemoveNext();
+				else curr->RemoveMe();
+				return true;
+			}
+			prev = curr;
+			curr = curr->next;
+		}
+		while (curr);
+		return false;
+	}
+
 	Item *ReplaceNth(SInt32 index, Item *item)
 	{
 		Item *replaced = NULL;
@@ -465,12 +484,6 @@ public:
 		}
 		while (curr = curr->next);
 		return -1;
-	}
-
-	template <class Op>
-	UInt32 RemoveIf(Op &op)
-	{
-		return FreeNodes(Head(), op);
 	}
 
 	SInt32 GetIndexOf(Item *item)

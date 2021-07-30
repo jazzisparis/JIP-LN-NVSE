@@ -1,27 +1,27 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetMerchantContainer, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(LNGetAggroRadius, , 0, 1, kParams_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(LNSetAggroRadius, , 0, 2, kParams_JIP_OneInt_OneOptionalActorBase);
-DEFINE_CMD_ALT_COND_PLUGIN(IsRaceInList, , , 1, kParams_FormList);
-DEFINE_COMMAND_PLUGIN(GetCreatureType, , 0, 1, kParams_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(GetCombatStyle, , 0, 1, kParams_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(CopyFaceGenFrom, , 1, 1, kParams_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(GetServiceFlag, , 0, 2, kParams_JIP_OneActorBase_OneInt);
-DEFINE_COMMAND_PLUGIN(SetServiceFlag, , 0, 3, kParams_JIP_OneActorBase_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetActorTemplateFlag, , 0, 2, kParams_JIP_OneInt_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(SetActorTemplateFlag, , 0, 3, kParams_JIP_TwoInts_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(LNSetActorTemplate, , 0, 2, kParams_JIP_OneForm_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(GetBaseFactionRank, , 0, 2, kParams_JIP_OneForm_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(SetBaseFactionRank, , 0, 3, kParams_JIP_OneFaction_OneInt_OneOptionalActorBase);
-DEFINE_COMMAND_ALT_PLUGIN(GetEquippedData, GetEqData, , 1, 1, kParams_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(SetEquippedData, SetEqData, , 1, 3, kParams_JIP_OneInt_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(EquipItemData, , 1, 5, kParams_JIP_OneObjectID_OneOptionalFloat_ThreeOptionalInts);
-DEFINE_COMMAND_PLUGIN(GetBaseKarma, , 0, 1, kParams_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(SetBaseKarma, , 0, 2, kParams_JIP_OneInt_OneOptionalActorBase);
-DEFINE_CMD_ALT_COND_PLUGIN(ActorHasEffect, , , 1, kParams_JIP_OneEffect);
-DEFINE_COMMAND_PLUGIN(GetBodyPartData, , 0, 1, kParams_JIP_OneActorBase);
-DEFINE_COMMAND_PLUGIN(SetBodyPartData, , 0, 2, kParams_JIP_OneActorBase_OneForm);
+DEFINE_COMMAND_PLUGIN(GetMerchantContainer, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(LNGetAggroRadius, 0, 1, kParams_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(LNSetAggroRadius, 0, 2, kParams_OneInt_OneOptionalActorBase);
+DEFINE_CMD_COND_PLUGIN(IsRaceInList, 1, 1, kParams_FormList);
+DEFINE_COMMAND_PLUGIN(GetCreatureType, 0, 1, kParams_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(GetCombatStyle, 0, 1, kParams_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(CopyFaceGenFrom, 1, 1, kParams_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(GetServiceFlag, 0, 2, kParams_OneActorBase_OneInt);
+DEFINE_COMMAND_PLUGIN(SetServiceFlag, 0, 3, kParams_OneActorBase_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetActorTemplateFlag, 0, 2, kParams_OneInt_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(SetActorTemplateFlag, 0, 3, kParams_TwoInts_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(LNSetActorTemplate, 0, 2, kParams_OneForm_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(GetBaseFactionRank, 0, 2, kParams_OneForm_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(SetBaseFactionRank, 0, 3, kParams_OneFaction_OneInt_OneOptionalActorBase);
+DEFINE_COMMAND_ALT_PLUGIN(GetEquippedData, GetEqData, 1, 1, kParams_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(SetEquippedData, SetEqData, 1, 3, kParams_OneInt_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(EquipItemData, 1, 5, kParams_OneObjectID_OneOptionalFloat_ThreeOptionalInts);
+DEFINE_COMMAND_PLUGIN(GetBaseKarma, 0, 1, kParams_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(SetBaseKarma, 0, 2, kParams_OneInt_OneOptionalActorBase);
+DEFINE_CMD_COND_PLUGIN(ActorHasEffect, 1, 1, kParams_OneEffect);
+DEFINE_COMMAND_PLUGIN(GetBodyPartData, 0, 1, kParams_OneActorBase);
+DEFINE_COMMAND_PLUGIN(SetBodyPartData, 0, 2, kParams_OneActorBase_OneForm);
 
 bool Cmd_GetMerchantContainer_Execute(COMMAND_ARGS)
 {

@@ -1,23 +1,23 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetWeatherImageSpaceMod, , 0, 2, kParams_JIP_OneWeatherID_OneInt);
-DEFINE_COMMAND_PLUGIN(SetWeatherImageSpaceMod, , 0, 3, kParams_JIP_OneWeatherID_OneInt_OneOptionalImageSpaceMod);
-DEFINE_COMMAND_PLUGIN(GetWeatherTexture, , 0, 2, kParams_JIP_OneWeatherID_OneInt);
-DEFINE_COMMAND_PLUGIN(SetWeatherTexture, , 0, 3, kParams_JIP_OneWeatherID_OneInt_OneString);
-DEFINE_COMMAND_PLUGIN(GetWeatherPrecipitationModel, , 0, 1, kParams_JIP_OneWeatherID);
-DEFINE_COMMAND_PLUGIN(SetWeatherPrecipitationModel, , 0, 2, kParams_JIP_OneWeatherID_OneString);
-DEFINE_COMMAND_PLUGIN(GetWeatherTraitNumeric, , 0, 2, kParams_JIP_OneWeatherID_OneInt);
-DEFINE_COMMAND_PLUGIN(SetWeatherTraitNumeric, , 0, 3, kParams_JIP_OneWeatherID_OneInt_OneDouble);
-DEFINE_COMMAND_PLUGIN(GetWeatherRGBColor, , 0, 4, kParams_JIP_OneWeatherID_TwoInts_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetWeatherRGBColor, , 0, 5, kParams_JIP_OneWeatherID_ThreeInts_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetCurrentWeather, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetWeatherTransitionTimeOverride, , 0, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetWindDirection, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetWindDirection, , 0, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(SetWindSpeedMult, , 0, 1, kParams_JIP_OneDouble);
-DEFINE_COMMAND_PLUGIN(TriggerLightningFX, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(ResetClouds, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(ReloadCloudTextures, , 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetWeatherImageSpaceMod, 0, 2, kParams_OneWeatherID_OneInt);
+DEFINE_COMMAND_PLUGIN(SetWeatherImageSpaceMod, 0, 3, kParams_OneWeatherID_OneInt_OneOptionalImageSpaceMod);
+DEFINE_COMMAND_PLUGIN(GetWeatherTexture, 0, 2, kParams_OneWeatherID_OneInt);
+DEFINE_COMMAND_PLUGIN(SetWeatherTexture, 0, 3, kParams_OneWeatherID_OneInt_OneString);
+DEFINE_COMMAND_PLUGIN(GetWeatherPrecipitationModel, 0, 1, kParams_OneWeatherID);
+DEFINE_COMMAND_PLUGIN(SetWeatherPrecipitationModel, 0, 2, kParams_OneWeatherID_OneString);
+DEFINE_COMMAND_PLUGIN(GetWeatherTraitNumeric, 0, 2, kParams_OneWeatherID_OneInt);
+DEFINE_COMMAND_PLUGIN(SetWeatherTraitNumeric, 0, 3, kParams_OneWeatherID_OneInt_OneDouble);
+DEFINE_COMMAND_PLUGIN(GetWeatherRGBColor, 0, 4, kParams_OneWeatherID_TwoInts_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetWeatherRGBColor, 0, 5, kParams_OneWeatherID_ThreeInts_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetCurrentWeather, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetWeatherTransitionTimeOverride, 0, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetWindDirection, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetWindDirection, 0, 1, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(SetWindSpeedMult, 0, 1, kParams_OneDouble);
+DEFINE_COMMAND_PLUGIN(TriggerLightningFX, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(ResetClouds, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(ReloadCloudTextures, 0, 0, NULL);
 
 bool Cmd_GetWeatherImageSpaceMod_Execute(COMMAND_ARGS)
 {

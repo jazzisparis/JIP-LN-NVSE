@@ -1,33 +1,33 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetNumEffects, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(GetNthEffectBase, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetNthEffectBase, , 0, 3, kParams_JIP_OneMagicItem_OneInt_OneMagicEffect);
-DEFINE_COMMAND_PLUGIN(GetNthEffectTraitNumeric, , 0, 3, kParams_JIP_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(SetNthEffectTraitNumeric, , 0, 4, kParams_JIP_OneForm_ThreeInts);
-DEFINE_COMMAND_PLUGIN(AddNewEffect, , 0, 7, kParams_JIP_OneMagicItem_OneEffect_TwoInts_ThreeOptionalInts);
-DEFINE_COMMAND_PLUGIN(RemoveNthEffect, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetObjectEffect, , 0, 2, kParams_JIP_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetNumActorEffects, , 0, 1, kParams_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(GetNthActorEffect, , 0, 2, kParams_JIP_OneInt_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(GetActorUnarmedEffect, , 0, 1, kParams_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(SetActorUnarmedEffect, , 0, 2, kParams_JIP_OneForm_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(GetAddictionEffect, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetAddictionEffect, , 0, 2, kParams_JIP_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetAddictionChance, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetAddictionChance, , 0, 2, kParams_OneForm_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetIsPoison, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(GetActiveEffects, , 1, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetTempEffects, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(RemoveNthTempEffect, , 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetEffectFlag, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetEffectFlag, , 0, 3, kParams_JIP_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetBaseEffectFlag, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetBaseEffectFlag, , 0, 3, kParams_JIP_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetBaseEffectScript, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetBaseEffectScript, , 0, 2, kParams_JIP_TwoForms);
-DEFINE_CMD_ALT_COND_PLUGIN(IsSpellTargetAlt, , , 1, kParams_JIP_OneMagicItem);
-DEFINE_COMMAND_PLUGIN(CastImmediate, , 1, 2, kParams_JIP_OneMagicItem_OneOptionalActor);
+DEFINE_COMMAND_PLUGIN(GetNumEffects, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(GetNthEffectBase, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetNthEffectBase, 0, 3, kParams_OneMagicItem_OneInt_OneMagicEffect);
+DEFINE_COMMAND_PLUGIN(GetNthEffectTraitNumeric, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(SetNthEffectTraitNumeric, 0, 4, kParams_OneForm_ThreeInts);
+DEFINE_COMMAND_PLUGIN(AddNewEffect, 0, 7, kParams_OneMagicItem_OneEffect_TwoInts_ThreeOptionalInts);
+DEFINE_COMMAND_PLUGIN(RemoveNthEffect, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetObjectEffect, 0, 2, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetNumActorEffects, 0, 1, kParams_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(GetNthActorEffect, 0, 2, kParams_OneInt_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(GetActorUnarmedEffect, 0, 1, kParams_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(SetActorUnarmedEffect, 0, 2, kParams_OneForm_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(GetAddictionEffect, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetAddictionEffect, 0, 2, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetAddictionChance, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetAddictionChance, 0, 2, kParams_OneForm_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetIsPoison, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(GetActiveEffects, 1, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetTempEffects, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(RemoveNthTempEffect, 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetEffectFlag, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetEffectFlag, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetBaseEffectFlag, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetBaseEffectFlag, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetBaseEffectScript, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetBaseEffectScript, 0, 2, kParams_TwoForms);
+DEFINE_CMD_COND_PLUGIN(IsSpellTargetAlt, 1, 1, kParams_OneMagicItem);
+DEFINE_COMMAND_PLUGIN(CastImmediate, 1, 2, kParams_OneMagicItem_OneOptionalActor);
 
 bool Cmd_GetNumEffects_Execute(COMMAND_ARGS)
 {

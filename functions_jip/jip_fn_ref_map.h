@@ -1,22 +1,22 @@
 #pragma once
 
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetSize, RefMapSize, , 0, 1, kParams_OneString);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetType, RefMapGetType, , 0, 2, kParams_JIP_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetFloat, RefMapGetFlt, , 0, 2, kParams_JIP_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetRef, RefMapGetRef, , 0, 2, kParams_JIP_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetString, RefMapGetStr, , 0, 2, kParams_JIP_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetValue, RefMapGetVal, , 0, 2, kParams_JIP_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetFirst, RefMapFirst, , 0, 1, kParams_OneString);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetNext, RefMapNext, , 0, 1, kParams_OneString);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetKeys, RefMapKeys, , 0, 1, kParams_OneString);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetAll, RefMapGetAll, , 0, 1, kParams_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetFloat, RefMapSetFlt, , 0, 3, kParams_JIP_OneString_OneDouble_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetRef, RefMapSetRef, , 0, 3, kParams_JIP_OneString_OneForm_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetString, RefMapSetStr, , 0, 3, kParams_JIP_TwoStrings_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetValue, RefMapSetVal, , 0, 3, kParams_JIP_OneString_OneInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayErase, RefMapErase, , 0, 2, kParams_JIP_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayValidate, RefMapValidate, , 0, 1, kParams_OneString);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayDestroy, RefMapDestroy, , 0, 1, kParams_OneString);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetSize, RefMapSize, 0, 1, kParams_OneString);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetType, RefMapGetType, 0, 2, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetFloat, RefMapGetFlt, 0, 2, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetRef, RefMapGetRef, 0, 2, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetString, RefMapGetStr, 0, 2, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetValue, RefMapGetVal, 0, 2, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetFirst, RefMapFirst, 0, 1, kParams_OneString);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetNext, RefMapNext, 0, 1, kParams_OneString);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetKeys, RefMapKeys, 0, 1, kParams_OneString);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetAll, RefMapGetAll, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetFloat, RefMapSetFlt, 0, 3, kParams_OneString_OneDouble_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetRef, RefMapSetRef, 0, 3, kParams_OneString_OneForm_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetString, RefMapSetStr, 0, 3, kParams_TwoStrings_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetValue, RefMapSetVal, 0, 3, kParams_OneString_OneInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayErase, RefMapErase, 0, 2, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayValidate, RefMapValidate, 0, 1, kParams_OneString);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayDestroy, RefMapDestroy, 0, 1, kParams_OneString);
 
 RefMapIDsMap *RMFind(Script *scriptObj, char *varName)
 {

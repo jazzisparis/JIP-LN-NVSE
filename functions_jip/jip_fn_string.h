@@ -1,8 +1,8 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(sv_RegexMatch, , 0, 22, kParams_JIP_OneInt_OneFormatString);
-DEFINE_COMMAND_PLUGIN(sv_RegexSearch, , 0, 22, kParams_JIP_OneInt_OneFormatString);
-DEFINE_COMMAND_PLUGIN(sv_RegexReplace, , 0, 22, kParams_JIP_OneInt_OneFormatString);
+DEFINE_COMMAND_PLUGIN(sv_RegexMatch, 0, 22, kParams_OneInt_OneFormatString);
+DEFINE_COMMAND_PLUGIN(sv_RegexSearch, 0, 22, kParams_OneInt_OneFormatString);
+DEFINE_COMMAND_PLUGIN(sv_RegexReplace, 0, 22, kParams_OneInt_OneFormatString);
 
 bool Cmd_sv_RegexMatch_Execute(COMMAND_ARGS)
 {

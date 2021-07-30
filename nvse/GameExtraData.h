@@ -321,6 +321,8 @@ public:
 	class ExtendDataList : public tList<ExtraDataList>
 	{
 	public:
+		ExtendDataList(ExtraDataList *_xData = nullptr) : tList<ExtraDataList>(_xData) {}
+
 		void Clear();
 		void CleanEmpty();
 	};

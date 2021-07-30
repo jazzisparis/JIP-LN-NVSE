@@ -1,18 +1,18 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetSoundTraitNumeric, , 0, 2, kParams_JIP_OneSound_OneInt);
-DEFINE_COMMAND_PLUGIN(SetSoundTraitNumeric, , 0, 3, kParams_JIP_OneSound_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetSoundFlag, , 0, 2, kParams_JIP_OneSound_OneInt);
-DEFINE_COMMAND_PLUGIN(SetSoundFlag, , 0, 3, kParams_JIP_OneSound_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetSoundSourceFile, , 0, 1, kParams_JIP_OneSound);
-DEFINE_COMMAND_PLUGIN(SetSoundSourceFile, , 0, 2, kParams_JIP_OneSound_OneString);
-DEFINE_COMMAND_PLUGIN(IsSoundPlaying, , 0, 2, kParams_JIP_OneSound_OneOptionalObjectRef);
-DEFINE_COMMAND_PLUGIN(GetSoundPlayers, , 0, 1, kParams_JIP_OneSound);
-DEFINE_COMMAND_PLUGIN(StopSound, , 0, 1, kParams_JIP_OneSound);
-DEFINE_COMMAND_PLUGIN(IsMusicPlaying, , 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetMusicState, , 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetGameVolume, , 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(SetGameVolume, , 0, 2, kParams_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetSoundTraitNumeric, 0, 2, kParams_OneSound_OneInt);
+DEFINE_COMMAND_PLUGIN(SetSoundTraitNumeric, 0, 3, kParams_OneSound_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetSoundFlag, 0, 2, kParams_OneSound_OneInt);
+DEFINE_COMMAND_PLUGIN(SetSoundFlag, 0, 3, kParams_OneSound_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetSoundSourceFile, 0, 1, kParams_OneSound);
+DEFINE_COMMAND_PLUGIN(SetSoundSourceFile, 0, 2, kParams_OneSound_OneString);
+DEFINE_COMMAND_PLUGIN(IsSoundPlaying, 0, 2, kParams_OneSound_OneOptionalObjectRef);
+DEFINE_COMMAND_PLUGIN(GetSoundPlayers, 0, 1, kParams_OneSound);
+DEFINE_COMMAND_PLUGIN(StopSound, 0, 1, kParams_OneSound);
+DEFINE_COMMAND_PLUGIN(IsMusicPlaying, 0, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetMusicState, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetGameVolume, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(SetGameVolume, 0, 2, kParams_OneInt_OneOptionalInt);
 
 bool Cmd_GetSoundTraitNumeric_Execute(COMMAND_ARGS)
 {

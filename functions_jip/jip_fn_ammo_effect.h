@@ -1,11 +1,11 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetNumAmmoEffects, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(GetNthAmmoEffect, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(AddAmmoEffect, , 0, 2, kParams_JIP_TwoForms);
-DEFINE_COMMAND_PLUGIN(RemoveAmmoEffect, , 0, 2, kParams_JIP_TwoForms);
-DEFINE_COMMAND_PLUGIN(GetAmmoEffectTraitNumeric, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetAmmoEffectTraitNumeric, , 0, 3, kParams_JIP_OneForm_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetNumAmmoEffects, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(GetNthAmmoEffect, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(AddAmmoEffect, 0, 2, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(RemoveAmmoEffect, 0, 2, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(GetAmmoEffectTraitNumeric, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetAmmoEffectTraitNumeric, 0, 3, kParams_OneForm_OneInt_OneFloat);
 
 bool Cmd_GetNumAmmoEffects_Execute(COMMAND_ARGS)
 {

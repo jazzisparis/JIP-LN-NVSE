@@ -1,6 +1,6 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetNVSEVersionFull, , 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetNVSEVersionFull, 0, 0, NULL);
 
 bool Cmd_GetNVSEVersionFull_Execute(COMMAND_ARGS)
 {
@@ -92,24 +92,25 @@ UInt8 __fastcall DoGetPerkRank(Actor *actor, BGSPerk *perk, bool forTeammates)
 {
 	if IS_ACTOR(actor)
 	{
-		if (actor->refID == 0x14)
-			return actor->GetPerkRank(perk, forTeammates);
 		if (s_NPCPerks)
-			return actor->GetPerkRank(perk, false);
-		if (actor->isTeammate)
-			return g_thePlayer->GetPerkRank(perk, true);
+			return actor->GetPerkRank(perk, forTeammates);
+		return g_thePlayer->GetPerkRank(perk, forTeammates | actor->isTeammate);
 	}
 	return 0;
 }
 
 bool Hook_HasPerk_Execute(COMMAND_ARGS)		// Modifies HasPerk to allow detection of follower perks on followers.
 {
+	*result = 0;
 	BGSPerk *perk;
 	UInt32 useAlt = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &useAlt))
-		*result = DoGetPerkRank((Actor*)thisObj, perk, useAlt) != 0;
-	else *result = 0;
-	DoConsolePrint(result);
+	{
+		UInt8 rank = DoGetPerkRank((Actor*)thisObj, perk, useAlt);
+		if (rank) *result = 1;
+		if (IsConsoleOpen())
+			Console_Print((const char*)0x1035F1C, rank);
+	}
 	return true;
 }
 
@@ -516,12 +517,12 @@ void InitCmdPatches()
 	cmdInfo->execute = Hook_GetNumericGameSetting_Execute;
 	cmdInfo = GetCmdByOpcode(0x149B);
 	cmdInfo->execute = Hook_SetNumericGameSetting_Execute;
-	cmdInfo->params = kParams_JIP_OneString_OneDouble;
+	cmdInfo->params = kParams_OneString_OneDouble;
 	cmdInfo = GetCmdByOpcode(0x149C);
 	cmdInfo->execute = Hook_GetNumericINISetting_Execute;
 	cmdInfo = GetCmdByOpcode(0x149D);
 	cmdInfo->execute = Hook_SetNumericINISetting_Execute;
-	cmdInfo->params = kParams_JIP_OneString_OneDouble;
+	cmdInfo->params = kParams_OneString_OneDouble;
 	cmdInfo = GetCmdByOpcode(0x1511);
 	cmdInfo->execute = Hook_IsRefInList_Execute;
 	cmdInfo->eval = (Cmd_Eval)Hook_IsRefInList_Eval;

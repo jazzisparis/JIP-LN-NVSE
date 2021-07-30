@@ -1,19 +1,19 @@
 #pragma once
 
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetSize, AuxVarSize, , 0, 2, kParams_JIP_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetType, AuxVarType, , 0, 3, kParams_JIP_OneString_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetFloat, AuxVarGetFlt, , 0, 3, kParams_JIP_OneString_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetRef, AuxVarGetRef, , 0, 3, kParams_JIP_OneString_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetString, AuxVarGetStr, , 0, 3, kParams_JIP_OneString_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetAsArray, AuxVarGetAsArr, , 0, 2, kParams_JIP_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetAll, AuxVarGetAll, , 0, 2, kParams_JIP_OneInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetFloat, AuxVarSetFlt, , 0, 4, kParams_JIP_OneString_OneDouble_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetRef, AuxVarSetRef, , 0, 4, kParams_JIP_OneString_OneForm_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetString, AuxVarSetStr, , 0, 4, kParams_JIP_TwoStrings_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetFromArray, AuxVarSetFromArr, , 0, 3, kParams_JIP_OneString_OneInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableErase, AuxVarErase, , 0, 3, kParams_JIP_OneString_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableEraseAll, AuxVarEraseAll, , 0, 2, kParams_JIP_OneInt_OneOptionalForm);
-DEFINE_CMD_ALT_COND_PLUGIN(AuxVarGetFltCond, , , 1, kParams_JIP_OneQuest_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetSize, AuxVarSize, 0, 2, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetType, AuxVarType, 0, 3, kParams_OneString_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetFloat, AuxVarGetFlt, 0, 3, kParams_OneString_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetRef, AuxVarGetRef, 0, 3, kParams_OneString_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetString, AuxVarGetStr, 0, 3, kParams_OneString_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetAsArray, AuxVarGetAsArr, 0, 2, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetAll, AuxVarGetAll, 0, 2, kParams_OneInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetFloat, AuxVarSetFlt, 0, 4, kParams_OneString_OneDouble_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetRef, AuxVarSetRef, 0, 4, kParams_OneString_OneForm_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetString, AuxVarSetStr, 0, 4, kParams_TwoStrings_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetFromArray, AuxVarSetFromArr, 0, 3, kParams_OneString_OneInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableErase, AuxVarErase, 0, 3, kParams_OneString_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableEraseAll, AuxVarEraseAll, 0, 2, kParams_OneInt_OneOptionalForm);
+DEFINE_CMD_COND_PLUGIN(AuxVarGetFltCond, 1, 2, kParams_OneQuest_OneInt);
 
 AuxVarValsArr* __fastcall AVGetArray(AuxVarInfo *varInfo, bool addArr = false)
 {

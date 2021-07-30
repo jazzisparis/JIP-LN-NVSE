@@ -1,27 +1,27 @@
 #pragma once
 
-DEFINE_COMMAND_ALT_PLUGIN(LeveledListAddForm, LListAddForm, , 0, 5, kParams_JIP_TwoForms_TwoInts_OneFloat);
-DEFINE_COMMAND_ALT_PLUGIN(LeveledListRemoveForm, LListRemoveForm, , 0, 2, kParams_JIP_TwoForms);
-DEFINE_COMMAND_ALT_PLUGIN(LeveledListReplaceForm, LListReplaceForm, , 0, 3, kParams_JIP_ThreeForms);
-DEFINE_COMMAND_PLUGIN(GetChanceNone, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetChanceNone, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetChanceNoneGlobal, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetChanceNoneGlobal, , 0, 2, kParams_JIP_OneForm_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(GetNumLevItems, LListGetCount, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_ALT_PLUGIN(GetNthLevItem, LListGetNthForm, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(SetNthLevItem, LListsetNthForm, , 0, 3, kParams_JIP_OneForm_OneInt_OneForm);
-DEFINE_COMMAND_ALT_PLUGIN(GetNthLevItemLevel, LListGetNthLevel, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(SetNthLevItemLevel, LListSetNthLevel, , 0, 3, kParams_JIP_OneForm_TwoInts);
-DEFINE_COMMAND_ALT_PLUGIN(GetNthLevItemCount, LListGetNthCount, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(SetNthLevItemCount, LListSetNthCount, , 0, 3, kParams_JIP_OneForm_TwoInts);
-DEFINE_COMMAND_ALT_PLUGIN(RemoveNthLevItem, LListRemoveNthForm, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(LeveledListClear, LListClear, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_ALT_PLUGIN(GetLevItemIndexByLevel, LListGetLevelIndex, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(GetLevItemIndexByForm, LListGetFormIndex, , 0, 2, kParams_JIP_TwoForms);
-DEFINE_COMMAND_ALT_PLUGIN(DumpLevList, LListDump, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_ALT_PLUGIN(GetLeveledListFlags, LListGetFlags, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_ALT_PLUGIN(SetLeveledListFlags, LListSetFlags, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(LeveledListHasFormDeep, LListHasFormDeep, , 0, 2, kParams_JIP_TwoForms);
+DEFINE_COMMAND_ALT_PLUGIN(LeveledListAddForm, LListAddForm, 0, 5, kParams_TwoForms_TwoInts_OneFloat);
+DEFINE_COMMAND_ALT_PLUGIN(LeveledListRemoveForm, LListRemoveForm, 0, 2, kParams_TwoForms);
+DEFINE_COMMAND_ALT_PLUGIN(LeveledListReplaceForm, LListReplaceForm, 0, 3, kParams_ThreeForms);
+DEFINE_COMMAND_PLUGIN(GetChanceNone, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetChanceNone, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetChanceNoneGlobal, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetChanceNoneGlobal, 0, 2, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(GetNumLevItems, LListGetCount, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_ALT_PLUGIN(GetNthLevItem, LListGetNthForm, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(SetNthLevItem, LListsetNthForm, 0, 3, kParams_OneForm_OneInt_OneForm);
+DEFINE_COMMAND_ALT_PLUGIN(GetNthLevItemLevel, LListGetNthLevel, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(SetNthLevItemLevel, LListSetNthLevel, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_ALT_PLUGIN(GetNthLevItemCount, LListGetNthCount, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(SetNthLevItemCount, LListSetNthCount, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_ALT_PLUGIN(RemoveNthLevItem, LListRemoveNthForm, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(LeveledListClear, LListClear, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_ALT_PLUGIN(GetLevItemIndexByLevel, LListGetLevelIndex, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(GetLevItemIndexByForm, LListGetFormIndex, 0, 2, kParams_TwoForms);
+DEFINE_COMMAND_ALT_PLUGIN(DumpLevList, LListDump, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_ALT_PLUGIN(GetLeveledListFlags, LListGetFlags, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_ALT_PLUGIN(SetLeveledListFlags, LListSetFlags, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(LeveledListHasFormDeep, LListHasFormDeep, 0, 2, kParams_TwoForms);
 
 bool Cmd_LeveledListAddForm_Execute(COMMAND_ARGS)
 {

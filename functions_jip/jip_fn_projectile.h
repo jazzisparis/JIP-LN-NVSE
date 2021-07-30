@@ -1,29 +1,29 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetProjectileTraitNumeric, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetProjectileTraitNumeric, , 0, 3, kParams_JIP_OneForm_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetProjectileFlag, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetProjectileFlag, , 0, 3, kParams_JIP_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetProjectileExplosion, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetProjectileExplosion, , 0, 2, kParams_JIP_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetProjectileRefSource, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetProjectileRefSource, , 1, 1, kParams_OneOptionalObjectRef);
-DEFINE_COMMAND_PLUGIN(GetProjectileRefWeapon, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetProjectileRefWeapon, , 1, 1, kParams_OneObjectID);
-DEFINE_COMMAND_PLUGIN(GetProjectileRefLifeTime, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetProjectileRefDistanceTraveled, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetProjectileRefDamage, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetProjectileRefDamage, , 1, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetProjectileRefSpeedMult, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetProjectileRefSpeedMult, , 1, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetDetonationTimer, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetDetonationTimer, , 1, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetMineArmed, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetProjectileMuzzleFlash, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetProjectileMuzzleFlash, , 0, 2, kParams_JIP_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(GetProjectileRefImpactRef, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetOnProjectileImpactEventHandler, , 0, 3, kParams_JIP_OneForm_OneInt_OneForm);
-DEFINE_COMMAND_PLUGIN(GetProjectileRefImpactMaterial, , 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetProjectileTraitNumeric, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetProjectileTraitNumeric, 0, 3, kParams_OneForm_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetProjectileFlag, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetProjectileFlag, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetProjectileExplosion, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetProjectileExplosion, 0, 2, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetProjectileRefSource, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetProjectileRefSource, 1, 1, kParams_OneOptionalObjectRef);
+DEFINE_COMMAND_PLUGIN(GetProjectileRefWeapon, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetProjectileRefWeapon, 1, 1, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(GetProjectileRefLifeTime, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetProjectileRefDistanceTraveled, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetProjectileRefDamage, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetProjectileRefDamage, 1, 1, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetProjectileRefSpeedMult, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetProjectileRefSpeedMult, 1, 1, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetDetonationTimer, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetDetonationTimer, 1, 1, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetMineArmed, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetProjectileMuzzleFlash, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetProjectileMuzzleFlash, 0, 2, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetProjectileRefImpactRef, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetOnProjectileImpactEventHandler, 0, 3, kParams_OneForm_OneInt_OneForm);
+DEFINE_COMMAND_PLUGIN(GetProjectileRefImpactMaterial, 1, 0, NULL);
 
 bool Cmd_GetProjectileTraitNumeric_Execute(COMMAND_ARGS)
 {

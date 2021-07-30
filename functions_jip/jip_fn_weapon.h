@@ -1,28 +1,28 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetWeaponDetectionSoundLevel, , 0, 1, kParams_OneObjectID);
-DEFINE_COMMAND_PLUGIN(SetWeaponDetectionSoundLevel, , 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_CMD_ALT_COND_PLUGIN(IsEquippedWeaponSilenced, , , 1, NULL);
-DEFINE_CMD_ALT_COND_PLUGIN(IsEquippedWeaponScoped, , , 1, NULL);
-DEFINE_COMMAND_PLUGIN(GetWeaponSound, , 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_COMMAND_PLUGIN(SetWeaponSound, , 0, 3, kParams_JIP_OneForm_OneInt_OneOptionalSound);
-DEFINE_COMMAND_PLUGIN(SetWeaponItemMod, , 0, 3, kParams_JIP_OneForm_OneInt_OneOptionalObjectID);
-DEFINE_COMMAND_PLUGIN(SetWeaponItemModEffect, , 0, 3, kParams_JIP_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(SetWeaponItemModValue, , 0, 3, kParams_JIP_OneForm_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetWeaponModReloadAnim, , 0, 1, kParams_OneObjectID);
-DEFINE_COMMAND_PLUGIN(SetWeaponModReloadAnim, , 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_COMMAND_PLUGIN(GetWeaponShellCasingModel, , 0, 1, kParams_OneObjectID);
-DEFINE_COMMAND_PLUGIN(SetWeaponShellCasingModel, , 0, 2, kParams_JIP_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(SetEmbeddedWeaponNode, , 0, 2, kParams_JIP_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(SetEmbeddedWeaponAV, , 0, 2, kParams_JIP_OneObjectID_OneActorValue);
-DEFINE_COMMAND_PLUGIN(GetCalculatedWeaponDamage, , 0, 1, kParams_OneOptionalObjectID);
-DEFINE_COMMAND_PLUGIN(GetWeaponOnHitSetting, , 0, 1, kParams_OneObjectID);
-DEFINE_COMMAND_PLUGIN(SetWeaponOnHitSetting, , 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_COMMAND_PLUGIN(GetWeaponSemiAutoFireDelay, , 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_COMMAND_PLUGIN(SetWeaponSemiAutoFireDelay, , 0, 3, kParams_JIP_OneObjectID_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetWeaponModel, , 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_COMMAND_PLUGIN(SetWeaponModel, , 0, 3, kParams_JIP_OneForm_OneInt_OneString);
-DEFINE_CMD_ALT_COND_PLUGIN(EquippedWeaponHasModType, , , 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetWeaponDetectionSoundLevel, 0, 1, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(SetWeaponDetectionSoundLevel, 0, 2, kParams_OneObjectID_OneInt);
+DEFINE_CMD_COND_PLUGIN(IsEquippedWeaponSilenced, 1, 0, NULL);
+DEFINE_CMD_COND_PLUGIN(IsEquippedWeaponScoped, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetWeaponSound, 0, 2, kParams_OneObjectID_OneInt);
+DEFINE_COMMAND_PLUGIN(SetWeaponSound, 0, 3, kParams_OneForm_OneInt_OneOptionalSound);
+DEFINE_COMMAND_PLUGIN(SetWeaponItemMod, 0, 3, kParams_OneForm_OneInt_OneOptionalObjectID);
+DEFINE_COMMAND_PLUGIN(SetWeaponItemModEffect, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(SetWeaponItemModValue, 0, 3, kParams_OneForm_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetWeaponModReloadAnim, 0, 1, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(SetWeaponModReloadAnim, 0, 2, kParams_OneObjectID_OneInt);
+DEFINE_COMMAND_PLUGIN(GetWeaponShellCasingModel, 0, 1, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(SetWeaponShellCasingModel, 0, 2, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(SetEmbeddedWeaponNode, 0, 2, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(SetEmbeddedWeaponAV, 0, 2, kParams_OneObjectID_OneActorValue);
+DEFINE_COMMAND_PLUGIN(GetCalculatedWeaponDamage, 0, 1, kParams_OneOptionalObjectID);
+DEFINE_COMMAND_PLUGIN(GetWeaponOnHitSetting, 0, 1, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(SetWeaponOnHitSetting, 0, 2, kParams_OneObjectID_OneInt);
+DEFINE_COMMAND_PLUGIN(GetWeaponSemiAutoFireDelay, 0, 2, kParams_OneObjectID_OneInt);
+DEFINE_COMMAND_PLUGIN(SetWeaponSemiAutoFireDelay, 0, 3, kParams_OneObjectID_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetWeaponModel, 0, 2, kParams_OneObjectID_OneInt);
+DEFINE_COMMAND_PLUGIN(SetWeaponModel, 0, 3, kParams_OneForm_OneInt_OneString);
+DEFINE_CMD_COND_PLUGIN(EquippedWeaponHasModType, 1, 1, kParams_OneInt);
 
 bool Cmd_GetWeaponDetectionSoundLevel_Execute(COMMAND_ARGS)
 {

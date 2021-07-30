@@ -1,7 +1,7 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetFactionReputationType, , 0, 1, kParams_JIP_OneFaction);
-DEFINE_COMMAND_PLUGIN(SetFactionReputationType, , 0, 2, kParams_JIP_OneFaction_OneOptionalReputation);
+DEFINE_COMMAND_PLUGIN(GetFactionReputationType, 0, 1, kParams_OneFaction);
+DEFINE_COMMAND_PLUGIN(SetFactionReputationType, 0, 2, kParams_OneFaction_OneOptionalReputation);
 
 bool Cmd_GetFactionReputationType_Execute(COMMAND_ARGS)
 {

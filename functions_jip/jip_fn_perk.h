@@ -1,7 +1,7 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetPerkFlag, , 0, 2, kParams_JIP_OnePerk_OneInt);
-DEFINE_COMMAND_PLUGIN(SetPerkFlag, , 0, 3, kParams_JIP_OnePerk_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetPerkFlag, 0, 2, kParams_OnePerk_OneInt);
+DEFINE_COMMAND_PLUGIN(SetPerkFlag, 0, 3, kParams_OnePerk_TwoInts);
 
 bool Cmd_GetPerkFlag_Execute(COMMAND_ARGS)
 {

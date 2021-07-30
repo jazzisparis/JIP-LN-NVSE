@@ -1,7 +1,7 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetPackageFlag, , 0, 2, kParams_JIP_OneAIPackage_OneInt);
-DEFINE_COMMAND_PLUGIN(SetPackageFlag, , 0, 3, kParams_JIP_OneAIPackage_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetPackageFlag, 0, 2, kParams_OneAIPackage_OneInt);
+DEFINE_COMMAND_PLUGIN(SetPackageFlag, 0, 3, kParams_OneAIPackage_TwoInts);
 
 bool Cmd_GetPackageFlag_Execute(COMMAND_ARGS)
 {

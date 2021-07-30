@@ -1,28 +1,28 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetFormRecipes, , 0, 2, kParams_JIP_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetFormRecipeOutputs, , 0, 2, kParams_JIP_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetRecipeRequiredSkill, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetRecipeRequiredSkill, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetRecipeRequiredSkillLevel, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetRecipeRequiredSkillLevel, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetRecipeInputForms, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(GetRecipeOutputForms, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(AddRecipeInputForm, , 0, 3, kParams_JIP_TwoForms_OneInt);
-DEFINE_COMMAND_PLUGIN(AddRecipeOutputForm, , 0, 3, kParams_JIP_TwoForms_OneInt);
-DEFINE_COMMAND_PLUGIN(RemoveRecipeInputForm, , 0, 2, kParams_JIP_TwoForms);
-DEFINE_COMMAND_PLUGIN(RemoveRecipeOutputForm, , 0, 2, kParams_JIP_TwoForms);
-DEFINE_COMMAND_PLUGIN(ReplaceRecipeInputForm, , 0, 3, kParams_JIP_ThreeForms);
-DEFINE_COMMAND_PLUGIN(ReplaceRecipeOutputForm, , 0, 3, kParams_JIP_ThreeForms);
-DEFINE_COMMAND_PLUGIN(GetRecipeInputCount, , 0, 2, kParams_JIP_TwoForms);
-DEFINE_COMMAND_PLUGIN(SetRecipeInputCount, , 0, 3, kParams_JIP_TwoForms_OneInt);
-DEFINE_COMMAND_PLUGIN(GetRecipeOutputCount, , 0, 2, kParams_JIP_TwoForms);
-DEFINE_COMMAND_PLUGIN(SetRecipeOutputCount, , 0, 3, kParams_JIP_TwoForms_OneInt);
-DEFINE_COMMAND_PLUGIN(GetRecipeCategory, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetRecipeCategory, , 0, 2, kParams_JIP_TwoForms);
-DEFINE_COMMAND_PLUGIN(GetRecipeSubcategory, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetRecipeSubcategory, , 0, 2, kParams_JIP_TwoForms);
-DEFINE_COMMAND_PLUGIN(AddRecipeCondition, , 0, 5, kParams_FormCondition);
+DEFINE_COMMAND_PLUGIN(GetFormRecipes, 0, 2, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetFormRecipeOutputs, 0, 2, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetRecipeRequiredSkill, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetRecipeRequiredSkill, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetRecipeRequiredSkillLevel, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetRecipeRequiredSkillLevel, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetRecipeInputForms, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(GetRecipeOutputForms, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(AddRecipeInputForm, 0, 3, kParams_TwoForms_OneInt);
+DEFINE_COMMAND_PLUGIN(AddRecipeOutputForm, 0, 3, kParams_TwoForms_OneInt);
+DEFINE_COMMAND_PLUGIN(RemoveRecipeInputForm, 0, 2, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(RemoveRecipeOutputForm, 0, 2, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(ReplaceRecipeInputForm, 0, 3, kParams_ThreeForms);
+DEFINE_COMMAND_PLUGIN(ReplaceRecipeOutputForm, 0, 3, kParams_ThreeForms);
+DEFINE_COMMAND_PLUGIN(GetRecipeInputCount, 0, 2, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(SetRecipeInputCount, 0, 3, kParams_TwoForms_OneInt);
+DEFINE_COMMAND_PLUGIN(GetRecipeOutputCount, 0, 2, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(SetRecipeOutputCount, 0, 3, kParams_TwoForms_OneInt);
+DEFINE_COMMAND_PLUGIN(GetRecipeCategory, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetRecipeCategory, 0, 2, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(GetRecipeSubcategory, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetRecipeSubcategory, 0, 2, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(AddRecipeCondition, 0, 5, kParams_FormCondition);
 
 bool Cmd_GetFormRecipes_Execute(COMMAND_ARGS)
 {

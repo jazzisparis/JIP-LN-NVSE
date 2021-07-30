@@ -1,15 +1,15 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetWorldspaceFlag, , 0, 2, kParams_JIP_OneWorldspace_OneInt);
-DEFINE_COMMAND_PLUGIN(SetWorldspaceFlag, , 0, 3, kParams_JIP_OneWorldspace_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetWorldspaceClimate, , 0, 1, kParams_JIP_OneWorldspace);
-DEFINE_COMMAND_PLUGIN(SetWorldspaceClimate, , 0, 2, kParams_JIP_OneWorldspace_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetWorldspaceNoiseTexture, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetWorldspaceNoiseTexture, , 0, 2, kParams_JIP_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(GetWorldspaceWaterType, , 0, 1, kParams_JIP_OneWorldspace);
-DEFINE_COMMAND_PLUGIN(SetWorldspaceWaterType, , 0, 2, kParams_JIP_OneWorldspace_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetWorldspaceImagespace, , 0, 1, kParams_JIP_OneWorldspace);
-DEFINE_COMMAND_PLUGIN(SetWorldspaceImagespace, , 0, 2, kParams_JIP_OneWorldspace_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetWorldspaceFlag, 0, 2, kParams_OneWorldspace_OneInt);
+DEFINE_COMMAND_PLUGIN(SetWorldspaceFlag, 0, 3, kParams_OneWorldspace_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetWorldspaceClimate, 0, 1, kParams_OneWorldspace);
+DEFINE_COMMAND_PLUGIN(SetWorldspaceClimate, 0, 2, kParams_OneWorldspace_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetWorldspaceNoiseTexture, 0, 1, kParams_OneWorldspace);
+DEFINE_COMMAND_PLUGIN(SetWorldspaceNoiseTexture, 0, 2, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetWorldspaceWaterType, 0, 1, kParams_OneWorldspace);
+DEFINE_COMMAND_PLUGIN(SetWorldspaceWaterType, 0, 2, kParams_OneWorldspace_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetWorldspaceImagespace, 0, 1, kParams_OneWorldspace);
+DEFINE_COMMAND_PLUGIN(SetWorldspaceImagespace, 0, 2, kParams_OneWorldspace_OneOptionalForm);
 
 bool Cmd_GetWorldspaceFlag_Execute(COMMAND_ARGS)
 {
@@ -75,7 +75,7 @@ bool Cmd_GetWorldspaceNoiseTexture_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	TESWorldSpace *wspc;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc) && IS_ID(wspc, TESWorldSpace))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc))
 		resStr = wspc->waterNoiseTexture.ddsPath.m_data;
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);

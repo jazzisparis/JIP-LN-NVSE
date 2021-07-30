@@ -1,28 +1,28 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(HasVariableAdded, , 0, 2, kParams_JIP_OneString_OneOptionalQuest);
-DEFINE_COMMAND_PLUGIN(AddScriptVariable, , 0, 2, kParams_JIP_OneString_OneOptionalQuest);
-DEFINE_COMMAND_PLUGIN(RemoveScriptVariable, , 0, 2, kParams_JIP_OneString_OneOptionalQuest);
-DEFINE_COMMAND_PLUGIN(RemoveAllAddedVariables, , 0, 1, kParams_JIP_OneOptionalQuest);
-DEFINE_COMMAND_PLUGIN(GetDelayElapsed, , 0, 1, kParams_OneQuest);
-DEFINE_COMMAND_PLUGIN(SetDelayElapsed, , 0, 2, kParams_JIP_OneQuest_OneFloat);
-DEFINE_COMMAND_PLUGIN(SetGameMainLoopCallback, , 0, 4, kParams_JIP_OneForm_OneInt_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(GetScriptDisabled, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetScriptDisabled, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetScriptEventDisabled, , 0, 2, kParams_JIP_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(SetScriptEventDisabled, , 0, 3, kParams_JIP_OneForm_OneString_OneInt);
-DEFINE_COMMAND_PLUGIN(FakeScriptEvent, , 1, 2, kParams_JIP_OneString_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetOnQuestStageEventHandler, , 0, 5, kParams_JIP_OneForm_OneInt_OneQuest_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(RunScriptSnippet, , 0, 22, kParams_JIP_OneInt_OneFormatString);
-DEFINE_COMMAND_PLUGIN(ScriptWait, , 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(IsScriptWaiting, , 0, 1, kParams_JIP_OneOptionalQuest);
-DEFINE_COMMAND_PLUGIN(StopScriptWaiting, , 0, 1, kParams_JIP_OneOptionalQuest);
-DEFINE_COMMAND_PLUGIN(GetScriptBlockDisabled, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetScriptBlockDisabled, , 0, 3, kParams_JIP_OneForm_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(HasScriptBlock, , 0, 2, kParams_JIP_OneInt_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(DisableScriptedActivate, , 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(RunBatchScript, , 0, 1, kParams_OneString);
-DEFINE_COMMAND_PLUGIN(ExecuteScript, , 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(HasVariableAdded, 0, 2, kParams_OneString_OneOptionalQuest);
+DEFINE_COMMAND_PLUGIN(AddScriptVariable, 0, 2, kParams_OneString_OneOptionalQuest);
+DEFINE_COMMAND_PLUGIN(RemoveScriptVariable, 0, 2, kParams_OneString_OneOptionalQuest);
+DEFINE_COMMAND_PLUGIN(RemoveAllAddedVariables, 0, 1, kParams_OneOptionalQuest);
+DEFINE_COMMAND_PLUGIN(GetDelayElapsed, 0, 1, kParams_OneQuest);
+DEFINE_COMMAND_PLUGIN(SetDelayElapsed, 0, 2, kParams_OneQuest_OneFloat);
+DEFINE_COMMAND_PLUGIN(SetGameMainLoopCallback, 0, 4, kParams_OneForm_OneInt_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(GetScriptDisabled, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetScriptDisabled, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetScriptEventDisabled, 0, 2, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(SetScriptEventDisabled, 0, 3, kParams_OneForm_OneString_OneInt);
+DEFINE_COMMAND_PLUGIN(FakeScriptEvent, 1, 2, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetOnQuestStageEventHandler, 0, 5, kParams_OneForm_OneInt_OneQuest_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(RunScriptSnippet, 0, 22, kParams_OneInt_OneFormatString);
+DEFINE_COMMAND_PLUGIN(ScriptWait, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(IsScriptWaiting, 0, 1, kParams_OneOptionalQuest);
+DEFINE_COMMAND_PLUGIN(StopScriptWaiting, 0, 1, kParams_OneOptionalQuest);
+DEFINE_COMMAND_PLUGIN(GetScriptBlockDisabled, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetScriptBlockDisabled, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(HasScriptBlock, 0, 2, kParams_OneInt_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(DisableScriptedActivate, 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(RunBatchScript, 0, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(ExecuteScript, 1, 0, NULL);
 
 UInt8 s_scriptVarActionType = 0;
 

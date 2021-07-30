@@ -12,7 +12,7 @@ enum
 
 enum
 {
-	kPluginOpcode_Debug = kNVSEOpcodeTest,
+	kPluginOpcode_Debug = 0x2000,
 };
 
 enum
