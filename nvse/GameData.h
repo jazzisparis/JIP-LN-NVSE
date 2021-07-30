@@ -712,13 +712,31 @@ struct EntryPointConditionInfo
 // 24
 struct AnimGroupInfo
 {
+	enum AnimKeyType
+	{
+		kKey_ClampSequence,
+		kKey_LoopingSequence,
+		kKey_SpecialIdle,
+		kKey_Equip,
+		kKey_Unequip,
+		kKey_Attack,
+		kKey_PowerAttackOrPipboy,
+		kKey_AttackThrow,
+		kKey_PlaceMine,
+		kKey_SpinAttack,
+		kKey_LoopingReload
+	};
+
 	const char	*name;			// 00
-	UInt8		byte04;			// 04
+	bool		usesVariants;	// 04
 	UInt8		pad05[3];		// 05
 	UInt32		sequenceType;	// 08
-	UInt32		unk0C;			// 0C
+	UInt32		keyType;		// 0C
 	UInt32		unk10;			// 10
-	UInt32		unk14[4];		// 14
+	UInt32		unk14;			// 14
+	UInt32		unk18;			// 18
+	UInt32		unk1C;			// 1C
+	UInt32		unk20;			// 20
 
 	__forceinline static AnimGroupInfo *Array() {return (AnimGroupInfo*)0x11977D8;}	//	Array size = 0xF5
 };

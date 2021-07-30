@@ -2271,7 +2271,7 @@ void BuildValidNPCPerks()
 	PrintLog("\n================\n");*/
 }
 
-typedef Map<BGSPerk*, UInt8> PerkRanksMap;
+typedef Map<BGSPerk*, UInt8, 4> PerkRanksMap;
 
 class NPCPerkEntryPoints
 {
@@ -4597,28 +4597,15 @@ _ReloadENB ReloadENB = NULL;
 void DeferredInit()
 {
 	g_pipBoyLight = *(SpellItem**)0x11C358C;
-	g_modelLoader = *(ModelLoader**)0x11C3B3C;
-	g_dataHandler = *(DataHandler**)0x11C3F2C;
-	g_loadedReferences = LoadedReferenceCollection::Get();
-	g_interfaceManager = *(InterfaceManager**)0x11D8A80;
-	g_OSGlobals = *(OSGlobals**)0x11DEA0C;
-	g_TES = *(TES**)0x11DEA10;
-	g_thePlayer = *(PlayerCharacter**)0x11DEA3C;
-	g_sceneGraph = *(SceneGraph**)0x11DEB7C;
-	g_scrapHeapQueue = *(void**)0x11DF1A8;
-	g_fontManager = *(FontManager**)0x11F33F8;
-	g_inputGlobals = *(OSInputGlobals**)0x11F35CC;
-	g_tileMenuArray = *(TileMenu***)0x11F350C;
-	g_HUDMainMenu = *(HUDMainMenu**)0x11D96C0;
 	g_consoleManager = ConsoleManager::GetSingleton();
-	g_sysColorManager = *(SystemColorManager**)0x11D8A88;
+	g_fontManager = *(FontManager**)0x11F33F8;
+	g_HUDMainMenu = *(HUDMainMenu**)0x11D96C0;
 	g_cursorNode = g_interfaceManager->cursor->node;
 	float converter = g_interfaceManager->menuRoot->GetValue(kTileValue_resolutionconverter)->num;
 	g_screenResConvert = converter;
 	converter *= 0.5F;
 	g_screenWidth = *(int*)0x11C73E0 * converter;
 	g_screenHeight = *(int*)0x11C7190 * converter;
-	g_shadowSceneNode = *(ShadowSceneNode**)0x11F91C8;
 	g_terminalModelDefault = *GameGlobals::TerminalModelPtr();
 	g_attachLightString = **(const char***)0x11C620C;
 	g_gameYear = (TESGlobal*)LookupFormByRefID(0x35);
