@@ -607,7 +607,7 @@ bool Cmd_CCCSetFollowState_Execute(COMMAND_ARGS)
 		UInt8 flag = state ? kHookActorFlag1_PCTeleportFollow : kHookActorFlag1_PCTeleportWait;
 		if (actor->jipActorFlags1 & flag) return true;
 		if (actor->jipActorFlags1 & kHookActorFlag1_PCTeleportAI)
-			actor->jipActorFlags1 &= ~kHookActorFlag1_PCTeleportAI;
+			actor->jipActorFlags1 ^= kHookActorFlag1_PCTeleportAI;
 		else
 		{
 			actor->jipActorFlags1 |= flag;
@@ -673,7 +673,7 @@ bool Cmd_LockEquipment_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &lockEqp) && IS_TYPE(thisObj, Character) && 
 		(!lockEqp != !(((Character*)thisObj)->jipActorFlags1 & kHookActorFlag1_LockedEquipment)))
 	{
-		((Character*)thisObj)->jipActorFlags1 &= ~kHookActorFlag1_LockedEquipment;
+		((Character*)thisObj)->jipActorFlags1 ^= kHookActorFlag1_LockedEquipment;
 		bool doLock = lockEqp != 0;
 		HOOK_MOD(EquipItem, doLock);
 		HOOK_MOD(ReEquipAll, doLock);

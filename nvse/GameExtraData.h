@@ -814,6 +814,22 @@ public:
 	TESObjectREFR		*dropper;	// 0C
 };
 
+// 10
+class ExtraLevCreaModifier : public BSExtraData
+{
+public:
+	enum LevelMod
+	{
+		kLvlMod_Easy,
+		kLvlMod_Medium,
+		kLvlMod_Hard,
+		kLvlMod_Boss,
+		kLvlMod_None
+	};
+
+	UInt32			levelMod;	// 0C
+};
+
 // 14
 class ExtraDroppedItemList : public BSExtraData
 {

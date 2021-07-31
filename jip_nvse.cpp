@@ -1401,23 +1401,6 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	return true;
 }
 
-void InitSingletonPointers()
-{
-	g_modelLoader = *(ModelLoader**)0x11C3B3C;
-	g_dataHandler = *(DataHandler**)0x11C3F2C;
-	g_loadedReferences = LoadedReferenceCollection::Get();
-	g_interfaceManager = *(InterfaceManager**)0x11D8A80;
-	g_OSGlobals = *(OSGlobals**)0x11DEA0C;
-	g_TES = *(TES**)0x11DEA10;
-	g_thePlayer = *(PlayerCharacter**)0x11DEA3C;
-	g_sceneGraph = *(SceneGraph**)0x11DEB7C;
-	g_scrapHeapQueue = *(void**)0x11DF1A8;
-	g_inputGlobals = *(OSInputGlobals**)0x11F35CC;
-	g_tileMenuArray = *(TileMenu***)0x11F350C;
-	g_sysColorManager = *(SystemColorManager**)0x11D8A88;
-	g_shadowSceneNode = *(ShadowSceneNode**)0x11F91C8;
-}
-
 void CleanMLCallbacks()
 {
 	for (auto iter = s_mainLoopCallbacks.Begin(); iter; ++iter)
@@ -1433,7 +1416,7 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			MemCopy = memcpy;
 			MemMove = memmove;
 
-			WriteRelCall(0x86B1E1, (UInt32)InitSingletonPointers);
+			SAFE_WRITE_BUF(0x86B1EE, "\x0F\x1F\x44\x00\x00");
 			InitJIPHooks();
 			InitGamePatches();
 			InitCmdPatches();

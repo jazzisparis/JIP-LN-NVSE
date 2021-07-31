@@ -684,7 +684,7 @@ bool Cmd_SetCombatDisabled_Execute(COMMAND_ARGS)
 		if (!target) s_forceCombatTargetMap.Erase(actor);
 		HOOK_MOD(StartCombat, !target);
 		HOOK_MOD(SetCombatTarget, target != NULL);
-		actor->jipActorFlags1 &= ~kHookActorFlag1_CombatAIModified;
+		actor->jipActorFlags1 ^= kHookActorFlag1_CombatAIModified;
 	}
 	if (target) s_forceCombatTargetMap[actor] = target;
 	else actor->StopCombat();
@@ -722,7 +722,7 @@ bool Cmd_SetTeammateUsingAmmo_Execute(COMMAND_ARGS)
 	UInt32 useAmmo;
 	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &useAmmo) && (!useAmmo == !(((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_InfiniteAmmo)))
 	{
-		((Actor*)thisObj)->jipActorFlags1 &= ~kHookActorFlag1_InfiniteAmmo;
+		((Actor*)thisObj)->jipActorFlags1 ^= kHookActorFlag1_InfiniteAmmo;
 		HOOK_MOD(RemoveAmmo, !useAmmo);
 	}
 	return true;
@@ -732,7 +732,7 @@ bool Cmd_ToggleDetectionFix_Execute(COMMAND_ARGS)
 {
 	UInt32 enable;
 	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && (!enable != !(((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_DetectionFix)))
-		((Actor*)thisObj)->jipActorFlags1 &= ~kHookActorFlag1_DetectionFix;
+		((Actor*)thisObj)->jipActorFlags1 ^= kHookActorFlag1_DetectionFix;
 	return true;
 }
 
@@ -1351,7 +1351,7 @@ bool Cmd_SetWheelDisabled_Execute(COMMAND_ARGS)
 {
 	UInt32 disable;
 	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &disable) && (!disable != !(((Actor*)thisObj)->jipActorFlags1 & kHookActorFlag1_DisableWheel)))
-		((Actor*)thisObj)->jipActorFlags1 &= ~kHookActorFlag1_DisableWheel;
+		((Actor*)thisObj)->jipActorFlags1 ^= kHookActorFlag1_DisableWheel;
 	return true;
 }
 
@@ -1753,7 +1753,7 @@ bool Cmd_SetVATSTargetable_Execute(COMMAND_ARGS)
 	UInt32 targetable;
 	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &targetable) && (!targetable == !(((Actor*)thisObj)->jipActorFlags2 & kHookActorFlag2_NonTargetable)))
 	{
-		((Actor*)thisObj)->jipActorFlags2 &= ~kHookActorFlag2_NonTargetable;
+		((Actor*)thisObj)->jipActorFlags2 ^= kHookActorFlag2_NonTargetable;
 		HOOK_MOD(AddVATSTarget, !targetable);
 	}
 	return true;
