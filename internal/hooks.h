@@ -62,7 +62,6 @@ enum
 	kHook_SetRepairListValues,
 	kHook_DoRepairItem,
 	kHook_RepairMenuClick,
-	kHook_DamageToWeapon,
 	kHook_InitMissileFlags,
 	kHook_QttSelectInventory,
 	kHook_QttSelectContainer,
@@ -97,10 +96,11 @@ enum
 	kHookFormFlag5_FastTravelInformed =		1 << 0,
 	kHookFormFlag5_CellChangeInformed =		1 << 1,
 	kHookFormFlag5_MenuInputInformed =		1 << 2,
+	kHookFormFlag5_ScriptInformed =			kHookFormFlag5_FastTravelInformed | kHookFormFlag5_CellChangeInformed | kHookFormFlag5_MenuInputInformed,
 	kHookFormFlag5_ScriptOnWait =			1 << 3,
 
-	kHookRefFlag61_Update3D =				1 << 0,
-	kHookRefFlag61_DisableCollision =		1 << 1,
+	kHookRefFlag5F_Update3D =				1 << 0,
+	kHookRefFlag5F_DisableCollision =		1 << 1,
 
 	kHookActorFlag1_CombatDisabled =		1 << 0,
 	kHookActorFlag1_ForceCombatTarget =		1 << 1,
@@ -1202,7 +1202,7 @@ __declspec(naked) void ReEquipAllHook()
 		mov		ecx, [ecx+0x68]
 		test	ecx, ecx
 		jz		skipRetn
-		cmp		dword ptr [ecx+0x28], 1
+		cmp		byte ptr [ecx+0x28], 1
 		ja		getPrefWpn
 		mov		eax, [ecx+0x114]
 		test	eax, eax
@@ -3475,7 +3475,7 @@ __declspec(naked) void CreateObjectNodeHook()
 		jz		contRetn
 		test	byte ptr [eax+6], kHookFormFlag6_InsertObject
 		jnz		skipRetn
-		test	byte ptr [eax+0x5F], kHookRefFlag61_DisableCollision
+		test	byte ptr [eax+0x5F], kHookRefFlag5F_DisableCollision
 		jnz		skipRetn
 	contRetn:
 		movzx	eax, byte ptr [ecx+4]
@@ -3556,9 +3556,9 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		test	ecx, ecx
 		jz		cellUnlock
 		mov		esi, ecx
-		test	byte ptr [edi+0x5F], kHookRefFlag61_Update3D
+		test	byte ptr [edi+0x5F], kHookRefFlag5F_Update3D
 		jz		doneFade
-		and		byte ptr [edi+0x5F], ~kHookRefFlag61_Update3D
+		and		byte ptr [edi+0x5F], ~kHookRefFlag5F_Update3D
 		mov		eax, [ecx]
 		cmp		dword ptr [eax+0x10], kAddr_ReturnThis
 		jnz		doneFade
@@ -3567,7 +3567,7 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		fstp	dword ptr [ecx+0xB8]
 		or		byte ptr [ecx+0x31], 0x40
 	doneFade:
-		test	byte ptr [edi+0x5F], kHookRefFlag61_DisableCollision
+		test	byte ptr [edi+0x5F], kHookRefFlag5F_DisableCollision
 		jz		doneCollision
 		call	NiNode::RemoveCollision
 	doneCollision:

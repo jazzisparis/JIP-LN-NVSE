@@ -441,10 +441,10 @@ public:
 	/*3B0*/virtual void		Unk_EC(void);
 	/*3B4*/virtual void		Unk_ED(void);
 	/*3B8*/virtual void		Unk_EE(void);
-	/*3BC*/virtual ExtraContainerChanges::EntryData *GetPreferedWeapon(UInt32 unk);
+	/*3BC*/virtual ContChangesEntry *GetPreferedWeapon(UInt32 unk);
 	/*3C0*/virtual void		Unk_F0(void);
 	/*3C4*/virtual void		ResetArmorDRDT();
-	/*3C8*/virtual void		Unk_F2(void);
+	/*3C8*/virtual bool		DamageWeaponHealth(ContChangesEntry *weapomInfo, float damage, int unused);
 	/*3CC*/virtual void		Unk_F3(void);
 	/*3D0*/virtual void		Unk_F4(void);
 	/*3D4*/virtual void		Unk_F5(void);
@@ -741,6 +741,16 @@ struct PerkRank
 	BGSPerk		*perk;
 	UInt8		rank;
 	UInt8		pad05[3];
+};
+
+class PerkRankFinder
+{
+	BGSPerk		*m_perk;
+
+public:
+	PerkRankFinder(BGSPerk *_perk) : m_perk(_perk) {}
+
+	bool Accept(PerkRank *perkRank) {return perkRank->perk == m_perk;}
 };
 
 struct CasinoStats

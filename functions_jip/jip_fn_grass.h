@@ -1,9 +1,9 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetGrassTraitNumeric, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetGrassTraitNumeric, , 0, 3, kParams_JIP_OneForm_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetGrassModel, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetGrassModel, , 0, 2, kParams_JIP_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetGrassTraitNumeric, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetGrassTraitNumeric, 0, 3, kParams_OneForm_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetGrassModel, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetGrassModel, 0, 2, kParams_OneForm_OneString);
 
 bool Cmd_GetGrassTraitNumeric_Execute(COMMAND_ARGS)
 {

@@ -876,6 +876,6 @@ extern double s_nvseVersion;
 #define REFR_RES *(UInt32*)result
 #define NUM_ARGS scriptData[*opcodeOffsetPtr]
 
-DEFINE_COMMAND_PLUGIN(EmptyCommand, , 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(EmptyCommand, 0, 0, NULL);
 
 void __stdcall StoreOriginalData(UInt32 addr, UInt8 size);

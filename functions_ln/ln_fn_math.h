@@ -1,15 +1,15 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(fsqrt, , 0, 1, kParams_JIP_OneDouble);
-DEFINE_CMD_ALT_COND_PLUGIN(GetDistance2D, , , 1, kParams_JIP_OneObjectRef);
-DEFINE_CMD_ALT_COND_PLUGIN(GetDistance3D, , , 1, kParams_JIP_OneObjectRef);
-DEFINE_COMMAND_PLUGIN(fSin, , 0, 2, kParams_JIP_OneDouble_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(fCos, , 0, 2, kParams_JIP_OneDouble_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(fTan, , 0, 1, kParams_JIP_OneDouble);
-DEFINE_COMMAND_PLUGIN(fAsin, , 0, 1, kParams_JIP_OneDouble);
-DEFINE_COMMAND_PLUGIN(fAcos, , 0, 1, kParams_JIP_OneDouble);
-DEFINE_COMMAND_PLUGIN(fAtan, , 0, 1, kParams_JIP_OneDouble);
-DEFINE_COMMAND_PLUGIN(fAtan2, , 0, 2, kParams_JIP_TwoDoubles);
+DEFINE_COMMAND_PLUGIN(fsqrt, 0, 1, kParams_OneDouble);
+DEFINE_CMD_COND_PLUGIN(GetDistance2D, 1, 1, kParams_OneObjectRef);
+DEFINE_CMD_COND_PLUGIN(GetDistance3D, 1, 1, kParams_OneObjectRef);
+DEFINE_COMMAND_PLUGIN(fSin, 0, 2, kParams_OneDouble_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(fCos, 0, 2, kParams_OneDouble_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(fTan, 0, 1, kParams_OneDouble);
+DEFINE_COMMAND_PLUGIN(fAsin, 0, 1, kParams_OneDouble);
+DEFINE_COMMAND_PLUGIN(fAcos, 0, 1, kParams_OneDouble);
+DEFINE_COMMAND_PLUGIN(fAtan, 0, 1, kParams_OneDouble);
+DEFINE_COMMAND_PLUGIN(fAtan2, 0, 2, kParams_TwoDoubles);
 
 bool Cmd_fsqrt_Execute(COMMAND_ARGS)
 {

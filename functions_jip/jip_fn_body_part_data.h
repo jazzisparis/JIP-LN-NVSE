@@ -1,20 +1,20 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetBodyPartDataSkeleton, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetBodyPartDataSkeleton, , 0, 2, kParams_JIP_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(GetBodyPartDataRagdoll, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetBodyPartDataRagdoll, , 0, 2, kParams_JIP_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetBodyPartDataHasPart, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetBodyPartTraitNumeric, , 0, 3, kParams_JIP_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(SetBodyPartTraitNumeric, , 0, 4, kParams_JIP_OneForm_TwoInts_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetBodyPartTraitForm, , 0, 3, kParams_JIP_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(SetBodyPartTraitForm, , 0, 4, kParams_JIP_OneForm_TwoInts_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetBodyPartName, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetBodyPartName, , 0, 3, kParams_JIP_OneForm_OneInt_OneString);
-DEFINE_COMMAND_PLUGIN(GetBodyPartReplacementModel, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetBodyPartReplacementModel, , 0, 3, kParams_JIP_OneForm_OneInt_OneString);
-DEFINE_COMMAND_PLUGIN(GetBodyPartFlag, , 0, 3, kParams_JIP_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(SetBodyPartFlag, , 0, 4, kParams_JIP_OneForm_ThreeInts);
+DEFINE_COMMAND_PLUGIN(GetBodyPartDataSkeleton, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetBodyPartDataSkeleton, 0, 2, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetBodyPartDataRagdoll, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetBodyPartDataRagdoll, 0, 2, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetBodyPartDataHasPart, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetBodyPartTraitNumeric, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(SetBodyPartTraitNumeric, 0, 4, kParams_OneForm_TwoInts_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetBodyPartTraitForm, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(SetBodyPartTraitForm, 0, 4, kParams_OneForm_TwoInts_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetBodyPartName, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetBodyPartName, 0, 3, kParams_OneForm_OneInt_OneString);
+DEFINE_COMMAND_PLUGIN(GetBodyPartReplacementModel, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetBodyPartReplacementModel, 0, 3, kParams_OneForm_OneInt_OneString);
+DEFINE_COMMAND_PLUGIN(GetBodyPartFlag, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(SetBodyPartFlag, 0, 4, kParams_OneForm_ThreeInts);
 
 bool Cmd_GetBodyPartDataSkeleton_Execute(COMMAND_ARGS)
 {

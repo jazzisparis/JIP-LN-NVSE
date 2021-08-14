@@ -1,15 +1,15 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetActivatorRadioStation, , 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetActivatorRadioStation, , 0, 2, kParams_JIP_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetActivatorPrompt, , 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetActivatorPrompt, , 0, 2, kParams_JIP_OneString_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetActivatorWaterType, , 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetActivatorWaterType, , 0, 2, kParams_JIP_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetActivatorSoundLooping, , 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetActivatorSoundLooping, , 0, 2, kParams_JIP_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetActivatorSoundActivate, , 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetActivatorSoundActivate, , 0, 2, kParams_JIP_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetActivatorRadioStation, 0, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetActivatorRadioStation, 0, 2, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetActivatorPrompt, 0, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetActivatorPrompt, 0, 2, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetActivatorWaterType, 0, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetActivatorWaterType, 0, 2, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetActivatorSoundLooping, 0, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetActivatorSoundLooping, 0, 2, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetActivatorSoundActivate, 0, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetActivatorSoundActivate, 0, 2, kParams_OneForm_OneOptionalForm);
 
 bool Cmd_GetActivatorRadioStation_Execute(COMMAND_ARGS)
 {

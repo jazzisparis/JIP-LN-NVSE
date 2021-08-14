@@ -75,7 +75,7 @@ void DoLoadGameCleanup()
 		for (auto userIter = s_eventInformedObjects.Begin(); userIter; ++userIter)
 		{
 			form = LookupFormByRefID(*userIter);
-			if (form) form->jipFormFlags5 = 0;
+			if (form) form->jipFormFlags5 &= ~kHookFormFlag5_ScriptInformed;
 		}
 		s_eventInformedObjects.Clear();
 
@@ -98,7 +98,7 @@ void DoLoadGameCleanup()
 		for (auto waitIter = s_scriptWaitInfoMap.Begin(); waitIter; ++waitIter)
 		{
 			form = LookupFormByRefID(waitIter().refID);
-			if (form) form->jipFormFlags5 = 0;
+			if (form) form->jipFormFlags5 &= ~kHookFormFlag5_ScriptOnWait;
 		}
 		s_scriptWaitInfoMap.Clear();
 		HOOK_SET(ScriptRunner, false);

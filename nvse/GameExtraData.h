@@ -321,6 +321,8 @@ public:
 	class ExtendDataList : public tList<ExtraDataList>
 	{
 	public:
+		ExtendDataList(ExtraDataList *_xData = nullptr) : tList<ExtraDataList>(_xData) {}
+
 		void Clear();
 		void CleanEmpty();
 	};
@@ -810,6 +812,22 @@ class ExtraItemDropper : public BSExtraData
 {
 public:
 	TESObjectREFR		*dropper;	// 0C
+};
+
+// 10
+class ExtraLevCreaModifier : public BSExtraData
+{
+public:
+	enum LevelMod
+	{
+		kLvlMod_Easy,
+		kLvlMod_Medium,
+		kLvlMod_Hard,
+		kLvlMod_Boss,
+		kLvlMod_None
+	};
+
+	UInt32			levelMod;	// 0C
 };
 
 // 14

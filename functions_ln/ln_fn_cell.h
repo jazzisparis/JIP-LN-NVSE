@@ -1,14 +1,14 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetCellRefs, , 0, 4, kParams_JIP_OneInt_TwoOptionalInts_OneOptionalCell);
-DEFINE_COMMAND_PLUGIN(GetCellWaterHeight, , 0, 1, kParams_JIP_OneOptionalCell);
-DEFINE_COMMAND_PLUGIN(SetCellWaterHeight, , 0, 2, kParams_JIP_OneFloat_OneOptionalCell);
-DEFINE_COMMAND_PLUGIN(GetCellWaterForm, , 0, 1, kParams_JIP_OneOptionalCell);
-DEFINE_COMMAND_PLUGIN(GetCellImageSpace, , 0, 1, kParams_JIP_OneCell);
-DEFINE_COMMAND_PLUGIN(GetCellLightingTemplate, , 0, 1, kParams_JIP_OneCell);
-DEFINE_COMMAND_PLUGIN(SetCellLightingTemplate, , 0, 2, kParams_JIP_OneCell_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetCellFlag, , 0, 2, kParams_JIP_OneCell_OneInt);
-DEFINE_COMMAND_PLUGIN(SetCellFlag, , 0, 3, kParams_JIP_OneCell_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetCellRefs, 0, 4, kParams_OneInt_TwoOptionalInts_OneOptionalCell);
+DEFINE_COMMAND_PLUGIN(GetCellWaterHeight, 0, 1, kParams_OneOptionalCell);
+DEFINE_COMMAND_PLUGIN(SetCellWaterHeight, 0, 2, kParams_OneFloat_OneOptionalCell);
+DEFINE_COMMAND_PLUGIN(GetCellWaterForm, 0, 1, kParams_OneOptionalCell);
+DEFINE_COMMAND_PLUGIN(GetCellImageSpace, 0, 1, kParams_OneCell);
+DEFINE_COMMAND_PLUGIN(GetCellLightingTemplate, 0, 1, kParams_OneCell);
+DEFINE_COMMAND_PLUGIN(SetCellLightingTemplate, 0, 2, kParams_OneCell_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetCellFlag, 0, 2, kParams_OneCell_OneInt);
+DEFINE_COMMAND_PLUGIN(SetCellFlag, 0, 3, kParams_OneCell_TwoInts);
 
 bool Cmd_GetCellRefs_Execute(COMMAND_ARGS)		// Deprecated
 {

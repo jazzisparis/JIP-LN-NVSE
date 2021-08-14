@@ -152,9 +152,9 @@ struct PermanentClonedForm
 class TESForm : public BaseFormComponent
 {
 public:
-	/*010*/virtual void *		Destroy(bool doFree);				// func_00C in GECK ?? I think ??
+	/*010*/virtual void		Destroy(bool doFree);				// func_00C in GECK ?? I think ??
 	/*014*/virtual void		Unk_05(void);						// Might be set default value (called from constructor)
-	/*018*/virtual UInt32		Unk_06(void);
+	/*018*/virtual UInt32	Unk_06(void);
 	/*01C*/virtual bool		Unk_07(void);
 	/*020*/virtual bool		LoadForm(ModInfo * modInfo);		// func_010 in GECK
 	/*024*/virtual bool		Unk_09(void * arg);					// points to LoadForm on TESForm
@@ -165,11 +165,11 @@ public:
 	/*034*/virtual void		WriteFormInfo(ModInfo* modInfo);	// does some saving stuff, then calls Fn0A
 	/*038*/virtual bool		Unk_0E(void * arg);					// prapares a GRUP formInfo
 	/*03C*/virtual bool		Sort(TESForm * form);				// returns if the argument is "greater or equal" to this form
-	/*040*/virtual TESForm *	CreateForm(void * arg0, void * mapToAddTo);	// makes a new form, 
+	/*040*/virtual TESForm *CreateForm(void * arg0, void * mapToAddTo);	// makes a new form, 
 	/*044*/virtual void		Unk_11(void * arg);
 	/*048*/virtual void		MarkAsModified(UInt32 changedFlags);		// enable changed flag?
 	/*04C*/virtual void		MarkAsUnmodified(UInt32 changedFlags);		// disable changed flag?
-	/*050*/virtual UInt32		GetSaveSize(UInt32 changedFlags);	// bytes taken by the delta flags for this form, UNRELIABLE, not (always) overriden
+	/*050*/virtual UInt32	GetSaveSize(UInt32 changedFlags);	// bytes taken by the delta flags for this form, UNRELIABLE, not (always) overriden
 	/*054*/virtual void		Unk_15(void * arg);					// collect referenced forms?
 	/*058*/virtual void		SaveGame(UInt32 changedFlags);		// Used as part of CopyFromBase with LoadGame.
 	/*05C*/virtual void		LoadGame(void * arg);				// load from BGSLoadFormBuffer arg
@@ -184,7 +184,7 @@ public:
 	/*080*/virtual void		Unk_20(void * arg);
 	/*084*/virtual void		Unk_21(void * arg);
 	/*088*/virtual void		InitItem(void);
-	/*08C*/virtual UInt32		GetTypeID(void);
+	/*08C*/virtual UInt32	GetTypeID(void);
 	/*090*/virtual void		GetDebugName(String * dst);
 	/*094*/virtual bool		IsQuestItem(void);
 										// Unk_26 though Unk_36 get or set flag bits
@@ -215,7 +215,7 @@ public:
 	/*0F8*/virtual bool		IsActorBase();		// TESNPC or TESCreature
 	/*0FC*/virtual bool		IsMobileObject();	// Actor, Projectile or Explosion
 	/*100*/virtual bool		IsActor(void);
-	/*104*/virtual UInt32		Unk_41(void);
+	/*104*/virtual UInt32	Unk_41(void);
 	/*108*/virtual void		CopyFrom(const TESForm * form);
 	/*10C*/virtual bool		Compare(TESForm * form);
 	/*110*/virtual bool		CheckFormGRUP(void * arg);	// Checks the group is valid for the form

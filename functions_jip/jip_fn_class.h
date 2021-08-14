@@ -1,9 +1,9 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetClassTraitNumeric, , 0, 2, kParams_JIP_OneClass_OneInt);
-DEFINE_COMMAND_PLUGIN(SetClassTraitNumeric, , 0, 3, kParams_JIP_OneClass_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetClassFlag, , 0, 2, kParams_JIP_OneClass_OneInt);
-DEFINE_COMMAND_PLUGIN(SetClassFlag, , 0, 3, kParams_JIP_OneClass_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetClassTraitNumeric, 0, 2, kParams_OneClass_OneInt);
+DEFINE_COMMAND_PLUGIN(SetClassTraitNumeric, 0, 3, kParams_OneClass_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetClassFlag, 0, 2, kParams_OneClass_OneInt);
+DEFINE_COMMAND_PLUGIN(SetClassFlag, 0, 3, kParams_OneClass_TwoInts);
 
 bool Cmd_GetClassTraitNumeric_Execute(COMMAND_ARGS)
 {

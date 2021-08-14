@@ -1,14 +1,14 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(IsRadioRef, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetRadioBroadcastType, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetRadioBroadcastType, , 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetRadioRadius, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetRadioRadius, , 1, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetRadioStatic, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetRadioStatic, , 1, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetRadioPosRef, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetRadioPosRef, , 1, 1, kParams_JIP_OneObjectRef);
+DEFINE_COMMAND_PLUGIN(IsRadioRef, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetRadioBroadcastType, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetRadioBroadcastType, 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetRadioRadius, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetRadioRadius, 1, 1, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetRadioStatic, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetRadioStatic, 1, 1, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetRadioPosRef, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetRadioPosRef, 1, 1, kParams_OneObjectRef);
 
 bool Cmd_IsRadioRef_Execute(COMMAND_ARGS)
 {

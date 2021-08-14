@@ -3,7 +3,7 @@
 #include "internal/dinput.h"
 #include "internal/xinput.h"
 #include "internal/jip_core.h"
-#include "internal/param_info.h"
+#include "nvse/ParamInfos.h"
 #include "internal/hooks.h"
 #include "internal/patches_cmd.h"
 #include "internal/patches_game.h"
@@ -1416,6 +1416,7 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			MemCopy = memcpy;
 			MemMove = memmove;
 
+			SAFE_WRITE_BUF(0x86B1EE, "\x0F\x1F\x44\x00\x00");
 			InitJIPHooks();
 			InitGamePatches();
 			InitCmdPatches();

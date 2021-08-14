@@ -1,11 +1,11 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(SetCellWaterForm, , 0, 2, kParams_JIP_OneCell_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetCellClimate, , 0, 1, kParams_JIP_OneCell);
-DEFINE_COMMAND_PLUGIN(SetCellClimate, , 0, 2, kParams_JIP_OneCell_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetCellNoiseTexture, , 0, 1, kParams_JIP_OneCell);
-DEFINE_COMMAND_PLUGIN(SetCellNoiseTexture, , 0, 2, kParams_JIP_OneCell_OneString);
-DEFINE_COMMAND_PLUGIN(GetOwnerOfCell, , 0, 1, kParams_JIP_OneCell);
+DEFINE_COMMAND_PLUGIN(SetCellWaterForm, 0, 2, kParams_OneCell_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetCellClimate, 0, 1, kParams_OneCell);
+DEFINE_COMMAND_PLUGIN(SetCellClimate, 0, 2, kParams_OneCell_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetCellNoiseTexture, 0, 1, kParams_OneCell);
+DEFINE_COMMAND_PLUGIN(SetCellNoiseTexture, 0, 2, kParams_OneCell_OneString);
+DEFINE_COMMAND_PLUGIN(GetOwnerOfCell, 0, 1, kParams_OneCell);
 
 bool Cmd_SetCellWaterForm_Execute(COMMAND_ARGS)
 {

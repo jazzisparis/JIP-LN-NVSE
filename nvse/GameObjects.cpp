@@ -790,7 +790,7 @@ __declspec(naked) bhkCharacterController *TESObjectREFR::GetCharacterController(
 		mov		ecx, [ecx+0x68]
 		test	ecx, ecx
 		jz		retnNULL
-		cmp		dword ptr [ecx+0x28], 1
+		cmp		byte ptr [ecx+0x28], 1
 		ja		retnNULL
 		mov		eax, [ecx+0x138]
 		retn
@@ -1868,7 +1868,7 @@ __declspec(naked) BackUpPackage *Actor::AddBackUpPackage(TESObjectREFR *targetRe
 		mov		ecx, [ecx+0x68]
 		test	ecx, ecx
 		jz		done
-		cmp		dword ptr [ecx+0x28], 0
+		cmp		byte ptr [ecx+0x28], 0
 		jnz		done
 		mov		[ebp-8], ecx
 		mov		eax, [ecx]

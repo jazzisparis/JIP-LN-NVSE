@@ -1,26 +1,26 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(RefToString, , 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(StringToRef, , 0, 1, kParams_OneString);
-DEFINE_COMMAND_PLUGIN(GetMinOf, , 0, 5, kParams_JIP_TwoDoubles_ThreeOptionalDoubles);
-DEFINE_COMMAND_PLUGIN(GetMaxOf, , 0, 5, kParams_JIP_TwoDoubles_ThreeOptionalDoubles);
-DEFINE_COMMAND_PLUGIN(ReadArrayFromFile, , 0, 2, kParams_JIP_OneString_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(WriteArrayToFile, , 0, 3, kParams_JIP_OneString_TwoInts);
-DEFINE_COMMAND_PLUGIN(ReadStringFromFile, , 0, 3, kParams_JIP_OneString_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(WriteStringToFile, , 0, 23, kParams_JIP_OneString_OneInt_OneFormatString);
-DEFINE_COMMAND_PLUGIN(GetLoadOrderChanged, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(ValidateModIndex, , 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(ClearJIPSavedData, , 0, 4, kParams_JIP_FourInts);
-DEFINE_COMMAND_PLUGIN(ClearModNVSEVars, , 0, 2, kParams_JIP_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(ModLogPrint, , 0, 22, kParams_JIP_OneInt_OneFormatString);
-DEFINE_COMMAND_PLUGIN(GetOptionalPatch, , 0, 1, kParams_OneString);
-DEFINE_COMMAND_PLUGIN(SetOptionalPatch, , 0, 2, kParams_JIP_OneString_OneInt);
-DEFINE_COMMAND_PLUGIN(GetPluginHeaderVersion, , 0, 1, kParams_OneString);
-DEFINE_COMMAND_PLUGIN(GetIsLAA, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(Sleep, , 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetArrayValue, , 0, 2, kParams_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetRandomInRange, , 0, 2, kParams_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetSessionTime, , 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(RefToString, 0, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(StringToRef, 0, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(GetMinOf, 0, 5, kParams_TwoDoubles_ThreeOptionalDoubles);
+DEFINE_COMMAND_PLUGIN(GetMaxOf, 0, 5, kParams_TwoDoubles_ThreeOptionalDoubles);
+DEFINE_COMMAND_PLUGIN(ReadArrayFromFile, 0, 2, kParams_OneString_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(WriteArrayToFile, 0, 3, kParams_OneString_TwoInts);
+DEFINE_COMMAND_PLUGIN(ReadStringFromFile, 0, 3, kParams_OneString_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(WriteStringToFile, 0, 23, kParams_OneString_OneInt_OneFormatString);
+DEFINE_COMMAND_PLUGIN(GetLoadOrderChanged, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(ValidateModIndex, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(ClearJIPSavedData, 0, 4, kParams_FourInts);
+DEFINE_COMMAND_PLUGIN(ClearModNVSEVars, 0, 2, kParams_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(ModLogPrint, 0, 22, kParams_OneInt_OneFormatString);
+DEFINE_COMMAND_PLUGIN(GetOptionalPatch, 0, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(SetOptionalPatch, 0, 2, kParams_OneString_OneInt);
+DEFINE_COMMAND_PLUGIN(GetPluginHeaderVersion, 0, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(GetIsLAA, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(Sleep, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetArrayValue, 0, 2, kParams_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetRandomInRange, 0, 2, kParams_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetSessionTime, 0, 0, NULL);
 
 bool Cmd_RefToString_Execute(COMMAND_ARGS)
 {
@@ -441,7 +441,7 @@ bool Cmd_GetOptionalPatch_Execute(COMMAND_ARGS)
 				enabled = HOOK_INSTALLED(QttSelectInventory);
 				break;
 			case 11:
-				enabled = HOOK_INSTALLED(DamageToWeapon);
+				enabled = s_FO3WpnDegradation;
 				break;
 			case 12:
 				enabled = s_localizedDTDR;

@@ -1,11 +1,11 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetLoadScreenTexture, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetLoadScreenTexture, , 0, 2, kParams_JIP_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(GetLoadScreenType, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetLoadScreenType, , 0, 2, kParams_JIP_TwoForms);
-DEFINE_COMMAND_PLUGIN(GetLoadScreenTypeTextRGB, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetLoadScreenTypeTextRGB, , 0, 4, kParams_JIP_OneForm_ThreeFloats);
+DEFINE_COMMAND_PLUGIN(GetLoadScreenTexture, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetLoadScreenTexture, 0, 2, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetLoadScreenType, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetLoadScreenType, 0, 2, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(GetLoadScreenTypeTextRGB, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetLoadScreenTypeTextRGB, 0, 4, kParams_OneForm_ThreeFloats);
 
 bool Cmd_GetLoadScreenTexture_Execute(COMMAND_ARGS)
 {

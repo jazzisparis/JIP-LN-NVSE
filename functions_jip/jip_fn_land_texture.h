@@ -1,13 +1,13 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetLandTextureTextureSet, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetLandTextureTextureSet, , 0, 2, kParams_JIP_TwoForms);
-DEFINE_COMMAND_PLUGIN(GetLandTextureTraitNumeric, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetLandTextureTraitNumeric, , 0, 3, kParams_JIP_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetLandTextureNumGrasses, , 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(GetLandTextureNthGrass, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(LandTextureAddGrass, , 0, 2, kParams_JIP_TwoForms);
-DEFINE_COMMAND_PLUGIN(LandTextureRemoveGrass, , 0, 2, kParams_JIP_TwoForms);
+DEFINE_COMMAND_PLUGIN(GetLandTextureTextureSet, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetLandTextureTextureSet, 0, 2, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(GetLandTextureTraitNumeric, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetLandTextureTraitNumeric, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetLandTextureNumGrasses, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(GetLandTextureNthGrass, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(LandTextureAddGrass, 0, 2, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(LandTextureRemoveGrass, 0, 2, kParams_TwoForms);
 
 bool Cmd_GetLandTextureTextureSet_Execute(COMMAND_ARGS)
 {

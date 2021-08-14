@@ -53,7 +53,7 @@ enum ParamType
 	kParamType_ImageSpace =				0x2B,	//							kFormType_ImageSpace
 	kParamType_Double =					0x2C,	// 
 	kParamType_ScriptVariable =			0x2D,	// 
-	kParamType_Unhandled2E =			0x2E,	// 
+	kParamType_VoiceType =				0x2E,	// 
 	kParamType_EncounterZone =			0x2F,	//							kFormType_EncounterZone
 	kParamType_IdleForm =				0x30,	//							kFormType_TESIdleForm
 	kParamType_Message =				0x31,	//							kFormType_Message
@@ -117,75 +117,57 @@ struct ParamInfo
 
 //Macro to make CommandInfo definitions a bit less tedious
 
-#define DEFINE_CMD_FULL(name, altName, description, refRequired, numParams, paramInfo, parser) \
+#define DEFINE_CMD_FULL(name, altName, refRequired, numParams, paramInfo, parser) \
 	extern bool Cmd_ ## name ## _Execute(COMMAND_ARGS); \
 	static CommandInfo (kCommandInfo_ ## name) = { \
 	#name, \
 	#altName, \
 	0, \
-	#description, \
+	"", \
 	refRequired, \
 	numParams, \
 	paramInfo, \
-	HANDLER(Cmd_ ## name ## _Execute), \
+	Cmd_ ## name ## _Execute, \
 	parser, \
 	NULL, \
 	0 \
 	};
 
-#define DEFINE_CMD_ALT(name, altName, description, refRequired, numParams, paramInfo) \
-	DEFINE_CMD_FULL(name, altName, description, refRequired, numParams, paramInfo, Cmd_Default_Parse)	
+#define DEFINE_COMMAND_PLUGIN(name, refRequired, numParams, paramInfo) \
+	DEFINE_CMD_FULL(name, , refRequired, numParams, paramInfo, NULL)
 
-#define DEFINE_CMD_ALT_EXP(name, altName, description, refRequired, paramInfo) \
-	DEFINE_CMD_FULL(name, altName, description, refRequired, (sizeof(paramInfo) / sizeof(ParamInfo)), paramInfo, Cmd_Expression_Parse)	
+#define DEFINE_COMMAND_ALT_PLUGIN(name, altName, refRequired, numParams, paramInfo) \
+	DEFINE_CMD_FULL(name, altName, refRequired, numParams, paramInfo, NULL)
 
-#define DEFINE_COMMAND(name, description, refRequired, numParams, paramInfo) \
-	DEFINE_CMD_FULL(name, , description, refRequired, numParams, paramInfo, Cmd_Default_Parse)	
+#define DEFINE_COMMAND_PLUGIN_EXP(name, refRequired, numParams, paramInfo) \
+	DEFINE_CMD_FULL(name, , refRequired, numParams, paramInfo, Cmd_Expression_Plugin_Parse)
 
-#define DEFINE_CMD(name, description, refRequired, paramInfo) \
-	DEFINE_COMMAND(name, description, refRequired, (sizeof(paramInfo) / sizeof(ParamInfo)), paramInfo)
-
-#define DEFINE_COMMAND_EXP(name, description, refRequired, paramInfo) \
-	DEFINE_CMD_ALT_EXP(name, , description, refRequired, paramInfo)	
-
-#define DEFINE_COMMAND_PLUGIN(name, description, refRequired, numParams, paramInfo) \
-	DEFINE_CMD_FULL(name, , description, refRequired, numParams, paramInfo, NULL)
-
-#define DEFINE_COMMAND_ALT_PLUGIN(name, altName, description, refRequired, numParams, paramInfo) \
-	DEFINE_CMD_FULL(name, altName, description, refRequired, numParams, paramInfo, NULL)
-
-#define DEFINE_COMMAND_PLUGIN_EXP(name, description, refRequired, paramInfo) \
-	DEFINE_CMD_FULL(name, , description, refRequired, (sizeof(paramInfo) / sizeof(ParamInfo)), paramInfo, Cmd_Expression_Plugin_Parse)
-
-#define DEFINE_COMMAND_ALT_PLUGIN_EXP(name, altName, description, refRequired, paramInfo) \
-	DEFINE_CMD_FULL(name, altName, description, refRequired, (sizeof(paramInfo) / sizeof(ParamInfo)), paramInfo, Cmd_Expression_Plugin_Parse)
+#define DEFINE_COMMAND_ALT_PLUGIN_EXP(name, altName, refRequired, numParams, paramInfo) \
+	DEFINE_CMD_FULL(name, altName, refRequired, numParams, paramInfo, Cmd_Expression_Plugin_Parse)
 
 // for commands which can be used as conditionals
-#define DEFINE_CMD_ALT_COND_ANY(name, altName, description, refRequired, paramInfo, parser) \
+#define DEFINE_CMD_ALT_COND_ANY(name, altName, refRequired, numParams, paramInfo, parser) \
 	extern bool Cmd_ ## name ## _Execute(COMMAND_ARGS); \
 	extern bool Cmd_ ## name ## _Eval(COMMAND_ARGS_EVAL); \
 	static CommandInfo (kCommandInfo_ ## name) = { \
 	#name,	\
 	#altName,		\
 	0,		\
-	#description,	\
+	"",	\
 	refRequired,	\
-	(sizeof(paramInfo) / sizeof(ParamInfo)),	\
+	numParams,	\
 	paramInfo,	\
-	HANDLER(Cmd_ ## name ## _Execute),	\
+	Cmd_ ## name ## _Execute,	\
 	parser,	\
-	HANDLER_EVAL(Cmd_ ## name ## _Eval),	\
+	Cmd_ ## name ## _Eval,	\
 	1	\
 	};
 
-#define DEFINE_CMD_ALT_COND(name, altName, description, refRequired, paramInfo) \
-	DEFINE_CMD_ALT_COND_ANY(name, altName, description, refRequired, paramInfo, Cmd_Default_Parse)
+#define DEFINE_CMD_COND_PLUGIN(name, refRequired, numParams, paramInfo) \
+	DEFINE_CMD_ALT_COND_ANY(name, , refRequired, numParams, paramInfo, NULL)
 
-#define DEFINE_CMD_ALT_COND_PLUGIN(name, altName, description, refRequired, paramInfo) \
-	DEFINE_CMD_ALT_COND_ANY(name, altName, description, refRequired, paramInfo, NULL)
-
-#define DEFINE_CMD_COND(name, description, refRequired, paramInfo) \
-	DEFINE_CMD_ALT_COND(name, , description, refRequired, paramInfo)
+#define DEFINE_CMD_ALT_COND_PLUGIN(name, altName, refRequired, numParams, paramInfo) \
+	DEFINE_CMD_ALT_COND_ANY(name, altName, refRequired, numParams, paramInfo, NULL)
 
 typedef bool (* Cmd_Execute)(COMMAND_ARGS);
 bool Cmd_Default_Execute(COMMAND_ARGS);
@@ -196,15 +178,6 @@ const Cmd_Parse Cmd_Expression_Plugin_Parse = (Cmd_Parse)0x08000000;
 
 typedef bool (* Cmd_Eval)(COMMAND_ARGS_EVAL);
 bool Cmd_Default_Eval(COMMAND_ARGS_EVAL);
-
-
-#ifdef RUNTIME
-#define HANDLER(x)	x
-#define HANDLER_EVAL(x)	x
-#else
-#define HANDLER(x)	Cmd_Default_Execute
-#define HANDLER_EVAL(x)	Cmd_Default_Eval
-#endif
 
 struct CommandInfo
 {
@@ -222,95 +195,4 @@ struct CommandInfo
 	Cmd_Eval	eval;			// 20
 
 	UInt32		flags;			// 24		might be more than one field (reference to 25 as a byte)
-
-	void	DumpFunctionDef() const;
-	void	DumpDocs() const;
 };
-
-const UInt32 kNVSEOpcodeStart	= 0x1400;
-const UInt32 kNVSEOpcodeTest	= 0x2000;
-
-/*
-struct CommandMetadata
-{
-	CommandMetadata() :parentPlugin(kNVSEOpcodeStart), returnType(kRetnType_Default) { }
-
-	UInt32				parentPlugin;
-	CommandReturnType	returnType;
-};
-
-class CommandTable
-{
-public:
-	CommandTable();
-	~CommandTable();
-
-	static void	Init(void);
-
-	void	Read(CommandInfo * start, CommandInfo * end);
-	void	Add(CommandInfo * info, CommandReturnType retnType = kRetnType_Default, UInt32 parentPluginOpcodeBase = 0);
-	void	PadTo(UInt32 id, CommandInfo * info = NULL);
-	bool	Replace(UInt32 opcodeToReplace, CommandInfo* replaceWith);
-
-	CommandInfo *	GetStart(void)	{ return &m_commands[0]; }
-	CommandInfo *	GetEnd(void)	{ return GetStart() + m_commands.size(); }
-	CommandInfo *	CommandTable::GetByName(const char * name);
-	CommandInfo *	GetByOpcode(UInt32 opcode);
-
-	void	SetBaseID(UInt32 id)	{ m_baseID = id; m_curID = id; }
-	UInt32	GetMaxID(void)			{ return m_baseID + m_commands.size(); }
-	void	SetCurID(UInt32 id)		{ m_curID = id; }
-	UInt32	GetCurID(void)			{ return m_curID; }
-
-	void	Dump(void);
-	void	DumpAlternateCommandNames(void);
-	void	DumpCommandDocumentation(UInt32 startWithID = kNVSEOpcodeStart);
-
-	CommandReturnType	GetReturnType(const CommandInfo * cmd);
-	void				SetReturnType(UInt32 opcode, CommandReturnType retnType);
-
-	UInt32				GetRequiredNVSEVersion(const CommandInfo * cmd);
-	PluginInfo *		GetParentPlugin(const CommandInfo * cmd);
-
-private:
-	// add commands for each release (will help keep track of commands)
-	void AddCommandsV1();
-	void AddCommandsV3s();
-	void AddCommandsV4();
-	void AddDebugCommands();
-
-	typedef std::vector <CommandInfo>				CommandList;
-	typedef std::map <UInt32, CommandMetadata>		CmdMetadataList;
-	typedef std::map <UInt32, CommandReturnType>	OpcodeReturnTypeMap;
-	typedef std::map <UInt32, UInt32>				OpcodeToPluginMap;
-
-	CommandList		m_commands;
-	CmdMetadataList	m_metadata;
-
-	UInt32		m_baseID;
-	UInt32		m_curID;
-
-	// todo: combine these in to a single struct
-	OpcodeReturnTypeMap	m_returnTypes;		// maps opcode to return type, only string/array-returning cmds included
-	OpcodeToPluginMap	m_opcodesByPlugin;	// maps opcode to owning plugin opcode base
-
-	std::vector<UInt32>	m_opcodesByRelease;	// maps an NVSE major version # to opcode of first command added to that release, beginning with v0008
-
-	void	RecordReleaseVersion(void);
-	void	RemoveDisabledPlugins(void);
-};
-
-extern CommandTable	g_consoleCommands;
-extern CommandTable g_scriptCommands;
-*/
-
-namespace PluginAPI
-{
-	const CommandInfo* GetCmdTblStart();
-	const CommandInfo* GetCmdTblEnd();
-	const CommandInfo* GetCmdByOpcode(UInt32 opcode);
-	const CommandInfo* GetCmdByName(const char* name);
-	UInt32 GetCmdRetnType(const CommandInfo* cmd);
-	UInt32 GetReqVersion(const CommandInfo* cmd);
-	const PluginInfo* GetCmdParentPlugin(const CommandInfo* cmd);
-}

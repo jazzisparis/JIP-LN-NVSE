@@ -1,11 +1,11 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetExplosionTraitNumeric, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetExplosionTraitNumeric, , 0, 3, kParams_JIP_OneForm_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetExplosionTraitForm, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetExplosionTraitForm, , 0, 3, kParams_JIP_OneForm_OneInt_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetExplosionFlag, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetExplosionFlag, , 0, 3, kParams_JIP_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetExplosionTraitNumeric, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetExplosionTraitNumeric, 0, 3, kParams_OneForm_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetExplosionTraitForm, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetExplosionTraitForm, 0, 3, kParams_OneForm_OneInt_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetExplosionFlag, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetExplosionFlag, 0, 3, kParams_OneForm_TwoInts);
 
 bool Cmd_GetExplosionTraitNumeric_Execute(COMMAND_ARGS)
 {

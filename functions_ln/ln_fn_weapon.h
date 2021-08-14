@@ -1,13 +1,13 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetWeaponKillImpulse, , 0, 1, kParams_OneObjectID);
-DEFINE_COMMAND_PLUGIN(SetWeaponKillImpulse, , 0, 2, kParams_OneForm_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetWeaponImpulseDistance, , 0, 1, kParams_OneObjectID);
-DEFINE_COMMAND_PLUGIN(SetWeaponImpulseDistance, , 0, 2, kParams_OneForm_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetWeaponVATSEffect, , 0, 1, kParams_OneObjectID);
-DEFINE_COMMAND_PLUGIN(SetWeaponVATSEffect, , 0, 2, kParams_JIP_TwoForms);
-DEFINE_COMMAND_PLUGIN(GetWeaponCritFlags, , 0, 1, kParams_OneObjectID);
-DEFINE_COMMAND_PLUGIN(SetWeaponCritFlags, , 0, 2, kParams_OneObjectID_OneInt);
+DEFINE_COMMAND_PLUGIN(GetWeaponKillImpulse, 0, 1, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(SetWeaponKillImpulse, 0, 2, kParams_OneForm_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetWeaponImpulseDistance, 0, 1, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(SetWeaponImpulseDistance, 0, 2, kParams_OneForm_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetWeaponVATSEffect, 0, 1, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(SetWeaponVATSEffect, 0, 2, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(GetWeaponCritFlags, 0, 1, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(SetWeaponCritFlags, 0, 2, kParams_OneObjectID_OneInt);
 
 bool Cmd_GetWeaponKillImpulse_Execute(COMMAND_ARGS)
 {

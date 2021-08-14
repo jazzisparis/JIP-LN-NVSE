@@ -180,7 +180,6 @@
     <ClInclude Include="internal\memory_pool.h" />
     <ClInclude Include="internal\misc_consts.h" />
     <ClInclude Include="internal\netimmerse.h" />
-    <ClInclude Include="internal\param_info.h" />
     <ClInclude Include="internal\patches_cmd.h" />
     <ClInclude Include="internal\patches_game.h" />
     <ClInclude Include="internal\prefix.h" />

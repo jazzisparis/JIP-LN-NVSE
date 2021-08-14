@@ -1,7 +1,7 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(InitMiniMap, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(UpdateMiniMap, , 0, 2, kParams_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(InitMiniMap, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(UpdateMiniMap, 0, 2, kParams_OneInt_OneOptionalInt);
 
 #define CACHED_TEXTURES_MAX 60
 #define CACHED_TEXTURES_MIN 42

@@ -1,13 +1,13 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(SetHotkey, , 0, 4, kParams_JIP_OneInt_OneForm_OneOptionalFloat_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(ClearAllHotkeys, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SaveHotkeys, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(RestoreHotkeys, , 0, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(BaseGetItemCount, , 0, 2, kParams_JIP_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(BaseAddItem, , 0, 3, kParams_JIP_OneForm_OneInt_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(BaseAddItemHealth, , 0, 4, kParams_JIP_OneForm_OneInt_OneFloat_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(BaseRemoveItem, , 0, 3, kParams_JIP_OneForm_OneInt_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetHotkey, 0, 4, kParams_OneInt_OneForm_OneOptionalFloat_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(ClearAllHotkeys, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SaveHotkeys, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(RestoreHotkeys, 0, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(BaseGetItemCount, 0, 2, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(BaseAddItem, 0, 3, kParams_OneForm_OneInt_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(BaseAddItemHealth, 0, 4, kParams_OneForm_OneInt_OneFloat_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(BaseRemoveItem, 0, 3, kParams_OneForm_OneInt_OneOptionalForm);
 
 struct HotkeyInfo
 {

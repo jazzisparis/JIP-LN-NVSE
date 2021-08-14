@@ -1,22 +1,22 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(SetStageAlt, , 0, 2, kParams_JIP_OneQuest_OneInt);
-DEFINE_COMMAND_PLUGIN(ClearActiveQuest, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetObjectiveTargets, , 0, 2, kParams_JIP_OneQuest_OneInt);
-DEFINE_COMMAND_PLUGIN(SetObjectiveNthTarget, , 0, 4, kParams_JIP_OneQuest_TwoInts_OneObjectRef);
-DEFINE_COMMAND_PLUGIN(GetObjectiveHasTarget, , 0, 3, kParams_JIP_OneQuest_OneInt_OneObjectRef);
-DEFINE_COMMAND_PLUGIN(AddObjectiveTarget, , 0, 3, kParams_JIP_OneQuest_OneInt_OneObjectRef);
-DEFINE_COMMAND_PLUGIN(RemoveObjectiveTarget, , 0, 3, kParams_JIP_OneQuest_OneInt_OneObjectRef);
-DEFINE_COMMAND_PLUGIN(GetObjectiveText, , 0, 2, kParams_JIP_OneQuest_OneInt);
-DEFINE_COMMAND_PLUGIN(SetObjectiveText, , 0, 23, kParams_JIP_OneQuest_OneInt_OneFormatString);
-DEFINE_COMMAND_PLUGIN(GetQuests, , 0, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetQuestObjectives, , 0, 2, kParams_JIP_OneQuest_OneInt);
-DEFINE_COMMAND_PLUGIN(GetActiveObjectives, , 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetObjectiveTeleportLinks, , 0, 2, kParams_JIP_OneQuest_OneInt);
-DEFINE_COMMAND_PLUGIN(GetQuestFlag, , 0, 2, kParams_JIP_OneQuest_OneInt);
-DEFINE_COMMAND_PLUGIN(SetQuestFlag, , 0, 3, kParams_JIP_OneQuest_TwoInts);
-DEFINE_COMMAND_PLUGIN(FailQuest, , 0, 1, kParams_OneQuest);
-DEFINE_COMMAND_PLUGIN(GetQuestTargetsChanged, , 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetStageAlt, 0, 2, kParams_OneQuest_OneInt);
+DEFINE_COMMAND_PLUGIN(ClearActiveQuest, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetObjectiveTargets, 0, 2, kParams_OneQuest_OneInt);
+DEFINE_COMMAND_PLUGIN(SetObjectiveNthTarget, 0, 4, kParams_OneQuest_TwoInts_OneObjectRef);
+DEFINE_COMMAND_PLUGIN(GetObjectiveHasTarget, 0, 3, kParams_OneQuest_OneInt_OneObjectRef);
+DEFINE_COMMAND_PLUGIN(AddObjectiveTarget, 0, 3, kParams_OneQuest_OneInt_OneObjectRef);
+DEFINE_COMMAND_PLUGIN(RemoveObjectiveTarget, 0, 3, kParams_OneQuest_OneInt_OneObjectRef);
+DEFINE_COMMAND_PLUGIN(GetObjectiveText, 0, 2, kParams_OneQuest_OneInt);
+DEFINE_COMMAND_PLUGIN(SetObjectiveText, 0, 23, kParams_OneQuest_OneInt_OneFormatString);
+DEFINE_COMMAND_PLUGIN(GetQuests, 0, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetQuestObjectives, 0, 2, kParams_OneQuest_OneInt);
+DEFINE_COMMAND_PLUGIN(GetActiveObjectives, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetObjectiveTeleportLinks, 0, 2, kParams_OneQuest_OneInt);
+DEFINE_COMMAND_PLUGIN(GetQuestFlag, 0, 2, kParams_OneQuest_OneInt);
+DEFINE_COMMAND_PLUGIN(SetQuestFlag, 0, 3, kParams_OneQuest_TwoInts);
+DEFINE_COMMAND_PLUGIN(FailQuest, 0, 1, kParams_OneQuest);
+DEFINE_COMMAND_PLUGIN(GetQuestTargetsChanged, 0, 0, NULL);
 
 bool Cmd_SetStageAlt_Execute(COMMAND_ARGS)
 {

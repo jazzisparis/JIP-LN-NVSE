@@ -50,7 +50,7 @@ struct ActorHitData
 	float				limbDmg;		// 20
 	float				blockDTMod;		// 24
 	float				armorDmg;		// 28
-	float				flt2C;			// 2C
+	float				weaponDmg;		// 2C
 	TESObjectWEAP		*weapon;		// 30
 	float				healthPerc;		// 34
 	NiVector3			impactPos;		// 38

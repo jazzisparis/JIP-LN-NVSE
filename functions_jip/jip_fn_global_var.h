@@ -1,9 +1,9 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetGlobalVariable, , 0, 1, kParams_JIP_OneGlobal);
-DEFINE_COMMAND_PLUGIN(SetGlobalVariable, , 0, 2, kParams_JIP_OneGlobal_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetGlobalRef, , 0, 1, kParams_JIP_OneGlobal);
-DEFINE_COMMAND_PLUGIN(SetGlobalRef, , 0, 2, kParams_JIP_OneGlobal_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetGlobalVariable, 0, 1, kParams_OneGlobal);
+DEFINE_COMMAND_PLUGIN(SetGlobalVariable, 0, 2, kParams_OneGlobal_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetGlobalRef, 0, 1, kParams_OneGlobal);
+DEFINE_COMMAND_PLUGIN(SetGlobalRef, 0, 2, kParams_OneGlobal_OneOptionalForm);
 
 bool Cmd_GetGlobalVariable_Execute(COMMAND_ARGS)
 {

@@ -1,17 +1,17 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(IsMapMarker, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetMapMarkerName, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetMapMarkerName, , 1, 1, kParams_OneString);
-DEFINE_COMMAND_PLUGIN(SetMapMarkerVisible, , 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetMapMarkerTravel, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetMapMarkerTravel, , 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetMapMarkerHidden, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetMapMarkerHidden, , 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetMapMarkerType, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetMapMarkerType, , 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetMapMarkerRep, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetMapMarkerRep, , 1, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(IsMapMarker, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetMapMarkerName, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetMapMarkerName, 1, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(SetMapMarkerVisible, 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetMapMarkerTravel, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetMapMarkerTravel, 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetMapMarkerHidden, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetMapMarkerHidden, 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetMapMarkerType, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetMapMarkerType, 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetMapMarkerRep, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetMapMarkerRep, 1, 1, kParams_OneOptionalForm);
 
 bool Cmd_IsMapMarker_Execute(COMMAND_ARGS)
 {

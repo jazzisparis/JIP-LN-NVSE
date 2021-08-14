@@ -1,10 +1,10 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetRaceVoice, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetRaceVoice, , 0, 3, kParams_JIP_OneForm_OneInt_OneForm);
-DEFINE_COMMAND_PLUGIN(GetRaceAgeRace, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetRaceAgeRace, , 0, 3, kParams_JIP_OneForm_OneInt_OneForm);
-DEFINE_COMMAND_PLUGIN(SetRace, , 0, 2, kParams_JIP_TwoForms);
+DEFINE_COMMAND_PLUGIN(GetRaceVoice, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetRaceVoice, 0, 3, kParams_OneForm_OneInt_OneForm);
+DEFINE_COMMAND_PLUGIN(GetRaceAgeRace, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetRaceAgeRace, 0, 3, kParams_OneForm_OneInt_OneForm);
+DEFINE_COMMAND_PLUGIN(SetRace, 0, 2, kParams_TwoForms);
 
 bool Cmd_GetRaceVoice_Execute(COMMAND_ARGS)
 {

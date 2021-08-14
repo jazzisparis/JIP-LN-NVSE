@@ -82,9 +82,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="internal\param_info.h">
-      <Filter>internal</Filter>
-    </ClInclude>
     <ClInclude Include="internal\hooks.h">
       <Filter>internal</Filter>
     </ClInclude>

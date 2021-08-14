@@ -1,32 +1,32 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(AddItemAlt, , 1, 4, kParams_JIP_OneItemOrList_OneInt_OneOptionalFloat_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetValueAlt, , 0, 1, kParams_OneOptionalObjectID);
-DEFINE_COMMAND_PLUGIN(SetValueAlt, , 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_COMMAND_PLUGIN(RemoveItemTarget, , 1, 4, kParams_JIP_OneItemOrList_OneContainer_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(GetWeaponRefModFlags, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetWeaponRefModFlags, , 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetItemRefCurrentHealth, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetItemRefCurrentHealth, , 1, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(SetHotkeyItemRef, , 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(EquipItemAlt, , 1, 3, kParams_EquipItem);
-DEFINE_COMMAND_PLUGIN(UnequipItemAlt, , 1, 3, kParams_EquipItem);
-DEFINE_COMMAND_PLUGIN(DropAlt, , 1, 3, kParams_JIP_OneItemOrList_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(DropMeAlt, , 1, 2, kParams_JIP_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(GetAllItems, , 1, 5, kParams_JIP_FourOptionalInts_OneOptionalList);
-DEFINE_COMMAND_PLUGIN(GetAllItemRefs, , 1, 5, kParams_JIP_FourOptionalInts_OneOptionalList);
-DEFINE_COMMAND_PLUGIN(RemoveMeIRAlt, , 1, 3, kParams_JIP_TwoOptionalInts_OneOptionalContainer);
-DEFINE_COMMAND_PLUGIN(GetEquippedItemRef, , 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetNoUnequip, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetNoUnequip, , 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetEquippedWeaponPoison, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(ToggleItemUnique, , 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetBaseItems, , 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetOnUseAidItemEventHandler, , 0, 3, kParams_JIP_OneForm_OneInt_OneForm);
-DEFINE_COMMAND_PLUGIN(GetEquippedArmorRefs, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDT, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDR, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetHotkeyItemRef, , 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(AddItemAlt, 1, 4, kParams_OneItemOrList_OneInt_OneOptionalFloat_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetValueAlt, 0, 1, kParams_OneOptionalObjectID);
+DEFINE_COMMAND_PLUGIN(SetValueAlt, 0, 2, kParams_OneObjectID_OneInt);
+DEFINE_COMMAND_PLUGIN(RemoveItemTarget, 1, 4, kParams_OneItemOrList_OneContainer_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(GetWeaponRefModFlags, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetWeaponRefModFlags, 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetItemRefCurrentHealth, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetItemRefCurrentHealth, 1, 1, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(SetHotkeyItemRef, 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(EquipItemAlt, 1, 3, kParams_OneObjectID_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(UnequipItemAlt, 1, 3, kParams_OneObjectID_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(DropAlt, 1, 3, kParams_OneItemOrList_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(DropMeAlt, 1, 2, kParams_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(GetAllItems, 1, 5, kParams_FourOptionalInts_OneOptionalList);
+DEFINE_COMMAND_PLUGIN(GetAllItemRefs, 1, 5, kParams_FourOptionalInts_OneOptionalList);
+DEFINE_COMMAND_PLUGIN(RemoveMeIRAlt, 1, 3, kParams_TwoOptionalInts_OneOptionalContainer);
+DEFINE_COMMAND_PLUGIN(GetEquippedItemRef, 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetNoUnequip, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetNoUnequip, 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetEquippedWeaponPoison, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(ToggleItemUnique, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetBaseItems, 0, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetOnUseAidItemEventHandler, 0, 3, kParams_OneForm_OneInt_OneForm);
+DEFINE_COMMAND_PLUGIN(GetEquippedArmorRefs, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDT, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDR, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetHotkeyItemRef, 0, 1, kParams_OneInt);
 
 bool Cmd_AddItemAlt_Execute(COMMAND_ARGS)
 {
@@ -151,13 +151,15 @@ bool Cmd_GetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 			return true;
 		}
 	}
-	TESForm *item = invRef ? invRef->type : thisObj->baseForm;
-	if (item)
+	if (invRef)
+		*result = invRef->entry->GetBaseHealth();
+	else
 	{
-		if IS_ID(item, TESObjectARMO)
-			*result = (int)((TESObjectARMO*)item)->health.health;
-		else if IS_ID(item, TESObjectWEAP)
-			*result = (int)((TESObjectWEAP*)item)->health.health;
+		ContChangesEntry entry(nullptr, 1, thisObj->baseForm);
+		ExtraContainerChanges::ExtendDataList extendData(xData);
+		if (xData)
+			entry.extendData = &extendData;
+		*result = entry.GetBaseHealth();
 	}
 	return true;
 }

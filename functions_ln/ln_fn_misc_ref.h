@@ -1,14 +1,14 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(SetLinkedRef, , 1, 1, kParams_OneOptionalObjectRef);
-DEFINE_COMMAND_PLUGIN(IsParentActivateOnly, , 0, 1, kParams_OneOptionalObjectRef);
-DEFINE_COMMAND_PLUGIN(SetBaseForm, , 1, 1, kParams_OneForm);
-DEFINE_COMMAND_ALT_PLUGIN(GetInventoryWeight, GetInvWeight, , 1, 1, kParams_OneOptionalInt);
-DEFINE_CMD_ALT_COND_PLUGIN(GetReferenceFlag, GetRefFlag, , 1, kParams_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(SetReferenceFlag, SetRefFlag, , 1, 2, kParams_TwoInts);
-DEFINE_COMMAND_PLUGIN(HasActionRef, , 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetRadius, , 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetRadius, , 0, 2, kParams_JIP_OneFloat_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetLinkedRef, 1, 1, kParams_OneOptionalObjectRef);
+DEFINE_COMMAND_PLUGIN(IsParentActivateOnly, 0, 1, kParams_OneOptionalObjectRef);
+DEFINE_COMMAND_PLUGIN(SetBaseForm, 1, 1, kParams_OneForm);
+DEFINE_COMMAND_ALT_PLUGIN(GetInventoryWeight, GetInvWeight, 1, 1, kParams_OneOptionalInt);
+DEFINE_CMD_ALT_COND_PLUGIN(GetReferenceFlag, GetRefFlag, 1, 1, kParams_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(SetReferenceFlag, SetRefFlag, 1, 2, kParams_TwoInts);
+DEFINE_COMMAND_PLUGIN(HasActionRef, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetRadius, 0, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetRadius, 0, 2, kParams_OneFloat_OneOptionalForm);
 
 __declspec(naked) bool Cmd_SetLinkedRef_Execute(COMMAND_ARGS)
 {
