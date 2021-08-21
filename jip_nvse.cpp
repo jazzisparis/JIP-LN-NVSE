@@ -498,7 +498,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2628*/REG_CMD_FRM(GetFactionReputationType);
 	/*2629*/REG_CMD(SetFactionReputationType);
 	/*262A*/REG_CMD_STR(RefToString);
-	/*262B*/REG_CMD(StringToRef);
+	/*262B*/REG_CMD_FRM(StringToRef);
 	/*262C*/REG_CMD(GetObjectDimensions);
 	/*262D*/REG_CMD(GetIsItem);
 	/*262E*/REG_CMD(GetMinOf);
