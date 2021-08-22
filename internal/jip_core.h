@@ -54,6 +54,10 @@ typedef bool (*_GetElement)(NVSEArrayVar *arr, const NVSEArrayElement &key, NVSE
 extern _GetElement GetElement;
 typedef bool (*_GetElements)(NVSEArrayVar *arr, NVSEArrayElement *elements, NVSEArrayElement *keys);
 extern _GetElements GetElements;
+typedef UInt32(*_GetArrayPacked)(NVSEArrayVar *arr);
+extern _GetArrayPacked GetArrayPacked;
+typedef int(*_GetContainerType)(NVSEArrayVar* arr);
+extern _GetContainerType GetArrayType;
 typedef bool (*_ExtractArgsEx)(COMMAND_ARGS_EX, ...);
 extern _ExtractArgsEx ExtractArgsEx;
 typedef bool (*_ExtractFormatStringArgs)(UInt32 fmtStringPos, char *buffer, COMMAND_ARGS_EX, UInt32 maxParams, ...);
@@ -757,6 +761,28 @@ struct TempArrayElements
 };
 
 ArrayElementR* __fastcall GetArrayData(NVSEArrayVar *srcArr, UInt32 *size);
+
+struct ArrayDataFull
+{
+	UInt32 size;
+	ArrayElementR* valsArr;
+	ArrayElementR* keysArr;
+
+	// modeled after SetINISection
+	~ArrayDataFull()  // todo: VERIFY THAT THIS ONLY RUNS IF VALSARR IS VALID!!!!!
+	{
+		size *= 2;
+		do
+		{
+			valsArr->~ElementR();
+			valsArr++;
+		} while (--size);
+	}
+};
+
+bool __fastcall GetArrayDataFull(NVSEArrayVar* srcArr, ArrayDataFull& data);
+
+
 
 // 30
 struct InventoryRef

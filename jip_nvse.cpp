@@ -1385,6 +1385,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	LookupArrayByID = arrInterface->LookupArrayByID;
 	GetElement = arrInterface->GetElement;
 	GetElements = arrInterface->GetElements;
+	GetArrayPacked = arrInterface->GetArrayPacked;
+	GetArrayType = arrInterface->GetContainerType;
 	NVSEScriptInterface *scrInterface = (NVSEScriptInterface*)nvse->QueryInterface(kInterface_Script);
 	ExtractArgsEx = scrInterface->ExtractArgsEx;
 	ExtractFormatStringArgs = scrInterface->ExtractFormatStringArgs;

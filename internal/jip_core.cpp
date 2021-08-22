@@ -28,6 +28,8 @@ _GetArraySize GetArraySize;
 _LookupArrayByID LookupArrayByID;
 _GetElement GetElement;
 _GetElements GetElements;
+_GetArrayPacked GetArrayPacked;
+_GetContainerType GetArrayType;
 _ExtractArgsEx ExtractArgsEx;
 _ExtractFormatStringArgs ExtractFormatStringArgs;
 _CallFunction CallFunction;
@@ -649,6 +651,26 @@ ArrayElementR* __fastcall GetArrayData(NVSEArrayVar *srcArr, UInt32 *size)
 	MemZero(data, *size * sizeof(ArrayElementR));
 	GetElements(srcArr, data, NULL);
 	return data;
+}
+
+// Initializes an ArrayDataFull struct object.
+bool __fastcall GetArrayDataFull(NVSEArrayVar* srcArr, ArrayDataFull& data)
+{
+	auto size = GetArraySize(srcArr);
+	if (size <= 0) return false;
+
+	// Modeled after how SetINISection allocates mem for val + key arrays.
+	ArrayElementR *valsArr = (ArrayElementR*)AuxBuffer::Get(2, size * sizeof(ArrayElementR) * 2), *keysArr = valsArr + size;
+	MemZero(valsArr, size * sizeof(ArrayElementR) * 2);
+		
+	GetElements(srcArr, valsArr, keysArr);
+	if (!valsArr || !keysArr) return false;
+
+	data.size = size;
+	data.valsArr = valsArr;
+	data.keysArr = keysArr;
+	
+	return true;
 }
 
 ExtraDataList *InventoryRef::CreateExtraData()

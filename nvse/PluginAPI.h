@@ -303,6 +303,7 @@ struct NVSEMessagingInterface
 
 #if RUNTIME
 
+
 struct NVSEArrayVarInterface
 {
 	enum
@@ -419,6 +420,15 @@ struct NVSEArrayVarInterface
 	// version 2
 	UInt32	(*GetArrayPacked)(Array *arr);
 
+	enum ContainerTypes
+	{
+		kArrType_Invalid = -1,
+		kArrType_Array = 0,
+		kArrType_Map,
+		kArrType_StringMap
+	};
+	
+	int		(*GetContainerType)(Array* arr);
 };
 typedef NVSEArrayVarInterface::Array NVSEArrayVar;
 typedef NVSEArrayVarInterface::Element NVSEArrayElement;

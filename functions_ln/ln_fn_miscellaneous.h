@@ -229,21 +229,27 @@ bool Cmd_GetWaterFormEffect_Execute(COMMAND_ARGS)
 
 bool Cmd_ar_Cat_Execute(COMMAND_ARGS)
 {
+	*result = 0;
 	UInt32 arr1ID, arr2ID;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &arr1ID, &arr2ID)) return true;
 	NVSEArrayVar *inArray = LookupArrayByID(arr1ID);
 	NVSEArrayVar *catArray = LookupArrayByID(arr2ID);
 	if (!inArray || !catArray) return true;
-	UInt32 size;
-	ArrayElementR *vals = GetArrayData(catArray, &size);
-	if (!vals) return true;
-	do
+	auto const type = GetArrayType(inArray);
+	if (type != GetArrayType(catArray)) return true;
+ 
+	ArrayDataFull data;
+	if (!GetArrayDataFull(catArray, data)) return true;
+	auto& [size, valsArr, keysArr] = data;
+	for (UInt32 idx = 0; idx < size; idx++)
 	{
-		AppendElement(inArray, *vals);
-		vals->~ElementR();
-		vals++;
+		if (type == NVSEArrayVarInterface::kArrType_Array)
+			AppendElement(inArray, valsArr[idx]);
+		else
+			SetElement(inArray, keysArr[idx], valsArr[idx]);
 	}
-	while (--size);
+	
+	*result = 1;
 	return true;
 }
 
