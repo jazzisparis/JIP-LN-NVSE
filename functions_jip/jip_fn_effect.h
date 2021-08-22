@@ -572,7 +572,15 @@ bool Cmd_CastImmediate_Execute(COMMAND_ARGS)
 		if (!caster) caster = target;
 		UInt32 *reachMultPtr = (UInt32*)0x11CF1E4, reachMult = *reachMultPtr;
 		*reachMultPtr = 0x43800000;
+
+		// Replace jnz with jmp. This makes it so the suitableMagicTgt is kept at 0 (bug happens otherwise).
+		SafeWriteBuf(0x815EBF, "\xEB\x33", 2);
+		
 		caster->magicCaster.CastSpell(magicItem, 0, &target->magicTarget, 1, 0);
+
+		// undo code changes
+		SafeWriteBuf(0x815EBF, "\x75\x33", 2); 
+		
 		*reachMultPtr = reachMult;
 	}
 	return true;
