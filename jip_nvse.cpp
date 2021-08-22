@@ -1341,6 +1341,12 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v56.26
 	/*2905*/REG_CMD(RemoveAllPerks);
 
+	//	v56.??
+	/*2906*/REG_CMD(GetHitFatigueDamage);
+	/*2907*/REG_CMD(GetHitArmorDamage);
+	/*2908*/REG_CMD(GetHitBlockingDTMod);
+	/*2909*/REG_CMD(GetHitCalculatedWeaponDamage);
+
 	//===========================================================
 
 	if (nvse->isEditor)
