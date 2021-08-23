@@ -764,19 +764,22 @@ ArrayElementR* __fastcall GetArrayData(NVSEArrayVar *srcArr, UInt32 *size);
 
 struct ArrayDataFull
 {
-	UInt32 size;
+	UInt32 size = 0;
 	ArrayElementR* valsArr;
 	ArrayElementR* keysArr;
 
 	// modeled after SetINISection
 	~ArrayDataFull()  // todo: VERIFY THAT THIS ONLY RUNS IF VALSARR IS VALID!!!!!
 	{
-		size *= 2;
-		do
+		if (size > 0)  // if mem was allocated
 		{
-			valsArr->~ElementR();
-			valsArr++;
-		} while (--size);
+			size *= 2;
+			do
+			{
+				valsArr->~ElementR();
+				valsArr++;
+			} while (--size);
+		}
 	}
 };
 

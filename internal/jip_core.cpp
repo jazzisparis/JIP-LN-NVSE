@@ -662,9 +662,7 @@ bool __fastcall GetArrayDataFull(NVSEArrayVar* srcArr, ArrayDataFull& data)
 	// Modeled after how SetINISection allocates mem for val + key arrays.
 	ArrayElementR *valsArr = (ArrayElementR*)AuxBuffer::Get(2, size * sizeof(ArrayElementR) * 2), *keysArr = valsArr + size;
 	MemZero(valsArr, size * sizeof(ArrayElementR) * 2);
-		
-	GetElements(srcArr, valsArr, keysArr);
-	if (!valsArr || !keysArr) return false;
+	GetElements(srcArr, valsArr, keysArr);  // assume this returns valid pointers, due to size check.
 
 	data.size = size;
 	data.valsArr = valsArr;
