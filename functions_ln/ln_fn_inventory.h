@@ -302,6 +302,7 @@ bool Cmd_BaseAddItem_Execute(COMMAND_ARGS)
 	while (iter = iter->next);
 	formCount = (TESContainer::FormCount*)GameHeapAlloc(sizeof(TESContainer::FormCount));
 	formCount->contExtraData = (LvlListExtra*)GameHeapAlloc(sizeof(LvlListExtra));
+	*formCount->contExtraData = {};
 	formCount->form = form;
 	formCount->count = count;
 	formCount->contExtraData->health = 1;
@@ -336,6 +337,7 @@ bool Cmd_BaseAddItemHealth_Execute(COMMAND_ARGS)
 	while (iter = iter->next);
 	formCount = (TESContainer::FormCount*)GameHeapAlloc(sizeof(TESContainer::FormCount));
 	formCount->contExtraData = (LvlListExtra*)GameHeapAlloc(sizeof(LvlListExtra));
+	*formCount->contExtraData = {};
 	formCount->form = form;
 	formCount->count = count;
 	formCount->contExtraData->health = health;
