@@ -608,6 +608,7 @@ void TESLeveledList::AddItem(TESForm *form, UInt16 level, UInt16 count, float he
 	while (iter = iter->next);
 	ListData *newData = (ListData*)GameHeapAlloc(sizeof(ListData));
 	LvlListExtra *newExtra = (LvlListExtra*)GameHeapAlloc(sizeof(LvlListExtra));
+	*newExtra = {};
 	newData->form = form;
 	newData->level = level;
 	newData->count = count;
