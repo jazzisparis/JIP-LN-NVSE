@@ -2437,6 +2437,7 @@ void __fastcall SetPerkRankPlayerHook(PlayerCharacter *thePlayer, int EDX, BGSPe
 	if (!perkRank)
 	{
 		perkRank = (PerkRank*)GameHeapAlloc(sizeof(PerkRank));
+		*perkRank = {};
 		perkRank->perk = perk;
 		perkList->Prepend(perkRank);
 	}

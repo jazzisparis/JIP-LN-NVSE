@@ -235,6 +235,7 @@ bool Cmd_AddDestructionStage_Execute(COMMAND_ARGS)
 	if (!destructible->data)
 	{
 		destructible->data = (DestructibleData*)GameHeapAlloc(sizeof(DestructibleData));
+		*destructible->data = {};
 		destructible->data->health = 0;
 		*(UInt32*)&destructible->data->stageCount = 0x160D0000;
 		destructible->data->stages = NULL;

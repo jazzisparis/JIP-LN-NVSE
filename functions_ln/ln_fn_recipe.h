@@ -299,6 +299,7 @@ bool Cmd_AddRecipeCondition_Execute(COMMAND_ARGS)
 	float value;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &recipe, &func, &param, &comp, &value) || NOT_ID(recipe, TESRecipe)) return true;
 	Condition *condition = (Condition*)GameHeapAlloc(sizeof(Condition));
+	*condition = {};
 	condition->runOnType = 0;
 	condition->opcode = func;
 	condition->parameter1.form = param;
