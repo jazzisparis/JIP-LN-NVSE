@@ -14,15 +14,16 @@ const char * TraitIDToName(int id);	// slow
 
 enum TileTypeID
 {
-	kTileType_rect =	0x385,
-	kTileType_image =	0x386,
-	kTileType_text =	0x387,
-	kTileType_nif =		0x388,
-	kTileType_3D =		kTileType_nif,
-	kTileType_menu =	0x389,
-	kTileType_hotrect =	0x38A,
-	kTileType_window =	0x38B,
-	kTileType_radial =	0x38C
+	kTileType_rect =		0x385,
+	kTileType_image =		0x386,
+	kTileType_text =		0x387,
+	kTileType_nif =			0x388,
+	kTileType_3D =			kTileType_nif,
+	kTileType_menu =		0x389,
+	kTileType_hotrect =		0x38A,
+	kTileType_window =		0x38B,
+	kTileType_radial =		0x38C,
+	kTileType_template =	0x3E7
 };
 
 enum TileValueID
@@ -239,7 +240,7 @@ public:
 
 	static UInt32 TraitNameToID(const char *traitName);
 	static UInt32 TraitNameToIDAdd(const char *traitName);
-	Value *GetValue(UInt32 typeID);
+	Value* __fastcall GetValue(UInt32 typeID);
 	Value *GetValueName(const char *valueName);
 	__forceinline float GetValueFloat(UInt32 id)
 	{
@@ -269,7 +270,7 @@ public:
 	}
 	Menu *GetParentMenu();
 	void DestroyAllChildren();
-	void PokeValue(UInt32 valueID);
+	void __fastcall PokeValue(UInt32 valueID);
 	void FakeClick();
 
 	void Dump();

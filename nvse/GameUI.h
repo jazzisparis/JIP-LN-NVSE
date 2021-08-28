@@ -192,6 +192,8 @@ public:
 	void					*pipBoyModeCallback;// 4C0
 	UInt32					unk4C4[47];			// 4C4
 
+	__forceinline static InterfaceManager *GetSingleton() {return *(InterfaceManager**)0x11D8A80;}
+
 	UInt32 GetTopVisibleMenuID();
 	TESObjectREFR *GetCursorPick();
 	Tile *GetActiveTile();
@@ -273,17 +275,17 @@ public:
 	/*00C*/virtual void		HandleClick(SInt32 tileID, Tile *clickedTile);
 	/*010*/virtual void		HandleMouseover(UInt32 arg0, Tile *activeTile);	//    Called on mouseover, activeTile is moused-over Tile
 	/*014*/virtual void		HandleMouseoverTileAlt(UInt32 arg0, Tile *tile);
-	/*018*/virtual void		Unk_06(UInt32 arg0, UInt32 arg1, UInt32 arg2);	// unused?
-	/*01C*/virtual void		Unk_07(UInt32 arg0, UInt32 arg1, UInt32 arg2);	// unused?
+	/*018*/virtual void		PostDragTileChange(UInt32 tileID, Tile* newTile, Tile* activeTile); // unused in vanilla
+	/*01C*/virtual void		PreDragTileChange(UInt32 tileID, Tile* oldTile, Tile* activeTile); // unused in vanilla
 	/*020*/virtual void		HandleActiveMenuClick(UInt32 tileID, Tile *activeTile); // StartMenu, RaceSexMenu, VATSMenu, BookMenu
-	/*024*/virtual void		Unk_09(UInt32 arg0, UInt32 arg1); // unused?
+	/*024*/virtual void		OnClickHeld(UInt32 tileID, Tile* activeTile); // unused by vanilla menus
 	/*028*/virtual void		HandleMousewheel(UInt32 tileID, Tile *tile);
 	/*02C*/virtual void		Update();	// Called every frame while the menu is active
 	/*030*/virtual bool		HandleKeyboardInput(UInt32 inputChar);	// Return false for handling keyboard shortcuts
 	/*034*/virtual UInt32	GetID();
-	/*038*/virtual bool		HandleSpecialKeyInput(MenuSpecialKeyboardInputCode code, UInt32 arg1);
+	/*038*/virtual bool		HandleSpecialKeyInput(MenuSpecialKeyboardInputCode code, float keyState);
 	/*03C*/virtual bool		HandleControllerInput(int arg0, Tile *tile);
-	/*040*/virtual void		Unk_10();	// unused?
+	/*040*/virtual void		OnUpdateUserTrait(int tileVal);	// unimplemented by any vanilla menus
 	/*044*/virtual void		HandleControllerConnectOrDisconnect(bool isControllerConnected);
 
 	// 14
@@ -734,9 +736,10 @@ public:
 	tList<QueuedMessage>			queuedMessages;		// 18C
 	UInt32							currMsgKey;			// 194
 	BSSimpleArray<SubtitleData>		subtitlesArr;		// 198
-	UInt32							unk1A8[4];			// 1A8
+	SubtitleData					*currentSubtitle;	// 1A8 
+	Sound							radiationSound;		// 1AC
 	TESObjectREFR					*crosshairRef;		// 1B8
-	UInt32							unk1BC;				// 1BC
+	UInt32							visibilityFlags;	// 1BC
 	UInt32							visibilityOverrides;	// 1C0
 	UInt32							stage;				// 1C4
 	HotKeyWheel						hotKeyWheel;		// 1C8
@@ -763,6 +766,8 @@ public:
 	tList<UInt32>					xpMessages;			// 264
 	tList<UInt32>					list26C;			// 26C
 	float							hudShake;			// 274
+
+	__forceinline static HUDMainMenu *Get() {return *(HUDMainMenu**)0x11D96C0;}
 };
 STATIC_ASSERT(sizeof(HUDMainMenu) == 0x278);
 
@@ -872,7 +877,8 @@ public:
 	MenuItemEntryList	leftItems;			// 098
 	MenuItemEntryList	rightItems;			// 0C8
 	MenuItemEntryList	*currentItems;		// 0F8
-	UInt32				unk0FC[4];			// 0FC
+	UInt32				unk0FC;				// 0FC
+	Sound				menuSound;			// 100
 
 	__forceinline static ContainerMenu *Get() {return *(ContainerMenu**)0x11D93F8;}
 	__forceinline static ContChangesEntry *Selection() {return *(ContChangesEntry**)0x11D93FC;}
@@ -1406,16 +1412,6 @@ STATIC_ASSERT(sizeof(HackingMenu) == 0x1DC);
 
 struct VATSTargetInfo
 {
-	TESObjectREFR	*targetRef;
-	UInt32			unk04;
-};
-
-// 144
-class VATSMenu : public Menu			// 1056
-{
-public:
-	virtual void		Unk_12(void);
-
 	enum ActionTypes
 	{
 		kAPCost_AttackUnarmed,
@@ -1435,68 +1431,122 @@ public:
 		kAPCost_Heal,
 		kAPCost_OneHandThrown = 0x13,
 		kAPCost_AttackThrown,
-		kAPCost_MAX = 0x16,
+		kAPCost_UnarmedAttackGround,
+		kAPCost_MAX = 0x16
 	};
 
-	UInt32				unk028;			// 028
-	TileImage			*tile02C;		// 02C
-	TileImage			*tile030;		// 030
-	TileImage			*tile034;		// 034
-	TileImage			*tile038;		// 038
-	TileImage			*tile03C;		// 03C
-	TileImage			*tile040;		// 040
-	TileImage			*tile044;		// 044
-	TileImage			*tile048;		// 048
-	TileImage			*tile04C;		// 04C
-	TileImage			*tile050;		// 050
-	TileText			*tile054;		// 054
-	TileText			*tile058;		// 058
-	TileText			*tile05C;		// 05C
-	TileText			*tile060;		// 060
-	TileImage			*tile064;		// 064
-	TileImage			*tile068;		// 068
-	TileImage			*tile06C;		// 06C
-	TileImage			*tile070;		// 070
-	TileText			*tile074;		// 074
-	TileRect			*tile078;		// 078
-	TileRect			*tile07C;		// 07C
-	TileRect			*tile080;		// 080
-	TileImage			*tile084;		// 084
-	TileRect			*tile088;		// 088
-	TileImage			*tile08C;		// 08C
-	TileImage			*tile090;		// 090
-	TileImage			*tile094;		// 094
-	TileImage			*tile098;		// 098
-	TileText			*tile09C;		// 09C
-	TileImage			*tile0A0;		// 0A0
-	TileImage			*tile0A4;		// 0A4
-	UInt32				unk0A8[2];		// 0A8
-	ListBox<UInt32>		queuedActions;	// 0B0
-	float				actionPoints;	// 0E0
-	float				maxActionPoints;// 0E4
-	float				flt0E8;			// 0E8
-	float				flt0EC;			// 0EC
-	float				clipAmmo;		// 0F0
-	float				reserveAmmo;	// 0F4
-	UInt32				unk0F8;			// 0F8
-	float				flt0FC;			// 0FC
-	UInt32				unk100[7];		// 100
-	int					actionType;		// 11C
-	UInt8				isSuccess;		// 120
-	UInt8				byte121;		// 121
-	UInt8				isMysteriousStrangerVisit;	// 122
-	UInt8				byte123;		// 123
-	UInt8				remainingShotsToFire;	// 124
-	UInt8				count125;		// 125
-	UInt8				pad126[2];		// 126
-	TESObjectREFR		*targetRef;		// 128
-	UInt32				avCode;			// 12C
-	ActorHitData		*hitData;		// 130
-	float				unk134;			// 134
-	float				unk138;			// 138
-	float				apCost;			// 13C
-	UInt8				isMissFortuneVisit;	// 140
-	UInt8				pad141[3];		// 141
+	int				actionType;			// 00
+	UInt8			isSuccess;			// 04
+	UInt8			byte05;				// 05
+	UInt8			mysteriousStrangerVisit;// 06
+	UInt8			byte07;				// 07
+	UInt8			remainingShotsToFire;	// 08
+	UInt8			count09;			// 09
+	UInt8			pad0A[2];			// 0A
+	TESObjectREFR	*refr;				// 0C
+	UInt32			avCode;				// 10
+	ActorHitData	*hitData;			// 14
+	float			flt18;				// 18
+	float			flt1C;				// 1C
+	float			apCost;				// 20
+	UInt8			missFortuneVisit;	// 24
+	UInt8			pad25[3];			// 25
+
+	static VATSTargetInfo *Create()
+	{
+		return ThisCall<VATSTargetInfo*>(0x9CA500, GameHeapAlloc(sizeof(VATSTargetInfo)));
+	}
+};
+STATIC_ASSERT(sizeof(VATSTargetInfo) == 0x28);
+
+struct VATSTargetBodyPartData
+{
+	NiPoint2	screenPos;			// 00
+	NiVector3	relativePos;		// 08
+	NiVector3	pos;				// 14
+	UInt32		bodyPartID;			// 20
+	float		percentVisible;		// 24
+	float		hitChance;			// 28
+	UInt8		isOnScreen;			// 2C
+	UInt8		byte2D;				// 2D
+	UInt8		shouldCalculateBodyPartVisibilityPercents;	// 2E
+	UInt8		byte2F;				// 2F
+	Tile		*bodyPartPercent;	// 30
+	float		flt34;				// 34
+	UInt8		byte38;				// 38
+	UInt8		pad39[3];			// 39
+};
+STATIC_ASSERT(sizeof(VATSTargetBodyPartData) == 0x3C);
+
+struct VATSTarget
+{
+	TESObjectREFR					*targetRef;		// 00
+	UInt32							unk04;			// 04
+	tList<VATSTargetBodyPartData>	bodyPartlist;	// 08
+	UInt8							byte10;			// 10
+	UInt8							pad11[3];		// 11
+	UInt32							unk14[3];		// 14
+	UInt8							byte20;			// 20
+	UInt8							pad21[3];		// 21
+};
+STATIC_ASSERT(sizeof(VATSTarget) == 0x24);
+
+// 144
+class VATSMenu : public Menu			// 1056
+{
+public:
+	virtual void		Unk_12(void);
+
+	UInt32					unk028;			// 028
+	TileImage				*tile02C;		// 02C
+	TileImage				*tile030;		// 030
+	TileImage				*tile034;		// 034
+	TileImage				*tile038;		// 038
+	TileImage				*tile03C;		// 03C
+	TileImage				*tile040;		// 040
+	TileImage				*tile044;		// 044
+	TileImage				*tile048;		// 048
+	TileImage				*tile04C;		// 04C
+	TileImage				*tile050;		// 050
+	TileText				*tile054;		// 054
+	TileText				*tile058;		// 058
+	TileText				*tile05C;		// 05C
+	TileText				*tile060;		// 060
+	TileImage				*tile064;		// 064
+	TileImage				*tile068;		// 068
+	TileImage				*tile06C;		// 06C
+	TileImage				*tile070;		// 070
+	TileText				*tile074;		// 074
+	TileRect				*tile078;		// 078
+	TileRect				*tile07C;		// 07C
+	TileRect				*tile080;		// 080
+	TileImage				*tile084;		// 084
+	TileRect				*tile088;		// 088
+	TileImage				*tile08C;		// 08C
+	TileImage				*tile090;		// 090
+	TileImage				*tile094;		// 094
+	TileImage				*tile098;		// 098
+	TileText				*tile09C;		// 09C
+	TileImage				*tile0A0;		// 0A0
+	TileImage				*tile0A4;		// 0A4
+	UInt32					unk0A8[2];		// 0A8
+	ListBox<UInt32>			queuedActions;	// 0B0
+	float					actionPoints;	// 0E0
+	float					maxActionPoints;// 0E4
+	float					flt0E8;			// 0E8
+	float					flt0EC;			// 0EC
+	float					clipAmmo;		// 0F0
+	float					reserveAmmo;	// 0F4
+	UInt8					fullyZoomedIn;	// 0F8
+	UInt8					byte0F9;		// 0F9
+	UInt8					byte0FA;		// 0FA
+	UInt8					byte0FB;		// 0FB
+	float					flt0FC;			// 0FC
+	VATSTargetBodyPartData	*currBodyPartData;	// 100
+	UInt8					hasConcentratedFire;// 104
+	UInt8					pad105[3];		// 105
+	UInt32					unk100[5];		// 108
+	VATSTargetInfo			targetInfo;		// 11C
 
 	__forceinline static VATSMenu *Get() {return *(VATSMenu**)0x11DB0D4;}
 	__forceinline static TESObjectREFR *Target() {return *(TESObjectREFR**)0x11F21CC;}
@@ -1508,22 +1558,22 @@ class ImageSpaceModifierInstanceRB;
 // 48
 struct VATSCameraData
 {
-	tList<void>						targetsList;	// 00
+	tList<VATSTargetInfo>			targetsList;	// 00
 	UInt32							mode;			// 08
 	UInt32							unk0C;			// 0C
 	BGSCameraShot					*camShot;		// 10
 	float							flt14;			// 14
 	float							flt18;			// 18
-	UInt32							unk1C;			// 1C
-	UInt32							unk20;			// 20
-	UInt32							unk24;			// 24
+	Projectile						*projectile1C;	// 1C
+	Projectile						*projectile20;	// 20
+	TESIdleForm						*attackAnim;	// 24
 	ImageSpaceModifierInstanceForm	*isModInstForm;	// 28
 	ImageSpaceModifierInstanceRB	*isModInstRB;	// 2C
 	UInt32							unk30;			// 30
-	NiObject						*object34;		// 34
+	NiPointLight					*ptLight;		// 34
 	UInt8							byte38;			// 38
 	UInt8							pad39[3];		// 39
-	UInt32							unk3C;			// 3C
+	UInt32							numKills;		// 3C
 	UInt32							unk40;			// 40
 	UInt32							unk44;			// 44
 
@@ -1705,33 +1755,82 @@ public:
 	virtual void	Unk_02(void);
 	virtual void	Unk_03(void);
 	virtual void	Unk_04(void);
-	virtual void	Unk_05(void);
+	virtual void	Update(void);
 	virtual void	Unk_06(void);
 	virtual void	Unk_07(void);
 	virtual void	Unk_08(void);
-	virtual void	Unk_09(void);
-	virtual void	Unk_0A(void);
+	virtual void	Init(void);
+	virtual void	ResetNifs(void);
 	virtual void	Unk_0B(void);
-	virtual void	Unk_0C(void);
-	virtual void	Unk_0D(void);
-	virtual void	Unk_0E(void);
-	virtual void	Unk_0F(void);
-	virtual void	Unk_10(void);
+	virtual void	OnMenuOpen(void);
+	virtual void	OnMenuClose(void);
+	virtual void	HandleStaticEffect(float msPassed);
+	virtual void	HandleVerticalHoldEffect(float msPassed);
+	virtual void	HandleShudderEffect(float msPassed);
 	virtual void	Unk_11(void);
 	virtual void	Unk_12(void);
-	virtual void	Unk_13(void);
+	virtual void	HandleScanlines(float msPassed);
 	virtual void	Unk_14(void);
 
-	NiAVObject			*unk04;			// 04
-	BSFadeNode			*node08;		// 08
-	UInt32				unk0C;			// 0C
-	NiSourceTexture		*srcTexture;	// 10
-	NiNode				*node14;		// 14
-	TileMenu			*tileMenu;		// 18
-	UInt32				unk1C[2];		// 1C
-	NiCamera			*camera;		// 24
-	UInt32				unk28[44];		// 28
+	NiAVObject			*screenTriShape;		// 04
+	BSFadeNode			*node08;				// 08
+	UInt32				unk0C;					// 0C
+	NiSourceTexture		*srcTexture;			// 10
+	NiNode				*node14;				// 14
+	TileMenu			*tileMenu;				// 18
+	NiPointLight		*light1C;				// 1C
+	UInt32				unk20;					// 20
+	NiCamera			*camera;				// 24
+	UInt8				isInitialised;			// 28
+	UInt8				pad29[3];				// 29
+	NiVector3			point2C;				// 2C
+	UInt32				unk38;					// 38
+	UInt32				unk3C;					// 3C
+	float				blurRadius;				// 40
+	float				blurIntensity;			// 44
+	float				scanlineFrequency;		// 48
+	UInt8				byte4C;					// 4C
+	UInt8				showStaticEffect;		// 4D
+	UInt8				pad4E[2];				// 4E
+	float				staticEffectStartTime;	// 50
+	float				burstDuration;			// 54
+	float				burstIntensity2;		// 58
+	float				burstIntensity;			// 5C
+	UInt8				showVerticalHoldEffect;	// 60
+	UInt8				pad61[3];				// 61
+	float				verticalHoldStartTime;	// 64
+	float				verticalHoldDuration;	// 68
+	float				verticalHoldSpeed;		// 6C
+	float				flt70;					// 70
+	UInt8				showShudderHoldEffect;	// 74
+	UInt8				pad75[3];				// 75
+	float				shudderHoldStartTime;	// 78
+	float				shudderHoldDuration;	// 7C
+	float				shudderHoldIntensity;	// 80
+	float				shudderHoldFrequency;	// 84
+	float				flt88;					// 88
+	float				pulseBrightenIntensity;	// 8C
+	float				pulseRadiusIntensity;	// 90
+	UInt8				byte94;					// 94
+	UInt8				scanlineEffect;			// 95
+	UInt8				pad96[2];				// 96
+	float				scanLineStartTime;		// 98
+	float				interval9C;				// 9C
+	UInt32				rateA0;					// A0
+	float				nextScanlineTime;		// A4
+	NiVector4			pointA8;				// A8
+	UInt8				renderedMenuOrPipboyOpen;// B8
+	UInt8				byteB9;					// B9
+	UInt8				padBA[2];				// BA
+	UInt32				scanlineTexture;		// BC
+	UInt32				unkC0;					// C0
+	UInt32				unkC4;					// C4
+	UInt32				unkC8;					// C8
+	UInt32				unkCC;					// CC
+	UInt32				unkD0;					// D0
+	NiNode				*nodeD4;				// D4
 };
+STATIC_ASSERT(sizeof(FORenderedMenu) == 0xD8);
 
 // 170 (from Stewie)
 class FOPipboyManager : public FORenderedMenu
@@ -1740,7 +1839,7 @@ public:
 	NiNode			*pipBoyScreenNode;		// 0D8
 	NiNode			*node0DC;				// 0DC
 	NiTriStrips		*triStrips0E0;			// 0E0
-	UInt32			unk0E4;					// 0E4
+	NiObject		*object0E4;				// 0E4
 	NiTriStrips		*pipboyLightButton[3];	// 0E8
 	NiNode			*pipboyLightGlow[3];	// 0F4	Stats, Items, Data
 	NiTriStrips		*scrollKnobs[3];		// 100
@@ -1763,9 +1862,10 @@ public:
 	UInt8			byte161;				// 161
 	UInt8			byte162;				// 162
 	UInt8			byte163;				// 163
-	float			time164;				// 164
+	float			lightFadeStartTime;		// 164
 	float			lightEffectFadeDuration;// 168
-	UInt32			unk16C;					// 16C
+	UInt8			resetPipboyManager;		// 16C
+	UInt8			pad16D[3];				// 16D
 };
 STATIC_ASSERT(sizeof(FOPipboyManager) == 0x170);
 
@@ -1779,14 +1879,32 @@ extern FontHeightData s_fontHeightDatas[90];
 // 54
 struct FontInfo
 {
+	// 38
+	struct CharDimensions
+	{
+		float			flt00[9];
+		float			width;		// 24
+		float			height;		// 28
+		float			flt2C;		// 2C
+		float			widthMod;	// 30
+		float			flt34;		// 34
+		//	totalWidth = width + widthMod
+	};
+
+	// 24
+	struct TexFileName
+	{
+		UInt32			unk00;
+		char			fileName[0x20];
+	};
+
+	// 3928
 	struct BufferData
 	{
-		float			lineHeight;		// 0000
-		UInt32			unk0004[73];	// 0004
-		UInt32			unk0128[458];	// 0128
-		float			baseHeight;		// 0850
-		float			flt0854;		// 0854
-		float			flt0858;		// 0858
+		float			lineHeight;				// 0000
+		UInt32			numTextures;			// 0004
+		TexFileName		textures[8];			// 0008
+		CharDimensions	charDimensions[256];	// 0128
 	};
 
 	struct ButtonIcon;
@@ -1794,8 +1912,7 @@ struct FontInfo
 	UInt8						isLoaded;	// 00
 	UInt8						pad01[3];	// 01
 	char						*filePath;	// 04
-	UInt8						fontID;		// 08
-	UInt8						pad09[3];	// 09
+	UInt32						fontID;		// 08
 	NiTexturingProperty			*texProp;	// 0C
 	UInt32						unk10[7];	// 10
 	float						flt2C;		// 2C
@@ -1826,6 +1943,8 @@ public:
 	{
 		return ThisCall<NiVector3*>(0xA1B020, this, outDims, srcString, fontID, maxFlt, startIdx);
 	}
+
+	__forceinline static FontManager *GetSingleton() {return *(FontManager**)0x11F33F8;}
 };
 
 extern FontManager *g_fontManager;
@@ -1864,9 +1983,9 @@ struct SystemColorManager
 
 	DList<SystemColor>	sysColors;
 	UInt32				unk0C;
-};
 
-extern SystemColorManager *g_sysColorManager;
+	__forceinline static SystemColorManager *GetSingleton() {return *(SystemColorManager**)0x11D8A88;}
+};
 
 // 229C
 class DebugText

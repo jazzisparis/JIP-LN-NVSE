@@ -338,7 +338,7 @@ __declspec(naked) NiAVObject* __fastcall NiNode::GetBlockByName(const char *name
 		cmp		[eax+8], edx
 		jz		found
 		mov		ecx, [eax]
-		cmp		dword ptr [ecx+0xC], kAddr_ReturnThis
+		cmp		dword ptr [ecx+0xC], ADDR_ReturnThis
 		jnz		iterHead
 		mov		ecx, eax
 		call	NiNode::GetBlockByName
@@ -397,7 +397,7 @@ __declspec(naked) NiNode* __fastcall NiNode::GetNode(const char *nodeName)
 		jz		done
 		xor		edx, edx
 		mov		ecx, [eax]
-		cmp		dword ptr [ecx+0xC], kAddr_ReturnThis
+		cmp		dword ptr [ecx+0xC], ADDR_ReturnThis
 		cmovnz	eax, edx
 	done:
 		retn
@@ -451,7 +451,7 @@ __declspec(naked) void NiNode::RemoveCollision()
 		test	ecx, ecx
 		jz		iterHead
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0xC], kAddr_ReturnThis
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
 		jnz		iterHead
 		call	NiNode::RemoveCollision
 		jmp		iterHead
@@ -561,7 +561,7 @@ __declspec(naked) void NiNode::ApplyForce(NiVector4 *forceVector)
 		test	ecx, ecx
 		jz		iterHead
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0xC], kAddr_ReturnThis
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
 		jnz		iterHead
 		push	dword ptr [esp+0xC]
 		call	NiNode::ApplyForce

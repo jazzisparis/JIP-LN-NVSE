@@ -450,13 +450,13 @@ public:
 		T_Data		data;
 	};
 
-	virtual void	Destroy(bool doFree);
-	virtual UInt32	CalculateBucket(T_Key key);
-	virtual bool	Equal(T_Key key1, T_Key key2);
-	virtual void	FillEntry(Entry *entry, T_Key key, T_Data data);
-	virtual	void	FreeKey(Entry *entry);
-	virtual	Entry	*AllocNewEntry();
-	virtual	void	FreeEntry(Entry *entry);
+	/*00*/virtual void		Destroy(bool doFree);
+	/*04*/virtual UInt32	CalculateBucket(T_Key key);
+	/*08*/virtual bool		Equal(T_Key key1, T_Key key2);
+	/*0C*/virtual void		FillEntry(Entry *entry, T_Key key, T_Data data);
+	/*10*/virtual void		FreeKey(Entry *entry);
+	/*14*/virtual Entry		*AllocNewEntry();
+	/*18*/virtual void		FreeEntry(Entry *entry);
 
 	UInt32		numBuckets;	// 04
 	Entry		**buckets;	// 08

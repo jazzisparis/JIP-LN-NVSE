@@ -229,7 +229,7 @@ public:
 	UInt32							unk634;					// 634
 	UInt32							unk638;					// 638
 
-	__forceinline static DataHandler *Get() {return *(DataHandler**)0x11C3F2C;}
+	__forceinline static DataHandler *GetSingleton() {return *(DataHandler**)0x11C3F2C;}
 	const ModInfo ** GetActiveModList();		// returns array of modEntry* corresponding to loaded mods sorted by mod index
 	const ModInfo* LookupModByName(const char* modName);
 	UInt8 GetModIndex(const char* modName);
@@ -621,6 +621,8 @@ public:
 	UInt32								unkB4[2];			// B4
 	NavMeshInfoMap						*navMeshInfoMap;	// BC
 	LoadedAreaBound						*areaBound;			// C0
+
+	__forceinline static TES *GetSingleton() {return *(TES**)0x11DEA10;}
 
 	__forceinline bool GetTerrainHeight(float *posXY, float *result)
 	{

@@ -17,6 +17,7 @@ _ReadRecord16 ReadRecord16;
 _ReadRecord32 ReadRecord32;
 _ReadRecord64 ReadRecord64;
 _GetCmdByOpcode GetCmdByOpcode;
+_GetPluginInfoByName GetPluginInfoByName;
 _GetStringVar GetStringVar;
 _AssignString AssignString;
 _CreateArray CreateArray;
@@ -28,6 +29,7 @@ _GetArraySize GetArraySize;
 _LookupArrayByID LookupArrayByID;
 _GetElement GetElement;
 _GetElements GetElements;
+_GetContainerType GetContainerType;
 _ExtractArgsEx ExtractArgsEx;
 _ExtractFormatStringArgs ExtractFormatStringArgs;
 _CallFunction CallFunction;
@@ -39,7 +41,8 @@ _InventoryRefGetForID InventoryRefGetForID;
 DIHookControl *g_DIHookCtrl;
 UInt8 *g_numPreloadMods;
 
-SpellItem *g_pipBoyLight;
+_UIOInjectComponent UIOInjectComponent = nullptr;
+
 ModelLoader *g_modelLoader;
 DataHandler *g_dataHandler;
 LoadedReferenceCollection *g_loadedReferences;
@@ -54,7 +57,6 @@ OSInputGlobals *g_inputGlobals;
 TileMenu **g_tileMenuArray;
 HUDMainMenu *g_HUDMainMenu;
 ConsoleManager *g_consoleManager;
-SystemColorManager *g_sysColorManager;
 NiNode *g_cursorNode;
 ShadowSceneNode *g_shadowSceneNode;
 TESObjectREFR *s_tempPosMarker;
@@ -331,7 +333,7 @@ __declspec(naked) int __stdcall GetRayCastMaterial(NiVector3 *posVector, NiMatri
 		jz		isTerrain
 		mov		ecx, eax
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		notActor
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x218]
@@ -855,7 +857,7 @@ void JIPScriptRunner::Init()
 	for (DirectoryIterator iter("Data\\NVSE\\plugins\\scripts\\*.txt"); iter; ++iter)
 	{
 		if (!iter.IsFile()) continue;
-		fileName = (char*)iter.Get();
+		fileName = const_cast<char*>(*iter);
 		if (fileName[2] != '_') continue;
 		switch (*(UInt16*)fileName |= 0x2020)
 		{
@@ -978,6 +980,8 @@ __declspec(naked) void __fastcall DoConsolePrint(double *result)
 		call	IsConsoleOpen
 		test	al, al
 		jz		done
+		cmp		dword ptr [ebp+4], 0x5E234B
+		jnz		done
 		mov		edx, [ebp]
 		mov		edx, [edx-0x30]
 		test	edx, edx
@@ -1011,6 +1015,8 @@ __declspec(naked) void __fastcall DoConsolePrint(TESForm *result)
 		call	IsConsoleOpen
 		test	al, al
 		jz		done
+		cmp		dword ptr [ebp+4], 0x5E234B
+		jnz		done
 		mov		edx, [ebp]
 		mov		edx, [edx-0x30]
 		test	edx, edx

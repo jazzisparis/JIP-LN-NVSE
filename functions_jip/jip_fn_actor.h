@@ -1511,7 +1511,7 @@ __declspec(naked) bool __fastcall IsIdlePlayingEx(Actor *actor, TESIdleForm *idl
 		mov		esi, ecx
 		mov		edi, edx
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		setz	al
 		jnz		done
 		mov		ecx, esi

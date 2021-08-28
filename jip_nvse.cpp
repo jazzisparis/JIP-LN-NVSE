@@ -91,13 +91,15 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 	if (nvse->runtimeVersion != RUNTIME_VERSION_1_4_0_525)
 	{
 		PrintLog("ERROR: Unsupported runtime version (%08X).", nvse->runtimeVersion);
+		MessageBox(nullptr, "ERROR!\n\nUnsupported runtime version.", "JIP LN NVSE Plugin", MB_OK | MB_ICONWARNING | MB_TOPMOST);
 		return false;
 	}
 	int version = nvse->nvseVersion;
 	s_nvseVersion = (version >> 24) + (((version >> 16) & 0xFF) * 0.1) + (((version & 0xFF) >> 4) * 0.01);
-	if (version < 0x6010070)
+	if (version < 0x6020020)
 	{
-		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.17 minimum.", s_nvseVersion);
+		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.22 minimum.", s_nvseVersion);
+		MessageBox(nullptr, "ERROR!\n\nxNVSE version is outdated.\n\nThis plugin requires v6.22 minimum.", "JIP LN NVSE Plugin", MB_OK | MB_ICONWARNING | MB_TOPMOST);
 		return false;
 	}
 	PrintLog("NVSE version:\t%.2f\nJIP LN version:\t%.2f\n", s_nvseVersion, JIP_LN_VERSION);
@@ -498,7 +500,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2628*/REG_CMD_FRM(GetFactionReputationType);
 	/*2629*/REG_CMD(SetFactionReputationType);
 	/*262A*/REG_CMD_STR(RefToString);
-	/*262B*/REG_CMD(StringToRef);
+	/*262B*/REG_CMD_FRM(StringToRef);
 	/*262C*/REG_CMD(GetObjectDimensions);
 	/*262D*/REG_CMD(GetIsItem);
 	/*262E*/REG_CMD(GetMinOf);
@@ -1371,7 +1373,9 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	serialization->SetSaveCallback(pluginHandle, SaveGameCallback);
 	serialization->SetNewGameCallback(pluginHandle, NewGameCallback);
 	((NVSEMessagingInterface*)nvse->QueryInterface(kInterface_Messaging))->RegisterListener(pluginHandle, "NVSE", NVSEMessageHandler);
-	GetCmdByOpcode = ((NVSECommandTableInterface*)nvse->QueryInterface(kInterface_CommandTable))->GetByOpcode;
+	NVSECommandTableInterface *cmdInterface = (NVSECommandTableInterface*)nvse->QueryInterface(kInterface_CommandTable);
+	GetCmdByOpcode = cmdInterface->GetByOpcode;
+	GetPluginInfoByName = cmdInterface->GetPluginInfoByName;
 	NVSEStringVarInterface *strInterface = (NVSEStringVarInterface*)nvse->QueryInterface(kInterface_StringVar);
 	GetStringVar = strInterface->GetString;
 	AssignString = strInterface->Assign;
@@ -1385,6 +1389,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	LookupArrayByID = arrInterface->LookupArrayByID;
 	GetElement = arrInterface->GetElement;
 	GetElements = arrInterface->GetElements;
+	GetContainerType = arrInterface->GetContainerType;
 	NVSEScriptInterface *scrInterface = (NVSEScriptInterface*)nvse->QueryInterface(kInterface_Script);
 	ExtractArgsEx = scrInterface->ExtractArgsEx;
 	ExtractFormatStringArgs = scrInterface->ExtractFormatStringArgs;
@@ -1420,6 +1425,11 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			InitJIPHooks();
 			InitGamePatches();
 			InitCmdPatches();
+
+			HMODULE hUIO = GetModuleHandle("ui_organizer");
+			if (hUIO)
+				UIOInjectComponent = (_UIOInjectComponent)GetProcAddress(hUIO, (LPCSTR)0xA);
+
 			break;
 		}
 		case NVSEMessagingInterface::kMessage_ExitGame:

@@ -899,7 +899,7 @@ __declspec(naked) SeenData* __fastcall AddExtraSeenData(TESObjectCELL *cell)
 		mov		[eax+0xC], ecx
 		push	eax
 		lea		ecx, [esi+0x28]
-		CALL_EAX(kAddr_AddExtraData)
+		CALL_EAX(ADDR_AddExtraData)
 		push	0x80000000
 		mov		ecx, esi
 		CALL_EAX(0x484B60)
@@ -1035,7 +1035,7 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		jz		iterNextExt
 		push	kExtraData_SeenData
 		lea		ecx, [esi+0x28]
-		CALL_EAX(kAddr_RemoveExtraType)
+		CALL_EAX(ADDR_RemoveExtraType)
 		or		byte ptr [esi+0x25], 1
 		push	0x80000000
 		mov		ecx, esi

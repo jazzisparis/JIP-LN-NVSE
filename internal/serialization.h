@@ -686,7 +686,8 @@ void SaveGameCallback(void*)
 		{
 			if ((actor = (Actor*)LookupFormByRefID(refIter.Key())) && IS_ACTOR(actor))
 			{
-				if (!refIter().perkRanks.Empty() && !actor->lifeState && (actor->isTeammate || !(((TESActorBase*)actor->baseForm)->baseData.flags & 8) || actor->GetNiNode()))
+				if (!refIter().perkRanks.Empty() && !actor->lifeState && (actor->isTeammate || !(((TESActorBase*)actor->baseForm)->baseData.flags & 8) ||
+					(actor->renderState && actor->renderState->niNode14)))
 					goto isValid;
 				actor->extraDataList.perksInfo = NULL;
 			}

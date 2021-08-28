@@ -94,7 +94,7 @@ public:
 		UInt32			unk04;			// 04	0-0x13 when fully-underwater; exterior only
 		float			waterLevel;		// 08
 		float			unk0C;			// 0C
-		UInt32			unk10;			// 10
+		UInt32			flags;			// 10
 		NiNode			*niNode14;		// 14
 		NiNode			*niNode18;		// 18
 	};

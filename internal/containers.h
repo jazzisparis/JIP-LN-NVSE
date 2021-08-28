@@ -1,10 +1,10 @@
 #pragma once
 
-#define MAP_DEFAULT_ALLOC			8
-#define MAP_MIN_BUCKET_COUNT		4
-#define MAP_MAX_BUCKET_COUNT		0x40000
-#define MAP_DEFAULT_BUCKET_COUNT	8
-#define VECTOR_DEFAULT_ALLOC		8
+#define MAP_DEFAULT_ALLOC			8UL
+#define MAP_MIN_BUCKET_COUNT		4UL
+#define MAP_MAX_BUCKET_COUNT		0x40000UL
+#define MAP_DEFAULT_BUCKET_COUNT	8UL
+#define VECTOR_DEFAULT_ALLOC		8UL
 
 void* __fastcall Pool_Alloc_Buckets(UInt32 numBuckets);
 UInt32 __fastcall AlignBucketCount(UInt32 count);
@@ -588,6 +588,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_alloc = MAP_DEF
 	using M_Value = std::conditional_t<(sizeof(T_Data) <= 8) || (sizeof(T_Data) <= alignof(T_Key)), MapValue<T_Data>, MapValue_p<T_Data>>;
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
 	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
+	using M_Pair = MappedPair<T_Key, T_Data>;
 
 	struct Entry
 	{
@@ -659,7 +660,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_alloc = MAP_DEF
 
 public:
 	Map(UInt32 _alloc = _default_alloc) : entries(nullptr), numEntries(0), numAlloc(_alloc) {}
-	Map(std::initializer_list<MappedPair<T_Key, T_Data>> inList) : entries(nullptr), numEntries(0), numAlloc(inList.size()) {InsertList(inList);}
+	Map(std::initializer_list<M_Pair> inList) : entries(nullptr), numEntries(0), numAlloc(inList.size()) {InsertList(inList);}
 	~Map()
 	{
 		if (!entries) return;
@@ -695,7 +696,7 @@ public:
 		return outData;
 	}
 
-	void InsertList(std::initializer_list<MappedPair<T_Key, T_Data>> inList)
+	void InsertList(std::initializer_list<M_Pair> inList)
 	{
 		T_Data *outData;
 		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
@@ -1122,6 +1123,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = 
 	using H_Key = HashedKey<T_Key>;
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
 	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
+	using M_Pair = MappedPair<T_Key, T_Data>;
 
 	struct Entry
 	{
@@ -1245,7 +1247,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = 
 
 public:
 	UnorderedMap(UInt32 _numBuckets = _default_bucket_count) : buckets(nullptr), numBuckets(_numBuckets), numEntries(0) {}
-	UnorderedMap(std::initializer_list<MappedPair<T_Key, T_Data>> inList) : buckets(nullptr), numBuckets(inList.size()), numEntries(0) {InsertList(inList);}
+	UnorderedMap(std::initializer_list<M_Pair> inList) : buckets(nullptr), numBuckets(inList.size()), numEntries(0) {InsertList(inList);}
 	~UnorderedMap()
 	{
 		if (!buckets) return;
@@ -1307,7 +1309,7 @@ public:
 		return value;
 	}
 
-	void InsertList(std::initializer_list<MappedPair<T_Key, T_Data>> inList)
+	void InsertList(std::initializer_list<M_Pair> inList)
 	{
 		T_Data *outData;
 		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
@@ -2123,11 +2125,7 @@ public:
 
 	T_Data Pop()
 	{
-		if (!numItems) return NULL;
-		numItems--;
-		T_Data *pEnd = End();
-		pEnd->~T_Data();
-		return *pEnd;
+		return numItems ? data[--numItems] : NULL;
 	}
 
 	bool operator==(const Vector &rhs) const

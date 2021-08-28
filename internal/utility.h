@@ -577,9 +577,14 @@ public:
 	LineIterator(const char *filePath, char *buffer);
 
 	explicit operator bool() const {return *dataPtr != 3;}
-	void operator++();
-
-	char *Get() {return dataPtr;}
+	char* operator*() {return dataPtr;}
+	void operator++()
+	{
+		while (*dataPtr)
+			dataPtr++;
+		while (!*dataPtr)
+			dataPtr++;
+	}
 };
 
 class DirectoryIterator
@@ -602,7 +607,6 @@ public:
 			return fndData.cFileName[1] != 0;
 		return fndData.cFileName[2] != 0;
 	}
-	const char *Get() const {return fndData.cFileName;}
 	void Close()
 	{
 		if (handle != INVALID_HANDLE_VALUE)
@@ -613,6 +617,7 @@ public:
 	}
 
 	explicit operator bool() const {return handle != INVALID_HANDLE_VALUE;}
+	const char* operator*() const {return fndData.cFileName;}
 	void operator++() {if (!FindNextFile(handle, &fndData)) Close();}
 };
 

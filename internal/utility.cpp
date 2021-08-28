@@ -166,7 +166,7 @@ __declspec(naked) int __vectorcall ifloor(float value)
 		push	0x3FA0
 		ldmxcsr	[esp]
 		cvtss2si	eax, xmm0
-		mov		dword ptr [esp], 0x1FA0
+		mov		byte ptr [esp+1], 0x1F
 		ldmxcsr	[esp]
 		pop		ecx
 		retn
@@ -186,7 +186,7 @@ __declspec(naked) int __vectorcall iceil(float value)
 		push	0x5FA0
 		ldmxcsr	[esp]
 		cvtss2si	eax, xmm0
-		mov		dword ptr [esp], 0x1FA0
+		mov		byte ptr [esp+1], 0x1F
 		ldmxcsr	[esp]
 		pop		ecx
 		retn
@@ -1744,35 +1744,76 @@ void PrintDebug(const char *fmt, ...)
 	va_end(args);
 }
 
-LineIterator::LineIterator(const char *filePath, char *buffer)
+__declspec(naked) LineIterator::LineIterator(const char *filePath, char *buffer)
 {
-	dataPtr = buffer;
-	FileStream sourceFile(filePath);
-	if (!sourceFile)
+	__asm
 	{
-		*buffer = 3;
-		return;
+		push	ebx
+		mov		ebx, ecx
+		mov		edx, [esp+0xC]
+		mov		[ebx], edx
+		push	'br'
+		push	esp
+		push	dword ptr [esp+0x10]
+		call	fopen
+		add		esp, 0xC
+		test	eax, eax
+		jz		openFail
+		push	esi
+		push	edi
+		push	SEEK_END
+		push	0
+		push	eax
+		call	fseek
+		call	ftell
+		mov		edi, eax
+		call	rewind
+		push	1
+		push	edi
+		push	dword ptr [ebx]
+		call	fread
+		add		esp, 0xC
+		call	fclose
+		add		esp, 0xC
+		mov		esi, [ebx]
+		mov		word ptr [esi+edi], 0x300
+		dec		esi
+		ALIGN 16
+	iterHead:
+		dec		edi
+		js		iterEnd
+		inc		esi
+		mov		al, [esi]
+		cmp		al, '\r'
+		ja		iterHead
+		jz		nullTerm
+		cmp		al, '\n'
+		jnz		iterHead
+	nullTerm:
+		mov		[esi], 0
+		jmp		iterHead
+		NOP_0x9
+	iterEnd:
+		mov		esi, [ebx]
+	findBgn:
+		cmp		[esi], 0
+		jnz		done
+		inc		esi
+		jmp		findBgn
+		ALIGN 16
+	done:
+		mov		[ebx], esi
+		pop		edi
+		pop		esi
+		pop		ebx
+		retn	8
+		ALIGN 16
+	openFail:
+		mov		edx, [ebx]
+		mov		[edx], 3
+		pop		ebx
+		retn	8
 	}
-	UInt32 length = sourceFile.GetLength();
-	sourceFile.ReadBuf(buffer, length);
-	*(UInt16*)(buffer + length) = 0x300;
-	while (length)
-	{
-		length--;
-		if ((*buffer == '\n') || (*buffer == '\r'))
-			*buffer = 0;
-		buffer++;
-	}
-	while (!*dataPtr)
-		dataPtr++;
-}
-
-void LineIterator::operator++()
-{
-	while (*dataPtr)
-		dataPtr++;
-	while (!*dataPtr)
-		dataPtr++;
 }
 
 UInt32 __fastcall FileToBuffer(const char *filePath, char *buffer)
@@ -2079,14 +2120,7 @@ void DumpMemImg(void *data, UInt32 size, UInt8 extra)
 	{
 		if (!extra) PrintDebug("%03X\t\t%08X\t", iter, *ptr);
 		else if (extra == 1) PrintDebug("%03X\t\t%08X\t[%08X]\t", iter, *ptr, ByteSwap(*ptr));
-		else if (extra == 2) PrintDebug("%03X\t\t%08X\t%f", iter, *ptr, *(float*)ptr);
+		else if (extra == 2) PrintDebug("%04X\t\t%08X\t%f", iter, *ptr, *(float*)ptr);
 		else if (extra == 3) PrintDebug("%03X\t\t%08X\t[%08X]\t%f", iter, *ptr, ByteSwap(*ptr), *(float*)ptr);
-		/*else
-		{
-			UInt32 addr = *ptr;
-			if (!(addr & 3) && (addr > 0x08000000) && (addr < 0x34000000))
-				PrintDebug("%03X\t\t%08X\t%08X\t", iter, *ptr, *(UInt32*)addr);
-			else PrintDebug("%03X\t\t%08X\t", iter, *ptr);
-		}*/
 	}
 }

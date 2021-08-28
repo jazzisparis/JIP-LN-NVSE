@@ -32,6 +32,8 @@ typedef void (*_ReadRecord64)(void *outData);
 extern _ReadRecord64 ReadRecord64;
 typedef CommandInfo* (*_GetCmdByOpcode)(UInt32 opcode);
 extern _GetCmdByOpcode GetCmdByOpcode;
+typedef const PluginInfo* (*_GetPluginInfoByName)(const char *pluginName);
+extern _GetPluginInfoByName GetPluginInfoByName;
 typedef const char* (*_GetStringVar)(UInt32 stringID);
 extern _GetStringVar GetStringVar;
 typedef bool (*_AssignString)(COMMAND_ARGS, const char *newValue);
@@ -54,6 +56,8 @@ typedef bool (*_GetElement)(NVSEArrayVar *arr, const NVSEArrayElement &key, NVSE
 extern _GetElement GetElement;
 typedef bool (*_GetElements)(NVSEArrayVar *arr, NVSEArrayElement *elements, NVSEArrayElement *keys);
 extern _GetElements GetElements;
+typedef int (*_GetContainerType)(NVSEArrayVar *arr);
+extern _GetContainerType GetContainerType;
 typedef bool (*_ExtractArgsEx)(COMMAND_ARGS_EX, ...);
 extern _ExtractArgsEx ExtractArgsEx;
 typedef bool (*_ExtractFormatStringArgs)(UInt32 fmtStringPos, char *buffer, COMMAND_ARGS_EX, UInt32 maxParams, ...);
@@ -64,14 +68,17 @@ typedef void (*_CaptureLambdaVars)(Script* scriptLambda);
 extern _CaptureLambdaVars CaptureLambdaVars;
 typedef void (*_UncaptureLambdaVars)(Script* scriptLambda);
 extern _UncaptureLambdaVars UncaptureLambdaVars;
-
 extern UInt8 *g_numPreloadMods;
+
+typedef Tile* (__stdcall *_UIOInjectComponent)(Tile *parentTile, const char *dataStr);
+extern _UIOInjectComponent UIOInjectComponent;
 
 #define MSGBOX_ARGS 0, 0, ShowMessageBox_Callback, 0, 0x17, 0, 0, "OK", NULL
 
 struct GameGlobals
 {
 	__forceinline static const char **TerminalModelPtr() {return (const char**)0x11A0BB0;}
+	__forceinline static SpellItem *PipBoyLight() {return *(SpellItem**)0x11C358C;}
 	__forceinline static TESDescription **CurrentDescription() {return (TESDescription**)0x11C5490;}
 	__forceinline static String *CurrentDescriptionText() {return (String*)0x11C5498;}
 	__forceinline static NiTPointerMap<TESForm> *AllFormsMap() {return *(NiTPointerMap<TESForm>**)0x11C54C0;}
@@ -79,7 +86,7 @@ struct GameGlobals
 	__forceinline static BSTCaseInsensitiveStringMap<void*> *IdleAnimsDirectoryMap() {return *(BSTCaseInsensitiveStringMap<void*>**)0x11CB6A0;}
 	__forceinline static BSSimpleArray<TESRecipeCategory> *RecipeMenuCategories() {return (BSSimpleArray<TESRecipeCategory>*)0x11D8F08;}
 	__forceinline static TESObjectWEAP *PlayerWeapon() {return *(TESObjectWEAP**)0x11D98D4;}
-	__forceinline static tList<VATSTargetInfo> *VATSTargetList() {return (tList<VATSTargetInfo>*)0x11DB150;}
+	__forceinline static tList<VATSTarget> *VATSTargetList() {return (tList<VATSTarget>*)0x11DB150;}
 	__forceinline static NiNode *ObjectLODRoot() {return *(NiNode**)0x11DEA18;}
 	__forceinline static bool *GamePadRumble() {return (bool*)0x11E0854;}
 	__forceinline static UInt32 TickCount() {return *(UInt32*)0x11F63A8;}
@@ -90,7 +97,6 @@ struct GameGlobals
 	__forceinline static RadioEntry *PipboyRadio() {return *(RadioEntry**)0x11DD42C;}
 };
 
-extern SpellItem *g_pipBoyLight;
 extern void *g_scrapHeapQueue;
 extern NiNode *g_cursorNode;
 extern float g_screenResConvert, g_screenWidth, g_screenHeight;
@@ -757,6 +763,33 @@ struct TempArrayElements
 };
 
 ArrayElementR* __fastcall GetArrayData(NVSEArrayVar *srcArr, UInt32 *size);
+
+struct ArrayDataFull
+{
+	UInt32			size;
+	ArrayElementR	*vals;
+	ArrayElementR	*keys;
+
+	ArrayDataFull(NVSEArrayVar *srcArr)
+	{
+		size = GetArraySize(srcArr);
+		if (size)
+		{
+			vals = (ArrayElementR*)AuxBuffer::Get(2, size * sizeof(ArrayElementR) * 2);
+			keys = vals + size;
+			MemZero(vals, size * sizeof(ArrayElementR) * 2);
+			if (!GetElements(srcArr, vals, keys))
+				size = 0;
+		}
+	}
+
+	~ArrayDataFull()
+	{
+		ArrayElementR *elems = vals;
+		for (UInt32 i = size * 2; i; i--, elems++)
+			elems->~ElementR();
+	}
+};
 
 // 30
 struct InventoryRef

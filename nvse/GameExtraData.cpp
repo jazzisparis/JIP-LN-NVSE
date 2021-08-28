@@ -693,7 +693,7 @@ __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(
 		push	dword ptr [esi+8]
 		push	ecx
 		push	kPerkEntry_CalculateWeaponDamage
-		CALL_EAX(kAddr_ApplyPerkModifiers)
+		CALL_EAX(ADDR_ApplyPerkModifiers)
 		add		esp, 0x14
 		fld		dword ptr [esp]
 		pop		ecx

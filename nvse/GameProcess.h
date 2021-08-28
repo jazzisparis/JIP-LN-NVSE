@@ -55,7 +55,7 @@ struct ActorHitData
 	float				healthPerc;		// 34
 	NiVector3			impactPos;		// 38
 	NiVector3			impactAngle;	// 44
-	UInt32				unk50;			// 50
+	MagicItem			*hitEffect;		// 50
 	void				*ptr54;			// 54
 	UInt32				flags;			// 58
 	float				dmgMult;		// 5C

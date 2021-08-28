@@ -546,6 +546,8 @@ struct ModelLoader
 	UInt8												byte2C;				// 2C
 	UInt8												pad2D[3];			// 2D
 
+	__forceinline static ModelLoader *GetSingleton() {return *(ModelLoader**)0x11C3B3C;}
+
 	__forceinline void QueueReference(TESObjectREFR *refr)
 	{
 		ThisCall(0x444850, this, refr, 1, false);

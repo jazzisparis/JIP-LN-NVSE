@@ -268,7 +268,7 @@ bool Cmd_GetFilesInFolder_Execute(COMMAND_ARGS)
 	StrCopy(pathEnd, filter);
 	NVSEArrayVar *outArray = CreateArray(NULL, 0, scriptObj);
 	for (DirectoryIterator iter(dataPathFull); iter; ++iter)
-		if (iter.IsFile()) AppendElement(outArray, ArrayElementL(iter.Get()));
+		if (iter.IsFile()) AppendElement(outArray, ArrayElementL(*iter));
 	AssignCommandResult(outArray, result);
 	return true;
 }
@@ -287,7 +287,7 @@ bool Cmd_GetFoldersInFolder_Execute(COMMAND_ARGS)
 	StrCopy(pathEnd, filter);
 	NVSEArrayVar *outArray = CreateArray(NULL, 0, scriptObj);
 	for (DirectoryIterator iter(dataPathFull); iter; ++iter)
-		if (iter.IsFolder()) AppendElement(outArray, ArrayElementL(iter.Get()));
+		if (iter.IsFolder()) AppendElement(outArray, ArrayElementL(*iter));
 	AssignCommandResult(outArray, result);
 	return true;
 }

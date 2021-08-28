@@ -1,5 +1,6 @@
 #pragma once
 
+class NiBlendInterpolator;
 class NiMultiTargetTransformController;
 class NiTextKeyExtraData;
 class NiDefaultAVObjectPalette;
@@ -334,43 +335,57 @@ class NiControllerSequence : public NiObject
 public:
 	virtual bool	Unk_23(float arg1, UInt8 arg2);
 
+	enum State
+	{
+		kState_Inactive,
+		kState_Animating,
+		kState_EaseIn,
+		kState_EaseOut,
+		kState_TransSource,
+		kState_TransDest,
+		kState_MorphSource
+	};
+
 	struct ControlledBlock
 	{
 		NiInterpolator						*interpolator;
 		NiMultiTargetTransformController	*multiTargetCtrl;
-		// More
+		NiBlendInterpolator					*blendInterpolator;
+		UInt8								blendIdx;
+		UInt8								byte0D;
+		UInt8								pad0E[2];
 	};
 
-	const char			*sequenceName;			// 08
-	UInt32				numControlledBlocks;	// 0C
-	UInt32				arrayGrowBy;			// 10
-	ControlledBlock		**controlledBlocks;		// 14
-	const char			**unkNodeName;			// 18
-	float				weight;					// 1C
-	NiTextKeyExtraData	*textKeyData;			// 20
-	UInt32				cycleType;				// 24
-	float				frequency;				// 28
-	float				startTime;				// 2C
-	float				stopTime;				// 30
-	float				flt34;					// 34
-	float				flt38;					// 38
-	float				flt3C;					// 3C
-	NiControllerManager	*manager;				// 40
-	UInt32				unk44;					// 44
-	float				flt48;					// 48
-	float				flt4C;					// 4C
-	float				flt50;					// 50
-	float				flt54;					// 54
-	UInt32				unk58;					// 58
-	const char			*rootNodeName;			// 5C
-	UInt32				unk60;					// 60
-	UInt32				unk64;					// 64
-	UInt16				word68;					// 68
-	UInt16				word6A;					// 6A	Pad?
-	UInt32				unk6C;					// 6C
-	UInt16				word70;					// 70
-	UInt8				byte72;					// 72
-	UInt8				byte73;					// 73	Pad
+	const char				*sequenceName;			// 08
+	UInt32					numControlledBlocks;	// 0C
+	UInt32					arrayGrowBy;			// 10
+	ControlledBlock			**controlledBlocks;		// 14
+	const char				**unkNodeName;			// 18
+	float					weight;					// 1C
+	NiTextKeyExtraData		*textKeyData;			// 20
+	UInt32					cycleType;				// 24
+	float					frequency;				// 28
+	float					beginKeyTime;			// 2C
+	float					endKeyTime;				// 30
+	float					lastTime;				// 34
+	float					weightedLastTime;		// 38
+	float					lastScaledTime;			// 3C
+	NiControllerManager		*manager;				// 40
+	UInt32					state;					// 44
+	float					offset;					// 48
+	float					startTime;				// 4C
+	float					endTime;				// 50
+	float					destFrame;				// 54
+	NiControllerSequence	*partnerSequence;		// 58
+	const char				*accumRootName;			// 5C
+	UInt32					unk60;					// 60
+	UInt32					unk64;					// 64
+	UInt16					word68;					// 68
+	UInt16					word6A;					// 6A	Pad?
+	UInt32					unk6C;					// 6C
+	UInt16					word70;					// 70
+	UInt8					byte72;					// 72
+	UInt8					byte73;					// 73	Pad
 
 	bool Play();
 };
@@ -673,14 +688,15 @@ public:
 class NiMaterialProperty : public NiProperty
 {
 public:
-	UInt32				unk18;			// 18
+	UInt32				m_iIndex;		// 18
 	NiColor				specularRGB;	// 1C
 	NiColor				emissiveRGB;	// 28
 	UInt32				isExternalEmit;	// 34
 	float				glossiness;		// 38
 	float				alpha;			// 3C
 	float				emitMult;		// 40
-	UInt32				unk44[2];		// 44
+	UInt32				m_uiRevID;		// 44
+	UInt32				unk48;			// 48
 
 	__forceinline static NiMaterialProperty *Create() {return CdeclCall<NiMaterialProperty*>(0xA756D0);}
 	void SetTraitValue(UInt32 traitID, float value);

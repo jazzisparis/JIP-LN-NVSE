@@ -88,7 +88,7 @@ bool Cmd_ReadArrayFromFile_Execute(COMMAND_ARGS)
 	if (!lineIter) return true;
 	TempElements *tempElems = GetTempElements();
 	tempElems->Clear();
-	char *dataPtr = lineIter.Get(), *pos;
+	char *dataPtr = *lineIter, *pos;
 	++lineIter;
 	while (true)
 	{
@@ -107,7 +107,7 @@ bool Cmd_ReadArrayFromFile_Execute(COMMAND_ARGS)
 	UInt32 numLines = 1, count;
 	while (lineIter)
 	{
-		dataPtr = lineIter.Get();
+		dataPtr = *lineIter;
 		++lineIter;
 		numLines++;
 		count = numColumns;
