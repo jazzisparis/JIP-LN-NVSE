@@ -7,10 +7,6 @@
 
 #define _HAS_EXCEPTIONS 0
 
-#define RUNTIME_VERSION_1_4_0_525	0x040020D0
-#define RUNTIME_VERSION_1_4_0_525ng	0x040020D1
-#define CS_VERSION_1_4_0_518		0x04002060
-
 #include <Windows.h>
 #include <string>
 #include <regex>

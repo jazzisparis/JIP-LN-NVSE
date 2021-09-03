@@ -137,10 +137,6 @@ enum TileValueID
 class Tile
 {
 public:
-	MEMBER_FN_PREFIX(Tile);
-	DEFINE_MEMBER_FN(SetStringValue, void, 0x00A01350, UInt32 valueID, const char* str, bool bPropagate);
-	DEFINE_MEMBER_FN(SetFloatValue, void, 0x00A012D0, UInt32 valueID, float num, bool bPropagate);
-
 	/*000*/virtual Tile		*Destroy(bool doFree);
 	/*004*/virtual void		Init(Tile *parent, const char *name, Tile *replacedChild);
 	/*008*/virtual NiNode	*CalcNode(void);

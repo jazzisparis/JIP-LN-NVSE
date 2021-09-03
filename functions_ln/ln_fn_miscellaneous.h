@@ -241,21 +241,15 @@ bool Cmd_ar_Cat_Execute(COMMAND_ARGS)
 	if (type != GetContainerType(catArray))
 		return true;
 	bool isPacked = type == NVSEArrayVarInterface::kArrType_Array;
-	ArrayDataFull arrData(catArray);
+	ArrayData arrData(catArray, isPacked);
 	if (!arrData.size)
 		return true;
 	for (UInt32 idx = 0; idx < arrData.size; idx++)
 	{
 		if (isPacked)
 			AppendElement(inArray, arrData.vals[idx]);
-		else if (overrideOldKeys)
+		else if (overrideOldKeys || !ArrayHasKey(inArray, arrData.keys[idx]))
 			SetElement(inArray, arrData.keys[idx], arrData.vals[idx]);
-		else
-		{
-			ArrayElementR tempVal;
-			if (!GetElement(inArray, arrData.keys[idx], tempVal))
-				SetElement(inArray, arrData.keys[idx], arrData.vals[idx]);
-		}
 	}
 	*result = 1;
 	return true;

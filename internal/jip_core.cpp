@@ -30,9 +30,12 @@ _LookupArrayByID LookupArrayByID;
 _GetElement GetElement;
 _GetElements GetElements;
 _GetContainerType GetContainerType;
+bool __cdecl ArrayHasKey_Placeholder(NVSEArrayVar *arr, const NVSEArrayElement &key) {return false;}
+_ArrayHasKey ArrayHasKey = ArrayHasKey_Placeholder;
 _ExtractArgsEx ExtractArgsEx;
 _ExtractFormatStringArgs ExtractFormatStringArgs;
 _CallFunction CallFunction;
+//_GetFunctionParams GetFunctionParams;
 _CaptureLambdaVars CaptureLambdaVars;
 _UncaptureLambdaVars UncaptureLambdaVars;
 _InventoryRefCreate InventoryRefCreate;
@@ -643,16 +646,6 @@ CriticalHitEventCallbacks s_criticalHitEvents;
 
 UnorderedMap<Script*, DisabledScriptBlocks> s_disabledScriptBlocksMap;
 
-ArrayElementR* __fastcall GetArrayData(NVSEArrayVar *srcArr, UInt32 *size)
-{
-	*size = GetArraySize(srcArr);
-	if (!*size) return NULL;
-	ArrayElementR *data = (ArrayElementR*)AuxBuffer::Get(2, *size * sizeof(ArrayElementR));
-	MemZero(data, *size * sizeof(ArrayElementR));
-	GetElements(srcArr, data, NULL);
-	return data;
-}
-
 ExtraDataList *InventoryRef::CreateExtraData()
 {
 	ContChangesEntry *pEntry = containerRef->GetContainerChangesEntry(type);
@@ -846,105 +839,88 @@ const AnimGroupClassify kAnimGroupClassify[] =
 	{2, 5, 0, 0}, {2, 5, 0, 0}, {2, 5, 0, 0}, {2, 5, 0, 0}
 };
 
-JIPScriptRunner s_jipScriptRunner;
+UnorderedMap<char*, Script*> s_cachedScripts;
 
-void JIPScriptRunner::Init()
+namespace JIPScriptRunner
 {
-	s_jipScriptRunner.script = (Script*)malloc(sizeof(Script));
-	MemZero(s_jipScriptRunner.script, sizeof(Script));
-	s_jipScriptRunner.scrContext = g_consoleManager->scriptContext;
-	char *fileName;
-	for (DirectoryIterator iter("Data\\NVSE\\plugins\\scripts\\*.txt"); iter; ++iter)
+	void Init()
 	{
-		if (!iter.IsFile()) continue;
-		fileName = const_cast<char*>(*iter);
-		if (fileName[2] != '_') continue;
-		switch (*(UInt16*)fileName |= 0x2020)
+		char *fileName, scriptsPath[0x50] = "Data\\NVSE\\plugins\\scripts\\*.txt", *buffer = GetStrArgBuffer();
+		for (DirectoryIterator iter(scriptsPath); iter; ++iter)
 		{
-			case 'rg':
-				RunFile(fileName);
-				break;
-			case 'lg':
-			case 'sg':
-			case 'mx':
-			case 'xg':
-				s_jipScriptRunner.sourceFiles.Insert(fileName);
-				break;
-			default:
-				break;
+			if (!iter.IsFile()) continue;
+			fileName = const_cast<char*>(*iter);
+			if (fileName[2] != '_') continue;
+			StrCopy(scriptsPath + 26, fileName);
+			if (!FileToBuffer(scriptsPath, buffer))
+				continue;
+			switch (*(UInt16*)fileName |= 0x2020)
+			{
+				case kRunOn_RestartGame:
+					PrintLog("Run Script : %s >> %s", fileName, RunScriptSource(buffer) ? "SUCCESS" : "FAILED");
+					break;
+				case kRunOn_LoadGame:
+				case kRunOn_ExitToMainMenu:
+				case kRunOn_NewGame:
+				case kRunOn_SaveGame:
+				case kRunOn_ExitGame:
+					s_cachedScripts[fileName] = Script::Create(buffer);
+					break;
+				default:
+					break;
+			}
 		}
 	}
-}
 
-__declspec(naked) bool __stdcall JIPScriptRunner::RunScript(const char *scriptText, TESObjectREFR *thisObj)
-{
-	__asm
+	void RunScripts(UInt16 type)
 	{
-		push	ebx
-		push	esi
-		mov		ebx, offset s_jipScriptRunner
-		mov		esi, [ebx]
-		mov		ecx, esi
-		CALL_EAX(0x5AA0F0)
-		mov		ecx, esi
-		CALL_EAX(0x484490)
-		push	dword ptr [esp+0xC]
-		mov		ecx, esi
-		CALL_EAX(0x5ABE50)
-		push	dword ptr [esp+0x10]
-		push	1
-		push	dword ptr [ebx+4]
-		mov		ecx, esi
-		CALL_EAX(0x5AC400)
-		mov		ecx, esi
-		cmp		dword ptr [ecx+0x20], 0
-		setnz	bl
-		CALL_EAX(0x5AA1A0)
-		mov		al, bl
-		pop		esi
-		pop		ebx
-		retn	8
-	}
-}
-
-void __stdcall JIPScriptRunner::RunFile(const char *fileName)
-{
-	char scriptsPath[0x80], *buffer = GetStrArgBuffer();
-	memcpy(scriptsPath, "Data\\NVSE\\plugins\\scripts\\", 26);
-	StrCopy(scriptsPath + 26, fileName);
-	bool success = FileToBuffer(scriptsPath, buffer) && RunScript(buffer);
-	PrintLog("Run Script : %s >> %s", fileName, success ? "SUCCESS" : "FAILED");
-}
-
-void __stdcall JIPScriptRunner::RunScriptFiles(UInt16 type)
-{
-	bool found = false;
-	for (auto iter = s_jipScriptRunner.sourceFiles.Begin(); iter; ++iter)
-	{
-		if (*(UInt16*)*iter == type)
+		for (auto iter = s_cachedScripts.Begin(); iter; ++iter)
 		{
-			found = true;
-			RunFile(*iter);
+			if (*(UInt16*)iter.Key() != type) continue;
+			if (iter->info.dataLength)
+			{
+				SuppressConsoleOutput();
+				iter->Execute(nullptr, nullptr, nullptr, true);
+			}
+			PrintLog("Run Script : %s >> %s", iter.Key(), iter->info.dataLength ? "SUCCESS" : "FAILED");
 		}
-		else if (found) break;
 	}
-}
 
-bool TESObjectREFR::RunScriptSource(char *sourceStr, bool doFree)
-{
-	ExtraScript *xScript = GetExtraType(&extraDataList, Script);
-	ScriptEventList *eventList = xScript ? xScript->eventList : NULL;
-	if (eventList) xScript->eventList = NULL;
-	bool success = JIPScriptRunner::RunScript(sourceStr, this);
-	if (!success)
+	bool __fastcall RunScript(Script *script, int EDX, TESObjectREFR *callingRef)
 	{
-		if (StrLen(sourceStr) > 0x80) const_cast<char*>(sourceStr)[0x80] = 0;
-		Console_Print("ERROR: Failed to execute script source:\n%s (...)", sourceStr);
+		bool result = script->info.dataLength != 0;
+		if (result)
+		{
+			ExtraScript *xScript = GetExtraType(&callingRef->extraDataList, Script);
+			ScriptEventList *eventList = xScript ? xScript->eventList : nullptr;
+			if (eventList) xScript->eventList = nullptr;
+			SuppressConsoleOutput();
+			script->Execute(callingRef, nullptr, nullptr, true);
+			if (eventList) xScript->eventList = eventList;
+		}
+		if (EDX != 1)
+		{
+			script->Destructor();
+			GameHeapFree(script);
+		}
+		return result;
 	}
-	if (doFree) free(sourceStr);
-	if (eventList) xScript->eventList = eventList;
-	return success;
-}
+
+	bool __fastcall RunScriptSource(char *scrSource)
+	{
+		UInt8 tempScrBuf[sizeof(Script)];
+		Script *tempScript = (Script*)tempScrBuf;
+		tempScript->Init(scrSource);
+		bool result = tempScript->info.dataLength != 0;
+		if (result)
+		{
+			SuppressConsoleOutput();
+			tempScript->Execute(nullptr, nullptr, nullptr, true);
+		}
+		tempScript->Destructor();
+		return result;
+	}
+};
 
 UnorderedMap<const char*, NiCamera*> s_extraCamerasMap;
 
@@ -965,10 +941,20 @@ __declspec(naked) bool IsConsoleOpen()
 		mov		eax, fs:[0x2C]
 		mov		edx, ds:[0x126FD98]
 		mov		eax, [eax+edx*4]
-		test	eax, eax
-		jz		done
 		mov		al, [eax+0x268]
 	done:
+		retn
+	}
+}
+
+__declspec(naked) void SuppressConsoleOutput()
+{
+	__asm
+	{
+		mov		eax, fs:[0x2C]
+		mov		edx, ds:[0x126FD98]
+		mov		eax, [eax+edx*4]
+		mov		[eax+0x268], 0
 		retn
 	}
 }

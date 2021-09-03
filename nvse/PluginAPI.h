@@ -301,8 +301,6 @@ struct NVSEMessagingInterface
 *		
 *********************************************************************************************/
 
-#if RUNTIME
-
 struct NVSEArrayVarInterface
 {
 	enum
@@ -428,15 +426,13 @@ struct NVSEArrayVarInterface
 	};
 
 	int		(*GetContainerType)(Array *arr);
-
+	bool	(*ArrayHasKey)(Array *arr, const Element &key);
 };
 typedef NVSEArrayVarInterface::Array NVSEArrayVar;
 typedef NVSEArrayVarInterface::Element NVSEArrayElement;
 typedef NVSEArrayVarInterface::ElementR ArrayElementR;
 typedef NVSEArrayVarInterface::ElementL ArrayElementL;
 
-#endif
-		
 /**** command table API docs *******************************************************
 *
 *	Command table API gives plugins limited access to NVSE's internal command table.
@@ -508,29 +504,19 @@ struct NVSECommandTableInterface
  *
  ******************************************************************************/
 
-#if RUNTIME
-
 struct NVSEScriptInterface
 {
 	enum {
 		kVersion = 1
 	};
 
-	bool	(* CallFunction)(Script* funcScript, TESObjectREFR* callingObj, TESObjectREFR* container,
-		NVSEArrayVarInterface::Element * result, UInt8 numArgs, ...);
-
-	UInt32	(* GetFunctionParams)(Script* funcScript, UInt8* paramTypesOut);
-	bool	(* ExtractArgsEx)(ParamInfo * paramInfo, UInt8 * scriptDataIn, UInt32 * scriptDataOffset, Script * scriptObj,
-		ScriptEventList * eventList, ...);
-	bool	(* ExtractFormatStringArgs)(UInt32 fmtStringPos, char* buffer, ParamInfo * paramInfo, UInt8 * scriptDataIn, 
-		UInt32 * scriptDataOffset, Script * scriptObj, ScriptEventList * eventList, UInt32 maxParams, ...);
-
+	bool	(*CallFunction)(Script *funcScript, TESObjectREFR *callingObj, TESObjectREFR *container, NVSEArrayVarInterface::Element *result, UInt8 numArgs, ...);
+	int		(*GetFunctionParams)(Script *funcScript, UInt8 *paramTypesOut);
+	bool	(*ExtractArgsEx)(ParamInfo *paramInfo, UInt8 *scriptDataIn, UInt32 *scriptDataOffset, Script *scriptObj, ScriptEventList *eventList, ...);
+	bool	(*ExtractFormatStringArgs)(UInt32 fmtStringPos, char *buffer, ParamInfo *paramInfo, UInt8 *scriptDataIn, UInt32 *scriptDataOffset, 
+										Script *scriptObj, ScriptEventList *eventList, UInt32 maxParams, ...);
 	bool	(*CallFunctionAlt)(Script *funcScript, TESObjectREFR *callingObj, UInt8 numArgs, ...);
 };
-
-#endif
-
-#if RUNTIME
 
 // Gives access to internal data without reverse engineering NVSE
 struct NVSEDataInterface
@@ -573,7 +559,6 @@ struct NVSEDataInterface
 	};
 	void * (* GetData)(UInt32 dataID);
 };
-#endif
 
 /**** serialization API docs ***************************************************
  *	

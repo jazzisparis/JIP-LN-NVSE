@@ -32,17 +32,14 @@ ConsoleManager * ConsoleManager::GetSingleton(void)
 	return (ConsoleManager *)ConsoleManager_GetSingleton(true);
 }
 
-void Console_Print(const char * fmt, ...)
+void Console_Print(const char *fmt, ...)
 {
-	ConsoleManager	* mgr = ConsoleManager::GetSingleton();
-	if(mgr)
+	ConsoleManager *mgr = ConsoleManager::GetSingleton();
+	if (mgr)
 	{
 		va_list	args;
-
 		va_start(args, fmt);
-
-		CALL_MEMBER_FN(mgr, Print)(fmt, args);
-
+		ThisCall(0x71D0A0, mgr, fmt, args);
 		va_end(args);
 	}
 }

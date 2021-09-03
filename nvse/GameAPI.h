@@ -3,8 +3,6 @@
 #define playerID	0x7
 #define playerRefID 0x14
 
-static const UInt32 s_Console__Print = 0x0071D0A0;
-
 void Console_Print(const char * fmt, ...);
 
 typedef bool (* _ExtractArgs)(ParamInfo * paramInfo, void * scriptData, UInt32 * arg2, TESObjectREFR * arg3, TESObjectREFR * arg4, Script * script, ScriptEventList * eventList, ...);
@@ -141,11 +139,6 @@ struct ScriptEventList
 class ConsoleManager
 {
 public:
-#if RUNTIME
-	MEMBER_FN_PREFIX(ConsoleManager);
-	DEFINE_MEMBER_FN(Print, void, s_Console__Print, const char * fmt, va_list args);
-#endif
-
 	struct TextNode
 	{
 		TextNode	*next;
@@ -360,27 +353,14 @@ public:
 
 	static TESSaveLoadGame* Get();
 
-	MEMBER_FN_PREFIX(TESSaveLoadGame);
-#if RUNTIME_VERSION == RUNTIME_VERSION_1_4_0_525
-	DEFINE_MEMBER_FN(AddCreatedForm, UInt32, 0x00861780, TESForm * pForm);
-#elif RUNTIME_VERSION == RUNTIME_VERSION_1_4_0_525ng
-	DEFINE_MEMBER_FN(AddCreatedForm, UInt32, 0x00861330, TESForm * pForm);
-#elif EDITOR
-#else
-#error
-#endif
+	__forceinline UInt32 AddCreatedForm(TESForm *pForm)
+	{
+		return ThisCall<UInt32>(0x861780, this, pForm);
+	}
 };
 
-#if RUNTIME_VERSION == RUNTIME_VERSION_1_4_0_525
 const UInt32 _SaveGameManager_ConstructSavegameFilename = 0x0084FF90;
 const UInt32 _SaveGameManager_ConstructSavegamePath		= 0x0084FF30;
-#elif RUNTIME_VERSION == RUNTIME_VERSION_1_4_0_525ng
-const UInt32 _SaveGameManager_ConstructSavegameFilename = 0x0084F9E0;
-const UInt32 _SaveGameManager_ConstructSavegamePath		= 0x0084F980;
-#elif EDITOR
-#else
-#error
-#endif
 
 class BGSCellNumericIDArrayMap;
 class BGSLoadGameSubBuffer;
@@ -444,10 +424,6 @@ class SaveGameManager
 {
 public:
 	static SaveGameManager* GetSingleton();
-	MEMBER_FN_PREFIX(SaveGameManager);
-	DEFINE_MEMBER_FN(ConstructSavegameFilename, void, _SaveGameManager_ConstructSavegameFilename, 
-					 const char* filename, char* outputBuf, bool bTempFile);
-	DEFINE_MEMBER_FN(ConstructSavegamePath, void, _SaveGameManager_ConstructSavegamePath, char* outputBuf);
 
 	struct SaveGameData
 	{

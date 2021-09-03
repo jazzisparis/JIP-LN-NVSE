@@ -58,12 +58,16 @@ typedef bool (*_GetElements)(NVSEArrayVar *arr, NVSEArrayElement *elements, NVSE
 extern _GetElements GetElements;
 typedef int (*_GetContainerType)(NVSEArrayVar *arr);
 extern _GetContainerType GetContainerType;
+typedef bool (*_ArrayHasKey)(NVSEArrayVar *arr, const NVSEArrayElement &key);
+extern _ArrayHasKey ArrayHasKey;
 typedef bool (*_ExtractArgsEx)(COMMAND_ARGS_EX, ...);
 extern _ExtractArgsEx ExtractArgsEx;
 typedef bool (*_ExtractFormatStringArgs)(UInt32 fmtStringPos, char *buffer, COMMAND_ARGS_EX, UInt32 maxParams, ...);
 extern _ExtractFormatStringArgs ExtractFormatStringArgs;
 typedef bool (*_CallFunction)(Script *funcScript, TESObjectREFR *callingObj, UInt8 numArgs, ...);
 extern _CallFunction CallFunction;
+//typedef int (*_GetFunctionParams)(Script *funcScript, UInt8 *paramTypesOut);
+//extern _GetFunctionParams GetFunctionParams;
 typedef void (*_CaptureLambdaVars)(Script* scriptLambda);
 extern _CaptureLambdaVars CaptureLambdaVars;
 typedef void (*_UncaptureLambdaVars)(Script* scriptLambda);
@@ -762,32 +766,40 @@ struct TempArrayElements
 	}
 };
 
-ArrayElementR* __fastcall GetArrayData(NVSEArrayVar *srcArr, UInt32 *size);
-
-struct ArrayDataFull
+struct ArrayData
 {
 	UInt32			size;
 	ArrayElementR	*vals;
 	ArrayElementR	*keys;
 
-	ArrayDataFull(NVSEArrayVar *srcArr)
+	ArrayData(NVSEArrayVar *srcArr, bool isPacked)
 	{
 		size = GetArraySize(srcArr);
 		if (size)
 		{
-			vals = (ArrayElementR*)AuxBuffer::Get(2, size * sizeof(ArrayElementR) * 2);
-			keys = vals + size;
-			MemZero(vals, size * sizeof(ArrayElementR) * 2);
+			UInt32 alloc = size * sizeof(ArrayElementR);
+			if (!isPacked) alloc *= 2;
+			vals = (ArrayElementR*)AuxBuffer::Get(2, alloc);
+			keys = isPacked ? nullptr : (vals + size);
+			MemZero(vals, alloc);
 			if (!GetElements(srcArr, vals, keys))
 				size = 0;
 		}
 	}
 
-	~ArrayDataFull()
+	~ArrayData()
 	{
-		ArrayElementR *elems = vals;
-		for (UInt32 i = size * 2; i; i--, elems++)
-			elems->~ElementR();
+		if (size)
+		{
+			UInt32 count = keys ? (size * 2) : size;
+			ArrayElementR *elems = vals;
+			do
+			{
+				elems->~ElementR();
+				elems++;
+			}
+			while (--count);
+		}
 	}
 };
 
@@ -834,20 +846,25 @@ struct AnimGroupClassify
 };
 extern const AnimGroupClassify kAnimGroupClassify[];
 
-class JIPScriptRunner
+enum ScriptRunOn
 {
-	Script					*script;
-	void					*scrContext;
-	UnorderedSet<char*>		sourceFiles;
+	kRunOn_LoadGame =		'lg',
+	kRunOn_ExitToMainMenu =	'mx',
+	kRunOn_NewGame =		'ng',
+	kRunOn_RestartGame =	'rg',
+	kRunOn_SaveGame =		'sg',
+	kRunOn_ExitGame =		'xg'
+};
 
-public:
-	JIPScriptRunner() : script(NULL) {}
-	~JIPScriptRunner() {free(script);}
+extern UnorderedMap<char*, Script*> s_cachedScripts;
 
-	static void Init();
-	static bool __stdcall RunScript(const char *scriptText, TESObjectREFR *thisObj = NULL);
-	static void __stdcall RunFile(const char *fileName);
-	static void __stdcall RunScriptFiles(UInt16 type);
+namespace JIPScriptRunner
+{
+	void Init();
+	void RunScripts(UInt16 type);
+
+	bool __fastcall RunScript(Script *script, int EDX, TESObjectREFR *callingRef);
+	bool __fastcall RunScriptSource(char *scrSource);
 };
 
 extern UnorderedMap<const char*, NiCamera*> s_extraCamerasMap;
@@ -857,6 +874,8 @@ extern bool s_HUDCursorMode;
 bool GetMenuMode();
 
 bool IsConsoleOpen();
+
+void SuppressConsoleOutput();
 
 void __fastcall DoConsolePrint(double *result);
 

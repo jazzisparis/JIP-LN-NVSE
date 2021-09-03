@@ -788,11 +788,11 @@ float TESObjectWEAP::GetModBonuses(UInt8 modFlags, UInt32 effectID)
 	return result;
 }
 
-void TESForm::DoAddForm(TESForm* newForm, bool persist, bool record) const
+void TESForm::DoAddForm(TESForm *newForm, bool persist, bool record) const
 {
-	CALL_MEMBER_FN(DataHandler::GetSingleton(), DoAddForm)(newForm);
+	DataHandler::GetSingleton()->DoAddForm(newForm);
 
-	if(persist)
+	if (persist)
 	{
 		// Only some forms can be safely saved as SaveForm. ie TESPackage at the moment.
 		bool canSave = false;
@@ -802,7 +802,7 @@ void TESForm::DoAddForm(TESForm* newForm, bool persist, bool record) const
 		// ... more ?
 
 		if (canSave)
-			CALL_MEMBER_FN(TESSaveLoadGame::Get(), AddCreatedForm)(newForm);
+			TESSaveLoadGame::Get()->AddCreatedForm(newForm);
 	}
 }
 

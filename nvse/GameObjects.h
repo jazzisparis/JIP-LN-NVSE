@@ -6,8 +6,6 @@ struct Sound;
 class TESObjectREFR : public TESForm
 {
 public:
-	MEMBER_FN_PREFIX(TESObjectREFR);
-
 	/*138*/virtual void		Unk_4E(void);	// GetStartingPosition(Position, Rotation, WorldOrCell)
 	/*13C*/virtual void		SayTopic(Sound *sound, TESTopic *topic, TESObjectREFR *target, UInt8 arg4, UInt8 arg5, UInt8 arg6, UInt8 arg7, UInt8 arg8);
 	/*140*/virtual void		Unk_50(void);
@@ -165,12 +163,13 @@ public:
 	NiAVObject* __fastcall GetNiBlock(const char *blockName);
 	NiNode* __fastcall GetNode(const char *nodeName);
 	hkpRigidBody *GetRigidBody(const char *nodeName);
-	bool RunScriptSource(char *sourceStr, bool doFree);
 
 	static TESObjectREFR* __stdcall Create(bool bTemp = false);
 
-	MEMBER_FN_PREFIX(TESObjectREFR);
-	DEFINE_MEMBER_FN(Activate, bool, 0x00573170, TESObjectREFR*, UInt32, UInt32, UInt32);	// Usage Activate(actionRef, 0, 0, 1); found inside Cmd_Activate_Execute as the last call (190 bytes)
+	__forceinline bool Activate(TESObjectREFR *actionRef, UInt32 arg2 = 0, UInt32 arg3 = 0, UInt32 arg4 = 1)
+	{
+		return ThisCall<bool>(0x573170, this, actionRef, arg2, arg3, arg4);
+	}
 };
 STATIC_ASSERT(sizeof(TESObjectREFR) == 0x068);
 

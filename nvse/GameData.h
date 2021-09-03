@@ -124,11 +124,11 @@ struct ModInfo		// referred to by game as TESFile
 	// In Editor: 430 = ONAM array and 434 ONAM array count. Allocated at 0438
 	
 	/*** used by TESForm::LoadForm() among others ***/
-	MEMBER_FN_PREFIX(ModInfo);
-	DEFINE_MEMBER_FN(GetNextChunk, UInt32, 0x004726B0);	// returns chunk type
-	DEFINE_MEMBER_FN(GetChunkData, bool, 0x00472890, UInt8* buf, UInt32 bufSize); // max size, not num to read
-	DEFINE_MEMBER_FN(Read32, void, 0x004727F0, void* out);
-	DEFINE_MEMBER_FN(HasMoreSubrecords, bool, 0x004726F0);
+	//MEMBER_FN_PREFIX(ModInfo);
+	//DEFINE_MEMBER_FN(GetNextChunk, UInt32, 0x004726B0);	// returns chunk type
+	//DEFINE_MEMBER_FN(GetChunkData, bool, 0x00472890, UInt8* buf, UInt32 bufSize); // max size, not num to read
+	//DEFINE_MEMBER_FN(Read32, void, 0x004727F0, void* out);
+	//DEFINE_MEMBER_FN(HasMoreSubrecords, bool, 0x004726F0);
 };
 STATIC_ASSERT(sizeof(WIN32_FIND_DATA) == 0x140);
 STATIC_ASSERT(sizeof(ModInfo) == 0x42C);
@@ -236,8 +236,10 @@ public:
 	UInt8 GetActiveModCount() const {return modList.modInfoList.Count();}
 	const char* GetNthModName(UInt32 modIndex);
 
-	MEMBER_FN_PREFIX(DataHandler);
-	DEFINE_MEMBER_FN(DoAddForm, UInt32, 0x004603B0, TESForm * pForm);	// stupid name is because AddForm is redefined in windows header files
+	__forceinline UInt32 DoAddForm(TESForm *pForm)
+	{
+		return ThisCall<UInt32>(0x4603B0, this, pForm);
+	}
 };
 STATIC_ASSERT(sizeof(DataHandler) == 0x63C);
 

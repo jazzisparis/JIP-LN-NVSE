@@ -293,8 +293,10 @@ public:
 	TESLeveledList *GetLvlList();
 	void SetJIPFlag(UInt16 jipFlag, bool bSet);
 
-	MEMBER_FN_PREFIX(TESForm);
-	DEFINE_MEMBER_FN(MarkAsTemporary, void, 0x00484490);	// probably a member of TESForm
+	__forceinline void MarkAsTemporary()
+	{
+		ThisCall(0x484490, this);
+	}
 };
 STATIC_ASSERT(sizeof(TESForm) == 0x18);
 
@@ -452,8 +454,6 @@ public:
 	virtual UInt32	GetSaveSize(UInt32 changedFlags);
 	virtual void	Save(UInt32 changedFlags);
 	virtual void	Load(UInt32 changedFlags);
-
-//	DEFINE_MEMBER_FN_LONG(TESValueForm, SetValue, void, _TESValueForm_SetValue, UInt32 newVal);
 
 	UInt32	value;
 	// 008

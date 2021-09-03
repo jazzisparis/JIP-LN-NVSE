@@ -85,15 +85,9 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 	if (nvse->isEditor)
 	{
 		//s_log.Create("jip_ln_nvse_editor.log");
-		return nvse->editorVersion == CS_VERSION_1_4_0_518;
+		return true;
 	}
 	s_log.Create("jip_ln_nvse.log");
-	if (nvse->runtimeVersion != RUNTIME_VERSION_1_4_0_525)
-	{
-		PrintLog("ERROR: Unsupported runtime version (%08X).", nvse->runtimeVersion);
-		MessageBox(nullptr, "ERROR!\n\nUnsupported runtime version.", "JIP LN NVSE Plugin", MB_OK | MB_ICONWARNING | MB_TOPMOST);
-		return false;
-	}
 	int version = nvse->nvseVersion;
 	s_nvseVersion = (version >> 24) + (((version >> 16) & 0xFF) * 0.1) + (((version & 0xFF) >> 4) * 0.01);
 	if (version < 0x6020020)
@@ -1390,10 +1384,12 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	GetElement = arrInterface->GetElement;
 	GetElements = arrInterface->GetElements;
 	GetContainerType = arrInterface->GetContainerType;
+	//ArrayHasKey = arrInterface->ArrayHasKey;
 	NVSEScriptInterface *scrInterface = (NVSEScriptInterface*)nvse->QueryInterface(kInterface_Script);
 	ExtractArgsEx = scrInterface->ExtractArgsEx;
 	ExtractFormatStringArgs = scrInterface->ExtractFormatStringArgs;
 	CallFunction = scrInterface->CallFunctionAlt;
+	//GetFunctionParams = scrInterface->GetFunctionParams;
 
 	NVSEDataInterface *nvseData = (NVSEDataInterface*)nvse->QueryInterface(kInterface_Data);
 	g_DIHookCtrl = (DIHookControl*)nvseData->GetSingleton(NVSEDataInterface::kNVSEData_DIHookControl);
@@ -1402,14 +1398,26 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	g_numPreloadMods = (UInt8*)nvseData->GetData(NVSEDataInterface::kNVSEData_NumPreloadMods);
 	CaptureLambdaVars = (_CaptureLambdaVars)nvseData->GetFunc(NVSEDataInterface::kNVSEData_LambdaSaveVariableList);
 	UncaptureLambdaVars = (_UncaptureLambdaVars)nvseData->GetFunc(NVSEDataInterface::kNVSEData_LambdaUnsaveVariableList);
+
+	MemCopy = memcpy;
+	MemMove = memmove;
 	
 	return true;
 }
 
-void CleanMLCallbacks()
+__declspec(noinline) void CleanMLCallbacks()
 {
 	for (auto iter = s_mainLoopCallbacks.Begin(); iter; ++iter)
-		if (iter->flags & 8) iter->bRemove = true;
+	{
+		if (iter->cmdPtr == JIPScriptRunner::RunScript)
+		{
+			((Script*)iter->thisObj)->Destructor();
+			GameHeapFree(iter->thisObj);
+			iter->bRemove = true;
+		}
+		else if (iter->flags & 8)
+			iter->bRemove = true;
+	}
 }
 
 void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
@@ -1418,9 +1426,6 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 	{
 		case NVSEMessagingInterface::kMessage_PostLoad:
 		{
-			MemCopy = memcpy;
-			MemMove = memmove;
-
 			SAFE_WRITE_BUF(0x86B1EE, "\x0F\x1F\x44\x00\x00");
 			InitJIPHooks();
 			InitGamePatches();
@@ -1433,22 +1438,22 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			break;
 		}
 		case NVSEMessagingInterface::kMessage_ExitGame:
-			JIPScriptRunner::RunScriptFiles('xg');
+			JIPScriptRunner::RunScripts(kRunOn_ExitGame);
 			break;
 		case NVSEMessagingInterface::kMessage_ExitToMainMenu:
 			CleanMLCallbacks();
-			JIPScriptRunner::RunScriptFiles('mx');
+			JIPScriptRunner::RunScripts(kRunOn_ExitToMainMenu);
 			break;
 		case NVSEMessagingInterface::kMessage_LoadGame:
-			JIPScriptRunner::RunScriptFiles('lg');
+			JIPScriptRunner::RunScripts(kRunOn_LoadGame);
 			break;
 		case NVSEMessagingInterface::kMessage_SaveGame:
-			JIPScriptRunner::RunScriptFiles('sg');
+			JIPScriptRunner::RunScripts(kRunOn_SaveGame);
 			break;
 		case NVSEMessagingInterface::kMessage_Precompile:
 			break;
 		case NVSEMessagingInterface::kMessage_NewGame:
-			JIPScriptRunner::RunScriptFiles('ng');
+			JIPScriptRunner::RunScripts(kRunOn_NewGame);
 		case NVSEMessagingInterface::kMessage_PreLoadGame:
 		{
 			CleanMLCallbacks();
@@ -1461,7 +1466,7 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			break;
 		}
 		case NVSEMessagingInterface::kMessage_ExitGame_Console:
-			JIPScriptRunner::RunScriptFiles('xg');
+			JIPScriptRunner::RunScripts(kRunOn_ExitGame);
 			break;
 		case NVSEMessagingInterface::kMessage_PostLoadGame:
 			break;

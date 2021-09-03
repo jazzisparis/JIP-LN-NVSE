@@ -3337,9 +3337,11 @@ __declspec(naked) void RepairMenuClickHook()
 		call	GetPCRepairSkill
 		mov		ecx, ds:[0x11DA760]
 		call	ContChangesEntry::GetHealthPercent
+		fsubp	st(1), st
+		fld1
 		fucomip	st, st(1)
 		fstp	st
-		setb	ah
+		setbe	ah
 		retn
 	}
 }
