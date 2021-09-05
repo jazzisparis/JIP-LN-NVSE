@@ -1944,7 +1944,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 
 const __m128 kVertexAlphaMults = {0.25, 0.5, 0.75, 1};
 alignas(16) const float
-kDirectionalLightValues[] = {217 / 255.0F, 217 / 255.0F, 217 / 255.0F, 0.2F, 0.2F, 0.2F, 0, 0, 0, 0, -1.570796F, 0, 0},
+kDirectionalLightValues[] = {1.0F, 1.0F, 1.0F, 0, 0, 0, 0, 0, 0, 0, -1.570796F, 0, 0},
 kFogPropertyValues[] = {31 / 255.0F, 47 / 255.0F, 63 / 255.0F, 500000.0F, 500000.0F};
 const UInt8 kSelectImgUpdate[][9] =
 {

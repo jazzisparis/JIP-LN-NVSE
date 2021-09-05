@@ -90,10 +90,10 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 	s_log.Create("jip_ln_nvse.log");
 	int version = nvse->nvseVersion;
 	s_nvseVersion = (version >> 24) + (((version >> 16) & 0xFF) * 0.1) + (((version & 0xFF) >> 4) * 0.01);
-	if (version < 0x6020020)
+	if (version < 0x6020030)
 	{
-		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.22 minimum.", s_nvseVersion);
-		MessageBox(nullptr, "ERROR!\n\nxNVSE version is outdated.\n\nThis plugin requires v6.22 minimum.", "JIP LN NVSE Plugin", MB_OK | MB_ICONWARNING | MB_TOPMOST);
+		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.23 minimum.", s_nvseVersion);
+		MessageBox(nullptr, "ERROR!\n\nxNVSE version is outdated.\n\nThis plugin requires v6.23 minimum.", "JIP LN NVSE Plugin", MB_OK | MB_ICONWARNING | MB_TOPMOST);
 		return false;
 	}
 	PrintLog("NVSE version:\t%.2f\nJIP LN version:\t%.2f\n", s_nvseVersion, JIP_LN_VERSION);
@@ -1384,7 +1384,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	GetElement = arrInterface->GetElement;
 	GetElements = arrInterface->GetElements;
 	GetContainerType = arrInterface->GetContainerType;
-	//ArrayHasKey = arrInterface->ArrayHasKey;
+	ArrayHasKey = arrInterface->ArrayHasKey;
 	NVSEScriptInterface *scrInterface = (NVSEScriptInterface*)nvse->QueryInterface(kInterface_Script);
 	ExtractArgsEx = scrInterface->ExtractArgsEx;
 	ExtractFormatStringArgs = scrInterface->ExtractFormatStringArgs;

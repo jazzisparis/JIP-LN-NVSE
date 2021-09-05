@@ -25,13 +25,6 @@ typedef signed short SInt16;
 typedef signed long SInt32;
 typedef signed long long SInt64;
 
-// Based on the boost implementation of static asserts
-template <bool x> struct StaticAssertFailure;
-template <> struct StaticAssertFailure <true> { enum { a = 1 }; };
-template <int x> struct static_assert_test { };
-
-#define STATIC_ASSERT(a) typedef static_assert_test <sizeof(StaticAssertFailure<(bool)(a)>)> static_assert_typedef_ ## __COUNTER__
-
 class BaseFormComponent;
 class TESFullName;
 class TESTexture;

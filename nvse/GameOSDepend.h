@@ -132,7 +132,7 @@ public:
 
 	__forceinline static OSInputGlobals *GetSingleton() {return *(OSInputGlobals**)0x11F35CC;}
 };
-STATIC_ASSERT(sizeof(OSInputGlobals) == 0x1C04);
+static_assert(sizeof(OSInputGlobals) == 0x1C04);
 
 extern OSInputGlobals *g_inputGlobals;
 #define KEYBOARD_BIND(ctrlID) g_inputGlobals->keyBinds[ctrlID]
@@ -223,6 +223,6 @@ public:
 
 	__forceinline static OSGlobals *GetSingleton() {return *(OSGlobals**)0x11DEA0C;}
 };
-STATIC_ASSERT(sizeof(OSGlobals) == 0xA4);
+static_assert(sizeof(OSGlobals) == 0xA4);
 
 extern OSGlobals *g_OSGlobals;

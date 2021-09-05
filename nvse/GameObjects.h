@@ -171,7 +171,7 @@ public:
 		return ThisCall<bool>(0x573170, this, actionRef, arg2, arg3, arg4);
 	}
 };
-STATIC_ASSERT(sizeof(TESObjectREFR) == 0x068);
+static_assert(sizeof(TESObjectREFR) == 0x068);
 
 extern TESObjectREFR *s_tempPosMarker;
 
@@ -249,7 +249,7 @@ public:
 	UInt8			unk86;			// 86 - loaded
 	UInt8			unk87;			// 87	Init'd to the inverse of NoLowLevelProcessing
 };
-STATIC_ASSERT(sizeof(MobileObject) == 0x88);
+static_assert(sizeof(MobileObject) == 0x88);
 
 typedef tList<ActiveEffect> ActiveEffectList;
 
@@ -280,7 +280,7 @@ public:
 
 	UInt32	unk04[2];	// 04
 };
-STATIC_ASSERT(sizeof(MagicCaster) == 0xC);
+static_assert(sizeof(MagicCaster) == 0xC);
 
 // 10
 class MagicTarget
@@ -303,7 +303,7 @@ public:
 
 	void RemoveEffect(EffectItem *effItem);
 };
-STATIC_ASSERT(sizeof(MagicTarget) == 0x10);
+static_assert(sizeof(MagicTarget) == 0x10);
 
 class PathingRequest;
 class PathingSolution;
@@ -1000,7 +1000,7 @@ public:
 	}
 	char GetDetectionState();
 };
-STATIC_ASSERT(sizeof(PlayerCharacter) == 0xE50);
+static_assert(sizeof(PlayerCharacter) == 0xE50);
 
 extern PlayerCharacter *g_thePlayer;
 
@@ -1116,7 +1116,7 @@ public:
 
 	void GetData(UInt32 dataType, double *result);
 };
-STATIC_ASSERT(sizeof(Projectile) == 0x150);
+static_assert(sizeof(Projectile) == 0x150);
 
 // 154
 class BeamProjectile : public Projectile
@@ -1187,4 +1187,4 @@ public:
 	UInt32			unk0D4[11];		// 0D4
 	float			unk100;			// 100
 };
-STATIC_ASSERT(sizeof(Explosion) == 0x104);
+static_assert(sizeof(Explosion) == 0x104);

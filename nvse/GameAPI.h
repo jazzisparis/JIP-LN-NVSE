@@ -163,7 +163,7 @@ public:
 
 	static ConsoleManager * GetSingleton(void);
 };
-STATIC_ASSERT(sizeof(ConsoleManager) == 0x914);
+static_assert(sizeof(ConsoleManager) == 0x914);
 
 extern ConsoleManager *g_consoleManager;
 
@@ -417,7 +417,7 @@ public:
 	UInt8										formVersion;			// 248
 	UInt8										pad249[3];				// 249
 };
-STATIC_ASSERT(sizeof(BGSSaveLoadGame) == 0x24C);
+static_assert(sizeof(BGSSaveLoadGame) == 0x24C);
 
 #if RUNTIME
 class SaveGameManager
@@ -538,56 +538,3 @@ struct NavMeshStaticAvoidNode
 	UInt32	unk020;	// 20
 	UInt32	unk024;	// 24
 };	// Alloc'd to 0x28
-
-/* I need to port NiTypes 
-
-class NavMesh: public TESForm
-{
-	NavMesh();
-	~NavMesh();
-
-	struct NavMeshGridCells
-	{
-		UInt32					cellCount;	// 00
-		BSSimpleArray<UInt16>	cells[1];	// 04
-	};	// 4 + cellCount*0x10
-
-	struct NavMeshGrid
-	{
-		UInt32	size;					// 000 = 0
-		float	unk004;					// 004
-		float	unk008;					// 008
-		float	flt00C;					// 00C Init'd to MAXFLOAT
-		float	unk010;					// 010
-		float	unk014;					// 014
-		float	unk018;					// 018
-		float	unk01C;					// 01C
-		float	unk020;					// 020
-		NavMeshGridCells	* cells;	// 024 = 0, array of size size*size
-	};
-
-	TESChildCell								childCell;				// 018
-	NiRefObject									niro;					// 01C
-	TESObjectCELL								* cell;					// 024
-	BSSimpleArray<NavMeshVertex>				vertices;				// 028
-	BSSimpleArray<NavMeshTriangle>				triangles;				// 038
-	BSSimpleArray<EdgeExtraInfo>				edgesExtraInfo;			// 048
-	BSSimpleArray<NavMeshTriangleDoorPortal>	trianglesDoorPortal;	// 058
-	BSSimpleArray<NavMeshClosedDoorInfo>		closedDoorsInfo;		// 068
-	BSSimpleArray<UInt16>						arr07NVCA;				// 078
-	NiTMap<ushort,NavMeshPOVData>				povDataMap;				// 088
-	BSSimpleArray<UInt8>						arr098;					// 098
-	NavMeshGrid									grid;					// 0A8
-	BSSimpleArray<NiTPointer<ObstacleUndoData>>	obstaclesUndoData;		// 0D0
-	NiTMap<ushort,NiPointer<ObstacleData>>		* obstaclesData;		// 0E0
-	BSSimpleArray<UInt8>						arr0E4;					// 0E4
-	BSSimpleArray<NavMeshStaticAvoidNode>		staticAvoidNodes;		// 0F4
-};
-
-class NavMeshInfoMap: public TESForm
-{
-	// 1C is NiTPointerMap indexed by NavMesh refID
-	// 2C is a map of map indexed by Worldspace/Cell refID
-};
-
-*/

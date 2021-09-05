@@ -30,8 +30,7 @@ _LookupArrayByID LookupArrayByID;
 _GetElement GetElement;
 _GetElements GetElements;
 _GetContainerType GetContainerType;
-bool __cdecl ArrayHasKey_Placeholder(NVSEArrayVar *arr, const NVSEArrayElement &key) {return false;}
-_ArrayHasKey ArrayHasKey = ArrayHasKey_Placeholder;
+_ArrayHasKey ArrayHasKey;
 _ExtractArgsEx ExtractArgsEx;
 _ExtractFormatStringArgs ExtractFormatStringArgs;
 _CallFunction CallFunction;
@@ -344,10 +343,12 @@ __declspec(naked) int __stdcall GetRayCastMaterial(NiVector3 *posVector, NiMatri
 		test	al, al
 		jz		notNPC
 		mov		eax, [ecx+0x1E4]
-		jmp		done
+		leave
+		retn	0x14
 	notNPC:
 		mov		eax, [ecx+0x148]
-		jmp		done
+		leave
+		retn	0x14
 	notActor:
 		mov		ecx, [esp+0xC]
 		mov		ecx, [ecx+0x1C]
@@ -384,10 +385,10 @@ __declspec(naked) int __stdcall GetRayCastMaterial(NiVector3 *posVector, NiMatri
 		ja		invalid
 		mov		edx, eax
 		movzx	eax, kMaterialConvert[edx]
-		jmp		done
+		leave
+		retn	0x14
 	invalid:
 		mov		eax, 0xFFFFFFFF
-	done:
 		leave
 		retn	0x14
 	}
@@ -970,8 +971,6 @@ __declspec(naked) void __fastcall DoConsolePrint(double *result)
 		jnz		done
 		mov		edx, [ebp]
 		mov		edx, [edx-0x30]
-		test	edx, edx
-		jz		done
 		mov		edx, [edx]
 		movq	xmm0, qword ptr [ecx]
 		push	ebp
@@ -1005,8 +1004,6 @@ __declspec(naked) void __fastcall DoConsolePrint(TESForm *result)
 		jnz		done
 		mov		edx, [ebp]
 		mov		edx, [edx-0x30]
-		test	edx, edx
-		jz		done
 		mov		edx, [edx]
 		push	ebp
 		mov		ebp, esp

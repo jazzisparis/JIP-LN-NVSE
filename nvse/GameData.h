@@ -130,8 +130,8 @@ struct ModInfo		// referred to by game as TESFile
 	//DEFINE_MEMBER_FN(Read32, void, 0x004727F0, void* out);
 	//DEFINE_MEMBER_FN(HasMoreSubrecords, bool, 0x004726F0);
 };
-STATIC_ASSERT(sizeof(WIN32_FIND_DATA) == 0x140);
-STATIC_ASSERT(sizeof(ModInfo) == 0x42C);
+static_assert(sizeof(WIN32_FIND_DATA) == 0x140);
+static_assert(sizeof(ModInfo) == 0x42C);
 
 struct ModList
 {
@@ -139,7 +139,7 @@ struct ModList
 	UInt32				loadedModCount;		// 08
 	ModInfo*			loadedMods[0xFF];	// 0C
 };
-STATIC_ASSERT(sizeof(ModList) == 0x408);
+static_assert(sizeof(ModList) == 0x408);
 
 // 5B8
 class DataHandler
@@ -241,7 +241,7 @@ public:
 		return ThisCall<UInt32>(0x4603B0, this, pForm);
 	}
 };
-STATIC_ASSERT(sizeof(DataHandler) == 0x63C);
+static_assert(sizeof(DataHandler) == 0x63C);
 
 extern DataHandler *g_dataHandler;
 
@@ -481,7 +481,7 @@ public:
 	}
 	bool GetIsRaining();
 };
-STATIC_ASSERT(sizeof(Sky) == 0x138);
+static_assert(sizeof(Sky) == 0x138);
 
 // 04
 class GridArray
@@ -528,7 +528,7 @@ public:
 	float								flt3C;			// 3C
 	float								flt40;			// 40
 };
-STATIC_ASSERT(sizeof(LoadedAreaBound) == 0x44);
+static_assert(sizeof(LoadedAreaBound) == 0x44);
 
 // A0
 struct WaterSurfaceManager
@@ -580,7 +580,7 @@ struct WaterSurfaceManager
 	float								flt98;			// 98
 	UInt32								unk9C;			// 9C
 };
-STATIC_ASSERT(sizeof(WaterSurfaceManager) == 0xA0);
+static_assert(sizeof(WaterSurfaceManager) == 0xA0);
 
 class BSTempNodeManager;
 
@@ -631,7 +631,7 @@ public:
 		return ThisCall<bool>(0x4572E0, this, posXY, result);
 	}
 };
-STATIC_ASSERT(sizeof(TES) == 0xC4);
+static_assert(sizeof(TES) == 0xC4);
 
 extern TES *g_TES;
 

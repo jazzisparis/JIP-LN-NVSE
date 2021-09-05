@@ -357,7 +357,8 @@ __declspec(naked) void PackageSetRunHook()
 		test	eax, kPackageFlag_AlwaysWalk
 		jz		allowRun
 		mov		eax, 0x101
-		jmp		done
+		leave
+		retn	0x18
 	allowRun:
 		test	eax, kPackageFlag_AlwaysRun
 		jnz		skipRetn
@@ -369,7 +370,6 @@ __declspec(naked) void PackageSetRunHook()
 		JMP_EAX(0x8DAAA9)
 	skipRetn:
 		mov		eax, 0x201
-	done:
 		leave
 		retn	0x18
 	}
@@ -1521,13 +1521,12 @@ __declspec(naked) void DeathResponseFixHook()
 		push	dword ptr [ebp-0x1C]
 		push	0
 		push	0
-		jmp		done
+		JMP_EAX(0x984160)
 	notApplicable:
 		push	1
 		push	dword ptr [ebp-0x1C]
 		push	1
 		push	1
-	done:
 		JMP_EAX(0x984160)
 	}
 }
@@ -1735,7 +1734,7 @@ __declspec(naked) void SetSourceSoundRequestHook()
 		mov		eax, [eax]
 		test	eax, eax
 		jnz		iterHead
-		jmp		done
+		JMP_EAX(0xAE5527)
 	found:
 		mov		eax, [eax+8]
 		mov		ecx, [ecx+8]
@@ -2066,7 +2065,7 @@ MediaSet* __stdcall PickMediaSetHook(ListNode<MediaSet> *listHead)
 
 Vector<TESLoadScreen*> s_locationLoadScreens, s_genericLoadScreens;
 
-__declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadingMenu, int EDX, BSSimpleArray<TESLoadScreen> *results)
+__declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadingMenu, int EDX, BSSimpleArray<TESLoadScreen*> *results)
 {
 	__asm
 	{
@@ -3193,40 +3192,14 @@ __declspec(naked) void MineExplodeChanceHook()
 	}
 }
 
-__declspec(naked) float GetPCRepairSkill()
-{
-	__asm
-	{
-		push	kAVCode_Repair
-		mov		ecx, g_thePlayer
-		add		ecx, 0xA4
-		CALL_EAX(0x93ACB0)
-		fstp	dword ptr [esp-4]
-		movss	xmm0, [esp-4]
-		pxor	xmm1, xmm1
-		maxss	xmm0, xmm1
-		movss	xmm1, ds:[0x11D0FF4]	// fRepairSkillBase
-		movss	xmm2, kFlt10
-		mulss	xmm1, xmm2
-		mulss	xmm2, ds:[0x11D0190]	// fRepairSkillMax
-		subss	xmm2, xmm1
-		mulss	xmm0, xmm2
-		mulss	xmm0, kFlt1d100
-		addss	xmm0, xmm1
-		minss	xmm0, kFlt100
-		movss	[esp-4], xmm0
-		fld		dword ptr [esp-4]
-		retn
-	}
-}
-
-float s_repairedItemHealth = 0;
+float s_pcRepairSkill = 0, s_repairedItemHealth = 0;
 bool s_repairedItemModded = false;
 
 __declspec(naked) void EnableRepairButtonHook()
 {
 	__asm
 	{
+		fstp	s_repairedItemHealth
 		mov		ecx, [ebp+8]
 		mov		eax, [ecx]
 		test	eax, eax
@@ -3238,9 +3211,25 @@ __declspec(naked) void EnableRepairButtonHook()
 		setnz	al
 	doneMods:
 		mov		s_repairedItemModded, al
-		call	GetPCRepairSkill
-		fucomip	st, st(1)
-		fstp	s_repairedItemHealth
+		push	kAVCode_Repair
+		mov		ecx, g_thePlayer
+		add		ecx, 0xA4
+		CALL_EAX(0x93ACB0)
+		fstp	dword ptr [ebp-0x44]
+		movss	xmm0, [ebp-0x44]
+		pxor	xmm1, xmm1
+		maxss	xmm0, xmm1
+		movss	xmm1, ds:[0x11D0FF4]	// fRepairSkillBase
+		movss	xmm2, kFlt10
+		mulss	xmm1, xmm2
+		mulss	xmm2, ds:[0x11D0190]	// fRepairSkillMax
+		subss	xmm2, xmm1
+		mulss	xmm0, xmm2
+		mulss	xmm0, kFlt1d100
+		addss	xmm0, xmm1
+		minss	xmm0, kFlt100
+		movss	s_pcRepairSkill, xmm0
+		comiss	xmm0, s_repairedItemHealth
 		retn
 	}
 }
@@ -3275,8 +3264,7 @@ __declspec(naked) float __stdcall GetRepairAmount(float itemToRepairHealth, floa
 {
 	__asm
 	{
-		call	GetPCRepairSkill
-		fstp	st
+		movss	xmm0, s_pcRepairSkill
 		mulss	xmm0, kFlt1d100
 		movss	xmm5, kFlt1d10
 		movss	xmm1, [esp+4]
@@ -3334,10 +3322,9 @@ __declspec(naked) void RepairMenuClickHook()
 {
 	__asm
 	{
-		call	GetPCRepairSkill
 		mov		ecx, ds:[0x11DA760]
 		call	ContChangesEntry::GetHealthPercent
-		fsubp	st(1), st
+		fsubr	s_pcRepairSkill
 		fld1
 		fucomip	st, st(1)
 		fstp	st
@@ -3928,7 +3915,7 @@ UnorderedMap<const char*, UInt32> s_optionalHacks({{"bIgnoreDTDRFix", 1}, {"bEna
 
 bool s_bigGunsSkill = false, s_failedScriptLocks = false, s_NVACAlerts = false, s_NPCWeaponMods = false, s_NPCPerks = false;
 UInt32 s_NVACAddress = 0;
-char *s_bigGunsDescription = "The Big Guns skill determines your combat effectiveness with all oversized weapons such as the Fat Man, Missile Launcher, Flamer, Minigun, Gatling Laser, etc.";
+const char kBigGunsDescription[] = "The Big Guns skill determines your combat effectiveness with all oversized weapons such as the Fat Man, Missile Launcher, Flamer, Minigun, Gatling Laser, etc.";
 
 bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 {
@@ -3961,17 +3948,8 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 				return false;
 			s_bigGunsSkill = bEnable;
 			ActorValueInfo *avInfo = ActorValueInfo::Array()[kAVCode_BigGuns];
-			if (bEnable)
-			{
-				avInfo->avFlags = 0x410;
-				s_descriptionChanges[&avInfo->description] = s_bigGunsDescription;
-			}
-			else
-			{
-				avInfo->avFlags = 0x2000;
-				s_descriptionChanges.Erase(&avInfo->description);
-			}
-			HOOK_SET(GetDescription, !s_descriptionChanges.Empty());
+			avInfo->avFlags = bEnable ? 0x410 : 0x2000;
+			SetDescriptionAltText(&avInfo->description, bEnable ? kBigGunsDescription : nullptr);
 			return true;
 		}
 		case 4:
@@ -4647,8 +4625,6 @@ void InitGamePatches()
 	}
 
 	PatchDisplayTime();
-
-
 
 	PrintLog("> Game patches initialized successfully.");
 }

@@ -190,7 +190,7 @@ bool Cmd_AuxiliaryVariableSetFloat_Execute(COMMAND_ARGS)
 			AuxVariableValue *value = AVGetValue(&varInfo, idx, true);
 			if (value)
 			{
-				value->SetFlt(fltVal);
+				*value = fltVal;
 				if (varInfo.isPerm)
 					s_dataChangedFlags |= kChangedFlag_AuxVars;
 				*result = 1;
@@ -214,7 +214,7 @@ bool Cmd_AuxiliaryVariableSetRef_Execute(COMMAND_ARGS)
 			AuxVariableValue *value = AVGetValue(&varInfo, idx, true);
 			if (value)
 			{
-				value->SetRef(refVal);
+				*value = refVal;
 				if (varInfo.isPerm)
 					s_dataChangedFlags |= kChangedFlag_AuxVars;
 				*result = 1;
@@ -238,7 +238,7 @@ bool Cmd_AuxiliaryVariableSetString_Execute(COMMAND_ARGS)
 			AuxVariableValue *value = AVGetValue(&varInfo, idx, true);
 			if (value)
 			{
-				value->SetStr(buffer);
+				*value = buffer;
 				if (varInfo.isPerm)
 					s_dataChangedFlags |= kChangedFlag_AuxVars;
 				*result = 1;

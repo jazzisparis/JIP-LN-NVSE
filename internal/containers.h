@@ -714,6 +714,7 @@ public:
 
 	T_Data Get(Key_Arg key)
 	{
+		static_assert(std::is_scalar_v<T_Data>);
 		UInt32 index;
 		return GetIndex(key, &index) ? entries[index].value.Get() : NULL;
 	}
@@ -734,6 +735,20 @@ public:
 		index = numEntries - index;
 		if (index) memcpy(pEntry, pEntry + 1, sizeof(Entry) * index);
 		return true;
+	}
+
+	T_Data GetErase(Key_Arg key)
+	{
+		static_assert(std::is_scalar_v<T_Data>);
+		UInt32 index;
+		if (!GetIndex(key, &index)) return NULL;
+		Entry *pEntry = entries + index;
+		T_Data outVal = pEntry->value.Get();
+		pEntry->Clear();
+		numEntries--;
+		index = numEntries - index;
+		if (index) memcpy(pEntry, pEntry + 1, sizeof(Entry) * index);
+		return outVal;
 	}
 
 	void Clear()
@@ -839,11 +854,13 @@ public:
 	public:
 		CpIterator(Map &source)
 		{
-			if (count = source.numEntries)
+			count = source.numEntries;
+			if (count > 1)
 			{
 				UInt32 size = count * sizeof(Entry);
 				pEntry = (Entry*)memcpy(AuxBuffer::Get(0, size), source.entries, size);
 			}
+			else pEntry = source.entries;
 		}
 	};
 
@@ -904,6 +921,8 @@ public:
 	UInt32 Size() const {return numKeys;}
 	bool Empty() const {return !numKeys;}
 	T_Key *Keys() {return reinterpret_cast<T_Key*>(keys);}
+
+	T_Key&& operator[](UInt32 index) const {return keys[index];}
 
 	bool Insert(Key_Arg key)
 	{
@@ -1032,11 +1051,13 @@ public:
 	public:
 		CpIterator(Set &source)
 		{
-			if (count = source.numKeys)
+			count = source.numKeys;
+			if (count > 1)
 			{
 				UInt32 size = count * sizeof(M_Key);
 				pKey = (M_Key*)memcpy(AuxBuffer::Get(1, size), source.keys, size);
 			}
+			else pKey = source.keys;
 		}
 	};
 
@@ -1323,6 +1344,7 @@ public:
 
 	T_Data Get(Key_Arg key)
 	{
+		static_assert(std::is_scalar_v<T_Data>);
 		Entry *pEntry = FindEntry(key);
 		return pEntry ? pEntry->value : NULL;
 	}
@@ -1357,6 +1379,7 @@ public:
 
 	T_Data GetErase(Key_Arg key)
 	{
+		static_assert(std::is_scalar_v<T_Data>);
 		if (numEntries)
 		{
 			UInt32 hashVal = HashKey<T_Key>(key);
@@ -2125,6 +2148,7 @@ public:
 
 	T_Data Pop()
 	{
+		static_assert(std::is_scalar_v<T_Data>);
 		return numItems ? data[--numItems] : NULL;
 	}
 
@@ -2307,11 +2331,13 @@ public:
 	public:
 		CpIterator(Vector &source)
 		{
-			if (count = source.numItems)
+			count = source.numItems;
+			if (count > 1)
 			{
 				UInt32 size = count * sizeof(T_Data);
 				pData = (T_Data*)memcpy(AuxBuffer::Get(2, size), source.data, size);
 			}
+			else pData = source.data;
 		}
 	};
 

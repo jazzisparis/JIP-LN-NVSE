@@ -18,7 +18,7 @@ extern bool s_controllerReady;
 typedef UInt32 (__stdcall *_XInputGetStateEx)(UInt32, XINPUT_GAMEPAD_EX*);
 extern _XInputGetStateEx XInputGetStateEx;
 
-extern UInt16 s_deadZoneLS, s_deadZoneRS;
+extern int s_deadZoneLS, s_deadZoneRS;
 extern double s_deadZoneLSg, s_deadZoneRSg, s_deadZoneLSd, s_deadZoneRSd;
 
 struct XInputStateMods

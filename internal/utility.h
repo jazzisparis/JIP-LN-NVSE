@@ -181,26 +181,10 @@ union FunctionArg
 	UInt32		uVal;
 	SInt32		iVal;
 
-	FunctionArg& operator=(void *other)
-	{
-		pVal = other;
-		return *this;
-	}
-	FunctionArg& operator=(float other)
-	{
-		fVal = other;
-		return *this;
-	}
-	FunctionArg& operator=(UInt32 other)
-	{
-		uVal = other;
-		return *this;
-	}
-	FunctionArg& operator=(SInt32 other)
-	{
-		iVal = other;
-		return *this;
-	}
+	inline void operator=(void *other) {pVal = other;}
+	inline void operator=(float other) {fVal = other;}
+	inline void operator=(UInt32 other) {uVal = other;}
+	inline void operator=(SInt32 other) {iVal = other;}
 };
 
 TESForm* __stdcall LookupFormByRefID(UInt32 refID);
@@ -219,16 +203,8 @@ union Coordinate
 	Coordinate(UInt32 _xy) : xy(_xy) {}
 	Coordinate(SInt32 *_x) : x(_x[0]), y(_x[1]) {}
 
-	inline Coordinate& operator=(const Coordinate &rhs)
-	{
-		xy = rhs.xy;
-		return *this;
-	}
-	inline Coordinate& operator=(UInt32 rhs)
-	{
-		xy = rhs;
-		return *this;
-	}
+	inline void operator=(const Coordinate &rhs) {xy = rhs.xy;}
+	inline void operator=(UInt32 rhs) {xy = rhs;}
 
 	inline bool operator==(const Coordinate &rhs) {return xy == rhs.xy;}
 	inline bool operator!=(const Coordinate &rhs) {return xy != rhs.xy;}

@@ -237,8 +237,7 @@ bool Cmd_RefMapArraySetFloat_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &fltVal, &form))
 	{
 		AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName);
-		if (value)
-			value->SetFlt(fltVal);
+		if (value) *value = fltVal;
 	}
 	return true;
 }
@@ -250,8 +249,7 @@ bool Cmd_RefMapArraySetRef_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &refVal, &form))
 	{
 		AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName);
-		if (value)
-			value->SetRef(refVal);
+		if (value) *value = refVal;
 	}
 	return true;
 }
@@ -263,8 +261,7 @@ bool Cmd_RefMapArraySetString_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, buffer, &form))
 	{
 		AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName);
-		if (value)
-			value->SetStr(buffer);
+		if (value) *value = buffer;
 	}
 	return true;
 }
@@ -284,7 +281,7 @@ bool Cmd_RefMapArraySetValue_Execute(COMMAND_ARGS)
 			{
 				ArrayElementR element;
 				GetElements(srcArr, &element, NULL);
-				value->SetElem(element);
+				*value = element;
 			}
 		}
 	}

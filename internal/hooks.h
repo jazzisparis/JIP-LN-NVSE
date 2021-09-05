@@ -563,6 +563,26 @@ __declspec(naked) void DoQueuedCmdCallHook()
 
 UnorderedMap<TESDescription*, char*> s_descriptionChanges;
 
+void __fastcall SetDescriptionAltText(TESDescription *description, const char *altText)
+{
+	if (altText && *altText)
+	{
+		char **findDesc;
+		if (s_descriptionChanges.Insert(description, &findDesc))
+			HOOK_MOD(GetDescription, true);
+		else free(*findDesc);
+		*findDesc = CopyString(altText);
+	}
+	else
+	{
+		char *currText = s_descriptionChanges.GetErase(description);
+		if (!currText) return;
+		free(currText);
+		HOOK_MOD(GetDescription, false);
+	}
+	*GameGlobals::CurrentDescription() = nullptr;
+}
+
 __declspec(naked) void GetDescriptionHook()
 {
 	__asm
@@ -802,7 +822,10 @@ __declspec(naked) bool __stdcall TextInputKeyPressHook(UInt32 inputKey)
 		push	dword ptr [ecx+0x2C]
 		push	1
 		call	dword ptr ds:[0x1070040]
-		jmp		done
+	done:
+		mov		al, 1
+		pop		esi
+		retn	4
 	passInput:
 		call	HandleInputKey
 		test	al, al
@@ -825,7 +848,6 @@ __declspec(naked) bool __stdcall TextInputKeyPressHook(UInt32 inputKey)
 		CALL_EAX(ADDR_TileSetString)
 		mov		ecx, esi
 		call	TextInputRefreshHook
-	done:
 		mov		al, 1
 		pop		esi
 		retn	4
@@ -1059,6 +1081,7 @@ __declspec(naked) void ResetHPWakeUpHook()
 
 typedef UnorderedMap<Actor*, EventCallbackScripts> ActorEventCallbacks;
 ActorEventCallbacks s_fireWeaponEventMap;
+EventCallbackScripts s_fireWeaponEventScripts;
 
 __declspec(naked) bool __fastcall RemoveAmmoHook(Actor *actor, int EDX, TESObjectWEAP *weapon)
 {
@@ -1066,18 +1089,25 @@ __declspec(naked) bool __fastcall RemoveAmmoHook(Actor *actor, int EDX, TESObjec
 	{
 		push	esi
 		mov		esi, ecx
+		mov		ecx, offset s_fireWeaponEventScripts
+		cmp		dword ptr [ecx+4], 0
+		jz		doneUnfiltered
+		push	dword ptr [esp+8]
+		push	esi
+		call	EventCallbackScripts::InvokeEventsThis1
+	doneUnfiltered:
 		test	byte ptr [esi+0x107], kHookActorFlag3_OnFireWeapon
-		jz		skipHandler
+		jz		doneFiltered
 		push	esi
 		mov		ecx, offset s_fireWeaponEventMap
 		call	ActorEventCallbacks::GetPtr
 		test	eax, eax
-		jz		skipHandler
+		jz		doneFiltered
 		push	dword ptr [esp+8]
 		push	esi
 		mov		ecx, eax
 		call	EventCallbackScripts::InvokeEventsThis1
-	skipHandler:
+	doneFiltered:
 		cmp		dword ptr [esi+0xC], 0x14
 		jz		retnTrue
 		test	byte ptr [esi+0x105], kHookActorFlag1_InfiniteAmmo
@@ -1093,10 +1123,10 @@ __declspec(naked) bool __fastcall RemoveAmmoHook(Actor *actor, int EDX, TESObjec
 		jz		retnFalse
 	retnTrue:
 		mov		al, 1
-		jmp		done
+		pop		esi
+		retn	4
 	retnFalse:
 		xor		al, al
-	done:
 		pop		esi
 		retn	4
 	}

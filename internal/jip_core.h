@@ -88,7 +88,7 @@ struct GameGlobals
 	__forceinline static NiTPointerMap<TESForm> *AllFormsMap() {return *(NiTPointerMap<TESForm>**)0x11C54C0;}
 	__forceinline static NiTStringPointerMap<TESForm> *EditorIDsMap() {return *(NiTStringPointerMap<TESForm>**)0x11C54C8;}
 	__forceinline static BSTCaseInsensitiveStringMap<void*> *IdleAnimsDirectoryMap() {return *(BSTCaseInsensitiveStringMap<void*>**)0x11CB6A0;}
-	__forceinline static BSSimpleArray<TESRecipeCategory> *RecipeMenuCategories() {return (BSSimpleArray<TESRecipeCategory>*)0x11D8F08;}
+	__forceinline static BSSimpleArray<TESRecipeCategory*> *RecipeMenuCategories() {return (BSSimpleArray<TESRecipeCategory*>*)0x11D8F08;}
 	__forceinline static TESObjectWEAP *PlayerWeapon() {return *(TESObjectWEAP**)0x11D98D4;}
 	__forceinline static tList<VATSTarget> *VATSTargetList() {return (tList<VATSTarget>*)0x11DB150;}
 	__forceinline static NiNode *ObjectLODRoot() {return *(NiNode**)0x11DEA18;}
@@ -397,30 +397,30 @@ class AuxVariableValue
 public:
 	AuxVariableValue() : alloc(0) {}
 	AuxVariableValue(UInt8 _type) : type(_type), alloc(0) {}
-	AuxVariableValue(NVSEArrayElement &elem) : alloc(0) {SetElem(elem);}
+	AuxVariableValue(const NVSEArrayElement &elem) : alloc(0) {*this = elem;}
 
 	~AuxVariableValue() {Clear();}
 
 	UInt8 GetType() const {return type;}
 	double GetFlt() const {return (type == 1) ? num : 0;}
 	UInt32 GetRef() const {return (type == 2) ? refID : 0;}
-	const char *GetStr() const {return alloc ? str : NULL;}
+	const char *GetStr() const {return alloc ? str : nullptr;}
 
-	void SetFlt(double value)
+	inline void operator=(double value)
 	{
 		Clear();
 		type = 1;
 		num = value;
 	}
 
-	void SetRef(TESForm *value)
+	inline void operator=(TESForm *value)
 	{
 		Clear();
 		type = 2;
 		refID = value ? value->refID : 0;
 	}
 
-	void SetStr(const char *value)
+	inline void operator=(const char *value)
 	{
 		type = 4;
 		length = StrLen(value);
@@ -439,11 +439,13 @@ public:
 			*str = 0;
 	}
 
-	void SetElem(NVSEArrayElement &elem)
+	inline void operator=(const NVSEArrayElement &value)
 	{
-		if (elem.GetType() == 2) SetRef(elem.form);
-		else if (elem.GetType() == 3) SetStr(elem.str);
-		else SetFlt(elem.num);
+		if (value.GetType() == 2)
+			*this = value.form;
+		else if (value.GetType() == 3)
+			*this = value.str;
+		else *this = value.num;
 	}
 
 	ArrayElementL GetAsElement() const
@@ -504,7 +506,7 @@ public:
 		}
 	}
 };
-STATIC_ASSERT(sizeof(AuxVariableValue) == 0x10);
+static_assert(sizeof(AuxVariableValue) == 0x10);
 
 typedef Vector<AuxVariableValue, 2> AuxVarValsArr;
 typedef UnorderedMap<char*, AuxVarValsArr> AuxVarVarsMap;
@@ -907,7 +909,7 @@ struct TLSData
 	UInt32			unk2BC;				// 2BC
 										// 25C is used as do not head track the player , 2B8 is used to init QueudFile::unk0018
 };
-STATIC_ASSERT(sizeof(TLSData) == 0x2C0);
+static_assert(sizeof(TLSData) == 0x2C0);
 
 TLSData *GetTLSData();
 

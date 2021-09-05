@@ -44,35 +44,59 @@ bool Cmd_StringToRef_Execute(COMMAND_ARGS)
 
 bool Cmd_GetMinOf_Execute(COMMAND_ARGS)
 {
-	UInt8 numArgs = NUM_ARGS;
-	double values[5];
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &values[0], &values[1], &values[2], &values[3], &values[4]))
-		return true;
-	double *current = values, *minVal = values;
-	do
+	UInt32 numArgs = NUM_ARGS;
+	double val1, val2, val3, val4, val5;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &val1, &val2, &val3, &val4, &val5))
 	{
-		current++;
-		if (*minVal > *current) minVal = current;
+		__asm
+		{
+			mov		edx, numArgs
+			movq	xmm0, val1
+			minsd	xmm0, val2
+			sub		dl, 2
+			jz		done
+			minsd	xmm0, val3
+			dec		dl
+			jz		done
+			minsd	xmm0, val4
+			dec		dl
+			jz		done
+			minsd	xmm0, val5
+		done:
+			mov		eax, result
+			movq	qword ptr [eax], xmm0
+		}
 	}
-	while (--numArgs > 1);
-	*result = *minVal;
+	else *result = 0;
 	return true;
 }
 
 bool Cmd_GetMaxOf_Execute(COMMAND_ARGS)
 {
-	UInt8 numArgs = NUM_ARGS;
-	double values[5];
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &values[0], &values[1], &values[2], &values[3], &values[4]))
-		return true;
-	double *current = values, *maxVal = values;
-	do
+	UInt32 numArgs = NUM_ARGS;
+	double val1, val2, val3, val4, val5;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &val1, &val2, &val3, &val4, &val5))
 	{
-		current++;
-		if (*maxVal < *current) maxVal = current;
+		__asm
+		{
+			mov		edx, numArgs
+			movq	xmm0, val1
+			maxsd	xmm0, val2
+			sub		dl, 2
+			jz		done
+			maxsd	xmm0, val3
+			dec		dl
+			jz		done
+			maxsd	xmm0, val4
+			dec		dl
+			jz		done
+			maxsd	xmm0, val5
+		done:
+			mov		eax, result
+			movq	qword ptr [eax], xmm0
+		}
 	}
-	while (--numArgs > 1);
-	*result = *maxVal;
+	else *result = 0;
 	return true;
 }
 

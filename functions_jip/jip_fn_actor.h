@@ -53,7 +53,7 @@ DEFINE_COMMAND_PLUGIN(SetOnAnimActionEventHandler, 0, 4, kParams_OneForm_OneInt_
 DEFINE_COMMAND_PLUGIN(SetOnPlayGroupEventHandler, 0, 4, kParams_OneForm_OneInt_OneForm_OneAnimGroup);
 DEFINE_COMMAND_PLUGIN(SetOnHealthDamageEventHandler, 0, 3, kParams_OneForm_OneInt_OneForm);
 DEFINE_COMMAND_PLUGIN(SetOnCrippledLimbEventHandler, 0, 3, kParams_OneForm_OneInt_OneForm);
-DEFINE_COMMAND_PLUGIN(SetOnFireWeaponEventHandler, 0, 3, kParams_OneForm_OneInt_OneForm);
+DEFINE_COMMAND_PLUGIN(SetOnFireWeaponEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(GetCurrentAmmo, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetCurrentAmmoRounds, 1, 0, NULL);
 DEFINE_COMMAND_ALT_PLUGIN(SetFullNameAlt, SetActorFullNameAlt, 0, 2, kParams_OneString_OneOptionalForm);
@@ -930,7 +930,7 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS)
 		return true;
 	UInt8 flag = s_onAnimEventFlag;
 	bool animAction = flag == kHookActorFlag3_OnAnimAction;
-	UInt32 hookIdx = animAction ? kHook_SetAnimAction : kHook_SetAnimGroup;
+	HookInfo &hookInfo = animAction ? s_hookInfos[kHook_SetAnimAction] : s_hookInfos[kHook_SetAnimGroup];
 	tList<TESForm> tempList(actorOrList);
 	if IS_ID(actorOrList, BGSListForm)
 		tempList = ((BGSListForm*)actorOrList)->list;
@@ -942,7 +942,7 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS)
 		if (addEvnt)
 		{
 			if (scriptsMap->Insert(animID, &callbacks))
-				s_hookInfos[hookIdx].ModUsers(true);
+				hookInfo.ModUsers(true);
 			callbacks->Insert(script);
 		}
 		else
@@ -951,7 +951,7 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS)
 			if (findAnim && findAnim().Erase(script) && findAnim().Empty())
 			{
 				findAnim.Remove();
-				s_hookInfos[hookIdx].ModUsers(false);
+				hookInfo.ModUsers(false);
 			}
 		}
 		return true;
@@ -968,7 +968,7 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS)
 			if (eventMap->Insert(actor, &scriptsMap))
 			{
 				actor->jipActorFlags3 |= flag;
-				s_hookInfos[hookIdx].ModUsers(true);
+				hookInfo.ModUsers(true);
 			}
 			(*scriptsMap)[animID].Insert(script);
 		}
@@ -983,7 +983,7 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS)
 			if (!findActor().Empty()) continue;
 			findActor.Remove();
 			actor->jipActorFlags3 &= ~flag;
-			s_hookInfos[hookIdx].ModUsers(false);
+			hookInfo.ModUsers(false);
 		}
 	}
 	while (iter = iter->next);
@@ -1008,7 +1008,22 @@ __declspec(naked) bool Cmd_SetOnPlayGroupEventHandler_Execute(COMMAND_ARGS)
 	}
 }
 
-UInt8 s_actorEventType = 0;
+struct ActorEventInfo
+{
+	ActorEventCallbacks		*filtered;
+	EventCallbackScripts	*unfiltered;
+	HookInfo				*hookInfo;
+	UInt8					flag;
+}
+s_actorEventInfos[] =
+{
+	{&s_healthDamageEventMap, nullptr, &s_hookInfos[kHook_DamageActorValue], kHookActorFlag3_OnHealthDamage},
+	{&s_crippledLimbEventMap, nullptr, &s_hookInfos[kHook_DamageActorValue], kHookActorFlag3_OnCrippledLimb},
+	{&s_fireWeaponEventMap, &s_fireWeaponEventScripts, &s_hookInfos[kHook_RemoveAmmo], kHookActorFlag3_OnFireWeapon},
+	{&s_onHitEventMap, &s_onHitEventScripts, &s_hookInfos[kHook_OnHitEvent], kHookActorFlag3_OnHit}
+};
+
+UInt32 s_actorEventType = 0;
 
 bool SetActorEventHandler_Execute(COMMAND_ARGS)
 {
@@ -1017,50 +1032,27 @@ bool SetActorEventHandler_Execute(COMMAND_ARGS)
 	TESForm *actorOrList = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &actorOrList) || NOT_ID(script, Script))
 		return true;
+	ActorEventInfo &eventInfo = s_actorEventInfos[s_actorEventType];
+	EventCallbackScripts *callbacks = eventInfo.unfiltered;
+	HookInfo *hookInfo = eventInfo.hookInfo;
 	if (!actorOrList)
 	{
 		if (addEvnt)
 		{
-			if (s_onHitEventScripts.Insert(script))
-				HOOK_MOD(OnHitEvent, true);
+			if (callbacks->Insert(script))
+				hookInfo->ModUsers(true);
 		}
-		else if (s_onHitEventScripts.Erase(script))
-			HOOK_MOD(OnHitEvent, false);
+		else if (callbacks->Erase(script))
+			hookInfo->ModUsers(false);
 		return true;
 	}
-	ActorEventCallbacks *eventMap;
-	UInt8 flag, hookID;
-	switch (s_actorEventType)
-	{
-		case 0:
-			eventMap = &s_healthDamageEventMap;
-			flag = kHookActorFlag3_OnHealthDamage;
-			hookID = kHook_DamageActorValue;
-			break;
-		case 1:
-			eventMap = &s_crippledLimbEventMap;
-			flag = kHookActorFlag3_OnCrippledLimb;
-			hookID = kHook_DamageActorValue;
-			break;
-		case 2:
-			eventMap = &s_fireWeaponEventMap;
-			flag = kHookActorFlag3_OnFireWeapon;
-			hookID = kHook_RemoveAmmo;
-			break;
-		case 3:
-			eventMap = &s_onHitEventMap;
-			flag = kHookActorFlag3_OnHit;
-			hookID = kHook_OnHitEvent;
-			break;
-		default:
-			return true;
-	}
+	ActorEventCallbacks *eventMap = eventInfo.filtered;
+	UInt8 flag = eventInfo.flag;
 	tList<TESForm> tempList(actorOrList);
 	if IS_ID(actorOrList, BGSListForm)
 		tempList = ((BGSListForm*)actorOrList)->list;
 	ListNode<TESForm> *iter = tempList.Head();
 	Actor *actor;
-	EventCallbackScripts *callbacks;
 	do
 	{
 		if (!(actor = (Actor*)iter->data)) continue;
@@ -1068,7 +1060,7 @@ bool SetActorEventHandler_Execute(COMMAND_ARGS)
 		{
 			if (NOT_ACTOR(actor)) continue;
 			if (eventMap->Insert(actor, &callbacks))
-				s_hookInfos[hookID].ModUsers(true);
+				hookInfo->ModUsers(true);
 			callbacks->Insert(script);
 			actor->jipActorFlags3 |= flag;
 		}
@@ -1080,7 +1072,7 @@ bool SetActorEventHandler_Execute(COMMAND_ARGS)
 				actor->jipActorFlags3 &= ~flag;
 			if (!findActor().Empty()) continue;
 			findActor.Remove();
-			s_hookInfos[hookID].ModUsers(false);
+			hookInfo->ModUsers(false);
 		}
 	}
 	while (iter = iter->next);

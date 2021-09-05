@@ -6,9 +6,9 @@ bool s_controllerReady = false;
 
 _XInputGetStateEx XInputGetStateEx;
 
-UInt16 s_deadZoneLS = 0x1EA9, s_deadZoneRS = 0x21F1;
+int s_deadZoneLS = 7849, s_deadZoneRS = 8689;
 double s_deadZoneLSg = 7849, s_deadZoneRSg = 8689;
-double s_deadZoneLSd = 24918, s_deadZoneRSd = 24078;
+double s_deadZoneLSd = 1.0 / 24918, s_deadZoneRSd = 1.0 / 24078;
 
 XInputStateMods s_XIStateMods = {0xFFFF, 0, 0, 0, 0};
 

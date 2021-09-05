@@ -105,7 +105,7 @@ public:
 		return ThisCall<ScriptEventList*>(0x5ABF60, this);
 	}
 };
-STATIC_ASSERT(sizeof(Script) == 0x54);
+static_assert(sizeof(Script) == 0x54);
 
 struct ScriptRunner
 {
@@ -132,7 +132,7 @@ struct ScriptRunner
 	UInt8				byteA1;				// A1	Set when the executing CommandInfo's 2nd flag bit (+0x25) is set
 	UInt8				padA2[2];			// A2
 };
-STATIC_ASSERT(sizeof(ScriptRunner) == 0xA4);
+static_assert(sizeof(ScriptRunner) == 0xA4);
 
 struct ConditionEntry
 {
@@ -171,7 +171,7 @@ struct QuestStageItem
 	UInt32			logDate;		// 68
 	TESQuest		*owningQuest;	// 6C;
 };
-STATIC_ASSERT(sizeof(QuestStageItem) == 0x70);
+static_assert(sizeof(QuestStageItem) == 0x70);
 
 // 41C
 struct ScriptLineBuffer

@@ -368,12 +368,12 @@ public:
 	UInt32									unk28[2];		// 28
 	TESEffectShader							*effectShader;	// 30
 	float									flt34;			// 34
-	BSSimpleArray<ParticleShaderProperty>	shaderProps;	// 38
+	BSSimpleArray<ParticleShaderProperty*>	shaderProps;	// 38
 	NiNode									*shaderNode;	// 48
 	UInt32									unk4C;			// 4C
-	BSSimpleArray<NiAVObject>				objects;		// 50	Seen BSFadeNode
+	BSSimpleArray<NiAVObject*>				objects;		// 50	Seen BSFadeNode
 	float									flt60;			// 60
 	float									flt64;			// 64
 	NiProperty								*prop68;		// 68	Seen 0x10AE0C8
 };
-STATIC_ASSERT(sizeof(MagicShaderHitEffect) == 0x6C);
+static_assert(sizeof(MagicShaderHitEffect) == 0x6C);
