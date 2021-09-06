@@ -239,30 +239,27 @@ enum MaterialType
 	kMaterial_OrganicGlow
 };
 
-enum
-{
-	kAddr_AddExtraData =			0x40FF60,
-	kAddr_RemoveExtraType =			0x410140,
-	kAddr_LoadModel =				0x447080,
-	kAddr_ApplyAmmoEffects =		0x59A030,
-	kAddr_MoveToMarker =			0x5CCB20,
-	kAddr_ApplyPerkModifiers =		0x5E58F0,
-	kAddr_ReturnThis =				0x6815C0,
-	kAddr_PurgeTerminalModel =		0x7FFE00,
-	kAddr_EquipItem =				0x88C650,
-	kAddr_UnequipItem =				0x88C790,
-	kAddr_ReturnTrue =				0x8D0360,
-	kAddr_TileGetFloat =			0xA011B0,
-	kAddr_TileSetFloat =			0xA012D0,
-	kAddr_TileSetString =			0xA01350,
-	kAddr_InitFontInfo =			0xA12020,
-};
+#define ADDR_AddExtraData		0x40FF60
+#define ADDR_RemoveExtraType	0x410140
+#define ADDR_LoadModel			0x447080
+#define ADDR_ApplyAmmoEffects	0x59A030
+#define ADDR_MoveToMarker		0x5CCB20
+#define ADDR_ApplyPerkModifiers	0x5E58F0
+#define ADDR_ReturnThis			0x6815C0
+#define ADDR_PurgeTerminalModel	0x7FFE00
+#define ADDR_EquipItem			0x88C650
+#define ADDR_UnequipItem		0x88C790
+#define ADDR_ReturnTrue			0x8D0360
+#define ADDR_TileGetFloat		0xA011B0
+#define ADDR_TileSetFloat		0xA012D0
+#define ADDR_TileSetString		0xA01350
+#define ADDR_InitFontInfo		0xA12020
 
-#define IS_REFERENCE(form) ((*(UInt32**)form)[0x3C] == kAddr_ReturnTrue)
-#define NOT_REFERENCE(form) ((*(UInt32**)form)[0x3C] != kAddr_ReturnTrue)
-#define IS_ACTOR(form) ((*(UInt32**)form)[0x40] == kAddr_ReturnTrue)
-#define NOT_ACTOR(form) ((*(UInt32**)form)[0x40] != kAddr_ReturnTrue)
-#define IS_NODE(object) ((*(UInt32**)object)[3] == kAddr_ReturnThis)
+#define IS_REFERENCE(form) ((*(UInt32**)form)[0x3C] == ADDR_ReturnTrue)
+#define NOT_REFERENCE(form) ((*(UInt32**)form)[0x3C] != ADDR_ReturnTrue)
+#define IS_ACTOR(form) ((*(UInt32**)form)[0x40] == ADDR_ReturnTrue)
+#define NOT_ACTOR(form) ((*(UInt32**)form)[0x40] != ADDR_ReturnTrue)
+#define IS_NODE(object) ((*(UInt32**)object)[3] == ADDR_ReturnThis)
 
 extern const bool kInventoryType[];
 extern const UInt8 kMaterialConvert[];

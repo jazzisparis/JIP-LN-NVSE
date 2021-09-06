@@ -238,6 +238,8 @@ bool Cmd_AddDestructionStage_Execute(COMMAND_ARGS)
 		destructible->data->health = 0;
 		*(UInt32*)&destructible->data->stageCount = 0x160D0000;
 		destructible->data->stages = NULL;
+		destructible->data->unk0C = 0;
+		destructible->data->unk10 = 0;
 	}
 	if (destructible->data->stages)
 	{

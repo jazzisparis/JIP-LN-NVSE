@@ -1,10 +1,10 @@
 #pragma once
 
-#define MAP_DEFAULT_ALLOC			8
-#define MAP_MIN_BUCKET_COUNT		4
-#define MAP_MAX_BUCKET_COUNT		0x40000
-#define MAP_DEFAULT_BUCKET_COUNT	8
-#define VECTOR_DEFAULT_ALLOC		8
+#define MAP_DEFAULT_ALLOC			8UL
+#define MAP_MIN_BUCKET_COUNT		4UL
+#define MAP_MAX_BUCKET_COUNT		0x40000UL
+#define MAP_DEFAULT_BUCKET_COUNT	8UL
+#define VECTOR_DEFAULT_ALLOC		8UL
 
 void* __fastcall Pool_Alloc_Buckets(UInt32 numBuckets);
 UInt32 __fastcall AlignBucketCount(UInt32 count);
@@ -588,6 +588,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_alloc = MAP_DEF
 	using M_Value = std::conditional_t<(sizeof(T_Data) <= 8) || (sizeof(T_Data) <= alignof(T_Key)), MapValue<T_Data>, MapValue_p<T_Data>>;
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
 	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
+	using M_Pair = MappedPair<T_Key, T_Data>;
 
 	struct Entry
 	{
@@ -659,7 +660,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_alloc = MAP_DEF
 
 public:
 	Map(UInt32 _alloc = _default_alloc) : entries(nullptr), numEntries(0), numAlloc(_alloc) {}
-	Map(std::initializer_list<MappedPair<T_Key, T_Data>> inList) : entries(nullptr), numEntries(0), numAlloc(inList.size()) {InsertList(inList);}
+	Map(std::initializer_list<M_Pair> inList) : entries(nullptr), numEntries(0), numAlloc(inList.size()) {InsertList(inList);}
 	~Map()
 	{
 		if (!entries) return;
@@ -695,7 +696,7 @@ public:
 		return outData;
 	}
 
-	void InsertList(std::initializer_list<MappedPair<T_Key, T_Data>> inList)
+	void InsertList(std::initializer_list<M_Pair> inList)
 	{
 		T_Data *outData;
 		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
@@ -713,6 +714,7 @@ public:
 
 	T_Data Get(Key_Arg key)
 	{
+		static_assert(std::is_scalar_v<T_Data>);
 		UInt32 index;
 		return GetIndex(key, &index) ? entries[index].value.Get() : NULL;
 	}
@@ -733,6 +735,20 @@ public:
 		index = numEntries - index;
 		if (index) memcpy(pEntry, pEntry + 1, sizeof(Entry) * index);
 		return true;
+	}
+
+	T_Data GetErase(Key_Arg key)
+	{
+		static_assert(std::is_scalar_v<T_Data>);
+		UInt32 index;
+		if (!GetIndex(key, &index)) return NULL;
+		Entry *pEntry = entries + index;
+		T_Data outVal = pEntry->value.Get();
+		pEntry->Clear();
+		numEntries--;
+		index = numEntries - index;
+		if (index) memcpy(pEntry, pEntry + 1, sizeof(Entry) * index);
+		return outVal;
 	}
 
 	void Clear()
@@ -838,11 +854,13 @@ public:
 	public:
 		CpIterator(Map &source)
 		{
-			if (count = source.numEntries)
+			count = source.numEntries;
+			if (count > 1)
 			{
 				UInt32 size = count * sizeof(Entry);
 				pEntry = (Entry*)memcpy(AuxBuffer::Get(0, size), source.entries, size);
 			}
+			else pEntry = source.entries;
 		}
 	};
 
@@ -903,6 +921,8 @@ public:
 	UInt32 Size() const {return numKeys;}
 	bool Empty() const {return !numKeys;}
 	T_Key *Keys() {return reinterpret_cast<T_Key*>(keys);}
+
+	T_Key&& operator[](UInt32 index) const {return keys[index];}
 
 	bool Insert(Key_Arg key)
 	{
@@ -1031,11 +1051,13 @@ public:
 	public:
 		CpIterator(Set &source)
 		{
-			if (count = source.numKeys)
+			count = source.numKeys;
+			if (count > 1)
 			{
 				UInt32 size = count * sizeof(M_Key);
 				pKey = (M_Key*)memcpy(AuxBuffer::Get(1, size), source.keys, size);
 			}
+			else pKey = source.keys;
 		}
 	};
 
@@ -1122,6 +1144,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = 
 	using H_Key = HashedKey<T_Key>;
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
 	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
+	using M_Pair = MappedPair<T_Key, T_Data>;
 
 	struct Entry
 	{
@@ -1245,7 +1268,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = 
 
 public:
 	UnorderedMap(UInt32 _numBuckets = _default_bucket_count) : buckets(nullptr), numBuckets(_numBuckets), numEntries(0) {}
-	UnorderedMap(std::initializer_list<MappedPair<T_Key, T_Data>> inList) : buckets(nullptr), numBuckets(inList.size()), numEntries(0) {InsertList(inList);}
+	UnorderedMap(std::initializer_list<M_Pair> inList) : buckets(nullptr), numBuckets(inList.size()), numEntries(0) {InsertList(inList);}
 	~UnorderedMap()
 	{
 		if (!buckets) return;
@@ -1307,7 +1330,7 @@ public:
 		return value;
 	}
 
-	void InsertList(std::initializer_list<MappedPair<T_Key, T_Data>> inList)
+	void InsertList(std::initializer_list<M_Pair> inList)
 	{
 		T_Data *outData;
 		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
@@ -1321,6 +1344,7 @@ public:
 
 	T_Data Get(Key_Arg key)
 	{
+		static_assert(std::is_scalar_v<T_Data>);
 		Entry *pEntry = FindEntry(key);
 		return pEntry ? pEntry->value : NULL;
 	}
@@ -1355,6 +1379,7 @@ public:
 
 	T_Data GetErase(Key_Arg key)
 	{
+		static_assert(std::is_scalar_v<T_Data>);
 		if (numEntries)
 		{
 			UInt32 hashVal = HashKey<T_Key>(key);
@@ -2123,11 +2148,8 @@ public:
 
 	T_Data Pop()
 	{
-		if (!numItems) return NULL;
-		numItems--;
-		T_Data *pEnd = End();
-		pEnd->~T_Data();
-		return *pEnd;
+		static_assert(std::is_scalar_v<T_Data>);
+		return numItems ? data[--numItems] : NULL;
 	}
 
 	bool operator==(const Vector &rhs) const
@@ -2309,11 +2331,13 @@ public:
 	public:
 		CpIterator(Vector &source)
 		{
-			if (count = source.numItems)
+			count = source.numItems;
+			if (count > 1)
 			{
 				UInt32 size = count * sizeof(T_Data);
 				pData = (T_Data*)memcpy(AuxBuffer::Get(2, size), source.data, size);
 			}
+			else pData = source.data;
 		}
 	};
 

@@ -899,7 +899,7 @@ __declspec(naked) SeenData* __fastcall AddExtraSeenData(TESObjectCELL *cell)
 		mov		[eax+0xC], ecx
 		push	eax
 		lea		ecx, [esi+0x28]
-		CALL_EAX(kAddr_AddExtraData)
+		CALL_EAX(ADDR_AddExtraData)
 		push	0x80000000
 		mov		ecx, esi
 		CALL_EAX(0x484B60)
@@ -1035,7 +1035,7 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		jz		iterNextExt
 		push	kExtraData_SeenData
 		lea		ecx, [esi+0x28]
-		CALL_EAX(kAddr_RemoveExtraType)
+		CALL_EAX(ADDR_RemoveExtraType)
 		or		byte ptr [esi+0x25], 1
 		push	0x80000000
 		mov		ecx, esi
@@ -1944,7 +1944,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 
 const __m128 kVertexAlphaMults = {0.25, 0.5, 0.75, 1};
 alignas(16) const float
-kDirectionalLightValues[] = {217 / 255.0F, 217 / 255.0F, 217 / 255.0F, 0.2F, 0.2F, 0.2F, 0, 0, 0, 0, -1.570796F, 0, 0},
+kDirectionalLightValues[] = {1.0F, 1.0F, 1.0F, 0, 0, 0, 0, 0, 0, 0, -1.570796F, 0, 0},
 kFogPropertyValues[] = {31 / 255.0F, 47 / 255.0F, 63 / 255.0F, 500000.0F, 500000.0F};
 const UInt8 kSelectImgUpdate[][9] =
 {

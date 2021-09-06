@@ -65,7 +65,7 @@ public:
 	UInt16		word22;			// 22	182
 	UInt32		unk24[19];		// 24	184
 };
-STATIC_ASSERT(sizeof(BSArchive) == 0x70);
+static_assert(sizeof(BSArchive) == 0x70);
 
 // 1D0
 class Archive : public BSFile
@@ -74,7 +74,7 @@ public:
 	NiRefObject			refObject;		// 158
 	BSArchive			archive;		// 160
 };
-STATIC_ASSERT(sizeof(Archive) == 0x1D0);
+static_assert(sizeof(Archive) == 0x1D0);
 
 // 160
 class ArchiveFile : public BSFile
@@ -83,7 +83,7 @@ public:
 	UInt32			unk158;		// 158
 	UInt32			unk15C;		// 15C
 };
-STATIC_ASSERT(sizeof(ArchiveFile) == 0x160);
+static_assert(sizeof(ArchiveFile) == 0x160);
 
 // 178
 class CompressedArchiveFile : public ArchiveFile
@@ -96,7 +96,7 @@ public:
 	UInt32			streamOffset;	// 170
 	UInt32			unk174;			// 174
 };
-STATIC_ASSERT(sizeof(CompressedArchiveFile) == 0x178);
+static_assert(sizeof(CompressedArchiveFile) == 0x178);
 
 // 5C8 (?)
 class NiStream
@@ -176,7 +176,7 @@ public:
 };
 
 // 14
-class QueuedChildren : public BSSimpleArray<NiPointer<QueuedFile>>
+class QueuedChildren : public BSSimpleArray<QueuedFile*>
 {
 	UInt32	counter;
 };
@@ -323,7 +323,7 @@ public:
 	UInt8			byte53;			// 53
 	UInt32			unk54;			// 54
 };
-STATIC_ASSERT(sizeof(BGSDistantObjectBlockLoadTask) == 0x58);
+static_assert(sizeof(BGSDistantObjectBlockLoadTask) == 0x58);
 
 // 14
 struct KFModel
@@ -486,7 +486,7 @@ public:
 
 	Iterator Begin() {return Iterator(*this);}
 };
-STATIC_ASSERT(sizeof(LockFreeMap<int, int>) == 0x40);
+static_assert(sizeof(LockFreeMap<int, int>) == 0x40);
 
 class Animation;
 class QueuedReplacementKFList;
@@ -512,7 +512,7 @@ public:
 	LightCS			semaphore;	// 20
 	UInt32			unk28[6];	// 28
 };
-STATIC_ASSERT(sizeof(LockFreeQueue<int>) == 0x40);
+static_assert(sizeof(LockFreeQueue<int>) == 0x40);
 
 // 10
 template <typename T_Data> class LockFreePriorityQueue
@@ -545,6 +545,8 @@ struct ModelLoader
 	BackgroundCloneThread								*bgCloneThread;		// 28
 	UInt8												byte2C;				// 2C
 	UInt8												pad2D[3];			// 2D
+
+	__forceinline static ModelLoader *GetSingleton() {return *(ModelLoader**)0x11C3B3C;}
 
 	__forceinline void QueueReference(TESObjectREFR *refr)
 	{
@@ -602,4 +604,4 @@ public:
 	LockFreePriorityQueue<IOTask*>	*taskQueue;	// 64
 	UInt32							unk68[14];	// 68
 };
-STATIC_ASSERT(sizeof(IOManager) == 0xA0);
+static_assert(sizeof(IOManager) == 0xA0);

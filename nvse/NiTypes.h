@@ -17,11 +17,7 @@ struct NiPoint2
 	NiPoint2(float _x, float _y) : x(_x), y(_y) {}
 	NiPoint2(const NiPoint2 &rhs) {_mm_storeu_si64(this, _mm_loadu_si64(&rhs));}
 
-	inline NiPoint2& operator=(const NiPoint2 &rhs)
-	{
-		_mm_storeu_si64(this, _mm_loadu_si64(&rhs));
-		return *this;
-	}
+	inline void operator=(const NiPoint2 &rhs) {_mm_storeu_si64(this, _mm_loadu_si64(&rhs));}
 };
 
 struct NiVector3;
@@ -37,12 +33,11 @@ struct NiMatrix33
 	void __fastcall Rotate(NiVector3 *rot);
 	void __fastcall Inverse(NiMatrix33 *mat = NULL);
 	
-	inline NiMatrix33& operator=(const NiMatrix33 &rhs)
+	inline void operator=(const NiMatrix33 &rhs)
 	{
 		_mm_storeu_ps(&cr[0][0], _mm_loadu_ps(&rhs.cr[0][0]));
 		_mm_storeu_ps(&cr[1][1], _mm_loadu_ps(&rhs.cr[1][1]));
 		cr[2][2] = rhs.cr[2][2];
-		return *this;
 	}
 };
 
@@ -113,7 +108,7 @@ struct alignas(16) AlignedVector4
 		return ((float*)&x)[axis];
 	}
 
-	AlignedVector4& operator=(float *valPtr) {_mm_store_ps(&x, _mm_loadu_ps(valPtr)); return *this;}
+	inline void operator=(float *valPtr) {_mm_store_ps(&x, _mm_loadu_ps(valPtr));}
 };
 
 float __vectorcall Vector3Length(AlignedVector4 *inVec);
@@ -224,8 +219,15 @@ struct NiTArray
 	T_Data Get(UInt32 idx) {return data[idx];}
 
 	UInt16 Length() {return firstFreeEntry;}
-	void AddAtIndex(UInt32 index, T_Data *item);	// no bounds checking
-	void SetCapacity(UInt16 newCapacity);	// grow and copy data if needed
+
+	__forceinline void AddAtIndex(UInt32 index, T_Data *item)
+	{
+		ThisCall(0x869640, this, index, item);
+	}
+	__forceinline void SetCapacity(UInt16 newCapacity)
+	{
+		ThisCall(0x8696E0, this, newCapacity);
+	}
 
 	class Iterator
 	{
@@ -251,16 +253,6 @@ struct NiTArray
 
 	Iterator Begin() {return Iterator(*this);}
 };
-
-template <typename T> void NiTArray<T>::AddAtIndex(UInt32 index, T* item)
-{
-	ThisCall(0x00869640, this, index, item);
-}
-
-template <typename T> void NiTArray<T>::SetCapacity(UInt16 newCapacity)
-{
-	ThisCall(0x008696E0, this, newCapacity);
-}
 
 // 18
 // an NiTArray that can go above 0xFFFF, probably with all the same weirdness
@@ -310,15 +302,6 @@ public:
 	};
 
 	Iterator Begin() {return Iterator(*this);}
-};
-
-// 8
-template <typename T>
-struct NiTSet
-{
-	T		* data;		// 00
-	UInt16	capacity;	// 04
-	UInt16	length;		// 06
 };
 
 // 10
@@ -450,13 +433,13 @@ public:
 		T_Data		data;
 	};
 
-	virtual void	Destroy(bool doFree);
-	virtual UInt32	CalculateBucket(T_Key key);
-	virtual bool	Equal(T_Key key1, T_Key key2);
-	virtual void	FillEntry(Entry *entry, T_Key key, T_Data data);
-	virtual	void	FreeKey(Entry *entry);
-	virtual	Entry	*AllocNewEntry();
-	virtual	void	FreeEntry(Entry *entry);
+	/*00*/virtual void		Destroy(bool doFree);
+	/*04*/virtual UInt32	CalculateBucket(T_Key key);
+	/*08*/virtual bool		Equal(T_Key key1, T_Key key2);
+	/*0C*/virtual void		FillEntry(Entry *entry, T_Key key, T_Data data);
+	/*10*/virtual void		FreeKey(Entry *entry);
+	/*14*/virtual Entry		*AllocNewEntry();
+	/*18*/virtual void		FreeEntry(Entry *entry);
 
 	UInt32		numBuckets;	// 04
 	Entry		**buckets;	// 08
@@ -565,69 +548,4 @@ class NiTStringPointerMap : public NiTMapBase<const char*, T_Data>
 public:
 	UInt8		byte10;
 	UInt8		pad11[3];
-};
-
-// not sure how much of this is in NiTListBase and how much is in NiTPointerListBase
-// 10
-template <typename T>
-class NiTListBase
-{
-public:
-	struct Node
-	{
-		Node	* next;
-		Node	* prev;
-		T		* data;
-	};
-
-	virtual void	Destructor(void);
-	virtual Node *	AllocateNode(void);
-	virtual void	FreeNode(Node * node);
-
-	Node	* start;	// 004
-	Node	* end;		// 008
-	UInt32	numItems;	// 00C
-};
-
-// 10
-template <typename T>
-class NiTPointerListBase : public NiTListBase <T>
-{
-public:
-};
-
-// 10
-template <typename T>
-class NiTPointerList : public NiTPointerListBase <T>
-{
-public:
-};
-
-// 4
-template <typename T>
-class NiPointer
-{
-public:
-	NiPointer(T *init) : data(init)		{	}
-
-	T	* data;
-
-	const T&	operator *() const { return *data; }
-	T&			operator *() { return *data; }
-
-	operator const T*() const { return data; }
-	operator T*() { return data; }
-};
-
-// 14
-template <typename T>
-class BSTPersistentList
-{
-public:
-	virtual void	Destroy(bool destroy);
-
-	UInt32	unk04;		// 04
-	UInt32	unk08;		// 08
-	UInt32	unk0C;		// 0C
-	UInt32	unk10;		// 10
 };

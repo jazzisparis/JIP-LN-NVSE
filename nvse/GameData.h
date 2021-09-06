@@ -124,14 +124,14 @@ struct ModInfo		// referred to by game as TESFile
 	// In Editor: 430 = ONAM array and 434 ONAM array count. Allocated at 0438
 	
 	/*** used by TESForm::LoadForm() among others ***/
-	MEMBER_FN_PREFIX(ModInfo);
-	DEFINE_MEMBER_FN(GetNextChunk, UInt32, 0x004726B0);	// returns chunk type
-	DEFINE_MEMBER_FN(GetChunkData, bool, 0x00472890, UInt8* buf, UInt32 bufSize); // max size, not num to read
-	DEFINE_MEMBER_FN(Read32, void, 0x004727F0, void* out);
-	DEFINE_MEMBER_FN(HasMoreSubrecords, bool, 0x004726F0);
+	//MEMBER_FN_PREFIX(ModInfo);
+	//DEFINE_MEMBER_FN(GetNextChunk, UInt32, 0x004726B0);	// returns chunk type
+	//DEFINE_MEMBER_FN(GetChunkData, bool, 0x00472890, UInt8* buf, UInt32 bufSize); // max size, not num to read
+	//DEFINE_MEMBER_FN(Read32, void, 0x004727F0, void* out);
+	//DEFINE_MEMBER_FN(HasMoreSubrecords, bool, 0x004726F0);
 };
-STATIC_ASSERT(sizeof(WIN32_FIND_DATA) == 0x140);
-STATIC_ASSERT(sizeof(ModInfo) == 0x42C);
+static_assert(sizeof(WIN32_FIND_DATA) == 0x140);
+static_assert(sizeof(ModInfo) == 0x42C);
 
 struct ModList
 {
@@ -139,7 +139,7 @@ struct ModList
 	UInt32				loadedModCount;		// 08
 	ModInfo*			loadedMods[0xFF];	// 0C
 };
-STATIC_ASSERT(sizeof(ModList) == 0x408);
+static_assert(sizeof(ModList) == 0x408);
 
 // 5B8
 class DataHandler
@@ -229,17 +229,19 @@ public:
 	UInt32							unk634;					// 634
 	UInt32							unk638;					// 638
 
-	__forceinline static DataHandler *Get() {return *(DataHandler**)0x11C3F2C;}
+	__forceinline static DataHandler *GetSingleton() {return *(DataHandler**)0x11C3F2C;}
 	const ModInfo ** GetActiveModList();		// returns array of modEntry* corresponding to loaded mods sorted by mod index
 	const ModInfo* LookupModByName(const char* modName);
 	UInt8 GetModIndex(const char* modName);
 	UInt8 GetActiveModCount() const {return modList.modInfoList.Count();}
 	const char* GetNthModName(UInt32 modIndex);
 
-	MEMBER_FN_PREFIX(DataHandler);
-	DEFINE_MEMBER_FN(DoAddForm, UInt32, 0x004603B0, TESForm * pForm);	// stupid name is because AddForm is redefined in windows header files
+	__forceinline UInt32 DoAddForm(TESForm *pForm)
+	{
+		return ThisCall<UInt32>(0x4603B0, this, pForm);
+	}
 };
-STATIC_ASSERT(sizeof(DataHandler) == 0x63C);
+static_assert(sizeof(DataHandler) == 0x63C);
 
 extern DataHandler *g_dataHandler;
 
@@ -479,7 +481,7 @@ public:
 	}
 	bool GetIsRaining();
 };
-STATIC_ASSERT(sizeof(Sky) == 0x138);
+static_assert(sizeof(Sky) == 0x138);
 
 // 04
 class GridArray
@@ -526,7 +528,7 @@ public:
 	float								flt3C;			// 3C
 	float								flt40;			// 40
 };
-STATIC_ASSERT(sizeof(LoadedAreaBound) == 0x44);
+static_assert(sizeof(LoadedAreaBound) == 0x44);
 
 // A0
 struct WaterSurfaceManager
@@ -578,7 +580,7 @@ struct WaterSurfaceManager
 	float								flt98;			// 98
 	UInt32								unk9C;			// 9C
 };
-STATIC_ASSERT(sizeof(WaterSurfaceManager) == 0xA0);
+static_assert(sizeof(WaterSurfaceManager) == 0xA0);
 
 class BSTempNodeManager;
 
@@ -622,12 +624,14 @@ public:
 	NavMeshInfoMap						*navMeshInfoMap;	// BC
 	LoadedAreaBound						*areaBound;			// C0
 
+	__forceinline static TES *GetSingleton() {return *(TES**)0x11DEA10;}
+
 	__forceinline bool GetTerrainHeight(float *posXY, float *result)
 	{
 		return ThisCall<bool>(0x4572E0, this, posXY, result);
 	}
 };
-STATIC_ASSERT(sizeof(TES) == 0xC4);
+static_assert(sizeof(TES) == 0xC4);
 
 extern TES *g_TES;
 

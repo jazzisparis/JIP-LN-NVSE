@@ -51,7 +51,7 @@ bool Cmd_CCCOnLoad_Execute(COMMAND_ARGS)
 	index = 0;
 	while (lineIter)
 	{
-		dataPtr = lineIter.Get();
+		dataPtr = *lineIter;
 		++lineIter;
 		delim = GetNextToken(dataPtr, '=');
 		pathStr = (char*)malloc(StrLen(delim) + 28);
@@ -64,7 +64,7 @@ bool Cmd_CCCOnLoad_Execute(COMMAND_ARGS)
 	for (DirectoryIterator iter("Data\\textures\\jazzisparis\\ccc\\avatar_*.dds"); iter; ++iter)
 	{
 		if (!iter.IsFile()) continue;
-		delim = const_cast<char*>(iter.Get());
+		delim = const_cast<char*>(*iter);
 		index = StrLen(delim);
 		pathStr = (char*)malloc(index + 17);
 		StrCopy(StrLenCopy(pathStr, "jazzisparis\\ccc\\", 16), delim);

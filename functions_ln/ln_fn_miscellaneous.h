@@ -13,7 +13,7 @@ DEFINE_COMMAND_PLUGIN(LNGetName, 0, 1, kParams_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(LNSetName, 0, 2, kParams_OneString_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(GetGlobalTimeMultiplier, ggtm, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetWaterFormEffect, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_ALT_PLUGIN(ar_Cat, pinto_Cat, 0, 2, kParams_TwoInts);
+DEFINE_COMMAND_ALT_PLUGIN(ar_Cat, pinto_Cat, 0, 3, kParams_TwoInts_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetFormFlag, 0, 2, kParams_OneForm_OneInt);
 DEFINE_COMMAND_PLUGIN(SetFormFlag, 0, 3, kParams_OneForm_TwoInts);
 DEFINE_COMMAND_PLUGIN(GetIngestibleFlag, 0, 2, kParams_OneForm_OneInt);
@@ -229,21 +229,29 @@ bool Cmd_GetWaterFormEffect_Execute(COMMAND_ARGS)
 
 bool Cmd_ar_Cat_Execute(COMMAND_ARGS)
 {
-	UInt32 arr1ID, arr2ID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &arr1ID, &arr2ID)) return true;
+	*result = 0;
+	UInt32 arr1ID, arr2ID, overrideOldKeys = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &arr1ID, &arr2ID, &overrideOldKeys))
+		return true;
 	NVSEArrayVar *inArray = LookupArrayByID(arr1ID);
 	NVSEArrayVar *catArray = LookupArrayByID(arr2ID);
-	if (!inArray || !catArray) return true;
-	UInt32 size;
-	ArrayElementR *vals = GetArrayData(catArray, &size);
-	if (!vals) return true;
-	do
+	if (!inArray || !catArray)
+		return true;
+	int type = GetContainerType(inArray);
+	if (type != GetContainerType(catArray))
+		return true;
+	bool isPacked = type == NVSEArrayVarInterface::kArrType_Array;
+	ArrayData arrData(catArray, isPacked);
+	if (!arrData.size)
+		return true;
+	for (UInt32 idx = 0; idx < arrData.size; idx++)
 	{
-		AppendElement(inArray, *vals);
-		vals->~ElementR();
-		vals++;
+		if (isPacked)
+			AppendElement(inArray, arrData.vals[idx]);
+		else if (overrideOldKeys || !ArrayHasKey(inArray, arrData.keys[idx]))
+			SetElement(inArray, arrData.keys[idx], arrData.vals[idx]);
 	}
-	while (--size);
+	*result = 1;
 	return true;
 }
 

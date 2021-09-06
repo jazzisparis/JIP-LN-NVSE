@@ -166,7 +166,7 @@ __declspec(naked) TESForm *TESObjectREFR::GetBaseForm()
 		mov		edx, [eax]
 		cmp		edx, kVtbl_BGSPlaceableWater
 		jz		isWater
-		cmp		dword ptr [edx+0xF8], kAddr_ReturnTrue
+		cmp		dword ptr [edx+0xF8], ADDR_ReturnTrue
 		jnz		done
 		push	eax
 		push	kExtraData_LeveledCreature
@@ -195,7 +195,7 @@ __declspec(naked) TESForm *TESObjectREFR::GetBaseForm2()
 		cmp		byte ptr [eax+0xF], 0xFF
 		jnz		done
 		mov		edx, [eax]
-		cmp		dword ptr [edx+0xF8], kAddr_ReturnTrue
+		cmp		dword ptr [edx+0xF8], ADDR_ReturnTrue
 		jnz		retnNULL
 		push	kExtraData_LeveledCreature
 		add		ecx, 0x44
@@ -608,10 +608,12 @@ void TESLeveledList::AddItem(TESForm *form, UInt16 level, UInt16 count, float he
 	while (iter = iter->next);
 	ListData *newData = (ListData*)GameHeapAlloc(sizeof(ListData));
 	LvlListExtra *newExtra = (LvlListExtra*)GameHeapAlloc(sizeof(LvlListExtra));
+	newExtra->ownerFaction = NULL;
+	newExtra->globalVar = NULL;
+	newExtra->health = health;
 	newData->form = form;
 	newData->level = level;
 	newData->count = count;
-	newExtra->health = health;
 	newData->extra = newExtra;
 	list.Insert(newData, index);
 }
@@ -786,11 +788,11 @@ float TESObjectWEAP::GetModBonuses(UInt8 modFlags, UInt32 effectID)
 	return result;
 }
 
-void TESForm::DoAddForm(TESForm* newForm, bool persist, bool record) const
+void TESForm::DoAddForm(TESForm *newForm, bool persist, bool record) const
 {
-	CALL_MEMBER_FN(DataHandler::Get(), DoAddForm)(newForm);
+	DataHandler::GetSingleton()->DoAddForm(newForm);
 
-	if(persist)
+	if (persist)
 	{
 		// Only some forms can be safely saved as SaveForm. ie TESPackage at the moment.
 		bool canSave = false;
@@ -800,7 +802,7 @@ void TESForm::DoAddForm(TESForm* newForm, bool persist, bool record) const
 		// ... more ?
 
 		if (canSave)
-			CALL_MEMBER_FN(TESSaveLoadGame::Get(), AddCreatedForm)(newForm);
+			TESSaveLoadGame::Get()->AddCreatedForm(newForm);
 	}
 }
 

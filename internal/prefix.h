@@ -7,10 +7,6 @@
 
 #define _HAS_EXCEPTIONS 0
 
-#define RUNTIME_VERSION_1_4_0_525	0x040020D0
-#define RUNTIME_VERSION_1_4_0_525ng	0x040020D1
-#define CS_VERSION_1_4_0_518		0x04002060
-
 #include <Windows.h>
 #include <string>
 #include <regex>
@@ -28,13 +24,6 @@ typedef signed char SInt8;
 typedef signed short SInt16;
 typedef signed long SInt32;
 typedef signed long long SInt64;
-
-// Based on the boost implementation of static asserts
-template <bool x> struct StaticAssertFailure;
-template <> struct StaticAssertFailure <true> { enum { a = 1 }; };
-template <int x> struct static_assert_test { };
-
-#define STATIC_ASSERT(a) typedef static_assert_test <sizeof(StaticAssertFailure<(bool)(a)>)> static_assert_typedef_ ## __COUNTER__
 
 class BaseFormComponent;
 class TESFullName;

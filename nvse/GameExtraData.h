@@ -963,7 +963,7 @@ public:
 		UInt8				explodeChance;
 		bool				explodeOnly;
 		UInt8				byte03;
-		BSSimpleArray<void>	*array04;
+		BSSimpleArray<void*>	*array04;
 	};
 
 	UInt16							dismemberedMask;	// 0C

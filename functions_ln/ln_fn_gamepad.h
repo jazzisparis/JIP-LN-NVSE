@@ -60,88 +60,138 @@ bool Cmd_GetPressedButtons_Execute(COMMAND_ARGS)
 	return true;
 }
 
+__declspec(naked) double __vectorcall GetLeftStick(SInt16 value)
+{
+	__asm
+	{
+		movsx	eax, cx
+		test	eax, eax
+		jz		retnZero
+		js		isNeg
+		sub		eax, s_deadZoneLS
+		jg		done
+	retnZero:
+		pxor	xmm0, xmm0
+		retn
+	isNeg:
+		inc		eax
+		add		eax, s_deadZoneLS
+		jge		retnZero
+	done:
+		movd	xmm0, eax
+		cvtdq2pd	xmm0, xmm0
+		mulsd	xmm0, s_deadZoneLSd
+		retn
+	}
+}
+
+__declspec(naked) double __vectorcall GetRightStick(SInt16 value)
+{
+	__asm
+	{
+		movsx	eax, cx
+		test	eax, eax
+		jz		retnZero
+		js		isNeg
+		sub		eax, s_deadZoneRS
+		jg		done
+	retnZero:
+		pxor	xmm0, xmm0
+		retn
+	isNeg:
+		inc		eax
+		add		eax, s_deadZoneRS
+		jge		retnZero
+	done:
+		movd	xmm0, eax
+		cvtdq2pd	xmm0, xmm0
+		mulsd	xmm0, s_deadZoneRSd
+		retn
+	}
+}
+
 bool Cmd_GetLeftStickX_Execute(COMMAND_ARGS)
 {
-	*result = s_gamePad.sThumbLX / s_deadZoneLSd;
+	*result = GetLeftStick(s_gamePad.sThumbLX);
 	return true;
 }
 
 bool Cmd_GetLeftStickX_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = s_gamePad.sThumbLX / s_deadZoneLSd;
+	*result = GetLeftStick(s_gamePad.sThumbLX);
 	return true;
 }
 
 bool Cmd_GetLeftStickY_Execute(COMMAND_ARGS)
 {
-	*result = s_gamePad.sThumbLY / s_deadZoneLSd;
+	*result = GetLeftStick(s_gamePad.sThumbLY);
 	return true;
 }
 
 bool Cmd_GetLeftStickY_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = s_gamePad.sThumbLY / s_deadZoneLSd;
+	*result = GetLeftStick(s_gamePad.sThumbLY);
 	return true;
 }
 
 bool Cmd_GetRightStickX_Execute(COMMAND_ARGS)
 {
-	*result = s_gamePad.sThumbRX / s_deadZoneRSd;
+	*result = GetRightStick(s_gamePad.sThumbRX);
 	return true;
 }
 
 bool Cmd_GetRightStickX_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = s_gamePad.sThumbRX / s_deadZoneRSd;
+	*result = GetRightStick(s_gamePad.sThumbRX);
 	return true;
 }
 
 bool Cmd_GetRightStickY_Execute(COMMAND_ARGS)
 {
-	*result = s_gamePad.sThumbRY / s_deadZoneRSd;
+	*result = GetRightStick(s_gamePad.sThumbRY);
 	return true;
 }
 
 bool Cmd_GetRightStickY_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = s_gamePad.sThumbRY / s_deadZoneRSd;
+	*result = GetRightStick(s_gamePad.sThumbRY);
 	return true;
 }
 
 bool Cmd_GetLeftTrigger_Execute(COMMAND_ARGS)
 {
-	*result = s_gamePad.bLeftTrigger / 255.0;
+	*result = s_gamePad.bLeftTrigger * (1 / 255.0);
 	return true;
 }
 
 bool Cmd_GetLeftTrigger_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = s_gamePad.bLeftTrigger / 255.0;
+	*result = s_gamePad.bLeftTrigger * (1 / 255.0);
 	return true;
 }
 
 bool Cmd_GetRightTrigger_Execute(COMMAND_ARGS)
 {
-	*result = s_gamePad.bRightTrigger / 255.0;
+	*result = s_gamePad.bRightTrigger * (1 / 255.0);
 	return true;
 }
 
 bool Cmd_GetRightTrigger_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = s_gamePad.bRightTrigger / 255.0;
+	*result = s_gamePad.bRightTrigger * (1 / 255.0);
 	return true;
 }
 
 bool Cmd_GetDeadZoneLS_Execute(COMMAND_ARGS)
 {
-	*result = s_deadZoneLS / 32767.0;
+	*result = s_deadZoneLSg * (1 / 32767.0);
 	DoConsolePrint(result);
 	return true;
 }
 
 bool Cmd_GetDeadZoneRS_Execute(COMMAND_ARGS)
 {
-	*result = s_deadZoneRS / 32767.0;
+	*result = s_deadZoneRSg * (1 / 32767.0);
 	DoConsolePrint(result);
 	return true;
 }
@@ -151,7 +201,7 @@ bool Cmd_SetDeadZoneLS_Execute(COMMAND_ARGS)
 	double deadzone;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &deadzone))
 	{
-		SInt32 value;
+		int value;
 		if (deadzone <= 0.1)
 			value = 3277;
 		else if (deadzone >= 0.9)
@@ -160,7 +210,7 @@ bool Cmd_SetDeadZoneLS_Execute(COMMAND_ARGS)
 			value = deadzone * 32767;
 		s_deadZoneLS = value;
 		s_deadZoneLSg = value;
-		s_deadZoneLSd = 32767.0 - value;
+		s_deadZoneLSd = 1.0 / (32767.0 - s_deadZoneLSg);
 		for (UInt32 patchAddr : {0x717B90, 0x717BA5, 0x717C15, 0x717C2A, 0x755552, 0x755569, 0x7AED31, 0x7E7F82, 0x7ECA56, 0x941157, 0x941177, 0xA23E5E, 0xA23E87})
 			SafeWrite32(patchAddr, value);
 		value = -value;
@@ -175,7 +225,7 @@ bool Cmd_SetDeadZoneRS_Execute(COMMAND_ARGS)
 	double deadzone;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &deadzone))
 	{
-		SInt32 value;
+		int value;
 		if (deadzone <= 0.1)
 			value = 3277;
 		else if (deadzone >= 0.9)
@@ -184,7 +234,7 @@ bool Cmd_SetDeadZoneRS_Execute(COMMAND_ARGS)
 			value = deadzone * 32767;
 		s_deadZoneRS = value;
 		s_deadZoneRSg = value;
-		s_deadZoneRSd = 32767.0 - value;
+		s_deadZoneRSd = 1.0 / (32767.0 - s_deadZoneRSg);
 		for (UInt32 patchAddr : {0x7AE57A, 0x7AE598, 0x7AE666, 0x7AE687, 0x7AE699, 0x7AE6AE, 0x7AE6C0, 0x7D57C0, 0x7D57D3, 0x7E7FAD, 0x7ECAAC, 0x7ECB3A, 0x7ECB51, 0x941197, 0x9455F5, 0x945644, 0x9456F0, 0x945710})
 			SafeWrite32(patchAddr, value);
 		value = -value;

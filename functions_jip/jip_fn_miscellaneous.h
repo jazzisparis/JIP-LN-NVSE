@@ -211,27 +211,15 @@ bool Cmd_SetFormDescription_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESForm *form;
 	char *buffer = GetStrArgBuffer();
-	if (!ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_SetFormDescription.numParams, &form))
-		return true;
-	TESDescription *description = DYNAMIC_CAST(form, TESForm, TESDescription);
-	if (!description && (NOT_ID(form, BGSNote) || !(description = ((BGSNote*)form)->noteText))) return true;
-	UInt16 newLen = StrLen(buffer);
-	char **findDesc, *newDesc;
-	if (!s_descriptionChanges.Insert(description, &findDesc))
+	if (ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_SetFormDescription.numParams, &form))
 	{
-		newDesc = *findDesc;
-		if (StrLen(newDesc) < newLen)
+		TESDescription *description = DYNAMIC_CAST(form, TESForm, TESDescription);
+		if (description || (IS_ID(form, BGSNote) && (description = ((BGSNote*)form)->noteText)))
 		{
-			GameHeapFree(newDesc);
-			newDesc = (char*)GameHeapAlloc(newLen + 1);
-			*findDesc = newDesc;
+			SetDescriptionAltText(description, buffer);
+			*result = 1;
 		}
 	}
-	else *findDesc = newDesc = (char*)GameHeapAlloc(newLen + 1);
-	StrCopy(newDesc, buffer);
-	*GameGlobals::CurrentDescription() = NULL;
-	HOOK_SET(GetDescription, true);
-	*result = 1;
 	return true;
 }
 

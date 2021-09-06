@@ -1635,21 +1635,21 @@ bool RegisterInsertObject(COMMAND_ARGS)
 			if (rootNode && (doInsert & 2))
 			{
 				bool useRoot = !blockName || (rootNode->m_blockName == blockName);
-				NiAVObject *targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName.Get());
+				NiAVObject *targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName);
 				if (targetObj)
 				{
 					if (insertNode)
-						DoInsertNode(targetObj, objectName, pDataStr->Get(), rootNode);
+						DoInsertNode(targetObj, objectName, *pDataStr, rootNode);
 					else if ((rootNode = DoAttachModel(targetObj, objectName, pDataStr, rootNode)) && (rootNode->m_flags & 0x20000000))
 						AddPointLights(rootNode);
 				}
 				if ((refr->refID == 0x14) && (rootNode = g_thePlayer->node1stPerson))
 				{
-					targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName.Get());
+					targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName);
 					if (targetObj)
 					{
 						if (insertNode)
-							DoInsertNode(targetObj, objectName, pDataStr->Get(), rootNode);
+							DoInsertNode(targetObj, objectName, *pDataStr, rootNode);
 						else DoAttachModel(targetObj, objectName, pDataStr, rootNode);
 					}
 				}
@@ -1665,12 +1665,12 @@ bool RegisterInsertObject(COMMAND_ARGS)
 			if (!findData) return true;
 			if (rootNode && (doInsert & 2) && findData() && (!insertNode || (*objectName != '^')))
 			{
-				NiAVObject *object = rootNode->GetBlockByName(findData().Get());
+				NiAVObject *object = rootNode->GetBlockByName(findData());
 				if (object)
 					object->m_parent->RemoveObject(object);
 				if ((refr->refID == 0x14) && (rootNode = g_thePlayer->node1stPerson))
 				{
-					object = rootNode->GetBlockByName(findData().Get());
+					object = rootNode->GetBlockByName(findData());
 					if (object)
 						object->m_parent->RemoveObject(object);
 				}

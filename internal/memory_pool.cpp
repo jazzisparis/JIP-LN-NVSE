@@ -1,7 +1,7 @@
 #include "internal/memory_pool.h"
 
-#define MAX_BLOCK_SIZE		0x400
-#define MEMORY_POOL_SIZE	0x1000
+#define MAX_BLOCK_SIZE		0x400UL
+#define MEMORY_POOL_SIZE	0x1000UL
 
 struct MemoryPool
 {

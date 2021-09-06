@@ -361,7 +361,7 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 		jz		done
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		done
 		call	TESObjectREFR::GetContainerChangesList
 		test	eax, eax
@@ -484,7 +484,7 @@ __declspec(naked) void Actor::EquipItemAlt(TESForm *itemForm, ContChangesEntry *
 	doEquip:
 		push	dword ptr [ebp+8]
 		mov		ecx, [ebp-4]
-		CALL_EAX(kAddr_EquipItem)
+		CALL_EAX(ADDR_EquipItem)
 	done:
 		leave
 		retn	0x10
@@ -609,7 +609,7 @@ __declspec(naked) void TESObjectREFR::SetPos(NiVector3 *posVector)
 		CALL_EAX(0x575830)
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		noCharCtrl
 		mov		ecx, [ecx+0x68]
 		test	ecx, ecx
@@ -714,7 +714,7 @@ __declspec(naked) void TESObjectREFR::MoveToCell(TESObjectCELL *cell, NiVector3 
 		push	0
 		push	eax
 		push	esi
-		CALL_EAX(kAddr_MoveToMarker)
+		CALL_EAX(ADDR_MoveToMarker)
 		add		esp, 0x14
 		pop		esi
 		retn	8
@@ -785,7 +785,7 @@ __declspec(naked) bhkCharacterController *TESObjectREFR::GetCharacterController(
 	__asm
 	{
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		retnNULL
 		mov		ecx, [ecx+0x68]
 		test	ecx, ecx
@@ -805,7 +805,7 @@ __declspec(naked) double TESObjectREFR::GetWaterImmersionPerc()	// result >= 0.8
 	__asm
 	{
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		invalid
 		cmp		byte ptr [ecx+0x14C], 0
 		jz		invalid
@@ -933,7 +933,7 @@ __declspec(naked) NiNode* __fastcall TESObjectREFR::GetNode(const char *nodeName
 		jz		done
 		xor		edx, edx
 		mov		ecx, [eax]
-		cmp		dword ptr [ecx+0xC], kAddr_ReturnThis
+		cmp		dword ptr [ecx+0xC], ADDR_ReturnThis
 		cmovnz	eax, edx
 	done:
 		retn
@@ -1725,7 +1725,7 @@ __declspec(naked) int Actor::GetGroundMaterial()
 		push	esi
 		mov		esi, ecx
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		invalid
 		mov		eax, [esi+0x68]
 		test	eax, eax
