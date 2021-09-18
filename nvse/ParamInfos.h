@@ -1691,3 +1691,16 @@ ParamInfo kParams_OneCasino_OneFloat[] =
 	{"Casino", kParamType_Casino, 0},
 	{"Float", kParamType_Float, 0}
 };
+
+ParamInfo kParams_FiveFloats_ThreeScriptVars_OneOptionalInt[] =
+{
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Integer", kParamType_Integer, 1}
+};

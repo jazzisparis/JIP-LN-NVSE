@@ -398,3 +398,31 @@ struct PlayingMusic
 	__forceinline static PlayingMusic *Get() {return (PlayingMusic*)0x11DD0F0;}
 };
 static_assert(sizeof(PlayingMusic) == 0x288);
+
+// 0C
+struct Sound
+{
+	UInt32		soundKey;	// 00
+	UInt8		byte04;		// 04
+	UInt8		pad05[3];	// 05
+	UInt32		unk08;		// 08
+
+	Sound() : soundKey(0xFFFFFFFF), byte04(0), unk08(0) {}
+
+	__forceinline void SetPos(float x, float y, float z)
+	{
+		ThisCall(0xAD8B60, this, x, y, z);
+	}
+	__forceinline void SetNiNode(NiNode *node)
+	{
+		ThisCall(0xAD8F20, this, node);
+	}
+	__forceinline void Play()
+	{
+		ThisCall(0xAD8830, this, 0);
+	}
+
+	static void PlayEDID(const char *soundEDID, UInt32 flags, TESObjectREFR *refr);
+	static void PlayFile(const char *filePath, UInt32 flags, TESObjectREFR *refr);
+	static void PlayTESSound(TESSound *gameSound, UInt32 flags, TESObjectREFR *refr);
+};

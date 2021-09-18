@@ -1,13 +1,11 @@
 #pragma once
 
-struct Sound;
-
 // 68
 class TESObjectREFR : public TESForm
 {
 public:
 	/*138*/virtual void		Unk_4E(void);	// GetStartingPosition(Position, Rotation, WorldOrCell)
-	/*13C*/virtual void		SayTopic(Sound *sound, TESTopic *topic, TESObjectREFR *target, UInt8 arg4, UInt8 arg5, UInt8 arg6, UInt8 arg7, UInt8 arg8);
+	/*13C*/virtual void		SayTopic(Sound *sound, TESTopic *topic, TESObjectREFR *target, bool dontUseNiNode, bool notVoice, bool useLipFile, UInt8 unused, bool subtitles);
 	/*140*/virtual void		Unk_50(void);
 	/*144*/virtual void		Unk_51(void);
 	/*148*/virtual bool		CastShadows();
@@ -325,29 +323,40 @@ public:
 class ActorMover
 {
 public:
-	virtual void		Unk_00(void);
+	virtual void		Destroy(bool doFree);
 	virtual void		Unk_01(void);
-	virtual void		ClearMovementFlag(void);
-	virtual void		SetMovementFlag(void);
+	virtual void		ClearMovementFlag(UInt32 flag);
+	virtual void		SetMovementFlags(UInt32 movementFlags);
 	virtual void		Unk_04(void);
 	virtual void		Unk_05(void);
-	virtual void		Unk_06(void);
+	virtual void		HandleTurnAnimationTimer(float timePassed);
 	virtual void		Unk_07(void);
 	virtual UInt32		GetMovementFlags();
-		//	Running		0x200
-		//	Sneaking	0x400
-
-		// bit 11 = swimming 
-		// bit 9 = sneaking
-		// bit 8 = run
-		// bit 7 = walk
-		// bit 0 = keep moving (Q)
 	virtual void		Unk_09(void);
 	virtual void		Unk_0A(void);
 	virtual void		Unk_0B(void);
 	virtual void		Unk_0C(void);
 	virtual void		Unk_0D(void);
 	virtual void		Unk_0E(void);
+
+	enum MovementFlags
+	{
+		kMoveFlag_Forward =		1,
+		kMoveFlag_Backward =	2,
+		kMoveFlag_Left =		4,
+		kMoveFlag_Right =		8,
+		kMoveFlag_TurnLeft =	0x10,
+		kMoveFlag_TurnRight =	0x20,
+		kMoveFlag_IsKeyboard =	0x40,	// (returns that the movement is for non-controller)
+		kMoveFlag_Walking =		0x100,
+		kMoveFlag_Running =		0x200,
+		kMoveFlag_Sneaking =	0x400,
+		kMoveFlag_Swimming =	0x800,
+		kMoveFlag_Jump =		0x1000,
+		kMoveFlag_Flying =		0x2000,
+		kMoveFlag_Fall =		0x4000,
+		kMoveFlag_Slide =		0x8000
+	};
 
 	UInt32						unk04[6];			// 04
 	PathingRequest				*pathingRequest;	// 1C
@@ -362,7 +371,10 @@ public:
 	UInt32						unk40;				// 40
 	PathingLocation				pathingLocation;	// 44
 	UInt32						unk6C;				// 6C
-	UInt8						unk70[4];			// 70
+	UInt8						byte70;				// 70
+	UInt8						byte71;				// 71
+	UInt8						byte72;				// 72
+	UInt8						byte73;				// 73
 	UInt32						unk74;				// 74
 	UInt32						unk78;				// 78
 	UInt32						unk7C;				// 7C
@@ -378,8 +390,8 @@ public:
 	float			flt8C;				// 8C
 	float			flt90;				// 90
 	UInt32			pcMovementFlags;	// 94
-	UInt32			unk98;				// 98
-	UInt32			unk9C;				// 9C
+	UInt32			turnAnimFlags;		// 98
+	float			turnAnimMinTime;	// 9C
 };
 
 typedef tList<BGSEntryPointPerkEntry> PerkEntryPointList;
@@ -445,7 +457,7 @@ public:
 	/*3C4*/virtual void		ResetArmorDRDT();
 	/*3C8*/virtual bool		DamageWeaponHealth(ContChangesEntry *weapomInfo, float damage, int unused);
 	/*3CC*/virtual void		Unk_F3(void);
-	/*3D0*/virtual void		Unk_F4(void);
+	/*3D0*/virtual void		DoActivate(TESObjectREFR *activatedRef, UInt32 count, bool arg3);
 	/*3D4*/virtual void		Unk_F5(void);
 	/*3D8*/virtual void		Unk_F6(void);
 	/*3DC*/virtual void		Unk_F7(void);
@@ -999,6 +1011,8 @@ public:
 		return ThisCall<bool>(0x950110, this, toggleON);
 	}
 	char GetDetectionState();
+
+	void ToggleSneak(bool toggle);
 };
 static_assert(sizeof(PlayerCharacter) == 0xE50);
 

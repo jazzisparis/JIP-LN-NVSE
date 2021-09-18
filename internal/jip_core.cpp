@@ -504,12 +504,6 @@ float GetDaysPassed(int bgnYear, int bgnMonth, int bgnDay)
 	return (float)totalDays + (g_gameHour->data / 24.0F);
 }
 
-void PlayGameSound(const char *soundEDID)
-{
-	Sound sound(soundEDID, 0x121);
-	sound.Play();
-}
-
 UnorderedMap<UInt32, ScriptVariablesMap> s_scriptVariablesBuffer;
 UnorderedMap<UInt32, VariableNames> s_addedVariables;
 
@@ -673,6 +667,7 @@ ExtraDataList* __fastcall SplitFromStack(ContChangesEntry *entry, ExtraDataList 
 	ExtraCount *xCount = GetExtraType(xDataIn, Count);
 	if (!xCount) return xDataIn;
 	ExtraDataList *xDataOut = xDataIn->CreateCopy();
+	xDataOut->RemoveByType(kExtraData_Worn);
 	xDataOut->RemoveByType(kExtraData_Count);
 	xDataOut->RemoveByType(kExtraData_Hotkey);
 	if (--xCount->count < 2)

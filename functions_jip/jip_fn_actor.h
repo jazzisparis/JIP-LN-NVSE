@@ -133,6 +133,7 @@ DEFINE_COMMAND_PLUGIN(SetNoGunWobble, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetHitNode, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitExtendedFlag, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(RemoveAllPerks, 1, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetActorMovementFlags, 1, 0, NULL);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -1195,8 +1196,8 @@ bool Cmd_SetSpeedMult_Execute(COMMAND_ARGS)
 	{
 		if (speedMult) ((Actor*)thisObj)->SetActorValueInt(0x15, speedMult);
 		BaseProcess *baseProc = ((Actor*)thisObj)->baseProcess;
-		if (baseProc && baseProc->unk2C)
-			baseProc->unk2C->flags &= ~0x3000;
+		if (baseProc && baseProc->cachedValues)
+			baseProc->cachedValues->flags &= ~0x3000;
 	}
 	return true;
 }
@@ -2472,5 +2473,18 @@ bool Cmd_RemoveAllPerks_Execute(COMMAND_ARGS)
 			}
 		}
 	}
+	return true;
+}
+
+bool Cmd_GetActorMovementFlags_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	if IS_ACTOR(thisObj)
+	{
+		ActorMover *actorMover = ((Actor*)thisObj)->actorMover;
+		if (actorMover)
+			*result = (int)actorMover->GetMovementFlags();
+	}
+	DoConsolePrint(result);
 	return true;
 }

@@ -223,7 +223,7 @@ public:
 	/*118*/virtual bool		Unk_46(void);
 	/*11C*/virtual bool		Unk_47(void);
 	/*120*/virtual bool		Unk_48(UInt32 formType);	// returns if the same FormType is passed in
-	/*124*/virtual bool		Unk_49(void * arg0, void * arg1, void * arg2, void * arg3, void * arg4);	// looks to be func33 in Oblivion
+	/*124*/virtual bool		ActivateRef(TESObjectREFR *activatedRef, TESObjectREFR *activatingRef, UInt8 arg3, TESForm *form, UInt32 count);	// looks to be func33 in Oblivion
 	/*128*/virtual void		SetRefID(UInt32 refID, bool generateID);
 	/*12C*/virtual const char	*GetName(void);
 	/*130*/virtual const char	*GetEditorID(void);
@@ -299,27 +299,6 @@ public:
 	}
 };
 static_assert(sizeof(TESForm) == 0x18);
-
-// 0C
-struct Sound
-{
-	UInt32		unk00;		// 00
-	UInt8		byte04;		// 04
-	UInt8		pad05[3];	// 05
-	UInt32		unk08;		// 08
-
-	Sound() : unk00(0xFFFFFFFF), byte04(0), unk08(0) {}
-
-	Sound(const char *soundEDID, UInt32 flags)
-	{
-		ThisCall(0xAD7550, *(BSWin32Audio**)0x11F6D98, this, soundEDID, flags);
-	}
-
-	void Play()
-	{
-		ThisCall(0xAD8830, this, 0);
-	}
-};
 
 struct Condition
 {

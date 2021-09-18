@@ -1282,8 +1282,8 @@ bool Actor::IsWeaponOut()
 
 bool Actor::GetIsGhost()
 {
-	if (baseProcess && baseProcess->unk2C)
-		return (baseProcess->unk2C->flags & 0x10000000) ? true : false;
+	if (baseProcess && baseProcess->cachedValues)
+		return (baseProcess->cachedValues->flags & 0x10000000) != 0;
 	return extraDataList.HasType(kExtraData_Ghost);
 }
 
@@ -1639,7 +1639,7 @@ __declspec(naked) float Actor::AdjustPushForce(float baseForce)
 
 __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR *originRef, bool adjustForce)
 {
-	static const float kFltFive = 5.0F, kPushTime = 1.0F / 96.0F;
+	static const float kFlt5div7 = 5.0F / 6.9991255F, kPushTime = 1.0F / 96.0F;
 	__asm
 	{
 		push	esi
@@ -1693,8 +1693,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 	doneForce:
 		mov		edx, [esp+8]
 		movd	xmm2, edx
-		mulss	xmm2, kFltFive
-		mulss	xmm2, ds:[0x1267BCC]
+		mulss	xmm2, kFlt5div7
 		and		edx, 0x7FFFFFFF
 		movd	xmm3, edx
 		mulss	xmm3, kPushTime
@@ -1927,6 +1926,31 @@ char PlayerCharacter::GetDetectionState()
 	if (ProcessManager::Get()->GetTotalDetectionValue(this) <= 0)
 		return 0;						// HIDDEN
 	return 2;							// DETECTED
+}
+
+void PlayerCharacter::ToggleSneak(bool toggle)
+{
+	HighProcess *hiProcess = (HighProcess*)baseProcess;
+	if (!hiProcess || hiProcess->processLevel || !actorMover)
+		return;
+	PlayerMover *pcMover = (PlayerMover*)actorMover;
+	UInt32 movementFlags = pcMover->pcMovementFlags;
+	bool isSneaking = (movementFlags & 0x400) != 0;
+	if ((isSneaking == toggle) || lifeState || sitSleepState || (pcControlFlags & 0x40) ||
+		hiProcess->knockedState || ((bool*)0x94423D)[hiProcess->currentAction] || GetIsParalyzed())
+		return;
+	//Sound::PlayEDID(toggle ? (const char*)0x108B050 : (const char*)0x108B064, 0x40102, this);
+	if (toggle) movementFlags |= 0x400;
+	else movementFlags &= ~0x400;
+	pcMover->SetMovementFlags(movementFlags);
+	ThisCall(0x93AB30, this, 0xA + isSneaking);
+	if (!isUsingScope)
+	{
+		ThisCall(0x8BB650, this, 0, 0, 0);
+		ThisCall(0x894CC0, this, 0);
+	}
+	if (hiProcess->cachedValues)
+		hiProcess->cachedValues->flags &= ~0x3000;
 }
 
 void Projectile::GetData(UInt32 dataType, double *result)

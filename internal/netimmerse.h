@@ -94,14 +94,8 @@ class TempNiRefObject
 	NiRefObject		*object;
 
 public:
-	TempNiRefObject(NiRefObject *_object) : object(nullptr)
-	{
-		NiReleaseAddRef(&object, _object);
-	}
-	~TempNiRefObject()
-	{
-		NiReleaseAddRef(&object, nullptr);
-	}
+	TempNiRefObject(NiRefObject *_object) : object(_object) {if (object) InterlockedIncrement(&object->m_uiRefCount);}
+	~TempNiRefObject() {if (object) NiReleaseObject(object);}
 };
 
 struct NiObjectCopyInfo
@@ -428,7 +422,7 @@ public:
 	void										*ptr44;			// 44
 	UInt32										unk48;			// 48
 	UInt32										unk4C;			// 4C
-	NiTStringPointerMap<NiControllerSequence*>	seqStrMap;		// 50
+	NiTStringPointerMap<NiControllerSequence*>	seqStrMap;		// 50	Case-sensitive!
 	NiTArray<void*>								*arr64;			// 64
 	UInt32										unk68;			// 68
 	UInt32										unk6C;			// 6C
@@ -1041,20 +1035,20 @@ public:
 	/*094*/virtual void		Unk_25(UInt32 arg1);
 	/*098*/virtual void		Unk_26(UInt32 arg1);
 	/*09C*/virtual NiAVObject	*GetObjectByName(NiString *objName);
-	/*0A0*/virtual void		Unk_28(UInt32 arg1, UInt32 arg2, UInt32 arg3);
-	/*0A4*/virtual void		Unk_29(UpdateParams *updParams, UInt32 arg2);
-	/*0A8*/virtual void		Unk_2A(UInt32 arg1, UInt32 arg2);
-	/*0AC*/virtual void		Unk_2B(UInt32 arg1, UInt32 arg2);
+	/*0A0*/virtual void		SetSelectiveUpdateFlags(UInt8 *bSelectiveUpdate, UInt32 bSelectiveUpdateTransform, UInt8 *bRigid);
+	/*0A4*/virtual void		UpdateDownwardPass(UpdateParams *updParams, UInt32 flags);
+	/*0A8*/virtual void		UpdateSelectedDownwardPass(UpdateParams *updParams, UInt32 flags);
+	/*0AC*/virtual void		UpdateRigidDownwardPass(UpdateInfo *updInfo, UInt32 flags);
 	/*0B0*/virtual void		Unk_2C(UInt32 arg1);
 	/*0B4*/virtual void		Unk_2D(UInt32 arg1);
 	/*0B8*/virtual void		UpdateTransform(UpdateInfo *updInfo);
-	/*0BC*/virtual void		Unk_2F(void);
+	/*0BC*/virtual void		UpdateWorldBound();
 	/*0C0*/virtual void		UpdateBounds(UpdateInfo *updInfo);
-	/*0C4*/virtual void		Unk_31(UInt32 arg1, UInt32 arg2);
-	/*0C8*/virtual void		Unk_32(UInt32 arg1);
+	/*0C4*/virtual void		PreAttachUpdate(NiNode *parent, UpdateInfo *updInfo);
+	/*0C8*/virtual void		Unk_32(NiNode *parent);
 	/*0CC*/virtual void		Unk_33(UInt32 arg1);
-	/*0D0*/virtual void		Unk_34(void);
-	/*0D4*/virtual void		Unk_35(UInt32 arg1);
+	/*0D0*/virtual void		PostAttachUpdate();
+	/*0D4*/virtual void		UpdateFadeAmount(void *arg1);
 	/*0D8*/virtual void		Unk_36(UInt32 arg1);
 
 	enum NiFlags
@@ -1107,7 +1101,7 @@ public:
 
 	void Update();
 	UInt32 GetIndex();
-	bool __fastcall ReplaceObject(NiAVObject *object);
+	bool ReplaceObject(NiAVObject *object);
 	NiProperty* __fastcall GetProperty(UInt32 propID);
 
 	void DumpProperties();
@@ -1121,12 +1115,12 @@ public:
 	/*0DC*/virtual void		AddObject(NiAVObject *object, bool arg2);
 	/*0E0*/virtual void		AddObjectAt(UInt32 index, NiAVObject *object);
 	/*0E4*/virtual void		RemoveObject2(NiAVObject *toRemove, NiAVObject **arg2);
-	/*0E8*/virtual void		RemoveObject(NiAVObject *toRemove);	//	Calls RemoveObject2 with arg2 as ptr to NULL
+	/*0E8*/virtual void		RemoveObject(NiAVObject *toRemove);		//	Calls RemoveObject2 with arg2 as ptr to NULL
 	/*0EC*/virtual void		RemoveNthObject2(UInt32 index, NiAVObject **arg2);
 	/*0F0*/virtual void		RemoveNthObject(UInt32 index);			//	Calls RemoveNthObject2 with arg2 as ptr to NULL
-	/*0F4*/virtual void		Unk_3D(UInt32 arg1, UInt32 arg2, UInt32 arg3);
-	/*0F8*/virtual void		Unk_3E(UInt32 arg1, UInt32 arg2);
-	/*0FC*/virtual void		Unk_3F(void);
+	/*0F4*/virtual void		ReplaceNthObject2(UInt32 index, NiAVObject *replaceWith, NiAVObject **arg3);
+	/*0F8*/virtual void		ReplaceNthObject(UInt32 index, NiAVObject *replaceWith);	//	Calls ReplaceNthObject2 with arg3 as ptr to NULL
+	/*0FC*/virtual void		UpdateUpwardPass();
 
 	NiTArray<NiAVObject*>	m_children;		// 9C
 
@@ -1209,7 +1203,7 @@ public:
 class BSFogProperty : public NiProperty
 {
 public:
-	UInt16				unk18;		// 18
+	UInt16				flags;		// 18
 	UInt16				unk1A;		// 1A
 	float				flt1C;		// 1C
 	NiColor				color;		// 20

@@ -27,8 +27,12 @@ public:
 
 		void Clear()
 		{
-			refr = NULL;
-			if (node) NiReleaseAddRef(&node, nullptr);
+			refr = nullptr;
+			if (node)
+			{
+				NiReleaseObject(node);
+				node = nullptr;
+			}
 		}
 
 		void Replace(HighlightedRef *hRef)

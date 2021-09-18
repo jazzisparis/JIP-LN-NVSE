@@ -1,5 +1,42 @@
 #include "internal/havok.h"
 
+__declspec(naked) void hkMatrix3x4::operator=(const NiMatrix33 &inMatrix)
+{
+	__asm
+	{
+		mov		edx, [esp+4]
+		movups	xmm0, [edx]
+		movaps	[ecx], xmm0
+		movups	xmm0, [edx+0xC]
+		movaps	[ecx+0x10], xmm0
+		movups	xmm0, [edx+0x18]
+		movaps	[ecx+0x20], xmm0
+		xor		edx, edx
+		mov		[ecx+0xC], edx
+		mov		[ecx+0x1C], edx
+		mov		[ecx+0x2C], edx
+		retn	4
+	}
+}
+
+__declspec(naked) hkVector4 *hkMatrix3x4::GetColumn(hkVector4 *outColumn, UInt32 whichColumn)
+{
+	__asm
+	{
+		mov		eax, [esp+8]
+		lea		edx, [ecx+eax*4]
+		mov		eax, [esp+4]
+		movss	xmm0, [edx]
+		movss	[eax], xmm0
+		movss	xmm0, [edx+0x10]
+		movss	[eax+4], xmm0
+		movss	xmm0, [edx+0x20]
+		movss	[eax+8], xmm0
+		mov		dword ptr [eax+0xC], 0
+		retn	8
+	}
+}
+
 bhkWorldM **g_bhkWorldM = (bhkWorldM**)0x11CA0D8;
 
 __declspec(naked) void bhkWorldObject::ApplyForce(NiVector4 *forceVector)

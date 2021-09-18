@@ -68,7 +68,7 @@ struct ProjectileData;
 class BaseProcess
 {
 public:
-	struct Data2C
+	struct CachedValues
 	{
 		enum
 		{
@@ -207,10 +207,10 @@ public:
 	/*168*/virtual void		SetAmmoInfo(ExtraContainerChanges::EntryData *_ammoInfo);
 	/*16C*/virtual void		Unk_5B(void);
 	/*170*/virtual void		HandleQueuedEquipItems(Actor *actor);
-	/*174*/virtual void		Unk_5D(void);	// Called by 5E with count itemExtraList item
-	/*178*/virtual void		QueueEquipItem(Actor *actor, bool doEquip, TESForm *item, UInt32 count, ExtraDataList *xDataList, bool applyEnchantment, bool noUnequip, UInt8 arg8, UInt8 arg9, bool playSound);
-	/*17C*/virtual void		Unk_5F(void);
-	/*180*/virtual void		Unk_60(void);
+	/*174*/virtual bool		IsItemQueued(TESForm *item, ExtraDataList *xDataList, bool doEquip);
+	/*178*/virtual void		QueueEquipItem(Actor *actor, bool doEquip, TESForm *item, UInt32 count, ExtraDataList *xDataList, bool applyEnchantment, bool noUnequip, bool removeEnchantment, UInt8 arg9, bool playSound);
+	/*17C*/virtual void		RemoveItemFromQueue(TESForm *item, ExtraDataList *xDataList);
+	/*180*/virtual void		RemoveAllItemsFromQueue();
 	/*184*/virtual NiNode	*GetProjectileNode();
 	/*188*/virtual void		SetProjectileNode(NiNode *node);
 	/*18C*/virtual void		Unk_63(void);
@@ -614,7 +614,7 @@ public:
 	float			unk20;			// 20	not initialized, only by descendant to -1.0! flt020 gets set to GameHour minus one on package evaluation
 	UInt32			unk24;			// 24	not initialized, only by descendant!
 	UInt32			processLevel;	// 28	not initialized, only by descendant to 3 for Low, 2 for MidlleLow, 1 MiddleHighProcess and 0 for HigProcess
-	Data2C			*unk2C;			// 2C
+	CachedValues	*cachedValues;	// 2C
 };
 
 // B4
@@ -863,6 +863,22 @@ public:
 		kState_GettingUp
 	};
 
+	// 18
+	struct QueueEquipItem
+	{
+		TESForm			*itemForm;			// 00
+		ExtraDataList	*xDataList;			// 04
+		UInt32			count;				// 08
+		bool			doEquip;			// 0C
+		bool			applyEnchantment;	// 0D
+		bool			lockEquip;			// 0E
+		bool			playSound;			// 0F
+		bool			removeEnchantment;	// 10
+		bool			unkArg9;			// 11
+		UInt8			pad12[2];			// 12
+		QueuedFile		*queuedFile;		// 14
+	};
+
 	tList<TESForm>						unk0C8;				// 0C8
 	tList<UInt32>						unk0D0;				// 0D0
 	UInt32								unk0D8[3];			// 0D8
@@ -874,15 +890,18 @@ public:
 	ExtraContainerChanges::EntryData	*weaponInfo;		// 114
 	ExtraContainerChanges::EntryData	*ammoInfo;			// 118
 	QueuedFile							*unk11C;			// 11C
-	UInt8								byt120;				// 120
-	UInt8								byt121;				// 121
-	UInt8								byt122;				// 122
-	UInt8								fil123;				// 123
+	UInt8								byte120;			// 120
+	UInt8								byte121;			// 121
+	UInt8								byte122;			// 122
+	UInt8								byte123;			// 123
 	UInt8								usingOneHandGrenade;// 124
 	UInt8								usingOneHandMine;	// 125
 	UInt8								usingOneHandThrown;	// 126
-	UInt8								byte127;			// 127
-	UInt32								unk128;				// 128 Gets copied over during TESNPC.CopyFromBase
+	UInt8								wearingHeavyArmor;	// 127
+	UInt8								wearingPowerArmorTorso;	// 128
+	UInt8								wearingPowerArmorHelmet;	// 129
+	UInt8								wearingBackpack;	// 12A
+	UInt8								byte12B;			// 12B
 	NiNode								*weaponNode;		// 12C
 	NiNode								*projectileNode;	// 130
 	UInt8								byt134;				// 134
@@ -931,7 +950,8 @@ public:
 	BSBound								*boundingBox;		// 224
 	bool								isAiming;			// 228
 	UInt8								pad229[3];			// 229
-	UInt32								unk22C[2];			// 22C
+	UInt32								unk22C;				// 22C
+	tList<QueueEquipItem>				*queuedEquipList;	// 230
 	float								radsSec234;			// 234
 	float								rads238;			// 238
 	float								waterRadsSec;		// 23C

@@ -40,6 +40,30 @@ public:
 	Iterator Begin() {return Iterator(*this);}
 };
 
+typedef AlignedVector4 hkVector4;
+
+struct hkMatrix3x4
+{
+	hkVector4	row[3];
+
+	void operator=(const NiMatrix33 &inMatrix);
+
+	inline void operator=(const hkVector4 &inQuaternion)
+	{
+		ThisCall(0xCB2D90, this, &inQuaternion);
+	}
+
+	hkVector4 *GetColumn(hkVector4 *outColumn, UInt32 whichColumn);
+};
+static_assert(sizeof(hkMatrix3x4) == 0x30);
+
+struct hkTransform
+{
+	hkMatrix3x4	rotation;		// 00
+	hkVector4	translation;	// 30
+};
+static_assert(sizeof(hkTransform) == 0x40);
+
 class hkStatisticsCollector;
 class hkpSimpleConstraintContactMgr;
 class bhkWorldObject;
@@ -201,8 +225,7 @@ public:
 	hkpEntityListener		entityListener;		// 08
 	hkpPhantomListener		phantomListener;	// 0C
 
-	float					velocity[3];		// 10
-	float					unk1C;				// 1C
+	hkVector4				velocity;			// 10
 	UInt32					unk20[4];			// 20
 	hkpCachingShapePhantom	*shapePhantom;		// 30
 	UInt32					unk34[16];			// 34
@@ -568,7 +591,7 @@ public:
 	UInt32						unk54;					// 54
 	UInt32						unk58;					// 58
 	UInt32						unk5C;					// 5C
-	AlignedVector4				origin;					// 60
+	hkVector4					origin;					// 60
 	bhkEntityListener			**listenerArray;		// 70
 	UInt32						numListeners;			// 74
 	UInt32						unk78;					// 78
@@ -588,9 +611,9 @@ static_assert(sizeof(bhkWorld) == 0xA0);
 class bhkWorldM : public bhkWorld
 {
 public:
-	AlignedVector4		borderSize;		// A0
-	AlignedVector4		worldTotalSize;	// B0
-	AlignedVector4		broadPhaseSize;	// C0
+	hkVector4		borderSize;		// A0
+	hkVector4		worldTotalSize;	// B0
+	hkVector4		broadPhaseSize;	// C0
 };
 static_assert(sizeof(bhkWorldM) == 0xD0);
 
@@ -622,6 +645,19 @@ public:
 	virtual void	ProcessCollision(UInt32 arg);
 	virtual void	Unk_2F(void);
 	virtual void	Unk_30(void);
+
+	enum Flags
+	{
+		kFlag_Active =			1,
+		kFlag_Notify =			4,
+		kFlag_SetLocal =		8,
+		kFlag_DebugDisplay =	0x10,
+		kFlag_UseVelocity =		0x20,
+		kFlag_Reset =			0x40,
+		kFlag_SyncOnUpdate =	0x80,
+		kFlag_AnimTargeted =	0x400,
+		kFlag_DismemberLimb =	0x800
+	};
 
 	UInt16			flags;			// 0C	0x40 is Update? Callbacks array @ 0x11AFE88
 	UInt16			word0E;			// 0E
@@ -1021,6 +1057,20 @@ class bhkListShape : public bhkShapeCollection
 public:
 };
 
+// 40
+struct hkpSurfaceInfo
+{
+	UInt32			supportedState;		// 00
+	UInt32			unk04;				// 04
+	UInt32			unk08;				// 08
+	UInt32			unk0C;				// 0C
+	hkVector4		surfaceNormal;		// 10
+	hkVector4		surfaceVelocity;	// 20
+	float			flt30;				// 30
+	UInt32			unk34[3];			// 34
+};
+static_assert(sizeof(hkpSurfaceInfo) == 0x40);
+
 // 10
 struct hkStepInfo
 {
@@ -1042,18 +1092,14 @@ public:
 	hkpCharacterContext		chrContext;			// 3E0
 	bhkCharacterListener	chrListener;		// 410
 
-	UInt32					unk480[4];			// 480
-	AlignedVector4			vector490;			// 490
-	AlignedVector4			vector4A0;			// 4A0
-	float					flt4B0;				// 4B0
-	UInt32					unk4B4[5];			// 4B4
-	float					unk4C8[2];			// 4C8
-	AlignedVector4			forwardVec;			// 4D0
+	hkpSurfaceInfo			surfaceInfo;		// 480
+	hkVector4				upVec;				// 4C0
+	hkVector4				forwardVec;			// 4D0
 	hkStepInfo				stepInfo;			// 4E0
-	AlignedVector4			velocity;			// 4F0
-	AlignedVector4			throwbackVelocity;	// 500
-	AlignedVector4			vector510;			// 510
-	UInt32					unk520;				// 520
+	hkVector4				velocity;			// 4F0
+	hkVector4				throwbackVelocity;	// 500
+	hkVector4				direction;			// 510
+	UInt32					wantState;			// 520
 	float					throwbackTimer;		// 524
 	float					rotMod;				// 528
 	float					rotModTime;			// 52C
@@ -1073,7 +1119,7 @@ public:
 	float					actorHeight;		// 564	ControllerShape total length (z)
 	float					speedPct;			// 568
 	float					flt56C;				// 56C
-	AlignedVector4			rotCenter;			// 570
+	hkVector4				rotCenter;			// 570
 	float					flt580;				// 580
 	float					flt584;				// 584
 	float					flt588;				// 588
@@ -1097,7 +1143,7 @@ public:
 	UInt8					byte610;			// 610
 	UInt8					pad611[3];			// 611
 	UInt32					unk614[3];			// 614
-	AlignedVector4			vector620;			// 620
+	hkVector4				vector620;			// 620
 	void					*ptr630;			// 630
 	float					flt634;				// 634
 	void					*ptr638;			// 638
@@ -1180,33 +1226,33 @@ public:
 	UInt32					unk34;				// 34
 };
 
-// F0+
+// 140
 class hkpMotion : public hkReferencedObject
 {
 public:
-	virtual void	Unk_03(void);
-	virtual void	SetBodyMass(float mass);
-	virtual void	Unk_05(void);
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
-	virtual void	Unk_08(void);
-	virtual void	Unk_09(void);
-	virtual void	Unk_0A(void);
-	virtual void	Unk_0B(void);
-	virtual void	Unk_0C(void);
-	virtual void	Unk_0D(void);
-	virtual void	Unk_0E(void);
-	virtual void	Unk_0F(void);
-	virtual void	SetLinearVelocity(AlignedVector4 *velocity);
-	virtual void	SetAngularVelocity(AlignedVector4 *velocity);
-	virtual void	Unk_12(void);
-	virtual void	Unk_13(void);
-	virtual void	Unk_14(void);
-	virtual void	Unk_15(void);
-	virtual void	Unk_16(void);
-	virtual void	Unk_17(void);
-	virtual void	Unk_18(void);
-	virtual void	Unk_19(void);
+	virtual void	SetBodyMass(float _bodyMass);
+	virtual void	SetBodyMassInv(float _bodyMassInv);
+	virtual void	GetInertiaLocal(hkMatrix3x4 *outInertia);
+	virtual void	GetInertiaWorld(hkMatrix3x4 *outInertia);
+	virtual void	SetInertiaLocal(hkMatrix3x4 *inInertia);
+	virtual void	SetInertiaInvLocal(hkMatrix3x4 *inInertia);
+	virtual void	GetInertiaInvLocal(hkMatrix3x4 *outInertia);
+	virtual void	GetInertiaInvWorld(hkMatrix3x4 *outInertia);
+	virtual void	SetCenterOfMassInLocal(hkVector4 *centerOfMass);
+	virtual void	SetPosition(hkVector4 *position);
+	virtual void	SetRotation(hkVector4 *rotation);
+	virtual void	SetPositionAndRotation(hkVector4 *position, hkVector4 *rotation);
+	virtual void	SetTransform(hkTransform *transform);
+	virtual void	SetLinearVelocity(hkVector4 *velocity);
+	virtual void	SetAngularVelocity(hkVector4 *velocity);
+	virtual void	GetProjectedPointVelocity(hkVector4 *point, hkVector4 *normal, float *outVel, float *outInvVirtMass);
+	virtual void	ApplyLinearImpulse(hkVector4 *impulse);
+	virtual void	ApplyPointImpulse(hkVector4 *impulse, hkVector4 *point);
+	virtual void	ApplyAngularImpulse(hkVector4 *impulse);
+	virtual void	ApplyPointForce(float deltaTime, hkVector4 *force, hkVector4 *point);
+	virtual void	ApplyForce(float deltaTime, hkVector4 *force);
+	virtual void	ApplyTorque(float deltaTime, hkVector4 *torque);
+	virtual void	GetMotionStateAndVelocitiesAndDeactivationType(hkpMotion *outMotion);
 
 	enum MotionType
 	{
@@ -1218,37 +1264,34 @@ public:
 		kMotionType_Character,
 	};
 
-	UInt8			type;			// 008
-	UInt8			byte009;		// 009
-	UInt16			word00A;		// 00A
-	UInt16			word00C;		// 00C
-	UInt8			pad00E[2];		// 00E
-	AlignedVector4	vector010;		// 010
-	AlignedVector4	vector020;		// 020
-	AlignedVector4	vector030;		// 030
-	AlignedVector4	vector040;		// 040
-	AlignedVector4	vector050;		// 050
-	AlignedVector4	vector060;		// 060
-	AlignedVector4	quaternion070;	// 070
-	AlignedVector4	quaternion080;	// 080
-	AlignedVector4	vector090;		// 090
-	AlignedVector4	vector0A0;		// 0A0
-	float			flt0B0;			// 0B0
-	float			linDamping;		// 0B4
-	float			angDamping;		// 0B8
-	UInt8			byte0BC;		// 0BC
-	UInt8			byte0BD;		// 0BD
-	UInt8			byte0BE;		// 0BE
-	UInt8			byte0BF;		// 0BF
-	float			inertiaX;		// 0C0
-	float			inertiaY;		// 0C4
-	float			inertiaZ;		// 0C8
-	float			bodyMass;		// 0CC
-	AlignedVector4	linVelocity;	// 0D0
-	AlignedVector4	angVelocity;	// 0E0
-	AlignedVector4	vector0F0;		// 0F0
-	AlignedVector4	vector100;		// 100
-	UInt32			unk110[12];		// 110
+	UInt8			type;				// 008
+	UInt8			deactivationType;	// 009
+	UInt16			word00A;			// 00A
+	UInt16			word00C;			// 00C
+	UInt8			pad00E[2];			// 00E
+	hkTransform		currTransform;		// 010
+	hkVector4		vector050;			// 050
+	hkVector4		vector060;			// 060
+	NiQuaternion	quaternion070;		// 070
+	NiQuaternion	quaternion080;		// 080
+	hkVector4		vector090;			// 090
+	hkVector4		vector0A0;			// 0A0
+	float			flt0B0;				// 0B0
+	float			linDamping;			// 0B4
+	float			angDamping;			// 0B8
+	UInt8			byte0BC;			// 0BC
+	UInt8			byte0BD;			// 0BD
+	UInt8			byte0BE;			// 0BE
+	UInt8			byte0BF;			// 0BF
+	float			inertiaX;			// 0C0
+	float			inertiaY;			// 0C4
+	float			inertiaZ;			// 0C8
+	float			bodyMassInv;		// 0CC
+	hkVector4		linVelocity;		// 0D0
+	hkVector4		angVelocity;		// 0E0
+	hkVector4		vector0F0;			// 0F0
+	hkVector4		vector100;			// 100
+	UInt32			unk110[12];			// 110
 
 	__forceinline float GetBodyMass()
 	{
@@ -1260,18 +1303,34 @@ static_assert(sizeof(hkpMotion) == 0x140);
 class hkpSphereMotion : public hkpMotion
 {
 public:
-	virtual void	Unk_1A(void);
 };
 
 class hkpBoxMotion : public hkpMotion
 {
 public:
-	virtual void	Unk_1A(void);
 };
 
 class hkpThinBoxMotion : public hkpBoxMotion
 {
 public:
+};
+
+class hkpKeyframedRigidMotion : public hkpMotion
+{
+public:
+	virtual void	Unk_1A(UInt32 arg1, UInt32 arg2);	// Null sub
+	virtual void	SetStoredMotion(hkpMotion *savedMotion);
+};
+
+class hkpMaxSizeMotion : public hkpKeyframedRigidMotion
+{
+public:
+};
+
+class hkpFixedRigidMotion : public hkpKeyframedRigidMotion
+{
+public:
+	virtual void	GetPositionAndVelocities(hkpMotion *outMotion);
 };
 
 // 30

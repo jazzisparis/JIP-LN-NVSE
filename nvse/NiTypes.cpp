@@ -359,6 +359,11 @@ __declspec(naked) void __fastcall NiMatrix33::Inverse(NiMatrix33 *mat)
 	}
 }
 
+void NiMatrix33::Dump()
+{
+	PrintDebug("%.4f\t%.4f\t%.4f\n%.4f\t%.4f\t%.4f\n%.4f\t%.4f\t%.4f\n", cr[0][0], cr[1][0], cr[2][0], cr[0][1], cr[1][1], cr[2][1], cr[0][2], cr[1][2], cr[2][2]);
+}
+
 void NiVector3::ToQuaternion(NiQuaternion &quaternion)
 {
 	double hlf = (double)z * 0.5;
@@ -412,6 +417,26 @@ __declspec(naked) void NiVector3::MultiplyMatrixVector(NiMatrix33 &mat, NiVector
 		mulss	xmm4, xmm2
 		addss	xmm3, xmm4
 		movss	[ecx+8], xmm3
+		retn	8
+	}
+}
+
+__declspec(naked) void NiVector3::ColumnMultiply(NiMatrix33 *rotMatrix, UInt32 whichColumn)
+{
+	__asm
+	{
+		mov		eax, [esp+4]
+		mov		edx, [esp+8]
+		lea		eax, [eax+edx*4]
+		movss	xmm0, [ecx]
+		mulss	xmm0, [eax]
+		movss	[ecx], xmm0
+		movss	xmm0, [ecx+4]
+		mulss	xmm0, [eax+0xC]
+		movss	[ecx+4], xmm0
+		movss	xmm0, [ecx+8]
+		mulss	xmm0, [eax+0x18]
+		movss	[ecx+8], xmm0
 		retn	8
 	}
 }

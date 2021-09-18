@@ -419,11 +419,28 @@ __declspec(naked) ContChangesEntry* __fastcall ExtraContainerChanges::EntryDataL
 	}
 }
 
-ExtraDataList *ExtraDataList::CreateCopy()
+__declspec(naked) ExtraDataList *ExtraDataList::CreateCopy(bool bCopyAndRemove)
 {
-	ExtraDataList *xDataList = Create();
-	xDataList->CopyFrom(this);
-	return xDataList;
+	__asm
+	{
+		push	esi
+		mov		esi, ecx
+		push	0x20
+		GAME_HEAP_ALLOC
+		pxor	xmm0, xmm0
+		movups	[eax], xmm0
+		movups	[eax+0x10], xmm0
+		mov		dword ptr [eax], kVtbl_ExtraDataList
+		movzx	edx, byte ptr [esp+8]
+		push	edx
+		push	esi
+		mov		esi, eax
+		mov		ecx, eax
+		CALL_EAX(0x412490)
+		mov		eax, esi
+		pop		esi
+		retn	4
+	}
 }
 
 __declspec(naked) double ExtraContainerChanges::Data::GetInventoryWeight()

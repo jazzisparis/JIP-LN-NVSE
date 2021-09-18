@@ -382,7 +382,6 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		push	ebp
 		mov		ebp, esp
 		push	ecx
-		sub		esp, 8
 		mov		ecx, g_dataHandler
 		mov		ecx, [ecx+0x628]
 		mov		ecx, [ecx]
@@ -393,10 +392,9 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		mov		eax, [eax]
 		test	eax, eax
 		jz		done
-		mov		[ebp-8], eax
+		push	eax
 		mov		ecx, [ebp-4]
-		mov		eax, [ecx+4]
-		mov		[ebp-0xC], eax
+		push	dword ptr [ecx+4]
 		mov		ecx, [ecx]
 		mov		edx, g_capsItem
 		call	ExtraContainerChanges::EntryDataList::FindForItem
@@ -409,17 +407,21 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		push	edi
 		mov		esi, [ebp-8]
 		mov		edi, edx
+		ALIGN 16
 	countHead:
+		test	esi, esi
+		jz		addHead
 		mov		ecx, [esi]
+		mov		esi, [esi+4]
 		test	ecx, ecx
-		jz		countNext
+		jz		countHead
 		push	kExtraData_OriginalReference
 		call	BaseExtraList::GetByType
 		test	eax, eax
-		jz		countNext
-		mov		eax, [eax+0xC]
-		cmp		[ebp-0xC], eax
-		jnz		countNext
+		jz		countHead
+		mov		edx, [eax+0xC]
+		cmp		[ebp-0xC], edx
+		jnz		countHead
 		push	kExtraData_Count
 		call	BaseExtraList::GetByType
 		test	eax, eax
@@ -427,21 +429,19 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		mov		ecx, 0x7FFF
 		cmp		edi, ecx
 		cmovl	ecx, edi
-		mov		word ptr [eax+0xC], cx
+		mov		[eax+0xC], cx
 		sub		edi, ecx
-		jmp		addHead
-	countNext:
-		mov		esi, [esi+4]
-		test	esi, esi
-		jnz		countHead
+		ALIGN 16
 	addHead:
 		cmp		edi, 1
 		jle		doPop
+		call	ExtraDataList::Create
+		mov		esi, eax
 		push	dword ptr [ebp-0xC]
 		call	ExtraOriginalReference::Create
 		push	eax
-		call	ExtraDataList::Create
-		mov		esi, eax
+		mov		ecx, esi
+		CALL_EAX(ADDR_AddExtraData)
 		mov		eax, 0x7FFF
 		cmp		edi, eax
 		cmovl	eax, edi
@@ -742,23 +742,106 @@ __declspec(naked) float GetWindSpeedHook()
 	}
 }
 
-__declspec(naked) void RemoveHotkeyFixHook()
+__declspec(naked) void __fastcall ClearExtraHotkeyIfUsed(ExtraDataList *inXDataList)
 {
 	__asm
 	{
-		mov		eax, [ebp+0x20]
-		cmp		eax, g_thePlayer
-		jz		doRemove
-		mov		ecx, [ebp+0x18]
-		CALL_EAX(0x418770)
-		movsx	eax, ax
-		cmp		[ebp+0x14], eax
-		jnz		done
-	doRemove:
-		mov		ecx, [ebp+0x18]
-		CALL_EAX(0x42DEC0)
-	done:
+		push	kExtraData_Hotkey
+		call	BaseExtraList::GetByType
+		test	eax, eax
+		jnz		isBound
 		retn
+		ALIGN 16
+	isBound:
+		push	ebx
+		push	esi
+		push	edi
+		push	1
+		push	eax
+		push	ecx
+		mov		bl, [eax+0xC]
+		mov		ecx, g_thePlayer
+		call	TESObjectREFR::GetContainerChangesList
+		mov		esi, eax
+		ALIGN 16
+	entryIter:
+		test	esi, esi
+		jz		done
+		mov		ecx, [esi]
+		mov		esi, [esi+4]
+		test	ecx, ecx
+		jz		entryIter
+		cmp		dword ptr [ecx], 0
+		jz		entryIter
+		mov		eax, [ecx+8]
+		mov		dl, [eax+4]
+		cmp		dl, kFormType_TESAmmo
+		jz		entryIter
+		cmp		dl, kFormType_TESObjectMISC
+		jz		entryIter
+		cmp		dl, kFormType_AlchemyItem
+		ja		entryIter
+		mov		edi, [ecx]
+		ALIGN 16
+	xdlIter:
+		test	edi, edi
+		jz		entryIter
+		mov		ecx, [edi]
+		mov		edi, [edi+4]
+		test	ecx, ecx
+		jz		xdlIter
+		push	kExtraData_Hotkey
+		call	BaseExtraList::GetByType
+		test	eax, eax
+		jz		xdlIter
+		cmp		[eax+0xC], bl
+		jnz		xdlIter
+		pop		ecx
+		CALL_EAX(0x410020)
+		pop		edi
+		pop		esi
+		pop		ebx
+		retn
+		ALIGN 16
+	done:
+		add		esp, 0xC
+		pop		edi
+		pop		esi
+		pop		ebx
+		retn
+	}
+}
+
+__declspec(naked) void HotkeyFixRemoveItemHook()
+{
+	__asm
+	{
+		cmp		byte ptr [ebp+0x1C], 0
+		jnz		done
+		mov		ecx, [ebp+0x18]
+		test	ecx, ecx
+		jz		done
+		mov		eax, [ebp+0x20]
+		test	eax, eax
+		jz		done
+		cmp		dword ptr [eax+0xC], 0x14
+		jnz		done
+		call	ClearExtraHotkeyIfUsed
+	done:
+		JMP_EAX(0x4C39B0)
+	}
+}
+
+__declspec(naked) void HotkeyFixPlayerActivateHook()
+{
+	__asm
+	{
+		mov		eax, [ecx+0x20]
+		movzx	edx, byte ptr [eax+4]
+		mov		[ebp-0x38], edx
+		add		ecx, 0x44
+		call	ClearExtraHotkeyIfUsed
+		JMP_EAX(0x95401E)
 	}
 }
 
@@ -4082,6 +4165,8 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			SafeWrite32(0x108AED8, (UInt32)RemovePerkPlayerHook);
 			SAFE_WRITE_BUF(0x5E592F, "\x0F\x1F\x84\x00\x00\x00\x00\x00");
 			SafeWrite32(0x64570F, 0x401F0F);
+			SAFE_WRITE_BUF(0x89B455, "\x8B\x02\x8B\x48\x68\x85\xC9\x74\x6E\x8B\x01\xFF\x90\x48\x01\x00\x00\x85\xC0\x74\x62\x8B\x48\x08\x89\x8D\x34\xFD\xFF\xFF\xEB\x57");
+			SAFE_WRITE_BUF(0x89B50B, "\x8B\x43\x08\x8B\x08");
 			return true;
 		}
 		case 19:
@@ -4464,7 +4549,9 @@ void InitGamePatches()
 	WritePushRetRelJump(0x5DBCFD, 0x5DBD23, (UInt32)AttachAshPileHook);
 	WriteRelCall(0x63C4D6, (UInt32)GetWindSpeedHook);
 	WriteRelCall(0x63C52C, (UInt32)GetWindSpeedHook);
-	WritePushRetRelJump(0x4C3998, 0x4C39B0, (UInt32)RemoveHotkeyFixHook);
+	WriteRelJump(0x4C3976, (UInt32)HotkeyFixRemoveItemHook);
+	WriteRelJump(0x95400F, (UInt32)HotkeyFixPlayerActivateHook);
+	SafeWrite8(0x412675, 1);
 	SAFE_WRITE_BUF(0x9B6335, "\xF3\x0F\x10\x45\xF4\x0F\x2F\x41\x14\x0F\x87\x8E\x00\x00\x00\x80\x49\x5B\x80\xF3\x0F\x11\x41\x14\x0F\x1F\x40\x00");
 	WritePushRetRelJump(0x5674D5, 0x567554, (UInt32)SetScaleHook);
 	SafeWrite16(0x567709, 0x15EB);

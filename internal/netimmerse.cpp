@@ -159,9 +159,10 @@ __declspec(naked) UInt32 NiAVObject::GetIndex()
 		movzx	eax, word ptr [eax+0xA6]
 		test	eax, eax
 		jz		done
+		sub		edx, 4
 		ALIGN 16
 	iterHead:
-		cmp		[edx+eax*4-4], ecx
+		cmp		[edx+eax*4], ecx
 		jz		done
 		dec		eax
 		jnz		iterHead
@@ -170,38 +171,35 @@ __declspec(naked) UInt32 NiAVObject::GetIndex()
 	}
 }
 
-__declspec(naked) bool __fastcall NiAVObject::ReplaceObject(NiAVObject *object)
+__declspec(naked) bool NiAVObject::ReplaceObject(NiAVObject *object)
 {
 	__asm
 	{
-		push	esi
-		mov		eax, [ecx+0x18]
-		test	eax, eax
+		mov		edx, [ecx+0x18]
+		test	edx, edx
 		jz		done
-		mov		esi, [eax+0xA0]
-		movzx	eax, word ptr [eax+0xA6]
-		test	eax, eax
-		jz		done
+		mov		eax, [edx+0xA0]
+		movzx	edx, word ptr [edx+0xA6]
 		ALIGN 16
 	iterHead:
-		cmp		[esi], ecx
-		jz		found
-		add		esi, 4
-		dec		eax
+		dec		edx
+		js		done
+		cmp		[eax+edx*4], ecx
 		jnz		iterHead
-	done:
-		pop		esi
-		retn
-	found:
+		lea		eax, [eax+edx*4]
+		mov		edx, [esp+4]
+		push	edx
+		push	eax
 		mov		eax, [ecx+0x18]
 		mov		dword ptr [ecx+0x18], 0
 		mov		[edx+0x18], eax
-		push	edx
-		push	esi
 		call	NiReleaseAddRef
 		mov		al, 1
-		pop		esi
-		retn
+		retn	4
+		ALIGN 16
+	done:
+		xor		al, al
+		retn	4
 	}
 }
 
@@ -426,13 +424,17 @@ __declspec(naked) void NiNode::RemoveCollision()
 {
 	__asm
 	{
-		lea		eax, [ecx+0x1C]
-		cmp		dword ptr [eax], 0
+		mov		eax, [ecx+0x1C]
+		test	eax, eax
 		jz		noColObj
+		xor		edx, edx
+		mov		[ecx+0x1C], edx
+		lock dec dword ptr [eax+4]
+		jg		noColObj
 		push	ecx
-		push	0
-		push	eax
-		call	NiReleaseAddRef
+		mov		ecx, eax
+		mov		eax, [ecx]
+		call	dword ptr [eax+4]
 		pop		ecx
 	noColObj:
 		movzx	eax, word ptr [ecx+0xA6]

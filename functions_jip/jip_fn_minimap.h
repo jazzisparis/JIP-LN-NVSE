@@ -1730,7 +1730,6 @@ bool s_defaultGridSize;
 NiColor *g_directionalLightColor;
 BSFogProperty *g_shadowFogProperty;
 BSParticleSystemManager *g_particleSysMngr;
-TESForm *g_blackPlaneBase;
 
 struct MapMarkerInfo
 {
@@ -1886,7 +1885,6 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	lmCamera->LODAdjust = 0.001F;
 	g_shadowSceneNode->AddObject(lmCamera, 1);
 
-	TESForm *markerBase = *(TESForm**)0x11CA224;
 	auto worldIter = g_dataHandler->worldSpaceList.Head();
 	TESWorldSpace *worldSpc, *rootWorld, *lastRoot = NULL;
 	TESObjectCELL *rootCell;
@@ -1910,7 +1908,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 		auto refrIter = rootCell->objectList.Head();
 		do
 		{
-			if (!(markerRef = refrIter->data) || (markerRef->baseForm != markerBase))
+			if (!(markerRef = refrIter->data) || (markerRef->baseForm->refID != 0x10))
 				continue;
 			xMarker = GetExtraType(&markerRef->extraDataList, MapMarker);
 			if (!xMarker || !xMarker->data)
@@ -1928,7 +1926,6 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	g_directionalLightColor = &g_TES->directionalLight->ambientColor;
 	g_shadowFogProperty = *(BSFogProperty**)0x11DEB00;
 	g_particleSysMngr = *(BSParticleSystemManager**)0x11DED58;
-	g_blackPlaneBase = LookupFormByRefID(0x15A1F2);
 	SafeWrite16(0x452736, 0x7705);
 	SAFE_WRITE_BUF(0x87A12A, "\x31\xD2\x66\x89\x50\x26\x89\x50\x28\x90");
 	SafeWrite8(0x555C20, 0xC3);
@@ -1944,8 +1941,8 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 
 const __m128 kVertexAlphaMults = {0.25, 0.5, 0.75, 1};
 alignas(16) const float
-kDirectionalLightValues[] = {1.0F, 1.0F, 1.0F, 0, 0, 0, 0, 0, 0, 0, -1.570796F, 0, 0},
-kFogPropertyValues[] = {31 / 255.0F, 47 / 255.0F, 63 / 255.0F, 500000.0F, 500000.0F};
+kDirectionalLightValues[] = {1.0F, 1.0F, 239 / 255.0F, 0, 0, 0, 0, 0, 0, 0},
+kFogPropertyValues[] = {31 / 255.0F, 47 / 255.0F, 63 / 255.0F, 0};
 const UInt8 kSelectImgUpdate[][9] =
 {
 	{8, 2, 0, 4, 1, 0, 0, 0, 0},
@@ -2323,7 +2320,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					GameGlobals::SceneLightsLock()->Leave();
 					memcpy(g_directionalLightColor, kDirectionalLightValues, sizeof(kDirectionalLightValues));
 					memcpy(&g_shadowFogProperty->color, kFogPropertyValues, sizeof(kFogPropertyValues));
-					g_shadowFogProperty->power = 1;
+					g_shadowFogProperty->power = 1000.0F;
 					*(UInt8*)0x11FF104 = 1;
 					g_particleSysMngr->m_flags |= 1;
 					for (auto hdnIter = s_hiddenNodes.Begin(); hdnIter; ++hdnIter)
@@ -2419,7 +2416,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				auto refsIter = parentCell->objectList.Head();
 				do
 				{
-					if ((objectRef = refsIter->data) && (objectRef->baseForm == g_blackPlaneBase) && !(objectRef->flags & 0x800) && (hideNode = objectRef->GetNiNode()))
+					if ((objectRef = refsIter->data) && (objectRef->baseForm->refID == 0x15A1F2) && !(objectRef->flags & 0x800) && (hideNode = objectRef->GetNiNode()))
 						s_hiddenNodes.Append(hideNode);
 				}
 				while (refsIter = refsIter->next);

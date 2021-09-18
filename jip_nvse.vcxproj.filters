@@ -80,6 +80,9 @@
     <ClCompile Include="internal\xinput.cpp">
       <Filter>internal</Filter>
     </ClCompile>
+    <ClCompile Include="nvse\GameSound.cpp">
+      <Filter>nvse</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="internal\hooks.h">

@@ -334,8 +334,6 @@ bool LeveledListHasFormDeep(TESLeveledList *pLvlList, TESForm *form, TempFormLis
 
 float GetDaysPassed(int bgnYear = 2281, int bgnMonth = 9, int bgnDay = 13);
 
-void PlayGameSound(const char *soundEDID);
-
 struct ScriptVariableEntry
 {
 	ScriptVar	*value;

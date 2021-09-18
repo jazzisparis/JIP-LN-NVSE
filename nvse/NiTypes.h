@@ -32,6 +32,7 @@ struct NiMatrix33
 	NiMatrix33 *MultiplyMatrices(NiMatrix33 *matA, NiMatrix33 *matB);
 	void __fastcall Rotate(NiVector3 *rot);
 	void __fastcall Inverse(NiMatrix33 *mat = NULL);
+	void Dump();
 	
 	inline void operator=(const NiMatrix33 &rhs)
 	{
@@ -40,6 +41,7 @@ struct NiMatrix33
 		cr[2][2] = rhs.cr[2][2];
 	}
 };
+static const NiMatrix33 kIdentityMatrix = {1.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F};
 
 struct NiQuaternion;
 
@@ -77,6 +79,7 @@ struct NiVector3
 
 	void ToQuaternion(NiQuaternion &quaternion);
 	void MultiplyMatrixVector(NiMatrix33 &mat, NiVector3 &vec);
+	void ColumnMultiply(NiMatrix33 *rotMatrix, UInt32 whichColumn);
 	void Normalize();
 	bool RayCastCoords(NiVector3 *posVector, NiMatrix33 *rotMatrix, float maxRange, UInt32 axis = 0, UInt16 filter = 6);
 };
@@ -209,16 +212,9 @@ struct NiTArray
 	UInt16		numObjs;		// 0C - init'd to 0
 	UInt16		growSize;		// 0E - init'd to size of preallocation
 
-	T_Data operator[](UInt32 idx)
-	{
-		if (idx < firstFreeEntry)
-			return data[idx];
-		return NULL;
-	}
+	T_Data operator[](UInt32 idx) {return data[idx];}
 
-	T_Data Get(UInt32 idx) {return data[idx];}
-
-	UInt16 Length() {return firstFreeEntry;}
+	UInt16 Length() const {return firstFreeEntry;}
 
 	__forceinline void AddAtIndex(UInt32 index, T_Data *item)
 	{
@@ -269,15 +265,9 @@ public:
 	UInt32	numObjs;		// 10 - init'd to 0
 	UInt32	growSize;		// 14 - init'd to size of preallocation
 
-	T_Data operator[](UInt32 idx) {
-		if (idx < firstFreeEntry)
-			return data[idx];
-		return NULL;
-	}
+	T_Data operator[](UInt32 idx) {return data[idx];}
 
-	T_Data Get(UInt32 idx) { return data[idx]; }
-
-	UInt32 Length(void) { return firstFreeEntry; }
+	UInt32 Length() const {return firstFreeEntry;}
 
 	class Iterator
 	{
@@ -367,7 +357,7 @@ public:
 		void FindNonEmpty()
 		{
 			for (Entry **end = &table->m_buckets[table->m_numBuckets]; bucket != end; bucket++)
-				if (entry = *bucket) return;
+				if (entry = *bucket) break;
 		}
 
 	public:
@@ -465,7 +455,7 @@ public:
 		void FindNonEmpty()
 		{
 			for (Entry **end = &table->buckets[table->numBuckets]; bucket != end; bucket++)
-				if (entry = *bucket) return;
+				if (entry = *bucket) break;
 		}
 
 	public:

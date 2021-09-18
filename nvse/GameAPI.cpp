@@ -89,3 +89,57 @@ ScriptVar *ScriptEventList::GetVariable(UInt32 id)
 	}
 	return NULL;
 }
+
+ScriptEventList *ScriptEventList::CreateCopy()
+{
+	ScriptEventList *pEventList = (ScriptEventList*)GameHeapAlloc(sizeof(ScriptEventList));
+	pEventList->m_script = m_script;
+	pEventList->unk04 = unk04;
+	pEventList->m_eventList = nullptr;
+	pEventList->m_vars = nullptr;
+	pEventList->m_effScrFlags = nullptr;
+	if (m_eventList)
+	{
+		ListNode<Event> *eventList = (ListNode<Event>*)GameHeapAlloc(sizeof(EventList));
+		eventList->data = nullptr;
+		eventList->next = nullptr;
+		pEventList->m_eventList = (EventList*)eventList;
+		auto evtIter = m_eventList->Head();
+		Event *pEvent;
+		do
+		{
+			if (!evtIter->data) continue;
+			pEvent = (Event*)GameHeapAlloc(sizeof(Event));
+			*pEvent = *evtIter->data;
+			if (eventList->data)
+				eventList = eventList->Append(pEvent);
+			else eventList->data = pEvent;
+		}
+		while (evtIter = evtIter->next);
+	}
+	if (m_vars)
+	{
+		ListNode<ScriptVar> *pVars = (ListNode<ScriptVar>*)GameHeapAlloc(sizeof(VarList));
+		pVars->data = nullptr;
+		pVars->next = nullptr;
+		pEventList->m_vars = (VarList*)pVars;
+		auto varIter = m_vars->Head();
+		ScriptVar *pVar;
+		do
+		{
+			if (!varIter->data) continue;
+			pVar = (ScriptVar*)GameHeapAlloc(sizeof(ScriptVar));
+			*pVar = *varIter->data;
+			if (pVars->data)
+				pVars = pVars->Append(pVar);
+			else pVars->data = pVar;
+		}
+		while (varIter = varIter->next);
+	}
+	if (m_effScrFlags)
+	{
+		pEventList->m_effScrFlags = (EffectScriptFlags*)GameHeapAlloc(sizeof(EffectScriptFlags));
+		*pEventList->m_effScrFlags = *m_effScrFlags;
+	}
+	return pEventList;
+}

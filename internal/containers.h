@@ -1444,7 +1444,7 @@ public:
 		void FindNonEmpty()
 		{
 			for (Bucket *pEnd = table->End(); bucket != pEnd; bucket++)
-				if (entry = bucket->entries) return;
+				if (entry = bucket->entries) break;
 		}
 
 	public:
@@ -1746,7 +1746,7 @@ public:
 		void FindNonEmpty()
 		{
 			for (Bucket *pEnd = table->End(); bucket != pEnd; bucket++)
-				if (entry = bucket->entries) return;
+				if (entry = bucket->entries) break;
 		}
 
 	public:

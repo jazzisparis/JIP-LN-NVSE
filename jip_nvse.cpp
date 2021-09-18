@@ -93,7 +93,7 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 	if (version < 0x6020030)
 	{
 		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.23 minimum.", s_nvseVersion);
-		MessageBox(nullptr, "ERROR!\n\nxNVSE version is outdated.\n\nThis plugin requires v6.23 minimum.", "JIP LN NVSE Plugin", MB_OK | MB_ICONWARNING | MB_TOPMOST);
+		MessageBox(nullptr, "ERROR!\n\nxNVSE version is outdated.\n\nThis plugin requires v6.2.3 minimum.", "JIP LN NVSE Plugin", MB_OK | MB_ICONWARNING | MB_TOPMOST);
 		return false;
 	}
 	PrintLog("NVSE version:\t%.2f\nJIP LN version:\t%.2f\n", s_nvseVersion, JIP_LN_VERSION);
@@ -1336,6 +1336,10 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2904*/REG_CMD(PlayAnimSequence);
 	//	v56.26
 	/*2905*/REG_CMD(RemoveAllPerks);
+	//	v56.36
+	/*2906*/REG_CMD(GetPointRayCastPos);
+	/*2907*/REG_CMD(TogglePlayerSneaking);
+	/*2908*/REG_CMD(GetActorMovementFlags);
 
 	//===========================================================
 

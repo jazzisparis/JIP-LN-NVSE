@@ -73,6 +73,8 @@ DEFINE_COMMAND_PLUGIN(ClearDeadActors, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetCameraMovement, 0, 2, kParams_TwoScriptVars);
 DEFINE_COMMAND_PLUGIN(GetReticleNode, 0, 2, kParams_OneOptionalFloat_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetInternalMarker, 0, 2, kParams_OneForm_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetPointRayCastPos, 0, 9, kParams_FiveFloats_ThreeScriptVars_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(TogglePlayerSneaking, 0, 1, kParams_OneInt);
 
 bool Cmd_DisableNavMeshAlt_Execute(COMMAND_ARGS)
 {
@@ -1220,8 +1222,7 @@ bool Cmd_GetReticleNode_Execute(COMMAND_ARGS)
 	UInt32 filter = 6;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &filter))
 	{
-		filter &= 0x3F;
-		NiAVObject *rtclObject = GetRayCastObject(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, maxRange, 0, filter);
+		NiAVObject *rtclObject = GetRayCastObject(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, maxRange, 0, filter & 0x3F);
 		if (rtclObject) nodeName = rtclObject->GetName();
 	}
 	AssignString(PASS_COMMAND_ARGS, nodeName);
@@ -1243,5 +1244,38 @@ bool Cmd_SetInternalMarker_Execute(COMMAND_ARGS)
 			s_internalMarkerIDs.Insert(form->refID);
 		else s_internalMarkerIDs.Erase(form->refID);
 	}
+	return true;
+}
+
+bool Cmd_GetPointRayCastPos_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	NiVector3 pos, rot;
+	ScriptVar *outX, *outY, *outZ;
+	UInt32 filter = 6;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pos.x, &pos.y, &pos.z, &rot.x, &rot.z, &outX, &outY, &outZ, &filter))
+	{
+		rot.x *= kFltPId180;
+		rot.y = 0;
+		rot.z *= kFltPId180;
+		NiMatrix33 rotMat;
+		rotMat = kIdentityMatrix;
+		rotMat.Rotate(&rot);
+		if (rot.RayCastCoords(&pos, &rotMat, 100000.0F, 4, filter & 0x3F))
+		{
+			outX->data.num = rot.x;
+			outY->data.num = rot.y;
+			outZ->data.num = rot.z;
+			*result = 1;
+		}
+	}
+	return true;
+}
+
+bool Cmd_TogglePlayerSneaking_Execute(COMMAND_ARGS)
+{
+	UInt32 toggle;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &toggle))
+		g_thePlayer->ToggleSneak(toggle != 0);
 	return true;
 }

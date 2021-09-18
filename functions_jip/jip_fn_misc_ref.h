@@ -949,35 +949,20 @@ bool Cmd_MoveToContainer_Execute(COMMAND_ARGS)
 	UInt32 clrOwner = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &target, &clrOwner) && kInventoryType[thisObj->baseForm->typeID] && target->GetContainer())
 	{
-		SInt32 quantity = 1;
-		ExtraDataList *xDataList = NULL;
-		if (thisObj->extraDataList.m_data)
+		if (thisObj == g_HUDMainMenu->crosshairRef)
+			CdeclCall(0x775A00, 0, 0, 0);
+		ExtraCount *xCount = GetExtraType(&thisObj->extraDataList, Count);
+		SInt32 quantity = xCount ? xCount->count : 1;
+		if (clrOwner) thisObj->extraDataList.RemoveByType(kExtraData_Ownership);
+		if (target->refID == 0x14)
+			ThisCall(0x953FF0, target, thisObj, quantity, 0);
+		else
 		{
-			ExtraCount *xCount = GetExtraType(&thisObj->extraDataList, Count);
-			if (xCount) quantity = xCount->count;
-			ExtraItemDropper *xDropper = GetExtraType(&thisObj->extraDataList, ItemDropper);
-			if (xDropper)
-			{
-				TESObjectREFR *dropperRef = xDropper->dropper;
-				thisObj->extraDataList.RemoveExtra(xDropper, true);
-				if (dropperRef)
-				{
-					ExtraDroppedItemList *xDroppedList = GetExtraType(&dropperRef->extraDataList, DroppedItemList);
-					if (xDroppedList && xDroppedList->itemRefs.Remove(thisObj) && xDroppedList->itemRefs.Empty())
-						dropperRef->extraDataList.RemoveExtra(xDroppedList, true);
-				}
-			}
-			if (clrOwner) thisObj->extraDataList.RemoveByType(kExtraData_Ownership);
-			if (thisObj->extraDataList.m_data)
-			{
-				xDataList = thisObj->extraDataList.CreateCopy();
-				thisObj->extraDataList.RemoveAll(true);
-			}
+			ThisCall(0x572230, thisObj);
+			ThisCall(0x574B30, target, thisObj, quantity, 0, 0);
+			if (!(thisObj->flags & 1) && !ThisCall<ModInfo*>(0x484E60, thisObj, 0xFFFFFFFF))
+				thisObj->Destroy(true);
 		}
-		target->AddItem(thisObj->baseForm, xDataList, quantity);
-		if (thisObj->modIndex == 0xFF)
-			thisObj->DeleteReference();
-		else thisObj->Disable();
 	}
 	return true;
 }
@@ -1245,8 +1230,7 @@ bool Cmd_GetRayCastPos_Execute(COMMAND_ARGS)
 		{
 			NiVector3 coords, posVector = objNode->m_worldTranslate;
 			posVector.z += posZmod;
-			filter &= 0x3F;
-			if (coords.RayCastCoords(&posVector, &objNode->m_worldRotate, 50000.0F, 4, filter))
+			if (coords.RayCastCoords(&posVector, &objNode->m_worldRotate, 50000.0F, 4, filter & 0x3F))
 			{
 				outX->data = coords.x;
 				outY->data = coords.y;
@@ -1807,8 +1791,7 @@ bool Cmd_GetRayCastRef_Execute(COMMAND_ARGS)
 		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
 		{
-			filter &= 0x3F;
-			NiAVObject *rcObject = GetRayCastObject(&objNode->m_worldTranslate, &objNode->m_worldRotate, 50000.0F, 4, filter);
+			NiAVObject *rcObject = GetRayCastObject(&objNode->m_worldTranslate, &objNode->m_worldRotate, 50000.0F, 4, filter & 0x3F);
 			if (rcObject)
 			{
 				TESObjectREFR *resRefr = CdeclCall<TESObjectREFR*>(0x56F930, rcObject);
@@ -1829,10 +1812,7 @@ bool Cmd_GetRayCastMaterial_Execute(COMMAND_ARGS)
 	{
 		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
-		{
-			filter &= 0x3F;
-			*result = GetRayCastMaterial(&objNode->m_worldTranslate, &objNode->m_worldRotate, 50000.0F, 4, filter);
-		}
+			*result = GetRayCastMaterial(&objNode->m_worldTranslate, &objNode->m_worldRotate, 50000.0F, 4, filter & 0x3F);
 	}
 	return true;
 }
