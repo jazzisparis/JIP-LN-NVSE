@@ -381,7 +381,7 @@ void NiVector3::ToQuaternion(NiQuaternion &quaternion)
 	quaternion.z = sY * cP * cR - cY * sP * sR;
 }
 
-__declspec(naked) void NiVector3::MultiplyMatrixVector(NiMatrix33 &mat, NiVector3 &vec)
+__declspec(naked) void NiVector3::MultiplyMatrixVector(NiMatrix33 *mat, NiVector3 *vec)
 {
 	__asm
 	{

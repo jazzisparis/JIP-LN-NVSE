@@ -126,6 +126,7 @@ public:
 	bool IsDeleted() const {return (flags & kFlags_Deleted) != 0;}
 	bool IsDestroyed() const {return (flags & kFlags_Destroyed) != 0;}
 
+	NiVector3 *RotVector() {return (NiVector3*)&rotX;}
 	NiVector3 *PosVector() {return (NiVector3*)&posX;}
 	NiPoint2 *PosXY() {return (NiPoint2*)&posX;}
 
@@ -145,9 +146,11 @@ public:
 	TESWorldSpace *GetParentWorld();
 	bool __fastcall GetInSameCellOrWorld(TESObjectREFR *target);
 	float __vectorcall GetDistance(TESObjectREFR *target);
-	void SetPos(NiVector3 *posVector);
-	void SetAngle(NiVector3 *rotVector);
+	void SetPos(NiVector4 *posVector);
+	void SetAngle(NiVector4 *rotVector);
 	void MoveToCell(TESObjectCELL *cell, NiVector3 *posVector);
+	bool GetTransformedPos(NiVector4 *posMods);
+	void TransformRotation(NiVector4 *rotVector, UInt8 type);
 	bool Disable();
 	void DeleteReference();
 	bhkCharacterController *GetCharacterController();
@@ -160,7 +163,7 @@ public:
 	bool ValidForHooks();
 	NiAVObject* __fastcall GetNiBlock(const char *blockName);
 	NiNode* __fastcall GetNode(const char *nodeName);
-	hkpRigidBody *GetRigidBody(const char *nodeName);
+	hkpRigidBody *GetRigidBody(const char *blockName);
 
 	static TESObjectREFR* __stdcall Create(bool bTemp = false);
 

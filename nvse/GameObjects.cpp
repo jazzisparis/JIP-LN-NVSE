@@ -597,7 +597,7 @@ __declspec(naked) float __vectorcall TESObjectREFR::GetDistance(TESObjectREFR *t
 	}
 }
 
-__declspec(naked) void TESObjectREFR::SetPos(NiVector3 *posVector)
+__declspec(naked) void TESObjectREFR::SetPos(NiVector4 *posVector)
 {
 	__asm
 	{
@@ -654,27 +654,44 @@ __declspec(naked) void TESObjectREFR::SetPos(NiVector3 *posVector)
 	}
 }
 
-__declspec(naked) void TESObjectREFR::SetAngle(NiVector3 *rotVector)
+__declspec(naked) void TESObjectREFR::SetAngle(NiVector4 *rotVector)
 {
 	__asm
 	{
-		mov		eax, [esp+4]
-		movss	xmm0, kFltPId180
-		movss	xmm1, [eax]
-		mulss	xmm1, xmm0
-		movss	[ecx+0x24], xmm1
-		movss	xmm1, [eax+4]
-		mulss	xmm1, xmm0
-		movss	[ecx+0x28], xmm1
-		mulss	xmm0, [eax+8]
-		movss	[ecx+0x2C], xmm0
-		push	0
-		push	0
-		push	ecx
+		push	esi
+		mov		esi, ecx
+		mov		eax, [esp+8]
+		movups	xmm0, [eax]
+		movss	xmm1, kFltPId180
+		shufps	xmm1, xmm1, 0xC0
+		mulps	xmm0, xmm1
+		mov		edx, [ecx+0x30]
+		movups	[ecx+0x24], xmm0
+		mov		[ecx+0x30], edx
 		push	2
-		CALL_EAX(0x484B60)
-		CALL_EAX(0x5C0B10)
-		add		esp, 0xC
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x48]
+		mov		ecx, esi
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x1D0]
+		test	eax, eax
+		jz		done
+		push	1
+		push	eax
+		lea		edx, [esi+0x24]
+		lea		ecx, [eax+0x34]
+		call	NiMatrix33::RotationMatrix
+		CALL_EAX(0xC6BD00)
+		mov		ecx, esi
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x1E4]
+		pop		ecx
+		pop		edx
+		test	eax, eax
+		jnz		done
+		call	NiAVObject::Update
+	done:
+		pop		esi
 		retn	4
 	}
 }
@@ -723,6 +740,82 @@ __declspec(naked) void TESObjectREFR::MoveToCell(TESObjectCELL *cell, NiVector3 
 		push	dword ptr [esp+0xC]
 		mov		ecx, esi
 		call	TESObjectREFR::SetPos
+		pop		esi
+		retn	8
+	}
+}
+
+__declspec(naked) bool TESObjectREFR::GetTransformedPos(NiVector4 *posMods)
+{
+	__asm
+	{
+		push	esi
+		mov		esi, ecx
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x1D0]
+		test	eax, eax
+		jz		done
+		mov		ecx, [esp+8]
+		push	ecx
+		add		eax, 0x34
+		push	eax
+		call	NiVector3::MultiplyMatrixVector
+		movups	xmm0, [ecx]
+		movups	xmm1, [esi+0x30]
+		addps	xmm0, xmm1
+		movups	[ecx], xmm0
+		mov		al, 1
+	done:
+		pop		esi
+		retn	4
+	}
+}
+
+__declspec(naked) void TESObjectREFR::TransformRotation(NiVector4 *rotVector, UInt8 type)
+{
+	__asm
+	{
+		push	esi
+		push	edi
+		mov		esi, ecx
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x1D0]
+		test	eax, eax
+		jz		done
+		mov		edi, eax
+		mov		edx, [esp+0xC]
+		movups	xmm0, [edx]
+		movss	xmm1, kFltPId180
+		shufps	xmm1, xmm1, 0xC0
+		mulps	xmm0, xmm1
+		movups	[edx], xmm0
+		lea		ecx, [edi+0x34]
+		cmp		byte ptr [esp+0x10], 1
+		jnz		doInverse
+		call	NiMatrix33::Rotate
+		jmp		doExtract
+	doInverse:
+		call	NiMatrix33::RotationMatrix
+		xor		edx, edx
+		mov		ecx, eax
+		call	NiMatrix33::Inverse
+	doExtract:
+		lea		edx, [esi+0x24]
+		lea		ecx, [edi+0x34]
+		call	NiMatrix33::ExtractAngles
+		push	1
+		push	edi
+		CALL_EAX(0xC6BD00)
+		add		esp, 8
+		mov		ecx, esi
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x1E4]
+		test	eax, eax
+		jnz		done
+		mov		ecx, edi
+		call	NiAVObject::Update
+	done:
+		pop		edi
 		pop		esi
 		retn	8
 	}
@@ -908,6 +1001,8 @@ __declspec(naked) NiAVObject* __fastcall TESObjectREFR::GetNiBlock(const char *b
 		pop		edx
 		test	eax, eax
 		jz		done
+		cmp		[edx], 0
+		jz		done
 		mov		ecx, eax
 		call	NiNode::GetBlock
 	done:
@@ -940,22 +1035,17 @@ __declspec(naked) NiNode* __fastcall TESObjectREFR::GetNode(const char *nodeName
 	}
 }
 
-hkpRigidBody *TESObjectREFR::GetRigidBody(const char *nodeName)
+hkpRigidBody *TESObjectREFR::GetRigidBody(const char *blockName)
 {
-	NiNode *rootNode = GetNiNode();
-	if (rootNode)
+	NiAVObject *block = GetNiBlock(blockName);
+	if (block && block->m_collisionObject)
 	{
-		NiNode *targetNode = rootNode->GetNode(nodeName);
-		if (targetNode && targetNode->m_collisionObject)
+		bhkWorldObject *hWorldObj = block->m_collisionObject->worldObj;
+		if (hWorldObj)
 		{
-			bhkWorldObject *hWorldObj = targetNode->m_collisionObject->worldObj;
-			if (hWorldObj)
-			{
-				hkpRigidBody *rigidBody = (hkpRigidBody*)hWorldObj->refObject;
-				UInt8 motionType = rigidBody->motion.type;
-				if ((motionType == 2) || (motionType == 3) || (motionType == 6))
-					return rigidBody;
-			}
+			hkpRigidBody *rigidBody = (hkpRigidBody*)hWorldObj->refObject;
+			if ((rigidBody->motion.type <= 3) || (rigidBody->motion.type == 6))
+				return rigidBody;
 		}
 	}
 	return NULL;

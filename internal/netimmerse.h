@@ -652,8 +652,8 @@ public:
 class NiProperty : public NiObjectNET
 {
 public:
-	virtual UInt32	GetPropertyType();
-	virtual void	UpdateController(float arg);
+	/*08C*/virtual UInt32	GetPropertyType();
+	/*090*/virtual void	UpdateController(float arg);
 
 	enum PropertyType
 	{

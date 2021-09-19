@@ -1,5 +1,55 @@
 #pragma once
 
+typedef AlignedVector4 hkVector4;
+__declspec(align(16)) typedef NiQuaternion hkQuaternion;
+
+// 30
+struct hkMatrix3x4
+{
+	hkVector4	row[3];
+
+	void operator=(const NiMatrix33 &inMatrix);
+
+	inline void operator=(const hkQuaternion &inQuaternion)
+	{
+		ThisCall(0xCB2D90, this, &inQuaternion);
+	}
+};
+
+// 40
+struct hkTransform
+{
+	hkMatrix3x4	rotation;		// 00
+	hkVector4	translation;	// 30
+};
+
+// 50
+struct hkSweptTransform
+{
+	hkVector4		centerOfMass0;	// 00
+	hkVector4		centerOfMass1;	// 10
+	hkQuaternion	rotation0;		// 20
+	hkQuaternion	rotation1;		// 30
+	hkVector4		centerOfMassLoc;// 40
+};
+
+// B0
+struct hkMotionState
+{
+	hkTransform			transform;		// 00
+	hkSweptTransform	sweptTransform;	// 40
+	hkVector4			deltaAngle;		// 90
+	float				objectRadius;	// A0
+	float				linearDamping;	// A4
+	float				angularDamping;	// A8
+	UInt8				byteAC;			// AC
+	UInt8				byteAD;			// AD
+	UInt8				byteAE;			// AE
+	UInt8				byteAF;			// AF
+};
+static_assert(sizeof(hkMotionState) == 0xB0);
+
+// 0C
 template <typename T_Data> class hkArray
 {
 public:
@@ -40,30 +90,6 @@ public:
 	Iterator Begin() {return Iterator(*this);}
 };
 
-typedef AlignedVector4 hkVector4;
-
-struct hkMatrix3x4
-{
-	hkVector4	row[3];
-
-	void operator=(const NiMatrix33 &inMatrix);
-
-	inline void operator=(const hkVector4 &inQuaternion)
-	{
-		ThisCall(0xCB2D90, this, &inQuaternion);
-	}
-
-	hkVector4 *GetColumn(hkVector4 *outColumn, UInt32 whichColumn);
-};
-static_assert(sizeof(hkMatrix3x4) == 0x30);
-
-struct hkTransform
-{
-	hkMatrix3x4	rotation;		// 00
-	hkVector4	translation;	// 30
-};
-static_assert(sizeof(hkTransform) == 0x40);
-
 class hkStatisticsCollector;
 class hkpSimpleConstraintContactMgr;
 class bhkWorldObject;
@@ -84,6 +110,7 @@ class hkpDefaultConvexListFilter;
 class hkpEntityListener;
 class hkpContactListener;
 class bhkShape;
+class hkpShape;
 class hkpCachingShapePhantom;
 
 // 04
@@ -107,10 +134,10 @@ public:
 // 10
 struct hkCdBody
 {
-	hkReferencedObject		*shape;			// 00
-	UInt32					shapeKey;		// 04
-	void					*motion;		// 08 - either hkTransform or hkMotionState
-	hkCdBody				*parent;		// 0C
+	hkpShape		*shape;			// 00
+	UInt32			shapeKey;		// 04
+	void			*motion;		// 08 - either hkTransform or hkMotionState
+	hkCdBody		*parent;		// 0C
 
 	hkpWorldObject *GetWorldObj() const {return (hkpWorldObject*)((UInt8*)this - 0x10);}
 };
@@ -248,7 +275,7 @@ class hkpWorldObject : public hkReferencedObject
 {
 public:
 	virtual void	Unk_03(void);
-	virtual void	Unk_04(void);
+	virtual hkMotionState	*GetMotionState();
 
 	hkpWorld				*pWorld;		// 08
 	bhkWorldObject			*object;		// 0C
@@ -259,7 +286,10 @@ public:
 	UInt8					layerType;		// 2C
 	UInt8					filterFlags;	// 2D
 	UInt8					unk2E[2];		// 2E
-	UInt32					unk30[12];		// 30
+	NiVector4				vector30;		// 30
+	NiVector4				vector40;		// 40
+	UInt32					unk50[3];		// 50
+	float					flt5C;			// 5C
 	hkArray<CdBodyLinker>	cdRgdBodies;	// 60
 	UInt32					unk6C[3];		// 6C
 	hkArray<CdParentObj>	parentObjs;		// 78
@@ -271,15 +301,15 @@ static_assert(sizeof(hkpWorldObject) == 0x8C);
 class hkpShape : public hkReferencedObject
 {
 public:
-	virtual void	Unk_03(void);
-	virtual void	Unk_04(void);
-	virtual void	Unk_05(void);
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
-	virtual void	Unk_08(void);
-	virtual void	Unk_09(void);
-	virtual void	Unk_0A(void);
-	virtual void	Unk_0B(void);
+	virtual void	Unk_03(hkVector4 *arg1);
+	virtual UInt32	Unk_04();
+	virtual bool	IsConvex();
+	virtual UInt32	Unk_06(UInt32 arg1, UInt32 arg2);
+	virtual void	Unk_07(UInt32 arg1, UInt32 arg2, UInt32 arg3);
+	virtual void	*Unk_08(void *arg1, hkVector4 *arg2, void *arg3);
+	virtual void	Unk_09(void *arg1, void *arg2, void *arg3);
+	virtual void	Unk_0A(hkVector4 *arg1, hkVector4 *arg2, void *arg3, hkVector4 *arg4);
+	virtual UInt32	Unk_0B();
 
 	bhkShape		*shape;		// 08
 	UInt32			unk0C;		// 0C
@@ -623,11 +653,11 @@ extern bhkWorldM **g_bhkWorldM;
 class NiCollisionObject : public NiObject
 {
 public:
-	virtual void	Attach(NiAVObject *obj);
-	virtual void	Unk_24(UInt32 arg);
-	virtual void	Unk_25(void);
-	virtual void	LoadBoundingVolume(UInt32 arg);
-	virtual void	Unk_27(UInt32 version, UInt32 arg1);
+	/*08C*/virtual void		Attach(NiAVObject *obj);
+	/*090*/virtual void		Unk_24(UInt32 arg);
+	/*094*/virtual void		Unk_25(void);
+	/*098*/virtual void		LoadBoundingVolume(UInt32 arg);
+	/*09C*/virtual void		Unk_27(UInt32 version, UInt32 arg1);
 
 	NiNode			*linkedNode;	// 08
 };
@@ -636,15 +666,15 @@ public:
 class bhkNiCollisionObject : public NiCollisionObject
 {
 public:
-	virtual void	Unk_28(void);
-	virtual void	Unk_29(void);
-	virtual void	Unk_2A(void);
-	virtual void	Unk_2B(void);
-	virtual void	Unk_2C(UInt32 moType, UInt32 arg2, UInt32 arg3);	//	arg3 unused?
-	virtual void	Unk_2D(void);
-	virtual void	ProcessCollision(UInt32 arg);
-	virtual void	Unk_2F(void);
-	virtual void	Unk_30(void);
+	/*0A0*/virtual void		Unk_28(void);
+	/*0A4*/virtual void		Unk_29(void);
+	/*0A8*/virtual void		Unk_2A(void);
+	/*0AC*/virtual void		Unk_2B(void);
+	/*0B0*/virtual void		Unk_2C(UInt32 moType, UInt32 arg2, UInt32 arg3);	//	arg3 unused?
+	/*0B4*/virtual bool		IsMovable();
+	/*0B8*/virtual void		ProcessCollision(UInt32 arg);
+	/*0BC*/virtual bool		Unk_2F();
+	/*0C0*/virtual void		Unk_30(UInt32 arg);
 
 	enum Flags
 	{
@@ -857,7 +887,7 @@ public:
 	UInt32			surfaceMaterial;// 24 (434)
 	UInt32			unk28;			// 28 (438)
 	UInt32			unk2C[5];		// 2C
-	NiVector4		vector40;		// 40 (450)
+	hkVector4		vector40;		// 40 (450)
 	UInt32			unk50[8];		// 50
 };
 
@@ -882,29 +912,23 @@ public:
 class hkpBoxShape : public hkpConvexShape
 {
 public:
-	virtual void	Unk_0C(void);
-	virtual void	Unk_0D(void);
-	virtual void	Unk_0E(void);
-	virtual void	Unk_0F(void);
-	virtual void	Unk_10(void);
-	virtual void	Unk_11(void);
+	virtual void	Unk_0C(void *arg1);
+	virtual void	Unk_0D(hkVector4 *vec);
+	virtual void	GetSupportingVertex(hkVector4 *arg1, hkVector4 *outVertex);
+	virtual void	ConvertVertexIdsToVertices(UInt16 *vtxIDsArr, UInt32 numVertices, hkVector4 *outVertices);
+	virtual UInt32	Unk_10(UInt32 arg1, UInt32 arg2, UInt32 arg3, UInt32 arg4, UInt32 arg5, UInt32 arg6, UInt32 arg7);
+	virtual void	Unk_11(hkVector4 *vec);
 
-	float			flt10;		// 10
-	float			flt14;		// 14
-	float			flt18;		// 18
-	float			flt1C;		// 1C
-	float			flt20;		// 20
-	float			flt24;		// 24
-	float			flt28;		// 28
-	float			flt2C;		// 2C
+	hkVector4		vector10;	// 10
+	hkVector4		vector20;	// 20
 };
 static_assert(sizeof(hkpBoxShape) == 0x30);
 
 struct VerticesBlock
 {
-	NiVector4	rowX;
-	NiVector4	rowY;
-	NiVector4	rowZ;
+	hkVector4	rowX;
+	hkVector4	rowY;
+	hkVector4	rowZ;
 };
 
 // 70
@@ -1240,8 +1264,8 @@ public:
 	virtual void	GetInertiaInvWorld(hkMatrix3x4 *outInertia);
 	virtual void	SetCenterOfMassInLocal(hkVector4 *centerOfMass);
 	virtual void	SetPosition(hkVector4 *position);
-	virtual void	SetRotation(hkVector4 *rotation);
-	virtual void	SetPositionAndRotation(hkVector4 *position, hkVector4 *rotation);
+	virtual void	SetRotation(hkQuaternion *rotation);
+	virtual void	SetPositionAndRotation(hkVector4 *position, hkQuaternion *rotation);
 	virtual void	SetTransform(hkTransform *transform);
 	virtual void	SetLinearVelocity(hkVector4 *velocity);
 	virtual void	SetAngularVelocity(hkVector4 *velocity);
@@ -1269,28 +1293,12 @@ public:
 	UInt16			word00A;			// 00A
 	UInt16			word00C;			// 00C
 	UInt8			pad00E[2];			// 00E
-	hkTransform		currTransform;		// 010
-	hkVector4		vector050;			// 050
-	hkVector4		vector060;			// 060
-	NiQuaternion	quaternion070;		// 070
-	NiQuaternion	quaternion080;		// 080
-	hkVector4		vector090;			// 090
-	hkVector4		vector0A0;			// 0A0
-	float			flt0B0;				// 0B0
-	float			linDamping;			// 0B4
-	float			angDamping;			// 0B8
-	UInt8			byte0BC;			// 0BC
-	UInt8			byte0BD;			// 0BD
-	UInt8			byte0BE;			// 0BE
-	UInt8			byte0BF;			// 0BF
-	float			inertiaX;			// 0C0
-	float			inertiaY;			// 0C4
-	float			inertiaZ;			// 0C8
+	hkMotionState	motionState;		// 010
+	NiVector3		inertia;			// 0C0
 	float			bodyMassInv;		// 0CC
 	hkVector4		linVelocity;		// 0D0
 	hkVector4		angVelocity;		// 0E0
-	hkVector4		vector0F0;			// 0F0
-	hkVector4		vector100;			// 100
+	hkVector4		deactivationPos[2];	// 0F0
 	UInt32			unk110[12];			// 110
 
 	__forceinline float GetBodyMass()
@@ -1349,7 +1357,6 @@ class hkpRigidBody : public hkpEntity
 {
 public:
 	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
 
 	UInt8							byte8C;			// 8C
 	UInt8							pad8D[3];		// 8D
@@ -1369,6 +1376,8 @@ public:
 	{
 		ThisCall(0xC9C1D0, this);
 	}
+
+	void SetAngularVelocity(UInt8 axis, float angVel);
 };
 
 // 14

@@ -58,17 +58,36 @@ struct NiVector3
 		return ((float*)&x)[axis];
 	}
 
+	void operator=(const NiVector3 &rhs)
+	{
+		x = rhs.x;
+		y = rhs.y;
+		z = rhs.z;
+	}
+
 	void operator+=(const NiVector3 &rhs)
 	{
 		x += rhs.x;
 		y += rhs.y;
 		z += rhs.z;
 	}
+	void operator+=(float value)
+	{
+		x += value;
+		y += value;
+		z += value;
+	}
 	void operator-=(const NiVector3 &rhs)
 	{
 		x -= rhs.x;
 		y -= rhs.y;
 		z -= rhs.z;
+	}
+	void operator-=(float value)
+	{
+		x -= value;
+		y -= value;
+		z -= value;
 	}
 	void operator*=(float value)
 	{
@@ -78,7 +97,7 @@ struct NiVector3
 	}
 
 	void ToQuaternion(NiQuaternion &quaternion);
-	void MultiplyMatrixVector(NiMatrix33 &mat, NiVector3 &vec);
+	void MultiplyMatrixVector(NiMatrix33 *mat, NiVector3 *vec);
 	void ColumnMultiply(NiMatrix33 *rotMatrix, UInt32 whichColumn);
 	void Normalize();
 	bool RayCastCoords(NiVector3 *posVector, NiMatrix33 *rotMatrix, float maxRange, UInt32 axis = 0, UInt16 filter = 6);
@@ -112,6 +131,13 @@ struct alignas(16) AlignedVector4
 	}
 
 	inline void operator=(float *valPtr) {_mm_store_ps(&x, _mm_loadu_ps(valPtr));}
+
+	void operator*=(float value)
+	{
+		x *= value;
+		y *= value;
+		z *= value;
+	}
 };
 
 float __vectorcall Vector3Length(AlignedVector4 *inVec);

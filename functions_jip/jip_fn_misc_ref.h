@@ -30,10 +30,10 @@ DEFINE_COMMAND_PLUGIN(SetInteractionDisabledType, 0, 2, kParams_TwoInts);
 DEFINE_COMMAND_PLUGIN(AddRefMapMarker, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(RemoveRefMapMarker, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(RefHasMapMarker, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetPosEx, 1, 3, kParams_ThreeFloats);
+DEFINE_COMMAND_PLUGIN(SetPosEx, 1, 4, kParams_ThreeFloats_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(MoveToReticle, 1, 4, kParams_FourOptionalFloats);
 DEFINE_COMMAND_PLUGIN(SetRefName, 1, 1, kParams_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(SetAngleEx, 1, 3, kParams_ThreeFloats);
+DEFINE_COMMAND_PLUGIN(SetAngleEx, 1, 4, kParams_ThreeFloats_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetTeleportDoor, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(SetOnCriticalHitEventHandler, 0, 5, kParams_OneForm_OneInt_ThreeOptionalForms);
 DEFINE_COMMAND_PLUGIN(MoveToFadeDelay, 1, 2, kParams_OneObjectRef_OneFloat);
@@ -51,7 +51,7 @@ DEFINE_COMMAND_PLUGIN(SetNifBlockScale, 1, 3, kParams_OneString_OneFloat_OneOpti
 DEFINE_COMMAND_PLUGIN(GetNifBlockFlag, 1, 3, kParams_OneString_OneInt_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetNifBlockFlag, 1, 4, kParams_OneString_TwoInts_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetObjectVelocity, 1, 1, kParams_OneOptionalAxis);
-DEFINE_COMMAND_PLUGIN(GetAngularVelocity, 1, 2, kParams_OneString_OneAxis);
+DEFINE_COMMAND_PLUGIN(GetAngularVelocity, 1, 2, kParams_OneString_OneOptionalAxis);
 DEFINE_COMMAND_PLUGIN(SetAngularVelocity, 1, 3, kParams_OneString_OneAxis_OneFloat);
 DEFINE_COMMAND_PLUGIN(PlaceAtCell, 0, 6, kParams_OneForm_OneInt_OneForm_ThreeFloats);
 DEFINE_COMMAND_PLUGIN(GetRayCastPos, 1, 6, kParams_ThreeGlobals_OneOptionalFloat_OneOptionalInt_OneOptionalString);
@@ -85,6 +85,7 @@ DEFINE_COMMAND_PLUGIN(ProjectExtraCamera, 0, 4, kParams_TwoStrings_OneDouble_One
 DEFINE_COMMAND_PLUGIN(RenameNifBlock, 1, 3, kParams_TwoStrings_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(RemoveNifBlock, 1, 2, kParams_OneString_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(PlayAnimSequence, 1, 2, kParams_OneString_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(GetTransformedPos, 1, 6, kParams_ThreeFloats_ThreeScriptVars);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -745,8 +746,9 @@ bool Cmd_RefHasMapMarker_Execute(COMMAND_ARGS)
 
 bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 {
-	NiVector3 posVector;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posVector.x, &posVector.y, &posVector.z))
+	NiVector4 posVector;
+	UInt32 transform = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posVector.x, &posVector.y, &posVector.z, &transform) && (!transform || thisObj->GetTransformedPos(&posVector)))
 		thisObj->SetPos(&posVector);
 	return true;
 }
@@ -754,9 +756,10 @@ bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	float maxRange = 12288.0F, posXmod = 0, posYmod = 0, posZmod = 0;
+	float maxRange = 12288.0F;
+	NiVector3 posMods(0, 0, 0);
 	UInt8 numArgs = NUM_ARGS;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &posXmod, &posYmod, &posZmod))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &posMods.x, &posMods.y, &posMods.z))
 	{
 		TESObjectCELL *cell = g_thePlayer->parentCell;
 		if (cell)
@@ -765,11 +768,7 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 			if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, maxRange))
 			{
 				if (numArgs > 1)
-				{
-					coords.x += posXmod;
-					coords.y += posYmod;
-					coords.z += posZmod;
-				}
+					coords += posMods;
 				thisObj->MoveToCell(cell, &coords);
 				*result = 1;
 			}
@@ -809,9 +808,16 @@ bool Cmd_SetRefName_Execute(COMMAND_ARGS)
 
 bool Cmd_SetAngleEx_Execute(COMMAND_ARGS)
 {
-	NiVector3 rotVector;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &rotVector.x, &rotVector.y, &rotVector.z))
-		thisObj->SetAngle(&rotVector);
+	NiVector4 rotVector;
+	UInt32 transform = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &rotVector.x, &rotVector.y, &rotVector.z, &transform))
+	{
+		rotVector.w = 0;
+		if (!transform)
+			thisObj->SetAngle(&rotVector);
+		else
+			thisObj->TransformRotation(&rotVector, transform);
+	}
 	return true;
 }
 
@@ -1144,20 +1150,11 @@ bool Cmd_GetObjectVelocity_Execute(COMMAND_ARGS)
 	char axis = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &axis))
 	{
-		NiNode *objNode = thisObj->GetNiNode();
-		if (objNode && objNode->m_collisionObject)
+		hkpRigidBody *rigidBody = thisObj->GetRigidBody("");
+		if (rigidBody)
 		{
-			bhkWorldObject *hWorldObj = objNode->m_collisionObject->worldObj;
-			if (hWorldObj && hWorldObj->refObject)
-			{
-				hkpRigidBody *rigidBody = (hkpRigidBody*)hWorldObj->refObject;
-				if ((rigidBody->motion.type <= 3) || (rigidBody->motion.type == 6))
-				{
-					float *velocity = (float*)&rigidBody->motion.linVelocity;
-					if (axis) *result = rigidBody->motion.linVelocity[axis - 'X'];
-					else *result = Vector3Length(&rigidBody->motion.linVelocity);
-				}
-			}
+			if (axis) *result = rigidBody->motion.linVelocity[axis - 'X'];
+			else *result = Vector3Length(&rigidBody->motion.linVelocity);
 		}
 	}
 	return true;
@@ -1167,11 +1164,15 @@ bool Cmd_GetAngularVelocity_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char blockName[0x40];
-	char axis;
+	char axis = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &axis))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
-		if (rigidBody) *result = rigidBody->motion.angVelocity[axis - 'X'];
+		if (rigidBody)
+		{
+			if (axis) *result = rigidBody->motion.angVelocity[axis - 'X'];
+			else *result = Vector3Length(&rigidBody->motion.angVelocity);
+		}
 	}
 	return true;
 }
@@ -1186,7 +1187,7 @@ bool Cmd_SetAngularVelocity_Execute(COMMAND_ARGS)
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
 		if (rigidBody)
 		{
-			rigidBody->motion.angVelocity[axis - 'X'] = velocity;
+			rigidBody->SetAngularVelocity(axis - 'X', velocity);
 			rigidBody->UpdateMotion();
 		}
 	}
@@ -1533,14 +1534,14 @@ bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
 bool Cmd_SetLinearVelocity_Execute(COMMAND_ARGS)
 {
 	char blockName[0x40];
-	AlignedVector4 velocity;
+	hkVector4 velocity;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &velocity.x, &velocity.y, &velocity.z))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
 		if (rigidBody)
 		{
 			velocity.w = 0;
-			rigidBody->motion.SetLinearVelocity(&velocity);
+			rigidBody->motion.linVelocity = velocity;
 			rigidBody->UpdateMotion();
 		}
 	}
@@ -2171,5 +2172,20 @@ bool Cmd_PlayAnimSequence_Execute(COMMAND_ARGS)
 			}
 		}
 	}
+	return true;
+}
+
+bool Cmd_GetTransformedPos_Execute(COMMAND_ARGS)
+{
+	NiVector4 posMods;
+	ScriptVar *outX, *outY, *outZ;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posMods.x, &posMods.y, &posMods.z, &outX, &outY, &outZ) && thisObj->GetTransformedPos(&posMods))
+	{
+		outX->data.num = posMods.x;
+		outY->data.num = posMods.y;
+		outZ->data.num = posMods.z;
+		*result = 1;
+	}
+	else *result = 0;
 	return true;
 }
