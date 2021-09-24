@@ -1,33 +1,140 @@
 #include "internal/havok.h"
 
-__declspec(naked) void hkMatrix3x4::operator=(const NiMatrix33 &inMatrix)
+void hkQuaternion::operator=(const NiVector3 &eulerYPR)
+{
+	NiMatrix33 rotMat;
+	rotMat.RotationMatrix((NiVector3*)&eulerYPR);
+	*this = rotMat;
+}
+
+__declspec(naked) void __fastcall hkQuaternion::operator=(const NiMatrix33 &mat)
 {
 	__asm
 	{
-		mov		eax, [esp+4]
-		mov		edx, [eax]
-		mov		[ecx], edx
-		mov		edx, [eax+0xC]
-		mov		[ecx+4], edx
-		mov		edx, [eax+0x18]
-		mov		[ecx+8], edx
-		mov		edx, [eax+4]
-		mov		[ecx+0x10], edx
-		mov		edx, [eax+0x10]
-		mov		[ecx+0x14], edx
-		mov		edx, [eax+0x1C]
-		mov		[ecx+0x18], edx
-		mov		edx, [eax+8]
-		mov		[ecx+0x20], edx
-		mov		edx, [eax+0x14]
-		mov		[ecx+0x24], edx
-		mov		edx, [eax+0x20]
-		mov		[ecx+0x28], edx
-		xor		edx, edx
-		mov		[ecx+0xC], edx
-		mov		[ecx+0x1C], edx
-		mov		[ecx+0x2C], edx
-		retn	4
+		movss	xmm0, [edx]
+		movss	xmm1, [edx+0x10]
+		movss	xmm2, [edx+0x20]
+		movaps	xmm3, xmm0
+		addss	xmm3, xmm1
+		addss	xmm3, xmm2
+		movss	xmm4, kFltOne
+		movaps	xmm5, xmm4
+		pxor	xmm6, xmm6
+		comiss	xmm3, xmm6
+		jbe		t_xyz
+		addss	xmm5, xmm3
+		movss	[ecx+0xC], xmm5
+		movss	xmm0, [edx+0x1C]
+		subss	xmm0, [edx+0x14]
+		movss	[ecx], xmm0
+		movss	xmm0, [edx+8]
+		subss	xmm0, [edx+0x18]
+		movss	[ecx+4], xmm0
+		movss	xmm0, [edx+0xC]
+		subss	xmm0, [edx+4]
+		movss	[ecx+8], xmm0
+		jmp		done
+	t_xyz:
+		comiss	xmm0, xmm1
+		jnb		t_xz
+		comiss	xmm1, xmm2
+		jb		t_z
+		subss	xmm5, xmm0
+		addss	xmm5, xmm1
+		subss	xmm5, xmm2
+		movss	xmm0, [edx+8]
+		subss	xmm0, [edx+0x18]
+		movss	[ecx+0xC], xmm0
+		movss	xmm0, [edx+0xC]
+		addss	xmm0, [edx+4]
+		movss	[ecx], xmm0
+		movss	[ecx+4], xmm5
+		movss	xmm0, [edx+0x1C]
+		addss	xmm0, [edx+0x14]
+		movss	[ecx+8], xmm0
+		jmp		done
+	t_xz:
+		comiss	xmm0, xmm2
+		jb		t_z
+		addss	xmm5, xmm0
+		subss	xmm5, xmm1
+		subss	xmm5, xmm2
+		movss	xmm0, [edx+0x1C]
+		subss	xmm0, [edx+0x14]
+		movss	[ecx+0xC], xmm0
+		movss	[ecx], xmm5
+		movss	xmm0, [edx+0xC]
+		addss	xmm0, [edx+4]
+		movss	[ecx+4], xmm0
+		movss	xmm0, [edx+0x18]
+		addss	xmm0, [edx+8]
+		movss	[ecx+8], xmm0
+		jmp		done
+	t_z:
+		subss	xmm5, xmm0
+		subss	xmm5, xmm1
+		addss	xmm5, xmm2
+		movss	xmm0, [edx+0xC]
+		subss	xmm0, [edx+4]
+		movss	[ecx+0xC], xmm0
+		movss	xmm0, [edx+0x18]
+		addss	xmm0, [edx+8]
+		movss	[ecx], xmm0
+		movss	xmm0, [edx+0x1C]
+		addss	xmm0, [edx+0x14]
+		movss	[ecx+4], xmm0
+		movss	[ecx+8], xmm5
+	done:
+		andps	xmm5, kSSERemoveSignMask
+		sqrtss	xmm0, xmm5
+		addss	xmm0, xmm0
+		divss	xmm4, xmm0
+		shufps	xmm4, xmm4, 0
+		movups	xmm0, [ecx]
+		mulps	xmm0, xmm4
+		movups	[ecx], xmm0
+		retn
+	}
+}
+
+void hkQuaternion::EulerYPR(NiVector3 &ypr)
+{
+	ypr.x = atan2f(2.0F * (w * x + y * z), 1.0F - (2.0F * (x * x + y * y)));
+	float sinp = 2.0F * (w * y - z * x);
+	if (abs(sinp) < 1.0F)
+		ypr.y = asinf(sinp);
+	else
+		ypr.y = (sinp > 0) ? kFltPId2 : -kFltPId2;
+	ypr.z = atan2f(2.0F * (w * z + x * y), 1.0F - (2.0F * (y * y + z * z)));
+}
+
+__declspec(naked) void __fastcall hkMatrix3x4::operator=(const NiMatrix33 &inMatrix)
+{
+	__asm
+	{
+		mov		eax, [edx]
+		mov		[ecx], eax
+		mov		eax, [edx+0xC]
+		mov		[ecx+4], eax
+		mov		eax, [edx+0x18]
+		mov		[ecx+8], eax
+		mov		eax, [edx+4]
+		mov		[ecx+0x10], eax
+		mov		eax, [edx+0x10]
+		mov		[ecx+0x14], eax
+		mov		eax, [edx+0x1C]
+		mov		[ecx+0x18], eax
+		mov		eax, [edx+8]
+		mov		[ecx+0x20], eax
+		mov		eax, [edx+0x14]
+		mov		[ecx+0x24], eax
+		mov		eax, [edx+0x20]
+		mov		[ecx+0x28], eax
+		xor		eax, eax
+		mov		[ecx+0xC], eax
+		mov		[ecx+0x1C], eax
+		mov		[ecx+0x2C], eax
+		retn
 	}
 }
 

@@ -1,18 +1,54 @@
 #pragma once
 
 typedef AlignedVector4 hkVector4;
-__declspec(align(16)) typedef NiQuaternion hkQuaternion;
+
+struct hkMatrix3x4;
+
+struct alignas(16) hkQuaternion
+{
+	float	x, y, z, w;
+
+	hkQuaternion() {}
+	hkQuaternion(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
+	hkQuaternion(const NiVector3 &eulerYPR) {*this = eulerYPR;}
+	hkQuaternion(const hkQuaternion &from) {*this = from;}
+	hkQuaternion(const NiMatrix33 &rotMat) {*this = rotMat;}
+	hkQuaternion(const hkMatrix3x4 &rotMat) {*this = rotMat;}
+
+	void operator=(const NiVector3 &eulerYPR);
+	inline void operator=(const hkQuaternion &from) {_mm_store_ps(&x, _mm_load_ps(&from.x));}
+	void __fastcall operator=(const NiMatrix33 &mat);
+	inline void operator=(const hkMatrix3x4 &rotMat) {ThisCall(0xCB26E0, this, &rotMat);}
+	inline void operator=(const hkVector4 &from) {_mm_store_ps(&x, _mm_load_ps(&from.x));}
+
+	inline void operator*=(float s)
+	{
+		x *= s;
+		y *= s;
+		z *= s;
+		w *= s;
+	}
+
+	void EulerYPR(NiVector3 &ypr);
+};
 
 // 30
-struct hkMatrix3x4
+struct alignas(16) hkMatrix3x4
 {
-	hkVector4	row[3];
+	float		rc[3][4];
 
-	void operator=(const NiMatrix33 &inMatrix);
+	hkMatrix3x4() {}
+	hkMatrix3x4(const NiMatrix33 &inMatrix) {*this = inMatrix;}
+	hkMatrix3x4(const hkQuaternion &inQuaternion) {*this = inQuaternion;}
+	hkMatrix3x4(const hkMatrix3x4 &inMatrix) {*this = inMatrix;}
 
-	inline void operator=(const hkQuaternion &inQuaternion)
+	void __fastcall operator=(const NiMatrix33 &inMatrix);
+	inline void operator=(const hkQuaternion &inQuaternion) {ThisCall(0xCB2D90, this, &inQuaternion);}
+	inline void operator=(const hkMatrix3x4 &from)
 	{
-		ThisCall(0xCB2D90, this, &inQuaternion);
+		_mm_store_ps(&rc[0][0], _mm_load_ps(&from.rc[0][0]));
+		_mm_store_ps(&rc[1][0], _mm_load_ps(&from.rc[1][0]));
+		_mm_store_ps(&rc[2][0], _mm_load_ps(&from.rc[2][0]));
 	}
 };
 
@@ -26,11 +62,11 @@ struct hkTransform
 // 50
 struct hkSweptTransform
 {
-	hkVector4		centerOfMass0;	// 00
-	hkVector4		centerOfMass1;	// 10
-	hkQuaternion	rotation0;		// 20
-	hkQuaternion	rotation1;		// 30
-	hkVector4		centerOfMassLoc;// 40
+	hkVector4		centerOfMass0;	// 00 (40)
+	hkVector4		centerOfMass1;	// 10 (50)
+	hkQuaternion	rotation0;		// 20 (60)
+	hkQuaternion	rotation1;		// 30 (70)
+	hkVector4		centerOfMassLoc;// 40 (80)
 };
 
 // B0

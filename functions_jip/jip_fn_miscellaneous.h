@@ -1259,8 +1259,7 @@ bool Cmd_GetPointRayCastPos_Execute(COMMAND_ARGS)
 		rot.y = 0;
 		rot.z *= kFltPId180;
 		NiMatrix33 rotMat;
-		rotMat = kIdentityMatrix;
-		rotMat.Rotate(&rot);
+		rotMat.RotationMatrixLocal(&rot);
 		if (rot.RayCastCoords(&pos, &rotMat, 100000.0F, 4, filter & 0x3F))
 		{
 			outX->data.num = rot.x;

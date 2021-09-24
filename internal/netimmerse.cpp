@@ -123,6 +123,23 @@ void NiMaterialProperty::SetTraitValue(UInt32 traitID, float value)
 	}
 }
 
+__declspec(naked) void __fastcall NiAVObject::TransformTranslate(NiVector4 *posMods)
+{
+	__asm
+	{
+		push	edx
+		add		ecx, 0x34
+		push	ecx
+		mov		ecx, edx
+		call	NiVector3::MultiplyMatrixVector
+		movups	xmm0, [ecx]
+		movups	xmm1, [eax+0x24]
+		addps	xmm0, xmm1
+		movups	[ecx], xmm0
+		retn
+	}
+}
+
 __declspec(naked) void NiAVObject::Update()
 {
 	__asm

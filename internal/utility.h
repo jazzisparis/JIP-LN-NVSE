@@ -64,7 +64,6 @@ __forceinline T_Ret CdeclCall(UInt32 _addr, Args ...args)
 
 static const double
 kDblPId180 = 0.017453292519943295,
-kDblPId2 = 1.57079632679489662,
 kDbl180dPI = 57.29577951308232088;
 
 static const float
@@ -75,6 +74,7 @@ kFltPId180 = 0.01745329238F,
 kFlt1d10 = 0.1F,
 kFltHalf = 0.5F,
 kFltOne = 1.0F,
+kFltPId2 = 1.5707963268F,
 kFlt10 = 10.0F,
 kFlt180dPI = 57.2957795F,
 kFlt100 = 100.0F,
@@ -232,6 +232,7 @@ template <typename T> inline T sqr(T value)
 	return value * value;
 }
 
+extern const UInt32 kSSERemoveSignMask[], kSSEChangeSignMask[], kSSEDiscard4thPS[];
 extern const UInt8 kLwrCaseConverter[], kUprCaseConverter[];
 
 UInt32 __vectorcall cvtd2ui(double value);

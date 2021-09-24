@@ -654,45 +654,57 @@ __declspec(naked) void TESObjectREFR::SetPos(NiVector4 *posVector)
 	}
 }
 
-__declspec(naked) void TESObjectREFR::SetAngle(NiVector4 *rotVector)
+__declspec(naked) void TESObjectREFR::SetAngle(NiVector4 *rotVector, bool setLocal)
 {
 	__asm
 	{
 		push	esi
+		push	edi
 		mov		esi, ecx
-		mov		eax, [esp+8]
-		movups	xmm0, [eax]
-		movss	xmm1, kFltPId180
-		shufps	xmm1, xmm1, 0xC0
-		mulps	xmm0, xmm1
-		mov		edx, [ecx+0x30]
-		movups	[ecx+0x24], xmm0
-		mov		[ecx+0x30], edx
-		push	2
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x48]
-		mov		ecx, esi
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x1D0]
 		test	eax, eax
 		jz		done
-		push	1
-		push	eax
-		lea		edx, [esi+0x24]
+		mov		edi, eax
 		lea		ecx, [eax+0x34]
+		mov		edx, [esp+0xC]
+		movups	xmm0, [edx]
+		movss	xmm1, kFltPId180
+		shufps	xmm1, xmm1, 0xC0
+		mulps	xmm0, xmm1
+		cmp		byte ptr [esp+0x10], 0
+		jnz		localRot
+		lea		edx, [esi+0x24]
+		mov		eax, [edx+0xC]
+		movups	[edx], xmm0
+		mov		[edx+0xC], eax
 		call	NiMatrix33::RotationMatrix
+		jmp		doneRot
+	localRot:
+		movups	[edx], xmm0
+		call	NiMatrix33::RotationMatrixLocal
+		lea		edx, [esi+0x24]
+		call	NiMatrix33::ExtractAngles
+	doneRot:
+		push	2
+		mov		ecx, esi
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x48]
+		push	1
+		push	edi
 		CALL_EAX(0xC6BD00)
+		add		esp, 8
 		mov		ecx, esi
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x1E4]
-		pop		ecx
-		pop		edx
 		test	eax, eax
 		jnz		done
+		mov		ecx, edi
 		call	NiAVObject::Update
 	done:
+		pop		edi
 		pop		esi
-		retn	4
+		retn	8
 	}
 }
 
@@ -771,38 +783,34 @@ __declspec(naked) bool TESObjectREFR::GetTransformedPos(NiVector4 *posMods)
 	}
 }
 
-__declspec(naked) void TESObjectREFR::TransformRotation(NiVector4 *rotVector, UInt8 type)
+__declspec(naked) void __fastcall TESObjectREFR::Rotate(NiVector4 *rotVector)
 {
 	__asm
 	{
 		push	esi
 		push	edi
 		mov		esi, ecx
+		mov		edi, edx
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x1D0]
 		test	eax, eax
 		jz		done
+		mov		edx, edi
 		mov		edi, eax
-		mov		edx, [esp+0xC]
 		movups	xmm0, [edx]
 		movss	xmm1, kFltPId180
 		shufps	xmm1, xmm1, 0xC0
 		mulps	xmm0, xmm1
 		movups	[edx], xmm0
 		lea		ecx, [edi+0x34]
-		cmp		byte ptr [esp+0x10], 1
-		jnz		doInverse
 		call	NiMatrix33::Rotate
-		jmp		doExtract
-	doInverse:
-		call	NiMatrix33::RotationMatrix
-		xor		edx, edx
-		mov		ecx, eax
-		call	NiMatrix33::Inverse
-	doExtract:
 		lea		edx, [esi+0x24]
 		lea		ecx, [edi+0x34]
 		call	NiMatrix33::ExtractAngles
+		push	2
+		mov		ecx, esi
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x48]
 		push	1
 		push	edi
 		CALL_EAX(0xC6BD00)
@@ -817,7 +825,7 @@ __declspec(naked) void TESObjectREFR::TransformRotation(NiVector4 *rotVector, UI
 	done:
 		pop		edi
 		pop		esi
-		retn	8
+		retn
 	}
 }
 

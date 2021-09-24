@@ -10,39 +10,16 @@ struct NiRTTI
 // 08
 struct NiPoint2
 {
-	float	x;
-	float	y;
+	float	x, y;
 
 	NiPoint2() {}
 	NiPoint2(float _x, float _y) : x(_x), y(_y) {}
-	NiPoint2(const NiPoint2 &rhs) {_mm_storeu_si64(this, _mm_loadu_si64(&rhs));}
+	NiPoint2(const NiPoint2 &rhs) {*this = rhs;}
 
 	inline void operator=(const NiPoint2 &rhs) {_mm_storeu_si64(this, _mm_loadu_si64(&rhs));}
 };
 
-struct NiVector3;
-
-// 24
-struct NiMatrix33
-{
-	float	cr[3][3];
-
-	void __fastcall ExtractAngles(NiVector3 *outAngles);
-	NiMatrix33* __fastcall RotationMatrix(NiVector3 *rot);
-	NiMatrix33 *MultiplyMatrices(NiMatrix33 *matA, NiMatrix33 *matB);
-	void __fastcall Rotate(NiVector3 *rot);
-	void __fastcall Inverse(NiMatrix33 *mat = NULL);
-	void Dump();
-	
-	inline void operator=(const NiMatrix33 &rhs)
-	{
-		_mm_storeu_ps(&cr[0][0], _mm_loadu_ps(&rhs.cr[0][0]));
-		_mm_storeu_ps(&cr[1][1], _mm_loadu_ps(&rhs.cr[1][1]));
-		cr[2][2] = rhs.cr[2][2];
-	}
-};
-static const NiMatrix33 kIdentityMatrix = {1.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F};
-
+struct NiMatrix33;
 struct NiQuaternion;
 
 // 0C
@@ -52,44 +29,45 @@ struct NiVector3
 
 	NiVector3() {}
 	NiVector3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+	NiVector3(const NiVector3 &rhs) {*this = rhs;}
 
-	float& operator[](char axis)
+	inline float& operator[](char axis)
 	{
 		return ((float*)&x)[axis];
 	}
 
-	void operator=(const NiVector3 &rhs)
+	inline void operator=(const NiVector3 &rhs)
 	{
 		x = rhs.x;
 		y = rhs.y;
 		z = rhs.z;
 	}
 
-	void operator+=(const NiVector3 &rhs)
+	inline void operator+=(const NiVector3 &rhs)
 	{
 		x += rhs.x;
 		y += rhs.y;
 		z += rhs.z;
 	}
-	void operator+=(float value)
+	inline void operator+=(float value)
 	{
 		x += value;
 		y += value;
 		z += value;
 	}
-	void operator-=(const NiVector3 &rhs)
+	inline void operator-=(const NiVector3 &rhs)
 	{
 		x -= rhs.x;
 		y -= rhs.y;
 		z -= rhs.z;
 	}
-	void operator-=(float value)
+	inline void operator-=(float value)
 	{
 		x -= value;
 		y -= value;
 		z -= value;
 	}
-	void operator*=(float value)
+	inline void operator*=(float value)
 	{
 		x *= value;
 		y *= value;
@@ -111,10 +89,20 @@ struct NiVector4
 
 	NiVector4() {}
 	NiVector4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
+	NiVector4(const NiVector4 &rhs) {*this = rhs;}
 
-	float& operator[](char axis)
+	inline void operator=(const NiVector4 &rhs) {_mm_storeu_ps(&x, _mm_loadu_ps(&rhs.x));}
+
+	inline float& operator[](char axis)
 	{
 		return ((float*)&x)[axis];
+	}
+
+	inline void operator*=(float value)
+	{
+		x *= value;
+		y *= value;
+		z *= value;
 	}
 };
 
@@ -124,15 +112,19 @@ struct alignas(16) AlignedVector4
 
 	AlignedVector4() {}
 	AlignedVector4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
+	AlignedVector4(const AlignedVector4 &from) {*this = from;}
+	AlignedVector4(const NiVector4 &from) {*this = from;}
 
-	float& operator[](char axis)
+	inline void operator=(const AlignedVector4 &from) {_mm_store_ps(&x, _mm_load_ps(&from.x));}
+	inline void operator=(const NiVector4 &from) {_mm_store_ps(&x, _mm_loadu_ps(&from.x));}
+	inline void operator=(float *valPtr) {_mm_store_ps(&x, _mm_loadu_ps(valPtr));}
+
+	inline float& operator[](char axis)
 	{
 		return ((float*)&x)[axis];
 	}
 
-	inline void operator=(float *valPtr) {_mm_store_ps(&x, _mm_loadu_ps(valPtr));}
-
-	void operator*=(float value)
+	inline void operator*=(float value)
 	{
 		x *= value;
 		y *= value;
@@ -142,13 +134,74 @@ struct alignas(16) AlignedVector4
 
 float __vectorcall Vector3Length(AlignedVector4 *inVec);
 
-// 10 - always aligned?
+// 24
+struct NiMatrix33
+{
+	float	cr[3][3];
+
+	inline void operator=(const NiMatrix33 &rhs)
+	{
+		_mm_storeu_ps(&cr[0][0], _mm_loadu_ps(&rhs.cr[0][0]));
+		_mm_storeu_ps(&cr[1][1], _mm_loadu_ps(&rhs.cr[1][1]));
+		cr[2][2] = rhs.cr[2][2];
+	}
+
+	void __fastcall ExtractAngles(NiVector3 *outAngles);
+	void __fastcall ExtractAnglesLocal(NiVector3 *outAngles);
+	NiMatrix33* __fastcall RotationMatrix(NiVector3 *rot);
+	NiMatrix33* __fastcall RotationMatrixLocal(NiVector3 *rot);
+	NiMatrix33 *MultiplyMatrices(NiMatrix33 *matA, NiMatrix33 *matB);
+	void __fastcall Rotate(NiVector3 *rot);
+	void __fastcall Transpose(NiMatrix33 *resMat = nullptr);
+	void Dump();
+};
+
+// 10
 struct NiQuaternion
 {
 	float	w, x, y, z;
 
 	NiQuaternion() {}
 	NiQuaternion(float _w, float _x, float _y, float _z) : w(_w), x(_x), y(_y), z(_z) {}
+	NiQuaternion(const NiQuaternion &from) {*this = from;}
+	NiQuaternion(const NiMatrix33 &rotMat) {*this = rotMat;}
+
+	inline void operator=(const NiQuaternion &rhs) {_mm_storeu_ps(&w, _mm_loadu_ps(&rhs.w));}
+
+	void __fastcall operator=(const NiMatrix33 &mat);
+
+	inline void operator+=(const NiQuaternion &rhs)
+	{
+		w += rhs.w;
+		x += rhs.x;
+		y += rhs.y;
+		z += rhs.z;
+	}
+	inline void operator-=(const NiQuaternion &rhs)
+	{
+		w -= rhs.w;
+		x -= rhs.x;
+		y -= rhs.y;
+		z -= rhs.z;
+	}
+	inline void operator*=(const NiQuaternion &rhs)
+	{
+		float tw = w * rhs.w - x * rhs.x - y * rhs.y - z * rhs.z;
+		float tx = w * rhs.x + x * rhs.w - y * rhs.z + z * rhs.y;
+		float ty = w * rhs.y + x * rhs.z + y * rhs.w - z * rhs.x;
+		float tz = w * rhs.z - x * rhs.y + y * rhs.x + z * rhs.w;
+		w = tw;
+		x = tx;
+		y = ty;
+		z = tz;
+	}
+	inline void operator*=(float s)
+	{
+		w *= s;
+		x *= s;
+		y *= s;
+		z *= s;
+	}
 
 	void EulerYPR(NiVector3 &ypr);
 	void RotationMatrix(NiMatrix33 &rotMatrix);
@@ -190,11 +243,9 @@ struct NiFrustum
 // C
 struct NiColor
 {
-	float	r;
-	float	g;
-	float	b;
+	float	r, g, b;
 
-	float& operator[](UInt32 which)
+	inline float& operator[](UInt32 which)
 	{
 		return ((float*)&r)[which];
 	}
@@ -203,12 +254,9 @@ struct NiColor
 // 10
 struct NiColorAlpha
 {
-	float	r;
-	float	g;
-	float	b;
-	float	a;
+	float	r, g, b, a;
 
-	float& operator[](UInt32 which)
+	inline float& operator[](UInt32 which)
 	{
 		return ((float*)&r)[which];
 	}

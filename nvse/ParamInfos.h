@@ -1630,6 +1630,14 @@ ParamInfo kParams_ThreeScriptVars[] =
 	{"Variable", kParamType_ScriptVariable, 0}
 };
 
+ParamInfo kParams_ThreeScriptVars_OneOptionalInt[] =
+{
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Integer", kParamType_Integer, 1}
+};
+
 ParamInfo kParams_OneString_TwoInts_OneFloat[] =
 {
 	{"String", kParamType_String, 0},

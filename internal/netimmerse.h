@@ -1099,6 +1099,7 @@ public:
 	NiVector3				m_worldTranslate;		// 8C
 	float					m_worldScale;			// 98
 
+	void __fastcall TransformTranslate(NiVector4 *posMods);
 	void Update();
 	UInt32 GetIndex();
 	bool ReplaceObject(NiAVObject *object);

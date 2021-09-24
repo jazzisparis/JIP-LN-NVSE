@@ -147,10 +147,10 @@ public:
 	bool __fastcall GetInSameCellOrWorld(TESObjectREFR *target);
 	float __vectorcall GetDistance(TESObjectREFR *target);
 	void SetPos(NiVector4 *posVector);
-	void SetAngle(NiVector4 *rotVector);
+	void SetAngle(NiVector4 *rotVector, bool setLocal);
 	void MoveToCell(TESObjectCELL *cell, NiVector3 *posVector);
 	bool GetTransformedPos(NiVector4 *posMods);
-	void TransformRotation(NiVector4 *rotVector, UInt8 type);
+	void __fastcall Rotate(NiVector4 *rotVector);
 	bool Disable();
 	void DeleteReference();
 	bhkCharacterController *GetCharacterController();

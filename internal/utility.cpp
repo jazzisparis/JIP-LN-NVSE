@@ -117,6 +117,11 @@ __declspec(naked) TESForm* __stdcall LookupFormByRefID(UInt32 refID)
 	}
 }
 
+alignas(16) const UInt32
+kSSERemoveSignMask[] = {0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF},
+kSSEChangeSignMask[] = {0x80000000, 0x80000000, 0x80000000, 0x80000000},
+kSSEDiscard4thPS[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0};
+
 __declspec(naked) UInt32 __vectorcall cvtd2ui(double value)
 {
 	__asm

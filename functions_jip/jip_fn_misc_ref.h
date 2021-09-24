@@ -78,7 +78,7 @@ DEFINE_COMMAND_PLUGIN(GetCollisionNodes, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetChildBlocks, 1, 2, kParams_OneOptionalString_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetBlockTextureSet, 1, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(GetPosEx, 1, 3, kParams_ThreeScriptVars);
-DEFINE_COMMAND_PLUGIN(GetAngleEx, 1, 3, kParams_ThreeScriptVars);
+DEFINE_COMMAND_PLUGIN(GetAngleEx, 1, 4, kParams_ThreeScriptVars_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetTextureTransformKey, 1, 4, kParams_OneString_TwoInts_OneFloat);
 DEFINE_COMMAND_PLUGIN(AttachExtraCamera, 1, 3, kParams_OneString_OneInt_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(ProjectExtraCamera, 0, 4, kParams_TwoStrings_OneDouble_OneOptionalInt);
@@ -813,10 +813,9 @@ bool Cmd_SetAngleEx_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &rotVector.x, &rotVector.y, &rotVector.z, &transform))
 	{
 		rotVector.w = 0;
-		if (!transform)
-			thisObj->SetAngle(&rotVector);
-		else
-			thisObj->TransformRotation(&rotVector, transform);
+		if (transform <= 1)
+			thisObj->SetAngle(&rotVector, transform);
+		else thisObj->Rotate(&rotVector);
 	}
 	return true;
 }
@@ -1078,7 +1077,7 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 			else if (transform == 1)
 				niBlock->m_localRotate.Rotate(&rot);
 			else
-				niBlock->m_localRotate.RotationMatrix(&rot)->Inverse();
+				niBlock->m_localRotate.RotationMatrixLocal(&rot);
 			niBlock->Update();
 		}
 	}
@@ -1932,11 +1931,22 @@ bool Cmd_GetPosEx_Execute(COMMAND_ARGS)
 bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 {
 	ScriptVar *outX, *outY, *outZ;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outX, &outY, &outZ))
+	UInt32 getLocal = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outX, &outY, &outZ, &getLocal))
 	{
-		outX->data.num = thisObj->rotX * kDbl180dPI;
-		outY->data.num = thisObj->rotY * kDbl180dPI;
-		outZ->data.num = thisObj->rotZ * kDbl180dPI;
+		NiVector3 *rotPtr = thisObj->RotVector(), locRot;
+		if (getLocal)
+		{
+			NiNode *rootNode = thisObj->GetNiNode();
+			if (rootNode)
+			{
+				rootNode->m_worldRotate.ExtractAnglesLocal(&locRot);
+				rotPtr = &locRot;
+			}
+		}
+		outX->data.num = rotPtr->x * kDbl180dPI;
+		outY->data.num = rotPtr->y * kDbl180dPI;
+		outZ->data.num = rotPtr->z * kDbl180dPI;
 	}
 	return true;
 }
