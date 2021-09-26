@@ -98,6 +98,13 @@ struct NiVector4
 		return ((float*)&x)[axis];
 	}
 
+	inline void operator+=(const NiVector3 &rhs)
+	{
+		x += rhs.x;
+		y += rhs.y;
+		z += rhs.z;
+	}
+
 	inline void operator*=(float value)
 	{
 		x *= value;
@@ -116,6 +123,7 @@ struct alignas(16) AlignedVector4
 	AlignedVector4(const NiVector4 &from) {*this = from;}
 
 	inline void operator=(const AlignedVector4 &from) {_mm_store_ps(&x, _mm_load_ps(&from.x));}
+	inline void operator=(const NiVector3 &from) {_mm_store_ps(&x, _mm_loadu_ps(&from.x));}
 	inline void operator=(const NiVector4 &from) {_mm_store_ps(&x, _mm_loadu_ps(&from.x));}
 	inline void operator=(float *valPtr) {_mm_store_ps(&x, _mm_loadu_ps(valPtr));}
 
@@ -147,12 +155,16 @@ struct NiMatrix33
 	}
 
 	void __fastcall ExtractAngles(NiVector3 *outAngles);
-	void __fastcall ExtractAnglesLocal(NiVector3 *outAngles);
+	void __fastcall ExtractAnglesInv(NiVector3 *outAngles);
 	NiMatrix33* __fastcall RotationMatrix(NiVector3 *rot);
-	NiMatrix33* __fastcall RotationMatrixLocal(NiVector3 *rot);
-	NiMatrix33 *MultiplyMatrices(NiMatrix33 *matA, NiMatrix33 *matB);
-	void __fastcall Rotate(NiVector3 *rot);
-	void __fastcall Transpose(NiMatrix33 *resMat = nullptr);
+	NiMatrix33* __fastcall RotationMatrixInv(NiVector3 *rot);
+	NiMatrix33* __fastcall MultiplyMatrices(NiMatrix33 *matB);
+	NiMatrix33* __fastcall Rotate(NiVector3 *rot);
+	NiMatrix33 *Transpose();
+	__forceinline NiMatrix33 *RotationMatrixFromAxisAndAngle(const NiVector3 &normalizedAxes, float angle)
+	{
+		return ThisCall<NiMatrix33*>(0x4168A0, this, angle, normalizedAxes.x, normalizedAxes.y, normalizedAxes.z);	//	Returns this
+	}
 	void Dump();
 };
 

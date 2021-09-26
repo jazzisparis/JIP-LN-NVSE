@@ -1876,8 +1876,8 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 
 	NiCamera *lmCamera = NiCamera::Create();
 	s_localMapCamera = lmCamera;
-	lmCamera->m_localRotate = {0, 0, 1.0F, 0, 1.0F, 0, -1.0F, 0, 0};
-	lmCamera->m_localTranslate.z = 65536.0F;
+	lmCamera->LocalRotate() = {0, 0, 1.0F, 0, 1.0F, 0, -1.0F, 0, 0};
+	lmCamera->LocalTranslate().z = 65536.0F;
 	lmCamera->frustum.viewPort = {-2048.0F, 2048.0F, 2048.0F, -2048.0F};
 	lmCamera->frustum.n = 100.0F;
 	lmCamera->frustum.f = 131072.0F;
@@ -2621,7 +2621,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			{
 				objectRef = mkrIter.Key();
 				markerData = &mkrIter();
-				currX = *(UInt32*)&objectRef->posX;
+				currX = *(UInt32*)&objectRef->position;
 				if (markerData->pos != currX)
 					markerData->pos = currX;
 				else if (!updateTiles) continue;
@@ -2646,7 +2646,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		s_wQuestMarkersRect->DestroyAllChildren();
 	}
 
-	s_pcMarkerRotate->SetFloat(s_cellNorthRotation - thePlayer->rotZ);
+	s_pcMarkerRotate->SetFloat(s_cellNorthRotation - thePlayer->rotation.z);
 	s_miniMapPosX->SetFloat(posMult.x);
 	s_miniMapPosY->SetFloat(posMult.y);
 	return true;

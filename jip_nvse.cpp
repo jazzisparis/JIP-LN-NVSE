@@ -1431,7 +1431,9 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 	{
 		case NVSEMessagingInterface::kMessage_PostLoad:
 		{
+			WriteRelCall(0x86B0F4, (UInt32)GetSingletonsHook);
 			SAFE_WRITE_BUF(0x86B1EE, "\x0F\x1F\x44\x00\x00");
+
 			InitJIPHooks();
 			InitGamePatches();
 			InitCmdPatches();

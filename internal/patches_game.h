@@ -3936,25 +3936,18 @@ __declspec(naked) void DoOperator()
 	}
 }
 
-const UInt32 kDoOperatorJumpTable[] =
-{
-	(UInt32)DoOperator, (UInt32)DoOperator,
-	(UInt32)DoOperator + 0x30, (UInt32)DoOperator + 0x30,
-	(UInt32)DoOperator + 0x60, (UInt32)DoOperator + 0x70,
-	(UInt32)DoOperator + 0x80, (UInt32)DoOperator + 0x90,
-	(UInt32)DoOperator + 0xA0, (UInt32)DoOperator + 0xB0,
-	(UInt32)DoOperator + 0xC0, (UInt32)DoOperator + 0xD0,
-	(UInt32)DoOperator + 0xE0, (UInt32)DoOperator + 0xF0,
-	(UInt32)DoOperator + 0x100, (UInt32)DoOperator + 0x110,
-	(UInt32)DoOperator + 0x120, (UInt32)DoOperator + 0x130,
-	(UInt32)DoOperator + 0x140, (UInt32)DoOperator + 0x150,
-	(UInt32)DoOperator + 0x160, (UInt32)DoOperator + 0x170,
-	(UInt32)DoOperator + 0x180, (UInt32)DoOperator + 0x1A0,
-	(UInt32)DoOperator + 0x1B0, (UInt32)DoOperator + 0x1D0
-};
-
 __declspec(naked) void DoOperatorHook()
 {
+	static const UInt32 kDoOperatorJumpTable[] =
+	{
+		(UInt32)DoOperator, (UInt32)DoOperator, (UInt32)DoOperator + 0x30, (UInt32)DoOperator + 0x30,
+		(UInt32)DoOperator + 0x60, (UInt32)DoOperator + 0x70, (UInt32)DoOperator + 0x80, (UInt32)DoOperator + 0x90,
+		(UInt32)DoOperator + 0xA0, (UInt32)DoOperator + 0xB0, (UInt32)DoOperator + 0xC0, (UInt32)DoOperator + 0xD0,
+		(UInt32)DoOperator + 0xE0, (UInt32)DoOperator + 0xF0, (UInt32)DoOperator + 0x100, (UInt32)DoOperator + 0x110,
+		(UInt32)DoOperator + 0x120, (UInt32)DoOperator + 0x130, (UInt32)DoOperator + 0x140, (UInt32)DoOperator + 0x150,
+		(UInt32)DoOperator + 0x160, (UInt32)DoOperator + 0x170, (UInt32)DoOperator + 0x180, (UInt32)DoOperator + 0x1A0,
+		(UInt32)DoOperator + 0x1B0, (UInt32)DoOperator + 0x1D0
+	};
 	__asm
 	{
 		mov		al, [ebp-0x28]
@@ -4182,8 +4175,6 @@ __declspec(naked) void InitFontManagerHook()
 	__asm
 	{
 		push	ebp
-		mov		ebp, esp
-		push	ecx
 		push	ebx
 		push	esi
 		push	edi
@@ -4193,11 +4184,13 @@ __declspec(naked) void InitFontManagerHook()
 		push	0x164
 		GAME_HEAP_ALLOC
 		mov		[esi], eax
-		mov		[ebp-4], eax
+		mov		g_fontManager, eax
+		mov		ebp, eax
 		mov		dword ptr [eax+0x20], 0
 		mov		esi, eax
 		mov		edi, 0x11F3418
 		mov		ebx, 1
+		ALIGN 16
 	defFontHead:
 		push	0x54
 		GAME_HEAP_ALLOC
@@ -4216,10 +4209,9 @@ __declspec(naked) void InitFontManagerHook()
 		inc		ebx
 		cmp		bl, 9
 		jb		defFontHead
-		mov		eax, [ebp-4]
-		mov		eax, [eax+8]
-		mov		[ebp-4], eax
+		mov		ebp, [ebp+8]
 		mov		edi, offset s_extraFontsPaths
+		ALIGN 16
 	extFontHead:
 		inc		ebx
 		cmp		bl, 0x5A
@@ -4245,21 +4237,24 @@ __declspec(naked) void InitFontManagerHook()
 		mov		ecx, offset s_fontInfosMap
 		call	UnorderedMap<const char*, FontInfo*>::InsertNotIn
 		jmp		extFontNext
+		ALIGN 16
 	doFree:
 		push	eax
 		GAME_HEAP_FREE
+		ALIGN 16
 	useDefault:
-		mov		eax, [ebp-4]
+		mov		eax, ebp
 	extFontNext:
 		add		esi, 4
 		mov		[esi], eax
 		add		edi, 4
 		jmp		extFontHead
+		ALIGN 16
 	done:
 		pop		edi
 		pop		esi
 		pop		ebx
-		leave
+		pop		ebp
 		retn
 	}
 }
@@ -4716,11 +4711,9 @@ void InitGamePatches()
 	PrintLog("> Game patches initialized successfully.");
 }
 
-typedef int (*_ReloadENB)(UInt32 type, void *data);
-_ReloadENB ReloadENB = NULL;
-
-void DeferredInit()
+NiCamera* __fastcall GetSingletonsHook(SceneGraph *sceneGraph)
 {
+	g_sceneGraph = sceneGraph;
 	g_modelLoader = ModelLoader::GetSingleton();
 	g_dataHandler = DataHandler::GetSingleton();
 	g_loadedReferences = LoadedReferenceCollection::Get();
@@ -4728,11 +4721,17 @@ void DeferredInit()
 	g_OSGlobals = OSGlobals::GetSingleton();
 	g_TES = TES::GetSingleton();
 	g_thePlayer = PlayerCharacter::GetSingleton();
-	g_sceneGraph = *(SceneGraph**)0x11DEB7C;
-	g_scrapHeapQueue = *(void**)0x11DF1A8;
-	g_fontManager = FontManager::GetSingleton();
 	g_inputGlobals = OSInputGlobals::GetSingleton();
+	g_scrapHeapQueue = *(void**)0x11DF1A8;
 	g_tileMenuArray = *(TileMenu***)0x11F350C;
+	return sceneGraph->camera;
+}
+
+typedef int (*_ReloadENB)(UInt32 type, void *data);
+_ReloadENB ReloadENB = NULL;
+
+void DeferredInit()
+{
 	g_HUDMainMenu = HUDMainMenu::Get();
 	g_consoleManager = ConsoleManager::GetSingleton();
 	g_cursorNode = g_interfaceManager->cursor->node;
@@ -4820,8 +4819,6 @@ void DeferredInit()
 	avInfo->fullName.name = avInfo->avName;
 	avInfo->callback4C = 0x643BD0;
 
-	JIPScriptRunner::Init();
-
 	s_LIGH_EDID = "LIGH_EDID";
 
 	UInt8 cccIdx = g_dataHandler->GetModIndex("JIP Companions Command & Control.esp");
@@ -4841,6 +4838,8 @@ void DeferredInit()
 			fclose(nvacLog);
 		}
 	}
+
+	JIPScriptRunner::Init();
 
 	Console_Print("JIP LN version: %.2f", JIP_LN_VERSION);
 }

@@ -3750,12 +3750,12 @@ void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm, NiPointLight *pt
 		v07 *= v01;
 		if (ptLight->m_flags & 0x20000000)
 		{
-			ptLight->m_localTranslate.x += v05 - ptLight->ambientColor.r;
-			ptLight->m_localTranslate.y += v06 - ptLight->ambientColor.g;
-			ptLight->m_localTranslate.z += v07 - ptLight->ambientColor.b;
+			ptLight->LocalTranslate().x += v05 - ptLight->ambientColor.r;
+			ptLight->LocalTranslate().y += v06 - ptLight->ambientColor.g;
+			ptLight->LocalTranslate().z += v07 - ptLight->ambientColor.b;
 			ptLight->ambientColor = {v05, v06, v07};
 		}
-		else ptLight->m_localTranslate = {v05, v06, v07};
+		else ptLight->LocalTranslate() = {v05, v06, v07};
 		v01 = sin((v02 + 1.7F) * 1.1F) + 1.0F;
 		v01 *= (sin(v03 * 1.3F) + 1.0F) * 0.0833333F;
 		v01 += sin(v04 * 3.0F) * 0.2F;

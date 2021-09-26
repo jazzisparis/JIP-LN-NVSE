@@ -409,9 +409,9 @@ struct Sound
 
 	Sound() : soundKey(0xFFFFFFFF), byte04(0), unk08(0) {}
 
-	__forceinline void SetPos(float x, float y, float z)
+	__forceinline void SetPos(const NiVector3 &posVec)
 	{
-		ThisCall(0xAD8B60, this, x, y, z);
+		ThisCall(0xAD8B60, this, posVec.x, posVec.y, posVec.z);
 	}
 	__forceinline void SetNiNode(NiNode *node)
 	{

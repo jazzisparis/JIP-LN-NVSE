@@ -540,7 +540,7 @@ bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 		filter &= 0x3F;
 	}
 	NiVector3 coords;
-	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, 50000.0F, 0, filter))
+	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->WorldRotate(), 50000.0F, 0, filter))
 	{
 		ArrayElementL elements[3] = {coords.x, coords.y, coords.z};
 		AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
@@ -558,7 +558,7 @@ bool Cmd_GetReticleRange_Execute(COMMAND_ARGS)
 		filter &= 0x3F;
 	}
 	NiVector3 coords;
-	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, 50000.0F, 0, filter))
+	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->WorldRotate(), 50000.0F, 0, filter))
 		*result = Vector3Distance(&coords, &g_thePlayer->cameraPos);
 	else *result = -1;
 	return true;
@@ -1222,7 +1222,7 @@ bool Cmd_GetReticleNode_Execute(COMMAND_ARGS)
 	UInt32 filter = 6;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &filter))
 	{
-		NiAVObject *rtclObject = GetRayCastObject(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, maxRange, 0, filter & 0x3F);
+		NiAVObject *rtclObject = GetRayCastObject(&g_thePlayer->cameraPos, &g_sceneGraph->camera->WorldRotate(), maxRange, 0, filter & 0x3F);
 		if (rtclObject) nodeName = rtclObject->GetName();
 	}
 	AssignString(PASS_COMMAND_ARGS, nodeName);
@@ -1259,7 +1259,7 @@ bool Cmd_GetPointRayCastPos_Execute(COMMAND_ARGS)
 		rot.y = 0;
 		rot.z *= kFltPId180;
 		NiMatrix33 rotMat;
-		rotMat.RotationMatrixLocal(&rot);
+		rotMat.RotationMatrixInv(&rot);
 		if (rot.RayCastCoords(&pos, &rotMat, 100000.0F, 4, filter & 0x3F))
 		{
 			outX->data.num = rot.x;

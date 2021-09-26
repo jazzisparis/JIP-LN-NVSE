@@ -42,7 +42,7 @@ public:
 	/*1C4*/virtual void		AnimateNiNode();
 	/*1C8*/virtual NiNode	*GenerateNiNode(bool arg1);
 	/*1CC*/virtual void		Set3D(NiNode* niNode, bool unloadArt);
-	/*1D0*/virtual NiNode	*GetNiNode();
+	/*1D0*/virtual NiNode	*GetNiNode_v();
 	/*1D4*/virtual void		Unk_75(void);
 	/*1D8*/virtual void		Unk_76(void);
 	/*1DC*/virtual void		Unk_77(void);
@@ -104,19 +104,16 @@ public:
 	EditorData	editorData;			// +04
 #endif
 
-	TESChildCell	childCell;				// 018
+	TESChildCell	childCell;		// 18
 
-	TESSound		*loopSound;				// 01C
-
-	TESForm			*baseForm;				// 020
-	
-	float			rotX, rotY, rotZ;		// 024 - either public or accessed via simple inline accessor common to all child classes
-	float			posX, posY, posZ;		// 030 - seems to be private
-	float			scale;					// 03C 
-
-	TESObjectCELL	*parentCell;			// 040
-	ExtraDataList	extraDataList;			// 044
-	RenderState		*renderState;			// 064
+	TESSound		*loopSound;		// 1C
+	TESForm			*baseForm;		// 20
+	NiVector3		rotation;		// 24
+	NiVector3		position;		// 30
+	float			scale;			// 3C 
+	TESObjectCELL	*parentCell;	// 40
+	ExtraDataList	extraDataList;	// 44
+	RenderState		*renderState;	// 64
 
 	ScriptEventList *GetEventList() const;
 
@@ -126,9 +123,7 @@ public:
 	bool IsDeleted() const {return (flags & kFlags_Deleted) != 0;}
 	bool IsDestroyed() const {return (flags & kFlags_Destroyed) != 0;}
 
-	NiVector3 *RotVector() {return (NiVector3*)&rotX;}
-	NiVector3 *PosVector() {return (NiVector3*)&posX;}
-	NiPoint2 *PosXY() {return (NiPoint2*)&posX;}
+	inline NiPoint2 *PosXY() const {return (NiPoint2*)&position;}
 
 	void Update3D();
 	TESContainer *GetContainer();
@@ -149,7 +144,7 @@ public:
 	void SetPos(NiVector4 *posVector);
 	void SetAngle(NiVector4 *rotVector, bool setLocal);
 	void MoveToCell(TESObjectCELL *cell, NiVector3 *posVector);
-	bool GetTransformedPos(NiVector4 *posMods);
+	bool __fastcall GetTransformedPos(NiVector4 *posMods);
 	void __fastcall Rotate(NiVector4 *rotVector);
 	bool Disable();
 	void DeleteReference();
@@ -161,9 +156,10 @@ public:
 	void SwapTexture(const char *blockName, const char *filePath, UInt32 texIdx);
 	bool SetLinkedRef(TESObjectREFR *linkObj, UInt8 modIdx = 0xFF);
 	bool ValidForHooks();
+	NiNode *GetNiNode();
 	NiAVObject* __fastcall GetNiBlock(const char *blockName);
 	NiNode* __fastcall GetNode(const char *nodeName);
-	hkpRigidBody *GetRigidBody(const char *blockName);
+	hkpRigidBody* __fastcall GetRigidBody(const char *blockName);
 
 	static TESObjectREFR* __stdcall Create(bool bTemp = false);
 
@@ -1097,7 +1093,7 @@ public:
 	tList<ImpactData>	impactDataList;	// 088
 	UInt8				hasImpacted;	// 090
 	UInt8				pad091[3];		// 091
-	float				unk094[13];		// 094
+	NiTransform			transform;		// 094
 	UInt32				projFlags;		// 0C8
 	float				speedMult1;		// 0CC
 	float				speedMult2;		// 0D0

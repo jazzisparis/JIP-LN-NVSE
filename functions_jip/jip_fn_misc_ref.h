@@ -330,7 +330,7 @@ bool Cmd_GetCenterPos_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &axis))
 	{
 		axis -= 'X';
-		*result = ((float*)&thisObj->posX)[axis];
+		*result = thisObj->position[axis];
 		if (IS_ACTOR(thisObj))
 		{
 			Actor *actor = (Actor*)thisObj;
@@ -765,7 +765,7 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 		if (cell)
 		{
 			NiVector3 coords;
-			if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, maxRange))
+			if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->WorldRotate(), maxRange))
 			{
 				if (numArgs > 1)
 					coords += posMods;
@@ -939,9 +939,7 @@ bool Cmd_PushObject_Execute(COMMAND_ARGS)
 		if (niNode)
 		{
 			if (!refr) refr = thisObj;
-			forceVector.x += refr->posX;
-			forceVector.y += refr->posY;
-			forceVector.z += refr->posZ;
+			forceVector += refr->position;
 			niNode->ApplyForce(&forceVector);
 		}
 	}
@@ -991,8 +989,7 @@ __declspec(naked) NiAVObject* __fastcall GetNifBlock(TESObjectREFR *thisObj, UIn
 		mov		eax, [ecx+0x694]
 		jmp		gotRoot
 	notPlayer:
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1D0]
+		call	TESObjectREFR::GetNiNode
 	gotRoot:
 		test	eax, eax
 		jz		done
@@ -1016,7 +1013,7 @@ bool Cmd_GetNifBlockTranslation_Execute(COMMAND_ARGS)
 		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
-			NiVector3 &transltn = getWorld ? niBlock->m_worldTranslate : niBlock->m_localTranslate;
+			NiVector3 &transltn = getWorld ? niBlock->WorldTranslate() : niBlock->LocalTranslate();
 			ArrayElementL elements[3] = {transltn.x, transltn.y, transltn.z};
 			AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
 		}
@@ -1034,7 +1031,7 @@ bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
-			niBlock->m_localTranslate = transltn;
+			niBlock->LocalTranslate() = transltn;
 			niBlock->Update();
 		}
 	}
@@ -1045,15 +1042,17 @@ bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char blockName[0x40];
-	UInt32 getWorld = 0, pcNode = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &getWorld, &pcNode))
+	UInt32 getMode = 0, pcNode = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &getMode, &pcNode))
 	{
 		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
 			NiVector3 rot;
-			NiMatrix33 &rotMat = getWorld ? niBlock->m_worldRotate : niBlock->m_localRotate;
-			rotMat.ExtractAngles(&rot);
+			NiMatrix33 &rotMat = (getMode & 1) ? niBlock->WorldRotate() : niBlock->LocalRotate();
+			if (!(getMode & 2))
+				rotMat.ExtractAngles(&rot);
+			else rotMat.ExtractAnglesInv(&rot);
 			ArrayElementL elements[3] = {rot.x * kDbl180dPI, rot.y * kDbl180dPI, rot.z * kDbl180dPI};
 			AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
 		}
@@ -1073,11 +1072,11 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 		{
 			rot *= kFltPId180;
 			if (!transform)
-				niBlock->m_localRotate.RotationMatrix(&rot);
+				niBlock->LocalRotate().RotationMatrix(&rot);
 			else if (transform == 1)
-				niBlock->m_localRotate.Rotate(&rot);
+				niBlock->LocalRotate().Rotate(&rot);
 			else
-				niBlock->m_localRotate.RotationMatrixLocal(&rot);
+				niBlock->LocalRotate().RotationMatrixInv(&rot);
 			niBlock->Update();
 		}
 	}
@@ -1092,7 +1091,7 @@ bool Cmd_GetNifBlockScale_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &pcNode))
 	{
 		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
-		if (niBlock) *result = niBlock->m_localScale;
+		if (niBlock) *result = niBlock->m_transformLocal.scale;
 	}
 	return true;
 }
@@ -1107,7 +1106,7 @@ bool Cmd_SetNifBlockScale_Execute(COMMAND_ARGS)
 		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
-			niBlock->m_localScale = newScale;
+			niBlock->m_transformLocal.scale = newScale;
 			niBlock->Update();
 		}
 	}
@@ -1200,7 +1199,7 @@ bool Cmd_PlaceAtCell_Execute(COMMAND_ARGS)
 	UInt32 count;
 	TESObjectCELL *worldOrCell;
 	TESObjectREFR *tempPosMarker = s_tempPosMarker;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &count, &worldOrCell, &tempPosMarker->posX, &tempPosMarker->posY, &tempPosMarker->posZ))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &count, &worldOrCell, &tempPosMarker->position.x, &tempPosMarker->position.y, &tempPosMarker->position.z))
 	{
 		if NOT_ID(worldOrCell, TESObjectCELL)
 		{
@@ -1228,9 +1227,9 @@ bool Cmd_GetRayCastPos_Execute(COMMAND_ARGS)
 		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
 		{
-			NiVector3 coords, posVector = objNode->m_worldTranslate;
+			NiVector3 coords, posVector = objNode->WorldTranslate();
 			posVector.z += posZmod;
-			if (coords.RayCastCoords(&posVector, &objNode->m_worldRotate, 50000.0F, 4, filter & 0x3F))
+			if (coords.RayCastCoords(&posVector, &objNode->WorldRotate(), 50000.0F, 4, filter & 0x3F))
 			{
 				outX->data = coords.x;
 				outY->data = coords.y;
@@ -1302,9 +1301,7 @@ bool Cmd_MoveToNode_Execute(COMMAND_ARGS)
 			NiNode *targetNode = targetRef->GetNode(nodeName);
 			if (targetNode)
 			{
-				posMods.x += targetNode->m_worldTranslate.x;
-				posMods.y += targetNode->m_worldTranslate.y;
-				posMods.z += targetNode->m_worldTranslate.z;
+				posMods += targetNode->WorldTranslate();
 				thisObj->MoveToCell(cell, &posMods);
 				*result = 1;
 			}
@@ -1453,7 +1450,7 @@ bool Cmd_AttachLight_Execute(COMMAND_ARGS)
 		if (objNode)
 		{
 			NiPointLight *pointLight = CreatePointLight(lightForm, objNode);
-			pointLight->m_localTranslate = offsetMod;
+			pointLight->LocalTranslate() = offsetMod;
 			pointLight->extraFlags |= 0x80;
 			*result = 1;
 		}
@@ -1709,11 +1706,11 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 			if (g_thePlayer->GetDistance(targetRef) > 1024.0F)
 			{
 				cell = targetRef->GetParentCell();
-				if (cell) g_thePlayer->MoveToCell(cell, targetRef->PosVector());
+				if (cell) g_thePlayer->MoveToCell(cell, &targetRef->position);
 			}
 			s_syncPositionRef = targetRef;
 			s_syncPositionFlags = (syncRot != 0);
-			s_syncPositionPos = &targetRef->posX;
+			s_syncPositionPos = targetRef->position;
 			s_syncPositionNode = nodeName;
 			HOOK_SET(SynchronizePosition, true);
 		}
@@ -1791,7 +1788,7 @@ bool Cmd_GetRayCastRef_Execute(COMMAND_ARGS)
 		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
 		{
-			NiAVObject *rcObject = GetRayCastObject(&objNode->m_worldTranslate, &objNode->m_worldRotate, 50000.0F, 4, filter & 0x3F);
+			NiAVObject *rcObject = GetRayCastObject(&objNode->WorldTranslate(), &objNode->WorldRotate(), 50000.0F, 4, filter & 0x3F);
 			if (rcObject)
 			{
 				TESObjectREFR *resRefr = CdeclCall<TESObjectREFR*>(0x56F930, rcObject);
@@ -1812,7 +1809,7 @@ bool Cmd_GetRayCastMaterial_Execute(COMMAND_ARGS)
 	{
 		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
-			*result = GetRayCastMaterial(&objNode->m_worldTranslate, &objNode->m_worldRotate, 50000.0F, 4, filter & 0x3F);
+			*result = GetRayCastMaterial(&objNode->WorldTranslate(), &objNode->WorldRotate(), 50000.0F, 4, filter & 0x3F);
 	}
 	return true;
 }
@@ -1921,9 +1918,9 @@ bool Cmd_GetPosEx_Execute(COMMAND_ARGS)
 	ScriptVar *outX, *outY, *outZ;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outX, &outY, &outZ))
 	{
-		outX->data.num = thisObj->posX;
-		outY->data.num = thisObj->posY;
-		outZ->data.num = thisObj->posZ;
+		outX->data.num = thisObj->position.x;
+		outY->data.num = thisObj->position.y;
+		outZ->data.num = thisObj->position.z;
 	}
 	return true;
 }
@@ -1934,13 +1931,13 @@ bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 	UInt32 getLocal = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outX, &outY, &outZ, &getLocal))
 	{
-		NiVector3 *rotPtr = thisObj->RotVector(), locRot;
+		NiVector3 *rotPtr = &thisObj->rotation, locRot;
 		if (getLocal)
 		{
 			NiNode *rootNode = thisObj->GetNiNode();
 			if (rootNode)
 			{
-				rootNode->m_worldRotate.ExtractAnglesLocal(&locRot);
+				rootNode->WorldRotate().ExtractAnglesInv(&locRot);
 				rotPtr = &locRot;
 			}
 		}

@@ -601,55 +601,45 @@ __declspec(naked) void TESObjectREFR::SetPos(NiVector4 *posVector)
 {
 	__asm
 	{
-		push	ebp
-		mov		ebp, esp
-		push	ecx
-		sub		esp, 0x10
-		push	dword ptr [ebp+8]
+		push	esi
+		mov		esi, ecx
+		push	dword ptr [esp+8]
 		CALL_EAX(0x575830)
-		mov		ecx, [ebp-4]
-		mov		eax, [ecx]
+		mov		eax, [esi]
 		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		noCharCtrl
-		mov		ecx, [ecx+0x68]
+		mov		ecx, [esi+0x68]
 		test	ecx, ecx
 		jz		noCharCtrl
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x28C]
-		test	eax, eax
+		cmp		dword ptr [ecx+0x28], 1
+		ja		noCharCtrl
+		mov		ecx, [ecx+0x138]
+		test	ecx, ecx
 		jz		noCharCtrl
-		mov		[ebp-8], eax
-		mov		ecx, eax
-		CALL_EAX(0x5C0860)
-		test	al, al
+		cmp		dword ptr [ecx+0x3F0], 4
 		jnz		noCharCtrl
-		push	dword ptr [ebp+8]
-		mov		ecx, [ebp-8]
+		push	dword ptr [esp+8]
 		CALL_EAX(0x5620E0)
 	noCharCtrl:
-		mov		ecx, [ebp-4]
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1D0]
+		mov		ecx, esi
+		call	TESObjectREFR::GetNiNode
 		test	eax, eax
 		jz		done
-		mov		[ebp-8], eax
-		push	dword ptr [ebp+8]
-		mov		ecx, eax
-		CALL_EAX(0x440460)
+		mov		ecx, [esp+8]
+		mov		edx, [ecx]
+		mov		[eax+0x58], edx
+		mov		edx, [ecx+4]
+		mov		[eax+0x5C], edx
+		mov		edx, [ecx+8]
+		mov		[eax+0x60], edx
 		push	1
-		push	dword ptr [ebp-8]
-		CALL_EAX(0xC6BD00)
-		add		esp, 8
-		lea		eax, [ebp-0x14]
-		xor		edx, edx
-		mov		[eax], edx
-		mov		[eax+4], edx
-		mov		[eax+8], edx
 		push	eax
-		mov		ecx, [ebp-8]
-		CALL_EAX(0xA59C60)
+		CALL_EAX(0xC6BD00)
+		pop		ecx
+		pop		edx
+		call	NiAVObject::Update
 	done:
-		leave
+		pop		esi
 		retn	4
 	}
 }
@@ -661,8 +651,7 @@ __declspec(naked) void TESObjectREFR::SetAngle(NiVector4 *rotVector, bool setLoc
 		push	esi
 		push	edi
 		mov		esi, ecx
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1D0]
+		call	TESObjectREFR::GetNiNode
 		test	eax, eax
 		jz		done
 		mov		edi, eax
@@ -682,8 +671,9 @@ __declspec(naked) void TESObjectREFR::SetAngle(NiVector4 *rotVector, bool setLoc
 		jmp		doneRot
 	localRot:
 		movups	[edx], xmm0
-		call	NiMatrix33::RotationMatrixLocal
+		call	NiMatrix33::RotationMatrixInv
 		lea		edx, [esi+0x24]
+		mov		ecx, eax
 		call	NiMatrix33::ExtractAngles
 	doneRot:
 		push	2
@@ -757,20 +747,19 @@ __declspec(naked) void TESObjectREFR::MoveToCell(TESObjectCELL *cell, NiVector3 
 	}
 }
 
-__declspec(naked) bool TESObjectREFR::GetTransformedPos(NiVector4 *posMods)
+__declspec(naked) bool __fastcall TESObjectREFR::GetTransformedPos(NiVector4 *posMods)
 {
 	__asm
 	{
 		push	esi
 		mov		esi, ecx
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1D0]
+		call	TESObjectREFR::GetNiNode
 		test	eax, eax
 		jz		done
-		mov		ecx, [esp+8]
-		push	ecx
+		push	edx
 		add		eax, 0x34
 		push	eax
+		mov		ecx, edx
 		call	NiVector3::MultiplyMatrixVector
 		movups	xmm0, [ecx]
 		movups	xmm1, [esi+0x30]
@@ -779,7 +768,7 @@ __declspec(naked) bool TESObjectREFR::GetTransformedPos(NiVector4 *posMods)
 		mov		al, 1
 	done:
 		pop		esi
-		retn	4
+		retn
 	}
 }
 
@@ -790,12 +779,9 @@ __declspec(naked) void __fastcall TESObjectREFR::Rotate(NiVector4 *rotVector)
 		push	esi
 		push	edi
 		mov		esi, ecx
-		mov		edi, edx
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1D0]
+		call	TESObjectREFR::GetNiNode
 		test	eax, eax
 		jz		done
-		mov		edx, edi
 		mov		edi, eax
 		movups	xmm0, [edx]
 		movss	xmm1, kFltPId180
@@ -805,7 +791,7 @@ __declspec(naked) void __fastcall TESObjectREFR::Rotate(NiVector4 *rotVector)
 		lea		ecx, [edi+0x34]
 		call	NiMatrix33::Rotate
 		lea		edx, [esi+0x24]
-		lea		ecx, [edi+0x34]
+		mov		ecx, eax
 		call	NiMatrix33::ExtractAngles
 		push	2
 		mov		ecx, esi
@@ -940,8 +926,7 @@ __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const c
 		push	ebp
 		mov		ebp, esp
 		sub		esp, 8
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1D0]
+		call	TESObjectREFR::GetNiNode
 		test	eax, eax
 		jz		done
 		mov		edx, [ebp+8]
@@ -999,14 +984,29 @@ __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const c
 	}
 }
 
+__declspec(naked) NiNode *TESObjectREFR::GetNiNode()
+{
+	__asm
+	{
+		mov		eax, [ecx+0x64]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x14]
+		cmp		dword ptr [ecx+0xC], 0x14
+		jnz		done
+		cmp		byte ptr [ecx+0x64A], 0
+		jnz		done
+		mov		eax, [ecx+0x694]
+	done:
+		retn
+	}
+}
+
 __declspec(naked) NiAVObject* __fastcall TESObjectREFR::GetNiBlock(const char *blockName)
 {
 	__asm
 	{
-		push	edx
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1D0]
-		pop		edx
+		call	TESObjectREFR::GetNiNode
 		test	eax, eax
 		jz		done
 		cmp		[edx], 0
@@ -1022,10 +1022,7 @@ __declspec(naked) NiNode* __fastcall TESObjectREFR::GetNode(const char *nodeName
 {
 	__asm
 	{
-		push	edx
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1D0]
-		pop		edx
+		call	TESObjectREFR::GetNiNode
 		test	eax, eax
 		jz		done
 		cmp		[edx], 0
@@ -1043,20 +1040,29 @@ __declspec(naked) NiNode* __fastcall TESObjectREFR::GetNode(const char *nodeName
 	}
 }
 
-hkpRigidBody *TESObjectREFR::GetRigidBody(const char *blockName)
+__declspec(naked) hkpRigidBody* __fastcall TESObjectREFR::GetRigidBody(const char *blockName)
 {
-	NiAVObject *block = GetNiBlock(blockName);
-	if (block && block->m_collisionObject)
+	__asm
 	{
-		bhkWorldObject *hWorldObj = block->m_collisionObject->worldObj;
-		if (hWorldObj)
-		{
-			hkpRigidBody *rigidBody = (hkpRigidBody*)hWorldObj->refObject;
-			if ((rigidBody->motion.type <= 3) || (rigidBody->motion.type == 6))
-				return rigidBody;
-		}
+		call	TESObjectREFR::GetNiBlock
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x1C]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x10]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+8]
+		mov		dl, [eax+0xE8]
+		cmp		dl, 3
+		jbe		done
+		cmp		dl, 6
+		jz		done
+		xor		eax, eax
+	done:
+		retn
 	}
-	return NULL;
 }
 
 bool TESObjectREFR::IsGrabbable()

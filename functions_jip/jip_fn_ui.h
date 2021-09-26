@@ -1258,8 +1258,8 @@ bool Cmd_SetCursorPos_Execute(COMMAND_ARGS)
 	{
 		g_interfaceManager->cursorX = posX;
 		g_interfaceManager->cursorY = posY;
-		g_cursorNode->m_localTranslate.x = (posX * g_screenResConvert) - g_screenWidth;
-		g_cursorNode->m_localTranslate.z = g_screenHeight - (posY * g_screenResConvert);
+		g_cursorNode->LocalTranslate().x = (posX * g_screenResConvert) - g_screenWidth;
+		g_cursorNode->LocalTranslate().z = g_screenHeight - (posY * g_screenResConvert);
 	}
 	return true;
 }

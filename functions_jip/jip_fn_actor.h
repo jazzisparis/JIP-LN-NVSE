@@ -825,7 +825,7 @@ bool Cmd_ResetFallTime_Execute(COMMAND_ARGS)
 	bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 	if (charCtrl)
 	{
-		charCtrl->startingHeight = thisObj->posZ;
+		charCtrl->startingHeight = thisObj->position.z;
 		charCtrl->fallTimeElapsed = 0;
 	}
 	return true;
@@ -1863,7 +1863,7 @@ bool Cmd_PushActorAwayAlt_Execute(COMMAND_ARGS)
 		BaseProcess *process = actor->baseProcess;
 		if (process && !process->processLevel)
 		{
-			if (!absPos) posVector += *(actor->PosVector());
+			if (!absPos) posVector += actor->position;
 			process->PushActorAway(actor, posVector.x, posVector.y, posVector.z, actor->AdjustPushForce(force));
 		}
 	}
