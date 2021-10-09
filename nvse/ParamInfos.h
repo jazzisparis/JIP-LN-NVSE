@@ -472,6 +472,27 @@ ParamInfo kParams_OneInt_OneFloat_OneOptionalActorBase[] =
 	{"Actor Base", kParamType_ActorBase, 1}
 };
 
+ParamInfo kParams_OneMagicItem_OneInt[] =
+{
+	{"Magic Item", kParamType_MagicItem, 0},
+	{"Integer", kParamType_Integer, 0}
+};
+
+ParamInfo kParams_OneMagicItem_TwoInts[] =
+{
+	{"Magic Item", kParamType_MagicItem, 0},
+	{"Integer", kParamType_Integer, 0},
+	{"Integer", kParamType_Integer, 0}
+};
+
+ParamInfo kParams_OneMagicItem_ThreeInts[] =
+{
+	{"Magic Item", kParamType_MagicItem, 0},
+	{"Integer", kParamType_Integer, 0},
+	{"Integer", kParamType_Integer, 0},
+	{"Integer", kParamType_Integer, 0}
+};
+
 ParamInfo kParams_OneMagicItem_OneInt_OneMagicEffect[] =
 {
 	{"Magic Item", kParamType_MagicItem, 0},

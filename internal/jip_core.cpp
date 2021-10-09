@@ -1044,6 +1044,11 @@ __declspec(naked) void __fastcall DoConsolePrint(TESForm *result)
 	}
 }
 
+bool IsInMainThread()
+{
+	return GetCurrentThreadId() == s_mainThreadID;
+}
+
 __declspec(naked) TLSData *GetTLSData()
 {
 	__asm

@@ -1,6 +1,5 @@
 #pragma once
 
-class NiBlendInterpolator;
 class NiMultiTargetTransformController;
 class NiTextKeyExtraData;
 class NiDefaultAVObjectPalette;
@@ -25,7 +24,7 @@ class BSDismemberSkinInstance;
 
 typedef FixedTypeArray<hkpWorldObject*, 0x40> ContactObjects;
 
-class NiString
+class NiFixedString
 {
 	const char		*str;
 
@@ -45,13 +44,13 @@ class NiString
 	}
 
 public:
-	NiString() : str(nullptr) {}
-	NiString(const char *inStr)
+	NiFixedString() : str(nullptr) {}
+	NiFixedString(const char *inStr)
 	{
 		str = (inStr && *inStr) ? CdeclCall<const char*>(0xA5B690, inStr) : nullptr;
 	}
-	NiString(const NiString &inStr) {Set(inStr.str);}
-	~NiString() {Unset();}
+	NiFixedString(const NiFixedString &inStr) {Set(inStr.str);}
+	~NiFixedString() {Unset();}
 
 	UInt32 Length() const {return str ? *(UInt32*)(str - 4) : 0;}
 
@@ -65,14 +64,14 @@ public:
 		if (inStr && *inStr)
 			str = CdeclCall<const char*>(0xA5B690, inStr);
 	}
-	inline void operator=(const NiString &inStr)
+	inline void operator=(const NiFixedString &inStr)
 	{
 		if (str != inStr.str)
 			Set(inStr.str);
 	}
 
-	inline bool operator==(const NiString &rhs) const {return str == rhs.str;}
-	inline bool operator<(const NiString &rhs) const {return str < rhs.str;}
+	inline bool operator==(const NiFixedString &rhs) const {return str == rhs.str;}
+	inline bool operator<(const NiFixedString &rhs) const {return str < rhs.str;}
 
 	UInt32 RefCount() const {return str ? *(UInt32*)(str - 8) : 0;}
 };
@@ -321,6 +320,44 @@ public:
 };
 static_assert(sizeof(NiTransformInterpolator) == 0x48);
 
+// 30
+class NiBlendInterpolator : public NiInterpolator
+{
+public:
+	virtual void	Unk_37(void);
+	virtual void	Unk_38(void);
+	virtual void	Unk_39(void);
+	virtual void	Unk_3A(void);
+
+	// 18
+	struct InterpArrayItem
+	{
+		NiTransformInterpolator	*interpolator;
+		float					weight;
+		float					normalizedWeight;
+		UInt8					priority;
+		UInt8					pad0D[3];
+		float					easeSpinner;
+		float					updateTime;
+	};
+
+	UInt8			flags;				// 0C
+	UInt8			arraySize;			// 0D
+	UInt8			interpCount;		// 0E
+	UInt8			singleIdx;			// 0F
+	UInt8			highPriority;		// 10
+	UInt8			nextHighPriority;	// 11
+	UInt8			pad12[2];			// 12
+	InterpArrayItem	*interpArray;		// 14
+	NiInterpolator	*singleInterp;		// 18
+	float			weightThreshold;	// 1C
+	float			singleTime;			// 20
+	float			highSumOfWeights;	// 24
+	float			nextHiSumOfWeights;	// 28
+	float			highEaseSpinner;	// 2C
+};
+static_assert(sizeof(NiBlendInterpolator) == 0x30);
+
 // 74
 class NiControllerSequence : public NiObject
 {
@@ -338,21 +375,37 @@ public:
 		kState_MorphSource
 	};
 
+	enum
+	{
+		kCycle_Loop,
+		kCycle_Reverse,
+		kCycle_Clamp
+	};
+
 	struct ControlledBlock
 	{
 		NiInterpolator						*interpolator;
 		NiMultiTargetTransformController	*multiTargetCtrl;
 		NiBlendInterpolator					*blendInterpolator;
 		UInt8								blendIdx;
-		UInt8								byte0D;
+		UInt8								priority;
 		UInt8								pad0E[2];
+	};
+
+	struct IDTag
+	{
+		NiFixedString	m_kAVObjectName;
+		NiFixedString	m_kPropertyType;
+		NiFixedString	m_kCtlrType;
+		NiFixedString	m_kCtlrID;
+		NiFixedString	m_kInterpolatorID;
 	};
 
 	const char				*sequenceName;			// 08
 	UInt32					numControlledBlocks;	// 0C
 	UInt32					arrayGrowBy;			// 10
 	ControlledBlock			**controlledBlocks;		// 14
-	const char				**unkNodeName;			// 18
+	IDTag					**idTags;				// 18
 	float					weight;					// 1C
 	NiTextKeyExtraData		*textKeyData;			// 20
 	UInt32					cycleType;				// 24
@@ -398,18 +451,18 @@ public:
 	virtual void	Unk_2B(void);
 	virtual void	Unk_2C(void);
 
-	UInt16				flags;		// 08
-	UInt16				unk0A;		// 0A
-	float				frequency;	// 0C
-	float				phaseTime;	// 10
-	float				flt14;		// 14
-	float				flt18;		// 18
-	float				flt1C;		// 1C
-	float				flt20;		// 20
-	float				flt24;		// 24
-	float				flt28;		// 28
-	NiNode				*target;	// 2C
-	NiTimeController	*nextCtrl;	// 30
+	UInt16				flags;				// 08
+	UInt16				unk0A;				// 0A
+	float				frequency;			// 0C
+	float				phaseTime;			// 10
+	float				lowKeyTime;			// 14
+	float				highKeyTime;		// 18
+	float				startTime;			// 1C
+	float				lastTime;			// 20
+	float				weightedLastTime;	// 24
+	float				scaledTime;			// 28
+	NiNode				*target;			// 2C
+	NiTimeController	*nextCtrl;			// 30
 };
 
 // 7C
@@ -546,7 +599,7 @@ public:
 	virtual void	Unk_23(void);
 	virtual void	Unk_24(void);
 
-	NiString		name;		// 08
+	NiFixedString	name;		// 08
 };
 
 // 10
@@ -604,7 +657,7 @@ public:
 class NiStringExtraData : public NiExtraData
 {
 public:
-	NiString	strData;	// 0C
+	NiFixedString	strData;	// 0C
 };
 
 // 14
@@ -613,6 +666,12 @@ class TileExtra : public NiExtraData
 public:
 	Tile		*parentTile;	// 0C
 	NiNode		*parentNode;	// 10
+};
+
+// 1C0
+class BSFaceGenAnimationData : public NiExtraData
+{
+public:
 };
 
 // 08
@@ -636,7 +695,7 @@ public:
 class NiObjectNET : public NiObject
 {
 public:
-	NiString			m_blockName;				// 08
+	NiFixedString		m_blockName;				// 08
 	NiTimeController	*m_controller;				// 0C
 	NiExtraData			**m_extraDataList;			// 10
 	UInt16				m_extraDataListLen;			// 14
@@ -1034,7 +1093,7 @@ public:
 	/*090*/virtual void		Unk_24(NiMatrix33 *arg1, NiVector3 *arg2, bool arg3);
 	/*094*/virtual void		Unk_25(UInt32 arg1);
 	/*098*/virtual void		Unk_26(UInt32 arg1);
-	/*09C*/virtual NiAVObject	*GetObjectByName(NiString *objName);
+	/*09C*/virtual NiAVObject	*GetObjectByName(NiFixedString *objName);
 	/*0A0*/virtual void		SetSelectiveUpdateFlags(UInt8 *bSelectiveUpdate, UInt32 bSelectiveUpdateTransform, UInt8 *bRigid);
 	/*0A4*/virtual void		UpdateDownwardPass(UpdateParams *updParams, UInt32 flags);
 	/*0A8*/virtual void		UpdateSelectedDownwardPass(UpdateParams *updParams, UInt32 flags);
@@ -1100,7 +1159,7 @@ public:
 	inline NiVector3& LocalTranslate() {return m_transformLocal.translate;}
 	inline NiVector3& WorldTranslate() {return m_transformWorld.translate;}
 
-	void __fastcall TransformTranslate(NiVector4 *posMods);
+	NiVector4* __fastcall TransformTranslate(NiVector4 *posMods);
 	void Update();
 	UInt32 GetIndex();
 	bool ReplaceObject(NiAVObject *object);
@@ -1126,9 +1185,9 @@ public:
 
 	NiTArray<NiAVObject*>	m_children;		// 9C
 
-	static NiNode* __stdcall Create(const char *nameStr);		//	str of NiString
+	static NiNode* __stdcall Create(const char *nameStr);		//	str of NiFixedString
 	NiNode* CreateCopy();
-	NiAVObject* __fastcall GetBlockByName(const char *nameStr);	//	str of NiString
+	NiAVObject* __fastcall GetBlockByName(const char *nameStr);	//	str of NiFixedString
 	NiAVObject* __fastcall GetBlock(const char *blockName);
 	NiNode* __fastcall GetNode(const char *nodeName);
 	bool IsMovable();
@@ -1200,6 +1259,42 @@ public:
 
 	UInt32			unkAC[2];		// AC
 };
+
+// F0
+class BSFaceGenNiNode : public NiNode
+{
+public:
+	virtual BSFaceGenAnimationData	*GetAnimData();
+	virtual void	SetAnimData(BSFaceGenAnimationData *inAnimData);
+	virtual NiMatrix33	*GetRotation(NiMatrix33 *outMat);
+	virtual void	SetRotation(NiMatrix33 *inMat);
+	virtual bool	GetAnimationUpdate();
+	virtual void	SetAnimationUpdate(bool arg);
+	virtual bool	GetApplyRotToParent();
+	virtual void	SetApplyRotToParent(bool doSet);
+	virtual bool	GetFixedNormals();
+	virtual void	SetFixedNormals(bool doSet);
+	virtual void	Unk_4A(void *arg);
+
+	BSFaceGenAnimationData	*animData;			// AC
+	NiMatrix33				rotation;			// B0
+	UInt8					forceBaseMorph;		// D4
+	UInt8					fixedNormals;		// D5
+	UInt8					animationUpdate;	// D6
+	UInt8					rotatedLastUpdate;	// D7
+	UInt8					applyRotToParent;	// D8
+	UInt8					padD9[3];			// D9
+	float					lastTime;			// DC
+	UInt8					usingLoResHead;		// E0
+	UInt8					isThePlayer;		// E1
+	UInt8					isInDialouge;		// E2
+	UInt8					padE3;				// E3
+	UInt32					unkE4;				// E4
+	UInt32					unkE8;				// E8
+	UInt8					byteEC;				// EC
+	UInt8					padED[3];			// ED
+};
+static_assert(sizeof(BSFaceGenNiNode) == 0xF0);
 
 // 64
 class BSFogProperty : public NiProperty
@@ -1460,14 +1555,21 @@ extern SceneGraph *g_sceneGraph;
 class TESAnimGroup : public NiRefObject
 {
 public:
+	struct AnimGroupSound
+	{
+		float		flt00;
+		UInt8		soundID;
+		UInt8		pad05[3];
+		UInt32		unk08;
+		TESSound	*sound;
+	};
+
 	UInt32			unk08[2];		// 08
 	UInt8			groupIndex;		// 10
 	UInt8			pad11[3];		// 11
-	UInt32			maxID;			// 14
-	float			*actionTimes;	// 18
-	float			flt1C;			// 1C
-	float			flt20;			// 20
-	float			flt24;			// 24
+	UInt32			numKeys;		// 14
+	float			*keyTimes;		// 18
+	NiVector3		moveVector;		// 1C
 	UInt8			leftOrRightFoot;// 28
 	UInt8			blend;			// 29
 	UInt8			blendIn;		// 2A
@@ -1475,7 +1577,8 @@ public:
 	UInt8			decal;			// 2C
 	UInt8			pad2D[3];		// 2D
 	char			*parentRootNode;// 30
-	UInt32			unk34[2];		// 34
+	UInt32			unk34;			// 34
+	AnimGroupSound	*animSound;		// 38
 };
 static_assert(sizeof(TESAnimGroup) == 0x3C);
 
@@ -2267,7 +2370,7 @@ public:
 	virtual void	Unk_27(void);
 	virtual void	Unk_28(void);
 
-	NiString		name;		// 08
+	NiFixedString	name;		// 08
 	UInt32			unk0C;		// 0C
 	UInt32			unk10;		// 10
 	UInt8			byte14;		// 14

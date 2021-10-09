@@ -2714,7 +2714,7 @@ __declspec(naked) bool __fastcall TESObjectLIGHSetEDIDHook(TESObjectLIGH *lightF
 	}
 }
 
-NiString s_LIGH_EDID;
+NiFixedString s_LIGH_EDID;
 
 __declspec(naked) void __fastcall InitPointLights(NiNode *niNode)
 {
@@ -3031,8 +3031,8 @@ __declspec(naked) void __fastcall HidePointLights(NiNode *objNode)
 	}
 }
 
-typedef Map<char*, NiString, 2> DataStrings;
-typedef Map<NiString, DataStrings, 2> NodeNamesMap;
+typedef Map<char*, NiFixedString, 2> DataStrings;
+typedef Map<NiFixedString, DataStrings, 2> NodeNamesMap;
 UnorderedMap<TESForm*, NodeNamesMap> s_insertNodeMap, s_attachModelMap;
 
 __declspec(naked) void __fastcall DoInsertNode(NiAVObject *targetObj, const char *nodeName, const char *nameStr, NiNode *rootNode)
@@ -3307,7 +3307,7 @@ __declspec(naked) void __fastcall AppendBlockNameSuffixes(NiNode *node, const ch
 	}
 }
 
-__declspec(naked) NiNode* __fastcall DoAttachModel(NiAVObject *targetObj, const char *modelPath, NiString *nameStr, NiNode *rootNode)
+__declspec(naked) NiNode* __fastcall DoAttachModel(NiAVObject *targetObj, const char *modelPath, NiFixedString *nameStr, NiNode *rootNode)
 {
 	__asm
 	{
@@ -3741,9 +3741,9 @@ void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm, NiPointLight *pt
 		ptLight->vectorF0 = {v02, v03, v04};
 		v03 += 0.5F;
 		v04 += 0.3F;
-		float v05 = sin(v02 * 2.0F + 3.4F);
-		float v06 = sin(v03 * 1.7F);
-		float v07 = sin(v04 * 2.6F);
+		float v05 = sinf(v02 * 2.0F + 3.4F);
+		float v06 = sinf(v03 * 1.7F);
+		float v07 = sinf(v04 * 2.6F);
 		v01 = *(float*)0x11C8FD0 * v05 * v06 * 0.5F;
 		v05 *= v01;
 		v06 *= v01;
@@ -3756,9 +3756,9 @@ void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm, NiPointLight *pt
 			ptLight->ambientColor = {v05, v06, v07};
 		}
 		else ptLight->LocalTranslate() = {v05, v06, v07};
-		v01 = sin((v02 + 1.7F) * 1.1F) + 1.0F;
-		v01 *= (sin(v03 * 1.3F) + 1.0F) * 0.0833333F;
-		v01 += sin(v04 * 3.0F) * 0.2F;
+		v01 = sinf((v02 + 1.7F) * 1.1F) + 1.0F;
+		v01 *= (sinf(v03 * 1.3F) + 1.0F) * 0.0833333F;
+		v01 += sinf(v04 * 3.0F) * 0.2F;
 		if (v01 > 1.0F) v01 = 1.0F;
 		else if (v01 < -1.0F) v01 = -1.0F;
 		ptLight->fadeValue = (v01 * 0.2F + 0.8F) * lightForm->fadeValue;
@@ -3904,7 +3904,7 @@ __declspec(naked) void __fastcall UpdateAnimatedLightsHook(TES *pTES)
 }
 
 TESObjectREFR *s_syncPositionRef = NULL;
-NiString s_syncPositionNode;
+NiFixedString s_syncPositionNode;
 AlignedVector4 s_syncPositionMods(0, 0, 0, 0), s_syncPositionPos;
 UInt8 s_syncPositionFlags = 0;
 

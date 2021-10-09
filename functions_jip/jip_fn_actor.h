@@ -792,8 +792,9 @@ bool Cmd_IsAttacking_Eval(COMMAND_ARGS_EVAL)
 
 bool Cmd_StopIdle_Execute(COMMAND_ARGS)
 {
-	if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->baseProcess)
-		((Actor*)thisObj)->baseProcess->SetQueuedIdleFlags(0x800);
+	Actor *actor = (Actor*)thisObj;
+	if (IS_ACTOR(actor) && actor->baseProcess)
+		actor->baseProcess->StopIdle(actor);
 	return true;
 }
 
@@ -1424,10 +1425,18 @@ bool Cmd_PlayIdleEx_Execute(COMMAND_ARGS)
 {
 	TESIdleForm *idleAnim = NULL;
 	Actor *actor = (Actor*)thisObj;
-	if (NOT_ACTOR(actor) || !actor->baseProcess || !ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim) || (idleAnim && NOT_ID(idleAnim, TESIdleForm))) return true;
-	if (!idleAnim) idleAnim = ThisCall<TESIdleForm*>(0x600950, GameGlobals::IdleAnimsDirectoryMap(), actor, actor->baseProcess->GetLowProcess40());
-	else if (idleAnim->children) idleAnim = idleAnim->FindIdle(actor);
-	if (idleAnim) actor->PlayIdle(idleAnim);
+	if (IS_ACTOR(actor) && actor->baseProcess && !actor->baseProcess->processLevel && ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim) && (!idleAnim || IS_ID(idleAnim, TESIdleForm)))
+	{
+		AnimData *animData = thisObj->GetAnimData();
+		if (animData)
+		{
+			if (!idleAnim)
+				idleAnim = ThisCall<TESIdleForm*>(0x600950, GameGlobals::IdleAnimsDirectoryMap(), actor, ((HighProcess*)actor->baseProcess)->unk40);
+			else if (idleAnim->children)
+				idleAnim = idleAnim->FindIdle(actor);
+			if (idleAnim) animData->PlayIdle(idleAnim);
+		}
+	}
 	return true;
 }
 
@@ -1487,58 +1496,22 @@ bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 bool Cmd_GetPlayedIdle_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->baseProcess)
-	{
-		TESIdleForm *idleAnim = ((Actor*)thisObj)->baseProcess->GetIdleForm350();
-		if (idleAnim) REFR_RES = idleAnim->refID;
-	}
+	AnimData *animData = thisObj->GetAnimData();
+	if (animData && animData->idleAnim && animData->idleAnim->idleForm)
+		REFR_RES = animData->idleAnim->idleForm->refID;
 	return true;
-}
-
-__declspec(naked) bool __fastcall IsIdlePlayingEx(Actor *actor, TESIdleForm *idleAnim)
-{
-	__asm
-	{
-		push	esi
-		push	edi
-		mov		esi, ecx
-		mov		edi, edx
-		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
-		setz	al
-		jnz		done
-		mov		ecx, esi
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1E4]
-		test	eax, eax
-		jz		done
-		mov		ecx, eax
-		CALL_EAX(0x4985F0)
-		test	al, al
-		setz	al
-		jnz		done
-		mov		eax, esi
-		mov		eax, [eax+0x68]
-		test	eax, eax
-		jz		done
-		mov		ecx, eax
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x718]
-		cmp		eax, edi
-		setz	al
-	done:
-		pop		edi
-		pop		esi
-		retn
-	}
 }
 
 bool Cmd_IsIdlePlayingEx_Execute(COMMAND_ARGS)
 {
+	*result = 0;
 	TESIdleForm *idleAnim;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim))
-		*result = IsIdlePlayingEx((Actor*)thisObj, idleAnim);
-	else *result = 0;
+	{
+		AnimData *animData = thisObj->GetAnimData();
+		if (animData && animData->idleAnim && (animData->idleAnim->idleForm == idleAnim))
+			*result = 1;
+	}
 	return true;
 }
 

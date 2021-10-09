@@ -1143,7 +1143,8 @@ __declspec(naked) void ProcessGradualSetFloatHook()
 {
 	__asm
 	{
-		CALL_EAX(0x457FE0)
+		call	GetTickCount
+		push	1
 		mov		ecx, [ebp-0x20]
 		mov		ecx, [ecx]
 		mov		edx, eax
@@ -1151,22 +1152,30 @@ __declspec(naked) void ProcessGradualSetFloatHook()
 		movd	xmm0, eax
 		cvtdq2ps	xmm0, xmm0
 		divss	xmm0, [ecx+0xC]
-		movss	xmm1, kFltOne
-		comiss	xmm0, xmm1
-		jb		notFinished
-		movss	xmm0, xmm1
-		mov		[ecx+8], edx
-	notFinished:
+		comiss	xmm0, kFltOne
+		jnb		finished
 		movss	xmm1, [ecx+4]
 		subss	xmm1, [ecx]
 		mulss	xmm0, xmm1
 		addss	xmm0, [ecx]
-		push	1
 		movd	eax, xmm0
 		push	eax
 		push	dword ptr [ecx+0x10]
 		mov		ecx, [ecx+0x14]
 		CALL_EAX(ADDR_TileSetFloat)
+		JMP_EAX(0xA08155)
+	finished:
+		mov		[ecx+8], edx
+		push	dword ptr [ecx]
+		push	dword ptr [ecx+0x10]
+		mov		ecx, [ecx+0x14]
+		CALL_EAX(ADDR_TileSetFloat)
+		cmp		dword ptr [ebp-0xD8], 5
+		jz		done
+		push	dword ptr [ebp-0x20]
+		lea		ecx, [ebp-0x18]
+		CALL_EAX(0xA0C7C0)
+	done:
 		JMP_EAX(0xA08155)
 	}
 }
@@ -4561,8 +4570,9 @@ void InitGamePatches()
 	WritePushRetRelJump(0x72F33D, 0x72F37F, (UInt32)ConstructItemEntryNameHook);
 	WriteRelCall(0x48E761, (UInt32)GetIconPathForItemHook);
 	WriteRelCall(0x406720, (UInt32)GetEffectHiddenHook);
-	SafeWrite8(0xA081A8, 5);
+	SafeWrite8(0xA081A8, 6);
 	SafeWrite32(0xA08718, (UInt32)ProcessGradualSetFloatHook);
+	SafeWrite32(0xA0871C, (UInt32)ProcessGradualSetFloatHook);
 	WritePushRetRelJump(0x454576, 0x454580, (UInt32)CloudsFixHook);
 	WriteRelCall(0x9D10F3, (UInt32)ReactionCooldownCheckHook);
 	WritePushRetRelJump(0x9F50C4, 0x9F50E7, (UInt32)IsValidAITargetHook);

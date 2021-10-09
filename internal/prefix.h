@@ -360,6 +360,7 @@ class BSSegmentedTriShape;
 class BSResizableTriShape;
 class BSFaceGenNiNode;
 class BSShaderAccumulator;
+class BSFaceGenAnimationData;
 
 class hkReferencedObject;
 class hkpWorldObject;

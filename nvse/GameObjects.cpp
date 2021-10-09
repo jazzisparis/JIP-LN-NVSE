@@ -9,12 +9,11 @@ __declspec(naked) float __vectorcall GetDistance3D(TESObjectREFR *ref1, TESObjec
 		movups	xmm0, [ecx+0x30]
 		movups	xmm1, [edx+0x30]
 		subps	xmm0, xmm1
+		andps	xmm0, kSSEDiscard4thPS
 		mulps	xmm0, xmm0
-		movhlps	xmm1, xmm0
-		addss	xmm1, xmm0
-		psrlq	xmm0, 0x20
-		addss	xmm1, xmm0
-		sqrtss	xmm0, xmm1
+		haddps	xmm0, xmm0
+		haddps	xmm0, xmm0
+		sqrtss	xmm0, xmm0
 		retn
 	}
 }
@@ -27,10 +26,8 @@ __declspec(naked) float __vectorcall GetDistance2D(TESObjectREFR *ref1, TESObjec
 		movq	xmm1, qword ptr [edx+0x30]
 		subps	xmm0, xmm1
 		mulps	xmm0, xmm0
-		movss	xmm1, xmm0
-		psrlq	xmm0, 0x20
-		addss	xmm1, xmm0
-		sqrtss	xmm0, xmm1
+		haddps	xmm0, xmm0
+		sqrtss	xmm0, xmm0
 		retn
 	}
 }
@@ -751,23 +748,18 @@ __declspec(naked) bool __fastcall TESObjectREFR::GetTransformedPos(NiVector4 *po
 {
 	__asm
 	{
-		push	esi
-		mov		esi, ecx
 		call	TESObjectREFR::GetNiNode
 		test	eax, eax
 		jz		done
-		push	edx
-		add		eax, 0x34
-		push	eax
 		mov		ecx, edx
-		call	NiVector3::MultiplyMatrixVector
-		movups	xmm0, [ecx]
-		movups	xmm1, [esi+0x30]
+		lea		edx, [eax+0x34]
+		call	NiVector3::MultiplyMatrix
+		movups	xmm0, [eax]
+		movups	xmm1, [edx+0x58]
 		addps	xmm0, xmm1
-		movups	[ecx], xmm0
+		movups	[eax], xmm0
 		mov		al, 1
 	done:
-		pop		esi
 		retn
 	}
 }
@@ -1330,20 +1322,26 @@ void Actor::UpdateActiveEffects(MagicItem *magicItem, EffectItem *effItem, bool 
 			if (activeEff->effectItem != effItem) continue;
 			if (activeEff->bTerminated) break;
 		}
-		ActiveEffect *newEff = EffectArchTypeEntry::Array()[effItem->setting->archtype].callback(activeEff->caster, magicItem, effItem);
+		MagicCaster *magCaster = activeEff->caster;
+		ActiveEffect *newEff = magCaster->CreateActiveEffect(magicItem, effItem, activeEff->enchantObject);
 		if (newEff)
 		{
-			iter->Insert(newEff);
-			newEff->target = activeEff->target;
-			newEff->enchantObject = activeEff->enchantObject;
+			MagicTarget *magTarget = activeEff->target;
 			if (!addNew)
 			{
+				if (activeEff->timeElapsed >= newEff->duration)
+				{
+					newEff->Destroy(true);
+					activeEff->Remove(true);
+					break;
+				}
+				newEff->timeElapsed = activeEff->timeElapsed;
 				newEff->bActive = activeEff->bActive;
 				newEff->flags = activeEff->flags;
 				activeEff->Remove(true);
 			}
-			else if (newEff->enchantObject && IS_ID(newEff->enchantObject, TESObjectARMO))
-				newEff->flags |= 0x100;
+			newEff->target = magTarget;
+			magTarget->ApplyEffect(magCaster, magicItem, newEff, false);
 		}
 		break;
 	}
@@ -1446,71 +1444,6 @@ __declspec(naked) void Actor::TurnAngle(float angle)
 		push	ecx
 		movss	[esp], xmm0
 		CALL_EAX(0x8BB5C0)
-		retn	4
-	}
-}
-
-__declspec(naked) void Actor::PlayIdle(TESIdleForm *idleAnim)
-{
-	__asm
-	{
-		push	ebp
-		mov		ebp, esp
-		push	ecx
-		sub		esp, 8
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1E4]
-		test	eax, eax
-		jz		jmpAddr1
-		mov		[ebp-8], eax
-		mov		ecx, eax
-		CALL_EAX(0x4985F0)
-		test	al, al
-		setz	dl
-		mov		[ebp-9], dl
-		mov		ecx, [ebp-8]
-		mov		ecx, [ecx+0x128]
-		test	ecx, ecx
-		jz		jmpAddr2
-		mov		ecx, [ecx+0x2C]
-		cmp		ecx, [ebp+8]
-		jz		jmpAddr1
-	jmpAddr2:
-		cmp		byte ptr [ebp-9], 0
-		jz		jmpAddr4
-		mov		ecx, [ebp-8]
-		mov		ecx, [ecx+0x124]
-		test	ecx, ecx
-		jz		jmpAddr4
-		mov		eax, [ecx+0xC]
-		cmp		eax, 3
-		jnz		jmpAddr3
-		mov		ecx, [ecx+0x18]
-		test	ecx, ecx
-		jz		jmpAddr4
-		mov		ecx, [ecx+0x24]
-		test	ecx, ecx
-		jnz		jmpAddr4
-	jmpAddr3:
-		mov		[ebp-9], 0
-	jmpAddr4:
-		cmp		byte ptr [ebp-9], 0
-		jnz		jmpAddr1
-		mov		ecx, [ebp-4]
-		mov		ecx, [ecx+0x68]
-		test	ecx, ecx
-		jz		jmpAddr1
-		push	dword ptr [ebp+8]
-		mov		edx, [ecx]
-		mov		edx, [edx+0x71C]
-		call	edx
-		mov		ecx, [ebp-4]
-		mov		ecx, [ecx+0x68]
-		push	0x80
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x614]
-	jmpAddr1:
-		leave
 		retn	4
 	}
 }
@@ -1772,21 +1705,19 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		movss	xmm0, [esp+0xC]
 		jmp		doneAngle
 	useRef:
-		movss	xmm0, [esi+0x30]
-		subss	xmm0, [eax+0x30]
-		movss	xmm1, [esi+0x34]
-		subss	xmm1, [eax+0x34]
-		movss	xmm2, xmm0
-		mulss	xmm2, xmm2
-		movss	xmm3, xmm1
-		mulss	xmm3, xmm3
-		addss	xmm2, xmm3
-		rsqrtss	xmm2, xmm2
-		pxor	xmm3, xmm3
-		comiss	xmm2, xmm3
+		movq	xmm0, qword ptr [esi+0x30]
+		movq	xmm1, qword ptr [eax+0x30]
+		subps	xmm0, xmm1
+		movaps	xmm1, xmm0
+		mulps	xmm1, xmm1
+		haddps	xmm1, xmm1
+		pxor	xmm2, xmm2
+		comiss	xmm1, xmm2
 		jz		done
-		mulss	xmm0, xmm2
-		mulss	xmm1, xmm2
+		rsqrtss	xmm1, xmm1
+		unpcklps	xmm1, xmm1
+		mulps	xmm0, xmm1
+		pshufd	xmm1, xmm0, 1
 	doneAngle:
 		cmp		[esp+0x14], 0
 		jz		doneForce

@@ -1544,151 +1544,158 @@ bool Cmd_SetLinearVelocity_Execute(COMMAND_ARGS)
 	return true;
 }
 
-UInt8 s_insertObjectFlag = 0;
-
-bool RegisterInsertObject(COMMAND_ARGS)
+bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *dataStr, UInt32 doInsert, UInt32 flag)
 {
 	static char meshesPath[0x80] = "data\\meshes\\";
+	TESObjectREFR *refr = IS_REFERENCE(form) ? (TESObjectREFR*)form : NULL;
+	NiNode *rootNode = (refr && refr->renderState) ? refr->renderState->niNode14 : NULL;
+	bool result = false, modifyMap = true;
+	if (refr)
+	{
+		if ((refr->modIndex == 0xFF) || kInventoryType[refr->baseForm->typeID])
+		{
+			if ((doInsert != 3) || !rootNode)
+				goto freeDataStr;
+			modifyMap = false;
+		}
+	}
+	else if (!form->IsBoundObject())
+		goto freeDataStr;
+
+	char *nodeName = NULL, *objectName = FindChr(dataStr, '|'), *suffix;
+	if (objectName)
+	{
+		*objectName++ = 0;
+		nodeName = dataStr;
+	}
+	else objectName = dataStr;
+
+	if (!*objectName) goto freeDataStr;
+
+	bool insertNode = flag == kHookFormFlag6_InsertNode;
+	auto formsMap = insertNode ? &s_insertNodeMap : &s_attachModelMap;
+
+	if (doInsert & 1)
+	{
+		if (!insertNode)
+		{
+			suffix = objectName;
+			if (*objectName == '*')
+			{
+				if (!(suffix = FindChr(objectName + 2, '*')))
+					goto freeDataStr;
+				suffix++;
+			}
+			StrCopy(meshesPath + 12, suffix);
+			if (!FileExistsEx(meshesPath, false))
+				goto freeDataStr;
+		}
+
+		NiFixedString blockName(nodeName), dataStr, *pDataStr;
+		if (modifyMap)
+		{
+			NodeNamesMap *namesMap;
+			if (formsMap->Insert(form, &namesMap))
+				form->SetJIPFlag(flag, true);
+			if (!(*namesMap)[blockName].Insert(objectName, &pDataStr))
+				goto freeDataStr;
+		}
+		else pDataStr = &dataStr;
+
+		if (insertNode)
+			*pDataStr = objectName + (*objectName == '^');
+
+		if (rootNode && (doInsert & 2))
+		{
+			bool useRoot = !blockName || (rootNode->m_blockName == blockName);
+			NiAVObject *targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName);
+			if (targetObj)
+			{
+				if (insertNode)
+					DoInsertNode(targetObj, objectName, *pDataStr, rootNode);
+				else if ((rootNode = DoAttachModel(targetObj, objectName, pDataStr, rootNode)) && (rootNode->m_flags & 0x20000000))
+					AddPointLights(rootNode);
+			}
+			if ((refr->refID == 0x14) && (rootNode = g_thePlayer->node1stPerson))
+			{
+				targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName);
+				if (targetObj)
+				{
+					if (insertNode)
+						DoInsertNode(targetObj, objectName, *pDataStr, rootNode);
+					else DoAttachModel(targetObj, objectName, pDataStr, rootNode);
+				}
+			}
+		}
+	}
+	else
+	{
+		auto findForm = formsMap->Find(form);
+		if (!findForm) goto freeDataStr;
+		auto findNode = findForm().FindOp(NiFixedString(nodeName));
+		if (!findNode) goto freeDataStr;
+		auto findData = findNode().FindOp(objectName);
+		if (!findData) goto freeDataStr;
+		if (rootNode && (doInsert & 2) && findData() && (!insertNode || (*objectName != '^')))
+		{
+			NiAVObject *object = rootNode->GetBlockByName(findData());
+			if (object)
+				object->m_parent->RemoveObject(object);
+			if ((refr->refID == 0x14) && (rootNode = g_thePlayer->node1stPerson))
+			{
+				object = rootNode->GetBlockByName(findData());
+				if (object)
+					object->m_parent->RemoveObject(object);
+			}
+		}
+		findData.Remove(findNode());
+		if (findNode().Empty())
+		{
+			findNode.Remove(findForm());
+			if (findForm().Empty())
+			{
+				findForm.Remove();
+				form->SetJIPFlag(flag, false);
+			}
+		}
+	}
+	s_insertObjects = !s_insertNodeMap.Empty() || !s_attachModelMap.Empty();
+	result = true;
+freeDataStr:
+	free(dataStr);
+	return result;
+}
+
+bool Cmd_InsertNode_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	TESForm *form;
+	UInt32 doInsert;
+	char *buffer = GetStrArgBuffer();
+	if (ExtractFormatStringArgs(2, buffer, EXTRACT_ARGS_EX, kCommandInfo_InsertNode.numParams, &form, &doInsert))
+	{
+		char *dataStr = CopyString(buffer);
+		if (!(doInsert & 2) || IsInMainThread())
+			*result = RegisterInsertObject(form, 0, dataStr, doInsert, kHookFormFlag6_InsertNode);
+		else MainLoopAddCallbackArgs(RegisterInsertObject, form, 3, dataStr, doInsert, kHookFormFlag6_InsertNode);
+	}
+	return true;
+}
+
+bool Cmd_AttachModel_Execute(COMMAND_ARGS)
+{
 	*result = 0;
 	TESForm *form;
 	UInt32 doInsert;
 	char *buffer = GetStrArgBuffer();
 	if (ExtractFormatStringArgs(2, buffer, EXTRACT_ARGS_EX, kCommandInfo_AttachModel.numParams, &form, &doInsert))
 	{
-		TESObjectREFR *refr = IS_REFERENCE(form) ? (TESObjectREFR*)form : NULL;
-		NiNode *rootNode = (refr && refr->renderState) ? refr->renderState->niNode14 : NULL;
-		bool modifyMap = true;
-		if (refr)
-		{
-			if ((refr->modIndex == 0xFF) || kInventoryType[refr->baseForm->typeID])
-			{
-				if ((doInsert != 3) || !rootNode)
-					return true;
-				modifyMap = false;
-			}
-		}
-		else if (!form->IsBoundObject())
-			return true;
-
-		char *nodeName = NULL, *objectName = FindChr(buffer, '|'), *suffix;
-		if (objectName)
-		{
-			*objectName++ = 0;
-			nodeName = buffer;
-		}
-		else objectName = buffer;
-
-		if (!*objectName) return true;
-
-		bool insertNode = s_insertObjectFlag == kHookFormFlag6_InsertNode;
-		auto formsMap = insertNode ? &s_insertNodeMap : &s_attachModelMap;
-
-		if (doInsert & 1)
-		{
-			if (!insertNode)
-			{
-				suffix = objectName;
-				if (*objectName == '*')
-				{
-					if (!(suffix = FindChr(objectName + 2, '*')))
-						return true;
-					suffix++;
-				}
-				StrCopy(meshesPath + 12, suffix);
-				if (!FileExistsEx(meshesPath, false))
-					return true;
-			}
-
-			NiString blockName(nodeName), dataStr, *pDataStr;
-			if (modifyMap)
-			{
-				NodeNamesMap *namesMap;
-				if (formsMap->Insert(form, &namesMap))
-					form->SetJIPFlag(s_insertObjectFlag, true);
-				if (!(*namesMap)[blockName].Insert(objectName, &pDataStr))
-					return true;
-			}
-			else pDataStr = &dataStr;
-
-			if (insertNode)
-				*pDataStr = objectName + (*objectName == '^');
-
-			if (rootNode && (doInsert & 2))
-			{
-				bool useRoot = !blockName || (rootNode->m_blockName == blockName);
-				NiAVObject *targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName);
-				if (targetObj)
-				{
-					if (insertNode)
-						DoInsertNode(targetObj, objectName, *pDataStr, rootNode);
-					else if ((rootNode = DoAttachModel(targetObj, objectName, pDataStr, rootNode)) && (rootNode->m_flags & 0x20000000))
-						AddPointLights(rootNode);
-				}
-				if ((refr->refID == 0x14) && (rootNode = g_thePlayer->node1stPerson))
-				{
-					targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName);
-					if (targetObj)
-					{
-						if (insertNode)
-							DoInsertNode(targetObj, objectName, *pDataStr, rootNode);
-						else DoAttachModel(targetObj, objectName, pDataStr, rootNode);
-					}
-				}
-			}
-		}
-		else
-		{
-			auto findForm = formsMap->Find(form);
-			if (!findForm) return true;
-			auto findNode = findForm().FindOp(NiString(nodeName));
-			if (!findNode) return true;
-			auto findData = findNode().FindOp(objectName);
-			if (!findData) return true;
-			if (rootNode && (doInsert & 2) && findData() && (!insertNode || (*objectName != '^')))
-			{
-				NiAVObject *object = rootNode->GetBlockByName(findData());
-				if (object)
-					object->m_parent->RemoveObject(object);
-				if ((refr->refID == 0x14) && (rootNode = g_thePlayer->node1stPerson))
-				{
-					object = rootNode->GetBlockByName(findData());
-					if (object)
-						object->m_parent->RemoveObject(object);
-				}
-			}
-			findData.Remove(findNode());
-			if (findNode().Empty())
-			{
-				findNode.Remove(findForm());
-				if (findForm().Empty())
-				{
-					findForm.Remove();
-					form->SetJIPFlag(s_insertObjectFlag, false);
-				}
-			}
-		}
-		s_insertObjects = !s_insertNodeMap.Empty() || !s_attachModelMap.Empty();
-		*result = 1;
+		char *dataStr = CopyString(buffer);
+		if (!(doInsert & 2) || IsInMainThread())
+			*result = RegisterInsertObject(form, 0, dataStr, doInsert, kHookFormFlag6_AttachModel);
+		else MainLoopAddCallbackArgs(RegisterInsertObject, form, 3, dataStr, doInsert, kHookFormFlag6_AttachModel);
 	}
 	return true;
-}
-
-__declspec(naked) bool Cmd_InsertNode_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_insertObjectFlag, kHookFormFlag6_InsertNode
-		jmp		RegisterInsertObject
-	}
-}
-
-__declspec(naked) bool Cmd_AttachModel_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_insertObjectFlag, kHookFormFlag6_AttachModel
-		jmp		RegisterInsertObject
-	}
 }
 
 bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)

@@ -308,7 +308,7 @@ public:
 	// 14
 	struct TemplateData
 	{
-		NiString				templateName;	// 00
+		NiFixedString			templateName;	// 00
 		TileExtra				*tileExtra;		// 04
 		DList<ParsedXMLTag>		parsedTags;		// 08
 	};

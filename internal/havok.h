@@ -21,6 +21,22 @@ struct alignas(16) hkQuaternion
 	inline void operator=(const hkMatrix3x4 &rotMat) {ThisCall(0xCB26E0, this, &rotMat);}
 	inline void operator=(const hkVector4 &from) {_mm_store_ps(&x, _mm_load_ps(&from.x));}
 
+	inline void operator+=(const hkQuaternion &rhs)
+	{
+		x += rhs.x;
+		y += rhs.y;
+		z += rhs.z;
+		w += rhs.w;
+	}
+
+	inline void operator-=(const hkQuaternion &rhs)
+	{
+		x -= rhs.x;
+		y -= rhs.y;
+		z -= rhs.z;
+		w -= rhs.w;
+	}
+
 	inline void operator*=(float s)
 	{
 		x *= s;
@@ -29,6 +45,17 @@ struct alignas(16) hkQuaternion
 		w *= s;
 	}
 
+	void __fastcall operator*=(const hkQuaternion &rhs);
+
+	inline hkQuaternion *Invert()
+	{
+		x = -x;
+		y = -y;
+		z = -z;
+		return this;
+	}
+
+	hkQuaternion *Normalize();
 	void EulerYPR(NiVector3 &ypr);
 };
 

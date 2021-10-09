@@ -4,29 +4,29 @@
 class ActiveEffect
 {
 public:
-	virtual void	Destroy(bool doFree);
-	virtual ActiveEffect	*Clone(void);
-	virtual void	Unk_02(UInt32 arg);
-	virtual void	Unk_03(UInt32 arg);
-	virtual void	SaveGame(UInt32 arg);
-	virtual void	LoadGame(UInt32 arg);
-	virtual void	Unk_06(UInt32 arg);
-	virtual void	Unk_07(UInt32 arg);
-	virtual void	Unk_08(UInt32 arg);
-	virtual bool	UnregisterCaster(MagicCaster *_caster);	// returns 1 and clears caster if it matches the parameter, else returns 0
-	virtual bool	Unk_0A(void);
-	virtual void	CopyTo(ActiveEffect *_target);
-	virtual bool	Unk_0C(UInt32 arg);
-	virtual bool	Unk_0D(UInt32 arg);
-	virtual void	Unk_0E(UInt32 arg);		// update/add effect?
-	virtual void	Terminate(void);	// update/add effect?
-	virtual void	Unk_10(UInt32 arg);
-	virtual void	Unk_11(UInt32 arg);
-	virtual void	Unk_12(UInt32 arg);
-	virtual void	Unk_13(UInt32 arg);
-	virtual void	Unk_14(void);
-	virtual void	Unk_15(void);
-	virtual void	Unk_16(void);
+	/*000*/virtual void		Destroy(bool doFree);
+	/*004*/virtual ActiveEffect	*Clone();
+	/*008*/virtual void		Unk_02();
+	/*00C*/virtual void		Unk_03(float arg);
+	/*010*/virtual void		SaveGame(UInt32 arg);
+	/*014*/virtual void		LoadGame(UInt32 arg);
+	/*018*/virtual void		Unk_06(UInt32 arg);
+	/*01C*/virtual void		Unk_07(UInt32 arg);
+	/*020*/virtual void		Unk_08(UInt32 arg);
+	/*024*/virtual void		Unk_09(UInt32 arg);
+	/*028*/virtual void		Unk_0A(UInt32 arg);
+	/*02C*/virtual void		CopyTo(ActiveEffect *_target);
+	/*030*/virtual bool		Unk_0C(UInt32 arg);
+	/*034*/virtual bool		Unk_0D(UInt32 arg);
+	/*038*/virtual bool		ResetCasterIfSame(MagicCaster *_caster);
+	/*03C*/virtual bool		Unk_0F();
+	/*040*/virtual void		Unk_10(UInt32 arg);
+	/*044*/virtual void		CopyFrom(ActiveEffect *from);
+	/*048*/virtual bool		Unk_12(UInt32 arg);
+	/*04C*/virtual bool		Unk_13(MagicTarget *_target);
+	/*050*/virtual void		Unk_14();
+	/*054*/virtual void		Unk_15();
+	/*058*/virtual void		Unk_16();
 
 	float			timeElapsed;		// 04
 	MagicItem		*magicItem;			// 08
@@ -45,7 +45,7 @@ public:
 	UInt32			spellType;			// 2C e.g. SpellItem::kType_Ability
 	Sound			sound;				// 30
 	MagicItemForm	*enchantObject;		// 3C enchanted obj responsible for effect
-	TESForm			*data;				// 40 - in ScriptEffect this is a Script *
+	tList<void>		*list40;			// 40
 	UInt32			unk44;				// 44
 
 	__forceinline void Remove(bool immediate)
@@ -60,7 +60,7 @@ class ValueModifierEffect : public ActiveEffect
 public:
 	virtual void	SetActorValueID(UInt32 avID);
 	virtual UInt32	GetActorValueID();
-	virtual void	Unk_19(void);
+	virtual void	Unk_19(Actor *actor, float modifier, UInt32 avCode);
 
 	UInt32		actorVal;
 };
@@ -69,7 +69,8 @@ public:
 class ScriptEffect : public ActiveEffect
 {
 public:
-	UInt32		unk48[2];	// 48
+	Script			*script;	// 48
+	ScriptEventList	*eventList;	// 4C
 };
 
 // 48
@@ -168,7 +169,7 @@ public:
 class LightEffect : public ActiveEffect
 {
 public:
-	UInt32		unk48;	// 48
+	NiPointLight	*ptLight;	// 48
 };
 
 // 4C

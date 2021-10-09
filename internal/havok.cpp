@@ -85,7 +85,7 @@ __declspec(naked) void __fastcall hkQuaternion::operator=(const NiMatrix33 &mat)
 		movss	[ecx+4], xmm0
 		movss	[ecx+8], xmm5
 	done:
-		andps	xmm5, kSSERemoveSignMask
+		andps	xmm5, kSSERemoveSignMaskPS
 		sqrtss	xmm0, xmm5
 		addss	xmm0, xmm0
 		divss	xmm4, xmm0
@@ -95,6 +95,71 @@ __declspec(naked) void __fastcall hkQuaternion::operator=(const NiMatrix33 &mat)
 		movups	[ecx], xmm0
 		retn
 	}
+}
+
+__declspec(naked) void __fastcall hkQuaternion::operator*=(const hkQuaternion &rhs)
+{
+	__asm
+	{
+		pshufd	xmm0, [ecx], 0x93
+		pshufd	xmm1, [edx], 0x93
+		mov		edx, 0x80000000
+		movd	xmm2, edx
+		movaps	xmm3, xmm1
+		mulps	xmm3, xmm0
+		pshufd	xmm4, xmm2, 1
+		xorps	xmm3, xmm4
+		haddps	xmm3, xmm3
+		haddps	xmm3, xmm3
+		movss	[ecx], xmm3
+		pshufd	xmm3, xmm1, 0xB1
+		mulps	xmm3, xmm0
+		pshufd	xmm4, xmm2, 0x15
+		xorps	xmm3, xmm4
+		haddps	xmm3, xmm3
+		haddps	xmm3, xmm3
+		movss	[ecx+4], xmm3
+		pshufd	xmm3, xmm1, 0x4E
+		mulps	xmm3, xmm0
+		pshufd	xmm4, xmm2, 0x51
+		xorps	xmm3, xmm4
+		haddps	xmm3, xmm3
+		haddps	xmm3, xmm3
+		movss	[ecx+8], xmm3
+		pshufd	xmm3, xmm1, 0x1B
+		mulps	xmm3, xmm0
+		pshufd	xmm4, xmm2, 0x45
+		xorps	xmm3, xmm4
+		haddps	xmm3, xmm3
+		haddps	xmm3, xmm3
+		movss	[ecx+0xC], xmm3
+		retn
+	}
+}
+
+__declspec(naked) hkQuaternion *hkQuaternion::Normalize()
+{
+    __asm
+    {
+		mov		eax, ecx
+		movaps	xmm0, [eax]
+		movaps	xmm1, xmm0
+		mulps	xmm1, xmm1
+		haddps	xmm1, xmm1
+		haddps	xmm1, xmm1
+		pxor	xmm2, xmm2
+		comiss	xmm1, xmm2
+		jz		zeroLen
+		rsqrtss	xmm2, xmm1
+		shufps	xmm2, xmm2, 0
+		mulps	xmm2, xmm0
+		movaps	[eax], xmm2
+		retn
+	zeroLen:
+		movaps	[eax], xmm2
+		mov		dword ptr [eax+0xC], 0x3F800000
+        retn
+    }
 }
 
 void hkQuaternion::EulerYPR(NiVector3 &ypr)

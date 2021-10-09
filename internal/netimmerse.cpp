@@ -123,19 +123,17 @@ void NiMaterialProperty::SetTraitValue(UInt32 traitID, float value)
 	}
 }
 
-__declspec(naked) void __fastcall NiAVObject::TransformTranslate(NiVector4 *posMods)
+__declspec(naked) NiVector4* __fastcall NiAVObject::TransformTranslate(NiVector4 *posMods)
 {
 	__asm
 	{
-		push	edx
-		add		ecx, 0x34
-		push	ecx
-		mov		ecx, edx
-		call	NiVector3::MultiplyMatrixVector
-		movups	xmm0, [ecx]
-		movups	xmm1, [eax+0x24]
+		xchg	ecx, edx
+		add		edx, 0x34
+		call	NiVector3::MultiplyMatrix
+		movups	xmm0, [eax]
+		movups	xmm1, [edx+0x24]
 		addps	xmm0, xmm1
-		movups	[ecx], xmm0
+		movups	[eax], xmm0
 		retn
 	}
 }
@@ -273,7 +271,7 @@ void NiAVObject::DumpParents()
 	//s_debug.Indent();
 }
 
-__declspec(naked) NiNode* __stdcall NiNode::Create(const char *nameStr)	//	str of NiString
+__declspec(naked) NiNode* __stdcall NiNode::Create(const char *nameStr)	//	str of NiFixedString
 {
 	__asm
 	{
@@ -331,7 +329,7 @@ __declspec(naked) NiNode *NiNode::CreateCopy()
 	}
 }
 
-__declspec(naked) NiAVObject* __fastcall NiNode::GetBlockByName(const char *nameStr)	//	str of NiString
+__declspec(naked) NiAVObject* __fastcall NiNode::GetBlockByName(const char *nameStr)	//	str of NiFixedString
 {
 	__asm
 	{
@@ -551,10 +549,8 @@ __declspec(naked) void NiNode::ApplyForce(NiVector4 *forceVector)
 		jz		doneCol
 		mov		edx, [eax+8]
 		mov		dl, [edx+0xE8]
-		cmp		dl, 2
-		jz		doApply
 		cmp		dl, 3
-		jz		doApply
+		jbe		doApply
 		cmp		dl, 6
 		jnz		doneCol
 	doApply:

@@ -486,84 +486,6 @@ public:
 	// 008
 };
 
-// 24
-class EffectItem
-{
-public:
-	enum
-	{
-		kRange_Self = 0,
-		kRange_Touch,
-		kRange_Target,
-	};
-
-	UInt32				magnitude;			// 00	used as a float
-	UInt32				area;				// 04
-	UInt32				duration;			// 08
-	UInt32				range;				// 0C
-	UInt32				actorValueOrOther;	// 10
-	EffectSetting		*setting;			// 14
-	float				cost;				// 18 on autocalc items this seems to be the cost
-	ConditionList		conditions;			// 1C
-};
-
-// 10
-class EffectItemList : public BSSimpleList<EffectItem>
-{
-public:
-	UInt32		unk0C;			// 0C
-
-	bool RemoveNthEffect(UInt32 index);
-};
-
-static_assert(sizeof(EffectItemList) == 0x10);
-
-// 1C
-class MagicItem : public TESFullName
-{
-public:
-	virtual void	Unk_04(void); // pure virtual
-	virtual void	Unk_05(void); // pure virtual
-	virtual UInt32	GetType();
-	virtual bool	Unk_07(void);
-	virtual bool	Unk_08(void);
-	virtual void	Unk_09(void); // pure virtual
-	virtual void	Unk_0A(void); // pure virtual
-	virtual void	Unk_0B(void); // pure virtual
-	virtual void	Unk_0C(void); // pure virtual
-	virtual void	Unk_0D(void); // pure virtual
-	virtual void	Unk_0E(void);
-	virtual void	Unk_0F(void); // pure virtual
-
-	EffectItemList	list;	// 00C
-//	UInt32	unk018;			// 018
-	// perhaps types are no longer correct!
-	enum EType{
-		kType_None = 0,
-		kType_Spell = 1,
-		kType_Enchantment = 2,
-		kType_Alchemy = 3,
-		kType_Ingredient = 4,
-	};
-	EType Type() const;
-
-	void __fastcall UpdateEffectsAllActors(EffectItem *effItem, bool addNew = false);
-};
-
-static_assert(sizeof(MagicItem) == 0x1C);
-
-// 034
-class MagicItemForm : public TESForm
-{
-public:
-	virtual void	ByteSwap(void); // pure virtual
-
-	// base
-	MagicItem	magicItem;	// 018
-};
-
-static_assert(sizeof(MagicItemForm) == 0x34);
-
 // 18
 class TESModel : public BaseFormComponent
 {
@@ -1908,7 +1830,6 @@ public:
 	TESDescription	desc2[3];		// 40
 	UInt32			unk58[(0x60 - 0x58) >> 2];	// 58
 };
-
 static_assert(sizeof(TESSkill) == 0x60);
 
 // B0
@@ -1990,6 +1911,165 @@ public:
 };
 static_assert(sizeof(EffectSetting) == 0xB0);
 
+// 24
+class EffectItem
+{
+public:
+	enum
+	{
+		kRange_Self = 0,
+		kRange_Touch,
+		kRange_Target,
+	};
+
+	UInt32				magnitude;			// 00	used as a float
+	UInt32				area;				// 04
+	UInt32				duration;			// 08
+	UInt32				range;				// 0C
+	UInt32				actorValueOrOther;	// 10
+	EffectSetting		*setting;			// 14
+	float				cost;				// 18 on autocalc items this seems to be the cost
+	ConditionList		conditions;			// 1C
+};
+
+// 10
+class EffectItemList : public BSSimpleList<EffectItem>
+{
+public:
+	UInt32		unk0C;			// 0C
+
+	bool RemoveNthEffect(UInt32 index);
+};
+static_assert(sizeof(EffectItemList) == 0x10);
+
+// 1C
+class MagicItem : public TESFullName
+{
+public:
+	/*010*/virtual bool		Unk_04();
+	/*014*/virtual void		Unk_05(bool doSet);
+	/*018*/virtual UInt32	GetType();
+	/*01C*/virtual bool		Unk_07();
+	/*020*/virtual bool		Unk_08();
+	/*024*/virtual UInt32	GetTypeSignature();
+	/*028*/virtual void		*Unk_0A();
+	/*02C*/virtual UInt32	Unk_0B();
+	/*030*/virtual bool		GetNotEqual(TESForm *magicForm);
+	/*034*/virtual void		CopyFrom(TESForm *magicForm);
+	/*038*/virtual void		Unk_0E();
+	/*03C*/virtual void		Unk_0F();
+	/*040*/virtual void		Unk_10(UInt32 arg1, UInt32 arg2);
+
+	EffectItemList	list;	// 0C
+
+	enum MagicItemType
+	{
+		//	SpellItem
+		kActorEffect =	0,
+		kDisease =		1,
+		kPower =		2,
+		kLesserPower =	3,
+		kAbility =		4,
+		kPoison =		5,
+		kAddiction =	10,
+
+		//	EnchantmentItem
+		kObjectEffect =	6,
+
+		//	AlchemyItem
+		kIngestible =	7,
+
+		//	IngredientItem
+		kIngredient =	8
+	};
+
+	void __fastcall UpdateEffectsAllActors(EffectItem *effItem, bool addNew = false);
+};
+static_assert(sizeof(MagicItem) == 0x1C);
+
+// 34
+class MagicItemForm : public TESForm
+{
+public:
+	virtual void	ByteSwap();
+
+	MagicItem	magicItem;	// 18
+};
+static_assert(sizeof(MagicItemForm) == 0x34);
+
+// 44
+class EnchantmentItem : public MagicItemForm
+{
+public:
+	enum
+	{
+		kType_Weapon = 2,
+		kType_Apparel,
+	};
+
+	UInt32		type;		// 34
+	UInt32		unk38;		// 38
+	UInt32		unk3C;		// 3C
+	UInt8		enchFlags;	// 40
+	UInt8		pad41[3];	// 41
+};
+static_assert(sizeof(EnchantmentItem) == 0x44);
+
+// 44
+class SpellItem : public MagicItemForm
+{
+public:
+	enum
+	{
+		kType_ActorEffect	= 0,
+		kType_Disease,
+		kType_Power,
+		kType_LesserPower,
+		kType_Ability,
+		kType_Poison,
+		kType_Addiction		= 10,
+	};
+
+	UInt32		type;		// 34
+	UInt32		unk38;		// 38
+	UInt32		unk3C;		// 3C
+	UInt8		spellFlags;	// 40
+	UInt8		pad41[3];	// 41
+};
+static_assert(sizeof(SpellItem) == 0x44);
+
+// 4C
+class MagicItemObject : public TESBoundObject
+{
+public:
+	MagicItem		magicItem;		// 30
+};
+
+// D8
+class AlchemyItem : public MagicItemObject
+{
+public:
+	TESModelTextureSwap			model;					// 4C
+	TESIcon						icon;					// 6C
+	BGSMessageIcon				messageIcon;			// 78
+	TESScriptableForm			scriptable;				// 88
+	TESWeightForm				weight;					// 94
+	BGSEquipType				equipType;				// 9C
+	BGSDestructibleObjectForm	destructible;			// A4
+	BGSPickupPutdownSounds		pickupPutdownsounds;	// AC
+
+	UInt32						value;					// B8
+	UInt8						alchFlags;				// BC
+	UInt8						padBD[3];				// BD
+	SpellItem					*withdrawalEffect;		// C0
+	float						addictionChance;		// C4
+	TESSound					*consumeSound;			// C8
+	TESIcon						iconCC;					// CC
+
+	bool IsPoison();
+};
+static_assert(sizeof(AlchemyItem) == 0xD8);
+
 // 68
 class TESGrass : public TESBoundObject
 {
@@ -2025,54 +2105,7 @@ public:
 	UInt8			specularExponent;	// 1F
 	tList<TESGrass>	grasses;			// 20
 };
-
 static_assert(sizeof(TESLandTexture) == 0x28);
-
-// 44
-class EnchantmentItem : public MagicItemForm
-{
-public:
-	virtual void	ByteSwap(void);
-
-	enum
-	{
-		kType_Weapon = 2,
-		kType_Apparel,
-	};
-
-	UInt32		type;		// 34
-	UInt32		unk38;		// 38
-	UInt32		unk3C;		// 3C
-	UInt8		enchFlags;	// 40
-	UInt8		pad41[3];	// 41
-};
-
-static_assert(sizeof(EnchantmentItem) == 0x44);
-
-// 44
-class SpellItem : public MagicItemForm
-{
-public:
-	virtual void	ByteSwap(void);
-
-	enum
-	{
-		kType_ActorEffect	= 0,
-		kType_Disease,
-		kType_Power,
-		kType_LesserPower,
-		kType_Ability,
-		kType_Poison,
-		kType_Addiction		= 10,
-	};
-
-	UInt32		type;		// 34
-	UInt32		unk38;		// 38
-	UInt32		unk3C;		// 3C
-	UInt8		spellFlags;	// 40
-	UInt8		pad41[3];	// 41
-};
-static_assert(sizeof(SpellItem) == 0x44);
 
 // 90
 class TESObjectACTI : public TESBoundAnimObject
@@ -3035,37 +3068,6 @@ class TESKey : public TESObjectMISC
 {
 public:
 };
-
-// 4C
-class MagicItemObject : public TESBoundObject
-{
-public:
-	MagicItem		magicItem;		// 30
-};
-
-// D8
-class AlchemyItem : public MagicItemObject
-{
-public:
-	TESModelTextureSwap			model;					// 4C
-	TESIcon						icon;					// 6C
-	BGSMessageIcon				messageIcon;			// 78
-	TESScriptableForm			scriptable;				// 88
-	TESWeightForm				weight;					// 94
-	BGSEquipType				equipType;				// 9C
-	BGSDestructibleObjectForm	destructible;			// A4
-	BGSPickupPutdownSounds		pickupPutdownsounds;	// AC
-	UInt32						value;					// B8
-	UInt8						alchFlags;				// BC
-	UInt8						padBD[3];				// BD
-	SpellItem					*withdrawalEffect;		// C0
-	float						addictionChance;		// C4
-	TESSound					*consumeSound;			// C8
-	TESIcon						iconCC;					// CC
-
-	bool IsPoison();
-};
-static_assert(sizeof(AlchemyItem) == 0xD8);
 
 // BGSIdleMarker (40)
 class BGSIdleMarker;
@@ -4634,12 +4636,95 @@ public:
 	UInt32					unk18C[2];		// 18C
 };
 
-// TESEffectShader (170)
+// 134
+struct EffectShaderData
+{
+	UInt8		flags;				// 000
+	UInt8		pad01[3];			// 001
+	UInt32		membraneSourceBlendMode;	// 004
+	UInt32		membraneBlendOp;	// 008
+	UInt32		membraneZTestFunc;	// 00C
+	UInt32		fillTextureRGB;		// 010
+	float		fillTextureAlphaFadeInTime;	// 014
+	float		fillTextureFullAlphaTime;	// 018
+	float		fillTextureAlphaFadeOutTime;// 01C
+	float		fillTexturePersistentAlphaRatio;// 020
+	float		fillTextureAlphaPulseAmpl;	// 024
+	float		fillTextureAlphaPulseFreq;	// 028
+	float		fillTextureAnimSpeedU;	// 02C
+	float		fillTextureAnimSpeedV;	// 030
+	float		edgeFallOff;		// 034
+	UInt32		edgeColor;			// 038
+	float		edgeAlphaFadeInTime;// 03C
+	float		edgeFullAlphaTime;	// 040
+	float		edgeAlphaFadeOutTime;	// 044
+	float		edgePersistentAlphaRatio;	// 048
+	float		edgeAlphaPulseAmpl;	// 04C
+	float		edgeAlphaPulseFreq;	// 050
+	float		fillTextureFullAlphaRatio;	// 054
+	float		edgeFullAlphaRatio;	// 058
+	UInt32		membraneDestBlendMode;	// 05C
+	UInt32		particleSourceBlendMode;// 060
+	UInt32		particleBlendOp;	// 064
+	UInt32		particleZTestFunc;	// 068
+	UInt32		particleDestBlendMode;	// 06C
+	float		particleBirthRampUpTime;// 070
+	float		particleBirthFullTime;	// 074
+	float		particleBirthRampDownTime;	// 078
+	float		particleBirthFullRatio;	// 07C
+	float		particleBirthPersistRatio;	// 080
+	float		particleLifetime;	// 084
+	float		particleLifetimeVar;// 088
+	float		particleInitSpeedAlongNormal;	// 08C
+	float		particleAccelAlongNormal;	// 090
+	NiVector3	initialVelocity;	// 094
+	NiVector3	acceleration;		// 0A0
+	float		scaleKey1;			// 0AC
+	float		scaleKey2;			// 0B0
+	float		scaleKey1Time;		// 0B4
+	float		scaleKey2Time;		// 0B8
+	UInt32		colorKey1RGB;		// 0BC
+	UInt32		colorKey2RGB;		// 0C0
+	UInt32		colorKey3RGB;		// 0C4
+	float		colorKey1Alpha;		// 0C8
+	float		colorKey2Alpha;		// 0CC
+	float		colorKey3Alpha;		// 0D0
+	float		colorKey1Time;		// 0D4
+	float		colorKey2Time;		// 0D8
+	float		colorKey3Time;		// 0DC
+	float		particleInitSpeedAlongNormalVar;// 0E0
+	float		particleInitRotDeg;	// 0E4
+	float		particleInitRotDegVar;	// 0E8
+	float		particleRotSpeedDegPerSec;	// 0EC
+	float		particleRotSpeedDegPerSecVar;	// 0F0
+	BGSDebris	*addonModels;		// 0F4
+	float		holesStartTime;		// 0F8
+	float		holesEndTime;		// 0FC
+	float		holesStartVal;		// 100
+	float		holesEndVal;		// 104
+	float		edgeWidthAlphaUnits;// 108
+	UInt32		edgeColorRGB;		// 10C
+	float		explosionWindSpeed;	// 110
+	UInt32		textureCountU;		// 114
+	UInt32		textureCountV;		// 118
+	float		addonFadeInTime;	// 11C
+	float		addonFadeOutTime;	// 120
+	float		addonScaleStart;	// 124
+	float		addonScaleEnd;		// 128
+	float		addonScaleInTime;	// 12C
+	float		addonScaleOutTime;	// 130
+};
+
+// 170
 class TESEffectShader : public TESForm
 {
 public:
-	UInt32 unk018[(0x170 - 0x18) >> 2];
+	EffectShaderData	shaderData;				// 018
+	TESTexture			fillTexture;			// 14C
+	TESTexture			particleShaderTexture;	// 158
+	TESTexture			holesTexture;			// 164
 };
+static_assert(sizeof(TESEffectShader) == 0x170);
 
 // A8
 class BGSExplosion : public TESBoundObject
@@ -4684,7 +4769,6 @@ public:
 		else explFlags &= ~pFlag;
 	}
 };
-
 static_assert(sizeof(BGSExplosion) == 0xA8);
 
 // BGSDebris (24)
@@ -4979,12 +5063,12 @@ class BGSPerk : public TESForm
 public:
 	struct PerkData
 	{
-		bool				isTrait;	// 00
-		UInt8				minLevel;	// 01
-		UInt8				numRanks;	// 02
-		bool				isPlayable;	// 03
-		bool				isHidden;	// 04
-		UInt8				unk05;		// 05 todo: collapse to pad[3] after verifying isPlayable and isHidden
+		bool				isTrait;	// 00 (38)
+		UInt8				minLevel;	// 01 (39)
+		UInt8				numRanks;	// 02 (3A)
+		bool				isPlayable;	// 03 (3B)
+		bool				isHidden;	// 04 (3C)
+		UInt8				unk05;		// 05 (3D)
 		UInt8				unk06;		// 06
 		UInt8				unk07;		// 07
 	};

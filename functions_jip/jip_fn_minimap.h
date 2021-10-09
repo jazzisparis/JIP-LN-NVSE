@@ -942,7 +942,7 @@ __declspec(naked) IntSeenData* __fastcall AddIntSeenData(IntSeenData *seenData, 
 
 __declspec(naked) void UpdateCellsSeenBitsHook()
 {
-	static const float kFlt1d80 = 0.0125F;
+	static const float kFlt6400 = 6400.0F;
 	__asm
 	{
 		push	ebp
@@ -967,11 +967,8 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		movq	xmm1, qword ptr [edi]
 		subps	xmm1, xmm0
 		mulps	xmm1, xmm1
-		movss	xmm2, xmm1
-		psrlq	xmm1, 0x20
-		addss	xmm1, xmm2
-		rsqrtss	xmm1, xmm1
-		comiss	xmm1, kFlt1d80
+		haddps	xmm1, xmm1
+		comiss	xmm1, kFlt6400
 		ja		doneExt
 	skipPosDiff:
 		movq	qword ptr [edi], xmm0
@@ -1939,10 +1936,8 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	return true;
 }
 
-const __m128 kVertexAlphaMults = {0.25, 0.5, 0.75, 1};
-alignas(16) const float
-kDirectionalLightValues[] = {1.0F, 1.0F, 239 / 255.0F, 0, 0, 0, 0, 0, 0, 0},
-kFogPropertyValues[] = {31 / 255.0F, 47 / 255.0F, 63 / 255.0F, 0};
+const __m128 kVertexAlphaMults = {0.25, 0.5, 0.75, 1}, kFogPropertyValues = {31 / 255.0F, 47 / 255.0F, 63 / 255.0F, 0};
+alignas(16) const float kDirectionalLightValues[] = {1.0F, 1.0F, 239 / 255.0F, 0, 0, 0, 0, 0, 0, 0};
 const UInt8 kSelectImgUpdate[][9] =
 {
 	{8, 2, 0, 4, 1, 0, 0, 0, 0},
@@ -2318,8 +2313,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 						}
 					}
 					GameGlobals::SceneLightsLock()->Leave();
+					_mm_storeu_ps(&g_shadowFogProperty->color.r, kFogPropertyValues);
 					memcpy(g_directionalLightColor, kDirectionalLightValues, sizeof(kDirectionalLightValues));
-					memcpy(&g_shadowFogProperty->color, kFogPropertyValues, sizeof(kFogPropertyValues));
 					g_shadowFogProperty->power = 1000.0F;
 					*(UInt8*)0x11FF104 = 1;
 					g_particleSysMngr->m_flags |= 1;

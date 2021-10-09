@@ -1676,7 +1676,7 @@ bool Cmd_AddTileFromTemplate_Execute(COMMAND_ARGS)
 
 bool Cmd_SetUIFloatGradual_Execute(COMMAND_ARGS)
 {
-	static const UInt8 kChangeModeMatch[] = {0, 4, 1, 5};
+	static const UInt8 kChangeModeMatch[] = {0, 4, 1, 5, 6};
 	char tilePath[0x100];
 	float startVal, endVal, timer;
 	UInt32 changeMode = 0;
@@ -1689,7 +1689,7 @@ bool Cmd_SetUIFloatGradual_Execute(COMMAND_ARGS)
 		{
 			if (numArgs >= 4)
 			{
-				if (changeMode > 3) changeMode = 0;
+				if (changeMode > 4) changeMode = 0;
 				else changeMode = kChangeModeMatch[changeMode];
 				component->GradualSetFloat(tileVal->id, startVal, endVal, timer, changeMode);
 			}

@@ -32,11 +32,11 @@ public:
 	/*19C*/virtual void		Unk_67(void);					// Actor: GetMagicEffectList
 	/*1A0*/virtual bool		GetIsChildSize(bool checkHeight);		// 068 Actor: GetIsChildSize
 	/*1A4*/virtual UInt32	GetActorUnk0148();			// result can be interchanged with baseForm, so TESForm* ?
-	/*1A8*/virtual void		SetActorUnk0148(UInt32 arg0);
+	/*1A8*/virtual void		SetActorUnk0148(UInt32 arg1);
 	/*1AC*/virtual void		Unk_6B(void);
-	/*1B0*/virtual void		Unk_6C(void);	// REFR: GetBSFaceGenNiNodeSkinned
-	/*1B4*/virtual void		Unk_6D(void);	// REFR: calls 006C
-	/*1B8*/virtual void		Unk_6E(void);	// MobileActor: calls 006D then NiNode::Func0040
+	/*1B0*/virtual BSFaceGenNiNode	*Unk_6C(UInt32 arg1);
+	/*1B4*/virtual BSFaceGenNiNode	*Unk_6D(UInt32 arg1);	// REFR: calls 006C
+	/*1B8*/virtual BSFaceGenAnimationData	*Unk_6E(UInt32 arg1);
 	/*1BC*/virtual void		Unk_6F(void);
 	/*1C0*/virtual bool		Unload3D();
 	/*1C4*/virtual void		AnimateNiNode();
@@ -58,8 +58,8 @@ public:
 	/*204*/virtual void		Unk_81(UInt32 arg0);
 	/*208*/virtual void		Unk_82(void);
 	/*20C*/virtual NiNode	*GetProjectileNode();
-	/*210*/virtual void		Unk_84(UInt32 arg0);
-	/*214*/virtual UInt32	Unk_85(void);			
+	/*210*/virtual void		SetProjectileNode(NiNode *node);
+	/*214*/virtual UInt32	GetSitSleepState();			
 	/*218*/virtual bool		IsCharacter();			// return false for Actor and Creature, true for character and PlayerCharacter
 	/*21C*/virtual bool		IsCreature();
 	/*220*/virtual bool		IsExplosion();
@@ -254,26 +254,26 @@ typedef tList<ActiveEffect> ActiveEffectList;
 class MagicCaster
 {
 public:
-	virtual void	AddAbility(SpellItem *splItem, bool arg2);
-	virtual void	AddAddiction(SpellItem *splItem, bool arg2);
-	virtual void	AddEffect(SpellItem *splItem, bool arg2);
-	virtual void	CastSpell(MagicItem *spell, bool arg2, MagicTarget *target, float arg4, bool arg5);
-	virtual void	AddDisease(SpellItem *splItem, MagicTarget *target, bool arg3);
-	virtual void	AddFormEffects(MagicItem *magItem, MagicItemForm *itemForm, bool arg3);
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
-	virtual void	Unk_08(void);
-	virtual void	Unk_09(void);
-	virtual void	Unk_0A(void);
-	virtual Actor	*GetActor(void);
-	virtual void	Unk_0C(void);
-	virtual void	Unk_0D(void);
-	virtual void	Unk_0E(void);
-	virtual void	Unk_0F(void);
-	virtual void	Unk_10(MagicItem *spell);
-	virtual void	Unk_11(void);
-	virtual void	Unk_12(MagicTarget *magicTarget);
-	virtual ActiveEffect	*CreateActiveEffect(MagicItem *magicItem, EffectItem *effItem, MagicItemForm *itemForm);
+	/*000*/virtual void		AddAbility(SpellItem *splItem, bool arg2);
+	/*004*/virtual void		AddAddiction(SpellItem *splItem, bool arg2);
+	/*008*/virtual void		AddEffect(SpellItem *splItem, bool arg2);
+	/*00C*/virtual void		CastSpell(MagicItem *spell, bool arg2, MagicTarget *target, float arg4, bool arg5);
+	/*010*/virtual void		AddDisease(SpellItem *splItem, MagicTarget *target, bool arg3);
+	/*014*/virtual void		AddFormEffects(MagicItem *magItem, MagicItemForm *itemForm, bool arg3);
+	/*018*/virtual Actor	*Unk_06();
+	/*01C*/virtual void		Unk_07();
+	/*020*/virtual void		Unk_08();
+	/*024*/virtual void		Unk_09(UInt32 arg1, UInt32 arg2);
+	/*028*/virtual bool		Unk_0A(UInt32 arg1, float *arg2, UInt32 *arg3, UInt32 arg4);
+	/*02C*/virtual Actor	*GetActor(void);
+	/*030*/virtual NiNode	*GetMagicNode();
+	/*034*/virtual MagicItem	*Unk_0D();
+	/*038*/virtual bool		Unk_0E(ActiveEffect *activeEffect);
+	/*03C*/virtual float	Unk_0F(UInt8 arg1, float arg2);
+	/*040*/virtual void		Unk_10(MagicItem *spell);
+	/*044*/virtual void		Unk_11();
+	/*048*/virtual void		Unk_12(MagicTarget *magicTarget);
+	/*04C*/virtual ActiveEffect	*CreateActiveEffect(MagicItem *magicItem, EffectItem *effItem, MagicItemForm *itemForm);
 
 	UInt32	unk04[2];	// 04
 };
@@ -283,18 +283,18 @@ static_assert(sizeof(MagicCaster) == 0xC);
 class MagicTarget
 {
 public:
-	virtual bool	ApplyEffect(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect, bool arg4);
-	virtual Actor	*GetActor(void);
-	virtual ActiveEffectList	*GetEffectList(void);
-	virtual bool	Unk_03(void);
-	virtual bool	CannotBeHit(void);
-	virtual void	Unk_05(void);
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
-	virtual void	Unk_08(void);
-	virtual float	Unk_09(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect);
-	virtual void	Unk_0A(void);
-	virtual void	Unk_0B(void);
+	/*000*/virtual bool		ApplyEffect(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect, bool arg4);
+	/*004*/virtual Actor	*GetActor(void);
+	/*008*/virtual ActiveEffectList	*GetEffectList(void);
+	/*00C*/virtual bool		Unk_03(void);
+	/*010*/virtual bool		CannotBeHit();
+	/*014*/virtual void		Unk_05(ActiveEffect *activeEffect);
+	/*018*/virtual void		Unk_06(ActiveEffect *activeEffect);
+	/*01C*/virtual void		Unk_07(MagicCaster *magicCaster, ActiveEffect *activeEffect);
+	/*020*/virtual void		Unk_08(MagicCaster *magicCaster, ActiveEffect *activeEffect);
+	/*024*/virtual float	GetEffectMagnitudeModifier(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect);
+	/*028*/virtual void		Unk_0A(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect, bool arg4);
+	/*02C*/virtual bool		Unk_0B(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect);
 
 	UInt32	unk04[3];	// 04
 
@@ -443,10 +443,10 @@ public:
 	/*390*/virtual UInt32	GetActorType();	// Creature = 0, Character = 1, PlayerCharacter = 2
 	/*394*/virtual void		SetActorValue(UInt32 avCode, float value);
 	/*398*/virtual void		SetActorValueInt(UInt32 avCode, UInt32 value);
-	/*39C*/virtual void		Unk_E7(void);
+	/*39C*/virtual void		ModActorValue(UInt32 avCode, float modifier, Actor *attacker);
 	/*3A0*/virtual void		Unk_E8(void);
-	/*3A4*/virtual void		Unk_E9(void);
-	/*3A8*/virtual void		ModActorValue(UInt32 avCode, int modifier, UInt32 arg3);
+	/*3A4*/virtual void		Unk_E9(UInt32 avCode, int modifier, UInt32 arg3);
+	/*3A8*/virtual void		ModActorValueInt(UInt32 avCode, int modifier, UInt32 arg3);
 	/*3AC*/virtual void		DamageActorValue(UInt32 avCode, float damage, Actor *attacker);
 	/*3B0*/virtual void		Unk_EC(void);
 	/*3B4*/virtual void		Unk_ED(void);
@@ -690,7 +690,6 @@ public:
 	BackUpPackage *AddBackUpPackage(TESObjectREFR *targetRef, TESObjectCELL *targetCell, UInt32 flags);
 	void __fastcall TurnToFaceObject(TESObjectREFR *target);
 	void TurnAngle(float angle);
-	void PlayIdle(TESIdleForm *idleAnim);
 	void PlayAnimGroup(UInt32 animGroupID);
 	UInt32 GetLevel();
 	double GetKillXP();
@@ -856,9 +855,9 @@ public:
 	float								grabbedWeight;			// 644
 	UInt8								byte648;				// 648
 	UInt8								byte649;				// 649
-	bool								byte64A;				// 64A	= not FirstPerson
-	bool								is3rdPerson;			// 64B
-	bool								bThirdPerson;			// 64C
+	bool								is3rdPerson;			// 64A
+	bool								byte64B;				// 64B
+	bool								byte64C;				// 64C
 	UInt8								byte64D;				// 64D
 	UInt8								byte64E;				// 64E
 	bool								isUsingScope;			// 64F
@@ -947,7 +946,8 @@ public:
 	PerkEntryPointList					perkEntriesPC[74];		// 884
 	tList<PerkRank>						perkRanksTM;			// AD4
 	PerkEntryPointList					perkEntriesTM[74];		// ADC
-	UInt32								unkD2C[4];				// D2C
+	UInt32								unkD2C;					// D2C
+	NiVector3							vecD30;					// D30
 	NiObject							*unkD3C;				// D3C
 	UInt32								unkD40;					// D40
 	Actor								*reticleActor;			// D44
@@ -999,7 +999,7 @@ public:
 		// tList at 6C4 is cleared when there is no current quest. There is another NiNode at 069C
 		// 086C is cleared after equipement change.
 
-	bool IsThirdPerson() { return bThirdPerson ? true : false; }
+	bool IsThirdPerson() { return is3rdPerson ? true : false; }
 	UInt32 GetMovementFlags() { return actorMover->GetMovementFlags(); }	// 11: IsSwimming, 9: IsSneaking, 8: IsRunning, 7: IsWalking, 0: keep moving
 	bool IsPlayerSwimming() { return (actorMover->GetMovementFlags() & 0x800) ? true : false; }
 

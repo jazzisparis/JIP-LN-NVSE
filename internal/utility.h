@@ -62,25 +62,11 @@ __forceinline T_Ret CdeclCall(UInt32 _addr, Args ...args)
 
 #define LOG_HOOKS 0
 
-static const double
-kDblPId180 = 0.017453292519943295,
-kDbl180dPI = 57.29577951308232088;
-
-static const float
-kFlt1d1000 = 0.001F,
-kFlt1d200 = 0.005F,
-kFlt1d100 = 0.01F,
-kFltPId180 = 0.01745329238F,
-kFlt1d10 = 0.1F,
-kFltHalf = 0.5F,
-kFltOne = 1.0F,
-kFltPId2 = 1.5707963268F,
-kFlt10 = 10.0F,
-kFlt180dPI = 57.2957795F,
-kFlt100 = 100.0F,
-kFlt200 = 200.0F,
-kFlt1000 = 1000.0F,
-kFltMax = FLT_MAX;
+extern const float kFlt1d1000, kFlt1d200, kFlt1d100, kFltPId180, kFlt1d10, kFltHalf, kFltOne, kFltPId2, kFlt10, kFlt180dPI, kFlt100, kFlt200, kFlt1000, kFltMax;
+extern const double kDblPId180, kDbl180dPI;
+extern const UInt32 kSSERemoveSignMaskPS[], kSSEChangeSignMaskPS[], kSSEDiscard4thPS[];
+extern const UInt64 kSSERemoveSignMaskPD[], kSSEChangeSignMaskPD[];
+extern const char kLwrCaseConverter[], kUprCaseConverter[];
 
 typedef void* (__cdecl *memcpy_t)(void*, const void*, size_t);
 extern memcpy_t MemCopy, MemMove;
@@ -231,9 +217,6 @@ template <typename T> inline T sqr(T value)
 {
 	return value * value;
 }
-
-extern const UInt32 kSSERemoveSignMask[], kSSEChangeSignMask[], kSSEDiscard4thPS[];
-extern const UInt8 kLwrCaseConverter[], kUprCaseConverter[];
 
 UInt32 __vectorcall cvtd2ui(double value);
 

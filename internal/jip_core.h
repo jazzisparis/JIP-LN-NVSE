@@ -881,6 +881,8 @@ void __fastcall DoConsolePrint(double *result);
 
 void __fastcall DoConsolePrint(TESForm *result);
 
+bool IsInMainThread();
+
 struct TLSData
 {
 	UInt32			unk000;				// 000

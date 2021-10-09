@@ -202,7 +202,7 @@ bool Cmd_ToggleFirstPerson_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &toggleON))
 	{
 		bool bToggle = toggleON != 0;
-		if (bToggle == g_thePlayer->bThirdPerson)
+		if (bToggle == g_thePlayer->is3rdPerson)
 			g_thePlayer->ToggleFirstPerson(bToggle);
 	}
 	return true;
@@ -489,7 +489,7 @@ bool SetOnKeyEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt;
-	UInt32 keyID = 0;
+	SInt32 keyID = -1;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &keyID) && IS_ID(script, Script))
 		SetInputEventHandler(s_onKeyEventMask, script, keyID, addEvnt != 0);
 	return true;
@@ -559,7 +559,7 @@ bool Cmd_GetReticleRange_Execute(COMMAND_ARGS)
 	}
 	NiVector3 coords;
 	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->WorldRotate(), 50000.0F, 0, filter))
-		*result = Vector3Distance(&coords, &g_thePlayer->cameraPos);
+		*result = Point3Distance(&coords, &g_thePlayer->cameraPos);
 	else *result = -1;
 	return true;
 }

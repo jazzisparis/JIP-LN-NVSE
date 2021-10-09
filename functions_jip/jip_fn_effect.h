@@ -1,12 +1,12 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetNumEffects, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(GetNthEffectBase, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetNumEffects, 0, 1, kParams_OneMagicItem);
+DEFINE_COMMAND_PLUGIN(GetNthEffectBase, 0, 2, kParams_OneMagicItem_OneInt);
 DEFINE_COMMAND_PLUGIN(SetNthEffectBase, 0, 3, kParams_OneMagicItem_OneInt_OneMagicEffect);
-DEFINE_COMMAND_PLUGIN(GetNthEffectTraitNumeric, 0, 3, kParams_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(SetNthEffectTraitNumeric, 0, 4, kParams_OneForm_ThreeInts);
+DEFINE_COMMAND_PLUGIN(GetNthEffectTraitNumeric, 0, 3, kParams_OneMagicItem_TwoInts);
+DEFINE_COMMAND_PLUGIN(SetNthEffectTraitNumeric, 0, 4, kParams_OneMagicItem_ThreeInts);
 DEFINE_COMMAND_PLUGIN(AddNewEffect, 0, 7, kParams_OneMagicItem_OneEffect_TwoInts_ThreeOptionalInts);
-DEFINE_COMMAND_PLUGIN(RemoveNthEffect, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(RemoveNthEffect, 0, 2, kParams_OneMagicItem_OneInt);
 DEFINE_COMMAND_PLUGIN(SetObjectEffect, 0, 2, kParams_OneForm_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(GetNumActorEffects, 0, 1, kParams_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(GetNthActorEffect, 0, 2, kParams_OneInt_OneOptionalActorBase);
@@ -31,30 +31,23 @@ DEFINE_COMMAND_PLUGIN(CastImmediate, 1, 2, kParams_OneMagicItem_OneOptionalActor
 
 bool Cmd_GetNumEffects_Execute(COMMAND_ARGS)
 {
-	*result = 0;
-	TESForm *form;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
-	{
-		EffectItemList *effList = DYNAMIC_CAST(form, TESForm, EffectItemList);
-		if (effList) *result = (int)effList->list.Count();
-	}
+	MagicItem *magicItem;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem))
+		*result = (int)magicItem->list.list.Count();
+	else *result = 0;
 	return true;
 }
 
 bool Cmd_GetNthEffectBase_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESForm *form;
+	MagicItem *magicItem;
 	UInt32 idx;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &idx))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &idx))
 	{
-		EffectItemList *effList = DYNAMIC_CAST(form, TESForm, EffectItemList);
-		if (effList)
-		{
-			EffectItem *effItem = effList->list.GetNthItem(idx);
-			if (effItem && effItem->setting)
-				REFR_RES = effItem->setting->refID;
-		}
+		EffectItem *effItem = magicItem->list.list.GetNthItem(idx);
+		if (effItem && effItem->setting)
+			REFR_RES = effItem->setting->refID;
 	}
 	return true;
 }
@@ -80,49 +73,49 @@ bool Cmd_SetNthEffectBase_Execute(COMMAND_ARGS)
 bool Cmd_GetNthEffectTraitNumeric_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESForm *form;
+	MagicItem *magicItem;
 	UInt32 idx, traitID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &idx, &traitID)) return true;
-	EffectItemList *effList = DYNAMIC_CAST(form, TESForm, EffectItemList);
-	if (!effList) return true;
-	EffectItem *effItem = effList->list.GetNthItem(idx);
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &idx, &traitID))
+		return true;
+	EffectItem *effItem = magicItem->list.list.GetNthItem(idx);
 	if (!effItem) return true;
 	switch (traitID)
 	{
-	case 0:
-		*result = (int)effItem->magnitude;
-		break;
-	case 1:
-		*result = (int)effItem->area;
-		break;
-	case 2:
-		*result = (int)effItem->duration;
-		break;
-	case 3:
-		*result = (int)effItem->range;
+		case 0:
+			*result = (int)effItem->magnitude;
+			break;
+		case 1:
+			*result = (int)effItem->area;
+			break;
+		case 2:
+			*result = (int)effItem->duration;
+			break;
+		case 3:
+			*result = (int)effItem->range;
+			break;
 	}
 	return true;
 }
 
 bool Cmd_SetNthEffectTraitNumeric_Execute(COMMAND_ARGS)
 {
-	TESForm *form;
+	MagicItem *magicItem;
 	UInt32 idx, traitID, val;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &idx, &traitID, &val) || (traitID > 2)) return true;
-	MagicItem *magicItem = DYNAMIC_CAST(form, TESForm, MagicItem);
-	if (!magicItem) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &idx, &traitID, &val) || (traitID > 2))
+		return true;
 	EffectItem *effItem = magicItem->list.list.GetNthItem(idx);
 	if (!effItem) return true;
 	switch (traitID)
 	{
-	case 0:
-		effItem->magnitude = val;
-		break;
-	case 1:
-		effItem->area = val;
-		break;
-	case 2:
-		effItem->duration = val;
+		case 0:
+			effItem->magnitude = val;
+			break;
+		case 1:
+			effItem->area = val;
+			return true;
+		case 2:
+			effItem->duration = val;
+			break;
 	}
 	magicItem->UpdateEffectsAllActors(effItem);
 	return true;
@@ -175,15 +168,11 @@ bool Cmd_AddNewEffect_Execute(COMMAND_ARGS)
 
 bool Cmd_RemoveNthEffect_Execute(COMMAND_ARGS)
 {
-	*result = -1;
-	TESForm *form;
+	MagicItem *magicItem;
 	SInt32 idx;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &idx))
-	{
-		EffectItemList *effList = DYNAMIC_CAST(form, TESForm, EffectItemList);
-		if (effList && effList->RemoveNthEffect(idx))
-			*result = (int)effList->list.Count();
-	}
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &idx) && magicItem->list.RemoveNthEffect(idx))
+		*result = (int)magicItem->list.list.Count();
+	else *result = -1;
 	return true;
 }
 

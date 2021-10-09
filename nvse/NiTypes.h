@@ -75,13 +75,14 @@ struct NiVector3
 	}
 
 	void ToQuaternion(NiQuaternion &quaternion);
-	void MultiplyMatrixVector(NiMatrix33 *mat, NiVector3 *vec);
-	void ColumnMultiply(NiMatrix33 *rotMatrix, UInt32 whichColumn);
-	void Normalize();
+	NiVector3* __fastcall MultiplyMatrix(NiMatrix33 *mat);
+	NiVector3* __fastcall MultiplyMatrixRow(NiMatrix33 *rotMatrix, UInt32 whichRow);
+	NiVector3 *Normalize();
+	NiVector3* __fastcall CrossProduct(NiVector3 *vB);
 	bool RayCastCoords(NiVector3 *posVector, NiMatrix33 *rotMatrix, float maxRange, UInt32 axis = 0, UInt16 filter = 6);
 };
 
-float __vectorcall Vector3Distance(NiVector3 *vec1, NiVector3 *vec2);
+float __vectorcall Point3Distance(NiVector3 *pt1, NiVector3 *pt2);
 
 struct NiVector4
 {
@@ -142,6 +143,8 @@ struct alignas(16) AlignedVector4
 
 float __vectorcall Vector3Length(AlignedVector4 *inVec);
 
+struct NiQuaternion;
+
 // 24
 struct NiMatrix33
 {
@@ -165,6 +168,7 @@ struct NiMatrix33
 	{
 		return ThisCall<NiMatrix33*>(0x4168A0, this, angle, normalizedAxes.x, normalizedAxes.y, normalizedAxes.z);	//	Returns this
 	}
+	NiMatrix33* __fastcall FromQuaternion(NiQuaternion *qt);
 	void Dump();
 };
 
@@ -189,6 +193,7 @@ struct NiQuaternion
 		y += rhs.y;
 		z += rhs.z;
 	}
+
 	inline void operator-=(const NiQuaternion &rhs)
 	{
 		w -= rhs.w;
@@ -196,17 +201,9 @@ struct NiQuaternion
 		y -= rhs.y;
 		z -= rhs.z;
 	}
-	inline void operator*=(const NiQuaternion &rhs)
-	{
-		float tw = w * rhs.w - x * rhs.x - y * rhs.y - z * rhs.z;
-		float tx = w * rhs.x + x * rhs.w - y * rhs.z + z * rhs.y;
-		float ty = w * rhs.y + x * rhs.z + y * rhs.w - z * rhs.x;
-		float tz = w * rhs.z - x * rhs.y + y * rhs.x + z * rhs.w;
-		w = tw;
-		x = tx;
-		y = ty;
-		z = tz;
-	}
+
+	void __fastcall operator*=(const NiQuaternion &rhs);
+
 	inline void operator*=(float s)
 	{
 		w *= s;
@@ -215,8 +212,16 @@ struct NiQuaternion
 		z *= s;
 	}
 
+	inline NiQuaternion *Invert()
+	{
+		x = -x;
+		y = -y;
+		z = -z;
+		return this;
+	}
+
+	NiQuaternion *Normalize();
 	void EulerYPR(NiVector3 &ypr);
-	void RotationMatrix(NiMatrix33 &rotMatrix);
 };
 
 // 34
