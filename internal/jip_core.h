@@ -32,6 +32,8 @@ typedef void (*_ReadRecord64)(void *outData);
 extern _ReadRecord64 ReadRecord64;
 typedef CommandInfo* (*_GetCmdByOpcode)(UInt32 opcode);
 extern _GetCmdByOpcode GetCmdByOpcode;
+typedef const PluginInfo* (*_GetPluginInfoByName)(const char *pluginName);
+extern _GetPluginInfoByName GetPluginInfoByName;
 typedef const char* (*_GetStringVar)(UInt32 stringID);
 extern _GetStringVar GetStringVar;
 typedef bool (*_AssignString)(COMMAND_ARGS, const char *newValue);
@@ -54,32 +56,41 @@ typedef bool (*_GetElement)(NVSEArrayVar *arr, const NVSEArrayElement &key, NVSE
 extern _GetElement GetElement;
 typedef bool (*_GetElements)(NVSEArrayVar *arr, NVSEArrayElement *elements, NVSEArrayElement *keys);
 extern _GetElements GetElements;
+typedef int (*_GetContainerType)(NVSEArrayVar *arr);
+extern _GetContainerType GetContainerType;
+typedef bool (*_ArrayHasKey)(NVSEArrayVar *arr, const NVSEArrayElement &key);
+extern _ArrayHasKey ArrayHasKey;
 typedef bool (*_ExtractArgsEx)(COMMAND_ARGS_EX, ...);
 extern _ExtractArgsEx ExtractArgsEx;
 typedef bool (*_ExtractFormatStringArgs)(UInt32 fmtStringPos, char *buffer, COMMAND_ARGS_EX, UInt32 maxParams, ...);
 extern _ExtractFormatStringArgs ExtractFormatStringArgs;
 typedef bool (*_CallFunction)(Script *funcScript, TESObjectREFR *callingObj, UInt8 numArgs, ...);
 extern _CallFunction CallFunction;
+//typedef int (*_GetFunctionParams)(Script *funcScript, UInt8 *paramTypesOut);
+//extern _GetFunctionParams GetFunctionParams;
 typedef void (*_CaptureLambdaVars)(Script* scriptLambda);
 extern _CaptureLambdaVars CaptureLambdaVars;
 typedef void (*_UncaptureLambdaVars)(Script* scriptLambda);
 extern _UncaptureLambdaVars UncaptureLambdaVars;
-
 extern UInt8 *g_numPreloadMods;
+
+typedef Tile* (__stdcall *_UIOInjectComponent)(Tile *parentTile, const char *dataStr);
+extern _UIOInjectComponent UIOInjectComponent;
 
 #define MSGBOX_ARGS 0, 0, ShowMessageBox_Callback, 0, 0x17, 0, 0, "OK", NULL
 
 struct GameGlobals
 {
 	__forceinline static const char **TerminalModelPtr() {return (const char**)0x11A0BB0;}
+	__forceinline static SpellItem *PipBoyLight() {return *(SpellItem**)0x11C358C;}
 	__forceinline static TESDescription **CurrentDescription() {return (TESDescription**)0x11C5490;}
 	__forceinline static String *CurrentDescriptionText() {return (String*)0x11C5498;}
 	__forceinline static NiTPointerMap<TESForm> *AllFormsMap() {return *(NiTPointerMap<TESForm>**)0x11C54C0;}
 	__forceinline static NiTStringPointerMap<TESForm> *EditorIDsMap() {return *(NiTStringPointerMap<TESForm>**)0x11C54C8;}
 	__forceinline static BSTCaseInsensitiveStringMap<void*> *IdleAnimsDirectoryMap() {return *(BSTCaseInsensitiveStringMap<void*>**)0x11CB6A0;}
-	__forceinline static BSSimpleArray<TESRecipeCategory> *RecipeMenuCategories() {return (BSSimpleArray<TESRecipeCategory>*)0x11D8F08;}
+	__forceinline static BSSimpleArray<TESRecipeCategory*> *RecipeMenuCategories() {return (BSSimpleArray<TESRecipeCategory*>*)0x11D8F08;}
 	__forceinline static TESObjectWEAP *PlayerWeapon() {return *(TESObjectWEAP**)0x11D98D4;}
-	__forceinline static tList<VATSTargetInfo> *VATSTargetList() {return (tList<VATSTargetInfo>*)0x11DB150;}
+	__forceinline static tList<VATSTarget> *VATSTargetList() {return (tList<VATSTarget>*)0x11DB150;}
 	__forceinline static NiNode *ObjectLODRoot() {return *(NiNode**)0x11DEA18;}
 	__forceinline static bool *GamePadRumble() {return (bool*)0x11E0854;}
 	__forceinline static UInt32 TickCount() {return *(UInt32*)0x11F63A8;}
@@ -90,7 +101,6 @@ struct GameGlobals
 	__forceinline static RadioEntry *PipboyRadio() {return *(RadioEntry**)0x11DD42C;}
 };
 
-extern SpellItem *g_pipBoyLight;
 extern void *g_scrapHeapQueue;
 extern NiNode *g_cursorNode;
 extern float g_screenResConvert, g_screenWidth, g_screenHeight;
@@ -324,8 +334,6 @@ bool LeveledListHasFormDeep(TESLeveledList *pLvlList, TESForm *form, TempFormLis
 
 float GetDaysPassed(int bgnYear = 2281, int bgnMonth = 9, int bgnDay = 13);
 
-void PlayGameSound(const char *soundEDID);
-
 struct ScriptVariableEntry
 {
 	ScriptVar	*value;
@@ -387,30 +395,30 @@ class AuxVariableValue
 public:
 	AuxVariableValue() : alloc(0) {}
 	AuxVariableValue(UInt8 _type) : type(_type), alloc(0) {}
-	AuxVariableValue(NVSEArrayElement &elem) : alloc(0) {SetElem(elem);}
+	AuxVariableValue(const NVSEArrayElement &elem) : alloc(0) {*this = elem;}
 
 	~AuxVariableValue() {Clear();}
 
 	UInt8 GetType() const {return type;}
 	double GetFlt() const {return (type == 1) ? num : 0;}
 	UInt32 GetRef() const {return (type == 2) ? refID : 0;}
-	const char *GetStr() const {return alloc ? str : NULL;}
+	const char *GetStr() const {return alloc ? str : nullptr;}
 
-	void SetFlt(double value)
+	inline void operator=(double value)
 	{
 		Clear();
 		type = 1;
 		num = value;
 	}
 
-	void SetRef(TESForm *value)
+	inline void operator=(TESForm *value)
 	{
 		Clear();
 		type = 2;
 		refID = value ? value->refID : 0;
 	}
 
-	void SetStr(const char *value)
+	inline void operator=(const char *value)
 	{
 		type = 4;
 		length = StrLen(value);
@@ -429,11 +437,13 @@ public:
 			*str = 0;
 	}
 
-	void SetElem(NVSEArrayElement &elem)
+	inline void operator=(const NVSEArrayElement &value)
 	{
-		if (elem.GetType() == 2) SetRef(elem.form);
-		else if (elem.GetType() == 3) SetStr(elem.str);
-		else SetFlt(elem.num);
+		if (value.GetType() == 2)
+			*this = value.form;
+		else if (value.GetType() == 3)
+			*this = value.str;
+		else *this = value.num;
 	}
 
 	ArrayElementL GetAsElement() const
@@ -494,7 +504,7 @@ public:
 		}
 	}
 };
-STATIC_ASSERT(sizeof(AuxVariableValue) == 0x10);
+static_assert(sizeof(AuxVariableValue) == 0x10);
 
 typedef Vector<AuxVariableValue, 2> AuxVarValsArr;
 typedef UnorderedMap<char*, AuxVarValsArr> AuxVarVarsMap;
@@ -756,7 +766,42 @@ struct TempArrayElements
 	}
 };
 
-ArrayElementR* __fastcall GetArrayData(NVSEArrayVar *srcArr, UInt32 *size);
+struct ArrayData
+{
+	UInt32			size;
+	ArrayElementR	*vals;
+	ArrayElementR	*keys;
+
+	ArrayData(NVSEArrayVar *srcArr, bool isPacked)
+	{
+		size = GetArraySize(srcArr);
+		if (size)
+		{
+			UInt32 alloc = size * sizeof(ArrayElementR);
+			if (!isPacked) alloc *= 2;
+			vals = (ArrayElementR*)AuxBuffer::Get(2, alloc);
+			keys = isPacked ? nullptr : (vals + size);
+			MemZero(vals, alloc);
+			if (!GetElements(srcArr, vals, keys))
+				size = 0;
+		}
+	}
+
+	~ArrayData()
+	{
+		if (size)
+		{
+			UInt32 count = keys ? (size * 2) : size;
+			ArrayElementR *elems = vals;
+			do
+			{
+				elems->~ElementR();
+				elems++;
+			}
+			while (--count);
+		}
+	}
+};
 
 // 30
 struct InventoryRef
@@ -801,20 +846,25 @@ struct AnimGroupClassify
 };
 extern const AnimGroupClassify kAnimGroupClassify[];
 
-class JIPScriptRunner
+enum ScriptRunOn
 {
-	Script					*script;
-	void					*scrContext;
-	UnorderedSet<char*>		sourceFiles;
+	kRunOn_LoadGame =		'lg',
+	kRunOn_ExitToMainMenu =	'mx',
+	kRunOn_NewGame =		'ng',
+	kRunOn_RestartGame =	'rg',
+	kRunOn_SaveGame =		'sg',
+	kRunOn_ExitGame =		'xg'
+};
 
-public:
-	JIPScriptRunner() : script(NULL) {}
-	~JIPScriptRunner() {free(script);}
+extern UnorderedMap<char*, Script*> s_cachedScripts;
 
-	static void Init();
-	static bool __stdcall RunScript(const char *scriptText, TESObjectREFR *thisObj = NULL);
-	static void __stdcall RunFile(const char *fileName);
-	static void __stdcall RunScriptFiles(UInt16 type);
+namespace JIPScriptRunner
+{
+	void Init();
+	void RunScripts(UInt16 type);
+
+	bool __fastcall RunScript(Script *script, int EDX, TESObjectREFR *callingRef);
+	bool __fastcall RunScriptSource(char *scrSource);
 };
 
 extern UnorderedMap<const char*, NiCamera*> s_extraCamerasMap;
@@ -824,6 +874,8 @@ extern bool s_HUDCursorMode;
 bool GetMenuMode();
 
 bool IsConsoleOpen();
+
+void SuppressConsoleOutput();
 
 void __fastcall DoConsolePrint(double *result);
 
@@ -855,7 +907,7 @@ struct TLSData
 	UInt32			unk2BC;				// 2BC
 										// 25C is used as do not head track the player , 2B8 is used to init QueudFile::unk0018
 };
-STATIC_ASSERT(sizeof(TLSData) == 0x2C0);
+static_assert(sizeof(TLSData) == 0x2C0);
 
 TLSData *GetTLSData();
 

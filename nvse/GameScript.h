@@ -10,7 +10,7 @@ public:
 		TESForm		*form;		// 08
 		UInt32		varIdx;		// 0C always zero in editor
 
-		void	Resolve(ScriptEventList * eventList);
+		void Resolve(ScriptEventList *eventList);
 	};
 
 	struct RefVarList : tList<RefVariable>
@@ -63,38 +63,49 @@ public:
 	RefVarList		refList;				// 44
 	VarInfoList		varList;				// 4C
 
-	RefVariable		*GetVariable(UInt32 reqIdx);
-	VariableInfo	*GetVariableInfo(UInt32 idx);
+	RefVariable *GetVariable(UInt32 reqIdx);
+	VariableInfo *GetVariableInfo(UInt32 idx);
 
-	UInt32			AddVariable(TESForm *form);
-	void			CleanupVariables(void);
+	UInt32 AddVariable(TESForm *form);
+	void CleanupVariables() {refList.RemoveAll();}
 
-	UInt32			Type() const {return info.type;}
-	bool			IsObjectScript() const {return info.type == eType_Object;}
-	bool			IsQuestScript() const {return info.type == eType_Quest;}
-	bool			IsMagicScript() const {return info.type == eType_Magic;}
-	bool			IsUnkScript() const {return info.type == eType_Unk;}
+	UInt32 Type() const {return info.type;}
+	bool IsObjectScript() const {return info.type == eType_Object;}
+	bool IsQuestScript() const {return info.type == eType_Quest;}
+	bool IsMagicScript() const {return info.type == eType_Magic;}
+	bool IsUnkScript() const {return info.type == eType_Unk;}
 
-	VariableInfo	*GetVariableByName(const char *varName);
-	//UInt32			GetVariableType(VariableInfo *var);
-	ScriptVar		*AddVariable(char *varName, ScriptEventList *eventList, UInt32 ownerID, UInt8 modIdx);
-	UInt32			GetDataLength();
+	VariableInfo *GetVariableByName(const char *varName);
+	ScriptVar *AddVariable(char *varName, ScriptEventList *eventList, UInt32 ownerID, UInt8 modIdx);
+	UInt32 GetDataLength();
 
-	static bool	RunScriptLine(const char *text, TESObjectREFR *object = NULL);
-	static bool	RunScriptLine2(const char *text, TESObjectREFR *object = NULL, bool bSuppressOutput = true);
+	__forceinline Script *Constructor()
+	{
+		return ThisCall<Script*>(0x5AA0F0, this);
+	}
+	__forceinline void Destructor()
+	{
+		ThisCall(0x5AA1A0, this);
+	}
+	__forceinline bool Execute(TESObjectREFR *thisObj, ScriptEventList *eventList, TESObjectREFR *containingObj, bool arg3)
+	{
+		return ThisCall<bool>(0x5AC1E0, this, thisObj, eventList, containingObj, arg3);
+	}
+	__forceinline bool Run(void *scriptContext, TESObjectREFR *object)
+	{
+		return ThisCall<bool>(0x5AC400, this, scriptContext, true, object);
+	}
 
-	// no changed flags (TESForm flags)
-	MEMBER_FN_PREFIX(Script);
-	// arg3 appears to be true for result scripts (runs script even if dataLength <= 4)
-	DEFINE_MEMBER_FN(Execute, bool, 0x005AC1E0, TESObjectREFR* thisObj, ScriptEventList* eventList, TESObjectREFR* containingObj, bool arg3);
-	DEFINE_MEMBER_FN(Constructor, Script *, 0x005AA0F0);
-	DEFINE_MEMBER_FN(SetText, void, 0x005ABE50, const char * text);
-	DEFINE_MEMBER_FN(Run, bool, 0x005AC400, void * scriptContext, bool unkAlwaysOne, TESObjectREFR * object);
-	DEFINE_MEMBER_FN(Destructor, void, 0x005AA1A0);
+	void Init(char *scrText);
+	static Script *Create(char *scrText);
+	bool Compile();
 
-	ScriptEventList	*CreateEventList();
+	__forceinline ScriptEventList *CreateEventList()
+	{
+		return ThisCall<ScriptEventList*>(0x5ABF60, this);
+	}
 };
-STATIC_ASSERT(sizeof(Script) == 0x54);
+static_assert(sizeof(Script) == 0x54);
 
 struct ScriptRunner
 {
@@ -121,7 +132,7 @@ struct ScriptRunner
 	UInt8				byteA1;				// A1	Set when the executing CommandInfo's 2nd flag bit (+0x25) is set
 	UInt8				padA2[2];			// A2
 };
-STATIC_ASSERT(sizeof(ScriptRunner) == 0xA4);
+static_assert(sizeof(ScriptRunner) == 0xA4);
 
 struct ConditionEntry
 {
@@ -160,7 +171,7 @@ struct QuestStageItem
 	UInt32			logDate;		// 68
 	TESQuest		*owningQuest;	// 6C;
 };
-STATIC_ASSERT(sizeof(QuestStageItem) == 0x70);
+static_assert(sizeof(QuestStageItem) == 0x70);
 
 // 41C
 struct ScriptLineBuffer
@@ -175,7 +186,7 @@ struct ScriptLineBuffer
 	UInt32				dataOffset;			// 40C
 	UInt32				cmdOpcode;			// 410 not initialized. Opcode of command being parsed
 	UInt32				callingRefIndex;	// 414 not initialized. Zero if cmd not invoked with dot syntax
-	UInt32				unk418;				// 418
+	UInt32				errorCode;			// 418
 
 	// these write data and update dataOffset
 	bool Write(const void* buf, UInt32 bufsize);
@@ -188,42 +199,26 @@ struct ScriptLineBuffer
 
 // size 0x58? Nothing initialized beyond 0x50.
 struct ScriptBuffer
-{	
-	template <typename tData> struct Node
-	{
-		tData		* data;
-		Node<tData>	* next;
-	};
+{
+	ScriptBuffer() {ThisCall(0x5AE490, this);}
+	~ScriptBuffer() {ThisCall(0x5AE5C0, this);}
 
-	char					*scriptText;		// 000
-	UInt32					textOffset;			// 004 
-	UInt32					unk008;				// 008
-	String					scriptName;			// 00C
-	UInt32					unk014;				// 014
-	UInt16					unk018;				// 018
-	UInt16					unk01A;				// 01A
-	UInt32					curLineNumber;		// 01C 
-	UInt8					*scriptData;		// 020 pointer to 0x4000-byte array
-	UInt32					dataOffset;			// 024
-	UInt32					unk028;				// 028
-	UInt32					numRefs;			// 02C
-	UInt32					unk030;				// 030
-	UInt32					varCount;			// 034 script->varCount
-	UInt8					scriptType;			// 038 script->type
-	UInt8					unk039;				// 039 script->unk35
-	UInt8					unk03A[2];
-	Script::VarInfoList		vars;				// 03C
-	Script::RefVarList		refVars;			// 044 probably ref vars
-	UInt32					unk04C;				// 04C num lines?
-	Node<ScriptLineBuffer>	lines;				// 050
+	char					*scriptText;		// 00
+	UInt32					textOffset;			// 04 
+	UInt32					runtimeMode;		// 08	0 - Editor; 1 - GameConsole
+	String					scriptName;			// 0C
+	UInt32					errorCode;			// 14
+	bool					partialScript;		// 18
+	UInt8					pad19[3];			// 19
+	UInt32					curLineNumber;		// 1C 
+	UInt8					*scriptData;		// 20	Ptr to 0x4000-byte array
+	UInt32					dataOffset;			// 24
+	Script::ScriptInfo		info;				// 28
+	Script::VarInfoList		vars;				// 3C
+	Script::RefVarList		refVars;			// 44
+	Script					*currScript;		// 4C
+	tList<ScriptLineBuffer>	lines;				// 50
 	// nothing else initialized
 
-	// convert a variable or form to a RefVar, add to refList if necessary
-	Script::RefVariable* ResolveRef(const char* refName);
-	UInt32 GetRefIdx(Script::RefVariable *refVar);
-	//UInt32 GetVariableType(VariableInfo *varInfo, Script::RefVariable *refVar);
+	UInt32 GetRefIdx(Script::RefVariable *refVar) {return refVars.GetIndex(refVar);}
 };
-
-//UInt32 GetDeclaredVariableType(const char* varName, const char* scriptText);	// parses scriptText to determine var type
-//Script* GetScriptFromForm(TESForm* form);
-

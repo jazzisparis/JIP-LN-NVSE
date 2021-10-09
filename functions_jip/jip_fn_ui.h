@@ -83,13 +83,36 @@ bool Cmd_InjectUIXML_Execute(COMMAND_ARGS)
 	return true;
 }
 
-Tile* __stdcall InjectUIComponent(Tile *parentTile, char *dataStr)
+__declspec(naked) Tile* __stdcall InjectUIComponent(Tile *parentTile, char *dataStr)
 {
-	FILE *tempXML = fopen("jip_temp.xml", "wb");
-	if (!tempXML) return NULL;
-	fputs(dataStr, tempXML);
-	fclose(tempXML);
-	return parentTile->ReadXML("jip_temp.xml");
+	static const char kTempXMLFile[] = "jip_temp.xml";
+	__asm
+	{
+		mov		eax, UIOInjectComponent
+		test	eax, eax
+		jz		doStream
+		jmp		eax
+		ALIGN 16
+	doStream:
+		push	'bw'
+		push	esp
+		push	offset kTempXMLFile
+		call	fopen
+		add		esp, 0xC
+		test	eax, eax
+		jz		done
+		push	eax
+		push	dword ptr [esp+0xC]
+		call	fputs
+		pop		ecx
+		call	fclose
+		pop		ecx
+		push	offset kTempXMLFile
+		mov		ecx, [esp+8]
+		CALL_EAX(0xA01B00)
+	done:
+		retn	8
+	}
 }
 
 bool Cmd_InjectUIComponent_Execute(COMMAND_ARGS)
@@ -534,7 +557,7 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		push	1
 		push	0
 		push	kTileValue_mouseover
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 	resetActive:
 		mov		dword ptr [esi+0xCC], 0
 		mov		dword ptr [esi+0xD0], 0
@@ -546,19 +569,19 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		fstp	dword ptr [esp]
 		push	kTileValue_depth
 		mov		ecx, [edi+4]
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		mov		eax, [esp+0xC]
 		push	1
 		push	eax
 		push	kTileValue_user0
 		mov		ecx, [edi+4]
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		mov		eax, [esp+0x10]
 		push	1
 		push	eax
 		push	kTileValue_user1
 		mov		ecx, [edi+4]
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		mov		esi, [esp+0x14]
 		mov		[esi+0x50], 0
 		cmp		[esi], 0
@@ -567,16 +590,16 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		push	0
 		push	kTileValue_visible
 		mov		ecx, [edi+0x30]
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 	hasTitle:
 		push	1
 		push	esi
 		push	kTileValue_string
 		mov		ecx, [edi+0x30]
-		CALL_EAX(kAddr_TileSetString)
+		CALL_EAX(ADDR_TileSetString)
 		push	kTileValue_font
 		mov		ecx, [edi+0x28]
-		CALL_EAX(kAddr_TileGetFloat)
+		CALL_EAX(ADDR_TileGetFloat)
 		fistp	dword ptr [edi+0x4C]
 		mov		ecx, [edi+0x4C]
 		mov		esi, offset s_fontHeightDatas
@@ -585,12 +608,12 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		push	dword ptr [esi]
 		push	kTileValue_user0
 		mov		ecx, [edi+0x28]
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		push	1
 		push	dword ptr [esi+4]
 		push	kTileValue_user1
 		mov		ecx, [edi+0x28]
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		push	0x400
 		lea		ecx, [edi+0x34]
 		call	String::Init
@@ -604,7 +627,7 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		push	dword ptr ds:[0x11D38BC]
 		push	kTileValue_string
 		mov		ecx, [edi+0x2C]
-		CALL_EAX(kAddr_TileSetString)
+		CALL_EAX(ADDR_TileSetString)
 		mov		dword ptr [edi+0x44], 0
 		mov		dword ptr [edi+0x48], 0x7FFF0001
 		mov		eax, [edi+0x28]
@@ -1182,8 +1205,8 @@ bool Cmd_GetVATSTargets_Execute(COMMAND_ARGS)
 	if (!VATSMenu::Get()) return true;
 	TempElements *tmpElements = GetTempElements();
 	tmpElements->Clear();
-	ListNode<VATSTargetInfo> *iter = GameGlobals::VATSTargetList()->Head();
-	VATSTargetInfo *targetInfo;
+	ListNode<VATSTarget> *iter = GameGlobals::VATSTargetList()->Head();
+	VATSTarget *targetInfo;
 	do
 	{
 		targetInfo = iter->data;
@@ -1235,8 +1258,8 @@ bool Cmd_SetCursorPos_Execute(COMMAND_ARGS)
 	{
 		g_interfaceManager->cursorX = posX;
 		g_interfaceManager->cursorY = posY;
-		g_cursorNode->m_localTranslate.x = (posX * g_screenResConvert) - g_screenWidth;
-		g_cursorNode->m_localTranslate.z = g_screenHeight - (posY * g_screenResConvert);
+		g_cursorNode->LocalTranslate().x = (posX * g_screenResConvert) - g_screenWidth;
+		g_cursorNode->LocalTranslate().z = g_screenHeight - (posY * g_screenResConvert);
 	}
 	return true;
 }
@@ -1278,7 +1301,7 @@ bool Cmd_SetSystemColor_Execute(COMMAND_ARGS)
 	UInt32 type, red, green, blue;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type, &red, &green, &blue) && type && (type <= 5))
 	{
-		DListNode<SystemColorManager::SystemColor> *colorNode = g_sysColorManager->sysColors.Head()->Advance(type - 1);
+		DListNode<SystemColorManager::SystemColor> *colorNode = SystemColorManager::GetSingleton()->sysColors.Head()->Advance(type - 1);
 		if (colorNode && colorNode->data)
 		{
 			colorNode->data->SetColorRGB(red, green, blue);
@@ -1448,51 +1471,49 @@ bool Cmd_ClickMenuTile_Execute(COMMAND_ARGS)
 	return true;
 }
 
-__declspec(naked) void __stdcall TogglePipBoyLight(UInt32 turnON)
+__declspec(naked) void __fastcall TogglePipBoyLight(PlayerCharacter *thePlayer, SpellItem *pipBoyLight, UInt32 turnON)
 {
 	__asm
 	{
-		push	esi
-		mov		esi, g_pipBoyLight
-		mov		ecx, g_thePlayer
 		push	0
-		cmp		dword ptr [esp+0xC], 0
+		cmp		dword ptr [esp+8], 0
 		jz		turnOFF
-		push	esi
+		push	edx
 		add		ecx, 0x88
 		mov		eax, [ecx]
 		call	dword ptr [eax]
 		jmp		finish
 	turnOFF:
 		push	0
-		add		esi, 0x18
-		push	esi
+		add		edx, 0x18
+		push	edx
 		add		ecx, 0x94
 		CALL_EAX(0x824400)
 	finish:
-		mov		esi, g_interfaceManager
-		mov		esi, [esi+0x174]
+		mov		ecx, g_interfaceManager
+		mov		ecx, [ecx+0x174]
+		mov		edx, [esp+4]
 		push	1
-		push	dword ptr [esp+0xC]
-		push	1
-		mov		ecx, esi
-		CALL_EAX(0x7FA310)
-		push	1
-		push	dword ptr [esp+0xC]
+		push	edx
 		push	0
-		mov		ecx, esi
+		push	ecx
+		push	1
+		push	edx
+		push	1
 		CALL_EAX(0x7FA310)
-		pop		esi
+		pop		ecx
+		CALL_EAX(0x7FA310)
 		retn	4
 	}
 }
 
 bool Cmd_TogglePipBoyLight_Execute(COMMAND_ARGS)
 {
-	UInt32 turnON, currState = ThisCall<bool>(0x822B90, &g_thePlayer->magicTarget, &g_pipBoyLight->magicItem, 1);
+	SpellItem *pipBoyLight = GameGlobals::PipBoyLight();
+	UInt32 turnON, currState = ThisCall<bool>(0x822B90, &g_thePlayer->magicTarget, &pipBoyLight->magicItem, 1);
 	*result = (int)currState;
 	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &turnON) && (turnON != currState))
-		TogglePipBoyLight(turnON);
+		TogglePipBoyLight(g_thePlayer, pipBoyLight, turnON);
 	return true;
 }
 

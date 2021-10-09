@@ -45,7 +45,7 @@ __declspec(naked) BSExtraData *BaseExtraList::GetByType(UInt32 xType) const
 	}
 }
 
-__declspec(naked) ExtraDataList* __stdcall ExtraDataList::Create(BSExtraData *xBSData)
+__declspec(naked) ExtraDataList *ExtraDataList::Create()
 {
 	__asm
 	{
@@ -55,16 +55,7 @@ __declspec(naked) ExtraDataList* __stdcall ExtraDataList::Create(BSExtraData *xB
 		movups	[eax], xmm0
 		movups	[eax+0x10], xmm0
 		mov		dword ptr [eax], kVtbl_ExtraDataList
-		mov		edx, [esp+4]
-		test	edx, edx
-		jz		done
-		push	eax
-		push	edx
-		mov		ecx, eax
-		CALL_EAX(0x40FF60)
-		pop		eax
-	done:
-		retn	4
+		retn
 	}
 }
 

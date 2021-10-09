@@ -66,8 +66,9 @@ void DoLoadGameCleanup()
 		HOOK_SET(GetDetectionValue, false);
 	HOOK_SET(AddVATSTarget, false);
 
-	if (s_fireWeaponEventMap.Empty()) HOOK_SET(RemoveAmmo, false);
-	else s_hookInfos[kHook_RemoveAmmo].userCount = s_fireWeaponEventMap.Size();
+	size = s_fireWeaponEventMap.Size() + s_fireWeaponEventScripts.Size();
+	if (!size) HOOK_SET(RemoveAmmo, false);
+	else s_hookInfos[kHook_RemoveAmmo].userCount = size;
 
 	TESForm *form;
 	if (!s_eventInformedObjects.Empty())
@@ -686,7 +687,8 @@ void SaveGameCallback(void*)
 		{
 			if ((actor = (Actor*)LookupFormByRefID(refIter.Key())) && IS_ACTOR(actor))
 			{
-				if (!refIter().perkRanks.Empty() && !actor->lifeState && (actor->isTeammate || !(((TESActorBase*)actor->baseForm)->baseData.flags & 8) || actor->GetNiNode()))
+				if (!refIter().perkRanks.Empty() && !actor->lifeState && (actor->isTeammate || !(((TESActorBase*)actor->baseForm)->baseData.flags & 8) ||
+					(actor->renderState && actor->renderState->niNode14)))
 					goto isValid;
 				actor->extraDataList.perksInfo = NULL;
 			}

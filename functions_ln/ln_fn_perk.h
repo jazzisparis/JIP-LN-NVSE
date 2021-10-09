@@ -38,7 +38,7 @@ __declspec(naked) bool Cmd_SetPerkRank_Execute(COMMAND_ARGS)
 		sub		esp, 0x1C
 		mov		ecx, [ebp+0x10]
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		done
 		lea		edx, [ebp-4]
 		mov		dword ptr [edx], 0

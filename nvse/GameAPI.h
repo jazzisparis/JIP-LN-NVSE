@@ -3,8 +3,6 @@
 #define playerID	0x7
 #define playerRefID 0x14
 
-static const UInt32 s_Console__Print = 0x0071D0A0;
-
 void Console_Print(const char * fmt, ...);
 
 typedef bool (* _ExtractArgs)(ParamInfo * paramInfo, void * scriptData, UInt32 * arg2, TESObjectREFR * arg3, TESObjectREFR * arg4, Script * script, ScriptEventList * eventList, ...);
@@ -67,47 +65,45 @@ struct ScriptVar
 	VarData				data;
 };
 
-// only records individual objects if there's a block that matches it
-// ### how can it tell?
 struct ScriptEventList
 {
 	enum
 	{
 		kEvent_OnAdd =						1,
 		kEvent_OnEquip =					2,
-		kEvent_OnActorEquip =				2,
+		kEvent_OnActorEquip =				kEvent_OnEquip,
 		kEvent_OnDrop =						4,
 		kEvent_OnUnequip =					8,
-		kEvent_OnActorUnequip =				8,
+		kEvent_OnActorUnequip =				kEvent_OnUnequip,
 
 		kEvent_OnDeath =					0x10,
 		kEvent_OnMurder =					0x20,
-		kEvent_OnCombatEnd =				0x40,			// See 0x008A083C
-		kEvent_OnHit =						0x80,			// See 0x0089AB12
+		kEvent_OnCombatEnd =				0x40,
+		kEvent_OnHit =						0x80,
 
-		kEvent_OnHitWith =					0x100,			// TESObjectWEAP*	0x0089AB2F
+		kEvent_OnHitWith =					0x100,
 		kEvent_OnPackageStart =				0x200,
 		kEvent_OnPackageDone =				0x400,
 		kEvent_OnPackageChange =			0x800,
 
 		kEvent_OnLoad =						0x1000,
-		kEvent_OnMagicEffectHit =			0x2000,			// EffectSetting* 0x0082326F
-		kEvent_OnSell =						0x4000,			// 0x0072FE29 and 0x0072FF05, linked to 'Barter Amount Traded' Misc Stat
+		kEvent_OnMagicEffectHit =			0x2000,
+		kEvent_OnSell =						0x4000,
 		kEvent_OnStartCombat =				0x8000,
 
-		kEvent_OnOpen =						0x10000,		// while opening some container, not all
+		kEvent_OnOpen =						0x10000,
 		kEvent_OnClose =					0x20000,
-		kEvent_SayToDone =					0x40000,		// in Func0050 0x005791C1 in relation to SayToTopicInfo (OnSayToDone? or OnSayStart/OnSayEnd?)
-		kEvent_OnGrab =						0x80000,		// 0x0095FACD and 0x009604B0 (same func which is called from PlayerCharacter_func001B and 0021)
+		kEvent_SayToDone =					0x40000,
+		kEvent_OnGrab =						0x80000,
 
-		kEvent_OnRelease =					0x100000,		// 0x0047ACCA in relation to container
-		kEvent_OnDestructionStageChange =	0x200000,		// 0x004763E7/0x0047ADEE
-		kEvent_OnFire =						0x400000,		// 0x008BAFB9 (references to package use item and use weapon are close)
+		kEvent_OnRelease =					0x100000,
+		kEvent_OnDestructionStageChange =	0x200000,
+		kEvent_OnFire =						0x400000,
 
-		kEvent_OnTrigger =					0x10000000,		// 0x005D8D6A	Cmd_EnterTrigger_Execute
-		kEvent_OnTriggerEnter =				0x20000000,		// 0x005D8D50	Cmd_EnterTrigger_Execute
-		kEvent_OnTriggerLeave =				0x40000000,		// 0x0062C946	OnTriggerLeave ?
-		kEvent_OnReset =					0x80000000		// 0x0054E5FB
+		kEvent_OnTrigger =					0x10000000,
+		kEvent_OnTriggerEnter =				0x20000000,
+		kEvent_OnTriggerLeave =				0x40000000,
+		kEvent_OnReset =					0x80000000
 	};
 
 	struct Event
@@ -116,7 +112,7 @@ struct ScriptEventList
 		UInt32		eventMask;
 	};
 
-	struct Struct10
+	struct EffectScriptFlags
 	{
 		bool	effectStart;
 		bool	effectFinish;
@@ -126,26 +122,21 @@ struct ScriptEventList
 	typedef tList<Event> EventList;
 	typedef tList<ScriptVar> VarList;
 
-	Script			*m_script;		// 00
-	UInt32			m_unk1;			// 04
-	EventList		*m_eventList;	// 08
-	VarList			*m_vars;		// 0C
-	Struct10		*unk010;		// 10
+	Script				*m_script;		// 00
+	UInt32				unk04;			// 04
+	EventList			*m_eventList;	// 08
+	VarList				*m_vars;		// 0C
+	EffectScriptFlags	*m_effScrFlags;	// 10
 
-	void Dump(void);
 	ScriptVar *GetVariable(UInt32 id);
 	UInt32 ResetAllVariables();
+	ScriptEventList *CreateCopy();
 };
 
 // 914
 class ConsoleManager
 {
 public:
-#if RUNTIME
-	MEMBER_FN_PREFIX(ConsoleManager);
-	DEFINE_MEMBER_FN(Print, void, s_Console__Print, const char * fmt, va_list args);
-#endif
-
 	struct TextNode
 	{
 		TextNode	*next;
@@ -170,7 +161,7 @@ public:
 
 	static ConsoleManager * GetSingleton(void);
 };
-STATIC_ASSERT(sizeof(ConsoleManager) == 0x914);
+static_assert(sizeof(ConsoleManager) == 0x914);
 
 extern ConsoleManager *g_consoleManager;
 
@@ -360,27 +351,14 @@ public:
 
 	static TESSaveLoadGame* Get();
 
-	MEMBER_FN_PREFIX(TESSaveLoadGame);
-#if RUNTIME_VERSION == RUNTIME_VERSION_1_4_0_525
-	DEFINE_MEMBER_FN(AddCreatedForm, UInt32, 0x00861780, TESForm * pForm);
-#elif RUNTIME_VERSION == RUNTIME_VERSION_1_4_0_525ng
-	DEFINE_MEMBER_FN(AddCreatedForm, UInt32, 0x00861330, TESForm * pForm);
-#elif EDITOR
-#else
-#error
-#endif
+	__forceinline UInt32 AddCreatedForm(TESForm *pForm)
+	{
+		return ThisCall<UInt32>(0x861780, this, pForm);
+	}
 };
 
-#if RUNTIME_VERSION == RUNTIME_VERSION_1_4_0_525
 const UInt32 _SaveGameManager_ConstructSavegameFilename = 0x0084FF90;
 const UInt32 _SaveGameManager_ConstructSavegamePath		= 0x0084FF30;
-#elif RUNTIME_VERSION == RUNTIME_VERSION_1_4_0_525ng
-const UInt32 _SaveGameManager_ConstructSavegameFilename = 0x0084F9E0;
-const UInt32 _SaveGameManager_ConstructSavegamePath		= 0x0084F980;
-#elif EDITOR
-#else
-#error
-#endif
 
 class BGSCellNumericIDArrayMap;
 class BGSLoadGameSubBuffer;
@@ -437,17 +415,13 @@ public:
 	UInt8										formVersion;			// 248
 	UInt8										pad249[3];				// 249
 };
-STATIC_ASSERT(sizeof(BGSSaveLoadGame) == 0x24C);
+static_assert(sizeof(BGSSaveLoadGame) == 0x24C);
 
 #if RUNTIME
 class SaveGameManager
 {
 public:
 	static SaveGameManager* GetSingleton();
-	MEMBER_FN_PREFIX(SaveGameManager);
-	DEFINE_MEMBER_FN(ConstructSavegameFilename, void, _SaveGameManager_ConstructSavegameFilename, 
-					 const char* filename, char* outputBuf, bool bTempFile);
-	DEFINE_MEMBER_FN(ConstructSavegamePath, void, _SaveGameManager_ConstructSavegamePath, char* outputBuf);
 
 	struct SaveGameData
 	{
@@ -562,56 +536,3 @@ struct NavMeshStaticAvoidNode
 	UInt32	unk020;	// 20
 	UInt32	unk024;	// 24
 };	// Alloc'd to 0x28
-
-/* I need to port NiTypes 
-
-class NavMesh: public TESForm
-{
-	NavMesh();
-	~NavMesh();
-
-	struct NavMeshGridCells
-	{
-		UInt32					cellCount;	// 00
-		BSSimpleArray<UInt16>	cells[1];	// 04
-	};	// 4 + cellCount*0x10
-
-	struct NavMeshGrid
-	{
-		UInt32	size;					// 000 = 0
-		float	unk004;					// 004
-		float	unk008;					// 008
-		float	flt00C;					// 00C Init'd to MAXFLOAT
-		float	unk010;					// 010
-		float	unk014;					// 014
-		float	unk018;					// 018
-		float	unk01C;					// 01C
-		float	unk020;					// 020
-		NavMeshGridCells	* cells;	// 024 = 0, array of size size*size
-	};
-
-	TESChildCell								childCell;				// 018
-	NiRefObject									niro;					// 01C
-	TESObjectCELL								* cell;					// 024
-	BSSimpleArray<NavMeshVertex>				vertices;				// 028
-	BSSimpleArray<NavMeshTriangle>				triangles;				// 038
-	BSSimpleArray<EdgeExtraInfo>				edgesExtraInfo;			// 048
-	BSSimpleArray<NavMeshTriangleDoorPortal>	trianglesDoorPortal;	// 058
-	BSSimpleArray<NavMeshClosedDoorInfo>		closedDoorsInfo;		// 068
-	BSSimpleArray<UInt16>						arr07NVCA;				// 078
-	NiTMap<ushort,NavMeshPOVData>				povDataMap;				// 088
-	BSSimpleArray<UInt8>						arr098;					// 098
-	NavMeshGrid									grid;					// 0A8
-	BSSimpleArray<NiTPointer<ObstacleUndoData>>	obstaclesUndoData;		// 0D0
-	NiTMap<ushort,NiPointer<ObstacleData>>		* obstaclesData;		// 0E0
-	BSSimpleArray<UInt8>						arr0E4;					// 0E4
-	BSSimpleArray<NavMeshStaticAvoidNode>		staticAvoidNodes;		// 0F4
-};
-
-class NavMeshInfoMap: public TESForm
-{
-	// 1C is NiTPointerMap indexed by NavMesh refID
-	// 2C is a map of map indexed by Worldspace/Cell refID
-};
-
-*/

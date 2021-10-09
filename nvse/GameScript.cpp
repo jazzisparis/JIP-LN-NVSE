@@ -9,44 +9,31 @@ void Script::RefVariable::Resolve(ScriptEventList *eventList)
 	}
 }
 
-ScriptEventList* Script::CreateEventList(void)
+bool Script::Compile()
 {
-	return ThisCall<ScriptEventList*>(0x005ABF60, this);	// 4th sub above Script::Execute (was 1st above in Oblivion) Execute is the second to last call in Run
+	ScriptBuffer scrBuffer;
+	scrBuffer.scriptText = text;
+	scrBuffer.runtimeMode = 1;
+	scrBuffer.scriptName.Set((const char*)0x1044CB4);
+	scrBuffer.partialScript = true;
+	scrBuffer.currScript = this;
+	return StdCall<bool>(0x5AEB90, this, &scrBuffer);
 }
 
-Script::RefVariable* ScriptBuffer::ResolveRef(const char* refName)
+void Script::Init(char *scrText)
 {
-	// ###TODO: Handle player, ref vars, quests, globals
-	return NULL;
+	Constructor();
+	MarkAsTemporary();
+	text = scrText;
+	Compile();
+	text = nullptr;
 }
 
-bool Script::RunScriptLine2(const char * text, TESObjectREFR* object, bool bSuppressOutput)
+Script *Script::Create(char *scrText)
 {
-	//ToggleConsoleOutput(!bSuppressOutput);
-
-	ConsoleManager	* consoleManager = ConsoleManager::GetSingleton();
-
-	UInt8	scriptBuf[sizeof(Script)];
-	Script	* script = (Script *)scriptBuf;
-
-	CALL_MEMBER_FN(script, Constructor)();
-	CALL_MEMBER_FN(script, MarkAsTemporary)();
-	CALL_MEMBER_FN(script, SetText)(text);
-	bool bResult = CALL_MEMBER_FN(script, Run)(consoleManager->scriptContext, true, object);
-	CALL_MEMBER_FN(script, Destructor)();
-
-	//ToggleConsoleOutput(true);
-	return bResult;
-}
-
-bool Script::RunScriptLine(const char * text, TESObjectREFR * object)
-{
-	return RunScriptLine2(text, object, false);
-}
-
-UInt32 ScriptBuffer::GetRefIdx(Script::RefVariable *refVar)
-{
-	return refVars.GetIndex(refVar);
+	Script *pScript = (Script*)GameHeapAlloc(sizeof(Script));
+	pScript->Init(scrText);
+	return pScript;
 }
 
 class ScriptVarFinder
@@ -117,11 +104,6 @@ UInt32 Script::AddVariable(TESForm *form)
 	UInt32 resultIdx = refList.Append(refVar) + 1;
 	info.numRefs = resultIdx + 1;
 	return resultIdx;
-}
-
-void Script::CleanupVariables()
-{
-	refList.RemoveAll();
 }
 
 UInt32 Script::RefVarList::GetIndex(RefVariable *refVar)

@@ -129,8 +129,10 @@ public:
 	UInt8				mouseBinds[28];			// 1BB0
 	UInt8				joystickBinds[28];		// 1BCC
 	UInt8				controllerBinds[28];	// 1BE8
+
+	__forceinline static OSInputGlobals *GetSingleton() {return *(OSInputGlobals**)0x11F35CC;}
 };
-STATIC_ASSERT(sizeof(OSInputGlobals) == 0x1C04);
+static_assert(sizeof(OSInputGlobals) == 0x1C04);
 
 extern OSInputGlobals *g_inputGlobals;
 #define KEYBOARD_BIND(ctrlID) g_inputGlobals->keyBinds[ctrlID]
@@ -218,7 +220,9 @@ public:
 	BSShaderAccumulator				*shaderAccum98;	// 98
 	UInt32							unk9C;			// 9C
 	NiCamera						*cameraA0;		// A0
+
+	__forceinline static OSGlobals *GetSingleton() {return *(OSGlobals**)0x11DEA0C;}
 };
-STATIC_ASSERT(sizeof(OSGlobals) == 0xA4);
+static_assert(sizeof(OSGlobals) == 0xA4);
 
 extern OSGlobals *g_OSGlobals;

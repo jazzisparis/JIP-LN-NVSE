@@ -361,7 +361,7 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 		jz		done
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		done
 		call	TESObjectREFR::GetContainerChangesList
 		test	eax, eax
@@ -484,7 +484,7 @@ __declspec(naked) void Actor::EquipItemAlt(TESForm *itemForm, ContChangesEntry *
 	doEquip:
 		push	dword ptr [ebp+8]
 		mov		ecx, [ebp-4]
-		CALL_EAX(kAddr_EquipItem)
+		CALL_EAX(ADDR_EquipItem)
 	done:
 		leave
 		retn	0x10
@@ -597,85 +597,104 @@ __declspec(naked) float __vectorcall TESObjectREFR::GetDistance(TESObjectREFR *t
 	}
 }
 
-__declspec(naked) void TESObjectREFR::SetPos(NiVector3 *posVector)
+__declspec(naked) void TESObjectREFR::SetPos(NiVector4 *posVector)
 {
 	__asm
 	{
-		push	ebp
-		mov		ebp, esp
-		push	ecx
-		sub		esp, 0x10
-		push	dword ptr [ebp+8]
+		push	esi
+		mov		esi, ecx
+		push	dword ptr [esp+8]
 		CALL_EAX(0x575830)
-		mov		ecx, [ebp-4]
-		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		mov		eax, [esi]
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		noCharCtrl
-		mov		ecx, [ecx+0x68]
+		mov		ecx, [esi+0x68]
 		test	ecx, ecx
 		jz		noCharCtrl
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x28C]
-		test	eax, eax
+		cmp		dword ptr [ecx+0x28], 1
+		ja		noCharCtrl
+		mov		ecx, [ecx+0x138]
+		test	ecx, ecx
 		jz		noCharCtrl
-		mov		[ebp-8], eax
-		mov		ecx, eax
-		CALL_EAX(0x5C0860)
-		test	al, al
+		cmp		dword ptr [ecx+0x3F0], 4
 		jnz		noCharCtrl
-		push	dword ptr [ebp+8]
-		mov		ecx, [ebp-8]
+		push	dword ptr [esp+8]
 		CALL_EAX(0x5620E0)
 	noCharCtrl:
-		mov		ecx, [ebp-4]
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1D0]
+		mov		ecx, esi
+		call	TESObjectREFR::GetNiNode
 		test	eax, eax
 		jz		done
-		mov		[ebp-8], eax
-		push	dword ptr [ebp+8]
-		mov		ecx, eax
-		CALL_EAX(0x440460)
+		mov		ecx, [esp+8]
+		mov		edx, [ecx]
+		mov		[eax+0x58], edx
+		mov		edx, [ecx+4]
+		mov		[eax+0x5C], edx
+		mov		edx, [ecx+8]
+		mov		[eax+0x60], edx
 		push	1
-		push	dword ptr [ebp-8]
-		CALL_EAX(0xC6BD00)
-		add		esp, 8
-		lea		eax, [ebp-0x14]
-		xor		edx, edx
-		mov		[eax], edx
-		mov		[eax+4], edx
-		mov		[eax+8], edx
 		push	eax
-		mov		ecx, [ebp-8]
-		CALL_EAX(0xA59C60)
+		CALL_EAX(0xC6BD00)
+		pop		ecx
+		pop		edx
+		call	NiAVObject::Update
 	done:
-		leave
+		pop		esi
 		retn	4
 	}
 }
 
-__declspec(naked) void TESObjectREFR::SetAngle(NiVector3 *rotVector)
+__declspec(naked) void TESObjectREFR::SetAngle(NiVector4 *rotVector, bool setLocal)
 {
 	__asm
 	{
-		mov		eax, [esp+4]
-		movss	xmm0, kFltPId180
-		movss	xmm1, [eax]
-		mulss	xmm1, xmm0
-		movss	[ecx+0x24], xmm1
-		movss	xmm1, [eax+4]
-		mulss	xmm1, xmm0
-		movss	[ecx+0x28], xmm1
-		mulss	xmm0, [eax+8]
-		movss	[ecx+0x2C], xmm0
-		push	0
-		push	0
-		push	ecx
+		push	esi
+		push	edi
+		mov		esi, ecx
+		call	TESObjectREFR::GetNiNode
+		test	eax, eax
+		jz		done
+		mov		edi, eax
+		lea		ecx, [eax+0x34]
+		mov		edx, [esp+0xC]
+		movups	xmm0, [edx]
+		movss	xmm1, kFltPId180
+		shufps	xmm1, xmm1, 0xC0
+		mulps	xmm0, xmm1
+		cmp		byte ptr [esp+0x10], 0
+		jnz		localRot
+		lea		edx, [esi+0x24]
+		mov		eax, [edx+0xC]
+		movups	[edx], xmm0
+		mov		[edx+0xC], eax
+		call	NiMatrix33::RotationMatrix
+		jmp		doneRot
+	localRot:
+		movups	[edx], xmm0
+		call	NiMatrix33::RotationMatrixInv
+		lea		edx, [esi+0x24]
+		mov		ecx, eax
+		call	NiMatrix33::ExtractAngles
+	doneRot:
 		push	2
-		CALL_EAX(0x484B60)
-		CALL_EAX(0x5C0B10)
-		add		esp, 0xC
-		retn	4
+		mov		ecx, esi
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x48]
+		push	1
+		push	edi
+		CALL_EAX(0xC6BD00)
+		add		esp, 8
+		mov		ecx, esi
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x1E4]
+		test	eax, eax
+		jnz		done
+		mov		ecx, edi
+		call	NiAVObject::Update
+	done:
+		pop		edi
+		pop		esi
+		retn	8
 	}
 }
 
@@ -714,7 +733,7 @@ __declspec(naked) void TESObjectREFR::MoveToCell(TESObjectCELL *cell, NiVector3 
 		push	0
 		push	eax
 		push	esi
-		CALL_EAX(kAddr_MoveToMarker)
+		CALL_EAX(ADDR_MoveToMarker)
 		add		esp, 0x14
 		pop		esi
 		retn	8
@@ -725,6 +744,74 @@ __declspec(naked) void TESObjectREFR::MoveToCell(TESObjectCELL *cell, NiVector3 
 		call	TESObjectREFR::SetPos
 		pop		esi
 		retn	8
+	}
+}
+
+__declspec(naked) bool __fastcall TESObjectREFR::GetTransformedPos(NiVector4 *posMods)
+{
+	__asm
+	{
+		push	esi
+		mov		esi, ecx
+		call	TESObjectREFR::GetNiNode
+		test	eax, eax
+		jz		done
+		push	edx
+		add		eax, 0x34
+		push	eax
+		mov		ecx, edx
+		call	NiVector3::MultiplyMatrixVector
+		movups	xmm0, [ecx]
+		movups	xmm1, [esi+0x30]
+		addps	xmm0, xmm1
+		movups	[ecx], xmm0
+		mov		al, 1
+	done:
+		pop		esi
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall TESObjectREFR::Rotate(NiVector4 *rotVector)
+{
+	__asm
+	{
+		push	esi
+		push	edi
+		mov		esi, ecx
+		call	TESObjectREFR::GetNiNode
+		test	eax, eax
+		jz		done
+		mov		edi, eax
+		movups	xmm0, [edx]
+		movss	xmm1, kFltPId180
+		shufps	xmm1, xmm1, 0xC0
+		mulps	xmm0, xmm1
+		movups	[edx], xmm0
+		lea		ecx, [edi+0x34]
+		call	NiMatrix33::Rotate
+		lea		edx, [esi+0x24]
+		mov		ecx, eax
+		call	NiMatrix33::ExtractAngles
+		push	2
+		mov		ecx, esi
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x48]
+		push	1
+		push	edi
+		CALL_EAX(0xC6BD00)
+		add		esp, 8
+		mov		ecx, esi
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x1E4]
+		test	eax, eax
+		jnz		done
+		mov		ecx, edi
+		call	NiAVObject::Update
+	done:
+		pop		edi
+		pop		esi
+		retn
 	}
 }
 
@@ -785,7 +872,7 @@ __declspec(naked) bhkCharacterController *TESObjectREFR::GetCharacterController(
 	__asm
 	{
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		retnNULL
 		mov		ecx, [ecx+0x68]
 		test	ecx, ecx
@@ -805,7 +892,7 @@ __declspec(naked) double TESObjectREFR::GetWaterImmersionPerc()	// result >= 0.8
 	__asm
 	{
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		invalid
 		cmp		byte ptr [ecx+0x14C], 0
 		jz		invalid
@@ -839,8 +926,7 @@ __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const c
 		push	ebp
 		mov		ebp, esp
 		sub		esp, 8
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1D0]
+		call	TESObjectREFR::GetNiNode
 		test	eax, eax
 		jz		done
 		mov		edx, [ebp+8]
@@ -898,15 +984,32 @@ __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const c
 	}
 }
 
+__declspec(naked) NiNode *TESObjectREFR::GetNiNode()
+{
+	__asm
+	{
+		mov		eax, [ecx+0x64]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x14]
+		cmp		dword ptr [ecx+0xC], 0x14
+		jnz		done
+		cmp		byte ptr [ecx+0x64A], 0
+		jnz		done
+		mov		eax, [ecx+0x694]
+	done:
+		retn
+	}
+}
+
 __declspec(naked) NiAVObject* __fastcall TESObjectREFR::GetNiBlock(const char *blockName)
 {
 	__asm
 	{
-		push	edx
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1D0]
-		pop		edx
+		call	TESObjectREFR::GetNiNode
 		test	eax, eax
+		jz		done
+		cmp		[edx], 0
 		jz		done
 		mov		ecx, eax
 		call	NiNode::GetBlock
@@ -919,10 +1022,7 @@ __declspec(naked) NiNode* __fastcall TESObjectREFR::GetNode(const char *nodeName
 {
 	__asm
 	{
-		push	edx
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1D0]
-		pop		edx
+		call	TESObjectREFR::GetNiNode
 		test	eax, eax
 		jz		done
 		cmp		[edx], 0
@@ -933,32 +1033,36 @@ __declspec(naked) NiNode* __fastcall TESObjectREFR::GetNode(const char *nodeName
 		jz		done
 		xor		edx, edx
 		mov		ecx, [eax]
-		cmp		dword ptr [ecx+0xC], kAddr_ReturnThis
+		cmp		dword ptr [ecx+0xC], ADDR_ReturnThis
 		cmovnz	eax, edx
 	done:
 		retn
 	}
 }
 
-hkpRigidBody *TESObjectREFR::GetRigidBody(const char *nodeName)
+__declspec(naked) hkpRigidBody* __fastcall TESObjectREFR::GetRigidBody(const char *blockName)
 {
-	NiNode *rootNode = GetNiNode();
-	if (rootNode)
+	__asm
 	{
-		NiNode *targetNode = rootNode->GetNode(nodeName);
-		if (targetNode && targetNode->m_collisionObject)
-		{
-			bhkWorldObject *hWorldObj = targetNode->m_collisionObject->worldObj;
-			if (hWorldObj)
-			{
-				hkpRigidBody *rigidBody = (hkpRigidBody*)hWorldObj->refObject;
-				UInt8 motionType = rigidBody->motion.type;
-				if ((motionType == 2) || (motionType == 3) || (motionType == 6))
-					return rigidBody;
-			}
-		}
+		call	TESObjectREFR::GetNiBlock
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x1C]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x10]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+8]
+		mov		dl, [eax+0xE8]
+		cmp		dl, 3
+		jbe		done
+		cmp		dl, 6
+		jz		done
+		xor		eax, eax
+	done:
+		retn
 	}
-	return NULL;
 }
 
 bool TESObjectREFR::IsGrabbable()
@@ -1282,8 +1386,8 @@ bool Actor::IsWeaponOut()
 
 bool Actor::GetIsGhost()
 {
-	if (baseProcess && baseProcess->unk2C)
-		return (baseProcess->unk2C->flags & 0x10000000) ? true : false;
+	if (baseProcess && baseProcess->cachedValues)
+		return (baseProcess->cachedValues->flags & 0x10000000) != 0;
 	return extraDataList.HasType(kExtraData_Ghost);
 }
 
@@ -1639,7 +1743,7 @@ __declspec(naked) float Actor::AdjustPushForce(float baseForce)
 
 __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR *originRef, bool adjustForce)
 {
-	static const float kFltFive = 5.0F, kPushTime = 1.0F / 96.0F;
+	static const float kFlt5div7 = 5.0F / 6.9991255F, kPushTime = 1.0F / 96.0F;
 	__asm
 	{
 		push	esi
@@ -1693,8 +1797,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 	doneForce:
 		mov		edx, [esp+8]
 		movd	xmm2, edx
-		mulss	xmm2, kFltFive
-		mulss	xmm2, ds:[0x1267BCC]
+		mulss	xmm2, kFlt5div7
 		and		edx, 0x7FFFFFFF
 		movd	xmm3, edx
 		mulss	xmm3, kPushTime
@@ -1725,7 +1828,7 @@ __declspec(naked) int Actor::GetGroundMaterial()
 		push	esi
 		mov		esi, ecx
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		invalid
 		mov		eax, [esi+0x68]
 		test	eax, eax
@@ -1927,6 +2030,31 @@ char PlayerCharacter::GetDetectionState()
 	if (ProcessManager::Get()->GetTotalDetectionValue(this) <= 0)
 		return 0;						// HIDDEN
 	return 2;							// DETECTED
+}
+
+void PlayerCharacter::ToggleSneak(bool toggle)
+{
+	HighProcess *hiProcess = (HighProcess*)baseProcess;
+	if (!hiProcess || hiProcess->processLevel || !actorMover)
+		return;
+	PlayerMover *pcMover = (PlayerMover*)actorMover;
+	UInt32 movementFlags = pcMover->pcMovementFlags;
+	bool isSneaking = (movementFlags & 0x400) != 0;
+	if ((isSneaking == toggle) || lifeState || sitSleepState || (pcControlFlags & 0x40) ||
+		hiProcess->knockedState || ((bool*)0x94423D)[hiProcess->currentAction] || GetIsParalyzed())
+		return;
+	//Sound::PlayEDID(toggle ? (const char*)0x108B050 : (const char*)0x108B064, 0x40102, this);
+	if (toggle) movementFlags |= 0x400;
+	else movementFlags &= ~0x400;
+	pcMover->SetMovementFlags(movementFlags);
+	ThisCall(0x93AB30, this, 0xA + isSneaking);
+	if (!isUsingScope)
+	{
+		ThisCall(0x8BB650, this, 0, 0, 0);
+		ThisCall(0x894CC0, this, 0);
+	}
+	if (hiProcess->cachedValues)
+		hiProcess->cachedValues->flags &= ~0x3000;
 }
 
 void Projectile::GetData(UInt32 dataType, double *result)

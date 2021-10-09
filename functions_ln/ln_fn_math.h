@@ -14,14 +14,13 @@ DEFINE_COMMAND_PLUGIN(fAtan2, 0, 2, kParams_TwoDoubles);
 bool Cmd_fsqrt_Execute(COMMAND_ARGS)
 {
 	double value;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value) && (value > 0))
 	{
 		__asm
 		{
-			fld		value
-			fsqrt
+			sqrtsd	xmm0, value
 			mov		eax, result
-			fstp	qword ptr [eax]
+			movq	qword ptr [eax], xmm0
 		}
 	}
 	else *result = 0;
@@ -92,7 +91,14 @@ bool Cmd_fAsin_Execute(COMMAND_ARGS)
 {
 	double value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		*result = asin(value) * kDbl180dPI;
+	{
+		if (value <= -1.0)
+			*result = -90.0;
+		else if (value >= 1.0)
+			*result = 90.0;
+		else
+			*result = asin(value) * kDbl180dPI;
+	}
 	else *result = 0;
 	return true;
 }
@@ -101,7 +107,14 @@ bool Cmd_fAcos_Execute(COMMAND_ARGS)
 {
 	double value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		*result = acos(value) * kDbl180dPI;
+	{
+		if (value <= -1.0)
+			*result = 180.0;
+		else if (value >= 1.0)
+			*result = 0;
+		else
+			*result = acos(value) * kDbl180dPI;
+	}
 	else *result = 0;
 	return true;
 }

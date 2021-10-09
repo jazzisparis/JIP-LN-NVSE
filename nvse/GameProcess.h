@@ -59,7 +59,7 @@ struct ActorHitData
 	float				healthPerc;		// 34
 	NiVector3			impactPos;		// 38
 	NiVector3			impactAngle;	// 44
-	UInt32				unk50;			// 50
+	MagicItem			*hitEffect;		// 50
 	void				*ptr54;			// 54
 	UInt32				flags;			// 58
 	float				dmgMult;		// 5C
@@ -72,7 +72,7 @@ struct ProjectileData;
 class BaseProcess
 {
 public:
-	struct Data2C
+	struct CachedValues
 	{
 		enum
 		{
@@ -211,10 +211,10 @@ public:
 	/*168*/virtual void		SetAmmoInfo(ExtraContainerChanges::EntryData *_ammoInfo);
 	/*16C*/virtual void		Unk_5B(void);
 	/*170*/virtual void		HandleQueuedEquipItems(Actor *actor);
-	/*174*/virtual void		Unk_5D(void);	// Called by 5E with count itemExtraList item
-	/*178*/virtual void		QueueEquipItem(Actor *actor, bool doEquip, TESForm *item, UInt32 count, ExtraDataList *xDataList, bool applyEnchantment, bool noUnequip, UInt8 arg8, UInt8 arg9, bool playSound);
-	/*17C*/virtual void		Unk_5F(void);
-	/*180*/virtual void		Unk_60(void);
+	/*174*/virtual bool		IsItemQueued(TESForm *item, ExtraDataList *xDataList, bool doEquip);
+	/*178*/virtual void		QueueEquipItem(Actor *actor, bool doEquip, TESForm *item, UInt32 count, ExtraDataList *xDataList, bool applyEnchantment, bool noUnequip, bool removeEnchantment, UInt8 arg9, bool playSound);
+	/*17C*/virtual void		RemoveItemFromQueue(TESForm *item, ExtraDataList *xDataList);
+	/*180*/virtual void		RemoveAllItemsFromQueue();
 	/*184*/virtual NiNode	*GetProjectileNode();
 	/*188*/virtual void		SetProjectileNode(NiNode *node);
 	/*18C*/virtual void		Unk_63(void);
@@ -618,7 +618,7 @@ public:
 	float			unk20;			// 20	not initialized, only by descendant to -1.0! flt020 gets set to GameHour minus one on package evaluation
 	UInt32			unk24;			// 24	not initialized, only by descendant!
 	UInt32			processLevel;	// 28	not initialized, only by descendant to 3 for Low, 2 for MidlleLow, 1 MiddleHighProcess and 0 for HigProcess
-	Data2C			*unk2C;			// 2C
+	CachedValues	*cachedValues;	// 2C
 };
 
 // B4
@@ -826,7 +826,7 @@ struct AnimData
 	NiObject						*object130;			// 130
 	tList<void>						list134;			// 134
 };
-STATIC_ASSERT(sizeof(AnimData) == 0x13C);
+static_assert(sizeof(AnimData) == 0x13C);
 
 class QueuedFile;
 class BSFaceGenAnimationData;
@@ -867,6 +867,22 @@ public:
 		kState_GettingUp
 	};
 
+	// 18
+	struct QueueEquipItem
+	{
+		TESForm			*itemForm;			// 00
+		ExtraDataList	*xDataList;			// 04
+		UInt32			count;				// 08
+		bool			doEquip;			// 0C
+		bool			applyEnchantment;	// 0D
+		bool			lockEquip;			// 0E
+		bool			playSound;			// 0F
+		bool			removeEnchantment;	// 10
+		bool			unkArg9;			// 11
+		UInt8			pad12[2];			// 12
+		QueuedFile		*queuedFile;		// 14
+	};
+
 	tList<TESForm>						unk0C8;				// 0C8
 	tList<UInt32>						unk0D0;				// 0D0
 	UInt32								unk0D8[3];			// 0D8
@@ -878,15 +894,18 @@ public:
 	ExtraContainerChanges::EntryData	*weaponInfo;		// 114
 	ExtraContainerChanges::EntryData	*ammoInfo;			// 118
 	QueuedFile							*unk11C;			// 11C
-	UInt8								byt120;				// 120
-	UInt8								byt121;				// 121
-	UInt8								byt122;				// 122
-	UInt8								fil123;				// 123
+	UInt8								byte120;			// 120
+	UInt8								byte121;			// 121
+	UInt8								byte122;			// 122
+	UInt8								byte123;			// 123
 	UInt8								usingOneHandGrenade;// 124
 	UInt8								usingOneHandMine;	// 125
 	UInt8								usingOneHandThrown;	// 126
-	UInt8								byte127;			// 127
-	UInt32								unk128;				// 128 Gets copied over during TESNPC.CopyFromBase
+	UInt8								wearingHeavyArmor;	// 127
+	UInt8								wearingPowerArmorTorso;	// 128
+	UInt8								wearingPowerArmorHelmet;	// 129
+	UInt8								wearingBackpack;	// 12A
+	UInt8								byte12B;			// 12B
 	NiNode								*weaponNode;		// 12C
 	NiNode								*projectileNode;	// 130
 	UInt8								byt134;				// 134
@@ -935,7 +954,8 @@ public:
 	BSBound								*boundingBox;		// 224
 	bool								isAiming;			// 228
 	UInt8								pad229[3];			// 229
-	UInt32								unk22C[2];			// 22C
+	UInt32								unk22C;				// 22C
+	tList<QueueEquipItem>				*queuedEquipList;	// 230
 	float								radsSec234;			// 234
 	float								rads238;			// 238
 	float								waterRadsSec;		// 23C
@@ -947,7 +967,7 @@ public:
 	ActorHitData						*hitData254;		// 254
 	UInt32								unk258;				// 258
 };
-STATIC_ASSERT(sizeof(MiddleHighProcess) == 0x25C);
+static_assert(sizeof(MiddleHighProcess) == 0x25C);
 
 struct DetectionData
 {
@@ -1130,7 +1150,7 @@ public:
 	float								flt450;				// 450
 	UInt32								unk454[6];			// 454
 };
-STATIC_ASSERT(sizeof(HighProcess) == 0x46C);
+static_assert(sizeof(HighProcess) == 0x46C);
 
 // 0C
 struct TaskletInfo
@@ -1299,7 +1319,7 @@ struct ProcessManager
 		return ThisCall<int>(0x973710, this, actor, arg2);
 	}
 };
-STATIC_ASSERT(sizeof(ProcessManager) == 0x103CC);
+static_assert(sizeof(ProcessManager) == 0x103CC);
 
 class CombatGoal;
 struct CombatSearchLocation;
@@ -1364,7 +1384,7 @@ public:
 	UInt32			actionID;	// 24
 	UInt32			unk28;		// 28
 };
-STATIC_ASSERT(sizeof(CombatAction) == 0x2C);
+static_assert(sizeof(CombatAction) == 0x2C);
 
 class CombatProcedure
 {
@@ -1459,7 +1479,7 @@ struct CombatActors
 	UInt8									pad155[3];			// 155
 	NiRefObject								*object158;			// 158
 };
-STATIC_ASSERT(sizeof(CombatActors) == 0x15C);
+static_assert(sizeof(CombatActors) == 0x15C);
 
 // 188
 class CombatController : public TESPackage
@@ -1473,29 +1493,29 @@ public:
 		TESObjectWEAP							*weapon3;	// 018
 		TESObjectWEAP							*weapon4;	// 01C
 		UInt32									unk020;		// 020
-		BSSimpleArray<TESObjectWEAP>			arr024;		// 024
+		BSSimpleArray<TESObjectWEAP*>			arr024;		// 024
 		UInt32									unk034[24];	// 034
 		float									flt094;		// 094
 		UInt32									unk098[11];	// 098
 		void									*ptr0C4;	// 0C4
 		UInt32									unk0C8[17];	// 0C8
-		BSSimpleArray<PathingCoverLocation>		arr10C;		// 10C
+		BSSimpleArray<PathingCoverLocation*>	arr10C;		// 10C
 		UInt32									unk11C[11];	// 11C
-		BSSimpleArray<PathingCoverLocation>		arr148;		// 148
+		BSSimpleArray<PathingCoverLocation*>	arr148;		// 148
 		UInt32									unk158[3];	// 158
-		BSSimpleArray<UnreachableCoverLocation>	arr164;		// 164
-		BSSimpleArray<UnreachableLocation>		arr174;		// 174
+		BSSimpleArray<UnreachableCoverLocation*>	arr164;		// 164
+		BSSimpleArray<UnreachableLocation*>		arr174;		// 174
 		UInt32									unk184[15];	// 184
 		Actor									*actor1C0;	// 1C0
 		CombatController						*cmbtCtrl;	// 1C4
 		UInt32									unk1C8[25];	// 1C8
 	};
-	STATIC_ASSERT(sizeof(Unk09C) == 0x22C);
+	static_assert(sizeof(Unk09C) == 0x22C);
 
 	CombatActors					*combatActors;		// 080
 	CombatProcedure					*combatProcedure1;	// 084
 	CombatProcedure					*combatProcedure2;	// 088
-	BSSimpleArray<CombatProcedure>	combatProcedures;	// 08C
+	BSSimpleArray<CombatProcedure*>	combatProcedures;	// 08C
 	Unk09C							*struct09C;			// 09C
 	void							*ptr0A0;			// 0A0
 	UInt32							unk0A4;				// 0A4
@@ -1526,4 +1546,4 @@ public:
 	float							flt148;				// 148
 	UInt32							unk14C[15];			// 14C
 };
-STATIC_ASSERT(sizeof(CombatController) == 0x188);
+static_assert(sizeof(CombatController) == 0x188);

@@ -367,14 +367,12 @@ bool Cmd_RunScriptSnippet_Execute(COMMAND_ARGS)
 	char *buffer = GetStrArgBuffer();
 	if (ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_RunScriptSnippet.numParams, &delayTime))
 	{
-		TESObjectREFR *callingRef = thisObj ? thisObj : g_thePlayer;
 		ReplaceChr(buffer, '\n', '\r');
+		Script *pScript = Script::Create(buffer);
+		TESObjectREFR *callingRef = thisObj ? thisObj : g_thePlayer;
 		if (delayTime)
-		{
-			bool (TESObjectREFR::*FuncPtr)(char*, bool) = &TESObjectREFR::RunScriptSource;
-			MainLoopAddCallbackArgsEx((void*&)FuncPtr, callingRef, 1, delayTime, 2, CopyString(buffer), true);
-		}
-		else callingRef->RunScriptSource(buffer, false);
+			MainLoopAddCallbackArgsEx(JIPScriptRunner::RunScript, pScript, 1, delayTime, 1, callingRef);
+		else JIPScriptRunner::RunScript(pScript, 0, callingRef);
 	}
 	return true;
 }
@@ -551,14 +549,20 @@ bool Cmd_DisableScriptedActivate_Execute(COMMAND_ARGS)
 
 bool Cmd_RunBatchScript_Execute(COMMAND_ARGS)
 {
+	*result = 0;
 	char filePath[0x80];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filePath))
 	{
-		char *buffer = GetStrArgBuffer();
-		TESObjectREFR *callingRef = thisObj ? thisObj : g_thePlayer;
-		*result = FileToBuffer(filePath, buffer) && callingRef->RunScriptSource(buffer, false);
+		Script **cachedScript;
+		if (s_cachedScripts.Insert(filePath, &cachedScript))
+		{
+			char *buffer = GetStrArgBuffer();
+			if (FileToBuffer(filePath, buffer))
+				*cachedScript = Script::Create(buffer);
+		}
+		if (*cachedScript && JIPScriptRunner::RunScript(*cachedScript, 1, thisObj ? thisObj : g_thePlayer))
+			*result = 1;
 	}
-	else *result = 0;
 	return true;
 }
 
@@ -570,7 +574,7 @@ bool Cmd_ExecuteScript_Execute(COMMAND_ARGS)
 		Script *pScript = xScript->script;
 		ScriptEventList *pEventList = xScript->eventList;
 		if (pScript && pEventList)
-			CALL_MEMBER_FN(pScript, Execute)(thisObj, pEventList, NULL, false);
+			pScript->Execute(thisObj, pEventList, NULL, false);
 	}
 	return true;
 }

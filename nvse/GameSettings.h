@@ -4,10 +4,8 @@
 class Setting
 {
 public:
-	Setting();
-	virtual ~Setting();
-
-	virtual void Unk_01(void);
+	virtual void	Destroy(bool doFree);
+	virtual void	Unk_01(void);
 
 	enum EType
 	{
@@ -81,9 +79,7 @@ template<class T> class SettingCollectionList
 class GameSettingCollection			// Contains SettingCollectionMap<Setting> and SettingCollection<Setting>
 {
 public:
-	GameSettingCollection();
-	virtual ~GameSettingCollection();
-
+	virtual void	Destroy(bool doFree);
 	virtual void	Unk_01(void);
 	virtual void	Unk_02(void);
 	virtual void	Unk_03(void);
@@ -107,18 +103,14 @@ public:
 	bool GetGameSetting(char* settingName, Setting** out);
 	static GameSettingCollection * GetSingleton();
 };
-
-STATIC_ASSERT(sizeof(GameSettingCollection) == 0x120);
+static_assert(sizeof(GameSettingCollection) == 0x120);
 
 // 114
 // actually 2 classes used: IniSettingCollection and IniPrefSettingCollection. Layouts are the same
 class IniSettingCollection
 {
 public:
-	IniSettingCollection();
-	~IniSettingCollection();
-
-	virtual IniSettingCollection	*Destroy(bool doFree);
+	virtual void	Destroy(bool doFree);
 	virtual void	Unk_01(UInt32 arg);
 	virtual void	Unk_02(UInt32 arg);
 	virtual void	Unk_03(UInt32 arg);
@@ -137,8 +129,7 @@ public:
 	static IniSettingCollection * GetIniSettings();
 	static IniSettingCollection * GetIniPrefs();
 };
-
-STATIC_ASSERT(sizeof(IniSettingCollection) == 0x114);
+static_assert(sizeof(IniSettingCollection) == 0x114);
 
 bool GetNumericGameSetting(char *settingName, double *result);
 bool GetINISetting(const char *settingName, Setting **out);

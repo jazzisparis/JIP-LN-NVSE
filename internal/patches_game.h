@@ -244,7 +244,7 @@ __declspec(naked) float MaxMessageWidthHook()
 	{
 		cmp		s_messageBoxScript, 0
 		jnz		overrideWidth
-		JMP_EAX(kAddr_TileGetFloat)
+		JMP_EAX(ADDR_TileGetFloat)
 	overrideWidth:
 		fld		maxWidth
 		retn	4
@@ -357,7 +357,8 @@ __declspec(naked) void PackageSetRunHook()
 		test	eax, kPackageFlag_AlwaysWalk
 		jz		allowRun
 		mov		eax, 0x101
-		jmp		done
+		leave
+		retn	0x18
 	allowRun:
 		test	eax, kPackageFlag_AlwaysRun
 		jnz		skipRetn
@@ -369,7 +370,6 @@ __declspec(naked) void PackageSetRunHook()
 		JMP_EAX(0x8DAAA9)
 	skipRetn:
 		mov		eax, 0x201
-	done:
 		leave
 		retn	0x18
 	}
@@ -382,7 +382,6 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		push	ebp
 		mov		ebp, esp
 		push	ecx
-		sub		esp, 8
 		mov		ecx, g_dataHandler
 		mov		ecx, [ecx+0x628]
 		mov		ecx, [ecx]
@@ -393,10 +392,9 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		mov		eax, [eax]
 		test	eax, eax
 		jz		done
-		mov		[ebp-8], eax
+		push	eax
 		mov		ecx, [ebp-4]
-		mov		eax, [ecx+4]
-		mov		[ebp-0xC], eax
+		push	dword ptr [ecx+4]
 		mov		ecx, [ecx]
 		mov		edx, g_capsItem
 		call	ExtraContainerChanges::EntryDataList::FindForItem
@@ -409,17 +407,21 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		push	edi
 		mov		esi, [ebp-8]
 		mov		edi, edx
+		ALIGN 16
 	countHead:
+		test	esi, esi
+		jz		addHead
 		mov		ecx, [esi]
+		mov		esi, [esi+4]
 		test	ecx, ecx
-		jz		countNext
+		jz		countHead
 		push	kExtraData_OriginalReference
 		call	BaseExtraList::GetByType
 		test	eax, eax
-		jz		countNext
-		mov		eax, [eax+0xC]
-		cmp		[ebp-0xC], eax
-		jnz		countNext
+		jz		countHead
+		mov		edx, [eax+0xC]
+		cmp		[ebp-0xC], edx
+		jnz		countHead
 		push	kExtraData_Count
 		call	BaseExtraList::GetByType
 		test	eax, eax
@@ -427,21 +429,19 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		mov		ecx, 0x7FFF
 		cmp		edi, ecx
 		cmovl	ecx, edi
-		mov		word ptr [eax+0xC], cx
+		mov		[eax+0xC], cx
 		sub		edi, ecx
-		jmp		addHead
-	countNext:
-		mov		esi, [esi+4]
-		test	esi, esi
-		jnz		countHead
+		ALIGN 16
 	addHead:
 		cmp		edi, 1
 		jle		doPop
+		call	ExtraDataList::Create
+		mov		esi, eax
 		push	dword ptr [ebp-0xC]
 		call	ExtraOriginalReference::Create
 		push	eax
-		call	ExtraDataList::Create
-		mov		esi, eax
+		mov		ecx, esi
+		CALL_EAX(ADDR_AddExtraData)
 		mov		eax, 0x7FFF
 		cmp		edi, eax
 		cmovl	eax, edi
@@ -450,7 +450,7 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		call	ExtraCount::Create
 		push	eax
 		mov		ecx, esi
-		CALL_EAX(kAddr_AddExtraData)
+		CALL_EAX(ADDR_AddExtraData)
 		push	esi
 		mov		ecx, [ebp-8]
 		call	ExtraContainerChanges::ExtendDataList::Append
@@ -527,7 +527,7 @@ __declspec(naked) void EffectSkillModifiers1Hook()
 		push	eax
 		push	g_thePlayer
 		push	kPerkEntry_ModifyRecoveredHealth
-		CALL_EAX(kAddr_ApplyPerkModifiers)
+		CALL_EAX(ADDR_ApplyPerkModifiers)
 		add		esp, 0xC
 	skipPerkMod:
 		cvttss2si	eax, dword ptr [ebp-0xC0]
@@ -579,7 +579,7 @@ __declspec(naked) void EffectSkillModifiers2Hook()
 		push	eax
 		push	ecx
 		push	kPerkEntry_ModifyRecoveredHealth
-		CALL_EAX(kAddr_ApplyPerkModifiers)
+		CALL_EAX(ADDR_ApplyPerkModifiers)
 		add		esp, 0xC
 	skipPerkMod:
 		push	dword ptr [ebp-0x50]
@@ -742,23 +742,106 @@ __declspec(naked) float GetWindSpeedHook()
 	}
 }
 
-__declspec(naked) void RemoveHotkeyFixHook()
+__declspec(naked) void __fastcall ClearExtraHotkeyIfUsed(ExtraDataList *inXDataList)
 {
 	__asm
 	{
-		mov		eax, [ebp+0x20]
-		cmp		eax, g_thePlayer
-		jz		doRemove
-		mov		ecx, [ebp+0x18]
-		CALL_EAX(0x418770)
-		movsx	eax, ax
-		cmp		[ebp+0x14], eax
-		jnz		done
-	doRemove:
-		mov		ecx, [ebp+0x18]
-		CALL_EAX(0x42DEC0)
-	done:
+		push	kExtraData_Hotkey
+		call	BaseExtraList::GetByType
+		test	eax, eax
+		jnz		isBound
 		retn
+		ALIGN 16
+	isBound:
+		push	ebx
+		push	esi
+		push	edi
+		push	1
+		push	eax
+		push	ecx
+		mov		bl, [eax+0xC]
+		mov		ecx, g_thePlayer
+		call	TESObjectREFR::GetContainerChangesList
+		mov		esi, eax
+		ALIGN 16
+	entryIter:
+		test	esi, esi
+		jz		done
+		mov		ecx, [esi]
+		mov		esi, [esi+4]
+		test	ecx, ecx
+		jz		entryIter
+		cmp		dword ptr [ecx], 0
+		jz		entryIter
+		mov		eax, [ecx+8]
+		mov		dl, [eax+4]
+		cmp		dl, kFormType_TESAmmo
+		jz		entryIter
+		cmp		dl, kFormType_TESObjectMISC
+		jz		entryIter
+		cmp		dl, kFormType_AlchemyItem
+		ja		entryIter
+		mov		edi, [ecx]
+		ALIGN 16
+	xdlIter:
+		test	edi, edi
+		jz		entryIter
+		mov		ecx, [edi]
+		mov		edi, [edi+4]
+		test	ecx, ecx
+		jz		xdlIter
+		push	kExtraData_Hotkey
+		call	BaseExtraList::GetByType
+		test	eax, eax
+		jz		xdlIter
+		cmp		[eax+0xC], bl
+		jnz		xdlIter
+		pop		ecx
+		CALL_EAX(0x410020)
+		pop		edi
+		pop		esi
+		pop		ebx
+		retn
+		ALIGN 16
+	done:
+		add		esp, 0xC
+		pop		edi
+		pop		esi
+		pop		ebx
+		retn
+	}
+}
+
+__declspec(naked) void HotkeyFixRemoveItemHook()
+{
+	__asm
+	{
+		cmp		byte ptr [ebp+0x1C], 0
+		jnz		done
+		mov		ecx, [ebp+0x18]
+		test	ecx, ecx
+		jz		done
+		mov		eax, [ebp+0x20]
+		test	eax, eax
+		jz		done
+		cmp		dword ptr [eax+0xC], 0x14
+		jnz		done
+		call	ClearExtraHotkeyIfUsed
+	done:
+		JMP_EAX(0x4C39B0)
+	}
+}
+
+__declspec(naked) void HotkeyFixPlayerActivateHook()
+{
+	__asm
+	{
+		mov		eax, [ecx+0x20]
+		movzx	edx, byte ptr [eax+4]
+		mov		[ebp-0x38], edx
+		add		ecx, 0x44
+		call	ClearExtraHotkeyIfUsed
+		JMP_EAX(0x95401E)
 	}
 }
 
@@ -1005,7 +1088,7 @@ __declspec(naked) void ConstructItemEntryNameHook()
 		push	edx
 		push	kTileValue_string
 		mov		ecx, [ebp+8]
-		CALL_EAX(kAddr_TileSetString)
+		CALL_EAX(ADDR_TileSetString)
 	done:
 		pop		edi
 		pop		esi
@@ -1083,7 +1166,7 @@ __declspec(naked) void ProcessGradualSetFloatHook()
 		push	eax
 		push	dword ptr [ecx+0x10]
 		mov		ecx, [ecx+0x14]
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		JMP_EAX(0xA08155)
 	}
 }
@@ -1283,7 +1366,7 @@ __declspec(naked) void PlayAttackSoundHook()
 	{
 		mov		ecx, [ebp+0xC]
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		done
 		mov		dword ptr [ebp-0x7C], 0x200000
 		mov		ecx, [ecx+0x68]
@@ -1353,7 +1436,7 @@ __declspec(naked) NiNode* __fastcall GetAttachParentNode(TESObjectREFR *refr)
 		test	eax, eax
 		jz		useRoot
 		mov		ecx, [eax]
-		cmp		dword ptr [ecx+0xC], kAddr_ReturnThis
+		cmp		dword ptr [ecx+0xC], ADDR_ReturnThis
 		jnz		useRoot
 		pop		ecx
 		retn
@@ -1521,13 +1604,12 @@ __declspec(naked) void DeathResponseFixHook()
 		push	dword ptr [ebp-0x1C]
 		push	0
 		push	0
-		jmp		done
+		JMP_EAX(0x984160)
 	notApplicable:
 		push	1
 		push	dword ptr [ebp-0x1C]
 		push	1
 		push	1
-	done:
 		JMP_EAX(0x984160)
 	}
 }
@@ -1544,19 +1626,22 @@ __declspec(naked) void ClearAshPilesHook()
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		doUnload
-		mov		edx, [eax+0xC]
-		mov		[ebp-0x20], edx
-		push	1
-		push	eax
-		mov		ecx, [ebp-0x2C]
-		add		ecx, 0x44
-		CALL_EAX(0x410020)
-		mov		ecx, [ebp-0x20]
+		mov		[ebp-0x20], eax
+		mov		ecx, [eax+0xC]
 		test	ecx, ecx
-		jz		done
+		jz		noRefr
+		mov		edx, [ecx+0x20]
+		test	byte ptr [edx+9], 4
+		jnz		done
 		push	kExtraData_AshPileRef
 		add		ecx, 0x44
-		CALL_EAX(0x410140)
+		CALL_EAX(0x410140)	//	BaseExtraList::RemoveByType
+	noRefr:
+		push	1
+		push	dword ptr [ebp-0x20]
+		mov		ecx, [ebp-0x2C]
+		add		ecx, 0x44
+		CALL_EAX(0x410020)	//	BaseExtraList::RemoveExtra
 	doUnload:
 		mov		ecx, [ebp-0x2C]
 		CALL_EAX(0x572270)
@@ -1732,7 +1817,7 @@ __declspec(naked) void SetSourceSoundRequestHook()
 		mov		eax, [eax]
 		test	eax, eax
 		jnz		iterHead
-		jmp		done
+		JMP_EAX(0xAE5527)
 	found:
 		mov		eax, [eax+8]
 		mov		ecx, [ecx+8]
@@ -1873,48 +1958,56 @@ __declspec(naked) UInt32 __fastcall GetFactionReactionHook(TESFaction *faction, 
 
 __declspec(naked) void TileTextApplyScaleHook()
 {
-	static const float kDepthMult = -0.008F;
 	__asm
 	{
-		pxor	xmm0, xmm0
-		push	kTileValue_depth
+		push	dword ptr [ebp-0x1C]
+		push	dword ptr [ebp-0x38]
+		push	0
+		lea		edx, [ebp-0x54]
+		push	edx
+		sub		edx, 4
+		push	edx
+		add		edx, 0x44
+		push	edx
+		mov		[ebp-0x29], 0
+		mov		edx, kTileValue_zoom
 		mov		ecx, [ebp-0x1B4]
-		mov		[ebp-0x18], ecx
 		call	Tile::GetValue
-		test	eax, eax
-		jz		noDepth
-		movss	xmm0, [eax+8]
-		mulss	xmm0, kDepthMult
-	noDepth:
-		push	kTileValue_zoom
-		mov		ecx, [ebp-0x18]
-		call	Tile::GetValue
-		mov		ecx, [ebp-0xB0]
 		test	eax, eax
 		jz		noScale
-		test	byte ptr [eax+0xB], 0x80
-		jnz		noScale
-		fld		dword ptr [eax+8]
-		fmul	kFlt1d100
-		fst		dword ptr [ecx+0x64]
-		fld		st
-		fimul	dword ptr [ebp-0x58]
-		fistp	dword ptr [ebp-0x58]
-		fimul	dword ptr [ebp-0x1C]
-		fistp	dword ptr [ebp-0x1C]
+		mov		edx, [eax+8]
+		test	edx, edx
+		jle		noScale
+		cmp		edx, 0x42C80000
+		jz		noScale
+		movd	xmm0, edx
+		mulss	xmm0, kFlt1d100
+		movss	[ebp-0x1C], xmm0
+		mov		[ebp-0x29], 1
+		cmp		dword ptr [ebp-0x58], 0x800
+		jnb		noScale
+		unpcklps	xmm0, xmm0
+		movq	xmm1, qword ptr [ebp-0x58]
+		cvtdq2ps	xmm1, xmm1
+		divps	xmm1, xmm0
+		cvtps2dq	xmm1, xmm1
+		movq	qword ptr [ebp-0x58], xmm1
 	noScale:
-		mov		edx, [ebp-0x20]
-		mov		[ecx+0x58], edx
-		movss	[ecx+0x5C], xmm0
-		mov		edx, [ebp-0x50]
-		mov		[ecx+0x60], edx
-		push	1
-		push	ecx
-		mov		eax, [ebp-0x18]
-		mov		ecx, [eax+0x2C]
-		mov		eax, [ecx]
-		call	dword ptr [eax+0xDC]
-		retn
+		mov		ecx, [ebp-0x64]
+		CALL_EAX(0xA12880)
+		mov		edx, [ebp-0xB0]
+		cmp		[ebp-0x29], 0
+		jz		done
+		movss	xmm0, [ebp-0x1C]
+		movss	[edx+0x64], xmm0
+		unpcklps	xmm0, xmm0
+		movq	xmm1, qword ptr [ebp-0x58]
+		cvtdq2ps	xmm1, xmm1
+		mulps	xmm0, xmm1
+		cvtps2dq	xmm0, xmm0
+		movq	qword ptr [ebp-0x58], xmm0
+	done:
+		JMP_EAX(0xA2221C)
 	}
 }
 
@@ -2000,7 +2093,7 @@ __declspec(naked) float __cdecl GetDamageToWeaponHook(Actor *actor)
 		jz		noAmmo
 		push	ecx
 		push	4
-		CALL_EAX(kAddr_ApplyAmmoEffects)
+		CALL_EAX(ADDR_ApplyAmmoEffects)
 		add		esp, 0xC
 		retn
 	noAmmo:
@@ -2055,7 +2148,7 @@ MediaSet* __stdcall PickMediaSetHook(ListNode<MediaSet> *listHead)
 
 Vector<TESLoadScreen*> s_locationLoadScreens, s_genericLoadScreens;
 
-__declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadingMenu, int EDX, BSSimpleArray<TESLoadScreen> *results)
+__declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadingMenu, int EDX, BSSimpleArray<TESLoadScreen*> *results)
 {
 	__asm
 	{
@@ -2204,8 +2297,8 @@ doneFlags:
 
 const UInt8 kValidEntryPoints[] =
 {
-	1, 2, 3, 0, 4, 0, 5, 0, 0, 0, 0, 0, 6, 0, 7, 8, 0, 0, 0, 0, 0, 0, 9, 10, 11, 12, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 14, 15,
-	16, 0, 0, 0, 17, 18, 0, 0, 0, 0, 0, 0, 0, 0, 19, 0, 0, 0, 20, 0, 21, 22, 0, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 24, 0
+	1, 2, 3, 0, 4, 0, 5, 0, 0, 0, 0, 0, 6, 0, 7, 8, 0, 0, 0, 0, 0, 0, 9, 10, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 13, 14,
+	15, 0, 0, 0, 16, 17, 0, 0, 18, 0, 0, 0, 0, 0, 19, 0, 0, 0, 20, 0, 21, 22, 0, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 24, 0
 };
 
 Vector<BGSPerk*> s_validNPCPerks(0x40), s_validNPCTraits(0x20), s_NPCPerksPick(0x40);
@@ -2291,10 +2384,11 @@ public:
 		return index ? &perkEntries[index - 1] : nullptr;
 	}
 
-	void Clear()
+	void Destroy()
 	{
 		for (auto &iter : perkEntries)
 			iter.RemoveAll();
+		POOL_FREE(this, 1, NPCPerkEntryPoints);
 	}
 };
 
@@ -2304,12 +2398,15 @@ struct NPCPerksInfo
 	NPCPerkEntryPoints		*entryPoints;
 
 	NPCPerksInfo() : entryPoints(nullptr) {}
-	~NPCPerksInfo()
+	~NPCPerksInfo() {if (entryPoints) entryPoints->Destroy();}
+
+	void Reset()
 	{
+		perkRanks.Clear();
 		if (entryPoints)
 		{
-			entryPoints->Clear();
-			POOL_FREE(entryPoints, 1, NPCPerkEntryPoints);
+			entryPoints->Destroy();
+			entryPoints = nullptr;
 		}
 	}
 };
@@ -2317,12 +2414,32 @@ struct NPCPerksInfo
 UnorderedMap<UInt32, NPCPerksInfo> s_NPCPerksInfoMap(0x80);
 bool s_NPCPerksAutoAdd = false;
 
+__declspec(naked) bool __fastcall DestroyActorHook(Actor *actor)
+{
+	__asm
+	{
+		cmp		dword ptr [ecx+0x60], 0
+		jz		done
+		mov		dword ptr [ecx+0x60], 0
+		or		s_dataChangedFlags, kChangedFlag_NPCPerks
+		push	ecx
+		push	dword ptr [ecx+0xC]
+		mov		ecx, offset s_NPCPerksInfoMap
+		call	UnorderedMap<UInt32, NPCPerksInfo>::Erase
+		pop		ecx
+	done:
+		test	byte ptr [ecx+9], 0x40
+		setnz	al
+		retn
+	}
+}
+
 NPCPerksInfo* __fastcall AddStartingPerks(Actor *actor, NPCPerksInfo *perksInfo)
 {
 	if (s_NPCPerksAutoAdd && IS_ID(actor, Character))
 	{
-		if (!perksInfo)
-			perksInfo = &s_NPCPerksInfoMap[actor->refID];
+		if (!perksInfo && !s_NPCPerksInfoMap.Insert(actor->refID, &perksInfo))
+			perksInfo->Reset();
 		perksInfo->perkRanks.Emplace(s_validNPCTraits[GetRandomInt(s_validNPCTraits.Size())], 1);
 		UInt32 level = actor->GetLevel();
 		if (level >= 3)
@@ -2340,10 +2457,11 @@ NPCPerksInfo* __fastcall AddStartingPerks(Actor *actor, NPCPerksInfo *perksInfo)
 			UInt32 size = s_NPCPerksPick.Size();
 			if (size)
 			{
-				s_NPCPerksPick.Shuffle();
 				if (level >= 30) level = 10;
 				else level /= 3;
-				if (level > size) level = size;
+				if (level < size)
+					s_NPCPerksPick.Shuffle();
+				else level = size;
 				do
 				{
 					perksInfo->perkRanks[s_NPCPerksPick[--level]]++;
@@ -2354,8 +2472,8 @@ NPCPerksInfo* __fastcall AddStartingPerks(Actor *actor, NPCPerksInfo *perksInfo)
 	}
 	if (actor->isTeammate && !g_thePlayer->perkRanksTM.Empty())
 	{
-		if (!perksInfo)
-			perksInfo = &s_NPCPerksInfoMap[actor->refID];
+		if (!perksInfo && !s_NPCPerksInfoMap.Insert(actor->refID, &perksInfo))
+			perksInfo->Reset();
 		auto perkIter = g_thePlayer->perkRanksTM.Head();
 		PerkRank *perkRank;
 		UInt8 *rankPtr;
@@ -2414,7 +2532,11 @@ void __fastcall SetPerkRankNPCHook(Actor *actor, int EDX, BGSPerk *perk, UInt8 n
 	if (actor->lifeState) return;
 	NPCPerksInfo *perksInfo = actor->extraDataList.perksInfo;
 	if (!perksInfo)
-		perksInfo = AddStartingPerks(actor, &s_NPCPerksInfoMap[actor->refID]);
+	{
+		if (!s_NPCPerksInfoMap.Insert(actor->refID, &perksInfo))
+			perksInfo->Reset();
+		AddStartingPerks(actor, perksInfo);
+	}
 	UInt8 *rankPtr;
 	if (perksInfo->perkRanks.Insert(perk, &rankPtr) || (*rankPtr < newRank))
 	{
@@ -2423,7 +2545,8 @@ void __fastcall SetPerkRankNPCHook(Actor *actor, int EDX, BGSPerk *perk, UInt8 n
 		NPCPerkEntryPoints *entryPoints = perksInfo->entryPoints;
 		if (!entryPoints)
 		{
-			if (!actor->GetNiNode()) return;
+			if (!actor->renderState || !actor->renderState->niNode14)
+				return;
 			perksInfo->entryPoints = entryPoints = NPCPerkEntryPoints::Create();
 		}
 		AddPerkEntriesNPC(actor, perk, newRank, entryPoints);
@@ -2499,6 +2622,11 @@ void __fastcall RemovePerkNPCHook(Actor *actor, int EDX, BGSPerk *perk, bool for
 	while (entryIter = entryIter->next);
 	if (bUpdReload)
 		ThisCall(0x8C17C0, actor);
+	if (perksInfo->perkRanks.Empty())
+	{
+		actor->extraDataList.perksInfo = nullptr;
+		s_NPCPerksInfoMap.Erase(actor->refID);
+	}
 }
 
 void __fastcall RemovePerkPlayerHook(PlayerCharacter *thePlayer, int EDX, BGSPerk *perk, bool forTeammates)
@@ -2620,7 +2748,7 @@ __declspec(naked) ExtraDataList* __fastcall DoOnLoadActorHook(TESObjectREFR *ref
 	__asm
 	{
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		done
 		cmp		dword ptr [ecx+0x108], 0
 		jnz		done
@@ -2993,7 +3121,7 @@ __declspec(naked) float __cdecl GetVATSTargetDTHook(PlayerCharacter *thePlayer, 
 		push	esi
 		push	dword ptr [ebp+8]
 		push	kPerkEntry_ModifyDamageThresholdAttacker
-		CALL_EAX(kAddr_ApplyPerkModifiers)
+		CALL_EAX(ADDR_ApplyPerkModifiers)
 		add		esp, 0x14
 		fsub	dword ptr [ebp-4]
 		mov		ecx, [ebp+0xC]
@@ -3006,7 +3134,7 @@ __declspec(naked) float __cdecl GetVATSTargetDTHook(PlayerCharacter *thePlayer, 
 		push	dword ptr [ebp+8]
 		push	ecx
 		push	kPerkEntry_ModifyDamageThresholdDefender
-		CALL_EAX(kAddr_ApplyPerkModifiers)
+		CALL_EAX(ADDR_ApplyPerkModifiers)
 		add		esp, 0x14
 		fadd	dword ptr [ebp-4]
 	notTeammate:
@@ -3027,7 +3155,7 @@ __declspec(naked) float __cdecl GetVATSTargetDTHook(PlayerCharacter *thePlayer, 
 		fstp	dword ptr [esp]
 		push	ecx
 		push	kAmmoEffect_DTMod
-		CALL_EAX(kAddr_ApplyAmmoEffects)
+		CALL_EAX(ADDR_ApplyAmmoEffects)
 		add		esp, 0xC
 		fldz
 		fucomip	st, st(1)
@@ -3132,7 +3260,7 @@ __declspec(naked) void MineExplodeChanceHook()
 		push	dword ptr [edx+0x20]
 		push	dword ptr [ebp-0x28]
 		push	4
-		CALL_EAX(kAddr_ApplyPerkModifiers)
+		CALL_EAX(ADDR_ApplyPerkModifiers)
 		add		esp, 0x10
 		push	0x64
 		mov		ecx, 0x11C4180
@@ -3147,40 +3275,14 @@ __declspec(naked) void MineExplodeChanceHook()
 	}
 }
 
-__declspec(naked) float GetPCRepairSkill()
-{
-	__asm
-	{
-		push	kAVCode_Repair
-		mov		ecx, g_thePlayer
-		add		ecx, 0xA4
-		CALL_EAX(0x93ACB0)
-		fstp	dword ptr [esp-4]
-		movss	xmm0, [esp-4]
-		pxor	xmm1, xmm1
-		maxss	xmm0, xmm1
-		movss	xmm1, ds:[0x11D0FF4]	// fRepairSkillBase
-		movss	xmm2, kFlt10
-		mulss	xmm1, xmm2
-		mulss	xmm2, ds:[0x11D0190]	// fRepairSkillMax
-		subss	xmm2, xmm1
-		mulss	xmm0, xmm2
-		mulss	xmm0, kFlt1d100
-		addss	xmm0, xmm1
-		minss	xmm0, kFlt100
-		movss	[esp-4], xmm0
-		fld		dword ptr [esp-4]
-		retn
-	}
-}
-
-float s_repairedItemHealth = 0;
+float s_pcRepairSkill = 0, s_repairedItemHealth = 0;
 bool s_repairedItemModded = false;
 
 __declspec(naked) void EnableRepairButtonHook()
 {
 	__asm
 	{
+		fstp	s_repairedItemHealth
 		mov		ecx, [ebp+8]
 		mov		eax, [ecx]
 		test	eax, eax
@@ -3192,9 +3294,25 @@ __declspec(naked) void EnableRepairButtonHook()
 		setnz	al
 	doneMods:
 		mov		s_repairedItemModded, al
-		call	GetPCRepairSkill
-		fucomip	st, st(1)
-		fstp	s_repairedItemHealth
+		push	kAVCode_Repair
+		mov		ecx, g_thePlayer
+		add		ecx, 0xA4
+		CALL_EAX(0x93ACB0)
+		fstp	dword ptr [ebp-0x44]
+		movss	xmm0, [ebp-0x44]
+		pxor	xmm1, xmm1
+		maxss	xmm0, xmm1
+		movss	xmm1, ds:[0x11D0FF4]	// fRepairSkillBase
+		movss	xmm2, kFlt10
+		mulss	xmm1, xmm2
+		mulss	xmm2, ds:[0x11D0190]	// fRepairSkillMax
+		subss	xmm2, xmm1
+		mulss	xmm0, xmm2
+		mulss	xmm0, kFlt1d100
+		addss	xmm0, xmm1
+		minss	xmm0, kFlt100
+		movss	s_pcRepairSkill, xmm0
+		comiss	xmm0, s_repairedItemHealth
 		retn
 	}
 }
@@ -3229,8 +3347,7 @@ __declspec(naked) float __stdcall GetRepairAmount(float itemToRepairHealth, floa
 {
 	__asm
 	{
-		call	GetPCRepairSkill
-		fstp	st
+		movss	xmm0, s_pcRepairSkill
 		mulss	xmm0, kFlt1d100
 		movss	xmm5, kFlt1d10
 		movss	xmm1, [esp+4]
@@ -3288,12 +3405,13 @@ __declspec(naked) void RepairMenuClickHook()
 {
 	__asm
 	{
-		call	GetPCRepairSkill
 		mov		ecx, ds:[0x11DA760]
 		call	ContChangesEntry::GetHealthPercent
+		fsubr	s_pcRepairSkill
+		fld1
 		fucomip	st, st(1)
 		fstp	st
-		setb	ah
+		setbe	ah
 		retn
 	}
 }
@@ -3793,48 +3911,43 @@ __declspec(naked) void DoOperator()
 //	Operator / (int)
 		test	ecx, ecx
 		jz		div0Int
-		xor		edx, edx
+		cdq
 		idiv	ecx
 	div0Int:
 		OPERATOR_RES_EAX
 //	Operator % (flt)
 		cvttsd2si	eax, xmm0
 		cvttsd2si	ecx, xmm1
-		xor		edx, edx
 		test	ecx, ecx
+		cmovz	edx, eax
 		jz		mod0Flt
+		cdq
 		idiv	ecx
 	mod0Flt:
 		OPERATOR_RES_EDX
 //	Operator % (int)
-		xor		edx, edx
 		test	ecx, ecx
+		cmovz	edx, eax
 		jz		mod0Int
+		cdq
 		idiv	ecx
 	mod0Int:
 		OPERATOR_RES_EDX
 	}
 }
 
-const UInt32 kDoOperatorJumpTable[] =
-{
-	(UInt32)DoOperator, (UInt32)DoOperator,
-	(UInt32)DoOperator + 0x30, (UInt32)DoOperator + 0x30,
-	(UInt32)DoOperator + 0x60, (UInt32)DoOperator + 0x70,
-	(UInt32)DoOperator + 0x80, (UInt32)DoOperator + 0x90,
-	(UInt32)DoOperator + 0xA0, (UInt32)DoOperator + 0xB0,
-	(UInt32)DoOperator + 0xC0, (UInt32)DoOperator + 0xD0,
-	(UInt32)DoOperator + 0xE0, (UInt32)DoOperator + 0xF0,
-	(UInt32)DoOperator + 0x100, (UInt32)DoOperator + 0x110,
-	(UInt32)DoOperator + 0x120, (UInt32)DoOperator + 0x130,
-	(UInt32)DoOperator + 0x140, (UInt32)DoOperator + 0x150,
-	(UInt32)DoOperator + 0x160, (UInt32)DoOperator + 0x170,
-	(UInt32)DoOperator + 0x180, (UInt32)DoOperator + 0x1A0,
-	(UInt32)DoOperator + 0x1B0, (UInt32)DoOperator + 0x1D0
-};
-
 __declspec(naked) void DoOperatorHook()
 {
+	static const UInt32 kDoOperatorJumpTable[] =
+	{
+		(UInt32)DoOperator, (UInt32)DoOperator, (UInt32)DoOperator + 0x30, (UInt32)DoOperator + 0x30,
+		(UInt32)DoOperator + 0x60, (UInt32)DoOperator + 0x70, (UInt32)DoOperator + 0x80, (UInt32)DoOperator + 0x90,
+		(UInt32)DoOperator + 0xA0, (UInt32)DoOperator + 0xB0, (UInt32)DoOperator + 0xC0, (UInt32)DoOperator + 0xD0,
+		(UInt32)DoOperator + 0xE0, (UInt32)DoOperator + 0xF0, (UInt32)DoOperator + 0x100, (UInt32)DoOperator + 0x110,
+		(UInt32)DoOperator + 0x120, (UInt32)DoOperator + 0x130, (UInt32)DoOperator + 0x140, (UInt32)DoOperator + 0x150,
+		(UInt32)DoOperator + 0x160, (UInt32)DoOperator + 0x170, (UInt32)DoOperator + 0x180, (UInt32)DoOperator + 0x1A0,
+		(UInt32)DoOperator + 0x1B0, (UInt32)DoOperator + 0x1D0
+	};
 	__asm
 	{
 		mov		al, [ebp-0x28]
@@ -3878,7 +3991,7 @@ UnorderedMap<const char*, UInt32> s_optionalHacks({{"bIgnoreDTDRFix", 1}, {"bEna
 
 bool s_bigGunsSkill = false, s_failedScriptLocks = false, s_NVACAlerts = false, s_NPCWeaponMods = false, s_NPCPerks = false;
 UInt32 s_NVACAddress = 0;
-char *s_bigGunsDescription = "The Big Guns skill determines your combat effectiveness with all oversized weapons such as the Fat Man, Missile Launcher, Flamer, Minigun, Gatling Laser, etc.";
+const char kBigGunsDescription[] = "The Big Guns skill determines your combat effectiveness with all oversized weapons such as the Fat Man, Missile Launcher, Flamer, Minigun, Gatling Laser, etc.";
 
 bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 {
@@ -3911,17 +4024,8 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 				return false;
 			s_bigGunsSkill = bEnable;
 			ActorValueInfo *avInfo = ActorValueInfo::Array()[kAVCode_BigGuns];
-			if (bEnable)
-			{
-				avInfo->avFlags = 0x410;
-				s_descriptionChanges[&avInfo->description] = s_bigGunsDescription;
-			}
-			else
-			{
-				avInfo->avFlags = 0x2000;
-				s_descriptionChanges.Erase(&avInfo->description);
-			}
-			HOOK_SET(GetDescription, !s_descriptionChanges.Empty());
+			avInfo->avFlags = bEnable ? 0x410 : 0x2000;
+			SetDescriptionAltText(&avInfo->description, bEnable ? kBigGunsDescription : nullptr);
 			return true;
 		}
 		case 4:
@@ -4040,6 +4144,7 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			s_NPCPerks = true;
 			BuildValidNPCPerks();
 			WriteRelCall(0x452220, (UInt32)DoOnLoadActorHook);
+			WriteRelCall(0x87DE3F, (UInt32)DestroyActorHook);
 			WriteRelJump(0x8BCA90, (UInt32)SetPlayerTeammateHook);
 			SafeWrite32(0x1086F04, (UInt32)SetPerkRankNPCHook);
 			SafeWrite32(0x1087544, (UInt32)SetPerkRankNPCHook);
@@ -4053,6 +4158,8 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			SafeWrite32(0x108AED8, (UInt32)RemovePerkPlayerHook);
 			SAFE_WRITE_BUF(0x5E592F, "\x0F\x1F\x84\x00\x00\x00\x00\x00");
 			SafeWrite32(0x64570F, 0x401F0F);
+			SAFE_WRITE_BUF(0x89B455, "\x8B\x02\x8B\x48\x68\x85\xC9\x74\x6E\x8B\x01\xFF\x90\x48\x01\x00\x00\x85\xC0\x74\x62\x8B\x48\x08\x89\x8D\x34\xFD\xFF\xFF\xEB\x57");
+			SAFE_WRITE_BUF(0x89B50B, "\x8B\x43\x08\x8B\x08");
 			return true;
 		}
 		case 19:
@@ -4068,8 +4175,6 @@ __declspec(naked) void InitFontManagerHook()
 	__asm
 	{
 		push	ebp
-		mov		ebp, esp
-		push	ecx
 		push	ebx
 		push	esi
 		push	edi
@@ -4079,11 +4184,13 @@ __declspec(naked) void InitFontManagerHook()
 		push	0x164
 		GAME_HEAP_ALLOC
 		mov		[esi], eax
-		mov		[ebp-4], eax
+		mov		g_fontManager, eax
+		mov		ebp, eax
 		mov		dword ptr [eax+0x20], 0
 		mov		esi, eax
 		mov		edi, 0x11F3418
 		mov		ebx, 1
+		ALIGN 16
 	defFontHead:
 		push	0x54
 		GAME_HEAP_ALLOC
@@ -4091,7 +4198,7 @@ __declspec(naked) void InitFontManagerHook()
 		push	dword ptr [edi]
 		push	ebx
 		mov		ecx, eax
-		CALL_EAX(kAddr_InitFontInfo)
+		CALL_EAX(ADDR_InitFontInfo)
 		mov		[esi], eax
 		push	eax
 		push	dword ptr [edi]
@@ -4102,10 +4209,9 @@ __declspec(naked) void InitFontManagerHook()
 		inc		ebx
 		cmp		bl, 9
 		jb		defFontHead
-		mov		eax, [ebp-4]
-		mov		eax, [eax+8]
-		mov		[ebp-4], eax
+		mov		ebp, [ebp+8]
 		mov		edi, offset s_extraFontsPaths
+		ALIGN 16
 	extFontHead:
 		inc		ebx
 		cmp		bl, 0x5A
@@ -4123,7 +4229,7 @@ __declspec(naked) void InitFontManagerHook()
 		push	dword ptr [edi]
 		push	ebx
 		mov		ecx, eax
-		CALL_EAX(kAddr_InitFontInfo)
+		CALL_EAX(ADDR_InitFontInfo)
 		cmp		dword ptr [eax+0x38], 0
 		jz		doFree
 		push	eax
@@ -4131,21 +4237,24 @@ __declspec(naked) void InitFontManagerHook()
 		mov		ecx, offset s_fontInfosMap
 		call	UnorderedMap<const char*, FontInfo*>::InsertNotIn
 		jmp		extFontNext
+		ALIGN 16
 	doFree:
 		push	eax
 		GAME_HEAP_FREE
+		ALIGN 16
 	useDefault:
-		mov		eax, [ebp-4]
+		mov		eax, ebp
 	extFontNext:
 		add		esi, 4
 		mov		[esi], eax
 		add		edi, 4
 		jmp		extFontHead
+		ALIGN 16
 	done:
 		pop		edi
 		pop		esi
 		pop		ebx
-		leave
+		pop		ebp
 		retn
 	}
 }
@@ -4369,19 +4478,21 @@ void InitGamePatches()
 	SAFE_WRITE_BUF(0xCD3FDD, "\xA9\x01\x00\x40\x00\x74\x0D\x89\xBE\x20\x05\x00\x00\x80\x8E\x14\x04\x00\x00\x80");
 
 	//	Nuke HUDMainMenu/HardcoreMode/ set texts <zoom>
-	SafeWrite16(0x76F688, 0x20EB);
+	/*SafeWrite16(0x76F688, 0x20EB);
 	SafeWrite16(0x76F742, 0x1FEB);
 	SafeWrite16(0x76F824, 0x1FEB);
 	SafeWrite16(0x76F92D, 0x20EB);
-	SafeWrite16(0x76FA5E, 0x1FEB);
+	SafeWrite16(0x76FA5E, 0x1FEB);*/
 
 	//	AdjustExplosionRadius perk entry point affects NPCs
-	SAFE_WRITE_BUF(0x9ACA31, "\x85\xC0\x74\x46\x8B\x08\x81\xB9\x00\x01\x00\x00\x60\x03\x8D\x00\x75\x38\x0F\x1F\x00");
-	SAFE_WRITE_BUF(0x9ACA6A, "\xFF\x75\xE8\x0F\x1F\x40\x00");
+	SAFE_WRITE_BUF(0x9ACA23, "\x8B\x8A\xFC\x00\x00\x00\x89\x4D\xE8\x85\xC9\x74\x4B\x8B\x01\x81\xB8\x00\x01\x00\x00\x60\x03\x8D\x00\x75\x3D\x8D\x45\xF0\x50\xFF\xB2\xF8\x00\x00\x00\x51\x6A\x48\xE8\xA0\x8E\xC3\xFF\x83\xC4\x10\xE9\xB5\x00\x00\x00");
 
 	//	Runtime script compiler recognize NVSE var types
 	SafeWrite32(0x118CBF4, (UInt32)&s_varTypeNameTokens);
 	SafeWrite32(0x118CBCC, (UInt32)&s_varTypeNameTokens[10]);
+
+	//	Enable console prints in the loading menu
+	SafeWrite16(0x71D0D2, 0x1BEB);
 
 	//	Inlines
 	SafeWrite32(0x47C850, 0x90C3C030);
@@ -4433,7 +4544,9 @@ void InitGamePatches()
 	WritePushRetRelJump(0x5DBCFD, 0x5DBD23, (UInt32)AttachAshPileHook);
 	WriteRelCall(0x63C4D6, (UInt32)GetWindSpeedHook);
 	WriteRelCall(0x63C52C, (UInt32)GetWindSpeedHook);
-	WritePushRetRelJump(0x4C3998, 0x4C39B0, (UInt32)RemoveHotkeyFixHook);
+	WriteRelJump(0x4C3976, (UInt32)HotkeyFixRemoveItemHook);
+	WriteRelJump(0x95400F, (UInt32)HotkeyFixPlayerActivateHook);
+	SafeWrite8(0x412675, 1);
 	SAFE_WRITE_BUF(0x9B6335, "\xF3\x0F\x10\x45\xF4\x0F\x2F\x41\x14\x0F\x87\x8E\x00\x00\x00\x80\x49\x5B\x80\xF3\x0F\x11\x41\x14\x0F\x1F\x40\x00");
 	WritePushRetRelJump(0x5674D5, 0x567554, (UInt32)SetScaleHook);
 	SafeWrite16(0x567709, 0x15EB);
@@ -4475,8 +4588,15 @@ void InitGamePatches()
 	SafeWrite32(0x10A3C5C, (UInt32)GetSoundFrequencyPercHook);
 	WriteRelJump(0x58E9D0, (UInt32)GetImpactDataHook);
 	WriteRelCall(0x5956BC, (UInt32)GetFactionReactionHook);
-	SAFE_WRITE_BUF(0xA03923, "\x8B\x45\x08\x3D\xB7\x0F\x00\x00\x72\x50\x3D\xF7\x0F\x00\x00\x74\x07\x3D\xBE\x0F\x00\x00\x77\x42\x8B\x45\xCC\xF6\x40\x30\x02\x75\x0B\x80\x48\x30\x02\x50\xE8\x42\x3D\x00\x00\x58\xC9\xC2\x0C\x00");
-	WritePushRetRelJump(0xA22244, 0xA222E7, (UInt32)TileTextApplyScaleHook);
+	/*SAFE_WRITE_BUF(0xA03923, "\x8B\x45\x08\x3D\xB7\x0F\x00\x00\x72\x50\x3D\xF7\x0F\x00\x00\x74\x07\x3D\xBE\x0F\x00\x00\x77\x42\x8B\x45\xCC\xF6\x40\x30\x02\x75\x0B\x80\x48\x30\x02\x50\xE8\x42\x3D\x00\x00\x58\xC9\xC2\x0C\x00");
+	SafeWrite8(0xA21B83, 0xAC);
+	SafeWrite8(0xA22041, 0xAC);
+	SafeWrite8(0xA22047, 0xAC);
+	SafeWrite8(0xA22125, 0xAC);
+	SafeWrite8(0xA223D2, 0xAC);
+	SafeWrite8(0xA21BCB, 0xE4);
+	SafeWrite8(0xA22014, 0xE4);
+	WriteRelJump(0xA221F8, (UInt32)TileTextApplyScaleHook);*/
 	SafeWrite32(0x102F5A4, (UInt32)MarkRefAsModifiedHook);
 	WriteRelJump(0x646260, (UInt32)GetDamageToWeaponHook);
 	*(UInt32*)0x11D0190 = 0x41200000;
@@ -4521,11 +4641,11 @@ void InitGamePatches()
 	for (DirectoryIterator dirIter(filePath); dirIter; ++dirIter)
 	{
 		if (!dirIter.IsFile()) continue;
-		StrCopy(namePtr, dirIter.Get());
+		StrCopy(namePtr, *dirIter);
 		LineIterator lineIter(filePath, buffer);
 		while (lineIter)
 		{
-			dataPtr = lineIter.Get();
+			dataPtr = *lineIter;
 			++lineIter;
 			delim = GetNextToken(dataPtr, '=');
 			size = StrLen(delim);
@@ -4544,7 +4664,7 @@ void InitGamePatches()
 	{
 		if (dirIter.IsFile())
 		{
-			memcpy(StrCopy(dataPath + 5, dirIter.Get()) - 8, "bsa", 4);
+			memcpy(StrCopy(dataPath + 5, *dirIter) - 8, "bsa", 4);
 			s_overrideBSAFiles.Insert(dataPath);
 		}
 	}
@@ -4591,27 +4711,29 @@ void InitGamePatches()
 	PrintLog("> Game patches initialized successfully.");
 }
 
+NiCamera* __fastcall GetSingletonsHook(SceneGraph *sceneGraph)
+{
+	g_sceneGraph = sceneGraph;
+	g_modelLoader = ModelLoader::GetSingleton();
+	g_dataHandler = DataHandler::GetSingleton();
+	g_loadedReferences = LoadedReferenceCollection::Get();
+	g_interfaceManager = InterfaceManager::GetSingleton();
+	g_OSGlobals = OSGlobals::GetSingleton();
+	g_TES = TES::GetSingleton();
+	g_thePlayer = PlayerCharacter::GetSingleton();
+	g_inputGlobals = OSInputGlobals::GetSingleton();
+	g_scrapHeapQueue = *(void**)0x11DF1A8;
+	g_tileMenuArray = *(TileMenu***)0x11F350C;
+	return sceneGraph->camera;
+}
+
 typedef int (*_ReloadENB)(UInt32 type, void *data);
 _ReloadENB ReloadENB = NULL;
 
 void DeferredInit()
 {
-	g_pipBoyLight = *(SpellItem**)0x11C358C;
-	g_modelLoader = *(ModelLoader**)0x11C3B3C;
-	g_dataHandler = *(DataHandler**)0x11C3F2C;
-	g_loadedReferences = LoadedReferenceCollection::Get();
-	g_interfaceManager = *(InterfaceManager**)0x11D8A80;
-	g_OSGlobals = *(OSGlobals**)0x11DEA0C;
-	g_TES = *(TES**)0x11DEA10;
-	g_thePlayer = *(PlayerCharacter**)0x11DEA3C;
-	g_sceneGraph = *(SceneGraph**)0x11DEB7C;
-	g_scrapHeapQueue = *(void**)0x11DF1A8;
-	g_fontManager = *(FontManager**)0x11F33F8;
-	g_inputGlobals = *(OSInputGlobals**)0x11F35CC;
-	g_tileMenuArray = *(TileMenu***)0x11F350C;
-	g_HUDMainMenu = *(HUDMainMenu**)0x11D96C0;
+	g_HUDMainMenu = HUDMainMenu::Get();
 	g_consoleManager = ConsoleManager::GetSingleton();
-	g_sysColorManager = *(SystemColorManager**)0x11D8A88;
 	g_cursorNode = g_interfaceManager->cursor->node;
 	float converter = g_interfaceManager->menuRoot->GetValue(kTileValue_resolutionconverter)->num;
 	g_screenResConvert = converter;
@@ -4670,7 +4792,7 @@ void DeferredInit()
 	for (UInt32 length = 1; length < 90; length++, fontInfos++)
 	{
 		if (length == 9) continue;
-		s_fontHeightDatas[length].heightBase = (*fontInfos)->bufferData->baseHeight;
+		s_fontHeightDatas[length].heightBase = (*fontInfos)->bufferData->charDimensions[' '].height;
 		s_fontHeightDatas[length].heightwGap = (*fontInfos)->bufferData->lineHeight;
 	}
 	s_fontHeightDatas[2].heightwGap += 4.0F;
@@ -4697,8 +4819,6 @@ void DeferredInit()
 	avInfo->fullName.name = avInfo->avName;
 	avInfo->callback4C = 0x643BD0;
 
-	JIPScriptRunner::Init();
-
 	s_LIGH_EDID = "LIGH_EDID";
 
 	UInt8 cccIdx = g_dataHandler->GetModIndex("JIP Companions Command & Control.esp");
@@ -4718,6 +4838,8 @@ void DeferredInit()
 			fclose(nvacLog);
 		}
 	}
+
+	JIPScriptRunner::Init();
 
 	Console_Print("JIP LN version: %.2f", JIP_LN_VERSION);
 }

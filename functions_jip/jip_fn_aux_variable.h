@@ -190,7 +190,7 @@ bool Cmd_AuxiliaryVariableSetFloat_Execute(COMMAND_ARGS)
 			AuxVariableValue *value = AVGetValue(&varInfo, idx, true);
 			if (value)
 			{
-				value->SetFlt(fltVal);
+				*value = fltVal;
 				if (varInfo.isPerm)
 					s_dataChangedFlags |= kChangedFlag_AuxVars;
 				*result = 1;
@@ -214,7 +214,7 @@ bool Cmd_AuxiliaryVariableSetRef_Execute(COMMAND_ARGS)
 			AuxVariableValue *value = AVGetValue(&varInfo, idx, true);
 			if (value)
 			{
-				value->SetRef(refVal);
+				*value = refVal;
 				if (varInfo.isPerm)
 					s_dataChangedFlags |= kChangedFlag_AuxVars;
 				*result = 1;
@@ -238,7 +238,7 @@ bool Cmd_AuxiliaryVariableSetString_Execute(COMMAND_ARGS)
 			AuxVariableValue *value = AVGetValue(&varInfo, idx, true);
 			if (value)
 			{
-				value->SetStr(buffer);
+				*value = buffer;
 				if (varInfo.isPerm)
 					s_dataChangedFlags |= kChangedFlag_AuxVars;
 				*result = 1;
@@ -258,33 +258,18 @@ bool Cmd_AuxiliaryVariableSetFromArray_Execute(COMMAND_ARGS)
 		return true;
 	NVSEArrayVar *srcArr = LookupArrayByID(arrID);
 	if (!srcArr) return true;
-	UInt32 srcSize;
-	ArrayElementR *arrElems = GetArrayData(srcArr, &srcSize);
-	if (!arrElems) return true;
+	ArrayData arrData(srcArr, true);
+	if (!arrData.size) return true;
 	AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
-	if (!varInfo.ownerID)
-	{
-		do
-		{
-			arrElems->~ElementR();
-			arrElems++;
-		}
-		while (--srcSize);
-		return true;
-	}
+	if (!varInfo.ownerID) return true;
 	AuxVarValsArr *valsArr = AVGetArray(&varInfo, true);
 	if (!valsArr->Empty())
 		valsArr->Clear();
-	*result = (int)srcSize;
-	do
-	{
-		valsArr->Append(*arrElems);
-		arrElems->~ElementR();
-		arrElems++;
-	}
-	while (--srcSize);
+	for (UInt32 idx = 0; idx < arrData.size; idx++)
+		valsArr->Append(arrData.vals[idx]);
 	if (varInfo.isPerm)
 		s_dataChangedFlags |= kChangedFlag_AuxVars;
+	*result = (int)arrData.size;
 	return true;
 }
 

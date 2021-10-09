@@ -85,19 +85,15 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 	if (nvse->isEditor)
 	{
 		//s_log.Create("jip_ln_nvse_editor.log");
-		return nvse->editorVersion == CS_VERSION_1_4_0_518;
+		return true;
 	}
 	s_log.Create("jip_ln_nvse.log");
-	if (nvse->runtimeVersion != RUNTIME_VERSION_1_4_0_525)
-	{
-		PrintLog("ERROR: Unsupported runtime version (%08X).", nvse->runtimeVersion);
-		return false;
-	}
 	int version = nvse->nvseVersion;
 	s_nvseVersion = (version >> 24) + (((version >> 16) & 0xFF) * 0.1) + (((version & 0xFF) >> 4) * 0.01);
-	if (version < 0x6010070)
+	if (version < 0x6020030)
 	{
-		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.17 minimum.", s_nvseVersion);
+		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.23 minimum.", s_nvseVersion);
+		MessageBox(nullptr, "ERROR!\n\nxNVSE version is outdated.\n\nThis plugin requires v6.2.3 minimum.", "JIP LN NVSE Plugin", MB_OK | MB_ICONWARNING | MB_TOPMOST);
 		return false;
 	}
 	PrintLog("NVSE version:\t%.2f\nJIP LN version:\t%.2f\n", s_nvseVersion, JIP_LN_VERSION);
@@ -498,7 +494,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2628*/REG_CMD_FRM(GetFactionReputationType);
 	/*2629*/REG_CMD(SetFactionReputationType);
 	/*262A*/REG_CMD_STR(RefToString);
-	/*262B*/REG_CMD(StringToRef);
+	/*262B*/REG_CMD_FRM(StringToRef);
 	/*262C*/REG_CMD(GetObjectDimensions);
 	/*262D*/REG_CMD(GetIsItem);
 	/*262E*/REG_CMD(GetMinOf);
@@ -1340,6 +1336,11 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2904*/REG_CMD(PlayAnimSequence);
 	//	v56.26
 	/*2905*/REG_CMD(RemoveAllPerks);
+	//	v56.36
+	/*2906*/REG_CMD(GetPointRayCastPos);
+	/*2907*/REG_CMD(TogglePlayerSneaking);
+	/*2908*/REG_CMD(GetActorMovementFlags);
+	/*2909*/REG_CMD(GetTransformedPos);
 
 	//	v56.??
 	/*2906*/REG_CMD(GetHitFatigueDamage);
@@ -1377,7 +1378,9 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	serialization->SetSaveCallback(pluginHandle, SaveGameCallback);
 	serialization->SetNewGameCallback(pluginHandle, NewGameCallback);
 	((NVSEMessagingInterface*)nvse->QueryInterface(kInterface_Messaging))->RegisterListener(pluginHandle, "NVSE", NVSEMessageHandler);
-	GetCmdByOpcode = ((NVSECommandTableInterface*)nvse->QueryInterface(kInterface_CommandTable))->GetByOpcode;
+	NVSECommandTableInterface *cmdInterface = (NVSECommandTableInterface*)nvse->QueryInterface(kInterface_CommandTable);
+	GetCmdByOpcode = cmdInterface->GetByOpcode;
+	GetPluginInfoByName = cmdInterface->GetPluginInfoByName;
 	NVSEStringVarInterface *strInterface = (NVSEStringVarInterface*)nvse->QueryInterface(kInterface_StringVar);
 	GetStringVar = strInterface->GetString;
 	AssignString = strInterface->Assign;
@@ -1391,10 +1394,13 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	LookupArrayByID = arrInterface->LookupArrayByID;
 	GetElement = arrInterface->GetElement;
 	GetElements = arrInterface->GetElements;
+	GetContainerType = arrInterface->GetContainerType;
+	ArrayHasKey = arrInterface->ArrayHasKey;
 	NVSEScriptInterface *scrInterface = (NVSEScriptInterface*)nvse->QueryInterface(kInterface_Script);
 	ExtractArgsEx = scrInterface->ExtractArgsEx;
 	ExtractFormatStringArgs = scrInterface->ExtractFormatStringArgs;
 	CallFunction = scrInterface->CallFunctionAlt;
+	//GetFunctionParams = scrInterface->GetFunctionParams;
 
 	NVSEDataInterface *nvseData = (NVSEDataInterface*)nvse->QueryInterface(kInterface_Data);
 	g_DIHookCtrl = (DIHookControl*)nvseData->GetSingleton(NVSEDataInterface::kNVSEData_DIHookControl);
@@ -1403,14 +1409,26 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	g_numPreloadMods = (UInt8*)nvseData->GetData(NVSEDataInterface::kNVSEData_NumPreloadMods);
 	CaptureLambdaVars = (_CaptureLambdaVars)nvseData->GetFunc(NVSEDataInterface::kNVSEData_LambdaSaveVariableList);
 	UncaptureLambdaVars = (_UncaptureLambdaVars)nvseData->GetFunc(NVSEDataInterface::kNVSEData_LambdaUnsaveVariableList);
+
+	MemCopy = memcpy;
+	MemMove = memmove;
 	
 	return true;
 }
 
-void CleanMLCallbacks()
+__declspec(noinline) void CleanMLCallbacks()
 {
 	for (auto iter = s_mainLoopCallbacks.Begin(); iter; ++iter)
-		if (iter->flags & 8) iter->bRemove = true;
+	{
+		if (iter->cmdPtr == JIPScriptRunner::RunScript)
+		{
+			((Script*)iter->thisObj)->Destructor();
+			GameHeapFree(iter->thisObj);
+			iter->bRemove = true;
+		}
+		else if (iter->flags & 8)
+			iter->bRemove = true;
+	}
 }
 
 void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
@@ -1419,32 +1437,36 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 	{
 		case NVSEMessagingInterface::kMessage_PostLoad:
 		{
-			MemCopy = memcpy;
-			MemMove = memmove;
-
+			WriteRelCall(0x86B0F4, (UInt32)GetSingletonsHook);
 			SAFE_WRITE_BUF(0x86B1EE, "\x0F\x1F\x44\x00\x00");
+
 			InitJIPHooks();
 			InitGamePatches();
 			InitCmdPatches();
+
+			HMODULE hUIO = GetModuleHandle("ui_organizer");
+			if (hUIO)
+				UIOInjectComponent = (_UIOInjectComponent)GetProcAddress(hUIO, (LPCSTR)0xA);
+
 			break;
 		}
 		case NVSEMessagingInterface::kMessage_ExitGame:
-			JIPScriptRunner::RunScriptFiles('xg');
+			JIPScriptRunner::RunScripts(kRunOn_ExitGame);
 			break;
 		case NVSEMessagingInterface::kMessage_ExitToMainMenu:
 			CleanMLCallbacks();
-			JIPScriptRunner::RunScriptFiles('mx');
+			JIPScriptRunner::RunScripts(kRunOn_ExitToMainMenu);
 			break;
 		case NVSEMessagingInterface::kMessage_LoadGame:
-			JIPScriptRunner::RunScriptFiles('lg');
+			JIPScriptRunner::RunScripts(kRunOn_LoadGame);
 			break;
 		case NVSEMessagingInterface::kMessage_SaveGame:
-			JIPScriptRunner::RunScriptFiles('sg');
+			JIPScriptRunner::RunScripts(kRunOn_SaveGame);
 			break;
 		case NVSEMessagingInterface::kMessage_Precompile:
 			break;
 		case NVSEMessagingInterface::kMessage_NewGame:
-			JIPScriptRunner::RunScriptFiles('ng');
+			JIPScriptRunner::RunScripts(kRunOn_NewGame);
 		case NVSEMessagingInterface::kMessage_PreLoadGame:
 		{
 			CleanMLCallbacks();
@@ -1457,7 +1479,7 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			break;
 		}
 		case NVSEMessagingInterface::kMessage_ExitGame_Console:
-			JIPScriptRunner::RunScriptFiles('xg');
+			JIPScriptRunner::RunScripts(kRunOn_ExitGame);
 			break;
 		case NVSEMessagingInterface::kMessage_PostLoadGame:
 			break;
