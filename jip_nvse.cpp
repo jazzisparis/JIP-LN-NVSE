@@ -1343,10 +1343,10 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2909*/REG_CMD(GetTransformedPos);
 
 	//	v56.??
-	/*2906*/REG_CMD(GetHitFatigueDamage);
-	/*2907*/REG_CMD(GetHitArmorDamage);
-	/*2908*/REG_CMD(GetHitBlockingDTMod);
-	/*2909*/REG_CMD(GetHitCalculatedWeaponDamage);
+	/*290A*/REG_CMD(GetHitFatigueDamage);
+	/*290B*/REG_CMD(GetHitArmorDamage);
+	/*290C*/REG_CMD(GetHitBlockingDTMod);
+	/*290D*/REG_CMD(GetHitCalculatedWeaponDamage);
 
 	//===========================================================
 
