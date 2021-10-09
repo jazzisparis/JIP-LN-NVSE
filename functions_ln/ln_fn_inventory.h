@@ -302,9 +302,11 @@ bool Cmd_BaseAddItem_Execute(COMMAND_ARGS)
 	while (iter = iter->next);
 	formCount = (TESContainer::FormCount*)GameHeapAlloc(sizeof(TESContainer::FormCount));
 	formCount->contExtraData = (LvlListExtra*)GameHeapAlloc(sizeof(LvlListExtra));
+	formCount->contExtraData->ownerFaction = NULL;
+	formCount->contExtraData->globalVar = NULL;
+	formCount->contExtraData->health = 1;
 	formCount->form = form;
 	formCount->count = count;
-	formCount->contExtraData->health = 1;
 	container->formCountList.Prepend(formCount);
 	return true;
 }
@@ -336,9 +338,11 @@ bool Cmd_BaseAddItemHealth_Execute(COMMAND_ARGS)
 	while (iter = iter->next);
 	formCount = (TESContainer::FormCount*)GameHeapAlloc(sizeof(TESContainer::FormCount));
 	formCount->contExtraData = (LvlListExtra*)GameHeapAlloc(sizeof(LvlListExtra));
+	formCount->contExtraData->ownerFaction = NULL;
+	formCount->contExtraData->globalVar = NULL;
+	formCount->contExtraData->health = health;
 	formCount->form = form;
 	formCount->count = count;
-	formCount->contExtraData->health = health;
 	container->formCountList.Prepend(formCount);
 	return true;
 }

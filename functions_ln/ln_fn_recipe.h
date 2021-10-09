@@ -299,11 +299,13 @@ bool Cmd_AddRecipeCondition_Execute(COMMAND_ARGS)
 	float value;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &recipe, &func, &param, &comp, &value) || NOT_ID(recipe, TESRecipe)) return true;
 	Condition *condition = (Condition*)GameHeapAlloc(sizeof(Condition));
-	condition->runOnType = 0;
-	condition->opcode = func;
-	condition->parameter1.form = param;
 	condition->type = comp;
 	condition->comparisonValue.value = value;
+	condition->opcode = func;
+	condition->parameter1.form = param;
+	condition->parameter2.form = NULL;
+	condition->runOnType = 0;
+	condition->reference = NULL;
 	recipe->conditions.Append(condition);
 	return true;
 }

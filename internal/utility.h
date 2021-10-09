@@ -36,26 +36,6 @@
 #define GAME_HEAP_ALLOC __asm mov ecx, 0x11F6238 CALL_EAX(0xAA3E40)
 #define GAME_HEAP_FREE  __asm mov ecx, 0x11F6238 CALL_EAX(0xAA4060)
 
-#define MEMBER_FN_PREFIX(className)	\
-	typedef className _MEMBER_FN_BASE_TYPE
-
-#define DEFINE_MEMBER_FN_LONG(className, functionName, retnType, address, ...)		\
-	typedef retnType (className::* _##functionName##_type)(__VA_ARGS__);			\
-																					\
-	inline _##functionName##_type * _##functionName##_GetPtr(void)					\
-	{																				\
-		static const UInt32 _address = address;										\
-		return (_##functionName##_type *)&_address;									\
-	}
-
-#define DEFINE_MEMBER_FN(functionName, retnType, address, ...)	\
-	DEFINE_MEMBER_FN_LONG(_MEMBER_FN_BASE_TYPE, functionName, retnType, address, __VA_ARGS__)
-
-#define CALL_MEMBER_FN(obj, fn)	\
-	((*(obj)).*(*((obj)->_##fn##_GetPtr())))
-
-#define SIZEOF_ARRAY(arrayName, elementType) (sizeof(arrayName) / sizeof(elementType))
-
 template <typename T_Ret = void, typename ...Args>
 __forceinline T_Ret ThisCall(UInt32 _addr, void *_this, Args ...args)
 {
@@ -84,7 +64,6 @@ __forceinline T_Ret CdeclCall(UInt32 _addr, Args ...args)
 
 static const double
 kDblPId180 = 0.017453292519943295,
-kDblPId2 = 1.57079632679489662,
 kDbl180dPI = 57.29577951308232088;
 
 static const float
@@ -95,6 +74,7 @@ kFltPId180 = 0.01745329238F,
 kFlt1d10 = 0.1F,
 kFltHalf = 0.5F,
 kFltOne = 1.0F,
+kFltPId2 = 1.5707963268F,
 kFlt10 = 10.0F,
 kFlt180dPI = 57.2957795F,
 kFlt100 = 100.0F,
@@ -201,26 +181,10 @@ union FunctionArg
 	UInt32		uVal;
 	SInt32		iVal;
 
-	FunctionArg& operator=(void *other)
-	{
-		pVal = other;
-		return *this;
-	}
-	FunctionArg& operator=(float other)
-	{
-		fVal = other;
-		return *this;
-	}
-	FunctionArg& operator=(UInt32 other)
-	{
-		uVal = other;
-		return *this;
-	}
-	FunctionArg& operator=(SInt32 other)
-	{
-		iVal = other;
-		return *this;
-	}
+	inline void operator=(void *other) {pVal = other;}
+	inline void operator=(float other) {fVal = other;}
+	inline void operator=(UInt32 other) {uVal = other;}
+	inline void operator=(SInt32 other) {iVal = other;}
 };
 
 TESForm* __stdcall LookupFormByRefID(UInt32 refID);
@@ -239,16 +203,8 @@ union Coordinate
 	Coordinate(UInt32 _xy) : xy(_xy) {}
 	Coordinate(SInt32 *_x) : x(_x[0]), y(_x[1]) {}
 
-	inline Coordinate& operator=(const Coordinate &rhs)
-	{
-		xy = rhs.xy;
-		return *this;
-	}
-	inline Coordinate& operator=(UInt32 rhs)
-	{
-		xy = rhs;
-		return *this;
-	}
+	inline void operator=(const Coordinate &rhs) {xy = rhs.xy;}
+	inline void operator=(UInt32 rhs) {xy = rhs;}
 
 	inline bool operator==(const Coordinate &rhs) {return xy == rhs.xy;}
 	inline bool operator!=(const Coordinate &rhs) {return xy != rhs.xy;}
@@ -276,6 +232,7 @@ template <typename T> inline T sqr(T value)
 	return value * value;
 }
 
+extern const UInt32 kSSERemoveSignMask[], kSSEChangeSignMask[], kSSEDiscard4thPS[];
 extern const UInt8 kLwrCaseConverter[], kUprCaseConverter[];
 
 UInt32 __vectorcall cvtd2ui(double value);
@@ -577,9 +534,14 @@ public:
 	LineIterator(const char *filePath, char *buffer);
 
 	explicit operator bool() const {return *dataPtr != 3;}
-	void operator++();
-
-	char *Get() {return dataPtr;}
+	char* operator*() {return dataPtr;}
+	void operator++()
+	{
+		while (*dataPtr)
+			dataPtr++;
+		while (!*dataPtr)
+			dataPtr++;
+	}
 };
 
 class DirectoryIterator
@@ -602,7 +564,6 @@ public:
 			return fndData.cFileName[1] != 0;
 		return fndData.cFileName[2] != 0;
 	}
-	const char *Get() const {return fndData.cFileName;}
 	void Close()
 	{
 		if (handle != INVALID_HANDLE_VALUE)
@@ -613,6 +574,7 @@ public:
 	}
 
 	explicit operator bool() const {return handle != INVALID_HANDLE_VALUE;}
+	const char* operator*() const {return fndData.cFileName;}
 	void operator++() {if (!FindNextFile(handle, &fndData)) Close();}
 };
 

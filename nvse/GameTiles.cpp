@@ -17,7 +17,7 @@ UInt32 Tile::TraitNameToIDAdd(const char *traitName)
 	return ::TraitNameToIDAdd(traitName, 0xFFFFFFFF);
 }
 
-__declspec(naked) Tile::Value *Tile::GetValue(UInt32 typeID)
+__declspec(naked) Tile::Value* __fastcall Tile::GetValue(UInt32 typeID)
 {
 	__asm
 	{
@@ -27,7 +27,6 @@ __declspec(naked) Tile::Value *Tile::GetValue(UInt32 typeID)
 		mov		ebx, [ecx+0x14]
 		xor		esi, esi
 		mov		edi, [ecx+0x18]
-		mov		edx, [esp+0x10]
 		ALIGN 16
 	iterHead:
 		cmp		esi, edi
@@ -50,7 +49,7 @@ __declspec(naked) Tile::Value *Tile::GetValue(UInt32 typeID)
 		pop		edi
 		pop		esi
 		pop		ebx
-		retn	4
+		retn
 	}
 }
 
@@ -113,11 +112,10 @@ Menu *Tile::GetParentMenu()
 	return NULL;
 }
 
-__declspec(naked) void Tile::PokeValue(UInt32 valueID)
+__declspec(naked) void __fastcall Tile::PokeValue(UInt32 valueID)
 {
 	__asm
 	{
-		push	dword ptr [esp+4]
 		call	Tile::GetValue
 		test	eax, eax
 		jz		done
@@ -131,7 +129,7 @@ __declspec(naked) void Tile::PokeValue(UInt32 valueID)
 		push	0
 		CALL_EAX(0xA0A270)
 	done:
-		retn	4
+		retn
 	}
 }
 
@@ -139,7 +137,7 @@ __declspec(naked) void Tile::FakeClick()
 {
 	__asm
 	{
-		push	kTileValue_clicked
+		mov		edx, kTileValue_clicked
 		call	Tile::GetValue
 		test	eax, eax
 		jz		done

@@ -102,6 +102,7 @@
     <ClCompile Include="nvse\GameRTTI.cpp" />
     <ClCompile Include="nvse\GameScript.cpp" />
     <ClCompile Include="nvse\GameSettings.cpp" />
+    <ClCompile Include="nvse\GameSound.cpp" />
     <ClCompile Include="nvse\GameTiles.cpp" />
     <ClCompile Include="nvse\GameTypes.cpp" />
     <ClCompile Include="nvse\GameUI.cpp" />

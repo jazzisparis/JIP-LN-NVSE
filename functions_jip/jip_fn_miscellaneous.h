@@ -73,6 +73,8 @@ DEFINE_COMMAND_PLUGIN(ClearDeadActors, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetCameraMovement, 0, 2, kParams_TwoScriptVars);
 DEFINE_COMMAND_PLUGIN(GetReticleNode, 0, 2, kParams_OneOptionalFloat_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetInternalMarker, 0, 2, kParams_OneForm_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetPointRayCastPos, 0, 9, kParams_FiveFloats_ThreeScriptVars_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(TogglePlayerSneaking, 0, 1, kParams_OneInt);
 
 bool Cmd_DisableNavMeshAlt_Execute(COMMAND_ARGS)
 {
@@ -211,27 +213,15 @@ bool Cmd_SetFormDescription_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESForm *form;
 	char *buffer = GetStrArgBuffer();
-	if (!ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_SetFormDescription.numParams, &form))
-		return true;
-	TESDescription *description = DYNAMIC_CAST(form, TESForm, TESDescription);
-	if (!description && (NOT_ID(form, BGSNote) || !(description = ((BGSNote*)form)->noteText))) return true;
-	UInt16 newLen = StrLen(buffer);
-	char **findDesc, *newDesc;
-	if (!s_descriptionChanges.Insert(description, &findDesc))
+	if (ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_SetFormDescription.numParams, &form))
 	{
-		newDesc = *findDesc;
-		if (StrLen(newDesc) < newLen)
+		TESDescription *description = DYNAMIC_CAST(form, TESForm, TESDescription);
+		if (description || (IS_ID(form, BGSNote) && (description = ((BGSNote*)form)->noteText)))
 		{
-			GameHeapFree(newDesc);
-			newDesc = (char*)GameHeapAlloc(newLen + 1);
-			*findDesc = newDesc;
+			SetDescriptionAltText(description, buffer);
+			*result = 1;
 		}
 	}
-	else *findDesc = newDesc = (char*)GameHeapAlloc(newLen + 1);
-	StrCopy(newDesc, buffer);
-	*GameGlobals::CurrentDescription() = NULL;
-	HOOK_SET(GetDescription, true);
-	*result = 1;
 	return true;
 }
 
@@ -550,7 +540,7 @@ bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 		filter &= 0x3F;
 	}
 	NiVector3 coords;
-	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, 50000.0F, 0, filter))
+	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->WorldRotate(), 50000.0F, 0, filter))
 	{
 		ArrayElementL elements[3] = {coords.x, coords.y, coords.z};
 		AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
@@ -568,7 +558,7 @@ bool Cmd_GetReticleRange_Execute(COMMAND_ARGS)
 		filter &= 0x3F;
 	}
 	NiVector3 coords;
-	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, 50000.0F, 0, filter))
+	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->WorldRotate(), 50000.0F, 0, filter))
 		*result = Vector3Distance(&coords, &g_thePlayer->cameraPos);
 	else *result = -1;
 	return true;
@@ -1232,8 +1222,7 @@ bool Cmd_GetReticleNode_Execute(COMMAND_ARGS)
 	UInt32 filter = 6;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &filter))
 	{
-		filter &= 0x3F;
-		NiAVObject *rtclObject = GetRayCastObject(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, maxRange, 0, filter);
+		NiAVObject *rtclObject = GetRayCastObject(&g_thePlayer->cameraPos, &g_sceneGraph->camera->WorldRotate(), maxRange, 0, filter & 0x3F);
 		if (rtclObject) nodeName = rtclObject->GetName();
 	}
 	AssignString(PASS_COMMAND_ARGS, nodeName);
@@ -1255,5 +1244,37 @@ bool Cmd_SetInternalMarker_Execute(COMMAND_ARGS)
 			s_internalMarkerIDs.Insert(form->refID);
 		else s_internalMarkerIDs.Erase(form->refID);
 	}
+	return true;
+}
+
+bool Cmd_GetPointRayCastPos_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	NiVector3 pos, rot;
+	ScriptVar *outX, *outY, *outZ;
+	UInt32 filter = 6;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pos.x, &pos.y, &pos.z, &rot.x, &rot.z, &outX, &outY, &outZ, &filter))
+	{
+		rot.x *= kFltPId180;
+		rot.y = 0;
+		rot.z *= kFltPId180;
+		NiMatrix33 rotMat;
+		rotMat.RotationMatrixInv(&rot);
+		if (rot.RayCastCoords(&pos, &rotMat, 100000.0F, 4, filter & 0x3F))
+		{
+			outX->data.num = rot.x;
+			outY->data.num = rot.y;
+			outZ->data.num = rot.z;
+			*result = 1;
+		}
+	}
+	return true;
+}
+
+bool Cmd_TogglePlayerSneaking_Execute(COMMAND_ARGS)
+{
+	UInt32 toggle;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &toggle))
+		g_thePlayer->ToggleSneak(toggle != 0);
 	return true;
 }

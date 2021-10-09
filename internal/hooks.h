@@ -563,6 +563,26 @@ __declspec(naked) void DoQueuedCmdCallHook()
 
 UnorderedMap<TESDescription*, char*> s_descriptionChanges;
 
+void __fastcall SetDescriptionAltText(TESDescription *description, const char *altText)
+{
+	if (altText && *altText)
+	{
+		char **findDesc;
+		if (s_descriptionChanges.Insert(description, &findDesc))
+			HOOK_MOD(GetDescription, true);
+		else free(*findDesc);
+		*findDesc = CopyString(altText);
+	}
+	else
+	{
+		char *currText = s_descriptionChanges.GetErase(description);
+		if (!currText) return;
+		free(currText);
+		HOOK_MOD(GetDescription, false);
+	}
+	*GameGlobals::CurrentDescription() = nullptr;
+}
+
 __declspec(naked) void GetDescriptionHook()
 {
 	__asm
@@ -651,7 +671,7 @@ __declspec(naked) void __fastcall TextInputRefreshHook(TextEditMenu *menu)
 		push	dword ptr [ecx+0x3C]
 		push	kTileValue_string
 		mov		ecx, [ecx+0x28]
-		CALL_EAX(kAddr_TileSetString)
+		CALL_EAX(ADDR_TileSetString)
 	doneCursor:
 		mov		ax, [esi+0x38]
 		mov		ecx, 0x3F800000
@@ -662,16 +682,16 @@ __declspec(naked) void __fastcall TextInputRefreshHook(TextEditMenu *menu)
 		push	ecx
 		push	kTileValue_target
 		mov		ecx, [esi+0x2C]
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		push	kTileValue_user1
 		mov		ecx, [esi+0x4C]
-		CALL_EAX(kAddr_TileGetFloat)
+		CALL_EAX(ADDR_TileGetFloat)
 		push	1
 		push	ecx
 		fstp	dword ptr [esp]
 		push	kTileValue_user2
 		mov		ecx, [esi+0x4C]
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 	done:
 		pop		esi
 		retn
@@ -802,7 +822,10 @@ __declspec(naked) bool __stdcall TextInputKeyPressHook(UInt32 inputKey)
 		push	dword ptr [ecx+0x2C]
 		push	1
 		call	dword ptr ds:[0x1070040]
-		jmp		done
+	done:
+		mov		al, 1
+		pop		esi
+		retn	4
 	passInput:
 		call	HandleInputKey
 		test	al, al
@@ -822,10 +845,9 @@ __declspec(naked) bool __stdcall TextInputKeyPressHook(UInt32 inputKey)
 		push	dword ptr [esi+0x3C]
 		push	kTileValue_string
 		mov		ecx, [esi+0x28]
-		CALL_EAX(kAddr_TileSetString)
+		CALL_EAX(ADDR_TileSetString)
 		mov		ecx, esi
 		call	TextInputRefreshHook
-	done:
 		mov		al, 1
 		pop		esi
 		retn	4
@@ -1059,6 +1081,7 @@ __declspec(naked) void ResetHPWakeUpHook()
 
 typedef UnorderedMap<Actor*, EventCallbackScripts> ActorEventCallbacks;
 ActorEventCallbacks s_fireWeaponEventMap;
+EventCallbackScripts s_fireWeaponEventScripts;
 
 __declspec(naked) bool __fastcall RemoveAmmoHook(Actor *actor, int EDX, TESObjectWEAP *weapon)
 {
@@ -1066,18 +1089,25 @@ __declspec(naked) bool __fastcall RemoveAmmoHook(Actor *actor, int EDX, TESObjec
 	{
 		push	esi
 		mov		esi, ecx
+		mov		ecx, offset s_fireWeaponEventScripts
+		cmp		dword ptr [ecx+4], 0
+		jz		doneUnfiltered
+		push	dword ptr [esp+8]
+		push	esi
+		call	EventCallbackScripts::InvokeEventsThis1
+	doneUnfiltered:
 		test	byte ptr [esi+0x107], kHookActorFlag3_OnFireWeapon
-		jz		skipHandler
+		jz		doneFiltered
 		push	esi
 		mov		ecx, offset s_fireWeaponEventMap
 		call	ActorEventCallbacks::GetPtr
 		test	eax, eax
-		jz		skipHandler
+		jz		doneFiltered
 		push	dword ptr [esp+8]
 		push	esi
 		mov		ecx, eax
 		call	EventCallbackScripts::InvokeEventsThis1
-	skipHandler:
+	doneFiltered:
 		cmp		dword ptr [esi+0xC], 0x14
 		jz		retnTrue
 		test	byte ptr [esi+0x105], kHookActorFlag1_InfiniteAmmo
@@ -1093,10 +1123,10 @@ __declspec(naked) bool __fastcall RemoveAmmoHook(Actor *actor, int EDX, TESObjec
 		jz		retnFalse
 	retnTrue:
 		mov		al, 1
-		jmp		done
+		pop		esi
+		retn	4
 	retnFalse:
 		xor		al, al
-	done:
 		pop		esi
 		retn	4
 	}
@@ -1254,7 +1284,7 @@ __declspec(naked) void ReEquipAllHook()
 		push	edx
 		push	ecx
 		mov		ecx, [ebp+8]
-		CALL_EAX(kAddr_EquipItem)
+		CALL_EAX(ADDR_EquipItem)
 		push	1
 		mov		ecx, [ebp-0x28]
 		CALL_EAX(0x4459E0)
@@ -1327,7 +1357,7 @@ __declspec(naked) void WeaponSwitchUnequipHook()
 		mov		eax, [ebp-0xC]
 		push	dword ptr [eax+4]
 		push	dword ptr [ebp-8]
-		CALL_EAX(kAddr_UnequipItem)
+		CALL_EAX(ADDR_UnequipItem)
 	done:
 		retn
 	}
@@ -2275,7 +2305,7 @@ __declspec(naked) void SetTerminalModelHook()
 {
 	__asm
 	{
-		CALL_EAX(kAddr_PurgeTerminalModel)
+		CALL_EAX(ADDR_PurgeTerminalModel)
 		mov		eax, [eax]
 		test	eax, eax
 		jnz		done
@@ -2315,7 +2345,7 @@ __declspec(naked) void AddVATSTargetHook()
 		mov		ecx, [ebp-0x28]
 		mov		ecx, [ecx]
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		setnz	al
 		jnz		done
 		test	byte ptr [ecx+0x106], kHookActorFlag2_NonTargetable
@@ -2708,7 +2738,7 @@ __declspec(naked) void __fastcall InitPointLights(NiNode *niNode)
 		mov		eax, [ecx]
 		cmp		eax, kVtbl_NiPointLight
 		jz		isLight
-		cmp		dword ptr [eax+0xC], kAddr_ReturnThis
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
 		jnz		blockIter
 		call	InitPointLights
 		jmp		blockIter
@@ -2933,7 +2963,7 @@ __declspec(naked) void __fastcall AddPointLights(NiNode *objNode)
 		mov		eax, [ecx]
 		cmp		eax, kVtbl_NiPointLight
 		jz		isLight
-		cmp		dword ptr [eax+0xC], kAddr_ReturnThis
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
 		jnz		iterHead
 		call	AddPointLights
 		jmp		iterHead
@@ -2984,7 +3014,7 @@ __declspec(naked) void __fastcall HidePointLights(NiNode *objNode)
 		mov		eax, [ecx]
 		cmp		eax, kVtbl_NiPointLight
 		jz		isLight
-		cmp		dword ptr [eax+0xC], kAddr_ReturnThis
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
 		jnz		iterHead
 		call	HidePointLights
 		jmp		iterHead
@@ -3016,7 +3046,7 @@ __declspec(naked) void __fastcall DoInsertNode(NiAVObject *targetObj, const char
 		mov		edx, [esp+8]
 		jz		asParent
 		mov		eax, [ebx]
-		cmp		dword ptr [eax+0xC], kAddr_ReturnThis
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
 		jnz		done
 		call	NiNode::GetBlockByName
 		test	eax, eax
@@ -3039,7 +3069,7 @@ __declspec(naked) void __fastcall DoInsertNode(NiAVObject *targetObj, const char
 		test	eax, eax
 		jz		doCreate
 		mov		edx, [eax]
-		cmp		dword ptr [edx+0xC], kAddr_ReturnThis
+		cmp		dword ptr [edx+0xC], ADDR_ReturnThis
 		jnz		done
 		push	1
 		push	ebx
@@ -3260,7 +3290,7 @@ __declspec(naked) void __fastcall AppendBlockNameSuffixes(NiNode *node, const ch
 		test	ecx, ecx
 		jz		iterHead
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0xC], kAddr_ReturnThis
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
 		jnz		notNode
 		call	AppendBlockNameSuffixes
 		jmp		iterHead
@@ -3383,7 +3413,7 @@ __declspec(naked) void __fastcall DoAttachModels(TESForm *form, int EDX, NiNode 
 		test	eax, eax
 		jz		nodeHead
 		mov		edx, [eax]
-		cmp		dword ptr [edx+0xC], kAddr_ReturnThis
+		cmp		dword ptr [edx+0xC], ADDR_ReturnThis
 		jnz		nodeHead
 	gotDest:
 		mov		[ebp-0xC], eax
@@ -3542,7 +3572,7 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		mov		dword ptr [edx], 0
 	doneSmph1:
 		mov		eax, [edi]
-		cmp		dword ptr [eax+0x100], kAddr_ReturnTrue
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jz		doneSmph2
 		sub		edx, 4
 		lock dec dword ptr [edx]
@@ -3560,7 +3590,7 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		jz		doneFade
 		and		byte ptr [edi+0x5F], ~kHookRefFlag5F_Update3D
 		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x10], kAddr_ReturnThis
+		cmp		dword ptr [eax+0x10], ADDR_ReturnThis
 		jnz		doneFade
 		fld1
 		fst		dword ptr [ecx+0xB4]
@@ -3637,7 +3667,7 @@ __declspec(naked) void LoadBip01SlotHook()
 		pop		ecx
 		mov		eax, [ebp-0x40]
 		mov		edx, [eax]
-		cmp		dword ptr [edx+0xC], kAddr_ReturnThis
+		cmp		dword ptr [edx+0xC], ADDR_ReturnThis
 		jnz		done
 		test	byte ptr [ecx+6], kHookFormFlag6_InsertObject
 		jz		doLights
@@ -3720,12 +3750,12 @@ void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm, NiPointLight *pt
 		v07 *= v01;
 		if (ptLight->m_flags & 0x20000000)
 		{
-			ptLight->m_localTranslate.x += v05 - ptLight->ambientColor.r;
-			ptLight->m_localTranslate.y += v06 - ptLight->ambientColor.g;
-			ptLight->m_localTranslate.z += v07 - ptLight->ambientColor.b;
+			ptLight->LocalTranslate().x += v05 - ptLight->ambientColor.r;
+			ptLight->LocalTranslate().y += v06 - ptLight->ambientColor.g;
+			ptLight->LocalTranslate().z += v07 - ptLight->ambientColor.b;
 			ptLight->ambientColor = {v05, v06, v07};
 		}
-		else ptLight->m_localTranslate = {v05, v06, v07};
+		else ptLight->LocalTranslate() = {v05, v06, v07};
 		v01 = sin((v02 + 1.7F) * 1.1F) + 1.0F;
 		v01 *= (sin(v03 * 1.3F) + 1.0F) * 0.0833333F;
 		v01 += sin(v04 * 3.0F) * 0.2F;
@@ -4040,7 +4070,7 @@ __declspec(naked) void ProcessHUDMainUI()
 		fstp	dword ptr [esp]
 		push	kTileValue_dragx
 		mov		ecx, esi
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		mov		ecx, esi
 		CALL_EAX(0xA01440)
 		fstp	dword ptr [ebp-0x14]
@@ -4054,7 +4084,7 @@ __declspec(naked) void ProcessHUDMainUI()
 		fstp	dword ptr [esp]
 		push	kTileValue_dragy
 		mov		ecx, esi
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		jmp		done
 	notPressed:
 		xor		edx, edx
@@ -4065,12 +4095,12 @@ __declspec(naked) void ProcessHUDMainUI()
 		push	0xBF800000
 		push	kTileValue_dragstartx
 		mov		ecx, esi
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		push	1
 		push	0xBF800000
 		push	kTileValue_dragstarty
 		mov		ecx, esi
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		mov		s_lastLMBState, 0
 	pickTile:
 		push	0
@@ -4098,13 +4128,13 @@ __declspec(naked) void ProcessHUDMainUI()
 		push	0x3F800000
 		push	kTileValue_clicked
 		mov		ecx, esi
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		push	1
 		push	0
 		push	kTileValue_clicked
 		mov		ecx, esi
-		CALL_EAX(kAddr_TileSetFloat)
-		push	kTileValue_id
+		CALL_EAX(ADDR_TileSetFloat)
+		mov		edx, kTileValue_id
 		mov		ecx, esi
 		call	Tile::GetValue
 		mov		edx, 0xFFFFFFFF
@@ -4155,7 +4185,7 @@ __declspec(naked) void ProcessHUDMainUI()
 		fstp	dword ptr [esp]
 		push	kTileValue_dragx
 		mov		ecx, esi
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		push	kTileValue_y
 		mov		ecx, esi
 		CALL_EAX(0xA011B0)
@@ -4166,21 +4196,21 @@ __declspec(naked) void ProcessHUDMainUI()
 		fstp	dword ptr [esp]
 		push	kTileValue_dragy
 		mov		ecx, esi
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		fild	dword ptr [ebx+0x50]
 		push	1
 		push	ecx
 		fstp	dword ptr [esp]
 		push	kTileValue_dragstartx
 		mov		ecx, esi
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		fild	dword ptr [ebx+0x5C]
 		push	1
 		push	ecx
 		fstp	dword ptr [esp]
 		push	kTileValue_dragstarty
 		mov		ecx, esi
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		fld		dword ptr [ebp-8]
 		fsub	dword ptr [ebp-0x10]
 		push	1
@@ -4188,7 +4218,7 @@ __declspec(naked) void ProcessHUDMainUI()
 		fstp	dword ptr [esp]
 		push	kTileValue_dragoffsetx
 		mov		ecx, esi
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		fld		dword ptr [ebp-0xC]
 		fsub	dword ptr [ebp-0x14]
 		push	1
@@ -4196,7 +4226,7 @@ __declspec(naked) void ProcessHUDMainUI()
 		fstp	dword ptr [esp]
 		push	kTileValue_dragoffsety
 		mov		ecx, esi
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		xor		edx, edx
 		mov		[ebx+0x54], edx
 		mov		[ebx+0x58], edx
@@ -4209,7 +4239,7 @@ __declspec(naked) void ProcessHUDMainUI()
 		test	eax, eax
 		jz		done
 		mov		ecx, 0xFFFFFF88
-		xor		edx, edx
+		cdq
 		idiv	ecx
 		test	eax, eax
 		jz		done
@@ -4233,12 +4263,12 @@ __declspec(naked) void ProcessHUDMainUI()
 		fstp	dword ptr [esp]
 		push	kTileValue_wheelmoved
 		mov		ecx, esi
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		push	1
 		push	0
 		push	kTileValue_wheelmoved
 		mov		ecx, esi
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		jmp		done
 	handleMouseover:
 		test	edi, edi
@@ -4247,7 +4277,7 @@ __declspec(naked) void ProcessHUDMainUI()
 		push	0
 		push	kTileValue_mouseover
 		mov		ecx, edi
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 	noLast:
 		mov		[ebx+0xCC], esi
 		test	esi, esi
@@ -4259,7 +4289,7 @@ __declspec(naked) void ProcessHUDMainUI()
 		push	0x3F800000
 		push	kTileValue_mouseover
 		mov		ecx, esi
-		CALL_EAX(kAddr_TileSetFloat)
+		CALL_EAX(ADDR_TileSetFloat)
 		mov		esi, g_HUDMainMenu
 	noCurr:
 		mov		[ebx+0xD0], esi

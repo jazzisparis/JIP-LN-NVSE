@@ -129,7 +129,7 @@ public:
 	UInt32			priority;				// 188
 	UInt32			unk18C[3];				// 18C
 };
-STATIC_ASSERT(sizeof(BSGameSound) == 0x198);
+static_assert(sizeof(BSGameSound) == 0x198);
 
 // 230
 class BSWin32GameSound : public BSGameSound
@@ -153,7 +153,7 @@ public:
 	NiVector3		originWorldPos;			// 218
 	UInt32			unk224[3];				// 224
 };
-STATIC_ASSERT(sizeof(BSWin32GameSound) == 0x230);
+static_assert(sizeof(BSWin32GameSound) == 0x230);
 
 enum AudioRequestTypes
 {
@@ -263,7 +263,7 @@ public:
 
 	__forceinline static BSAudioManager *Get() {return (BSAudioManager*)0x11F6EF0;}
 };
-STATIC_ASSERT(sizeof(BSAudioManager) == 0x188);
+static_assert(sizeof(BSAudioManager) == 0x188);
 
 class BSAudioListener
 {
@@ -301,7 +301,7 @@ public:
 	NiVector3				topOrientation;		// 4C
 	NiVector3				frontOrientation;	// 58
 };
-STATIC_ASSERT(sizeof(BSWin32AudioListener) == 0x64);
+static_assert(sizeof(BSWin32AudioListener) == 0x64);
 
 class IDirectSound8;
 class IDirectSoundBuffer;
@@ -341,7 +341,7 @@ public:
 
 	__forceinline static BSWin32Audio *Get() {return *(BSWin32Audio**)0x11F6D98;}
 };
-STATIC_ASSERT(sizeof(BSWin32Audio) == 0xA4);
+static_assert(sizeof(BSWin32Audio) == 0xA4);
 
 // 30
 class BSThread
@@ -397,4 +397,32 @@ struct PlayingMusic
 
 	__forceinline static PlayingMusic *Get() {return (PlayingMusic*)0x11DD0F0;}
 };
-STATIC_ASSERT(sizeof(PlayingMusic) == 0x288);
+static_assert(sizeof(PlayingMusic) == 0x288);
+
+// 0C
+struct Sound
+{
+	UInt32		soundKey;	// 00
+	UInt8		byte04;		// 04
+	UInt8		pad05[3];	// 05
+	UInt32		unk08;		// 08
+
+	Sound() : soundKey(0xFFFFFFFF), byte04(0), unk08(0) {}
+
+	__forceinline void SetPos(const NiVector3 &posVec)
+	{
+		ThisCall(0xAD8B60, this, posVec.x, posVec.y, posVec.z);
+	}
+	__forceinline void SetNiNode(NiNode *node)
+	{
+		ThisCall(0xAD8F20, this, node);
+	}
+	__forceinline void Play()
+	{
+		ThisCall(0xAD8830, this, 0);
+	}
+
+	static void PlayEDID(const char *soundEDID, UInt32 flags, TESObjectREFR *refr);
+	static void PlayFile(const char *filePath, UInt32 flags, TESObjectREFR *refr);
+	static void PlayTESSound(TESSound *gameSound, UInt32 flags, TESObjectREFR *refr);
+};

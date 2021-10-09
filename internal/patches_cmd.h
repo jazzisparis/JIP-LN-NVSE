@@ -442,8 +442,6 @@ bool Hook_Update3D_Execute(COMMAND_ARGS)
 	return true;
 }
 
-Cmd_Execute IsPluginInstalled, GetPluginVersion;
-
 bool __fastcall IsJIPAlias(const char *pluginName)
 {
 	return !StrCompare(pluginName, "JIP NVSE Plugin") || !StrCompare(pluginName, "lutana_nvse") || StrBeginsCI(pluginName, "JIP LN NVSE");
@@ -452,12 +450,8 @@ bool __fastcall IsJIPAlias(const char *pluginName)
 bool Hook_IsPluginInstalled_Execute(COMMAND_ARGS)
 {
 	char pluginName[0x80];
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pluginName))
-	{
-		if (IsJIPAlias(pluginName))
-			*result = 1;
-		else IsPluginInstalled(PASS_COMMAND_ARGS);
-	}
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pluginName) && (GetPluginInfoByName(pluginName) || IsJIPAlias(pluginName)))
+		*result = 1;
 	else *result = 0;
 	DoConsolePrint(result);
 	return true;
@@ -465,14 +459,18 @@ bool Hook_IsPluginInstalled_Execute(COMMAND_ARGS)
 
 bool Hook_GetPluginVersion_Execute(COMMAND_ARGS)
 {
+	*result = -1;
 	char pluginName[0x80];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pluginName))
 	{
 		if (IsJIPAlias(pluginName))
 			*result = JIP_LN_VERSION;
-		else GetPluginVersion(PASS_COMMAND_ARGS);
+		else
+		{
+			const PluginInfo *pluginInfo = GetPluginInfoByName(pluginName);
+			if (pluginInfo) *result = (int)pluginInfo->version;
+		}
 	}
-	else *result = 0;
 	DoConsolePrint(result);
 	return true;
 }
@@ -529,10 +527,8 @@ void InitCmdPatches()
 	cmdInfo = GetCmdByOpcode(0x152D);
 	cmdInfo->execute = Hook_Update3D_Execute;
 	cmdInfo = GetCmdByOpcode(0x15DF);
-	IsPluginInstalled = cmdInfo->execute;
 	cmdInfo->execute = Hook_IsPluginInstalled_Execute;
 	cmdInfo = GetCmdByOpcode(0x15E0);
-	GetPluginVersion = cmdInfo->execute;
 	cmdInfo->execute = Hook_GetPluginVersion_Execute;
 
 	SayTo = GetCmdByOpcode(0x1034)->execute;

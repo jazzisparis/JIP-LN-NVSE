@@ -1,15 +1,11 @@
 #pragma once
 
-struct Sound;
-
 // 68
 class TESObjectREFR : public TESForm
 {
 public:
-	MEMBER_FN_PREFIX(TESObjectREFR);
-
 	/*138*/virtual void		Unk_4E(void);	// GetStartingPosition(Position, Rotation, WorldOrCell)
-	/*13C*/virtual void		SayTopic(Sound *sound, TESTopic *topic, TESObjectREFR *target, UInt8 arg4, UInt8 arg5, UInt8 arg6, UInt8 arg7, UInt8 arg8);
+	/*13C*/virtual void		SayTopic(Sound *sound, TESTopic *topic, TESObjectREFR *target, bool dontUseNiNode, bool notVoice, bool useLipFile, UInt8 unused, bool subtitles);
 	/*140*/virtual void		Unk_50(void);
 	/*144*/virtual void		Unk_51(void);
 	/*148*/virtual bool		CastShadows();
@@ -46,7 +42,7 @@ public:
 	/*1C4*/virtual void		AnimateNiNode();
 	/*1C8*/virtual NiNode	*GenerateNiNode(bool arg1);
 	/*1CC*/virtual void		Set3D(NiNode* niNode, bool unloadArt);
-	/*1D0*/virtual NiNode	*GetNiNode();
+	/*1D0*/virtual NiNode	*GetNiNode_v();
 	/*1D4*/virtual void		Unk_75(void);
 	/*1D8*/virtual void		Unk_76(void);
 	/*1DC*/virtual void		Unk_77(void);
@@ -94,7 +90,7 @@ public:
 		UInt32			unk04;			// 04	0-0x13 when fully-underwater; exterior only
 		float			waterLevel;		// 08
 		float			unk0C;			// 0C
-		UInt32			unk10;			// 10
+		UInt32			flags;			// 10
 		NiNode			*niNode14;		// 14
 		NiNode			*niNode18;		// 18
 	};
@@ -108,19 +104,16 @@ public:
 	EditorData	editorData;			// +04
 #endif
 
-	TESChildCell	childCell;				// 018
+	TESChildCell	childCell;		// 18
 
-	TESSound		*loopSound;				// 01C
-
-	TESForm			*baseForm;				// 020
-	
-	float			rotX, rotY, rotZ;		// 024 - either public or accessed via simple inline accessor common to all child classes
-	float			posX, posY, posZ;		// 030 - seems to be private
-	float			scale;					// 03C 
-
-	TESObjectCELL	*parentCell;			// 040
-	ExtraDataList	extraDataList;			// 044
-	RenderState		*renderState;			// 064
+	TESSound		*loopSound;		// 1C
+	TESForm			*baseForm;		// 20
+	NiVector3		rotation;		// 24
+	NiVector3		position;		// 30
+	float			scale;			// 3C 
+	TESObjectCELL	*parentCell;	// 40
+	ExtraDataList	extraDataList;	// 44
+	RenderState		*renderState;	// 64
 
 	ScriptEventList *GetEventList() const;
 
@@ -130,8 +123,7 @@ public:
 	bool IsDeleted() const {return (flags & kFlags_Deleted) != 0;}
 	bool IsDestroyed() const {return (flags & kFlags_Destroyed) != 0;}
 
-	NiVector3 *PosVector() {return (NiVector3*)&posX;}
-	NiPoint2 *PosXY() {return (NiPoint2*)&posX;}
+	inline NiPoint2 *PosXY() const {return (NiPoint2*)&position;}
 
 	void Update3D();
 	TESContainer *GetContainer();
@@ -149,9 +141,11 @@ public:
 	TESWorldSpace *GetParentWorld();
 	bool __fastcall GetInSameCellOrWorld(TESObjectREFR *target);
 	float __vectorcall GetDistance(TESObjectREFR *target);
-	void SetPos(NiVector3 *posVector);
-	void SetAngle(NiVector3 *rotVector);
+	void SetPos(NiVector4 *posVector);
+	void SetAngle(NiVector4 *rotVector, bool setLocal);
 	void MoveToCell(TESObjectCELL *cell, NiVector3 *posVector);
+	bool __fastcall GetTransformedPos(NiVector4 *posMods);
+	void __fastcall Rotate(NiVector4 *rotVector);
 	bool Disable();
 	void DeleteReference();
 	bhkCharacterController *GetCharacterController();
@@ -162,17 +156,19 @@ public:
 	void SwapTexture(const char *blockName, const char *filePath, UInt32 texIdx);
 	bool SetLinkedRef(TESObjectREFR *linkObj, UInt8 modIdx = 0xFF);
 	bool ValidForHooks();
+	NiNode *GetNiNode();
 	NiAVObject* __fastcall GetNiBlock(const char *blockName);
 	NiNode* __fastcall GetNode(const char *nodeName);
-	hkpRigidBody *GetRigidBody(const char *nodeName);
-	bool RunScriptSource(char *sourceStr, bool doFree);
+	hkpRigidBody* __fastcall GetRigidBody(const char *blockName);
 
 	static TESObjectREFR* __stdcall Create(bool bTemp = false);
 
-	MEMBER_FN_PREFIX(TESObjectREFR);
-	DEFINE_MEMBER_FN(Activate, bool, 0x00573170, TESObjectREFR*, UInt32, UInt32, UInt32);	// Usage Activate(actionRef, 0, 0, 1); found inside Cmd_Activate_Execute as the last call (190 bytes)
+	__forceinline bool Activate(TESObjectREFR *actionRef, UInt32 arg2 = 0, UInt32 arg3 = 0, UInt32 arg4 = 1)
+	{
+		return ThisCall<bool>(0x573170, this, actionRef, arg2, arg3, arg4);
+	}
 };
-STATIC_ASSERT(sizeof(TESObjectREFR) == 0x068);
+static_assert(sizeof(TESObjectREFR) == 0x068);
 
 extern TESObjectREFR *s_tempPosMarker;
 
@@ -250,7 +246,7 @@ public:
 	UInt8			unk86;			// 86 - loaded
 	UInt8			unk87;			// 87	Init'd to the inverse of NoLowLevelProcessing
 };
-STATIC_ASSERT(sizeof(MobileObject) == 0x88);
+static_assert(sizeof(MobileObject) == 0x88);
 
 typedef tList<ActiveEffect> ActiveEffectList;
 
@@ -281,7 +277,7 @@ public:
 
 	UInt32	unk04[2];	// 04
 };
-STATIC_ASSERT(sizeof(MagicCaster) == 0xC);
+static_assert(sizeof(MagicCaster) == 0xC);
 
 // 10
 class MagicTarget
@@ -304,7 +300,7 @@ public:
 
 	void RemoveEffect(EffectItem *effItem);
 };
-STATIC_ASSERT(sizeof(MagicTarget) == 0x10);
+static_assert(sizeof(MagicTarget) == 0x10);
 
 class PathingRequest;
 class PathingSolution;
@@ -326,29 +322,40 @@ public:
 class ActorMover
 {
 public:
-	virtual void		Unk_00(void);
+	virtual void		Destroy(bool doFree);
 	virtual void		Unk_01(void);
-	virtual void		ClearMovementFlag(void);
-	virtual void		SetMovementFlag(void);
+	virtual void		ClearMovementFlag(UInt32 flag);
+	virtual void		SetMovementFlags(UInt32 movementFlags);
 	virtual void		Unk_04(void);
 	virtual void		Unk_05(void);
-	virtual void		Unk_06(void);
+	virtual void		HandleTurnAnimationTimer(float timePassed);
 	virtual void		Unk_07(void);
 	virtual UInt32		GetMovementFlags();
-		//	Running		0x200
-		//	Sneaking	0x400
-
-		// bit 11 = swimming 
-		// bit 9 = sneaking
-		// bit 8 = run
-		// bit 7 = walk
-		// bit 0 = keep moving (Q)
 	virtual void		Unk_09(void);
 	virtual void		Unk_0A(void);
 	virtual void		Unk_0B(void);
 	virtual void		Unk_0C(void);
 	virtual void		Unk_0D(void);
 	virtual void		Unk_0E(void);
+
+	enum MovementFlags
+	{
+		kMoveFlag_Forward =		1,
+		kMoveFlag_Backward =	2,
+		kMoveFlag_Left =		4,
+		kMoveFlag_Right =		8,
+		kMoveFlag_TurnLeft =	0x10,
+		kMoveFlag_TurnRight =	0x20,
+		kMoveFlag_IsKeyboard =	0x40,	// (returns that the movement is for non-controller)
+		kMoveFlag_Walking =		0x100,
+		kMoveFlag_Running =		0x200,
+		kMoveFlag_Sneaking =	0x400,
+		kMoveFlag_Swimming =	0x800,
+		kMoveFlag_Jump =		0x1000,
+		kMoveFlag_Flying =		0x2000,
+		kMoveFlag_Fall =		0x4000,
+		kMoveFlag_Slide =		0x8000
+	};
 
 	UInt32						unk04[6];			// 04
 	PathingRequest				*pathingRequest;	// 1C
@@ -363,7 +370,10 @@ public:
 	UInt32						unk40;				// 40
 	PathingLocation				pathingLocation;	// 44
 	UInt32						unk6C;				// 6C
-	UInt8						unk70[4];			// 70
+	UInt8						byte70;				// 70
+	UInt8						byte71;				// 71
+	UInt8						byte72;				// 72
+	UInt8						byte73;				// 73
 	UInt32						unk74;				// 74
 	UInt32						unk78;				// 78
 	UInt32						unk7C;				// 7C
@@ -379,8 +389,8 @@ public:
 	float			flt8C;				// 8C
 	float			flt90;				// 90
 	UInt32			pcMovementFlags;	// 94
-	UInt32			unk98;				// 98
-	UInt32			unk9C;				// 9C
+	UInt32			turnAnimFlags;		// 98
+	float			turnAnimMinTime;	// 9C
 };
 
 typedef tList<BGSEntryPointPerkEntry> PerkEntryPointList;
@@ -446,7 +456,7 @@ public:
 	/*3C4*/virtual void		ResetArmorDRDT();
 	/*3C8*/virtual bool		DamageWeaponHealth(ContChangesEntry *weapomInfo, float damage, int unused);
 	/*3CC*/virtual void		Unk_F3(void);
-	/*3D0*/virtual void		Unk_F4(void);
+	/*3D0*/virtual void		DoActivate(TESObjectREFR *activatedRef, UInt32 count, bool arg3);
 	/*3D4*/virtual void		Unk_F5(void);
 	/*3D8*/virtual void		Unk_F6(void);
 	/*3DC*/virtual void		Unk_F7(void);
@@ -1000,8 +1010,10 @@ public:
 		return ThisCall<bool>(0x950110, this, toggleON);
 	}
 	char GetDetectionState();
+
+	void ToggleSneak(bool toggle);
 };
-STATIC_ASSERT(sizeof(PlayerCharacter) == 0xE50);
+static_assert(sizeof(PlayerCharacter) == 0xE50);
 
 extern PlayerCharacter *g_thePlayer;
 
@@ -1081,7 +1093,7 @@ public:
 	tList<ImpactData>	impactDataList;	// 088
 	UInt8				hasImpacted;	// 090
 	UInt8				pad091[3];		// 091
-	float				unk094[13];		// 094
+	NiTransform			transform;		// 094
 	UInt32				projFlags;		// 0C8
 	float				speedMult1;		// 0CC
 	float				speedMult2;		// 0D0
@@ -1117,7 +1129,7 @@ public:
 
 	void GetData(UInt32 dataType, double *result);
 };
-STATIC_ASSERT(sizeof(Projectile) == 0x150);
+static_assert(sizeof(Projectile) == 0x150);
 
 // 154
 class BeamProjectile : public Projectile
@@ -1188,4 +1200,4 @@ public:
 	UInt32			unk0D4[11];		// 0D4
 	float			unk100;			// 100
 };
-STATIC_ASSERT(sizeof(Explosion) == 0x104);
+static_assert(sizeof(Explosion) == 0x104);
