@@ -116,8 +116,7 @@ __declspec(naked) void __fastcall hkQuaternion::operator*=(const hkQuaternion &r
 	{
 		pshufd	xmm0, [ecx], 0x93
 		pshufd	xmm1, [edx], 0x93
-		mov		edx, 0x80000000
-		movd	xmm2, edx
+		movss	xmm2, kSSEChangeSignMaskPS0
 		movaps	xmm3, xmm1
 		mulps	xmm3, xmm0
 		pshufd	xmm4, xmm2, 1
@@ -163,10 +162,12 @@ __declspec(naked) hkQuaternion *hkQuaternion::Normalize()
 		pxor	xmm2, xmm2
 		comiss	xmm1, xmm2
 		jz		zeroLen
-		rsqrtss	xmm2, xmm1
-		shufps	xmm2, xmm2, 0
-		mulps	xmm2, xmm0
-		movaps	[eax], xmm2
+		sqrtss	xmm2, xmm1
+		movss	xmm1, kFltOne
+		divss	xmm1, xmm2
+		shufps	xmm1, xmm1, 0
+		mulps	xmm0, xmm1
+		movaps	[eax], xmm0
 		retn
 	zeroLen:
 		movaps	[eax], xmm2
@@ -175,15 +176,58 @@ __declspec(naked) hkQuaternion *hkQuaternion::Normalize()
     }
 }
 
-void hkQuaternion::ToEulerYPR(NiVector3 &ypr) const
+__declspec(naked) void __fastcall hkQuaternion::ToEulerYPR(NiVector3 &ypr) const
 {
-	ypr.x = dATan2(2.0F * (w * x + y * z), 1.0F - (2.0F * (x * x + y * y)));
-	float sinp = 2.0F * (w * y - z * x);
-	if (abs(sinp) < 1.0F)
-		ypr.y = dASin(sinp);
-	else
-		ypr.y = (sinp > 0) ? kFltPId2 : -kFltPId2;
-	ypr.z = dATan2(2.0F * (w * z + x * y), 1.0F - (2.0F * (y * y + z * z)));
+	__asm
+	{
+		push	esi
+		push	edi
+		mov		esi, ecx
+		mov		edi, edx
+		movaps	xmm7, [esi]
+		pshufd	xmm0, xmm7, 0x47
+		pshufd	xmm1, xmm7, 0x48
+		mulps	xmm0, xmm1
+		haddps	xmm0, xmm0
+		addps	xmm0, xmm0
+		pshufd	xmm1, xmm0, 1
+		xorps	xmm1, kSSEChangeSignMaskPS0
+		addss	xmm1, kFltOne
+		call	dATan2
+		movss	[edi], xmm0
+		pshufd	xmm0, xmm7, 0xB
+		pshufd	xmm1, xmm7, 1
+		mulps	xmm0, xmm1
+		hsubps	xmm0, xmm0
+		addss	xmm0, xmm0
+		movss	xmm1, xmm0
+		andps	xmm1, kSSERemoveSignMaskPS
+		comiss	xmm1, kFltOne
+		jnb		invSinP
+		call	dASin
+		jmp		doneY
+	invSinP:
+		pxor	xmm2, xmm2
+		comiss	xmm0, xmm2
+		movss	xmm0, kFltPId2
+		ja		doneY
+		xorps	xmm0, kSSEChangeSignMaskPS0
+	doneY:
+		movss	[edi+4], xmm0
+		pshufd	xmm0, xmm7, 0x93
+		pshufd	xmm1, xmm7, 0x96
+		mulps	xmm0, xmm1
+		haddps	xmm0, xmm0
+		addps	xmm0, xmm0
+		pshufd	xmm1, xmm0, 1
+		xorps	xmm1, kSSEChangeSignMaskPS0
+		addss	xmm1, kFltOne
+		call	dATan2
+		movss	[edi+8], xmm0
+		pop		edi
+		pop		esi
+		retn
+	}
 }
 
 __declspec(naked) void __fastcall hkMatrix3x4::operator=(const NiMatrix33 &inMatrix)
