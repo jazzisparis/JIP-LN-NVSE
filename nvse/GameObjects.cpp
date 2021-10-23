@@ -1696,13 +1696,9 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		mov		eax, [esp+0x10]
 		test	eax, eax
 		jnz		useRef
-		fld		dword ptr [esp+0xC]
-		fmul	kDblPId180
-		fsincos
-		fstp	dword ptr [esp+0xC]
-		movss	xmm1, [esp+0xC]
-		fstp	dword ptr [esp+0xC]
 		movss	xmm0, [esp+0xC]
+		mulss	xmm0, kFltPId180
+		call	GetSinCos
 		jmp		doneAngle
 	useRef:
 		movq	xmm0, qword ptr [esi+0x30]
@@ -1717,7 +1713,6 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		rsqrtss	xmm1, xmm1
 		unpcklps	xmm1, xmm1
 		mulps	xmm0, xmm1
-		pshufd	xmm1, xmm0, 1
 	doneAngle:
 		cmp		[esp+0x14], 0
 		jz		doneForce
@@ -1733,14 +1728,11 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		movd	xmm3, edx
 		mulss	xmm3, kPushTime
 		mulss	xmm2, xmm3
-		mulss	xmm0, xmm2
-		mulss	xmm1, xmm2
-		pxor	xmm2, xmm2
+		unpcklps	xmm2, xmm2
+		mulps	xmm0, xmm2
 		mov		esi, [esi+0x68]
 		mov		esi, [esi+0x138]
-		movss	[esi+0x500], xmm0
-		movss	[esi+0x504], xmm1
-		movq	qword ptr [esi+0x508], xmm2
+		movaps	[esi+0x500], xmm0
 		movss	[esi+0x524], xmm3
 		or		byte ptr [esi+0x417], 0x80
 	done:

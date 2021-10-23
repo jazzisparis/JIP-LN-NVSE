@@ -778,21 +778,16 @@ bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 		while (++startIdx < 9);
 		if (rotationKeys)
 		{
-			NiQuaternion quaternion;
-			rotYPR.x *= kFltPId180;
-			rotYPR.y *= kFltPId180;
-			rotYPR.z *= kFltPId180;
-			rotYPR.ToQuaternion(quaternion);
+			rotYPR *= kFltPId180;
+			NiQuaternion quaternion = rotYPR;
 			rotationKeys[1].value = quaternion;
 			rotationKeys[1].quaternion20 = quaternion;
 			rotationKeys[1].quaternion30 = quaternion;
 			rotationKeys[2].value = quaternion;
 			rotationKeys[2].quaternion20 = quaternion;
 			rotationKeys[2].quaternion30 = quaternion;
-			rotYPR.x *= -0.5;
-			rotYPR.y *= -0.5;
-			rotYPR.z *= -0.5;
-			rotYPR.ToQuaternion(quaternion);
+			rotYPR *= -0.5;
+			quaternion = rotYPR;
 			rotationKeys[0].quaternion20 = quaternion;
 			rotationKeys[0].quaternion30 = quaternion;
 			while (++startIdx < 8)
@@ -1259,7 +1254,7 @@ bool Cmd_GetPointRayCastPos_Execute(COMMAND_ARGS)
 		rot.y = 0;
 		rot.z *= kFltPId180;
 		NiMatrix33 rotMat;
-		rotMat.RotationMatrixInv(&rot);
+		rotMat.RotationMatrixInv(rot);
 		if (rot.RayCastCoords(&pos, &rotMat, 100000.0F, 4, filter & 0x3F))
 		{
 			outX->data.num = rot.x;

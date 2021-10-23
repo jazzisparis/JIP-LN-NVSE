@@ -9,9 +9,11 @@ kFltPId180 = 0.01745329238F,
 kFlt1d10 = 0.1F,
 kFltHalf = 0.5F,
 kFltOne = 1.0F,
-kFltPId2 = 1.5707963268F,
+kFltPId2 = 1.570796371F,
+kFltPI = 3.141592741F,
+kFltPIx2 = 6.283185482F,
 kFlt10 = 10.0F,
-kFlt180dPI = 57.2957795F,
+kFlt180dPI = 57.29578018F,
 kFlt100 = 100.0F,
 kFlt200 = 200.0F,
 kFlt1000 = 1000.0F,
@@ -24,6 +26,7 @@ kDbl180dPI = 57.29577951308232088;
 alignas(16) const UInt32
 kSSERemoveSignMaskPS[] = {0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF},
 kSSEChangeSignMaskPS[] = {0x80000000, 0x80000000, 0x80000000, 0x80000000},
+kSSEChangeSignMaskPS0[] = {0x80000000, 0, 0, 0},
 kSSEDiscard4thPS[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000};
 
 alignas(16) const UInt64
@@ -261,6 +264,203 @@ __declspec(naked) int __vectorcall iceil(float value)
 		retn
 	isNeg:
 		cvttss2si	eax, xmm0
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall dCos(float angle)
+{
+	static const float kFlt2dPI = 0.6366197467F, kCosCalc1 = 0.00002315393249F, kCosCalc2 = 0.001385370386F, kCosCalc3 = 0.04166358337F, kCosCalc4 = 0.4999990463F, kCosCalc5 = 0.9999999404F;
+	__asm
+	{
+		movss	xmm1, xmm0
+		andps	xmm0, kSSERemoveSignMaskPS
+		movss	xmm4, kFltPIx2
+		comiss	xmm0, xmm4
+		jb		perdOK
+		subss	xmm0, xmm4
+	perdOK:
+		movss	xmm2, kFlt2dPI
+		mulss	xmm2, xmm0
+		cvttss2si	eax, xmm2
+		movss	xmm3, kSSEChangeSignMaskPS0
+		test	eax, eax
+		jz		doCalc
+		cmp		eax, 2
+		ja		fourthQ
+		subss	xmm0, kFltPI
+		jz		doCalc
+		xorps	xmm0, xmm3
+		jmp		doCalc
+	fourthQ:
+		subss	xmm0, xmm4
+		xorps	xmm0, xmm3
+	doCalc:
+		mulss	xmm0, xmm0
+		movss	xmm2, kCosCalc1
+		mulss	xmm2, xmm0
+		subss	xmm2, kCosCalc2
+		mulss	xmm2, xmm0
+		addss	xmm2, kCosCalc3
+		mulss	xmm2, xmm0
+		subss	xmm2, kCosCalc4
+		mulss	xmm0, xmm2
+		addss	xmm0, kCosCalc5
+		test	eax, 3
+		jp		doneCalc
+		xorps	xmm0, xmm3
+	doneCalc:
+		mov		ecx, 3
+		sub		ecx, eax
+		pxor	xmm2, xmm2
+		comiss	xmm1, xmm2
+		cmovb	eax, ecx
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall dSin(float angle)
+{
+	__asm
+	{
+		movss	xmm1, xmm0
+		movss	xmm0, kFltPId2
+		subss	xmm0, xmm1
+		jmp		dCos
+	}
+}
+
+__declspec(naked) __m128 __vectorcall GetSinCos(float angle)
+{
+	static const UInt32 kSineSignMask[] = {0, 0, 0x80000000, 0x80000000};
+	__asm
+	{
+		call	dCos
+		unpcklps	xmm0, xmm0
+		mulss	xmm0, xmm0
+		movss	xmm1, kFltOne
+		subss	xmm1, xmm0
+		sqrtss	xmm0, xmm1
+		movss	xmm1, kSineSignMask[eax*4]
+		xorps	xmm0, xmm1
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall dATan(float x)
+{
+	static const float kFltTanPId12 = 0.2679491937F, kFltTanPId6 = 0.5773502588F, kFltPId6 = 0.5235987902F, kFltTerm1 = 1.686762929F, kFltTerm2 = 0.4378497303F;
+	__asm
+	{
+		pxor	xmm3, xmm3
+		comiss	xmm0, xmm3
+		setb	al
+		andps	xmm0, kSSERemoveSignMaskPS
+		movss	xmm3, kFltOne
+		comiss	xmm0, xmm3
+		seta	cl
+		jbe		skipRecpr
+		divss	xmm3, xmm0
+		movss	xmm0, xmm3
+	skipRecpr:
+		comiss	xmm0, kFltTanPId12
+		seta	dl
+		jbe		noRegion
+		movss	xmm4, kFltTanPId6
+		movss	xmm3, xmm0
+		mulss	xmm3, xmm4
+		addss	xmm3, kFltOne
+		subss	xmm0, xmm4
+		divss	xmm0, xmm3
+	noRegion:
+		movss	xmm3, xmm0
+		mulss	xmm3, xmm3
+		movss	xmm4, kFltTerm2
+		mulss	xmm4, xmm3
+		movss	xmm5, kFltTerm1
+		addss	xmm4, xmm5
+		addss	xmm5, xmm3
+		divss	xmm4, xmm5
+		mulss	xmm0, xmm4
+		test	dl, dl
+		jz		dnRegion
+		addss	xmm0, kFltPId6
+	dnRegion:
+		movss	xmm3, kSSEChangeSignMaskPS0
+		test	cl, cl
+		jz		dnCmplm
+		subss	xmm0, kFltPId2
+		xorps	xmm0, xmm3
+	dnCmplm:
+		test	al, al
+		jz		done
+		xorps	xmm0, xmm3
+	done:
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall dASin(float x)
+{
+	__asm
+	{
+		movss	xmm3, xmm0
+		mulss	xmm3, xmm3
+		movss	xmm4, kFltOne
+		subss	xmm4, xmm3
+		sqrtss	xmm4, xmm4
+		divss	xmm0, xmm4
+		jmp		dATan
+	}
+}
+
+__declspec(naked) float __vectorcall dACos(float x)
+{
+	_asm
+	{
+		movss	xmm3, xmm0
+		mulss	xmm3, xmm3
+		movss	xmm4, kFltOne
+		subss	xmm4, xmm3
+		sqrtss	xmm4, xmm4
+		divss	xmm0, xmm4
+		call	dATan
+		subss	xmm0, kFltPId2
+		xorps	xmm0, kSSEChangeSignMaskPS0
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall dATan2(float y, float x)
+{
+	__asm
+	{
+		movss	xmm2, xmm0
+		pxor	xmm6, xmm6
+		comiss	xmm1, xmm6
+		jz		xZero
+		divss	xmm0, xmm1
+		call	dATan
+		comiss	xmm1, xmm6
+		ja		done
+		movss	xmm4, kFltPI
+		comiss	xmm2, xmm6
+		jb		decPI
+		addss	xmm0, xmm4
+		retn
+	decPI:
+		subss	xmm0, xmm4
+	done:
+		retn
+	xZero:
+		comiss	xmm2, xmm6
+		jz		retn0
+		movss	xmm0, kFltPId2
+		ja		done
+		xorps	xmm0, kSSEChangeSignMaskPS0
+		retn
+	retn0:
+		movss	xmm0, xmm6
 		retn
 	}
 }

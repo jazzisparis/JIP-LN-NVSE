@@ -63,7 +63,7 @@ bool Cmd_fSin_Execute(COMMAND_ARGS)
 	double value;
 	UInt32 precision;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value, &precision))
-		*result = sin(value * kDblPId180);
+		*result = dSin(value * kDblPId180);
 	else *result = 0;
 	return true;
 }
@@ -73,7 +73,7 @@ bool Cmd_fCos_Execute(COMMAND_ARGS)
 	double value;
 	UInt32 precision;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value, &precision))
-		*result = cos(value * kDblPId180);
+		*result = dCos(value * kDblPId180);
 	else *result = 0;
 	return true;
 }
@@ -97,7 +97,7 @@ bool Cmd_fAsin_Execute(COMMAND_ARGS)
 		else if (value >= 1.0)
 			*result = 90.0;
 		else
-			*result = asin(value) * kDbl180dPI;
+			*result = dASin(value) * kDbl180dPI;
 	}
 	else *result = 0;
 	return true;
@@ -113,7 +113,7 @@ bool Cmd_fAcos_Execute(COMMAND_ARGS)
 		else if (value >= 1.0)
 			*result = 0;
 		else
-			*result = acos(value) * kDbl180dPI;
+			*result = dACos(value) * kDbl180dPI;
 	}
 	else *result = 0;
 	return true;
@@ -123,7 +123,7 @@ bool Cmd_fAtan_Execute(COMMAND_ARGS)
 {
 	double value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		*result = atan(value) * kDbl180dPI;
+		*result = dATan(value) * kDbl180dPI;
 	else *result = 0;
 	return true;
 }
@@ -132,7 +132,7 @@ bool Cmd_fAtan2_Execute(COMMAND_ARGS)
 {
 	double y, x;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &y, &x))
-		*result = atan2(y, x) * kDbl180dPI;
+		*result = dATan2(y, x) * kDbl180dPI;
 	else *result = 0;
 	return true;
 }

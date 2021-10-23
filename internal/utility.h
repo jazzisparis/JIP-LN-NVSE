@@ -62,9 +62,9 @@ __forceinline T_Ret CdeclCall(UInt32 _addr, Args ...args)
 
 #define LOG_HOOKS 0
 
-extern const float kFlt1d1000, kFlt1d200, kFlt1d100, kFltPId180, kFlt1d10, kFltHalf, kFltOne, kFltPId2, kFlt10, kFlt180dPI, kFlt100, kFlt200, kFlt1000, kFltMax;
+extern const float kFlt1d1000, kFlt1d200, kFlt1d100, kFltPId180, kFlt1d10, kFltHalf, kFltOne, kFltPId2, kFltPI, kFltPIx2, kFlt10, kFlt180dPI, kFlt100, kFlt200, kFlt1000, kFltMax;
 extern const double kDblPId180, kDbl180dPI;
-extern const UInt32 kSSERemoveSignMaskPS[], kSSEChangeSignMaskPS[], kSSEDiscard4thPS[];
+extern const UInt32 kSSERemoveSignMaskPS[], kSSEChangeSignMaskPS[], kSSEChangeSignMaskPS0[], kSSEDiscard4thPS[];
 extern const UInt64 kSSERemoveSignMaskPD[], kSSEChangeSignMaskPD[];
 extern const char kLwrCaseConverter[], kUprCaseConverter[];
 
@@ -231,6 +231,17 @@ __forceinline int iround(float value)
 {
 	return _mm_cvt_ss2si(_mm_load_ss(&value));
 }
+
+float __vectorcall dCos(float angle);
+float __vectorcall dSin(float angle);
+
+__m128 __vectorcall GetSinCos(float angle);
+
+float __vectorcall dATan(float x);
+float __vectorcall dASin(float x);
+float __vectorcall dACos(float x);
+
+float __vectorcall dATan2(float y, float x);
 
 char *GetStrArgBuffer();
 

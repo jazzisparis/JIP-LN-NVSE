@@ -260,7 +260,7 @@ public:
 	/*00C*/virtual void		CastSpell(MagicItem *spell, bool arg2, MagicTarget *target, float arg4, bool arg5);
 	/*010*/virtual void		AddDisease(SpellItem *splItem, MagicTarget *target, bool arg3);
 	/*014*/virtual void		AddFormEffects(MagicItem *magItem, MagicItemForm *itemForm, bool arg3);
-	/*018*/virtual Actor	*Unk_06();
+	/*018*/virtual MagicTarget	*Unk_06();
 	/*01C*/virtual void		Unk_07();
 	/*020*/virtual void		Unk_08();
 	/*024*/virtual void		Unk_09(UInt32 arg1, UInt32 arg2);
@@ -271,7 +271,7 @@ public:
 	/*038*/virtual bool		Unk_0E(ActiveEffect *activeEffect);
 	/*03C*/virtual float	Unk_0F(UInt8 arg1, float arg2);
 	/*040*/virtual void		Unk_10(MagicItem *spell);
-	/*044*/virtual void		Unk_11();
+	/*044*/virtual MagicTarget	*Unk_11();
 	/*048*/virtual void		Unk_12(MagicTarget *magicTarget);
 	/*04C*/virtual ActiveEffect	*CreateActiveEffect(MagicItem *magicItem, EffectItem *effItem, MagicItemForm *itemForm);
 

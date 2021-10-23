@@ -1072,11 +1072,11 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 		{
 			rot *= kFltPId180;
 			if (!transform)
-				niBlock->LocalRotate().RotationMatrix(&rot);
+				niBlock->LocalRotate().RotationMatrix(rot);
 			else if (transform == 1)
-				niBlock->LocalRotate().Rotate(&rot);
+				niBlock->LocalRotate().Rotate(rot);
 			else
-				niBlock->LocalRotate().RotationMatrixInv(&rot);
+				niBlock->LocalRotate().RotationMatrixInv(rot);
 			niBlock->Update();
 		}
 	}

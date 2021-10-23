@@ -422,9 +422,9 @@ public:
 	/*3BC*/virtual void		Unk_EF();
 	/*3C0*/virtual void		Unk_F0();
 	/*3C4*/virtual void		Unk_F1();
-	/*3C8*/virtual void		Unk_F2();
+	/*3C8*/virtual MagicItem	*Unk_F2();
 	/*3CC*/virtual void		Unk_F3();
-	/*3D0*/virtual void		Unk_F4();
+	/*3D0*/virtual MagicTarget	*Unk_F4();
 	/*3D4*/virtual void		Unk_F5();
 	/*3D8*/virtual void		Unk_F6();
 	/*3DC*/virtual void		Unk_F7();
