@@ -298,7 +298,7 @@ struct NiQuaternion
 	}
 
 	NiQuaternion *Normalize();
-	void ToEulerYPR(NiVector3 &ypr) const;
+	void __fastcall ToEulerYPR(NiVector3 &ypr) const;
 
 	void lerp(const NiQuaternion &qb, float t);
 	void slerp(const NiQuaternion &qb, float t);
