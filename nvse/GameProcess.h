@@ -21,17 +21,21 @@ struct ActorHitData
 {
 	enum HitFlags
 	{
-		kFlag_TargetIsBlocking =		1,
-		kFlag_TargetWeaponOut =			2,
-		kFlag_IsCritical =				4,
-		kFlag_OnDeathCritEffect =		8,
-		kFlag_IsFatal =					0x10,
-		kFlag_DismemberLimb =			0x20,
-		kFlag_ExplodeLimb =				0x40,
-		kFlag_CrippleLimb =				0x80,
-		kFlag_BreakWeaponNonEmbedded =	0x100,
-		kFlag_BreakWeaponEmbedded =		0x200,
-		kFlag_IsSneakAttack =			0x400,
+		kFlag_TargetIsBlocking =		1,			// see 0x9B5E8A
+		kFlag_TargetWeaponOut =			2,			// see 0x9B5FDB
+		kFlag_IsCritical =				4,			// see 0x9B72D9
+		kFlag_OnDeathCritEffect =		8,			// see 0x9B7397
+		kFlag_IsFatal =					0x10,		// see 0x9B7774, 0x9CA3D6
+		kFlag_DismemberLimb =			0x20,		// see 0x9B781B
+		kFlag_ExplodeLimb =				0x40,		// see 0x9B782F, 0x8B4C6C, 0x8B4C18
+		kFlag_CrippleLimb =				0x80,		// see 0x9B7729
+		kFlag_BreakWeaponNonEmbedded =	0x100,		// see 0x9B7619 
+		kFlag_BreakWeaponEmbedded =		0x200,		// see 0x9B7608
+		kFlag_IsSneakAttack =			0x400,		// see 0x9B72AB
+		kFlag_Unk800 =					0x800,		// see 0x9B5002, 0x7F173F. IsVATSQueuedHit?
+		kFlag_Unk1000 =					0x1000,		// see 0x9B5011
+		kFlag_IsExplosionHit =			0x2000,		// see 0x9B579C
+		
 		kFlag_ArmorPenetrated =			0x80000000	// JIP only
 	};
 
@@ -46,7 +50,7 @@ struct ActorHitData
 	SInt32				hitLocation;	// 10
 	float				healthDmg;		// 14
 	float				wpnBaseDmg;		// 18	Skill and weapon condition modifiers included
-	float				fatigueDmg;		// 1C
+	float				fatigueDmg;		// 1C   Note that most vanilla weapons deal scripted fatigue damage, so only ammo effects are reflected here.
 	float				limbDmg;		// 20
 	float				blockDTMod;		// 24
 	float				armorDmg;		// 28
