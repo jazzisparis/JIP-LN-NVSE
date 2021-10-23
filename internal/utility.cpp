@@ -323,9 +323,8 @@ __declspec(naked) float __vectorcall dSin(float angle)
 {
 	__asm
 	{
-		movss	xmm1, xmm0
-		movss	xmm0, kFltPId2
-		subss	xmm0, xmm1
+		xorps	xmm0, kSSEChangeSignMaskPS0
+		addss	xmm0, kFltPId2
 		jmp		dCos
 	}
 }
@@ -338,9 +337,9 @@ __declspec(naked) __m128 __vectorcall GetSinCos(float angle)
 		call	dCos
 		unpcklps	xmm0, xmm0
 		mulss	xmm0, xmm0
-		movss	xmm1, kFltOne
-		subss	xmm1, xmm0
-		sqrtss	xmm0, xmm1
+		xorps	xmm0, kSSEChangeSignMaskPS0
+		addss	xmm0, kFltOne
+		sqrtss	xmm0, xmm0
 		movss	xmm1, kSineSignMask[eax*4]
 		xorps	xmm0, xmm1
 		retn
@@ -406,10 +405,10 @@ __declspec(naked) float __vectorcall dASin(float x)
 	{
 		movss	xmm3, xmm0
 		mulss	xmm3, xmm3
-		movss	xmm4, kFltOne
-		subss	xmm4, xmm3
-		sqrtss	xmm4, xmm4
-		divss	xmm0, xmm4
+		xorps	xmm3, kSSEChangeSignMaskPS0
+		addss	xmm3, kFltOne
+		sqrtss	xmm3, xmm3
+		divss	xmm0, xmm3
 		jmp		dATan
 	}
 }
@@ -420,10 +419,10 @@ __declspec(naked) float __vectorcall dACos(float x)
 	{
 		movss	xmm3, xmm0
 		mulss	xmm3, xmm3
-		movss	xmm4, kFltOne
-		subss	xmm4, xmm3
-		sqrtss	xmm4, xmm4
-		divss	xmm0, xmm4
+		xorps	xmm3, kSSEChangeSignMaskPS0
+		addss	xmm3, kFltOne
+		sqrtss	xmm3, xmm3
+		divss	xmm0, xmm3
 		call	dATan
 		subss	xmm0, kFltPId2
 		xorps	xmm0, kSSEChangeSignMaskPS0
