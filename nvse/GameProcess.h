@@ -31,7 +31,11 @@ struct ActorHitData
 		kFlag_CrippleLimb =				0x80,
 		kFlag_BreakWeaponNonEmbedded =	0x100,
 		kFlag_BreakWeaponEmbedded =		0x200,
+		kFlag_BreakWeapon =				kFlag_BreakWeaponNonEmbedded | kFlag_BreakWeaponEmbedded,
 		kFlag_IsSneakAttack =			0x400,
+		kFlag_Unk800 =					0x800,
+		kFlag_Unk1000 =					0x1000,
+		kFlag_IsExplosionHit =			0x2000,
 		kFlag_ArmorPenetrated =			0x80000000	// JIP only
 	};
 
