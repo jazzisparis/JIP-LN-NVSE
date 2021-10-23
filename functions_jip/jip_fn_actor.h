@@ -135,11 +135,6 @@ DEFINE_COMMAND_PLUGIN(GetHitExtendedFlag, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(RemoveAllPerks, 1, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetActorMovementFlags, 1, 0, NULL);
 
-DEFINE_COMMAND_PLUGIN(GetHitFatigueDamage, true, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetHitArmorDamage, true, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetHitBlockingDTMod, true, 0, NULL);
-DEFINE_COMMAND_ALT_PLUGIN(GetHitCalculatedWeaponDamage, GetHitBaseWpnDam, true, 0, NULL);
-
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
 	*result = 0;
@@ -1307,7 +1302,7 @@ bool Cmd_GetActorValueModifier_Execute(COMMAND_ARGS)
 		activeEff = iter->data;
 		if (!activeEff || !activeEff->bActive || activeEff->bTerminated || !activeEff->effectItem) continue;
 		effSetting = activeEff->effectItem->setting;
-		if (!effSetting || effSetting->archtype || (effSetting->actorVal != actorVal) ||
+		if (!effSetting || effSetting->archtype || (effSetting->actorVal != actorVal) || 
 			!(effSetting->effectFlags & 2) || !((activeEff->duration ? 2 : 1) & duration)) continue;
 		modifier += activeEff->magnitude;
 	}
@@ -1401,18 +1396,6 @@ void __fastcall GetHitData(Actor *target, UInt8 dataType, double *result)
 		case 5:
 			if (hitData->flags & 0x80000000)
 				*result = 1;
-			break;
-		case 6:
-			*result = hitData->fatigueDmg;
-			break;
-		case 7:
-			*result = hitData->armorDmg;
-			break;
-		case 8:
-			*result = hitData->blockDTMod;
-			break;
-		case 9:
-			*result = hitData->wpnBaseDmg;
 			break;
 	}
 }
@@ -2427,9 +2410,6 @@ bool Cmd_GetHitExtendedFlag_Execute(COMMAND_ARGS)
 				case 7:
 					if (flags & 0x400) isSet = true;
 					break;
-				case 8:
-					if (flags & 0x2000) isSet = true;
-					break;
 			}
 		}
 	}
@@ -2466,31 +2446,6 @@ bool Cmd_RemoveAllPerks_Execute(COMMAND_ARGS)
 			}
 		}
 	}
-	return true;
-}
-
-
-bool Cmd_GetHitFatigueDamage_Execute(COMMAND_ARGS)
-{
-	GetHitData((Actor*)thisObj, 6, result);
-	return true;
-}
-
-bool Cmd_GetHitArmorDamage_Execute(COMMAND_ARGS)
-{
-	GetHitData((Actor*)thisObj, 7, result);
-	return true;
-}
-
-bool Cmd_GetHitBlockingDTMod_Execute(COMMAND_ARGS)
-{
-	GetHitData((Actor*)thisObj, 8, result);
-	return true;
-}
-
-bool Cmd_GetHitCalculatedWeaponDamage_Execute(COMMAND_ARGS)
-{
-	GetHitData((Actor*)thisObj, 9, result);
 	return true;
 }
 
