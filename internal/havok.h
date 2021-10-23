@@ -62,7 +62,7 @@ struct alignas(16) hkQuaternion
 	}
 
 	hkQuaternion *Normalize();
-	void ToEulerYPR(NiVector3 &ypr) const;
+	void __fastcall ToEulerYPR(NiVector3 &ypr) const;
 };
 
 // 30
