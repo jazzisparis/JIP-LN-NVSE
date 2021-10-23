@@ -134,6 +134,10 @@ DEFINE_COMMAND_PLUGIN(GetHitNode, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitExtendedFlag, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(RemoveAllPerks, 1, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetActorMovementFlags, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetHitFatigueDamage, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetHitArmorDamage, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetHitBlockingDTMod, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetHitBaseWeaponDamage, 1, 0, NULL);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -2485,3 +2489,29 @@ bool Cmd_GetActorMovementFlags_Execute(COMMAND_ARGS)
 	DoConsolePrint(result);
 	return true;
 }
+
+//	Credits to Demorome
+bool Cmd_GetHitFatigueDamage_Execute(COMMAND_ARGS)
+{
+	GetHitData((Actor*)thisObj, 6, result);
+	return true;
+}
+
+bool Cmd_GetHitArmorDamage_Execute(COMMAND_ARGS)
+{
+	GetHitData((Actor*)thisObj, 7, result);
+	return true;
+}
+
+bool Cmd_GetHitBlockingDTMod_Execute(COMMAND_ARGS)
+{
+	GetHitData((Actor*)thisObj, 8, result);
+	return true;
+}
+
+bool Cmd_GetHitBaseWeaponDamage_Execute(COMMAND_ARGS)
+{
+	GetHitData((Actor*)thisObj, 9, result);
+	return true;
+}
+//	===================
