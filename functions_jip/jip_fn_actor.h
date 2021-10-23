@@ -1397,6 +1397,18 @@ void __fastcall GetHitData(Actor *target, UInt8 dataType, double *result)
 			if (hitData->flags & 0x80000000)
 				*result = 1;
 			break;
+		case 6:
+			*result = hitData->fatigueDmg;
+			break;
+		case 7:
+			*result = hitData->armorDmg;
+			break;
+		case 8:
+			*result = hitData->blockDTMod;
+			break;
+		case 9:
+			*result = hitData->wpnBaseDmg;
+			break;
 	}
 }
 
@@ -2387,28 +2399,40 @@ bool Cmd_GetHitExtendedFlag_Execute(COMMAND_ARGS)
 			switch (flagID)
 			{
 				case 0:
-					if (flags & 1) isSet = true;
+					if (flags & ActorHitData::kFlag_TargetIsBlocking)
+						isSet = true;
 					break;
 				case 1:
-					if (flags & 4) isSet = true;
+					if (flags & ActorHitData::kFlag_IsCritical)
+						isSet = true;
 					break;
 				case 2:
-					if (flags & 0x10) isSet = true;
+					if (flags & ActorHitData::kFlag_IsFatal)
+						isSet = true;
 					break;
 				case 3:
-					if (flags & 0x20) isSet = true;
+					if (flags & ActorHitData::kFlag_DismemberLimb)
+						isSet = true;
 					break;
 				case 4:
-					if (flags & 0x40) isSet = true;
+					if (flags & ActorHitData::kFlag_ExplodeLimb)
+						isSet = true;
 					break;
 				case 5:
-					if (flags & 0x80) isSet = true;
+					if (flags & ActorHitData::kFlag_CrippleLimb)
+						isSet = true;
 					break;
 				case 6:
-					if (flags & 0x300) isSet = true;
+					if (flags & ActorHitData::kFlag_BreakWeapon)
+						isSet = true;
 					break;
 				case 7:
-					if (flags & 0x400) isSet = true;
+					if (flags & ActorHitData::kFlag_IsSneakAttack)
+						isSet = true;
+					break;
+				case 8:
+					if (flags & ActorHitData::kFlag_IsExplosionHit)
+						isSet = true;
 					break;
 			}
 		}
