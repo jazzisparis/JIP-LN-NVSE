@@ -559,10 +559,11 @@ bool Cmd_CastImmediate_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &caster) && IS_ACTOR(target) && target->parentCell && (magicItem->GetType() != 4))
 	{
 		if (!caster) caster = target;
-		UInt32 *reachMultPtr = (UInt32*)0x11CF1E4, reachMult = *reachMultPtr;
-		*reachMultPtr = 0x43800000;
+		caster->magicCaster.Unk_12(&target->magicTarget);
+		UInt32 reachMult = *(UInt32*)0x11CF1E4;
+		*(UInt32*)0x11CF1E4 = 0x43800000;
 		caster->magicCaster.CastSpell(magicItem, 0, &target->magicTarget, 1, 0);
-		*reachMultPtr = reachMult;
+		*(UInt32*)0x11CF1E4 = reachMult;
 	}
 	return true;
 }
