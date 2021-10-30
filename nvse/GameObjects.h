@@ -28,8 +28,8 @@ public:
 	/*18C*/virtual void		Unk_63(void);
 	/*190*/virtual void		AddItem(TESForm *item, ExtraDataList *xDataList, UInt32 quantity);
 	/*194*/virtual void		Unk_65(void);
-	/*198*/virtual void		Unk_66(void);
-	/*19C*/virtual void		Unk_67(void);					// Actor: GetMagicEffectList
+	/*198*/virtual MagicCaster	*GetMagicCaster();
+	/*19C*/virtual MagicTarget	*GetMagicTarget();
 	/*1A0*/virtual bool		GetIsChildSize(bool checkHeight);		// 068 Actor: GetIsChildSize
 	/*1A4*/virtual UInt32	GetActorUnk0148();			// result can be interchanged with baseForm, so TESForm* ?
 	/*1A8*/virtual void		SetActorUnk0148(UInt32 arg1);
@@ -260,19 +260,19 @@ public:
 	/*00C*/virtual void		CastSpell(MagicItem *spell, bool arg2, MagicTarget *target, float arg4, bool arg5);
 	/*010*/virtual void		AddDisease(SpellItem *splItem, MagicTarget *target, bool arg3);
 	/*014*/virtual void		AddFormEffects(MagicItem *magItem, MagicItemForm *itemForm, bool arg3);
-	/*018*/virtual MagicTarget	*Unk_06();
+	/*018*/virtual MagicTarget	*PickMagicTarget();
 	/*01C*/virtual void		Unk_07();
 	/*020*/virtual void		Unk_08();
 	/*024*/virtual void		Unk_09(UInt32 arg1, UInt32 arg2);
 	/*028*/virtual bool		Unk_0A(UInt32 arg1, float *arg2, UInt32 *arg3, UInt32 arg4);
 	/*02C*/virtual Actor	*GetActor(void);
 	/*030*/virtual NiNode	*GetMagicNode();
-	/*034*/virtual MagicItem	*Unk_0D();
+	/*034*/virtual MagicItem	*GetMagicItem();
 	/*038*/virtual bool		Unk_0E(ActiveEffect *activeEffect);
 	/*03C*/virtual float	Unk_0F(UInt8 arg1, float arg2);
-	/*040*/virtual void		Unk_10(MagicItem *spell);
-	/*044*/virtual MagicTarget	*Unk_11();
-	/*048*/virtual void		Unk_12(MagicTarget *magicTarget);
+	/*040*/virtual void		SetMagicItem(MagicItem *spell);
+	/*044*/virtual MagicTarget	*GetMagicTarget();
+	/*048*/virtual void		SetMagicTarget(MagicTarget *magicTarget);
 	/*04C*/virtual ActiveEffect	*CreateActiveEffect(MagicItem *magicItem, EffectItem *effItem, MagicItemForm *itemForm);
 
 	UInt32	unk04[2];	// 04
@@ -820,7 +820,8 @@ public:
 	UInt32								unk208;					// 208
 	void								*unk20C;				// 20C
 	tList<ActiveEffect>					*activeEffects;			// 210
-	UInt32								unk214[2];				// 214
+	MagicItem							*pcMagicItem;			// 214
+	MagicTarget							*pcMagicTarget;			// 218
 	void								*unk21C;				// 21C
 	UInt32								unk220[8];				// 220	224 is a package of type 1C
 	bool								showQuestItems;			// 240
