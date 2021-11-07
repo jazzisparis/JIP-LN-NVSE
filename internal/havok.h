@@ -15,54 +15,61 @@ struct alignas(16) hkQuaternion
 	hkQuaternion(const NiMatrix33 &rotMat) {*this = rotMat;}
 	hkQuaternion(const hkMatrix3x4 &rotMat) {*this = rotMat;}
 	hkQuaternion(const AxisAngle &axisAngle) {*this = axisAngle;}
+	explicit hkQuaternion(const __m128 rhs) {*this = rhs;}
 
 	void operator=(const NiVector3 &eulerYPR)
 	{
 		NiMatrix33 rotMat = eulerYPR;
 		*this = rotMat;
 	}
-	inline void operator=(const hkQuaternion &from) {_mm_store_ps(&x, _mm_load_ps(&from.x));}
-	void __fastcall operator=(const NiMatrix33 &mat);
+	inline void operator=(const hkQuaternion &from) {_mm_store_ps(&x, from);}
+	inline void operator=(const NiMatrix33 &rotMat) {FromRotationMatrix(rotMat);}
 	inline void operator=(const hkMatrix3x4 &rotMat) {ThisCall(0xCB26E0, this, &rotMat);}
-	inline void operator=(const hkVector4 &from) {_mm_store_ps(&x, _mm_load_ps(&from.x));}
-	void __fastcall operator=(const AxisAngle &axisAngle);
+	inline void operator=(const hkVector4 &from) {_mm_store_ps(&x, from);}
+	inline void operator=(const AxisAngle &axisAngle) {FromAxisAngle(axisAngle);}
+	inline void operator=(const __m128 rhs) {_mm_store_ps(&x, rhs);}
 
 	inline void operator+=(const hkQuaternion &rhs)
 	{
-		_mm_store_ps(&x, _mm_add_ps(_mm_load_ps(&x), _mm_load_ps(&rhs.x)));
+		*this = _mm_add_ps(*this, rhs);
 	}
 
 	inline void operator-=(const hkQuaternion &rhs)
 	{
-		_mm_store_ps(&x, _mm_sub_ps(_mm_load_ps(&x), _mm_load_ps(&rhs.x)));
+		*this = _mm_sub_ps(*this, rhs);
 	}
 
 	inline void operator*=(float s)
 	{
-		_mm_store_ps(&x, _mm_mul_ps(_mm_load_ps(&x), _mm_set_ps1(s)));
+		*this = _mm_mul_ps(*this, _mm_set_ps1(s));
 	}
 
 	void __fastcall operator*=(const hkQuaternion &rhs);
 
+	inline operator __m128() const {return _mm_load_ps(&x);}
+
+	hkQuaternion* __fastcall FromRotationMatrix(const NiMatrix33 &rotMat);
+	hkQuaternion* __fastcall FromAxisAngle(const AxisAngle &axisAngle);
+
 	inline hkQuaternion *Invert()
 	{
-		_mm_store_ps(&x, _mm_xor_ps(_mm_load_ps(&x), _mm_load_ps((const float*)0x10C4C00)));
+		*this = _mm_xor_ps(*this, _mm_load_ps((const float*)0x10C4C00));
 		return this;
 	}
 
 	inline void Negate()
 	{
-		_mm_store_ps(&x, _mm_xor_ps(_mm_load_ps(&x), _mm_load_ps((const float*)kSSEChangeSignMaskPS)));
+		*this = _mm_xor_ps(*this, _mm_load_ps((const float*)kSSEChangeSignMaskPS));
 	}
 
 	inline float __vectorcall DotProduct(const hkQuaternion &rhs) const
 	{
-		__m128 m = _mm_mul_ps(_mm_load_ps(&x), _mm_load_ps(&rhs.x));
+		__m128 m = _mm_mul_ps(*this, rhs);
 		return _mm_hadd_ps(_mm_hadd_ps(m, m), m).m128_f32[0];
 	}
 
 	hkQuaternion *Normalize();
-	void __fastcall ToEulerYPR(NiVector3 &ypr) const;
+	NiVector3* __fastcall ToEulerYPR(NiVector3 &ypr) const;
 };
 
 // 30

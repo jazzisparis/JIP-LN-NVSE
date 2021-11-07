@@ -1707,9 +1707,8 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		movaps	xmm1, xmm0
 		mulps	xmm1, xmm1
 		haddps	xmm1, xmm1
-		pxor	xmm2, xmm2
-		comiss	xmm1, xmm2
-		jz		done
+		comiss	xmm1, kFlt1d10K
+		jb		done
 		rsqrtss	xmm1, xmm1
 		unpcklps	xmm1, xmm1
 		mulps	xmm0, xmm1

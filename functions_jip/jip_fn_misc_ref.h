@@ -1051,8 +1051,8 @@ bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 			NiVector3 rot;
 			NiMatrix33 &rotMat = (getMode & 1) ? niBlock->WorldRotate() : niBlock->LocalRotate();
 			if (!(getMode & 2))
-				rotMat.ExtractAngles(&rot);
-			else rotMat.ExtractAnglesInv(&rot);
+				rotMat.ExtractAngles(rot);
+			else rotMat.ExtractAnglesInv(rot);
 			ArrayElementL elements[3] = {rot.x * kDbl180dPI, rot.y * kDbl180dPI, rot.z * kDbl180dPI};
 			AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
 		}
@@ -1943,10 +1943,7 @@ bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 		{
 			NiNode *rootNode = thisObj->GetNiNode();
 			if (rootNode)
-			{
-				rootNode->WorldRotate().ExtractAnglesInv(&locRot);
-				rotPtr = &locRot;
-			}
+				rotPtr = rootNode->WorldRotate().ExtractAnglesInv(locRot);
 		}
 		outX->data.num = rotPtr->x * kDbl180dPI;
 		outY->data.num = rotPtr->y * kDbl180dPI;

@@ -1213,7 +1213,7 @@ __declspec(naked) bool ReactionCooldownCheckHook()
 		sub		eax, lastTickCount
 		movd	xmm0, eax
 		cvtdq2ps	xmm0, xmm0
-		mulss	xmm0, kFlt1d1000
+		mulss	xmm0, kFlt1d1K
 		comiss	xmm0, ds:[0x11CE9B8]
 		seta	al
 		jbe		done

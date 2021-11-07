@@ -1,6 +1,6 @@
 #include "internal/havok.h"
 
-__declspec(naked) void __fastcall hkQuaternion::operator=(const NiMatrix33 &mat)
+__declspec(naked) hkQuaternion* __fastcall hkQuaternion::FromRotationMatrix(const NiMatrix33 &mat)
 {
 	__asm
 	{
@@ -86,26 +86,25 @@ __declspec(naked) void __fastcall hkQuaternion::operator=(const NiMatrix33 &mat)
 		movaps	xmm0, [ecx]
 		mulps	xmm0, xmm4
 		movaps	[ecx], xmm0
+		mov		eax, ecx
 		retn
 	}
 }
 
-__declspec(naked) void __fastcall hkQuaternion::operator=(const AxisAngle &axisAngle)
+__declspec(naked) hkQuaternion* __fastcall hkQuaternion::FromAxisAngle(const AxisAngle &axisAngle)
 {
 	__asm
 	{
-		push	esi
-		mov		esi, ecx
 		movss	xmm0, [edx+0xC]
 		mulss	xmm0, kFltHalf
+		movups	xmm7, [edx]
 		call	GetSinCos
 		pshufd	xmm1, xmm0, 1
 		shufps	xmm0, xmm0, 0x80
-		movups	xmm2, [edx]
-		mulps	xmm0, xmm2
-		movaps	[esi], xmm0
-		movss	[esi+0xC], xmm1
-		pop		esi
+		mulps	xmm0, xmm7
+		movaps	[ecx], xmm0
+		movss	[ecx+0xC], xmm1
+		mov		eax, ecx
 		retn
 	}
 }
@@ -114,8 +113,8 @@ __declspec(naked) void __fastcall hkQuaternion::operator*=(const hkQuaternion &r
 {
 	__asm
 	{
-		pshufd	xmm0, [ecx], 0x93
-		pshufd	xmm1, [edx], 0x93
+		pshufd	xmm0, [edx], 0x93
+		pshufd	xmm1, [ecx], 0x93
 		movss	xmm2, kSSEChangeSignMaskPS0
 		movaps	xmm3, xmm1
 		mulps	xmm3, xmm0
@@ -160,31 +159,24 @@ __declspec(naked) hkQuaternion *hkQuaternion::Normalize()
 		haddps	xmm1, xmm1
 		haddps	xmm1, xmm1
 		pxor	xmm2, xmm2
-		comiss	xmm1, xmm2
-		jz		zeroLen
-		sqrtss	xmm2, xmm1
-		movss	xmm1, kFltOne
-		divss	xmm1, xmm2
-		shufps	xmm1, xmm1, 0
-		mulps	xmm0, xmm1
-		movaps	[eax], xmm0
-		retn
+		comiss	xmm1, kFlt1d10K
+		jb		zeroLen
+		sqrtss	xmm1, xmm1
+		movss	xmm2, kFltOne
+		divss	xmm2, xmm1
+		shufps	xmm2, xmm2, 0
+		mulps	xmm2, xmm0
 	zeroLen:
 		movaps	[eax], xmm2
-		mov		dword ptr [eax+0xC], 0x3F800000
         retn
     }
 }
 
-__declspec(naked) void __fastcall hkQuaternion::ToEulerYPR(NiVector3 &ypr) const
+__declspec(naked) NiVector3* __fastcall hkQuaternion::ToEulerYPR(NiVector3 &ypr) const
 {
 	__asm
 	{
-		push	esi
-		push	edi
-		mov		esi, ecx
-		mov		edi, edx
-		movaps	xmm7, [esi]
+		movaps	xmm7, [ecx]
 		pshufd	xmm0, xmm7, 0x47
 		pshufd	xmm1, xmm7, 0x48
 		mulps	xmm0, xmm1
@@ -193,8 +185,8 @@ __declspec(naked) void __fastcall hkQuaternion::ToEulerYPR(NiVector3 &ypr) const
 		pshufd	xmm1, xmm0, 1
 		xorps	xmm1, kSSEChangeSignMaskPS0
 		addss	xmm1, kFltOne
-		call	dATan2
-		movss	[edi], xmm0
+		call	ATan2
+		movss	[edx], xmm0
 		pshufd	xmm0, xmm7, 0xB
 		pshufd	xmm1, xmm7, 1
 		mulps	xmm0, xmm1
@@ -204,16 +196,15 @@ __declspec(naked) void __fastcall hkQuaternion::ToEulerYPR(NiVector3 &ypr) const
 		andps	xmm1, kSSERemoveSignMaskPS
 		comiss	xmm1, kFltOne
 		jnb		invSinP
-		call	dASin
+		call	ASin
 		jmp		doneY
 	invSinP:
-		pxor	xmm2, xmm2
-		comiss	xmm0, xmm2
+		movss	xmm1, xmm0
+		andps	xmm1, kSSEChangeSignMaskPS0
 		movss	xmm0, kFltPId2
-		ja		doneY
-		xorps	xmm0, kSSEChangeSignMaskPS0
+		xorps	xmm0, xmm1
 	doneY:
-		movss	[edi+4], xmm0
+		movss	[edx+4], xmm0
 		pshufd	xmm0, xmm7, 0x93
 		pshufd	xmm1, xmm7, 0x96
 		mulps	xmm0, xmm1
@@ -222,10 +213,9 @@ __declspec(naked) void __fastcall hkQuaternion::ToEulerYPR(NiVector3 &ypr) const
 		pshufd	xmm1, xmm0, 1
 		xorps	xmm1, kSSEChangeSignMaskPS0
 		addss	xmm1, kFltOne
-		call	dATan2
-		movss	[edi+8], xmm0
-		pop		edi
-		pop		esi
+		call	ATan2
+		movss	[edx+8], xmm0
+		mov		eax, edx
 		retn
 	}
 }

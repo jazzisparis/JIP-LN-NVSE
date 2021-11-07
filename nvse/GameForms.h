@@ -2032,13 +2032,13 @@ public:
 
 	enum Flags
 	{
-		kFlag_NoAutoCalc = 1 << 0,	// see 0x40E600, 0x40E577, 0x40E1EF, 0x4094B1
-		kFlag_Unk2 = 1 << 1,	// see 0x823C2C
-		kFlag_PCStartEffect = 1 << 2,	// see 0x8C2E3C, 0x7294A3, 0x7293D8, 0x708B94
-		kFlag_AreaEffectIgnoresLOS = 1 << 4,	// see 0x818DD0
-		kFlag_ScriptEffectAlwaysApplies = 1 << 5,	// see 0x40E65F (AlwaysApplyNotSet?)
-		kFlag_DisallowAbsorbOrReflect = 1 << 6, // see 0x40E67F
-		kFlag_ForceTouchExplode = 1 << 7,  // see 0x8169A8, 0x816173, 0x816849, 0x8169A8
+		kFlag_NoAutoCalc =					1,		// see 0x40E600, 0x40E577, 0x40E1EF, 0x4094B1
+		kFlag_Unk2 =						2,		// see 0x823C2C
+		kFlag_PCStartEffect =				4,		// see 0x8C2E3C, 0x7294A3, 0x7293D8, 0x708B94
+		kFlag_AreaEffectIgnoresLOS =		0x10,	// see 0x818DD0
+		kFlag_ScriptEffectAlwaysApplies =	0x20,	// see 0x40E65F (AlwaysApplyNotSet?)
+		kFlag_DisallowAbsorbOrReflect =		0x40,	// see 0x40E67F
+		kFlag_ForceTouchExplode =			0x80	// see 0x8169A8, 0x816173, 0x816849, 0x8169A8
 	};
 
 	UInt32		type;		// 34

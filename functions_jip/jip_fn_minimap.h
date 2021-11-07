@@ -65,10 +65,9 @@ __declspec(naked) __m128* __fastcall GetNorthRotation(TESObjectCELL *cell)
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		noRotation
-		mov		edx, [eax+0xC]
-		xor		edx, 0x80000000
-		mov		s_cellNorthRotation, edx
-		movd	xmm0, edx
+		movss	xmm0, [eax+0xC]
+		xorps	xmm0, kSSEChangeSignMaskPS0
+		movss	s_cellNorthRotation, xmm0
 		call	GetSinCos
 		pshufd	xmm1, xmm0, 0x41
 		mov		eax, offset s_northRotationMods
@@ -840,14 +839,14 @@ __declspec(naked) bool __fastcall UpdateSeenBits(SeenData *seenData, SInt32 *pos
 		or		s_updateFogOfWar, dl
 		pcmpeqd	xmm0, xmm0
 		movups	xmm1, [esi]
-		pcmpeqd	xmm1, xmm0
-		pmovmskb	edx, xmm1
-		cmp		edx, 0xFFFF
+		cmpps	xmm1, xmm0, 4
+		movmskps	edx, xmm1
+		test	dl, dl
 		jnz		done
 		movups	xmm1, [esi+0x10]
-		pcmpeqd	xmm1, xmm0
-		pmovmskb	edx, xmm1
-		cmp		edx, 0xFFFF
+		cmpps	xmm1, xmm0, 4
+		movmskps	edx, xmm1
+		test	dl, dl
 	done:
 		setz	al
 		lea		ecx, [esi-4]

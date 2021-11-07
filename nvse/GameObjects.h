@@ -265,7 +265,7 @@ public:
 	/*020*/virtual void		Unk_08();
 	/*024*/virtual void		Unk_09(UInt32 arg1, UInt32 arg2);
 	/*028*/virtual bool		Unk_0A(UInt32 arg1, float *arg2, UInt32 *arg3, UInt32 arg4);
-	/*02C*/virtual Actor	*GetActor(void);
+	/*02C*/virtual Actor	*GetActor();
 	/*030*/virtual NiNode	*GetMagicNode();
 	/*034*/virtual MagicItem	*GetMagicItem();
 	/*038*/virtual bool		Unk_0E(ActiveEffect *activeEffect);
@@ -273,7 +273,7 @@ public:
 	/*040*/virtual void		SetMagicItem(MagicItem *spell);
 	/*044*/virtual MagicTarget	*GetMagicTarget();
 	/*048*/virtual void		SetMagicTarget(MagicTarget *magicTarget);
-	/*04C*/virtual ActiveEffect	*CreateActiveEffect(MagicItem *magicItem, EffectItem *effItem, MagicItemForm *itemForm);
+	/*04C*/virtual ActiveEffect	*CreateActiveEffect(MagicItem *magicItem, EffectItem *effItem, TESForm *itemForm);
 
 	UInt32	unk04[2];	// 04
 };
@@ -284,9 +284,9 @@ class MagicTarget
 {
 public:
 	/*000*/virtual bool		ApplyEffect(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect, bool arg4);
-	/*004*/virtual Actor	*GetActor(void);
-	/*008*/virtual ActiveEffectList	*GetEffectList(void);
-	/*00C*/virtual bool		Unk_03(void);
+	/*004*/virtual Actor	*GetActor();
+	/*008*/virtual ActiveEffectList	*GetEffectList();
+	/*00C*/virtual bool		Unk_03();
 	/*010*/virtual bool		CannotBeHit();
 	/*014*/virtual void		Unk_05(ActiveEffect *activeEffect);
 	/*018*/virtual void		Unk_06(ActiveEffect *activeEffect);
