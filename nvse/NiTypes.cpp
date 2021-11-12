@@ -2,6 +2,20 @@
 
 const __m128 kHalfAngles = {0.5F, 0.5F, 0.5F, 0};
 
+void NiVector3::operator=(const NiVector4 &rhs)
+{
+	x = rhs.x;
+	y = rhs.y;
+	z = rhs.z;
+}
+
+void NiVector3::operator+=(const NiVector4 &rhs)
+{
+	x += rhs.x;
+	y += rhs.y;
+	z += rhs.z;
+}
+
 __declspec(naked) NiVector3* __fastcall NiVector3::MultiplyMatrix(const NiMatrix33 &mat)
 {
 	__asm
@@ -106,7 +120,7 @@ __declspec(naked) NiVector3 *NiVector3::Normalize()
 		haddps	xmm1, xmm1
 		haddps	xmm1, xmm1
 		pxor	xmm2, xmm2
-		comiss	xmm1, kFlt1d10K
+		comiss	xmm1, kFlt1d100K
 		jb		zeroLen
 		sqrtss	xmm1, xmm1
 		movss	xmm2, kFltOne
@@ -746,7 +760,7 @@ void NiMatrix33::Dump() const
 
 __declspec(naked) bool __fastcall NiQuaternion::operator==(const NiQuaternion &rhs) const
 {
-	static const __m128 kEqEpsilon = {0.0001F, 0.0001F, 0.0001F, 0.0001F};
+	static const __m128 kEqEpsilon = {1.0e-05F, 1.0e-05F, 1.0e-05F, 1.0e-05F};
 	__asm
 	{
 		movups	xmm0, [ecx]
@@ -952,7 +966,7 @@ __declspec(naked) NiQuaternion *NiQuaternion::Normalize()
 		haddps	xmm1, xmm1
 		haddps	xmm1, xmm1
 		pxor	xmm2, xmm2
-		comiss	xmm1, kFlt1d10K
+		comiss	xmm1, kFlt1d100K
 		jb		zeroLen
 		sqrtss	xmm1, xmm1
 		movss	xmm2, kFltOne
@@ -1053,6 +1067,20 @@ void __vectorcall NiQuaternion::slerp(const NiQuaternion &qb, float t)
 		*this *= Sin(halfTheta - t * halfTheta);
 		*this += qb * Sin(t * halfTheta);
 		*this *= 1.0F / sqrtf(sinHalfTheta);
+	}
+}
+
+__declspec(naked) NiVector4* __fastcall NiTransform::GetTranslatedPos(NiVector4 *posMods)
+{
+	__asm
+	{
+		xchg	ecx, edx
+		call	NiVector3::MultiplyMatrix
+		movups	xmm0, [eax]
+		movups	xmm1, [edx+0x24]
+		addps	xmm0, xmm1
+		movups	[eax], xmm0
+		retn
 	}
 }
 

@@ -1965,61 +1965,6 @@ __declspec(naked) UInt32 __fastcall GetFactionReactionHook(TESFaction *faction, 
 	}
 }
 
-__declspec(naked) void TileTextApplyScaleHook()
-{
-	__asm
-	{
-		push	dword ptr [ebp-0x1C]
-		push	dword ptr [ebp-0x38]
-		push	0
-		lea		edx, [ebp-0x54]
-		push	edx
-		sub		edx, 4
-		push	edx
-		add		edx, 0x44
-		push	edx
-		mov		[ebp-0x29], 0
-		mov		edx, kTileValue_zoom
-		mov		ecx, [ebp-0x1B4]
-		call	Tile::GetValue
-		test	eax, eax
-		jz		noScale
-		mov		edx, [eax+8]
-		test	edx, edx
-		jle		noScale
-		cmp		edx, 0x42C80000
-		jz		noScale
-		movd	xmm0, edx
-		mulss	xmm0, kFlt1d100
-		movss	[ebp-0x1C], xmm0
-		mov		[ebp-0x29], 1
-		cmp		dword ptr [ebp-0x58], 0x800
-		jnb		noScale
-		unpcklps	xmm0, xmm0
-		movq	xmm1, qword ptr [ebp-0x58]
-		cvtdq2ps	xmm1, xmm1
-		divps	xmm1, xmm0
-		cvtps2dq	xmm1, xmm1
-		movq	qword ptr [ebp-0x58], xmm1
-	noScale:
-		mov		ecx, [ebp-0x64]
-		CALL_EAX(0xA12880)
-		mov		edx, [ebp-0xB0]
-		cmp		[ebp-0x29], 0
-		jz		done
-		movss	xmm0, [ebp-0x1C]
-		movss	[edx+0x64], xmm0
-		unpcklps	xmm0, xmm0
-		movq	xmm1, qword ptr [ebp-0x58]
-		cvtdq2ps	xmm1, xmm1
-		mulps	xmm0, xmm1
-		cvtps2dq	xmm0, xmm0
-		movq	qword ptr [ebp-0x58], xmm0
-	done:
-		JMP_EAX(0xA2221C)
-	}
-}
-
 __declspec(naked) void __fastcall MarkRefAsModifiedHook(TESObjectREFR *refr, int EDX, UInt32 flag)
 {
 	__asm
@@ -4486,13 +4431,6 @@ void InitGamePatches()
 	WritePushRetRelJump(0x9313EC, 0x931431, (UInt32)MarkCreatureNoFallHook);
 	SAFE_WRITE_BUF(0xCD3FDD, "\xA9\x01\x00\x40\x00\x74\x0D\x89\xBE\x20\x05\x00\x00\x80\x8E\x14\x04\x00\x00\x80");
 
-	//	Nuke HUDMainMenu/HardcoreMode/ set texts <zoom>
-	/*SafeWrite16(0x76F688, 0x20EB);
-	SafeWrite16(0x76F742, 0x1FEB);
-	SafeWrite16(0x76F824, 0x1FEB);
-	SafeWrite16(0x76F92D, 0x20EB);
-	SafeWrite16(0x76FA5E, 0x1FEB);*/
-
 	//	AdjustExplosionRadius perk entry point affects NPCs
 	SAFE_WRITE_BUF(0x9ACA23, "\x8B\x8A\xFC\x00\x00\x00\x89\x4D\xE8\x85\xC9\x74\x4B\x8B\x01\x81\xB8\x00\x01\x00\x00\x60\x03\x8D\x00\x75\x3D\x8D\x45\xF0\x50\xFF\xB2\xF8\x00\x00\x00\x51\x6A\x48\xE8\xA0\x8E\xC3\xFF\x83\xC4\x10\xE9\xB5\x00\x00\x00");
 
@@ -4598,15 +4536,6 @@ void InitGamePatches()
 	SafeWrite32(0x10A3C5C, (UInt32)GetSoundFrequencyPercHook);
 	WriteRelJump(0x58E9D0, (UInt32)GetImpactDataHook);
 	WriteRelCall(0x5956BC, (UInt32)GetFactionReactionHook);
-	/*SAFE_WRITE_BUF(0xA03923, "\x8B\x45\x08\x3D\xB7\x0F\x00\x00\x72\x50\x3D\xF7\x0F\x00\x00\x74\x07\x3D\xBE\x0F\x00\x00\x77\x42\x8B\x45\xCC\xF6\x40\x30\x02\x75\x0B\x80\x48\x30\x02\x50\xE8\x42\x3D\x00\x00\x58\xC9\xC2\x0C\x00");
-	SafeWrite8(0xA21B83, 0xAC);
-	SafeWrite8(0xA22041, 0xAC);
-	SafeWrite8(0xA22047, 0xAC);
-	SafeWrite8(0xA22125, 0xAC);
-	SafeWrite8(0xA223D2, 0xAC);
-	SafeWrite8(0xA21BCB, 0xE4);
-	SafeWrite8(0xA22014, 0xE4);
-	WriteRelJump(0xA221F8, (UInt32)TileTextApplyScaleHook);*/
 	SafeWrite32(0x102F5A4, (UInt32)MarkRefAsModifiedHook);
 	WriteRelJump(0x646260, (UInt32)GetDamageToWeaponHook);
 	*(UInt32*)0x11D0190 = 0x41200000;

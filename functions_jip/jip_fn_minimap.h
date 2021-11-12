@@ -839,14 +839,14 @@ __declspec(naked) bool __fastcall UpdateSeenBits(SeenData *seenData, SInt32 *pos
 		or		s_updateFogOfWar, dl
 		pcmpeqd	xmm0, xmm0
 		movups	xmm1, [esi]
-		cmpps	xmm1, xmm0, 4
+		pcmpeqd	xmm1, xmm0
 		movmskps	edx, xmm1
-		test	dl, dl
+		cmp		dl, 0xF
 		jnz		done
 		movups	xmm1, [esi+0x10]
-		cmpps	xmm1, xmm0, 4
+		pcmpeqd	xmm1, xmm0
 		movmskps	edx, xmm1
-		test	dl, dl
+		cmp		dl, 0xF
 	done:
 		setz	al
 		lea		ecx, [esi-4]

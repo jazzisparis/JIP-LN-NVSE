@@ -134,10 +134,8 @@ DEFINE_COMMAND_PLUGIN(GetHitNode, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitExtendedFlag, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(RemoveAllPerks, 1, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetActorMovementFlags, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetHitFatigueDamage, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetHitArmorDamage, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetHitBlockingDTMod, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitBaseWeaponDamage, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetHitFatigueDamage, 1, 0, NULL);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -1353,78 +1351,15 @@ bool Cmd_SetWheelDisabled_Execute(COMMAND_ARGS)
 	return true;
 }
 
-__declspec(naked) float __fastcall AdjustDmgByDifficulty(ActorHitData *hitData)
-{
-	__asm
-	{
-		mov		edx, g_thePlayer
-		mov		eax, 0x119B310
-		cmp		dword ptr [ecx+4], edx
-		jz		isPlayer
-		add		eax, 0x14
-	isPlayer:
-		mov		edx, [edx+0x7B8]
-		mov		eax, [eax+edx*4]
-		fld		dword ptr [ecx+0x14]
-		fmul	dword ptr [eax+4]
-		retn
-	}
-}
-
-void __fastcall GetHitData(Actor *target, UInt8 dataType, double *result)
-{
-	*result = 0;
-	if (NOT_ACTOR(target) || !target->baseProcess) return;
-	ActorHitData *hitData = target->baseProcess->GetHitData();
-	if (!hitData) return;
-	switch (dataType)
-	{
-		case 0:
-			*result = AdjustDmgByDifficulty(hitData);
-			break;
-		case 1:
-			*result = hitData->limbDmg;
-			break;
-		case 2:
-			if (hitData->source)
-				REFR_RES = hitData->source->refID;
-			break;
-		case 3:
-			if (hitData->projectile)
-				REFR_RES = hitData->projectile->refID;
-			break;
-		case 4:
-			if (hitData->weapon)
-				REFR_RES = hitData->weapon->refID;
-			break;
-		case 5:
-			if (hitData->flags & 0x80000000)
-				*result = 1;
-			break;
-		case 6:
-			*result = hitData->fatigueDmg;
-			break;
-		case 7:
-			*result = hitData->armorDmg;
-			break;
-		case 8:
-			*result = hitData->blockDTMod;
-			break;
-		case 9:
-			*result = hitData->wpnBaseDmg;
-			break;
-	}
-}
-
 bool Cmd_GetHitHealthDamage_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 0, result);
+	((Actor*)thisObj)->GetHitDataValue(0, result);
 	return true;
 }
 
 bool Cmd_GetHitLimbDamage_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 1, result);
+	((Actor*)thisObj)->GetHitDataValue(1, result);
 	return true;
 }
 
@@ -1570,19 +1505,19 @@ bool Cmd_RemoveBaseEffectListEffect_Execute(COMMAND_ARGS)
 
 bool Cmd_GetHitAttacker_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 2, result);
+	((Actor*)thisObj)->GetHitDataValue(2, result);
 	return true;
 }
 
 bool Cmd_GetHitProjectile_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 3, result);
+	((Actor*)thisObj)->GetHitDataValue(3, result);
 	return true;
 }
 
 bool Cmd_GetHitWeapon_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 4, result);
+	((Actor*)thisObj)->GetHitDataValue(4, result);
 	return true;
 }
 
@@ -1803,7 +1738,7 @@ bool Cmd_GetActorLeveledList_Execute(COMMAND_ARGS)
 
 bool Cmd_GetArmourPenetrated_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 5, result);
+	((Actor*)thisObj)->GetHitDataValue(5, result);
 	return true;
 }
 
@@ -2491,27 +2426,15 @@ bool Cmd_GetActorMovementFlags_Execute(COMMAND_ARGS)
 }
 
 //	Credits to Demorome
-bool Cmd_GetHitFatigueDamage_Execute(COMMAND_ARGS)
-{
-	GetHitData((Actor*)thisObj, 6, result);
-	return true;
-}
-
-bool Cmd_GetHitArmorDamage_Execute(COMMAND_ARGS)
-{
-	GetHitData((Actor*)thisObj, 7, result);
-	return true;
-}
-
-bool Cmd_GetHitBlockingDTMod_Execute(COMMAND_ARGS)
-{
-	GetHitData((Actor*)thisObj, 8, result);
-	return true;
-}
-
 bool Cmd_GetHitBaseWeaponDamage_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 9, result);
+	((Actor*)thisObj)->GetHitDataValue(6, result);
+	return true;
+}
+
+bool Cmd_GetHitFatigueDamage_Execute(COMMAND_ARGS)
+{
+	((Actor*)thisObj)->GetHitDataValue(7, result);
 	return true;
 }
 //	===================

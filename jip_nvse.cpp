@@ -1340,11 +1340,9 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2906*/REG_CMD(GetPointRayCastPos);
 	/*2907*/REG_CMD(TogglePlayerSneaking);
 	/*2908*/REG_CMD(GetActorMovementFlags);
-	/*2909*/REG_CMD(GetTransformedPos);
-	/*290A*/REG_CMD(GetHitFatigueDamage);
-	/*290B*/REG_CMD(GetHitArmorDamage);
-	/*290C*/REG_CMD(GetHitBlockingDTMod);
-	/*290D*/REG_CMD(GetHitBaseWeaponDamage);
+	/*2909*/REG_CMD(GetTranslatedPos);
+	/*290A*/REG_CMD(GetHitBaseWeaponDamage);
+	/*290B*/REG_CMD(GetHitFatigueDamage);
 
 	//===========================================================
 

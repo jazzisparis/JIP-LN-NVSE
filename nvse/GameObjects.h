@@ -144,7 +144,7 @@ public:
 	void SetPos(NiVector4 *posVector);
 	void SetAngle(NiVector4 *rotVector, bool setLocal);
 	void MoveToCell(TESObjectCELL *cell, NiVector3 *posVector);
-	bool __fastcall GetTransformedPos(NiVector4 *posMods);
+	bool __fastcall GetTranslatedPos(NiVector4 *posMods);
 	void __fastcall Rotate(NiVector4 *rotVector);
 	bool Disable();
 	void DeleteReference();
@@ -693,6 +693,7 @@ public:
 	void PlayAnimGroup(UInt32 animGroupID);
 	UInt32 GetLevel();
 	double GetKillXP();
+	void GetHitDataValue(UInt32 valueType, double *result);
 	void DismemberLimb(UInt32 bodyPartID, bool explode);
 	void EquipItemAlt(TESForm *itemForm, ContChangesEntry *entry, UInt32 noUnequip, UInt32 noMessage);
 	bool HasNoPath();
@@ -1010,7 +1011,7 @@ public:
 	{
 		return ThisCall<bool>(0x950110, this, toggleON);
 	}
-	char GetDetectionState();
+	int GetDetectionState();
 
 	void ToggleSneak(bool toggle);
 };

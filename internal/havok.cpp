@@ -159,7 +159,7 @@ __declspec(naked) hkQuaternion *hkQuaternion::Normalize()
 		haddps	xmm1, xmm1
 		haddps	xmm1, xmm1
 		pxor	xmm2, xmm2
-		comiss	xmm1, kFlt1d10K
+		comiss	xmm1, kFlt1d100K
 		jb		zeroLen
 		sqrtss	xmm1, xmm1
 		movss	xmm2, kFltOne

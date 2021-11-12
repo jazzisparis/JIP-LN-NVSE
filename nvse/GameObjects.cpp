@@ -675,8 +675,7 @@ __declspec(naked) void TESObjectREFR::SetAngle(NiVector4 *rotVector, bool setLoc
 	doneRot:
 		push	2
 		mov		ecx, esi
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x48]
+		CALL_EAX(0x484B60)
 		push	1
 		push	edi
 		CALL_EAX(0xC6BD00)
@@ -744,7 +743,7 @@ __declspec(naked) void TESObjectREFR::MoveToCell(TESObjectCELL *cell, NiVector3 
 	}
 }
 
-__declspec(naked) bool __fastcall TESObjectREFR::GetTransformedPos(NiVector4 *posMods)
+__declspec(naked) bool __fastcall TESObjectREFR::GetTranslatedPos(NiVector4 *posMods)
 {
 	__asm
 	{
@@ -752,10 +751,10 @@ __declspec(naked) bool __fastcall TESObjectREFR::GetTransformedPos(NiVector4 *po
 		test	eax, eax
 		jz		done
 		mov		ecx, edx
-		lea		edx, [eax+0x34]
+		lea		edx, [eax+0x68]
 		call	NiVector3::MultiplyMatrix
 		movups	xmm0, [eax]
-		movups	xmm1, [edx+0x58]
+		movups	xmm1, [edx+0x24]
 		addps	xmm0, xmm1
 		movups	[eax], xmm0
 		mov		al, 1
@@ -787,8 +786,7 @@ __declspec(naked) void __fastcall TESObjectREFR::Rotate(NiVector4 *rotVector)
 		call	NiMatrix33::ExtractAngles
 		push	2
 		mov		ecx, esi
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x48]
+		CALL_EAX(0x484B60)
 		push	1
 		push	edi
 		CALL_EAX(0xC6BD00)
@@ -1535,6 +1533,67 @@ __declspec(naked) double Actor::GetKillXP()
 	}
 }
 
+__declspec(naked) double __fastcall AdjustDmgByDifficulty(ActorHitData *hitData)
+{
+	__asm
+	{
+		mov		edx, g_thePlayer
+		mov		eax, 0x119B310
+		cmp		dword ptr [ecx+4], edx
+		jz		isPlayer
+		add		eax, 0x14
+	isPlayer:
+		mov		edx, [edx+0x7B8]
+		mov		eax, [eax+edx*4]
+		fld		dword ptr [ecx+0x14]
+		fmul	dword ptr [eax+4]
+		retn
+	}
+}
+
+void Actor::GetHitDataValue(UInt32 valueType, double *result)
+{
+	*result = 0;
+	if (NOT_ACTOR(this) || !baseProcess || (baseProcess->processLevel > 1))
+		return;
+	ActorHitData *hitData = ((MiddleHighProcess*)baseProcess)->hitData240;
+	if (!hitData) return;
+	switch (valueType)
+	{
+		case 0:
+			*result = AdjustDmgByDifficulty(hitData);
+			break;
+		case 1:
+			*result = hitData->limbDmg;
+			break;
+		case 2:
+			if (hitData->source)
+				*(UInt32*)result = hitData->source->refID;
+			break;
+		case 3:
+			if (hitData->projectile)
+				*(UInt32*)result = hitData->projectile->refID;
+			break;
+		case 4:
+			if (hitData->weapon)
+				*(UInt32*)result = hitData->weapon->refID;
+			break;
+		case 5:
+			if (hitData->flags & 0x80000000)
+				*result = 1;
+			break;
+		case 6:
+			*result = hitData->wpnBaseDmg;
+			break;
+		case 7:
+			*result = hitData->fatigueDmg;
+			break;
+		case 8:
+			*result = hitData->armorDmg;
+			break;
+	}
+}
+
 __declspec(naked) void Actor::DismemberLimb(UInt32 bodyPartID, bool explode)
 {
 	__asm
@@ -1707,7 +1766,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		movaps	xmm1, xmm0
 		mulps	xmm1, xmm1
 		haddps	xmm1, xmm1
-		comiss	xmm1, kFlt1d10K
+		comiss	xmm1, kFlt1d100K
 		jb		done
 		rsqrtss	xmm1, xmm1
 		unpcklps	xmm1, xmm1
@@ -1944,14 +2003,17 @@ __declspec(naked) BackUpPackage *Actor::AddBackUpPackage(TESObjectREFR *targetRe
 	}
 }
 
-char PlayerCharacter::GetDetectionState()
+int PlayerCharacter::GetDetectionState()
 {
-	if (!parentCell) return -1;
-	if (pcUnseen || byte5F8) return 1;	// CAUTION
-	if (pcInCombat) return 3;			// DANGER
+	if (!parentCell)
+		return -1;
+	if (pcUnseen)
+		return 1;		// CAUTION
+	if (pcInCombat)
+		return 3;		// DANGER
 	if (ProcessManager::Get()->GetTotalDetectionValue(this) <= 0)
-		return 0;						// HIDDEN
-	return 2;							// DETECTED
+		return 0;		// HIDDEN
+	return 2;			// DETECTED
 }
 
 void PlayerCharacter::ToggleSneak(bool toggle)

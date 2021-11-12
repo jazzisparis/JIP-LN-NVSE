@@ -539,8 +539,9 @@ bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 		ExtractArgsEx(EXTRACT_ARGS_EX, &filter);
 		filter &= 0x3F;
 	}
+	NiCamera *camera = g_sceneGraph->camera;
 	NiVector3 coords;
-	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->WorldRotate(), 50000.0F, 0, filter))
+	if (coords.RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), 50000.0F, 0, filter))
 	{
 		ArrayElementL elements[3] = {coords.x, coords.y, coords.z};
 		AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
@@ -557,9 +558,10 @@ bool Cmd_GetReticleRange_Execute(COMMAND_ARGS)
 		ExtractArgsEx(EXTRACT_ARGS_EX, &filter);
 		filter &= 0x3F;
 	}
+	NiCamera *camera = g_sceneGraph->camera;
 	NiVector3 coords;
-	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->WorldRotate(), 50000.0F, 0, filter))
-		*result = Point3Distance(&coords, &g_thePlayer->cameraPos);
+	if (coords.RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), 50000.0F, 0, filter))
+		*result = Point3Distance(&coords, &camera->WorldTranslate());
 	else *result = -1;
 	return true;
 }

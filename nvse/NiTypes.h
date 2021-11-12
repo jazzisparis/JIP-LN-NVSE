@@ -1,5 +1,6 @@
 #pragma once
 
+struct NiVector4;
 struct NiQuaternion;
 struct NiMatrix33;
 
@@ -32,6 +33,7 @@ struct NiVector3
 	NiVector3() {}
 	NiVector3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
 	NiVector3(const NiVector3 &rhs) {*this = rhs;}
+	NiVector3(const NiVector4 &rhs) {*this = rhs;}
 
 	inline float& operator[](char axis)
 	{
@@ -44,6 +46,7 @@ struct NiVector3
 		y = rhs.y;
 		z = rhs.z;
 	}
+	void operator=(const NiVector4 &rhs);
 
 	inline void operator+=(const NiVector3 &rhs)
 	{
@@ -51,12 +54,14 @@ struct NiVector3
 		y += rhs.y;
 		z += rhs.z;
 	}
+	void operator+=(const NiVector4 &rhs);
 	inline void operator+=(float value)
 	{
 		x += value;
 		y += value;
 		z += value;
 	}
+
 	inline void operator-=(const NiVector3 &rhs)
 	{
 		x -= rhs.x;
@@ -97,9 +102,16 @@ struct NiVector4
 	NiVector4() {}
 	NiVector4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
 	NiVector4(const NiVector4 &rhs) {*this = rhs;}
+	NiVector4(const NiVector3 &rhs) {*this = rhs;}
 	explicit NiVector4(const __m128 rhs) {*this = rhs;}
 
 	inline void operator=(const NiVector4 &rhs) {_mm_storeu_ps(&x, rhs);}
+	inline void operator=(const NiVector3 &rhs)
+	{
+		x = rhs.x;
+		y = rhs.y;
+		z = rhs.z;
+	}
 	inline void operator=(const __m128 rhs) {_mm_storeu_ps(&x, rhs);}
 
 	inline float& operator[](char axis)
@@ -361,6 +373,8 @@ struct NiTransform
 	NiMatrix33	rotate;		// 00
 	NiVector3	translate;	// 24
 	float		scale;		// 30
+
+	NiVector4* __fastcall GetTranslatedPos(NiVector4 *posMods);
 };
 
 // 10

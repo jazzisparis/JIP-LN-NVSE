@@ -2,7 +2,7 @@
 #include "nvse/GameAPI.h"
 
 const float
-kFlt1d10K = 0.0001F,
+kFlt1d100K = 1.0e-05F,
 kFlt1d1K = 0.001F,
 kFlt1d200 = 0.005F,
 kFlt1d100 = 0.01F,
@@ -352,11 +352,11 @@ __declspec(naked) __m128 __vectorcall GetSinCos(float angle)
 		subss	xmm2, xmm0
 		pxor	xmm3, xmm3
 		movss	xmm0, xmm3
-		comiss	xmm2, kFlt1d10K
+		comiss	xmm2, kFlt1d100K
 		jb		done
 		sqrtss	xmm0, xmm2
-		mov		edx, 3
-		sub		edx, eax
+		lea		edx, [eax-3]
+		neg		edx
 		comiss	xmm4, xmm3
 		cmovb	eax, edx
 		cmp		al, 2
@@ -422,7 +422,7 @@ __declspec(naked) float __vectorcall ASin(float x)
 		mulss	xmm3, xmm0
 		movss	xmm4, kFltOne
 		subss	xmm4, xmm3
-		comiss	xmm4, kFlt1d10K
+		comiss	xmm4, kFlt1d100K
 		jb		retnPId2
 		sqrtss	xmm3, xmm4
 		divss	xmm0, xmm3
@@ -444,7 +444,7 @@ __declspec(naked) float __vectorcall ACos(float x)
 		mulss	xmm3, xmm0
 		movss	xmm4, kFltOne
 		subss	xmm4, xmm3
-		comiss	xmm4, kFlt1d10K
+		comiss	xmm4, kFlt1d100K
 		jb		retnPI0
 		sqrtss	xmm3, xmm4
 		divss	xmm0, xmm3

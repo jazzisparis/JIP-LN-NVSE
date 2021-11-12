@@ -1217,12 +1217,13 @@ ParamInfo kParams_OneMagicItem[] =
 	{"Magic Item", kParamType_MagicItem, 0}
 };
 
-ParamInfo kParams_FourOptionalFloats[] =
+ParamInfo kParams_FourOptionalFloats_OneOptionalInt[] =
 {
 	{"Float", kParamType_Float, 1},
 	{"Float", kParamType_Float, 1},
 	{"Float", kParamType_Float, 1},
-	{"Float", kParamType_Float, 1}
+	{"Float", kParamType_Float, 1},
+	{"Integer", kParamType_Integer, 1}
 };
 
 ParamInfo kParams_OneInt_OneFloat_TwoOptionalForms[] =
