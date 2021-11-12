@@ -4525,7 +4525,7 @@ void InitGamePatches()
 	WriteRelCall(0x89DC0E, (UInt32)KillChallengeFixHook);
 	WriteRelCall(0x72880D, (UInt32)IsDisposableWeaponHook);
 	WriteRelJump(0x984156, (UInt32)DeathResponseFixHook);
-	SAFE_WRITE_BUF(0x9EE367, "\x8B\x8A\xB0\x00\x00\x00\x83\xB9\x08\x01\x00\x00\x02\x0F\x84\x82\x00\x00\x00\xEB\x41");
+	SAFE_WRITE_BUF(0x9EE367, "\x8B\x8A\xB0\x00\x00\x00\x83\xB9\x08\x01\x00\x00\x02\x0F\x84\x82\x00\x00\x00\xE8\x71\x84\xEB\xFF\x84\xC0\x75\x79\xEB\x38");
 	SafeWrite16(0x54E421, 0x1EEB);
 	WritePushRetRelJump(0x54E4E1, 0x54E5E6, (UInt32)ClearAshPilesHook);
 	WritePushRetRelJump(0x82D8CA, 0x82D8F4, (UInt32)SetAcousticSpaceFixHook);
