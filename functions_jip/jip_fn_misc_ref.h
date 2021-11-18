@@ -313,9 +313,10 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 		ExtraStartingPosition *xStartingPos = GetExtraType(&thisObj->extraDataList, StartingPosition);
 		if (!xStartingPos) return true;
 		ExtraStartingWorldOrCell *xStartingCell = GetExtraType(&thisObj->extraDataList, StartingWorldOrCell);
-		cell = xStartingCell ? (TESObjectCELL*)xStartingCell->worldOrCell : thisObj->GetParentCell();
+		cell = xStartingCell ? (TESObjectCELL*)xStartingCell->worldOrCell : thisObj->GetParentCell(); 
 		posVector = &xStartingPos->posVector;
-		rotVector = std::make_unique<NiVector4>(xStartingPos->rotVector.x, xStartingPos->rotVector.y, xStartingPos->rotVector.z, 0);
+		if (bResetAngle)
+			rotVector = std::make_unique<NiVector4>(xStartingPos->rotVector);
 	}
 	if (!cell) return true;
 	if NOT_ID(cell, TESObjectCELL)

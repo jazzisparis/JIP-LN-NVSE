@@ -4,3 +4,16 @@
 *.db-wal
 *.opendb
 *.ipch
+*.tlog
+*.pdb
+*.log
+*.ipdb
+*.exp
+*.recipe
+*.dll
+*.obj
+*.iobj
+*.lib
+*.h
+.vs/jip_nvse/v16/.suo
+*.res
