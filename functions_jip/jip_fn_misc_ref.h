@@ -326,7 +326,7 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 	}
 	thisObj->MoveToCell(cell, posVector);
 	if (rotVector)
-		thisObj->SetAngle(rotVector.release(), false);
+		thisObj->SetAngle(rotVector.get(), false);
 	*result = 1;
 	return true;
 }
