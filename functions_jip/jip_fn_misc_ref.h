@@ -12,7 +12,7 @@ DEFINE_COMMAND_PLUGIN(SetPrimitiveBound, 1, 2, kParams_OneAxis_OneFloat);
 DEFINE_COMMAND_PLUGIN(AddPrimitive, 1, 4, kParams_OneInt_ThreeFloats);
 DEFINE_COMMAND_PLUGIN(GetTeammates, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(MoveToCell, 1, 4, kParams_OneForm_ThreeFloats);
-DEFINE_COMMAND_PLUGIN(MoveToEditorPosition, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(MoveToEditorPosition, true, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetCenterPos, 1, 1, kParams_OneAxis);
 DEFINE_COMMAND_PLUGIN(GetRefType, 0, 1, kParams_OneOptionalObjectRef);
 DEFINE_COMMAND_PLUGIN(ToggleObjectCollision, 1, 1, kParams_OneInt);
@@ -296,8 +296,12 @@ bool Cmd_MoveToCell_Execute(COMMAND_ARGS)
 bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESObjectCELL *cell;
-	NiVector3 *posVector;
+	UInt32 bResetAngle = false;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bResetAngle))
+		return true;
+	TESObjectCELL* cell;
+	NiVector3* posVector;
+	std::unique_ptr<NiVector4> rotVector;
 	if (IS_ACTOR(thisObj))
 	{
 		Actor *actor = (Actor*)thisObj;
@@ -311,6 +315,7 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 		ExtraStartingWorldOrCell *xStartingCell = GetExtraType(&thisObj->extraDataList, StartingWorldOrCell);
 		cell = xStartingCell ? (TESObjectCELL*)xStartingCell->worldOrCell : thisObj->GetParentCell();
 		posVector = &xStartingPos->posVector;
+		rotVector = std::make_unique<NiVector4>(xStartingPos->rotVector.x, xStartingPos->rotVector.y, xStartingPos->rotVector.z, 0);
 	}
 	if (!cell) return true;
 	if NOT_ID(cell, TESObjectCELL)
@@ -320,6 +325,8 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 		cell = ((TESWorldSpace*)cell)->cell;
 	}
 	thisObj->MoveToCell(cell, posVector);
+	if (rotVector)
+		thisObj->SetAngle(rotVector.release(), false);
 	*result = 1;
 	return true;
 }
