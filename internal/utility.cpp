@@ -2,16 +2,19 @@
 #include "nvse/GameAPI.h"
 
 const float
-kFlt1d1000 = 0.001F,
+kFlt1d100K = 1.0e-05F,
+kFlt1d1K = 0.001F,
 kFlt1d200 = 0.005F,
 kFlt1d100 = 0.01F,
 kFltPId180 = 0.01745329238F,
 kFlt1d10 = 0.1F,
 kFltHalf = 0.5F,
 kFltOne = 1.0F,
-kFltPId2 = 1.5707963268F,
+kFltPId2 = 1.570796371F,
+kFltPI = 3.141592741F,
+kFltPIx2 = 6.283185482F,
 kFlt10 = 10.0F,
-kFlt180dPI = 57.2957795F,
+kFlt180dPI = 57.29578018F,
 kFlt100 = 100.0F,
 kFlt200 = 200.0F,
 kFlt1000 = 1000.0F,
@@ -24,6 +27,7 @@ kDbl180dPI = 57.29577951308232088;
 alignas(16) const UInt32
 kSSERemoveSignMaskPS[] = {0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF},
 kSSEChangeSignMaskPS[] = {0x80000000, 0x80000000, 0x80000000, 0x80000000},
+kSSEChangeSignMaskPS0[] = {0x80000000, 0, 0, 0},
 kSSEDiscard4thPS[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000};
 
 alignas(16) const UInt64
@@ -261,6 +265,233 @@ __declspec(naked) int __vectorcall iceil(float value)
 		retn
 	isNeg:
 		cvttss2si	eax, xmm0
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall fMod(float numer, float denom)
+{
+	__asm
+	{
+		movss	xmm2, xmm0
+		divss	xmm2, xmm1
+		cvttps2dq	xmm2, xmm2
+		cvtdq2ps	xmm2, xmm2
+		mulss	xmm2, xmm1
+		subss	xmm0, xmm2
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall Cos(float angle)
+{
+	static const float
+	kFlt2dPI = 0.6366197467F, kCosCalc1 = 0.00002315393249F, kCosCalc2 = 0.001385370386F,
+	kCosCalc3 = 0.04166358337F, kCosCalc4 = 0.4999990463F, kCosCalc5 = 0.9999999404F;
+	__asm
+	{
+		andps	xmm0, kSSERemoveSignMaskPS
+		movss	xmm2, kFltPIx2
+		comiss	xmm0, xmm2
+		jb		perdOK
+		movss	xmm1, xmm0
+		divss	xmm1, xmm2
+		cvttps2dq	xmm1, xmm1
+		cvtdq2ps	xmm1, xmm1
+		mulss	xmm1, xmm2
+		subss	xmm0, xmm1
+	perdOK:
+		movss	xmm1, kFlt2dPI
+		mulss	xmm1, xmm0
+		cvttps2dq	xmm1, xmm1
+		movd	eax, xmm1
+		pxor	xmm3, xmm3
+		test	al, al
+		jz		doCalc
+		jp		fourthQ
+		movss	xmm2, kFltPI
+		movss	xmm3, kSSEChangeSignMaskPS0
+	fourthQ:
+		subss	xmm0, xmm2
+	doCalc:
+		mulss	xmm0, xmm0
+		movss	xmm1, kCosCalc1
+		mulss	xmm1, xmm0
+		subss	xmm1, kCosCalc2
+		mulss	xmm1, xmm0
+		addss	xmm1, kCosCalc3
+		mulss	xmm1, xmm0
+		subss	xmm1, kCosCalc4
+		mulss	xmm0, xmm1
+		addss	xmm0, kCosCalc5
+		xorps	xmm0, xmm3
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall Sin(float angle)
+{
+	__asm
+	{
+		movss	xmm1, xmm0
+		movss	xmm0, kFltPId2
+		subss	xmm0, xmm1
+		jmp		Cos
+	}
+}
+
+__declspec(naked) __m128 __vectorcall GetSinCos(float angle)
+{
+	__asm
+	{
+		movss	xmm4, xmm0
+		call	Cos
+		unpcklps	xmm0, xmm0
+		mulss	xmm0, xmm0
+		movss	xmm2, kFltOne
+		subss	xmm2, xmm0
+		pxor	xmm3, xmm3
+		movss	xmm0, xmm3
+		comiss	xmm2, kFlt1d100K
+		jb		done
+		sqrtss	xmm0, xmm2
+		lea		edx, [eax-3]
+		neg		edx
+		comiss	xmm4, xmm3
+		cmovb	eax, edx
+		cmp		al, 2
+		jb		done
+		xorps	xmm0, kSSEChangeSignMaskPS0
+	done:
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall ATan(float x)
+{
+	static const float
+	kFltTanPId12 = 0.2679491937F, kFltTanPId6 = 0.5773502588F, kFltPId6 = 0.5235987902F,
+	kFltTerm1 = 1.686762929F, kFltTerm2 = 0.4378497303F;
+	__asm
+	{
+		xorps	xmm5, xmm5
+		movss	xmm6, xmm0
+		andps	xmm6, kSSEChangeSignMaskPS0
+		xorps	xmm0, xmm6
+		movss	xmm3, kFltOne
+		comiss	xmm0, xmm3
+		seta	al
+		jbe		skipRecpr
+		divss	xmm3, xmm0
+		movss	xmm0, xmm3
+	skipRecpr:
+		comiss	xmm0, kFltTanPId12
+		jbe		noRegion
+		movss	xmm4, kFltTanPId6
+		movss	xmm3, xmm0
+		mulss	xmm3, xmm4
+		addss	xmm3, kFltOne
+		subss	xmm0, xmm4
+		divss	xmm0, xmm3
+		movss	xmm5, kFltPId6
+	noRegion:
+		movss	xmm3, xmm0
+		mulss	xmm3, xmm0
+		movss	xmm4, kFltTerm2
+		mulss	xmm4, xmm3
+		addss	xmm3, kFltTerm1
+		addss	xmm4, kFltTerm1
+		mulss	xmm0, xmm4
+		divss	xmm0, xmm3
+		addss	xmm0, xmm5
+		test	al, al
+		jz		done
+		subss	xmm0, kFltPId2
+		xorps	xmm0, kSSEChangeSignMaskPS0
+	done:
+		xorps	xmm0, xmm6
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall ASin(float x)
+{
+	__asm
+	{
+		movss	xmm3, xmm0
+		mulss	xmm3, xmm0
+		movss	xmm4, kFltOne
+		subss	xmm4, xmm3
+		comiss	xmm4, kFlt1d100K
+		jb		retnPId2
+		sqrtss	xmm3, xmm4
+		divss	xmm0, xmm3
+		jmp		ATan
+	retnPId2:
+		movss	xmm3, xmm0
+		andps	xmm3, kSSEChangeSignMaskPS0
+		movss	xmm0, kFltPId2
+		xorps	xmm0, xmm3
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall ACos(float x)
+{
+	_asm
+	{
+		movss	xmm3, xmm0
+		mulss	xmm3, xmm0
+		movss	xmm4, kFltOne
+		subss	xmm4, xmm3
+		comiss	xmm4, kFlt1d100K
+		jb		retnPI0
+		sqrtss	xmm3, xmm4
+		divss	xmm0, xmm3
+		call	ATan
+		movss	xmm3, xmm0
+		movss	xmm0, kFltPId2
+		subss	xmm0, xmm3
+		retn
+	retnPI0:
+		movss	xmm3, xmm0
+		pxor	xmm0, xmm0
+		comiss	xmm3, xmm0
+		jnb		done
+		movss	xmm0, kFltPI
+	done:
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall ATan2(float y, float x)
+{
+	__asm
+	{
+		movss	xmm2, xmm0
+		pxor	xmm5, xmm5
+		comiss	xmm1, xmm5
+		jz		xZero
+		divss	xmm0, xmm1
+		call	ATan
+		pxor	xmm5, xmm5
+		comiss	xmm1, xmm5
+		ja		done
+		andps	xmm2, kSSEChangeSignMaskPS0
+		movss	xmm4, kFltPI
+		xorps	xmm4, xmm2
+		addss	xmm0, xmm4
+		retn
+	xZero:
+		comiss	xmm2, xmm5
+		jz		retn0
+		movss	xmm0, kFltPId2
+		ja		done
+		xorps	xmm0, kSSEChangeSignMaskPS0
+		retn
+	retn0:
+		movss	xmm0, xmm5
+	done:
 		retn
 	}
 }

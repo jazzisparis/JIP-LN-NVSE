@@ -44,7 +44,7 @@ public:
 	MagicCaster		*caster;			// 28
 	UInt32			spellType;			// 2C e.g. SpellItem::kType_Ability
 	Sound			sound;				// 30
-	MagicItemForm	*enchantObject;		// 3C enchanted obj responsible for effect
+	TESForm			*enchantObject;		// 3C	Object responsible for effect
 	tList<void>		*list40;			// 40
 	UInt32			unk44;				// 44
 

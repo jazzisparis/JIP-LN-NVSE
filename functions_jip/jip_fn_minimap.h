@@ -65,16 +65,14 @@ __declspec(naked) __m128* __fastcall GetNorthRotation(TESObjectCELL *cell)
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		noRotation
-		fld		dword ptr [eax+0xC]
-		fchs
-		fst		s_cellNorthRotation
+		movss	xmm0, [eax+0xC]
+		xorps	xmm0, kSSEChangeSignMaskPS0
+		movss	s_cellNorthRotation, xmm0
+		call	GetSinCos
+		pshufd	xmm1, xmm0, 0x41
 		mov		eax, offset s_northRotationMods
-		fsincos
-		fst		dword ptr [eax]
-		fstp	dword ptr [eax+0xC]
-		fst		dword ptr [eax+4]
-		fchs
-		fstp	dword ptr [eax+8]
+		movaps	[eax], xmm1
+		xor		byte ptr [eax+0xB], 0x80
 		retn
 		ALIGN 16
 	noRotation:
@@ -839,22 +837,16 @@ __declspec(naked) bool __fastcall UpdateSeenBits(SeenData *seenData, SInt32 *pos
 		jns		iter1Head
 		mov		dl, [ebp-8]
 		or		s_updateFogOfWar, dl
-		mov		edx, 0xFFFFFFFF
-		cmp		[esi], edx
+		pcmpeqd	xmm0, xmm0
+		movups	xmm1, [esi]
+		pcmpeqd	xmm1, xmm0
+		movmskps	edx, xmm1
+		cmp		dl, 0xF
 		jnz		done
-		cmp		[esi+4], edx
-		jnz		done
-		cmp		[esi+8], edx
-		jnz		done
-		cmp		[esi+0xC], edx
-		jnz		done
-		cmp		[esi+0x10], edx
-		jnz		done
-		cmp		[esi+0x14], edx
-		jnz		done
-		cmp		[esi+0x18], edx
-		jnz		done
-		cmp		[esi+0x1C], edx
+		movups	xmm1, [esi+0x10]
+		pcmpeqd	xmm1, xmm0
+		movmskps	edx, xmm1
+		cmp		dl, 0xF
 	done:
 		setz	al
 		lea		ecx, [esi-4]
@@ -955,15 +947,16 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		mov		esi, [ebx+0x40]
 		test	esi, esi
 		jz		doneExt
-		movq	xmm0, qword ptr [ebx+0x30]
 		mov		edi, 0x11CA208
 		cmp		s_pcCurrCell0, esi
 		jz		sameCell
 		mov		s_pcCurrCell0, esi
 		mov		ecx, esi
 		call	GetNorthRotation
+		movq	xmm0, qword ptr [ebx+0x30]
 		jmp		skipPosDiff
 	sameCell:
+		movq	xmm0, qword ptr [ebx+0x30]
 		movq	xmm1, qword ptr [edi]
 		subps	xmm1, xmm0
 		mulps	xmm1, xmm1

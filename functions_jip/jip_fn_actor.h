@@ -134,6 +134,8 @@ DEFINE_COMMAND_PLUGIN(GetHitNode, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitExtendedFlag, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(RemoveAllPerks, 1, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetActorMovementFlags, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetHitBaseWeaponDamage, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetHitFatigueDamage, 1, 0, NULL);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -1349,66 +1351,15 @@ bool Cmd_SetWheelDisabled_Execute(COMMAND_ARGS)
 	return true;
 }
 
-__declspec(naked) float __fastcall AdjustDmgByDifficulty(ActorHitData *hitData)
-{
-	__asm
-	{
-		mov		edx, g_thePlayer
-		mov		eax, 0x119B310
-		cmp		dword ptr [ecx+4], edx
-		jz		isPlayer
-		add		eax, 0x14
-	isPlayer:
-		mov		edx, [edx+0x7B8]
-		mov		eax, [eax+edx*4]
-		fld		dword ptr [ecx+0x14]
-		fmul	dword ptr [eax+4]
-		retn
-	}
-}
-
-void __fastcall GetHitData(Actor *target, UInt8 dataType, double *result)
-{
-	*result = 0;
-	if (NOT_ACTOR(target) || !target->baseProcess) return;
-	ActorHitData *hitData = target->baseProcess->GetHitData();
-	if (!hitData) return;
-	switch (dataType)
-	{
-		case 0:
-			*result = AdjustDmgByDifficulty(hitData);
-			break;
-		case 1:
-			*result = hitData->limbDmg;
-			break;
-		case 2:
-			if (hitData->source)
-				REFR_RES = hitData->source->refID;
-			break;
-		case 3:
-			if (hitData->projectile)
-				REFR_RES = hitData->projectile->refID;
-			break;
-		case 4:
-			if (hitData->weapon)
-				REFR_RES = hitData->weapon->refID;
-			break;
-		case 5:
-			if (hitData->flags & 0x80000000)
-				*result = 1;
-			break;
-	}
-}
-
 bool Cmd_GetHitHealthDamage_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 0, result);
+	((Actor*)thisObj)->GetHitDataValue(0, result);
 	return true;
 }
 
 bool Cmd_GetHitLimbDamage_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 1, result);
+	((Actor*)thisObj)->GetHitDataValue(1, result);
 	return true;
 }
 
@@ -1554,19 +1505,19 @@ bool Cmd_RemoveBaseEffectListEffect_Execute(COMMAND_ARGS)
 
 bool Cmd_GetHitAttacker_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 2, result);
+	((Actor*)thisObj)->GetHitDataValue(2, result);
 	return true;
 }
 
 bool Cmd_GetHitProjectile_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 3, result);
+	((Actor*)thisObj)->GetHitDataValue(3, result);
 	return true;
 }
 
 bool Cmd_GetHitWeapon_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 4, result);
+	((Actor*)thisObj)->GetHitDataValue(4, result);
 	return true;
 }
 
@@ -1787,7 +1738,7 @@ bool Cmd_GetActorLeveledList_Execute(COMMAND_ARGS)
 
 bool Cmd_GetArmourPenetrated_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 5, result);
+	((Actor*)thisObj)->GetHitDataValue(5, result);
 	return true;
 }
 
@@ -2387,28 +2338,40 @@ bool Cmd_GetHitExtendedFlag_Execute(COMMAND_ARGS)
 			switch (flagID)
 			{
 				case 0:
-					if (flags & 1) isSet = true;
+					if (flags & ActorHitData::kFlag_TargetIsBlocking)
+						isSet = true;
 					break;
 				case 1:
-					if (flags & 4) isSet = true;
+					if (flags & ActorHitData::kFlag_IsCritical)
+						isSet = true;
 					break;
 				case 2:
-					if (flags & 0x10) isSet = true;
+					if (flags & ActorHitData::kFlag_IsFatal)
+						isSet = true;
 					break;
 				case 3:
-					if (flags & 0x20) isSet = true;
+					if (flags & ActorHitData::kFlag_DismemberLimb)
+						isSet = true;
 					break;
 				case 4:
-					if (flags & 0x40) isSet = true;
+					if (flags & ActorHitData::kFlag_ExplodeLimb)
+						isSet = true;
 					break;
 				case 5:
-					if (flags & 0x80) isSet = true;
+					if (flags & ActorHitData::kFlag_CrippleLimb)
+						isSet = true;
 					break;
 				case 6:
-					if (flags & 0x300) isSet = true;
+					if (flags & ActorHitData::kFlag_BreakWeapon)
+						isSet = true;
 					break;
 				case 7:
-					if (flags & 0x400) isSet = true;
+					if (flags & ActorHitData::kFlag_IsSneakAttack)
+						isSet = true;
+					break;
+				case 8:
+					if (flags & ActorHitData::kFlag_IsExplosionHit)
+						isSet = true;
 					break;
 			}
 		}
@@ -2461,3 +2424,17 @@ bool Cmd_GetActorMovementFlags_Execute(COMMAND_ARGS)
 	DoConsolePrint(result);
 	return true;
 }
+
+//	Credits to Demorome
+bool Cmd_GetHitBaseWeaponDamage_Execute(COMMAND_ARGS)
+{
+	((Actor*)thisObj)->GetHitDataValue(6, result);
+	return true;
+}
+
+bool Cmd_GetHitFatigueDamage_Execute(COMMAND_ARGS)
+{
+	((Actor*)thisObj)->GetHitDataValue(7, result);
+	return true;
+}
+//	===================

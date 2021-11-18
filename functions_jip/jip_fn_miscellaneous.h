@@ -539,8 +539,9 @@ bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 		ExtractArgsEx(EXTRACT_ARGS_EX, &filter);
 		filter &= 0x3F;
 	}
+	NiCamera *camera = g_sceneGraph->camera;
 	NiVector3 coords;
-	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->WorldRotate(), 50000.0F, 0, filter))
+	if (coords.RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), 50000.0F, 0, filter))
 	{
 		ArrayElementL elements[3] = {coords.x, coords.y, coords.z};
 		AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
@@ -557,9 +558,10 @@ bool Cmd_GetReticleRange_Execute(COMMAND_ARGS)
 		ExtractArgsEx(EXTRACT_ARGS_EX, &filter);
 		filter &= 0x3F;
 	}
+	NiCamera *camera = g_sceneGraph->camera;
 	NiVector3 coords;
-	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->WorldRotate(), 50000.0F, 0, filter))
-		*result = Point3Distance(&coords, &g_thePlayer->cameraPos);
+	if (coords.RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), 50000.0F, 0, filter))
+		*result = Point3Distance(&coords, &camera->WorldTranslate());
 	else *result = -1;
 	return true;
 }
@@ -778,21 +780,16 @@ bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 		while (++startIdx < 9);
 		if (rotationKeys)
 		{
-			NiQuaternion quaternion;
-			rotYPR.x *= kFltPId180;
-			rotYPR.y *= kFltPId180;
-			rotYPR.z *= kFltPId180;
-			rotYPR.ToQuaternion(quaternion);
+			rotYPR *= kFltPId180;
+			NiQuaternion quaternion = rotYPR;
 			rotationKeys[1].value = quaternion;
 			rotationKeys[1].quaternion20 = quaternion;
 			rotationKeys[1].quaternion30 = quaternion;
 			rotationKeys[2].value = quaternion;
 			rotationKeys[2].quaternion20 = quaternion;
 			rotationKeys[2].quaternion30 = quaternion;
-			rotYPR.x *= -0.5;
-			rotYPR.y *= -0.5;
-			rotYPR.z *= -0.5;
-			rotYPR.ToQuaternion(quaternion);
+			rotYPR *= -0.5;
+			quaternion = rotYPR;
 			rotationKeys[0].quaternion20 = quaternion;
 			rotationKeys[0].quaternion30 = quaternion;
 			while (++startIdx < 8)
@@ -1259,7 +1256,7 @@ bool Cmd_GetPointRayCastPos_Execute(COMMAND_ARGS)
 		rot.y = 0;
 		rot.z *= kFltPId180;
 		NiMatrix33 rotMat;
-		rotMat.RotationMatrixInv(&rot);
+		rotMat.RotationMatrixInv(rot);
 		if (rot.RayCastCoords(&pos, &rotMat, 100000.0F, 4, filter & 0x3F))
 		{
 			outX->data.num = rot.x;

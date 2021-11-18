@@ -63,7 +63,7 @@ bool Cmd_fSin_Execute(COMMAND_ARGS)
 	double value;
 	UInt32 precision;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value, &precision))
-		*result = sin(value * kDblPId180);
+		*result = Sin(value * kDblPId180);
 	else *result = 0;
 	return true;
 }
@@ -73,7 +73,7 @@ bool Cmd_fCos_Execute(COMMAND_ARGS)
 	double value;
 	UInt32 precision;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value, &precision))
-		*result = cos(value * kDblPId180);
+		*result = Cos(value * kDblPId180);
 	else *result = 0;
 	return true;
 }
@@ -91,14 +91,7 @@ bool Cmd_fAsin_Execute(COMMAND_ARGS)
 {
 	double value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-	{
-		if (value <= -1.0)
-			*result = -90.0;
-		else if (value >= 1.0)
-			*result = 90.0;
-		else
-			*result = asin(value) * kDbl180dPI;
-	}
+		*result = ASin(value) * kDbl180dPI;
 	else *result = 0;
 	return true;
 }
@@ -107,14 +100,7 @@ bool Cmd_fAcos_Execute(COMMAND_ARGS)
 {
 	double value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-	{
-		if (value <= -1.0)
-			*result = 180.0;
-		else if (value >= 1.0)
-			*result = 0;
-		else
-			*result = acos(value) * kDbl180dPI;
-	}
+		*result = ACos(value) * kDbl180dPI;
 	else *result = 0;
 	return true;
 }
@@ -123,7 +109,7 @@ bool Cmd_fAtan_Execute(COMMAND_ARGS)
 {
 	double value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		*result = atan(value) * kDbl180dPI;
+		*result = ATan(value) * kDbl180dPI;
 	else *result = 0;
 	return true;
 }
@@ -132,7 +118,7 @@ bool Cmd_fAtan2_Execute(COMMAND_ARGS)
 {
 	double y, x;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &y, &x))
-		*result = atan2(y, x) * kDbl180dPI;
+		*result = ATan2(y, x) * kDbl180dPI;
 	else *result = 0;
 	return true;
 }

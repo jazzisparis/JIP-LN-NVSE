@@ -31,7 +31,7 @@ DEFINE_COMMAND_PLUGIN(AddRefMapMarker, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(RemoveRefMapMarker, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(RefHasMapMarker, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(SetPosEx, 1, 4, kParams_ThreeFloats_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(MoveToReticle, 1, 4, kParams_FourOptionalFloats);
+DEFINE_COMMAND_PLUGIN(MoveToReticle, 1, 5, kParams_FourOptionalFloats_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetRefName, 1, 1, kParams_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(SetAngleEx, 1, 4, kParams_ThreeFloats_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetTeleportDoor, 1, 0, NULL);
@@ -85,7 +85,7 @@ DEFINE_COMMAND_PLUGIN(ProjectExtraCamera, 0, 4, kParams_TwoStrings_OneDouble_One
 DEFINE_COMMAND_PLUGIN(RenameNifBlock, 1, 3, kParams_TwoStrings_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(RemoveNifBlock, 1, 2, kParams_OneString_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(PlayAnimSequence, 1, 2, kParams_OneString_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(GetTransformedPos, 1, 6, kParams_ThreeFloats_ThreeScriptVars);
+DEFINE_COMMAND_PLUGIN(GetTranslatedPos, 1, 6, kParams_ThreeFloats_ThreeScriptVars);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -755,7 +755,7 @@ bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 {
 	NiVector4 posVector;
 	UInt32 transform = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posVector.x, &posVector.y, &posVector.z, &transform) && (!transform || thisObj->GetTransformedPos(&posVector)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posVector.x, &posVector.y, &posVector.z, &transform) && (!transform || thisObj->GetTranslatedPos(&posVector)))
 		thisObj->SetPos(&posVector);
 	return true;
 }
@@ -763,22 +763,30 @@ bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	float maxRange = 12288.0F;
+	float maxRange = 50000.0F;
 	NiVector3 posMods(0, 0, 0);
+	UInt32 translate = 0;
 	UInt8 numArgs = NUM_ARGS;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &posMods.x, &posMods.y, &posMods.z))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &posMods.x, &posMods.y, &posMods.z, &translate))
 	{
 		TESObjectCELL *cell = g_thePlayer->parentCell;
 		if (cell)
 		{
-			NiVector3 coords;
-			if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->WorldRotate(), maxRange))
+			NiCamera *camera = g_sceneGraph->camera;
+			NiVector4 coords;
+			NiVector3 *pCoords = (NiVector3*)&coords;
+			if (!pCoords->RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), maxRange))
 			{
-				if (numArgs > 1)
-					coords += posMods;
-				thisObj->MoveToCell(cell, &coords);
-				*result = 1;
+				if (!translate) return true;
+				coords.x = (maxRange < 4096.0F) ? maxRange : 4096.0F;
+				coords.y = 0;
+				coords.z = 0;
+				camera->m_transformWorld.GetTranslatedPos(&coords);
 			}
+			if (numArgs > 1)
+				coords += posMods;
+			thisObj->MoveToCell(cell, pCoords);
+			*result = 1;
 		}
 	}
 	return true;
@@ -819,7 +827,6 @@ bool Cmd_SetAngleEx_Execute(COMMAND_ARGS)
 	UInt32 transform = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &rotVector.x, &rotVector.y, &rotVector.z, &transform))
 	{
-		rotVector.w = 0;
 		if (transform <= 1)
 			thisObj->SetAngle(&rotVector, transform);
 		else thisObj->Rotate(&rotVector);
@@ -1058,8 +1065,8 @@ bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 			NiVector3 rot;
 			NiMatrix33 &rotMat = (getMode & 1) ? niBlock->WorldRotate() : niBlock->LocalRotate();
 			if (!(getMode & 2))
-				rotMat.ExtractAngles(&rot);
-			else rotMat.ExtractAnglesInv(&rot);
+				rotMat.ExtractAngles(rot);
+			else rotMat.ExtractAnglesInv(rot);
 			ArrayElementL elements[3] = {rot.x * kDbl180dPI, rot.y * kDbl180dPI, rot.z * kDbl180dPI};
 			AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
 		}
@@ -1079,11 +1086,11 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 		{
 			rot *= kFltPId180;
 			if (!transform)
-				niBlock->LocalRotate().RotationMatrix(&rot);
+				niBlock->LocalRotate().RotationMatrix(rot);
 			else if (transform == 1)
-				niBlock->LocalRotate().Rotate(&rot);
+				niBlock->LocalRotate().Rotate(rot);
 			else
-				niBlock->LocalRotate().RotationMatrixInv(&rot);
+				niBlock->LocalRotate().RotationMatrixInv(rot);
 			niBlock->Update();
 		}
 	}
@@ -1950,10 +1957,7 @@ bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 		{
 			NiNode *rootNode = thisObj->GetNiNode();
 			if (rootNode)
-			{
-				rootNode->WorldRotate().ExtractAnglesInv(&locRot);
-				rotPtr = &locRot;
-			}
+				rotPtr = rootNode->WorldRotate().ExtractAnglesInv(locRot);
 		}
 		outX->data.num = rotPtr->x * kDbl180dPI;
 		outY->data.num = rotPtr->y * kDbl180dPI;
@@ -2196,11 +2200,11 @@ bool Cmd_PlayAnimSequence_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool Cmd_GetTransformedPos_Execute(COMMAND_ARGS)
+bool Cmd_GetTranslatedPos_Execute(COMMAND_ARGS)
 {
 	NiVector4 posMods;
 	ScriptVar *outX, *outY, *outZ;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posMods.x, &posMods.y, &posMods.z, &outX, &outY, &outZ) && thisObj->GetTransformedPos(&posMods))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posMods.x, &posMods.y, &posMods.z, &outX, &outY, &outZ) && thisObj->GetTranslatedPos(&posMods))
 	{
 		outX->data.num = posMods.x;
 		outY->data.num = posMods.y;

@@ -1159,7 +1159,6 @@ public:
 	inline NiVector3& LocalTranslate() {return m_transformLocal.translate;}
 	inline NiVector3& WorldTranslate() {return m_transformWorld.translate;}
 
-	NiVector4* __fastcall TransformTranslate(NiVector4 *posMods);
 	void Update();
 	UInt32 GetIndex();
 	bool ReplaceObject(NiAVObject *object);
