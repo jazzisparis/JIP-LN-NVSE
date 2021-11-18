@@ -327,7 +327,7 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 	}
 	thisObj->MoveToCell(cell, posVector);
 	if (rotVector)
-		thisObj->SetAngle(rotVector.get(), false);
+		thisObj->SetAngle(rotVector.get(), false);	//bug: does not properly reset to the editor-chosen angle.
 	*result = 1;
 	return true;
 }
