@@ -3703,8 +3703,7 @@ __declspec(naked) void LoadWeaponSlotHook()
 	__asm
 	{
 		mov		eax, [ebp-0x14]
-		mov		edx, 0x3F800000
-		movd	xmm0, edx
+		movss	xmm0, kFltOne
 		movups	[eax+0x34], xmm0
 		movups	[eax+0x44], xmm0
 		movups	[eax+0x54], xmm0

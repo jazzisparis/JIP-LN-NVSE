@@ -1385,7 +1385,8 @@ bool Cmd_PlayIdleEx_Execute(COMMAND_ARGS)
 				idleAnim = ThisCall<TESIdleForm*>(0x600950, GameGlobals::IdleAnimsDirectoryMap(), actor, ((HighProcess*)actor->baseProcess)->unk40);
 			else if (idleAnim->children)
 				idleAnim = idleAnim->FindIdle(actor);
-			if (idleAnim) animData->PlayIdle(idleAnim);
+			if (idleAnim && (animData->GetPlayedIdle() != idleAnim))
+				animData->PlayIdle(idleAnim);
 		}
 	}
 	return true;
@@ -1448,8 +1449,11 @@ bool Cmd_GetPlayedIdle_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	AnimData *animData = thisObj->GetAnimData();
-	if (animData && animData->idleAnim && animData->idleAnim->idleForm)
-		REFR_RES = animData->idleAnim->idleForm->refID;
+	if (animData)
+	{
+		TESIdleForm *idleAnim = animData->GetPlayedIdle();
+		if (idleAnim) REFR_RES = idleAnim->refID;
+	}
 	return true;
 }
 
@@ -1460,7 +1464,7 @@ bool Cmd_IsIdlePlayingEx_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim))
 	{
 		AnimData *animData = thisObj->GetAnimData();
-		if (animData && animData->idleAnim && (animData->idleAnim->idleForm == idleAnim))
+		if (animData && (animData->GetPlayedIdle() == idleAnim))
 			*result = 1;
 	}
 	return true;

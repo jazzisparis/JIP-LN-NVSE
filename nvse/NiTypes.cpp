@@ -1,7 +1,5 @@
 #include "nvse/NiTypes.h"
 
-const __m128 kHalfAngles = {0.5F, 0.5F, 0.5F, 0};
-
 void NiVector3::operator=(const NiVector4 &rhs)
 {
 	x = rhs.x;
@@ -162,7 +160,11 @@ __declspec(naked) AxisAngle* __fastcall AxisAngle::FromEulerYPR(const NiVector3 
 	__asm
 	{
 		movups	xmm7, [edx]
-		mulps	xmm7, kHalfAngles
+		movaps	xmm0, kVcPI
+		cmpps	xmm0, xmm7, 1
+		andps	xmm0, kVcPIx2
+		subps	xmm7, xmm0
+		mulps	xmm7, kVcHalf
 		pshufd	xmm0, xmm7, 0xFE
 		call	GetSinCos
 		movaps	xmm5, xmm0
@@ -291,42 +293,42 @@ __declspec(naked) NiMatrix33* __fastcall NiMatrix33::FromQuaternion(const NiQuat
 	}
 }
 
+const float kNegPId2 = -1.570796371F;
+
 __declspec(naked) NiVector3* __fastcall NiMatrix33::ExtractAngles(NiVector3 &outAngles) const
 {
 	__asm
 	{
+		mov		eax, edx
 		movss	xmm0, [ecx+8]
 		movss	xmm1, xmm0
-		andps	xmm1, kSSERemoveSignMaskPS
+		movss	xmm2, xmm0
+		movss	xmm3, kSSEChangeSignMaskPS0
+		andps	xmm2, xmm3
+		xorps	xmm1, xmm2
 		comiss	xmm1, kFltOne
-		jnb		zeroZ
+		jnb		singularity
+		xorps	xmm0, xmm3
 		call	ASin
-		movss	[edx+4], xmm0
-		xor		byte ptr [edx+7], 0x80
+		movss	[eax+4], xmm0
 		movss	xmm0, [ecx+0x14]
 		movss	xmm1, [ecx+0x20]
 		call	ATan2
-		movss	[edx], xmm0
+		movss	[eax], xmm0
 		movss	xmm0, [ecx+4]
 		movss	xmm1, [ecx]
 		call	ATan2
-		movss	[edx+8], xmm0
-		mov		eax, edx
+		movss	[eax+8], xmm0
 		retn
-	zeroZ:
+	singularity:
+		movss	xmm0, kNegPId2
+		xorps	xmm0, xmm2
+		movq	qword ptr [eax+4], xmm0
 		movss	xmm0, [ecx+0xC]
+		xorps	xmm0, xmm2
 		movss	xmm1, [ecx+0x10]
 		call	ATan2
-		movss	[edx], xmm0
-		mov		dword ptr [edx+4], 0x3FC90FDB
-		pxor	xmm1, xmm1
-		movss	[edx+8], xmm1
-		mov		eax, 3
-		mov		ecx, 7
-		comiss	xmm0, xmm1
-		cmova	eax, ecx
-		xor		byte ptr [edx+eax], 0x80
-		mov		eax, edx
+		movss	[eax], xmm0
 		retn
 	}
 }
@@ -335,38 +337,36 @@ __declspec(naked) NiVector3* __fastcall NiMatrix33::ExtractAnglesInv(NiVector3 &
 {
 	__asm
 	{
+		mov		eax, edx
 		movss	xmm0, [ecx+0x18]
 		movss	xmm1, xmm0
-		andps	xmm1, kSSERemoveSignMaskPS
+		movss	xmm2, xmm0
+		movss	xmm3, kSSEChangeSignMaskPS0
+		andps	xmm2, xmm3
+		xorps	xmm1, xmm2
 		comiss	xmm1, kFltOne
-		jnb		zeroZ
+		jnb		singularity
+		xorps	xmm0, xmm3
 		call	ASin
-		movss	[edx+4], xmm0
-		xor		byte ptr [edx+7], 0x80
+		movss	[eax+4], xmm0
 		movss	xmm0, [ecx+0x1C]
 		movss	xmm1, [ecx+0x20]
 		call	ATan2
-		movss	[edx], xmm0
+		movss	[eax], xmm0
 		movss	xmm0, [ecx+0xC]
 		movss	xmm1, [ecx]
 		call	ATan2
-		movss	[edx+8], xmm0
-		mov		eax, edx
+		movss	[eax+8], xmm0
 		retn
-	zeroZ:
+	singularity:
+		movss	xmm0, kNegPId2
+		xorps	xmm0, xmm2
+		movq	qword ptr [eax+4], xmm0
 		movss	xmm0, [ecx+4]
+		xorps	xmm0, xmm2
 		movss	xmm1, [ecx+0x10]
 		call	ATan2
-		movss	[edx], xmm0
-		mov		dword ptr [edx+4], 0x3FC90FDB
-		pxor	xmm1, xmm1
-		movss	[edx+8], xmm1
-		mov		eax, 3
-		mov		ecx, 7
-		comiss	xmm0, xmm1
-		cmova	eax, ecx
-		xor		byte ptr [edx+eax], 0x80
-		mov		eax, edx
+		movss	[eax], xmm0
 		retn
 	}
 }
@@ -580,11 +580,10 @@ __declspec(naked) NiMatrix33* __fastcall NiMatrix33::RotationMatrix(const NiVect
 	static const void *kRotationMatrixJmpTable[] = {RotationMatrixX, RotationMatrixY, RotationMatrixXY, RotationMatrixZ, RotationMatrixXZ, RotationMatrixYZ, RotationMatrixXYZ};
 	__asm
 	{
-		mov		eax, 0x3F800000
-		movd	xmm0, eax
+		movss	xmm0, kFltOne
 		movups	[ecx], xmm0
 		movups	[ecx+0x10], xmm0
-		mov		[ecx+0x20], eax
+		movss	[ecx+0x20], xmm0
 		movups	xmm7, [edx]
 		andps	xmm7, kSSEDiscard4thPS
 		pxor	xmm1, xmm1
@@ -769,7 +768,7 @@ __declspec(naked) bool __fastcall NiQuaternion::operator==(const NiQuaternion &r
 		andps	xmm0, kSSERemoveSignMaskPS
 		cmpps	xmm0, kEqEpsilon, 1
 		movmskps	eax, xmm0
-		xor		al, 0xF
+		cmp		al, 0xF
 		setz	al
 		retn
 	}
@@ -871,7 +870,11 @@ __declspec(naked) NiQuaternion* __fastcall NiQuaternion::FromEulerYPR(const NiVe
 	__asm
 	{
 		movups	xmm7, [edx]
-		mulps	xmm7, kHalfAngles
+		movaps	xmm0, kVcPI
+		cmpps	xmm0, xmm7, 1
+		andps	xmm0, kVcPIx2
+		subps	xmm7, xmm0
+		mulps	xmm7, kVcHalf
 		pshufd	xmm0, xmm7, 0xFC
 		call	GetSinCos
 		movaps	xmm6, xmm0
@@ -1000,16 +1003,16 @@ __declspec(naked) NiVector3* __fastcall NiQuaternion::ToEulerYPR(NiVector3 &ypr)
 		hsubps	xmm0, xmm0
 		addss	xmm0, xmm0
 		movss	xmm1, xmm0
-		andps	xmm1, kSSERemoveSignMaskPS
+		movss	xmm2, xmm0
+		andps	xmm2, kSSEChangeSignMaskPS0
+		xorps	xmm1, xmm2
 		comiss	xmm1, kFltOne
 		jnb		invSinP
 		call	ASin
 		jmp		doneY
 	invSinP:
-		movss	xmm1, xmm0
-		andps	xmm1, kSSEChangeSignMaskPS0
 		movss	xmm0, kFltPId2
-		xorps	xmm0, xmm1
+		xorps	xmm0, xmm2
 	doneY:
 		movss	[edx+4], xmm0
 		pshufd	xmm0, xmm7, 0xE4

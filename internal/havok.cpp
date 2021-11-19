@@ -193,16 +193,16 @@ __declspec(naked) NiVector3* __fastcall hkQuaternion::ToEulerYPR(NiVector3 &ypr)
 		hsubps	xmm0, xmm0
 		addss	xmm0, xmm0
 		movss	xmm1, xmm0
-		andps	xmm1, kSSERemoveSignMaskPS
+		movss	xmm2, xmm0
+		andps	xmm2, kSSEChangeSignMaskPS0
+		xorps	xmm1, xmm2
 		comiss	xmm1, kFltOne
 		jnb		invSinP
 		call	ASin
 		jmp		doneY
 	invSinP:
-		movss	xmm1, xmm0
-		andps	xmm1, kSSEChangeSignMaskPS0
 		movss	xmm0, kFltPId2
-		xorps	xmm0, xmm1
+		xorps	xmm0, xmm2
 	doneY:
 		movss	[edx+4], xmm0
 		pshufd	xmm0, xmm7, 0x93

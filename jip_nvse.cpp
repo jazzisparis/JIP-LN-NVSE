@@ -1336,7 +1336,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2904*/REG_CMD(PlayAnimSequence);
 	//	v56.26
 	/*2905*/REG_CMD(RemoveAllPerks);
-	//	v56.36
+	//	v56.38
 	/*2906*/REG_CMD(GetPointRayCastPos);
 	/*2907*/REG_CMD(TogglePlayerSneaking);
 	/*2908*/REG_CMD(GetActorMovementFlags);

@@ -42,7 +42,7 @@ public:
 		kDisable_All =		kDisable_User | kDisable_Script,
 	};
 
-	bool IsKeyPressed(UInt32 keycode, UInt8 flags = 1);
+	bool __fastcall IsKeyPressed(UInt32 keycode, UInt32 flags = 1);
 	bool IsKeyPressedRaw(UInt32 keycode);
 	bool IsLMBPressed();
 	bool IsKeyDisabled(UInt32 keycode);

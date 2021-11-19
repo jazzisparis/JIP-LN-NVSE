@@ -298,8 +298,7 @@ __declspec(naked) NiNode *NiNode::CreateCopy()
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x68]
 		and		byte ptr [esi+0x30], 0xFE
-		mov		edx, 0x3F800000
-		movd	xmm0, edx
+		movss	xmm0, kFltOne
 		movups	[esi+0x34], xmm0
 		movups	[esi+0x44], xmm0
 		movups	[esi+0x54], xmm0

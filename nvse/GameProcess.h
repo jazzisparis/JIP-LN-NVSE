@@ -898,6 +898,8 @@ struct AnimData
 	NiObject						*object130;			// 130
 	tList<PlayingIdle>				playingIdleAnims;	// 134
 
+	TESIdleForm *GetPlayedIdle();
+
 	__forceinline void PlayIdle(TESIdleForm *idleAnim)
 	{
 		ThisCall(0x497F20, this, idleAnim, actor, idleAnim->data.groupFlags & 0x3F, 3);

@@ -62,10 +62,11 @@ __forceinline T_Ret CdeclCall(UInt32 _addr, Args ...args)
 
 #define LOG_HOOKS 0
 
-extern const float kFlt1d100K, kFlt1d1K, kFlt1d200, kFlt1d100, kFltPId180, kFlt1d10, kFltHalf, kFltOne, kFltPId2, kFltPI, kFltPIx2, kFlt10, kFlt180dPI, kFlt100, kFlt200, kFlt1000, kFltMax;
+extern const float kFlt1d100K, kFlt1d1K, kFlt1d200, kFlt1d100, kFltPId180, kFlt1d10, kFltHalf, kFltOne, kFltPId2, kFltPI, kFltPIx2, kFlt10, kFlt180dPI, kFlt100, kFlt1000, kFltMax;
 extern const double kDblPId180, kDbl180dPI;
 extern const UInt32 kSSERemoveSignMaskPS[], kSSEChangeSignMaskPS[], kSSEChangeSignMaskPS0[], kSSEDiscard4thPS[];
 extern const UInt64 kSSERemoveSignMaskPD[], kSSEChangeSignMaskPD[];
+extern const __m128 kVcPI, kVcPIx2, kVcHalf;
 extern const char kLwrCaseConverter[], kUprCaseConverter[];
 
 typedef void* (__cdecl *memcpy_t)(void*, const void*, size_t);
@@ -234,15 +235,15 @@ __forceinline int iround(float value)
 
 float __vectorcall fMod(float numer, float denom);
 
-float __vectorcall Cos(float angle);
 float __vectorcall Sin(float angle);
+float __vectorcall Cos(float angle);
+float __vectorcall Tan(float angle);
 
 __m128 __vectorcall GetSinCos(float angle);
 
-float __vectorcall ATan(float x);
 float __vectorcall ASin(float x);
 float __vectorcall ACos(float x);
-
+float __vectorcall ATan(float x);
 float __vectorcall ATan2(float y, float x);
 
 char *GetStrArgBuffer();

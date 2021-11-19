@@ -1149,8 +1149,7 @@ __declspec(naked) void ProcessGradualSetFloatHook()
 		mov		ecx, [ecx]
 		mov		edx, eax
 		sub		eax, [ecx+8]
-		movd	xmm0, eax
-		cvtdq2ps	xmm0, xmm0
+		cvtsi2ss	xmm0, eax
 		divss	xmm0, [ecx+0xC]
 		comiss	xmm0, kFltOne
 		jnb		finished
@@ -1211,8 +1210,7 @@ __declspec(naked) bool ReactionCooldownCheckHook()
 		CALL_EAX(0x457FE0)
 		mov		edx, eax
 		sub		eax, lastTickCount
-		movd	xmm0, eax
-		cvtdq2ps	xmm0, xmm0
+		cvtsi2ss	xmm0, eax
 		mulss	xmm0, kFlt1d1K
 		comiss	xmm0, ds:[0x11CE9B8]
 		seta	al
@@ -1790,14 +1788,13 @@ __declspec(naked) float __vectorcall GetFrequencyModifier(TESSound *soundForm)
 		movsx	edx, byte ptr [ecx+0x46]
 		test	edx, edx
 		jz		done
-		movd	xmm1, edx
-		cvtdq2ps	xmm1, xmm1
+		cvtsi2ss	xmm1, edx
 		js		isNeg
 		mulss	xmm1, kFlt1d100
-		jmp		doAdd
+		addss	xmm0, xmm1
+		retn
 	isNeg:
 		mulss	xmm1, kFlt1d200
-	doAdd:
 		addss	xmm0, xmm1
 	done:
 		retn
@@ -1867,6 +1864,7 @@ __declspec(naked) void FillGameSoundPropsHook()
 
 __declspec(naked) UInt32 __fastcall AdjustSoundFrequencyHook(BSGameSound *gameSound, int EDX, float freq)
 {
+	static const float kFlt200K = 200000.0F;
 	__asm
 	{
 		cmp		dword ptr [ecx+0x19C], 0
@@ -1874,17 +1872,12 @@ __declspec(naked) UInt32 __fastcall AdjustSoundFrequencyHook(BSGameSound *gameSo
 		cmp		dword ptr [ecx+0x198], 0
 		jz		done
 		movzx	edx, word ptr [ecx+0x15A]
-		movd	xmm0, edx
-		cvtdq2ps	xmm0, xmm0
+		cvtsi2ss	xmm0, edx
 		mulss	xmm0, [ecx+0x138]
 		mulss	xmm0, [esp+4]
+		maxss	xmm0, kFlt100
+		minss	xmm0, kFlt200K
 		cvtss2si	edx, xmm0
-		mov		eax, 0x64
-		cmp		edx, eax
-		cmovb	edx, eax
-		mov		eax, 0x30D40
-		cmp		edx, eax
-		cmova	edx, eax
 		push	edx
 		mov		ecx, [ecx+0x19C]
 		push	ecx
@@ -1914,12 +1907,10 @@ __declspec(naked) float __fastcall GetSoundFrequencyPercHook(BSGameSound *gameSo
 		pop		edx
 		test	eax, eax
 		js		retn1
-		movd	xmm0, edx
-		cvtdq2ps	xmm0, xmm0
+		cvtsi2ss	xmm0, edx
 		mov		ecx, [esp]
 		movzx	edx, word ptr [ecx+0x15A]
-		movd	xmm1, edx
-		cvtdq2ps	xmm1, xmm1
+		cvtsi2ss	xmm1, edx
 		mulss	xmm1, [ecx+0x138]
 		divss	xmm0, xmm1
 		movss	[esp], xmm0
@@ -2024,8 +2015,7 @@ __declspec(naked) float __cdecl GetDamageToWeaponHook(Actor *actor)
 		js		skipFO3
 		mulss	xmm0, kDegrMults[edx*4]
 		mov		dx, [ecx+0xA0]
-		movd	xmm1, edx
-		cvtdq2ps	xmm1, xmm1
+		cvtsi2ss	xmm1, edx
 		mulss	xmm0, xmm1
 	skipFO3:
 		movd	eax, xmm0
@@ -3658,8 +3648,8 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		movq	xmm1, xmm0
 		divsd	xmm1, xmm4
 		mov		eax, [ecx+0x10]
-		cvttss2si	edx, [eax+0x24]
-		movd	xmm3, edx
+		movss	xmm3, [eax+0x24]
+		cvttps2dq	xmm3, xmm3
 		cvtdq2pd	xmm3, xmm3
 		addsd	xmm1, xmm3
 	proceed:
@@ -3696,12 +3686,10 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		subsd	xmm0, xmm4
 		comisd	xmm0, xmm4
 		ja		iterHead
-		movd	xmm3, esi
-		cvtdq2ps	xmm3, xmm3
+		cvtsi2ss	xmm3, esi
 		mov		eax, [ecx+4]
 		movss	[eax+0x24], xmm3
-		movd	xmm3, edi
-		cvtdq2ps	xmm3, xmm3
+		cvtsi2ss	xmm3, edi
 		mov		eax, [ecx+8]
 		movss	[eax+0x24], xmm3
 		inc		dword ptr [ecx+0x18]
@@ -3922,12 +3910,10 @@ __declspec(naked) void DoOperatorHook()
 		movq	xmm0, qword ptr [ebp-0x20]
 		test	ah, ah
 		jnz		rValFlt
-		movd	xmm1, [ebp-0x38]
-		cvtdq2pd	xmm1, xmm1
+		cvtsi2sd	xmm1, [ebp-0x38]
 		jmp		doJump
 	lValCvt:
-		movd	xmm0, [ebp-0x20]
-		cvtdq2pd	xmm0, xmm0
+		cvtsi2sd	xmm0, [ebp-0x20]
 	rValFlt:
 		movq	xmm1, qword ptr [ebp-0x38]
 	doJump:
@@ -4525,7 +4511,7 @@ void InitGamePatches()
 	WriteRelCall(0x89DC0E, (UInt32)KillChallengeFixHook);
 	WriteRelCall(0x72880D, (UInt32)IsDisposableWeaponHook);
 	WriteRelJump(0x984156, (UInt32)DeathResponseFixHook);
-	SAFE_WRITE_BUF(0x9EE367, "\x8B\x8A\xB0\x00\x00\x00\x83\xB9\x08\x01\x00\x00\x02\x0F\x84\x82\x00\x00\x00\xE8\x71\x84\xEB\xFF\x84\xC0\x75\x79\xEB\x38");
+	SAFE_WRITE_BUF(0x9EE367, "\x8B\x8A\xB0\x00\x00\x00\x83\xB9\x08\x01\x00\x00\x02\x0F\x84\x82\x00\x00\x00\xEB\x41");
 	SafeWrite16(0x54E421, 0x1EEB);
 	WritePushRetRelJump(0x54E4E1, 0x54E5E6, (UInt32)ClearAshPilesHook);
 	WritePushRetRelJump(0x82D8CA, 0x82D8F4, (UInt32)SetAcousticSpaceFixHook);

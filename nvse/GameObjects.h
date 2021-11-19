@@ -617,7 +617,7 @@ public:
 	UInt8								byte15E;					// 15E
 	UInt8								byte15F;					// 15F
 	NiVector3							startingPos;				// 160
-	float								flt16C;						// 16C
+	float								startingZRot;				// 16C
 	TESForm								*startingWorldOrCell;		// 170
 	UInt8								byte174;					// 174-
 	UInt8								byte175;					// 175-

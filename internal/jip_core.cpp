@@ -543,6 +543,34 @@ ScriptVar *Script::AddVariable(char *varName, ScriptEventList *eventList, UInt32
 	return var;
 }
 
+__declspec(naked) TESIdleForm *AnimData::GetPlayedIdle()
+{
+	__asm
+	{
+		mov		eax, [ecx+0x128]
+		test	eax, eax
+		jz		noQueued
+		mov		eax, [eax+0x2C]
+		test	eax, eax
+		jnz		done
+	noQueued:
+		mov		eax, [ecx+0x124]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x2C]
+		test	eax, eax
+		jz		done
+		push	eax
+		CALL_EAX(0x4985F0)
+		pop		edx
+		movzx	eax, al
+		dec		eax
+		and		eax, edx
+	done:
+		retn
+	}
+}
+
 UnorderedMap<UInt32, LinkedRefEntry> s_linkedRefModified;
 UnorderedMap<UInt32, UInt32> s_linkedRefDefault, s_linkedRefsTemp;
 

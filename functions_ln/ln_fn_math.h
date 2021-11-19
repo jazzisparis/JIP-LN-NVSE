@@ -82,7 +82,7 @@ bool Cmd_fTan_Execute(COMMAND_ARGS)
 {
 	double value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		*result = tan(value * kDblPId180);
+		*result = Tan(value * kDblPId180);
 	else *result = 0;
 	return true;
 }

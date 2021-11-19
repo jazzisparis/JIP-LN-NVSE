@@ -78,8 +78,7 @@ __declspec(naked) double __vectorcall GetLeftStick(SInt16 value)
 		add		eax, s_deadZoneLS
 		jge		retnZero
 	done:
-		movd	xmm0, eax
-		cvtdq2pd	xmm0, xmm0
+		cvtsi2sd	xmm0, eax
 		mulsd	xmm0, s_deadZoneLSd
 		retn
 	}
@@ -103,8 +102,7 @@ __declspec(naked) double __vectorcall GetRightStick(SInt16 value)
 		add		eax, s_deadZoneRS
 		jge		retnZero
 	done:
-		movd	xmm0, eax
-		cvtdq2pd	xmm0, xmm0
+		cvtsi2sd	xmm0, eax
 		mulsd	xmm0, s_deadZoneRSd
 		retn
 	}

@@ -12,7 +12,7 @@ DEFINE_COMMAND_PLUGIN(SetPrimitiveBound, 1, 2, kParams_OneAxis_OneFloat);
 DEFINE_COMMAND_PLUGIN(AddPrimitive, 1, 4, kParams_OneInt_ThreeFloats);
 DEFINE_COMMAND_PLUGIN(GetTeammates, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(MoveToCell, 1, 4, kParams_OneForm_ThreeFloats);
-DEFINE_COMMAND_PLUGIN(MoveToEditorPosition, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(MoveToEditorPosition, 1, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetCenterPos, 1, 1, kParams_OneAxis);
 DEFINE_COMMAND_PLUGIN(GetRefType, 0, 1, kParams_OneOptionalObjectRef);
 DEFINE_COMMAND_PLUGIN(ToggleObjectCollision, 1, 1, kParams_OneInt);
@@ -296,13 +296,23 @@ bool Cmd_MoveToCell_Execute(COMMAND_ARGS)
 bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 {
 	*result = 0;
+	UInt32 resetRot = 0;
+	if (NUM_ARGS)
+		ExtractArgsEx(EXTRACT_ARGS_EX, &resetRot);
 	TESObjectCELL *cell;
 	NiVector3 *posVector;
+	NiVector4 rotVector;
 	if (IS_ACTOR(thisObj))
 	{
 		Actor *actor = (Actor*)thisObj;
 		cell = (TESObjectCELL*)actor->startingWorldOrCell;
 		posVector = &actor->startingPos;
+		if (resetRot)
+		{
+			rotVector.x = 0;
+			rotVector.y = 0;
+			rotVector.z = actor->startingZRot * kFlt180dPI;
+		}
 	}
 	else
 	{
@@ -311,6 +321,11 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 		ExtraStartingWorldOrCell *xStartingCell = GetExtraType(&thisObj->extraDataList, StartingWorldOrCell);
 		cell = xStartingCell ? (TESObjectCELL*)xStartingCell->worldOrCell : thisObj->GetParentCell();
 		posVector = &xStartingPos->posVector;
+		if (resetRot)
+		{
+			rotVector = xStartingPos->rotVector;
+			rotVector *= kFlt180dPI;
+		}
 	}
 	if (!cell) return true;
 	if NOT_ID(cell, TESObjectCELL)
@@ -320,6 +335,8 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 		cell = ((TESWorldSpace*)cell)->cell;
 	}
 	thisObj->MoveToCell(cell, posVector);
+	if (resetRot)
+		thisObj->SetAngle(&rotVector, false);
 	*result = 1;
 	return true;
 }

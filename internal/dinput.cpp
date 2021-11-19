@@ -1,30 +1,23 @@
 #include "internal/dinput.h"
 
-__declspec(naked) bool DIHookControl::IsKeyPressed(UInt32 keycode, UInt8 flags)
+__declspec(naked) bool __fastcall DIHookControl::IsKeyPressed(UInt32 keycode, UInt32 flags)
 {
+	static const UInt32 kFlagMask[] = {0x100, 0x100, 1, 0x101, 0x10000, 0x10100, 0x10001, 0x10101};
 	__asm
 	{
-		mov		eax, [esp+4]
-		cmp		eax, kMaxMacros
+		cmp		edx, kMaxMacros
 		jnb		retnFalse
-		mov		dl, [esp+8]
-		test	dl, dl
-		jnz		doneFlag
-		mov		dl, 1
-	doneFlag:
-		lea		ecx, [ecx+eax*8+4]
-		sub		ecx, eax
-		mov		al, [ecx+2]
-		shl		al, 1
-		or		al, [ecx]
-		shl		al, 1
-		or		al, [ecx+1]
-		test	al, dl
+		lea		ecx, [ecx+edx*8+4]
+		sub		ecx, edx
+		mov		eax, [esp+4]
+		and		eax, 7
+		mov		edx, kFlagMask[eax*4]
+		test	[ecx], edx
 		setnz	al
-		retn	8
+		retn	4
 	retnFalse:
 		xor		al, al
-		retn	8
+		retn	4
 	}
 }
 

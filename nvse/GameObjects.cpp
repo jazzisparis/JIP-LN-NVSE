@@ -1518,8 +1518,7 @@ __declspec(naked) double Actor::GetKillXP()
 		push	edx
 		CALL_EAX(0x6705B0)
 		add		esp, 8
-		movd	xmm0, eax
-		cvtdq2ps	xmm0, xmm0
+		cvtsi2ss	xmm0, eax
 		mov		eax, g_thePlayer
 		push	dword ptr [eax+0x7B8]
 		push	ecx
