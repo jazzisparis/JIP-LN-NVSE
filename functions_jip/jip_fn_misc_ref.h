@@ -1,4 +1,6 @@
 #pragma once
+#define _USE_MATH_DEFINES
+#include <math.h>
 
 DEFINE_COMMAND_PLUGIN(SetPersistent, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetObjectDimensions, 0, 2, kParams_OneAxis_OneOptionalForm);
@@ -297,8 +299,11 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 bResetAngle = false;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bResetAngle))
-		return true;
+	if (NUM_ARGS) {		//workaround for breaking backwards compat when adding an arg to a previously arg-less func.
+		if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bResetAngle))
+			return true;
+	}
+	
 	TESObjectCELL* cell;
 	NiVector3* posVector;
 	std::unique_ptr<NiVector4> rotVector;
@@ -325,9 +330,13 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 			return true;
 		cell = ((TESWorldSpace*)cell)->cell;
 	}
+
 	thisObj->MoveToCell(cell, posVector);
 	if (rotVector)
-		thisObj->SetAngle(rotVector.get(), false);	//bug: does not properly reset to the editor-chosen angle.
+	{
+		*rotVector *= kFlt180dPI;	//convert from radians to degrees.
+		thisObj->SetAngle(rotVector.get(), false);
+	}
 	*result = 1;
 	return true;
 }

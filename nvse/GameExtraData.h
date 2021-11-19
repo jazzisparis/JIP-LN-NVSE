@@ -717,7 +717,7 @@ class ExtraStartingPosition : public BSExtraData
 {
 public:
 	NiVector3	posVector;	// 0C
-	NiVector3	rotVector;	// 18
+	NiVector3	rotVector;	// 18, in radians
 };
 
 // 10
