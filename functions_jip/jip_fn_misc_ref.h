@@ -1,6 +1,4 @@
 #pragma once
-#define _USE_MATH_DEFINES
-#include <math.h>
 
 DEFINE_COMMAND_PLUGIN(SetPersistent, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetObjectDimensions, 0, 2, kParams_OneAxis_OneOptionalForm);
