@@ -419,11 +419,28 @@ __declspec(naked) ContChangesEntry* __fastcall ExtraContainerChanges::EntryDataL
 	}
 }
 
-ExtraDataList *ExtraDataList::CreateCopy()
+__declspec(naked) ExtraDataList *ExtraDataList::CreateCopy(bool bCopyAndRemove)
 {
-	ExtraDataList *xDataList = Create();
-	xDataList->CopyFrom(this);
-	return xDataList;
+	__asm
+	{
+		push	esi
+		mov		esi, ecx
+		push	0x20
+		GAME_HEAP_ALLOC
+		pxor	xmm0, xmm0
+		movups	[eax], xmm0
+		movups	[eax+0x10], xmm0
+		mov		dword ptr [eax], kVtbl_ExtraDataList
+		movzx	edx, byte ptr [esp+8]
+		push	edx
+		push	esi
+		mov		esi, eax
+		mov		ecx, eax
+		CALL_EAX(0x412490)
+		mov		eax, esi
+		pop		esi
+		retn	4
+	}
 }
 
 __declspec(naked) double ExtraContainerChanges::Data::GetInventoryWeight()
@@ -577,8 +594,7 @@ __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetBaseHe
 		mov		dl, [eax+4]
 		cmp		dl, kFormType_TESObjectWEAP
 		jnz		notWeapon
-		movd	xmm1, [eax+0x98]
-		cvtdq2ps	xmm1, xmm1
+		cvtsi2ss	xmm1, [eax+0x98]
 		mov		edx, 0xA
 		call	ContChangesEntry::GetWeaponModEffectValue
 		addss	xmm0, xmm1
@@ -586,8 +602,7 @@ __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetBaseHe
 	notWeapon:
 		cmp		dl, kFormType_TESObjectARMO
 		jnz		done
-		movd	xmm0, [eax+0x6C]
-		cvtdq2ps	xmm0, xmm0
+		cvtsi2ss	xmm0, [eax+0x6C]
 		retn
 	done:
 		pxor	xmm0, xmm0

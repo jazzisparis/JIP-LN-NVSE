@@ -14,14 +14,13 @@ DEFINE_COMMAND_PLUGIN(fAtan2, 0, 2, kParams_TwoDoubles);
 bool Cmd_fsqrt_Execute(COMMAND_ARGS)
 {
 	double value;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value) && (value > 0))
 	{
 		__asm
 		{
-			fld		value
-			fsqrt
+			sqrtsd	xmm0, value
 			mov		eax, result
-			fstp	qword ptr [eax]
+			movq	qword ptr [eax], xmm0
 		}
 	}
 	else *result = 0;
@@ -64,7 +63,7 @@ bool Cmd_fSin_Execute(COMMAND_ARGS)
 	double value;
 	UInt32 precision;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value, &precision))
-		*result = sin(value * kDblPId180);
+		*result = Sin(value * kDblPId180);
 	else *result = 0;
 	return true;
 }
@@ -74,7 +73,7 @@ bool Cmd_fCos_Execute(COMMAND_ARGS)
 	double value;
 	UInt32 precision;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value, &precision))
-		*result = cos(value * kDblPId180);
+		*result = Cos(value * kDblPId180);
 	else *result = 0;
 	return true;
 }
@@ -83,7 +82,7 @@ bool Cmd_fTan_Execute(COMMAND_ARGS)
 {
 	double value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		*result = tan(value * kDblPId180);
+		*result = Tan(value * kDblPId180);
 	else *result = 0;
 	return true;
 }
@@ -92,7 +91,7 @@ bool Cmd_fAsin_Execute(COMMAND_ARGS)
 {
 	double value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		*result = asin(value) * kDbl180dPI;
+		*result = ASin(value) * kDbl180dPI;
 	else *result = 0;
 	return true;
 }
@@ -101,7 +100,7 @@ bool Cmd_fAcos_Execute(COMMAND_ARGS)
 {
 	double value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		*result = acos(value) * kDbl180dPI;
+		*result = ACos(value) * kDbl180dPI;
 	else *result = 0;
 	return true;
 }
@@ -110,7 +109,7 @@ bool Cmd_fAtan_Execute(COMMAND_ARGS)
 {
 	double value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		*result = atan(value) * kDbl180dPI;
+		*result = ATan(value) * kDbl180dPI;
 	else *result = 0;
 	return true;
 }
@@ -119,7 +118,7 @@ bool Cmd_fAtan2_Execute(COMMAND_ARGS)
 {
 	double y, x;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &y, &x))
-		*result = atan2(y, x) * kDbl180dPI;
+		*result = ATan2(y, x) * kDbl180dPI;
 	else *result = 0;
 	return true;
 }

@@ -504,12 +504,6 @@ float GetDaysPassed(int bgnYear, int bgnMonth, int bgnDay)
 	return (float)totalDays + (g_gameHour->data / 24.0F);
 }
 
-void PlayGameSound(const char *soundEDID)
-{
-	Sound sound(soundEDID, 0x121);
-	sound.Play();
-}
-
 UnorderedMap<UInt32, ScriptVariablesMap> s_scriptVariablesBuffer;
 UnorderedMap<UInt32, VariableNames> s_addedVariables;
 
@@ -547,6 +541,34 @@ ScriptVar *Script::AddVariable(char *varName, ScriptEventList *eventList, UInt32
 	if (varName[0] != '*')
 		s_scriptVariablesBuffer[ownerID][varName].Set(var, modIdx);
 	return var;
+}
+
+__declspec(naked) TESIdleForm *AnimData::GetPlayedIdle()
+{
+	__asm
+	{
+		mov		eax, [ecx+0x128]
+		test	eax, eax
+		jz		noQueued
+		mov		eax, [eax+0x2C]
+		test	eax, eax
+		jnz		done
+	noQueued:
+		mov		eax, [ecx+0x124]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x2C]
+		test	eax, eax
+		jz		done
+		push	eax
+		CALL_EAX(0x4985F0)
+		pop		edx
+		movzx	eax, al
+		dec		eax
+		and		eax, edx
+	done:
+		retn
+	}
 }
 
 UnorderedMap<UInt32, LinkedRefEntry> s_linkedRefModified;
@@ -673,6 +695,7 @@ ExtraDataList* __fastcall SplitFromStack(ContChangesEntry *entry, ExtraDataList 
 	ExtraCount *xCount = GetExtraType(xDataIn, Count);
 	if (!xCount) return xDataIn;
 	ExtraDataList *xDataOut = xDataIn->CreateCopy();
+	xDataOut->RemoveByType(kExtraData_Worn);
 	xDataOut->RemoveByType(kExtraData_Count);
 	xDataOut->RemoveByType(kExtraData_Hotkey);
 	if (--xCount->count < 2)
@@ -1047,6 +1070,11 @@ __declspec(naked) void __fastcall DoConsolePrint(TESForm *result)
 	done:
 		retn
 	}
+}
+
+bool IsInMainThread()
+{
+	return GetCurrentThreadId() == s_mainThreadID;
 }
 
 __declspec(naked) TLSData *GetTLSData()

@@ -73,6 +73,8 @@ DEFINE_COMMAND_PLUGIN(ClearDeadActors, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetCameraMovement, 0, 2, kParams_TwoScriptVars);
 DEFINE_COMMAND_PLUGIN(GetReticleNode, 0, 2, kParams_OneOptionalFloat_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetInternalMarker, 0, 2, kParams_OneForm_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetPointRayCastPos, 0, 9, kParams_FiveFloats_ThreeScriptVars_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(TogglePlayerSneaking, 0, 1, kParams_OneInt);
 
 bool Cmd_DisableNavMeshAlt_Execute(COMMAND_ARGS)
 {
@@ -200,7 +202,7 @@ bool Cmd_ToggleFirstPerson_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &toggleON))
 	{
 		bool bToggle = toggleON != 0;
-		if (bToggle == g_thePlayer->bThirdPerson)
+		if (bToggle == g_thePlayer->is3rdPerson)
 			g_thePlayer->ToggleFirstPerson(bToggle);
 	}
 	return true;
@@ -487,7 +489,7 @@ bool SetOnKeyEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt;
-	UInt32 keyID = 0;
+	SInt32 keyID = -1;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &keyID) && IS_ID(script, Script))
 		SetInputEventHandler(s_onKeyEventMask, script, keyID, addEvnt != 0);
 	return true;
@@ -537,8 +539,9 @@ bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 		ExtractArgsEx(EXTRACT_ARGS_EX, &filter);
 		filter &= 0x3F;
 	}
+	NiCamera *camera = g_sceneGraph->camera;
 	NiVector3 coords;
-	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, 50000.0F, 0, filter))
+	if (coords.RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), 50000.0F, 0, filter))
 	{
 		ArrayElementL elements[3] = {coords.x, coords.y, coords.z};
 		AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
@@ -555,9 +558,10 @@ bool Cmd_GetReticleRange_Execute(COMMAND_ARGS)
 		ExtractArgsEx(EXTRACT_ARGS_EX, &filter);
 		filter &= 0x3F;
 	}
+	NiCamera *camera = g_sceneGraph->camera;
 	NiVector3 coords;
-	if (coords.RayCastCoords(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, 50000.0F, 0, filter))
-		*result = Vector3Distance(&coords, &g_thePlayer->cameraPos);
+	if (coords.RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), 50000.0F, 0, filter))
+		*result = Point3Distance(&coords, &camera->WorldTranslate());
 	else *result = -1;
 	return true;
 }
@@ -776,21 +780,16 @@ bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 		while (++startIdx < 9);
 		if (rotationKeys)
 		{
-			NiQuaternion quaternion;
-			rotYPR.x *= kFltPId180;
-			rotYPR.y *= kFltPId180;
-			rotYPR.z *= kFltPId180;
-			rotYPR.ToQuaternion(quaternion);
+			rotYPR *= kFltPId180;
+			NiQuaternion quaternion = rotYPR;
 			rotationKeys[1].value = quaternion;
 			rotationKeys[1].quaternion20 = quaternion;
 			rotationKeys[1].quaternion30 = quaternion;
 			rotationKeys[2].value = quaternion;
 			rotationKeys[2].quaternion20 = quaternion;
 			rotationKeys[2].quaternion30 = quaternion;
-			rotYPR.x *= -0.5;
-			rotYPR.y *= -0.5;
-			rotYPR.z *= -0.5;
-			rotYPR.ToQuaternion(quaternion);
+			rotYPR *= -0.5;
+			quaternion = rotYPR;
 			rotationKeys[0].quaternion20 = quaternion;
 			rotationKeys[0].quaternion30 = quaternion;
 			while (++startIdx < 8)
@@ -1220,8 +1219,7 @@ bool Cmd_GetReticleNode_Execute(COMMAND_ARGS)
 	UInt32 filter = 6;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &filter))
 	{
-		filter &= 0x3F;
-		NiAVObject *rtclObject = GetRayCastObject(&g_thePlayer->cameraPos, &g_sceneGraph->camera->m_worldRotate, maxRange, 0, filter);
+		NiAVObject *rtclObject = GetRayCastObject(&g_thePlayer->cameraPos, &g_sceneGraph->camera->WorldRotate(), maxRange, 0, filter & 0x3F);
 		if (rtclObject) nodeName = rtclObject->GetName();
 	}
 	AssignString(PASS_COMMAND_ARGS, nodeName);
@@ -1243,5 +1241,37 @@ bool Cmd_SetInternalMarker_Execute(COMMAND_ARGS)
 			s_internalMarkerIDs.Insert(form->refID);
 		else s_internalMarkerIDs.Erase(form->refID);
 	}
+	return true;
+}
+
+bool Cmd_GetPointRayCastPos_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	NiVector3 pos, rot;
+	ScriptVar *outX, *outY, *outZ;
+	UInt32 filter = 6;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pos.x, &pos.y, &pos.z, &rot.x, &rot.z, &outX, &outY, &outZ, &filter))
+	{
+		rot.x *= kFltPId180;
+		rot.y = 0;
+		rot.z *= kFltPId180;
+		NiMatrix33 rotMat;
+		rotMat.RotationMatrixInv(rot);
+		if (rot.RayCastCoords(&pos, &rotMat, 100000.0F, 4, filter & 0x3F))
+		{
+			outX->data.num = rot.x;
+			outY->data.num = rot.y;
+			outZ->data.num = rot.z;
+			*result = 1;
+		}
+	}
+	return true;
+}
+
+bool Cmd_TogglePlayerSneaking_Execute(COMMAND_ARGS)
+{
+	UInt32 toggle;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &toggle))
+		g_thePlayer->ToggleSneak(toggle != 0);
 	return true;
 }

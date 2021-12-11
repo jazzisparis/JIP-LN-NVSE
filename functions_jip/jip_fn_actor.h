@@ -133,6 +133,9 @@ DEFINE_COMMAND_PLUGIN(SetNoGunWobble, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetHitNode, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitExtendedFlag, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(RemoveAllPerks, 1, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetActorMovementFlags, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetHitBaseWeaponDamage, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetHitFatigueDamage, 1, 0, NULL);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -791,8 +794,9 @@ bool Cmd_IsAttacking_Eval(COMMAND_ARGS_EVAL)
 
 bool Cmd_StopIdle_Execute(COMMAND_ARGS)
 {
-	if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->baseProcess)
-		((Actor*)thisObj)->baseProcess->SetQueuedIdleFlags(0x800);
+	Actor *actor = (Actor*)thisObj;
+	if (IS_ACTOR(actor) && actor->baseProcess)
+		actor->baseProcess->StopIdle(actor);
 	return true;
 }
 
@@ -824,7 +828,7 @@ bool Cmd_ResetFallTime_Execute(COMMAND_ARGS)
 	bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 	if (charCtrl)
 	{
-		charCtrl->startingHeight = thisObj->posZ;
+		charCtrl->startingHeight = thisObj->position.z;
 		charCtrl->fallTimeElapsed = 0;
 	}
 	return true;
@@ -1195,8 +1199,8 @@ bool Cmd_SetSpeedMult_Execute(COMMAND_ARGS)
 	{
 		if (speedMult) ((Actor*)thisObj)->SetActorValueInt(0x15, speedMult);
 		BaseProcess *baseProc = ((Actor*)thisObj)->baseProcess;
-		if (baseProc && baseProc->unk2C)
-			baseProc->unk2C->flags &= ~0x3000;
+		if (baseProc && baseProc->cachedValues)
+			baseProc->cachedValues->flags &= ~0x3000;
 	}
 	return true;
 }
@@ -1347,66 +1351,15 @@ bool Cmd_SetWheelDisabled_Execute(COMMAND_ARGS)
 	return true;
 }
 
-__declspec(naked) float __fastcall AdjustDmgByDifficulty(ActorHitData *hitData)
-{
-	__asm
-	{
-		mov		edx, g_thePlayer
-		mov		eax, 0x119B310
-		cmp		dword ptr [ecx+4], edx
-		jz		isPlayer
-		add		eax, 0x14
-	isPlayer:
-		mov		edx, [edx+0x7B8]
-		mov		eax, [eax+edx*4]
-		fld		dword ptr [ecx+0x14]
-		fmul	dword ptr [eax+4]
-		retn
-	}
-}
-
-void __fastcall GetHitData(Actor *target, UInt8 dataType, double *result)
-{
-	*result = 0;
-	if (NOT_ACTOR(target) || !target->baseProcess) return;
-	ActorHitData *hitData = target->baseProcess->GetHitData();
-	if (!hitData) return;
-	switch (dataType)
-	{
-		case 0:
-			*result = AdjustDmgByDifficulty(hitData);
-			break;
-		case 1:
-			*result = hitData->limbDmg;
-			break;
-		case 2:
-			if (hitData->source)
-				REFR_RES = hitData->source->refID;
-			break;
-		case 3:
-			if (hitData->projectile)
-				REFR_RES = hitData->projectile->refID;
-			break;
-		case 4:
-			if (hitData->weapon)
-				REFR_RES = hitData->weapon->refID;
-			break;
-		case 5:
-			if (hitData->flags & 0x80000000)
-				*result = 1;
-			break;
-	}
-}
-
 bool Cmd_GetHitHealthDamage_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 0, result);
+	((Actor*)thisObj)->GetHitDataValue(0, result);
 	return true;
 }
 
 bool Cmd_GetHitLimbDamage_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 1, result);
+	((Actor*)thisObj)->GetHitDataValue(1, result);
 	return true;
 }
 
@@ -1423,10 +1376,19 @@ bool Cmd_PlayIdleEx_Execute(COMMAND_ARGS)
 {
 	TESIdleForm *idleAnim = NULL;
 	Actor *actor = (Actor*)thisObj;
-	if (NOT_ACTOR(actor) || !actor->baseProcess || !ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim) || (idleAnim && NOT_ID(idleAnim, TESIdleForm))) return true;
-	if (!idleAnim) idleAnim = ThisCall<TESIdleForm*>(0x600950, GameGlobals::IdleAnimsDirectoryMap(), actor, actor->baseProcess->GetLowProcess40());
-	else if (idleAnim->children) idleAnim = idleAnim->FindIdle(actor);
-	if (idleAnim) actor->PlayIdle(idleAnim);
+	if (IS_ACTOR(actor) && actor->baseProcess && !actor->baseProcess->processLevel && ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim) && (!idleAnim || IS_ID(idleAnim, TESIdleForm)))
+	{
+		AnimData *animData = thisObj->GetAnimData();
+		if (animData)
+		{
+			if (!idleAnim)
+				idleAnim = ThisCall<TESIdleForm*>(0x600950, GameGlobals::IdleAnimsDirectoryMap(), actor, ((HighProcess*)actor->baseProcess)->unk40);
+			else if (idleAnim->children)
+				idleAnim = idleAnim->FindIdle(actor);
+			if (idleAnim && (animData->GetPlayedIdle() != idleAnim))
+				animData->PlayIdle(idleAnim);
+		}
+	}
 	return true;
 }
 
@@ -1486,58 +1448,25 @@ bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 bool Cmd_GetPlayedIdle_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->baseProcess)
+	AnimData *animData = thisObj->GetAnimData();
+	if (animData)
 	{
-		TESIdleForm *idleAnim = ((Actor*)thisObj)->baseProcess->GetIdleForm350();
+		TESIdleForm *idleAnim = animData->GetPlayedIdle();
 		if (idleAnim) REFR_RES = idleAnim->refID;
 	}
 	return true;
 }
 
-__declspec(naked) bool __fastcall IsIdlePlayingEx(Actor *actor, TESIdleForm *idleAnim)
-{
-	__asm
-	{
-		push	esi
-		push	edi
-		mov		esi, ecx
-		mov		edi, edx
-		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
-		setz	al
-		jnz		done
-		mov		ecx, esi
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1E4]
-		test	eax, eax
-		jz		done
-		mov		ecx, eax
-		CALL_EAX(0x4985F0)
-		test	al, al
-		setz	al
-		jnz		done
-		mov		eax, esi
-		mov		eax, [eax+0x68]
-		test	eax, eax
-		jz		done
-		mov		ecx, eax
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x718]
-		cmp		eax, edi
-		setz	al
-	done:
-		pop		edi
-		pop		esi
-		retn
-	}
-}
-
 bool Cmd_IsIdlePlayingEx_Execute(COMMAND_ARGS)
 {
+	*result = 0;
 	TESIdleForm *idleAnim;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim))
-		*result = IsIdlePlayingEx((Actor*)thisObj, idleAnim);
-	else *result = 0;
+	{
+		AnimData *animData = thisObj->GetAnimData();
+		if (animData && (animData->GetPlayedIdle() == idleAnim))
+			*result = 1;
+	}
 	return true;
 }
 
@@ -1580,19 +1509,19 @@ bool Cmd_RemoveBaseEffectListEffect_Execute(COMMAND_ARGS)
 
 bool Cmd_GetHitAttacker_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 2, result);
+	((Actor*)thisObj)->GetHitDataValue(2, result);
 	return true;
 }
 
 bool Cmd_GetHitProjectile_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 3, result);
+	((Actor*)thisObj)->GetHitDataValue(3, result);
 	return true;
 }
 
 bool Cmd_GetHitWeapon_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 4, result);
+	((Actor*)thisObj)->GetHitDataValue(4, result);
 	return true;
 }
 
@@ -1813,7 +1742,7 @@ bool Cmd_GetActorLeveledList_Execute(COMMAND_ARGS)
 
 bool Cmd_GetArmourPenetrated_Execute(COMMAND_ARGS)
 {
-	GetHitData((Actor*)thisObj, 5, result);
+	((Actor*)thisObj)->GetHitDataValue(5, result);
 	return true;
 }
 
@@ -1862,7 +1791,7 @@ bool Cmd_PushActorAwayAlt_Execute(COMMAND_ARGS)
 		BaseProcess *process = actor->baseProcess;
 		if (process && !process->processLevel)
 		{
-			if (!absPos) posVector += *(actor->PosVector());
+			if (!absPos) posVector += actor->position;
 			process->PushActorAway(actor, posVector.x, posVector.y, posVector.z, actor->AdjustPushForce(force));
 		}
 	}
@@ -2413,28 +2342,40 @@ bool Cmd_GetHitExtendedFlag_Execute(COMMAND_ARGS)
 			switch (flagID)
 			{
 				case 0:
-					if (flags & 1) isSet = true;
+					if (flags & ActorHitData::kFlag_TargetIsBlocking)
+						isSet = true;
 					break;
 				case 1:
-					if (flags & 4) isSet = true;
+					if (flags & ActorHitData::kFlag_IsCritical)
+						isSet = true;
 					break;
 				case 2:
-					if (flags & 0x10) isSet = true;
+					if (flags & ActorHitData::kFlag_IsFatal)
+						isSet = true;
 					break;
 				case 3:
-					if (flags & 0x20) isSet = true;
+					if (flags & ActorHitData::kFlag_DismemberLimb)
+						isSet = true;
 					break;
 				case 4:
-					if (flags & 0x40) isSet = true;
+					if (flags & ActorHitData::kFlag_ExplodeLimb)
+						isSet = true;
 					break;
 				case 5:
-					if (flags & 0x80) isSet = true;
+					if (flags & ActorHitData::kFlag_CrippleLimb)
+						isSet = true;
 					break;
 				case 6:
-					if (flags & 0x300) isSet = true;
+					if (flags & ActorHitData::kFlag_BreakWeapon)
+						isSet = true;
 					break;
 				case 7:
-					if (flags & 0x400) isSet = true;
+					if (flags & ActorHitData::kFlag_IsSneakAttack)
+						isSet = true;
+					break;
+				case 8:
+					if (flags & ActorHitData::kFlag_IsExplosionHit)
+						isSet = true;
 					break;
 			}
 		}
@@ -2474,3 +2415,30 @@ bool Cmd_RemoveAllPerks_Execute(COMMAND_ARGS)
 	}
 	return true;
 }
+
+bool Cmd_GetActorMovementFlags_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	if IS_ACTOR(thisObj)
+	{
+		ActorMover *actorMover = ((Actor*)thisObj)->actorMover;
+		if (actorMover)
+			*result = (int)actorMover->GetMovementFlags();
+	}
+	DoConsolePrint(result);
+	return true;
+}
+
+//	Credits to Demorome
+bool Cmd_GetHitBaseWeaponDamage_Execute(COMMAND_ARGS)
+{
+	((Actor*)thisObj)->GetHitDataValue(6, result);
+	return true;
+}
+
+bool Cmd_GetHitFatigueDamage_Execute(COMMAND_ARGS)
+{
+	((Actor*)thisObj)->GetHitDataValue(7, result);
+	return true;
+}
+//	===================

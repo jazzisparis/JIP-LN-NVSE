@@ -65,16 +65,14 @@ __declspec(naked) __m128* __fastcall GetNorthRotation(TESObjectCELL *cell)
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		noRotation
-		fld		dword ptr [eax+0xC]
-		fchs
-		fst		s_cellNorthRotation
+		movss	xmm0, [eax+0xC]
+		xorps	xmm0, kSSEChangeSignMaskPS0
+		movss	s_cellNorthRotation, xmm0
+		call	GetSinCos
+		pshufd	xmm1, xmm0, 0x41
 		mov		eax, offset s_northRotationMods
-		fsincos
-		fst		dword ptr [eax]
-		fstp	dword ptr [eax+0xC]
-		fst		dword ptr [eax+4]
-		fchs
-		fstp	dword ptr [eax+8]
+		movaps	[eax], xmm1
+		xor		byte ptr [eax+0xB], 0x80
 		retn
 		ALIGN 16
 	noRotation:
@@ -839,22 +837,16 @@ __declspec(naked) bool __fastcall UpdateSeenBits(SeenData *seenData, SInt32 *pos
 		jns		iter1Head
 		mov		dl, [ebp-8]
 		or		s_updateFogOfWar, dl
-		mov		edx, 0xFFFFFFFF
-		cmp		[esi], edx
+		pcmpeqd	xmm0, xmm0
+		movups	xmm1, [esi]
+		pcmpeqd	xmm1, xmm0
+		movmskps	edx, xmm1
+		cmp		dl, 0xF
 		jnz		done
-		cmp		[esi+4], edx
-		jnz		done
-		cmp		[esi+8], edx
-		jnz		done
-		cmp		[esi+0xC], edx
-		jnz		done
-		cmp		[esi+0x10], edx
-		jnz		done
-		cmp		[esi+0x14], edx
-		jnz		done
-		cmp		[esi+0x18], edx
-		jnz		done
-		cmp		[esi+0x1C], edx
+		movups	xmm1, [esi+0x10]
+		pcmpeqd	xmm1, xmm0
+		movmskps	edx, xmm1
+		cmp		dl, 0xF
 	done:
 		setz	al
 		lea		ecx, [esi-4]
@@ -942,7 +934,7 @@ __declspec(naked) IntSeenData* __fastcall AddIntSeenData(IntSeenData *seenData, 
 
 __declspec(naked) void UpdateCellsSeenBitsHook()
 {
-	static const float kFlt1d80 = 0.0125F;
+	static const float kFlt6400 = 6400.0F;
 	__asm
 	{
 		push	ebp
@@ -955,23 +947,21 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		mov		esi, [ebx+0x40]
 		test	esi, esi
 		jz		doneExt
-		movq	xmm0, qword ptr [ebx+0x30]
 		mov		edi, 0x11CA208
 		cmp		s_pcCurrCell0, esi
 		jz		sameCell
 		mov		s_pcCurrCell0, esi
 		mov		ecx, esi
 		call	GetNorthRotation
+		movq	xmm0, qword ptr [ebx+0x30]
 		jmp		skipPosDiff
 	sameCell:
+		movq	xmm0, qword ptr [ebx+0x30]
 		movq	xmm1, qword ptr [edi]
 		subps	xmm1, xmm0
 		mulps	xmm1, xmm1
-		movss	xmm2, xmm1
-		psrlq	xmm1, 0x20
-		addss	xmm1, xmm2
-		rsqrtss	xmm1, xmm1
-		comiss	xmm1, kFlt1d80
+		haddps	xmm1, xmm1
+		comiss	xmm1, kFlt6400
 		ja		doneExt
 	skipPosDiff:
 		movq	qword ptr [edi], xmm0
@@ -1730,7 +1720,6 @@ bool s_defaultGridSize;
 NiColor *g_directionalLightColor;
 BSFogProperty *g_shadowFogProperty;
 BSParticleSystemManager *g_particleSysMngr;
-TESForm *g_blackPlaneBase;
 
 struct MapMarkerInfo
 {
@@ -1877,8 +1866,8 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 
 	NiCamera *lmCamera = NiCamera::Create();
 	s_localMapCamera = lmCamera;
-	lmCamera->m_localRotate = {0, 0, 1.0F, 0, 1.0F, 0, -1.0F, 0, 0};
-	lmCamera->m_localTranslate.z = 65536.0F;
+	lmCamera->LocalRotate() = {0, 0, 1.0F, 0, 1.0F, 0, -1.0F, 0, 0};
+	lmCamera->LocalTranslate().z = 65536.0F;
 	lmCamera->frustum.viewPort = {-2048.0F, 2048.0F, 2048.0F, -2048.0F};
 	lmCamera->frustum.n = 100.0F;
 	lmCamera->frustum.f = 131072.0F;
@@ -1886,7 +1875,6 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	lmCamera->LODAdjust = 0.001F;
 	g_shadowSceneNode->AddObject(lmCamera, 1);
 
-	TESForm *markerBase = *(TESForm**)0x11CA224;
 	auto worldIter = g_dataHandler->worldSpaceList.Head();
 	TESWorldSpace *worldSpc, *rootWorld, *lastRoot = NULL;
 	TESObjectCELL *rootCell;
@@ -1910,7 +1898,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 		auto refrIter = rootCell->objectList.Head();
 		do
 		{
-			if (!(markerRef = refrIter->data) || (markerRef->baseForm != markerBase))
+			if (!(markerRef = refrIter->data) || (markerRef->baseForm->refID != 0x10))
 				continue;
 			xMarker = GetExtraType(&markerRef->extraDataList, MapMarker);
 			if (!xMarker || !xMarker->data)
@@ -1928,7 +1916,6 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	g_directionalLightColor = &g_TES->directionalLight->ambientColor;
 	g_shadowFogProperty = *(BSFogProperty**)0x11DEB00;
 	g_particleSysMngr = *(BSParticleSystemManager**)0x11DED58;
-	g_blackPlaneBase = LookupFormByRefID(0x15A1F2);
 	SafeWrite16(0x452736, 0x7705);
 	SAFE_WRITE_BUF(0x87A12A, "\x31\xD2\x66\x89\x50\x26\x89\x50\x28\x90");
 	SafeWrite8(0x555C20, 0xC3);
@@ -1942,10 +1929,8 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	return true;
 }
 
-const __m128 kVertexAlphaMults = {0.25, 0.5, 0.75, 1};
-alignas(16) const float
-kDirectionalLightValues[] = {1.0F, 1.0F, 1.0F, 0, 0, 0, 0, 0, 0, 0, -1.570796F, 0, 0},
-kFogPropertyValues[] = {31 / 255.0F, 47 / 255.0F, 63 / 255.0F, 500000.0F, 500000.0F};
+const __m128 kVertexAlphaMults = {0.25, 0.5, 0.75, 1}, kFogPropertyValues = {31 / 255.0F, 47 / 255.0F, 63 / 255.0F, 0};
+alignas(16) const float kDirectionalLightValues[] = {1.0F, 1.0F, 239 / 255.0F, 0, 0, 0, 0, 0, 0, 0};
 const UInt8 kSelectImgUpdate[][9] =
 {
 	{8, 2, 0, 4, 1, 0, 0, 0, 0},
@@ -2321,9 +2306,9 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 						}
 					}
 					GameGlobals::SceneLightsLock()->Leave();
+					_mm_storeu_ps(&g_shadowFogProperty->color.r, kFogPropertyValues);
 					memcpy(g_directionalLightColor, kDirectionalLightValues, sizeof(kDirectionalLightValues));
-					memcpy(&g_shadowFogProperty->color, kFogPropertyValues, sizeof(kFogPropertyValues));
-					g_shadowFogProperty->power = 1;
+					g_shadowFogProperty->power = 1000.0F;
 					*(UInt8*)0x11FF104 = 1;
 					g_particleSysMngr->m_flags |= 1;
 					for (auto hdnIter = s_hiddenNodes.Begin(); hdnIter; ++hdnIter)
@@ -2419,7 +2404,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				auto refsIter = parentCell->objectList.Head();
 				do
 				{
-					if ((objectRef = refsIter->data) && (objectRef->baseForm == g_blackPlaneBase) && !(objectRef->flags & 0x800) && (hideNode = objectRef->GetNiNode()))
+					if ((objectRef = refsIter->data) && (objectRef->baseForm->refID == 0x15A1F2) && !(objectRef->flags & 0x800) && (hideNode = objectRef->GetNiNode()))
 						s_hiddenNodes.Append(hideNode);
 				}
 				while (refsIter = refsIter->next);
@@ -2624,7 +2609,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			{
 				objectRef = mkrIter.Key();
 				markerData = &mkrIter();
-				currX = *(UInt32*)&objectRef->posX;
+				currX = *(UInt32*)&objectRef->position;
 				if (markerData->pos != currX)
 					markerData->pos = currX;
 				else if (!updateTiles) continue;
@@ -2649,7 +2634,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		s_wQuestMarkersRect->DestroyAllChildren();
 	}
 
-	s_pcMarkerRotate->SetFloat(s_cellNorthRotation - thePlayer->rotZ);
+	s_pcMarkerRotate->SetFloat(s_cellNorthRotation - thePlayer->rotation.z);
 	s_miniMapPosX->SetFloat(posMult.x);
 	s_miniMapPosY->SetFloat(posMult.y);
 	return true;

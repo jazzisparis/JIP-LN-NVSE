@@ -10,7 +10,7 @@ int s_deadZoneLS = 7849, s_deadZoneRS = 8689;
 double s_deadZoneLSg = 7849, s_deadZoneRSg = 8689;
 double s_deadZoneLSd = 1.0 / 24918, s_deadZoneRSd = 1.0 / 24078;
 
-XInputStateMods s_XIStateMods = {0xFFFF, 0, 0, 0, 0};
+XInputStateMods s_XIStateMods = {0xFBFF, 0, 0, 0, 0};
 
 __declspec(naked) UInt32 __stdcall Hook_XInputGetState(UInt32 index, XINPUT_GAMEPAD_EX *currState)
 {
@@ -23,7 +23,10 @@ __declspec(naked) UInt32 __stdcall Hook_XInputGetState(UInt32 index, XINPUT_GAME
 		jz		updateState
 		movups	xmm0, [ecx]
 		movups	[eax], xmm0
-		jmp		done
+	done:
+		mov		eax, result
+		retn	8
+		ALIGN 16
 	updateState:
 		push	ecx
 		push	0
@@ -40,36 +43,45 @@ __declspec(naked) UInt32 __stdcall Hook_XInputGetState(UInt32 index, XINPUT_GAME
 		movaps	s_gamePad, xmm0
 		mov		ecx, offset s_XIStateMods
 		mov		ax, [esi+4]
+		xor		edx, edx
+		test	ax, kXboxMask_GUIDE
+		setz	dl
+		neg		edx
+		and		eax, edx
 		or		ax, [ecx+2]
 		and		ax, [ecx]
 		or		ax, [ecx+4]
-		mov		word ptr [ecx+4], 0
 		mov		[esi+4], ax
+		mov		word ptr [ecx+4], 0
 		mov		al, [ecx+6]
 		test	al, al
 		jz		doneTRmods
-		mov		dl, al
-		and		dl, 0x11
-		cmp		dl, 1
+		mov		dx, [esi+6]
+		mov		ah, al
+		and		ah, 0x11
+		cmp		ah, 1
 		jnz		testLThold
-		mov		[esi+6], 0
+		xor		dl, dl
 		jmp		testRTskip
+		ALIGN 16
 	testLThold:
 		test	al, 0x14
 		jz		testRTskip
-		mov		byte ptr [esi+6], 0xFF
+		mov		dl, 0xFF
 	testRTskip:
-		mov		dl, al
-		and		dl, 0x22
-		cmp		dl, 2
+		mov		ah, al
+		and		ah, 0x22
+		cmp		ah, 2
 		jnz		testRThold
-		mov		[esi+7], 0
+		xor		dh, dh
 		jmp		clrTRtap
+		ALIGN 16
 	testRThold:
 		test	al, 0x28
 		jz		clrTRtap
-		mov		byte ptr [esi+7], 0xFF
+		mov		dh, 0xFF
 	clrTRtap:
+		mov		[esi+6], dx
 		and		al, 0xF
 		mov		[ecx+6], al
 	doneTRmods:
@@ -83,6 +95,7 @@ __declspec(naked) UInt32 __stdcall Hook_XInputGetState(UInt32 index, XINPUT_GAME
 		test	al, 1
 		jz		lStickX
 		jmp		lStickY0
+		ALIGN 16
 	lStickDn:
 		test	al, 2
 		jz		lStickX
@@ -95,6 +108,7 @@ __declspec(naked) UInt32 __stdcall Hook_XInputGetState(UInt32 index, XINPUT_GAME
 		test	al, 4
 		jz		rightStick
 		jmp		lStickX0
+		ALIGN 16
 	lStickLt:
 		test	al, 8
 		jz		rightStick
@@ -105,9 +119,8 @@ __declspec(naked) UInt32 __stdcall Hook_XInputGetState(UInt32 index, XINPUT_GAME
 		jz		doneSticks
 		mov		[esi+0xC], edx
 	doneSticks:
-		pop		esi
-	done:
 		mov		eax, result
+		pop		esi
 		retn	8
 	}
 }

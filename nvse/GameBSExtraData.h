@@ -52,9 +52,9 @@ struct BaseExtraList
 	{
 		ThisCall(0x40FAE0, this, doFree);
 	}
-	__forceinline void CopyFrom(const BaseExtraList *sourceList)
+	__forceinline void CopyFrom(const BaseExtraList *sourceList, bool bCopyAndRemove)
 	{
-		ThisCall(0x411EC0, this, sourceList);
+		ThisCall(0x412490, this, sourceList, bCopyAndRemove);
 	}
 	void DebugDump() const;
 	char GetExtraFactionRank(TESFaction *faction) const;
@@ -63,7 +63,7 @@ struct BaseExtraList
 
 struct ExtraDataList : public BaseExtraList
 {
-	ExtraDataList *CreateCopy();
-	static ExtraDataList* __stdcall Create(BSExtraData *xBSData = NULL);
+	ExtraDataList *CreateCopy(bool bCopyAndRemove = false);
+	static ExtraDataList *Create();
 };
 static_assert(sizeof(ExtraDataList) == 0x020);

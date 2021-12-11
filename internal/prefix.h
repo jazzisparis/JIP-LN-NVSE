@@ -360,6 +360,7 @@ class BSSegmentedTriShape;
 class BSResizableTriShape;
 class BSFaceGenNiNode;
 class BSShaderAccumulator;
+class BSFaceGenAnimationData;
 
 class hkReferencedObject;
 class hkpWorldObject;
@@ -381,6 +382,7 @@ class bhkRagdollPenetrationUtil;
 struct hkCdBody;
 
 class BSWin32Audio;
+struct Sound;
 class DIHookControl;
 
 #include "internal/class_vtbls.h"

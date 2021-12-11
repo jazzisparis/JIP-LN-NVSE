@@ -1,13 +1,11 @@
 #pragma once
 
-struct Sound;
-
 // 68
 class TESObjectREFR : public TESForm
 {
 public:
 	/*138*/virtual void		Unk_4E(void);	// GetStartingPosition(Position, Rotation, WorldOrCell)
-	/*13C*/virtual void		SayTopic(Sound *sound, TESTopic *topic, TESObjectREFR *target, UInt8 arg4, UInt8 arg5, UInt8 arg6, UInt8 arg7, UInt8 arg8);
+	/*13C*/virtual void		SayTopic(Sound *sound, TESTopic *topic, TESObjectREFR *target, bool dontUseNiNode, bool notVoice, bool useLipFile, UInt8 unused, bool subtitles);
 	/*140*/virtual void		Unk_50(void);
 	/*144*/virtual void		Unk_51(void);
 	/*148*/virtual bool		CastShadows();
@@ -30,21 +28,21 @@ public:
 	/*18C*/virtual void		Unk_63(void);
 	/*190*/virtual void		AddItem(TESForm *item, ExtraDataList *xDataList, UInt32 quantity);
 	/*194*/virtual void		Unk_65(void);
-	/*198*/virtual void		Unk_66(void);
-	/*19C*/virtual void		Unk_67(void);					// Actor: GetMagicEffectList
+	/*198*/virtual MagicCaster	*GetMagicCaster();
+	/*19C*/virtual MagicTarget	*GetMagicTarget();
 	/*1A0*/virtual bool		GetIsChildSize(bool checkHeight);		// 068 Actor: GetIsChildSize
 	/*1A4*/virtual UInt32	GetActorUnk0148();			// result can be interchanged with baseForm, so TESForm* ?
-	/*1A8*/virtual void		SetActorUnk0148(UInt32 arg0);
+	/*1A8*/virtual void		SetActorUnk0148(UInt32 arg1);
 	/*1AC*/virtual void		Unk_6B(void);
-	/*1B0*/virtual void		Unk_6C(void);	// REFR: GetBSFaceGenNiNodeSkinned
-	/*1B4*/virtual void		Unk_6D(void);	// REFR: calls 006C
-	/*1B8*/virtual void		Unk_6E(void);	// MobileActor: calls 006D then NiNode::Func0040
+	/*1B0*/virtual BSFaceGenNiNode	*Unk_6C(UInt32 arg1);
+	/*1B4*/virtual BSFaceGenNiNode	*Unk_6D(UInt32 arg1);	// REFR: calls 006C
+	/*1B8*/virtual BSFaceGenAnimationData	*Unk_6E(UInt32 arg1);
 	/*1BC*/virtual void		Unk_6F(void);
 	/*1C0*/virtual bool		Unload3D();
 	/*1C4*/virtual void		AnimateNiNode();
 	/*1C8*/virtual NiNode	*GenerateNiNode(bool arg1);
 	/*1CC*/virtual void		Set3D(NiNode* niNode, bool unloadArt);
-	/*1D0*/virtual NiNode	*GetNiNode();
+	/*1D0*/virtual NiNode	*GetNiNode_v();
 	/*1D4*/virtual void		Unk_75(void);
 	/*1D8*/virtual void		Unk_76(void);
 	/*1DC*/virtual void		Unk_77(void);
@@ -60,8 +58,8 @@ public:
 	/*204*/virtual void		Unk_81(UInt32 arg0);
 	/*208*/virtual void		Unk_82(void);
 	/*20C*/virtual NiNode	*GetProjectileNode();
-	/*210*/virtual void		Unk_84(UInt32 arg0);
-	/*214*/virtual UInt32	Unk_85(void);			
+	/*210*/virtual void		SetProjectileNode(NiNode *node);
+	/*214*/virtual UInt32	GetSitSleepState();			
 	/*218*/virtual bool		IsCharacter();			// return false for Actor and Creature, true for character and PlayerCharacter
 	/*21C*/virtual bool		IsCreature();
 	/*220*/virtual bool		IsExplosion();
@@ -106,19 +104,16 @@ public:
 	EditorData	editorData;			// +04
 #endif
 
-	TESChildCell	childCell;				// 018
+	TESChildCell	childCell;		// 18
 
-	TESSound		*loopSound;				// 01C
-
-	TESForm			*baseForm;				// 020
-	
-	float			rotX, rotY, rotZ;		// 024 - either public or accessed via simple inline accessor common to all child classes
-	float			posX, posY, posZ;		// 030 - seems to be private
-	float			scale;					// 03C 
-
-	TESObjectCELL	*parentCell;			// 040
-	ExtraDataList	extraDataList;			// 044
-	RenderState		*renderState;			// 064
+	TESSound		*loopSound;		// 1C
+	TESForm			*baseForm;		// 20
+	NiVector3		rotation;		// 24
+	NiVector3		position;		// 30
+	float			scale;			// 3C 
+	TESObjectCELL	*parentCell;	// 40
+	ExtraDataList	extraDataList;	// 44
+	RenderState		*renderState;	// 64
 
 	ScriptEventList *GetEventList() const;
 
@@ -128,8 +123,7 @@ public:
 	bool IsDeleted() const {return (flags & kFlags_Deleted) != 0;}
 	bool IsDestroyed() const {return (flags & kFlags_Destroyed) != 0;}
 
-	NiVector3 *PosVector() {return (NiVector3*)&posX;}
-	NiPoint2 *PosXY() {return (NiPoint2*)&posX;}
+	inline NiPoint2 *PosXY() const {return (NiPoint2*)&position;}
 
 	void Update3D();
 	TESContainer *GetContainer();
@@ -147,9 +141,11 @@ public:
 	TESWorldSpace *GetParentWorld();
 	bool __fastcall GetInSameCellOrWorld(TESObjectREFR *target);
 	float __vectorcall GetDistance(TESObjectREFR *target);
-	void SetPos(NiVector3 *posVector);
-	void SetAngle(NiVector3 *rotVector);
+	void SetPos(NiVector4 *posVector);
+	void SetAngle(NiVector4 *rotVector, bool setLocal);
 	void MoveToCell(TESObjectCELL *cell, NiVector3 *posVector);
+	bool __fastcall GetTranslatedPos(NiVector4 *posMods);
+	void __fastcall Rotate(NiVector4 *rotVector);
 	bool Disable();
 	void DeleteReference();
 	bhkCharacterController *GetCharacterController();
@@ -160,9 +156,10 @@ public:
 	void SwapTexture(const char *blockName, const char *filePath, UInt32 texIdx);
 	bool SetLinkedRef(TESObjectREFR *linkObj, UInt8 modIdx = 0xFF);
 	bool ValidForHooks();
+	NiNode *GetNiNode();
 	NiAVObject* __fastcall GetNiBlock(const char *blockName);
 	NiNode* __fastcall GetNode(const char *nodeName);
-	hkpRigidBody *GetRigidBody(const char *nodeName);
+	hkpRigidBody* __fastcall GetRigidBody(const char *blockName);
 
 	static TESObjectREFR* __stdcall Create(bool bTemp = false);
 
@@ -257,26 +254,26 @@ typedef tList<ActiveEffect> ActiveEffectList;
 class MagicCaster
 {
 public:
-	virtual void	AddAbility(SpellItem *splItem, bool arg2);
-	virtual void	AddAddiction(SpellItem *splItem, bool arg2);
-	virtual void	AddEffect(SpellItem *splItem, bool arg2);
-	virtual void	CastSpell(MagicItem *spell, bool arg2, MagicTarget *target, float arg4, bool arg5);
-	virtual void	AddDisease(SpellItem *splItem, MagicTarget *target, bool arg3);
-	virtual void	AddFormEffects(MagicItem *magItem, MagicItemForm *itemForm, bool arg3);
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
-	virtual void	Unk_08(void);
-	virtual void	Unk_09(void);
-	virtual void	Unk_0A(void);
-	virtual Actor	*GetActor(void);
-	virtual void	Unk_0C(void);
-	virtual void	Unk_0D(void);
-	virtual void	Unk_0E(void);
-	virtual void	Unk_0F(void);
-	virtual void	Unk_10(MagicItem *spell);
-	virtual void	Unk_11(void);
-	virtual void	Unk_12(MagicTarget *magicTarget);
-	virtual ActiveEffect	*CreateActiveEffect(MagicItem *magicItem, EffectItem *effItem, MagicItemForm *itemForm);
+	/*000*/virtual void		AddAbility(SpellItem *splItem, bool arg2);
+	/*004*/virtual void		AddAddiction(SpellItem *splItem, bool arg2);
+	/*008*/virtual void		AddEffect(SpellItem *splItem, bool arg2);
+	/*00C*/virtual void		CastSpell(MagicItem *spell, bool arg2, MagicTarget *target, float arg4, bool arg5);
+	/*010*/virtual void		AddDisease(SpellItem *splItem, MagicTarget *target, bool arg3);
+	/*014*/virtual void		AddFormEffects(MagicItem *magItem, MagicItemForm *itemForm, bool arg3);
+	/*018*/virtual MagicTarget	*PickMagicTarget();
+	/*01C*/virtual void		Unk_07();
+	/*020*/virtual void		Unk_08();
+	/*024*/virtual void		Unk_09(UInt32 arg1, UInt32 arg2);
+	/*028*/virtual bool		Unk_0A(UInt32 arg1, float *arg2, UInt32 *arg3, UInt32 arg4);
+	/*02C*/virtual Actor	*GetActor();
+	/*030*/virtual NiNode	*GetMagicNode();
+	/*034*/virtual MagicItem	*GetMagicItem();
+	/*038*/virtual bool		Unk_0E(ActiveEffect *activeEffect);
+	/*03C*/virtual float	Unk_0F(UInt8 arg1, float arg2);
+	/*040*/virtual void		SetMagicItem(MagicItem *spell);
+	/*044*/virtual MagicTarget	*GetMagicTarget();
+	/*048*/virtual void		SetMagicTarget(MagicTarget *magicTarget);
+	/*04C*/virtual ActiveEffect	*CreateActiveEffect(MagicItem *magicItem, EffectItem *effItem, TESForm *itemForm);
 
 	UInt32	unk04[2];	// 04
 };
@@ -286,18 +283,18 @@ static_assert(sizeof(MagicCaster) == 0xC);
 class MagicTarget
 {
 public:
-	virtual bool	ApplyEffect(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect, bool arg4);
-	virtual Actor	*GetActor(void);
-	virtual ActiveEffectList	*GetEffectList(void);
-	virtual bool	Unk_03(void);
-	virtual bool	CannotBeHit(void);
-	virtual void	Unk_05(void);
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
-	virtual void	Unk_08(void);
-	virtual float	Unk_09(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect);
-	virtual void	Unk_0A(void);
-	virtual void	Unk_0B(void);
+	/*000*/virtual bool		ApplyEffect(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect, bool arg4);
+	/*004*/virtual Actor	*GetActor();
+	/*008*/virtual ActiveEffectList	*GetEffectList();
+	/*00C*/virtual bool		Unk_03();
+	/*010*/virtual bool		CannotBeHit();
+	/*014*/virtual void		Unk_05(ActiveEffect *activeEffect);
+	/*018*/virtual void		Unk_06(ActiveEffect *activeEffect);
+	/*01C*/virtual void		Unk_07(MagicCaster *magicCaster, ActiveEffect *activeEffect);
+	/*020*/virtual void		Unk_08(MagicCaster *magicCaster, ActiveEffect *activeEffect);
+	/*024*/virtual float	GetEffectMagnitudeModifier(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect);
+	/*028*/virtual void		Unk_0A(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect, bool arg4);
+	/*02C*/virtual bool		Unk_0B(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect);
 
 	UInt32	unk04[3];	// 04
 
@@ -325,29 +322,40 @@ public:
 class ActorMover
 {
 public:
-	virtual void		Unk_00(void);
+	virtual void		Destroy(bool doFree);
 	virtual void		Unk_01(void);
-	virtual void		ClearMovementFlag(void);
-	virtual void		SetMovementFlag(void);
+	virtual void		ClearMovementFlag(UInt32 flag);
+	virtual void		SetMovementFlags(UInt32 movementFlags);
 	virtual void		Unk_04(void);
 	virtual void		Unk_05(void);
-	virtual void		Unk_06(void);
+	virtual void		HandleTurnAnimationTimer(float timePassed);
 	virtual void		Unk_07(void);
 	virtual UInt32		GetMovementFlags();
-		//	Running		0x200
-		//	Sneaking	0x400
-
-		// bit 11 = swimming 
-		// bit 9 = sneaking
-		// bit 8 = run
-		// bit 7 = walk
-		// bit 0 = keep moving (Q)
 	virtual void		Unk_09(void);
 	virtual void		Unk_0A(void);
 	virtual void		Unk_0B(void);
 	virtual void		Unk_0C(void);
 	virtual void		Unk_0D(void);
 	virtual void		Unk_0E(void);
+
+	enum MovementFlags
+	{
+		kMoveFlag_Forward =		1,
+		kMoveFlag_Backward =	2,
+		kMoveFlag_Left =		4,
+		kMoveFlag_Right =		8,
+		kMoveFlag_TurnLeft =	0x10,
+		kMoveFlag_TurnRight =	0x20,
+		kMoveFlag_IsKeyboard =	0x40,	// (returns that the movement is for non-controller)
+		kMoveFlag_Walking =		0x100,
+		kMoveFlag_Running =		0x200,
+		kMoveFlag_Sneaking =	0x400,
+		kMoveFlag_Swimming =	0x800,
+		kMoveFlag_Jump =		0x1000,
+		kMoveFlag_Flying =		0x2000,
+		kMoveFlag_Fall =		0x4000,
+		kMoveFlag_Slide =		0x8000
+	};
 
 	UInt32						unk04[6];			// 04
 	PathingRequest				*pathingRequest;	// 1C
@@ -362,7 +370,10 @@ public:
 	UInt32						unk40;				// 40
 	PathingLocation				pathingLocation;	// 44
 	UInt32						unk6C;				// 6C
-	UInt8						unk70[4];			// 70
+	UInt8						byte70;				// 70
+	UInt8						byte71;				// 71
+	UInt8						byte72;				// 72
+	UInt8						byte73;				// 73
 	UInt32						unk74;				// 74
 	UInt32						unk78;				// 78
 	UInt32						unk7C;				// 7C
@@ -378,8 +389,8 @@ public:
 	float			flt8C;				// 8C
 	float			flt90;				// 90
 	UInt32			pcMovementFlags;	// 94
-	UInt32			unk98;				// 98
-	UInt32			unk9C;				// 9C
+	UInt32			turnAnimFlags;		// 98
+	float			turnAnimMinTime;	// 9C
 };
 
 typedef tList<BGSEntryPointPerkEntry> PerkEntryPointList;
@@ -432,10 +443,10 @@ public:
 	/*390*/virtual UInt32	GetActorType();	// Creature = 0, Character = 1, PlayerCharacter = 2
 	/*394*/virtual void		SetActorValue(UInt32 avCode, float value);
 	/*398*/virtual void		SetActorValueInt(UInt32 avCode, UInt32 value);
-	/*39C*/virtual void		Unk_E7(void);
+	/*39C*/virtual void		ModActorValue(UInt32 avCode, float modifier, Actor *attacker);
 	/*3A0*/virtual void		Unk_E8(void);
-	/*3A4*/virtual void		Unk_E9(void);
-	/*3A8*/virtual void		ModActorValue(UInt32 avCode, int modifier, UInt32 arg3);
+	/*3A4*/virtual void		Unk_E9(UInt32 avCode, int modifier, UInt32 arg3);
+	/*3A8*/virtual void		ModActorValueInt(UInt32 avCode, int modifier, UInt32 arg3);
 	/*3AC*/virtual void		DamageActorValue(UInt32 avCode, float damage, Actor *attacker);
 	/*3B0*/virtual void		Unk_EC(void);
 	/*3B4*/virtual void		Unk_ED(void);
@@ -445,7 +456,7 @@ public:
 	/*3C4*/virtual void		ResetArmorDRDT();
 	/*3C8*/virtual bool		DamageWeaponHealth(ContChangesEntry *weapomInfo, float damage, int unused);
 	/*3CC*/virtual void		Unk_F3(void);
-	/*3D0*/virtual void		Unk_F4(void);
+	/*3D0*/virtual void		DoActivate(TESObjectREFR *activatedRef, UInt32 count, bool arg3);
 	/*3D4*/virtual void		Unk_F5(void);
 	/*3D8*/virtual void		Unk_F6(void);
 	/*3DC*/virtual void		Unk_F7(void);
@@ -606,7 +617,7 @@ public:
 	UInt8								byte15E;					// 15E
 	UInt8								byte15F;					// 15F
 	NiVector3							startingPos;				// 160
-	float								flt16C;						// 16C
+	float								startingZRot;				// 16C
 	TESForm								*startingWorldOrCell;		// 170
 	UInt8								byte174;					// 174-
 	UInt8								byte175;					// 175-
@@ -679,10 +690,10 @@ public:
 	BackUpPackage *AddBackUpPackage(TESObjectREFR *targetRef, TESObjectCELL *targetCell, UInt32 flags);
 	void __fastcall TurnToFaceObject(TESObjectREFR *target);
 	void TurnAngle(float angle);
-	void PlayIdle(TESIdleForm *idleAnim);
 	void PlayAnimGroup(UInt32 animGroupID);
 	UInt32 GetLevel();
 	double GetKillXP();
+	void GetHitDataValue(UInt32 valueType, double *result);
 	void DismemberLimb(UInt32 bodyPartID, bool explode);
 	void EquipItemAlt(TESForm *itemForm, ContChangesEntry *entry, UInt32 noUnequip, UInt32 noMessage);
 	bool HasNoPath();
@@ -810,7 +821,8 @@ public:
 	UInt32								unk208;					// 208
 	void								*unk20C;				// 20C
 	tList<ActiveEffect>					*activeEffects;			// 210
-	UInt32								unk214[2];				// 214
+	MagicItem							*pcMagicItem;			// 214
+	MagicTarget							*pcMagicTarget;			// 218
 	void								*unk21C;				// 21C
 	UInt32								unk220[8];				// 220	224 is a package of type 1C
 	bool								showQuestItems;			// 240
@@ -845,9 +857,9 @@ public:
 	float								grabbedWeight;			// 644
 	UInt8								byte648;				// 648
 	UInt8								byte649;				// 649
-	bool								byte64A;				// 64A	= not FirstPerson
-	bool								is3rdPerson;			// 64B
-	bool								bThirdPerson;			// 64C
+	bool								is3rdPerson;			// 64A
+	bool								byte64B;				// 64B
+	bool								byte64C;				// 64C
 	UInt8								byte64D;				// 64D
 	UInt8								byte64E;				// 64E
 	bool								isUsingScope;			// 64F
@@ -936,7 +948,8 @@ public:
 	PerkEntryPointList					perkEntriesPC[74];		// 884
 	tList<PerkRank>						perkRanksTM;			// AD4
 	PerkEntryPointList					perkEntriesTM[74];		// ADC
-	UInt32								unkD2C[4];				// D2C
+	UInt32								unkD2C;					// D2C
+	NiVector3							vecD30;					// D30
 	NiObject							*unkD3C;				// D3C
 	UInt32								unkD40;					// D40
 	Actor								*reticleActor;			// D44
@@ -988,7 +1001,7 @@ public:
 		// tList at 6C4 is cleared when there is no current quest. There is another NiNode at 069C
 		// 086C is cleared after equipement change.
 
-	bool IsThirdPerson() { return bThirdPerson ? true : false; }
+	bool IsThirdPerson() { return is3rdPerson ? true : false; }
 	UInt32 GetMovementFlags() { return actorMover->GetMovementFlags(); }	// 11: IsSwimming, 9: IsSneaking, 8: IsRunning, 7: IsWalking, 0: keep moving
 	bool IsPlayerSwimming() { return (actorMover->GetMovementFlags() & 0x800) ? true : false; }
 
@@ -998,7 +1011,9 @@ public:
 	{
 		return ThisCall<bool>(0x950110, this, toggleON);
 	}
-	char GetDetectionState();
+	int GetDetectionState();
+
+	void ToggleSneak(bool toggle);
 };
 static_assert(sizeof(PlayerCharacter) == 0xE50);
 
@@ -1080,7 +1095,7 @@ public:
 	tList<ImpactData>	impactDataList;	// 088
 	UInt8				hasImpacted;	// 090
 	UInt8				pad091[3];		// 091
-	float				unk094[13];		// 094
+	NiTransform			transform;		// 094
 	UInt32				projFlags;		// 0C8
 	float				speedMult1;		// 0CC
 	float				speedMult2;		// 0D0

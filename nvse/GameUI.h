@@ -27,8 +27,12 @@ public:
 
 		void Clear()
 		{
-			refr = NULL;
-			if (node) NiReleaseAddRef(&node, nullptr);
+			refr = nullptr;
+			if (node)
+			{
+				NiReleaseObject(node);
+				node = nullptr;
+			}
 		}
 
 		void Replace(HighlightedRef *hRef)
@@ -304,7 +308,7 @@ public:
 	// 14
 	struct TemplateData
 	{
-		NiString				templateName;	// 00
+		NiFixedString			templateName;	// 00
 		TileExtra				*tileExtra;		// 04
 		DList<ParsedXMLTag>		parsedTags;		// 08
 	};

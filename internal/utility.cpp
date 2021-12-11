@@ -1,6 +1,83 @@
 #include "internal/utility.h"
 #include "nvse/GameAPI.h"
 
+const float
+kFlt1d100K = 1.0e-05F,
+kFlt1d1K = 0.001F,
+kFlt1d200 = 0.005F,
+kFlt1d100 = 0.01F,
+kFltPId180 = 0.01745329238F,
+kFlt1d10 = 0.1F,
+kFltHalf = 0.5F,
+kFltOne = 1.0F,
+kFltPId2 = 1.570796371F,
+kFltPI = 3.141592741F,
+kFltPIx2 = 6.283185482F,
+kFlt10 = 10.0F,
+kFlt180dPI = 57.29578018F,
+kFlt100 = 100.0F,
+kFlt1000 = 1000.0F,
+kFltMax = FLT_MAX;
+
+const double
+kDblPId180 = 0.017453292519943295,
+kDbl180dPI = 57.29577951308232088;
+
+alignas(16) const UInt32
+kSSERemoveSignMaskPS[] = {0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF},
+kSSEChangeSignMaskPS[] = {0x80000000, 0x80000000, 0x80000000, 0x80000000},
+kSSEChangeSignMaskPS0[] = {0x80000000, 0, 0, 0},
+kSSEDiscard4thPS[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000};
+
+alignas(16) const UInt64
+kSSERemoveSignMaskPD[] = {0x7FFFFFFFFFFFFFFF, 0x7FFFFFFFFFFFFFFF},
+kSSEChangeSignMaskPD[] = {0x8000000000000000, 0x8000000000000000};
+
+const __m128
+kVcPI = {3.141592741F, 3.141592741F, 3.141592741F, 0},
+kVcPIx2 = {6.283185482F, 6.283185482F, 6.283185482F, 0},
+kVcHalf = {0.5F, 0.5F, 0.5F, 0};
+
+alignas(16) const char
+kLwrCaseConverter[] =
+{
+	'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07', '\x08', '\x09', '\x0A', '\x0B', '\x0C', '\x0D', '\x0E', '\x0F',
+	'\x10', '\x11', '\x12', '\x13', '\x14', '\x15', '\x16', '\x17', '\x18', '\x19', '\x1A', '\x1B', '\x1C', '\x1D', '\x1E', '\x1F',
+	'\x20', '\x21', '\x22', '\x23', '\x24', '\x25', '\x26', '\x27', '\x28', '\x29', '\x2A', '\x2B', '\x2C', '\x2D', '\x2E', '\x2F',
+	'\x30', '\x31', '\x32', '\x33', '\x34', '\x35', '\x36', '\x37', '\x38', '\x39', '\x3A', '\x3B', '\x3C', '\x3D', '\x3E', '\x3F',
+	'\x40', '\x61', '\x62', '\x63', '\x64', '\x65', '\x66', '\x67', '\x68', '\x69', '\x6A', '\x6B', '\x6C', '\x6D', '\x6E', '\x6F',
+	'\x70', '\x71', '\x72', '\x73', '\x74', '\x75', '\x76', '\x77', '\x78', '\x79', '\x7A', '\x5B', '\x5C', '\x5D', '\x5E', '\x5F',
+	'\x60', '\x61', '\x62', '\x63', '\x64', '\x65', '\x66', '\x67', '\x68', '\x69', '\x6A', '\x6B', '\x6C', '\x6D', '\x6E', '\x6F',
+	'\x70', '\x71', '\x72', '\x73', '\x74', '\x75', '\x76', '\x77', '\x78', '\x79', '\x7A', '\x7B', '\x7C', '\x7D', '\x7E', '\x7F',
+	'\x80', '\x81', '\x82', '\x83', '\x84', '\x85', '\x86', '\x87', '\x88', '\x89', '\x8A', '\x8B', '\x8C', '\x8D', '\x8E', '\x8F',
+	'\x90', '\x91', '\x92', '\x93', '\x94', '\x95', '\x96', '\x97', '\x98', '\x99', '\x9A', '\x9B', '\x9C', '\x9D', '\x9E', '\x9F',
+	'\xA0', '\xA1', '\xA2', '\xA3', '\xA4', '\xA5', '\xA6', '\xA7', '\xA8', '\xA9', '\xAA', '\xAB', '\xAC', '\xAD', '\xAE', '\xAF',
+	'\xB0', '\xB1', '\xB2', '\xB3', '\xB4', '\xB5', '\xB6', '\xB7', '\xB8', '\xB9', '\xBA', '\xBB', '\xBC', '\xBD', '\xBE', '\xBF',
+	'\xC0', '\xC1', '\xC2', '\xC3', '\xC4', '\xC5', '\xC6', '\xC7', '\xC8', '\xC9', '\xCA', '\xCB', '\xCC', '\xCD', '\xCE', '\xCF',
+	'\xD0', '\xD1', '\xD2', '\xD3', '\xD4', '\xD5', '\xD6', '\xD7', '\xD8', '\xD9', '\xDA', '\xDB', '\xDC', '\xDD', '\xDE', '\xDF',
+	'\xE0', '\xE1', '\xE2', '\xE3', '\xE4', '\xE5', '\xE6', '\xE7', '\xE8', '\xE9', '\xEA', '\xEB', '\xEC', '\xED', '\xEE', '\xEF',
+	'\xF0', '\xF1', '\xF2', '\xF3', '\xF4', '\xF5', '\xF6', '\xF7', '\xF8', '\xF9', '\xFA', '\xFB', '\xFC', '\xFD', '\xFE', '\xFF'
+},
+kUprCaseConverter[] =
+{
+	'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07', '\x08', '\x09', '\x0A', '\x0B', '\x0C', '\x0D', '\x0E', '\x0F',
+	'\x10', '\x11', '\x12', '\x13', '\x14', '\x15', '\x16', '\x17', '\x18', '\x19', '\x1A', '\x1B', '\x1C', '\x1D', '\x1E', '\x1F',
+	'\x20', '\x21', '\x22', '\x23', '\x24', '\x25', '\x26', '\x27', '\x28', '\x29', '\x2A', '\x2B', '\x2C', '\x2D', '\x2E', '\x2F',
+	'\x30', '\x31', '\x32', '\x33', '\x34', '\x35', '\x36', '\x37', '\x38', '\x39', '\x3A', '\x3B', '\x3C', '\x3D', '\x3E', '\x3F',
+	'\x40', '\x41', '\x42', '\x43', '\x44', '\x45', '\x46', '\x47', '\x48', '\x49', '\x4A', '\x4B', '\x4C', '\x4D', '\x4E', '\x4F',
+	'\x50', '\x51', '\x52', '\x53', '\x54', '\x55', '\x56', '\x57', '\x58', '\x59', '\x5A', '\x5B', '\x5C', '\x5D', '\x5E', '\x5F',
+	'\x60', '\x41', '\x42', '\x43', '\x44', '\x45', '\x46', '\x47', '\x48', '\x49', '\x4A', '\x4B', '\x4C', '\x4D', '\x4E', '\x4F',
+	'\x50', '\x51', '\x52', '\x53', '\x54', '\x55', '\x56', '\x57', '\x58', '\x59', '\x5A', '\x7B', '\x7C', '\x7D', '\x7E', '\x7F',
+	'\x80', '\x81', '\x82', '\x83', '\x84', '\x85', '\x86', '\x87', '\x88', '\x89', '\x8A', '\x8B', '\x8C', '\x8D', '\x8E', '\x8F',
+	'\x90', '\x91', '\x92', '\x93', '\x94', '\x95', '\x96', '\x97', '\x98', '\x99', '\x9A', '\x9B', '\x9C', '\x9D', '\x9E', '\x9F',
+	'\xA0', '\xA1', '\xA2', '\xA3', '\xA4', '\xA5', '\xA6', '\xA7', '\xA8', '\xA9', '\xAA', '\xAB', '\xAC', '\xAD', '\xAE', '\xAF',
+	'\xB0', '\xB1', '\xB2', '\xB3', '\xB4', '\xB5', '\xB6', '\xB7', '\xB8', '\xB9', '\xBA', '\xBB', '\xBC', '\xBD', '\xBE', '\xBF',
+	'\xC0', '\xC1', '\xC2', '\xC3', '\xC4', '\xC5', '\xC6', '\xC7', '\xC8', '\xC9', '\xCA', '\xCB', '\xCC', '\xCD', '\xCE', '\xCF',
+	'\xD0', '\xD1', '\xD2', '\xD3', '\xD4', '\xD5', '\xD6', '\xD7', '\xD8', '\xD9', '\xDA', '\xDB', '\xDC', '\xDD', '\xDE', '\xDF',
+	'\xE0', '\xE1', '\xE2', '\xE3', '\xE4', '\xE5', '\xE6', '\xE7', '\xE8', '\xE9', '\xEA', '\xEB', '\xEC', '\xED', '\xEE', '\xEF',
+	'\xF0', '\xF1', '\xF2', '\xF3', '\xF4', '\xF5', '\xF6', '\xF7', '\xF8', '\xF9', '\xFA', '\xFB', '\xFC', '\xFD', '\xFE', '\xFF'
+};
+
 memcpy_t MemCopy = memcpy, MemMove = memmove;
 
 #define FAST_SLEEP_COUNT 10000UL
@@ -192,6 +269,273 @@ __declspec(naked) int __vectorcall iceil(float value)
 		retn
 	isNeg:
 		cvttss2si	eax, xmm0
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall fMod(float numer, float denom)
+{
+	__asm
+	{
+		movss	xmm2, xmm0
+		divss	xmm2, xmm1
+		cvttps2dq	xmm2, xmm2
+		cvtdq2ps	xmm2, xmm2
+		mulss	xmm2, xmm1
+		subss	xmm0, xmm2
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall Sin(float angle)
+{
+	__asm
+	{
+		movss	xmm1, xmm0
+		movss	xmm0, kFltPId2
+		subss	xmm0, xmm1
+		jmp		Cos
+	}
+}
+
+__declspec(naked) float __vectorcall Cos(float angle)
+{
+	static const float
+	k1dPIx2 = 0.1591549367F, kFlt2dPI = 0.6366197467F, kCosCst1 = 0.00002315393249F, kCosCst2 = 0.001385370386F,
+	kCosCst3 = 0.04166358337F, kCosCst4 = 0.4999990463F, kCosCst5 = 0.9999999404F;
+	__asm
+	{
+		andps	xmm0, kSSERemoveSignMaskPS
+		movss	xmm2, kFltPIx2
+		comiss	xmm0, xmm2
+		jb		perdOK
+		movss	xmm1, xmm0
+		mulss	xmm1, k1dPIx2
+		cvttps2dq	xmm1, xmm1
+		cvtdq2ps	xmm1, xmm1
+		mulss	xmm1, xmm2
+		subss	xmm0, xmm1
+	perdOK:
+		movss	xmm1, kFlt2dPI
+		mulss	xmm1, xmm0
+		cvttss2si	eax, xmm1
+		pxor	xmm3, xmm3
+		test	al, al
+		jz		doCalc
+		jp		fourthQ
+		movss	xmm2, kFltPI
+		movss	xmm3, kSSEChangeSignMaskPS0
+	fourthQ:
+		subss	xmm0, xmm2
+	doCalc:
+		mulss	xmm0, xmm0
+		movss	xmm1, kCosCst1
+		mulss	xmm1, xmm0
+		subss	xmm1, kCosCst2
+		mulss	xmm1, xmm0
+		addss	xmm1, kCosCst3
+		mulss	xmm1, xmm0
+		subss	xmm1, kCosCst4
+		mulss	xmm0, xmm1
+		addss	xmm0, kCosCst5
+		xorps	xmm0, xmm3
+		retn
+	}
+}
+
+__declspec(naked) __m128 __vectorcall GetSinCos(float angle)
+{
+	__asm
+	{
+		movd	edx, xmm0
+		call	Cos
+		unpcklps	xmm0, xmm0
+		mulss	xmm0, xmm0
+		movss	xmm1, kFltOne
+		subss	xmm1, xmm0
+		comiss	xmm1, kFlt1d100K
+		jb		zeroSin
+		sqrtss	xmm0, xmm1
+		sar		edx, 0x1F
+		xor		al, dl
+		test	al, 2
+		jz		done
+		xorps	xmm0, kSSEChangeSignMaskPS0
+		retn
+	zeroSin:
+		pxor	xmm1, xmm1
+		movss	xmm0, xmm1
+	done:
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall Tan(float angle)
+{
+	_asm
+	{
+		call	GetSinCos
+		pshufd	xmm1, xmm0, 1
+		divss	xmm0, xmm1
+		retn
+	}
+}
+
+const float kASinCst1 = -0.01872929931F, kASinCst2 = 0.0742610022F, kASinCst3 = 0.2121143937F;
+
+__declspec(naked) float __vectorcall ASin(float x)
+{
+	__asm
+	{
+		movss	xmm4, xmm0
+		andps	xmm4, kSSEChangeSignMaskPS0
+		xorps	xmm0, xmm4
+		movss	xmm3, kFltOne
+		comiss	xmm0, xmm3
+		jnb		ooRange
+		movss	xmm1, kASinCst1
+		mulss	xmm1, xmm0
+		addss	xmm1, kASinCst2
+		mulss	xmm1, xmm0
+		subss	xmm1, kASinCst3
+		mulss	xmm1, xmm0
+		subss	xmm3, xmm0
+		movss	xmm0, kFltPId2
+		addss	xmm1, xmm0
+		sqrtss	xmm2, xmm3
+		mulss	xmm2, xmm1
+		subss	xmm0, xmm2
+		xorps	xmm0, xmm4
+		retn
+	ooRange:
+		movss	xmm0, kFltPId2
+		xorps	xmm0, xmm4
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall ACos(float x)
+{
+	_asm
+	{
+		movss	xmm4, xmm0
+		andps	xmm4, kSSEChangeSignMaskPS0
+		xorps	xmm0, xmm4
+		movss	xmm3, kFltOne
+		comiss	xmm0, xmm3
+		jnb		ooRange
+		movss	xmm1, kASinCst1
+		mulss	xmm1, xmm0
+		addss	xmm1, kASinCst2
+		mulss	xmm1, xmm0
+		subss	xmm1, kASinCst3
+		mulss	xmm1, xmm0
+		addss	xmm1, kFltPId2
+		subss	xmm3, xmm0
+		sqrtss	xmm3, xmm3
+		mulss	xmm1, xmm3
+		xorps	xmm1, xmm4
+		psrad	xmm4, 0x1F
+		movss	xmm0, kFltPI
+		andps	xmm0, xmm4
+		addss	xmm0, xmm1
+		retn
+	ooRange:
+		psrad	xmm4, 0x1F
+		movss	xmm0, kFltPI
+		andps	xmm0, xmm4
+		retn
+	}
+}
+
+const float
+kATanCst1 = -0.01348046958F, kATanCst2 = 0.05747731403F, kATanCst3 = 0.1212390736F,
+kATanCst4 = 0.1956359297F, kATanCst5 = 0.3329946101F, kATanCst6 = 0.9999956489F;
+
+__declspec(naked) float __vectorcall ATan(float x)
+{
+	_asm
+	{
+		movss	xmm1, kFltOne
+		movss	xmm2, xmm0
+		andps	xmm2, kSSERemoveSignMaskPS
+		movss	xmm3, xmm2
+		maxss	xmm3, xmm1
+		movss	xmm4, xmm2
+		minss	xmm4, xmm1
+		divss	xmm4, xmm3
+		movss	xmm3, xmm4
+		mulss	xmm3, xmm4
+		movss	xmm5, kATanCst1
+		mulss	xmm5, xmm3
+		addss	xmm5, kATanCst2
+		mulss	xmm5, xmm3
+		subss	xmm5, kATanCst3
+		mulss	xmm5, xmm3
+		addss	xmm5, kATanCst4
+		mulss	xmm5, xmm3
+		subss	xmm5, kATanCst5
+		mulss	xmm5, xmm3
+		addss	xmm5, kATanCst6
+		mulss	xmm5, xmm4
+		movss	xmm3, kSSEChangeSignMaskPS0
+		subss	xmm1, xmm2
+		andps	xmm1, xmm3
+		xorps	xmm5, xmm1
+		psrad	xmm1, 0x1F
+		movss	xmm2, kFltPId2
+		andps	xmm2, xmm1
+		addss	xmm5, xmm2
+		andps	xmm0, xmm3
+		xorps	xmm0, xmm5
+		retn
+	}
+}
+
+__declspec(naked) float __vectorcall ATan2(float y, float x)
+{
+	__asm
+	{
+		movss	xmm6, kSSERemoveSignMaskPS
+		movss	xmm2, xmm0
+		andps	xmm2, xmm6
+		movss	xmm3, xmm1
+		andps	xmm3, xmm6
+		movss	xmm4, xmm2
+		movss	xmm5, xmm3
+		maxss	xmm4, xmm5
+		minss	xmm5, xmm2
+		divss	xmm5, xmm4
+		movss	xmm4, xmm5
+		mulss	xmm4, xmm5
+		movss	xmm6, kATanCst1
+		mulss	xmm6, xmm4
+		addss	xmm6, kATanCst2
+		mulss	xmm6, xmm4
+		subss	xmm6, kATanCst3
+		mulss	xmm6, xmm4
+		addss	xmm6, kATanCst4
+		mulss	xmm6, xmm4
+		subss	xmm6, kATanCst5
+		mulss	xmm6, xmm4
+		addss	xmm6, kATanCst6
+		mulss	xmm6, xmm5
+		movss	xmm4, kSSEChangeSignMaskPS0
+		subss	xmm3, xmm2
+		andps	xmm3, xmm4
+		xorps	xmm6, xmm3
+		psrad	xmm3, 0x1F
+		movss	xmm2, kFltPId2
+		andps	xmm2, xmm3
+		addss	xmm6, xmm2
+		andps	xmm1, xmm4
+		xorps	xmm6, xmm1
+		psrad	xmm1, 0x1F
+		movss	xmm2, kFltPI
+		andps	xmm2, xmm1
+		addss	xmm6, xmm2
+		andps	xmm0, xmm4
+		xorps	xmm0, xmm6
 		retn
 	}
 }
@@ -484,45 +828,6 @@ __declspec(naked) char* __fastcall StrCat(char *dest, const char *src)
 		retn
 	}
 }
-
-alignas(16) const UInt8 kLwrCaseConverter[] =
-{
-	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
-	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
-	0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F,
-	0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F,
-	0x40, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F,
-	0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F,
-	0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F,
-	0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F,
-	0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F,
-	0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F,
-	0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF,
-	0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF,
-	0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF,
-	0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF,
-	0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF,
-	0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF
-};
-alignas(16) const UInt8 kUprCaseConverter[] =
-{
-	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
-	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
-	0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F,
-	0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F,
-	0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F,
-	0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F,
-	0x60, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F,
-	0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F,
-	0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F,
-	0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F,
-	0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF,
-	0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF,
-	0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF,
-	0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF,
-	0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF,
-	0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF
-};
 
 __declspec(noinline) char __fastcall StrCompare(const char *lstr, const char *rstr)
 {
@@ -896,9 +1201,7 @@ __declspec(naked) char* __vectorcall FltToStr(char *str, double value)
 		retn
 	nonZero:
 		ja		isPos
-		pcmpeqd	xmm2, xmm2
-		psrlq	xmm2, 1
-		andpd	xmm0, xmm2
+		andpd	xmm0, kSSERemoveSignMaskPD
 		mov		[ecx], '-'
 		inc		ecx
 	isPos:
@@ -1104,8 +1407,7 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 	intEnd:
 		test	eax, eax
 		jz		noInt
-		movd	xmm0, eax
-		cvtdq2pd	xmm0, xmm0
+		cvtsi2sd	xmm0, eax
 		jns		noOverflow
 		addsd	xmm0, kValueBounds
 	noOverflow:
@@ -1129,8 +1431,7 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 	fracEnd:
 		test	eax, eax
 		jz		addSign
-		movd	xmm1, eax
-		cvtdq2pd	xmm1, xmm1
+		cvtsi2sd	xmm1, eax
 		shl		dl, 1
 		mov		cl, dh
 		mulsd	xmm1, kFactor10Div[ecx*8]
@@ -1138,9 +1439,7 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 	addSign:
 		test	dl, 6
 		jz		done
-		pcmpeqd	xmm1, xmm1
-		psllq	xmm1, 0x3F
-		orpd	xmm0, xmm1
+		orpd	xmm0, kSSEChangeSignMaskPD
 	done:
 		pop		edi
 		pop		esi

@@ -78,8 +78,7 @@ __declspec(naked) double __vectorcall GetLeftStick(SInt16 value)
 		add		eax, s_deadZoneLS
 		jge		retnZero
 	done:
-		movd	xmm0, eax
-		cvtdq2pd	xmm0, xmm0
+		cvtsi2sd	xmm0, eax
 		mulsd	xmm0, s_deadZoneLSd
 		retn
 	}
@@ -103,8 +102,7 @@ __declspec(naked) double __vectorcall GetRightStick(SInt16 value)
 		add		eax, s_deadZoneRS
 		jge		retnZero
 	done:
-		movd	xmm0, eax
-		cvtdq2pd	xmm0, xmm0
+		cvtsi2sd	xmm0, eax
 		mulsd	xmm0, s_deadZoneRSd
 		retn
 	}
@@ -210,7 +208,7 @@ bool Cmd_SetDeadZoneLS_Execute(COMMAND_ARGS)
 			value = deadzone * 32767;
 		s_deadZoneLS = value;
 		s_deadZoneLSg = value;
-		s_deadZoneLSd = 1.0 / (32767.0 - s_deadZoneLSg);
+		s_deadZoneLSd = 1.0 / (32767 - value);
 		for (UInt32 patchAddr : {0x717B90, 0x717BA5, 0x717C15, 0x717C2A, 0x755552, 0x755569, 0x7AED31, 0x7E7F82, 0x7ECA56, 0x941157, 0x941177, 0xA23E5E, 0xA23E87})
 			SafeWrite32(patchAddr, value);
 		value = -value;
@@ -234,7 +232,7 @@ bool Cmd_SetDeadZoneRS_Execute(COMMAND_ARGS)
 			value = deadzone * 32767;
 		s_deadZoneRS = value;
 		s_deadZoneRSg = value;
-		s_deadZoneRSd = 1.0 / (32767.0 - s_deadZoneRSg);
+		s_deadZoneRSd = 1.0 / (32767 - value);
 		for (UInt32 patchAddr : {0x7AE57A, 0x7AE598, 0x7AE666, 0x7AE687, 0x7AE699, 0x7AE6AE, 0x7AE6C0, 0x7D57C0, 0x7D57D3, 0x7E7FAD, 0x7ECAAC, 0x7ECB3A, 0x7ECB51, 0x941197, 0x9455F5, 0x945644, 0x9456F0, 0x945710})
 			SafeWrite32(patchAddr, value);
 		value = -value;
@@ -308,23 +306,23 @@ bool Cmd_IsButtonHeld_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_EnableTrigger_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger < 2))
-		s_XIStateMods.triggerMods &= ~(1 << trigger);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger))
+		s_XIStateMods.triggerMods &= (trigger ? 0xFD : 0xFE);
 	return true;
 }
 
 bool Cmd_DisableTrigger_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger < 2))
-		s_XIStateMods.triggerMods |= (1 << trigger);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger))
+		s_XIStateMods.triggerMods |= (trigger ? 2 : 1);
 	return true;
 }
 
 bool Cmd_IsTriggerDisabled_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (s_XIStateMods.triggerMods & (1 << trigger)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (s_XIStateMods.triggerMods & (trigger ? 2 : 1)))
 		*result = 1;
 	else *result = 0;
 	return true;
@@ -332,30 +330,30 @@ bool Cmd_IsTriggerDisabled_Execute(COMMAND_ARGS)
 
 bool Cmd_IsTriggerDisabled_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (s_XIStateMods.triggerMods & (1 << (UInt8)arg1)) ? 1 : 0;
+	*result = (s_XIStateMods.triggerMods & (arg1 ? 2 : 1)) ? 1 : 0;
 	return true;
 }
 
 bool Cmd_HoldTrigger_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger <= 1))
-		s_XIStateMods.triggerMods |= (4 << trigger);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger))
+		s_XIStateMods.triggerMods |= (trigger ? 8 : 4);
 	return true;
 }
 
 bool Cmd_ReleaseTrigger_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger <= 1))
-		s_XIStateMods.triggerMods &= ~(4 << trigger);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger))
+		s_XIStateMods.triggerMods &= (trigger ? 0xF7 : 0xFB);
 	return true;
 }
 
 bool Cmd_IsTriggerHeld_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger <= 1) && (s_XIStateMods.triggerMods & (4 << trigger)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (s_XIStateMods.triggerMods & (trigger ? 8 : 4)))
 		*result = 1;
 	else *result = 0;
 	return true;
@@ -363,7 +361,7 @@ bool Cmd_IsTriggerHeld_Execute(COMMAND_ARGS)
 
 bool Cmd_IsTriggerHeld_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (s_XIStateMods.triggerMods & (4 << (UInt32)arg1)) ? 1 : 0;
+	*result = (s_XIStateMods.triggerMods & (arg1 ? 8 : 4)) ? 1 : 0;
 	return true;
 }
 
@@ -378,8 +376,8 @@ bool Cmd_TapButton_Execute(COMMAND_ARGS)
 bool Cmd_TapTrigger_Execute(COMMAND_ARGS)
 {
 	UInt32 trigger;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (trigger <= 1))
-		s_XIStateMods.triggerMods |= (0x10 << trigger);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger))
+		s_XIStateMods.triggerMods |= (trigger ? 0x20 : 0x10);
 	return true;
 }
 
@@ -426,7 +424,7 @@ __declspec(naked) bool Cmd_SetOnTriggerUpEventHandler_Execute(COMMAND_ARGS)
 bool Cmd_IsStickDisabled_Execute(COMMAND_ARGS)
 {
 	UInt32 stick;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &stick) && (stick <= 1) && (s_XIStateMods.stickSkip & (0xF << (stick << 2))))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &stick) && (s_XIStateMods.stickSkip & (stick ? 0xF0 : 0xF)))
 		*result = 1;
 	else *result = 0;
 	return true;
@@ -434,17 +432,18 @@ bool Cmd_IsStickDisabled_Execute(COMMAND_ARGS)
 
 bool Cmd_IsStickDisabled_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (s_XIStateMods.stickSkip & (0xF << ((UInt32)arg1 << 2))) ? 1 : 0;
+	*result = (s_XIStateMods.stickSkip & (arg1 ? 0xF0 : 0xF)) ? 1 : 0;
 	return true;
 }
 
 bool Cmd_SetStickDisabled_Execute(COMMAND_ARGS)
 {
 	UInt32 stick, doSet;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &stick, &doSet) && (stick <= 1))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &stick, &doSet))
 	{
-		if (doSet) s_XIStateMods.stickSkip |= (0xF << (stick << 2));
-		else s_XIStateMods.stickSkip &= ~(0xF << (stick << 2));
+		UInt8 flag = stick ? 0xF0 : 0xF;
+		if (doSet) s_XIStateMods.stickSkip |= flag;
+		else s_XIStateMods.stickSkip &= ~flag;
 	}
 	return true;
 }

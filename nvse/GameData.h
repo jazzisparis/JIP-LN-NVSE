@@ -451,7 +451,8 @@ public:
 	NiColor							sunFog;				// 0C0
 	float							windSpeed;			// 0CC
 	float							windDirection;		// 0D0
-	UInt32							unk0D4[6];			// 0D4
+	UInt32							unk0D4[5];			// 0D4
+	float							fogPower;			// 0E8
 	float							gameHour;			// 0EC
 	float							lastUpdateHour;		// 0F0
 	float							weatherPercent;		// 0F4
