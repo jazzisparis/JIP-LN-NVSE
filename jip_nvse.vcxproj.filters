@@ -388,6 +388,9 @@
     <ClInclude Include="internal\jip_core.h">
       <Filter>internal</Filter>
     </ClInclude>
+    <ClInclude Include="NVSEParamInfos.h">
+      <Filter>nvse</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="exports.def" />

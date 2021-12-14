@@ -9,14 +9,14 @@ DEFINE_COMMAND_PLUGIN(SetINIFloat, 0, 3, kParams_OneString_OneDouble_OneOptional
 DEFINE_COMMAND_PLUGIN(GetINIString, 0, 2, kParams_OneString_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(SetINIString, 0, 3, kParams_TwoString_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetINISection, 0, 3, kParams_OneString_OneOptionalString_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetINISection, 0, 3, kParams_OneString_OneInt_OneOptionalString);
+DEFINE_COMMAND_PLUGIN_EXP(SetINISection, 0, 3, kNVSEParams_OneString_OneArray_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetINISectionNames, 0, 1, kParams_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(RemoveINIKey, 0, 2, kParams_OneString_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(RemoveINISection, 0, 2, kParams_OneString_OneOptionalString);
 DEFINE_COMMAND_ALT_PLUGIN(GetFilesInFolder, GetFiles, 0, 2, kParams_OneString_OneOptionalString);
 DEFINE_COMMAND_ALT_PLUGIN(GetFoldersInFolder, GetFolders, 0, 2, kParams_OneString_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(SortFormsByType, 0, 2, kParams_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetFormCountType, 0, 2, kParams_TwoInts);
+DEFINE_COMMAND_PLUGIN_EXP(SortFormsByType, 0, 2, kNVSEParams_TwoArrays);
+DEFINE_COMMAND_PLUGIN_EXP(GetFormCountType, 0, 2, kNVSEParams_OneArray_OneInt);
 DEFINE_COMMAND_ALT_PLUGIN(GetDefaultMessageTime, GetDMT, 0, 0, NULL);
 DEFINE_COMMAND_ALT_PLUGIN(SetDefaultMessageTime, SetDMT, 0, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(Console, 0, 21, kParams_FormatString);
@@ -178,31 +178,37 @@ bool Cmd_GetINISection_Execute(COMMAND_ARGS)
 bool Cmd_SetINISection_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char configPath[0x80], secName[0x40], *iniPath = configPath + 12;
-	UInt32 arrID;
-	*iniPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &secName, &arrID, iniPath) || !GetINIPath(iniPath, scriptObj))
-		return true;
-	NVSEArrayVar *srcArray = LookupArrayByID(arrID);
-	if (!srcArray || (GetContainerType(srcArray) != NVSEArrayVarInterface::kArrType_StringMap))
-		return true;
-	ArrayData arrData(srcArray, false);
-	if (!arrData.size) return true;
-	char *buffer = GetStrArgBuffer(), *posPtr = buffer;
-	for (UInt32 idx = 0; idx < arrData.size; idx++)
+	if (PluginExpressionEvaluator eval(PASS_COMMAND_ARGS);
+		eval.ExtractArgs())
 	{
-		posPtr = StrCopy(posPtr, arrData.keys[idx].String());
-		*posPtr++ = '=';
-		if (arrData.vals[idx].GetType() == 3)
-			posPtr = StrCopy(posPtr, arrData.vals[idx].String());
-		else posPtr = FltToStr(posPtr, arrData.vals[idx].Number());
-		posPtr++;
+		NVSEArrayVar* srcArray = eval.GetNthArg(1)->GetArrayVar();	//cheaper to extract and check first.
+		if (!srcArray || (GetContainerType(srcArray) != NVSEArrayVarInterface::kArrType_StringMap))
+			return true;
+		char configPath[0x80], secName[0x40], * iniPath = configPath + 12;
+		*iniPath = 0;
+		strcpy(secName, eval.GetNthArg(0)->GetString());	//todo: verify this works!
+		if (!GetINIPath(iniPath, scriptObj)) return true;
+		if (eval.NumArgs() == 3)
+			strcpy(configPath, eval.GetNthArg(2)->GetString());	//todo: verify this works!
+
+		ArrayData arrData(srcArray, false);
+		if (!arrData.size) return true;
+		char* buffer = GetStrArgBuffer(), * posPtr = buffer;
+		for (UInt32 idx = 0; idx < arrData.size; idx++)
+		{
+			posPtr = StrCopy(posPtr, arrData.keys[idx].String());
+			*posPtr++ = '=';
+			if (arrData.vals[idx].GetType() == 3)
+				posPtr = StrCopy(posPtr, arrData.vals[idx].String());
+			else posPtr = FltToStr(posPtr, arrData.vals[idx].Number());
+			posPtr++;
+		}
+		*posPtr = 0;
+		if (!FileExists(configPath))
+			FileStream::MakeAllDirs(configPath);
+		if (WritePrivateProfileSection(secName, buffer, configPath))
+			*result = 1;
 	}
-	*posPtr = 0;
-	if (!FileExists(configPath))
-		FileStream::MakeAllDirs(configPath);
-	if (WritePrivateProfileSection(secName, buffer, configPath))
-		*result = 1;
 	return true;
 }
 
@@ -289,71 +295,76 @@ bool Cmd_GetFoldersInFolder_Execute(COMMAND_ARGS)
 bool Cmd_SortFormsByType_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	UInt32 formArrID, typeArrID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &formArrID, &typeArrID)) return true;
-	NVSEArrayVar *formArray = LookupArrayByID(formArrID);
-	NVSEArrayVar *typeArray = LookupArrayByID(typeArrID);
-	if (!formArray || !typeArray) return true;
-	UInt32 nForms = GetArraySize(formArray), nTypes = GetArraySize(typeArray);
-	if (!nForms || !nTypes) return true;
-	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
-	Vector<TESForm*> tempForms(nForms);
-	UInt32 size = GetMax(nForms, nTypes) * sizeof(ArrayElementL);
-	ArrayElementL *elements = (ArrayElementL*)AuxBuffer::Get(2, size);
-	MemZero(elements, size);
-	GetElements(formArray, elements, NULL);
-	TESForm *form;
-	for (int idx = 0; idx < nForms; idx++)
+	if (PluginExpressionEvaluator eval(PASS_COMMAND_ARGS);
+		eval.ExtractArgs())
 	{
-		form = elements[idx].Form();
-		if (form) tempForms.Append(form);
-	}
-	GetElements(typeArray, elements, NULL);
-	UInt8 typeID;
-	for (UInt32 idx = 0; idx < nTypes; idx++)
-	{
-		typeID = elements[idx].Number();
-		for (auto iter = tempForms.BeginRv(); iter; --iter)
+		NVSEArrayVar* formArray = eval.GetNthArg(0)->GetArrayVar();
+		NVSEArrayVar* typeArray = eval.GetNthArg(1)->GetArrayVar();
+		if (!formArray || !typeArray) return true;
+		UInt32 const nForms = GetArraySize(formArray), nTypes = GetArraySize(typeArray);
+		if (!nForms || !nTypes) return true;
+		TempElements* tmpElements = GetTempElements();
+		tmpElements->Clear();
+		Vector<TESForm*> tempForms(nForms);
+		UInt32 const size = GetMax(nForms, nTypes) * sizeof(ArrayElementL);
+		ArrayElementL* elements = (ArrayElementL*)AuxBuffer::Get(2, size);
+		MemZero(elements, size);
+		GetElements(formArray, elements, NULL);
+		TESForm* form;
+		for (int idx = 0; idx < nForms; idx++)
 		{
-			form = *iter;
-			if ((form->typeID != typeID) && (NOT_REFERENCE(form) || (((TESObjectREFR*)form)->baseForm->typeID != typeID)))
-				continue;
-			tmpElements->Append(form);
-			iter.Remove(tempForms);
+			form = elements[idx].Form();
+			if (form) tempForms.Append(form);
 		}
-		if (tempForms.Empty()) break;
+		GetElements(typeArray, elements, NULL);
+		UInt8 typeID;
+		for (UInt32 idx = 0; idx < nTypes; idx++)
+		{
+			typeID = elements[idx].Number();
+			for (auto iter = tempForms.BeginRv(); iter; --iter)
+			{
+				form = *iter;
+				if ((form->typeID != typeID) && (NOT_REFERENCE(form) || (((TESObjectREFR*)form)->baseForm->typeID != typeID)))
+					continue;
+				tmpElements->Append(form);
+				iter.Remove(tempForms);
+			}
+			if (tempForms.Empty()) break;
+		}
+		if (!tempForms.Empty())
+			for (auto iter = tempForms.Begin(); iter; ++iter)
+				tmpElements->Append(*iter);
+		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	}
-	if (!tempForms.Empty())
-		for (auto iter = tempForms.Begin(); iter; ++iter)
-			tmpElements->Append(*iter);
-	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }
 
 bool Cmd_GetFormCountType_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	UInt32 arrID, typeID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &arrID, &typeID)) return true;
-	NVSEArrayVar *formArray = LookupArrayByID(arrID);
-	if (!formArray || (GetContainerType(formArray) != NVSEArrayVarInterface::kArrType_Array))
-		return true;
-	UInt32 size = GetArraySize(formArray);
-	if (!size) return true;
-	ArrayElementR *elements = (ArrayElementR*)AuxBuffer::Get(2, size * sizeof(ArrayElementR));
-	MemZero(elements, size * sizeof(ArrayElementR));
-	if (!GetElements(formArray, elements, NULL))
-		return true;
-	int count = 0;
-	TESForm *form;
-	for (UInt32 idx = 0; idx < size; idx++)
+	if (PluginExpressionEvaluator eval(PASS_COMMAND_ARGS);
+		eval.ExtractArgs())
 	{
-		form = elements[idx].Form();
-		if (form && (form->typeID == typeID))
-			count++;
+		NVSEArrayVar* formArray = eval.GetNthArg(0)->GetArrayVar();
+		if (!formArray || (GetContainerType(formArray) != NVSEArrayVarInterface::kArrType_Array))
+			return true;
+		UInt32 const typeID = eval.GetNthArg(1)->GetInt();
+		UInt32 const size = GetArraySize(formArray);
+		if (!size) return true;
+		ArrayElementR* elements = (ArrayElementR*)AuxBuffer::Get(2, size * sizeof(ArrayElementR));
+		MemZero(elements, size * sizeof(ArrayElementR));
+		if (!GetElements(formArray, elements, NULL))
+			return true;
+		int count = 0;
+		TESForm* form;
+		for (UInt32 idx = 0; idx < size; idx++)
+		{
+			form = elements[idx].Form();
+			if (form && (form->typeID == typeID))
+				count++;
+		}
+		*result = count;
 	}
-	*result = count;
 	return true;
 }
 

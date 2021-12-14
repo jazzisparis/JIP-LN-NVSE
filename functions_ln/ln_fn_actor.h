@@ -15,7 +15,7 @@ DEFINE_COMMAND_PLUGIN(LNSetActorTemplate, 0, 2, kParams_OneForm_OneOptionalActor
 DEFINE_COMMAND_PLUGIN(GetBaseFactionRank, 0, 2, kParams_OneForm_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(SetBaseFactionRank, 0, 3, kParams_OneFaction_OneInt_OneOptionalActorBase);
 DEFINE_COMMAND_ALT_PLUGIN(GetEquippedData, GetEqData, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(SetEquippedData, SetEqData, 1, 3, kParams_OneInt_TwoOptionalInts);
+DEFINE_COMMAND_ALT_PLUGIN(SetEquippedData, SetEqData, 1, 3, kNVSEParams_OneArray_TwoOptionalBools);
 DEFINE_COMMAND_PLUGIN(EquipItemData, 1, 5, kParams_OneObjectID_OneOptionalFloat_ThreeOptionalInts);
 DEFINE_COMMAND_PLUGIN(GetBaseKarma, 0, 1, kParams_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(SetBaseKarma, 0, 2, kParams_OneInt_OneOptionalActorBase);
@@ -325,15 +325,28 @@ void SetEquippedData(Actor *actor, TESForm *form, float health, UInt8 flags, boo
 
 bool Cmd_SetEquippedData_Execute(COMMAND_ARGS)
 {
-	UInt32 arrID, lock = 0, silent = 1;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &arrID, &lock, &silent) || NOT_ACTOR(thisObj))
+	if (NOT_ACTOR(thisObj))
 		return true;
-	NVSEArrayVar *inArray = LookupArrayByID(arrID);
-	if (!inArray || (GetArraySize(inArray) != 3))
-		return true;
-	ArrayElementL vals[3];
-	GetElements(inArray, vals, NULL);
-	SetEquippedData((Actor*)thisObj, vals[0].Form(), (float)vals[1].Number(), (UInt8)vals[2].Number(), lock != 0, silent != 0);
+	if (PluginExpressionEvaluator eval(PASS_COMMAND_ARGS);
+		eval.ExtractArgs())
+	{
+		NVSEArrayVar* inArray = eval.GetNthArg(0)->GetArrayVar();
+		if (!inArray || (GetArraySize(inArray) != 3))
+			return true;
+		bool lock = false, silent = true;
+		auto const numArgs = eval.NumArgs();
+		if (numArgs >= 2)
+		{
+			lock = eval.GetNthArg(1)->GetBool();
+		}
+		if (numArgs >= 3)
+		{
+			silent = eval.GetNthArg(1)->GetBool();
+		}
+		ArrayElementL vals[3];
+		GetElements(inArray, vals, NULL);
+		SetEquippedData((Actor*)thisObj, vals[0].Form(), (float)vals[1].Number(), (UInt8)vals[2].Number(), lock, silent);
+	}
 	return true;
 }
 

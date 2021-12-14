@@ -189,6 +189,7 @@
     <ClInclude Include="internal\utility.h" />
     <ClInclude Include="internal\version.h" />
     <ClInclude Include="internal\xinput.h" />
+    <ClInclude Include="NVSEParamInfos.h" />
     <ClInclude Include="nvse\CommandTable.h" />
     <ClInclude Include="nvse\GameAPI.h" />
     <ClInclude Include="nvse\GameBSExtraData.h" />

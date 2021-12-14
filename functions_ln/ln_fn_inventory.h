@@ -3,7 +3,7 @@
 DEFINE_COMMAND_PLUGIN(SetHotkey, 0, 4, kParams_OneInt_OneForm_OneOptionalFloat_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ClearAllHotkeys, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(SaveHotkeys, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(RestoreHotkeys, 0, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN_EXP(RestoreHotkeys, 0, 1, kNVSEParams_OneOptionalArray);
 DEFINE_COMMAND_PLUGIN(BaseGetItemCount, 0, 2, kParams_OneForm_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(BaseAddItem, 0, 3, kParams_OneForm_OneInt_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(BaseAddItemHealth, 0, 4, kParams_OneForm_OneInt_OneFloat_OneOptionalForm);
@@ -228,23 +228,25 @@ bool Cmd_SaveHotkeys_Execute(COMMAND_ARGS)
 
 bool Cmd_RestoreHotkeys_Execute(COMMAND_ARGS)
 {
-	UInt32 arrID = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &arrID)) return true;
-	if (arrID)
+	if (PluginExpressionEvaluator eval(PASS_COMMAND_ARGS);
+		eval.ExtractArgs())
 	{
-		NVSEArrayVar *inArray = LookupArrayByID(arrID), *dataArray;
-		if (!inArray || (GetArraySize(inArray) != 8)) return true;
-		ArrayElementL vals[8], data[3];
-		GetElements(inArray, vals, NULL);
-		for (UInt8 idx = 0; idx < 8; idx++)
+		if (NVSEArrayVar* const inArray = eval.GetNthArg(0)->GetArrayVar())
 		{
-			dataArray = vals[idx].Array();
-			if (!dataArray || (GetArraySize(dataArray) != 3)) continue;
-			GetElements(dataArray, data, NULL);
-			SetHotkey(idx, HotkeyInfo(data[0].Form(), data[1].Number(), data[2].Number()));
+			NVSEArrayVar* dataArray;
+			if (!inArray || (GetArraySize(inArray) != 8)) return true;
+			ArrayElementL vals[8], data[3];
+			GetElements(inArray, vals, NULL);
+			for (UInt8 idx = 0; idx < 8; idx++)
+			{
+				dataArray = vals[idx].Array();
+				if (!dataArray || (GetArraySize(dataArray) != 3)) continue;
+				GetElements(dataArray, data, NULL);
+				SetHotkey(idx, HotkeyInfo(data[0].Form(), data[1].Number(), data[2].Number()));
+			}
 		}
+		else for (UInt8 idx = 0; idx < 8; idx++) SetHotkey(idx, s_savedHotkeys[idx]);
 	}
-	else for (UInt8 idx = 0; idx < 8; idx++) SetHotkey(idx, s_savedHotkeys[idx]);
 	return true;
 }
 

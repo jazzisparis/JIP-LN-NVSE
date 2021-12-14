@@ -4,6 +4,7 @@
 #include "internal/xinput.h"
 #include "internal/jip_core.h"
 #include "nvse/ParamInfos.h"
+#include "NVSEParamInfos.h"
 #include "internal/hooks.h"
 #include "internal/patches_cmd.h"
 #include "internal/patches_game.h"

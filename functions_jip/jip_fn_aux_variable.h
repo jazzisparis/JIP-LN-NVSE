@@ -10,7 +10,7 @@ DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetAll, AuxVarGetAll, 0, 2, kParams_O
 DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetFloat, AuxVarSetFlt, 0, 4, kParams_OneString_OneDouble_OneOptionalInt_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetRef, AuxVarSetRef, 0, 4, kParams_OneString_OneForm_OneOptionalInt_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetString, AuxVarSetStr, 0, 4, kParams_TwoStrings_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetFromArray, AuxVarSetFromArr, 0, 3, kParams_OneString_OneInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN_EXP(AuxiliaryVariableSetFromArray, AuxVarSetFromArr, 0, 3, kNVSEParams_OneString_OneArray_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableErase, AuxVarErase, 0, 3, kParams_OneString_OneOptionalInt_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableEraseAll, AuxVarEraseAll, 0, 2, kParams_OneInt_OneOptionalForm);
 DEFINE_CMD_COND_PLUGIN(AuxVarGetFltCond, 1, 2, kParams_OneQuest_OneInt);
@@ -251,25 +251,30 @@ bool Cmd_AuxiliaryVariableSetString_Execute(COMMAND_ARGS)
 bool Cmd_AuxiliaryVariableSetFromArray_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char varName[0x50];
-	UInt32 arrID;
-	TESForm *form = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &arrID, &form) || !arrID)
-		return true;
-	NVSEArrayVar *srcArr = LookupArrayByID(arrID);
-	if (!srcArr) return true;
-	ArrayData arrData(srcArr, true);
-	if (!arrData.size) return true;
-	AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
-	if (!varInfo.ownerID) return true;
-	AuxVarValsArr *valsArr = AVGetArray(&varInfo, true);
-	if (!valsArr->Empty())
-		valsArr->Clear();
-	for (UInt32 idx = 0; idx < arrData.size; idx++)
-		valsArr->Append(arrData.vals[idx]);
-	if (varInfo.isPerm)
-		s_dataChangedFlags |= kChangedFlag_AuxVars;
-	*result = (int)arrData.size;
+	if (PluginExpressionEvaluator eval(PASS_COMMAND_ARGS);
+		eval.ExtractArgs())
+	{
+		char varName[0x50];
+		TESForm* form = NULL;
+		if (NVSEArrayVar* srcArr = eval.GetNthArg(1)->GetArrayVar())
+		{
+			strcpy(varName, eval.GetNthArg(0)->GetString());	//todo: verify this is safe, I've no idea
+			if (eval.NumArgs() == 3)
+				form = eval.GetNthArg(2)->GetTESForm();
+			ArrayData arrData(srcArr, true);
+			if (!arrData.size) return true;
+			AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
+			if (!varInfo.ownerID) return true;
+			AuxVarValsArr* valsArr = AVGetArray(&varInfo, true);
+			if (!valsArr->Empty())
+				valsArr->Clear();
+			for (UInt32 idx = 0; idx < arrData.size; idx++)
+				valsArr->Append(arrData.vals[idx]);
+			if (varInfo.isPerm)
+				s_dataChangedFlags |= kChangedFlag_AuxVars;
+			*result = (int)arrData.size;
+		}
+	}
 	return true;
 }
 

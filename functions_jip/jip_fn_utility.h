@@ -5,7 +5,7 @@ DEFINE_COMMAND_PLUGIN(StringToRef, 0, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(GetMinOf, 0, 5, kParams_TwoDoubles_ThreeOptionalDoubles);
 DEFINE_COMMAND_PLUGIN(GetMaxOf, 0, 5, kParams_TwoDoubles_ThreeOptionalDoubles);
 DEFINE_COMMAND_PLUGIN(ReadArrayFromFile, 0, 2, kParams_OneString_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(WriteArrayToFile, 0, 3, kParams_OneString_TwoInts);
+DEFINE_COMMAND_PLUGIN_EXP(WriteArrayToFile, 0, 3, kNVSEParams_OneString_OneInt_OneArray);
 DEFINE_COMMAND_PLUGIN(ReadStringFromFile, 0, 3, kParams_OneString_TwoOptionalInts);
 DEFINE_COMMAND_PLUGIN(WriteStringToFile, 0, 23, kParams_OneString_OneInt_OneFormatString);
 DEFINE_COMMAND_PLUGIN(GetLoadOrderChanged, 0, 0, NULL);
@@ -191,42 +191,45 @@ bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char filePath[0x80];
-	UInt32 apnd, arrID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &filePath, &apnd, &arrID))
-		return true;
-	NVSEArrayVar *mainArray = LookupArrayByID(arrID), *column;
-	if (!mainArray) return true;
-	UInt32 numLines = 1, idx, cnt;
-	TempArrayElements topLine(mainArray);
-	if (!topLine.size) return true;
-	Vector<TempArrayElements> columnBuffer(topLine.size);
-	ArrayElementR *elem;
-	TempArrayElements *colElements;
-	for (idx = 0; idx < topLine.size; idx++)
+	if (PluginExpressionEvaluator eval(PASS_COMMAND_ARGS);
+		eval.ExtractArgs())
 	{
-		elem = &topLine.elements[idx];
-		if (column = elem->Array())
+		NVSEArrayVar* mainArray = eval.GetNthArg(2)->GetArrayVar(), *column;
+		if (!mainArray) return true;
+		strcpy(filePath, eval.GetNthArg(0)->GetString());	//todo: check if this is safe, I've no idea.
+		bool const apnd = eval.GetNthArg(1)->GetBool();
+		
+		UInt32 numLines = 1, idx, cnt;
+		TempArrayElements topLine(mainArray);
+		if (!topLine.size) return true;
+		Vector<TempArrayElements> columnBuffer(topLine.size);
+		ArrayElementR* elem;
+		TempArrayElements* colElements;
+		for (idx = 0; idx < topLine.size; idx++)
 		{
-			colElements = columnBuffer.Append(column);
-			if (numLines < colElements->size)
-				numLines = colElements->size;
-		}
-		else columnBuffer.Append(elem);
-	}
-	ReplaceChr(filePath, '/', '\\');
-	FileStream outputFile;
-	if (outputFile.OpenWrite(filePath, apnd != 0))
-	{
-		char valStr[0x20];
-		for (idx = 0; idx < numLines; idx++)
-		{
-			for (cnt = 0; cnt < topLine.size; cnt++)
+			elem = &topLine.elements[idx];
+			if (column = elem->Array())
 			{
-				if (columnBuffer[cnt].size > idx)
+				colElements = columnBuffer.Append(column);
+				if (numLines < colElements->size)
+					numLines = colElements->size;
+			}
+			else columnBuffer.Append(elem);
+		}
+		ReplaceChr(filePath, '/', '\\');
+		FileStream outputFile;
+		if (outputFile.OpenWrite(filePath, apnd))
+		{
+			char valStr[0x20];
+			for (idx = 0; idx < numLines; idx++)
+			{
+				for (cnt = 0; cnt < topLine.size; cnt++)
 				{
-					elem = &columnBuffer[cnt].elements[idx];
-					switch (elem->GetType())
+					if (columnBuffer[cnt].size > idx)
 					{
+						elem = &columnBuffer[cnt].elements[idx];
+						switch (elem->GetType())
+						{
 						case 1:
 							FltToStr(valStr, elem->Number());
 							outputFile.WriteStr(valStr);
@@ -245,16 +248,17 @@ bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 							break;
 						default:
 							outputFile.WriteChar('0');
+						}
 					}
+					else outputFile.WriteChar('0');
+					if ((topLine.size - cnt) > 1)
+						outputFile.WriteChar('\t');
 				}
-				else outputFile.WriteChar('0');
-				if ((topLine.size - cnt) > 1)
-					outputFile.WriteChar('\t');
+				if ((numLines - idx) > 1)
+					outputFile.WriteChar('\n');
 			}
-			if ((numLines - idx) > 1)
-				outputFile.WriteChar('\n');
+			*result = 1;
 		}
-		*result = 1;
 	}
 	return true;
 }
