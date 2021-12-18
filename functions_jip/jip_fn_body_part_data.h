@@ -119,7 +119,7 @@ bool Cmd_GetBodyPartTraitNumeric_Execute(COMMAND_ARGS)
 		*result = bodyPart->goreEffTranslate[traitID - 13];
 		break;
 	default:
-		*result = bodyPart->goreEffRotation[traitID - 16] * kDbl180dPI;
+		*result = bodyPart->goreEffRotation[traitID - 16] * Dbl180dPI;
 	}
 	return true;
 }

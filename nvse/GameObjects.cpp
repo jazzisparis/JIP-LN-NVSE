@@ -6,10 +6,11 @@ __declspec(naked) float __vectorcall GetDistance3D(TESObjectREFR *ref1, TESObjec
 {
 	__asm
 	{
-		movups	xmm0, [ecx+0x30]
-		movups	xmm1, [edx+0x30]
+		movups	xmm0, [ecx+0x2C]
+		psrldq	xmm0, 4
+		movups	xmm1, [edx+0x2C]
+		psrldq	xmm1, 4
 		subps	xmm0, xmm1
-		andps	xmm0, kSSEDiscard4thPS
 		mulps	xmm0, xmm0
 		haddps	xmm0, xmm0
 		haddps	xmm0, xmm0
@@ -574,8 +575,6 @@ __declspec(naked) bool __fastcall TESObjectREFR::GetInSameCellOrWorld(TESObjectR
 	}
 }
 
-float __vectorcall GetDistance3D(TESObjectREFR *ref1, TESObjectREFR *ref2);
-
 __declspec(naked) float __vectorcall TESObjectREFR::GetDistance(TESObjectREFR *target)
 {
 	__asm
@@ -589,7 +588,8 @@ __declspec(naked) float __vectorcall TESObjectREFR::GetDistance(TESObjectREFR *t
 		jz		fltMax
 		jmp		GetDistance3D
 	fltMax:
-		movss	xmm0, kFltMax
+		mov		eax, 0x7F7FFFFF
+		movd	xmm0, eax
 		retn
 	}
 }
@@ -614,7 +614,7 @@ __declspec(naked) void TESObjectREFR::SetPos(NiVector4 *posVector)
 		test	ecx, ecx
 		jz		noCharCtrl
 		cmp		dword ptr [ecx+0x3F0], 4
-		jnz		noCharCtrl
+		jz		noCharCtrl
 		push	dword ptr [esp+8]
 		CALL_EAX(0x5620E0)
 	noCharCtrl:
@@ -623,10 +623,8 @@ __declspec(naked) void TESObjectREFR::SetPos(NiVector4 *posVector)
 		test	eax, eax
 		jz		done
 		mov		ecx, [esp+8]
-		mov		edx, [ecx]
-		mov		[eax+0x58], edx
-		mov		edx, [ecx+4]
-		mov		[eax+0x5C], edx
+		movq	xmm0, qword ptr [ecx]
+		movq	qword ptr [eax+0x58], xmm0
 		mov		edx, [ecx+8]
 		mov		[eax+0x60], edx
 		push	1
@@ -747,7 +745,10 @@ __declspec(naked) bool __fastcall TESObjectREFR::GetTranslatedPos(NiVector4 *pos
 {
 	__asm
 	{
-		call	TESObjectREFR::GetNiNode
+		mov		eax, [ecx+0x64]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x14]
 		test	eax, eax
 		jz		done
 		mov		ecx, edx
@@ -1415,7 +1416,7 @@ float Actor::GetRadiationLevel()
 		xRadiation = GetExtraType(&refr->extraDataList, Radiation);
 		if (xRadiation) result += xRadiation->radiation * distance / xRadius->radius;
 	}
-	return result ? ((1.0 - (avOwner.GetActorValue(kAVCode_RadResist) / 100.0)) * result) : 0;
+	return result ? ((1.0 - (avOwner.GetActorValue(kAVCode_RadResist) * 0.01)) * result) : 0;
 }
 
 __declspec(naked) void __fastcall Actor::TurnToFaceObject(TESObjectREFR *target)
@@ -1431,18 +1432,17 @@ __declspec(naked) void __fastcall Actor::TurnToFaceObject(TESObjectREFR *target)
 	}
 }
 
-__declspec(naked) void Actor::TurnAngle(float angle)
+__declspec(naked) void __vectorcall Actor::TurnAngle(float angle)
 {
 	__asm
 	{
 		push	0
-		movss	xmm0, [esp+8]
 		mulss	xmm0, kFltPId180
 		addss	xmm0, [ecx+0x2C]
 		push	ecx
 		movss	[esp], xmm0
 		CALL_EAX(0x8BB5C0)
-		retn	4
+		retn
 	}
 }
 
@@ -1765,7 +1765,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		movaps	xmm1, xmm0
 		mulps	xmm1, xmm1
 		haddps	xmm1, xmm1
-		comiss	xmm1, kFlt1d100K
+		comiss	xmm1, kEqEpsilon
 		jb		done
 		rsqrtss	xmm1, xmm1
 		unpcklps	xmm1, xmm1

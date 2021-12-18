@@ -764,6 +764,8 @@ struct TempArrayElements
 		while (--size);
 		free(elements);
 	}
+
+	ArrayElementR& operator[](UInt32 index) const {return elements[index];}
 };
 
 struct ArrayData

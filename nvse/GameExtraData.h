@@ -899,7 +899,7 @@ public:
 	tList<TESObjectREFR>	children;	// 0C
 };
 
-// 18
+// 20
 class ExtraActivateRef : public BSExtraData
 {
 public:
@@ -910,6 +910,7 @@ public:
 	};
 	tList<parentRef>	parentRefs;
 	UInt32				flags;
+	String              activationPromptOverride;
 };
 
 // 10

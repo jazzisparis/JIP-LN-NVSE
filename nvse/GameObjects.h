@@ -689,7 +689,7 @@ public:
 	float GetRadiationLevel();
 	BackUpPackage *AddBackUpPackage(TESObjectREFR *targetRef, TESObjectCELL *targetCell, UInt32 flags);
 	void __fastcall TurnToFaceObject(TESObjectREFR *target);
-	void TurnAngle(float angle);
+	void __vectorcall TurnAngle(float angle);
 	void PlayAnimGroup(UInt32 animGroupID);
 	UInt32 GetLevel();
 	double GetKillXP();

@@ -65,6 +65,13 @@ public:
 		UInt32		unk10;
 	};
 
+	enum KeyModifier
+	{
+		kHeld_Alt =		1,
+		kHeld_Ctrl =	2,
+		kHeld_Shift =	4
+	};
+
 	UInt32					flags;				// 000
 	SceneGraph				*sceneGraph004;		// 004
 	SceneGraph				*sceneGraph008;		// 008
@@ -153,15 +160,22 @@ public:
 	UInt8					pad111[3];			// 111
 	UInt32					menuStack[10];		// 114
 	Unk13C					*ptr13C;			// 13C
-	UInt32					unk140[5];			// 140
-	UInt32					unk154;				// 154
-	UInt32					unk158;				// 158
+	UInt32					unk140;				// 140
+	UInt32					unk144;				// 144
+	UInt8					byte148;			// 148
+	UInt8					isShift;			// 149
+	UInt8					byte14A;			// 14A
+	UInt8					byte14B;			// 14B
+	UInt32					keyModifiers;		// 14C
+	UInt32					currentKey;			// 150
+	UInt32					keyRepeatStartTime;	// 154
+	UInt32					lastKeyRepeatTime;	// 158
 	UInt32					unk15C;				// 15C
 	UInt32					unk160;				// 160
 	Unk164					*ptr164;			// 164
 	UInt8					byte168;			// 168
 	UInt8					pad169[3];			// 169
-	void					*ptr16C;			// 16C
+	FORenderedMenu			*renderedMenu;		// 16C
 	UInt8					byte170;			// 170
 	UInt8					byte171;			// 171
 	UInt8					byte172;			// 172
@@ -174,7 +188,7 @@ public:
 	HighlightedRef			highlightMain;		// 1E0
 	UInt32					numHighlighted;		// 1E8
 	SInt32					flashingRefIndex;	// 1EC
-	HighlightedRef			highlightedRefs[32];	// 1F0
+	HighlightedRef			highlightedRefs[32];// 1F0
 	UInt32					unk2F0[41];			// 2F0
 	NiObject				*unk394;			// 394 seen NiSourceTexture
 	UInt32					unk398[47];			// 398
@@ -199,7 +213,7 @@ public:
 	__forceinline static InterfaceManager *GetSingleton() {return *(InterfaceManager**)0x11D8A80;}
 
 	UInt32 GetTopVisibleMenuID();
-	TESObjectREFR *GetCursorPick();
+	NiAVObject *GetCursorPick();
 	Tile *GetActiveTile();
 	void ClearHighlights();
 	void AddHighlightedRef(TESObjectREFR *refr);
@@ -1098,12 +1112,12 @@ class QuantityMenu : public Menu		// 1016
 public:
 	virtual void		Unk_12(void);
 
-	TileRect			*tile28;		// 28
+	TileRect			*tile28;		// 28	QM_AmountMeter
 	TileImage			*tile2C;		// 2C	QM_DecreaseArrow
 	TileImage			*tile30;		// 30	QM_IncreaseArrow
-	TileText			*tile34;		// 34
-	TileImage			*tile38;		// 38
-	TileImage			*tile3C;		// 3C
+	TileText			*tile34;		// 34	QM_AmountChosen
+	TileImage			*tile38;		// 38	QM_OKButton
+	TileImage			*tile3C;		// 3C	QM_CancelButton
 	float				currentQtt;		// 40
 
 	__forceinline static QuantityMenu *Get() {return *(QuantityMenu**)0x11DA618;}
@@ -1754,27 +1768,27 @@ extern HUDMainMenu *g_HUDMainMenu;
 class FORenderedMenu
 {
 public:
-	virtual void	Destructor(bool doFree);
-	virtual void	Unk_01(void);
-	virtual void	Unk_02(void);
-	virtual void	Unk_03(void);
-	virtual void	Unk_04(void);
-	virtual void	Update(void);
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
-	virtual void	Unk_08(void);
-	virtual void	Init(void);
-	virtual void	ResetNifs(void);
-	virtual void	Unk_0B(void);
-	virtual void	OnMenuOpen(void);
-	virtual void	OnMenuClose(void);
-	virtual void	HandleStaticEffect(float msPassed);
-	virtual void	HandleVerticalHoldEffect(float msPassed);
-	virtual void	HandleShudderEffect(float msPassed);
-	virtual void	Unk_11(void);
-	virtual void	Unk_12(void);
-	virtual void	HandleScanlines(float msPassed);
-	virtual void	Unk_14(void);
+	/*000*/virtual void		Destructor(bool doFree);
+	/*004*/virtual void		Unk_01(void);
+	/*008*/virtual void		Unk_02(void);
+	/*00C*/virtual void		Unk_03(void);
+	/*010*/virtual void		Unk_04(void);
+	/*014*/virtual void		Update(void);
+	/*018*/virtual void		Unk_06(void);
+	/*01C*/virtual void		Unk_07(void);
+	/*020*/virtual void		Unk_08(void);
+	/*024*/virtual void		Init(void);
+	/*028*/virtual void		ResetNifs(void);
+	/*02C*/virtual void		Unk_0B(void);
+	/*030*/virtual void		OnMenuOpen(void);
+	/*034*/virtual void		OnMenuClose(void);
+	/*038*/virtual void		HandleStaticEffect(float msPassed);
+	/*03C*/virtual void		HandleVerticalHoldEffect(float msPassed);
+	/*040*/virtual void		HandleShudderEffect(float msPassed);
+	/*044*/virtual void		Unk_11(void);
+	/*048*/virtual void		Unk_12(void);
+	/*04C*/virtual void		HandleScanlines(float msPassed);
+	/*050*/virtual void		Unk_14(void);
 
 	NiAVObject			*screenTriShape;		// 04
 	BSFadeNode			*node08;				// 08
@@ -1833,6 +1847,8 @@ public:
 	UInt32				unkCC;					// CC
 	UInt32				unkD0;					// D0
 	NiNode				*nodeD4;				// D4
+
+	__forceinline void Close() {ThisCall(0x7FFD50, this);}
 };
 static_assert(sizeof(FORenderedMenu) == 0xD8);
 
@@ -1872,6 +1888,18 @@ public:
 	UInt8			pad16D[3];				// 16D
 };
 static_assert(sizeof(FOPipboyManager) == 0x170);
+
+// F0
+class FORenderedTerminal : public FORenderedMenu
+{
+public:
+	NiVector3		localTranslate;	// D8
+	NiTriStrips		*powerButton;	// E4
+	float			fltE8;			// E8
+	UInt8			bytEC;			// EC
+	UInt8			padED[3];		// ED
+};
+static_assert(sizeof(FORenderedTerminal) == 0xF0);
 
 struct FontHeightData
 {

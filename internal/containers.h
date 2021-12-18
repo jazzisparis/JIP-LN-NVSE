@@ -922,7 +922,7 @@ public:
 	bool Empty() const {return !numKeys;}
 	T_Key *Keys() {return reinterpret_cast<T_Key*>(keys);}
 
-	T_Key&& operator[](UInt32 index) const {return keys[index];}
+	const T_Key& operator[](UInt32 index) const {return keys[index];}
 
 	bool Insert(Key_Arg key)
 	{

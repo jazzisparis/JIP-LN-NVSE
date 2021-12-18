@@ -617,11 +617,10 @@ __declspec(naked) void QttMenuEnableWheelHook()
 	__asm
 	{
 		mov		eax, g_interfaceManager
-		pxor	xmm0, xmm0
-		comiss	xmm0, [eax+0x44]
+		cmp		dword ptr [eax+0x44], 0
 		jz		done
-		setb	dl
-		add		dl, 1
+		setg	dl
+		inc		dl
 		movzx	eax, dl
 		push	0
 		push	eax
@@ -2841,7 +2840,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 		}
 		valueMod1 = 1.0F;
 		if (flagPCTM & 0x10)
-			valueMod1 += ThisCall<float>(0x66EF50, &g_thePlayer->avOwner, kAVCode_Charisma) / 20.0F;
+			valueMod1 += ThisCall<float>(0x66EF50, &g_thePlayer->avOwner, kAVCode_Charisma) * 0.05F;
 		dmgResist = (target->avOwner.GetActorValue(kAVCode_DamageResist) - hitLocDR) * valueMod1;
 		if (dmgResist > 100.0F)
 			dmgResist = 100.0F;
@@ -2854,7 +2853,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 			valueMod2 = *(float*)0x11D1024;		// fMaxArmorRating
 			if (dmgResist > valueMod2)
 				dmgResist = valueMod2;
-			dmgResist = 1.0F - (dmgResist / 100.0F);
+			dmgResist = 1.0F - (dmgResist * 0.01F);
 		}
 		cpyThreshold = dmgThreshold = (target->avOwner.GetActorValue(kAVCode_DamageThreshold) - hitLocDT) * valueMod1;
 		if (ammoEffects)
@@ -2988,12 +2987,12 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 		if (flagPCTM & 2)
 			CdeclCall(0x8D5CB0, source, 9);
 	}
-	if (hitWeapon && (hitWeapon->resistType != -1) && (!ammo || !(ammo->flags & 1)))
+	if (hitWeapon && (hitWeapon->resistType != -1) && (!ammo || !(ammo->ammoFlags & 1)))
 	{
 		valueMod1 = target->avOwner.GetActorValue(hitWeapon->resistType);
 		if (valueMod1 > 0)
 		{
-			valueMod1 /= 100.0F;
+			valueMod1 *= 0.01F;
 			if (valueMod1 < 1.0F)
 				hitData->healthDmg *= 1.0F - valueMod1;
 			else hitData->healthDmg = 0;
@@ -3102,10 +3101,9 @@ __declspec(naked) float __cdecl GetVATSTargetDTHook(PlayerCharacter *thePlayer, 
 		CALL_EAX(ADDR_ApplyAmmoEffects)
 		add		esp, 0xC
 		fldz
-		fucomip	st, st(1)
-		jbe		done
-		fstp	st
-		fldz
+		fucomi	st, st(1)
+		fcmovb	st, st(1)
+		fstp	st(1)
 	done:
 		pop		esi
 		leave
@@ -3619,7 +3617,7 @@ __declspec(naked) bool __fastcall CreatureSpreadFixHook(Actor *actor)
 
 __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlobals, int EDX, float secPassed)
 {
-	static const double kDbl0dot1 = 0.1, kDbl24dot0 = 24.0, kDbl3600dot0 = 3600.0;
+	static const double kDbl0dot1 = 0.1, kDbl24dot0 = 24.0, kDbl1d3600 = 1 / 3600.0;
 	static double gameHour = 0, daysPassed = 0;
 	__asm
 	{
@@ -3628,7 +3626,7 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		mov		eax, [ecx+0x14]
 		cvtss2sd	xmm0, [eax+0x24]
 		mulsd	xmm2, xmm0
-		divsd	xmm2, kDbl3600dot0
+		mulsd	xmm2, kDbl1d3600
 		mov		eax, [ecx+0xC]
 		cvtss2sd	xmm0, [eax+0x24]
 		cmp		byte ptr [ecx+0x1C], 0

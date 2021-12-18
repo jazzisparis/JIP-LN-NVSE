@@ -16,7 +16,7 @@ bool Cmd_GetWorldspaceFlag_Execute(COMMAND_ARGS)
 	TESWorldSpace *wspc;
 	UInt32 flagID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc, &flagID) && (flagID <= 7))
-		*result = (wspc->flags & (1 << flagID)) ? 1 : 0;
+		*result = (wspc->worldFlags & (1 << flagID)) ? 1 : 0;
 	else *result = 0;
 	return true;
 }
@@ -28,8 +28,8 @@ bool Cmd_SetWorldspaceFlag_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc, &flagID, &val) && (flagID <= 7))
 	{
 		flagID = 1 << flagID;
-		if (val) wspc->flags |= flagID;
-		else wspc->flags &= ~flagID;
+		if (val) wspc->worldFlags |= flagID;
+		else wspc->worldFlags &= ~flagID;
 	}
 	return true;
 }

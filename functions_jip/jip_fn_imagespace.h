@@ -12,7 +12,8 @@ bool Cmd_GetImageSpaceTrait_Execute(COMMAND_ARGS)
 	UInt32 traitID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &imgSpace, &traitID) && (traitID <= 32))
 	{
-		if (((traitID >= 21) && (traitID <= 23)) || ((traitID >= 29) && (traitID <= 31))) *result = imgSpace->traitValues[traitID] * 255;
+		if (((traitID >= 21) && (traitID <= 23)) || ((traitID >= 29) && (traitID <= 31)))
+			*result = imgSpace->traitValues[traitID] * 255;
 		else *result = imgSpace->traitValues[traitID];
 	}
 	else *result = 0;
@@ -26,7 +27,8 @@ bool Cmd_SetImageSpaceTrait_Execute(COMMAND_ARGS)
 	float value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &imgSpace, &traitID, &value) && (traitID <= 32))
 	{
-		if (((traitID >= 21) && (traitID <= 23)) || ((traitID >= 29) && (traitID <= 31))) imgSpace->traitValues[traitID] = value / 255;
+		if (((traitID >= 21) && (traitID <= 23)) || ((traitID >= 29) && (traitID <= 31)))
+			imgSpace->traitValues[traitID] = value * (1 / 255.0F);
 		else imgSpace->traitValues[traitID] = value;
 	}
 	return true;
@@ -79,14 +81,14 @@ bool Cmd_SetImageSpaceModTrait_Execute(COMMAND_ARGS)
 		else if (traitID <= 50)
 		{
 			traitID -= 47;
-			value /= 255;
+			value *= 1 / 255.0F;
 			imod->clrIntrpl[0].value[traitID] = value;
 			imod->data704[0]->value[traitID] = value;
 		}
 		else if (traitID <= 54)
 		{
 			traitID -= 51;
-			value /= 255;
+			value *= 1 / 255.0F;
 			imod->clrIntrpl[1].value[traitID] = value;
 			imod->data704[1]->value[traitID] = value;
 		}

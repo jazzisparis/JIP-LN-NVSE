@@ -182,7 +182,7 @@ bool Cmd_GetQuests_Execute(COMMAND_ARGS)
 		objective = iter->data;
 		if (!objective || !(objective->status & 1)) continue;
 		quest = objective->quest;
-		if (bCompl != !(quest->flags & 2))
+		if (bCompl != !(quest->questFlags & TESQuest::kFlag_Completed))
 			tmpFormLst->Insert(quest);
 	}
 	while (iter = iter->next);
@@ -275,8 +275,8 @@ bool Cmd_GetQuestFlag_Execute(COMMAND_ARGS)
 {
 	TESQuest *quest;
 	UInt32 flagID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &flagID) && (flagID <= 3))
-		*result = (quest->flags & (1 << flagID)) ? 1 : 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &flagID) && (flagID <= 7))
+		*result = (quest->questFlags & (1 << flagID)) ? 1 : 0;
 	else *result = 0;
 	return true;
 }
@@ -285,10 +285,10 @@ bool Cmd_SetQuestFlag_Execute(COMMAND_ARGS)
 {
 	TESQuest *quest;
 	UInt32 flagID, doSet;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &flagID, &doSet) && (flagID <= 3))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &flagID, &doSet) && (flagID <= 7))
 	{
-		if (doSet) quest->flags |= (1 << flagID);
-		else quest->flags &= ~(1 << flagID);
+		if (doSet) quest->questFlags |= (1 << flagID);
+		else quest->questFlags &= ~(1 << flagID);
 	};
 	return true;
 }
@@ -313,7 +313,7 @@ bool Cmd_GetQuestTargetsChanged_Execute(COMMAND_ARGS)
 	bool evalRes;
 	do
 	{
-		if (!(objective = objIter->data) || (objective->quest->flags & 2) || ((objective->status & 3) != 1) || objective->targets.Empty())
+		if (!(objective = objIter->data) || (objective->quest->questFlags & TESQuest::kFlag_Completed) || ((objective->status & 3) != 1) || objective->targets.Empty())
 			continue;
 		auto trgIter = objective->targets.Head();
 		do

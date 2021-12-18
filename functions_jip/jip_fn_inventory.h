@@ -35,7 +35,7 @@ bool Cmd_AddItemAlt_Execute(COMMAND_ARGS)
 	float condition = 100;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &count, &condition, &doEquip) && count && thisObj->GetContainer())
 	{
-		condition = GetMin(GetMax(condition, 0.0F), 100.0F) / 100;
+		condition = GetMin(GetMax(condition, 0.0F), 100.0F) * 0.01F;
 		thisObj->AddItemAlt(form, count, condition, doEquip != 0);
 	}
 	return true;

@@ -33,7 +33,7 @@ bool Cmd_SetBipedModelPathAlt_Execute(COMMAND_ARGS)
 {
 	TESObjectARMO *armor;
 	UInt32 whichPath;
-	char *buffer = GetStrArgBuffer();
+	char buffer[0x80];
 	if (ExtractFormatStringArgs(2, buffer, EXTRACT_ARGS_EX, kCommandInfo_SetBipedModelPathAlt.numParams, &armor, &whichPath) && 
 		IS_TYPE(armor, TESObjectARMO) && (whichPath <= 3))
 		armor->bipedModel.bipedModel[whichPath].nifPath.Set(buffer);

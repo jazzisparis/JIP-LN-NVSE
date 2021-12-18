@@ -283,7 +283,7 @@ public:
 	/*180*/virtual void		RemoveAllItemsFromQueue();
 	/*184*/virtual NiNode	*GetProjectileNode();
 	/*188*/virtual void		SetProjectileNode(NiNode *node);
-	/*18C*/virtual void		Unk_63(void);
+	/*18C*/virtual void		Unk_63(NiControllerManager *ctrlMgr, NiNode *node);
 	/*190*/virtual NiNode	*GetWeaponNode(ValidBip01Names *vbp01Names);
 	/*194*/virtual void		Unk_65(void);
 	/*198*/virtual void		Unk_66(void);

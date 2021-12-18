@@ -22,25 +22,13 @@ __declspec(naked) void UpdateTileScales()
 		mov		eax, s_miniMapScale
 		mulss	xmm1, [eax+8]
 		mov		ecx, offset s_localMapShapes
-		movd	edx, xmm1
-		mov		eax, [ecx]
-		mov		[eax+0x64], edx
-		mov		eax, [ecx+4]
-		mov		[eax+0x64], edx
-		mov		eax, [ecx+8]
-		mov		[eax+0x64], edx
-		mov		eax, [ecx+0xC]
-		mov		[eax+0x64], edx
-		mov		eax, [ecx+0x10]
-		mov		[eax+0x64], edx
-		mov		eax, [ecx+0x14]
-		mov		[eax+0x64], edx
-		mov		eax, [ecx+0x18]
-		mov		[eax+0x64], edx
-		mov		eax, [ecx+0x1C]
-		mov		[eax+0x64], edx
-		mov		eax, [ecx+0x20]
-		mov		[eax+0x64], edx
+		mov		edx, 8
+		ALIGN 16
+	iterHead:
+		mov		eax, [ecx+edx*4]
+		movss	[eax+0x64], xmm1
+		dec		dl
+		jns		iterHead
 		mulss	xmm0, kFlt10
 		cvttss2si	eax, xmm0
 		shl		eax, 4
@@ -69,10 +57,10 @@ __declspec(naked) __m128* __fastcall GetNorthRotation(TESObjectCELL *cell)
 		xorps	xmm0, kSSEChangeSignMaskPS0
 		movss	s_cellNorthRotation, xmm0
 		call	GetSinCos
-		pshufd	xmm1, xmm0, 0x41
+		shufps	xmm0, xmm0, 0x14
 		mov		eax, offset s_northRotationMods
-		movaps	[eax], xmm1
-		xor		byte ptr [eax+0xB], 0x80
+		movaps	[eax], xmm0
+		xor		byte ptr [eax+0xF], 0x80
 		retn
 		ALIGN 16
 	noRotation:
@@ -85,27 +73,17 @@ NiCamera *s_localMapCamera = NULL;
 
 __declspec(naked) void __fastcall SetCameraRotation(TESObjectCELL *cell)
 {
+	static const __m128 kNoRotation = {0, 1, 1, 0};
 	__asm
 	{
 		call	GetNorthRotation
 		mov		ecx, s_localMapCamera
+		mov		edx, offset kNoRotation
 		test	eax, eax
-		jz		noRot
-		mov		edx, [eax]
-		mov		[ecx+0x3C], edx
-		mov		[ecx+0x44], edx
-		mov		edx, [eax+4]
-		mov		[ecx+0x38], edx
-		mov		edx, [eax+8]
-		mov		[ecx+0x48], edx
-		retn
-		ALIGN 16
-	noRot:
-		mov		[ecx+0x38], eax
-		mov		[ecx+0x48], eax
-		mov		edx, 0x3F800000
-		mov		[ecx+0x3C], edx
-		mov		[ecx+0x44], edx
+		cmovz	eax, edx
+		movaps	xmm0, [eax]
+		movq	qword ptr [ecx+0x38], xmm0
+		movhps	[ecx+0x44], xmm0
 		retn
 	}
 }
@@ -120,9 +98,8 @@ __declspec(naked) void __fastcall AdjustInteriorPos(TESObjectREFR *refr, NiPoint
 		jz		noRotation
 		unpcklps	xmm0, xmm0
 		mulps	xmm0, s_northRotationMods
-		pxor	xmm1, xmm1
-		movhlps	xmm1, xmm0
-		addps	xmm0, xmm1
+		shufps	xmm0, xmm0, 0x27
+		haddps	xmm0, xmm0
 	noRotation:
 		subps	xmm0, kIntrPosMods
 		movq	qword ptr [edx], xmm0
@@ -1059,9 +1036,10 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		jz		noRotation
 		unpcklps	xmm0, xmm0
 		mulps	xmm0, s_northRotationMods
-		pxor	xmm1, xmm1
-		movhlps	xmm1, xmm0
-		addps	xmm0, xmm1
+		pshufd	xmm1, xmm0, 0x27
+		pxor	xmm0, xmm0
+		haddps	xmm1, xmm0
+		movq	xmm0, xmm1
 	noRotation:
 		cvtps2dq	xmm0, xmm0
 		movq	qword ptr [ebp-8], xmm0
@@ -1560,11 +1538,9 @@ __declspec(naked) void __stdcall GenerateLocalMapInterior(TESObjectCELL *cell, C
 		cvtdq2ps	xmm0, xmm0
 		cmp		s_cellNorthRotation, 0
 		jz		noRot
-		unpcklps	xmm0, xmm0
-		pshufd	xmm1, s_northRotationMods, 0xD8
-		mulps	xmm0, xmm1
-		movhlps	xmm1, xmm0
-		addps	xmm0, xmm1
+		shufps	xmm0, xmm0, 0x11
+		mulps	xmm0, s_northRotationMods
+		haddps	xmm0, xmm0
 	noRot:
 		mov		eax, [ecx+0xA0]
 		mov		ecx, [eax]
@@ -1866,7 +1842,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 
 	NiCamera *lmCamera = NiCamera::Create();
 	s_localMapCamera = lmCamera;
-	lmCamera->LocalRotate() = {0, 0, 1.0F, 0, 1.0F, 0, -1.0F, 0, 0};
+	lmCamera->LocalRotate() = NiMatrix33(0, 0, 1.0F, 0, 1.0F, 0, -1.0F, 0, 0);
 	lmCamera->LocalTranslate().z = 65536.0F;
 	lmCamera->frustum.viewPort = {-2048.0F, 2048.0F, 2048.0F, -2048.0F};
 	lmCamera->frustum.n = 100.0F;

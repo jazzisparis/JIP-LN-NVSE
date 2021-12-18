@@ -5,7 +5,7 @@ DEFINE_COMMAND_PLUGIN(StringToRef, 0, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(GetMinOf, 0, 5, kParams_TwoDoubles_ThreeOptionalDoubles);
 DEFINE_COMMAND_PLUGIN(GetMaxOf, 0, 5, kParams_TwoDoubles_ThreeOptionalDoubles);
 DEFINE_COMMAND_PLUGIN(ReadArrayFromFile, 0, 2, kParams_OneString_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(WriteArrayToFile, 0, 3, kParams_OneString_TwoInts);
+DEFINE_COMMAND_PLUGIN(WriteArrayToFile, 0, 4, kParams_OneString_TwoInts_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ReadStringFromFile, 0, 3, kParams_OneString_TwoOptionalInts);
 DEFINE_COMMAND_PLUGIN(WriteStringToFile, 0, 23, kParams_OneString_OneInt_OneFormatString);
 DEFINE_COMMAND_PLUGIN(GetLoadOrderChanged, 0, 0, NULL);
@@ -153,23 +153,13 @@ bool Cmd_ReadArrayFromFile_Execute(COMMAND_ARGS)
 		while (--count);
 	}
 	ArrayElementL *elemPtr = tempElems->Data();
-	if (numLines == 1)
+	if ((numLines == 1) && !transpose)
 	{
 		AssignCommandResult(CreateArray(elemPtr, numColumns, scriptObj), result);
 		return true;
 	}
 	NVSEArrayVar *mainArr = CreateArray(NULL, 0, scriptObj);
-	if (transpose)
-	{
-		count = numLines;
-		do
-		{
-			AppendElement(mainArr, ArrayElementL(CreateArray(elemPtr, numColumns, scriptObj)));
-			elemPtr += numColumns;
-		}
-		while (--count);
-	}
-	else
+	if (!transpose)
 	{
 		TempElements transElems(numLines);
 		count = numColumns;
@@ -183,16 +173,57 @@ bool Cmd_ReadArrayFromFile_Execute(COMMAND_ARGS)
 		}
 		while (--count);
 	}
+	else
+	{
+		count = numLines;
+		do
+		{
+			AppendElement(mainArr, ArrayElementL(CreateArray(elemPtr, numColumns, scriptObj)));
+			elemPtr += numColumns;
+		}
+		while (--count);
+	}
 	AssignCommandResult(mainArr, result);
 	return true;
+}
+
+void __fastcall WriteElemToFile(TempArrayElements *colElements, UInt32 idx, FILE *theFile)
+{
+	if (colElements->size > idx)
+	{
+		ArrayElementR *elem = &(*colElements)[idx];
+		switch (elem->GetType())
+		{
+			case 1:
+			{
+				char valStr[0x20];
+				FltToStr(valStr, elem->Number());
+				fputs(valStr, theFile);
+				return;
+			}
+			case 2:
+				if (elem->Form())
+				{
+					fputc('@', theFile);
+					fputs(elem->Form()->RefToString(), theFile);
+					return;
+				}
+				break;
+			case 3:
+				fputc('$', theFile);
+				fputs(elem->String(), theFile);
+				return;
+		}
+	}
+	fputc('0', theFile);
 }
 
 bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char filePath[0x80];
-	UInt32 apnd, arrID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &filePath, &apnd, &arrID))
+	UInt32 apnd, arrID, transpose = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &filePath, &apnd, &arrID, &transpose))
 		return true;
 	NVSEArrayVar *mainArray = LookupArrayByID(arrID), *column;
 	if (!mainArray) return true;
@@ -204,7 +235,7 @@ bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 	TempArrayElements *colElements;
 	for (idx = 0; idx < topLine.size; idx++)
 	{
-		elem = &topLine.elements[idx];
+		elem = &topLine[idx];
 		if (column = elem->Array())
 		{
 			colElements = columnBuffer.Append(column);
@@ -217,42 +248,35 @@ bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 	FileStream outputFile;
 	if (outputFile.OpenWrite(filePath, apnd != 0))
 	{
-		char valStr[0x20];
-		for (idx = 0; idx < numLines; idx++)
+		FILE *theFile = outputFile.GetStream();
+		if (!transpose)
+		{
+			for (idx = 0; idx < numLines; idx++)
+			{
+				for (cnt = 0; cnt < topLine.size; cnt++)
+				{
+					WriteElemToFile(&columnBuffer[cnt], idx, theFile);
+					if ((topLine.size - cnt) > 1)
+						fputc('\t', theFile);
+				}
+				if ((numLines - idx) > 1)
+					fputc('\n', theFile);
+			}
+		}
+		else
 		{
 			for (cnt = 0; cnt < topLine.size; cnt++)
 			{
-				if (columnBuffer[cnt].size > idx)
+				colElements = &columnBuffer[cnt];
+				for (idx = 0; idx < numLines; idx++)
 				{
-					elem = &columnBuffer[cnt].elements[idx];
-					switch (elem->GetType())
-					{
-						case 1:
-							FltToStr(valStr, elem->Number());
-							outputFile.WriteStr(valStr);
-							break;
-						case 2:
-							if (elem->Form())
-							{
-								outputFile.WriteChar('@');
-								outputFile.WriteStr(elem->Form()->RefToString());
-							}
-							else outputFile.WriteChar('0');
-							break;
-						case 3:
-							outputFile.WriteChar('$');
-							outputFile.WriteStr(elem->String());
-							break;
-						default:
-							outputFile.WriteChar('0');
-					}
+					WriteElemToFile(colElements, idx, theFile);
+					if ((numLines - idx) > 1)
+						fputc('\t', theFile);
 				}
-				else outputFile.WriteChar('0');
 				if ((topLine.size - cnt) > 1)
-					outputFile.WriteChar('\t');
+					fputc('\n', theFile);
 			}
-			if ((numLines - idx) > 1)
-				outputFile.WriteChar('\n');
 		}
 		*result = 1;
 	}
@@ -582,6 +606,6 @@ bool Cmd_GetRandomInRange_Execute(COMMAND_ARGS)
 
 bool Cmd_GetSessionTime_Execute(COMMAND_ARGS)
 {
-	*result = int(CdeclCall<UInt32>(0x457FE0) - s_initialTickCount) / 1000.0;
+	*result = int(CdeclCall<UInt32>(0x457FE0) - s_initialTickCount) * 0.001;
 	return true;
 }

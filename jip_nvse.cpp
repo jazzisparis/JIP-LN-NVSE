@@ -81,7 +81,7 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 {
 	info->infoVersion = PluginInfo::kInfoVersion;
 	info->name = "JIP LN NVSE";
-	info->version = JIP_LN_VERSION_MAJ;
+	info->version = JIP_LN_VERSION_INT;
 	if (nvse->isEditor)
 	{
 		//s_log.Create("jip_ln_nvse_editor.log");
@@ -1517,4 +1517,9 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			break;
 		}
 	}
+}
+
+double GetJIPLNVersion()
+{
+	return JIP_LN_VERSION;
 }

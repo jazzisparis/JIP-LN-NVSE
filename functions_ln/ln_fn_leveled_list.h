@@ -30,7 +30,7 @@ bool Cmd_LeveledListAddForm_Execute(COMMAND_ARGS)
 	float health;
 	TESLeveledList *lvlList;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &list, &form, &level, &count, &health) && (lvlList = list->GetLvlList()))
-		lvlList->AddItem(form, level, count, health ? (health <= 1 ? health : health / 100) : 0);
+		lvlList->AddItem(form, level, count, health ? (health <= 1 ? health : health * 0.01F) : 0);
 	return true;
 }
 

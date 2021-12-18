@@ -94,9 +94,10 @@ bool Cmd_EnableNavMeshAlt_Execute(COMMAND_ARGS)
 
 bool Cmd_GetTerrainHeight_Execute(COMMAND_ARGS)
 {
-	float posXY[2], tempRes = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posXY[0], &posXY[1]))
-		g_TES->GetTerrainHeight(posXY, &tempRes);
+	NiPoint2 posXY;
+	float tempRes = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posXY.x, &posXY.y))
+		g_TES->GetTerrainHeight(&posXY, &tempRes);
 	*result = tempRes;
 	return true;
 }
@@ -1196,8 +1197,8 @@ bool Cmd_GetCameraMovement_Execute(COMMAND_ARGS)
 			double fMovY = iMovY * mouseSensitivity;
 			if (controller)
 			{
-				fMovX /= 1500;
-				fMovY /= -1500;
+				fMovX *= 1 / 1500.0;
+				fMovY *= -1 / 1500.0;
 			}
 			outX->data.num = fMovX;
 			outY->data.num = fMovY;

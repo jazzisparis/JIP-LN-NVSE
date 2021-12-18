@@ -683,12 +683,12 @@ bool Cmd_GetWaterTrait_Execute(COMMAND_ARGS)
 		*result = water->opacity;
 		break;
 	case 1:
-		*result = water->flags;
+		*result = water->waterFlags;
 		break;
 	case 12:
 	case 13:
 	case 14:
-		*result = RGBHexToDec(*(UInt32*)&water->visData[traitID - 2]);
+		cvtui2d(RGBHexToDec(*(UInt32*)&water->visData[traitID - 2]), result);
 		break;
 	default:
 		*result = water->visData[traitID - 2];
@@ -709,7 +709,7 @@ bool Cmd_SetWaterTrait_Execute(COMMAND_ARGS)
 		if (intVal <= 100) water->opacity = intVal;
 		break;
 	case 1:
-		if (intVal <= 3) water->flags = intVal;
+		if (intVal <= 3) water->waterFlags = intVal;
 		break;
 	case 12:
 	case 13:

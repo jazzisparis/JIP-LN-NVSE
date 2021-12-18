@@ -1496,12 +1496,6 @@ ParamInfo kParams_OneObjectRef_OneFloat_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_TwoDoubles[] =
-{
-	{"Double", kParamType_Double, 0},
-	{"Double", kParamType_Double, 0}
-};
-
 ParamInfo kParams_OneObjectID_OneInt_OneFloat[] =
 {
 	{"Object ID", kParamType_ObjectID, 0},
@@ -1668,11 +1662,11 @@ ParamInfo kParams_OneString_TwoInts_OneFloat[] =
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_TwoStrings_OneDouble_OneOptionalInt[] =
+ParamInfo kParams_TwoStrings_OneFloat_OneOptionalInt[] =
 {
 	{"String", kParamType_String, 0},
 	{"String", kParamType_String, 0},
-	{"Double", kParamType_Double, 0},
+	{"Float", kParamType_Float, 0},
 	{"Integer", kParamType_Integer, 1}
 };
 
@@ -1751,4 +1745,14 @@ ParamInfo kParams_ThreeFloats_ThreeScriptVars[] =
 	{"Variable", kParamType_ScriptVariable, 0},
 	{"Variable", kParamType_ScriptVariable, 0},
 	{"Variable", kParamType_ScriptVariable, 0}
+};
+
+ParamInfo kParams_OneIdleForm[] =
+{
+	{"Idle Form", kParamType_IdleForm, 0}
+};
+
+ParamInfo kParams_OneOptionalIdleForm[] =
+{
+	{"Idle Form", kParamType_IdleForm, 1}
 };

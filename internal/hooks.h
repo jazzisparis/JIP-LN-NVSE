@@ -3743,9 +3743,9 @@ void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm, NiPointLight *pt
 		ptLight->vectorF0 = {v02, v03, v04};
 		v03 += 0.5F;
 		v04 += 0.3F;
-		float v05 = Sin(v02 * 2.0F + 3.4F);
-		float v06 = Sin(v03 * 1.7F);
-		float v07 = Sin(v04 * 2.6F);
+		float v05 = Cos(-1.8292036F - 2.0F * v02);
+		float v06 = Cos(kFltPId2 - 1.7F * v03);
+		float v07 = Cos(kFltPId2 - 2.6F * v04);
 		v01 = *(float*)0x11C8FD0 * v05 * v06 * 0.5F;
 		v05 *= v01;
 		v06 *= v01;
@@ -3758,9 +3758,9 @@ void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm, NiPointLight *pt
 			ptLight->ambientColor = {v05, v06, v07};
 		}
 		else ptLight->LocalTranslate() = {v05, v06, v07};
-		v01 = Sin((v02 + 1.7F) * 1.1F) + 1.0F;
-		v01 *= (Sin(v03 * 1.3F) + 1.0F) * 0.0833333F;
-		v01 += Sin(v04 * 3.0F) * 0.2F;
+		v01 = Cos(kFltPId2 - 1.1F * (v02 + 1.7F)) + 1.0F;
+		v01 *= (Cos(kFltPId2 - 1.3F * v03) + 1.0F) * 0.0833333F;
+		v01 += Cos(kFltPId2 - 3.0F * v04) * 0.2F;
 		if (v01 > 1.0F) v01 = 1.0F;
 		else if (v01 < -1.0F) v01 = -1.0F;
 		ptLight->fadeValue = (v01 * 0.2F + 0.8F) * lightForm->fadeValue;

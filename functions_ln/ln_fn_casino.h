@@ -53,7 +53,7 @@ bool Cmd_GetCasinoBJ17Stand_Execute(COMMAND_ARGS)
 {
 	TESCasino *casino;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &casino))
-		*result = (int)casino->flags;
+		*result = (int)casino->casinoFlags;
 	else *result = 0;
 	return true;
 }
@@ -63,7 +63,7 @@ bool Cmd_SetCasinoBJ17Stand_Execute(COMMAND_ARGS)
 	TESCasino *casino;
 	UInt32 value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &casino, &value))
-		casino->flags = value != 0;
+		casino->casinoFlags = value != 0;
 	return true;
 }
 

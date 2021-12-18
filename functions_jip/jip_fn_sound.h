@@ -32,13 +32,13 @@ bool Cmd_GetSoundTraitNumeric_Execute(COMMAND_ARGS)
 		*result = sound->frequencyAdj;
 		break;
 	case 3:
-		*result = sound->staticAttenuation / -100.0;
+		*result = sound->staticAttenuation * -0.01;
 		break;
 	case 4:
-		*result = sound->endsAt * 5.62353;
+		*result = sound->endsAt * (1434 / 255.0F);
 		break;
 	case 5:
-		*result = sound->startsAt * 5.62353;
+		*result = sound->startsAt * (1434 / 255.0F);
 		break;
 	case 6:
 	case 7:
@@ -119,7 +119,7 @@ bool Cmd_SetSoundTraitNumeric_Execute(COMMAND_ARGS)
 			intVal = 255;
 		else if (intVal < 0)
 			intVal = 0;
-		else intVal = val / 5.62353;
+		else intVal = val * (255 / 1434.0F);
 		sound->endsAt = intVal;
 		break;
 	case 5:
@@ -127,7 +127,7 @@ bool Cmd_SetSoundTraitNumeric_Execute(COMMAND_ARGS)
 			intVal = 255;
 		else if (intVal < 0)
 			intVal = 0;
-		else intVal = val / 5.62353;
+		else intVal = val * (255 / 1434.0F);
 		sound->startsAt = intVal;
 		break;
 	case 6:
@@ -343,6 +343,6 @@ bool Cmd_SetGameVolume_Execute(COMMAND_ARGS)
 	UInt32 volType;
 	int volLevel = -1;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &volType, &volLevel) && (volType <= 5) && (volLevel <= 100))
-		BSAudioManager::Get()->volumes[volType] = (volLevel < 0) ? *(float*)(0x11F6E18 + volType * 0xC) : (volLevel / 100.0);
+		BSAudioManager::Get()->volumes[volType] = (volLevel < 0) ? *(float*)(0x11F6E18 + volType * 0xC) : (volLevel * 0.01F);
 	return true;
 }

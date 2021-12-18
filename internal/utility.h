@@ -62,12 +62,14 @@ __forceinline T_Ret CdeclCall(UInt32 _addr, Args ...args)
 
 #define LOG_HOOKS 0
 
-extern const float kFlt1d100K, kFlt1d1K, kFlt1d200, kFlt1d100, kFltPId180, kFlt1d10, kFltHalf, kFltOne, kFltPId2, kFltPI, kFltPIx2, kFlt10, kFlt180dPI, kFlt100, kFlt1000, kFltMax;
-extern const double kDblPId180, kDbl180dPI;
-extern const UInt32 kSSERemoveSignMaskPS[], kSSEChangeSignMaskPS[], kSSEChangeSignMaskPS0[], kSSEDiscard4thPS[];
+extern const float kFlt1d1K, kFlt1d200, kFlt1d100, kFltPId180, kFlt1d10, kFltHalf, kFltOne, kFltPId2, kFltPI, kFltPIx2, kFlt10, kFlt180dPI, kFlt100, kFlt1000;
+extern const UInt32 kSSERemoveSignMaskPS[], kSSERemoveSignMaskPS0[], kSSEChangeSignMaskPS[], kSSEChangeSignMaskPS0[], kSSEDiscard4thPS[], kSSEDiscardUprPS[];
 extern const UInt64 kSSERemoveSignMaskPD[], kSSEChangeSignMaskPD[];
-extern const __m128 kVcPI, kVcPIx2, kVcHalf;
+extern const __m128 kEqEpsilon, kVcPI, kVcPIx2, kVcHalf;
 extern const char kLwrCaseConverter[], kUprCaseConverter[];
+
+#define DblPId180 0.017453292519943295
+#define Dbl180dPI 57.29577951308232
 
 typedef void* (__cdecl *memcpy_t)(void*, const void*, size_t);
 extern memcpy_t MemCopy, MemMove;
@@ -221,7 +223,7 @@ template <typename T> inline T sqr(T value)
 
 UInt32 __vectorcall cvtd2ui(double value);
 
-double __vectorcall cvtui2d(UInt32 value);
+double __fastcall cvtui2d(UInt32 value);
 void __fastcall cvtui2d(UInt32 value, double *result);
 
 int __vectorcall ifloor(float value);
@@ -489,7 +491,8 @@ public:
 
 	explicit operator bool() const {return theFile != NULL;}
 
-	UInt32 GetLength();
+	FILE *GetStream() const {return theFile;}
+	UInt32 GetLength() const;
 	char ReadChar();
 	void ReadBuf(void *outData, UInt32 inLength);
 	void WriteChar(char chr);

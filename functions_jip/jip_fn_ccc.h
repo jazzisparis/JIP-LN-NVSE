@@ -458,8 +458,8 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 				if (!mkRefr || (mkRefr->baseForm->refID != 0x10)) continue;
 				xMarker = GetExtraType(&mkRefr->extraDataList, MapMarker);
 				if (!xMarker || !xMarker->data || !xMarker->data->fullName.name.m_dataLen) continue;
-				coord.x = ifloor(mkRefr->position.x / 4096);
-				coord.y = ifloor(mkRefr->position.y / 4096);
+				coord.x = ifloor(mkRefr->position.x * (1 / 4096.0F));
+				coord.y = ifloor(mkRefr->position.y * (1 / 4096.0F));
 				(*markersGrid)[coord] = mkRefr;
 			}
 			while (objIter = objIter->next);
@@ -468,7 +468,7 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 	if (!markersGrid->Empty())
 	{
 		mkRefr = NULL;
-		SInt16 gridX = coord.x = ifloor(thisObj->position.x / 4096), gridY = coord.y = ifloor(thisObj->position.y / 4096);
+		SInt16 gridX = coord.x = ifloor(thisObj->position.x * (1 / 4096.0F)), gridY = coord.y = ifloor(thisObj->position.y * (1 / 4096.0F));
 		char modX, modY, count;
 		TESObjectREFR *findMarker;
 		float distMin = 40000, distTmp;

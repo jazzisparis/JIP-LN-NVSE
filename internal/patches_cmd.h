@@ -129,18 +129,6 @@ bool Hook_GetBaseObject_Execute(COMMAND_ARGS)
 	return true;
 }
 
-TESObjectWEAP* __fastcall ExtractWeapon(TESObjectWEAP *weapon, TESObjectREFR *thisObj)
-{
-	if (!weapon)
-	{
-		if (!thisObj) return NULL;
-		weapon = (TESObjectWEAP*)thisObj->baseForm;
-	}
-	else if IS_ID(weapon, TESObjectREFR)
-		weapon = (TESObjectWEAP*)((TESObjectREFR*)weapon)->baseForm;
-	return IS_ID(weapon, TESObjectWEAP) ? weapon : NULL;
-}
-
 bool Hook_IsKeyPressed_Execute(COMMAND_ARGS)
 {
 	UInt32 keyID, flags = 1;

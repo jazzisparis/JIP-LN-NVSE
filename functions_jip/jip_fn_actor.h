@@ -78,7 +78,7 @@ DEFINE_COMMAND_PLUGIN(GetKiller, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(KillActorAlt, 1, 3, kParams_OneOptionalObjectRef_TwoOptionalInts);
 DEFINE_COMMAND_ALT_PLUGIN(ReloadEquippedModels, ReloadModels, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetPlayedIdle, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(IsIdlePlayingEx, 1, 1, kParams_OneForm);
+DEFINE_CMD_COND_PLUGIN(IsIdlePlayingEx, 1, 1, kParams_OneForm);
 DEFINE_COMMAND_PLUGIN(SetWeaponOut, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(AddBaseEffectListEffect, 0, 2, kParams_OneSpellItem_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(RemoveBaseEffectListEffect, 0, 2, kParams_OneSpellItem_OneOptionalActorBase);
@@ -251,7 +251,7 @@ bool Cmd_GetActorLevelingData_Execute(COMMAND_ARGS)
 	}
 	if (valID == 1) *result = actorBase->baseData.calcMin;
 	else if (valID == 2) *result = actorBase->baseData.calcMax;
-	else if (actorBase->baseData.flags & 0x80) *result = actorBase->baseData.level / 1000.0;
+	else if (actorBase->baseData.flags & 0x80) *result = actorBase->baseData.level * 0.001;
 	else *result = actorBase->baseData.level;
 	return true;
 }
@@ -1417,30 +1417,36 @@ __declspec(naked) bool Cmd_KillActorAlt_Execute(COMMAND_ARGS)
 bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 {
 	Character *character = (Character*)thisObj;
-	if (character->IsCharacter() && character->GetNiNode() && character->validBip01Names)
+	if (!character->IsCharacter()) return true;
+	NiNode *niNode = character->renderState ? character->renderState->niNode14 : nullptr;
+	if (!niNode) return true;
+	ValidBip01Names *bip01Names = character->validBip01Names;
+	if (!bip01Names) return true;
+	PlayerCharacter *thePlayer = (character->refID == 0x14) ? (PlayerCharacter*)character : nullptr;
+Do1stPerson:
+	ValidBip01Names::Data *slotData = bip01Names->slotData;
+	UInt32 slotIdx = 20;
+	do
 	{
-		bool isPlayer = character->refID == 0x14;
-		ValidBip01Names::Data *slotData = character->validBip01Names->slotData;
-		UInt32 slotIdx;
-	Do1stPerson:
-		slotIdx = 20;
-		do
+		if (slotData->object && slotData->armor && IS_ID(slotData->armor, TESObjectARMO))
 		{
-			if ((slotIdx != 14) && slotData->armor && IS_ID(slotData->armor, TESObjectARMO) && slotData->object)
-			{
-				slotData->object->m_parent->RemoveObject(slotData->object);
-				slotData->object = NULL;
-			}
-			slotData++;
+			slotData->object->m_parent->RemoveObject(slotData->object);
+			slotData->object = nullptr;
 		}
-		while (--slotIdx);
-		if (isPlayer)
-		{
-			isPlayer = false;
-			slotData = g_thePlayer->VB01N1stPerson->slotData;
-			goto Do1stPerson;
-		}
-		ThisCall(0x605D70, character->baseForm, character);
+		slotData++;
+	}
+	while (--slotIdx);
+	ThisCall(0x606540, character->baseForm, character, bip01Names, 0);
+	ThisCall(0x4AC1E0, bip01Names, 0);
+	ThisCall(0xA5A040, niNode);
+	niNode->UpdateWorldBound();
+	niNode->Update();
+	if (thePlayer)
+	{
+		niNode = thePlayer->node1stPerson;
+		bip01Names = thePlayer->VB01N1stPerson;
+		thePlayer = nullptr;
+		goto Do1stPerson;
 	}
 	return true;
 }
@@ -1457,16 +1463,24 @@ bool Cmd_GetPlayedIdle_Execute(COMMAND_ARGS)
 	return true;
 }
 
+bool __fastcall IsIdlePlaying(TESObjectREFR *thisObj, TESIdleForm *idleAnim)
+{
+	AnimData *animData = thisObj->GetAnimData();
+	return animData && (animData->GetPlayedIdle() == idleAnim);
+}
+
 bool Cmd_IsIdlePlayingEx_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESIdleForm *idleAnim;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim))
-	{
-		AnimData *animData = thisObj->GetAnimData();
-		if (animData && (animData->GetPlayedIdle() == idleAnim))
-			*result = 1;
-	}
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim) && IsIdlePlaying(thisObj, idleAnim))
+		*result = 1;
+	else *result = 0;
+	return true;
+}
+
+bool Cmd_IsIdlePlayingEx_Eval(COMMAND_ARGS_EVAL)
+{
+	*result = IsIdlePlaying(thisObj, (TESIdleForm*)arg1);
 	return true;
 }
 
@@ -2132,7 +2146,7 @@ bool Cmd_GetActorTiltAngle_Execute(COMMAND_ARGS)
 	{
 		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 		if (charCtrl)
-			*result = ((axis == 'X') ? charCtrl->tiltAngleX : charCtrl->tiltAngleY) * kDbl180dPI;
+			*result = ((axis == 'X') ? charCtrl->tiltAngleX : charCtrl->tiltAngleY) * Dbl180dPI;
 	}
 	return true;
 }

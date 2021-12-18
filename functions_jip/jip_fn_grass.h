@@ -41,7 +41,7 @@ bool Cmd_GetGrassTraitNumeric_Execute(COMMAND_ARGS)
 		*result = grass->wavePeriod;
 		break;
 	case 9:
-		*result = grass->flags;
+		*result = grass->grassFlags;
 	}
 	return true;
 }
@@ -83,7 +83,7 @@ bool Cmd_SetGrassTraitNumeric_Execute(COMMAND_ARGS)
 		grass->wavePeriod = fVal;
 		break;
 	case 9:
-		grass->flags = (iVal > 7) ? 7 : iVal;
+		grass->grassFlags = (iVal > 7) ? 7 : iVal;
 	}
 	return true;
 }
