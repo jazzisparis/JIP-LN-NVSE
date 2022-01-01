@@ -18,7 +18,7 @@ bool Cmd_fsqrt_Execute(COMMAND_ARGS)
 	{
 		__asm
 		{
-			pxor	xmm1, xmm1
+			xorps	xmm1, xmm1
 			maxsd	xmm1, value
 			sqrtsd	xmm0, xmm1
 			mov		eax, result

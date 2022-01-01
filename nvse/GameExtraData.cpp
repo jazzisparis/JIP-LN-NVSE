@@ -427,7 +427,7 @@ __declspec(naked) ExtraDataList *ExtraDataList::CreateCopy(bool bCopyAndRemove)
 		mov		esi, ecx
 		push	0x20
 		GAME_HEAP_ALLOC
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		movups	[eax], xmm0
 		movups	[eax+0x10], xmm0
 		mov		dword ptr [eax], kVtbl_ExtraDataList
@@ -580,7 +580,7 @@ __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetWeapon
 		pop		ecx
 		retn
 	retn0:
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		pop		ecx
 		retn
 	}
@@ -605,13 +605,14 @@ __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetBaseHe
 		cvtsi2ss	xmm0, [eax+0x6C]
 		retn
 	done:
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		retn
 	}
 }
 
-__declspec(naked) float ExtraContainerChanges::EntryData::GetHealthPercent()
+__declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetHealthPercent()
 {
+	static const float kFltMin1 = -1.0F;
 	__asm
 	{
 		mov		eax, [ecx+8]
@@ -622,7 +623,7 @@ __declspec(naked) float ExtraContainerChanges::EntryData::GetHealthPercent()
 		jnz		invalid
 		push	esi
 		mov		esi, ecx
-		movss	xmm3, kFlt100
+		movss	xmm0, kFlt100
 		mov		eax, [ecx]
 		test	eax, eax
 		jz		done
@@ -633,20 +634,19 @@ __declspec(naked) float ExtraContainerChanges::EntryData::GetHealthPercent()
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		done
-		movss	xmm2, [eax+0xC]
+		movss	xmm2, xmm0
+		movss	xmm3, [eax+0xC]
 		mov		ecx, esi
 		call	ContChangesEntry::GetBaseHealth
-		divss	xmm2, xmm0
-		mulss	xmm2, xmm3
-		minss	xmm3, xmm2
+		divss	xmm3, xmm0
+		mulss	xmm3, xmm2
+		minss	xmm2, xmm3
+		movss	xmm0, xmm2
 	done:
-		movss	[esp-4], xmm3
-		fld		dword ptr [esp-4]
 		pop		esi
 		retn
 	invalid:
-		fld1
-		fchs
+		movss	xmm0, kFltMin1
 		retn
 	}
 }

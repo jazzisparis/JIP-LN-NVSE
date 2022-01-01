@@ -2337,7 +2337,12 @@ public:
 		kFlag_Pulse =			0x80,
 		kFlag_PulseSlow =		0x100,
 		kFlag_SpotLight =		0x200,
-		kFlag_SpotShadow =		0x400
+		kFlag_SpotShadow =		0x400,
+		//	JIP Only
+		kFlag_Pulse2 =			0x800,
+		kFlag_Pulse2Slow =		0x1000,
+		kFlag_ColorShift =		0x2000,
+		kFlag_ColorShiftSlow =	0x4000
 	};
 
 	TESFullName					fullName;		// 030
@@ -3411,15 +3416,15 @@ public:
 	// 64
 	struct CellRenderData
 	{
-		NiNode									*masterNode;	// 00
-		tList<TESObjectREFR>					list04;			// 04
-		NiTMapBase<TESObjectREFR*, NiNode*>		map0C;			// 0C
-		NiTMapBase<TESForm*, TESObjectREFR*>	map1C;			// 1C
-		NiTMapBase<TESObjectREFR*, NiNode*>		map2C;			// 2C
-		NiTMapBase<TESObjectREFR*, NiNode*>		map3C;			// 3C
-		tList<TESObjectREFR>					list4C;			// 4C
-		tList<void>								list54;			// 54
-		tList<TESObjectREFR>					list5C;			// 5C
+		NiNode											*masterNode;// 00
+		tList<TESObjectREFR>							list04;		// 04
+		NiTMapBase<TESObjectREFR*, NiNode*>				map0C;		// 0C
+		NiTMapBase<TESForm*, TESObjectREFR*>			map1C;		// 1C
+		NiTMapBase<TESObjectREFR*, NiNode*>				map2C;		// 2C
+		NiTMapBase<TESObjectREFR*, BSMultiBoundNode*>	map3C;		// 3C
+		tList<TESObjectREFR>							list4C;		// 4C	Scripted non-actors
+		tList<void>										list54;		// 54	Has ExtraActivateRefChildren
+		tList<TESObjectREFR>							list5C;		// 5C
 	};
 
 	enum

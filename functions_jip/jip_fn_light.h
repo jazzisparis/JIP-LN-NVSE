@@ -108,7 +108,7 @@ bool Cmd_GetLightFlag_Execute(COMMAND_ARGS)
 {
 	TESObjectLIGH *light;
 	UInt32 flagID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &light, &flagID) && IS_ID(light, TESObjectLIGH) && (flagID <= 10))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &light, &flagID) && IS_ID(light, TESObjectLIGH) && (flagID <= 31))
 		*result = (light->lightFlags & (1 << flagID)) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -118,7 +118,7 @@ bool Cmd_SetLightFlag_Execute(COMMAND_ARGS)
 {
 	TESObjectLIGH *light;
 	UInt32 flagID, val;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &light, &flagID, &val) && IS_ID(light, TESObjectLIGH) && (flagID <= 10))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &light, &flagID, &val) && IS_ID(light, TESObjectLIGH) && (flagID <= 31))
 	{
 		flagID = 1 << flagID;
 		if (val) light->lightFlags |= flagID;

@@ -173,7 +173,7 @@ bool Cmd_GetCombatStyleFlag_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESCombatStyle *cStyle;
 	UInt32 flagID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cStyle, &flagID) && (flagID <= 8))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cStyle, &flagID) && (flagID <= 15))
 		*result = (cStyle->csFlags & (1 << flagID)) ? 1 : 0;
 	return true;
 }
@@ -182,7 +182,7 @@ bool Cmd_SetCombatStyleFlag_Execute(COMMAND_ARGS)
 {
 	TESCombatStyle *cStyle;
 	UInt32 flagID, val;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cStyle, &flagID, &val) && (flagID <= 8))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cStyle, &flagID, &val) && (flagID <= 15))
 		cStyle->SetFlag(1 << flagID, val != 0);
 	return true;
 }

@@ -17,7 +17,7 @@ __declspec(naked) void UpdateTileScales()
 	{
 		mov		eax, s_localMapZoom
 		movss	xmm0, [eax+8]
-		movss	xmm1, kFltHalf
+		movss	xmm1, kVcHalf
 		addss	xmm1, xmm0
 		mov		eax, s_miniMapScale
 		mulss	xmm1, [eax+8]
@@ -162,7 +162,7 @@ __declspec(naked) void __fastcall WorldDimensions::GetPosMods(TESWorldSpace *wor
 		movaps	[ecx+0x10], xmm0
 		cmp		dword ptr [edx], 0x3F800000
 		jz		done
-		movss	xmm1, kFltHalf
+		movss	xmm1, kVcHalf
 		mulss	xmm0, xmm1
 		subss	xmm1, xmm0
 		unpcklps	xmm1, xmm1
@@ -855,7 +855,7 @@ __declspec(naked) SeenData* __fastcall AddExtraSeenData(TESObjectCELL *cell)
 		mov		[eax+0x24], edx
 		mov		[eax+0x28], edx
 	doneData:
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		movups	[eax+4], xmm0
 		movups	[eax+0x14], xmm0
 		push	eax
@@ -895,7 +895,7 @@ __declspec(naked) IntSeenData* __fastcall AddIntSeenData(IntSeenData *seenData, 
 		GAME_HEAP_ALLOC
 		pop		edx
 		mov		dword ptr [eax], kVtbl_IntSeenData
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		movups	[eax+4], xmm0
 		movups	[eax+0x14], xmm0
 		mov		[eax+0x24], dx
@@ -1037,7 +1037,7 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		unpcklps	xmm0, xmm0
 		mulps	xmm0, s_northRotationMods
 		pshufd	xmm1, xmm0, 0x27
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		haddps	xmm1, xmm0
 		movq	xmm0, xmm1
 	noRotation:
@@ -1398,7 +1398,7 @@ __declspec(naked) void __stdcall GenerateLocalMapExterior(TESObjectCELL *cell, _
 		mov		ecx, [eax+4]
 		mov		[ebp-8], ecx
 		or		byte ptr [ecx+0x30], 1
-		pxor	xmm1, xmm1
+		xorps	xmm1, xmm1
 		movups	[ebp-0x18], xmm1
 		mov		ecx, [eax+8]
 		mov		eax, [ecx+0xA0]
@@ -1842,7 +1842,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 
 	NiCamera *lmCamera = NiCamera::Create();
 	s_localMapCamera = lmCamera;
-	lmCamera->LocalRotate() = NiMatrix33(0, 0, 1.0F, 0, 1.0F, 0, -1.0F, 0, 0);
+	lmCamera->LocalRotate() = {0, 0, 1.0F, 0, 1.0F, 0, -1.0F, 0, 0};
 	lmCamera->LocalTranslate().z = 65536.0F;
 	lmCamera->frustum.viewPort = {-2048.0F, 2048.0F, 2048.0F, -2048.0F};
 	lmCamera->frustum.n = 100.0F;
@@ -2277,7 +2277,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					{
 						if ((pntLight = (NiPointLight*)lgtNode->data->light) && (pntLight->effectType == 2))
 						{
-							pntLight->radiusE4 = pntLight->radius;
+							pntLight->radius0E4 = pntLight->radius;
 							pntLight->radius = 0;
 						}
 					}
@@ -2441,7 +2441,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				GameGlobals::SceneLightsLock()->Enter();
 				for (auto lgtNode = g_shadowSceneNode->lgtList0B4.Head(); lgtNode; lgtNode = lgtNode->next)
 					if ((pntLight = (NiPointLight*)lgtNode->data->light) && (pntLight->effectType == 2))
-						pntLight->radius = pntLight->radiusE4;
+						pntLight->radius = pntLight->radius0E4;
 				GameGlobals::SceneLightsLock()->Leave();
 			}
 			else *g_lightingPasses = lightingPasses;

@@ -78,7 +78,7 @@ DEFINE_COMMAND_PLUGIN(GetKiller, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(KillActorAlt, 1, 3, kParams_OneOptionalObjectRef_TwoOptionalInts);
 DEFINE_COMMAND_ALT_PLUGIN(ReloadEquippedModels, ReloadModels, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetPlayedIdle, 1, 0, NULL);
-DEFINE_CMD_COND_PLUGIN(IsIdlePlayingEx, 1, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(IsIdlePlayingEx, 1, 1, kParams_OneForm);
 DEFINE_COMMAND_PLUGIN(SetWeaponOut, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(AddBaseEffectListEffect, 0, 2, kParams_OneSpellItem_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(RemoveBaseEffectListEffect, 0, 2, kParams_OneSpellItem_OneOptionalActorBase);
@@ -2160,7 +2160,7 @@ bool Cmd_SetActorTiltAngle_Execute(COMMAND_ARGS)
 		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 		if (charCtrl)
 		{
-			angle *= kFltPId180;
+			angle *= FltPId180;
 			if (axis == 'X')
 				charCtrl->tiltAngleX = angle;
 			else charCtrl->tiltAngleY = angle;

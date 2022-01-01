@@ -231,7 +231,7 @@ bool Cmd_SetWindDirection_Execute(COMMAND_ARGS)
 {
 	float windDirection;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &windDirection) && g_TES->sky)
-		g_TES->sky->windDirection = windDirection * -kFltPId180;
+		g_TES->sky->windDirection = windDirection * -FltPId180;
 	return true;
 }
 
@@ -255,7 +255,7 @@ bool Cmd_ResetClouds_Execute(COMMAND_ARGS)
 {
 	__asm
 	{
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		movups	ds:[0x11FF8B4], xmm0
 	}
 	return true;

@@ -154,7 +154,7 @@ bool Cmd_GetExplosionFlag_Execute(COMMAND_ARGS)
 {
 	BGSExplosion *explosion;
 	UInt32 flagID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &explosion, &flagID) && IS_ID(explosion, BGSExplosion) && flagID && (flagID <= 6))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &explosion, &flagID) && IS_ID(explosion, BGSExplosion) && flagID && (flagID <= 31))
 		*result = (explosion->explFlags & (1 << flagID)) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -164,7 +164,7 @@ bool Cmd_SetExplosionFlag_Execute(COMMAND_ARGS)
 {
 	BGSExplosion *explosion;
 	UInt32 flagID, val;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &explosion, &flagID, &val) && IS_ID(explosion, BGSExplosion) && flagID && (flagID <= 6))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &explosion, &flagID, &val) && IS_ID(explosion, BGSExplosion) && flagID && (flagID <= 31))
 		explosion->SetFlag(1 << flagID, val != 0);
 	return true;
 }

@@ -86,7 +86,7 @@ __declspec(naked) void __fastcall DoQueuedPlayerHook(QueuedPlayer *queuedPlayer)
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xE8]
 	done694:
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		movups	ds:[0x11E07CC], xmm0
 		lea		ecx, [ebx+0xD74]
 		movups	[ecx], xmm0
@@ -1150,7 +1150,7 @@ __declspec(naked) void ProcessGradualSetFloatHook()
 		sub		eax, [ecx+8]
 		cvtsi2ss	xmm0, eax
 		divss	xmm0, [ecx+0xC]
-		comiss	xmm0, kFltOne
+		comiss	xmm0, kVcOne
 		jnb		finished
 		movss	xmm1, [ecx+4]
 		subss	xmm1, [ecx]
@@ -1541,6 +1541,49 @@ __declspec(naked) void __fastcall RemoveExplosionLightHook(Explosion *explosion)
 	}
 }
 
+__declspec(naked) void SetMuzzleFlashFadeHook()
+{
+	__asm
+	{
+		mov		ecx, [ebp-8]
+		mov		edx, [ecx+0x14]
+		mov		eax, [edx+0x74]
+		mov		edx, [eax+0xB4]
+		movzx	eax, byte ptr [ecx]
+		neg		eax
+		and		edx, eax
+		mov		eax, [ecx+0x10]
+		mov		[eax+0xC4], edx
+		leave
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall SetExplosionLightFadeHook(Explosion *explRef)
+{
+	__asm
+	{
+		mov		eax, [ecx+0xC4]
+		test	eax, eax
+		jz		done
+		movss	xmm1, [ecx+0x88]
+		addss	xmm1, xmm1
+		divss	xmm1, [ecx+0x8C]
+		movss	xmm2, kVcOne
+		movss	xmm0, xmm2
+		subss	xmm0, xmm1
+		minss	xmm0, xmm2
+		xorps	xmm2, xmm2
+		maxss	xmm0, xmm2
+		mov		edx, [ecx+0x20]
+		mov		ecx, [edx+0x80]
+		mulss	xmm0, [ecx+0xB4]
+		movss	[eax+0xC4], xmm0
+	done:
+		retn
+	}
+}
+
 __declspec(naked) bool __fastcall KillChallengeFixHook(Actor *killed)
 {
 	__asm
@@ -1779,21 +1822,18 @@ __declspec(naked) bool __cdecl PickSoundFileFromFolderHook(char *outFilePath)
 
 __declspec(naked) float __vectorcall GetFrequencyModifier(TESSound *soundForm)
 {
+	static const float kFreqMult[] = {0.01F, 0.005F};
 	__asm
 	{
-		movss	xmm0, kFltOne
+		movss	xmm0, kVcOne
 		test	byte ptr [ecx+0x48], 1
 		jnz		done
 		movsx	edx, byte ptr [ecx+0x46]
 		test	edx, edx
 		jz		done
 		cvtsi2ss	xmm1, edx
-		js		isNeg
-		mulss	xmm1, kFlt1d100
-		addss	xmm0, xmm1
-		retn
-	isNeg:
-		mulss	xmm1, kFlt1d200
+		shr		edx, 0x1F
+		mulss	xmm1, kFreqMult[edx*4]
 		addss	xmm0, xmm1
 	done:
 		retn
@@ -3242,7 +3282,7 @@ __declspec(naked) void EnableRepairButtonHook()
 		CALL_EAX(0x93ACB0)
 		fstp	dword ptr [ebp-0x44]
 		movss	xmm0, [ebp-0x44]
-		pxor	xmm1, xmm1
+		xorps	xmm1, xmm1
 		maxss	xmm0, xmm1
 		movss	xmm1, ds:[0x11D0FF4]	// fRepairSkillBase
 		movss	xmm2, kFlt10
@@ -3276,10 +3316,8 @@ __declspec(naked) void PopulateRepairListHook()
 		cmp		s_repairedItemModded, 0
 		jnz		done
 		call	ContChangesEntry::GetHealthPercent
-		fld		s_repairedItemHealth
-		fucomip	st, st(1)
-		setnb	al
-		fstp	st
+		comiss	xmm0, s_repairedItemHealth
+		setb	al
 	done:
 		retn
 	}
@@ -3333,11 +3371,11 @@ __declspec(naked) void DoRepairItemHook()
 		mov		ecx, [ebp+8]
 		call	ContChangesEntry::GetHealthPercent
 		push	ecx
-		fstp	dword ptr [esp]
+		movss	[esp], xmm0
 		mov		ecx, ds:[0x11DA760]
 		call	ContChangesEntry::GetHealthPercent
 		push	ecx
-		fstp	dword ptr [esp]
+		movss	[esp], xmm0
 		call	GetRepairAmount
 		retn
 	}
@@ -3349,11 +3387,10 @@ __declspec(naked) void RepairMenuClickHook()
 	{
 		mov		ecx, ds:[0x11DA760]
 		call	ContChangesEntry::GetHealthPercent
-		fsubr	s_pcRepairSkill
-		fld1
-		fucomip	st, st(1)
-		fstp	st
-		setbe	ah
+		movss	xmm1, s_pcRepairSkill
+		subss	xmm1, xmm0
+		comiss	xmm1, kVcOne
+		seta	ah
 		retn
 	}
 }
@@ -3491,7 +3528,7 @@ __declspec(naked) void InitControllerShapeHook()
 		mov		ecx, [ecx+0x40]
 		add		ecx, 0x20
 		mov		dl, 5
-		pxor	xmm1, xmm1
+		xorps	xmm1, xmm1
 		movss	xmm2, kFltSix
 	iter1Head:
 		movups	xmm0, [ecx]
@@ -3671,7 +3708,7 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		mov		edx, 0x1F
 		mov		eax, [ecx]
 		movss	xmm3, [eax+0x24]
-		addss	xmm3, kFltOne
+		addss	xmm3, kVcOne
 		movss	[eax+0x24], xmm3
 		jmp		iterNext
 	incDay:
@@ -3719,7 +3756,7 @@ __declspec(naked) bool __fastcall ModHardcoreNeedsHook(PlayerCharacter *thePlaye
 		jz		tracking
 		add		ecx, 0x49C
 		xor		edx, edx
-		pxor	xmm1, xmm1
+		xorps	xmm1, xmm1
 		cmp		[ecx], edx
 		jz		FOD
 		movss	xmm0, [ecx]
@@ -4506,6 +4543,8 @@ void InitGamePatches()
 	WriteRelCall(0x9BC6D9, (UInt32)RemoveProjectileLightHook);
 	WriteRelCall(0x9AD024, (UInt32)AddExplosionLightHook);
 	WriteRelCall(0x9AC6A5, (UInt32)RemoveExplosionLightHook);
+	WriteRelJump(0x9BB906, (UInt32)SetMuzzleFlashFadeHook);
+	WriteRelCall(0x9AE68C, (UInt32)SetExplosionLightFadeHook);
 	WriteRelCall(0x89DC0E, (UInt32)KillChallengeFixHook);
 	WriteRelCall(0x72880D, (UInt32)IsDisposableWeaponHook);
 	WriteRelJump(0x984156, (UInt32)DeathResponseFixHook);

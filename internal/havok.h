@@ -18,6 +18,7 @@ struct alignas(16) hkQuaternion
 	explicit hkQuaternion(const __m128 rhs) {*this = rhs;}
 
 	inline void operator=(const hkQuaternion &from) {_mm_store_ps(&x, from);}
+	inline void operator=(hkQuaternion &&from) {_mm_store_ps(&x, from);}
 	inline void operator=(const NiVector3 &ypr) {FromEulerYPR(ypr);}
 	inline void operator=(const NiMatrix33 &rotMat) {FromRotationMatrix(rotMat);}
 	inline void operator=(const hkMatrix3x4 &rotMat) {ThisCall(0xCB26E0, this, &rotMat);}
@@ -61,7 +62,7 @@ struct alignas(16) hkQuaternion
 
 	inline void Negate()
 	{
-		*this = _mm_xor_ps(*this, _mm_load_ps((const float*)kSSEChangeSignMaskPS));
+		*this = _mm_xor_ps(*this, _mm_load_ps((const float*)(kPackedValues + 8)));
 	}
 
 	inline float __vectorcall DotProduct(const hkQuaternion &rhs) const
@@ -1243,7 +1244,7 @@ public:
 	float					flt590;				// 590
 	bhkCachingShapePhantom	*chrPhantom;		// 594
 	UInt32					unk598;				// 598
-	UInt32					unk59C;				// 59C
+	UInt32					usedShape;			// 59C	0 - 5A4; 1 - 5A8
 	UInt32					unk5A0;				// 5A0
 	bhkCapsuleShape			*capsuleShape;		// 5A4
 	bhkCharControllerShape	*charCtrlShape;		// 5A8

@@ -1756,3 +1756,9 @@ ParamInfo kParams_OneOptionalIdleForm[] =
 {
 	{"Idle Form", kParamType_IdleForm, 1}
 };
+
+ParamInfo kParams_OneOptionalInt_OneOptionalFloat[] =
+{
+	{"Integer", kParamType_Integer, 1},
+	{"Float", kParamType_Float, 0}
+};

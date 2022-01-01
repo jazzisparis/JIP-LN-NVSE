@@ -655,11 +655,28 @@ public:
 	float		fltData;	// 0C
 };
 
+// 14
+class NiFloatsExtraData : public NiExtraData
+{
+public:
+	UInt32		count;		// 0C
+	float		*data;		// 10
+};
+
 // 10
 class NiStringExtraData : public NiExtraData
 {
 public:
 	NiFixedString	strData;	// 0C
+};
+
+// 1C
+class NiVectorExtraData : public NiExtraData
+{
+public:
+	NiVector4		vec4;		// 0C
+
+	__forceinline static NiVectorExtraData *Create() {return CdeclCall<NiVectorExtraData*>(0xA91FE0);}
 };
 
 // 14
@@ -706,6 +723,10 @@ public:
 	const char *GetName() const {return m_blockName ? m_blockName : "NULL";}
 	void __fastcall SetName(const char *newName);
 	NiExtraData* __fastcall GetExtraData(UInt32 vtbl);
+	__forceinline bool AddExtraData(NiExtraData *xData)
+	{
+		return ThisCall<bool>(0xA5BA40, this, xData);
+	}
 	void DumpExtraData();
 };
 
@@ -1480,37 +1501,46 @@ public:
 	NiColor			diffuseColor;		// D4
 };
 
-// FC
+// FC (JIP: 110)
 class NiPointLight : public NiLight
 {
 public:
-	float			radius;			// E0
-	float			radiusE4;		// E4
-	TESObjectLIGH	*baseLight;		// E8	JIP only
-	UInt32			unkEC;			// EC
-	NiVector3		vectorF0;		// F0	Used for animated lights
+	float			radius;			// 0E0
+	float			radius0E4;		// 0E4
+	TESObjectLIGH	*baseLight;		// 0E8	JIP only
+	NiObject		*obj0EC;		// 0EC
+	NiVector3		vector0F0;		// 0F0	Used for animated lights
+	//	JIP Only
+	float			flt0FC;			// 0FC
+	NiVector4		vector100;		// 100
 
 	__forceinline static NiPointLight *Create() {return CdeclCall<NiPointLight*>(0xA7D6E0);}
 };
-static_assert(sizeof(NiPointLight) == 0xFC);
+static_assert(sizeof(NiPointLight) == 0x110);
 
 // 114
-class NiSpotLight : public NiPointLight
+class NiSpotLight : public NiLight
 {
 public:
+	float			radius;			// 0E0
+	float			radius0E4;		// 0E4
+	TESObjectLIGH	*baseLight;		// 0E8	JIP only
+	NiObject		*obj0EC;		// 0EC
+	NiVector3		vector0F0;		// 0F0	Used for animated lights
 	NiVector3		direction;		// 0FC
 	float			outerSpotAngle;	// 108
 	float			innerSpotAngle;	// 10C
 	float			spotExponent;	// 110
 };
+static_assert(sizeof(NiSpotLight) == 0x114);
 
 // FC
 class NiDirectionalLight : public NiLight
 {
 public:
-	NiColor			fogColor;			// E0
-	UInt32			unkEC;				// EC
-	NiVector3		direction;			// F0
+	NiColor			fogColor;		// E0
+	NiObject		*objEC;			// EC
+	NiVector3		direction;		// F0
 };
 
 // 15C

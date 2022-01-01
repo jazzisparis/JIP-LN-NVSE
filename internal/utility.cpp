@@ -3,37 +3,31 @@
 
 const float
 kFlt1d1K = 0.001F,
-kFlt1d200 = 0.005F,
 kFlt1d100 = 0.01F,
-kFltPId180 = 0.01745329238F,
 kFlt1d10 = 0.1F,
-kFltHalf = 0.5F,
-kFltOne = 1.0F,
-kFltPId2 = 1.570796371F,
-kFltPI = 3.141592741F,
-kFltPIx2 = 6.283185482F,
+kFlt1d4 = 0.25F,
+kFlt3 = 3.0F,
 kFlt10 = 10.0F,
-kFlt180dPI = 57.29578018F,
 kFlt100 = 100.0F,
 kFlt1000 = 1000.0F;
 
-alignas(16) const UInt32
-kSSERemoveSignMaskPS[] = {0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF},
-kSSERemoveSignMaskPS0[] = {0x7FFFFFFF, 0x00000000, 0x00000000, 0x00000000},
-kSSEChangeSignMaskPS[] = {0x80000000, 0x80000000, 0x80000000, 0x80000000},
-kSSEChangeSignMaskPS0[] = {0x80000000, 0x00000000, 0x00000000, 0x00000000},
-kSSEDiscard4thPS[] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000},
-kSSEDiscardUprPS[] = {0xFFFFFFFF, 0xFFFFFFFF, 0x00000000, 0x00000000};
-
-alignas(16) const UInt64
-kSSERemoveSignMaskPD[] = {0x7FFFFFFFFFFFFFFF, 0x7FFFFFFFFFFFFFFF},
-kSSEChangeSignMaskPD[] = {0x8000000000000000, 0x8000000000000000};
-
-const __m128
-kEqEpsilon = {7.62939453125e-06F, 7.62939453125e-06F, 7.62939453125e-06F, 7.62939453125e-06F},
-kVcPI = {3.141592741F, 3.141592741F, 3.141592741F, 0},
-kVcPIx2 = {6.283185482F, 6.283185482F, 6.283185482F, 0},
-kVcHalf = {0.5F, 0.5F, 0.5F, 0};
+alignas(16) const UInt32 kPackedValues[] =
+{
+	0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF,
+	0x7FFFFFFF, 0x00000000, 0x00000000, 0x00000000,
+	0x80000000, 0x80000000, 0x80000000, 0x80000000,
+	0x80000000, 0x00000000, 0x00000000, 0x00000000,
+	0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000,
+	0xFFFFFFFF, 0x7FFFFFFF, 0xFFFFFFFF, 0x7FFFFFFF,
+	0x00000000, 0x80000000, 0x00000000, 0x80000000,
+	0x37000000, 0x37000000, 0x37000000, 0x37000000,
+	0x3C8EFA35, 0x3C8EFA35, 0x3C8EFA35, 0x00000000,
+	0x3FC90FDB, 0x3FC90FDB, 0x3FC90FDB, 0x00000000,
+	0x40490FDB, 0x40490FDB, 0x40490FDB, 0x00000000,
+	0x40C90FDB, 0x40C90FDB, 0x40C90FDB, 0x00000000,
+	0x3F000000, 0x3F000000, 0x3F000000, 0x00000000,
+	0x3F800000, 0x3F800000, 0x3F800000, 0x00000000
+};
 
 alignas(16) const char
 kLwrCaseConverter[] =
@@ -287,7 +281,7 @@ __declspec(naked) float __vectorcall Sin(float angle)
 	__asm
 	{
 		movss	xmm1, xmm0
-		movss	xmm0, kFltPId2
+		movss	xmm0, kVcPId2
 		subss	xmm0, xmm1
 		jmp		Cos
 	}
@@ -295,31 +289,30 @@ __declspec(naked) float __vectorcall Sin(float angle)
 
 __declspec(naked) float __vectorcall Cos(float angle)
 {
-	static const float k1dPIx2 = 0.1591549367F, kFlt2dPI = 0.6366197467F;
-	alignas(16) static const float kCosCst[] = {2.315393249e-05F, 0.001385370386F, 0.04166358337F, 0.4999990463F, 0.9999999404F};
+	alignas(16) static const float kCosCst[] = {2.315393249e-05F, 0.001385370386F, 0.04166358337F, 0.4999990463F, 0.9999999404F, 0.1591549367F, 0.6366197467F};
 	__asm
 	{
 		andps	xmm0, kSSERemoveSignMaskPS0
-		movss	xmm2, kFltPIx2
+		movss	xmm2, kVcPIx2
 		comiss	xmm0, xmm2
 		jb		perdOK
-		movss	xmm1, k1dPIx2
+		movss	xmm1, kCosCst+0x14
 		mulss	xmm1, xmm0
 		cvttps2dq	xmm1, xmm1
 		cvtdq2ps	xmm1, xmm1
 		mulss	xmm1, xmm2
 		subss	xmm0, xmm1
 	perdOK:
-		comiss	xmm0, kEqEpsilon
+		comiss	xmm0, kVcEpsilon
 		jb		retn1
-		movss	xmm1, kFlt2dPI
+		movss	xmm1, kCosCst+0x18
 		mulss	xmm1, xmm0
 		cvttss2si	eax, xmm1
-		pxor	xmm3, xmm3
+		xorps	xmm3, xmm3
 		test	al, al
 		jz		doCalc
 		jp		fourthQ
-		movss	xmm2, kFltPI
+		movss	xmm2, kVcPI
 		movss	xmm3, kSSEChangeSignMaskPS0
 	fourthQ:
 		subss	xmm0, xmm2
@@ -341,7 +334,7 @@ __declspec(naked) float __vectorcall Cos(float angle)
 		xorps	xmm0, xmm3
 		retn
 	retn1:
-		movss	xmm0, kFltOne
+		movss	xmm0, kVcOne
 		retn
 	}
 }
@@ -355,9 +348,9 @@ __declspec(naked) __m128 __vectorcall GetSinCos(float angle)
 		movss	xmm1, xmm0
 		unpcklps	xmm0, xmm0
 		mulss	xmm0, xmm0
-		movss	xmm2, kFltOne
+		movss	xmm2, kVcOne
 		subss	xmm2, xmm0
-		comiss	xmm2, kEqEpsilon
+		comiss	xmm2, kVcEpsilon
 		jb		zeroSin
 		sqrtss	xmm0, xmm2
 		and		dl, 1
@@ -369,8 +362,84 @@ __declspec(naked) __m128 __vectorcall GetSinCos(float angle)
 	done:
 		retn
 	zeroSin:
-		pxor	xmm2, xmm2
+		xorps	xmm2, xmm2
 		movss	xmm0, xmm2
+		retn
+	}
+}
+
+__declspec(naked) __m128 __vectorcall GetSinCosV3(__m128 angles)
+{
+	alignas(16) static const UInt32 kCosV3Cst[] =
+	{
+		0x3E22F983, 0x3E22F983, 0x3E22F983, 0x00000000,
+		0x3F22F983, 0x3F22F983, 0x3F22F983, 0x00000000,
+		0x00000002, 0x00000002, 0x00000002, 0x00000000,
+		0x37C23AB1, 0x37C23AB1, 0x37C23AB1, 0x00000000,
+		0x3AB59551, 0x3AB59551, 0x3AB59551, 0x00000000,
+		0x3D2AA76F, 0x3D2AA76F, 0x3D2AA76F, 0x00000000,
+		0x3EFFFFE0, 0x3EFFFFE0, 0x3EFFFFE0, 0x00000000,
+		0x3F7FFFFF, 0x3F7FFFFF, 0x3F7FFFFF, 0x00000000
+	};
+	__asm
+	{
+		mov		edx, offset kPackedValues
+		movaps	xmm6, xmm0
+		andps	xmm0, [edx]
+		movaps	xmm1, xmm0
+		movaps	xmm2, [edx+0xB0]
+		cmpps	xmm1, xmm2, 5
+		movmskps	eax, xmm1
+		test	al, 7
+		mov		eax, offset kCosV3Cst
+		jz		perdOK
+		movaps	xmm1, xmm0
+		mulps	xmm1, [eax]
+		cvttps2dq	xmm1, xmm1
+		cvtdq2ps	xmm1, xmm1
+		mulps	xmm1, xmm2
+		subps	xmm0, xmm1
+	perdOK:
+		movaps	xmm1, xmm0
+		mulps	xmm1, [eax+0x10]
+		cvttps2dq	xmm1, xmm1
+		movaps	xmm5, xmm1
+		movaps	xmm7, [eax+0x20]
+		pcmpgtd	xmm1, xmm7
+		andps	xmm2, xmm1
+		xorps	xmm1, [edx+0x40]
+		andps	xmm1, xmm5
+		xorps	xmm3, xmm3
+		pcmpgtd	xmm1, xmm3
+		movaps	xmm3, xmm1
+		andps	xmm1, [edx+0xA0]
+		subps	xmm0, xmm1
+		subps	xmm0, xmm2
+		pslld	xmm3, 0x1F
+		mulps	xmm0, xmm0
+		movaps	xmm1, [eax+0x30]
+		mulps	xmm1, xmm0
+		subps	xmm1, [eax+0x40]
+		mulps	xmm1, xmm0
+		addps	xmm1, [eax+0x50]
+		mulps	xmm1, xmm0
+		subps	xmm1, [eax+0x60]
+		mulps	xmm0, xmm1
+		addps	xmm0, [eax+0x70]
+		xorps	xmm0, xmm3
+		movaps	xmm1, xmm0
+		mulps	xmm0, xmm0
+		movaps	xmm2, [edx+0xD0]
+		subps	xmm2, xmm0
+		movaps	xmm3, xmm2
+		cmpps	xmm3, [edx+0x70], 6
+		andps	xmm2, xmm3
+		sqrtps	xmm0, xmm2
+		psrad	xmm6, 0x1F
+		xorps	xmm5, xmm6
+		andps	xmm5, xmm7
+		pslld	xmm5, 0x1E
+		xorps	xmm0, xmm5
 		retn
 	}
 }
@@ -382,19 +451,19 @@ __declspec(naked) float __vectorcall Tan(float angle)
 		call	GetSinCos
 		movss	xmm2, xmm1
 		andps	xmm2, kSSERemoveSignMaskPS0
-		comiss	xmm2, kEqEpsilon
+		comiss	xmm2, kVcEpsilon
 		jb		ooRange
 		divss	xmm0, xmm1
 		retn
 	ooRange:
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		retn
 	}
 }
 
-const __m128 kASinCst = {-0.01872929931F, 0.0742610022F, 0.2121143937F, 1.570796371F};
-alignas(16) const UInt32 kASinErrorFix[] =	//	Decrease max absolute error to 6.7e-6
+alignas(16) const UInt32 kASinConsts[] =
 {
+	0xBC996E30, 0x3D981627, 0x3E593484, 0x3FC90FDB, 0x37000000, 0x3F800000, 0x40490FDB, 0x03800000,
 	0x37202A00, 0x37E24000, 0x38333600, 0x386E4C00, 0x38913200, 0x38A84000, 0x38BC5200, 0x38CDAC00,
 	0x38DC5000, 0x38E8C000, 0x38F2C800, 0x38FAA800, 0x39005600, 0x39029000, 0x3903C800, 0x39046400,
 	0x39042C00, 0x39036800, 0x39022800, 0x39003400, 0x38FB7000, 0x38F60800, 0x38EFD800, 0x38E8B800,
@@ -412,7 +481,6 @@ alignas(16) const UInt32 kASinErrorFix[] =	//	Decrease max absolute error to 6.7
 	0x383B0000, 0x38318000, 0x38260000, 0x381A0000, 0x380D8000, 0x38010000, 0x37E70000, 0x37CB0000,
 	0x37AF0000, 0x37930000, 0x376C0000, 0x37340000, 0x37020000, 0x36A00000, 0x36180000, 0x35000000
 };
-const UInt32 kMult128 = 0x3800000;
 
 __declspec(naked) float __vectorcall ASin(float x)
 {
@@ -421,15 +489,15 @@ __declspec(naked) float __vectorcall ASin(float x)
 		movss	xmm4, xmm0
 		andps	xmm4, kSSEChangeSignMaskPS0
 		xorps	xmm0, xmm4
-		comiss	xmm0, kEqEpsilon
+		comiss	xmm0, kASinConsts+0x10
 		jb		done
-		movss	xmm3, kFltOne
+		movss	xmm3, kASinConsts+0x14
 		comiss	xmm0, xmm3
 		jnb		ooRange
-		movss	xmm1, kMult128
+		movss	xmm1, kASinConsts+0x1C
 		paddd	xmm1, xmm0
 		cvttss2si	eax, xmm1
-		movaps	xmm2, kASinCst
+		movaps	xmm2, kASinConsts
 		movss	xmm1, xmm2
 		mulss	xmm1, xmm0
 		psrldq	xmm2, 4
@@ -444,12 +512,12 @@ __declspec(naked) float __vectorcall ASin(float x)
 		sqrtss	xmm2, xmm3
 		mulss	xmm2, xmm1
 		subss	xmm0, xmm2
-		addss	xmm0, kASinErrorFix[eax*4]
+		addss	xmm0, kASinConsts[eax*4+0x20]
 		xorps	xmm0, xmm4
 	done:
 		retn
 	ooRange:
-		movss	xmm0, kFltPId2
+		movss	xmm0, kASinConsts+0xC
 		xorps	xmm0, xmm4
 		retn
 	}
@@ -462,15 +530,15 @@ __declspec(naked) float __vectorcall ACos(float x)
 		movss	xmm4, xmm0
 		andps	xmm4, kSSEChangeSignMaskPS0
 		xorps	xmm0, xmm4
-		comiss	xmm0, kEqEpsilon
+		comiss	xmm0, kASinConsts+0x10
 		jb		isZero
-		movss	xmm3, kFltOne
+		movss	xmm3, kASinConsts+0x14
 		comiss	xmm0, xmm3
 		jnb		ooRange
-		movss	xmm1, kMult128
+		movss	xmm1, kASinConsts+0x1C
 		paddd	xmm1, xmm0
 		cvttss2si	eax, xmm1
-		movaps	xmm2, kASinCst
+		movaps	xmm2, kASinConsts
 		movss	xmm1, xmm2
 		mulss	xmm1, xmm0
 		psrldq	xmm2, 4
@@ -484,20 +552,20 @@ __declspec(naked) float __vectorcall ACos(float x)
 		subss	xmm3, xmm0
 		sqrtss	xmm0, xmm3
 		mulss	xmm0, xmm1
-		subss	xmm0, kASinErrorFix[eax*4]
+		subss	xmm0, kASinConsts[eax*4+0x20]
 		movmskps	eax, xmm4
 		test	al, al
 		jz		done
 		xorps	xmm0, xmm4
-		addss	xmm0, kFltPI
+		addss	xmm0, kASinConsts+0x18
 	done:
 		retn
 	isZero:
-		movss	xmm0, kFltPId2
+		movss	xmm0, kASinConsts+0xC
 		retn
 	ooRange:
 		psrad	xmm4, 0x1F
-		movss	xmm0, kFltPI
+		movss	xmm0, kASinConsts+0x18
 		andps	xmm0, xmm4
 		retn
 	}
@@ -507,7 +575,7 @@ __declspec(naked) float __vectorcall ATan(float x)
 {
 	_asm
 	{
-		movss	xmm1, kFltOne
+		movss	xmm1, kVcOne
 		jmp		ATan2
 	}
 }
@@ -517,7 +585,7 @@ __declspec(naked) float __vectorcall ATan2(float y, float x)
 	alignas(16) static const float kATanCst[] = {-0.01348046958F, 0.05747731403F, 0.1212390736F, 0.1956359297F, 0.3329946101F, 0.9999956489F};
 	__asm
 	{
-		pxor	xmm2, xmm2
+		xorps	xmm2, xmm2
 		comiss	xmm0, xmm2
 		jz		zeroY
 		comiss	xmm1, xmm2
@@ -558,13 +626,13 @@ __declspec(naked) float __vectorcall ATan2(float y, float x)
 		comiss	xmm2, xmm3
 		jbe		doneCmp1
 		xorps	xmm6, xmm4
-		addss	xmm6, kFltPId2
+		addss	xmm6, kVcPId2
 	doneCmp1:
-		pxor	xmm2, xmm2
+		xorps	xmm2, xmm2
 		comiss	xmm1, xmm2
 		jnb		doneCmp2
 		xorps	xmm6, xmm4
-		addss	xmm6, kFltPI
+		addss	xmm6, kVcPI
 	doneCmp2:
 		andps	xmm0, xmm4
 		xorps	xmm0, xmm6
@@ -572,12 +640,12 @@ __declspec(naked) float __vectorcall ATan2(float y, float x)
 	zeroY:
 		comiss	xmm1, xmm2
 		jnb		done
-		movss	xmm0, kFltPI
+		movss	xmm0, kVcPI
 		retn
 	zeroX:
 		movss	xmm1, xmm0
 		andps	xmm1, kSSEChangeSignMaskPS0
-		movss	xmm0, kFltPId2
+		movss	xmm0, kVcPId2
 		xorps	xmm0, xmm1
 	done:
 		retn
@@ -1237,7 +1305,7 @@ __declspec(naked) char* __vectorcall FltToStr(char *str, double value)
 	static const int kIntDivisors[] = {10, 100, 1000, 10000, 100000};
 	__asm
 	{
-		pxor	xmm1, xmm1
+		xorps	xmm1, xmm1
 		comisd	xmm0, xmm1
 		jz		isZero
 		ja		isPos
@@ -1418,12 +1486,12 @@ __declspec(naked) UInt32 __fastcall StrToUInt(const char *str)
 
 __declspec(naked) double __vectorcall StrToDbl(const char *str)
 {
-	static const double kValueBounds[] = {4294967296, -4294967296}, kFactor10Div[] = {1.0e-09, 1.0e-08, 1.0e-07, 1.0e-06, 1.0e-05, 0.0001, 0.001, 0.01, 0.1};
+	alignas(16) static const double kStrToDblConsts[] = {4294967296, -4294967296, 1.0e-09, 1.0e-08, 1.0e-07, 1.0e-06, 1.0e-05, 0.0001, 0.001, 0.01, 0.1};
 	__asm
 	{
 		push	esi
 		push	edi
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		test	ecx, ecx
 		jz		done
 		mov		esi, ecx
@@ -1453,7 +1521,7 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 		jz		noInt
 		cvtsi2sd	xmm0, eax
 		jns		noOverflow
-		addsd	xmm0, kValueBounds
+		addsd	xmm0, kStrToDblConsts
 	noOverflow:
 		shl		dl, 1
 		xor		eax, eax
@@ -1478,7 +1546,7 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 		cvtsi2sd	xmm1, eax
 		shl		dl, 1
 		mov		cl, dh
-		mulsd	xmm1, kFactor10Div[ecx*8]
+		mulsd	xmm1, kStrToDblConsts[ecx*8+0x10]
 		addsd	xmm0, xmm1
 	addSign:
 		test	dl, 6
@@ -1490,7 +1558,7 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 		retn
 	overflow:
 		movzx	eax, dl
-		movq	xmm0, kValueBounds[eax*8]
+		movq	xmm0, kStrToDblConsts[eax*8]
 		pop		edi
 		pop		esi
 		retn

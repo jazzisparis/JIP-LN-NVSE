@@ -107,7 +107,7 @@ bool Cmd_GetProjectileFlag_Execute(COMMAND_ARGS)
 {
 	BGSProjectile *projectile;
 	UInt32 flagID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile, &flagID) && IS_ID(projectile, BGSProjectile) && (flagID <= 11))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile, &flagID) && IS_ID(projectile, BGSProjectile) && (flagID <= 15))
 		*result = (projectile->projFlags & (1 << flagID)) ? 1 : 0;
 	else *result = 0;
 	return true;
@@ -117,7 +117,7 @@ bool Cmd_SetProjectileFlag_Execute(COMMAND_ARGS)
 {
 	BGSProjectile *projectile;
 	UInt32 flagID, val;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile, &flagID, &val) && IS_ID(projectile, BGSProjectile) && (flagID <= 11))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile, &flagID, &val) && IS_ID(projectile, BGSProjectile) && (flagID <= 15))
 		projectile->SetFlag(1 << flagID, val != 0);
 	return true;
 }

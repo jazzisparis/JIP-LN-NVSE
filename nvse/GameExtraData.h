@@ -347,7 +347,7 @@ public:
 		ExtraDataList *GetEquippedExtra();
 		float __vectorcall GetWeaponModEffectValue(UInt32 effectType);
 		float __vectorcall GetBaseHealth();
-		float GetHealthPercent();
+		float __vectorcall GetHealthPercent();
 		float CalculateWeaponDamage(Actor *owner, float condition, TESForm *ammo);
 	};
 

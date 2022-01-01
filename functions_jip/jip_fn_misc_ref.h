@@ -297,7 +297,7 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 resetRot = 0;
-	if (NUM_ARGS)
+	if (NUM_ARGS_EX)
 		ExtractArgsEx(EXTRACT_ARGS_EX, &resetRot);
 	TESObjectCELL *cell;
 	NiVector3 *posVector;
@@ -311,7 +311,7 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 		{
 			rotVector.x = 0;
 			rotVector.y = 0;
-			rotVector.z = actor->startingZRot * kFlt180dPI;
+			rotVector.z = actor->startingZRot * Flt180dPI;
 		}
 	}
 	else
@@ -324,7 +324,7 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 		if (resetRot)
 		{
 			rotVector = xStartingPos->rotVector;
-			rotVector *= kFlt180dPI;
+			rotVector *= Flt180dPI;
 		}
 	}
 	if (!cell) return true;
@@ -784,18 +784,15 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 		{
 			NiCamera *camera = g_sceneGraph->camera;
 			NiVector4 coords;
-			NiVector3 *pCoords = (NiVector3*)&coords;
-			if (!pCoords->RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), maxRange))
+			if (!((NiVector3*)&coords)->RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), maxRange))
 			{
 				if (!translate) return true;
-				coords.x = (maxRange < 4096.0F) ? maxRange : 4096.0F;
-				coords.y = 0;
-				coords.z = 0;
+				coords = NiVector4((maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0, 0);
 				camera->m_transformWorld.GetTranslatedPos(&coords);
 			}
 			if (numArgs > 1)
 				coords += posMods;
-			thisObj->MoveToCell(cell, pCoords);
+			thisObj->MoveToCell(cell, coords);
 			*result = 1;
 		}
 	}
@@ -1057,6 +1054,18 @@ bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 		{
 			niBlock->LocalTranslate() = transltn;
 			niBlock->Update();
+			__asm
+			{
+				mov		ecx, niBlock
+				cmp		dword ptr [ecx], kVtbl_NiPointLight
+				jnz		done
+				test	byte ptr [ecx+0x9F], 1
+				jz		done
+				movups	xmm0, [ecx+0x54]
+				psrldq	xmm0, 4
+				movups	[ecx+0x100], xmm0
+			done:
+			}
 		}
 	}
 	return true;
@@ -1094,7 +1103,7 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
-			rot *= kFltPId180;
+			rot *= FltPId180;
 			if (!transform)
 				niBlock->LocalRotate().RotationMatrix(rot);
 			else if (transform == 1)
@@ -2135,7 +2144,7 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 			}
 			if (pTexture)
 			{
-				float w = Tan(fov * kFltPId180) * (1 / 1.5F);
+				float w = Tan(fov * FltPId180) * (1 / 1.5F);
 				xCamera->frustum.viewPort = {-w, w, w, -w};
 				s_projectPixelSize = pixelSize;
 				ProjectExtraCamera(xCamera, pTexture);

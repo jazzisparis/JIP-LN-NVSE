@@ -163,7 +163,7 @@ bool Cmd_GetSoundFlag_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESSound *sound;
 	UInt32 flagID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &flagID) && (flagID <= 15))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &flagID) && (flagID <= 31))
 		*result = (sound->soundFlags & (1 << flagID)) ? 1 : 0;
 	return true;
 }
@@ -172,7 +172,7 @@ bool Cmd_SetSoundFlag_Execute(COMMAND_ARGS)
 {
 	TESSound *sound;
 	UInt32 flagID, val;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &flagID, &val) && (flagID <= 15))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &flagID, &val) && (flagID <= 31))
 		sound->SetFlag(1 << flagID, val != 0);
 	return true;
 }

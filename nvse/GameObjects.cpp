@@ -653,9 +653,7 @@ __declspec(naked) void TESObjectREFR::SetAngle(NiVector4 *rotVector, bool setLoc
 		lea		ecx, [eax+0x34]
 		mov		edx, [esp+0xC]
 		movups	xmm0, [edx]
-		movss	xmm1, kFltPId180
-		shufps	xmm1, xmm1, 0xC0
-		mulps	xmm0, xmm1
+		mulps	xmm0, kVcPId180
 		cmp		byte ptr [esp+0x10], 0
 		jnz		localRot
 		lea		edx, [esi+0x24]
@@ -754,7 +752,6 @@ __declspec(naked) bool __fastcall TESObjectREFR::GetTranslatedPos(NiVector4 *pos
 		mov		ecx, edx
 		lea		edx, [eax+0x68]
 		call	NiVector3::MultiplyMatrix
-		movups	xmm0, [eax]
 		movups	xmm1, [edx+0x24]
 		addps	xmm0, xmm1
 		movups	[eax], xmm0
@@ -776,9 +773,7 @@ __declspec(naked) void __fastcall TESObjectREFR::Rotate(NiVector4 *rotVector)
 		jz		done
 		mov		edi, eax
 		movups	xmm0, [edx]
-		movss	xmm1, kFltPId180
-		shufps	xmm1, xmm1, 0xC0
-		mulps	xmm0, xmm1
+		mulps	xmm0, kVcPId180
 		movups	[edx], xmm0
 		lea		ecx, [edi+0x34]
 		call	NiMatrix33::Rotate
@@ -1437,7 +1432,7 @@ __declspec(naked) void __vectorcall Actor::TurnAngle(float angle)
 	__asm
 	{
 		push	0
-		mulss	xmm0, kFltPId180
+		mulss	xmm0, kVcPId180
 		addss	xmm0, [ecx+0x2C]
 		push	ecx
 		movss	[esp], xmm0
@@ -1746,7 +1741,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		jnz		hasForce
 		mov		esi, [esi+0x68]
 		mov		esi, [esi+0x138]
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		movaps	[esi+0x500], xmm0
 		mov		dword ptr [esi+0x524], 0
 		jmp		done
@@ -1755,7 +1750,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		test	eax, eax
 		jnz		useRef
 		movss	xmm0, [esp+0xC]
-		mulss	xmm0, kFltPId180
+		mulss	xmm0, kVcPId180
 		call	GetSinCos
 		jmp		doneAngle
 	useRef:
@@ -1765,7 +1760,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		movaps	xmm1, xmm0
 		mulps	xmm1, xmm1
 		haddps	xmm1, xmm1
-		comiss	xmm1, kEqEpsilon
+		comiss	xmm1, kVcEpsilon
 		jb		done
 		rsqrtss	xmm1, xmm1
 		unpcklps	xmm1, xmm1

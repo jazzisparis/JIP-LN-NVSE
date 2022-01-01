@@ -51,7 +51,7 @@ __declspec(naked) ExtraDataList *ExtraDataList::Create()
 	{
 		push	0x20
 		GAME_HEAP_ALLOC
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		movups	[eax], xmm0
 		movups	[eax+0x10], xmm0
 		mov		dword ptr [eax], kVtbl_ExtraDataList
