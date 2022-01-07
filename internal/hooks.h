@@ -118,6 +118,7 @@ enum
 	kHookActorFlag2_TeammateKillable =		1 << 2,
 	kHookActorFlag2_NoGunWobble =			1 << 3,
 	kHookActorFlag2_CastImmediate =			1 << 4,
+	kHookActorFlag2_SkipDrawWeapAnim =		1 << 5,
 
 	kHookActorFlag3_OnAnimAction =			1 << 0,
 	kHookActorFlag3_OnPlayGroup =			1 << 1,
@@ -3723,17 +3724,19 @@ __declspec(naked) void LoadWeaponSlotHook()
 
 __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm, NiPointLight *ptLight)
 {
-	alignas(16) static const float kTimeMods[] =
+	alignas(16) static constexpr HexFloat kAnimatedLightMods[] =
 	{
-		7.5F, 30 / 7.0F, 0.125F, 0.0625F, 
-		0.5F, 0.2F, 1 / 252.0F, 0.7F, 
-		0.1F, 0.1F, 0.1F, 0, 
-		1 / 127.0F, 1 / 127.0F, 1 / 127.0F, 0, 
-		4.0F, 2.0F
+		7.5F, 30 / 7.0F, 0.125F, 0.0625F,
+		4.0F, 2.0F, 1 / 252.0F, 0.7F,
+		0.1F, 0.1F, 0.1F, 0.0F, 
+		1 / 127.0F, 1 / 127.0F, 1 / 127.0F, 0.0F, 
+		0x7FUL, 0x7FUL, 0x7FUL, 0UL,
+		0x3FUL, 0x3FUL, 0x3FUL, 0UL
 	};
-	alignas(16) static const UInt32 kRandMod[] = {0x7F, 0x7F, 0x7F, 0, 0x3F, 0x3F, 0x3F, 0};
 	__asm
 	{
+		push	ebp
+		mov		ebp, offset kAnimatedLightMods
 		add		ecx, 0x7C
 		add		edx, 0xC4
 		mov		eax, [ecx+0x2C]
@@ -3744,7 +3747,7 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		mov		ebx, edx
 		shr		eax, 4
 		and		eax, 4
-		mulss	xmm0, kTimeMods[eax]
+		mulss	xmm0, [ebp+eax]
 		movss	xmm1, [ecx+0x38]
 		movss	xmm2, [ebx]
 		movss	xmm3, [ebx+8]
@@ -3754,17 +3757,17 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		movups	xmm6, [ebx+0x2C]
 		mov		edx, [ebx+4]
 		test	edx, edx
-		jnz		hasSaved
+		jnz		hasSaved1
 		or		byte ptr [ebx-0x25], 1
 		movups	[ebx+0x3C], xmm4
 		movaps	xmm5, xmm4
-		jmp		doRecalc
-	hasSaved:
+		jmp		doRecalc1
+	hasSaved1:
 		movd	xmm7, edx
 		addss	xmm7, xmm0
 		comiss	xmm7, kVcOne
-		jbe		doneRecalc
-	doRecalc:
+		jbe		doneRecalc1
+	doRecalc1:
 		push	esi
 		push	edi
 		mov		esi, 0xAA5230
@@ -3774,8 +3777,8 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		call	esi
 		and		eax, 0x3F
 		cvtsi2ss	xmm3, eax
-		mulss	xmm3, kTimeMods+0x18
-		addss	xmm3, kTimeMods+0x1C
+		mulss	xmm3, [ebp+0x18]
+		addss	xmm3, [ebp+0x1C]
 		mulss	xmm3, xmm1
 		subss	xmm3, xmm2
 		movss	[ebx+8], xmm3
@@ -3795,15 +3798,15 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		add		esp, 0xC
 		pop		edi
 		pop		esi
-		andps	xmm6, kRandMod
-		psubd	xmm6, kRandMod+0x10
+		andps	xmm6, [ebp+0x40]
+		psubd	xmm6, [ebp+0x50]
 		cvtdq2ps	xmm6, xmm6
-		mulps	xmm6, kTimeMods+0x20
+		mulps	xmm6, [ebp+0x20]
 		subps	xmm6, xmm4
 		addps	xmm6, xmm5
 		movups	[ebx+0x2C], xmm6
 		movss	xmm7, xmm0
-	doneRecalc:
+	doneRecalc1:
 		movss	[ebx+4], xmm7
 		mulss	xmm3, xmm0
 		addss	xmm2, xmm3
@@ -3813,14 +3816,15 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		addps	xmm4, xmm6
 		movups	[ebx-0x6C], xmm4
 		pop		ebx
+		pop		ebp
 		retn
 		ALIGN 16
 	doPulse:
 		test	eax, 0x180
-		jz		doPulse2
+		jz		doClrShft
 		shr		eax, 6
 		and		eax, 4
-		mulss	xmm0, kTimeMods[eax+8]
+		mulss	xmm0, [ebp+eax+8]
 		movss	xmm1, [ecx+0x38]
 		movss	xmm2, [edx]
 		comiss	xmm1, xmm2
@@ -3835,62 +3839,26 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		xorps	xmm0, xmm1
 		addss	xmm2, xmm0
 		movss	[edx], xmm2
-		retn
-		ALIGN 16
-	doPulse2:
-		test	eax, 0x1800
-		jz		doClrShft
-		shr		eax, 0xA
-		and		eax, 4
-		mulss	xmm0, kTimeMods[eax+0x10]
-		movups	xmm1, [edx+0x3C]
-		mov		ecx, [edx+4]
-		test	ecx, ecx
-		jnz		hasSaved2
-		movups	xmm1, [edx+0xC]
-		psrldq	xmm1, 4
-		movups	[edx+0x3C], xmm1
-	hasSaved2:
-		movss	xmm2, [edx+0xC]
-		xorps	xmm2, xmm0
-		movd	xmm3, ecx
-		addss	xmm2, xmm3
-		xorps	xmm3, xmm3
-		movss	xmm4, kVcOne
-		comiss	xmm2, xmm3
-		setbe	al
-		comiss	xmm2, xmm4
-		setnb	cl
-		or		al, cl
-		shl		eax, 0x1F
-		xor		[edx+0xC], eax
-		maxss	xmm2, xmm0
-		minss	xmm2, xmm4
-		movss	[edx+4], xmm2
-		shufps	xmm2, xmm2, 0x40
-		mulps	xmm1, xmm2
-		movq	qword ptr [edx+0x10], xmm1
-		movhlps	xmm1, xmm1
-		movss	[edx+0x18], xmm1
+		pop		ebp
 		retn
 		ALIGN 16
 	doClrShft:
 		push	ebx
 		mov		ebx, edx
-		shr		eax, 0xC
+		shr		eax, 0xA
 		and		eax, 4
-		mulss	xmm0, kTimeMods[eax+0x40]
+		mulss	xmm0, [ebp+eax+0x10]
 		movups	xmm1, [ebx+0xC]
 		psrldq	xmm1, 4
 		movups	xmm2, [ebx+0x2C]
 		movups	xmm3, [ebx+0x3C]
 		mov		edx, [ebx+4]
 		test	edx, edx
-		jnz		hasSaved3
+		jnz		hasSaved2
 		movups	[ebx+0x3C], xmm1
 		movaps	xmm3, xmm1
 		jmp		doRecalc2
-	hasSaved3:
+	hasSaved2:
 		movd	xmm4, edx
 		addss	xmm4, xmm0
 		comiss	xmm4, kVcOne
@@ -3916,9 +3884,9 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		add		esp, 0xC
 		pop		edi
 		pop		esi
-		andps	xmm2, kRandMod
+		andps	xmm2, [ebp+0x40]
 		cvtdq2ps	xmm2, xmm2
-		mulps	xmm2, kTimeMods+0x30
+		mulps	xmm2, [ebp+0x30]
 		mulps	xmm2, xmm3
 		subps	xmm2, xmm1
 		movups	[ebx+0x2C], xmm2
@@ -3932,6 +3900,7 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		movhlps	xmm1, xmm1
 		movss	[ebx+0x18], xmm1
 		pop		ebx
+		pop		ebp
 		retn
 	}
 }
@@ -3940,7 +3909,7 @@ __declspec(naked) void __fastcall UpdateAnimatedLightHook(TESObjectLIGH *lightFo
 {
 	__asm
 	{
-		test	dword ptr [ecx+0xA8], 0x79C8
+		test	dword ptr [ecx+0xA8], 0x19C8
 		jz		done
 		mov		edx, [esp+4]
 		mov		edx, [edx]
@@ -4003,7 +3972,7 @@ __declspec(naked) void __fastcall UpdateAnimatedLightsHook(TES *pTES)
 	unmodified:
 		cmp		dword ptr [ecx+4], 1
 		jz		doAdd
-		test	dword ptr [edx+0xA8], 0x79C8
+		test	dword ptr [edx+0xA8], 0x19C8
 		jz		iterHead
 		xchg	ecx, edx
 		call	DoUpdateAnimatedLight
@@ -4672,6 +4641,19 @@ __declspec(naked) void CastSpellHook()
 	}
 }
 
+__declspec(naked) void SkipDrawWeapAnimHook()
+{
+	__asm
+	{
+		mov		eax, [esp+0x10]
+		test	byte ptr [eax+0x106], kHookActorFlag2_SkipDrawWeapAnim
+		jnz		done
+		JMP_EAX(0x923960)
+	done:
+		retn	0x10
+	}
+}
+
 UnorderedMap<const char*, UInt32> s_eventMasks({{"OnActivate", 0}, {"OnAdd", 1}, {"OnEquip", 2}, {"OnActorEquip", 2}, {"OnDrop", 4}, {"OnUnequip", 8}, {"OnActorUnequip", 8},
 	{"OnDeath", 0x10}, {"OnMurder", 0x20}, {"OnCombatEnd", 0x40}, {"OnHit", 0x80}, {"OnHitWith", 0x100}, {"OnPackageStart", 0x200}, {"OnPackageDone", 0x400},
 	{"OnPackageChange", 0x800}, {"OnLoad", 0x1000}, {"OnMagicEffectHit", 0x2000}, {"OnSell", 0x4000}, {"OnStartCombat", 0x8000}, {"OnOpen", 0x10000}, {"OnClose", 0x20000},
@@ -4770,6 +4752,7 @@ void InitJIPHooks()
 	WriteRelCall(0x7704AE, (UInt32)ClearHUDOrphanedTiles);
 	WriteRelJump(0x50F9E0, (UInt32)GetIsInternalMarkerHook);
 	WriteRelJump(0x815EE6, (UInt32)CastSpellHook);
+	WriteRelCall(0x923299, (UInt32)SkipDrawWeapAnimHook);
 
 	PrintLog("> JIP hooks initialized successfully.");
 }

@@ -701,6 +701,10 @@ public:
 	float AdjustPushForce(float baseForce);
 	void PushActor(float force, float angle, TESObjectREFR *originRef, bool adjustForce);
 	int GetGroundMaterial();
+	__forceinline void RefreshAnimData()
+	{
+		ThisCall(0x8B0B00, this, 0);
+	}
 };
 
 extern float s_moveAwayDistance;

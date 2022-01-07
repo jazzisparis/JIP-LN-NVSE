@@ -136,6 +136,7 @@ DEFINE_COMMAND_PLUGIN(RemoveAllPerks, 1, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetActorMovementFlags, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitBaseWeaponDamage, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitFatigueDamage, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(RefreshAnimData, 1, 0, NULL);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -1417,37 +1418,40 @@ __declspec(naked) bool Cmd_KillActorAlt_Execute(COMMAND_ARGS)
 bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 {
 	Character *character = (Character*)thisObj;
-	if (!character->IsCharacter()) return true;
-	NiNode *niNode = character->renderState ? character->renderState->niNode14 : nullptr;
-	if (!niNode) return true;
-	ValidBip01Names *bip01Names = character->validBip01Names;
-	if (!bip01Names) return true;
+	if (!character->IsCharacter() || !character->renderState || !character->renderState->niNode14 || !character->validBip01Names)
+		return true;
 	PlayerCharacter *thePlayer = (character->refID == 0x14) ? (PlayerCharacter*)character : nullptr;
+	ValidBip01Names::Data *slotData = character->validBip01Names->slotData;
+	UInt32 slotIdx;
+	NiAVObject *object;
 Do1stPerson:
-	ValidBip01Names::Data *slotData = bip01Names->slotData;
-	UInt32 slotIdx = 20;
+	slotIdx = 0;
 	do
 	{
-		if (slotData->object && slotData->armor && IS_ID(slotData->armor, TESObjectARMO))
+		if ((slotIdx != 6) && (object = slotData->object) && slotData->item)
 		{
-			slotData->object->m_parent->RemoveObject(slotData->object);
+			object->m_parent->RemoveObject(object);
 			slotData->object = nullptr;
 		}
 		slotData++;
 	}
-	while (--slotIdx);
-	ThisCall(0x606540, character->baseForm, character, bip01Names, 0);
-	ThisCall(0x4AC1E0, bip01Names, 0);
-	ThisCall(0xA5A040, niNode);
-	niNode->UpdateWorldBound();
-	niNode->Update();
+	while (++slotIdx < 20);
 	if (thePlayer)
 	{
-		niNode = thePlayer->node1stPerson;
-		bip01Names = thePlayer->VB01N1stPerson;
+		slotData = thePlayer->VB01N1stPerson->slotData;
 		thePlayer = nullptr;
+		TESObjectWEAP *weapon = slotData[5].weapon;
+		if (weapon)
+		{
+			CdeclCall(0x77F270);
+			if (character->EquippedWeaponHasMod(14))
+				CdeclCall(0x77F2F0, &weapon->targetNIF);
+		}
 		goto Do1stPerson;
 	}
+	character->jipActorFlags2 |= kHookActorFlag2_SkipDrawWeapAnim;
+	ThisCall(0x605D70, character->baseForm, character);
+	character->jipActorFlags2 &= ~kHookActorFlag2_SkipDrawWeapAnim;
 	return true;
 }
 
@@ -2456,3 +2460,10 @@ bool Cmd_GetHitFatigueDamage_Execute(COMMAND_ARGS)
 	return true;
 }
 //	===================
+
+bool Cmd_RefreshAnimData_Execute(COMMAND_ARGS)
+{
+	if IS_ACTOR(thisObj)
+		((Actor*)thisObj)->RefreshAnimData();
+	return true;
+}

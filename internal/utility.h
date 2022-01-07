@@ -62,8 +62,17 @@ __forceinline T_Ret CdeclCall(UInt32 _addr, Args ...args)
 
 #define LOG_HOOKS 0
 
+union HexFloat
+{
+	float	f;
+	UInt32	h;
+
+	constexpr HexFloat(const float _f) : f(_f) {}
+	constexpr HexFloat(const UInt32 _h) : h(_h) {}
+};
+
 extern const float kFlt1d1K, kFlt1d100, kFlt1d10, kFlt1d4, kFlt3, kFlt10, kFlt100, kFlt1000;
-extern const UInt32 kPackedValues[];
+extern const HexFloat kPackedValues[];
 extern const char kLwrCaseConverter[], kUprCaseConverter[];
 
 #define kSSERemoveSignMaskPS	kPackedValues

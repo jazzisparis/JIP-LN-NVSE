@@ -118,7 +118,7 @@ __declspec(naked) Tile* __stdcall InjectUIComponent(Tile *parentTile, char *data
 bool Cmd_InjectUIComponent_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char tilePath[0x100], buffer[0x80];
+	char tilePath[0x100], *buffer = GetStrArgBuffer();
 	if (ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_InjectUIComponent.numParams, &tilePath))
 	{
 		Tile *component = GetTargetComponent(tilePath);
@@ -1777,7 +1777,7 @@ bool Cmd_AttachUIXML_Execute(COMMAND_ARGS)
 bool Cmd_AttachUIComponent_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char nodeName[0x40], buffer[0x80];
+	char nodeName[0x40], *buffer = GetStrArgBuffer();
 	if (ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_AttachUIComponent.numParams, &nodeName))
 	{
 		NiNode *targetNode = thisObj->GetNode(nodeName);

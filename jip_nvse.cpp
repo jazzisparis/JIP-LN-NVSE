@@ -1343,6 +1343,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2909*/REG_CMD(GetTranslatedPos);
 	/*290A*/REG_CMD(GetHitBaseWeaponDamage);
 	/*290B*/REG_CMD(GetHitFatigueDamage);
+	//	v56.42
+	/*290C*/REG_CMD(RefreshAnimData);
 
 	//===========================================================
 

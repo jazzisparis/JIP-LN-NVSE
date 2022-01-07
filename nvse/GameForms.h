@@ -2339,10 +2339,8 @@ public:
 		kFlag_SpotLight =		0x200,
 		kFlag_SpotShadow =		0x400,
 		//	JIP Only
-		kFlag_Pulse2 =			0x800,
-		kFlag_Pulse2Slow =		0x1000,
-		kFlag_ColorShift =		0x2000,
-		kFlag_ColorShiftSlow =	0x4000
+		kFlag_ColorShift =		0x800,
+		kFlag_ColorShiftSlow =	0x1000
 	};
 
 	TESFullName					fullName;		// 030
