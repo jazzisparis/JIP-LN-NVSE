@@ -38,7 +38,7 @@ DEFINE_COMMAND_PLUGIN(RefreshItemsList, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetBarterPriceMult, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(SetBarterPriceMult, 0, 2, kParams_OneInt_OneFloat);
 DEFINE_COMMAND_PLUGIN(SetTerminalUIModel, 0, 2, kParams_OneForm_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(ShowQuantityMenu, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(ShowQuantityMenu, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(MessageBoxExAlt, 0, 22, kParams_OneForm_OneFormatString);
 DEFINE_COMMAND_PLUGIN(GetVATSTargets, 0, 0, NULL);
 DEFINE_CMD_COND_PLUGIN(IsInCharGen, 0, 0, NULL);
@@ -1099,9 +1099,9 @@ __declspec(naked) void QuantityMenuCallback(int count)
 bool Cmd_ShowQuantityMenu_Execute(COMMAND_ARGS)
 {
 	Script *callback;
-	int maxCount;
-	if (!QuantityMenu::Get() && !s_quantityMenuScript && ExtractArgsEx(EXTRACT_ARGS_EX, &callback, &maxCount) && 
-		IS_ID(callback, Script) && ShowQuantityMenu(maxCount, QuantityMenuCallback, maxCount))
+	int maxCount, defaultCount = -1;
+	if (!QuantityMenu::Get() && !s_quantityMenuScript && ExtractArgsEx(EXTRACT_ARGS_EX, &callback, &maxCount, &defaultCount) && (maxCount > 0) && IS_ID(callback, Script) && 
+		ShowQuantityMenu(maxCount, QuantityMenuCallback, ((defaultCount < 0) || (defaultCount > maxCount)) ? maxCount : defaultCount))
 	{
 		s_quantityMenuScript = callback;
 		CaptureLambdaVars(callback);
@@ -1637,7 +1637,7 @@ bool Cmd_ToggleHUDCursor_Execute(COMMAND_ARGS)
 bool Cmd_AddTileFromTemplate_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char *buffer = GetStrArgBuffer();
+	char buffer[0x80];
 	if (ExtractFormatStringArgs(0, buffer, EXTRACT_ARGS_EX, kCommandInfo_AddTileFromTemplate.numParams))
 	{
 		char *tempName = GetNextToken(buffer, '|');
@@ -1707,27 +1707,33 @@ bool Cmd_SetUIFloatGradual_Execute(COMMAND_ARGS)
 bool Cmd_CloseActiveMenu_Execute(COMMAND_ARGS)
 {
 	UInt32 closeAll = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &closeAll) && (g_interfaceManager->currentMode > 1))
+	InterfaceManager *intrfcMgr = InterfaceManager::GetSingleton();
+	if ((intrfcMgr->currentMode > 1) && ExtractArgsEx(EXTRACT_ARGS_EX, &closeAll))
 	{
-		UInt32 index = 10, *mnStack = &g_interfaceManager->menuStack[9], menuID;
+		int index = 9;
 		do
 		{
-			menuID = *mnStack--;
+			UInt32 menuID = intrfcMgr->menuStack[index];
 			if (!menuID) continue;
 			if (menuID >= kMenuType_Min)
 			{
 				TileMenu *tileMenu = g_tileMenuArray[menuID - kMenuType_Min];
 				if (tileMenu)
-					tileMenu->Destroy(true);
+				{
+					FORenderedMenu *renderedMenu = intrfcMgr->renderedMenu;
+					if (renderedMenu && (renderedMenu->tileMenu == tileMenu))
+						renderedMenu->Close();
+					else tileMenu->Destroy(true);
+				}
 			}
 			else if (menuID == 1)
 			{
-				g_interfaceManager->pipBoyMode = 4;
-				g_interfaceManager->pipBoyModeCallback = NULL;
+				intrfcMgr->pipBoyMode = 4;
+				intrfcMgr->pipBoyModeCallback = nullptr;
 			}
 			if (!closeAll) break;
 		}
-		while (--index);
+		while (--index >= 0);
 	}
 	return true;
 }

@@ -17,30 +17,18 @@ __declspec(naked) void UpdateTileScales()
 	{
 		mov		eax, s_localMapZoom
 		movss	xmm0, [eax+8]
-		movss	xmm1, kFltHalf
+		movss	xmm1, kVcHalf
 		addss	xmm1, xmm0
 		mov		eax, s_miniMapScale
 		mulss	xmm1, [eax+8]
 		mov		ecx, offset s_localMapShapes
-		movd	edx, xmm1
-		mov		eax, [ecx]
-		mov		[eax+0x64], edx
-		mov		eax, [ecx+4]
-		mov		[eax+0x64], edx
-		mov		eax, [ecx+8]
-		mov		[eax+0x64], edx
-		mov		eax, [ecx+0xC]
-		mov		[eax+0x64], edx
-		mov		eax, [ecx+0x10]
-		mov		[eax+0x64], edx
-		mov		eax, [ecx+0x14]
-		mov		[eax+0x64], edx
-		mov		eax, [ecx+0x18]
-		mov		[eax+0x64], edx
-		mov		eax, [ecx+0x1C]
-		mov		[eax+0x64], edx
-		mov		eax, [ecx+0x20]
-		mov		[eax+0x64], edx
+		mov		edx, 8
+		ALIGN 16
+	iterHead:
+		mov		eax, [ecx+edx*4]
+		movss	[eax+0x64], xmm1
+		dec		dl
+		jns		iterHead
 		mulss	xmm0, kFlt10
 		cvttss2si	eax, xmm0
 		shl		eax, 4
@@ -69,10 +57,10 @@ __declspec(naked) __m128* __fastcall GetNorthRotation(TESObjectCELL *cell)
 		xorps	xmm0, kSSEChangeSignMaskPS0
 		movss	s_cellNorthRotation, xmm0
 		call	GetSinCos
-		pshufd	xmm1, xmm0, 0x41
+		shufps	xmm0, xmm0, 0x14
 		mov		eax, offset s_northRotationMods
-		movaps	[eax], xmm1
-		xor		byte ptr [eax+0xB], 0x80
+		movaps	[eax], xmm0
+		xor		byte ptr [eax+0xF], 0x80
 		retn
 		ALIGN 16
 	noRotation:
@@ -85,27 +73,17 @@ NiCamera *s_localMapCamera = NULL;
 
 __declspec(naked) void __fastcall SetCameraRotation(TESObjectCELL *cell)
 {
+	static const __m128 kNoRotation = {0, 1, 1, 0};
 	__asm
 	{
 		call	GetNorthRotation
 		mov		ecx, s_localMapCamera
+		mov		edx, offset kNoRotation
 		test	eax, eax
-		jz		noRot
-		mov		edx, [eax]
-		mov		[ecx+0x3C], edx
-		mov		[ecx+0x44], edx
-		mov		edx, [eax+4]
-		mov		[ecx+0x38], edx
-		mov		edx, [eax+8]
-		mov		[ecx+0x48], edx
-		retn
-		ALIGN 16
-	noRot:
-		mov		[ecx+0x38], eax
-		mov		[ecx+0x48], eax
-		mov		edx, 0x3F800000
-		mov		[ecx+0x3C], edx
-		mov		[ecx+0x44], edx
+		cmovz	eax, edx
+		movaps	xmm0, [eax]
+		movq	qword ptr [ecx+0x38], xmm0
+		movhps	[ecx+0x44], xmm0
 		retn
 	}
 }
@@ -120,9 +98,8 @@ __declspec(naked) void __fastcall AdjustInteriorPos(TESObjectREFR *refr, NiPoint
 		jz		noRotation
 		unpcklps	xmm0, xmm0
 		mulps	xmm0, s_northRotationMods
-		pxor	xmm1, xmm1
-		movhlps	xmm1, xmm0
-		addps	xmm0, xmm1
+		shufps	xmm0, xmm0, 0x27
+		haddps	xmm0, xmm0
 	noRotation:
 		subps	xmm0, kIntrPosMods
 		movq	qword ptr [edx], xmm0
@@ -185,7 +162,7 @@ __declspec(naked) void __fastcall WorldDimensions::GetPosMods(TESWorldSpace *wor
 		movaps	[ecx+0x10], xmm0
 		cmp		dword ptr [edx], 0x3F800000
 		jz		done
-		movss	xmm1, kFltHalf
+		movss	xmm1, kVcHalf
 		mulss	xmm0, xmm1
 		subss	xmm1, xmm0
 		unpcklps	xmm1, xmm1
@@ -878,7 +855,7 @@ __declspec(naked) SeenData* __fastcall AddExtraSeenData(TESObjectCELL *cell)
 		mov		[eax+0x24], edx
 		mov		[eax+0x28], edx
 	doneData:
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		movups	[eax+4], xmm0
 		movups	[eax+0x14], xmm0
 		push	eax
@@ -918,7 +895,7 @@ __declspec(naked) IntSeenData* __fastcall AddIntSeenData(IntSeenData *seenData, 
 		GAME_HEAP_ALLOC
 		pop		edx
 		mov		dword ptr [eax], kVtbl_IntSeenData
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		movups	[eax+4], xmm0
 		movups	[eax+0x14], xmm0
 		mov		[eax+0x24], dx
@@ -1059,9 +1036,10 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		jz		noRotation
 		unpcklps	xmm0, xmm0
 		mulps	xmm0, s_northRotationMods
-		pxor	xmm1, xmm1
-		movhlps	xmm1, xmm0
-		addps	xmm0, xmm1
+		pshufd	xmm1, xmm0, 0x27
+		xorps	xmm0, xmm0
+		haddps	xmm1, xmm0
+		movq	xmm0, xmm1
 	noRotation:
 		cvtps2dq	xmm0, xmm0
 		movq	qword ptr [ebp-8], xmm0
@@ -1420,7 +1398,7 @@ __declspec(naked) void __stdcall GenerateLocalMapExterior(TESObjectCELL *cell, _
 		mov		ecx, [eax+4]
 		mov		[ebp-8], ecx
 		or		byte ptr [ecx+0x30], 1
-		pxor	xmm1, xmm1
+		xorps	xmm1, xmm1
 		movups	[ebp-0x18], xmm1
 		mov		ecx, [eax+8]
 		mov		eax, [ecx+0xA0]
@@ -1560,11 +1538,9 @@ __declspec(naked) void __stdcall GenerateLocalMapInterior(TESObjectCELL *cell, C
 		cvtdq2ps	xmm0, xmm0
 		cmp		s_cellNorthRotation, 0
 		jz		noRot
-		unpcklps	xmm0, xmm0
-		pshufd	xmm1, s_northRotationMods, 0xD8
-		mulps	xmm0, xmm1
-		movhlps	xmm1, xmm0
-		addps	xmm0, xmm1
+		shufps	xmm0, xmm0, 0x11
+		mulps	xmm0, s_northRotationMods
+		haddps	xmm0, xmm0
 	noRot:
 		mov		eax, [ecx+0xA0]
 		mov		ecx, [eax]
@@ -2301,7 +2277,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					{
 						if ((pntLight = (NiPointLight*)lgtNode->data->light) && (pntLight->effectType == 2))
 						{
-							pntLight->radiusE4 = pntLight->radius;
+							pntLight->radius0E4 = pntLight->radius;
 							pntLight->radius = 0;
 						}
 					}
@@ -2465,7 +2441,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				GameGlobals::SceneLightsLock()->Enter();
 				for (auto lgtNode = g_shadowSceneNode->lgtList0B4.Head(); lgtNode; lgtNode = lgtNode->next)
 					if ((pntLight = (NiPointLight*)lgtNode->data->light) && (pntLight->effectType == 2))
-						pntLight->radius = pntLight->radiusE4;
+						pntLight->radius = pntLight->radius0E4;
 				GameGlobals::SceneLightsLock()->Leave();
 			}
 			else *g_lightingPasses = lightingPasses;

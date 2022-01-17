@@ -64,7 +64,14 @@ __declspec(naked) UInt32 __fastcall StrHashCS(const char *inKey)
 		add		eax, ecx
 		shl		edx, 5
 		add		eax, edx
-		inc		esi
+		mov		cl, [esi+1]
+		test	cl, cl
+		jz		done
+		mov		edx, eax
+		add		eax, ecx
+		shl		edx, 5
+		add		eax, edx
+		add		esi, 2
 		jmp		iterHead
 	done:
 		pop		esi
@@ -92,7 +99,15 @@ __declspec(naked) UInt32 __fastcall StrHashCI(const char *inKey)
 		add		eax, edx
 		movzx	edx, kLwrCaseConverter[ecx]
 		add		eax, edx
-		inc		esi
+		mov		cl, [esi+1]
+		test	cl, cl
+		jz		done
+		mov		edx, eax
+		shl		edx, 5
+		add		eax, edx
+		movzx	edx, kLwrCaseConverter[ecx]
+		add		eax, edx
+		add		esi, 2
 		jmp		iterHead
 	done:
 		pop		esi

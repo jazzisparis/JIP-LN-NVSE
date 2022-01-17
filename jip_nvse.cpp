@@ -81,7 +81,7 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 {
 	info->infoVersion = PluginInfo::kInfoVersion;
 	info->name = "JIP LN NVSE";
-	info->version = JIP_LN_VERSION_MAJ;
+	info->version = JIP_LN_VERSION_INT;
 	if (nvse->isEditor)
 	{
 		//s_log.Create("jip_ln_nvse_editor.log");
@@ -1343,6 +1343,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2909*/REG_CMD(GetTranslatedPos);
 	/*290A*/REG_CMD(GetHitBaseWeaponDamage);
 	/*290B*/REG_CMD(GetHitFatigueDamage);
+	//	v56.42
+	/*290C*/REG_CMD(RefreshAnimData);
 
 	//===========================================================
 
@@ -1517,4 +1519,9 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			break;
 		}
 	}
+}
+
+double GetJIPLNVersion()
+{
+	return JIP_LN_VERSION;
 }

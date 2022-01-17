@@ -347,7 +347,7 @@ public:
 		ExtraDataList *GetEquippedExtra();
 		float __vectorcall GetWeaponModEffectValue(UInt32 effectType);
 		float __vectorcall GetBaseHealth();
-		float GetHealthPercent();
+		float __vectorcall GetHealthPercent();
 		float CalculateWeaponDamage(Actor *owner, float condition, TESForm *ammo);
 	};
 
@@ -899,7 +899,7 @@ public:
 	tList<TESObjectREFR>	children;	// 0C
 };
 
-// 18
+// 20
 class ExtraActivateRef : public BSExtraData
 {
 public:
@@ -910,6 +910,7 @@ public:
 	};
 	tList<parentRef>	parentRefs;
 	UInt32				flags;
+	String              activationPromptOverride;
 };
 
 // 10

@@ -169,6 +169,22 @@ struct ParamInfo
 #define DEFINE_CMD_ALT_COND_PLUGIN(name, altName, refRequired, numParams, paramInfo) \
 	DEFINE_CMD_ALT_COND_ANY(name, altName, refRequired, numParams, paramInfo, NULL)
 
+#define DEFINE_CMD_COND_ONLY(name, refRequired, numParams, paramInfo) \
+	extern bool Cmd_ ## name ## _Eval(COMMAND_ARGS_EVAL); \
+	static CommandInfo (kCommandInfo_ ## name) = { \
+	#name,	\
+	"",		\
+	0,		\
+	"",	\
+	refRequired,	\
+	numParams,	\
+	paramInfo,	\
+	NULL,	\
+	NULL,	\
+	Cmd_ ## name ## _Eval,	\
+	1	\
+	};
+
 typedef bool (* Cmd_Execute)(COMMAND_ARGS);
 bool Cmd_Default_Execute(COMMAND_ARGS);
 

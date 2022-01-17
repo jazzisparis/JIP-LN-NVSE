@@ -25,6 +25,14 @@ __declspec(naked) bool NiControllerSequence::Play()
 	}
 }
 
+NiControllerSequence *NiControllerManager::FindSequence(const char *seqName)
+{
+	for (auto iter = sequences.Begin(); iter; ++iter)
+		if (!StrCompare(iter->sequenceName, seqName))
+			return *iter;
+	return nullptr;
+}
+
 NiTransformController *NiTransformController::Create(NiNode *pTarget, NiTransformInterpolator *pInterpolator)
 {
 	NiTransformController *controller = CdeclCall<NiTransformController*>(0xA36810);
@@ -98,7 +106,7 @@ void NiObjectNET::DumpExtraData()
 	s_debug.Outdent();
 }
 
-void NiMaterialProperty::SetTraitValue(UInt32 traitID, float value)
+void __vectorcall NiMaterialProperty::SetTraitValue(UInt32 traitID, float value)
 {
 	switch (traitID)
 	{
@@ -298,7 +306,7 @@ __declspec(naked) NiNode *NiNode::CreateCopy()
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x68]
 		and		byte ptr [esi+0x30], 0xFE
-		movss	xmm0, kFltOne
+		movss	xmm0, kVcOne
 		movups	[esi+0x34], xmm0
 		movups	[esi+0x44], xmm0
 		movups	[esi+0x54], xmm0
@@ -409,7 +417,7 @@ bool NiNode::IsMovable()
 		if (hWorldObj)
 		{
 			UInt8 motionType = ((hkpRigidBody*)hWorldObj->refObject)->motion.type;
-			if ((motionType == 2) || (motionType == 3) || (motionType == 6))
+			if ((motionType <= 3) || (motionType == 6))
 				return true;
 		}
 	}
@@ -571,6 +579,36 @@ __declspec(naked) void NiNode::ApplyForce(NiVector4 *forceVector)
 		pop		esi
 	done:
 		retn	4
+	}
+}
+
+__declspec(naked) bool __fastcall NiPick::GetResults(NiCamera *camera)
+{
+	__asm
+	{
+		push	ebp
+		mov		ebp, esp
+		push	ecx
+		sub		esp, 0x18
+		mov		ecx, edx
+		lea		edx, [ebp-0x1C]
+		lea		eax, [ebp-0x10]
+		push	0
+		push	edx
+		push	eax
+		push	0
+		push	edx
+		push	eax
+		mov		eax, g_interfaceManager
+		cvttss2si	edx, [eax+0x40]
+		push	edx
+		cvttss2si	edx, [eax+0x38]
+		push	edx
+		CALL_EAX(0xA71080)
+		mov		ecx, [ebp-4]
+		CALL_EAX(0xE98E20)
+		leave
+		retn
 	}
 }
 

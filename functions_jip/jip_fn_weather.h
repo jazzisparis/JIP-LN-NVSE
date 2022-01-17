@@ -93,13 +93,13 @@ bool Cmd_GetWeatherTraitNumeric_Execute(COMMAND_ARGS)
 		case 1:
 		case 2:
 		case 3:
-			*result = weather->cloudSpeed[traitID] / 2550.0;
+			*result = weather->cloudSpeed[traitID] * (1 / 2550.0);
 			break;
 		case 4:
-			*result = weather->windSpeed / 255.0;
+			*result = weather->windSpeed * (1 / 255.0);
 			break;
 		case 5:
-			*result = weather->transDelta / 1000.0;
+			*result = weather->transDelta * 0.001;
 			break;
 		case 6:
 		case 7:
@@ -108,13 +108,13 @@ bool Cmd_GetWeatherTraitNumeric_Execute(COMMAND_ARGS)
 		case 10:
 		case 11:
 		case 12:
-			*result = ((UInt8*)weather)[0xDE + traitID] / 255.0;
+			*result = ((UInt8*)weather)[0xDE + traitID] * (1 / 255.0);
 			break;
 		case 13:
 			*result = weather->weatherClassification;
 			break;
 		case 14:
-			*result = RGBHexToDec(weather->lightningColor);
+			cvtui2d(RGBHexToDec(weather->lightningColor), result);
 			break;
 		default:
 			*result = weather->fogDistance[traitID - 15];
@@ -175,9 +175,9 @@ bool Cmd_GetWeatherRGBColor_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &type, &time, &layer) && (type <= 9) && (time <= 5))
 	{
 		if (type != 2)
-			*result = RGBHexToDec(weather->colors[type][time]);
+			cvtui2d(RGBHexToDec(weather->colors[type][time]), result);
 		else if (layer <= 3)
-			*result = RGBHexToDec(weather->cloudColor[layer][time]);
+			cvtui2d(RGBHexToDec(weather->cloudColor[layer][time]), result);
 	}
 	return true;
 }
@@ -220,7 +220,7 @@ bool Cmd_GetWindDirection_Execute(COMMAND_ARGS)
 {
 	if (g_TES->sky)
 	{
-		*result = g_TES->sky->windDirection * -kDbl180dPI;
+		*result = g_TES->sky->windDirection * -Dbl180dPI;
 		DoConsolePrint(result);
 	}
 	else *result = 0;
@@ -231,7 +231,7 @@ bool Cmd_SetWindDirection_Execute(COMMAND_ARGS)
 {
 	float windDirection;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &windDirection) && g_TES->sky)
-		g_TES->sky->windDirection = windDirection * -kFltPId180;
+		g_TES->sky->windDirection = windDirection * -FltPId180;
 	return true;
 }
 
@@ -239,7 +239,7 @@ bool Cmd_SetWindSpeedMult_Execute(COMMAND_ARGS)
 {
 	double speedMult;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &speedMult))
-		s_windSpeedMult = speedMult / 255.0;
+		s_windSpeedMult = speedMult * (1 / 255.0);
 	return true;
 }
 
@@ -255,7 +255,7 @@ bool Cmd_ResetClouds_Execute(COMMAND_ARGS)
 {
 	__asm
 	{
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		movups	ds:[0x11FF8B4], xmm0
 	}
 	return true;

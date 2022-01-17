@@ -119,7 +119,7 @@ bool Cmd_GetBodyPartTraitNumeric_Execute(COMMAND_ARGS)
 		*result = bodyPart->goreEffTranslate[traitID - 13];
 		break;
 	default:
-		*result = bodyPart->goreEffRotation[traitID - 16] * kDbl180dPI;
+		*result = bodyPart->goreEffRotation[traitID - 16] * Dbl180dPI;
 	}
 	return true;
 }
@@ -180,7 +180,7 @@ bool Cmd_SetBodyPartTraitNumeric_Execute(COMMAND_ARGS)
 		bodyPart->goreEffTranslate[traitID - 13] = val;
 		break;
 	default:
-		bodyPart->goreEffRotation[traitID - 16] = val * kFltPId180;
+		bodyPart->goreEffRotation[traitID - 16] = val * FltPId180;
 	}
 	return true;
 }
@@ -303,7 +303,8 @@ bool Cmd_GetBodyPartFlag_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSBodyPartData *bpData;
 	UInt32 partID, flagID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &flagID) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14) || (flagID > 6)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &flagID) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14) || (flagID > 7))
+		return true;
 	BGSBodyPart *bodyPart = bpData->bodyParts[partID];
 	if (bodyPart) *result = (bodyPart->flags & (1 << flagID)) ? 1 : 0;
 	return true;
@@ -313,7 +314,8 @@ bool Cmd_SetBodyPartFlag_Execute(COMMAND_ARGS)
 {
 	BGSBodyPartData *bpData;
 	UInt32 partID, flagID, val;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &flagID, &val) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14) || (flagID > 6)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &flagID, &val) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14) || (flagID > 7))
+		return true;
 	BGSBodyPart *bodyPart = bpData->bodyParts[partID];
 	if (bodyPart) bodyPart->SetFlag(1 << flagID, val != 0);
 	return true;

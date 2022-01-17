@@ -81,7 +81,7 @@ DEFINE_COMMAND_PLUGIN(GetPosEx, 1, 3, kParams_ThreeScriptVars);
 DEFINE_COMMAND_PLUGIN(GetAngleEx, 1, 4, kParams_ThreeScriptVars_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetTextureTransformKey, 1, 4, kParams_OneString_TwoInts_OneFloat);
 DEFINE_COMMAND_PLUGIN(AttachExtraCamera, 1, 3, kParams_OneString_OneInt_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(ProjectExtraCamera, 0, 4, kParams_TwoStrings_OneDouble_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(ProjectExtraCamera, 0, 4, kParams_TwoStrings_OneFloat_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(RenameNifBlock, 1, 3, kParams_TwoStrings_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(RemoveNifBlock, 1, 2, kParams_OneString_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(PlayAnimSequence, 1, 2, kParams_OneString_OneOptionalString);
@@ -222,8 +222,8 @@ bool Cmd_SetPrimitiveBound_Execute(COMMAND_ARGS)
 	BGSPrimitive *primitive = xPrimitive->primitive;
 	axis -= 'X';
 	*result = primitive->bounds[axis] * 2;
-	if (primitive->type == 2) primitive->bounds[2] = primitive->bounds[1] = primitive->bounds[0] = val / 2;
-	else primitive->bounds[axis] = val / 2;
+	if (primitive->type == 2) primitive->bounds[2] = primitive->bounds[1] = primitive->bounds[0] = val * 0.5F;
+	else primitive->bounds[axis] = val * 0.5F;
 	thisObj->Update3D();
 	return true;
 }
@@ -244,12 +244,12 @@ bool Cmd_AddPrimitive_Execute(COMMAND_ARGS)
 		MemZero(primitive, size);
 		*(UInt32*)primitive = (type == 1) ? kVtbl_BGSPrimitiveBox : ((type == 2) ? kVtbl_BGSPrimitiveSphere : kVtbl_BGSPrimitivePlane);
 		primitive->type = type;
-		primitive->bounds[0] = boundX / 2;
-		if (type == 2) primitive->bounds[2] = primitive->bounds[1] = boundX / 2;
+		primitive->bounds[0] = boundX * 0.5F;
+		if (type == 2) primitive->bounds[2] = primitive->bounds[1] = boundX * 0.5F;
 		else
 		{
-			primitive->bounds[1] = (type == 1) ? (boundY / 2) : 1;
-			primitive->bounds[2] = boundZ / 2;
+			primitive->bounds[1] = (type == 1) ? (boundY * 0.5F) : 1;
+			primitive->bounds[2] = boundZ * 0.5F;
 		}
 		xPrimitive->primitive = primitive;
 		thisObj->Update3D();
@@ -297,7 +297,7 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 resetRot = 0;
-	if (NUM_ARGS)
+	if (NUM_ARGS_EX)
 		ExtractArgsEx(EXTRACT_ARGS_EX, &resetRot);
 	TESObjectCELL *cell;
 	NiVector3 *posVector;
@@ -311,7 +311,7 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 		{
 			rotVector.x = 0;
 			rotVector.y = 0;
-			rotVector.z = actor->startingZRot * kFlt180dPI;
+			rotVector.z = actor->startingZRot * Flt180dPI;
 		}
 	}
 	else
@@ -324,7 +324,7 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 		if (resetRot)
 		{
 			rotVector = xStartingPos->rotVector;
-			rotVector *= kFlt180dPI;
+			rotVector *= Flt180dPI;
 		}
 	}
 	if (!cell) return true;
@@ -361,7 +361,7 @@ bool Cmd_GetCenterPos_Execute(COMMAND_ARGS)
 		{
 			TESBoundObject *object = DYNAMIC_CAST(thisObj->baseForm, TESForm, TESBoundObject);
 			if (object)
-				*result += (object->bounds[axis] + object->bounds[axis + 3]) * thisObj->scale / 2;
+				*result += (object->bounds[axis] + object->bounds[axis + 3]) * thisObj->scale * 0.5F;
 		}
 	}
 	else *result = 0;
@@ -784,18 +784,15 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 		{
 			NiCamera *camera = g_sceneGraph->camera;
 			NiVector4 coords;
-			NiVector3 *pCoords = (NiVector3*)&coords;
-			if (!pCoords->RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), maxRange))
+			if (!((NiVector3*)&coords)->RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), maxRange))
 			{
 				if (!translate) return true;
-				coords.x = (maxRange < 4096.0F) ? maxRange : 4096.0F;
-				coords.y = 0;
-				coords.z = 0;
+				coords = NiVector4((maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0, 0);
 				camera->m_transformWorld.GetTranslatedPos(&coords);
 			}
 			if (numArgs > 1)
 				coords += posMods;
-			thisObj->MoveToCell(cell, pCoords);
+			thisObj->MoveToCell(cell, coords);
 			*result = 1;
 		}
 	}
@@ -1057,6 +1054,18 @@ bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 		{
 			niBlock->LocalTranslate() = transltn;
 			niBlock->Update();
+			__asm
+			{
+				mov		ecx, niBlock
+				cmp		dword ptr [ecx], kVtbl_NiPointLight
+				jnz		done
+				test	byte ptr [ecx+0x9F], 1
+				jz		done
+				movups	xmm0, [ecx+0x54]
+				psrldq	xmm0, 4
+				movups	[ecx+0x100], xmm0
+			done:
+			}
 		}
 	}
 	return true;
@@ -1077,7 +1086,7 @@ bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 			if (!(getMode & 2))
 				rotMat.ExtractAngles(rot);
 			else rotMat.ExtractAnglesInv(rot);
-			ArrayElementL elements[3] = {rot.x * kDbl180dPI, rot.y * kDbl180dPI, rot.z * kDbl180dPI};
+			ArrayElementL elements[3] = {rot.x * Dbl180dPI, rot.y * Dbl180dPI, rot.z * Dbl180dPI};
 			AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
 		}
 	}
@@ -1094,7 +1103,7 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
-			rot *= kFltPId180;
+			rot *= FltPId180;
 			if (!transform)
 				niBlock->LocalRotate().RotationMatrix(rot);
 			else if (transform == 1)
@@ -1277,7 +1286,7 @@ bool Cmd_GetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 			NiControllerManager *ctrlMgr = (NiControllerManager*)rootNode->m_controller;
 			if (ctrlMgr && IS_TYPE(ctrlMgr, NiControllerManager))
 			{
-				NiControllerSequence *sequence = ctrlMgr->seqStrMap.Lookup(seqName);
+				NiControllerSequence *sequence = ctrlMgr->FindSequence(seqName);
 				if (sequence) *result = sequence->frequency;
 			}
 		}
@@ -1302,7 +1311,7 @@ bool Cmd_SetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 						iter->frequency = frequency;
 				else
 				{
-					NiControllerSequence *sequence = ctrlMgr->seqStrMap.Lookup(seqName);
+					NiControllerSequence *sequence = ctrlMgr->FindSequence(seqName);
 					if (sequence) sequence->frequency = frequency;
 				}
 			}
@@ -1568,12 +1577,13 @@ bool Cmd_SetLinearVelocity_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *dataStr, UInt32 doInsert, UInt32 flag)
+bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 {
 	static char meshesPath[0x80] = "data\\meshes\\";
 	TESObjectREFR *refr = IS_REFERENCE(form) ? (TESObjectREFR*)form : NULL;
 	NiNode *rootNode = (refr && refr->renderState) ? refr->renderState->niNode14 : NULL;
 	bool result = false, modifyMap = true;
+	char doInsert = *inData;
 	if (refr)
 	{
 		if ((refr->modIndex == 0xFF) || kInventoryType[refr->baseForm->typeID])
@@ -1586,16 +1596,17 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *dataStr, UInt
 	else if (!form->IsBoundObject())
 		goto freeDataStr;
 
-	char *nodeName = NULL, *objectName = FindChr(dataStr, '|'), *suffix;
+	char *pInData = inData + 2, *nodeName = NULL, *objectName = FindChr(pInData, '|'), *suffix;
 	if (objectName)
 	{
 		*objectName++ = 0;
-		nodeName = dataStr;
+		nodeName = pInData;
 	}
-	else objectName = dataStr;
+	else objectName = pInData;
 
 	if (!*objectName) goto freeDataStr;
 
+	UInt8 flag = ((UInt8*)inData)[1];
 	bool insertNode = flag == kHookFormFlag6_InsertNode;
 	auto formsMap = insertNode ? &s_insertNodeMap : &s_attachModelMap;
 
@@ -1640,7 +1651,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *dataStr, UInt
 				else if ((rootNode = DoAttachModel(targetObj, objectName, pDataStr, rootNode)) && (rootNode->m_flags & 0x20000000))
 					AddPointLights(rootNode);
 			}
-			if ((refr->refID == 0x14) && (rootNode = g_thePlayer->node1stPerson))
+			if (rootNode = s_pc1stPersonNode)
 			{
 				targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName);
 				if (targetObj)
@@ -1665,7 +1676,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *dataStr, UInt
 			NiAVObject *object = rootNode->GetBlockByName(findData());
 			if (object)
 				object->m_parent->RemoveObject(object);
-			if ((refr->refID == 0x14) && (rootNode = g_thePlayer->node1stPerson))
+			if (rootNode = s_pc1stPersonNode)
 			{
 				object = rootNode->GetBlockByName(findData());
 				if (object)
@@ -1686,7 +1697,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *dataStr, UInt
 	s_insertObjects = !s_insertNodeMap.Empty() || !s_attachModelMap.Empty();
 	result = true;
 freeDataStr:
-	free(dataStr);
+	Pool_Free(inData, 0x80);
 	return result;
 }
 
@@ -1694,15 +1705,15 @@ bool Cmd_InsertNode_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form;
-	UInt32 doInsert;
-	char *buffer = GetStrArgBuffer();
-	if (ExtractFormatStringArgs(2, buffer, EXTRACT_ARGS_EX, kCommandInfo_InsertNode.numParams, &form, &doInsert))
+	char *dataStr = (char*)Pool_Alloc(0x80);
+	if (ExtractFormatStringArgs(2, dataStr + 2, EXTRACT_ARGS_EX, kCommandInfo_InsertNode.numParams, &form, dataStr))
 	{
-		char *dataStr = CopyString(buffer);
-		if (!(doInsert & 2) || IsInMainThread())
-			*result = RegisterInsertObject(form, 0, dataStr, doInsert, kHookFormFlag6_InsertNode);
-		else MainLoopAddCallbackArgs(RegisterInsertObject, form, 3, dataStr, doInsert, kHookFormFlag6_InsertNode);
+		((UInt8*)dataStr)[1] = kHookFormFlag6_InsertNode;
+		if (!(*dataStr & 2) || IsInMainThread())
+			*result = RegisterInsertObject(form, 0, dataStr);
+		else MainLoopAddCallbackArgs(RegisterInsertObject, form, 1, dataStr);
 	}
+	else Pool_Free(dataStr, 0x80);
 	return true;
 }
 
@@ -1710,15 +1721,15 @@ bool Cmd_AttachModel_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form;
-	UInt32 doInsert;
-	char *buffer = GetStrArgBuffer();
-	if (ExtractFormatStringArgs(2, buffer, EXTRACT_ARGS_EX, kCommandInfo_AttachModel.numParams, &form, &doInsert))
+	char *dataStr = (char*)Pool_Alloc(0x80);
+	if (ExtractFormatStringArgs(2, dataStr + 2, EXTRACT_ARGS_EX, kCommandInfo_AttachModel.numParams, &form, dataStr))
 	{
-		char *dataStr = CopyString(buffer);
-		if (!(doInsert & 2) || IsInMainThread())
-			*result = RegisterInsertObject(form, 0, dataStr, doInsert, kHookFormFlag6_AttachModel);
-		else MainLoopAddCallbackArgs(RegisterInsertObject, form, 3, dataStr, doInsert, kHookFormFlag6_AttachModel);
+		((UInt8*)dataStr)[1] = kHookFormFlag6_AttachModel;
+		if (!(*dataStr & 2) || IsInMainThread())
+			*result = RegisterInsertObject(form, 0, dataStr);
+		else MainLoopAddCallbackArgs(RegisterInsertObject, form, 1, dataStr);
 	}
+	else Pool_Free(dataStr, 0x80);
 	return true;
 }
 
@@ -1761,8 +1772,8 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 
 bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 {
-	char *buffer = GetStrArgBuffer();
-	*buffer = '^';
+	char buffer[0x80];
+	buffer[0] = '^';
 	TESForm *form;
 	if (ExtractFormatStringArgs(1, buffer + 1, EXTRACT_ARGS_EX, kCommandInfo_ModelHasBlock.numParams, &form))
 	{
@@ -1965,13 +1976,13 @@ bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 		NiVector3 *rotPtr = &thisObj->rotation, locRot;
 		if (getLocal)
 		{
-			NiNode *rootNode = thisObj->GetNiNode();
+			NiNode *rootNode = thisObj->renderState ? thisObj->renderState->niNode14 : nullptr;
 			if (rootNode)
 				rotPtr = rootNode->WorldRotate().ExtractAnglesInv(locRot);
 		}
-		outX->data.num = rotPtr->x * kDbl180dPI;
-		outY->data.num = rotPtr->y * kDbl180dPI;
-		outZ->data.num = rotPtr->z * kDbl180dPI;
+		outX->data.num = rotPtr->x * Dbl180dPI;
+		outY->data.num = rotPtr->y * Dbl180dPI;
+		outZ->data.num = rotPtr->z * Dbl180dPI;
 	}
 	return true;
 }
@@ -2107,7 +2118,7 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char camName[0x40], nodeName[0x40];
-	double fov;
+	float fov;
 	UInt32 pixelSize = 0x100;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &camName, &nodeName, &fov, &pixelSize))
 	{
@@ -2133,7 +2144,7 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 			}
 			if (pTexture)
 			{
-				float w = tan(fov * kDblPId180) / 1.5;
+				float w = Tan(fov * FltPId180) * (1 / 1.5F);
 				xCamera->frustum.viewPort = {-w, w, w, -w};
 				s_projectPixelSize = pixelSize;
 				ProjectExtraCamera(xCamera, pTexture);
@@ -2181,7 +2192,7 @@ bool Cmd_RemoveNifBlock_Execute(COMMAND_ARGS)
 bool Cmd_PlayAnimSequence_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char sequenceName[0x40], nodeName[0x40];
+	char sequenceName[0x60], nodeName[0x40];
 	nodeName[0] = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sequenceName, &nodeName))
 	{
@@ -2191,7 +2202,7 @@ bool Cmd_PlayAnimSequence_Execute(COMMAND_ARGS)
 			NiControllerManager *ctrlMgr = (NiControllerManager*)targetNode->m_controller;
 			if (ctrlMgr && IS_TYPE(ctrlMgr, NiControllerManager))
 			{
-				NiControllerSequence *sequence = ctrlMgr->seqStrMap.Lookup(sequenceName);
+				NiControllerSequence *sequence = ctrlMgr->FindSequence(sequenceName);
 				if (sequence)
 				{
 					for (auto iter = ctrlMgr->sequences.Begin(); iter; ++iter)
@@ -2199,7 +2210,7 @@ bool Cmd_PlayAnimSequence_Execute(COMMAND_ARGS)
 							iter->Unk_23(0, 0);
 					if (sequence->Play())
 					{
-						thisObj->Unk_32(1);
+						//thisObj->Unk_32(1);
 						thisObj->MarkAsModified(0x10000000);
 						*result = 1;
 					}

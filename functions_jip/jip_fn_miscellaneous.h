@@ -34,8 +34,8 @@ DEFINE_COMMAND_PLUGIN(SetOnKeyDownEventHandler, 0, 3, kParams_OneForm_OneInt_One
 DEFINE_COMMAND_PLUGIN(SetOnKeyUpEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetOnControlDownEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetOnControlUpEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetReticlePos, 0, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetReticleRange, 0, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetReticlePos, 0, 2, kParams_OneOptionalInt_OneOptionalFloat);
+DEFINE_COMMAND_PLUGIN(GetReticleRange, 0, 2, kParams_OneOptionalInt_OneOptionalFloat);
 DEFINE_COMMAND_PLUGIN(SetOnDialogTopicEventHandler, 0, 3, kParams_OneForm_OneInt_OneForm);
 DEFINE_COMMAND_PLUGIN(GetGameDaysPassed, 0, 3, kParams_ThreeOptionalInts);
 DEFINE_CMD_COND_PLUGIN(IsPCInCombat, 0, 0, NULL);
@@ -94,9 +94,10 @@ bool Cmd_EnableNavMeshAlt_Execute(COMMAND_ARGS)
 
 bool Cmd_GetTerrainHeight_Execute(COMMAND_ARGS)
 {
-	float posXY[2], tempRes = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posXY[0], &posXY[1]))
-		g_TES->GetTerrainHeight(posXY, &tempRes);
+	NiPoint2 posXY;
+	float tempRes = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posXY.x, &posXY.y))
+		g_TES->GetTerrainHeight(&posXY, &tempRes);
 	*result = tempRes;
 	return true;
 }
@@ -533,36 +534,50 @@ __declspec(naked) bool Cmd_SetOnControlUpEventHandler_Execute(COMMAND_ARGS)
 
 bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 {
-	UInt32 filter = 6;
-	if (NUM_ARGS)
-	{
-		ExtractArgsEx(EXTRACT_ARGS_EX, &filter);
-		filter &= 0x3F;
-	}
+	*result = 0;
+	if (!g_thePlayer->parentCell)
+		return true;
+	int filter = -1;
+	float maxRange = 50000.0F;
+	UInt8 numArgs = NUM_ARGS_EX;
+	if (numArgs && !ExtractArgsEx(EXTRACT_ARGS_EX, &filter, &maxRange))
+		return true;
+	if (filter < 0) filter = 6;
+	else filter &= 0x3F;
 	NiCamera *camera = g_sceneGraph->camera;
-	NiVector3 coords;
-	if (coords.RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), 50000.0F, 0, filter))
+	NiVector4 coords;
+	if (!((NiVector3*)&coords)->RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), maxRange, 0, filter))
 	{
-		ArrayElementL elements[3] = {coords.x, coords.y, coords.z};
-		AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
+		if (numArgs < 2) return true;
+		coords = NiVector4((maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0, 0);
+		camera->m_transformWorld.GetTranslatedPos(&coords);
 	}
-	else *result = 0;
+	ArrayElementL elements[3] = {coords.x, coords.y, coords.z};
+	AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
 	return true;
 }
 
 bool Cmd_GetReticleRange_Execute(COMMAND_ARGS)
 {
-	UInt32 filter = 6;
-	if (NUM_ARGS)
-	{
-		ExtractArgsEx(EXTRACT_ARGS_EX, &filter);
-		filter &= 0x3F;
-	}
+	*result = -1;
+	if (!g_thePlayer->parentCell)
+		return true;
+	int filter = -1;
+	float maxRange = 50000.0F;
+	UInt8 numArgs = NUM_ARGS_EX;
+	if (numArgs && !ExtractArgsEx(EXTRACT_ARGS_EX, &filter, &maxRange))
+		return true;
+	if (filter < 0) filter = 6;
+	else filter &= 0x3F;
 	NiCamera *camera = g_sceneGraph->camera;
-	NiVector3 coords;
-	if (coords.RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), 50000.0F, 0, filter))
-		*result = Point3Distance(&coords, &camera->WorldTranslate());
-	else *result = -1;
+	NiVector4 coords;
+	if (!((NiVector3*)&coords)->RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), maxRange, 0, filter))
+	{
+		if (numArgs < 2) return true;
+		coords = NiVector4((maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0, 0);
+		camera->m_transformWorld.GetTranslatedPos(&coords);
+	}
+	*result = Point3Distance(coords, &g_thePlayer->position);
 	return true;
 }
 
@@ -780,7 +795,7 @@ bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 		while (++startIdx < 9);
 		if (rotationKeys)
 		{
-			rotYPR *= kFltPId180;
+			rotYPR *= FltPId180;
 			NiQuaternion quaternion = rotYPR;
 			rotationKeys[1].value = quaternion;
 			rotationKeys[1].quaternion20 = quaternion;
@@ -1196,8 +1211,8 @@ bool Cmd_GetCameraMovement_Execute(COMMAND_ARGS)
 			double fMovY = iMovY * mouseSensitivity;
 			if (controller)
 			{
-				fMovX /= 1500;
-				fMovY /= -1500;
+				fMovX *= 1 / 1500.0;
+				fMovY *= -1 / 1500.0;
 			}
 			outX->data.num = fMovX;
 			outY->data.num = fMovY;
@@ -1252,9 +1267,9 @@ bool Cmd_GetPointRayCastPos_Execute(COMMAND_ARGS)
 	UInt32 filter = 6;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pos.x, &pos.y, &pos.z, &rot.x, &rot.z, &outX, &outY, &outZ, &filter))
 	{
-		rot.x *= kFltPId180;
+		rot.x *= FltPId180;
 		rot.y = 0;
-		rot.z *= kFltPId180;
+		rot.z *= FltPId180;
 		NiMatrix33 rotMat;
 		rotMat.RotationMatrixInv(rot);
 		if (rot.RayCastCoords(&pos, &rotMat, 100000.0F, 4, filter & 0x3F))

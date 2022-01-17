@@ -136,6 +136,7 @@ DEFINE_COMMAND_PLUGIN(RemoveAllPerks, 1, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetActorMovementFlags, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitBaseWeaponDamage, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitFatigueDamage, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(RefreshAnimData, 1, 0, NULL);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -251,7 +252,7 @@ bool Cmd_GetActorLevelingData_Execute(COMMAND_ARGS)
 	}
 	if (valID == 1) *result = actorBase->baseData.calcMin;
 	else if (valID == 2) *result = actorBase->baseData.calcMax;
-	else if (actorBase->baseData.flags & 0x80) *result = actorBase->baseData.level / 1000.0;
+	else if (actorBase->baseData.flags & 0x80) *result = actorBase->baseData.level * 0.001;
 	else *result = actorBase->baseData.level;
 	return true;
 }
@@ -1417,31 +1418,40 @@ __declspec(naked) bool Cmd_KillActorAlt_Execute(COMMAND_ARGS)
 bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 {
 	Character *character = (Character*)thisObj;
-	if (character->IsCharacter() && character->GetNiNode() && character->validBip01Names)
+	if (!character->IsCharacter() || !character->renderState || !character->renderState->niNode14 || !character->validBip01Names)
+		return true;
+	PlayerCharacter *thePlayer = (character->refID == 0x14) ? (PlayerCharacter*)character : nullptr;
+	ValidBip01Names::Data *slotData = character->validBip01Names->slotData;
+	UInt32 slotIdx;
+	NiAVObject *object;
+Do1stPerson:
+	slotIdx = 0;
+	do
 	{
-		bool isPlayer = character->refID == 0x14;
-		ValidBip01Names::Data *slotData = character->validBip01Names->slotData;
-		UInt32 slotIdx;
-	Do1stPerson:
-		slotIdx = 20;
-		do
+		if ((slotIdx != 6) && (object = slotData->object) && slotData->item)
 		{
-			if ((slotIdx != 14) && slotData->armor && IS_ID(slotData->armor, TESObjectARMO) && slotData->object)
-			{
-				slotData->object->m_parent->RemoveObject(slotData->object);
-				slotData->object = NULL;
-			}
-			slotData++;
+			object->m_parent->RemoveObject(object);
+			slotData->object = nullptr;
 		}
-		while (--slotIdx);
-		if (isPlayer)
-		{
-			isPlayer = false;
-			slotData = g_thePlayer->VB01N1stPerson->slotData;
-			goto Do1stPerson;
-		}
-		ThisCall(0x605D70, character->baseForm, character);
+		slotData++;
 	}
+	while (++slotIdx < 20);
+	if (thePlayer)
+	{
+		slotData = thePlayer->VB01N1stPerson->slotData;
+		thePlayer = nullptr;
+		TESObjectWEAP *weapon = slotData[5].weapon;
+		if (weapon)
+		{
+			CdeclCall(0x77F270);
+			if (character->EquippedWeaponHasMod(14))
+				CdeclCall(0x77F2F0, &weapon->targetNIF);
+		}
+		goto Do1stPerson;
+	}
+	character->jipActorFlags2 |= kHookActorFlag2_SkipDrawWeapAnim;
+	ThisCall(0x605D70, character->baseForm, character);
+	character->jipActorFlags2 &= ~kHookActorFlag2_SkipDrawWeapAnim;
 	return true;
 }
 
@@ -1457,16 +1467,24 @@ bool Cmd_GetPlayedIdle_Execute(COMMAND_ARGS)
 	return true;
 }
 
+bool __fastcall IsIdlePlaying(TESObjectREFR *thisObj, TESIdleForm *idleAnim)
+{
+	AnimData *animData = thisObj->GetAnimData();
+	return animData && (animData->GetPlayedIdle() == idleAnim);
+}
+
 bool Cmd_IsIdlePlayingEx_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESIdleForm *idleAnim;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim))
-	{
-		AnimData *animData = thisObj->GetAnimData();
-		if (animData && (animData->GetPlayedIdle() == idleAnim))
-			*result = 1;
-	}
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim) && IsIdlePlaying(thisObj, idleAnim))
+		*result = 1;
+	else *result = 0;
+	return true;
+}
+
+bool Cmd_IsIdlePlayingEx_Eval(COMMAND_ARGS_EVAL)
+{
+	*result = IsIdlePlaying(thisObj, (TESIdleForm*)arg1);
 	return true;
 }
 
@@ -2132,7 +2150,7 @@ bool Cmd_GetActorTiltAngle_Execute(COMMAND_ARGS)
 	{
 		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 		if (charCtrl)
-			*result = ((axis == 'X') ? charCtrl->tiltAngleX : charCtrl->tiltAngleY) * kDbl180dPI;
+			*result = ((axis == 'X') ? charCtrl->tiltAngleX : charCtrl->tiltAngleY) * Dbl180dPI;
 	}
 	return true;
 }
@@ -2146,7 +2164,7 @@ bool Cmd_SetActorTiltAngle_Execute(COMMAND_ARGS)
 		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 		if (charCtrl)
 		{
-			angle *= kFltPId180;
+			angle *= FltPId180;
 			if (axis == 'X')
 				charCtrl->tiltAngleX = angle;
 			else charCtrl->tiltAngleY = angle;
@@ -2442,3 +2460,10 @@ bool Cmd_GetHitFatigueDamage_Execute(COMMAND_ARGS)
 	return true;
 }
 //	===================
+
+bool Cmd_RefreshAnimData_Execute(COMMAND_ARGS)
+{
+	if IS_ACTOR(thisObj)
+		((Actor*)thisObj)->RefreshAnimData();
+	return true;
+}

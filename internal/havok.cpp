@@ -1,90 +1,127 @@
 #include "internal/havok.h"
 
+__declspec(naked) hkQuaternion* __fastcall hkQuaternion::FromEulerYPR(const NiVector3 &ypr)
+{
+	__asm
+	{
+		mov		eax, offset kVcPI
+		movups	xmm0, [edx]
+		movaps	xmm1, [eax]
+		cmpps	xmm1, xmm0, 1
+		andps	xmm1, [eax+0x10]
+		subps	xmm0, xmm1
+		mulps	xmm0, [eax+0x20]
+		call	GetSinCosV3
+		movaps	xmm2, xmm0
+		movlhps	xmm2, xmm1
+		shufps	xmm2, xmm2, 0xD7
+		movaps	xmm3, xmm0
+		movhlps	xmm3, xmm1
+		shufps	xmm3, xmm3, 0x88
+		movaps	xmm4, xmm1
+		movlhps	xmm4, xmm0
+		pshufd	xmm0, xmm4, 0xA2
+		shufps	xmm4, xmm4, 8
+		movaps	xmm5, xmm3
+		mulps	xmm5, xmm2
+		pshufd	xmm3, xmm5, 0xE0
+		mulps	xmm3, xmm4
+		pshufd	xmm6, xmm5, 0xB5
+		mulps	xmm0, xmm6
+		xorps	xmm0, kSSEChangeSignMaskPD
+		addps	xmm0, xmm3
+		shufps	xmm0, xmm0, 0x39
+		movaps	[ecx], xmm0
+		mov		eax, ecx
+		retn
+	}
+}
+
 __declspec(naked) hkQuaternion* __fastcall hkQuaternion::FromRotationMatrix(const NiMatrix33 &mat)
 {
 	__asm
 	{
-		movss	xmm0, [edx]
-		movss	xmm1, [edx+0x10]
+		movss	xmm1, [edx]
+		movss	xmm0, [edx+0x10]
 		movss	xmm2, [edx+0x20]
-		movss	xmm3, xmm0
-		addss	xmm3, xmm1
+		movss	xmm3, xmm1
+		addss	xmm3, xmm0
 		addss	xmm3, xmm2
-		movss	xmm4, kFltOne
-		movss	xmm5, xmm4
-		pxor	xmm6, xmm6
-		comiss	xmm3, xmm6
+		xorps	xmm4, xmm4
+		comiss	xmm3, xmm4
 		jbe		t_xyz
-		addss	xmm5, xmm3
-		movss	[ecx+0xC], xmm5
-		movss	xmm0, [edx+0x14]
-		subss	xmm0, [edx+0x1C]
-		movss	[ecx], xmm0
-		movss	xmm0, [edx+0x18]
-		subss	xmm0, [edx+8]
-		movss	[ecx+4], xmm0
-		movss	xmm0, [edx+4]
-		subss	xmm0, [edx+0xC]
-		movss	[ecx+8], xmm0
+		addss	xmm3, kVcOne
+		movaps	xmm2, xmm1
+		movhlps	xmm2, xmm0
+		unpcklps	xmm1, xmm0
+		movhlps	xmm1, xmm0
+		pshufd	xmm0, xmm1, 0x8C
+		subps	xmm0, xmm2
+		movss	xmm0, xmm3
+		shufps	xmm0, xmm0, 0x39
 		jmp		done
 	t_xyz:
-		comiss	xmm0, xmm1
+		movss	xmm3, kVcOne
+		pshufd	xmm4, kSSEChangeSignMaskPS0, 0x51
+		comiss	xmm1, xmm0
 		jnb		t_xz
-		comiss	xmm1, xmm2
-		jb		t_z
-		subss	xmm5, xmm0
-		addss	xmm5, xmm1
-		subss	xmm5, xmm2
-		movss	xmm0, [edx+0x18]
-		subss	xmm0, [edx+8]
-		movss	[ecx+0xC], xmm0
-		movss	xmm0, [edx+4]
-		addss	xmm0, [edx+0xC]
-		movss	[ecx], xmm0
-		movss	[ecx+4], xmm5
-		movss	xmm0, [edx+0x14]
-		addss	xmm0, [edx+0x1C]
-		movss	[ecx+8], xmm0
-		jmp		done
-	t_xz:
 		comiss	xmm0, xmm2
 		jb		t_z
-		addss	xmm5, xmm0
-		subss	xmm5, xmm1
-		subss	xmm5, xmm2
-		movss	xmm0, [edx+0x14]
-		subss	xmm0, [edx+0x1C]
-		movss	[ecx+0xC], xmm0
-		movss	[ecx], xmm5
-		movss	xmm0, [edx+4]
-		addss	xmm0, [edx+0xC]
-		movss	[ecx+4], xmm0
-		movss	xmm0, [edx+8]
-		addss	xmm0, [edx+0x18]
-		movss	[ecx+8], xmm0
+		subss	xmm3, xmm1
+		addss	xmm3, xmm0
+		subss	xmm3, xmm2
+		movaps	xmm2, xmm0
+		movhlps	xmm2, xmm1
+		shufps	xmm2, xmm2, 0xD0
+		unpcklps	xmm1, xmm0
+		movhlps	xmm1, xmm0
+		pshufd	xmm0, xmm1, 0xE0
+		xorps	xmm2, xmm4
+		addps	xmm0, xmm2
+		movss	xmm0, xmm3
+		shufps	xmm0, xmm0, 0x72
+		jmp		done
+	t_xz:
+		comiss	xmm1, xmm2
+		jb		t_z
+		addss	xmm3, xmm1
+		subss	xmm3, xmm0
+		subss	xmm3, xmm2
+		movaps	xmm2, xmm1
+		unpcklps	xmm2, xmm0
+		movhlps	xmm2, xmm1
+		shufps	xmm2, xmm2, 0x2C
+		movhlps	xmm0, xmm1
+		shufps	xmm0, xmm0, 0x9C
+		xorps	xmm0, xmm4
+		addps	xmm0, xmm2
+		movss	xmm0, xmm3
+		pshufd	xmm0, xmm1, 0x78
 		jmp		done
 	t_z:
-		subss	xmm5, xmm0
-		subss	xmm5, xmm1
-		addss	xmm5, xmm2
-		movss	xmm0, [edx+4]
-		subss	xmm0, [edx+0xC]
-		movss	[ecx+0xC], xmm0
-		movss	xmm0, [edx+8]
-		addss	xmm0, [edx+0x18]
-		movss	[ecx], xmm0
-		movss	xmm0, [edx+0x14]
-		addss	xmm0, [edx+0x1C]
-		movss	[ecx+4], xmm0
-		movss	[ecx+8], xmm5
+		subss	xmm3, xmm1
+		subss	xmm3, xmm0
+		addss	xmm3, xmm2
+		movaps	xmm2, xmm1
+		unpcklps	xmm2, xmm0
+		movhlps	xmm2, xmm1
+		shufps	xmm2, xmm2, 0xC8
+		movhlps	xmm0, xmm1
+		xorps	xmm0, xmm4
+		addps	xmm0, xmm2
+		movss	xmm0, xmm3
+		pshufd	xmm0, xmm2, 0x4E
 	done:
-		andps	xmm5, kSSERemoveSignMaskPS
-		sqrtss	xmm0, xmm5
-		addss	xmm0, xmm0
-		divss	xmm4, xmm0
-		shufps	xmm4, xmm4, 0
-		movaps	xmm0, [ecx]
-		mulps	xmm0, xmm4
+		andps	xmm3, kSSERemoveSignMaskPS0
+		rsqrtss	xmm1, xmm3
+		mulss	xmm3, xmm1
+		mulss	xmm3, xmm1
+		movss	xmm2, kFlt3
+		subss	xmm2, xmm3
+		mulss	xmm2, xmm1
+		mulss	xmm2, kFlt1d4
+		shufps	xmm2, xmm2, 0
+		mulps	xmm0, xmm2
 		movaps	[ecx], xmm0
 		mov		eax, ecx
 		retn
@@ -96,14 +133,14 @@ __declspec(naked) hkQuaternion* __fastcall hkQuaternion::FromAxisAngle(const Axi
 	__asm
 	{
 		movss	xmm0, [edx+0xC]
-		mulss	xmm0, kFltHalf
+		mulss	xmm0, kVcHalf
 		movups	xmm7, [edx]
 		call	GetSinCos
-		pshufd	xmm1, xmm0, 1
 		shufps	xmm0, xmm0, 0x80
 		mulps	xmm0, xmm7
+		shufps	xmm1, xmm0, 0x20
+		shufps	xmm0, xmm1, 0x24
 		movaps	[ecx], xmm0
-		movss	[ecx+0xC], xmm1
 		mov		eax, ecx
 		retn
 	}
@@ -113,37 +150,38 @@ __declspec(naked) void __fastcall hkQuaternion::operator*=(const hkQuaternion &r
 {
 	__asm
 	{
-		pshufd	xmm0, [edx], 0x93
 		pshufd	xmm1, [ecx], 0x93
-		movss	xmm2, kSSEChangeSignMaskPS0
+		pshufd	xmm2, [edx], 0x93
 		movaps	xmm3, xmm1
-		mulps	xmm3, xmm0
-		pshufd	xmm4, xmm2, 1
-		xorps	xmm3, xmm4
+		mulps	xmm3, xmm2
+		movss	xmm5, kSSEChangeSignMaskPS0
+		xorps	xmm3, xmm5
 		haddps	xmm3, xmm3
 		haddps	xmm3, xmm3
-		movss	[ecx], xmm3
+		movss	xmm0, xmm3
 		pshufd	xmm3, xmm1, 0xB1
-		mulps	xmm3, xmm0
-		pshufd	xmm4, xmm2, 0x15
-		xorps	xmm3, xmm4
+		mulps	xmm3, xmm2
+		pslldq	xmm5, 8
+		xorps	xmm3, xmm5
 		haddps	xmm3, xmm3
 		haddps	xmm3, xmm3
-		movss	[ecx+4], xmm3
+		unpcklps	xmm0, xmm3
 		pshufd	xmm3, xmm1, 0x4E
-		mulps	xmm3, xmm0
-		pshufd	xmm4, xmm2, 0x51
-		xorps	xmm3, xmm4
+		mulps	xmm3, xmm2
+		psrldq	xmm5, 8
+		xorps	xmm3, xmm5
 		haddps	xmm3, xmm3
 		haddps	xmm3, xmm3
-		movss	[ecx+8], xmm3
+		movss	xmm4, xmm3
 		pshufd	xmm3, xmm1, 0x1B
-		mulps	xmm3, xmm0
-		pshufd	xmm4, xmm2, 0x45
-		xorps	xmm3, xmm4
+		mulps	xmm3, xmm2
+		pslldq	xmm5, 4
+		xorps	xmm3, xmm5
 		haddps	xmm3, xmm3
 		haddps	xmm3, xmm3
-		movss	[ecx+0xC], xmm3
+		unpcklps	xmm4, xmm3
+		movlhps	xmm0, xmm4
+		movaps	[ecx], xmm0
 		retn
 	}
 }
@@ -153,21 +191,25 @@ __declspec(naked) hkQuaternion *hkQuaternion::Normalize()
     __asm
     {
 		mov		eax, ecx
-		movaps	xmm0, [eax]
-		movaps	xmm1, xmm0
-		mulps	xmm1, xmm1
-		haddps	xmm1, xmm1
-		haddps	xmm1, xmm1
-		pxor	xmm2, xmm2
-		comiss	xmm1, kFlt1d100K
+		movaps	xmm1, [eax]
+		movaps	xmm2, xmm1
+		mulps	xmm2, xmm2
+		haddps	xmm2, xmm2
+		haddps	xmm2, xmm2
+		xorps	xmm0, xmm0
+		comiss	xmm2, kVcEpsilon
 		jb		zeroLen
-		sqrtss	xmm1, xmm1
-		movss	xmm2, kFltOne
-		divss	xmm2, xmm1
-		shufps	xmm2, xmm2, 0
-		mulps	xmm2, xmm0
+		rsqrtss	xmm3, xmm2
+		movss	xmm0, kFlt3
+		mulss	xmm2, xmm3
+		mulss	xmm2, xmm3
+		subss	xmm0, xmm2
+		mulss	xmm0, xmm3
+		mulss	xmm0, kVcHalf
+		shufps	xmm0, xmm0, 0
+		mulps	xmm0, xmm1
 	zeroLen:
-		movaps	[eax], xmm2
+		movaps	[eax], xmm0
         retn
     }
 }
@@ -184,7 +226,7 @@ __declspec(naked) NiVector3* __fastcall hkQuaternion::ToEulerYPR(NiVector3 &ypr)
 		addps	xmm0, xmm0
 		pshufd	xmm1, xmm0, 1
 		xorps	xmm1, kSSEChangeSignMaskPS0
-		addss	xmm1, kFltOne
+		addss	xmm1, kVcOne
 		call	ATan2
 		movss	[edx], xmm0
 		pshufd	xmm0, xmm7, 0xB
@@ -192,18 +234,7 @@ __declspec(naked) NiVector3* __fastcall hkQuaternion::ToEulerYPR(NiVector3 &ypr)
 		mulps	xmm0, xmm1
 		hsubps	xmm0, xmm0
 		addss	xmm0, xmm0
-		movss	xmm1, xmm0
-		movss	xmm2, xmm0
-		andps	xmm2, kSSEChangeSignMaskPS0
-		xorps	xmm1, xmm2
-		comiss	xmm1, kFltOne
-		jnb		invSinP
 		call	ASin
-		jmp		doneY
-	invSinP:
-		movss	xmm0, kFltPId2
-		xorps	xmm0, xmm2
-	doneY:
 		movss	[edx+4], xmm0
 		pshufd	xmm0, xmm7, 0x93
 		pshufd	xmm1, xmm7, 0x96
@@ -212,7 +243,7 @@ __declspec(naked) NiVector3* __fastcall hkQuaternion::ToEulerYPR(NiVector3 &ypr)
 		addps	xmm0, xmm0
 		pshufd	xmm1, xmm0, 1
 		xorps	xmm1, kSSEChangeSignMaskPS0
-		addss	xmm1, kFltOne
+		addss	xmm1, kVcOne
 		call	ATan2
 		movss	[edx+8], xmm0
 		mov		eax, edx
@@ -220,28 +251,24 @@ __declspec(naked) NiVector3* __fastcall hkQuaternion::ToEulerYPR(NiVector3 &ypr)
 	}
 }
 
+void hkQuaternion::Dump() const
+{
+	PrintDebug("%.6f\t%.6f\t%.6f\t%.6f\n\n", x, y, z, w);
+}
+
 __declspec(naked) void __fastcall hkMatrix3x4::operator=(const NiMatrix33 &inMatrix)
 {
 	__asm
 	{
-		mov		eax, [edx]
-		mov		[ecx], eax
-		mov		eax, [edx+0xC]
-		mov		[ecx+4], eax
-		mov		eax, [edx+0x18]
-		mov		[ecx+8], eax
-		mov		eax, [edx+4]
-		mov		[ecx+0x10], eax
-		mov		eax, [edx+0x10]
-		mov		[ecx+0x14], eax
-		mov		eax, [edx+0x1C]
-		mov		[ecx+0x18], eax
-		mov		eax, [edx+8]
-		mov		[ecx+0x20], eax
-		mov		eax, [edx+0x14]
-		mov		[ecx+0x24], eax
-		mov		eax, [edx+0x20]
-		mov		[ecx+0x28], eax
+		movups	xmm0, [edx-4]
+		psrldq	xmm0, 4
+		movaps	[ecx], xmm0
+		movups	xmm0, [edx+8]
+		psrldq	xmm0, 4
+		movaps	[ecx+0x10], xmm0
+		movups	xmm0, [edx+0x14]
+		psrldq	xmm0, 4
+		movaps	[ecx+0x20], xmm0
 		retn
 	}
 }
@@ -258,7 +285,7 @@ __declspec(naked) void __fastcall hkMatrix3x4::operator=(const hkQuaternion &inQ
 		pshufd	xmm2, xmm0, 0x78
 		mulps	xmm2, xmm3
 		mulps	xmm0, xmm3
-		subss	xmm0, kFltOne
+		subss	xmm0, kVcOne
 		pshufd	xmm3, xmm0, 1
 		addss	xmm3, xmm0
 		movss	[ecx], xmm3
@@ -351,16 +378,14 @@ __declspec(naked) void bhkWorldObject::ApplyForce(NiVector4 *forceVector)
 	}
 }
 
-__declspec(naked) void hkpRigidBody::SetAngularVelocity(UInt8 axis, float angVel)
+__declspec(naked) void __vectorcall hkpRigidBody::SetAngularVelocity(UInt32 axis, float angVel)
 {
 	__asm
 	{
-		movss	xmm0, [esp+8]
 		shufps	xmm0, xmm0, 0xC0
-		movzx	edx, byte ptr [esp+4]
 		shl		edx, 4
 		mulps	xmm0, [ecx+edx+0xF0]
 		movaps	[ecx+0x1C0], xmm0
-		retn	8
+		retn
 	}
 }

@@ -501,7 +501,7 @@ float GetDaysPassed(int bgnYear, int bgnMonth, int bgnDay)
 		totalDays += iDay - 1;
 	}
 	else totalDays = iDay - bgnDay;
-	return (float)totalDays + (g_gameHour->data / 24.0F);
+	return (float)totalDays + g_gameHour->data * (1 / 24.0F);
 }
 
 UnorderedMap<UInt32, ScriptVariablesMap> s_scriptVariablesBuffer;
@@ -719,7 +719,7 @@ TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 	TESForm *item;
 	ContChangesEntry *entry;
 	ExtraDataList *xData;
-	if (actor->GetNiNode())
+	if (actor->renderState && actor->renderState->niNode14)
 	{
 		if (slotIndex == 5)
 		{

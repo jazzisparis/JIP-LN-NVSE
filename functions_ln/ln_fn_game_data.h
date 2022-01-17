@@ -5,7 +5,7 @@ DEFINE_COMMAND_ALT_PLUGIN(GetLoadedTypeArray, GLTA, 0, 2, kParams_OneInt_OneOpti
 DEFINE_COMMAND_PLUGIN(Search, 0, 2, kParams_OneString_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetModName, 0, 2, kParams_OneInt_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetFormMods, 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetFormRefs, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(GetFormRefs, 0, 2, kParams_OneForm_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetSelfModIndex, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(IsFormOverridden, 0, 1, kParams_OneForm);
 DEFINE_COMMAND_ALT_PLUGIN(GetFormFromMod, GFFM, 0, 2, kParams_TwoStrings);
@@ -276,13 +276,41 @@ bool Cmd_GetFormRefs_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESForm *form;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form)) return true;
+	UInt32 scanGrid = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &scanGrid)) return true;
 	TempElements *tmpElements = GetTempElements();
 	tmpElements->Clear();
-	ListNode<TESWorldSpace> *wspcIter = g_dataHandler->worldSpaceList.Head();
-	TESWorldSpace *wspc;
 	ListNode<TESObjectREFR> *refrIter;
 	TESObjectREFR *refr;
+	for (auto intrIter = g_dataHandler->cellArray.Begin(); intrIter; ++intrIter)
+	{
+		if (!*intrIter) continue;
+		refrIter = intrIter->objectList.Head();
+		do
+		{
+			refr = refrIter->data;
+			if (refr && (refr->baseForm == form))
+				tmpElements->Append(refr);
+		}
+		while (refrIter = refrIter->next);
+	}
+	if (scanGrid)
+	{
+		for (auto gridIter = g_TES->gridCellArray->Begin(); gridIter; ++gridIter)
+		{
+			if (!*gridIter) continue;
+			refrIter = gridIter->objectList.Head();
+			do
+			{
+				refr = refrIter->data;
+				if (refr && (refr->baseForm == form) && !(refr->flags & TESObjectREFR::kFlags_Persistent))
+					tmpElements->Append(refr);
+			}
+			while (refrIter = refrIter->next);
+		}
+	}
+	ListNode<TESWorldSpace> *wspcIter = g_dataHandler->worldSpaceList.Head();
+	TESWorldSpace *wspc;
 	do
 	{
 		if (!(wspc = wspcIter->data) || !wspc->cell) continue;
@@ -296,19 +324,6 @@ bool Cmd_GetFormRefs_Execute(COMMAND_ARGS)
 		while (refrIter = refrIter->next);
 	}
 	while (wspcIter = wspcIter->next);
-	TESObjectCELL **cells = g_dataHandler->cellArray.data;
-	for (UInt32 count = g_dataHandler->cellArray.Length(); count; count--, cells++)
-	{
-		if (!*cells) continue;
-		refrIter = (*cells)->objectList.Head();
-		do
-		{
-			refr = refrIter->data;
-			if (refr && (refr->baseForm == form))
-				tmpElements->Append(refr);
-		}
-		while (refrIter = refrIter->next);
-	}
 	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	return true;
 }

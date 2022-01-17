@@ -62,12 +62,39 @@ __forceinline T_Ret CdeclCall(UInt32 _addr, Args ...args)
 
 #define LOG_HOOKS 0
 
-extern const float kFlt1d100K, kFlt1d1K, kFlt1d200, kFlt1d100, kFltPId180, kFlt1d10, kFltHalf, kFltOne, kFltPId2, kFltPI, kFltPIx2, kFlt10, kFlt180dPI, kFlt100, kFlt1000, kFltMax;
-extern const double kDblPId180, kDbl180dPI;
-extern const UInt32 kSSERemoveSignMaskPS[], kSSEChangeSignMaskPS[], kSSEChangeSignMaskPS0[], kSSEDiscard4thPS[];
-extern const UInt64 kSSERemoveSignMaskPD[], kSSEChangeSignMaskPD[];
-extern const __m128 kVcPI, kVcPIx2, kVcHalf;
+union HexFloat
+{
+	float	f;
+	UInt32	h;
+
+	constexpr HexFloat(const float _f) : f(_f) {}
+	constexpr HexFloat(const UInt32 _h) : h(_h) {}
+};
+
+extern const float kFlt1d1K, kFlt1d100, kFlt1d10, kFlt1d4, kFlt3, kFlt10, kFlt100, kFlt1000;
+extern const HexFloat kPackedValues[];
 extern const char kLwrCaseConverter[], kUprCaseConverter[];
+
+#define kSSERemoveSignMaskPS	kPackedValues
+#define kSSERemoveSignMaskPS0	kPackedValues+0x10
+#define kSSEChangeSignMaskPS	kPackedValues+0x20
+#define kSSEChangeSignMaskPS0	kPackedValues+0x30
+#define kSSEDiscard4thPS		kPackedValues+0x40
+#define kSSERemoveSignMaskPD	kPackedValues+0x50
+#define kSSEChangeSignMaskPD	kPackedValues+0x60
+#define kVcEpsilon				kPackedValues+0x70
+#define kVcPId180				kPackedValues+0x80
+#define kVcPId2					kPackedValues+0x90
+#define kVcPI					kPackedValues+0xA0
+#define kVcPIx2					kPackedValues+0xB0
+#define kVcHalf					kPackedValues+0xC0
+#define kVcOne					kPackedValues+0xD0
+
+#define FltPId2		1.570796371F
+#define FltPId180	0.01745329238F
+#define Flt180dPI	57.29578018F
+#define DblPId180	0.017453292519943295
+#define Dbl180dPI	57.29577951308232
 
 typedef void* (__cdecl *memcpy_t)(void*, const void*, size_t);
 extern memcpy_t MemCopy, MemMove;
@@ -221,7 +248,7 @@ template <typename T> inline T sqr(T value)
 
 UInt32 __vectorcall cvtd2ui(double value);
 
-double __vectorcall cvtui2d(UInt32 value);
+double __fastcall cvtui2d(UInt32 value);
 void __fastcall cvtui2d(UInt32 value, double *result);
 
 int __vectorcall ifloor(float value);
@@ -239,7 +266,15 @@ float __vectorcall Sin(float angle);
 float __vectorcall Cos(float angle);
 float __vectorcall Tan(float angle);
 
+//	Takes:   xmm0 = {a, 0, 0, 0};
+//	Returns: xmm0 = {sin(a), cos(a), 0, 0},
+//			 xmm1 = {cos(a), 0, 0, 0}
 __m128 __vectorcall GetSinCos(float angle);
+
+//	Takes:   xmm0 = {x, y, z, 0};
+//	Returns: xmm0 = {sin(x), sin(y), sin(z), 0},
+//			 xmm1 = {cos(x), cos(y), cos(z), 0}
+__m128 __vectorcall GetSinCosV3(__m128 angles);
 
 float __vectorcall ASin(float x);
 float __vectorcall ACos(float x);
@@ -489,7 +524,8 @@ public:
 
 	explicit operator bool() const {return theFile != NULL;}
 
-	UInt32 GetLength();
+	FILE *GetStream() const {return theFile;}
+	UInt32 GetLength() const;
 	char ReadChar();
 	void ReadBuf(void *outData, UInt32 inLength);
 	void WriteChar(char chr);

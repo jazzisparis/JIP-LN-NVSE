@@ -71,7 +71,7 @@ __declspec(naked) double __vectorcall GetLeftStick(SInt16 value)
 		sub		eax, s_deadZoneLS
 		jg		done
 	retnZero:
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		retn
 	isNeg:
 		inc		eax
@@ -95,7 +95,7 @@ __declspec(naked) double __vectorcall GetRightStick(SInt16 value)
 		sub		eax, s_deadZoneRS
 		jg		done
 	retnZero:
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		retn
 	isNeg:
 		inc		eax

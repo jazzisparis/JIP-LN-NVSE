@@ -482,6 +482,8 @@ public:
 	UInt32										unk70;			// 70
 	UInt32										unk74;			// 74
 	NiDefaultAVObjectPalette					*defObjPlt;		// 78
+
+	NiControllerSequence *FindSequence(const char *seqName);
 };
 static_assert(sizeof(NiControllerManager) == 0x7C);
 
@@ -653,11 +655,28 @@ public:
 	float		fltData;	// 0C
 };
 
+// 14
+class NiFloatsExtraData : public NiExtraData
+{
+public:
+	UInt32		count;		// 0C
+	float		*data;		// 10
+};
+
 // 10
 class NiStringExtraData : public NiExtraData
 {
 public:
 	NiFixedString	strData;	// 0C
+};
+
+// 1C
+class NiVectorExtraData : public NiExtraData
+{
+public:
+	NiVector4		vec4;		// 0C
+
+	__forceinline static NiVectorExtraData *Create() {return CdeclCall<NiVectorExtraData*>(0xA91FE0);}
 };
 
 // 14
@@ -704,6 +723,10 @@ public:
 	const char *GetName() const {return m_blockName ? m_blockName : "NULL";}
 	void __fastcall SetName(const char *newName);
 	NiExtraData* __fastcall GetExtraData(UInt32 vtbl);
+	__forceinline bool AddExtraData(NiExtraData *xData)
+	{
+		return ThisCall<bool>(0xA5BA40, this, xData);
+	}
 	void DumpExtraData();
 };
 
@@ -746,7 +769,7 @@ public:
 	UInt32				unk48;			// 48
 
 	__forceinline static NiMaterialProperty *Create() {return CdeclCall<NiMaterialProperty*>(0xA756D0);}
-	void SetTraitValue(UInt32 traitID, float value);
+	void __vectorcall SetTraitValue(UInt32 traitID, float value);
 };
 
 // 1C
@@ -1478,37 +1501,46 @@ public:
 	NiColor			diffuseColor;		// D4
 };
 
-// FC
+// FC (JIP: 110)
 class NiPointLight : public NiLight
 {
 public:
-	float			radius;			// E0
-	float			radiusE4;		// E4
-	TESObjectLIGH	*baseLight;		// E8	JIP only
-	UInt32			unkEC;			// EC
-	NiVector3		vectorF0;		// F0	Used for animated lights
+	float			radius;			// 0E0
+	float			radius0E4;		// 0E4
+	TESObjectLIGH	*baseLight;		// 0E8	JIP only
+	NiObject		*obj0EC;		// 0EC
+	NiVector3		vector0F0;		// 0F0	Used for animated lights
+	//	JIP Only
+	float			flt0FC;			// 0FC
+	NiVector4		vector100;		// 100
 
 	__forceinline static NiPointLight *Create() {return CdeclCall<NiPointLight*>(0xA7D6E0);}
 };
-static_assert(sizeof(NiPointLight) == 0xFC);
+static_assert(sizeof(NiPointLight) == 0x110);
 
 // 114
-class NiSpotLight : public NiPointLight
+class NiSpotLight : public NiLight
 {
 public:
+	float			radius;			// 0E0
+	float			radius0E4;		// 0E4
+	TESObjectLIGH	*baseLight;		// 0E8	JIP only
+	NiObject		*obj0EC;		// 0EC
+	NiVector3		vector0F0;		// 0F0	Used for animated lights
 	NiVector3		direction;		// 0FC
 	float			outerSpotAngle;	// 108
 	float			innerSpotAngle;	// 10C
 	float			spotExponent;	// 110
 };
+static_assert(sizeof(NiSpotLight) == 0x114);
 
 // FC
 class NiDirectionalLight : public NiLight
 {
 public:
-	NiColor			fogColor;			// E0
-	UInt32			unkEC;				// EC
-	NiVector3		direction;			// F0
+	NiColor			fogColor;		// E0
+	NiObject		*objEC;			// EC
+	NiVector3		direction;		// F0
 };
 
 // 15C
@@ -2467,40 +2499,43 @@ static_assert(sizeof(BSCullingProcess) == 0xCC);
 class NiPick
 {
 public:
-	NiPick(UInt32 capacity = 0, UInt32 growSize = 8) {ThisCall(0xE98F20, this, capacity, growSize);}
+	NiPick(NiAVObject *origin)
+	{
+		ThisCall(0xE98F20, this, 0, 8);
+		InterlockedIncrement(&origin->m_uiRefCount);
+		originObj = origin;
+	}
 	~NiPick() {ThisCall(0xE98FA0, this);}
 
-	// 10
-	struct Results
+	// 44
+	struct Result
 	{
-		struct Result
-		{
-			NiAVObject	*object;
-			UInt32		unk04;
-			NiVector3	pos;
-		};
-
-		UInt32		**_vtbl;		// 00
-		Result		**data;			// 04
-		UInt16		capacity;		// 08
-		UInt16		firstFreeEntry;	// 0A
-		UInt16		numObjs;		// 0C
-		UInt16		growSize;		// 0E
+		NiAVObject	*result;	// 00
+		NiObject	*object04;	// 04
+		NiVector3	pos;		// 08
+		float		flt14;		// 14
+		UInt32		unk18[7];	// 18
+		float		flt34;		// 34
+		float		flt38;		// 38
+		float		flt3C;		// 3C
+		float		flt40;		// 40
 	};
 
-	UInt32			unk00;		// 00	If non-zero, returns only one result
-	UInt32			unk04;		// 04
-	UInt32			unk08;		// 08
-	UInt32			unk0C;		// 0C
-	UInt8			byte10;		// 10
-	UInt8			byte11;		// 11
-	UInt8			pad12[2];	// 12
-	NiRefObject		*object14;	// 14
-	Results			results;	// 18
-	UInt32			numResults;	// 28
-	UInt32			unk2C;		// 2C
-	UInt8			byte30;		// 30
-	UInt8			byte31;		// 31
-	UInt8			byte32;		// 32
-	UInt8			byte33;		// 33
+	UInt32				unk00;		// 00	If non-zero, returns only one result
+	UInt32				unk04;		// 04
+	UInt32				unk08;		// 08
+	UInt32				unk0C;		// 0C
+	UInt8				byte10;		// 10
+	UInt8				byte11;		// 11
+	UInt8				pad12[2];	// 12
+	NiAVObject			*originObj;	// 14
+	NiTArray<Result*>	results;	// 18
+	UInt32				numResults;	// 28
+	UInt32				unk2C;		// 2C
+	UInt8				byte30;		// 30
+	UInt8				byte31;		// 31
+	UInt8				byte32;		// 32
+	UInt8				byte33;		// 33
+
+	bool __fastcall GetResults(NiCamera *camera);
 };

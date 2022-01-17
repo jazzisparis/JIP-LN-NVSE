@@ -385,6 +385,13 @@ class BSWin32Audio;
 struct Sound;
 class DIHookControl;
 
+struct NiVector3;
+struct NiVector4;
+struct NiQuaternion;
+struct NiMatrix33;
+struct hkQuaternion;
+struct hkMatrix3x4;
+
 #include "internal/class_vtbls.h"
 #include "internal/memory_pool.h"
 #include "internal/misc_consts.h"

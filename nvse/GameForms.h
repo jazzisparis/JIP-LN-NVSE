@@ -2099,7 +2099,7 @@ public:
 	float			heightRange;			// 58
 	float			colorRange;				// 5C
 	float			wavePeriod;				// 60
-	UInt8			flags;					// 64
+	UInt8			grassFlags;				// 64
 	UInt8			pad65[3];				// 65
 };
 
@@ -2337,7 +2337,10 @@ public:
 		kFlag_Pulse =			0x80,
 		kFlag_PulseSlow =		0x100,
 		kFlag_SpotLight =		0x200,
-		kFlag_SpotShadow =		0x400
+		kFlag_SpotShadow =		0x400,
+		//	JIP Only
+		kFlag_ColorShift =		0x800,
+		kFlag_ColorShiftSlow =	0x1000
 	};
 
 	TESFullName					fullName;		// 030
@@ -2459,9 +2462,9 @@ static_assert(sizeof(BGSStaticCollection) == 0x50);
 class BGSPlaceableWater : public TESBoundObject
 {
 public:
-	TESModel			model;	// 30
-	UInt32				flags;	// 48
-	TESWaterForm		*water;	// 4C
+	TESModel			model;		// 30
+	UInt32				waterFlags;	// 48
+	TESWaterForm		*water;		// 4C
 };
 
 // TESObjectTREE (94)
@@ -2840,7 +2843,7 @@ public:
 	TESScriptableForm			scriptable;				// 09C
 
 	float						speed;					// 0A8
-	UInt32						flags;					// 0AC
+	UInt32						ammoFlags;				// 0AC
 	UInt32						projPerShot;			// 0B0
 	BGSProjectile				*projectile;			// 0B4
 	float						weight;					// 0B8
@@ -2850,9 +2853,9 @@ public:
 	String						abbreviation;			// 0CC
 	tList<TESAmmoEffect>		effectList;				// 0D4
 
-	bool IsNonPlayable() {return (flags & kFlags_NonPlayable) == kFlags_NonPlayable;}
+	bool IsNonPlayable() {return (ammoFlags & kFlags_NonPlayable) == kFlags_NonPlayable;}
 	bool IsPlayable() {return !IsNonPlayable();}
-	void SetPlayable(bool doset) {if (doset) flags &= ~kFlags_NonPlayable; else flags |= kFlags_NonPlayable;}
+	void SetPlayable(bool doset) {if (doset) ammoFlags &= ~kFlags_NonPlayable; else ammoFlags |= kFlags_NonPlayable;}
 };
 static_assert(sizeof(TESAmmo) == 0xDC);
 
@@ -3411,15 +3414,15 @@ public:
 	// 64
 	struct CellRenderData
 	{
-		NiNode									*masterNode;	// 00
-		tList<TESObjectREFR>					list04;			// 04
-		NiTMapBase<TESObjectREFR*, NiNode*>		map0C;			// 0C
-		NiTMapBase<TESForm*, TESObjectREFR*>	map1C;			// 1C
-		NiTMapBase<TESObjectREFR*, NiNode*>		map2C;			// 2C
-		NiTMapBase<TESObjectREFR*, NiNode*>		map3C;			// 3C
-		tList<TESObjectREFR>					list4C;			// 4C
-		tList<void>								list54;			// 54
-		tList<TESObjectREFR>					list5C;			// 5C
+		NiNode											*masterNode;// 00
+		tList<TESObjectREFR>							list04;		// 04
+		NiTMapBase<TESObjectREFR*, NiNode*>				map0C;		// 0C
+		NiTMapBase<TESForm*, TESObjectREFR*>			map1C;		// 1C
+		NiTMapBase<TESObjectREFR*, NiNode*>				map2C;		// 2C
+		NiTMapBase<TESObjectREFR*, BSMultiBoundNode*>	map3C;		// 3C
+		tList<TESObjectREFR>							list4C;		// 4C	Scripted non-actors
+		tList<void>										list54;		// 54	Has ExtraActivateRefChildren
+		tList<TESObjectREFR>							list5C;		// 5C
 	};
 
 	enum
@@ -3613,7 +3616,7 @@ public:
 	TESClimate			*climate;			// 40
 	TESImageSpace		*imageSpace;		// 44
 	ImpactDataSwap		*impactSwap;		// 48
-	UInt8				flags;				// 4C
+	UInt8				worldFlags;			// 4C
 	UInt8				unk4D;				// 4D
 	UInt16				parentFlags;		// 4E
 	RefListPointerMap	pointerMap;			// 50
@@ -3832,7 +3835,18 @@ public:
 		tList<LogEntry>		logEntries;	// 04
 	};
 
-	UInt8					flags;				// 3C	bit0 is startGameEnabled/isRunning
+	enum QuestFlag
+	{
+		kFlag_IsRunning =			1 << 0,
+		kFlag_Completed =			1 << 1,
+		kFlag_AllowRepeatedTopics =	1 << 2,
+		kFlag_AllowRepeatedStages =	1 << 3,
+		kFlag_RunAfterReset =		1 << 4,
+		kFlag_IsShownInPipboy =		1 << 5,
+		kFlag_Failed =				1 << 6
+	};
+
+	UInt8					questFlags;			// 3C
 	UInt8					priority;			// 3D
 	UInt8					pad3E[2];			// 3E
 	float					questDelayTime;		// 40
@@ -4508,18 +4522,16 @@ public:
 		else csFlags &= ~pFlag;
 	}
 };
-
 static_assert(sizeof(TESCombatStyle) == 0x108);
 
-// 2C
+// 28
 class TESRecipeCategory : public TESForm
 {
 public:
-	TESFullName			fullName;	// 18
+	TESFullName			fullName;		// 18
 
-	UInt32				flags;		// 24
+	UInt32				categoryFlags;	// 24
 };
-
 static_assert(sizeof(TESRecipeCategory) == 0x28);
 
 struct RecipeComponent
@@ -4633,7 +4645,7 @@ public:
 	UInt32					unk02C[14];		// 02C
 	TESTexture				noiseMap;		// 064
 	UInt8					opacity;		// 070 ANAM
-	UInt8					flags;			// 071 FNAM (0x01: causes damage, 0x02: reflective)
+	UInt8					waterFlags;		// 071 FNAM (0x01: causes damage, 0x02: reflective)
 	UInt8					unk072[2];		// 072
 	UInt32					unk074[2];		// 074
 	TESSound				*sound;			// 07C
@@ -5115,7 +5127,7 @@ public:
 	UInt32					maxWinnings;
 	UInt32					currencyRefID;			// ID, not form pointer
 	UInt32					winningsQuestRefID;		// ID, not form pointer
-	UInt32					flags;					// 1: dealer stand on soft 17 (no other flags)
+	UInt32					casinoFlags;			// 1: dealer stand on soft 17 (no other flags)
 	UInt32					unk220[2];
 };
 

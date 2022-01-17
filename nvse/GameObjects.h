@@ -689,7 +689,7 @@ public:
 	float GetRadiationLevel();
 	BackUpPackage *AddBackUpPackage(TESObjectREFR *targetRef, TESObjectCELL *targetCell, UInt32 flags);
 	void __fastcall TurnToFaceObject(TESObjectREFR *target);
-	void TurnAngle(float angle);
+	void __vectorcall TurnAngle(float angle);
 	void PlayAnimGroup(UInt32 animGroupID);
 	UInt32 GetLevel();
 	double GetKillXP();
@@ -701,6 +701,10 @@ public:
 	float AdjustPushForce(float baseForce);
 	void PushActor(float force, float angle, TESObjectREFR *originRef, bool adjustForce);
 	int GetGroundMaterial();
+	__forceinline void RefreshAnimData()
+	{
+		ThisCall(0x8B0B00, this, 0);
+	}
 };
 
 extern float s_moveAwayDistance;
@@ -1181,25 +1185,45 @@ public:
 	float		flt15C;			// 15C
 };
 
+// 24
+class NonActorMagicCaster : public BSExtraData
+{
+public:
+	MagicCaster		caster;		// 0C
+};
+
 // 104
 class Explosion : public MobileObject
 {
 public:
 	virtual void	Unk_C1(void);
 
-	float			unk088;			// 088
-	float			unk08C;			// 08C
-	float			unk090;			// 090
-	float			unk094;			// 094
-	float			unk098;			// 098
-	float			unk09C;			// 09C
-	NiRefObject		*object0A0;		// 0A0
-	tList<void>		list0A4;		// 0A4
-	UInt32			unk0AC[6];		// 0AC
-	NiPointLight	*pointLight;	// 0C4
-	UInt32			unk0C8[2];		// 0C8
-	NiRefObject		*object0D0;		// 0D0
-	UInt32			unk0D4[11];		// 0D4
-	float			unk100;			// 100
+	float				unk088;			// 088	init'd to 0
+	float				unk08C;			// 08C	init'd to 3.0
+	float				unk090;			// 090	init'd to 0
+	float				radius;			// 094
+	float				ISradius;		// 098
+	float				unk09C;			// 09C	init'd to 1.0
+	NiRefObject			*object0A0;		// 0A0
+	tList<void>			list0A4;		// 0A4
+	Sound				sound0AC;		// 0AC
+	Sound				sound0B8;		// 0B8
+	NiPointLight		*pointLight;	// 0C4
+	TESObjectREFR		*sourceRef;		// 0C8
+	UInt32				unk0CC;			// 0CC
+	NiRefObject			*object0D0;		// 0D0
+	UInt8				byte0D4;		// 0D4
+	UInt8				byte0D5;		// 0D5
+	UInt8				byte0D6;		// 0D6
+	UInt8				byte0D7;		// 0D7
+	UInt8				byte0D8;		// 0D8
+	UInt8				byte0D9;		// 0D9
+	UInt8				pad0DA[2];		// 0DA
+	NonActorMagicCaster	*caster;		// 0DC
+	UInt32				unk0E0;			// 0E0
+	UInt32				unk0E4;			// 0E4
+	NiVector3			vec0E8;			// 0E8
+	NiVector3			vec0F4;			// 0F4
+	float				unk100;			// 100	init'd to -1.0
 };
 static_assert(sizeof(Explosion) == 0x104);

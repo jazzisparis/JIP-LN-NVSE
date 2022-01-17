@@ -118,6 +118,7 @@ enum
 	kHookActorFlag2_TeammateKillable =		1 << 2,
 	kHookActorFlag2_NoGunWobble =			1 << 3,
 	kHookActorFlag2_CastImmediate =			1 << 4,
+	kHookActorFlag2_SkipDrawWeapAnim =		1 << 5,
 
 	kHookActorFlag3_OnAnimAction =			1 << 0,
 	kHookActorFlag3_OnPlayGroup =			1 << 1,
@@ -1648,7 +1649,7 @@ __declspec(naked) void DamageActorValueHook()
 		jz		done
 		movss	xmm0, [ebp+0x10]
 		addss	xmm0, [ebp+0x14]
-		pxor	xmm1, xmm1
+		xorps	xmm1, xmm1
 		comiss	xmm0, xmm1
 		ja		done
 		push	esi
@@ -1666,7 +1667,7 @@ __declspec(naked) void DamageActorValueHook()
 	healthDmg:
 		test	byte ptr [esi+0x107], kHookActorFlag3_OnHealthDamage
 		jz		done
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		comiss	xmm0, [ebp+0x14]
 		jbe		done
 		push	esi
@@ -2666,7 +2667,7 @@ __declspec(naked) void PlayerMinHealthHook()
 		movss	xmm0, [ebp-0x40]
 		movss	xmm1, xmm0
 		addss	xmm1, [ebp+0xC]
-		movss	xmm2, kFltOne
+		movss	xmm2, kVcOne
 		comiss	xmm1, xmm2
 		jnb		done
 		subss	xmm2, xmm0
@@ -2684,7 +2685,7 @@ __declspec(naked) void ApplyActorVelocityHook()
 		fld		dword ptr [eax]
 		test	byte ptr [ecx+0x417], 0x80
 		jz		contRetn
-		pxor	xmm0, xmm0
+		xorps	xmm0, xmm0
 		comiss	xmm0, [ecx+0x524]
 		jnb		rmvFlag
 		JMP_EDX(0xC6D5A5)
@@ -2837,7 +2838,7 @@ __declspec(naked) NiPointLight* __fastcall DestroyNiPointLightHook(NiPointLight 
 		jnz		done
 		test	byte ptr [esp+8], 1
 		jz		done
-		push	0xFC
+		push	0x110
 		push	esi
 		CALL_EAX(0xAA1460)
 		add		esp, 8
@@ -2916,28 +2917,21 @@ __declspec(naked) void __fastcall SetLightProperties(NiPointLight *ptLight, TESO
 	static const __m128 kColourMults = {1.0 / 255, 1.0 / 255, 1.0 / 255, 1};
 	__asm
 	{
-		add		ecx, 0xC4
-		add		edx, 0xA0
-		mov		eax, [edx+0x14]
-		mov		[ecx], eax
-		pxor	xmm0, xmm0
-		movups	[ecx+4], xmm0
-		movups	[ecx+0x28], xmm0
-		xor		eax, eax
-		mov		al, [edx+4]
-		mov		[ecx+0x10], eax
-		mov		al, [edx+5]
-		mov		[ecx+0x14], eax
-		mov		al, [edx+6]
-		mov		[ecx+0x18], eax
-		mov		eax, [edx]
-		mov		[ecx+0x1C], eax
-		movups	xmm0, [ecx+0x10]
+		movss	xmm0, [edx+0xB4]
+		lea		eax, [ecx+0xC4]
+		movups	[eax], xmm0
+		xorps	xmm0, xmm0
+		movups	[eax+0x2C], xmm0
+		movq	xmm1, qword ptr [edx+0xA0]
+		pshufd	xmm0, xmm1, 0xA9
+		punpcklbw	xmm0, xmm0
+		punpcklwd	xmm0, xmm0
+		psrld	xmm0, 0x18
+		pslldq	xmm1, 0xC
+		orps	xmm0, xmm1
 		cvtdq2ps	xmm0, xmm0
 		mulps	xmm0, kColourMults
-		movups	[ecx+0x10], xmm0
-		sub		ecx, 0xC4
-		sub		edx, 0xA0
+		movups	[eax+0x10], xmm0
 		retn
 	}
 }
@@ -3703,7 +3697,7 @@ __declspec(naked) void LoadWeaponSlotHook()
 	__asm
 	{
 		mov		eax, [ebp-0x14]
-		movss	xmm0, kFltOne
+		movss	xmm0, kVcOne
 		movups	[eax+0x34], xmm0
 		movups	[eax+0x44], xmm0
 		movups	[eax+0x54], xmm0
@@ -3728,54 +3722,186 @@ __declspec(naked) void LoadWeaponSlotHook()
 	}
 }
 
-void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm, NiPointLight *ptLight)
+__declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm, NiPointLight *ptLight)
 {
-	if (lightForm->lightFlags & 0x48)
+	alignas(16) static constexpr HexFloat kAnimatedLightMods[] =
 	{
-		float v01 = *(float*)0x11F63A0 * 0.001F;
-		if (lightForm->lightFlags & 0x40) v01 *= 0.5F;
-		float v02 = ptLight->vectorF0.x + GetRandomIntInRange(1100, 13100) * v01;
-		float v03 = ptLight->vectorF0.y + GetRandomIntInRange(1200, 13200) * v01;
-		float v04 = ptLight->vectorF0.z + GetRandomIntInRange(1300, 19300) * v01;
-		if (v02 > 6.28319F) v02 -= 6.28319F;
-		if (v03 > 6.28319F) v03 -= 6.28319F;
-		if (v04 > 6.28319F) v04 -= 6.28319F;
-		ptLight->vectorF0 = {v02, v03, v04};
-		v03 += 0.5F;
-		v04 += 0.3F;
-		float v05 = Sin(v02 * 2.0F + 3.4F);
-		float v06 = Sin(v03 * 1.7F);
-		float v07 = Sin(v04 * 2.6F);
-		v01 = *(float*)0x11C8FD0 * v05 * v06 * 0.5F;
-		v05 *= v01;
-		v06 *= v01;
-		v07 *= v01;
-		if (ptLight->m_flags & 0x20000000)
-		{
-			ptLight->LocalTranslate().x += v05 - ptLight->ambientColor.r;
-			ptLight->LocalTranslate().y += v06 - ptLight->ambientColor.g;
-			ptLight->LocalTranslate().z += v07 - ptLight->ambientColor.b;
-			ptLight->ambientColor = {v05, v06, v07};
-		}
-		else ptLight->LocalTranslate() = {v05, v06, v07};
-		v01 = Sin((v02 + 1.7F) * 1.1F) + 1.0F;
-		v01 *= (Sin(v03 * 1.3F) + 1.0F) * 0.0833333F;
-		v01 += Sin(v04 * 3.0F) * 0.2F;
-		if (v01 > 1.0F) v01 = 1.0F;
-		else if (v01 < -1.0F) v01 = -1.0F;
-		ptLight->fadeValue = (v01 * 0.2F + 0.8F) * lightForm->fadeValue;
-	}
-	else
+		7.5F, 30 / 7.0F, 0.125F, 0.0625F,
+		4.0F, 2.0F, 1 / 252.0F, 0.7F,
+		0.1F, 0.1F, 0.1F, 0.0F, 
+		1 / 127.0F, 1 / 127.0F, 1 / 127.0F, 0.0F, 
+		0x7FUL, 0x7FUL, 0x7FUL, 0UL,
+		0x3FUL, 0x3FUL, 0x3FUL, 0UL
+	};
+	__asm
 	{
-		float v08 = lightForm->fadeValue;
-		float v09 = ptLight->fadeValue;
-		float v10 = (lightForm->lightFlags & 0x100) ? 0.05F : 0.1F;
-		v10 *= *(float*)0x11F63A0 * v08;
-		if (v09 >= v08) ptLight->extraFlags |= 1;
-		else if (v09 <= (v08 * 0.25F)) ptLight->extraFlags &= ~1;
-		if (ptLight->extraFlags & 1) v09 -= v10;
-		else v09 += v10;
-		ptLight->fadeValue = v09;
+		push	ebp
+		mov		ebp, offset kAnimatedLightMods
+		add		ecx, 0x7C
+		add		edx, 0xC4
+		mov		eax, [ecx+0x2C]
+		movss	xmm0, ds:0x11F63A0
+		test	eax, 0x48
+		jz		doPulse
+		push	ebx
+		mov		ebx, edx
+		shr		eax, 4
+		and		eax, 4
+		mulss	xmm0, [ebp+eax]
+		movss	xmm1, [ecx+0x38]
+		movss	xmm2, [ebx]
+		movss	xmm3, [ebx+8]
+		movups	xmm4, [ebx-0x70]
+		psrldq	xmm4, 4
+		movups	xmm5, [ebx+0x3C]
+		movups	xmm6, [ebx+0x2C]
+		mov		edx, [ebx+4]
+		test	edx, edx
+		jnz		hasSaved1
+		or		byte ptr [ebx-0x25], 1
+		movups	[ebx+0x3C], xmm4
+		movaps	xmm5, xmm4
+		jmp		doRecalc1
+	hasSaved1:
+		movd	xmm7, edx
+		addss	xmm7, xmm0
+		comiss	xmm7, kVcOne
+		jbe		doneRecalc1
+	doRecalc1:
+		push	esi
+		push	edi
+		mov		esi, 0xAA5230
+		mov		edi, 0x11C4180
+		push	0xFFFFFFFF
+		mov		ecx, edi
+		call	esi
+		and		eax, 0x3F
+		cvtsi2ss	xmm3, eax
+		mulss	xmm3, [ebp+0x18]
+		addss	xmm3, [ebp+0x1C]
+		mulss	xmm3, xmm1
+		subss	xmm3, xmm2
+		movss	[ebx+8], xmm3
+		push	0xFFFFFFFF
+		mov		ecx, edi
+		call	esi
+		push	eax
+		push	0xFFFFFFFF
+		mov		ecx, edi
+		call	esi
+		push	eax
+		push	0xFFFFFFFF
+		mov		ecx, edi
+		call	esi
+		push	eax
+		movups	xmm6, [esp]
+		add		esp, 0xC
+		pop		edi
+		pop		esi
+		andps	xmm6, [ebp+0x40]
+		psubd	xmm6, [ebp+0x50]
+		cvtdq2ps	xmm6, xmm6
+		mulps	xmm6, [ebp+0x20]
+		subps	xmm6, xmm4
+		addps	xmm6, xmm5
+		movups	[ebx+0x2C], xmm6
+		movss	xmm7, xmm0
+	doneRecalc1:
+		movss	[ebx+4], xmm7
+		mulss	xmm3, xmm0
+		addss	xmm2, xmm3
+		movss	[ebx], xmm2
+		shufps	xmm0, xmm0, 0x40
+		mulps	xmm6, xmm0
+		addps	xmm4, xmm6
+		movups	[ebx-0x6C], xmm4
+		pop		ebx
+		pop		ebp
+		retn
+		ALIGN 16
+	doPulse:
+		test	eax, 0x180
+		jz		doClrShft
+		shr		eax, 6
+		and		eax, 4
+		mulss	xmm0, [ebp+eax+8]
+		movss	xmm1, [ecx+0x38]
+		movss	xmm2, [edx]
+		comiss	xmm1, xmm2
+		setbe	al
+		mulss	xmm1, kFlt1d4
+		comiss	xmm1, xmm2
+		setnb	cl
+		or		al, cl
+		shl		eax, 0x1F
+		xor		[edx+0xC], eax
+		movss	xmm1, [edx+0xC]
+		xorps	xmm0, xmm1
+		addss	xmm2, xmm0
+		movss	[edx], xmm2
+		pop		ebp
+		retn
+		ALIGN 16
+	doClrShft:
+		push	ebx
+		mov		ebx, edx
+		shr		eax, 0xA
+		and		eax, 4
+		mulss	xmm0, [ebp+eax+0x10]
+		movups	xmm1, [ebx+0xC]
+		psrldq	xmm1, 4
+		movups	xmm2, [ebx+0x2C]
+		movups	xmm3, [ebx+0x3C]
+		mov		edx, [ebx+4]
+		test	edx, edx
+		jnz		hasSaved2
+		movups	[ebx+0x3C], xmm1
+		movaps	xmm3, xmm1
+		jmp		doRecalc2
+	hasSaved2:
+		movd	xmm4, edx
+		addss	xmm4, xmm0
+		comiss	xmm4, kVcOne
+		jbe		doneRecalc2
+	doRecalc2:
+		push	esi
+		push	edi
+		mov		esi, 0xAA5230
+		mov		edi, 0x11C4180
+		push	0xFFFFFFFF
+		mov		ecx, edi
+		call	esi
+		push	eax
+		push	0xFFFFFFFF
+		mov		ecx, edi
+		call	esi
+		push	eax
+		push	0xFFFFFFFF
+		mov		ecx, edi
+		call	esi
+		push	eax
+		movups	xmm2, [esp]
+		add		esp, 0xC
+		pop		edi
+		pop		esi
+		andps	xmm2, [ebp+0x40]
+		cvtdq2ps	xmm2, xmm2
+		mulps	xmm2, [ebp+0x30]
+		mulps	xmm2, xmm3
+		subps	xmm2, xmm1
+		movups	[ebx+0x2C], xmm2
+		movss	xmm4, xmm0
+	doneRecalc2:
+		movss	[ebx+4], xmm4
+		shufps	xmm0, xmm0, 0x40
+		mulps	xmm2, xmm0
+		addps	xmm1, xmm2
+		movq	qword ptr [ebx+0x10], xmm1
+		movhlps	xmm1, xmm1
+		movss	[ebx+0x18], xmm1
+		pop		ebx
+		pop		ebp
+		retn
 	}
 }
 
@@ -3783,7 +3909,7 @@ __declspec(naked) void __fastcall UpdateAnimatedLightHook(TESObjectLIGH *lightFo
 {
 	__asm
 	{
-		test	dword ptr [ecx+0xA8], 0x1C8
+		test	dword ptr [ecx+0xA8], 0x19C8
 		jz		done
 		mov		edx, [esp+4]
 		mov		edx, [edx]
@@ -3837,15 +3963,16 @@ __declspec(naked) void __fastcall UpdateAnimatedLightsHook(TES *pTES)
 		cmp		[ecx+0x9E], 0
 		jz		unmodified
 		mov		[ecx+0x9E], 0
-		movups	xmm0, [ecx+0x58]
-		movups	xmm1, [ecx+0xC8]
-		subps	xmm0, xmm1
-		movups	[ecx+0x58], xmm0
 		call	SetLightProperties
+		test	byte ptr [ecx+0x9F], 1
+		jz		unmodified
+		and		byte ptr [ecx+0x9F], 0xFE
+		movups	xmm0, [ecx+0x100]
+		movups	[ecx+0x58], xmm0
 	unmodified:
 		cmp		dword ptr [ecx+4], 1
 		jz		doAdd
-		test	dword ptr [edx+0xA8], 0x1C8
+		test	dword ptr [edx+0xA8], 0x19C8
 		jz		iterHead
 		xchg	ecx, edx
 		call	DoUpdateAnimatedLight
@@ -3854,7 +3981,7 @@ __declspec(naked) void __fastcall UpdateAnimatedLightsHook(TES *pTES)
 	doFree:
 		cmp		dword ptr [ecx+4], 0
 		jnz		iterHead
-		push	0xFC
+		push	0x110
 		push	ecx
 		CALL_EAX(0xAA1460)
 		add		esp, 8
@@ -4514,6 +4641,19 @@ __declspec(naked) void CastSpellHook()
 	}
 }
 
+__declspec(naked) void SkipDrawWeapAnimHook()
+{
+	__asm
+	{
+		mov		eax, [esp+0x10]
+		test	byte ptr [eax+0x106], kHookActorFlag2_SkipDrawWeapAnim
+		jnz		done
+		JMP_EAX(0x923960)
+	done:
+		retn	0x10
+	}
+}
+
 UnorderedMap<const char*, UInt32> s_eventMasks({{"OnActivate", 0}, {"OnAdd", 1}, {"OnEquip", 2}, {"OnActorEquip", 2}, {"OnDrop", 4}, {"OnUnequip", 8}, {"OnActorUnequip", 8},
 	{"OnDeath", 0x10}, {"OnMurder", 0x20}, {"OnCombatEnd", 0x40}, {"OnHit", 0x80}, {"OnHitWith", 0x100}, {"OnPackageStart", 0x200}, {"OnPackageDone", 0x400},
 	{"OnPackageChange", 0x800}, {"OnLoad", 0x1000}, {"OnMagicEffectHit", 0x2000}, {"OnSell", 0x4000}, {"OnStartCombat", 0x8000}, {"OnOpen", 0x10000}, {"OnClose", 0x20000},
@@ -4581,6 +4721,10 @@ void InitJIPHooks()
 	HOOK_INIT_JPRT(SynchronizePosition, 0x575836, 0x575845);
 
 	SetFormEDID = (_SetFormEDID)*(UInt32*)0x1029018;
+
+	for (UInt32 addr : {0x50DA73, 0x792DC0, 0x7C6F86, 0x7FC4DA, 0x7FD49F, 0x80EA39, 0x81C095, 0x9C6CB6, 0x9C6D3D, 0xA7D6E2, 0xA7D7C3, 0xB5CD2A})
+		SafeWrite32(addr, 0x110);
+
 	SafeWrite32(0x1029018, (UInt32)TESObjectLIGHSetEDIDHook);
 	SAFE_WRITE_BUF(0xA68D6B, "\x8B\x86\x9C\x00\x00\x00\x89\x87\x9C\x00\x00\x00");
 	WritePushRetRelJump(0x447155, 0x447171, (UInt32)LoadNifRetnNodeHook);
@@ -4608,6 +4752,7 @@ void InitJIPHooks()
 	WriteRelCall(0x7704AE, (UInt32)ClearHUDOrphanedTiles);
 	WriteRelJump(0x50F9E0, (UInt32)GetIsInternalMarkerHook);
 	WriteRelJump(0x815EE6, (UInt32)CastSpellHook);
+	WriteRelCall(0x923299, (UInt32)SkipDrawWeapAnimHook);
 
 	PrintLog("> JIP hooks initialized successfully.");
 }

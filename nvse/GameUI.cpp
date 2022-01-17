@@ -135,7 +135,7 @@ bool InterfaceManager::IsRefHighlighted(TESObjectREFR *refr)
 	return false;
 }
 
-__declspec(naked) TESObjectREFR *InterfaceManager::GetCursorPick()
+__declspec(naked) NiAVObject *InterfaceManager::GetCursorPick()
 {
 	__asm
 	{
@@ -150,36 +150,34 @@ __declspec(naked) TESObjectREFR *InterfaceManager::GetCursorPick()
 		push	0
 		mov     ecx, edi
 		CALL_EAX(0xE98F20)
-		mov     ecx, edi
-		mov		dword ptr [ecx], 1
-		mov		byte ptr [ecx+0x11], 1
+		mov		dword ptr [edi], 1
+		mov		byte ptr [edi+0x11], 1
 		mov		eax, g_TES
-		push	dword ptr [eax+0xC]
-		CALL_EAX(0x705FC0)
+		mov		ecx, [eax+0xC]
+		lock inc dword ptr [ecx+4]
+		mov		[edi+0x14], ecx
 		push	0
 		push	0
 		push	0
 		mov		eax, g_thePlayer
 		push	dword ptr [eax+0x670]
-		mov		ecx, ds:[0x11DEB7C]
+		mov		ecx, g_sceneGraph
 		CALL_EAX(0xC52020)
-		push	0
 		lea     edx, [ebp-0x4C]
+		lea     eax, [ebp-0x40]
+		push	0
 		push	edx
-		lea     edx, [ebp-0x40]
+		push	eax
+		push	0
 		push	edx
+		push	eax
 		cvttss2si	edx, [esi+0x40]
 		push	edx
 		cvttss2si	edx, [esi+0x38]
 		push	edx
-		mov		ecx, ds:[0x11DEB7C]
+		mov		ecx, g_sceneGraph
 		mov		ecx, [ecx+0xAC]
 		CALL_EAX(0xA71080)
-		push	0
-		lea     edx, [ebp-0x4C]
-		push	edx
-		lea     edx, [ebp-0x40]
-		push	edx
 		mov     ecx, edi
 		CALL_EAX(0xE98E20)
 		xor		esi, esi
@@ -187,12 +185,9 @@ __declspec(naked) TESObjectREFR *InterfaceManager::GetCursorPick()
 		jz		done
 		cmp		dword ptr [edi+0x28], 0
 		jz		done
-		mov		eax, [edi+0x1C]
-		mov		eax, [eax]
-		push	dword ptr [eax]
-		CALL_EAX(0x56F930)
-		pop		ecx
-		mov		esi, eax
+		mov		esi, [edi+0x1C]
+		mov		eax, [esi]
+		mov		esi, [eax]
 	done:
 		mov     ecx, edi
 		CALL_EAX(0xE98FA0)

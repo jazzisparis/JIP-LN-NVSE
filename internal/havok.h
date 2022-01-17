@@ -2,32 +2,34 @@
 
 typedef AlignedVector4 hkVector4;
 
-struct hkMatrix3x4;
-
 struct alignas(16) hkQuaternion
 {
 	float	x, y, z, w;
 
 	hkQuaternion() {}
 	hkQuaternion(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
-	hkQuaternion(const NiVector3 &eulerYPR) {*this = eulerYPR;}
 	hkQuaternion(const hkQuaternion &from) {*this = from;}
+	hkQuaternion(const NiVector3 &ypr) {*this = ypr;}
 	hkQuaternion(const NiMatrix33 &rotMat) {*this = rotMat;}
 	hkQuaternion(const hkMatrix3x4 &rotMat) {*this = rotMat;}
+	hkQuaternion(const hkVector4 &from) {*this = from;}
 	hkQuaternion(const AxisAngle &axisAngle) {*this = axisAngle;}
+	hkQuaternion(const NiQuaternion &niQt) {*this = niQt;}
 	explicit hkQuaternion(const __m128 rhs) {*this = rhs;}
 
-	void operator=(const NiVector3 &eulerYPR)
-	{
-		NiMatrix33 rotMat = eulerYPR;
-		*this = rotMat;
-	}
 	inline void operator=(const hkQuaternion &from) {_mm_store_ps(&x, from);}
+	inline void operator=(hkQuaternion &&from) {_mm_store_ps(&x, from);}
+	inline void operator=(const NiVector3 &ypr) {FromEulerYPR(ypr);}
 	inline void operator=(const NiMatrix33 &rotMat) {FromRotationMatrix(rotMat);}
 	inline void operator=(const hkMatrix3x4 &rotMat) {ThisCall(0xCB26E0, this, &rotMat);}
 	inline void operator=(const hkVector4 &from) {_mm_store_ps(&x, from);}
 	inline void operator=(const AxisAngle &axisAngle) {FromAxisAngle(axisAngle);}
 	inline void operator=(const __m128 rhs) {_mm_store_ps(&x, rhs);}
+
+	inline void operator=(const NiQuaternion &niQt)
+	{
+		_mm_store_si128((__m128i*)&x, _mm_shuffle_epi32(_mm_loadu_si128((__m128i*)&niQt.w), 0x39));
+	}
 
 	inline void operator+=(const hkQuaternion &rhs)
 	{
@@ -48,6 +50,7 @@ struct alignas(16) hkQuaternion
 
 	inline operator __m128() const {return _mm_load_ps(&x);}
 
+	hkQuaternion* __fastcall FromEulerYPR(const NiVector3 &ypr);
 	hkQuaternion* __fastcall FromRotationMatrix(const NiMatrix33 &rotMat);
 	hkQuaternion* __fastcall FromAxisAngle(const AxisAngle &axisAngle);
 
@@ -59,7 +62,7 @@ struct alignas(16) hkQuaternion
 
 	inline void Negate()
 	{
-		*this = _mm_xor_ps(*this, _mm_load_ps((const float*)kSSEChangeSignMaskPS));
+		*this = _mm_xor_ps(*this, _mm_load_ps((const float*)(kPackedValues + 8)));
 	}
 
 	inline float __vectorcall DotProduct(const hkQuaternion &rhs) const
@@ -70,6 +73,8 @@ struct alignas(16) hkQuaternion
 
 	hkQuaternion *Normalize();
 	NiVector3* __fastcall ToEulerYPR(NiVector3 &ypr) const;
+
+	void Dump() const;
 };
 
 // 30
@@ -1239,7 +1244,7 @@ public:
 	float					flt590;				// 590
 	bhkCachingShapePhantom	*chrPhantom;		// 594
 	UInt32					unk598;				// 598
-	UInt32					unk59C;				// 59C
+	UInt32					usedShape;			// 59C	0 - 5A4; 1 - 5A8
 	UInt32					unk5A0;				// 5A0
 	bhkCapsuleShape			*capsuleShape;		// 5A4
 	bhkCharControllerShape	*charCtrlShape;		// 5A8
@@ -1465,7 +1470,7 @@ public:
 		ThisCall(0xC9C1D0, this);
 	}
 
-	void SetAngularVelocity(UInt8 axis, float angVel);
+	void __vectorcall SetAngularVelocity(UInt32 axis, float angVel);
 };
 
 // 14

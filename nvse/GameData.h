@@ -515,6 +515,29 @@ public:
 	UInt8			byte20;			// 20
 	UInt8			pad21[3];		// 21
 	UInt32			unk24;			// 24
+
+	class Iterator
+	{
+		friend GridCellArray;
+
+		TESObjectCELL	**pCells;
+		UInt32			count;
+
+	public:
+		explicit operator bool() const {return count != 0;}
+		void operator++()
+		{
+			pCells++;
+			count--;
+		}
+
+		TESObjectCELL* operator*() const {return *pCells;}
+		TESObjectCELL* operator->() const {return *pCells;}
+
+		Iterator(GridCellArray &source) : pCells(source.gridCells), count(source.gridSize * source.gridSize) {}
+	};
+
+	Iterator Begin() {return Iterator(*this);}
 };
 
 // 44
@@ -627,7 +650,7 @@ public:
 
 	__forceinline static TES *GetSingleton() {return *(TES**)0x11DEA10;}
 
-	__forceinline bool GetTerrainHeight(float *posXY, float *result)
+	__forceinline bool GetTerrainHeight(NiPoint2 *posXY, float *result)
 	{
 		return ThisCall<bool>(0x4572E0, this, posXY, result);
 	}
