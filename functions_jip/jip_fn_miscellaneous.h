@@ -546,7 +546,7 @@ bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 	else filter &= 0x3F;
 	NiCamera *camera = g_sceneGraph->camera;
 	NiVector4 coords;
-	if (!((NiVector3*)&coords)->RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), maxRange, 0, filter))
+	if (!((NiVector3*)&coords)->RayCastCoords(camera->WorldTranslate(), camera->WorldRotate()[0], maxRange, filter))
 	{
 		if (numArgs < 2) return true;
 		coords = NiVector4((maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0, 0);
@@ -571,7 +571,7 @@ bool Cmd_GetReticleRange_Execute(COMMAND_ARGS)
 	else filter &= 0x3F;
 	NiCamera *camera = g_sceneGraph->camera;
 	NiVector4 coords;
-	if (!((NiVector3*)&coords)->RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), maxRange, 0, filter))
+	if (!((NiVector3*)&coords)->RayCastCoords(camera->WorldTranslate(), camera->WorldRotate()[0], maxRange, filter))
 	{
 		if (numArgs < 2) return true;
 		coords = NiVector4((maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0, 0);
@@ -1234,7 +1234,7 @@ bool Cmd_GetReticleNode_Execute(COMMAND_ARGS)
 	UInt32 filter = 6;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &filter))
 	{
-		NiAVObject *rtclObject = GetRayCastObject(&g_thePlayer->cameraPos, &g_sceneGraph->camera->WorldRotate(), maxRange, 0, filter & 0x3F);
+		NiAVObject *rtclObject = GetRayCastObject(g_thePlayer->cameraPos, g_sceneGraph->camera->WorldRotate()[0], maxRange, filter & 0x3F);
 		if (rtclObject) nodeName = rtclObject->GetName();
 	}
 	AssignString(PASS_COMMAND_ARGS, nodeName);
@@ -1263,20 +1263,18 @@ bool Cmd_GetPointRayCastPos_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	NiVector3 pos, rot;
-	ScriptVar *outX, *outY, *outZ;
+	ResultVars outPos;
 	UInt32 filter = 6;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pos.x, &pos.y, &pos.z, &rot.x, &rot.z, &outX, &outY, &outZ, &filter))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pos.x, &pos.y, &pos.z, &rot.x, &rot.z, &outPos.x, &outPos.y, &outPos.z, &filter))
 	{
 		rot.x *= FltPId180;
 		rot.y = 0;
 		rot.z *= FltPId180;
 		NiMatrix33 rotMat;
 		rotMat.RotationMatrixInv(rot);
-		if (rot.RayCastCoords(&pos, &rotMat, 100000.0F, 4, filter & 0x3F))
+		if (rot.RayCastCoords(pos, rotMat[1], 100000.0F, filter & 0x3F))
 		{
-			outX->data.num = rot.x;
-			outY->data.num = rot.y;
-			outZ->data.num = rot.z;
+			outPos.Set(&rot.x);
 			*result = 1;
 		}
 	}

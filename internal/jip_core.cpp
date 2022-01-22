@@ -59,7 +59,7 @@ OSInputGlobals *g_inputGlobals;
 TileMenu **g_tileMenuArray;
 HUDMainMenu *g_HUDMainMenu;
 ConsoleManager *g_consoleManager;
-NiNode *g_cursorNode;
+NiNode *s_pc1stPersonNode = nullptr, *g_cursorNode;
 ShadowSceneNode *g_shadowSceneNode;
 TESObjectREFR *s_tempPosMarker;
 float g_screenResConvert, g_screenWidth, g_screenHeight;
@@ -129,6 +129,47 @@ const char kMenuIDJumpTable[] =
 };
 
 UInt32 s_serializedFlags = 0;
+
+__declspec(naked) void __fastcall ResultVars::Set(float *resPtr)
+{
+	__asm
+	{
+		movups	xmm0, [edx-4]
+		psrldq	xmm0, 4
+		cvtps2pd	xmm1, xmm0
+		movhlps	xmm0, xmm0
+		cvtps2pd	xmm0, xmm0
+		mov		eax, [ecx]
+		movq	qword ptr [eax+8], xmm1
+		mov		eax, [ecx+4]
+		movhpd	qword ptr [eax+8], xmm1
+		mov		eax, [ecx+8]
+		movq	qword ptr [eax+8], xmm0
+		retn
+	}
+}
+
+__declspec(naked) void __vectorcall ResultVars::Set(float *resPtr, double modifier)
+{
+	__asm
+	{
+		movups	xmm1, [edx-4]
+		psrldq	xmm1, 4
+		cvtps2pd	xmm2, xmm1
+		movhlps	xmm1, xmm1
+		cvtps2pd	xmm1, xmm1
+		movddup	xmm0, xmm0
+		mulpd	xmm2, xmm0
+		mulsd	xmm1, xmm0
+		mov		eax, [ecx]
+		movq	qword ptr [eax+8], xmm2
+		mov		eax, [ecx+4]
+		movhpd	qword ptr [eax+8], xmm2
+		mov		eax, [ecx+8]
+		movq	qword ptr [eax+8], xmm1
+		retn
+	}
+}
 
 __declspec(noinline) TempFormList *GetTempFormList()
 {
@@ -222,60 +263,79 @@ bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *inv
 	return !invItemsMap->Empty();
 }
 
-__declspec(naked) NiAVObject* __fastcall _GetRayCastObject(void *rcData, void *args)
+struct alignas(16) RayCastData
 {
+	AlignedVector4	pos0;		// 00	
+	AlignedVector4	pos1;		// 10
+	UInt8			byte20;		// 20
+	UInt8			pad21[3];	// 21
+	UInt8			layerType;	// 24
+	UInt8			filterFlags;// 25
+	UInt8			pad26[2];	// 26
+	UInt32			unk28[6];	// 28
+	float			flt40;		// 40
+	UInt32			unk44[19];	// 44
+	AlignedVector4	vector90;	// 90
+	UInt32			unkA0[3];	// A0
+	UInt8			byteAC;		// AC
+	UInt8			padAD[3];	// AD
+};
+static_assert(sizeof(RayCastData) == 0xB0);
+
+__declspec(naked) NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
+{
+	static const float kUnitConv = 1 / 6.999125481F;
 	__asm
 	{
-		push	ebp
-		mov		ebp, esp
-		sub		esp, 0xC
-		push	esi
-		push	edi
-		mov		esi, ecx
-		mov		edi, edx
-		mov		eax, [edi+0xC]
-		add		eax, [edi+0x14]
-		mov		ecx, [edi+8]
-		lea		edx, [ebp-0xC]
-		movss	xmm0, [edi+0x10]
+		push	ebx
+		mov		ebx, ecx
+		mov		eax, [ebp+0xC]
+		mov		ecx, [ebp+8]
+		movups	xmm0, [eax]
+		shufps	xmm0, xmm0, 0xC
 		movss	xmm1, [eax+0x18]
-		mulss	xmm1, xmm0
-		addss	xmm1, [ecx+8]
-		movss	[edx+8], xmm1
-		movss	xmm1, [eax+0xC]
-		mulss	xmm1, xmm0
-		addss	xmm1, [ecx+4]
-		movss	[edx+4], xmm1
-		mulss	xmm0, [eax]
-		addss	xmm0, [ecx]
-		movss	[edx], xmm0
-		mov		ecx, esi
-		CALL_EAX(0x4A3C20)
-		lea		eax, [esi+0x24]
-		push	eax
-		mov		ecx, g_thePlayer
-		CALL_EAX(0x931ED0)
-		mov		edx, [eax]
-		mov		dx, [edi+0x18]
-		mov		[eax], edx
-		push	dword ptr [edi+8]
-		mov		ecx, esi
-		CALL_EAX(0x4A3DA0)
-		lea		eax, [ebp-0xC]
-		push	eax
-		mov		ecx, esi
-		CALL_EAX(0x4A3EB0)
-		push	esi
+		movlhps	xmm0, xmm1
+		movss	xmm1, [ebp+0x10]
+		shufps	xmm1, xmm1, 0x40
+		mulps	xmm0, xmm1
+		movups	xmm1, [ecx]
+		movss	xmm2, kUnitConv
+		shufps	xmm2, xmm2, 0x40
+		mulps	xmm1, xmm2
+		movaps	[ebx], xmm1
+		mulps	xmm0, xmm2
+		addps	xmm0, xmm1
+		movaps	[ebx+0x10], xmm0
+		mov		dword ptr [ebx+0x40], 0x3F800000
+		mov		eax, 0xFFFFFFFF
+		mov		[ebx+0x44], eax
+		mov		[ebx+0x50], eax
+		xor		eax, eax
+		mov		[ebx+0x20], al
+		lea		ecx, [ebx+0x70]
+		mov		[ecx], eax
+		mov		[ecx+0x10], eax
+		xorps	xmm0, xmm0
+		movaps	[ecx+0x20], xmm0
+		movaps	[ecx+0x30], xmm0
+		mov		eax, g_thePlayer
+		mov		ecx, [eax+0x68]
+		mov		eax, [ecx+0x138]
+		mov		ecx, [eax+0x594]
+		mov		eax, [ecx+8]
+		mov		ecx, [eax+0x2C]
+		mov		cx, [ebp+0x14]
+		mov		[ebx+0x24], ecx
+		push	1
+		push	ebx
 		mov		ecx, g_TES
-		CALL_EAX(0x458420)
-		pop		edi
-		pop		esi
-		leave
+		CALL_EAX(0x458440)
+		pop		ebx
 		retn
 	}
 }
 
-__declspec(naked) NiAVObject* __stdcall GetRayCastObject(NiVector3 *posVector, NiMatrix33 *rotMatrix, float maxRange, UInt32 axis, UInt16 filter)
+__declspec(naked) NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt16 filter)
 {
 	__asm
 	{
@@ -283,38 +343,35 @@ __declspec(naked) NiAVObject* __stdcall GetRayCastObject(NiVector3 *posVector, N
 		mov		ebp, esp
 		and		esp, 0xFFFFFFF0
 		sub		esp, 0xB0
-		mov		edx, ebp
 		mov		ecx, esp
 		call	_GetRayCastObject
 		leave
-		retn	0x14
+		retn	0x10
 	}
 }
 
-__declspec(naked) bool NiVector3::RayCastCoords(NiVector3 *posVector, NiMatrix33 *rotMatrix, float maxRange, UInt32 axis, UInt16 filter)
+__declspec(naked) bool NiVector3::RayCastCoords(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt16 filter)
 {
 	__asm
 	{
 		push	ebp
 		mov		ebp, esp
 		and		esp, 0xFFFFFFF0
-		sub		esp, 0xC0
-		mov		[esp], ecx
-		mov		edx, ebp
-		lea		ecx, [esp+0x10]
+		sub		esp, 0xB0
+		push	ecx
+		lea		ecx, [esp+4]
 		call	_GetRayCastObject
-		push	dword ptr [esp]
-		lea		ecx, [esp+0x14]
+		lea		ecx, [esp+4]
 		CALL_EAX(0x5DBE60)
-		push	dword ptr [esp]
+		push	eax
 		mov		ecx, g_TES
 		CALL_EAX(0x451110)
 		leave
-		retn	0x14
+		retn	0x10
 	}
 }
 
-__declspec(naked) int __stdcall GetRayCastMaterial(NiVector3 *posVector, NiMatrix33 *rotMatrix, float maxRange, UInt32 axis, UInt16 filter)
+__declspec(naked) int __stdcall GetRayCastMaterial(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt16 filter)
 {
 	__asm
 	{
@@ -322,15 +379,13 @@ __declspec(naked) int __stdcall GetRayCastMaterial(NiVector3 *posVector, NiMatri
 		mov		ebp, esp
 		and		esp, 0xFFFFFFF0
 		sub		esp, 0xC0
-		mov		edx, ebp
 		lea		ecx, [esp+0x10]
 		call	_GetRayCastObject
 		test	eax, eax
 		jz		invalid
 		mov		[esp+0xC], eax
-		push	eax
-		CALL_EAX(0x56F930)
-		pop		ecx
+		mov		ecx, eax
+		call	NiAVObject::GetParentRef
 		test	eax, eax
 		jz		isTerrain
 		mov		ecx, eax
@@ -390,7 +445,7 @@ __declspec(naked) int __stdcall GetRayCastMaterial(NiVector3 *posVector, NiMatri
 	invalid:
 		mov		eax, 0xFFFFFFFF
 		leave
-		retn	0x14
+		retn	0x10
 	}
 }
 

@@ -983,12 +983,16 @@ public:
 	void				*ptr0C4;				// 0C4
 	UInt32				unk0C8;					// 0C8
 	void				*ptr0CC;				// 0CC
-	UInt32				unk0D0[4];				// 0D0
+	NiObject			*object0D0;				// 0D0
+	UInt32				unk0D4;					// 0D4
+	UInt32				unk0D8;					// 0D8
+	NiObject			*object0DC;				// 0DC
 	float				refractionStrength;		// 0E0
 	SInt32				refractionFirePeriod;	// 0E4
 	float				parallaxMaxPasses;		// 0E8
 	float				parallaxScale;			// 0EC
-	UInt32				unk0F0[5];				// 0F0
+	UInt32				unk0F0[4];				// 0F0
+	void				*ptr100;				// 100
 };
 static_assert(sizeof(BSShaderPPLightingProperty) == 0x104);
 
@@ -1186,6 +1190,7 @@ public:
 	UInt32 GetIndex();
 	bool ReplaceObject(NiAVObject *object);
 	NiProperty* __fastcall GetProperty(UInt32 propID);
+	TESObjectREFR *GetParentRef();
 
 	void DumpProperties();
 	void DumpParents();

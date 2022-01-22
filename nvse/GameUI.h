@@ -65,6 +65,23 @@ public:
 		UInt32		unk10;
 	};
 
+	struct HUDEffects
+	{
+		UInt32				unk00;			// 00
+		NiTArray<UInt32>	array04;		// 04	NiTPrimitiveArray<BGSMenuPacker::PackedMenu*>
+		UInt32				unk14[5];		// 14
+		UInt8				byte28;			// 28
+		UInt8				pad29[3];
+		float				flt2C[8];		// 2C
+		UInt32				unk4C;			// 4C
+		void				*ptr50;			// 50	vtbl: 0x10AFF8C; size: 0x88; c'tor: 0xB8A9E0
+		UInt8				byte54;			// 54
+		UInt8				pad55[3];
+		float				blurRadius;		// 58
+		float				scanlineFreq;	// 5C
+		float				blurIntensity;	// 60
+	};
+
 	enum KeyModifier
 	{
 		kHeld_Alt =		1,
@@ -181,9 +198,7 @@ public:
 	UInt8					byte172;			// 172
 	UInt8					byte173;			// 173
 	FOPipboyManager			*pipboyManager;		// 174
-	UInt32					unk178;				// 178
-	NiTArray<UInt32>		array17C;			// 17C NiTPrimitiveArray@PackedMenu@BGSMenuPacker
-	UInt32					unk18C[20];			// 18C
+	HUDEffects				hudEffects;			// 178
 	UInt32					highlightState;		// 1DC
 	HighlightedRef			highlightMain;		// 1E0
 	UInt32					numHighlighted;		// 1E8

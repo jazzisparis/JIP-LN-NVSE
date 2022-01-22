@@ -623,7 +623,7 @@ __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetHealth
 		jnz		invalid
 		push	esi
 		mov		esi, ecx
-		movss	xmm0, kFlt100
+		movss	xmm0, SS_100
 		mov		eax, [ecx]
 		test	eax, eax
 		jz		done

@@ -71,24 +71,32 @@ union HexFloat
 	constexpr HexFloat(const UInt32 _h) : h(_h) {}
 };
 
-extern const float kFlt1d1K, kFlt1d100, kFlt1d10, kFlt1d4, kFlt3, kFlt10, kFlt100, kFlt1000;
 extern const HexFloat kPackedValues[];
 extern const char kLwrCaseConverter[], kUprCaseConverter[];
 
-#define kSSERemoveSignMaskPS	kPackedValues
-#define kSSERemoveSignMaskPS0	kPackedValues+0x10
-#define kSSEChangeSignMaskPS	kPackedValues+0x20
-#define kSSEChangeSignMaskPS0	kPackedValues+0x30
-#define kSSEDiscard4thPS		kPackedValues+0x40
-#define kSSERemoveSignMaskPD	kPackedValues+0x50
-#define kSSEChangeSignMaskPD	kPackedValues+0x60
-#define kVcEpsilon				kPackedValues+0x70
-#define kVcPId180				kPackedValues+0x80
-#define kVcPId2					kPackedValues+0x90
-#define kVcPI					kPackedValues+0xA0
-#define kVcPIx2					kPackedValues+0xB0
-#define kVcHalf					kPackedValues+0xC0
-#define kVcOne					kPackedValues+0xD0
+#define PS_AbsMask			kPackedValues
+#define PS_AbsMask0			kPackedValues+0x10
+#define PS_FlipSignMask		kPackedValues+0x20
+#define PS_FlipSignMask0	kPackedValues+0x30
+#define PS_Discard3rdMask	kPackedValues+0x40
+#define PD_AbsMask			kPackedValues+0x50
+#define PD_FlipSignMask		kPackedValues+0x60
+
+#define PS_Epsilon			kPackedValues+0x70
+#define PS_V3_PId180		kPackedValues+0x80
+#define PS_V3_PId2			kPackedValues+0x90
+#define PS_V3_PI			kPackedValues+0xA0
+#define PS_V3_PIx2			kPackedValues+0xB0
+#define PS_V3_Half			kPackedValues+0xC0
+#define PS_V3_One			kPackedValues+0xD0
+
+#define SS_1d1K				kPackedValues+0xE0
+#define SS_1d100			kPackedValues+0xE4
+#define SS_1d10				kPackedValues+0xE8
+#define SS_1d4				kPackedValues+0xEC
+#define SS_3				kPackedValues+0xF0
+#define SS_10				kPackedValues+0xF4
+#define SS_100				kPackedValues+0xF8
 
 #define FltPId2		1.570796371F
 #define FltPId180	0.01745329238F

@@ -851,7 +851,7 @@ __declspec(naked) void SetScaleHook()
 	{
 		movss	xmm0, [ebp+8]
 		maxss	xmm0, kMinScale
-		minss	xmm0, kFlt100
+		minss	xmm0, SS_100
 		movss	[ebp+8], xmm0
 		retn
 	}
@@ -1150,7 +1150,7 @@ __declspec(naked) void ProcessGradualSetFloatHook()
 		sub		eax, [ecx+8]
 		cvtsi2ss	xmm0, eax
 		divss	xmm0, [ecx+0xC]
-		comiss	xmm0, kVcOne
+		comiss	xmm0, PS_V3_One
 		jnb		finished
 		movss	xmm1, [ecx+4]
 		subss	xmm1, [ecx]
@@ -1210,7 +1210,7 @@ __declspec(naked) bool ReactionCooldownCheckHook()
 		mov		edx, eax
 		sub		eax, lastTickCount
 		cvtsi2ss	xmm0, eax
-		mulss	xmm0, kFlt1d1K
+		mulss	xmm0, SS_1d1K
 		comiss	xmm0, ds:[0x11CE9B8]
 		seta	al
 		jbe		done
@@ -1569,7 +1569,7 @@ __declspec(naked) void __fastcall SetExplosionLightFadeHook(Explosion *explRef)
 		movss	xmm1, [ecx+0x88]
 		addss	xmm1, xmm1
 		divss	xmm1, [ecx+0x8C]
-		movss	xmm2, kVcOne
+		movss	xmm2, PS_V3_One
 		movss	xmm0, xmm2
 		subss	xmm0, xmm1
 		minss	xmm0, xmm2
@@ -1825,7 +1825,7 @@ __declspec(naked) float __vectorcall GetFrequencyModifier(TESSound *soundForm)
 	static const float kFreqMult[] = {0.01F, 0.005F};
 	__asm
 	{
-		movss	xmm0, kVcOne
+		movss	xmm0, PS_V3_One
 		test	byte ptr [ecx+0x48], 1
 		jnz		done
 		movsx	edx, byte ptr [ecx+0x46]
@@ -1914,7 +1914,7 @@ __declspec(naked) UInt32 __fastcall AdjustSoundFrequencyHook(BSGameSound *gameSo
 		cvtsi2ss	xmm0, edx
 		mulss	xmm0, [ecx+0x138]
 		mulss	xmm0, [esp+4]
-		maxss	xmm0, kFlt100
+		maxss	xmm0, SS_100
 		minss	xmm0, kFlt200K
 		cvtss2si	edx, xmm0
 		push	edx
@@ -3264,7 +3264,16 @@ __declspec(naked) void EnableRepairButtonHook()
 {
 	__asm
 	{
-		fstp	s_repairedItemHealth
+		mov		ecx, [ebp+8]
+		call	ContChangesEntry::GetHealthPercent
+		push	0x5FA0
+		ldmxcsr	[esp]
+		cvtps2dq	xmm0, xmm0
+		cvtdq2ps	xmm0, xmm0
+		mov		byte ptr [esp+1], 0x1F
+		ldmxcsr	[esp]
+		pop		ecx
+		movss	s_repairedItemHealth, xmm0
 		mov		ecx, [ebp+8]
 		mov		eax, [ecx]
 		test	eax, eax
@@ -3285,14 +3294,14 @@ __declspec(naked) void EnableRepairButtonHook()
 		xorps	xmm1, xmm1
 		maxss	xmm0, xmm1
 		movss	xmm1, ds:[0x11D0FF4]	// fRepairSkillBase
-		movss	xmm2, kFlt10
+		movss	xmm2, SS_10
 		mulss	xmm1, xmm2
 		mulss	xmm2, ds:[0x11D0190]	// fRepairSkillMax
 		subss	xmm2, xmm1
 		mulss	xmm0, xmm2
-		mulss	xmm0, kFlt1d100
+		mulss	xmm0, SS_1d100
 		addss	xmm0, xmm1
-		minss	xmm0, kFlt100
+		minss	xmm0, SS_100
 		movss	s_pcRepairSkill, xmm0
 		comiss	xmm0, s_repairedItemHealth
 		retn
@@ -3317,39 +3326,35 @@ __declspec(naked) void PopulateRepairListHook()
 		jnz		done
 		call	ContChangesEntry::GetHealthPercent
 		comiss	xmm0, s_repairedItemHealth
-		setb	al
+		setbe	al
 	done:
 		retn
 	}
 }
 
-__declspec(naked) float __stdcall GetRepairAmount(float itemToRepairHealth, float itemUsedHealth)
+__declspec(naked) float __vectorcall GetRepairAmount(float itemToRepairHealth, float itemUsedHealth)
 {
 	__asm
 	{
-		movss	xmm0, s_pcRepairSkill
-		mulss	xmm0, kFlt1d100
-		movss	xmm5, kFlt1d10
-		movss	xmm1, [esp+4]
+		movss	xmm5, SS_1d10
+		mulss	xmm0, xmm5
 		mulss	xmm1, xmm5
-		movss	xmm3, [esp+8]
-		mulss	xmm3, xmm5
-		movss	xmm2, xmm1
-		minss	xmm2, xmm3
-		mulss	xmm2, ds:[0x11D074C]	// fRepairScavengeMult
-		maxss	xmm1, xmm3
-		movss	xmm3, ds:[0x11D0884]	// fRepairMin
+		movss	xmm2, s_pcRepairSkill
+		mulss	xmm2, SS_1d100
+		movss	xmm3, xmm0
+		minss	xmm3, xmm1
+		mulss	xmm3, ds:[0x11D074C]	// fRepairScavengeMult
+		maxss	xmm0, xmm1
+		movss	xmm1, ds:[0x11D0884]	// fRepairMin
 		movss	xmm4, ds:[0x11CFFA4]	// fRepairMax
-		subss	xmm4, xmm3
-		mulss	xmm4, xmm0
-		addss	xmm4, xmm1
-		addss	xmm4, xmm2
-		addss	xmm4, xmm3
-		mulss	xmm4, xmm5
-		minss	xmm0, xmm4
-		movss	[esp+4], xmm0
-		fld		dword ptr [esp+4]
-		retn	8
+		subss	xmm4, xmm1
+		mulss	xmm4, xmm2
+		addss	xmm0, xmm1
+		addss	xmm0, xmm3
+		addss	xmm0, xmm4
+		mulss	xmm0, xmm5
+		minss	xmm0, xmm2
+		retn
 	}
 }
 
@@ -3357,9 +3362,10 @@ __declspec(naked) void SetRepairListValuesHook()
 {
 	__asm
 	{
-		push	dword ptr [ebp-0xC]
-		push	dword ptr [ebp-4]
+		movss	xmm1, [ebp-0xC]
+		movss	xmm0, [ebp-4]
 		call	GetRepairAmount
+		movss	[ebp-8], xmm0
 		retn
 	}
 }
@@ -3370,13 +3376,12 @@ __declspec(naked) void DoRepairItemHook()
 	{
 		mov		ecx, [ebp+8]
 		call	ContChangesEntry::GetHealthPercent
-		push	ecx
-		movss	[esp], xmm0
+		movss	xmm5, xmm0
 		mov		ecx, ds:[0x11DA760]
 		call	ContChangesEntry::GetHealthPercent
-		push	ecx
-		movss	[esp], xmm0
+		movss	xmm1, xmm5
 		call	GetRepairAmount
+		movss	[ebp-0x14], xmm0
 		retn
 	}
 }
@@ -3387,10 +3392,8 @@ __declspec(naked) void RepairMenuClickHook()
 	{
 		mov		ecx, ds:[0x11DA760]
 		call	ContChangesEntry::GetHealthPercent
-		movss	xmm1, s_pcRepairSkill
-		subss	xmm1, xmm0
-		comiss	xmm1, kVcOne
-		seta	ah
+		addss	xmm0, PS_V3_One
+		comiss	xmm0, s_pcRepairSkill
 		retn
 	}
 }
@@ -3654,27 +3657,27 @@ __declspec(naked) bool __fastcall CreatureSpreadFixHook(Actor *actor)
 
 __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlobals, int EDX, float secPassed)
 {
-	static const double kDbl0dot1 = 0.1, kDbl24dot0 = 24.0, kDbl1d3600 = 1 / 3600.0;
-	static double gameHour = 0, daysPassed = 0;
+	static const double kMults[] = {24.0, 1 / 3600.0, 0.1};
+	alignas(16) static double hourAndDays[] = {0, 0};
 	__asm
 	{
-		movq	xmm4, kDbl24dot0
+		movq	xmm4, kMults
 		cvtss2sd	xmm2, [esp+4]
 		mov		eax, [ecx+0x14]
 		cvtss2sd	xmm0, [eax+0x24]
 		mulsd	xmm2, xmm0
-		mulsd	xmm2, kDbl1d3600
+		mulsd	xmm2, kMults+8
 		mov		eax, [ecx+0xC]
 		cvtss2sd	xmm0, [eax+0x24]
 		cmp		byte ptr [ecx+0x1C], 0
 		jnz		doRecalc
 		movq	xmm1, xmm0
-		movq	xmm3, gameHour
+		movaps	xmm3, hourAndDays
 		subsd	xmm1, xmm3
-		comisd	xmm1, kDbl0dot1
+		comisd	xmm1, kMults+0x10
 		ja		doRecalc
 		movq	xmm0, xmm3
-		movq	xmm1, daysPassed
+		movhlps	xmm1, xmm3
 		jmp		proceed
 	doRecalc:
 		mov		[ecx+0x1C], 0
@@ -3708,7 +3711,7 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		mov		edx, 0x1F
 		mov		eax, [ecx]
 		movss	xmm3, [eax+0x24]
-		addss	xmm3, kVcOne
+		addss	xmm3, PS_V3_One
 		movss	[eax+0x24], xmm3
 		jmp		iterNext
 	incDay:
@@ -3739,8 +3742,8 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		cvtsd2ss	xmm3, xmm1
 		mov		eax, [ecx+0x10]
 		movss	[eax+0x24], xmm3
-		movq	gameHour, xmm0
-		movq	daysPassed, xmm1
+		movlhps	xmm0, xmm1
+		movaps	hourAndDays, xmm0
 		retn	4
 	}
 }
@@ -3927,10 +3930,13 @@ __declspec(naked) void DoOperatorHook()
 	};
 	__asm
 	{
+		push	0x5948BB
+		mov		[ebp-0x10], 0
 		mov		al, [ebp-0x28]
 		mov		ah, [ebp-0x40]
-		shl		edx, 3
-		cmp		edx, 8
+		lea		ecx, kDoOperatorJumpTable[edx*8]
+		cmp		edx, 1
+		mov		edx, ecx
 		jbe		doJump
 		test	al, al
 		jnz		lValFlt
@@ -3938,23 +3944,21 @@ __declspec(naked) void DoOperatorHook()
 		jnz		lValCvt
 		mov		eax, [ebp-0x20]
 		mov		ecx, [ebp-0x38]
-		add		edx, 4
-		jmp		doJump
+		jmp		dword ptr [edx+4]
 		ALIGN 16
 	lValFlt:
 		movq	xmm0, qword ptr [ebp-0x20]
 		test	ah, ah
 		jnz		rValFlt
 		cvtsi2sd	xmm1, [ebp-0x38]
-		jmp		doJump
+	doJump:
+		jmp		dword ptr [edx]
+		ALIGN 16
 	lValCvt:
 		cvtsi2sd	xmm0, [ebp-0x20]
 	rValFlt:
 		movq	xmm1, qword ptr [ebp-0x38]
-	doJump:
-		mov		[ebp-0x10], 0
-		push	0x5948BB
-		jmp		kDoOperatorJumpTable[edx]
+		jmp		dword ptr [edx]
 	}
 }
 
@@ -3987,6 +3991,7 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			if (!HOOK_SET(EnableRepairButton, bEnable))
 				return false;
 			SafeWrite8(0x7818D3, bEnable ? 0x77 : 0x7A);
+			SafeWrite8(0x7B5D05, bEnable ? 0x76 : 0x75);
 			HOOK_SET(PopulateRepairList, bEnable);
 			HOOK_SET(SetRepairListValues, bEnable);
 			HOOK_SET(DoRepairItem, bEnable);
@@ -4577,11 +4582,11 @@ void InitGamePatches()
 	WriteRelJump(0x9C3BD6, (UInt32)MineExplodeChanceHook);
 
 	HOOK_INIT_JUMP(CalculateHitDamage, 0x9B5A30);
-	HOOK_INIT_JPRT(EnableRepairButton, 0x7818C8, 0x7818D3);
+	HOOK_INIT_JPRT(EnableRepairButton, 0x7818B2, 0x7818D3);
 	HOOK_INIT_JPRT(PopulateRepairList, 0x4D4C11, 0x4D4C26);
-	HOOK_INIT_JPRT(SetRepairListValues, 0x7B58DB, 0x7B5927);
-	HOOK_INIT_JPRT(DoRepairItem, 0x7B5DAD, 0x7B5E08);
-	HOOK_INIT_JPRT(RepairMenuClick, 0x7B5CED, 0x7B5D02);
+	HOOK_INIT_JPRT(SetRepairListValues, 0x7B58DB, 0x7B592A);
+	HOOK_INIT_JPRT(DoRepairItem, 0x7B5DAD, 0x7B5E0B);
+	HOOK_INIT_JPRT(RepairMenuClick, 0x7B5CED, 0x7B5D05);
 	HOOK_INIT_CALL(InitMissileFlags, 0x9B7E14);
 	HOOK_INIT_JUMP(QttSelectInventory, 0x780B09);
 	HOOK_INIT_JUMP(QttSelectContainer, 0x75BF97);
@@ -4779,7 +4784,7 @@ void DeferredInit()
 
 	ActorValueInfo *avInfo = ActorValueInfo::Array()[kAVCode_BigGuns];
 	avInfo->fullName.name = avInfo->avName;
-	avInfo->callback4C = 0x643BD0;
+	avInfo->callback4C = (void*)0x643BD0;
 
 	s_LIGH_EDID = "LIGH_EDID";
 

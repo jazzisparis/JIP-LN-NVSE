@@ -653,7 +653,7 @@ __declspec(naked) void TESObjectREFR::SetAngle(NiVector4 *rotVector, bool setLoc
 		lea		ecx, [eax+0x34]
 		mov		edx, [esp+0xC]
 		movups	xmm0, [edx]
-		mulps	xmm0, kVcPId180
+		mulps	xmm0, PS_V3_PId180
 		cmp		byte ptr [esp+0x10], 0
 		jnz		localRot
 		lea		edx, [esi+0x24]
@@ -773,7 +773,7 @@ __declspec(naked) void __fastcall TESObjectREFR::Rotate(NiVector4 *rotVector)
 		jz		done
 		mov		edi, eax
 		movups	xmm0, [edx]
-		mulps	xmm0, kVcPId180
+		mulps	xmm0, PS_V3_PId180
 		movups	[edx], xmm0
 		lea		ecx, [edi+0x34]
 		call	NiMatrix33::Rotate
@@ -1432,7 +1432,7 @@ __declspec(naked) void __vectorcall Actor::TurnAngle(float angle)
 	__asm
 	{
 		push	0
-		mulss	xmm0, kVcPId180
+		mulss	xmm0, PS_V3_PId180
 		addss	xmm0, [ecx+0x2C]
 		push	ecx
 		movss	[esp], xmm0
@@ -1711,7 +1711,7 @@ __declspec(naked) float Actor::AdjustPushForce(float baseForce)
 		push	0xA
 		add		ecx, 0xA4
 		CALL_EAX(0x66EF50)
-		fmul	kFlt10
+		fmul	dword ptr SS_10
 		fmul	dword ptr ds:[0x11CEA6C]
 		fadd	dword ptr ds:[0x11CE664]
 		fld		dword ptr [esp+4]
@@ -1729,7 +1729,7 @@ __declspec(naked) float Actor::AdjustPushForce(float baseForce)
 
 __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR *originRef, bool adjustForce)
 {
-	static const float kFlt5div7 = 5.0F / 6.9991255F, kPushTime = 1.0F / 96.0F;
+	static const float kPushActor[] = {5 / 6.999125481F, 1 / 96.0F};
 	__asm
 	{
 		push	esi
@@ -1750,7 +1750,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		test	eax, eax
 		jnz		useRef
 		movss	xmm0, [esp+0xC]
-		mulss	xmm0, kVcPId180
+		mulss	xmm0, PS_V3_PId180
 		call	GetSinCos
 		jmp		doneAngle
 	useRef:
@@ -1760,7 +1760,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		movaps	xmm1, xmm0
 		mulps	xmm1, xmm1
 		haddps	xmm1, xmm1
-		comiss	xmm1, kVcEpsilon
+		comiss	xmm1, PS_Epsilon
 		jb		done
 		rsqrtss	xmm1, xmm1
 		unpcklps	xmm1, xmm1
@@ -1775,10 +1775,10 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 	doneForce:
 		mov		edx, [esp+8]
 		movd	xmm2, edx
-		mulss	xmm2, kFlt5div7
+		mulss	xmm2, kPushActor
 		and		edx, 0x7FFFFFFF
 		movd	xmm3, edx
-		mulss	xmm3, kPushTime
+		mulss	xmm3, kPushActor+4
 		mulss	xmm2, xmm3
 		unpcklps	xmm2, xmm2
 		mulps	xmm0, xmm2

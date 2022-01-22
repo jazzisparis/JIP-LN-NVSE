@@ -102,7 +102,7 @@ struct GameGlobals
 };
 
 extern void *g_scrapHeapQueue;
-extern NiNode *g_cursorNode;
+extern NiNode *s_pc1stPersonNode, *g_cursorNode;
 extern float g_screenResConvert, g_screenWidth, g_screenHeight;
 extern const char *g_terminalModelDefault;
 extern TESObjectWEAP *g_fistsWeapon;
@@ -226,6 +226,18 @@ public:
 	inline bool operator<(const LambdaVarContext &rhs) const {return scriptLambda < rhs.scriptLambda;}
 };
 
+struct ResultVars
+{
+	ScriptVar	*x;
+	ScriptVar	*y;
+	ScriptVar	*z;
+
+	ResultVars() {}
+
+	void __fastcall Set(float *resPtr);
+	void __vectorcall Set(float *resPtr, double modifier);
+};
+
 typedef Set<TESForm*> TempFormList;
 TempFormList *GetTempFormList();
 
@@ -247,9 +259,9 @@ InventoryItemsMap *GetInventoryItemsMap();
 
 bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *invItemsMap);
 
-NiAVObject* __stdcall GetRayCastObject(NiVector3 *posVector, NiMatrix33 *rotMatrix, float maxRange, UInt32 axis, UInt16 filter);
+NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt16 filter);
 
-int __stdcall GetRayCastMaterial(NiVector3 *posVector, NiMatrix33 *rotMatrix, float maxRange, UInt32 axis, UInt16 filter);
+int __stdcall GetRayCastMaterial(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt16 filter);
 
 struct AppearanceUndo
 {

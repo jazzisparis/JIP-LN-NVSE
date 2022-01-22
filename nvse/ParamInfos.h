@@ -1391,10 +1391,10 @@ ParamInfo kParams_OneString_ThreeFloats_TwoOptionalInts[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneString_OneOptionalAxis[] =
+ParamInfo kParams_OneString_OneAxis[] =
 {
 	{"String", kParamType_String, 0},
-	{"Axis", kParamType_Axis, 1}
+	{"Axis", kParamType_Axis, 0}
 };
 
 ParamInfo kParams_OneString_OneAxis_OneFloat[] =
@@ -1761,4 +1761,23 @@ ParamInfo kParams_OneOptionalInt_OneOptionalFloat[] =
 {
 	{"Integer", kParamType_Integer, 1},
 	{"Float", kParamType_Float, 0}
+};
+
+ParamInfo kParams_OneString_ThreeScriptVars_TwoOptionalInts[] =
+{
+	{"String", kParamType_String, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Integer", kParamType_Integer, 1},
+	{"Integer", kParamType_Integer, 1}
+};
+
+ParamInfo kParams_OneString_ThreeScriptVars_OneOptionalInt[] =
+{
+	{"String", kParamType_String, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Integer", kParamType_Integer, 1}
 };

@@ -17,7 +17,7 @@ __declspec(naked) void UpdateTileScales()
 	{
 		mov		eax, s_localMapZoom
 		movss	xmm0, [eax+8]
-		movss	xmm1, kVcHalf
+		movss	xmm1, PS_V3_Half
 		addss	xmm1, xmm0
 		mov		eax, s_miniMapScale
 		mulss	xmm1, [eax+8]
@@ -29,7 +29,7 @@ __declspec(naked) void UpdateTileScales()
 		movss	[eax+0x64], xmm1
 		dec		dl
 		jns		iterHead
-		mulss	xmm0, kFlt10
+		mulss	xmm0, SS_10
 		cvttss2si	eax, xmm0
 		shl		eax, 4
 		add		eax, 0x70
@@ -54,7 +54,7 @@ __declspec(naked) __m128* __fastcall GetNorthRotation(TESObjectCELL *cell)
 		test	eax, eax
 		jz		noRotation
 		movss	xmm0, [eax+0xC]
-		xorps	xmm0, kSSEChangeSignMaskPS0
+		xorps	xmm0, PS_FlipSignMask0
 		movss	s_cellNorthRotation, xmm0
 		call	GetSinCos
 		shufps	xmm0, xmm0, 0x14
@@ -162,7 +162,7 @@ __declspec(naked) void __fastcall WorldDimensions::GetPosMods(TESWorldSpace *wor
 		movaps	[ecx+0x10], xmm0
 		cmp		dword ptr [edx], 0x3F800000
 		jz		done
-		movss	xmm1, kVcHalf
+		movss	xmm1, PS_V3_Half
 		mulss	xmm0, xmm1
 		subss	xmm1, xmm0
 		unpcklps	xmm1, xmm1

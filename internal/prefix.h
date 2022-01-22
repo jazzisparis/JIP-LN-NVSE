@@ -385,8 +385,10 @@ class BSWin32Audio;
 struct Sound;
 class DIHookControl;
 
+struct NiPoint2;
 struct NiVector3;
 struct NiVector4;
+struct AlignedVector4;
 struct NiQuaternion;
 struct NiMatrix33;
 struct hkQuaternion;

@@ -2667,7 +2667,7 @@ __declspec(naked) void PlayerMinHealthHook()
 		movss	xmm0, [ebp-0x40]
 		movss	xmm1, xmm0
 		addss	xmm1, [ebp+0xC]
-		movss	xmm2, kVcOne
+		movss	xmm2, PS_V3_One
 		comiss	xmm1, xmm2
 		jnb		done
 		subss	xmm2, xmm0
@@ -3690,14 +3690,12 @@ __declspec(naked) void LoadBip01SlotHook()
 	}
 }
 
-NiNode *s_pc1stPersonNode = NULL;
-
 __declspec(naked) void LoadWeaponSlotHook()
 {
 	__asm
 	{
 		mov		eax, [ebp-0x14]
-		movss	xmm0, kVcOne
+		movss	xmm0, PS_V3_One
 		movups	[eax+0x34], xmm0
 		movups	[eax+0x44], xmm0
 		movups	[eax+0x54], xmm0
@@ -3727,9 +3725,9 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 	alignas(16) static constexpr HexFloat kAnimatedLightMods[] =
 	{
 		7.5F, 30 / 7.0F, 0.125F, 0.0625F,
-		4.0F, 2.0F, 1 / 252.0F, 0.7F,
-		0.1F, 0.1F, 0.1F, 0.0F, 
-		1 / 127.0F, 1 / 127.0F, 1 / 127.0F, 0.0F, 
+		4.0F, 2.0F, 1 / 210.0F, 0.675F,
+		0.1F, 0.1F, 0.1F, 0UL, 
+		1 / 127.0F, 1 / 127.0F, 1 / 127.0F, 0UL, 
 		0x7FUL, 0x7FUL, 0x7FUL, 0UL,
 		0x3FUL, 0x3FUL, 0x3FUL, 0UL
 	};
@@ -3765,7 +3763,7 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 	hasSaved1:
 		movd	xmm7, edx
 		addss	xmm7, xmm0
-		comiss	xmm7, kVcOne
+		comiss	xmm7, PS_V3_One
 		jbe		doneRecalc1
 	doRecalc1:
 		push	esi
@@ -3829,7 +3827,7 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		movss	xmm2, [edx]
 		comiss	xmm1, xmm2
 		setbe	al
-		mulss	xmm1, kFlt1d4
+		mulss	xmm1, SS_1d4
 		comiss	xmm1, xmm2
 		setnb	cl
 		or		al, cl
@@ -3861,7 +3859,7 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 	hasSaved2:
 		movd	xmm4, edx
 		addss	xmm4, xmm0
-		comiss	xmm4, kVcOne
+		comiss	xmm4, PS_V3_One
 		jbe		doneRecalc2
 	doRecalc2:
 		push	esi
@@ -3924,16 +3922,14 @@ __declspec(naked) void __fastcall UpdateAnimatedLightsHook(TES *pTES)
 	__asm
 	{
 		mov		dword ptr ds:[0x11C56E8], 0
-		mov		eax, [ecx+0x34]
-		test	eax, eax
-		jz		isExterior
-		mov		ecx, eax
-		CALL_EAX(0x553820)
-		jmp		doneCells
-	isExterior:
+		mov		edx, [ecx+0x34]
 		mov		ecx, [ecx+8]
-		CALL_EAX(0x4BABA0)
-	doneCells:
+		test	edx, edx
+		cmovnz	ecx, edx
+		mov		edx, 0x553820
+		mov		eax, 0x4BABA0
+		cmovnz	eax, edx
+		call	eax
 		mov		eax, offset s_activePtLights
 		mov		ecx, [eax+4]
 		test	ecx, ecx
