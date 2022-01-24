@@ -267,6 +267,9 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 		case kMenuType_Computers:
 			menuRef = ((ComputersMenu*)menu)->targetRef;
 			break;
+		case kMenuType_RepairServices:
+			menuRef = *((Actor**)0x11DA7F4);	//  g_repairServicesVendor
+			break;
 		case kMenuType_ItemMod:
 			menuRef = CreateRefForStack(g_thePlayer, ItemModMenu::Target());
 			break;
