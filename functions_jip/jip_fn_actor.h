@@ -72,13 +72,13 @@ DEFINE_COMMAND_PLUGIN(SetWheelDisabled, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetHitHealthDamage, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitLimbDamage, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(CrippleLimb, 1, 2, kParams_OneInt_OneOptionalObjectRef);
-DEFINE_COMMAND_PLUGIN(PlayIdleEx, 1, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(PlayIdleEx, 1, 1, kParams_OneOptionalIdleForm);
 DEFINE_COMMAND_PLUGIN(GetKillXP, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetKiller, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(KillActorAlt, 1, 3, kParams_OneOptionalObjectRef_TwoOptionalInts);
 DEFINE_COMMAND_ALT_PLUGIN(ReloadEquippedModels, ReloadModels, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetPlayedIdle, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(IsIdlePlayingEx, 1, 1, kParams_OneForm);
+DEFINE_CMD_COND_PLUGIN(IsIdlePlayingEx, 1, 1, kParams_OneIdleForm);
 DEFINE_COMMAND_PLUGIN(SetWeaponOut, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(AddBaseEffectListEffect, 0, 2, kParams_OneSpellItem_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(RemoveBaseEffectListEffect, 0, 2, kParams_OneSpellItem_OneOptionalActorBase);
@@ -137,6 +137,7 @@ DEFINE_COMMAND_PLUGIN(GetActorMovementFlags, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitBaseWeaponDamage, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitFatigueDamage, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(RefreshAnimData, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetActorVelocityAlt, 1, 4, kParams_ThreeScriptVars_OneOptionalInt);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -1257,7 +1258,7 @@ bool Cmd_GetActorVelocity_Execute(COMMAND_ARGS)
 		if (charCtrl)
 		{
 			if (axis) *result = charCtrl->velocity[axis - 'X'];
-			else *result = Vector3Length(&charCtrl->velocity);
+			else *result = charCtrl->velocity.Length();
 		}
 	}
 	return true;
@@ -1283,7 +1284,7 @@ bool Cmd_GetObjectUnderFeet_Execute(COMMAND_ARGS)
 	bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 	if (charCtrl && charCtrl->bodyUnderFeet)
 	{
-		TESObjectREFR *refr = GetCdBodyRef(&charCtrl->bodyUnderFeet->cdBody);
+		TESObjectREFR *refr = charCtrl->bodyUnderFeet->GetParentRef();
 		if (refr) REFR_RES = refr->refID;
 	}
 	return true;
@@ -1377,7 +1378,7 @@ bool Cmd_PlayIdleEx_Execute(COMMAND_ARGS)
 {
 	TESIdleForm *idleAnim = NULL;
 	Actor *actor = (Actor*)thisObj;
-	if (IS_ACTOR(actor) && actor->baseProcess && !actor->baseProcess->processLevel && ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim) && (!idleAnim || IS_ID(idleAnim, TESIdleForm)))
+	if (IS_ACTOR(actor) && actor->baseProcess && !actor->baseProcess->processLevel && ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim))
 	{
 		AnimData *animData = thisObj->GetAnimData();
 		if (animData)
@@ -1422,13 +1423,21 @@ bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 		return true;
 	PlayerCharacter *thePlayer = (character->refID == 0x14) ? (PlayerCharacter*)character : nullptr;
 	ValidBip01Names::Data *slotData = character->validBip01Names->slotData;
+	TESObjectWEAP *weapon = slotData[5].weapon;
+	bool doReEquip = weapon && (weapon->weaponFlags1 & 0x10);
+	if (doReEquip)
+	{
+		NiNode *backPack = character->validBip01Names->bip01->GetNode("Backpack");
+		if (backPack)
+			backPack->m_parent->RemoveObject(backPack);
+	}
 	UInt32 slotIdx;
 	NiAVObject *object;
 Do1stPerson:
 	slotIdx = 0;
 	do
 	{
-		if ((slotIdx != 6) && (object = slotData->object) && slotData->item)
+		if ((slotIdx != 6) && (object = slotData->object))
 		{
 			object->m_parent->RemoveObject(object);
 			slotData->object = nullptr;
@@ -1440,7 +1449,6 @@ Do1stPerson:
 	{
 		slotData = thePlayer->VB01N1stPerson->slotData;
 		thePlayer = nullptr;
-		TESObjectWEAP *weapon = slotData[5].weapon;
 		if (weapon)
 		{
 			CdeclCall(0x77F270);
@@ -1452,6 +1460,12 @@ Do1stPerson:
 	character->jipActorFlags2 |= kHookActorFlag2_SkipDrawWeapAnim;
 	ThisCall(0x605D70, character->baseForm, character);
 	character->jipActorFlags2 &= ~kHookActorFlag2_SkipDrawWeapAnim;
+	if (doReEquip)
+	{
+		ContChangesEntry *weapInfo = character->GetWeaponInfo();
+		if (weapInfo && (weapInfo->type == weapon))
+			character->EquipItem(weapon, 1, weapInfo->extendData ? weapInfo->extendData->GetFirstItem() : nullptr, 1, 0, 1);
+	}
 	return true;
 }
 
@@ -2150,7 +2164,7 @@ bool Cmd_GetActorTiltAngle_Execute(COMMAND_ARGS)
 	{
 		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 		if (charCtrl)
-			*result = ((axis == 'X') ? charCtrl->tiltAngleX : charCtrl->tiltAngleY) * Dbl180dPI;
+			*result = charCtrl->tiltAngle[axis - 'X'] * Dbl180dPI;
 	}
 	return true;
 }
@@ -2163,12 +2177,7 @@ bool Cmd_SetActorTiltAngle_Execute(COMMAND_ARGS)
 	{
 		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 		if (charCtrl)
-		{
-			angle *= FltPId180;
-			if (axis == 'X')
-				charCtrl->tiltAngleX = angle;
-			else charCtrl->tiltAngleY = angle;
-		}
+			charCtrl->tiltAngle[axis - 'X'] = angle * FltPId180;
 	}
 	return true;
 }
@@ -2334,7 +2343,7 @@ bool Cmd_GetHitNode_Execute(COMMAND_ARGS)
 					continue;
 				hkpRigidBody *rigidBody = impactData->rigidBody;
 				if (!rigidBody) continue;
-				NiNode *hitNode = GetCdBodyNode(&rigidBody->cdBody);
+				NiNode *hitNode = rigidBody->GetParentNode();
 				if (!hitNode) continue;
 				nodeName = hitNode->GetName();
 				break;
@@ -2465,5 +2474,29 @@ bool Cmd_RefreshAnimData_Execute(COMMAND_ARGS)
 {
 	if IS_ACTOR(thisObj)
 		((Actor*)thisObj)->RefreshAnimData();
+	return true;
+}
+
+bool Cmd_GetActorVelocityAlt_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	ResultVars outVel;
+	UInt32 getLocal = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outVel.x, &outVel.y, &outVel.z, &getLocal))
+	{
+		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
+		if (charCtrl)
+		{
+			NiNode *rootNode = thisObj->renderState ? thisObj->renderState->niNode14 : nullptr;
+			if (rootNode)
+			{
+				NiVector3 velocity = charCtrl->velocity;
+				if (getLocal)
+					velocity.MultiplyMatrixInv(rootNode->WorldRotate());
+				outVel.Set(&velocity.x);
+				*result = 1;
+			}
+		}
+	}
 	return true;
 }

@@ -382,7 +382,8 @@ struct PlayingMusic
 	float					flt21C;					// 21C
 	UInt8					track1Flags;			// 220
 	UInt8					track2Flags;			// 221
-	UInt8					pad222[2];				// 222
+	bool					isPaused;				// 222
+	bool					isMusicON;				// 223
 	UInt32					unk224;					// 224
 	UInt32					unk228[8];				// 228
 	float					flt248;					// 248

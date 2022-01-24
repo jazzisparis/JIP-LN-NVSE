@@ -16,6 +16,11 @@ struct NiPoint2
 	NiPoint2(float _x, float _y) : x(_x), y(_y) {}
 	NiPoint2(const NiPoint2 &rhs) {*this = rhs;}
 
+	inline float& operator[](char axis)
+	{
+		return ((float*)&x)[axis];
+	}
+
 	inline void operator=(const NiPoint2 &rhs) {_mm_storeu_si64(this, _mm_loadu_si64(&rhs));}
 	inline void operator=(NiPoint2 &&rhs) {_mm_storeu_si64(this, _mm_loadu_si64(&rhs));}
 
@@ -31,6 +36,7 @@ struct NiVector3
 	NiVector3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
 	NiVector3(const NiVector3 &rhs) {*this = rhs;}
 	NiVector3(const NiVector4 &rhs) {*this = rhs;}
+	NiVector3(const AlignedVector4 &rhs) {*this = rhs;}
 
 	inline float& operator[](char axis)
 	{
@@ -50,6 +56,7 @@ struct NiVector3
 		z = rhs.z;
 	}
 	void operator=(const NiVector4 &rhs);
+	void operator=(const AlignedVector4 &rhs);
 
 	inline void operator+=(const NiVector3 &rhs)
 	{
@@ -94,13 +101,17 @@ struct NiVector3
 
 	inline operator __m128() const {return _mm_loadu_ps(&x);}
 
+	float __vectorcall Length() const;
 	NiVector3* __fastcall MultiplyMatrix(const NiMatrix33 &mat);
+	NiVector3* __fastcall MultiplyMatrixInv(const NiMatrix33 &mat);
 	NiVector3* __fastcall MultiplyMatrixRow(const NiMatrix33 &rotMatrix, UInt32 whichRow);
 	NiVector3* __fastcall MultiplyQuaternion(const NiQuaternion &qt);
 	NiVector3 *Normalize();
 	NiVector3* __fastcall CrossProduct(const NiVector3 &vB);
 	NiVector3* __fastcall Interpolate(const NiVector3 &vB, float t, const NiVector3 &res);
-	bool RayCastCoords(NiVector3 *posVector, NiMatrix33 *rotMatrix, float maxRange, UInt32 axis = 0, UInt16 filter = 6);
+	bool RayCastCoords(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt16 filter = 6);
+
+	void Dump() const;
 };
 
 float __vectorcall Point3Distance(NiVector3 *pt1, NiVector3 *pt2);
@@ -146,6 +157,13 @@ struct NiVector4
 
 	inline operator NiVector3*() const {return (NiVector3*)this;}
 	inline operator __m128() const {return _mm_loadu_ps(&x);}
+
+	inline float __vectorcall Length() const
+	{
+		return ((NiVector3*)this)->Length();
+	}
+
+	void Dump() const;
 };
 
 struct alignas(16) AlignedVector4
@@ -179,9 +197,14 @@ struct alignas(16) AlignedVector4
 	}
 
 	inline operator __m128() const {return _mm_load_ps(&x);}
-};
 
-float __vectorcall Vector3Length(AlignedVector4 *inVec);
+	inline float __vectorcall Length() const
+	{
+		return ((NiVector3*)this)->Length();
+	}
+
+	void Dump() const;
+};
 
 // 10
 struct AxisAngle
@@ -213,6 +236,8 @@ struct AxisAngle
 	AxisAngle* __fastcall FromQuaternion(const NiQuaternion &qt);
 
 	NiVector3 *ToEulerYPR(NiVector3 &ypr) const;
+
+	void Dump() const;
 };
 
 // 24
@@ -259,6 +284,15 @@ struct NiMatrix33
 	inline void operator*=(const NiMatrix33 &rhs) {MultiplyMatrices(rhs);}
 
 	inline float operator[](UInt32 idx) const {return cr[0][idx];}
+	inline float* operator[](UInt32 idx) {return &cr[0][idx];}
+
+	inline bool operator==(const NiMatrix33 &rhs) const
+	{
+		for (UInt32 i = 0; i < 9; i++)
+			if (fabs(cr[0][i] - rhs.cr[0][i]) > 0.00001F)
+				return false;
+		return true;
+	}
 
 	NiVector3* __fastcall ExtractAngles(NiVector3 &outAngles) const;
 	NiVector3* __fastcall ExtractAnglesInv(NiVector3 &outAngles) const;
@@ -269,6 +303,7 @@ struct NiMatrix33
 	NiMatrix33* __fastcall MultiplyMatrices(const NiMatrix33 &matB);
 	NiMatrix33* __fastcall Rotate(const NiVector3 &rot);
 	NiMatrix33 *Transpose();
+
 	void Dump() const;
 };
 
@@ -350,10 +385,10 @@ struct NiQuaternion
 
 	NiQuaternion* __fastcall MultiplyQuaternion(const NiQuaternion &rhs);
 
-	inline NiQuaternion *Invert()
+	inline NiQuaternion& Invert()
 	{
 		*this = _mm_xor_ps(*this, _mm_load_ps((const float*)0x10C8780));
-		return this;
+		return *this;
 	}
 
 	inline void Negate()
@@ -370,25 +405,25 @@ struct NiQuaternion
 	NiQuaternion *Normalize();
 	NiVector3* __fastcall ToEulerYPR(NiVector3 &ypr) const;
 
-	NiQuaternion *Rotate(const NiQuaternion &rot)
+	NiQuaternion& Rotate(const NiQuaternion &rot)
 	{
 		NiQuaternion q = rot;
-		*this *= *q.Invert();
-		return this;
+		*this *= q.Invert();
+		return *this;
 	}
 
-	NiQuaternion *Rotate(const NiVector3 &rot)
+	NiQuaternion& Rotate(const NiVector3 &rot)
 	{
 		NiQuaternion q = rot;
-		*this *= *q.Invert();
-		return this;
+		*this *= q.Invert();
+		return *this;
 	}
 
-	NiQuaternion *Rotate(const AxisAngle &rot)
+	NiQuaternion& Rotate(const AxisAngle &rot)
 	{
 		NiQuaternion q = rot;
-		*this *= *q.Invert();
-		return this;
+		*this *= q.Invert();
+		return *this;
 	}
 
 	void __vectorcall lerp(const NiQuaternion &qb, float t);

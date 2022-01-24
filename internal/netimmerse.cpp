@@ -238,6 +238,29 @@ __declspec(naked) NiProperty* __fastcall NiAVObject::GetProperty(UInt32 propID)
 	}
 }
 
+__declspec(naked) TESObjectREFR *NiAVObject::GetParentRef()
+{
+	__asm
+	{
+	iterHead:
+		test	ecx, ecx
+		jz		retnNULL
+		mov		eax, ecx
+		mov		ecx, [ecx+0x18]
+		mov		edx, [eax]
+		cmp		dword ptr [edx+0x10], ADDR_ReturnThis
+		jnz		iterHead
+		mov		eax, [eax+0xCC]
+		test	eax, eax
+		jz		iterHead
+		retn
+		ALIGN 16
+	retnNULL:
+		xor		eax, eax
+		retn
+	}
+}
+
 void NiAVObject::DumpProperties()
 {
 	s_debug.Indent();
@@ -306,7 +329,7 @@ __declspec(naked) NiNode *NiNode::CreateCopy()
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x68]
 		and		byte ptr [esi+0x30], 0xFE
-		movss	xmm0, kVcOne
+		movss	xmm0, PS_V3_One
 		movups	[esi+0x34], xmm0
 		movups	[esi+0x44], xmm0
 		movups	[esi+0x54], xmm0

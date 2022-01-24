@@ -90,10 +90,10 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 	s_log.Create("jip_ln_nvse.log");
 	int version = nvse->nvseVersion;
 	s_nvseVersion = (version >> 24) + (((version >> 16) & 0xFF) * 0.1) + (((version & 0xFF) >> 4) * 0.01);
-	if (version < 0x6020030)
+	if (version < 0x6020050)
 	{
-		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.23 minimum.", s_nvseVersion);
-		MessageBox(nullptr, "ERROR!\n\nxNVSE version is outdated.\n\nThis plugin requires v6.2.3 minimum.", "JIP LN NVSE Plugin", MB_OK | MB_ICONWARNING | MB_TOPMOST);
+		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.25 minimum.", s_nvseVersion);
+		MessageBox(nullptr, "ERROR!\n\nxNVSE version is outdated.\n\nThis plugin requires v6.2.5 minimum.", "JIP LN NVSE Plugin", MB_OK | MB_ICONWARNING | MB_TOPMOST);
 		return false;
 	}
 	PrintLog("NVSE version:\t%.2f\nJIP LN version:\t%.2f\n", s_nvseVersion, JIP_LN_VERSION);
@@ -1345,6 +1345,13 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*290B*/REG_CMD(GetHitFatigueDamage);
 	//	v56.42
 	/*290C*/REG_CMD(RefreshAnimData);
+	//	v56.44
+	/*290D*/REG_CMD(GetNifBlockTranslationAlt);
+	/*290E*/REG_CMD(GetNifBlockRotationAlt);
+	/*290F*/REG_CMD(GetLinearVelocityAlt);
+	/*2910*/REG_CMD(GetAngularVelocityAlt);
+	/*2911*/REG_CMD(SetAngularVelocityEx);
+	/*2912*/REG_CMD(GetActorVelocityAlt);
 
 	//===========================================================
 
@@ -1410,6 +1417,11 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 
 	MemCopy = memcpy;
 	MemMove = memmove;
+
+	//	xNVSE 6.2.5 : Skip ExtraContainerChanges::Cleanup() call in ~InventoryReference()
+	UInt32 patchAddr = (UInt32)nvse - 0x6ABF2;
+	if (*(UInt32*)patchAddr == 0xC1831774)
+		SafeWrite8(patchAddr, 0xEB);
 	
 	return true;
 }
@@ -1448,6 +1460,7 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 
 			break;
 		}
+		case NVSEMessagingInterface::kMessage_ExitGame_Console:
 		case NVSEMessagingInterface::kMessage_ExitGame:
 			JIPScriptRunner::RunScripts(kRunOn_ExitGame);
 			break;
@@ -1476,9 +1489,6 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			s_syncPositionRef = NULL;
 			break;
 		}
-		case NVSEMessagingInterface::kMessage_ExitGame_Console:
-			JIPScriptRunner::RunScripts(kRunOn_ExitGame);
-			break;
 		case NVSEMessagingInterface::kMessage_PostLoadGame:
 			break;
 		case NVSEMessagingInterface::kMessage_PostPostLoad:

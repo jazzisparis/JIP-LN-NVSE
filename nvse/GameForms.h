@@ -3837,13 +3837,14 @@ public:
 
 	enum QuestFlag
 	{
-		kFlag_IsRunning =			1 << 0,
-		kFlag_Completed =			1 << 1,
-		kFlag_AllowRepeatedTopics =	1 << 2,
-		kFlag_AllowRepeatedStages =	1 << 3,
-		kFlag_RunAfterReset =		1 << 4,
-		kFlag_IsShownInPipboy =		1 << 5,
-		kFlag_Failed =				1 << 6
+		kFlag_IsRunning =			1,
+		kFlag_Completed =			2,
+		kFlag_AllowRepeatedTopics =	4,
+		kFlag_AllowRepeatedStages =	8,
+		kFlag_RunAfterReset =		0x10,
+		kFlag_StartGameEnabled =	kFlag_IsRunning | kFlag_RunAfterReset,
+		kFlag_IsShownInPipboy =		0x20,
+		kFlag_Failed =				0x40
 	};
 
 	UInt8					questFlags;			// 3C
@@ -5375,26 +5376,53 @@ static_assert(sizeof(BGSAddonNode) == 0x60);
 class ActorValueInfo : public TESForm
 {
 public:
+	enum ActorValueFlags
+	{
+		kAVFlag_Unk0 =					1,
+		kAVFlag_Unused1 =				2,
+		kAVFlag_Unused2 =				4,
+		kAVFlag_Max10 =					8,
+		kAVFlag_Skill =					0x10,
+		kAVFlag_Condition =				0x20,
+		kAVFlag_Regenerates =			0x40,
+		kAVFlag_IgnoreDerivedValue =	0x80,
+		kAVFlag_NonDamageable =			0x100,
+		kAVFlag_NegateEffectsString =	0x200,
+		kAVFlag_CreatureCombatSkill =	0x400,
+		kAVFlag_UnkB =					0x800,
+		kAVFlag_UnkC =					0x1000,
+		kAVFlag_UnusedD =				0x2000,
+		kAVFlag_NonModifiableByScript =	0x4000,
+		kAVFlag_Min1 =					0x8000
+	};
+
+	enum ActorValueGroups
+	{
+		kAVGroup_SPECIAL =		0,
+		kAVGroup_Misc =			1,	//	Incl. Health, Fatigue, AP, etc.
+		kAVGroup_Skills =		2,
+		kAVGroup_Behavior =		3,
+		kAVGroup_LimbCond =		4,
+		kAVGroup_Effects =		5,	//	Incl. RADS and HC needs.
+		kAVGroup_Resistance =	6,
+		kAVGroup_Variables =	7
+	};
+
 	TESFullName			fullName;
 	TESDescription		description;
 	TESIcon				icon;
 
-	char				*infoName;		// 38
-	String				avName;			// 3C
-	UInt32				avFlags;		// 44
-		//		bit 0x01	used in list of modified ActorValue for Player and others. Either can damage or "special damage", see 0x00937280
-		//		bit 0x03
-		//		bit 0x04
-		//		bit 0x07
-		//		bit 0x08
-		//		bit 0x0B
-		//		bit 0x0C
-		//		bit 0x0E	canModify
-	UInt32				unk48;			// 48
-	UInt32				callback4C;		// 4C
-	UInt32				unk50;			// 50
-	UInt32				callback54;		// 54
-	UInt32				unk4C[27];		// 4C
+	char				*infoName;			// 38
+	String				avName;				// 3C
+	UInt32				avFlags;			// 44
+	UInt32				avGroup;			// 48
+	void				*callback4C;		// 4C
+	UInt32				unk50;				// 50
+	void				*callback54;		// 54
+	UInt32				numDerivedStats;	// 58
+	UInt32				derivedStatIDs[15];	// 5C
+	UInt32				numLevels;			// 98
+	const char			*levelNames[10];	// 9C
 
 	__forceinline static ActorValueInfo **Array() {return (ActorValueInfo**)0x11D61C8;}
 };

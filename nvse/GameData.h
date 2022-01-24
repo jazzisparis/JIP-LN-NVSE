@@ -712,7 +712,7 @@ struct RadioEntry
 	UInt32			unk08[7];
 };
 
-typedef ActiveEffect *(*ActiveEffectCreate)(MagicCaster *magCaster, MagicItem *magItem, EffectItem *effItem);
+typedef ActiveEffect* (*ActiveEffectCreate)(MagicCaster*, MagicItem*, EffectItem*);
 
 // 10
 struct EffectArchTypeEntry

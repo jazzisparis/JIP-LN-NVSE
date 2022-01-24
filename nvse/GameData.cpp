@@ -83,7 +83,7 @@ __declspec(naked) bool Sky::GetIsRaining()
 		cmp		byte ptr [eax+0xEB], 4
 		jnz		retnFalse
 	weatherPerc:
-		movss	xmm0, kVcOne
+		movss	xmm0, PS_V3_One
 		comiss	xmm0, [ecx+0xF4]
 		setbe	al
 		retn

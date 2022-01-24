@@ -51,7 +51,7 @@ DEFINE_COMMAND_PLUGIN(SetNifBlockScale, 1, 3, kParams_OneString_OneFloat_OneOpti
 DEFINE_COMMAND_PLUGIN(GetNifBlockFlag, 1, 3, kParams_OneString_OneInt_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetNifBlockFlag, 1, 4, kParams_OneString_TwoInts_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetObjectVelocity, 1, 1, kParams_OneOptionalAxis);
-DEFINE_COMMAND_PLUGIN(GetAngularVelocity, 1, 2, kParams_OneString_OneOptionalAxis);
+DEFINE_COMMAND_PLUGIN(GetAngularVelocity, 1, 2, kParams_OneString_OneAxis);
 DEFINE_COMMAND_PLUGIN(SetAngularVelocity, 1, 3, kParams_OneString_OneAxis_OneFloat);
 DEFINE_COMMAND_PLUGIN(PlaceAtCell, 0, 6, kParams_OneForm_OneInt_OneForm_ThreeFloats);
 DEFINE_COMMAND_PLUGIN(GetRayCastPos, 1, 6, kParams_ThreeGlobals_OneOptionalFloat_OneOptionalInt_OneOptionalString);
@@ -67,7 +67,7 @@ DEFINE_COMMAND_PLUGIN(AttachLight, 1, 5, kParams_OneString_OneForm_ThreeOptional
 DEFINE_COMMAND_PLUGIN(RemoveLight, 1, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(GetExtraFloat, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(SetExtraFloat, 1, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(SetLinearVelocity, 1, 4, kParams_OneString_ThreeFloats);
+DEFINE_COMMAND_PLUGIN(SetLinearVelocity, 1, 5, kParams_OneString_ThreeFloats_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(InsertNode, 0, 23, kParams_OneForm_OneInt_OneFormatString);
 DEFINE_COMMAND_PLUGIN(AttachModel, 0, 23, kParams_OneForm_OneInt_OneFormatString);
 DEFINE_COMMAND_ALT_PLUGIN(SynchronizePosition, SyncPos, 0, 4, kParams_OneOptionalObjectRef_OneOptionalInt_OneOptionalFloat_OneOptionalString);
@@ -86,6 +86,11 @@ DEFINE_COMMAND_PLUGIN(RenameNifBlock, 1, 3, kParams_TwoStrings_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(RemoveNifBlock, 1, 2, kParams_OneString_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(PlayAnimSequence, 1, 2, kParams_OneString_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetTranslatedPos, 1, 6, kParams_ThreeFloats_ThreeScriptVars);
+DEFINE_COMMAND_PLUGIN(GetNifBlockTranslationAlt, 1, 6, kParams_OneString_ThreeScriptVars_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(GetNifBlockRotationAlt, 1, 6, kParams_OneString_ThreeScriptVars_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(GetLinearVelocityAlt, 1, 5, kParams_OneString_ThreeScriptVars_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetAngularVelocityAlt, 1, 5, kParams_OneString_ThreeScriptVars_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetAngularVelocityEx, 1, 5, kParams_OneString_ThreeFloats_OneOptionalInt);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -481,7 +486,7 @@ bool __fastcall GetHasContact(TESObjectREFR *thisObj, TESForm *form)
 		if (!charCtrl) return false;
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
-			refr = GetCdBodyRef(&charCtrl->bodyUnderFeet->cdBody);
+			refr = charCtrl->bodyUnderFeet->GetParentRef();
 			if (refr && tmpFormLst->HasKey(refr))
 				return true;
 		}
@@ -499,7 +504,7 @@ bool __fastcall GetHasContact(TESObjectREFR *thisObj, TESForm *form)
 	}
 	for (; count; count--, bodies++)
 	{
-		refr = GetCdBodyRef(&(*bodies)->cdBody);
+		refr = (*bodies)->GetParentRef();
 		if (refr && tmpFormLst->HasKey(refr))
 			return true;
 	}
@@ -529,7 +534,7 @@ bool __fastcall GetHasContactBase(TESObjectREFR *thisObj, TESForm *form)
 		if (!charCtrl) return false;
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
-			refr = GetCdBodyRef(&charCtrl->bodyUnderFeet->cdBody);
+			refr = charCtrl->bodyUnderFeet->GetParentRef();
 			if (refr && tmpFormLst->HasKey(refr->baseForm))
 				return true;
 		}
@@ -547,7 +552,7 @@ bool __fastcall GetHasContactBase(TESObjectREFR *thisObj, TESForm *form)
 	}
 	for (; count; count--, bodies++)
 	{
-		refr = GetCdBodyRef(&(*bodies)->cdBody);
+		refr = (*bodies)->GetParentRef();
 		if (refr && tmpFormLst->HasKey(refr->baseForm))
 			return true;
 	}
@@ -575,7 +580,7 @@ bool __fastcall GetHasContactType(TESObjectREFR *thisObj, UInt32 typeID)
 		if (!charCtrl) return false;
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
-			refr = GetCdBodyRef(&charCtrl->bodyUnderFeet->cdBody);
+			refr = charCtrl->bodyUnderFeet->GetParentRef();
 			if (refr && (refr->baseForm->typeID == typeID))
 				return true;
 		}
@@ -593,7 +598,7 @@ bool __fastcall GetHasContactType(TESObjectREFR *thisObj, UInt32 typeID)
 	}
 	for (; count; count--, bodies++)
 	{
-		refr = GetCdBodyRef(&(*bodies)->cdBody);
+		refr = (*bodies)->GetParentRef();
 		if (refr && (refr->baseForm->typeID == typeID))
 			return true;
 	}
@@ -630,7 +635,7 @@ bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 		if (!charCtrl) return true;
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
-			refr = GetCdBodyRef(&charCtrl->bodyUnderFeet->cdBody);
+			refr = charCtrl->bodyUnderFeet->GetParentRef();
 			if (refr) tmpFormLst->Insert(refr);
 		}
 		bodies = charCtrl->pointCollector.contactBodies.data;
@@ -647,7 +652,7 @@ bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 	}
 	for (; count; count--, bodies++)
 	{
-		refr = GetCdBodyRef(&(*bodies)->cdBody);
+		refr = (*bodies)->GetParentRef();
 		if (refr) tmpFormLst->Insert(refr);
 	}
 	if (!tmpFormLst->Empty())
@@ -784,7 +789,7 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 		{
 			NiCamera *camera = g_sceneGraph->camera;
 			NiVector4 coords;
-			if (!((NiVector3*)&coords)->RayCastCoords(&camera->WorldTranslate(), &camera->WorldRotate(), maxRange))
+			if (!((NiVector3*)&coords)->RayCastCoords(camera->WorldTranslate(), camera->WorldRotate()[0], maxRange))
 			{
 				if (!translate) return true;
 				coords = NiVector4((maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0, 0);
@@ -1185,7 +1190,7 @@ bool Cmd_GetObjectVelocity_Execute(COMMAND_ARGS)
 		if (rigidBody)
 		{
 			if (axis) *result = rigidBody->motion.linVelocity[axis - 'X'];
-			else *result = Vector3Length(&rigidBody->motion.linVelocity);
+			else *result = rigidBody->motion.linVelocity.Length();
 		}
 	}
 	return true;
@@ -1195,14 +1200,29 @@ bool Cmd_GetAngularVelocity_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char blockName[0x40];
-	char axis = 0;
+	char axis;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &axis))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
 		if (rigidBody)
 		{
-			if (axis) *result = rigidBody->motion.angVelocity[axis - 'X'];
-			else *result = Vector3Length(&rigidBody->motion.angVelocity);
+			__asm
+			{
+				mov		ecx, rigidBody
+				movups	xmm0, [ecx+0x1BC]
+				psrldq	xmm0, 4
+				xor		eax, eax
+				mov		al, axis
+				sub		al, 'X'
+				shl		al, 4
+				mulps	xmm0, [ecx+eax+0xF0]
+				xorps	xmm1, xmm1
+				haddps	xmm0, xmm1
+				haddps	xmm0, xmm1
+				cvtps2pd	xmm0, xmm0
+				mov		eax, result
+				movq	qword ptr [eax], xmm0
+			}
 		}
 	}
 	return true;
@@ -1218,8 +1238,19 @@ bool Cmd_SetAngularVelocity_Execute(COMMAND_ARGS)
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
 		if (rigidBody)
 		{
-			rigidBody->SetAngularVelocity(axis - 'X', velocity);
-			rigidBody->UpdateMotion();
+			__asm
+			{
+				movss	xmm0, velocity
+				shufps	xmm0, xmm0, 0x40
+				xor		eax, eax
+				mov		al, axis
+				sub		al, 'X'
+				shl		al, 4
+				mov		ecx, rigidBody
+				mulps	xmm0, [ecx+eax+0xF0]
+				movaps	[ecx+0x1C0], xmm0
+				CALL_EAX(0xC9C1D0)
+			}
 		}
 	}
 	return true;
@@ -1262,7 +1293,7 @@ bool Cmd_GetRayCastPos_Execute(COMMAND_ARGS)
 		{
 			NiVector3 coords, posVector = objNode->WorldTranslate();
 			posVector.z += posZmod;
-			if (coords.RayCastCoords(&posVector, &objNode->WorldRotate(), 50000.0F, 4, filter & 0x3F))
+			if (coords.RayCastCoords(posVector, objNode->WorldRotate()[1], 50000.0F, filter & 0x3F))
 			{
 				outX->data = coords.x;
 				outY->data = coords.y;
@@ -1281,7 +1312,7 @@ bool Cmd_GetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &seqName))
 	{
 		NiNode *rootNode = thisObj->GetNiNode();
-		if (rootNode)
+		if (rootNode && (NOT_ACTOR(thisObj) || (((Actor*)thisObj)->lifeState != 1)))
 		{
 			NiControllerManager *ctrlMgr = (NiControllerManager*)rootNode->m_controller;
 			if (ctrlMgr && IS_TYPE(ctrlMgr, NiControllerManager))
@@ -1301,7 +1332,7 @@ bool Cmd_SetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &seqName, &frequency))
 	{
 		NiNode *rootNode = thisObj->GetNiNode();
-		if (rootNode)
+		if (rootNode && (NOT_ACTOR(thisObj) || (((Actor*)thisObj)->lifeState != 1)))
 		{
 			NiControllerManager *ctrlMgr = (NiControllerManager*)rootNode->m_controller;
 			if (ctrlMgr && IS_TYPE(ctrlMgr, NiControllerManager))
@@ -1562,16 +1593,18 @@ bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
 
 bool Cmd_SetLinearVelocity_Execute(COMMAND_ARGS)
 {
+	*result = 0;
 	char blockName[0x40];
-	hkVector4 velocity;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &velocity.x, &velocity.y, &velocity.z))
+	hkVector4 velocity(_mm_setzero_ps());
+	UInt32 setLocal = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &velocity.x, &velocity.y, &velocity.z, &setLocal))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
 		if (rigidBody)
 		{
-			velocity.w = 0;
-			rigidBody->motion.linVelocity = velocity;
+			rigidBody->motion.linVelocity = setLocal ? rigidBody->motion.motionState.transform.rotation.MultiplyVectorInv(velocity) : velocity;
 			rigidBody->UpdateMotion();
+			*result = 1;
 		}
 	}
 	return true;
@@ -1830,10 +1863,10 @@ bool Cmd_GetRayCastRef_Execute(COMMAND_ARGS)
 		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
 		{
-			NiAVObject *rcObject = GetRayCastObject(&objNode->WorldTranslate(), &objNode->WorldRotate(), 50000.0F, 4, filter & 0x3F);
+			NiAVObject *rcObject = GetRayCastObject(objNode->WorldTranslate(), objNode->WorldRotate()[1], 50000.0F, filter & 0x3F);
 			if (rcObject)
 			{
-				TESObjectREFR *resRefr = CdeclCall<TESObjectREFR*>(0x56F930, rcObject);
+				TESObjectREFR *resRefr = rcObject->GetParentRef();
 				if (resRefr) REFR_RES = resRefr->refID;
 			}
 		}
@@ -1843,16 +1876,17 @@ bool Cmd_GetRayCastRef_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRayCastMaterial_Execute(COMMAND_ARGS)
 {
-	*result = -1;
 	UInt32 filter = 6;
 	char nodeName[0x40];
 	nodeName[0] = 0;
+	int material = -1;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filter, &nodeName))
 	{
 		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
-			*result = GetRayCastMaterial(&objNode->WorldTranslate(), &objNode->WorldRotate(), 50000.0F, 4, filter & 0x3F);
+			material = GetRayCastMaterial(objNode->WorldTranslate(), objNode->WorldRotate()[1], 50000.0F, filter & 0x3F);
 	}
+	*result = material;
 	return true;
 }
 
@@ -1957,21 +1991,17 @@ bool Cmd_GetBlockTextureSet_Execute(COMMAND_ARGS)
 
 bool Cmd_GetPosEx_Execute(COMMAND_ARGS)
 {
-	ScriptVar *outX, *outY, *outZ;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outX, &outY, &outZ))
-	{
-		outX->data.num = thisObj->position.x;
-		outY->data.num = thisObj->position.y;
-		outZ->data.num = thisObj->position.z;
-	}
+	ResultVars outPos;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outPos.x, &outPos.y, &outPos.z))
+		outPos.Set(&thisObj->position.x);
 	return true;
 }
 
 bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 {
-	ScriptVar *outX, *outY, *outZ;
+	ResultVars outRot;
 	UInt32 getLocal = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outX, &outY, &outZ, &getLocal))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outRot.x, &outRot.y, &outRot.z, &getLocal))
 	{
 		NiVector3 *rotPtr = &thisObj->rotation, locRot;
 		if (getLocal)
@@ -1980,9 +2010,7 @@ bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 			if (rootNode)
 				rotPtr = rootNode->WorldRotate().ExtractAnglesInv(locRot);
 		}
-		outX->data.num = rotPtr->x * Dbl180dPI;
-		outY->data.num = rotPtr->y * Dbl180dPI;
-		outZ->data.num = rotPtr->z * Dbl180dPI;
+		outRot.Set(&rotPtr->x, Dbl180dPI);
 	}
 	return true;
 }
@@ -2197,7 +2225,7 @@ bool Cmd_PlayAnimSequence_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sequenceName, &nodeName))
 	{
 		NiNode *targetNode = thisObj->GetNode(nodeName);
-		if (targetNode)
+		if (targetNode && (NOT_ACTOR(thisObj) || (((Actor*)thisObj)->lifeState != 1)))
 		{
 			NiControllerManager *ctrlMgr = (NiControllerManager*)targetNode->m_controller;
 			if (ctrlMgr && IS_TYPE(ctrlMgr, NiControllerManager))
@@ -2224,14 +2252,114 @@ bool Cmd_PlayAnimSequence_Execute(COMMAND_ARGS)
 bool Cmd_GetTranslatedPos_Execute(COMMAND_ARGS)
 {
 	NiVector4 posMods;
-	ScriptVar *outX, *outY, *outZ;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posMods.x, &posMods.y, &posMods.z, &outX, &outY, &outZ) && thisObj->GetTranslatedPos(&posMods))
+	ResultVars outPos;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posMods.x, &posMods.y, &posMods.z, &outPos.x, &outPos.y, &outPos.z) && thisObj->GetTranslatedPos(&posMods))
 	{
-		outX->data.num = posMods.x;
-		outY->data.num = posMods.y;
-		outZ->data.num = posMods.z;
+		outPos.Set(&posMods.x);
 		*result = 1;
 	}
 	else *result = 0;
+	return true;
+}
+
+bool Cmd_GetNifBlockTranslationAlt_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char blockName[0x40];
+	ResultVars outPos;
+	UInt32 getWorld = 0, pcNode = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &outPos.x, &outPos.y, &outPos.z, &getWorld, &pcNode))
+	{
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
+		if (niBlock)
+		{
+			outPos.Set(getWorld ? &niBlock->WorldTranslate().x : &niBlock->LocalTranslate().x);
+			*result = 1;
+		}
+	}
+	return true;
+}
+
+bool Cmd_GetNifBlockRotationAlt_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char blockName[0x40];
+	ResultVars outRot;
+	UInt32 getMode = 0, pcNode = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &outRot.x, &outRot.y, &outRot.z, &getMode, &pcNode))
+	{
+		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
+		if (niBlock)
+		{
+			NiVector3 rot;
+			NiMatrix33 &rotMat = (getMode & 1) ? niBlock->WorldRotate() : niBlock->LocalRotate();
+			if (!(getMode & 2))
+				rotMat.ExtractAngles(rot);
+			else rotMat.ExtractAnglesInv(rot);
+			outRot.Set(&rot.x, Dbl180dPI);
+			*result = 1;
+		}
+	}
+	return true;
+}
+
+bool Cmd_GetLinearVelocityAlt_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char blockName[0x40];
+	ResultVars outVel;
+	UInt32 getLocal = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &outVel.x, &outVel.y, &outVel.z, &getLocal))
+	{
+		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
+		if (rigidBody)
+		{
+			hkVector4 velocity = rigidBody->motion.linVelocity;
+			if (getLocal)
+				velocity = rigidBody->motion.motionState.transform.rotation.MultiplyVector(velocity);
+			outVel.Set(&velocity.x);
+			*result = 1;
+		}
+	}
+	return true;
+}
+
+bool Cmd_GetAngularVelocityAlt_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char blockName[0x40];
+	ResultVars outVel;
+	UInt32 getGlobal = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &outVel.x, &outVel.y, &outVel.z, &getGlobal))
+	{
+		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
+		if (rigidBody)
+		{
+			hkVector4 velocity = rigidBody->motion.angVelocity;
+			if (!getGlobal)
+				velocity = rigidBody->motion.motionState.transform.rotation.MultiplyVector(velocity);
+			outVel.Set(&velocity.x);
+			*result = 1;
+		}
+	}
+	return true;
+}
+
+bool Cmd_SetAngularVelocityEx_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char blockName[0x40];
+	hkVector4 velocity(_mm_setzero_ps());
+	UInt32 setGlobal = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &velocity.x, &velocity.y, &velocity.z, &setGlobal))
+	{
+		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
+		if (rigidBody)
+		{
+			rigidBody->motion.angVelocity = setGlobal ? velocity : rigidBody->motion.motionState.transform.rotation.MultiplyVectorInv(velocity);
+			rigidBody->UpdateMotion();
+			*result = 1;
+		}
+	}
 	return true;
 }

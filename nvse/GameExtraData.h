@@ -1095,6 +1095,14 @@ public:
 };
 
 // 10
+class ExtraModdingItem : public BSExtraData
+{
+public:
+	bool		isModdingItem;	// 0C
+	UInt8		pad0D[3];		// 0D
+};
+
+// 10
 class ExtraAudioMarker : public BSExtraData
 {
 public:
