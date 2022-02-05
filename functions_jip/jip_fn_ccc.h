@@ -484,7 +484,7 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 				findMarker = markersGrid->Get(coord);
 				if (findMarker)
 				{
-					distTmp = Point3Distance(&thisObj->position, &findMarker->position);
+					distTmp = Point3Distance(thisObj->position, findMarker->position);
 					if (distMin > distTmp)
 					{
 						mkRefr = findMarker;
@@ -662,7 +662,7 @@ bool Cmd_MoveToPosStr_Execute(COMMAND_ARGS)
 	posVector.y = StrToInt(pos);
 	if (!*delim) return true;
 	posVector.z = StrToInt(delim);
-	thisObj->MoveToCell(cell, &posVector);
+	thisObj->MoveToCell(cell, posVector);
 	*result = 1;
 	return true;
 }

@@ -437,12 +437,8 @@ bool NiNode::IsMovable()
 	if (m_collisionObject)
 	{
 		bhkWorldObject *hWorldObj = m_collisionObject->worldObj;
-		if (hWorldObj)
-		{
-			UInt8 motionType = ((hkpRigidBody*)hWorldObj->refObject)->motion.type;
-			if ((motionType <= 3) || (motionType == 6))
-				return true;
-		}
+		if (hWorldObj && ((hkpRigidBody*)hWorldObj->refObject)->IsMobile())
+			return true;
 	}
 	for (auto iter = m_children.Begin(); iter; ++iter)
 		if (*iter && IS_NODE(*iter) && ((NiNode*)*iter)->IsMovable())
@@ -510,7 +506,7 @@ void NiNode::BulkSetMaterialPropertyTraitValue(UInt32 traitID, float value)
 	}
 }
 
-void NiNode::GetContactObjects(ContactObjects *contactObjs)
+void NiNode::GetContactObjects(ContactObjects &contactObjs)
 {
 	if (m_collisionObject && m_collisionObject->worldObj)
 	{
@@ -521,14 +517,14 @@ void NiNode::GetContactObjects(ContactObjects *contactObjs)
 			ConstraintContact *contactsArr = rigidBody->contactsArr;
 			if (contactsArr)
 				for (UInt16 count = rigidBody->contactsSize; count; count--, contactsArr++)
-					contactObjs->Append(contactsArr->contactBody);
+					contactObjs.Append(contactsArr->contactBody);
 			if (rigidBody->constraintInst.data)
 				for (auto iter = rigidBody->constraintInst.Begin(); iter; ++iter)
-					contactObjs->Append(iter->contactBody);
+					contactObjs.Append(iter->contactBody);
 		}
 		else if IS_TYPE(hWorldObj, hkpSimpleShapePhantom)
 			for (auto iter = ((hkpSimpleShapePhantom*)hWorldObj)->cdBodies.Begin(); iter; ++iter)
-				contactObjs->Append(iter->GetWorldObj());
+				contactObjs.Append(iter->GetWorldObj());
 	}
 	for (auto iter = m_children.Begin(); iter; ++iter)
 		if (*iter && IS_NODE(*iter)) ((NiNode*)*iter)->GetContactObjects(contactObjs);
@@ -544,37 +540,76 @@ bool NiNode::HasPhantom()
 	return false;
 }
 
-void NiNode::GetBodyMass(float *totalMass)
-{
-	if (m_collisionObject && m_collisionObject->worldObj)
-		*totalMass += ((hkpRigidBody*)m_collisionObject->worldObj->refObject)->motion.GetBodyMass();
-	for (auto iter = m_children.Begin(); iter; ++iter)
-		if (*iter && IS_NODE(*iter)) ((NiNode*)*iter)->GetBodyMass(totalMass);
-}
-
-__declspec(naked) void NiNode::ApplyForce(NiVector4 *forceVector)
+__declspec(naked) float __vectorcall NiNode::GetBodyMass(float totalMass)
 {
 	__asm
 	{
 		mov		eax, [ecx+0x1C]
 		test	eax, eax
-		jz		doneCol
+		jz		doChildren
 		mov		eax, [eax+0x10]
 		test	eax, eax
-		jz		doneCol
+		jz		doChildren
+		mov		eax, [eax+8]
+		cmp		byte ptr [eax+0x28], 1
+		jnz		doChildren
+		mov		eax, [eax+0x1AC]
+		test	eax, eax
+		jz		doChildren
+		movd	xmm1, eax
+		rcpss	xmm1, xmm1
+		addss	xmm0, xmm1
+	doChildren:
+		movzx	eax, word ptr [ecx+0xA6]
+		test	eax, eax
+		jz		done
+		push	esi
+		push	edi
+		mov		esi, [ecx+0xA0]
+		mov		edi, eax
+		ALIGN 16
+	iterHead:
+		dec		edi
+		js		iterEnd
+		mov		ecx, [esi]
+		add		esi, 4
+		test	ecx, ecx
+		jz		iterHead
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
+		jnz		iterHead
+		call	NiNode::GetBodyMass
+		jmp		iterHead
+		ALIGN 16
+	iterEnd:
+		pop		edi
+		pop		esi
+	done:
+		retn
+	}
+}
+
+__declspec(naked) void NiNode::ApplyForce(const NiVector4 &forceVector)
+{
+	__asm
+	{
+		mov		eax, [ecx+0x1C]
+		test	eax, eax
+		jz		doChildren
+		mov		eax, [eax+0x10]
+		test	eax, eax
+		jz		doChildren
 		mov		edx, [eax+8]
-		mov		dl, [edx+0xE8]
-		cmp		dl, 3
-		jbe		doApply
-		cmp		dl, 6
-		jnz		doneCol
-	doApply:
+		cmp		byte ptr [edx+0x28], 1
+		jnz		doChildren
+		test	byte ptr [edx+0xE8], 2
+		jz		doChildren
 		push	ecx
 		push	dword ptr [esp+8]
 		mov		ecx, eax
 		call	bhkWorldObject::ApplyForce
 		pop		ecx
-	doneCol:
+	doChildren:
 		movzx	eax, word ptr [ecx+0xA6]
 		test	eax, eax
 		jz		done
@@ -633,6 +668,14 @@ __declspec(naked) bool __fastcall NiPick::GetResults(NiCamera *camera)
 		leave
 		retn
 	}
+}
+
+void NiRenderedTexture::SaveToFile(char *filePath, UInt32 fileFmt)
+{
+	if (!textureData || !textureData->d3dBaseTexture)
+		return;
+	FileStream::MakeAllDirs(filePath);
+	StdCall(0xEE6DC2, filePath, fileFmt, textureData->d3dBaseTexture, nullptr);
 }
 
 void NiNode::Dump()

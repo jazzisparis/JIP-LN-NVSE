@@ -399,8 +399,8 @@ struct hkMatrix3x4;
 #include "internal/misc_consts.h"
 #include "internal/utility.h"
 #include "internal/containers.h"
+#include "internal/Ni_types.h"
 
-#include "nvse/NiTypes.h"
 #include "nvse/GameTypes.h"
 #include "nvse/GameRTTI.h"
 #include "nvse/CommandTable.h"

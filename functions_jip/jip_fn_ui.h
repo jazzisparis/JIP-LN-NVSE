@@ -267,6 +267,9 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 		case kMenuType_Computers:
 			menuRef = ((ComputersMenu*)menu)->targetRef;
 			break;
+		case kMenuType_RepairServices:
+			menuRef = RepairServicesMenu::Target();
+			break;
 		case kMenuType_ItemMod:
 			menuRef = CreateRefForStack(g_thePlayer, ItemModMenu::Target());
 			break;
@@ -1816,7 +1819,7 @@ bool Cmd_GetWorldMapPosMults_Execute(COMMAND_ARGS)
 				}
 			}
 			NiPoint2 outPos;
-			GetWorldMapPosMults(thisObj->PosXY(), &worldDimensions, &outPos);
+			GetWorldMapPosMults(thisObj->position, worldDimensions, outPos);
 			outX->data.num = outPos.x;
 			outY->data.num = outPos.y;
 		}

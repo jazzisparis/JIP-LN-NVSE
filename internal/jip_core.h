@@ -118,13 +118,13 @@ __forceinline TESObjectREFR *PlaceAtMe(TESObjectREFR *refr, TESForm *form, UInt3
 {
 	return CdeclCall<TESObjectREFR*>(0x5C4B30, refr, form, count, distance, direction, health);
 }
-__forceinline NiNode *GetCdBodyNode(hkCdBody *cdBody)
+__forceinline NiNode *GetCdBodyNode(hkpWorldObject *object)
 {
-	return CdeclCall<NiNode*>(0xC7FA90, cdBody);
+	return CdeclCall<NiNode*>(0xC7FA90, &object->cdBody);
 }
-__forceinline TESObjectREFR *GetCdBodyRef(hkCdBody *cdBody)
+__forceinline TESObjectREFR *GetCdBodyRef(hkpWorldObject *object)
 {
-	return CdeclCall<TESObjectREFR*>(0x62B4E0, cdBody);
+	return CdeclCall<TESObjectREFR*>(0x62B4E0, &object->cdBody);
 }
 __forceinline void RefreshItemListBox()
 {
@@ -234,8 +234,8 @@ struct ResultVars
 
 	ResultVars() {}
 
-	void __fastcall Set(float *resPtr);
-	void __vectorcall Set(float *resPtr, double modifier);
+	void __fastcall Set(const NiVector3 &values);
+	void __vectorcall Set(const NiVector3 &values, const __m128 modifier);
 };
 
 typedef Set<TESForm*> TempFormList;
@@ -914,7 +914,7 @@ struct TLSData
 	UInt32			lastVarIndex;		// 280
 	ScriptEventList	*lastEventList;		// 284
 	Script			*lastScript;		// 288
-	UInt32			unk28C;				// 28C
+	UInt32			activateRecursionDepth;	// 28C
 	UInt32			unk290;				// 290
 	UInt32			flags294;			// 294
 	UInt32			unk298[7];			// 298

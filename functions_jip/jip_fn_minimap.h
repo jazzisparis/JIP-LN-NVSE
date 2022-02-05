@@ -88,7 +88,7 @@ __declspec(naked) void __fastcall SetCameraRotation(TESObjectCELL *cell)
 	}
 }
 
-__declspec(naked) void __fastcall AdjustInteriorPos(TESObjectREFR *refr, NiPoint2 *outPos)
+__declspec(naked) void __fastcall AdjustInteriorPos(TESObjectREFR *refr, NiPoint2 &outPos)
 {
 	static const __m128 kIntrPosMods = {2048, 2048, 0, 0};
 	__asm
@@ -178,7 +178,7 @@ __declspec(naked) void __fastcall WorldDimensions::GetPosMods(TESWorldSpace *wor
 	}
 }
 
-__declspec(naked) void __fastcall GetWorldMapPosMults(NiPoint2 *inPos, WorldDimensions *worldDimensions, NiPoint2 *outMults, Coordinate *outCoord = nullptr)
+__declspec(naked) void __fastcall GetWorldMapPosMults(const NiVector3 &inPos, const WorldDimensions &worldDimensions, NiPoint2 &outMults, Coordinate *outCoord = nullptr)
 {
 	static const __m128 kPosMultMods = {0.1015625, 0.1015625, 0, 0};
 	__asm
@@ -218,7 +218,7 @@ __declspec(naked) void __fastcall GetWorldMapPosMults(NiPoint2 *inPos, WorldDime
 	}
 }
 
-__declspec(naked) void __fastcall GetLocalMapPosMults(NiPoint2 *inPos, NiPoint2 *nwXY, NiPoint2 *outMults)
+__declspec(naked) void __fastcall GetLocalMapPosMults(const NiPoint2 &inPos, const NiPoint2 &nwXY, NiPoint2 &outMults)
 {
 	static const __m128 kPosMults = {1.0 / 12288, -1.0 / 12288, 0, 0};
 	__asm
@@ -729,7 +729,7 @@ __declspec(naked) UInt32 __fastcall GetFOWUpdateMask(SInt32 posX, SInt32 posY)
 	}
 }
 
-__declspec(naked) void __fastcall DoSelectiveFOWUpdate(NiPoint2 *adjustedPos)
+__declspec(naked) void __fastcall DoSelectiveFOWUpdate(const NiPoint2 &adjustedPos)
 {
 	__asm
 	{
@@ -1141,7 +1141,7 @@ void __fastcall GetTeleportDoors(TESObjectCELL *cell, DoorRefsList *doorRefsList
 	}
 }
 
-__declspec(naked) float* __fastcall GetVtxAlphaPtr(NiPoint2 *posMult)
+__declspec(naked) float* __fastcall GetVtxAlphaPtr(const NiPoint2 &posMult)
 {
 	static const float kFlt48 = 48.0F;
 	__asm
@@ -1879,7 +1879,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 			xMarker = GetExtraType(&markerRef->extraDataList, MapMarker);
 			if (!xMarker || !xMarker->data)
 				continue;
-			GetWorldMapPosMults(markerRef->PosXY(), &s_rootWorldDimensions, &posXY, &coord);
+			GetWorldMapPosMults(markerRef->position, s_rootWorldDimensions, posXY, &coord);
 			if (!worldMarkers)
 				worldMarkers = &s_worldMapMarkers[rootWorld];
 			(*worldMarkers)[coord].Append(markerRef, xMarker->data, posXY);
@@ -1985,6 +1985,18 @@ void MiniMapLoadGame()
 	s_pcCurrWorld = NULL;
 	s_pcRootWorld = NULL;
 	s_lastInterior = NULL;
+}
+
+#define SAVE_LOCAL_MAPS 0
+
+void SaveLocalMapTexture(TESObjectCELL *cell, Coordinate coord, NiRenderedTexture *texture)
+{
+	char fileName[0x80];
+	if (cell->IsInterior())
+		sprintf_s(fileName, 0x80, "local_map\\Interior\\%s.(%d,%d).dds", cell->GetEditorID(), coord.x, coord.y);
+	else
+		sprintf_s(fileName, 0x80, "local_map\\Exterior\\%s.(%d,%d).dds", cell->worldSpace->GetEditorID(), coord.x, coord.y);
+	texture->SaveToFile(fileName, D3DXIFF_DDS);
 }
 
 bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
@@ -2094,7 +2106,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			updateTiles = true;
 		}
 
-		GetWorldMapPosMults(objectRef->PosXY(), &s_rootWorldDimensions, &posMult, &coord);
+		GetWorldMapPosMults(objectRef->position, s_rootWorldDimensions, posMult, &coord);
 
 		if (s_currWorldCoords != coord)
 		{
@@ -2217,7 +2229,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				cvtdq2ps	xmm0, xmm0
 				movq	qword ptr nwXY, xmm0
 			}
-			GetLocalMapPosMults(thePlayer->PosXY(), &nwXY, &posMult);
+			GetLocalMapPosMults(thePlayer->position, nwXY, posMult);
 
 			UInt8 quadrant = posMult.x >= 0.5F;
 			if (posMult.y < 0.5F) quadrant |= 2;
@@ -2264,7 +2276,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				}
 			}
 			else if (updateFogOfWar)
-				DoSelectiveFOWUpdate(thePlayer->PosXY());
+				DoSelectiveFOWUpdate(thePlayer->position);
 
 			if (updateTiles || (s_defaultGridSize && (s_currCellQuad != quadrant)))
 			{
@@ -2305,6 +2317,9 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					{
 						GenerateLocalMapExterior(cell, generateFunc, &exteriorEntry->texture);
 						s_exteriorKeys.Append(cell->refID);
+#if SAVE_LOCAL_MAPS
+						SaveLocalMapTexture(cell, s_currLocalCoords + kGridAdjustCoord[gridIdx], exteriorEntry->texture);
+#endif
 					}
 					else if (updateTiles)
 						s_exteriorKeys.MoveToEnd(cell->refID);
@@ -2313,6 +2328,9 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 						if (gridIdx == 4) exteriorEntry->regenFlags = 0xF;
 						else exteriorEntry->regenFlags |= quadrant;
 						GenerateLocalMapExterior(cell, generateFunc, &exteriorEntry->texture);
+#if SAVE_LOCAL_MAPS
+						SaveLocalMapTexture(cell, s_currLocalCoords + kGridAdjustCoord[gridIdx], exteriorEntry->texture);
+#endif
 					}
 					s_tileShaderProps[gridIdx]->srcTexture = exteriorEntry->texture;
 				}
@@ -2339,7 +2357,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		}
 		else
 		{
-			AdjustInteriorPos(thePlayer, &adjustedPos);
+			AdjustInteriorPos(thePlayer, adjustedPos);
 			__asm
 			{
 				movq	xmm0, qword ptr adjustedPos
@@ -2357,7 +2375,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				cvtdq2ps	xmm0, xmm0
 				movq	qword ptr nwXY, xmm0
 			}
-			GetLocalMapPosMults(&adjustedPos, &nwXY, &posMult);
+			GetLocalMapPosMults(adjustedPos, nwXY, posMult);
 
 			if (s_lastInterior != parentCell)
 			{
@@ -2380,7 +2398,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				auto refsIter = parentCell->objectList.Head();
 				do
 				{
-					if ((objectRef = refsIter->data) && (objectRef->baseForm->refID == 0x15A1F2) && !(objectRef->flags & 0x800) && (hideNode = objectRef->GetNiNode()))
+					if ((objectRef = refsIter->data) && (objectRef->baseForm->refID == 0x15A1F2) && !(objectRef->flags & 0x800) && (hideNode = objectRef->GetRefNiNode()))
 						s_hiddenNodes.Append(hideNode);
 				}
 				while (refsIter = refsIter->next);
@@ -2420,6 +2438,9 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					{
 						*renderedTexture = NULL;
 						GenerateLocalMapInterior(parentCell, coord, generateFunc, renderedTexture);
+#if SAVE_LOCAL_MAPS
+						SaveLocalMapTexture(cell, coord, *renderedTexture);
+#endif
 					}
 					s_tileShaderProps[gridIdx]->srcTexture = *renderedTexture;
 					if (useFogOfWar)
@@ -2431,7 +2452,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				while (gridIdx);
 			}
 			else if (updateFogOfWar)
-				DoSelectiveFOWUpdate(&adjustedPos);
+				DoSelectiveFOWUpdate(adjustedPos);
 		}
 
 		if (restore)
@@ -2460,11 +2481,11 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				for (auto doorIter = s_doorRefsList.Begin(); doorIter; ++doorIter)
 				{
 					if (parentWorld)
-						GetLocalMapPosMults(doorIter().doorRef->PosXY(), &nwXY, &adjustedPos);
+						GetLocalMapPosMults(doorIter().doorRef->position, nwXY, adjustedPos);
 					else
 					{
-						AdjustInteriorPos(doorIter().doorRef, &adjustedPos);
-						GetLocalMapPosMults(&adjustedPos, &nwXY, &adjustedPos);
+						AdjustInteriorPos(doorIter().doorRef, adjustedPos);
+						GetLocalMapPosMults(adjustedPos, nwXY, adjustedPos);
 					}
 					if ((adjustedPos.x < 0) || (adjustedPos.x >= 1.0F) || (adjustedPos.y < 0) || (adjustedPos.y >= 1.0F))
 						continue;
@@ -2479,7 +2500,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					cell = doorIter().linkedCell;
 					tileData->visited->SetFloat(!cell || (cell == parentCell) || cell->extraDataList.HasType(kExtraData_DetachTime));
 					if (useFogOfWar)
-						tileData->vtxAlpha = GetVtxAlphaPtr(&adjustedPos);
+						tileData->vtxAlpha = GetVtxAlphaPtr(adjustedPos);
 					else
 					{
 						tileData->vtxAlpha = NULL;
@@ -2590,13 +2611,13 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					markerData->pos = currX;
 				else if (!updateTiles) continue;
 				if (worldMap)
-					GetWorldMapPosMults(objectRef->PosXY(), &s_rootWorldDimensions, &adjustedPos);
+					GetWorldMapPosMults(objectRef->position, s_rootWorldDimensions, adjustedPos);
 				else if (parentWorld)
-					GetLocalMapPosMults(objectRef->PosXY(), &nwXY, &adjustedPos);
+					GetLocalMapPosMults(objectRef->position, nwXY, adjustedPos);
 				else
 				{
-					AdjustInteriorPos(objectRef, &adjustedPos);
-					GetLocalMapPosMults(&adjustedPos, &nwXY, &adjustedPos);
+					AdjustInteriorPos(objectRef, adjustedPos);
+					GetLocalMapPosMults(adjustedPos, nwXY, adjustedPos);
 				}
 				markerData->x->SetFloat(adjustedPos.x);
 				markerData->y->SetFloat(adjustedPos.y);

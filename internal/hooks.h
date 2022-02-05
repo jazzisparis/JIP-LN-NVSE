@@ -3220,53 +3220,36 @@ __declspec(naked) NiNode* __fastcall LoadModelCopy(const char *filePath)
 	}
 }
 
-__declspec(naked) void __fastcall AppendNameSuffix(NiAVObject *object, const char *suffix)
+__declspec(naked) void __fastcall AppendNameSuffix(NiAVObject *object)
 {
 	__asm
 	{
-		push	ebp
-		mov		ebp, esp
-		sub		esp, 0x50
-		push	ecx
-		push	edx
-		push	ebx
-		lea		ebx, [ebp-0x50]
-		mov		ecx, [ecx+8]
-		test	ecx, ecx
-		jz		cpyIter2
-		ALIGN 16
-	cpyIter1:
-		mov		al, [ecx]
-		test	al, al
-		jz		cpyIter2
-		mov		[ebx], al
-		inc		ecx
-		inc		ebx
-		jmp		cpyIter1
-		ALIGN 16
-	cpyIter2:
-		mov		al, [edx]
-		cmp		al, '*'
+		mov		eax, [ecx+8]
+		test	eax, eax
 		jz		done
-		mov		[ebx], al
-		inc		edx
-		inc		ebx
-		jmp		cpyIter2
-		ALIGN 16
-	done:
-		mov		[ebx], 0
-		lea		edx, [ebp-0x50]
-		mov		ecx, [ebp-0x54]
+		mov		edx, [eax-4]
+		test	edx, edx
+		jz		done
+		movdqu	xmm1, xmmword ptr [eax]
+		movdqu	xmm2, xmmword ptr [eax+0x10]
+		mov		eax, 0x20
+		cmp		edx, eax
+		cmova	edx, eax
+		sub		esp, 0x34
+		movdqu	xmmword ptr [esp], xmm1
+		movdqu	xmmword ptr [esp+0x10], xmm2
+		movdqu	xmmword ptr [esp+edx], xmm0
+		add		edx, ebx
+		mov		[esp+edx], 0
+		mov		edx, esp
 		call	NiObjectNET::SetName
-		pop		ebx
-		pop		edx
-		pop		ecx
-		leave
+		add		esp, 0x34
+	done:
 		retn
 	}
 }
 
-__declspec(naked) void __fastcall AppendBlockNameSuffixes(NiNode *node, const char *suffix)
+__declspec(naked) void __fastcall AppendBlockNameSuffixes(NiNode *node)
 {
 	__asm
 	{
@@ -3312,29 +3295,36 @@ __declspec(naked) NiNode* __fastcall DoAttachModel(NiAVObject *targetObj, const 
 		mov		ebp, esp
 		push	ecx
 		push	edx
+		push	edx
+		push	ebx
+		xor		ebx, ebx
 		mov		ecx, edx
 		cmp		[ecx], '*'
-		setz	al
-		push	eax
 		jnz		noSuffix
 		inc		ecx
 		mov		[ebp-8], ecx
+		sub		ebx, ecx
 		mov		dl, '*'
 		call	FindChr
+		add		ebx, eax
+		mov		ecx, 0x10
+		cmp		ebx, ecx
+		cmova	ebx, ecx
 		lea		ecx, [eax+1]
 	noSuffix:
 		call	LoadModelCopy
 		test	eax, eax
 		jz		done
-		push	eax
+		mov		[ebp-0xC], eax
 		push	1
 		push	eax
 		mov		ecx, eax
-		cmp		byte ptr [ebp-0xC], 0
+		test	ebx, ebx
 		jz		doneSuffix
 		mov		edx, [ebp-8]
+		movdqu	xmm0, xmmword ptr [edx]
 		call	AppendBlockNameSuffixes
-		mov		ecx, [ebp-0x10]
+		mov		ecx, [ebp-0xC]
 	doneSuffix:
 		mov		eax, [ebp+8]
 		cmp		dword ptr [eax], 0
@@ -3347,7 +3337,7 @@ __declspec(naked) NiNode* __fastcall DoAttachModel(NiAVObject *targetObj, const 
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xDC]
-		mov		ecx, [ebp-0x10]
+		mov		ecx, [ebp-0xC]
 		CALL_EAX(0xA5A040)
 		push	0
 		push	0
@@ -3355,7 +3345,7 @@ __declspec(naked) NiNode* __fastcall DoAttachModel(NiAVObject *targetObj, const 
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xC0]
-		mov		eax, [ebp-0x10]
+		mov		eax, [ebp-0xC]
 		or		byte ptr [eax+0x33], 0x80
 		test	byte ptr [eax+0x33], 0x20
 		jz		done
@@ -3370,6 +3360,7 @@ __declspec(naked) NiNode* __fastcall DoAttachModel(NiAVObject *targetObj, const 
 		cmp		ecx, edx
 		jnz		parentIter
 	done:
+		pop		ebx
 		leave
 		retn	8
 	}
@@ -3589,9 +3580,8 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		mov		eax, [ecx]
 		cmp		dword ptr [eax+0x10], ADDR_ReturnThis
 		jnz		doneFade
-		fld1
-		fst		dword ptr [ecx+0xB4]
-		fstp	dword ptr [ecx+0xB8]
+		movaps	xmm0, PS_V3_One
+		movq	qword ptr [ecx+0xB4], xmm0
 		or		byte ptr [ecx+0x31], 0x40
 	doneFade:
 		test	byte ptr [edi+0x5F], kHookRefFlag5F_DisableCollision
@@ -4464,13 +4454,19 @@ __declspec(naked) void SkyRefreshClimateHook()
 {
 	__asm
 	{
-		CALL_EAX(0x404F00)
+		mov		eax, fs:[0x2C]
+		mov		ecx, ds:[0x126FD98]
+		mov		edx, [eax+ecx*4]
+		add		edx, 0x2B4
+		mov		eax, [edx]
+		mov		[ebp-0x10], eax
+		mov		dword ptr [edx], 0x21
 		mov		eax, s_forcedClimate
 		test	eax, eax
 		jz		done
 		mov		[ebp+8], eax
 	done:
-		JMP_EAX(0x63C92E)
+		retn
 	}
 }
 
@@ -4741,7 +4737,7 @@ void InitJIPHooks()
 	SAFE_WRITE_BUF(0x92C4A0, "\x8B\x81\x40\x02\x00\x00\x85\xC0\x74\x07\xC7\x40\x10\xFF\xFF\xFF\xFF\xC3");
 	WriteRelJump(0x418B10, (UInt32)GetCannotWearHook);
 	WriteRelJump(0x4AC645, (UInt32)BipedSlotVisibilityHook);
-	WriteRelJump(0x63C929, (UInt32)SkyRefreshClimateHook);
+	WritePushRetRelJump(0x63C918, 0x63C92E, (UInt32)SkyRefreshClimateHook);
 	WriteRelJump(0x87F427, (UInt32)IsActorEssentialHook);
 	WritePushRetRelJump(0x524014, 0x524042, (UInt32)FireWeaponWobbleHook);
 	WriteRelJump(0xA239E0, (UInt32)GetMouseMovementHook);

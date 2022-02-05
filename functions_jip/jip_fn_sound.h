@@ -209,7 +209,7 @@ bool Cmd_IsSoundPlaying_Execute(COMMAND_ARGS)
 		BSGameSound *gameSound;
 		if (refr)
 		{
-			NiAVObject *refNode = refr->GetNiNode();
+			NiAVObject *refNode = refr->GetRefNiNode();
 			if (!refNode) return true;
 			for (; sndIter; ++sndIter)
 			{

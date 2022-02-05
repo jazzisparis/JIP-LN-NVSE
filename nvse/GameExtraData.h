@@ -341,7 +341,6 @@ public:
 		{
 			ThisCall(0x4459E0, this, 1);
 		}
-		void Cleanup();
 		bool __fastcall HasExtraType(UInt8 xType);
 		bool HasExtraLeveledItem();
 		ExtraDataList *GetEquippedExtra();
@@ -371,8 +370,6 @@ public:
 	};
 
 	Data	*data;	// 0C
-
-	void Cleanup();	// clean up unneeded extra data from each EntryData
 
 	static ExtraContainerChanges* Create();
 

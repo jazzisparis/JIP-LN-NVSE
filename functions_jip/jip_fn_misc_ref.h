@@ -51,7 +51,7 @@ DEFINE_COMMAND_PLUGIN(SetNifBlockScale, 1, 3, kParams_OneString_OneFloat_OneOpti
 DEFINE_COMMAND_PLUGIN(GetNifBlockFlag, 1, 3, kParams_OneString_OneInt_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetNifBlockFlag, 1, 4, kParams_OneString_TwoInts_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetObjectVelocity, 1, 1, kParams_OneOptionalAxis);
-DEFINE_COMMAND_PLUGIN(GetAngularVelocity, 1, 2, kParams_OneString_OneAxis);
+DEFINE_COMMAND_PLUGIN(GetAngularVelocity, 1, 2, kParams_OneString_OneOptionalAxis);
 DEFINE_COMMAND_PLUGIN(SetAngularVelocity, 1, 3, kParams_OneString_OneAxis_OneFloat);
 DEFINE_COMMAND_PLUGIN(PlaceAtCell, 0, 6, kParams_OneForm_OneInt_OneForm_ThreeFloats);
 DEFINE_COMMAND_PLUGIN(GetRayCastPos, 1, 6, kParams_ThreeGlobals_OneOptionalFloat_OneOptionalInt_OneOptionalString);
@@ -91,6 +91,10 @@ DEFINE_COMMAND_PLUGIN(GetNifBlockRotationAlt, 1, 6, kParams_OneString_ThreeScrip
 DEFINE_COMMAND_PLUGIN(GetLinearVelocityAlt, 1, 5, kParams_OneString_ThreeScriptVars_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetAngularVelocityAlt, 1, 5, kParams_OneString_ThreeScriptVars_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetAngularVelocityEx, 1, 5, kParams_OneString_ThreeFloats_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetCollisionObjProperty, 1, 2, kParams_OneString_OneInt);
+DEFINE_COMMAND_PLUGIN(SetCollisionObjProperty, 1, 3, kParams_OneString_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetCollisionObjLayerType, 1, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(SetCollisionObjLayerType, 1, 2, kParams_OneString_OneInt);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -292,7 +296,7 @@ bool Cmd_MoveToCell_Execute(COMMAND_ARGS)
 				return true;
 			cell = ((TESWorldSpace*)cell)->cell;
 		}
-		thisObj->MoveToCell(cell, &posVector);
+		thisObj->MoveToCell(cell, posVector);
 		*result = 1;
 	}
 	return true;
@@ -339,9 +343,9 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 			return true;
 		cell = ((TESWorldSpace*)cell)->cell;
 	}
-	thisObj->MoveToCell(cell, posVector);
+	thisObj->MoveToCell(cell, *posVector);
 	if (resetRot)
-		thisObj->SetAngle(&rotVector, false);
+		thisObj->SetAngle(rotVector, false);
 	*result = 1;
 	return true;
 }
@@ -481,8 +485,9 @@ bool __fastcall GetHasContact(TESObjectREFR *thisObj, TESForm *form)
 	TESObjectREFR *refr;
 	if (IS_ACTOR(thisObj))
 	{
-		if (!((Actor*)thisObj)->baseProcess) return false;
-		bhkCharacterController *charCtrl = ((Actor*)thisObj)->baseProcess->GetCharacterController();
+		HighProcess *hiProc = (HighProcess*)((Actor*)thisObj)->baseProcess;
+		if (!hiProc || hiProc->processLevel) return false;
+		bhkCharacterController *charCtrl = hiProc->charCtrl;
 		if (!charCtrl) return false;
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
@@ -495,10 +500,10 @@ bool __fastcall GetHasContact(TESObjectREFR *thisObj, TESForm *form)
 	}
 	else
 	{
-		NiNode *niNode = thisObj->GetNiNode();
+		NiNode *niNode = thisObj->GetRefNiNode();
 		if (!niNode) return false;
 		ContactObjects contactObjs;
-		niNode->GetContactObjects(&contactObjs);
+		niNode->GetContactObjects(contactObjs);
 		bodies = contactObjs.Data();
 		count = contactObjs.Size();
 	}
@@ -529,8 +534,9 @@ bool __fastcall GetHasContactBase(TESObjectREFR *thisObj, TESForm *form)
 	TESObjectREFR *refr;
 	if (IS_ACTOR(thisObj))
 	{
-		if (!((Actor*)thisObj)->baseProcess) return false;
-		bhkCharacterController *charCtrl = ((Actor*)thisObj)->baseProcess->GetCharacterController();
+		HighProcess *hiProc = (HighProcess*)((Actor*)thisObj)->baseProcess;
+		if (!hiProc || hiProc->processLevel) return false;
+		bhkCharacterController *charCtrl = hiProc->charCtrl;
 		if (!charCtrl) return false;
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
@@ -543,10 +549,10 @@ bool __fastcall GetHasContactBase(TESObjectREFR *thisObj, TESForm *form)
 	}
 	else
 	{
-		NiNode *niNode = thisObj->GetNiNode();
+		NiNode *niNode = thisObj->GetRefNiNode();
 		if (!niNode) return false;
 		ContactObjects contactObjs;
-		niNode->GetContactObjects(&contactObjs);
+		niNode->GetContactObjects(contactObjs);
 		bodies = contactObjs.Data();
 		count = contactObjs.Size();
 	}
@@ -575,8 +581,9 @@ bool __fastcall GetHasContactType(TESObjectREFR *thisObj, UInt32 typeID)
 	TESObjectREFR *refr;
 	if (IS_ACTOR(thisObj))
 	{
-		if (!((Actor*)thisObj)->baseProcess) return false;
-		bhkCharacterController *charCtrl = ((Actor*)thisObj)->baseProcess->GetCharacterController();
+		HighProcess *hiProc = (HighProcess*)((Actor*)thisObj)->baseProcess;
+		if (!hiProc || hiProc->processLevel) return false;
+		bhkCharacterController *charCtrl = hiProc->charCtrl;
 		if (!charCtrl) return false;
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
@@ -589,10 +596,10 @@ bool __fastcall GetHasContactType(TESObjectREFR *thisObj, UInt32 typeID)
 	}
 	else
 	{
-		NiNode *niNode = thisObj->GetNiNode();
+		NiNode *niNode = thisObj->GetRefNiNode();
 		if (!niNode) return false;
 		ContactObjects contactObjs;
-		niNode->GetContactObjects(&contactObjs);
+		niNode->GetContactObjects(contactObjs);
 		bodies = contactObjs.Data();
 		count = contactObjs.Size();
 	}
@@ -630,8 +637,9 @@ bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 	TESObjectREFR *refr;
 	if (IS_ACTOR(thisObj))
 	{
-		if (!((Actor*)thisObj)->baseProcess) return true;
-		bhkCharacterController *charCtrl = ((Actor*)thisObj)->baseProcess->GetCharacterController();
+		HighProcess *hiProc = (HighProcess*)((Actor*)thisObj)->baseProcess;
+		if (!hiProc || hiProc->processLevel) return true;
+		bhkCharacterController *charCtrl = hiProc->charCtrl;
 		if (!charCtrl) return true;
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
@@ -643,10 +651,10 @@ bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 	}
 	else
 	{
-		NiNode *niNode = thisObj->GetNiNode();
+		NiNode *niNode = thisObj->GetRefNiNode();
 		if (!niNode) return true;
 		ContactObjects contactObjs;
-		niNode->GetContactObjects(&contactObjs);
+		niNode->GetContactObjects(contactObjs);
 		bodies = contactObjs.Data();
 		count = contactObjs.Size();
 	}
@@ -673,7 +681,7 @@ bool Cmd_GetHasPhantom_Execute(COMMAND_ARGS)
 		*result = 1;
 		return true;
 	}
-	NiNode *niNode = thisObj->GetNiNode();
+	NiNode *niNode = thisObj->GetRefNiNode();
 	*result = (niNode && niNode->HasPhantom()) ? 1 : 0;
 	return true;
 }
@@ -770,8 +778,8 @@ bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 {
 	NiVector4 posVector;
 	UInt32 transform = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posVector.x, &posVector.y, &posVector.z, &transform) && (!transform || thisObj->GetTranslatedPos(&posVector)))
-		thisObj->SetPos(&posVector);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posVector.x, &posVector.y, &posVector.z, &transform) && (!transform || thisObj->GetTranslatedPos(posVector)))
+		thisObj->SetPos(posVector);
 	return true;
 }
 
@@ -788,12 +796,12 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 		if (cell)
 		{
 			NiCamera *camera = g_sceneGraph->camera;
-			NiVector4 coords;
-			if (!((NiVector3*)&coords)->RayCastCoords(camera->WorldTranslate(), camera->WorldRotate()[0], maxRange))
+			NiVector3 coords;
+			if (!coords.RayCastCoords(camera->WorldTranslate(), camera->WorldRotate(), maxRange))
 			{
 				if (!translate) return true;
-				coords = NiVector4((maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0, 0);
-				camera->m_transformWorld.GetTranslatedPos(&coords);
+				coords = {(maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0};
+				camera->m_transformWorld.GetTranslatedPos(coords);
 			}
 			if (numArgs > 1)
 				coords += posMods;
@@ -840,8 +848,8 @@ bool Cmd_SetAngleEx_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &rotVector.x, &rotVector.y, &rotVector.z, &transform))
 	{
 		if (transform <= 1)
-			thisObj->SetAngle(&rotVector, transform);
-		else thisObj->Rotate(&rotVector);
+			thisObj->SetAngle(rotVector, transform);
+		else thisObj->Rotate(rotVector);
 	}
 	return true;
 }
@@ -945,13 +953,12 @@ bool Cmd_IsAnimPlayingEx_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRigidBodyMass_Execute(COMMAND_ARGS)
 {
-	float totalMass = 0;
+	*result = 0;
 	if (NOT_ACTOR(thisObj))
 	{
-		NiNode *niNode = thisObj->GetNiNode();
-		if (niNode) niNode->GetBodyMass(&totalMass);
+		NiNode *niNode = thisObj->GetRefNiNode();
+		if (niNode) *result = niNode->GetBodyMass(0);
 	}
-	*result = totalMass;
 	return true;
 }
 
@@ -961,12 +968,12 @@ bool Cmd_PushObject_Execute(COMMAND_ARGS)
 	TESObjectREFR *refr = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &forceVector.x, &forceVector.y, &forceVector.z, &forceVector.w, &refr))
 	{
-		NiNode *niNode = thisObj->GetNiNode();
+		NiNode *niNode = thisObj->GetRefNiNode();
 		if (niNode)
 		{
 			if (!refr) refr = thisObj;
 			forceVector += refr->position;
-			niNode->ApplyForce(&forceVector);
+			niNode->ApplyForce(forceVector);
 		}
 	}
 	return true;
@@ -1091,7 +1098,8 @@ bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 			if (!(getMode & 2))
 				rotMat.ExtractAngles(rot);
 			else rotMat.ExtractAnglesInv(rot);
-			ArrayElementL elements[3] = {rot.x * Dbl180dPI, rot.y * Dbl180dPI, rot.z * Dbl180dPI};
+			rot *= GET_PS(9);
+			ArrayElementL elements[3] = {rot.x, rot.y, rot.z};
 			AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
 		}
 	}
@@ -1108,7 +1116,7 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
-			rot *= FltPId180;
+			rot *= GET_PS(8);
 			if (!transform)
 				niBlock->LocalRotate().RotationMatrix(rot);
 			else if (transform == 1)
@@ -1187,7 +1195,7 @@ bool Cmd_GetObjectVelocity_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &axis))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody("");
-		if (rigidBody)
+		if (rigidBody && rigidBody->IsMobile())
 		{
 			if (axis) *result = rigidBody->motion.linVelocity[axis - 'X'];
 			else *result = rigidBody->motion.linVelocity.Length();
@@ -1200,25 +1208,33 @@ bool Cmd_GetAngularVelocity_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char blockName[0x40];
-	char axis;
+	char axis = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &axis))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
-		if (rigidBody)
+		if (rigidBody && rigidBody->IsMobile())
 		{
 			__asm
 			{
 				mov		ecx, rigidBody
 				movups	xmm0, [ecx+0x1BC]
 				psrldq	xmm0, 4
+				xorps	xmm1, xmm1
 				xor		eax, eax
 				mov		al, axis
 				sub		al, 'X'
+				js		getNet
 				shl		al, 4
 				mulps	xmm0, [ecx+eax+0xF0]
-				xorps	xmm1, xmm1
 				haddps	xmm0, xmm1
 				haddps	xmm0, xmm1
+				jmp		done
+			getNet:
+				mulps	xmm0, xmm0
+				haddps	xmm0, xmm1
+				haddps	xmm0, xmm1
+				sqrtss	xmm0, xmm0
+			done:
 				cvtps2pd	xmm0, xmm0
 				mov		eax, result
 				movq	qword ptr [eax], xmm0
@@ -1236,7 +1252,7 @@ bool Cmd_SetAngularVelocity_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &axis, &velocity))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
-		if (rigidBody)
+		if (rigidBody && rigidBody->IsMobile())
 		{
 			__asm
 			{
@@ -1293,7 +1309,7 @@ bool Cmd_GetRayCastPos_Execute(COMMAND_ARGS)
 		{
 			NiVector3 coords, posVector = objNode->WorldTranslate();
 			posVector.z += posZmod;
-			if (coords.RayCastCoords(posVector, objNode->WorldRotate()[1], 50000.0F, filter & 0x3F))
+			if (coords.RayCastCoords(posVector, objNode->WorldRotate() + 1, 50000.0F, filter & 0x3F))
 			{
 				outX->data = coords.x;
 				outY->data = coords.y;
@@ -1366,7 +1382,7 @@ bool Cmd_MoveToNode_Execute(COMMAND_ARGS)
 			if (targetNode)
 			{
 				posMods += targetNode->WorldTranslate();
-				thisObj->MoveToCell(cell, &posMods);
+				thisObj->MoveToCell(cell, posMods);
 				*result = 1;
 			}
 		}
@@ -1406,7 +1422,7 @@ bool Cmd_GetNifBlockParentNodes_Execute(COMMAND_ARGS)
 		if (pcNode && (thisObj->refID == 0x14))
 		{
 			if (pcNode & 1)
-				rootNode = thisObj->renderState ? thisObj->renderState->niNode14 : NULL;
+				rootNode = thisObj->GetRefNiNode();
 			else rootNode = ((PlayerCharacter*)thisObj)->node1stPerson;
 		}
 		else rootNode = thisObj->GetNiNode();
@@ -1600,7 +1616,7 @@ bool Cmd_SetLinearVelocity_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &velocity.x, &velocity.y, &velocity.z, &setLocal))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
-		if (rigidBody)
+		if (rigidBody && rigidBody->IsMobile())
 		{
 			rigidBody->motion.linVelocity = setLocal ? rigidBody->motion.motionState.transform.rotation.MultiplyVectorInv(velocity) : velocity;
 			rigidBody->UpdateMotion();
@@ -1614,7 +1630,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 {
 	static char meshesPath[0x80] = "data\\meshes\\";
 	TESObjectREFR *refr = IS_REFERENCE(form) ? (TESObjectREFR*)form : NULL;
-	NiNode *rootNode = (refr && refr->renderState) ? refr->renderState->niNode14 : NULL;
+	NiNode *rootNode = refr ? refr->GetRefNiNode() : NULL;
 	bool result = false, modifyMap = true;
 	char doInsert = *inData;
 	if (refr)
@@ -1684,7 +1700,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 				else if ((rootNode = DoAttachModel(targetObj, objectName, pDataStr, rootNode)) && (rootNode->m_flags & 0x20000000))
 					AddPointLights(rootNode);
 			}
-			if (rootNode = s_pc1stPersonNode)
+			if ((refr->refID == 0x14) && (rootNode = g_thePlayer->node1stPerson))
 			{
 				targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName);
 				if (targetObj)
@@ -1709,7 +1725,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 			NiAVObject *object = rootNode->GetBlockByName(findData());
 			if (object)
 				object->m_parent->RemoveObject(object);
-			if (rootNode = s_pc1stPersonNode)
+			if ((refr->refID == 0x14) && (rootNode = g_thePlayer->node1stPerson))
 			{
 				object = rootNode->GetBlockByName(findData());
 				if (object)
@@ -1781,7 +1797,7 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 			if (g_thePlayer->GetDistance(targetRef) > 1024.0F)
 			{
 				cell = targetRef->GetParentCell();
-				if (cell) g_thePlayer->MoveToCell(cell, &targetRef->position);
+				if (cell) g_thePlayer->MoveToCell(cell, targetRef->position);
 			}
 			s_syncPositionRef = targetRef;
 			s_syncPositionFlags = (syncRot != 0);
@@ -1796,7 +1812,7 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 			{
 				s_syncPositionRef = NULL;
 				cell = targetRef->GetParentCell();
-				if (cell) g_thePlayer->MoveToCell(cell, (NiVector3*)&s_syncPositionPos);
+				if (cell) g_thePlayer->MoveToCell(cell, s_syncPositionPos);
 			}
 		}
 	}
@@ -1811,7 +1827,7 @@ bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 	if (ExtractFormatStringArgs(1, buffer + 1, EXTRACT_ARGS_EX, kCommandInfo_ModelHasBlock.numParams, &form))
 	{
 		TESObjectREFR *refr = IS_REFERENCE(form) ? (TESObjectREFR*)form : NULL;
-		NiNode *rootNode = refr ? refr->GetNiNode() : NULL;
+		NiNode *rootNode = refr ? refr->GetRefNiNode() : NULL;
 		if (rootNode && rootNode->GetBlock(buffer + 1))
 			goto Retn1;
 		NodeNamesMap *namesMap = s_insertNodeMap.GetPtr(form);
@@ -1863,7 +1879,7 @@ bool Cmd_GetRayCastRef_Execute(COMMAND_ARGS)
 		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
 		{
-			NiAVObject *rcObject = GetRayCastObject(objNode->WorldTranslate(), objNode->WorldRotate()[1], 50000.0F, filter & 0x3F);
+			NiAVObject *rcObject = GetRayCastObject(objNode->WorldTranslate(), objNode->WorldRotate() + 1, 50000.0F, filter & 0x3F);
 			if (rcObject)
 			{
 				TESObjectREFR *resRefr = rcObject->GetParentRef();
@@ -1884,7 +1900,7 @@ bool Cmd_GetRayCastMaterial_Execute(COMMAND_ARGS)
 	{
 		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
-			material = GetRayCastMaterial(objNode->WorldTranslate(), objNode->WorldRotate()[1], 50000.0F, filter & 0x3F);
+			material = GetRayCastMaterial(objNode->WorldTranslate(), objNode->WorldRotate() + 1, 50000.0F, filter & 0x3F);
 	}
 	*result = material;
 	return true;
@@ -1911,7 +1927,7 @@ void GetCollisionNodes(NiNode *node, TempElements *tmpElements)
 bool Cmd_GetCollisionNodes_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	NiNode *rootNode = thisObj->GetNiNode();
+	NiNode *rootNode = thisObj->GetRefNiNode();
 	if (rootNode)
 	{
 		TempElements *tmpElements = GetTempElements();
@@ -1993,7 +2009,7 @@ bool Cmd_GetPosEx_Execute(COMMAND_ARGS)
 {
 	ResultVars outPos;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outPos.x, &outPos.y, &outPos.z))
-		outPos.Set(&thisObj->position.x);
+		outPos.Set(thisObj->position);
 	return true;
 }
 
@@ -2006,11 +2022,11 @@ bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 		NiVector3 *rotPtr = &thisObj->rotation, locRot;
 		if (getLocal)
 		{
-			NiNode *rootNode = thisObj->renderState ? thisObj->renderState->niNode14 : nullptr;
+			NiNode *rootNode = thisObj->GetRefNiNode();
 			if (rootNode)
-				rotPtr = rootNode->WorldRotate().ExtractAnglesInv(locRot);
+				rotPtr = &rootNode->WorldRotate().ExtractAnglesInv(locRot);
 		}
-		outRot.Set(&rotPtr->x, Dbl180dPI);
+		outRot.Set(*rotPtr, GET_PS(9));
 	}
 	return true;
 }
@@ -2253,9 +2269,9 @@ bool Cmd_GetTranslatedPos_Execute(COMMAND_ARGS)
 {
 	NiVector4 posMods;
 	ResultVars outPos;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posMods.x, &posMods.y, &posMods.z, &outPos.x, &outPos.y, &outPos.z) && thisObj->GetTranslatedPos(&posMods))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posMods.x, &posMods.y, &posMods.z, &outPos.x, &outPos.y, &outPos.z) && thisObj->GetTranslatedPos(posMods))
 	{
-		outPos.Set(&posMods.x);
+		outPos.Set(posMods);
 		*result = 1;
 	}
 	else *result = 0;
@@ -2273,7 +2289,7 @@ bool Cmd_GetNifBlockTranslationAlt_Execute(COMMAND_ARGS)
 		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
-			outPos.Set(getWorld ? &niBlock->WorldTranslate().x : &niBlock->LocalTranslate().x);
+			outPos.Set(getWorld ? niBlock->WorldTranslate() : niBlock->LocalTranslate());
 			*result = 1;
 		}
 	}
@@ -2296,7 +2312,7 @@ bool Cmd_GetNifBlockRotationAlt_Execute(COMMAND_ARGS)
 			if (!(getMode & 2))
 				rotMat.ExtractAngles(rot);
 			else rotMat.ExtractAnglesInv(rot);
-			outRot.Set(&rot.x, Dbl180dPI);
+			outRot.Set(rot, GET_PS(9));
 			*result = 1;
 		}
 	}
@@ -2312,12 +2328,12 @@ bool Cmd_GetLinearVelocityAlt_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &outVel.x, &outVel.y, &outVel.z, &getLocal))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
-		if (rigidBody)
+		if (rigidBody && rigidBody->IsMobile())
 		{
 			hkVector4 velocity = rigidBody->motion.linVelocity;
 			if (getLocal)
 				velocity = rigidBody->motion.motionState.transform.rotation.MultiplyVector(velocity);
-			outVel.Set(&velocity.x);
+			outVel.Set(velocity);
 			*result = 1;
 		}
 	}
@@ -2333,12 +2349,12 @@ bool Cmd_GetAngularVelocityAlt_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &outVel.x, &outVel.y, &outVel.z, &getGlobal))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
-		if (rigidBody)
+		if (rigidBody && rigidBody->IsMobile())
 		{
 			hkVector4 velocity = rigidBody->motion.angVelocity;
 			if (!getGlobal)
 				velocity = rigidBody->motion.motionState.transform.rotation.MultiplyVector(velocity);
-			outVel.Set(&velocity.x);
+			outVel.Set(velocity);
 			*result = 1;
 		}
 	}
@@ -2354,12 +2370,109 @@ bool Cmd_SetAngularVelocityEx_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &velocity.x, &velocity.y, &velocity.z, &setGlobal))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
-		if (rigidBody)
+		if (rigidBody && rigidBody->IsMobile())
 		{
 			rigidBody->motion.angVelocity = setGlobal ? velocity : rigidBody->motion.motionState.transform.rotation.MultiplyVectorInv(velocity);
 			rigidBody->UpdateMotion();
 			*result = 1;
 		}
+	}
+	return true;
+}
+
+bool Cmd_GetCollisionObjProperty_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char blockName[0x40];
+	UInt32 propID;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &propID) && (propID <= 6))
+	{
+		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
+		if (rigidBody)
+		{
+			switch (propID)
+			{
+				case 0:
+					*result = rigidBody->friction;
+					break;
+				case 1:
+					*result = rigidBody->restitution;
+					break;
+				case 2:
+					*result = rigidBody->motion.motionState.linearDamping;
+					break;
+				case 3:
+					*result = rigidBody->motion.motionState.angularDamping;
+					break;
+				case 4:
+				case 5:
+				case 6:
+					*result = rigidBody->motion.inertia[propID - 4];
+					break;
+			}
+		}
+	}
+	return true;
+}
+
+bool Cmd_SetCollisionObjProperty_Execute(COMMAND_ARGS)
+{
+	char blockName[0x40];
+	UInt32 propID;
+	float value;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &propID, &value) && (propID <= 6))
+	{
+		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
+		if (rigidBody)
+		{
+			switch (propID)
+			{
+				case 0:
+					rigidBody->friction = value;
+					break;
+				case 1:
+					rigidBody->restitution = value;
+					break;
+				case 2:
+					rigidBody->motion.motionState.linearDamping = value;
+					break;
+				case 3:
+					rigidBody->motion.motionState.angularDamping = value;
+					break;
+				case 4:
+				case 5:
+				case 6:
+					rigidBody->motion.inertia[propID - 4] = value;
+					break;
+			}
+			//rigidBody->UpdateMotion();
+		}
+	}
+	return true;
+}
+
+bool Cmd_GetCollisionObjLayerType_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char blockName[0x40];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName))
+	{
+		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
+		if (rigidBody)
+			*result = rigidBody->layerType;
+	}
+	return true;
+}
+
+bool Cmd_SetCollisionObjLayerType_Execute(COMMAND_ARGS)
+{
+	char blockName[0x40];
+	UInt32 layerType;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &layerType) && layerType && (layerType < LAYER_MAX))
+	{
+		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
+		if (rigidBody)
+			rigidBody->layerType = layerType;
 	}
 	return true;
 }

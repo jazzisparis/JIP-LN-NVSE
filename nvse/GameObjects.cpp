@@ -594,7 +594,7 @@ __declspec(naked) float __vectorcall TESObjectREFR::GetDistance(TESObjectREFR *t
 	}
 }
 
-__declspec(naked) void TESObjectREFR::SetPos(NiVector4 *posVector)
+__declspec(naked) void TESObjectREFR::SetPos(NiVector3 &posVector)
 {
 	__asm
 	{
@@ -639,7 +639,7 @@ __declspec(naked) void TESObjectREFR::SetPos(NiVector4 *posVector)
 	}
 }
 
-__declspec(naked) void TESObjectREFR::SetAngle(NiVector4 *rotVector, bool setLocal)
+__declspec(naked) void TESObjectREFR::SetAngle(NiVector4 &rotVector, bool setLocal)
 {
 	__asm
 	{
@@ -690,7 +690,7 @@ __declspec(naked) void TESObjectREFR::SetAngle(NiVector4 *rotVector, bool setLoc
 	}
 }
 
-__declspec(naked) void TESObjectREFR::MoveToCell(TESObjectCELL *cell, NiVector3 *posVector)
+__declspec(naked) void TESObjectREFR::MoveToCell(TESObjectCELL *cell, const NiVector3 &posVector)
 {
 	__asm
 	{
@@ -739,7 +739,7 @@ __declspec(naked) void TESObjectREFR::MoveToCell(TESObjectCELL *cell, NiVector3 
 	}
 }
 
-__declspec(naked) bool __fastcall TESObjectREFR::GetTranslatedPos(NiVector4 *posMods)
+__declspec(naked) bool __fastcall TESObjectREFR::GetTranslatedPos(NiVector4 &posMods)
 {
 	__asm
 	{
@@ -761,7 +761,7 @@ __declspec(naked) bool __fastcall TESObjectREFR::GetTranslatedPos(NiVector4 *pos
 	}
 }
 
-__declspec(naked) void __fastcall TESObjectREFR::Rotate(NiVector4 *rotVector)
+__declspec(naked) void __fastcall TESObjectREFR::Rotate(NiVector4 &rotVector)
 {
 	__asm
 	{
@@ -901,7 +901,7 @@ bool TESObjectREFR::IsMobile()
 {
 	if (IS_ACTOR(this) || IsProjectile())
 		return true;
-	NiNode *objNode = GetNiNode();
+	NiNode *objNode = GetRefNiNode();
 	return objNode && objNode->IsMovable();
 }
 
@@ -1040,10 +1040,7 @@ __declspec(naked) hkpRigidBody* __fastcall TESObjectREFR::GetRigidBody(const cha
 		test	eax, eax
 		jz		done
 		mov		eax, [eax+8]
-		mov		dl, [eax+0xE8]
-		cmp		dl, 3
-		jbe		done
-		cmp		dl, 6
+		cmp		byte ptr [eax+0x28], 1
 		jz		done
 		xor		eax, eax
 	done:
@@ -1054,13 +1051,13 @@ __declspec(naked) hkpRigidBody* __fastcall TESObjectREFR::GetRigidBody(const cha
 bool TESObjectREFR::IsGrabbable()
 {
 	if IS_ACTOR(this)
-		return *(bool*)0x11E0B20 || HasHealth(0);
+		return *(bool*)0x11E0B20 || ((Actor*)this)->GetDead();
 	if (IsProjectile())
 	{
 		Projectile *projRefr = (Projectile*)this;
 		return (projRefr->projFlags & 0x200) && (projRefr->GetProjectileType() == 3) && projRefr->IsProximityTriggered();
 	}
-	NiNode *objNode = GetNiNode();
+	NiNode *objNode = GetRefNiNode();
 	return objNode && objNode->IsMovable();
 }
 

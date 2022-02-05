@@ -11,10 +11,11 @@ alignas(16) const HexFloat kPackedValues[] =
 	0xFFFFFFFFUL, 0x7FFFFFFFUL, 0xFFFFFFFFUL, 0x7FFFFFFFUL,
 	0UL, 0x80000000UL, 0UL, 0x80000000UL,
 	FLT_EPSILON, FLT_EPSILON, FLT_EPSILON, FLT_EPSILON,
-	0.01745329238F, 0.01745329238F, 0.01745329238F, 0UL,
-	1.570796371F, 1.570796371F, 1.570796371F, 0UL,
-	3.141592741F, 3.141592741F, 3.141592741F, 0UL,
-	6.283185482F, 6.283185482F, 6.283185482F, 0UL,
+	FltPId180, FltPId180, FltPId180, 0UL,
+	Flt180dPI, Flt180dPI, Flt180dPI, 0UL,
+	FltPId2, FltPId2, FltPId2, 0UL,
+	FltPI, FltPI, FltPI, 0UL,
+	FltPIx2, FltPIx2, FltPIx2, 0UL,
 	0.5F, 0.5F, 0.5F, 0UL,
 	1.0F, 1.0F, 1.0F, 0UL,
 	0.001F, 0.01F, 0.1F, 0.25F,
@@ -376,7 +377,7 @@ __declspec(naked) __m128 __vectorcall GetSinCosV3(__m128 angles)
 		movaps	xmm5, xmm0
 		andps	xmm0, [edx]
 		movaps	xmm1, xmm0
-		movaps	xmm2, [edx+0xB0]
+		movaps	xmm2, [edx+0xC0]
 		cmpnltps	xmm1, xmm2
 		movmskps	eax, xmm1
 		test	al, 7
@@ -401,7 +402,7 @@ __declspec(naked) __m128 __vectorcall GetSinCosV3(__m128 angles)
 		xorps	xmm3, xmm3
 		pcmpgtd	xmm1, xmm3
 		movaps	xmm3, xmm1
-		andps	xmm1, [edx+0xA0]
+		andps	xmm1, [edx+0xB0]
 		subps	xmm0, xmm1
 		subps	xmm0, xmm2
 		pslld	xmm3, 0x1F
@@ -418,7 +419,7 @@ __declspec(naked) __m128 __vectorcall GetSinCosV3(__m128 angles)
 		xorps	xmm0, xmm3
 		movaps	xmm1, xmm0
 		mulps	xmm0, xmm0
-		movaps	xmm2, [edx+0xD0]
+		movaps	xmm2, [edx+0xE0]
 		subps	xmm2, xmm0
 		movaps	xmm3, xmm2
 		xorps	xmm0, xmm0

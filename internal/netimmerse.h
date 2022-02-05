@@ -1220,10 +1220,10 @@ public:
 	bool IsMovable();
 	void RemoveCollision();
 	void BulkSetMaterialPropertyTraitValue(UInt32 traitID, float value);
-	void GetContactObjects(ContactObjects *contactObjs);
+	void GetContactObjects(ContactObjects &contactObjs);
 	bool HasPhantom();
-	void GetBodyMass(float *totalMass);
-	void ApplyForce(NiVector4 *forceVector);
+	float __vectorcall GetBodyMass(float totalMass);
+	void ApplyForce(const NiVector4 &forceVector);
 	void Dump();
 };
 static_assert(sizeof(NiNode) == 0xAC);
@@ -1693,6 +1693,19 @@ public:
 };
 static_assert(sizeof(NiRenderer) == 0x210);
 
+enum D3DXIMAGE_FILEFORMAT
+{
+	D3DXIFF_BMP,
+	D3DXIFF_JPG,
+	D3DXIFF_TGA,
+	D3DXIFF_PNG,
+	D3DXIFF_DDS,
+	D3DXIFF_PPM,
+	D3DXIFF_DIB,
+	D3DXIFF_HDR,
+	D3DXIFF_PFM
+};
+
 class NiDX9Renderer : public NiRenderer
 {
 public:
@@ -1923,8 +1936,8 @@ public:
 	virtual void	Unk_24(void);
 	virtual void	Unk_25(void);
 	virtual void	Unk_26(void);
-	virtual void	Unk_27(void);
-	virtual void	Unk_28(void);
+	virtual IDirect3DBaseTexture9	*GetD3DBaseTexture();
+	virtual void	SetD3DBaseTexture(IDirect3DBaseTexture9 *baseTexture);
 	virtual void	Unk_29(void);
 	virtual void	Unk_2A(void);
 	virtual void	Unk_2B(void);
@@ -1935,9 +1948,9 @@ public:
 	UInt32					unk24;			// 24
 	UInt32					unk28[14];		// 28
 	NiDX9Renderer			*renderer;		// 60
-	IDirect3DBaseTexture9	*d3dInterface;	// 64
+	IDirect3DBaseTexture9	*d3dBaseTexture;// 64
 	UInt32					unk68;			// 68
-	UInt32					unk6C;			// 6C
+	NiObject				*object6C;		// 6C
 };
 
 // 30
@@ -2019,6 +2032,8 @@ public:
 	UInt8				byte41;		// 41
 	UInt8				pad42[2];	// 42
 	UInt32				unk44;		// 44
+
+	void SaveToFile(char *filePath, UInt32 fileFmt);
 };
 
 // 40

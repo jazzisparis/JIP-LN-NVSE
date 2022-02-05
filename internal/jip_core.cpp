@@ -130,7 +130,7 @@ const char kMenuIDJumpTable[] =
 
 UInt32 s_serializedFlags = 0;
 
-__declspec(naked) void __fastcall ResultVars::Set(float *resPtr)
+__declspec(naked) void __fastcall ResultVars::Set(const NiVector3 &values)
 {
 	__asm
 	{
@@ -149,24 +149,21 @@ __declspec(naked) void __fastcall ResultVars::Set(float *resPtr)
 	}
 }
 
-__declspec(naked) void __vectorcall ResultVars::Set(float *resPtr, double modifier)
+__declspec(naked) void __vectorcall ResultVars::Set(const NiVector3 &values, const __m128 modifier)
 {
 	__asm
 	{
-		movups	xmm1, [edx-4]
-		psrldq	xmm1, 4
-		cvtps2pd	xmm2, xmm1
-		movhlps	xmm1, xmm1
-		cvtps2pd	xmm1, xmm1
-		movddup	xmm0, xmm0
-		mulpd	xmm2, xmm0
-		mulsd	xmm1, xmm0
+		movups	xmm1, [edx]
+		mulps	xmm0, xmm1
+		cvtps2pd	xmm1, xmm0
+		movhlps	xmm0, xmm0
+		cvtps2pd	xmm0, xmm0
 		mov		eax, [ecx]
-		movq	qword ptr [eax+8], xmm2
-		mov		eax, [ecx+4]
-		movhpd	qword ptr [eax+8], xmm2
-		mov		eax, [ecx+8]
 		movq	qword ptr [eax+8], xmm1
+		mov		eax, [ecx+4]
+		movhpd	qword ptr [eax+8], xmm1
+		mov		eax, [ecx+8]
+		movq	qword ptr [eax+8], xmm0
 		retn
 	}
 }
@@ -774,7 +771,7 @@ TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 	TESForm *item;
 	ContChangesEntry *entry;
 	ExtraDataList *xData;
-	if (actor->renderState && actor->renderState->niNode14)
+	if (actor->GetRefNiNode())
 	{
 		if (slotIndex == 5)
 		{

@@ -266,15 +266,15 @@ public:
 	/*13C*/virtual void		Unk_4F(void);
 	/*140*/virtual void		Unk_50(void);
 	/*144*/virtual BSFaceGenAnimationData	*GetFaceGenAnimData(Actor *actor);
-	/*148*/virtual ExtraContainerChanges::EntryData *GetWeaponInfo();
-	/*14C*/virtual ExtraContainerChanges::EntryData *GetAmmoInfo();
+	/*148*/virtual ContChangesEntry *GetWeaponInfo();
+	/*14C*/virtual ContChangesEntry *GetAmmoInfo();
 	/*150*/virtual void		Unk_54(void);
 	/*154*/virtual void		Unk_55(void);
 	/*158*/virtual void		Unk_56(void);
 	/*15C*/virtual void		Unk_57(void);
-	/*160*/virtual void		Unk_58(void);
+	/*160*/virtual void		Unk_58(ContChangesEntry *_weapInfo, NiNode *rootNode, bool arg3);
 	/*164*/virtual void		Unk_59(void);
-	/*168*/virtual void		SetAmmoInfo(ExtraContainerChanges::EntryData *_ammoInfo);
+	/*168*/virtual void		SetAmmoInfo(ContChangesEntry *_ammoInfo);
 	/*16C*/virtual void		Unk_5B(void);
 	/*170*/virtual void		HandleQueuedEquipItems(Actor *actor);
 	/*174*/virtual bool		IsItemQueued(TESForm *item, ExtraDataList *xDataList, bool doEquip);
@@ -975,117 +975,117 @@ public:
 		QueuedFile		*queuedFile;		// 14
 	};
 
-	tList<TESForm>						list0C8;			// 0C8
-	tList<UInt32>						list0D0;			// 0D0
-	float								flt0D8;				// 0D8
-	float								flt0DC;				// 0DC
-	UInt8								byte0E0;			// 0E0
-	UInt8								byte0E1;			// 0E1
-	UInt8								byte0E2;			// 0E2
-	UInt8								byte0E3;			// 0E3
-	PackageInfo							interruptPackage;	// 0E4
-	UInt8								unk0FC[12];			// 0FC
-	UInt32								unk108;				// 108
-	TESIdleForm							*lastPlayedIdle;	// 10C
-	UInt8								byte110;			// 110
-	UInt8								byte111;			// 111
-	UInt8								byte112;			// 112
-	UInt8								byte113;			// 113
-	ExtraContainerChanges::EntryData	*weaponInfo;		// 114
-	ExtraContainerChanges::EntryData	*ammoInfo;			// 118
-	QueuedFile							*unk11C;			// 11C
-	NiRefObject							*object120;			// 120
-	UInt8								usingOneHandGrenade;// 124
-	UInt8								usingOneHandMine;	// 125
-	UInt8								usingOneHandThrown;	// 126
-	UInt8								wearingHeavyArmor;	// 127
-	UInt8								wearingPowerArmorTorso;	// 128
-	UInt8								wearingPowerArmorHelmet;	// 129
-	UInt8								wearingBackpack;	// 12A
-	UInt8								byte12B;			// 12B
-	NiNode								*weaponNode;		// 12C
-	NiNode								*projectileNode;	// 130
-	UInt8								byt134;				// 134
-	bool								isWeaponOut;		// 135
-	UInt8								byt136;				// 136
-	UInt8								byt137;				// 137
-	bhkCharacterController				*charCtrl;			// 138
-	UInt8								knockedState;		// 13C
-	UInt8								sitSleepState;		// 13D
-	UInt8								unk13E[2];			// 13E
-	TESObjectREFR						*usedFurniture;		// 140
-	UInt8								byte144;			// 144
-	UInt8								unk145[3];			// 145
-	Unk148								unk148;				// 148
-	UInt32								unk158;				// 158
-	UInt32								unk15C;				// 15C
-	MagicItem							*magicItem160;		// 160
-	UInt32								unk164;				// 164
-	UInt8								byte168;			// 168
-	UInt8								byte169;			// 169
-	UInt8								byte16A;			// 16A
-	UInt8								byte16B;			// 16B
-	UInt32								unk16C;				// 16C
-	float								actorAlpha;			// 170
-	float								flt174;				// 174
-	BSFaceGenAnimationData				*faceGenAnimData;	// 178
-	UInt8								byte17C;			// 17C
-	UInt8								byte17D;			// 17D
-	UInt8								byte17E;			// 17E
-	UInt8								byte17F;			// 17F
-	UInt8								byte180;			// 180
-	UInt8								byte181;			// 181
-	UInt8								byte182;			// 182
-	UInt8								byte183;			// 183
-	UInt32								unk184;				// 184
-	UInt8								hasCaughtPCPickpocketting;	// 188
-	UInt8								byte189;			// 189
-	UInt8								byte18A;			// 18A
-	UInt8								byte18B;			// 18B
-	UInt8								byte18C;			// 18C
-	UInt8								byte18D;			// 18D
-	UInt8								pad18E[2];			// 18E
-	UInt32								unk190[2];			// 190
-	float								flt198;				// 198
-	UInt8								byte19C;			// 19C
-	UInt8								byte19D;			// 19D
-	UInt8								byte19E;			// 19E
-	UInt8								byte19F;			// 19F
-	void								*ptr1A0;			// 1A0
-	UInt32								unk1A4;				// 1A4
-	UInt32								unk1A8;				// 1A8
-	tList<void>							*list1AC;			// 1AC
-	tList<void>							list1B0;			// 1B0
-	tList<void>							*list1B8;			// 1B8
-	MagicTarget							*magicTarget1BC;	// 1BC
-	AnimData							*animData;			// 1C0
-	BSAnimGroupSequence					*animSequence[3];	// 1C4
-	float								flt1D0;				// 1D0
-	float								flt1D4;				// 1D4
-	UInt8								byte1D8;			// 1D8
-	UInt8								byte1D9;			// 1D9
-	UInt8								byte1DA;			// 1DA
-	UInt8								byte1DB;			// 1DB
-	NiNode								*limbNodes[15];		// 1DC
-	NiNode								*node218;			// 218
-	NiNode								*node21C;			// 21C
-	BSShaderProperty					*shaderProp220;		// 220
-	BSBound								*boundingBox;		// 224
-	bool								isAiming;			// 228
-	UInt8								byte229;			// 229
-	UInt16								word22A;			// 22A
-	UInt32								unk22C;				// 22C
-	tList<QueueEquipItem>				*queuedEquipList;	// 230
-	float								radsSec234;			// 234
-	float								rads238;			// 238
-	float								waterRadsSec;		// 23C
-	ActorHitData						*hitData240;		// 240
-	UInt32								unk244;				// 244
-	BSFaceGenNiNode						*unk248;			// 248
-	BSFaceGenNiNode						*unk24C;			// 24C
-	NiTriShape							*unk250;			// 250
-	ActorHitData						*hitData254;		// 254
-	UInt32								unk258;				// 258
+	tList<TESForm>				list0C8;			// 0C8
+	tList<UInt32>				list0D0;			// 0D0
+	float						flt0D8;				// 0D8
+	float						flt0DC;				// 0DC
+	UInt8						byte0E0;			// 0E0
+	UInt8						byte0E1;			// 0E1
+	UInt8						byte0E2;			// 0E2
+	UInt8						byte0E3;			// 0E3
+	PackageInfo					interruptPackage;	// 0E4
+	UInt8						unk0FC[12];			// 0FC
+	UInt32						unk108;				// 108
+	TESIdleForm					*lastPlayedIdle;	// 10C
+	UInt8						byte110;			// 110
+	UInt8						byte111;			// 111
+	UInt8						byte112;			// 112
+	UInt8						byte113;			// 113
+	ContChangesEntry			*weaponInfo;		// 114
+	ContChangesEntry			*ammoInfo;			// 118
+	QueuedFile					*unk11C;			// 11C
+	NiRefObject					*object120;			// 120
+	UInt8						usingOneHandGrenade;// 124
+	UInt8						usingOneHandMine;	// 125
+	UInt8						usingOneHandThrown;	// 126
+	UInt8						wearingHeavyArmor;	// 127
+	UInt8						wearingPowerArmorTorso;	// 128
+	UInt8						wearingPowerArmorHelmet;	// 129
+	UInt8						wearingBackpack;	// 12A
+	UInt8						byte12B;			// 12B
+	NiNode						*weaponNode;		// 12C
+	NiNode						*projectileNode;	// 130
+	UInt8						byt134;				// 134
+	bool						isWeaponOut;		// 135
+	UInt8						byt136;				// 136
+	UInt8						byt137;				// 137
+	bhkCharacterController		*charCtrl;			// 138
+	UInt8						knockedState;		// 13C
+	UInt8						sitSleepState;		// 13D
+	UInt8						unk13E[2];			// 13E
+	TESObjectREFR				*usedFurniture;		// 140
+	UInt8						byte144;			// 144
+	UInt8						unk145[3];			// 145
+	Unk148						unk148;				// 148
+	UInt32						unk158;				// 158
+	UInt32						unk15C;				// 15C
+	MagicItem					*magicItem160;		// 160
+	UInt32						unk164;				// 164
+	UInt8						byte168;			// 168
+	UInt8						byte169;			// 169
+	UInt8						byte16A;			// 16A
+	UInt8						byte16B;			// 16B
+	UInt32						unk16C;				// 16C
+	float						actorAlpha;			// 170
+	float						flt174;				// 174
+	BSFaceGenAnimationData		*faceGenAnimData;	// 178
+	UInt8						byte17C;			// 17C
+	UInt8						byte17D;			// 17D
+	UInt8						byte17E;			// 17E
+	UInt8						byte17F;			// 17F
+	UInt8						byte180;			// 180
+	UInt8						byte181;			// 181
+	UInt8						byte182;			// 182
+	UInt8						byte183;			// 183
+	UInt32						unk184;				// 184
+	UInt8						hasCaughtPCPickpocketting;	// 188
+	UInt8						byte189;			// 189
+	UInt8						byte18A;			// 18A
+	UInt8						byte18B;			// 18B
+	UInt8						byte18C;			// 18C
+	UInt8						byte18D;			// 18D
+	UInt8						pad18E[2];			// 18E
+	UInt32						unk190[2];			// 190
+	float						flt198;				// 198
+	UInt8						byte19C;			// 19C
+	UInt8						byte19D;			// 19D
+	UInt8						byte19E;			// 19E
+	UInt8						byte19F;			// 19F
+	void						*ptr1A0;			// 1A0
+	UInt32						unk1A4;				// 1A4
+	UInt32						unk1A8;				// 1A8
+	tList<void>					*list1AC;			// 1AC
+	tList<void>					list1B0;			// 1B0
+	tList<void>					*list1B8;			// 1B8
+	MagicTarget					*magicTarget1BC;	// 1BC
+	AnimData					*animData;			// 1C0
+	BSAnimGroupSequence			*animSequence[3];	// 1C4
+	float						flt1D0;				// 1D0
+	float						flt1D4;				// 1D4
+	UInt8						byte1D8;			// 1D8
+	UInt8						byte1D9;			// 1D9
+	UInt8						byte1DA;			// 1DA
+	UInt8						byte1DB;			// 1DB
+	NiNode						*limbNodes[15];		// 1DC
+	NiNode						*node218;			// 218
+	NiNode						*node21C;			// 21C
+	BSShaderProperty			*shaderProp220;		// 220
+	BSBound						*boundingBox;		// 224
+	bool						isAiming;			// 228
+	UInt8						byte229;			// 229
+	UInt16						word22A;			// 22A
+	UInt32						unk22C;				// 22C
+	tList<QueueEquipItem>		*queuedEquipList;	// 230
+	float						radsSec234;			// 234
+	float						rads238;			// 238
+	float						waterRadsSec;		// 23C
+	ActorHitData				*hitData240;		// 240
+	UInt32						unk244;				// 244
+	BSFaceGenNiNode				*unk248;			// 248
+	BSFaceGenNiNode				*unk24C;			// 24C
+	NiTriShape					*unk250;			// 250
+	ActorHitData				*hitData254;		// 254
+	UInt32						unk258;				// 258
 };
 static_assert(sizeof(MiddleHighProcess) == 0x25C);
 
@@ -1392,8 +1392,8 @@ struct ProcessManager
 	tList<void>								list070;			// 070
 	tList<void>								list078;			// 078
 	tList<Actor>							highActors;			// 080
-	UInt32									unk088[50];			// 088
-	UInt32									unk150;				// 150
+	Actor									*nearestActors[50];	// 088
+	UInt32									nearestActorsCount;	// 150
 	float									flt154;				// 154
 	float									flt158;				// 158
 	UInt8									byte15C;			// 15C

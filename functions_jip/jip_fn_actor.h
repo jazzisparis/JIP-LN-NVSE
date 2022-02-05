@@ -1322,7 +1322,8 @@ bool Cmd_GetPerkModifier_Execute(COMMAND_ARGS)
 	UInt32 entryPointID;
 	float baseValue;
 	TESForm *filterForm1 = NULL, *filterForm2 = NULL;
-	if (NOT_ACTOR(thisObj) || !ExtractArgsEx(EXTRACT_ARGS_EX, &entryPointID, &baseValue, &filterForm1, &filterForm2) || (entryPointID > 73)) return true;
+	if (NOT_ACTOR(thisObj) || !ExtractArgsEx(EXTRACT_ARGS_EX, &entryPointID, &baseValue, &filterForm1, &filterForm2) || (entryPointID > 73))
+		return true;
 	switch (EntryPointConditionInfo::Array()[entryPointID].numTabs)
 	{
 		case 1:
@@ -1405,7 +1406,7 @@ bool Cmd_GetKiller_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	Actor *actor = (Actor*)thisObj;
-	actor = (IS_ACTOR(actor) && actor->HasHealth(0)) ? actor->killer : NULL;
+	actor = (IS_ACTOR(actor) && actor->GetDead()) ? actor->killer : NULL;
 	if (actor) REFR_RES = actor->refID;
 	DoConsolePrint(actor);
 	return true;
@@ -1419,7 +1420,7 @@ __declspec(naked) bool Cmd_KillActorAlt_Execute(COMMAND_ARGS)
 bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 {
 	Character *character = (Character*)thisObj;
-	if (!character->IsCharacter() || !character->renderState || !character->renderState->niNode14 || !character->validBip01Names)
+	if (!character->IsCharacter() || !character->GetRefNiNode() || !character->validBip01Names)
 		return true;
 	PlayerCharacter *thePlayer = (character->refID == 0x14) ? (PlayerCharacter*)character : nullptr;
 	ValidBip01Names::Data *slotData = character->validBip01Names->slotData;
@@ -2487,13 +2488,13 @@ bool Cmd_GetActorVelocityAlt_Execute(COMMAND_ARGS)
 		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 		if (charCtrl)
 		{
-			NiNode *rootNode = thisObj->renderState ? thisObj->renderState->niNode14 : nullptr;
+			NiNode *rootNode = thisObj->GetRefNiNode();
 			if (rootNode)
 			{
 				NiVector3 velocity = charCtrl->velocity;
 				if (getLocal)
 					velocity.MultiplyMatrixInv(rootNode->WorldRotate());
-				outVel.Set(&velocity.x);
+				outVel.Set(velocity);
 				*result = 1;
 			}
 		}

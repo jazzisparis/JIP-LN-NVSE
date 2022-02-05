@@ -56,11 +56,12 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <FloatingPointModel>Precise</FloatingPointModel>
       <ExceptionHandling>false</ExceptionHandling>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>exports.def</ModuleDefinitionFile>
@@ -72,7 +73,7 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Message>Installing DLL...</Message>
@@ -90,6 +91,7 @@
     <ClCompile Include="internal\jip_core.cpp" />
     <ClCompile Include="internal\memory_pool.cpp" />
     <ClCompile Include="internal\netimmerse.cpp" />
+    <ClCompile Include="internal\Ni_types.cpp" />
     <ClCompile Include="internal\utility.cpp" />
     <ClCompile Include="internal\xinput.cpp" />
     <ClCompile Include="jip_nvse.cpp" />
@@ -106,7 +108,6 @@
     <ClCompile Include="nvse\GameTiles.cpp" />
     <ClCompile Include="nvse\GameTypes.cpp" />
     <ClCompile Include="nvse\GameUI.cpp" />
-    <ClCompile Include="nvse\NiTypes.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="functions_jip\jip_fn_actor.h" />
@@ -181,6 +182,7 @@
     <ClInclude Include="internal\memory_pool.h" />
     <ClInclude Include="internal\misc_consts.h" />
     <ClInclude Include="internal\netimmerse.h" />
+    <ClInclude Include="internal\Ni_types.h" />
     <ClInclude Include="internal\patches_cmd.h" />
     <ClInclude Include="internal\patches_game.h" />
     <ClInclude Include="internal\prefix.h" />
@@ -207,7 +209,6 @@
     <ClInclude Include="nvse\GameTiles.h" />
     <ClInclude Include="nvse\GameTypes.h" />
     <ClInclude Include="nvse\GameUI.h" />
-    <ClInclude Include="nvse\NiTypes.h" />
     <ClInclude Include="nvse\ParamInfos.h" />
     <ClInclude Include="nvse\PluginAPI.h" />
   </ItemGroup>

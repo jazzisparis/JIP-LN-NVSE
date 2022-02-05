@@ -267,20 +267,16 @@ __declspec(naked) void InitArmorFormHook()
 {
 	__asm
 	{
-		push	ebp
-		mov		ebp, esp
 		push	0xFFFFFFFF
-		mov		ecx, [ebp]
-		mov		ecx, [ecx-0xC]
+		mov		ecx, [ebp-0xC]
 		CALL_EAX(0x484E60)
 		push	eax
-		lea		eax, [ebp+8]
+		lea		eax, [esp+8]
 		push	eax
 		CALL_EAX(0x485D50)
 		add		esp, 8
-		push	dword ptr [ebp+8]
+		push	dword ptr [esp+4]
 		call	LookupFormByRefID
-		leave
 		retn
 	}
 }
@@ -289,15 +285,12 @@ __declspec(naked) UInt32 ToggleConsoleHook()
 {
 	__asm
 	{
-		add		ecx, 0x29
-		test	byte ptr [ecx+0x19F8], 0x80
-		jnz		retnFalse
-		test	byte ptr [ecx+0x18F8], 0x80
-		setnz	al
-		movzx	eax, al
-		retn	8
-	retnFalse:
 		xor		eax, eax
+		test	byte ptr [ecx+0x1A21], 0x80
+		jnz		done
+		test	byte ptr [ecx+0x1921], 0x80
+		setnz	al
+	done:
 		retn	8
 	}
 }
@@ -478,14 +471,14 @@ __declspec(naked) void BarterSellFixHook()
 
 __declspec(naked) void JumpHeightFixHook()
 {
-	static const UInt32 kFlt7 = 0x40E00000;
+	static const float kUnitConv = 6.999125481F;
 	__asm
 	{
 		add		esp, 8
 		mov		dword ptr [esi+0x3F0], 2
 		mov		dword ptr [esi+0x520], 0xB
 		movss	xmm0, [esi+0x540]
-		mulss	xmm0, kFlt7
+		mulss	xmm0, kUnitConv
 		addss	xmm0, [esp+0x28]
 		movss	[esi+0x544], xmm0
 		JMP_EAX(0xCD4486)
@@ -600,8 +593,8 @@ __declspec(naked) void RecipeMenuAmmoEffectsHook()
 		push	0x100
 		lea		eax, [ebp-0x338]
 		push	eax
-		CALL_EAX(0x503A70)
-		JMP_EAX(0x729506)
+		push	0x729506
+		JMP_EAX(0x503A70)
 	notAmmo:
 		mov		ecx, [ebp-0x6C]
 		test	ecx, ecx
@@ -727,9 +720,9 @@ __declspec(naked) void AttachAshPileHook()
 	}
 }
 
-double s_windSpeedMult = 1 / 255.0;
+float s_windSpeedMult = 1 / 255.0F;
 
-__declspec(naked) float GetWindSpeedHook()
+__declspec(naked) double __fastcall GetWindSpeedHook(TESWeather *weather, int EDX, UInt32 speedType, float maxSpeed, float minSpeed)
 {
 	__asm
 	{
@@ -1159,9 +1152,9 @@ __declspec(naked) void ProcessGradualSetFloatHook()
 		movd	eax, xmm0
 		push	eax
 		push	dword ptr [ecx+0x10]
+		push	0xA08155
 		mov		ecx, [ecx+0x14]
-		CALL_EAX(ADDR_TileSetFloat)
-		JMP_EAX(0xA08155)
+		JMP_EAX(ADDR_TileSetFloat)
 	finished:
 		mov		[ecx+8], edx
 		push	dword ptr [ecx]
@@ -1634,32 +1627,35 @@ __declspec(naked) void DeathResponseFixHook()
 {
 	__asm
 	{
+		mov		dl, 1
 		cmp		dword ptr [ebp+0x1C], 0
-		jnz		notApplicable
+		jnz		done
 		cmp		dword ptr [ebp+0x10], 2
-		jnz		notApplicable
+		jnz		done
 		cmp		dword ptr [ebp+0x14], 6
-		jnz		notApplicable
+		jnz		done
 		cmp		dword ptr [ebp+0x18], 1
-		jnz		notApplicable
+		jnz		done
 		mov		ecx, [ebp+8]
 		test	ecx, ecx
-		jz		notApplicable
+		jz		done
 		call	GetNearestLivingAlly
 		test	eax, eax
-		jz		notApplicable
+		setz	dl
+		jz		done
 		mov		[ebp-0x14], eax
-		push	0
+	done:
+		push	edx
 		push	dword ptr [ebp-0x1C]
+		push	edx
+		push	edx
 		push	0
 		push	0
-		JMP_EAX(0x984160)
-	notApplicable:
-		push	1
-		push	dword ptr [ebp-0x1C]
-		push	1
-		push	1
-		JMP_EAX(0x984160)
+		push	0
+		push	dword ptr [ebp-0x14]
+		push	0x9841C1
+		mov		ecx, [ebp-0x10]
+		JMP_EAX(0x8B2170)
 	}
 }
 
@@ -2429,7 +2425,7 @@ NPCPerksInfo* __fastcall AddStartingPerks(Actor *actor, NPCPerksInfo *perksInfo)
 		{
 			s_NPCPerksPick.Clear();
 			BGSPerk *perk;
-			UInt8 minLevel = (level * 3) / 2;
+			UInt8 minLevel = (level * 3) >> 1;
 			for (auto rstIter = s_validNPCPerks.Begin(); rstIter; ++rstIter)
 			{
 				perk = *rstIter;
@@ -2528,7 +2524,7 @@ void __fastcall SetPerkRankNPCHook(Actor *actor, int EDX, BGSPerk *perk, UInt8 n
 		NPCPerkEntryPoints *entryPoints = perksInfo->entryPoints;
 		if (!entryPoints)
 		{
-			if (!actor->renderState || !actor->renderState->niNode14)
+			if (!actor->GetRefNiNode())
 				return;
 			perksInfo->entryPoints = entryPoints = NPCPerkEntryPoints::Create();
 		}
@@ -3013,7 +3009,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 		{
 			if (flagPCTM & 8)
 				CdeclCall(0x77F420, true);
-			else if ((flagPCTM & 1) && !target->HasHealth(0))
+			else if ((flagPCTM & 1) && !target->GetDead())
 				CdeclCall(0x77F490, true);
 		}
 	}
@@ -3022,7 +3018,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 		hitData->healthDmg = valueMod1;
 		if (flagPCTM & 8)
 			CdeclCall(0x77F420, flagArg);
-		else if ((flagPCTM & 1) && !target->HasHealth(0))
+		else if ((flagPCTM & 1) && !target->GetDead())
 			CdeclCall(0x77F490, flagArg);
 		if (flagPCTM & 2)
 			CdeclCall(0x8D5CB0, source, 9);

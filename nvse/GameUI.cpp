@@ -90,7 +90,7 @@ void InterfaceManager::AddHighlightedRef(TESObjectREFR *refr)
 		if (highlightedRefs[--index].refr == refr) return;
 	if (numHighlighted < 32)
 	{
-		NiNode *refrNode = refr->GetNiNode();
+		NiNode *refrNode = refr->GetRefNiNode();
 		if (refrNode)
 		{
 			highlightedRefs[numHighlighted].Set(refr, refrNode);

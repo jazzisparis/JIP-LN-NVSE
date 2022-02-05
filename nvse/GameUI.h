@@ -1653,6 +1653,7 @@ public:
 	UInt8				pad9D[3];		// 9D
 
 	__forceinline static RepairServicesMenu *Get() {return *(RepairServicesMenu**)0x11DA7F0;}
+	__forceinline static Actor *Target() {return *(Actor**)0x11DA7F4;}
 };
 static_assert(sizeof(RepairServicesMenu) == 0xA0);
 

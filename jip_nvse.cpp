@@ -1352,6 +1352,11 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2910*/REG_CMD(GetAngularVelocityAlt);
 	/*2911*/REG_CMD(SetAngularVelocityEx);
 	/*2912*/REG_CMD(GetActorVelocityAlt);
+	//	v56.46
+	/*2913*/REG_CMD(GetCollisionObjProperty);
+	/*2914*/REG_CMD(SetCollisionObjProperty);
+	/*2915*/REG_CMD(GetCollisionObjLayerType);
+	/*2916*/REG_CMD(SetCollisionObjLayerType);
 
 	//===========================================================
 

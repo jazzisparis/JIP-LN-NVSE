@@ -1,25 +1,4 @@
-#include "nvse/NiTypes.h"
-
-void NiVector3::operator=(const NiVector4 &rhs)
-{
-	x = rhs.x;
-	y = rhs.y;
-	z = rhs.z;
-}
-
-void NiVector3::operator=(const AlignedVector4 &rhs)
-{
-	x = rhs.x;
-	y = rhs.y;
-	z = rhs.z;
-}
-
-void NiVector3::operator+=(const NiVector4 &rhs)
-{
-	x += rhs.x;
-	y += rhs.y;
-	z += rhs.z;
-}
+#include "internal/Ni_types.h"
 
 __declspec(naked) float __vectorcall NiVector3::Length() const
 {
@@ -36,7 +15,7 @@ __declspec(naked) float __vectorcall NiVector3::Length() const
 	}
 }
 
-__declspec(naked) NiVector3* __fastcall NiVector3::MultiplyMatrix(const NiMatrix33 &mat)
+__declspec(naked) NiVector3& __fastcall NiVector3::MultiplyMatrix(const NiMatrix33 &mat)
 {
 	__asm
 	{
@@ -64,7 +43,7 @@ __declspec(naked) NiVector3* __fastcall NiVector3::MultiplyMatrix(const NiMatrix
 	}
 }
 
-__declspec(naked) NiVector3* __fastcall NiVector3::MultiplyMatrixInv(const NiMatrix33 &mat)
+__declspec(naked) NiVector3& __fastcall NiVector3::MultiplyMatrixInv(const NiMatrix33 &mat)
 {
 	__asm
 	{
@@ -89,7 +68,7 @@ __declspec(naked) NiVector3* __fastcall NiVector3::MultiplyMatrixInv(const NiMat
 	}
 }
 
-__declspec(naked) NiVector3* __fastcall NiVector3::MultiplyMatrixRow(const NiMatrix33 &rotMatrix, UInt32 whichRow)
+__declspec(naked) NiVector3& __fastcall NiVector3::MultiplyMatrixRow(const NiMatrix33 &rotMatrix, UInt32 whichRow)
 {
 	__asm
 	{
@@ -108,7 +87,7 @@ __declspec(naked) NiVector3* __fastcall NiVector3::MultiplyMatrixRow(const NiMat
 	}
 }
 
-__declspec(naked) NiVector3* __fastcall NiVector3::MultiplyQuaternion(const NiQuaternion &qt)
+__declspec(naked) NiVector3& __fastcall NiVector3::MultiplyQuaternion(const NiQuaternion &qt)
 {
 	__asm
 	{
@@ -144,7 +123,7 @@ __declspec(naked) NiVector3* __fastcall NiVector3::MultiplyQuaternion(const NiQu
 	}
 }
 
-__declspec(naked) NiVector3 *NiVector3::Normalize()
+__declspec(naked) NiVector3& NiVector3::Normalize()
 {
     __asm
     {
@@ -175,7 +154,7 @@ __declspec(naked) NiVector3 *NiVector3::Normalize()
     }
 }
 
-__declspec(naked) NiVector3* __fastcall NiVector3::CrossProduct(const NiVector3 &vB)
+__declspec(naked) NiVector3& __fastcall NiVector3::CrossProduct(const NiVector3 &vB)
 {
 	__asm
 	{
@@ -197,7 +176,7 @@ __declspec(naked) NiVector3* __fastcall NiVector3::CrossProduct(const NiVector3 
 	}
 }
 
-__declspec(naked) NiVector3* __fastcall NiVector3::Interpolate(const NiVector3 &vB, float t, const NiVector3 &res)
+__declspec(naked) NiVector3& __fastcall NiVector3::Interpolate(const NiVector3 &vB, float t, const NiVector3 &res)
 {
 	__asm
 	{
@@ -233,7 +212,7 @@ void AlignedVector4::Dump() const
 	PrintDebug("%.6f\t%.6f\t%.6f\t%.6f\n", x, y, z, w);
 }
 
-__declspec(naked) AxisAngle* __fastcall AxisAngle::FromEulerYPR(const NiVector3 &ypr)
+__declspec(naked) AxisAngle& __fastcall AxisAngle::FromEulerYPR(const NiVector3 &ypr)
 {
 	__asm
 	{
@@ -276,7 +255,7 @@ __declspec(naked) AxisAngle* __fastcall AxisAngle::FromEulerYPR(const NiVector3 
 	}
 }
 
-__declspec(naked) AxisAngle* __fastcall AxisAngle::FromRotationMatrix(const NiMatrix33 &rotMat)
+__declspec(naked) AxisAngle& __fastcall AxisAngle::FromRotationMatrix(const NiMatrix33 &rotMat)
 {
 	__asm
 	{
@@ -298,7 +277,7 @@ __declspec(naked) AxisAngle* __fastcall AxisAngle::FromRotationMatrix(const NiMa
 	}
 }
 
-__declspec(naked) AxisAngle* __fastcall AxisAngle::FromQuaternion(const NiQuaternion &qt)
+__declspec(naked) AxisAngle& __fastcall AxisAngle::FromQuaternion(const NiQuaternion &qt)
 {
 	__asm
 	{
@@ -312,7 +291,7 @@ __declspec(naked) AxisAngle* __fastcall AxisAngle::FromQuaternion(const NiQuater
 	}
 }
 
-NiVector3 *AxisAngle::ToEulerYPR(NiVector3 &ypr) const
+NiVector3& AxisAngle::ToEulerYPR(NiVector3 &ypr) const
 {
 	NiQuaternion qt = *this;
 	return qt.ToEulerYPR(ypr);
@@ -323,7 +302,7 @@ void AxisAngle::Dump() const
 	PrintDebug("(%.6f, %.6f, %.6f), %.6f\n", axis.x, axis.y, axis.z, theta);
 }
 
-__declspec(naked) NiMatrix33* __fastcall NiMatrix33::FromQuaternion(const NiQuaternion &qt)
+__declspec(naked) NiMatrix33& __fastcall NiMatrix33::FromQuaternion(const NiQuaternion &qt)
 {
 	__asm
 	{
@@ -371,7 +350,7 @@ __declspec(naked) NiMatrix33* __fastcall NiMatrix33::FromQuaternion(const NiQuat
 	}
 }
 
-__declspec(naked) NiVector3* __fastcall NiMatrix33::ExtractAngles(NiVector3 &outAngles) const
+__declspec(naked) NiVector3& __fastcall NiMatrix33::ExtractAngles(NiVector3 &outAngles) const
 {
 	__asm
 	{
@@ -393,7 +372,7 @@ __declspec(naked) NiVector3* __fastcall NiMatrix33::ExtractAngles(NiVector3 &out
 	}
 }
 
-__declspec(naked) NiVector3* __fastcall NiMatrix33::ExtractAnglesInv(NiVector3 &outAngles) const
+__declspec(naked) NiVector3& __fastcall NiMatrix33::ExtractAnglesInv(NiVector3 &outAngles) const
 {
 	__asm
 	{
@@ -584,7 +563,7 @@ __declspec(naked) void RotationMatrixXYZ()
 	}
 }
 
-__declspec(naked) NiMatrix33* __fastcall NiMatrix33::RotationMatrix(const NiVector3 &rot)
+__declspec(naked) NiMatrix33& __fastcall NiMatrix33::RotationMatrix(const NiVector3 &rot)
 {
 	static const void *kRotationMatrixJmpTable[] = {RotationMatrixX, RotationMatrixY, RotationMatrixXY, RotationMatrixZ, RotationMatrixXZ, RotationMatrixYZ, RotationMatrixXYZ};
 	__asm
@@ -608,7 +587,7 @@ __declspec(naked) NiMatrix33* __fastcall NiMatrix33::RotationMatrix(const NiVect
 	}
 }
 
-__declspec(naked) NiMatrix33* __fastcall NiMatrix33::RotationMatrixInv(const NiVector3 &rot)
+__declspec(naked) NiMatrix33& __fastcall NiMatrix33::RotationMatrixInv(const NiVector3 &rot)
 {
 	__asm
 	{
@@ -625,7 +604,7 @@ __declspec(naked) NiMatrix33* __fastcall NiMatrix33::RotationMatrixInv(const NiV
 	}
 }
 
-__declspec(naked) NiMatrix33* __fastcall NiMatrix33::FromAxisAngle(const AxisAngle &axisAngle)
+__declspec(naked) NiMatrix33& __fastcall NiMatrix33::FromAxisAngle(const AxisAngle &axisAngle)
 {
 	__asm
 	{
@@ -693,7 +672,7 @@ __declspec(naked) void __fastcall NiMatrix33::operator=(const hkMatrix3x4 &inMat
 	}
 }
 
-__declspec(naked) NiMatrix33* __fastcall NiMatrix33::MultiplyMatrices(const NiMatrix33 &matB)
+__declspec(naked) NiMatrix33& __fastcall NiMatrix33::MultiplyMatrices(const NiMatrix33 &matB)
 {
 	__asm
 	{
@@ -740,7 +719,7 @@ __declspec(naked) NiMatrix33* __fastcall NiMatrix33::MultiplyMatrices(const NiMa
 	}
 }
 
-__declspec(naked) NiMatrix33* __fastcall NiMatrix33::Rotate(const NiVector3 &rot)
+__declspec(naked) NiMatrix33& __fastcall NiMatrix33::Rotate(const NiVector3 &rot)
 {
 	__asm
 	{
@@ -756,7 +735,7 @@ __declspec(naked) NiMatrix33* __fastcall NiMatrix33::Rotate(const NiVector3 &rot
 	}
 }
 
-__declspec(naked) NiMatrix33 *NiMatrix33::Transpose()
+__declspec(naked) NiMatrix33& NiMatrix33::Transpose()
 {
 	__asm
 	{
@@ -794,7 +773,7 @@ __declspec(naked) bool __fastcall NiQuaternion::operator==(const NiQuaternion &r
 	}
 }
 
-__declspec(naked) NiQuaternion* __fastcall NiQuaternion::FromRotationMatrix(const NiMatrix33 &rotMat)
+__declspec(naked) NiQuaternion& __fastcall NiQuaternion::FromRotationMatrix(const NiMatrix33 &rotMat)
 {
 	__asm
 	{
@@ -884,7 +863,7 @@ __declspec(naked) NiQuaternion* __fastcall NiQuaternion::FromRotationMatrix(cons
 	}
 }
 
-__declspec(naked) NiQuaternion* __fastcall NiQuaternion::FromEulerYPR(const NiVector3 &ypr)
+__declspec(naked) NiQuaternion& __fastcall NiQuaternion::FromEulerYPR(const NiVector3 &ypr)
 {
 	__asm
 	{
@@ -920,7 +899,7 @@ __declspec(naked) NiQuaternion* __fastcall NiQuaternion::FromEulerYPR(const NiVe
 	}
 }
 
-__declspec(naked) NiQuaternion* __fastcall NiQuaternion::FromAxisAngle(const AxisAngle &axisAngle)
+__declspec(naked) NiQuaternion& __fastcall NiQuaternion::FromAxisAngle(const AxisAngle &axisAngle)
 {
 	__asm
 	{
@@ -943,7 +922,7 @@ void NiQuaternion::operator=(const hkQuaternion &hkQt)
 	_mm_storeu_si128((__m128i*)&w, _mm_shuffle_epi32(_mm_load_si128((__m128i*)&hkQt.x), 0x93));
 }
 
-__declspec(naked) NiQuaternion* __fastcall NiQuaternion::MultiplyQuaternion(const NiQuaternion &rhs)
+__declspec(naked) NiQuaternion& __fastcall NiQuaternion::MultiplyQuaternion(const NiQuaternion &rhs)
 {
 	__asm
 	{
@@ -985,7 +964,7 @@ __declspec(naked) NiQuaternion* __fastcall NiQuaternion::MultiplyQuaternion(cons
 	}
 }
 
-__declspec(naked) NiQuaternion *NiQuaternion::Normalize()
+__declspec(naked) NiQuaternion& NiQuaternion::Normalize()
 {
     __asm
     {
@@ -1013,7 +992,7 @@ __declspec(naked) NiQuaternion *NiQuaternion::Normalize()
     }
 }
 
-__declspec(naked) NiVector3* __fastcall NiQuaternion::ToEulerYPR(NiVector3 &ypr) const
+__declspec(naked) NiVector3& __fastcall NiQuaternion::ToEulerYPR(NiVector3 &ypr) const
 {
 	__asm
 	{
@@ -1098,7 +1077,7 @@ void NiQuaternion::Dump() const
 	PrintDebug("%.6f\t%.6f\t%.6f\t%.6f\n", x, y, z, w);
 }
 
-__declspec(naked) NiVector4* __fastcall NiTransform::GetTranslatedPos(NiVector4 *posMods)
+__declspec(naked) NiVector3& __fastcall NiTransform::GetTranslatedPos(NiVector3 &posMods)
 {
 	__asm
 	{
@@ -1106,12 +1085,14 @@ __declspec(naked) NiVector4* __fastcall NiTransform::GetTranslatedPos(NiVector4 
 		call	NiVector3::MultiplyMatrix
 		movups	xmm1, [edx+0x24]
 		addps	xmm0, xmm1
-		movups	[eax], xmm0
+		movhlps	xmm1, xmm0
+		movq	qword ptr [eax], xmm0
+		movss	[eax+8], xmm1
 		retn
 	}
 }
 
-__declspec(naked) float __vectorcall Point3Distance(NiVector3 *pt1, NiVector3 *pt2)
+__declspec(naked) float __vectorcall Point3Distance(const NiVector3 &pt1, const NiVector3 &pt2)
 {
 	__asm
 	{

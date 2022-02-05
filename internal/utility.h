@@ -74,6 +74,8 @@ union HexFloat
 extern const HexFloat kPackedValues[];
 extern const char kLwrCaseConverter[], kUprCaseConverter[];
 
+#define GET_PS(i)	((const __m128*)kPackedValues)[i]
+
 #define PS_AbsMask			kPackedValues
 #define PS_AbsMask0			kPackedValues+0x10
 #define PS_FlipSignMask		kPackedValues+0x20
@@ -84,21 +86,24 @@ extern const char kLwrCaseConverter[], kUprCaseConverter[];
 
 #define PS_Epsilon			kPackedValues+0x70
 #define PS_V3_PId180		kPackedValues+0x80
-#define PS_V3_PId2			kPackedValues+0x90
-#define PS_V3_PI			kPackedValues+0xA0
-#define PS_V3_PIx2			kPackedValues+0xB0
-#define PS_V3_Half			kPackedValues+0xC0
-#define PS_V3_One			kPackedValues+0xD0
+#define PS_V3_180dPI		kPackedValues+0x90
+#define PS_V3_PId2			kPackedValues+0xA0
+#define PS_V3_PI			kPackedValues+0xB0
+#define PS_V3_PIx2			kPackedValues+0xC0
+#define PS_V3_Half			kPackedValues+0xD0
+#define PS_V3_One			kPackedValues+0xE0
 
-#define SS_1d1K				kPackedValues+0xE0
-#define SS_1d100			kPackedValues+0xE4
-#define SS_1d10				kPackedValues+0xE8
-#define SS_1d4				kPackedValues+0xEC
-#define SS_3				kPackedValues+0xF0
-#define SS_10				kPackedValues+0xF4
-#define SS_100				kPackedValues+0xF8
+#define SS_1d1K				kPackedValues+0xF0
+#define SS_1d100			kPackedValues+0xF4
+#define SS_1d10				kPackedValues+0xF8
+#define SS_1d4				kPackedValues+0xFC
+#define SS_3				kPackedValues+0x100
+#define SS_10				kPackedValues+0x104
+#define SS_100				kPackedValues+0x108
 
 #define FltPId2		1.570796371F
+#define FltPI		3.141592741F
+#define FltPIx2		6.283185482F
 #define FltPId180	0.01745329238F
 #define Flt180dPI	57.29578018F
 #define DblPId180	0.017453292519943295

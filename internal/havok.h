@@ -31,38 +31,42 @@ struct alignas(16) hkQuaternion
 		_mm_store_si128((__m128i*)&x, _mm_shuffle_epi32(_mm_loadu_si128((__m128i*)&niQt.w), 0x39));
 	}
 
-	inline void operator+=(const hkQuaternion &rhs)
+	inline hkQuaternion& operator+=(const hkQuaternion &rhs)
 	{
 		*this = _mm_add_ps(*this, rhs);
+		return *this;
 	}
 
-	inline void operator-=(const hkQuaternion &rhs)
+	inline hkQuaternion& operator-=(const hkQuaternion &rhs)
 	{
 		*this = _mm_sub_ps(*this, rhs);
+		return *this;
 	}
 
-	inline void operator*=(float s)
+	inline hkQuaternion& operator*=(float s)
 	{
 		*this = _mm_mul_ps(*this, _mm_set_ps1(s));
+		return *this;
 	}
 
-	void __fastcall operator*=(const hkQuaternion &rhs);
+	hkQuaternion& __fastcall operator*=(const hkQuaternion &rhs);
 
 	inline operator __m128() const {return _mm_load_ps(&x);}
 
-	hkQuaternion* __fastcall FromEulerYPR(const NiVector3 &ypr);
-	hkQuaternion* __fastcall FromRotationMatrix(const NiMatrix33 &rotMat);
-	hkQuaternion* __fastcall FromAxisAngle(const AxisAngle &axisAngle);
+	hkQuaternion& __fastcall FromEulerYPR(const NiVector3 &ypr);
+	hkQuaternion& __fastcall FromRotationMatrix(const NiMatrix33 &rotMat);
+	hkQuaternion& __fastcall FromAxisAngle(const AxisAngle &axisAngle);
 
-	inline hkQuaternion *Invert()
+	inline hkQuaternion& Invert()
 	{
 		*this = _mm_xor_ps(*this, _mm_load_ps((const float*)0x10C4C00));
-		return this;
+		return *this;
 	}
 
-	inline void Negate()
+	inline hkQuaternion& Negate()
 	{
-		*this = _mm_xor_ps(*this, _mm_load_ps((const float*)(kPackedValues + 8)));
+		*this = _mm_xor_ps(*this, GET_PS(2));
+		return *this;
 	}
 
 	inline float __vectorcall DotProduct(const hkQuaternion &rhs) const
@@ -71,8 +75,8 @@ struct alignas(16) hkQuaternion
 		return _mm_hadd_ps(_mm_hadd_ps(m, m), m).m128_f32[0];
 	}
 
-	hkQuaternion *Normalize();
-	NiVector3* __fastcall ToEulerYPR(NiVector3 &ypr) const;
+	hkQuaternion& Normalize();
+	NiVector3& __fastcall ToEulerYPR(NiVector3 &ypr) const;
 
 	void Dump() const;
 };
@@ -99,8 +103,6 @@ struct alignas(16) hkMatrix3x4
 	hkMatrix3x4(const hkQuaternion &inQuaternion) {*this = inQuaternion;}
 	hkMatrix3x4(const hkMatrix3x4 &inMatrix) {*this = inMatrix;}
 
-	inline float operator[](UInt32 idx) const {return cr[0][idx];}
-
 	void __fastcall operator=(const NiMatrix33 &inMatrix);
 	void __fastcall operator=(const hkQuaternion &inQuaternion);
 	inline void operator=(const hkMatrix3x4 &from)
@@ -109,6 +111,8 @@ struct alignas(16) hkMatrix3x4
 		_mm_store_ps(&cr[1][0], _mm_load_ps(&from.cr[1][0]));
 		_mm_store_ps(&cr[2][0], _mm_load_ps(&from.cr[2][0]));
 	}
+
+	inline operator float*() const {return (float*)this;}
 
 	__m128 __vectorcall MultiplyVector(const hkVector4 &vec) const;
 	__m128 __vectorcall MultiplyVectorInv(const hkVector4 &vec) const;
@@ -212,6 +216,53 @@ class hkpContactListener;
 class bhkShape;
 class hkpShape;
 class hkpCachingShapePhantom;
+
+enum CollisionLayerTypes
+{
+	LAYER_STATIC = 1,
+	LAYER_ANIM_STATIC,
+	LAYER_TRANSPARENT,
+	LAYER_CLUTTER,
+	LAYER_WEAPON,
+	LAYER_PROJECTILE,
+	LAYER_SPELL,
+	LAYER_BIPED,
+	LAYER_TREES,
+	LAYER_PROPS,
+	LAYER_WATER,
+	LAYER_TRIGGER,
+	LAYER_TERRAIN,
+	LAYER_TRAP,
+	LAYER_NONCOLLIDABLE,
+	LAYER_CLOUD_TRAP,
+	LAYER_GROUND,
+	LAYER_PORTAL,
+	LAYER_DEBRIS_SMALL,
+	LAYER_DEBRIS_LARGE,
+	LAYER_ACOUSTIC_SPACE,
+	LAYER_ACTORZONE,
+	LAYER_PROJECTILEZONE,
+	LAYER_GASTRAP,
+	LAYER_SHELLCASING,
+	LAYER_TRANSPARENT_SMALL,
+	LAYER_INVISIBLE_WALL,
+	LAYER_TRANSPARENT_SMALL_ANIM,
+	LAYER_DEADBIP,
+	LAYER_CHARCONTROLLER,
+	LAYER_AVOIDBOX,
+	LAYER_COLLISIONBOX,
+	LAYER_CAMERASPHERE,
+	LAYER_DOORDETECTION,
+	LAYER_CAMERAPICK,
+	LAYER_ITEMPICK,
+	LAYER_LINEOFSIGHT,
+	LAYER_PATHPICK,
+	LAYER_CUSTOMPICK1,
+	LAYER_CUSTOMPICK2,
+	LAYER_SPELLEXPLOSION,
+	LAYER_DROPPINGPICK,
+	LAYER_MAX
+};
 
 // 04
 class hkBaseObject
@@ -391,7 +442,7 @@ public:
 	NiVector4				vector30;		// 30
 	NiVector4				vector40;		// 40
 	UInt32					unk50[3];		// 50
-	float					flt5C;			// 5C
+	float					penetrateDepth;	// 5C
 	hkArray<CdBodyLinker>	cdRgdBodies;	// 60
 	UInt32					unk6C[3];		// 6C
 	hkArray<CdParentObj>	parentObjs;		// 78
@@ -402,6 +453,12 @@ public:
 };
 static_assert(sizeof(hkpWorldObject) == 0x8C);
 
+struct hkDiagonal
+{
+	hkVector4	pt0;
+	hkVector4	pt1;
+};
+
 // 10
 class hkpShape : public hkReferencedObject
 {
@@ -410,7 +467,7 @@ public:
 	virtual UInt32	Unk_04();
 	virtual bool	IsConvex();
 	virtual UInt32	Unk_06(UInt32 arg1, UInt32 arg2);
-	virtual void	Unk_07(UInt32 arg1, UInt32 arg2, UInt32 arg3);
+	virtual void	GetSpaceDiagonal(hkTransform *arg1, float arg2, hkDiagonal *resPtr);	// arg1 = (hkTransform*)0x1268370; arg2 = 0
 	virtual void	*Unk_08(void *arg1, hkVector4 *arg2, void *arg3);
 	virtual void	Unk_09(void *arg1, void *arg2, void *arg3);
 	virtual void	Unk_0A(hkVector4 *arg1, hkVector4 *arg2, void *arg3, hkVector4 *arg4);
@@ -419,6 +476,7 @@ public:
 	bhkShape		*shape;		// 08
 	UInt32			unk0C;		// 0C
 };
+static_assert(sizeof(hkpShape) == 0x10);
 
 // 0C
 class bhkRefObject : public NiObject
@@ -461,7 +519,7 @@ public:
 
 	UInt32				bodyFlags;		// 10
 
-	void ApplyForce(NiVector4 *forceVector);
+	void ApplyForce(const NiVector4 &forceVector);
 };
 
 // 18
@@ -488,8 +546,33 @@ class bhkCachingShapePhantom : public bhkShapePhantom
 public:
 };
 
-// 10
-class hkpTransformShape : public hkpShape
+// 18
+class hkpShapeContainer
+{
+public:
+	virtual void	Destroy(bool doFree);
+	virtual UInt32	GetSize();
+	virtual void	Unk_02(void);
+	virtual void	Unk_03(void);
+	virtual void	Unk_04(void);
+	virtual void	Unk_05(void);
+	virtual void	Unk_06(void);
+
+	// 10
+	struct ShapeItem
+	{
+		hkpShape	*shape;		// 00
+		UInt32		unk04[3];	// 04
+	};
+
+	UInt32				unk04;		// 04
+	hkArray<ShapeItem>	shapes;		// 08
+	UInt16				word14;		// 14
+	UInt16				sizeMod;	// 16
+};
+static_assert(sizeof(hkpShapeContainer) == 0x18);
+
+class hkpSingleShapeContainer : public hkpShapeContainer
 {
 public:
 };
@@ -997,11 +1080,18 @@ public:
 	UInt32			unk50[8];		// 50
 };
 
+// 20
 class hkpSphereRepShape : public hkpShape
 {
 public:
+	float			radius;		// 10
+	UInt32			unk14;		// 14
+	UInt32			unk18;		// 18
+	UInt32			unk1C;		// 1C
 };
+static_assert(sizeof(hkpSphereRepShape) == 0x20);
 
+// 20
 class hkpConvexShape : public hkpSphereRepShape
 {
 public:
@@ -1011,7 +1101,6 @@ public:
 class hkpSphereShape : public hkpConvexShape
 {
 public:
-	UInt32			unk10[4];		// 10
 };
 
 // 30
@@ -1025,8 +1114,7 @@ public:
 	virtual UInt32	Unk_10(UInt32 arg1, UInt32 arg2, UInt32 arg3, UInt32 arg4, UInt32 arg5, UInt32 arg6, UInt32 arg7);
 	virtual void	Unk_11(hkVector4 *vec);
 
-	hkVector4		vector10;	// 10
-	hkVector4		vector20;	// 20
+	hkVector4		dimensions;	// 20
 };
 static_assert(sizeof(hkpBoxShape) == 0x30);
 
@@ -1048,10 +1136,6 @@ public:
 	virtual void	Unk_10(void);
 	virtual void	Unk_11(void);
 
-	float			radius;			// 10
-	float			flt14;			// 14
-	UInt32			unk18;			// 18
-	float			flt1C;			// 1C
 	float			flt20;			// 20
 	float			flt24;			// 24
 	float			flt28;			// 28
@@ -1093,42 +1177,12 @@ public:
 	virtual void	Unk_10(void);
 	virtual void	Unk_11(void);
 
-	float			radius;		// 10
-	UInt32			unk14;		// 14
-	UInt32			unk18;		// 18
-	UInt32			unk1C;		// 1C
 	NiVector3		point1;		// 20
 	float			radius1;	// 2C
 	NiVector3		point2;		// 30
 	float			radius2;	// 3C
 };
 static_assert(sizeof(hkpCapsuleShape) == 0x40);
-
-// 18
-class hkpShapeContainer
-{
-public:
-	virtual void	Destroy(bool doFree);
-	virtual UInt32	GetSize();
-	virtual void	Unk_02(void);
-	virtual void	Unk_03(void);
-	virtual void	Unk_04(void);
-	virtual void	Unk_05(void);
-	virtual void	Unk_06(void);
-
-	// 10
-	struct ShapeItem
-	{
-		hkpShape	*shape;		// 00
-		UInt32		unk04[3];	// 04
-	};
-
-	UInt32				unk04;		// 04
-	hkArray<ShapeItem>	shapes;		// 08
-	UInt16				word14;		// 14
-	UInt16				sizeMod;	// 16
-};
-static_assert(sizeof(hkpShapeContainer) == 0x18);
 
 // 70
 class hkpShapeCollection : public hkpShape
@@ -1161,6 +1215,12 @@ public:
 
 // 14
 class bhkCapsuleShape : public bhkConvexShape
+{
+public:
+};
+
+// 14
+class bhkBoxShape : public bhkConvexShape
 {
 public:
 };
@@ -1393,23 +1453,18 @@ public:
 		kMotionType_Character,
 	};
 
-	UInt8			type;				// 008
-	UInt8			deactivationType;	// 009
-	UInt16			word00A;			// 00A
-	UInt16			word00C;			// 00C
-	UInt8			pad00E[2];			// 00E
-	hkMotionState	motionState;		// 010
-	NiVector3		inertia;			// 0C0
-	float			bodyMassInv;		// 0CC
-	hkVector4		linVelocity;		// 0D0
-	hkVector4		angVelocity;		// 0E0
-	hkVector4		deactivationPos[2];	// 0F0
-	UInt32			unk110[12];			// 110
-
-	__forceinline float GetBodyMass()
-	{
-		return ThisCall<float>(0xC86430, this);
-	}
+	UInt8			type;				// 008 (0E8)
+	UInt8			deactivationType;	// 009 (0E9)
+	UInt16			word00A;			// 00A (0EA)
+	UInt16			word00C;			// 00C (0EC)
+	UInt8			pad00E[2];			// 00E (0EE)
+	hkMotionState	motionState;		// 010 (0F0)
+	NiVector3		inertia;			// 0C0 (1A0)
+	float			bodyMassInv;		// 0CC (1AC)
+	hkVector4		linVelocity;		// 0D0 (1B0)
+	hkVector4		angVelocity;		// 0E0 (1C0)
+	hkVector4		deactivationPos[2];	// 0F0 (1D0)
+	UInt32			unk110[12];			// 110 (1F0)
 
 	void Dump();
 };
@@ -1448,6 +1503,11 @@ public:
 	virtual void	GetPositionAndVelocities(hkpMotion *outMotion);
 };
 
+class hkpCharacterMotion : public hkpMotion
+{
+public:
+};
+
 // 30
 struct ConstraintContact
 {
@@ -1478,6 +1538,8 @@ public:
 	hkpSimulationIsland				*simIsle;		// CC
 	UInt32							unkD0[4];		// D0
 	hkpMotion						motion;			// E0
+
+	bool IsMobile() const {return (motion.type & 2) != 0;}
 
 	__forceinline void UpdateMotion()
 	{

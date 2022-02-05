@@ -843,15 +843,16 @@ struct ExpressionEvaluatorUtils
 	ScriptVar*				(__fastcall *ScriptTokenGetScriptVar)(PluginScriptToken *scrToken);
 	const PluginTokenPair*	(__fastcall *ScriptTokenGetPair)(PluginScriptToken *scrToken);
 	const PluginTokenSlice*	(__fastcall *ScriptTokenGetSlice)(PluginScriptToken *scrToken);
+	UInt32					(__fastcall *ScriptTokenGetAnimGroup)(PluginScriptToken *scrToken);
+
+	void					(__fastcall *SetExpectedReturnType)(void *expEval, CommandReturnType type);
+	void					(__fastcall *AssignCommandResultFromElement)(void *expEval, NVSEArrayElement &result);
+	void					(__fastcall *ScriptTokenGetElement)(PluginScriptToken *scrToken, ArrayElementR &outElem);
 
 	void					(*Reserved_1)(void) = nullptr;
 	void					(*Reserved_2)(void) = nullptr;
 	void					(*Reserved_3)(void) = nullptr;
 	void					(*Reserved_4)(void) = nullptr;
-	void					(*Reserved_5)(void) = nullptr;
-	void					(*Reserved_6)(void) = nullptr;
-	void					(*Reserved_7)(void) = nullptr;
-	void					(*Reserved_8)(void) = nullptr;
 };
 
 extern ExpressionEvaluatorUtils s_expEvalUtils;
@@ -883,6 +884,18 @@ public:
 	PluginScriptToken *GetNthArg(UInt32 argIdx)
 	{
 		return s_expEvalUtils.GetNthArg(expEval, argIdx);
+	}
+
+	void SetExpectedReturnType(CommandReturnType type)
+	{
+		s_expEvalUtils.SetExpectedReturnType(expEval, type);
+	}
+
+	//	Will set the expected return type on its own.
+	//	If the Element is invalid, will throw an NVSE error in console about unexpected return type.
+	void AssignCommandResult(NVSEArrayElement &result)
+	{
+		s_expEvalUtils.AssignCommandResultFromElement(expEval, result);
 	}
 };
 
@@ -933,6 +946,11 @@ struct PluginScriptToken
 		return s_expEvalUtils.ScriptTokenGetActorValue(this);
 	}
 
+	UInt32 GetAnimGroup()
+	{
+		return s_expEvalUtils.ScriptTokenGetAnimGroup(this);
+	}
+
 	ScriptVar *GetScriptVar()
 	{
 		return s_expEvalUtils.ScriptTokenGetScriptVar(this);
@@ -946,6 +964,11 @@ struct PluginScriptToken
 	const PluginTokenSlice *GetSlice()
 	{
 		return s_expEvalUtils.ScriptTokenGetSlice(this);
+	}
+
+	void GetElement(ArrayElementR &outElem)
+	{
+		s_expEvalUtils.ScriptTokenGetElement(this, outElem);
 	}
 };
 

@@ -123,7 +123,7 @@ public:
 	bool IsDeleted() const {return (flags & kFlags_Deleted) != 0;}
 	bool IsDestroyed() const {return (flags & kFlags_Destroyed) != 0;}
 
-	inline NiPoint2 *PosXY() const {return (NiPoint2*)&position;}
+	__forceinline NiNode *GetRefNiNode() {return renderState ? renderState->niNode14 : nullptr;}
 
 	void Update3D();
 	TESContainer *GetContainer();
@@ -141,11 +141,11 @@ public:
 	TESWorldSpace *GetParentWorld();
 	bool __fastcall GetInSameCellOrWorld(TESObjectREFR *target);
 	float __vectorcall GetDistance(TESObjectREFR *target);
-	void SetPos(NiVector4 *posVector);
-	void SetAngle(NiVector4 *rotVector, bool setLocal);
-	void MoveToCell(TESObjectCELL *cell, NiVector3 *posVector);
-	bool __fastcall GetTranslatedPos(NiVector4 *posMods);
-	void __fastcall Rotate(NiVector4 *rotVector);
+	void SetPos(NiVector3 &posVector);
+	void SetAngle(NiVector4 &rotVector, bool setLocal);
+	void MoveToCell(TESObjectCELL *cell, const NiVector3 &posVector);
+	bool __fastcall GetTranslatedPos(NiVector4 &posMods);
+	void __fastcall Rotate(NiVector4 &rotVector);
 	bool Disable();
 	void DeleteReference();
 	bhkCharacterController *GetCharacterController();

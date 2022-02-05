@@ -556,7 +556,7 @@ bool Cmd_CastImmediate_Execute(COMMAND_ARGS)
 {
 	MagicItem *magicItem;
 	Actor *target = (Actor*)thisObj, *caster = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &caster) && IS_ACTOR(target) && target->GetNiNode() && (magicItem->GetType() != 4))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &caster) && IS_ACTOR(target) && target->GetRefNiNode() && (magicItem->GetType() != 4))
 	{
 		if (!caster) caster = target;
 		caster->jipActorFlags2 |= kHookActorFlag2_CastImmediate;

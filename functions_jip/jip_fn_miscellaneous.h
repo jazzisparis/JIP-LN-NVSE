@@ -30,10 +30,6 @@ DEFINE_COMMAND_PLUGIN(SetOnPCTargetChangeEventHandler, 0, 2, kParams_OneForm_One
 DEFINE_COMMAND_ALT_PLUGIN(FreePlayer, GoodbyeWorldspace, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetLocalGravity, 0, 1, kParams_OneAxis);
 DEFINE_COMMAND_PLUGIN(SetLocalGravityVector, 0, 3, kParams_ThreeFloats);
-DEFINE_COMMAND_PLUGIN(SetOnKeyDownEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetOnKeyUpEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetOnControlDownEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetOnControlUpEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetReticlePos, 0, 2, kParams_OneOptionalInt_OneOptionalFloat);
 DEFINE_COMMAND_PLUGIN(GetReticleRange, 0, 2, kParams_OneOptionalInt_OneOptionalFloat);
 DEFINE_COMMAND_PLUGIN(SetOnDialogTopicEventHandler, 0, 3, kParams_OneForm_OneInt_OneForm);
@@ -484,54 +480,6 @@ bool Cmd_SetLocalGravityVector_Execute(COMMAND_ARGS)
 	return true;
 }
 
-UInt32 s_onKeyEventMask = 0;
-
-bool SetOnKeyEventHandler_Execute(COMMAND_ARGS)
-{
-	Script *script;
-	UInt32 addEvnt;
-	SInt32 keyID = -1;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &keyID) && IS_ID(script, Script))
-		SetInputEventHandler(s_onKeyEventMask, script, keyID, addEvnt != 0);
-	return true;
-}
-
-__declspec(naked) bool Cmd_SetOnKeyDownEventHandler_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_onKeyEventMask, kLNEventMask_OnKeyDown
-		jmp		SetOnKeyEventHandler_Execute
-	}
-}
-
-__declspec(naked) bool Cmd_SetOnKeyUpEventHandler_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_onKeyEventMask, kLNEventMask_OnKeyUp
-		jmp		SetOnKeyEventHandler_Execute
-	}
-}
-
-__declspec(naked) bool Cmd_SetOnControlDownEventHandler_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_onKeyEventMask, kLNEventMask_OnControlDown
-		jmp		SetOnKeyEventHandler_Execute
-	}
-}
-
-__declspec(naked) bool Cmd_SetOnControlUpEventHandler_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_onKeyEventMask, kLNEventMask_OnControlUp
-		jmp		SetOnKeyEventHandler_Execute
-	}
-}
-
 bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 {
 	*result = 0;
@@ -545,12 +493,12 @@ bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 	if (filter < 0) filter = 6;
 	else filter &= 0x3F;
 	NiCamera *camera = g_sceneGraph->camera;
-	NiVector4 coords;
-	if (!((NiVector3*)&coords)->RayCastCoords(camera->WorldTranslate(), camera->WorldRotate()[0], maxRange, filter))
+	NiVector3 coords;
+	if (!coords.RayCastCoords(camera->WorldTranslate(), camera->WorldRotate(), maxRange, filter))
 	{
 		if (numArgs < 2) return true;
-		coords = NiVector4((maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0, 0);
-		camera->m_transformWorld.GetTranslatedPos(&coords);
+		coords = {(maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0};
+		camera->m_transformWorld.GetTranslatedPos(coords);
 	}
 	ArrayElementL elements[3] = {coords.x, coords.y, coords.z};
 	AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
@@ -570,14 +518,14 @@ bool Cmd_GetReticleRange_Execute(COMMAND_ARGS)
 	if (filter < 0) filter = 6;
 	else filter &= 0x3F;
 	NiCamera *camera = g_sceneGraph->camera;
-	NiVector4 coords;
-	if (!((NiVector3*)&coords)->RayCastCoords(camera->WorldTranslate(), camera->WorldRotate()[0], maxRange, filter))
+	NiVector3 coords;
+	if (!coords.RayCastCoords(camera->WorldTranslate(), camera->WorldRotate(), maxRange, filter))
 	{
 		if (numArgs < 2) return true;
-		coords = NiVector4((maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0, 0);
-		camera->m_transformWorld.GetTranslatedPos(&coords);
+		coords = {(maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0};
+		camera->m_transformWorld.GetTranslatedPos(coords);
 	}
-	*result = Point3Distance(coords, &g_thePlayer->position);
+	*result = Point3Distance(coords, g_thePlayer->position);
 	return true;
 }
 
@@ -795,7 +743,7 @@ bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 		while (++startIdx < 9);
 		if (rotationKeys)
 		{
-			rotYPR *= FltPId180;
+			rotYPR *= GET_PS(8);
 			NiQuaternion quaternion = rotYPR;
 			rotationKeys[1].value = quaternion;
 			rotationKeys[1].quaternion20 = quaternion;
@@ -1234,7 +1182,7 @@ bool Cmd_GetReticleNode_Execute(COMMAND_ARGS)
 	UInt32 filter = 6;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &filter))
 	{
-		NiAVObject *rtclObject = GetRayCastObject(g_thePlayer->cameraPos, g_sceneGraph->camera->WorldRotate()[0], maxRange, filter & 0x3F);
+		NiAVObject *rtclObject = GetRayCastObject(g_thePlayer->cameraPos, g_sceneGraph->camera->WorldRotate(), maxRange, filter & 0x3F);
 		if (rtclObject) nodeName = rtclObject->GetName();
 	}
 	AssignString(PASS_COMMAND_ARGS, nodeName);
@@ -1267,14 +1215,13 @@ bool Cmd_GetPointRayCastPos_Execute(COMMAND_ARGS)
 	UInt32 filter = 6;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pos.x, &pos.y, &pos.z, &rot.x, &rot.z, &outPos.x, &outPos.y, &outPos.z, &filter))
 	{
-		rot.x *= FltPId180;
 		rot.y = 0;
-		rot.z *= FltPId180;
+		rot *= GET_PS(8);
 		NiMatrix33 rotMat;
 		rotMat.RotationMatrixInv(rot);
-		if (rot.RayCastCoords(pos, rotMat[1], 100000.0F, filter & 0x3F))
+		if (rot.RayCastCoords(pos, rotMat + 1, 100000.0F, filter & 0x3F))
 		{
-			outPos.Set(&rot.x);
+			outPos.Set(rot);
 			*result = 1;
 		}
 	}

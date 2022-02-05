@@ -1,32 +1,5 @@
 #include "nvse/GameExtraData.h"
 
-void ExtraContainerChanges::EntryData::Cleanup()
-{
-	if (!extendData) return;
-	ListNode<ExtraDataList> *xdlIter = extendData->Head(), *prev = NULL;;
-	ExtraDataList *xData;
-	ExtraCount *xCount;
-	do
-	{
-		xData = xdlIter->data;
-		if (xData)
-		{
-			xCount = GetExtraType(xData, Count);
-			if (xCount && (xCount->count <= 1))
-				xData->RemoveByType(kExtraData_Count);
-			if (xData->m_data)
-			{
-				prev = xdlIter;
-				xdlIter = xdlIter->next;
-				continue;
-			}
-		}
-		GameHeapFree(xData);
-		xdlIter = prev ? prev->RemoveNext() : xdlIter->RemoveMe();
-	}
-	while (xdlIter);
-}
-
 ExtraContainerChanges *ExtraContainerChanges::Create()
 {
 	UInt32 *dataPtr = (UInt32*)GameHeapAlloc(sizeof(ExtraContainerChanges));
@@ -47,20 +20,6 @@ ExtraContainerChanges::Data *ExtraContainerChanges::Data::Create(TESObjectREFR *
 	data->totalWgLast = -1.0F;
 	data->byte10 = 0;
 	return data;
-}
-
-void ExtraContainerChanges::Cleanup()
-{
-	if (data && data->objList)
-	{
-		ListNode<EntryData> *entryIter = data->objList->Head();
-		do
-		{
-			if (entryIter->data)
-				entryIter->data->Cleanup();
-		}
-		while (entryIter = entryIter->next);
-	}
 }
 
 BSExtraData *BSExtraData::Create(UInt8 xType, UInt32 size, UInt32 vtbl)

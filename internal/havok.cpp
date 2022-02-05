@@ -1,6 +1,6 @@
 #include "internal/havok.h"
 
-__declspec(naked) hkQuaternion* __fastcall hkQuaternion::FromEulerYPR(const NiVector3 &ypr)
+__declspec(naked) hkQuaternion& __fastcall hkQuaternion::FromEulerYPR(const NiVector3 &ypr)
 {
 	__asm
 	{
@@ -37,7 +37,7 @@ __declspec(naked) hkQuaternion* __fastcall hkQuaternion::FromEulerYPR(const NiVe
 	}
 }
 
-__declspec(naked) hkQuaternion* __fastcall hkQuaternion::FromRotationMatrix(const NiMatrix33 &mat)
+__declspec(naked) hkQuaternion& __fastcall hkQuaternion::FromRotationMatrix(const NiMatrix33 &mat)
 {
 	__asm
 	{
@@ -128,7 +128,7 @@ __declspec(naked) hkQuaternion* __fastcall hkQuaternion::FromRotationMatrix(cons
 	}
 }
 
-__declspec(naked) hkQuaternion* __fastcall hkQuaternion::FromAxisAngle(const AxisAngle &axisAngle)
+__declspec(naked) hkQuaternion& __fastcall hkQuaternion::FromAxisAngle(const AxisAngle &axisAngle)
 {
 	__asm
 	{
@@ -146,7 +146,7 @@ __declspec(naked) hkQuaternion* __fastcall hkQuaternion::FromAxisAngle(const Axi
 	}
 }
 
-__declspec(naked) void __fastcall hkQuaternion::operator*=(const hkQuaternion &rhs)
+__declspec(naked) hkQuaternion& __fastcall hkQuaternion::operator*=(const hkQuaternion &rhs)
 {
 	__asm
 	{
@@ -183,11 +183,12 @@ __declspec(naked) void __fastcall hkQuaternion::operator*=(const hkQuaternion &r
 		unpcklps	xmm4, xmm3
 		movlhps	xmm0, xmm4
 		movaps	[ecx], xmm0
+		mov		eax, ecx
 		retn
 	}
 }
 
-__declspec(naked) hkQuaternion *hkQuaternion::Normalize()
+__declspec(naked) hkQuaternion& hkQuaternion::Normalize()
 {
     __asm
     {
@@ -215,7 +216,7 @@ __declspec(naked) hkQuaternion *hkQuaternion::Normalize()
     }
 }
 
-__declspec(naked) NiVector3* __fastcall hkQuaternion::ToEulerYPR(NiVector3 &ypr) const
+__declspec(naked) NiVector3& __fastcall hkQuaternion::ToEulerYPR(NiVector3 &ypr) const
 {
 	__asm
 	{
@@ -376,27 +377,26 @@ __declspec(naked) NiNode *hkpWorldObject::GetParentNode()
 {
 	__asm
 	{
-		push	esi
-		mov		esi, [ecx+0x78]
-		mov		ecx, [ecx+0x7C]
-		mov		edx, 0x1267B70
+		mov		edx, [ecx+0x7C]
+		mov		ecx, [ecx+0x78]
 		ALIGN 16
 	iterHead:
-		dec		ecx
+		dec		edx
 		js		retnNULL
-		mov		eax, esi
-		add		esi, 0x10
-		cmp		[eax], edx
-		jnz		iterHead
-		mov		eax, [eax+8]
-		test	eax, eax
-		jz		iterHead
-		pop		esi
+		mov		eax, [ecx]
+		cmp		eax, 0x1267B70
+		jz		foundCol
+		cmp		eax, 0x11F4280
+		jz		done
+		add		ecx, 0x10
+		jmp		iterHead
+	foundCol:
+		mov		ecx, [ecx+8]
+	done:
+		mov		eax, [ecx+8]
 		retn
-		ALIGN 16
 	retnNULL:
 		xor		eax, eax
-		pop		esi
 		retn
 	}
 }
@@ -405,38 +405,24 @@ __declspec(naked) TESObjectREFR *hkpWorldObject::GetParentRef()
 {
 	__asm
 	{
+		call	hkpWorldObject::GetParentNode
 		push	esi
-		mov		esi, [ecx+0x78]
-		mov		ecx, [ecx+0x7C]
-		mov		edx, 0x1267B70
-		ALIGN 16
-	iter1Head:
-		dec		ecx
-		js		retnNULL
-		mov		eax, esi
-		add		esi, 0x10
-		cmp		[eax], edx
-		jnz		iter1Head
-		mov		eax, [eax+8]
-		test	eax, eax
-		jz		iter1Head
-		mov		esi, [eax+8]
+		mov		esi, eax
 		mov		edx, ADDR_ReturnThis
 		ALIGN 16
-	iter2Head:
+	iterHead:
 		test	esi, esi
 		jz		retnNULL
 		mov		eax, esi
 		mov		esi, [esi+0x18]
 		mov		ecx, [eax]
 		cmp		[ecx+0x10], edx
-		jnz		iter2Head
+		jnz		iterHead
 		mov		eax, [eax+0xCC]
 		test	eax, eax
-		jz		iter2Head
+		jz		iterHead
 		pop		esi
 		retn
-		ALIGN 16
 	retnNULL:
 		xor		eax, eax
 		pop		esi
@@ -446,7 +432,7 @@ __declspec(naked) TESObjectREFR *hkpWorldObject::GetParentRef()
 
 bhkWorldM **g_bhkWorldM = (bhkWorldM**)0x11CA0D8;
 
-__declspec(naked) void bhkWorldObject::ApplyForce(NiVector4 *forceVector)
+__declspec(naked) void bhkWorldObject::ApplyForce(const NiVector4 &forceVector)
 {
 	static const __m128 kUnitConv = {6.999125481F, 1 / 6.999125481F, 0, 0};
 	__asm
@@ -472,7 +458,7 @@ __declspec(naked) void bhkWorldObject::ApplyForce(NiVector4 *forceVector)
 		mulss	xmm1, kUnitConv+4
 		shufps	xmm1, xmm1, 0x40
 		mulps	xmm0, xmm1
-		mov		eax, [esp]
+		pop		eax
 		mov		ecx, [eax+8]
 		addps	xmm0, [ecx+0x1B0]
 		movaps	[ecx+0x1B0], xmm0

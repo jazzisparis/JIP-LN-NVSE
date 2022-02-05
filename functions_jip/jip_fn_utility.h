@@ -44,22 +44,22 @@ bool Cmd_StringToRef_Execute(COMMAND_ARGS)
 
 bool Cmd_GetMinOf_Execute(COMMAND_ARGS)
 {
-	UInt32 numArgs = NUM_ARGS;
+	UInt8 numArgs = NUM_ARGS;
 	double val1, val2, val3, val4, val5;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &val1, &val2, &val3, &val4, &val5))
 	{
 		__asm
 		{
-			mov		edx, numArgs
 			movq	xmm0, val1
 			minsd	xmm0, val2
-			sub		dl, 2
+			mov		dl, numArgs
+			cmp		dl, 2
 			jz		done
 			minsd	xmm0, val3
-			dec		dl
+			cmp		dl, 3
 			jz		done
 			minsd	xmm0, val4
-			dec		dl
+			cmp		dl, 4
 			jz		done
 			minsd	xmm0, val5
 		done:
@@ -73,22 +73,22 @@ bool Cmd_GetMinOf_Execute(COMMAND_ARGS)
 
 bool Cmd_GetMaxOf_Execute(COMMAND_ARGS)
 {
-	UInt32 numArgs = NUM_ARGS;
+	UInt8 numArgs = NUM_ARGS;
 	double val1, val2, val3, val4, val5;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &val1, &val2, &val3, &val4, &val5))
 	{
 		__asm
 		{
-			mov		edx, numArgs
 			movq	xmm0, val1
 			maxsd	xmm0, val2
-			sub		dl, 2
+			mov		dl, numArgs
+			cmp		dl, 2
 			jz		done
 			maxsd	xmm0, val3
-			dec		dl
+			cmp		dl, 3
 			jz		done
 			maxsd	xmm0, val4
-			dec		dl
+			cmp		dl, 4
 			jz		done
 			maxsd	xmm0, val5
 		done:

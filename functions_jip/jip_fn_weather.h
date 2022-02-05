@@ -14,7 +14,7 @@ DEFINE_COMMAND_PLUGIN(GetCurrentWeather, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(SetWeatherTransitionTimeOverride, 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetWindDirection, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(SetWindDirection, 0, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(SetWindSpeedMult, 0, 1, kParams_OneDouble);
+DEFINE_COMMAND_PLUGIN(SetWindSpeedMult, 0, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(TriggerLightningFX, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(ResetClouds, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(ReloadCloudTextures, 0, 0, NULL);
@@ -237,9 +237,9 @@ bool Cmd_SetWindDirection_Execute(COMMAND_ARGS)
 
 bool Cmd_SetWindSpeedMult_Execute(COMMAND_ARGS)
 {
-	double speedMult;
+	float speedMult;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &speedMult))
-		s_windSpeedMult = speedMult * (1 / 255.0);
+		s_windSpeedMult = speedMult * (1 / 255.0F);
 	return true;
 }
 
