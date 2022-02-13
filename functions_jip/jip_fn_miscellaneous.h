@@ -969,29 +969,7 @@ bool Cmd_ToggleCameraCollision_Execute(COMMAND_ARGS)
 	return true;
 }
 
-TESObjectWEAP *g_rockItLauncher = NULL;
-
-__declspec(naked) BGSProjectile* __fastcall GetWeaponProjectileHook(TESObjectWEAP *weapon, int EDX, Actor *actor)
-{
-	__asm
-	{
-		push	ecx
-		push	dword ptr [esp+8]
-		CALL_EAX(0x525980)
-		pop		ecx
-		test    eax, eax
-		jz		weapProj
-		cmp		byte ptr [eax+4], kFormType_TESObjectMISC
-		jz		weapProj
-		mov		eax, [eax+0xB4]
-		test	eax, eax
-		jnz		done
-	weapProj:
-		mov		eax, [ecx+0x118]
-	done:
-		retn	4
-	}
-}
+TESObjectWEAP *g_rockItLauncher = nullptr;
 
 __declspec(naked) TESForm* __fastcall GetWeaponAmmoHook(TESObjectWEAP *weapon, int EDX, Actor *actor)
 {
@@ -1037,6 +1015,28 @@ __declspec(naked) TESForm* __fastcall GetWeaponAmmoHook(TESObjectWEAP *weapon, i
 	}
 }
 
+__declspec(naked) BGSProjectile* __fastcall GetWeaponProjectileHook(TESObjectWEAP *weapon, int EDX, Actor *actor)
+{
+	__asm
+	{
+		push	ecx
+		push	dword ptr [esp+8]
+		call	GetWeaponAmmoHook
+		pop		ecx
+		test    eax, eax
+		jz		weapProj
+		cmp		byte ptr [eax+4], kFormType_TESObjectMISC
+		jz		weapProj
+		mov		eax, [eax+0xB4]
+		test	eax, eax
+		jnz		done
+	weapProj:
+		mov		eax, [ecx+0x118]
+	done:
+		retn	4
+	}
+}
+
 __declspec(naked) void RILAmmoFixHook()
 {
 	__asm
@@ -1062,10 +1062,8 @@ __declspec(naked) void PCAmmoSwitchHook()
 
 bool Cmd_InitRockItLauncher_Execute(COMMAND_ARGS)
 {
-	static bool installed = false;
-	if (!installed && ExtractArgsEx(EXTRACT_ARGS_EX, &g_rockItLauncher))
+	if (!g_rockItLauncher && ExtractArgsEx(EXTRACT_ARGS_EX, &g_rockItLauncher))
 	{
-		installed = true;
 		WriteRelJump(0x525980, (UInt32)GetWeaponAmmoHook);
 		WriteRelJump(0x525A90, (UInt32)GetWeaponProjectileHook);
 		WritePushRetRelJump(0x946310, 0x946326, (UInt32)RILAmmoFixHook);

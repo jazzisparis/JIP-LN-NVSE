@@ -151,6 +151,8 @@ public:
 	/*080*/virtual void		Unk_20(void);
 	/*084*/virtual void		Unk_21(UInt32 arg);
 	/*088*/virtual NiControllerManager	*GetControllerManager();	// Returns this
+
+	NiObject* __fastcall HasBaseType(const NiRTTI *baseType);
 };
 
 enum InterpKeyType
@@ -2033,7 +2035,7 @@ public:
 	UInt8				pad42[2];	// 42
 	UInt32				unk44;		// 44
 
-	void SaveToFile(char *filePath, UInt32 fileFmt);
+	void __fastcall SaveToFile(UInt32 fileFmt, char *filePath);
 };
 
 // 40

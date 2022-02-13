@@ -531,6 +531,8 @@ extern RefMapModsMap s_refMapArraysPerm, s_refMapArraysTemp;
 
 UInt32 __fastcall GetSubjectID(TESForm *form, TESObjectREFR *thisObj);
 
+#define JIP_VARS_CS 1
+
 struct AuxVarInfo
 {
 	UInt32		ownerID;
@@ -564,7 +566,7 @@ struct AuxVarInfo
 		}
 	}
 
-	AuxVarModsMap& ModsMap() {return isPerm ? s_auxVariablesPerm : s_auxVariablesTemp;}
+	AuxVarModsMap& ModsMap() const {return isPerm ? s_auxVariablesPerm : s_auxVariablesTemp;}
 };
 
 struct RefMapInfo
@@ -584,7 +586,7 @@ struct RefMapInfo
 		modIndex = (type > 1) ? 0xFF : scriptObj->GetOverridingModIdx();
 	}
 
-	RefMapModsMap& ModsMap() {return isPerm ? s_refMapArraysPerm : s_refMapArraysTemp;}
+	RefMapModsMap& ModsMap() const {return isPerm ? s_refMapArraysPerm : s_refMapArraysTemp;}
 };
 
 extern UInt8 s_dataChangedFlags;

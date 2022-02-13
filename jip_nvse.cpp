@@ -1357,6 +1357,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2914*/REG_CMD(SetCollisionObjProperty);
 	/*2915*/REG_CMD(GetCollisionObjLayerType);
 	/*2916*/REG_CMD(SetCollisionObjLayerType);
+	//	v56.48
+	/*2917*/REG_CMD(SetRefrModelPath);
 
 	//===========================================================
 

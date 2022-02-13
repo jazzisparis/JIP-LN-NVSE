@@ -134,6 +134,22 @@ void DoLoadGameCleanup()
 		}
 		s_extraCamerasMap.Clear();
 	}
+
+	if (!s_refNamesMap.Empty())
+	{
+		for (auto nameIter = s_refNamesMap.Begin(); nameIter; ++nameIter)
+			free(*nameIter);
+		s_refNamesMap.Clear();
+		HOOK_SET(GetRefName, false);
+	}
+
+	if (!s_refrModelPathMap.Empty())
+	{
+		for (auto pathIter = s_refrModelPathMap.Begin(); pathIter; ++pathIter)
+			free(*pathIter);
+		s_refrModelPathMap.Clear();
+		HOOK_SET(GetModelPath, false);
+	}
 }
 
 void __fastcall RestoreLinkedRefs(UnorderedMap<UInt32, UInt32> *tempMap = NULL)

@@ -195,7 +195,7 @@ __declspec(naked) void __fastcall GetWorldMapPosMults(const NiVector3 &inPos, co
 	noScale:
 		movq	xmm1, qword ptr [eax]
 		addps	xmm0, xmm1
-		movq	xmm1, xmm0
+		movaps	xmm1, xmm0
 		movq	xmm2, qword ptr [edx]
 		subps	xmm0, xmm2
 		movq	xmm2, qword ptr [edx+8]
@@ -1039,7 +1039,7 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		pshufd	xmm1, xmm0, 0x27
 		xorps	xmm0, xmm0
 		haddps	xmm1, xmm0
-		movq	xmm0, xmm1
+		movaps	xmm0, xmm1
 	noRotation:
 		cvtps2dq	xmm0, xmm0
 		movq	qword ptr [ebp-8], xmm0
@@ -1581,6 +1581,46 @@ __declspec(naked) void __stdcall GenerateLocalMapInterior(TESObjectCELL *cell, C
 	}
 }
 
+__declspec(naked) void __fastcall SaveLocalMapTexture(TESForm *worldOrCell, NiRenderedTexture *texture, Coordinate coord)
+{
+	static const char kFileFmt[] = "local_maps\\%s.(%d,%d).dds";
+	__asm
+	{
+		mov		eax, [edx+0x24]
+		test	eax, eax
+		jz		done
+		mov		edx, [eax+0x64]
+		test	edx, edx
+		jz		done
+		push	ebp
+		mov		ebp, esp
+		sub		esp, 0x80
+		push	0
+		push	edx
+		push	D3DXIFF_DDS
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x130]
+		lea		ecx, [ebp-0x80]
+		push	ecx
+		movsx	edx, word ptr [ebp+8]
+		push	edx
+		movsx	edx, word ptr [ebp+0xA]
+		push	edx
+		push	eax
+		push	offset kFileFmt
+		push	0x80
+		push	ecx
+		call	sprintf_s
+		add		esp, 0x18
+		lea		ecx, [ebp-0x80]
+		call	FileStream::MakeAllDirs
+		CALL_EAX(0xEE6DC2)
+		leave
+	done:
+		retn	4
+	}
+}
+
 struct MapMarkerTile
 {
 	Tile::Value		*visible;
@@ -1987,18 +2027,6 @@ void MiniMapLoadGame()
 	s_lastInterior = NULL;
 }
 
-#define SAVE_LOCAL_MAPS 0
-
-void SaveLocalMapTexture(TESObjectCELL *cell, Coordinate coord, NiRenderedTexture *texture)
-{
-	char fileName[0x80];
-	if (cell->IsInterior())
-		sprintf_s(fileName, 0x80, "local_map\\Interior\\%s.(%d,%d).dds", cell->GetEditorID(), coord.x, coord.y);
-	else
-		sprintf_s(fileName, 0x80, "local_map\\Exterior\\%s.(%d,%d).dds", cell->worldSpace->GetEditorID(), coord.x, coord.y);
-	texture->SaveToFile(fileName, D3DXIFF_DDS);
-}
-
 bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 {
 	UInt32 updateType, showFlags = 0x100;
@@ -2206,7 +2234,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			updateTiles = true;
 		}
 
-		bool fullColour = (showFlags & 8) != 0, restore = false;
+		bool fullColour = (showFlags & 8) != 0, restore = false, saveToFile = (showFlags & 0x20) != 0;
 		_GenerateRenderedTexture generateFunc = fullColour ? GenerateRenderedTexture : GenerateRenderedTextureDefault;
 		s_useAltFormat = true;
 
@@ -2317,9 +2345,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					{
 						GenerateLocalMapExterior(cell, generateFunc, &exteriorEntry->texture);
 						s_exteriorKeys.Append(cell->refID);
-#if SAVE_LOCAL_MAPS
-						SaveLocalMapTexture(cell, s_currLocalCoords + kGridAdjustCoord[gridIdx], exteriorEntry->texture);
-#endif
+						if (saveToFile)
+							SaveLocalMapTexture(parentWorld, exteriorEntry->texture, s_currLocalCoords + kGridAdjustCoord[gridIdx]);
 					}
 					else if (updateTiles)
 						s_exteriorKeys.MoveToEnd(cell->refID);
@@ -2328,9 +2355,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 						if (gridIdx == 4) exteriorEntry->regenFlags = 0xF;
 						else exteriorEntry->regenFlags |= quadrant;
 						GenerateLocalMapExterior(cell, generateFunc, &exteriorEntry->texture);
-#if SAVE_LOCAL_MAPS
-						SaveLocalMapTexture(cell, s_currLocalCoords + kGridAdjustCoord[gridIdx], exteriorEntry->texture);
-#endif
+						if (saveToFile)
+							SaveLocalMapTexture(parentWorld, exteriorEntry->texture, s_currLocalCoords + kGridAdjustCoord[gridIdx]);
 					}
 					s_tileShaderProps[gridIdx]->srcTexture = exteriorEntry->texture;
 				}
@@ -2438,9 +2464,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					{
 						*renderedTexture = NULL;
 						GenerateLocalMapInterior(parentCell, coord, generateFunc, renderedTexture);
-#if SAVE_LOCAL_MAPS
-						SaveLocalMapTexture(cell, coord, *renderedTexture);
-#endif
+						if (saveToFile)
+							SaveLocalMapTexture(parentCell, *renderedTexture, coord);
 					}
 					s_tileShaderProps[gridIdx]->srcTexture = *renderedTexture;
 					if (useFogOfWar)

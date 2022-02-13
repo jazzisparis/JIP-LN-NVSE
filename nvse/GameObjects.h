@@ -143,7 +143,7 @@ public:
 	float __vectorcall GetDistance(TESObjectREFR *target);
 	void SetPos(NiVector3 &posVector);
 	void SetAngle(NiVector4 &rotVector, bool setLocal);
-	void MoveToCell(TESObjectCELL *cell, const NiVector3 &posVector);
+	void __fastcall MoveToCell(TESObjectCELL *cell, const NiVector3 &posVector);
 	bool __fastcall GetTranslatedPos(NiVector4 &posMods);
 	void __fastcall Rotate(NiVector4 &rotVector);
 	bool Disable();

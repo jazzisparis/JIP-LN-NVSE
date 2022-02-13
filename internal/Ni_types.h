@@ -50,27 +50,27 @@ struct NiVector3
 	{
 		__m128 m = _mm_loadu_ps((const float*)&rhs);
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_movehl_ps(m, m));
+		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
 	}
 	inline void operator=(const AlignedVector4 &rhs)
 	{
 		__m128 m = _mm_load_ps((const float*)&rhs);
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_movehl_ps(m, m));
+		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
 	}
 
 	inline NiVector3& operator+=(const NiVector3 &rhs)
 	{
 		__m128 m = _mm_add_ps(*this, rhs);
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_movehl_ps(m, m));
+		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
 		return *this;
 	}
 	inline NiVector3& operator+=(const NiVector4 &rhs)
 	{
 		__m128 m = _mm_add_ps(*this, _mm_loadu_ps((const float*)&rhs));
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_movehl_ps(m, m));
+		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
 		return *this;
 	}
 	inline NiVector3& operator+=(float value)
@@ -78,14 +78,14 @@ struct NiVector3
 		__m128 m = _mm_load_ss(&value);
 		m = _mm_add_ps(*this, _mm_shuffle_ps(m, m, 0x40));
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_movehl_ps(m, m));
+		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
 		return *this;
 	}
 	inline NiVector3& operator-=(const NiVector3 &rhs)
 	{
 		__m128 m = _mm_sub_ps(*this, rhs);
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_movehl_ps(m, m));
+		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
 		return *this;
 	}
 	inline NiVector3& operator-=(float value)
@@ -93,7 +93,7 @@ struct NiVector3
 		__m128 m = _mm_load_ss(&value);
 		m = _mm_sub_ps(*this, _mm_shuffle_ps(m, m, 0x40));
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_movehl_ps(m, m));
+		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
 		return *this;
 	}
 	inline NiVector3& operator*=(float value)
@@ -101,21 +101,21 @@ struct NiVector3
 		__m128 m = _mm_load_ss(&value);
 		m = _mm_mul_ps(*this, _mm_shuffle_ps(m, m, 0x40));
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_movehl_ps(m, m));
+		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
 		return *this;
 	}
 	inline NiVector3& operator*=(const NiVector3 &rhs)
 	{
 		__m128 m = _mm_mul_ps(*this, rhs);
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_movehl_ps(m, m));
+		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
 		return *this;
 	}
 	inline NiVector3& __vectorcall operator*=(const __m128 packedPS)
 	{
 		__m128 m = _mm_mul_ps(*this, packedPS);
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_movehl_ps(m, m));
+		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
 		return *this;
 	}
 	inline NiVector3& operator*=(const NiMatrix33 &mat) {return MultiplyMatrix(mat);}
@@ -164,7 +164,7 @@ struct NiVector4
 	{
 		__m128 m = _mm_add_ps(*this, rhs);
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_movehl_ps(m, m));
+		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
 		return *this;
 	}
 
@@ -173,7 +173,7 @@ struct NiVector4
 		__m128 m = _mm_load_ss(&value);
 		m = _mm_mul_ps(*this, _mm_shuffle_ps(m, m, 0x40));
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_movehl_ps(m, m));
+		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
 		return *this;
 	}
 

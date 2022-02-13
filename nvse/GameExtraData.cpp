@@ -593,14 +593,14 @@ __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetHealth
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		done
-		movss	xmm2, xmm0
+		movaps	xmm2, xmm0
 		movss	xmm3, [eax+0xC]
 		mov		ecx, esi
 		call	ContChangesEntry::GetBaseHealth
 		divss	xmm3, xmm0
 		mulss	xmm3, xmm2
 		minss	xmm2, xmm3
-		movss	xmm0, xmm2
+		movaps	xmm0, xmm2
 	done:
 		pop		esi
 		retn

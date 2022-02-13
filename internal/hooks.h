@@ -56,6 +56,7 @@ enum
 	kHook_PlayerMinHealth,
 	kHook_ApplyActorVelocity,
 	kHook_SynchronizePosition,
+	kHook_GetModelPath,
 	kHook_CalculateHitDamage,
 	kHook_EnableRepairButton,
 	kHook_PopulateRepairList,
@@ -86,12 +87,11 @@ enum
 	kHookFormFlag6_NoPCActivation =			1 << 1,
 	kHookFormFlag6_EventDisabled =			1 << 2,
 	kHookFormFlag6_ActivateDisabled =		1 << 3,
-	kHookFormFlag6_AltRefName =				1 << 4,
+	kHookFormFlag6_UniqueItem =				1 << 4,
 	kHookFormFlag6_IsAshPile =				1 << 5,
 	kHookFormFlag6_InsertNode =				1 << 6,
 	kHookFormFlag6_AttachModel =			1 << 7,
 	kHookFormFlag6_InsertObject =			kHookFormFlag6_InsertNode | kHookFormFlag6_AttachModel,
-	kHookFormFlag6_UniqueItem =				1 << 8,
 
 	kHookFormFlag5_FastTravelInformed =		1 << 0,
 	kHookFormFlag5_CellChangeInformed =		1 << 1,
@@ -101,6 +101,8 @@ enum
 
 	kHookRefFlag5F_Update3D =				1 << 0,
 	kHookRefFlag5F_DisableCollision =		1 << 1,
+	kHookRefFlag5F_AltRefName =				1 << 2,
+	kHookRefFlag5F_RefrModelPath =			1 << 3,
 
 	kHookActorFlag1_CombatDisabled =		1 << 0,
 	kHookActorFlag1_ForceCombatTarget =		1 << 1,
@@ -2003,7 +2005,7 @@ __declspec(naked) const char* __fastcall GetRefNameHook(TESObjectREFR *refr)
 {
 	__asm
 	{
-		test	byte ptr [ecx+6], kHookFormFlag6_AltRefName
+		test	byte ptr [ecx+0x5F], kHookRefFlag5F_AltRefName
 		jz		baseName
 		push	ecx
 		push	ecx
@@ -2497,7 +2499,7 @@ __declspec(naked) void CheckUniqueItemHook()
 		cmp		eax, esi
 		jnz		done
 		xor		eax, eax
-		test	word ptr [ecx+6], kHookFormFlag6_UniqueItem
+		test	byte ptr [ecx+6], kHookFormFlag6_UniqueItem
 		jnz		done
 		mov		eax, esi
 	done:
@@ -2665,7 +2667,7 @@ __declspec(naked) void PlayerMinHealthHook()
 		cmp		dword ptr [ebp+0xC], 0
 		jge		done
 		movss	xmm0, [ebp-0x40]
-		movss	xmm1, xmm0
+		movaps	xmm1, xmm0
 		addss	xmm1, [ebp+0xC]
 		movss	xmm2, PS_V3_One
 		comiss	xmm1, xmm2
@@ -3716,10 +3718,10 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 	{
 		7.5F, 30 / 7.0F, 0.125F, 0.0625F,
 		4.0F, 2.0F, 1 / 210.0F, 0.675F,
-		0.1F, 0.1F, 0.1F, 0UL, 
-		1 / 127.0F, 1 / 127.0F, 1 / 127.0F, 0UL, 
-		0x7FUL, 0x7FUL, 0x7FUL, 0UL,
-		0x3FUL, 0x3FUL, 0x3FUL, 0UL
+		PS_DUP_3(0.1F),
+		PS_DUP_3(1 / 127.0F),
+		PS_DUP_3(0x7FUL),
+		PS_DUP_3(0x3FUL)
 	};
 	__asm
 	{
@@ -3793,7 +3795,7 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		subps	xmm6, xmm4
 		addps	xmm6, xmm5
 		movups	[ebx+0x2C], xmm6
-		movss	xmm7, xmm0
+		movaps	xmm7, xmm0
 	doneRecalc1:
 		movss	[ebx+4], xmm7
 		mulss	xmm3, xmm0
@@ -3878,14 +3880,14 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		mulps	xmm2, xmm3
 		subps	xmm2, xmm1
 		movups	[ebx+0x2C], xmm2
-		movss	xmm4, xmm0
+		movaps	xmm4, xmm0
 	doneRecalc2:
 		movss	[ebx+4], xmm4
 		shufps	xmm0, xmm0, 0x40
 		mulps	xmm2, xmm0
 		addps	xmm1, xmm2
 		movq	qword ptr [ebx+0x10], xmm1
-		movhlps	xmm1, xmm1
+		shufps	xmm1, xmm1, 0xFE
 		movss	[ebx+0x18], xmm1
 		pop		ebx
 		pop		ebp
@@ -4079,6 +4081,53 @@ __declspec(naked) void SynchronizePositionHook()
 		fstp	dword ptr [ecx+0x2C]
 	done:
 		retn
+	}
+}
+
+UnorderedMap<TESObjectREFR*, char*> s_refrModelPathMap;
+
+__declspec(naked) char* __fastcall GetModelPathHook(TESObject *baseForm, int EDX, TESObjectREFR *refr)
+{
+	__asm
+	{
+		mov		eax, [esp+4]
+		test	eax, eax
+		jz		getModel
+		test	byte ptr [eax+0x5F], kHookRefFlag5F_RefrModelPath
+		jz		getModel
+		push	ecx
+		push	eax
+		mov		ecx, offset s_refrModelPathMap
+		call	UnorderedMap<TESObjectREFR*, char*>::Get
+		pop		ecx
+		test	eax, eax
+		jz		getModel
+		retn	4
+	getModel:
+		JMP_EAX(0x50FD90)
+	}
+}
+
+void __cdecl DestroyRefrHook(TESObjectREFR *refr)
+{
+	ThisCall(0x405430, (void*)0x11CA304, refr);
+	if (refr->extraDataList.jipRefFlags5F & kHookRefFlag5F_AltRefName)
+	{
+		char *refName = s_refNamesMap.GetErase(refr);
+		if (refName)
+		{
+			free(refName);
+			HOOK_MOD(GetRefName, false);
+		}
+	}
+	if (refr->extraDataList.jipRefFlags5F & kHookRefFlag5F_RefrModelPath)
+	{
+		char *modelPath = s_refrModelPathMap.GetErase(refr);
+		if (modelPath)
+		{
+			free(modelPath);
+			HOOK_MOD(GetModelPath, false);
+		}
 	}
 }
 
@@ -4711,6 +4760,7 @@ void InitJIPHooks()
 	HOOK_INIT_JPRT(PlayerMinHealth, 0x93B80A, 0x93B84F);
 	HOOK_INIT_JUMP(ApplyActorVelocity, 0xC6D4E4);
 	HOOK_INIT_JPRT(SynchronizePosition, 0x575836, 0x575845);
+	HOOK_INIT_CALL(GetModelPath, 0x50FE8B);
 
 	SetFormEDID = (_SetFormEDID)*(UInt32*)0x1029018;
 
@@ -4745,6 +4795,7 @@ void InitJIPHooks()
 	WriteRelJump(0x50F9E0, (UInt32)GetIsInternalMarkerHook);
 	WriteRelJump(0x815EE6, (UInt32)CastSpellHook);
 	WriteRelCall(0x923299, (UInt32)SkipDrawWeapAnimHook);
+	WriteRelCall(0x55A47D, (UInt32)DestroyRefrHook);
 
 	PrintLog("> JIP hooks initialized successfully.");
 }

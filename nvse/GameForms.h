@@ -273,6 +273,8 @@ public:
 	tList<ModInfo> mods;			// 010 ModReferenceList in Oblivion	
 	// 018 / 028
 
+	bool IsCreated() const {return modIndex == 0xFF;}
+
 	TESFullName *GetFullName();
 	const char *GetTheName();
 

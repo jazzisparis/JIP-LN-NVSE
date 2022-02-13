@@ -15,29 +15,36 @@ DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableErase, AuxVarErase, 0, 3, kParams_One
 DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableEraseAll, AuxVarEraseAll, 0, 2, kParams_OneInt_OneOptionalForm);
 DEFINE_CMD_COND_PLUGIN(AuxVarGetFltCond, 1, 2, kParams_OneQuest_OneInt);
 
-AuxVarValsArr* __fastcall AVGetArray(AuxVarInfo *varInfo, bool addArr = false)
+#if JIP_VARS_CS
+PrimitiveCS s_auxVarCS;
+#define AUX_VAR_CS	ScopedPrimitiveCS cs(&s_auxVarCS);
+#else
+#define AUX_VAR_CS
+#endif
+
+AuxVarValsArr* __fastcall AVGetArray(const AuxVarInfo &varInfo, bool addArr = false)
 {
-	if (addArr) return &varInfo->ModsMap()[varInfo->modIndex][varInfo->ownerID][varInfo->varName];
-	AuxVarOwnersMap *ownersMap = varInfo->ModsMap().GetPtr(varInfo->modIndex);
-	if (!ownersMap) return NULL;
-	AuxVarVarsMap *varsMap = ownersMap->GetPtr(varInfo->ownerID);
-	if (!varsMap) return NULL;
-	return varsMap->GetPtr(varInfo->varName);
+	if (addArr) return &varInfo.ModsMap()[varInfo.modIndex][varInfo.ownerID][varInfo.varName];
+	AuxVarOwnersMap *ownersMap = varInfo.ModsMap().GetPtr(varInfo.modIndex);
+	if (!ownersMap) return nullptr;
+	AuxVarVarsMap *varsMap = ownersMap->GetPtr(varInfo.ownerID);
+	if (!varsMap) return nullptr;
+	return varsMap->GetPtr(varInfo.varName);
 }
 
-AuxVariableValue* __fastcall AVGetValue(AuxVarInfo *varInfo, SInt32 idx, bool addVal = false)
+AuxVariableValue* __fastcall AVGetValue(const AuxVarInfo &varInfo, SInt32 idx, bool addVal = false)
 {
 	AuxVarValsArr *valsArr = AVGetArray(varInfo, addVal && (idx <= 0));
-	if (!valsArr) return NULL;
+	if (!valsArr) return nullptr;
 	SInt32 size = valsArr->Size();
 	if (idx < 0)
 	{
 		if (addVal) return valsArr->Append();
-		return size ? valsArr->GetPtr(size - 1) : NULL;
+		return size ? valsArr->GetPtr(size - 1) : nullptr;
 	}
 	AuxVariableValue *varValue = valsArr->GetPtr(idx);
 	if (varValue) return varValue;
-	if (!addVal || (idx > size)) return NULL;
+	if (!addVal || (idx > size)) return nullptr;
 	return valsArr->Append();
 }
 
@@ -46,11 +53,16 @@ bool Cmd_AuxiliaryVariableGetSize_Execute(COMMAND_ARGS)
 	*result = 0;
 	char varName[0x50];
 	TESForm *form = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form)) return true;
-	AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
-	if (!varInfo.ownerID) return true;
-	AuxVarValsArr *valsArr = AVGetArray(&varInfo);
-	if (valsArr) *result = (int)valsArr->Size();
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
+	{
+		AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
+		if (varInfo.ownerID)
+		{
+			AUX_VAR_CS
+			AuxVarValsArr *valsArr = AVGetArray(varInfo);
+			if (valsArr) *result = (int)valsArr->Size();
+		}
+	}
 	return true;
 }
 
@@ -59,13 +71,14 @@ bool Cmd_AuxiliaryVariableGetType_Execute(COMMAND_ARGS)
 	*result = 0;
 	char varName[0x50];
 	SInt32 idx = 0;
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &idx, &form) && (idx >= 0))
 	{
 		AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
 		if (varInfo.ownerID)
 		{
-			AuxVariableValue *value = AVGetValue(&varInfo, idx);
+			AUX_VAR_CS
+			AuxVariableValue *value = AVGetValue(varInfo, idx);
 			if (value)
 				*result = value->GetType();
 		}
@@ -78,13 +91,14 @@ bool Cmd_AuxiliaryVariableGetFloat_Execute(COMMAND_ARGS)
 	*result = 0;
 	char varName[0x50];
 	SInt32 idx = 0;
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &idx, &form) && (idx >= 0))
 	{
 		AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
 		if (varInfo.ownerID)
 		{
-			AuxVariableValue *value = AVGetValue(&varInfo, idx);
+			AUX_VAR_CS
+			AuxVariableValue *value = AVGetValue(varInfo, idx);
 			if (value)
 				*result = value->GetFlt();
 		}
@@ -97,13 +111,14 @@ bool Cmd_AuxiliaryVariableGetRef_Execute(COMMAND_ARGS)
 	*result = 0;
 	char varName[0x50];
 	SInt32 idx = 0;
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &idx, &form) && (idx >= 0))
 	{
 		AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
 		if (varInfo.ownerID)
 		{
-			AuxVariableValue *value = AVGetValue(&varInfo, idx);
+			AUX_VAR_CS
+			AuxVariableValue *value = AVGetValue(varInfo, idx);
 			if (value)
 				REFR_RES = value->GetRef();
 		}
@@ -113,16 +128,17 @@ bool Cmd_AuxiliaryVariableGetRef_Execute(COMMAND_ARGS)
 
 bool Cmd_AuxiliaryVariableGetString_Execute(COMMAND_ARGS)
 {
-	const char *resStr = NULL;
+	const char *resStr = nullptr;
 	char varName[0x50];
 	SInt32 idx = 0;
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &idx, &form) && (idx >= 0))
 	{
 		AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
 		if (varInfo.ownerID)
 		{
-			AuxVariableValue *value = AVGetValue(&varInfo, idx);
+			AUX_VAR_CS
+			AuxVariableValue *value = AVGetValue(varInfo, idx);
 			if (value)
 				resStr = value->GetStr();
 		}
@@ -135,18 +151,25 @@ bool Cmd_AuxiliaryVariableGetAsArray_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char varName[0x50];
-	TESForm *form = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form)) return true;
-	AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
-	if (!varInfo.ownerID) return true;
-	AuxVarValsArr *valsArr = AVGetArray(&varInfo);
-	if (!valsArr) return true;
-	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
-	for (auto value = valsArr->Begin(); value; ++value)
-		tmpElements->Append(value().GetAsElement());
-	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+	TESForm *form = nullptr;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
+	{
+		AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
+		if (varInfo.ownerID)
+		{
+			AUX_VAR_CS
+			AuxVarValsArr *valsArr = AVGetArray(varInfo);
+			if (valsArr)
+			{
+				TempElements *tmpElements = GetTempElements();
+				tmpElements->Clear();
+				for (auto value = valsArr->Begin(); value; ++value)
+					tmpElements->Append(value().GetAsElement());
+				if (!tmpElements->Empty())
+					AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+			}
+		}
+	}
 	return true;
 }
 
@@ -154,24 +177,33 @@ bool Cmd_AuxiliaryVariableGetAll_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 type;
-	TESForm *form = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &type, &form)) return true;
-	AuxVarInfo varInfo(form, thisObj, scriptObj, type);
-	if (!varInfo.ownerID) return true;
-	AuxVarOwnersMap *findMod = varInfo.ModsMap().GetPtr(varInfo.modIndex);
-	if (!findMod) return true;
-	AuxVarVarsMap *findOwner = findMod->GetPtr(varInfo.ownerID);
-	if (!findOwner) return true;
-	NVSEArrayVar *varsMap = CreateStringMap(NULL, NULL, 0, scriptObj);
-	TempElements *tmpElements = GetTempElements();
-	for (auto varIter = findOwner->Begin(); varIter; ++varIter)
+	TESForm *form = nullptr;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type, &form))
 	{
-		tmpElements->Clear();
-		for (auto value = varIter().Begin(); value; ++value)
-			tmpElements->Append(value().GetAsElement());
-		SetElement(varsMap, ArrayElementL(varIter.Key()), ArrayElementL(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj)));
+		AuxVarInfo varInfo(form, thisObj, scriptObj, type);
+		if (varInfo.ownerID)
+		{
+			AUX_VAR_CS
+			AuxVarOwnersMap *findMod = varInfo.ModsMap().GetPtr(varInfo.modIndex);
+			if (findMod)
+			{
+				AuxVarVarsMap *findOwner = findMod->GetPtr(varInfo.ownerID);
+				if (findOwner)
+				{
+					NVSEArrayVar *varsMap = CreateStringMap(nullptr, nullptr, 0, scriptObj);
+					TempElements *tmpElements = GetTempElements();
+					for (auto varIter = findOwner->Begin(); varIter; ++varIter)
+					{
+						tmpElements->Clear();
+						for (auto value = varIter().Begin(); value; ++value)
+							tmpElements->Append(value().GetAsElement());
+						SetElement(varsMap, ArrayElementL(varIter.Key()), ArrayElementL(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj)));
+					}
+					if (GetArraySize(varsMap)) AssignCommandResult(varsMap, result);
+				}
+			}
+		}
 	}
-	if (GetArraySize(varsMap)) AssignCommandResult(varsMap, result);
 	return true;
 }
 
@@ -181,13 +213,14 @@ bool Cmd_AuxiliaryVariableSetFloat_Execute(COMMAND_ARGS)
 	char varName[0x50];
 	double fltVal;
 	SInt32 idx = 0;
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &fltVal, &idx, &form))
 	{
 		AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
 		if (varInfo.ownerID)
 		{
-			AuxVariableValue *value = AVGetValue(&varInfo, idx, true);
+			AUX_VAR_CS
+			AuxVariableValue *value = AVGetValue(varInfo, idx, true);
 			if (value)
 			{
 				*value = fltVal;
@@ -205,13 +238,14 @@ bool Cmd_AuxiliaryVariableSetRef_Execute(COMMAND_ARGS)
 	*result = 0;
 	char varName[0x50];
 	SInt32 idx = 0;
-	TESForm *refVal, *form = NULL;
+	TESForm *refVal, *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &refVal, &idx, &form))
 	{
 		AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
 		if (varInfo.ownerID)
 		{
-			AuxVariableValue *value = AVGetValue(&varInfo, idx, true);
+			AUX_VAR_CS
+			AuxVariableValue *value = AVGetValue(varInfo, idx, true);
 			if (value)
 			{
 				*value = refVal;
@@ -229,13 +263,14 @@ bool Cmd_AuxiliaryVariableSetString_Execute(COMMAND_ARGS)
 	*result = 0;
 	char varName[0x50], *buffer = GetStrArgBuffer();
 	SInt32 idx = 0;
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, buffer, &idx, &form))
 	{
 		AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
 		if (varInfo.ownerID)
 		{
-			AuxVariableValue *value = AVGetValue(&varInfo, idx, true);
+			AUX_VAR_CS
+			AuxVariableValue *value = AVGetValue(varInfo, idx, true);
 			if (value)
 			{
 				*value = buffer;
@@ -253,7 +288,7 @@ bool Cmd_AuxiliaryVariableSetFromArray_Execute(COMMAND_ARGS)
 	*result = 0;
 	char varName[0x50];
 	UInt32 arrID;
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &arrID, &form) || !arrID)
 		return true;
 	NVSEArrayVar *srcArr = LookupArrayByID(arrID);
@@ -262,7 +297,8 @@ bool Cmd_AuxiliaryVariableSetFromArray_Execute(COMMAND_ARGS)
 	if (!arrData.size) return true;
 	AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
 	if (!varInfo.ownerID) return true;
-	AuxVarValsArr *valsArr = AVGetArray(&varInfo, true);
+	AUX_VAR_CS
+	AuxVarValsArr *valsArr = AVGetArray(varInfo, true);
 	if (!valsArr->Empty())
 		valsArr->Clear();
 	for (UInt32 idx = 0; idx < arrData.size; idx++)
@@ -278,10 +314,12 @@ bool Cmd_AuxiliaryVariableErase_Execute(COMMAND_ARGS)
 	*result = -1;
 	char varName[0x50];
 	SInt32 idx = -1;
-	TESForm *form = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &idx, &form)) return true;
+	TESForm *form = nullptr;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &idx, &form))
+		return true;
 	AuxVarInfo varInfo(form, thisObj, scriptObj, varName);
 	if (!varInfo.ownerID) return true;
+	AUX_VAR_CS
 	auto findMod = varInfo.ModsMap().Find(varInfo.modIndex);
 	if (!findMod) return true;
 	auto findOwner = findMod().Find(varInfo.ownerID);
@@ -312,10 +350,12 @@ bool Cmd_AuxiliaryVariableErase_Execute(COMMAND_ARGS)
 bool Cmd_AuxiliaryVariableEraseAll_Execute(COMMAND_ARGS)
 {
 	UInt32 type;
-	TESForm *form = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &type, &form)) return true;
+	TESForm *form = nullptr;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &type, &form))
+		return true;
 	AuxVarInfo varInfo(form, thisObj, scriptObj, type);
 	if (!varInfo.ownerID) return true;
+	AUX_VAR_CS
 	auto findMod = varInfo.ModsMap().Find(varInfo.modIndex);
 	if (!findMod) return true;
 	auto findOwner = findMod().Find(varInfo.ownerID);
@@ -337,8 +377,9 @@ double __fastcall AuxVarGetFltCond(TESObjectREFR *thisObj, TESQuest *quest, UInt
 			const char *varName = GetStringVar((int)scriptVar->data.num);
 			if (varName && *varName)
 			{
-				AuxVarInfo varInfo(NULL, thisObj, quest->scriptable.script, (char*)varName);
-				AuxVariableValue *value = AVGetValue(&varInfo, 0);
+				AuxVarInfo varInfo(nullptr, thisObj, quest->scriptable.script, (char*)varName);
+				AUX_VAR_CS
+				AuxVariableValue *value = AVGetValue(varInfo, 0);
 				if (value) return value->GetFlt();
 			}
 		}

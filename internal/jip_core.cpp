@@ -137,7 +137,7 @@ __declspec(naked) void __fastcall ResultVars::Set(const NiVector3 &values)
 		movups	xmm0, [edx-4]
 		psrldq	xmm0, 4
 		cvtps2pd	xmm1, xmm0
-		movhlps	xmm0, xmm0
+		shufps	xmm0, xmm0, 0xFE
 		cvtps2pd	xmm0, xmm0
 		mov		eax, [ecx]
 		movq	qword ptr [eax+8], xmm1
@@ -156,7 +156,7 @@ __declspec(naked) void __vectorcall ResultVars::Set(const NiVector3 &values, con
 		movups	xmm1, [edx]
 		mulps	xmm0, xmm1
 		cvtps2pd	xmm1, xmm0
-		movhlps	xmm0, xmm0
+		shufps	xmm0, xmm0, 0xFE
 		cvtps2pd	xmm0, xmm0
 		mov		eax, [ecx]
 		movq	qword ptr [eax+8], xmm1
@@ -291,7 +291,7 @@ __declspec(naked) NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
 		movups	xmm0, [eax]
 		shufps	xmm0, xmm0, 0xC
 		movss	xmm1, [eax+0x18]
-		movlhps	xmm0, xmm1
+		shufps	xmm0, xmm1, 0x44
 		movss	xmm1, [ebp+0x10]
 		shufps	xmm1, xmm1, 0x40
 		mulps	xmm0, xmm1

@@ -1,5 +1,24 @@
 #include "internal/netimmerse.h"
 
+__declspec(naked) NiObject* __fastcall NiObject::HasBaseType(const NiRTTI *baseType)
+{
+	__asm
+	{
+		mov		eax, [ecx]
+		call	dword ptr [eax+8]
+		ALIGN 16
+	iterHead:
+		test	eax, eax
+		jz		done
+		cmp		eax, edx
+		mov		eax, [eax+4]
+		jnz		iterHead
+		mov		eax, ecx
+	done:
+		retn
+	}
+}
+
 __declspec(naked) bool NiControllerSequence::Play()
 {
 	__asm
@@ -670,12 +689,25 @@ __declspec(naked) bool __fastcall NiPick::GetResults(NiCamera *camera)
 	}
 }
 
-void NiRenderedTexture::SaveToFile(char *filePath, UInt32 fileFmt)
+__declspec(naked) void __fastcall NiRenderedTexture::SaveToFile(UInt32 fileFmt, char *filePath)
 {
-	if (!textureData || !textureData->d3dBaseTexture)
-		return;
-	FileStream::MakeAllDirs(filePath);
-	StdCall(0xEE6DC2, filePath, fileFmt, textureData->d3dBaseTexture, nullptr);
+	__asm
+	{
+		mov		eax, [ecx+0x24]
+		test	eax, eax
+		jz		done
+		mov		ecx, [eax+0x64]
+		test	ecx, ecx
+		jz		done
+		mov		eax, [esp+4]
+		push	0
+		push	ecx
+		push	edx
+		push	eax
+		CALL_EAX(0xEE6DC2)
+	done:
+		retn	4
+	}
 }
 
 void NiNode::Dump()

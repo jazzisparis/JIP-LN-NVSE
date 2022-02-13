@@ -995,9 +995,16 @@ public:
 	virtual void	Unk_04(void);
 	virtual void	Unk_05(void);
 
+	enum PrimitiveType
+	{
+		kType_Box =		1,
+		kType_Sphere =	2,
+		kType_Plane =	3
+	};
+
 	UInt32			type;		// 04
-	float			unk08[4];	// 08
-	float			bounds[3];	// 18
+	NiVector4		vector08;	// 08
+	NiVector3		bounds;		// 18
 	NiRefObject		*unk24;		// 24
 	NiRefObject		*unk28;		// 28
 	NiRefObject		*unk2C;		// 2C

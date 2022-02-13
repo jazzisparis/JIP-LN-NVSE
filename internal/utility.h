@@ -62,6 +62,11 @@ __forceinline T_Ret CdeclCall(UInt32 _addr, Args ...args)
 
 #define LOG_HOOKS 0
 
+#define PS_DUP_1(a)	a, 0UL, 0UL, 0UL
+#define PS_DUP_2(a)	a, a, 0UL, 0UL
+#define PS_DUP_3(a)	a, a, a, 0UL
+#define PS_DUP_4(a)	a, a, a, a
+
 union HexFloat
 {
 	float	f;
@@ -104,6 +109,7 @@ extern const char kLwrCaseConverter[], kUprCaseConverter[];
 #define FltPId2		1.570796371F
 #define FltPI		3.141592741F
 #define FltPIx2		6.283185482F
+#define Flt2dPI		0.6366197467F
 #define FltPId180	0.01745329238F
 #define Flt180dPI	57.29578018F
 #define DblPId180	0.017453292519943295
@@ -200,6 +206,9 @@ public:
 	ScopedLock(T_CS *_cs) : cs(_cs) {cs->Enter();}
 	~ScopedLock() {cs->Leave();}
 };
+
+typedef ScopedLock<PrimitiveCS> ScopedPrimitiveCS;
+typedef ScopedLock<LightCS> ScopedLightCS;
 
 union FunctionArg
 {
@@ -546,7 +555,7 @@ public:
 	void WriteBuf(const void *inData, UInt32 inLength);
 	int WriteFmtStr(const char *fmt, ...);
 
-	static void MakeAllDirs(char *fullPath);
+	static void __fastcall MakeAllDirs(char *fullPath);
 };
 
 extern const char kIndentLevelStr[];

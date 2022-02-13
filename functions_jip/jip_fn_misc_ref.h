@@ -95,14 +95,16 @@ DEFINE_COMMAND_PLUGIN(GetCollisionObjProperty, 1, 2, kParams_OneString_OneInt);
 DEFINE_COMMAND_PLUGIN(SetCollisionObjProperty, 1, 3, kParams_OneString_OneInt_OneFloat);
 DEFINE_COMMAND_PLUGIN(GetCollisionObjLayerType, 1, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(SetCollisionObjLayerType, 1, 2, kParams_OneString_OneInt);
+DEFINE_COMMAND_PLUGIN(SetRefrModelPath, 1, 1, kParams_OneOptionalString);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
-	UInt32 flag;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &flag))
+	UInt32 doSet;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &doSet) && (!doSet != !(thisObj->flags & TESObjectREFR::kFlags_Persistent)))
 	{
-		if (flag) thisObj->flags |= TESObjectREFR::kFlags_Persistent;
-		else thisObj->flags &= ~TESObjectREFR::kFlags_Persistent;
+		thisObj->flags ^= TESObjectREFR::kFlags_Persistent;
+		if (!thisObj->IsCreated())
+			thisObj->MarkAsModified(2);
 	}
 	return true;
 }
@@ -215,7 +217,7 @@ bool Cmd_GetPrimitiveBound_Execute(COMMAND_ARGS)
 	{
 		ExtraPrimitive *xPrimitive = GetExtraType(&thisObj->extraDataList, Primitive);
 		if (xPrimitive && xPrimitive->primitive)
-			*result = xPrimitive->primitive->bounds[axis - 'X'] * 2;
+			*result = xPrimitive->primitive->bounds[axis - 'X'] * 2.0;
 	}
 	return true;
 }
@@ -225,14 +227,17 @@ bool Cmd_SetPrimitiveBound_Execute(COMMAND_ARGS)
 	*result = -1;
 	char axis;
 	float val;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &axis, &val)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &axis, &val))
+		return true;
 	ExtraPrimitive *xPrimitive = GetExtraType(&thisObj->extraDataList, Primitive);
 	if (!xPrimitive || !xPrimitive->primitive) return true;
 	BGSPrimitive *primitive = xPrimitive->primitive;
 	axis -= 'X';
-	*result = primitive->bounds[axis] * 2;
-	if (primitive->type == 2) primitive->bounds[2] = primitive->bounds[1] = primitive->bounds[0] = val * 0.5F;
-	else primitive->bounds[axis] = val * 0.5F;
+	val *= 0.5F;
+	*result = primitive->bounds[axis] * 2.0;
+	if (primitive->type == 2)
+		primitive->bounds = {val, val, val};
+	else primitive->bounds[axis] = val;
 	thisObj->Update3D();
 	return true;
 }
@@ -241,24 +246,29 @@ bool Cmd_AddPrimitive_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 type;
-	float boundX, boundY, boundZ;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type, &boundX, &boundY, &boundZ) && (type >= 1) && (type <= 3) &&
+	NiVector3 bounds;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type, &bounds.x, &bounds.y, &bounds.z) && (type >= 1) && (type <= 3) &&
 		((thisObj->baseForm->refID == 0x21) || (IS_ID(thisObj->baseForm, TESObjectACTI) && (type != 3))) &&
 		!thisObj->extraDataList.HasType(kExtraData_Primitive))
 	{
 		ExtraPrimitive *xPrimitive = ExtraPrimitive::Create();
 		thisObj->extraDataList.AddExtra(xPrimitive);
-		UInt8 size = (type == 1) ? 0x4C : 0x34;
+		UInt32 size = (type == 1) ? 0x4C : 0x34;
 		BGSPrimitive *primitive = (BGSPrimitive*)GameHeapAlloc(size);
 		MemZero(primitive, size);
 		*(UInt32*)primitive = (type == 1) ? kVtbl_BGSPrimitiveBox : ((type == 2) ? kVtbl_BGSPrimitiveSphere : kVtbl_BGSPrimitivePlane);
 		primitive->type = type;
-		primitive->bounds[0] = boundX * 0.5F;
-		if (type == 2) primitive->bounds[2] = primitive->bounds[1] = boundX * 0.5F;
+		bounds *= 0.5F;
+		primitive->bounds.x = bounds.x;
+		if (type == 2)
+		{
+			primitive->bounds.y = bounds.x;
+			primitive->bounds.z = bounds.x;
+		}
 		else
 		{
-			primitive->bounds[1] = (type == 1) ? (boundY * 0.5F) : 1;
-			primitive->bounds[2] = boundZ * 0.5F;
+			primitive->bounds.y = (type == 1) ? bounds.y : 1.0F;
+			primitive->bounds.z = bounds.z;
 		}
 		xPrimitive->primitive = primitive;
 		thisObj->Update3D();
@@ -814,28 +824,28 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 
 bool Cmd_SetRefName_Execute(COMMAND_ARGS)
 {
-	char name[0x40];
-	UInt8 numArgs = NUM_ARGS;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &name) || !thisObj->ValidForHooks()) return true;
-	if (numArgs)
+	char name[0x80];
+	name[0] = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &name))
 	{
-		char **namePtr;
-		if (s_refNamesMap.Insert(thisObj, &namePtr))
+		if (name[0])
 		{
-			thisObj->SetJIPFlag(kHookFormFlag6_AltRefName, true);
-			HOOK_MOD(GetRefName, true);
+			char **namePtr;
+			if (s_refNamesMap.Insert(thisObj, &namePtr))
+				HOOK_MOD(GetRefName, true);
+			else free(*namePtr);
+			*namePtr = CopyString(name);
+			thisObj->extraDataList.jipRefFlags5F |= kHookRefFlag5F_AltRefName;
 		}
-		else free(*namePtr);
-		*namePtr = CopyString(name);
-	}
-	else
-	{
-		char *refName = s_refNamesMap.GetErase(thisObj);
-		if (refName)
+		else
 		{
-			thisObj->SetJIPFlag(kHookFormFlag6_AltRefName, false);
-			HOOK_MOD(GetRefName, false);
-			free(refName);
+			char *refName = s_refNamesMap.GetErase(thisObj);
+			if (refName)
+			{
+				free(refName);
+				HOOK_MOD(GetRefName, false);
+			}
+			thisObj->extraDataList.jipRefFlags5F &= ~kHookRefFlag5F_AltRefName;
 		}
 	}
 	return true;
@@ -966,7 +976,7 @@ bool Cmd_PushObject_Execute(COMMAND_ARGS)
 {
 	NiVector4 forceVector;
 	TESObjectREFR *refr = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &forceVector.x, &forceVector.y, &forceVector.z, &forceVector.w, &refr))
+	if (NOT_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &forceVector.x, &forceVector.y, &forceVector.z, &forceVector.w, &refr))
 	{
 		NiNode *niNode = thisObj->GetRefNiNode();
 		if (niNode)
@@ -1635,7 +1645,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 	char doInsert = *inData;
 	if (refr)
 	{
-		if ((refr->modIndex == 0xFF) || kInventoryType[refr->baseForm->typeID])
+		if (refr->IsCreated() || kInventoryType[refr->baseForm->typeID])
 		{
 			if ((doInsert != 3) || !rootNode)
 				goto freeDataStr;
@@ -1700,7 +1710,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 				else if ((rootNode = DoAttachModel(targetObj, objectName, pDataStr, rootNode)) && (rootNode->m_flags & 0x20000000))
 					AddPointLights(rootNode);
 			}
-			if ((refr->refID == 0x14) && (rootNode = g_thePlayer->node1stPerson))
+			if ((refr->refID == 0x14) && (rootNode = s_pc1stPersonNode))
 			{
 				targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName);
 				if (targetObj)
@@ -1725,7 +1735,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 			NiAVObject *object = rootNode->GetBlockByName(findData());
 			if (object)
 				object->m_parent->RemoveObject(object);
-			if ((refr->refID == 0x14) && (rootNode = g_thePlayer->node1stPerson))
+			if ((refr->refID == 0x14) && (rootNode = s_pc1stPersonNode))
 			{
 				object = rootNode->GetBlockByName(findData());
 				if (object)
@@ -1827,7 +1837,7 @@ bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 	if (ExtractFormatStringArgs(1, buffer + 1, EXTRACT_ARGS_EX, kCommandInfo_ModelHasBlock.numParams, &form))
 	{
 		TESObjectREFR *refr = IS_REFERENCE(form) ? (TESObjectREFR*)form : NULL;
-		NiNode *rootNode = refr ? refr->GetRefNiNode() : NULL;
+		NiNode *rootNode = refr ? refr->GetNiNode() : NULL;
 		if (rootNode && rootNode->GetBlock(buffer + 1))
 			goto Retn1;
 		NodeNamesMap *namesMap = s_insertNodeMap.GetPtr(form);
@@ -2385,7 +2395,7 @@ bool Cmd_GetCollisionObjProperty_Execute(COMMAND_ARGS)
 	*result = 0;
 	char blockName[0x40];
 	UInt32 propID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &propID) && (propID <= 6))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &propID) && (propID <= 7))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
 		if (rigidBody)
@@ -2409,6 +2419,10 @@ bool Cmd_GetCollisionObjProperty_Execute(COMMAND_ARGS)
 				case 6:
 					*result = rigidBody->motion.inertia[propID - 4];
 					break;
+				case 7:
+					if (rigidBody->motion.bodyMassInv > 0)
+						*result = 1.0 / rigidBody->motion.bodyMassInv;
+					break;
 			}
 		}
 	}
@@ -2420,7 +2434,7 @@ bool Cmd_SetCollisionObjProperty_Execute(COMMAND_ARGS)
 	char blockName[0x40];
 	UInt32 propID;
 	float value;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &propID, &value) && (propID <= 6))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &propID, &value) && (propID <= 7))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
 		if (rigidBody)
@@ -2443,6 +2457,9 @@ bool Cmd_SetCollisionObjProperty_Execute(COMMAND_ARGS)
 				case 5:
 				case 6:
 					rigidBody->motion.inertia[propID - 4] = value;
+					break;
+				case 7:
+					rigidBody->motion.bodyMassInv = (value > 0) ? (1.0F / value) : 0;
 					break;
 			}
 			//rigidBody->UpdateMotion();
@@ -2473,6 +2490,35 @@ bool Cmd_SetCollisionObjLayerType_Execute(COMMAND_ARGS)
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
 		if (rigidBody)
 			rigidBody->layerType = layerType;
+	}
+	return true;
+}
+
+bool Cmd_SetRefrModelPath_Execute(COMMAND_ARGS)
+{
+	char modelPath[0x80];
+	modelPath[0] = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &modelPath))
+	{
+		if (modelPath[0])
+		{
+			char **pPath;
+			if (s_refrModelPathMap.Insert(thisObj, &pPath))
+				HOOK_MOD(GetModelPath, true);
+			else free(*pPath);
+			*pPath = CopyString(modelPath);
+			thisObj->extraDataList.jipRefFlags5F |= kHookRefFlag5F_RefrModelPath;
+		}
+		else
+		{
+			char *modelPath = s_refrModelPathMap.GetErase(thisObj);
+			if (modelPath)
+			{
+				free(modelPath);
+				HOOK_MOD(GetModelPath, false);
+			}
+			thisObj->extraDataList.jipRefFlags5F &= ~kHookRefFlag5F_RefrModelPath;
+		}
 	}
 	return true;
 }

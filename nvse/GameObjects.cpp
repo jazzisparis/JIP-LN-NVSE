@@ -690,14 +690,15 @@ __declspec(naked) void TESObjectREFR::SetAngle(NiVector4 &rotVector, bool setLoc
 	}
 }
 
-__declspec(naked) void TESObjectREFR::MoveToCell(TESObjectCELL *cell, const NiVector3 &posVector)
+__declspec(naked) void __fastcall TESObjectREFR::MoveToCell(TESObjectCELL *cell, const NiVector3 &posVector)
 {
 	__asm
 	{
 		push	esi
 		mov		esi, ecx
+		push	edx
 		call	TESObjectREFR::GetParentCell
-		mov		ecx, [esp+8]
+		pop		ecx
 		test	eax, eax
 		jz		doMove
 		mov		edx, [esi+0x64]
@@ -715,7 +716,7 @@ __declspec(naked) void TESObjectREFR::MoveToCell(TESObjectCELL *cell, const NiVe
 	doMove:
 		mov		eax, s_tempPosMarker
 		mov		[eax+0x40], ecx
-		mov		ecx, [esp+0xC]
+		mov		ecx, [esp+8]
 		movq	xmm0, qword ptr [ecx]
 		movq	qword ptr [eax+0x30], xmm0
 		mov		edx, [ecx+8]
@@ -728,14 +729,12 @@ __declspec(naked) void TESObjectREFR::MoveToCell(TESObjectCELL *cell, const NiVe
 		CALL_EAX(ADDR_MoveToMarker)
 		add		esp, 0x14
 		pop		esi
-		retn	8
+		retn	4
 		ALIGN 16
 	doSetPos:
-		push	dword ptr [esp+0xC]
 		mov		ecx, esi
-		call	TESObjectREFR::SetPos
 		pop		esi
-		retn	8
+		jmp		TESObjectREFR::SetPos
 	}
 }
 
@@ -1886,7 +1885,7 @@ TESObjectREFR *TESObjectREFR::GetMerchantContainer()
 
 TESActorBase *Actor::GetActorBase()
 {
-	if (baseForm->modIndex == 0xFF)
+	if (baseForm->IsCreated())
 	{
 		ExtraLeveledCreature *xLvlCre = GetExtraType(&extraDataList, LeveledCreature);
 		if (xLvlCre) return xLvlCre->actorBase;

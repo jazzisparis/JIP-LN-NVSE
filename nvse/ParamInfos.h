@@ -1781,3 +1781,9 @@ ParamInfo kParams_OneString_ThreeScriptVars_OneOptionalInt[] =
 	{"Variable", kParamType_ScriptVariable, 0},
 	{"Integer", kParamType_Integer, 1}
 };
+
+ParamInfo kParams_TwoDoubles[] =
+{
+	{"Double", kParamType_Double, 0},
+	{"Double", kParamType_Double, 0}
+};

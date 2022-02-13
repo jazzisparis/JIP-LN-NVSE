@@ -1563,7 +1563,7 @@ __declspec(naked) void __fastcall SetExplosionLightFadeHook(Explosion *explRef)
 		addss	xmm1, xmm1
 		divss	xmm1, [ecx+0x8C]
 		movss	xmm2, PS_V3_One
-		movss	xmm0, xmm2
+		movaps	xmm0, xmm2
 		subss	xmm0, xmm1
 		minss	xmm0, xmm2
 		xorps	xmm2, xmm2
@@ -3337,7 +3337,7 @@ __declspec(naked) float __vectorcall GetRepairAmount(float itemToRepairHealth, f
 		mulss	xmm1, xmm5
 		movss	xmm2, s_pcRepairSkill
 		mulss	xmm2, SS_1d100
-		movss	xmm3, xmm0
+		movaps	xmm3, xmm0
 		minss	xmm3, xmm1
 		mulss	xmm3, ds:[0x11D074C]	// fRepairScavengeMult
 		maxss	xmm0, xmm1
@@ -3372,10 +3372,10 @@ __declspec(naked) void DoRepairItemHook()
 	{
 		mov		ecx, [ebp+8]
 		call	ContChangesEntry::GetHealthPercent
-		movss	xmm5, xmm0
+		movaps	xmm5, xmm0
 		mov		ecx, ds:[0x11DA760]
 		call	ContChangesEntry::GetHealthPercent
-		movss	xmm1, xmm5
+		movaps	xmm1, xmm5
 		call	GetRepairAmount
 		movss	[ebp-0x14], xmm0
 		retn
@@ -3667,19 +3667,19 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		cvtss2sd	xmm0, [eax+0x24]
 		cmp		byte ptr [ecx+0x1C], 0
 		jnz		doRecalc
-		movq	xmm1, xmm0
+		movaps	xmm1, xmm0
 		movaps	xmm3, hourAndDays
 		subsd	xmm1, xmm3
 		comisd	xmm1, kMults+0x10
 		ja		doRecalc
-		movq	xmm0, xmm3
-		movhlps	xmm1, xmm3
+		movaps	xmm0, xmm3
+		pshufd	xmm1, xmm3, 0xFE
 		jmp		proceed
 	doRecalc:
 		mov		[ecx+0x1C], 0
 		mov		edx, g_thePlayer
 		mov		[edx+0xE39], 1
-		movq	xmm1, xmm0
+		movaps	xmm1, xmm0
 		divsd	xmm1, xmm4
 		mov		eax, [ecx+0x10]
 		movss	xmm3, [eax+0x24]
@@ -3738,7 +3738,7 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		cvtsd2ss	xmm3, xmm1
 		mov		eax, [ecx+0x10]
 		movss	[eax+0x24], xmm3
-		movlhps	xmm0, xmm1
+		shufps	xmm0, xmm1, 0x44
 		movaps	hourAndDays, xmm0
 		retn	4
 	}
@@ -4475,6 +4475,9 @@ void InitGamePatches()
 	SAFE_WRITE_BUF(0x601C30, "\x8B\x41\x04\x85\xC0\x74\x01\xC3\x81\xE9\xD8\x00\x00\x00\xF7\x01\x01\x00\x00\x00\xB8\x48\x3E\x1D\x01\xB9\x1C\x27\x1D\x01\x0F\x45\xC1\x8B\x00\xC3");
 	SafeWrite32(0x104A1BC, (UInt32)SetNPCModelHook);
 	SafeWrite8(0x40F75B, 0x18);
+
+	/*SafeWrite8(0x484E02, 0x2C);
+	SafeWrite8(0x484CA4, 0x2C);*/
 
 	SafeWrite32(0x9ED3F8, (UInt32)&s_moveAwayDistance);
 	SafeWrite32(0x9ED528, (UInt32)&s_moveAwayDistance);

@@ -742,7 +742,7 @@ public:
 	UInt8				pad31[3];			// 31
 	UInt32				unk34;				// 34
 	FloatPair			unk38;				// 38
-	TESForm				*unk40;				// 40	Used when picking idle anims.
+	TESObjectREFR		*interactedRef;		// 40	Used when picking idle anims.
 	UInt32				unk44;				// 44
 	UInt32				unk48;				// 48
 	UInt32				unk4C;				// 4C

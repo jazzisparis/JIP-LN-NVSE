@@ -1385,7 +1385,7 @@ bool Cmd_PlayIdleEx_Execute(COMMAND_ARGS)
 		if (animData)
 		{
 			if (!idleAnim)
-				idleAnim = ThisCall<TESIdleForm*>(0x600950, GameGlobals::IdleAnimsDirectoryMap(), actor, ((HighProcess*)actor->baseProcess)->unk40);
+				idleAnim = ThisCall<TESIdleForm*>(0x600950, GameGlobals::IdleAnimsDirectoryMap(), actor, ((HighProcess*)actor->baseProcess)->interactedRef);
 			else if (idleAnim->children)
 				idleAnim = idleAnim->FindIdle(actor);
 			if (idleAnim && (animData->GetPlayedIdle() != idleAnim))
