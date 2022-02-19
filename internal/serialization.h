@@ -1,29 +1,54 @@
 #pragma once
 
-void DoLoadGameCleanup()
+char s_lastLoadedPath[0x80] = {0};
+UInt8 s_lastChangedFlags = 0;
+
+void __fastcall RestoreLinkedRefs(UnorderedMap<UInt32, UInt32> *tempMap = NULL)
 {
-	if (g_thePlayer->teammateCount)
+	if (s_linkedRefDefault.Empty()) return;
+	UInt32 key;
+	auto linkIter = s_linkedRefDefault.Begin();
+	while (linkIter)
 	{
-		ListNode<PerkRank> *perkIter = g_thePlayer->perkRanksTM.Head();
-		PerkRank *perkRank;
-		do
-		{
-			perkRank = perkIter->data;
-			if (perkRank && perkRank->perk)
-				ThisCall(0x5EB6A0, perkRank->perk, g_thePlayer, 0, perkRank->rank, 1);
-		}
-		while (perkIter = perkIter->next);
+		key = linkIter.Key();
+		++linkIter;
+		if (!tempMap || !tempMap->HasKey(key))
+			SetLinkedRefID(key);
 	}
+}
 
+__declspec(noinline) void CleanMLCallbacks()
+{
+	for (auto iter = s_mainLoopCallbacks.Begin(); iter; ++iter)
+	{
+		if (iter->cmdPtr == JIPScriptRunner::RunScript)
+		{
+			((Script*)iter->thisObj)->Destructor();
+			GameHeapFree(iter->thisObj);
+			iter->bRemove = true;
+		}
+		else if (iter->flags & 8)
+			iter->bRemove = true;
+	}
+}
+
+void MiniMapLoadGame();
+
+void DoPreLoadGameHousekeeping()
+{
+	UInt8 changedFlags = s_dataChangedFlags;
+	s_dataChangedFlags = 0;
+	s_lastChangedFlags = changedFlags;
+
+	if (changedFlags & kChangedFlag_AuxVars) s_auxVariablesPerm.Clear();
+	if (changedFlags & kChangedFlag_RefMaps) s_refMapArraysPerm.Clear();
+	if (changedFlags & kChangedFlag_LinkedRefs) s_linkedRefModified.Clear();
 	s_scriptVariablesBuffer.Clear();
-
-	if (s_dataChangedFlags & kChangedFlag_AuxVars) s_auxVariablesPerm.Clear();
-	if (s_dataChangedFlags & kChangedFlag_RefMaps) s_refMapArraysPerm.Clear();
-	if (s_dataChangedFlags & kChangedFlag_LinkedRefs) s_linkedRefModified.Clear();
 	s_linkedRefsTemp.Clear();
+	s_serializedFlags = 0;
 
 	UInt32 size = s_NPCPerksInfoMap.Size();
-	if (size && (s_dataChangedFlags & kChangedFlag_NPCPerks))
+	if (size && (changedFlags & kChangedFlag_NPCPerks))
 	{
 		Actor *actor;
 		for (auto refIter = s_NPCPerksInfoMap.Begin(); refIter; ++refIter)
@@ -35,20 +60,11 @@ void DoLoadGameCleanup()
 		s_NPCPerksInfoMap.Clear();
 	}
 
-	if ((s_dataChangedFlags == kChangedFlag_All) && !s_resolvedGlobals.Empty())
+	if ((changedFlags == kChangedFlag_All) && !s_resolvedGlobals.Empty())
 	{
 		for (auto globIter = s_resolvedGlobals.Begin(); globIter; ++globIter)
 			globIter->jipFormFlags6 = 0;
 		s_resolvedGlobals.Clear();
-	}
-	s_dataChangedFlags = 0;
-	s_serializedFlags = 0;
-
-	auto pcAprUndo = s_appearanceUndoMap.Find((TESNPC*)g_thePlayer->baseForm);
-	if (pcAprUndo)
-	{
-		pcAprUndo->Destroy();
-		pcAprUndo.Remove();
 	}
 
 	HOOK_SET(StartCombat, false);
@@ -85,14 +101,6 @@ void DoLoadGameCleanup()
 		if (s_pcCellChangeInformed.Clear())
 			HOOK_SET(PCCellChange, false);
 	}
-	
-	if (s_refMapMarkersCount)
-	{
-		while (--s_refMapMarkersCount)
-			s_refMapMarkersList.RemoveNth(0);
-		s_refMapMarkersList.Init();
-		HOOK_SET(CreateMapMarkers, false);
-	}
 
 	if (!s_scriptWaitInfoMap.Empty())
 	{
@@ -105,13 +113,6 @@ void DoLoadGameCleanup()
 		HOOK_SET(ScriptRunner, false);
 		HOOK_SET(EvalEventBlock, false);
 		s_scriptWaitInfo = NULL;
-	}
-
-	for (auto flagsIter = s_jipFormFlagsMap.Begin(); flagsIter; ++flagsIter)
-	{
-		form = LookupFormByRefID(flagsIter.Key());
-		if (form && *flagsIter) form->jipFormFlags6 = *flagsIter;
-		else flagsIter.Remove();
 	}
 
 	for (auto lgtIter = s_activePtLights.Begin(); lgtIter; ++lgtIter)
@@ -150,23 +151,88 @@ void DoLoadGameCleanup()
 		s_refrModelPathMap.Clear();
 		HOOK_SET(GetModelPath, false);
 	}
+
+	if (s_refMapMarkersCount)
+	{
+		while (--s_refMapMarkersCount)
+			s_refMapMarkersList.RemoveNth(0);
+		s_refMapMarkersList.Init();
+		HOOK_SET(CreateMapMarkers, false);
+	}
+
+	auto pcAprUndo = s_appearanceUndoMap.Find((TESNPC*)g_thePlayer->baseForm);
+	if (pcAprUndo)
+	{
+		pcAprUndo->Destroy();
+		pcAprUndo.Remove();
+	}
+
+	CleanMLCallbacks();
+	s_gameLoadFlagLN = true;
+	HOOK_SET(OnRagdoll, false);
+	s_onRagdollEventScripts.Clear();
+	MiniMapLoadGame();
+	HOOK_SET(SynchronizePosition, false);
+	s_syncPositionRef = NULL;
 }
 
-void __fastcall RestoreLinkedRefs(UnorderedMap<UInt32, UInt32> *tempMap = NULL)
+void RestoreJIPFormFlags()
 {
-	if (s_linkedRefDefault.Empty()) return;
-	UInt32 key;
-	auto linkIter = s_linkedRefDefault.Begin();
-	while (linkIter)
+	for (auto flagsIter = s_jipFormFlagsMap.Begin(); flagsIter; ++flagsIter)
 	{
-		key = linkIter.Key();
-		++linkIter;
-		if (!tempMap || !tempMap->HasKey(key))
-			SetLinkedRefID(key);
+		TESForm *form = LookupFormByRefID(flagsIter.Key());
+		if (form && *flagsIter) form->jipFormFlags6 = *flagsIter;
+		else flagsIter.Remove();
 	}
 }
 
-char s_lastLoadedPath[MAX_PATH];
+void DoLoadGameHousekeeping()
+{
+	RestoreJIPFormFlags();
+
+	if (g_thePlayer->teammateCount)
+	{
+		ListNode<PerkRank>* perkIter = g_thePlayer->perkRanksTM.Head();
+		PerkRank* perkRank;
+		do
+		{
+			perkRank = perkIter->data;
+			if (perkRank && perkRank->perk)
+				ThisCall(0x5EB6A0, perkRank->perk, g_thePlayer, 0, perkRank->rank, 1);
+		}
+		while (perkIter = perkIter->next);
+	}
+
+	Actor *actor;
+	if (s_NPCWeaponMods && !(g_thePlayer->actorFlags & 0x10000000))
+	{
+		g_thePlayer->actorFlags |= 0x10000000;
+		auto actorIter = ProcessManager::Get()->highActors.Head();
+		do
+		{
+			if (!(actor = actorIter->data) || (actor->actorFlags & 0x10000000))
+				continue;
+			actor->actorFlags |= 0x10000000;
+			if (!actor->isTeammate)
+				DistributeWeaponMods(actor);
+		}
+		while (actorIter = actorIter->next);
+	}
+
+	if (s_NPCPerks && (s_lastChangedFlags & kChangedFlag_NPCPerks))
+	{
+		auto actorIter = ProcessManager::Get()->highActors.Head();
+		do
+		{
+			if (actor = actorIter->data)
+				InitNPCPerks(actor);
+		}
+		while (actorIter = actorIter->next);
+	}
+
+	if (s_lastChangedFlags & kChangedFlag_LinkedRefs)
+		RestoreLinkedRefs(&s_linkedRefsTemp);
+}
 
 UInt8 *s_loadGameBuffer = NULL;
 UInt32 s_loadGameBufferSize = 0x10000;
@@ -188,14 +254,7 @@ UInt8* __fastcall GetLoadGameBuffer(UInt32 length)
 
 void LoadGameCallback(void*)
 {
-	const char *currentPath = GetSavePath();
-	if (strcmp(s_lastLoadedPath, currentPath))
-	{
-		StrCopy(s_lastLoadedPath, currentPath);
-		s_dataChangedFlags = kChangedFlag_All;
-	}
-	UInt8 changedFlags = s_dataChangedFlags;
-	DoLoadGameCleanup();
+	UInt8 changedFlags = s_lastChangedFlags;
 
 	UInt32 type, length, nRecs, nRefs, nVars, buffer4, refID, skipSize;
 	UInt8 buffer1, modIdx;
@@ -565,43 +624,12 @@ void LoadGameCallback(void*)
 				break;
 		}
 	}
-	if (changedFlags & kChangedFlag_LinkedRefs)
-		RestoreLinkedRefs(&s_linkedRefsTemp);
-	Actor *actor;
-	if (s_NPCWeaponMods && !(g_thePlayer->actorFlags & 0x10000000))
-	{
-		g_thePlayer->actorFlags |= 0x10000000;
-		auto actorIter = ProcessManager::Get()->highActors.Head();
-		do
-		{
-			if (!(actor = actorIter->data) || (actor->actorFlags & 0x10000000))
-				continue;
-			actor->actorFlags |= 0x10000000;
-			if (!actor->isTeammate)
-				DistributeWeaponMods(actor);
-		}
-		while (actorIter = actorIter->next);
-	}
-	if (s_NPCPerks && (changedFlags & kChangedFlag_NPCPerks))
-	{
-		auto actorIter = ProcessManager::Get()->highActors.Head();
-		do
-		{
-			if (actor = actorIter->data)
-				InitNPCPerks(actor);
-		}
-		while (actorIter = actorIter->next);
-		//PrintLog("\n================\n");
-	}
 }
 
 void SaveGameCallback(void*)
 {
 	UInt8 buffer1;
 	UInt32 buffer2;
-
-	StrCopy(s_lastLoadedPath, GetSavePath());
-	s_dataChangedFlags = 0;
 
 	if (buffer2 = s_scriptVariablesBuffer.Size())
 	{
@@ -727,12 +755,4 @@ void SaveGameCallback(void*)
 			}
 		}
 	}
-}
-
-void NewGameCallback(void*)
-{
-	s_dataChangedFlags = kChangedFlag_All;
-	DoLoadGameCleanup();
-	RestoreLinkedRefs();
-	s_lastLoadedPath[0] = 0;
 }

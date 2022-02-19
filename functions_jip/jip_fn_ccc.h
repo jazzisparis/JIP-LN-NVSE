@@ -625,11 +625,11 @@ bool Cmd_RefToPosStr_Execute(COMMAND_ARGS)
 	{
 		char *pos = UIntToHex(posStr, cell->worldSpace ? cell->worldSpace->refID : cell->refID);
 		*pos++ = ' ';
-		pos = IntToStr(pos, ifloor(thisObj->position.x));
+		pos = IntToStr(pos, int(thisObj->position.x));
 		*pos++ = ' ';
-		pos = IntToStr(pos, ifloor(thisObj->position.y));
+		pos = IntToStr(pos, int(thisObj->position.y));
 		*pos++ = ' ';
-		IntToStr(pos, iceil(thisObj->position.z));
+		IntToStr(pos, int(thisObj->position.z) + 1);
 	}
 	else posStr[0] = 0;
 	AssignString(PASS_COMMAND_ARGS, posStr);

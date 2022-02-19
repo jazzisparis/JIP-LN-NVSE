@@ -6,10 +6,11 @@ __declspec(naked) float __vectorcall GetDistance3D(TESObjectREFR *ref1, TESObjec
 {
 	__asm
 	{
-		movups	xmm0, [ecx+0x2C]
-		psrldq	xmm0, 4
-		movups	xmm1, [edx+0x2C]
-		psrldq	xmm1, 4
+		movaps	xmm2, PS_XYZ0Mask
+		movups	xmm0, [ecx+0x30]
+		andps	xmm0, xmm2
+		movups	xmm1, [edx+0x30]
+		andps	xmm1, xmm2
 		subps	xmm0, xmm1
 		mulps	xmm0, xmm0
 		haddps	xmm0, xmm0

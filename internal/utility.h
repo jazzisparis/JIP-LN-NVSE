@@ -85,7 +85,7 @@ extern const char kLwrCaseConverter[], kUprCaseConverter[];
 #define PS_AbsMask0			kPackedValues+0x10
 #define PS_FlipSignMask		kPackedValues+0x20
 #define PS_FlipSignMask0	kPackedValues+0x30
-#define PS_Discard3rdMask	kPackedValues+0x40
+#define PS_XYZ0Mask			kPackedValues+0x40
 #define PD_AbsMask			kPackedValues+0x50
 #define PD_FlipSignMask		kPackedValues+0x60
 

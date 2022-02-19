@@ -64,8 +64,6 @@ kUprCaseConverter[] =
 
 memcpy_t MemCopy = memcpy, MemMove = memmove;
 
-#define FAST_SLEEP_COUNT 10000UL
-
 __declspec(naked) PrimitiveCS *PrimitiveCS::Enter()
 {
 	__asm
@@ -79,7 +77,6 @@ __declspec(naked) PrimitiveCS *PrimitiveCS::Enter()
 		mov		eax, ebx
 		pop		ebx
 		retn
-		NOP_0xA
 	doSpin:
 		mov		ecx, eax
 		xor		eax, eax
@@ -87,20 +84,15 @@ __declspec(naked) PrimitiveCS *PrimitiveCS::Enter()
 		test	eax, eax
 		jz		done
 		push	esi
-		push	edi
 		mov		esi, ecx
-		mov		edi, FAST_SLEEP_COUNT
+		ALIGN 16
 	spinHead:
-		xor		eax, eax
-		dec		edi
-		sets	al
-		push	eax
+		push	0
 		call	Sleep
 		xor		eax, eax
 		lock cmpxchg [ebx], esi
 		test	eax, eax
 		jnz		spinHead
-		pop		edi
 		pop		esi
 		mov		eax, ebx
 		pop		ebx
@@ -120,7 +112,7 @@ __declspec(naked) void LightCS::Enter()
 		inc		dword ptr [ebx+4]
 		pop		ebx
 		retn
-		NOP_0x9
+		ALIGN 16
 	doSpin:
 		mov		ecx, eax
 		xor		eax, eax
@@ -128,20 +120,15 @@ __declspec(naked) void LightCS::Enter()
 		test	eax, eax
 		jz		done
 		push	esi
-		push	edi
 		mov		esi, ecx
-		mov		edi, FAST_SLEEP_COUNT
+		ALIGN 16
 	spinHead:
-		xor		eax, eax
-		dec		edi
-		sets	al
-		push	eax
+		push	0
 		call	Sleep
 		xor		eax, eax
 		lock cmpxchg [ebx], esi
 		test	eax, eax
 		jnz		spinHead
-		pop		edi
 		pop		esi
 	done:
 		mov		dword ptr [ebx+4], 1
@@ -288,14 +275,6 @@ __declspec(naked) float __vectorcall Sin(float angle)
 
 alignas(16) constexpr HexFloat kCosConstsPS[] =
 {
-	PS_DUP_2(Flt2dPI),
-	PS_DUP_2(3UL),
-	PS_DUP_2(2UL),
-	PS_DUP_2(CosConst_1),
-	PS_DUP_2(CosConst_2),
-	PS_DUP_2(CosConst_3),
-	PS_DUP_2(CosConst_4),
-	PS_DUP_2(CosConst_5),
 	PS_DUP_3(Flt2dPI),
 	PS_DUP_3(3UL),
 	PS_DUP_3(2UL),
@@ -358,29 +337,29 @@ __declspec(naked) float __vectorcall Cos(float angle)
 	}
 }
 
-__declspec(naked) __m128 __vectorcall Cos_PS(const HexFloat *scConsts, __m128 angles)
+__declspec(naked) __m128 __vectorcall Cos_PS(__m128 angles)
 {
 	__asm
 	{
 		andps	xmm0, PS_AbsMask
 		movaps	xmm1, xmm0
 		movaps	xmm2, PS_V3_PIx2
-		mulps	xmm1, [ecx]
+		mulps	xmm1, kCosConstsPS
 		cvttps2dq	xmm1, xmm1
 		movaps	xmm3, xmm1
-		pcmpgtd	xmm3, [ecx+0x10]
+		pcmpgtd	xmm3, kCosConstsPS+0x10
 		movmskps	edx, xmm3
 		test	dl, dl
 		jz		perdOK
 		movaps	xmm3, xmm1
-		andps	xmm1, [ecx+0x10]
+		andps	xmm1, kCosConstsPS+0x10
 		psrld	xmm3, 2
 		cvtdq2ps	xmm3, xmm3
 		mulps	xmm3, xmm2
 		subps	xmm0, xmm3
 	perdOK:
 		movaps	xmm3, xmm1
-		pcmpgtd	xmm1, [ecx+0x20]
+		pcmpgtd	xmm1, kCosConstsPS+0x20
 		andps	xmm2, xmm1
 		andnps	xmm1, xmm3
 		xorps	xmm3, xmm3
@@ -391,15 +370,15 @@ __declspec(naked) __m128 __vectorcall Cos_PS(const HexFloat *scConsts, __m128 an
 		orps	xmm1, xmm2
 		subps	xmm0, xmm1
 		mulps	xmm0, xmm0
-		movaps	xmm1, [ecx+0x30]
+		movaps	xmm1, kCosConstsPS+0x30
 		mulps	xmm1, xmm0
-		subps	xmm1, [ecx+0x40]
+		subps	xmm1, kCosConstsPS+0x40
 		mulps	xmm1, xmm0
-		addps	xmm1, [ecx+0x50]
+		addps	xmm1, kCosConstsPS+0x50
 		mulps	xmm1, xmm0
-		subps	xmm1, [ecx+0x60]
+		subps	xmm1, kCosConstsPS+0x60
 		mulps	xmm0, xmm1
-		addps	xmm0, [ecx+0x70]
+		addps	xmm0, kCosConstsPS+0x70
 		xorps	xmm0, xmm3
 		retn
 	}
@@ -409,7 +388,6 @@ __declspec(naked) __m128 __vectorcall GetSinCos(float angle)
 {
 	__asm
 	{
-		mov		ecx, offset kCosConstsPS
 		movaps	xmm1, xmm0
 		movss	xmm0, PS_V3_PId2
 		subss	xmm0, xmm1
@@ -424,7 +402,6 @@ __declspec(naked) __m128 __vectorcall GetSinCosV3(__m128 angles)
 {
 	__asm
 	{
-		mov		ecx, offset kCosConstsPS+0x80
 		movaps	xmm5, xmm0
 		call	Cos_PS
 		movaps	xmm4, xmm0
@@ -484,13 +461,12 @@ __declspec(naked) float __vectorcall ASin(float x)
 		movaps	xmm4, xmm0
 		andps	xmm4, PS_FlipSignMask0
 		xorps	xmm0, xmm4
-		mov		eax, offset kASinConsts
-		movss	xmm3, [eax+0x14]
+		movss	xmm3, kASinConsts+0x14
 		comiss	xmm0, xmm3
 		jnb		ooRange
-		movss	xmm1, [eax+0x1C]
+		movss	xmm1, kASinConsts+0x1C
 		paddd	xmm1, xmm0
-		movaps	xmm2, [eax]
+		movaps	xmm2, kASinConsts
 		cvttss2si	eax, xmm1
 		movaps	xmm1, xmm2
 		mulss	xmm1, xmm0
@@ -511,7 +487,7 @@ __declspec(naked) float __vectorcall ASin(float x)
 	done:
 		retn
 	ooRange:
-		movss	xmm0, [eax+0xC]
+		movss	xmm0, kASinConsts+0xC
 		xorps	xmm0, xmm4
 		retn
 	}
@@ -521,19 +497,18 @@ __declspec(naked) float __vectorcall ACos(float x)
 {
 	_asm
 	{
-		mov		eax, offset kASinConsts
 		xorps	xmm4, xmm4
 		comiss	xmm0, xmm4
 		jz		isZero
 		movaps	xmm4, xmm0
 		andps	xmm4, PS_FlipSignMask0
 		xorps	xmm0, xmm4
-		movq	xmm3, qword ptr [eax+0x14]
+		movss	xmm3, kASinConsts+0x14
 		comiss	xmm0, xmm3
 		jnb		ooRange
-		movss	xmm1, [eax+0x1C]
+		movss	xmm1, kASinConsts+0x1C
 		paddd	xmm1, xmm0
-		movaps	xmm2, [eax]
+		movaps	xmm2, kASinConsts
 		cvttss2si	eax, xmm1
 		movaps	xmm1, xmm2
 		mulss	xmm1, xmm0
@@ -552,16 +527,15 @@ __declspec(naked) float __vectorcall ACos(float x)
 		movmskps	eax, xmm4
 		test	al, al
 		jz		done
-		psrldq	xmm3, 4
 		xorps	xmm0, xmm4
-		addss	xmm0, xmm3
+		addss	xmm0, kASinConsts+0x18
 	done:
 		retn
 	isZero:
-		movss	xmm0, [eax+0xC]
+		movss	xmm0, kASinConsts+0xC
 		retn
 	ooRange:
-		pshufd	xmm0, xmm3, 0xA9
+		movss	xmm0, kASinConsts+0x18
 		psrad	xmm4, 0x1F
 		andps	xmm0, xmm4
 		retn

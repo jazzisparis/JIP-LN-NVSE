@@ -689,6 +689,29 @@ __declspec(naked) bool __fastcall NiPick::GetResults(NiCamera *camera)
 	}
 }
 
+__declspec(naked) NiSourceTexture* __fastcall NiSourceTexture::Create(const char *ddsPath)
+{
+	__asm
+	{
+		push	eax
+		push	ecx
+		lea		ecx, [esp+4]
+		CALL_EAX(0x438170)
+		push	0
+		push	1
+		push	0x11A9598
+		push	eax
+		CALL_EAX(0xA5FD70)
+		add		esp, 0x10
+		pop		ecx
+		test	ecx, ecx
+		jz		done
+		lock dec dword ptr [ecx-8]
+	done:
+		retn
+	}
+}
+
 __declspec(naked) void __fastcall NiRenderedTexture::SaveToFile(UInt32 fileFmt, char *filePath)
 {
 	__asm

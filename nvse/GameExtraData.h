@@ -763,7 +763,7 @@ class ExtraTimeLeft : public BSExtraData
 public:
 	float		timeLeft;		// 0C
 
-	static ExtraTimeLeft *Create();
+	static ExtraTimeLeft *Create(float _timeLeft);
 };
 
 // 10

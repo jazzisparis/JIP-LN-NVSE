@@ -5420,7 +5420,7 @@ public:
 	UInt32				avGroup;			// 48
 	void				*callback4C;		// 4C
 	UInt32				unk50;				// 50
-	void				*callback54;		// 54
+	void				(*OnChangeCallback)(ActorValueOwner *avOwner, UInt32 avCode, float prevVal, float modifier, ActorValueOwner *attacker);	// 54
 	UInt32				numDerivedStats;	// 58
 	UInt32				derivedStatIDs[15];	// 5C
 	UInt32				numLevels;			// 98

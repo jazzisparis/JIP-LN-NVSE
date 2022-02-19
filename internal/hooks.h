@@ -579,9 +579,8 @@ void __fastcall SetDescriptionAltText(TESDescription *description, const char *a
 	}
 	else
 	{
-		char *currText = s_descriptionChanges.GetErase(description);
-		if (!currText) return;
-		free(currText);
+		if (!s_descriptionChanges.EraseFree(description))
+			return;
 		HOOK_MOD(GetDescription, false);
 	}
 	*GameGlobals::CurrentDescription() = nullptr;
@@ -1169,18 +1168,18 @@ __declspec(naked) void TeleportWithPCHook()
 {
 	__asm
 	{
+		mov		eax, 0x8AD49C
 		cmp		byte ptr [ecx+0x18D], 0
-		jz		contRetn2
-		mov		al, [ecx+0x105]
-		test	al, kHookActorFlag1_PCTeleportFollow
-		jnz		contRetn2
-		test	al, kHookActorFlag1_PCTeleportWait
-		jz		contRetn1
-		JMP_EAX(0x8AD38B)
-	contRetn1:
-		JMP_EAX(0x8AD47D)
-	contRetn2:
-		JMP_EAX(0x8AD49C)
+		jz		done
+		mov		dl, [ecx+0x105]
+		test	dl, kHookActorFlag1_PCTeleportFollow
+		jnz		done
+		mov		eax, 0x8AD47D
+		mov		ecx, 0x8AD38B
+		test	dl, kHookActorFlag1_PCTeleportWait
+		cmovnz	eax, ecx
+	done:
+		jmp		eax
 	}
 }
 
@@ -3347,6 +3346,7 @@ __declspec(naked) NiNode* __fastcall DoAttachModel(NiAVObject *targetObj, const 
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xC0]
+		add		esp, 8
 		mov		eax, [ebp-0xC]
 		or		byte ptr [eax+0x33], 0x80
 		test	byte ptr [eax+0x33], 0x20
@@ -3741,8 +3741,8 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		movss	xmm1, [ecx+0x38]
 		movss	xmm2, [ebx]
 		movss	xmm3, [ebx+8]
-		movups	xmm4, [ebx-0x70]
-		psrldq	xmm4, 4
+		movups	xmm4, [ebx-0x6C]
+		andps	xmm4, PS_XYZ0Mask
 		movups	xmm5, [ebx+0x3C]
 		movups	xmm6, [ebx+0x2C]
 		mov		edx, [ebx+4]
@@ -3838,8 +3838,8 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		shr		eax, 0xA
 		and		eax, 4
 		mulss	xmm0, [ebp+eax+0x10]
-		movups	xmm1, [ebx+0xC]
-		psrldq	xmm1, 4
+		movups	xmm1, [ebx+0x10]
+		andps	xmm1, PS_XYZ0Mask
 		movups	xmm2, [ebx+0x2C]
 		movups	xmm3, [ebx+0x3C]
 		mov		edx, [ebx+4]
@@ -4108,26 +4108,42 @@ __declspec(naked) char* __fastcall GetModelPathHook(TESObject *baseForm, int EDX
 	}
 }
 
-void __cdecl DestroyRefrHook(TESObjectREFR *refr)
+__declspec(naked) bool __fastcall DestroyRefrHook(TESObjectREFR *refr)
 {
-	ThisCall(0x405430, (void*)0x11CA304, refr);
-	if (refr->extraDataList.jipRefFlags5F & kHookRefFlag5F_AltRefName)
+	__asm
 	{
-		char *refName = s_refNamesMap.GetErase(refr);
-		if (refName)
-		{
-			free(refName);
-			HOOK_MOD(GetRefName, false);
-		}
-	}
-	if (refr->extraDataList.jipRefFlags5F & kHookRefFlag5F_RefrModelPath)
-	{
-		char *modelPath = s_refrModelPathMap.GetErase(refr);
-		if (modelPath)
-		{
-			free(modelPath);
-			HOOK_MOD(GetModelPath, false);
-		}
+		push	esi
+		mov		esi, ecx
+		test	byte ptr [esi+0x5F], kHookRefFlag5F_AltRefName
+		jz		doneRefName
+		push	esi
+		mov		ecx, offset s_refNamesMap
+		call	UnorderedMap<TESObjectREFR*, char*>::EraseFree
+		test	al, al
+		jz		doneRefName
+		push	0
+		mov		ecx, offset s_hookInfos+kHook_GetRefName*kHookInfoSize
+		call	HookInfo::ModUsers
+	doneRefName:
+		test	byte ptr [esi+0x5F], kHookRefFlag5F_RefrModelPath
+		jz		doneModel
+		push	esi
+		mov		ecx, offset s_refrModelPathMap
+		call	UnorderedMap<TESObjectREFR*, char*>::EraseFree
+		test	al, al
+		jz		doneModel
+		push	0
+		mov		ecx, offset s_hookInfos+kHook_GetModelPath*kHookInfoSize
+		call	HookInfo::ModUsers
+	doneModel:
+		mov		eax, [esi+0x20]
+		test	eax, eax
+		jz		done
+		cmp		byte ptr [eax+4], kFormType_TESFurniture
+		setz	al
+	done:
+		pop		esi
+		retn
 	}
 }
 
@@ -4795,7 +4811,7 @@ void InitJIPHooks()
 	WriteRelJump(0x50F9E0, (UInt32)GetIsInternalMarkerHook);
 	WriteRelJump(0x815EE6, (UInt32)CastSpellHook);
 	WriteRelCall(0x923299, (UInt32)SkipDrawWeapAnimHook);
-	WriteRelCall(0x55A47D, (UInt32)DestroyRefrHook);
+	WriteRelCall(0x55A488, (UInt32)DestroyRefrHook);
 
 	PrintLog("> JIP hooks initialized successfully.");
 }

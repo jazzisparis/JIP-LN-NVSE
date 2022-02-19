@@ -7,7 +7,6 @@ _WriteRecordData WriteRecordData;
 _GetNextRecordInfo GetNextRecordInfo;
 _ReadRecordData ReadRecordData;
 _ResolveRefID ResolveRefID;
-_GetSavePath GetSavePath;
 _WriteRecord8 WriteRecord8;
 _WriteRecord16 WriteRecord16;
 _WriteRecord32 WriteRecord32;
@@ -134,8 +133,8 @@ __declspec(naked) void __fastcall ResultVars::Set(const NiVector3 &values)
 {
 	__asm
 	{
-		movups	xmm0, [edx-4]
-		psrldq	xmm0, 4
+		movups	xmm0, [edx]
+		andps	xmm0, PS_XYZ0Mask
 		cvtps2pd	xmm1, xmm0
 		shufps	xmm0, xmm0, 0xFE
 		cvtps2pd	xmm0, xmm0

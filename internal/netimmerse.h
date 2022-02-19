@@ -1066,16 +1066,16 @@ class TileShaderProperty : public BSShaderProperty
 {
 public:
 	NiTexture			*srcTexture;	// 60
-	NiObject			*object64;		// 64
+	NiTexture			*alphaTexture;	// 64
 	NiColorAlpha		overlayColor;	// 68
 	float				alpha;			// 78
-	UInt32				unk7C;			// 7C
-	UInt32				unk80;			// 80
+	float				flt7C;			// 7C
+	float				flt80;			// 80
 	float				flt84;			// 84
 	float				flt88;			// 88
 	UInt32				unk8C;			// 8C
 	UInt8				byte90;			// 90
-	UInt8				byte91;			// 91
+	UInt8				bRotates;		// 91
 	bool				hasVtxColors;	// 92
 	UInt8				byte93;			// 93
 	void				*ptr94;			// 94
@@ -2002,8 +2002,8 @@ public:
 	virtual void	Unk_2A(void);
 	virtual void	Unk_2B(void);
 
-	char			*ddsPath1;		// 30
-	char			*ddsPath2;		// 34
+	NiFixedString	ddsPath1;		// 30
+	NiFixedString	ddsPath2;		// 34
 	UInt32			unk38;			// 38
 	UInt32			unk3C;			// 3C
 	UInt8			byte40;			// 40
@@ -2011,6 +2011,8 @@ public:
 	UInt8			byte42;			// 42
 	UInt8			byte43;			// 43
 	UInt32			unk44;			// 44
+
+	static NiSourceTexture* __fastcall Create(const char *ddsPath);
 };
 
 // 4C

@@ -4,8 +4,8 @@ __declspec(naked) float __vectorcall NiVector3::Length() const
 {
 	__asm
 	{
-		movups	xmm0, [ecx-4]
-		psrldq	xmm0, 4
+		movups	xmm0, [ecx]
+		andps	xmm0, PS_XYZ0Mask
 		xorps	xmm1, xmm1
 		mulps	xmm0, xmm0
 		haddps	xmm0, xmm1
@@ -19,8 +19,8 @@ __declspec(naked) NiVector3& __fastcall NiVector3::MultiplyMatrix(const NiMatrix
 {
 	__asm
 	{
-		movups	xmm1, [ecx-4]
-		psrldq	xmm1, 4
+		movups	xmm1, [ecx]
+		andps	xmm1, PS_XYZ0Mask
 		xorps	xmm3, xmm3
 		movups	xmm0, [edx]
 		mulps	xmm0, xmm1
@@ -47,8 +47,8 @@ __declspec(naked) NiVector3& __fastcall NiVector3::MultiplyMatrixInv(const NiMat
 {
 	__asm
 	{
-		movups	xmm3, [ecx-4]
-		psrldq	xmm3, 4
+		movups	xmm3, [ecx]
+		andps	xmm3, PS_XYZ0Mask
 		movups	xmm0, [edx]
 		pshufd	xmm1, xmm3, 0xC0
 		mulps	xmm0, xmm1
@@ -91,8 +91,8 @@ __declspec(naked) NiVector3& __fastcall NiVector3::MultiplyQuaternion(const NiQu
 {
 	__asm
 	{
-		movups	xmm0, [ecx-4]
-		psrldq	xmm0, 4
+		movups	xmm0, [ecx]
+		andps	xmm0, PS_XYZ0Mask
 		movups	xmm1, [edx]
 		pshufd	xmm2, xmm1, 0
 		psrldq	xmm1, 4
@@ -128,8 +128,8 @@ __declspec(naked) NiVector3& NiVector3::Normalize()
     __asm
     {
 		mov		eax, ecx
-		movups	xmm1, [eax-4]
-		psrldq	xmm1, 4
+		movups	xmm1, [eax]
+		andps	xmm1, PS_XYZ0Mask
 		movaps	xmm2, xmm1
 		mulps	xmm2, xmm2
 		xorps	xmm0, xmm0
@@ -158,8 +158,8 @@ __declspec(naked) NiVector3& __fastcall NiVector3::CrossProduct(const NiVector3 
 {
 	__asm
 	{
-		movups	xmm1, [edx-4]
-		psrldq	xmm1, 4
+		movups	xmm1, [edx]
+		andps	xmm1, PS_XYZ0Mask
 		movups	xmm2, [ecx]
 		pshufd	xmm0, xmm1, 0xC9
 		pshufd	xmm3, xmm2, 0x12
@@ -180,10 +180,11 @@ __declspec(naked) NiVector3& __fastcall NiVector3::Interpolate(const NiVector3 &
 {
 	__asm
 	{
-		movups	xmm0, [ecx-4]
-		psrldq	xmm0, 4
-		movups	xmm1, [edx-4]
-		psrldq	xmm1, 4
+		movaps	xmm2, PS_XYZ0Mask
+		movups	xmm0, [ecx]
+		andps	xmm0, xmm2
+		movups	xmm1, [edx]
+		andps	xmm1, xmm2
 		subps	xmm1, xmm0
 		movss	xmm2, [esp+4]
 		shufps	xmm2, xmm2, 0xC0
@@ -216,16 +217,13 @@ __declspec(naked) AxisAngle& __fastcall AxisAngle::FromEulerYPR(const NiVector3 
 {
 	__asm
 	{
-		mov		eax, offset PS_V3_PI
 		movups	xmm0, [edx]
-		movaps	xmm1, [eax]
+		movaps	xmm1, PS_V3_PI
 		cmpltps	xmm1, xmm0
-		andps	xmm1, [eax+0x10]
+		andps	xmm1, PS_V3_PIx2
 		subps	xmm0, xmm1
-		mulps	xmm0, [eax+0x20]
-		mov		eax, ecx
+		mulps	xmm0, PS_V3_Half
 		call	GetSinCosV3
-		mov		ecx, eax
 		movaps	xmm4, xmm0
 		unpcklps	xmm4, xmm1
 		shufps	xmm4, xmm1, 0xF0
@@ -401,9 +399,8 @@ __declspec(naked) NiMatrix33& __fastcall NiMatrix33::RotationMatrix(const NiVect
 {
 	__asm
 	{
-		mov		eax, ecx
-		movups	xmm0, [edx-4]
-		psrldq	xmm0, 4
+		movups	xmm0, [edx]
+		andps	xmm0, PS_XYZ0Mask
 		call	GetSinCosV3
 		pshufd	xmm4, xmm0, 0xFE
 		pshufd	xmm5, xmm1, 0xFE
@@ -412,24 +409,22 @@ __declspec(naked) NiMatrix33& __fastcall NiMatrix33::RotationMatrix(const NiVect
 		movshdup	xmm3, xmm1
 		movaps	xmm6, xmm3
 		mulps	xmm6, xmm5
-		shufps	xmm6, xmm2, 0x44
-		movups	[eax], xmm6
-		xor		byte ptr [eax+0xB], 0x80
+		movq	qword ptr [ecx], xmm6
 		movaps	xmm6, xmm0
 		mulss	xmm6, xmm4
 		movaps	xmm7, xmm1
 		mulss	xmm7, xmm5
-		shufps	xmm1, xmm7, 0x44
+		unpcklps	xmm1, xmm7
 		mulss	xmm7, xmm2
 		addss	xmm7, xmm6
 		movaps	xmm6, xmm0
 		mulss	xmm6, xmm3
 		unpcklps	xmm6, xmm7
-		shufps	xmm6, xmm1, 0xE4
-		shufps	xmm6, xmm6, 0x4E
+		movq	qword ptr [ecx+0x14], xmm6
+		movshdup	xmm6, xmm1
 		movaps	xmm7, xmm2
 		mulss	xmm7, xmm4
-		shufps	xmm2, xmm7, 0x44
+		unpcklps	xmm2, xmm7
 		mulss	xmm7, xmm0
 		addss	xmm7, xmm6
 		mulss	xmm0, xmm5
@@ -438,14 +433,16 @@ __declspec(naked) NiMatrix33& __fastcall NiMatrix33::RotationMatrix(const NiVect
 		mulss	xmm5, xmm0
 		subss	xmm5, xmm4
 		unpcklps	xmm5, xmm7
-		shufps	xmm5, xmm6, 0xE4
-		movups	[eax+0xC], xmm5
+		movq	qword ptr [ecx+0xC], xmm5
+		xorps	xmm2, PS_FlipSignMask0
+		movss	[ecx+8], xmm2
 		mulss	xmm3, xmm1
-		unpckhps	xmm2, xmm2
+		psrldq	xmm2, 4
 		mulss	xmm1, xmm2
 		subss	xmm1, xmm0
 		unpcklps	xmm1, xmm3
-		movq	qword ptr [eax+0x1C], xmm1
+		movq	qword ptr [ecx+0x1C], xmm1
+		mov		eax, ecx
 		retn
 	}
 }
@@ -472,9 +469,8 @@ __declspec(naked) NiMatrix33& __fastcall NiMatrix33::FromAxisAngle(const AxisAng
 	__asm
 	{
 		movss	xmm0, [edx+0xC]
-		movups	xmm7, [edx-4]
-		psrldq	xmm7, 4
-		mov		eax, ecx
+		movups	xmm7, [edx]
+		andps	xmm7, PS_XYZ0Mask
 		call	GetSinCos
 		pshufd	xmm2, xmm0, 0x80
 		movaps	xmm3, xmm1
@@ -488,7 +484,7 @@ __declspec(naked) NiMatrix33& __fastcall NiMatrix33::FromAxisAngle(const AxisAng
 		mulps	xmm7, xmm4
 		movaps	xmm4, xmm7
 		addss	xmm4, xmm3
-		movss	[eax], xmm4
+		movss	[ecx], xmm4
 		pshufd	xmm6, xmm7, 1
 		addss	xmm6, xmm3
 		shufps	xmm7, xmm7, 2
@@ -506,7 +502,7 @@ __declspec(naked) NiMatrix33& __fastcall NiMatrix33::FromAxisAngle(const AxisAng
 		addss	xmm6, xmm5
 		unpcklps	xmm4, xmm0
 		shufps	xmm4, xmm3, 0x44
-		movups	[eax+4], xmm4
+		movups	[ecx+4], xmm4
 		pshufd	xmm3, xmm1, 1
 		movaps	xmm4, xmm3
 		subss	xmm3, xmm2
@@ -514,7 +510,8 @@ __declspec(naked) NiMatrix33& __fastcall NiMatrix33::FromAxisAngle(const AxisAng
 		unpcklps	xmm4, xmm6
 		unpcklps	xmm3, xmm7
 		shufps	xmm4, xmm3, 0x44
-		movups	[eax+0x14], xmm4
+		movups	[ecx+0x14], xmm4
+		mov		eax, ecx
 		retn
 	}
 }
@@ -539,12 +536,13 @@ __declspec(naked) NiMatrix33& __fastcall NiMatrix33::MultiplyMatrices(const NiMa
 {
 	__asm
 	{
-		movups	xmm0, [edx-4]
-		psrldq	xmm0, 4
-		movups	xmm1, [edx+8]
-		psrldq	xmm1, 4
-		movups	xmm2, [edx+0x14]
-		psrldq	xmm2, 4
+		movaps	xmm3, PS_XYZ0Mask
+		movups	xmm0, [edx]
+		andps	xmm0, xmm3
+		movups	xmm1, [edx+0xC]
+		andps	xmm1, xmm3
+		movups	xmm2, [edx+0x18]
+		andps	xmm2, xmm3
 		movups	xmm3, [ecx]
 		movups	xmm4, [ecx+0x10]
 		pshufd	xmm5, xmm3, 0
@@ -733,14 +731,12 @@ __declspec(naked) NiQuaternion& __fastcall NiQuaternion::FromEulerYPR(const NiVe
 {
 	__asm
 	{
-		mov		eax, offset PS_V3_PI
 		movups	xmm0, [edx]
-		movaps	xmm1, [eax]
+		movaps	xmm1, PS_V3_PI
 		cmpltps	xmm1, xmm0
-		andps	xmm1, [eax+0x10]
+		andps	xmm1, PS_V3_PIx2
 		subps	xmm0, xmm1
-		mulps	xmm0, [eax+0x20]
-		mov		eax, ecx
+		mulps	xmm0, PS_V3_Half
 		call	GetSinCosV3
 		movaps	xmm2, xmm0
 		shufps	xmm2, xmm1, 0x44
@@ -760,7 +756,8 @@ __declspec(naked) NiQuaternion& __fastcall NiQuaternion::FromEulerYPR(const NiVe
 		mulps	xmm0, xmm6
 		xorps	xmm0, PD_FlipSignMask
 		addps	xmm0, xmm3
-		movups	[eax], xmm0
+		movups	[ecx], xmm0
+		mov		eax, ecx
 		retn
 	}
 }
@@ -771,16 +768,16 @@ __declspec(naked) NiQuaternion& __fastcall NiQuaternion::FromAxisAngle(const Axi
 	{
 		movss	xmm0, [edx+0xC]
 		mulss	xmm0, PS_V3_Half
-		movups	xmm7, [edx]
-		mov		eax, ecx
+		movups	xmm5, [edx]
 		call	GetSinCos
 		shufps	xmm0, xmm0, 2
-		shufps	xmm7, xmm7, 0x90
-		mulps	xmm0, xmm7
+		shufps	xmm5, xmm5, 0x90
+		mulps	xmm0, xmm5
 		movaps	xmm2, xmm0
 		shufps	xmm0, xmm1, 1
 		shufps	xmm0, xmm2, 0xE2
-		movups	[eax], xmm0
+		movups	[ecx], xmm0
+		mov		eax, ecx
 		retn
 	}
 }
@@ -964,10 +961,11 @@ __declspec(naked) float __vectorcall Point3Distance(const NiVector3 &pt1, const 
 {
 	__asm
 	{
-		movups	xmm0, [ecx-4]
-		psrldq	xmm0, 4
-		movups	xmm1, [edx-4]
-		psrldq	xmm1, 4
+		movaps	xmm2, PS_XYZ0Mask
+		movups	xmm0, [ecx]
+		andps	xmm0, xmm2
+		movups	xmm1, [edx]
+		andps	xmm1, xmm2
 		subps	xmm0, xmm1
 		mulps	xmm0, xmm0
 		xorps	xmm1, xmm1

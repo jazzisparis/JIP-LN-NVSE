@@ -263,6 +263,26 @@ Tile* __fastcall GetTargetComponent(const char *componentPath, Tile::Value **val
 	return component;
 }
 
+__declspec(naked) void __fastcall TileImage::SetAlphaTexture(const char *ddsPath)
+{
+	__asm
+	{
+		mov		ecx, [ecx+0x40]
+		test	ecx, ecx
+		jz		done
+		push	ecx
+		mov		ecx, edx
+		call	NiSourceTexture::Create
+		pop		ecx
+		push	eax
+		add		ecx, 0x64
+		push	ecx
+		call	NiReleaseAddRef
+	done:
+		retn
+	}
+}
+
 void Tile::Dump()
 {
 	PrintDebug("%08X\t%s", this, name.m_data);

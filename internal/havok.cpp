@@ -4,14 +4,12 @@ __declspec(naked) hkQuaternion& __fastcall hkQuaternion::FromEulerYPR(const NiVe
 {
 	__asm
 	{
-		mov		eax, offset PS_V3_PI
 		movups	xmm0, [edx]
-		movaps	xmm1, [eax]
+		movaps	xmm1, PS_V3_PI
 		cmpltps	xmm1, xmm0
-		andps	xmm1, [eax+0x10]
+		andps	xmm1, PS_V3_PIx2
 		subps	xmm0, xmm1
-		mulps	xmm0, [eax+0x20]
-		mov		eax, ecx
+		mulps	xmm0, PS_V3_Half
 		call	GetSinCosV3
 		movaps	xmm2, xmm0
 		shufps	xmm2, xmm1, 0x44
@@ -32,7 +30,8 @@ __declspec(naked) hkQuaternion& __fastcall hkQuaternion::FromEulerYPR(const NiVe
 		xorps	xmm0, PD_FlipSignMask
 		addps	xmm0, xmm3
 		shufps	xmm0, xmm0, 0x39
-		movaps	[eax], xmm0
+		movaps	[ecx], xmm0
+		mov		eax, ecx
 		retn
 	}
 }
@@ -136,14 +135,14 @@ __declspec(naked) hkQuaternion& __fastcall hkQuaternion::FromAxisAngle(const Axi
 	{
 		movss	xmm0, [edx+0xC]
 		mulss	xmm0, PS_V3_Half
-		movups	xmm7, [edx]
-		mov		eax, ecx
+		movups	xmm5, [edx]
 		call	GetSinCos
 		shufps	xmm0, xmm0, 0x80
-		mulps	xmm0, xmm7
+		mulps	xmm0, xmm5
 		shufps	xmm1, xmm0, 0x20
 		shufps	xmm0, xmm1, 0x24
-		movaps	[eax], xmm0
+		movaps	[ecx], xmm0
+		mov		eax, ecx
 		retn
 	}
 }
@@ -264,14 +263,15 @@ __declspec(naked) void __fastcall hkMatrix3x4::operator=(const NiMatrix33 &inMat
 {
 	__asm
 	{
-		movups	xmm0, [edx-4]
-		psrldq	xmm0, 4
+		movaps	xmm1, PS_XYZ0Mask
+		movups	xmm0, [edx]
+		andps	xmm0, xmm1
 		movaps	[ecx], xmm0
-		movups	xmm0, [edx+8]
-		psrldq	xmm0, 4
+		movups	xmm0, [edx+0xC]
+		andps	xmm0, xmm1
 		movaps	[ecx+0x10], xmm0
-		movups	xmm0, [edx+0x14]
-		psrldq	xmm0, 4
+		movups	xmm0, [edx+0x18]
+		andps	xmm0, xmm1
 		movaps	[ecx+0x20], xmm0
 		retn
 	}
@@ -328,8 +328,8 @@ __declspec(naked) __m128 __vectorcall hkMatrix3x4::MultiplyVector(const hkVector
 {
 	__asm
 	{
-		movups	xmm1, [edx-4]
-		psrldq	xmm1, 4
+		movups	xmm1, [edx]
+		andps	xmm1, PS_XYZ0Mask
 		xorps	xmm3, xmm3
 		movaps	xmm0, [ecx]
 		mulps	xmm0, xmm1
@@ -353,8 +353,8 @@ __declspec(naked) __m128 __vectorcall hkMatrix3x4::MultiplyVectorInv(const hkVec
 {
 	__asm
 	{
-		movups	xmm3, [edx-4]
-		psrldq	xmm3, 4
+		movups	xmm3, [edx]
+		andps	xmm3, PS_XYZ0Mask
 		movaps	xmm0, [ecx]
 		pshufd	xmm1, xmm3, 0xC0
 		mulps	xmm0, xmm1

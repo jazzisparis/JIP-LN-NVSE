@@ -1377,7 +1377,6 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	GetNextRecordInfo = serialization->GetNextRecordInfo;
 	ReadRecordData = serialization->ReadRecordData;
 	ResolveRefID = serialization->ResolveRefID;
-	GetSavePath = serialization->GetSavePath;
 	WriteRecord8 = serialization->WriteRecord8;
 	WriteRecord16 = serialization->WriteRecord16;
 	WriteRecord32 = serialization->WriteRecord32;
@@ -1388,7 +1387,6 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	ReadRecord64 = serialization->ReadRecord64;
 	serialization->SetLoadCallback(pluginHandle, LoadGameCallback);
 	serialization->SetSaveCallback(pluginHandle, SaveGameCallback);
-	serialization->SetNewGameCallback(pluginHandle, NewGameCallback);
 	((NVSEMessagingInterface*)nvse->QueryInterface(kInterface_Messaging))->RegisterListener(pluginHandle, "NVSE", NVSEMessageHandler);
 	NVSECommandTableInterface *cmdInterface = (NVSECommandTableInterface*)nvse->QueryInterface(kInterface_CommandTable);
 	GetCmdByOpcode = cmdInterface->GetByOpcode;
@@ -1433,21 +1431,6 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	return true;
 }
 
-__declspec(noinline) void CleanMLCallbacks()
-{
-	for (auto iter = s_mainLoopCallbacks.Begin(); iter; ++iter)
-	{
-		if (iter->cmdPtr == JIPScriptRunner::RunScript)
-		{
-			((Script*)iter->thisObj)->Destructor();
-			GameHeapFree(iter->thisObj);
-			iter->bRemove = true;
-		}
-		else if (iter->flags & 8)
-			iter->bRemove = true;
-	}
-}
-
 void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 {
 	switch (nvseMsg->type)
@@ -1472,31 +1455,32 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			JIPScriptRunner::RunScripts(kRunOn_ExitGame);
 			break;
 		case NVSEMessagingInterface::kMessage_ExitToMainMenu:
-			CleanMLCallbacks();
+			s_dataChangedFlags = kChangedFlag_All;
+			DoPreLoadGameHousekeeping();
+			RestoreLinkedRefs();
+			s_lastLoadedPath[0] = 0;
 			JIPScriptRunner::RunScripts(kRunOn_ExitToMainMenu);
 			break;
 		case NVSEMessagingInterface::kMessage_LoadGame:
-			JIPScriptRunner::RunScripts(kRunOn_LoadGame);
 			break;
 		case NVSEMessagingInterface::kMessage_SaveGame:
+			memcpy(s_lastLoadedPath, nvseMsg->data, nvseMsg->dataLen + 1);
+			s_dataChangedFlags = 0;
 			JIPScriptRunner::RunScripts(kRunOn_SaveGame);
 			break;
 		case NVSEMessagingInterface::kMessage_Precompile:
 			break;
-		case NVSEMessagingInterface::kMessage_NewGame:
-			JIPScriptRunner::RunScripts(kRunOn_NewGame);
 		case NVSEMessagingInterface::kMessage_PreLoadGame:
-		{
-			CleanMLCallbacks();
-			s_gameLoadFlagLN = true;
-			HOOK_SET(OnRagdoll, false);
-			s_onRagdollEventScripts.Clear();
-			MiniMapLoadGame();
-			HOOK_SET(SynchronizePosition, false);
-			s_syncPositionRef = NULL;
+			if (strcmp(s_lastLoadedPath, (const char*)nvseMsg->data))
+			{
+				memcpy(s_lastLoadedPath, nvseMsg->data, nvseMsg->dataLen + 1);
+				s_dataChangedFlags = kChangedFlag_All;
+			}
+			DoPreLoadGameHousekeeping();
 			break;
-		}
 		case NVSEMessagingInterface::kMessage_PostLoadGame:
+			DoLoadGameHousekeeping();
+			JIPScriptRunner::RunScripts(kRunOn_LoadGame);
 			break;
 		case NVSEMessagingInterface::kMessage_PostPostLoad:
 			break;
@@ -1508,6 +1492,10 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			break;
 		case NVSEMessagingInterface::kMessage_RenameNewGame:
 			break;
+		case NVSEMessagingInterface::kMessage_NewGame:
+			RestoreJIPFormFlags();
+			JIPScriptRunner::RunScripts(kRunOn_NewGame);
+			break;
 		case NVSEMessagingInterface::kMessage_DeleteGameName:
 			break;
 		case NVSEMessagingInterface::kMessage_RenameGameName:
@@ -1516,6 +1504,8 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			break;
 		case NVSEMessagingInterface::kMessage_DeferredInit:
 			DeferredInit();
+			break;
+		case NVSEMessagingInterface::kMessage_ClearScriptDataCache:
 			break;
 		case NVSEMessagingInterface::kMessage_MainGameLoop:
 		{
@@ -1535,6 +1525,12 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			}
 			break;
 		}
+		case NVSEMessagingInterface::kMessage_ScriptCompile:
+			break;
+		case NVSEMessagingInterface::kMessage_EventListDestroyed:
+			break;
+		case NVSEMessagingInterface::kMessage_PostQueryPlugins:
+			break;
 	}
 }
 

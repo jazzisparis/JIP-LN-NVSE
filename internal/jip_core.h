@@ -12,8 +12,6 @@ typedef UInt32 (*_ReadRecordData)(void *buffer, UInt32 length);
 extern _ReadRecordData ReadRecordData;
 typedef bool (*_ResolveRefID)(UInt32 refID, UInt32 *outRefID);
 extern _ResolveRefID ResolveRefID;
-typedef const char* (*_GetSavePath)(void);
-extern _GetSavePath GetSavePath;
 typedef void (*_WriteRecord8)(UInt8 inData);
 extern _WriteRecord8 WriteRecord8;
 typedef void (*_WriteRecord16)(UInt16 inData);

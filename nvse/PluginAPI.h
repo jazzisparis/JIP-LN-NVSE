@@ -157,11 +157,12 @@ struct NVSEIOInterface
 
 struct NVSEMessagingInterface
 {
-	struct Message {
-		const char	* sender;
+	struct Message
+	{
+		const char	*sender;
 		UInt32		type;
 		UInt32		dataLen;
-		void		* data;
+		void		*data;
 	};
 
 	typedef void (* EventCallback)(Message* msg);
@@ -224,8 +225,11 @@ struct NVSEMessagingInterface
 // added for kVersion == 4 (xNVSE)
 		kMessage_DeferredInit,
 		kMessage_ClearScriptDataCache,
-		kMessage_MainGameLoop,
-		kMessage_ScriptCompile
+		kMessage_MainGameLoop,			// called each game loop
+		kMessage_ScriptCompile,			// EDITOR: called after successful script compilation in GECK. data: pointer to Script
+		kMessage_EventListDestroyed,	// called before a script event list is destroyed, dataLen: 4, data: ScriptEventList* ptr
+		kMessage_PostQueryPlugins		// called after all plugins have been queried
+
 	};
 
 	UInt32	version;
@@ -848,11 +852,11 @@ struct ExpressionEvaluatorUtils
 	void					(__fastcall *SetExpectedReturnType)(void *expEval, CommandReturnType type);
 	void					(__fastcall *AssignCommandResultFromElement)(void *expEval, NVSEArrayElement &result);
 	void					(__fastcall *ScriptTokenGetElement)(PluginScriptToken *scrToken, ArrayElementR &outElem);
+	bool					(__fastcall *ScriptTokenCanConvertTo)(PluginScriptToken *scrToken, UInt8 toType);
 
 	void					(*Reserved_1)(void) = nullptr;
 	void					(*Reserved_2)(void) = nullptr;
 	void					(*Reserved_3)(void) = nullptr;
-	void					(*Reserved_4)(void) = nullptr;
 };
 
 extern ExpressionEvaluatorUtils s_expEvalUtils;
@@ -904,6 +908,11 @@ struct PluginScriptToken
 	Token_Type GetType()
 	{
 		return s_expEvalUtils.ScriptTokenGetType(this);
+	}
+
+	bool CanConvertTo(UInt8 toType)
+	{
+		return s_expEvalUtils.ScriptTokenCanConvertTo(this, toType);
 	}
 
 	double GetFloat()

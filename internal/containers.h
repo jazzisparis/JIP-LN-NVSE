@@ -1401,6 +1401,31 @@ public:
 		return NULL;
 	}
 
+	bool EraseFree(Key_Arg key)
+	{
+		static_assert(std::is_pointer_v<T_Data>);
+		if (numEntries)
+		{
+			UInt32 hashVal = HashKey<T_Key>(key);
+			Bucket *pBucket = &buckets[hashVal & (numBuckets - 1)];
+			Entry *pEntry = pBucket->entries, *prev = nullptr;
+			while (pEntry)
+			{
+				if (pEntry->key.Match(key, hashVal))
+				{
+					T_Data outVal = pEntry->value;
+					numEntries--;
+					pBucket->Remove(pEntry, prev);
+					free(outVal);
+					return true;
+				}
+				prev = pEntry;
+				pEntry = pEntry->next;
+			}
+		}
+		return false;
+	}
+
 	bool Clear()
 	{
 		if (!numEntries) return false;

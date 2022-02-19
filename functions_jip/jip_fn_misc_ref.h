@@ -101,11 +101,7 @@ bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
 	UInt32 doSet;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &doSet) && (!doSet != !(thisObj->flags & TESObjectREFR::kFlags_Persistent)))
-	{
-		thisObj->flags ^= TESObjectREFR::kFlags_Persistent;
-		if (!thisObj->IsCreated())
-			thisObj->MarkAsModified(2);
-	}
+		ThisCall(0x565480, thisObj, doSet != 0);
 	return true;
 }
 
@@ -402,8 +398,7 @@ bool Cmd_GetRefType_Execute(COMMAND_ARGS)
 bool Cmd_ToggleObjectCollision_Execute(COMMAND_ARGS)
 {
 	UInt32 enable;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && NOT_ACTOR(thisObj) && !kInventoryType[thisObj->baseForm->typeID] && 
-		(!enable == !(thisObj->extraDataList.jipRefFlags5F & kHookRefFlag5F_DisableCollision)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && NOT_ACTOR(thisObj) && (!enable == !(thisObj->extraDataList.jipRefFlags5F & kHookRefFlag5F_DisableCollision)))
 	{
 		thisObj->extraDataList.jipRefFlags5F ^= kHookRefFlag5F_DisableCollision;
 		thisObj->Update3D();
@@ -839,12 +834,8 @@ bool Cmd_SetRefName_Execute(COMMAND_ARGS)
 		}
 		else
 		{
-			char *refName = s_refNamesMap.GetErase(thisObj);
-			if (refName)
-			{
-				free(refName);
+			if (s_refNamesMap.EraseFree(thisObj))
 				HOOK_MOD(GetRefName, false);
-			}
 			thisObj->extraDataList.jipRefFlags5F &= ~kHookRefFlag5F_AltRefName;
 		}
 	}
@@ -1083,8 +1074,8 @@ bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 				jnz		done
 				test	byte ptr [ecx+0x9F], 1
 				jz		done
-				movups	xmm0, [ecx+0x54]
-				psrldq	xmm0, 4
+				movups	xmm0, [ecx+0x58]
+				andps	xmm0, PS_XYZ0Mask
 				movups	[ecx+0x100], xmm0
 			done:
 			}
@@ -1227,8 +1218,8 @@ bool Cmd_GetAngularVelocity_Execute(COMMAND_ARGS)
 			__asm
 			{
 				mov		ecx, rigidBody
-				movups	xmm0, [ecx+0x1BC]
-				psrldq	xmm0, 4
+				movaps	xmm0, [ecx+0x1C0]
+				andps	xmm0, PS_XYZ0Mask
 				xorps	xmm1, xmm1
 				xor		eax, eax
 				mov		al, axis
@@ -1579,9 +1570,9 @@ bool Cmd_GetExtraFloat_Execute(COMMAND_ARGS)
 	else xData = &thisObj->extraDataList;
 	if (xData)
 	{
-		ExtraCharge *xCharge = GetExtraType(xData, Charge);
-		if (xCharge)
-			*result = xCharge->charge;
+		ExtraTimeLeft *xTimeLeft = GetExtraType(xData, TimeLeft);
+		if (xTimeLeft)
+			*result = xTimeLeft->timeLeft;
 	}
 	return true;
 }
@@ -1603,16 +1594,16 @@ bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
 					SInt32 count = invRef->GetCount();
 					if (count > 1)
 						xData->AddExtra(ExtraCount::Create(count));
-					xData->AddExtra(ExtraCharge::Create(fltVal));
+					xData->AddExtra(ExtraTimeLeft::Create(fltVal));
 				}
 				return true;
 			}
 		}
 		else xData = &thisObj->extraDataList;
-		ExtraCharge *xCharge = GetExtraType(xData, Charge);
-		if (xCharge)
-			xCharge->charge = fltVal;
-		else xData->AddExtra(ExtraCharge::Create(fltVal));
+		ExtraTimeLeft *xTimeLeft = GetExtraType(xData, TimeLeft);
+		if (xTimeLeft)
+			xTimeLeft->timeLeft = fltVal;
+		else xData->AddExtra(ExtraTimeLeft::Create(fltVal));
 	}
 	return true;
 }
@@ -2511,12 +2502,8 @@ bool Cmd_SetRefrModelPath_Execute(COMMAND_ARGS)
 		}
 		else
 		{
-			char *modelPath = s_refrModelPathMap.GetErase(thisObj);
-			if (modelPath)
-			{
-				free(modelPath);
+			if (s_refrModelPathMap.EraseFree(thisObj))
 				HOOK_MOD(GetModelPath, false);
-			}
 			thisObj->extraDataList.jipRefFlags5F &= ~kHookRefFlag5F_RefrModelPath;
 		}
 	}

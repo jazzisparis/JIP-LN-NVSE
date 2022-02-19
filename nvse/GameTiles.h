@@ -315,6 +315,8 @@ public:
 	TileShaderProperty	*shaderProp;	// 40
 	UInt8				byt044;			// 44
 	UInt8				fill[3];		// 45-47
+
+	void __fastcall SetAlphaTexture(const char *ddsPath);
 };
 
 // 48

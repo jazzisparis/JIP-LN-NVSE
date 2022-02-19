@@ -338,13 +338,15 @@ ExtraUses *ExtraUses::Create()
 	return (ExtraUses*)dataPtr;
 }
 
-ExtraTimeLeft *ExtraTimeLeft::Create()
+ExtraTimeLeft *ExtraTimeLeft::Create(float _timeLeft)
 {
 	UInt32 *dataPtr = (UInt32*)GameHeapAlloc(sizeof(ExtraTimeLeft));
 	dataPtr[0] = kVtbl_ExtraTimeLeft;
 	dataPtr[1] = kExtraData_TimeLeft;
 	dataPtr[2] = 0;
-	return (ExtraTimeLeft*)dataPtr;
+	ExtraTimeLeft *xTimeLeft = (ExtraTimeLeft*)dataPtr;
+	xTimeLeft->timeLeft = _timeLeft;
+	return xTimeLeft;
 }
 
 ExtraCharge *ExtraCharge::Create(float _charge)

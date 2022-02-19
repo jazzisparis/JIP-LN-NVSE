@@ -339,6 +339,19 @@ __declspec(naked) void RemoveMeHook()
 	}
 }
 
+__declspec(naked) bool __fastcall IsPersistentHook(TESForm *form)
+{
+	__asm
+	{
+		cmp		byte ptr [ecx+0xF], 0xFF
+		jz		done
+		JMP_EAX(0x5653D0)
+	done:
+		xor		al, al
+		retn
+	}
+}
+
 __declspec(naked) void PackageSetRunHook()
 {
 	__asm
@@ -1009,7 +1022,7 @@ __declspec(naked) void ConstructItemEntryNameHook()
 		jz		doneExtra
 		cmp		al, kFormType_TESObjectARMO
 		jnz		isWeapon
-		push	kExtraData_Charge
+		push	kExtraData_TimeLeft
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		doneExtra
@@ -4501,6 +4514,9 @@ void InitGamePatches()
 	WriteRelCall(0x5B5B18, (UInt32)CmdActivateHook);
 	WriteRelCall(0x5B5B48, (UInt32)CmdActivateHook);
 	WriteRelJump(0x5B54E7, (UInt32)RemoveMeHook);
+	WriteRelCall(0x41C833, (UInt32)IsPersistentHook);
+	WriteRelCall(0x4C232C, (UInt32)IsPersistentHook);
+	WriteRelCall(0x4C273A, (UInt32)IsPersistentHook);
 	WriteRelJump(0x8DAA6F, (UInt32)PackageSetRunHook);
 	SAFE_WRITE_BUF(0x8AB6D9, "\x8B\x8D\x54\xFF\xFF\xFF\x66\xC7\x81\x05\x01\x00\x00\x00\x00\x80\xA1\x43\x01\x00\x00\xBF\x0F\x1F\x40\x00");
 	WriteRelCall(0x73005C, (UInt32)BarterSellFixHook);

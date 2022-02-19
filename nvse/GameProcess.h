@@ -56,10 +56,10 @@ struct ActorHitData
 	float				armorDmg;		// 28
 	float				weaponDmg;		// 2C
 	TESObjectWEAP		*weapon;		// 30
-	float				healthPerc;		// 34
+	float				weapHealthPerc;	// 34
 	NiVector3			impactPos;		// 38
 	NiVector3			impactAngle;	// 44
-	MagicItem			*hitEffect;		// 50
+	SpellItem			*critHitEffect;	// 50
 	void				*ptr54;			// 54
 	UInt32				flags;			// 58
 	float				dmgMult;		// 5C
