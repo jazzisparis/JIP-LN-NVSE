@@ -126,7 +126,8 @@ enum MiscStatCode
 	/*27*/kMiscStat_BarterAmountTraded,
 	/*28*/kMiscStat_RouletteGamesPlayed,
 	/*29*/kMiscStat_BlackjackGamesPlayed,
-	/*2A*/kMiscStat_SlotsGamesPlayed
+	/*2A*/kMiscStat_SlotsGamesPlayed,
+	kMiscStat_Max
 };
 
 enum PerkEntryPointID

@@ -33,7 +33,7 @@ bool Cmd_GetDistance2D_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *refr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &refr) && thisObj->GetInSameCellOrWorld(refr))
-		*result = GetDistance2D(thisObj, refr);
+		*result = Point2Distance(thisObj->position, refr->position);
 	else *result = FLT_MAX;
 	return true;
 }
@@ -41,7 +41,7 @@ bool Cmd_GetDistance2D_Execute(COMMAND_ARGS)
 bool Cmd_GetDistance2D_Eval(COMMAND_ARGS_EVAL)
 {
 	TESObjectREFR *refr = (TESObjectREFR*)arg1;
-	*result = thisObj->GetInSameCellOrWorld(refr) ? GetDistance2D(thisObj, refr) : FLT_MAX;
+	*result = thisObj->GetInSameCellOrWorld(refr) ? Point2Distance(thisObj->position, refr->position) : FLT_MAX;
 	return true;
 }
 

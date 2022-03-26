@@ -286,11 +286,11 @@ __declspec(naked) void __fastcall TileImage::SetAlphaTexture(const char *ddsPath
 void Tile::Dump()
 {
 	PrintDebug("%08X\t%s", this, name.m_data);
-	s_debug.Indent();
+	s_debug().Indent();
 
 	PrintDebug("Values:");
 
-	s_debug.Indent();
+	s_debug().Indent();
 	
 	Value *value;
 	const char *traitName;
@@ -313,12 +313,12 @@ void Tile::Dump()
 			PrintDebug("%d  %s: %.4f", value->id, traitName, value->num);
 	}
 
-	s_debug.Outdent();
+	s_debug().Outdent();
 
 	for (DListNode<Tile> *traverse = children.Tail(); traverse; traverse = traverse->prev)
 		if (traverse->data) traverse->data->Dump();
 
-	s_debug.Outdent();
+	s_debug().Outdent();
 }
 
 // not a one-way mapping, so we just return the first

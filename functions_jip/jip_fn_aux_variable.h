@@ -61,6 +61,7 @@ bool Cmd_AuxiliaryVariableGetSize_Execute(COMMAND_ARGS)
 			AUX_VAR_CS
 			AuxVarValsArr *valsArr = AVGetArray(varInfo);
 			if (valsArr) *result = (int)valsArr->Size();
+
 		}
 	}
 	return true;

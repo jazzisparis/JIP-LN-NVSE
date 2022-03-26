@@ -87,7 +87,7 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 		//s_log.Create("jip_ln_nvse_editor.log");
 		return true;
 	}
-	s_log.Create("jip_ln_nvse.log");
+	s_log().Create("jip_ln_nvse.log");
 	int version = nvse->nvseVersion;
 	s_nvseVersion = (version >> 24) + (((version >> 16) & 0xFF) * 0.1) + (((version & 0xFF) >> 4) * 0.01);
 	if (version < 0x6020050)
@@ -1359,6 +1359,9 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2916*/REG_CMD(SetCollisionObjLayerType);
 	//	v56.48
 	/*2917*/REG_CMD(SetRefrModelPath);
+	//	v56.52
+	/*2918*/REG_CMD(PlaceModel);
+	/*2919*/REG_CMD(AttachLine);
 
 	//===========================================================
 
@@ -1437,6 +1440,9 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 	{
 		case NVSEMessagingInterface::kMessage_PostLoad:
 		{
+			*s_lightFormEDIDMap;
+			*s_fileExtToType;
+
 			WriteRelCall(0x86B0F4, (UInt32)GetSingletonsHook);
 			SAFE_WRITE_BUF(0x86B1EE, "\x0F\x1F\x44\x00\x00");
 
@@ -1509,8 +1515,8 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			break;
 		case NVSEMessagingInterface::kMessage_MainGameLoop:
 		{
-			if (!s_mainLoopCallbacks.Empty())
-				CycleMainLoopCallbacks(&s_mainLoopCallbacks);
+			if (!s_mainLoopCallbacks().Empty())
+				CycleMainLoopCallbacks(*s_mainLoopCallbacks);
 			if (s_LNEventFlags)
 				LN_ProcessEvents();
 			if (s_HUDCursorMode && (g_interfaceManager->currentMode > 1))

@@ -2,34 +2,59 @@
 #include "nvse/GameExtraData.h"
 #include "nvse/GameTasks.h"
 
-__declspec(naked) float __vectorcall GetDistance3D(TESObjectREFR *ref1, TESObjectREFR *ref2)
+__declspec(naked) TESForm *TESObjectREFR::GetBaseForm() const
 {
 	__asm
 	{
-		movaps	xmm2, PS_XYZ0Mask
-		movups	xmm0, [ecx+0x30]
-		andps	xmm0, xmm2
-		movups	xmm1, [edx+0x30]
-		andps	xmm1, xmm2
-		subps	xmm0, xmm1
-		mulps	xmm0, xmm0
-		haddps	xmm0, xmm0
-		haddps	xmm0, xmm0
-		sqrtss	xmm0, xmm0
+		mov		eax, [ecx+0x20]
+		test	eax, eax
+		jz		done
+		cmp		byte ptr [eax+0xF], 0xFF
+		jnz		done
+		mov		edx, [eax]
+		cmp		edx, kVtbl_BGSPlaceableWater
+		jz		isWater
+		cmp		dword ptr [edx+0xF8], ADDR_ReturnTrue
+		jnz		done
+		push	eax
+		push	kExtraData_LeveledCreature
+		add		ecx, 0x44
+		call	BaseExtraList::GetByType
+		pop		ecx
+		test	eax, eax
+		cmovz	eax, ecx
+		jz		done
+		mov		eax, [eax+0xC]
+		retn
+	isWater:
+		mov		eax, [eax+0x4C]
+	done:
 		retn
 	}
 }
 
-__declspec(naked) float __vectorcall GetDistance2D(TESObjectREFR *ref1, TESObjectREFR *ref2)
+__declspec(naked) TESForm *TESObjectREFR::GetBaseForm2() const
 {
 	__asm
 	{
-		movq	xmm0, qword ptr [ecx+0x30]
-		movq	xmm1, qword ptr [edx+0x30]
-		subps	xmm0, xmm1
-		mulps	xmm0, xmm0
-		haddps	xmm0, xmm0
-		sqrtss	xmm0, xmm0
+		mov		eax, [ecx+0x20]
+		test	eax, eax
+		jz		done
+		cmp		byte ptr [eax+0xF], 0xFF
+		jnz		done
+		mov		edx, [eax]
+		cmp		dword ptr [edx+0xF8], ADDR_ReturnTrue
+		jnz		retnNULL
+		push	kExtraData_LeveledCreature
+		add		ecx, 0x44
+		call	BaseExtraList::GetByType
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x10]
+		retn
+	retnNULL:
+		xor		eax, eax
+	done:
 		retn
 	}
 }
@@ -40,7 +65,7 @@ ScriptEventList *TESObjectREFR::GetEventList() const
 	return xScript ? xScript->eventList : NULL;
 }
 
-__declspec(naked) TESContainer *TESObjectREFR::GetContainer()
+__declspec(naked) TESContainer *TESObjectREFR::GetContainer() const
 {
 	__asm
 	{
@@ -113,7 +138,7 @@ TESObjectREFR *TESObjectREFR::Create(bool bTemp)
 	return refr;
 }
 
-__declspec(naked) bool TESObjectREFR::GetDisabled()
+__declspec(naked) bool TESObjectREFR::GetDisabled() const
 {
 	__asm
 	{
@@ -131,7 +156,7 @@ __declspec(naked) bool TESObjectREFR::GetDisabled()
 	}
 }
 
-__declspec(naked) ExtraContainerChanges::EntryDataList *TESObjectREFR::GetContainerChangesList()
+__declspec(naked) ExtraContainerChanges::EntryDataList *TESObjectREFR::GetContainerChangesList() const
 {
 	__asm
 	{
@@ -149,7 +174,7 @@ __declspec(naked) ExtraContainerChanges::EntryDataList *TESObjectREFR::GetContai
 	}
 }
 
-__declspec(naked) ContChangesEntry *TESObjectREFR::GetContainerChangesEntry(TESForm *itemForm)
+__declspec(naked) ContChangesEntry *TESObjectREFR::GetContainerChangesEntry(TESForm *itemForm) const
 {
 	__asm
 	{
@@ -235,7 +260,7 @@ __declspec(naked) SInt32 __fastcall GetFormCount(TESContainer::FormCountList *fo
 	}
 }
 
-__declspec(naked) SInt32 TESObjectREFR::GetItemCount(TESForm *form)
+__declspec(naked) SInt32 TESObjectREFR::GetItemCount(TESForm *form) const
 {
 	__asm
 	{
@@ -496,7 +521,7 @@ bool TESObjectREFR::ValidForHooks()
 	return !kInventoryType[baseForm->typeID] && !IsProjectile();
 }
 
-__declspec(naked) TESObjectCELL *TESObjectREFR::GetParentCell()
+__declspec(naked) TESObjectCELL *TESObjectREFR::GetParentCell() const
 {
 	__asm
 	{
@@ -514,7 +539,7 @@ __declspec(naked) TESObjectCELL *TESObjectREFR::GetParentCell()
 	}
 }
 
-__declspec(naked) TESWorldSpace *TESObjectREFR::GetParentWorld()
+__declspec(naked) TESWorldSpace *TESObjectREFR::GetParentWorld() const
 {
 	__asm
 	{
@@ -534,7 +559,7 @@ __declspec(naked) TESWorldSpace *TESObjectREFR::GetParentWorld()
 	}
 }
 
-__declspec(naked) bool __fastcall TESObjectREFR::GetInSameCellOrWorld(TESObjectREFR *target)
+__declspec(naked) bool __fastcall TESObjectREFR::GetInSameCellOrWorld(TESObjectREFR *target) const
 {
 	__asm
 	{
@@ -576,7 +601,7 @@ __declspec(naked) bool __fastcall TESObjectREFR::GetInSameCellOrWorld(TESObjectR
 	}
 }
 
-__declspec(naked) float __vectorcall TESObjectREFR::GetDistance(TESObjectREFR *target)
+__declspec(naked) float __vectorcall TESObjectREFR::GetDistance(TESObjectREFR *target) const
 {
 	__asm
 	{
@@ -587,7 +612,9 @@ __declspec(naked) float __vectorcall TESObjectREFR::GetDistance(TESObjectREFR *t
 		pop		ecx
 		test	al, al
 		jz		fltMax
-		jmp		GetDistance3D
+		add		ecx, 0x30
+		add		edx, 0x30
+		jmp		Point3Distance
 	fltMax:
 		mov		eax, 0x7F7FFFFF
 		movd	xmm0, eax
@@ -595,72 +622,98 @@ __declspec(naked) float __vectorcall TESObjectREFR::GetDistance(TESObjectREFR *t
 	}
 }
 
-__declspec(naked) void TESObjectREFR::SetPos(NiVector3 &posVector)
+void __fastcall SetRefrPositionHook(TESObjectREFR *refr, int EDX, const NiVector3 &pos);
+
+__declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 {
+	static const __m128 kUnitConv = {PS_DUP_3(1 / 6.999125481F)};
 	__asm
 	{
-		push	esi
-		mov		esi, ecx
-		push	dword ptr [esp+8]
-		CALL_EAX(0x575830)
-		mov		eax, [esi]
-		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
-		jnz		noCharCtrl
-		mov		ecx, [esi+0x68]
+		push	ebp
+		mov		ebp, esp
+		and		esp, 0xFFFFFFF0
+		sub		esp, 0x20
+		push	ecx
+		push	dword ptr [ebp+8]
+		call	SetRefrPositionHook
+		pop		eax
+		mov		ecx, [eax+0x64]
 		test	ecx, ecx
-		jz		noCharCtrl
-		cmp		dword ptr [ecx+0x28], 1
-		ja		noCharCtrl
-		mov		ecx, [ecx+0x138]
-		test	ecx, ecx
-		jz		noCharCtrl
-		cmp		dword ptr [ecx+0x3F0], 4
-		jz		noCharCtrl
-		push	dword ptr [esp+8]
-		CALL_EAX(0x5620E0)
-	noCharCtrl:
-		mov		ecx, esi
-		call	TESObjectREFR::GetNiNode
-		test	eax, eax
 		jz		done
-		mov		ecx, [esp+8]
-		movq	xmm0, qword ptr [ecx]
-		movq	qword ptr [eax+0x58], xmm0
-		mov		edx, [ecx+8]
-		mov		[eax+0x60], edx
-		push	1
+		mov		ecx, [ecx+0x14]
+		test	ecx, ecx
+		jz		done
+		push	ecx
+		mov		edx, [ebp+8]
+		movups	xmm0, [edx]
+		movq	qword ptr [ecx+0x58], xmm0
+		unpckhps	xmm0, xmm0
+		movss	[ecx+0x60], xmm0
+		mov		edx, [eax]
+		cmp		dword ptr [edx+0x100], ADDR_ReturnTrue
+		jnz		doUpdate
+		mov		eax, [eax+0x68]
+		test	eax, eax
+		jz		doUpdate
+		cmp		dword ptr [eax+0x28], 1
+		ja		doUpdate
+		mov		eax, [eax+0x138]
+		test	eax, eax
+		jz		doUpdate
+		cmp		dword ptr [eax+0x3F0], 4
+		jz		doUpdate
 		push	eax
-		CALL_EAX(0xC6BD00)
+		lea		edx, [eax+0x570]
+		mov		eax, [edx+0x24]
+		mov		eax, [eax+8]
+		add		eax, 0xB0
+		lea		ecx, [esp+8]
+		push	edx
+		push	eax
+		CALL_EAX(0xC7F700)
+		pop		eax
+		mov		edx, [ebp+8]
+		movups	xmm0, [edx]
+		mulps	xmm0, kUnitConv
+		addps	xmm0, xmm1
+		movaps	[ecx], xmm0
+		mov		edx, [eax+8]
+		xorps	xmm0, xmm0
+		movaps	[edx+0x20], xmm0
+		movss	xmm0, [edx+0x58]
+		addss	xmm0, [edx+0x5C]
+		movd	eax, xmm0
+		push	eax
+		push	ecx
+		mov		ecx, [edx+0x30]
+		CALL_EAX(0xC9E990)
+		mov		ecx, [esp]
+	doUpdate:
+		call	NiNode::ResetCollision
 		pop		ecx
-		pop		edx
 		call	NiAVObject::Update
 	done:
-		pop		esi
+		leave
 		retn	4
 	}
 }
 
-__declspec(naked) void TESObjectREFR::SetAngle(NiVector4 &rotVector, bool setLocal)
+__declspec(naked) void __fastcall TESObjectREFR::SetAngle(NiVector4 &rotVector, UInt8 setLocal)
 {
 	__asm
 	{
 		push	esi
-		push	edi
 		mov		esi, ecx
-		call	TESObjectREFR::GetNiNode
-		test	eax, eax
-		jz		done
-		mov		edi, eax
-		lea		ecx, [eax+0x34]
-		mov		edx, [esp+0xC]
+		sub		esp, 0x24
 		movups	xmm0, [edx]
 		mulps	xmm0, PS_V3_PId180
-		cmp		byte ptr [esp+0x10], 0
+		mov		ecx, esp
+		cmp		byte ptr [ecx+0x2C], 0
 		jnz		localRot
 		lea		edx, [esi+0x24]
-		mov		eax, [edx+0xC]
-		movups	[edx], xmm0
-		mov		[edx+0xC], eax
+		movq	qword ptr [edx], xmm0
+		unpckhps	xmm0, xmm0
+		movss	[edx+8], xmm0
 		call	NiMatrix33::RotationMatrix
 		jmp		doneRot
 	localRot:
@@ -670,24 +723,32 @@ __declspec(naked) void TESObjectREFR::SetAngle(NiVector4 &rotVector, bool setLoc
 		mov		ecx, eax
 		call	NiMatrix33::ExtractAngles
 	doneRot:
+		mov		eax, [esi+0x64]
+		test	eax, eax
+		jz		done
+		mov		ecx, [eax+0x14]
+		test	ecx, ecx
+		jz		done
+		push	ecx
+		call	NiNode::ResetCollision
+		pop		ecx
+		mov		eax, [esi]
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
+		jz		done
+		movups	xmm0, [esp]
+		movups	[ecx+0x34], xmm0
+		movups	xmm0, [esp+0x10]
+		movups	[ecx+0x44], xmm0
+		mov		edx, [esp+0x20]
+		mov		[ecx+0x54], edx
+		call	NiAVObject::Update
+	done:
 		push	2
 		mov		ecx, esi
 		CALL_EAX(0x484B60)
-		push	1
-		push	edi
-		CALL_EAX(0xC6BD00)
-		add		esp, 8
-		mov		ecx, esi
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1E4]
-		test	eax, eax
-		jnz		done
-		mov		ecx, edi
-		call	NiAVObject::Update
-	done:
-		pop		edi
+		add		esp, 0x24
 		pop		esi
-		retn	8
+		retn	4
 	}
 }
 
@@ -697,31 +758,31 @@ __declspec(naked) void __fastcall TESObjectREFR::MoveToCell(TESObjectCELL *cell,
 	{
 		push	esi
 		mov		esi, ecx
-		push	edx
-		call	TESObjectREFR::GetParentCell
-		pop		ecx
+		mov		eax, [esi+0x40]
 		test	eax, eax
 		jz		doMove
-		mov		edx, [esi+0x64]
-		test	edx, edx
+		mov		ecx, [esi+0x64]
+		test	ecx, ecx
 		jz		doMove
-		cmp		dword ptr [edx+0x14], 0
+		cmp		dword ptr [ecx+0x14], 0
 		jz		doMove
-		cmp		eax, ecx
+		cmp		eax, edx
 		jz		doSetPos
-		mov		edx, [ecx+0xC0]
-		test	edx, edx
+		mov		ecx, [edx+0xC0]
+		test	ecx, ecx
 		jz		doMove
-		cmp		[eax+0xC0], edx
+		cmp		[eax+0xC0], ecx
 		jz		doSetPos
 	doMove:
 		mov		eax, s_tempPosMarker
-		mov		[eax+0x40], ecx
+		mov		[eax+0x40], edx
+		movups	xmm0, [esi+0x24]
+		movups	[eax+0x24], xmm0
 		mov		ecx, [esp+8]
-		movq	xmm0, qword ptr [ecx]
+		movups	xmm0, [ecx]
 		movq	qword ptr [eax+0x30], xmm0
-		mov		edx, [ecx+8]
-		mov		[eax+0x38], edx
+		unpckhps	xmm0, xmm0
+		movss	[eax+0x38], xmm0
 		push	0
 		push	0
 		push	0
@@ -766,36 +827,55 @@ __declspec(naked) void __fastcall TESObjectREFR::Rotate(NiVector4 &rotVector)
 	__asm
 	{
 		push	esi
-		push	edi
 		mov		esi, ecx
-		call	TESObjectREFR::GetNiNode
-		test	eax, eax
-		jz		done
-		mov		edi, eax
+		sub		esp, 0x24
 		movups	xmm0, [edx]
 		mulps	xmm0, PS_V3_PId180
 		movups	[edx], xmm0
-		lea		ecx, [edi+0x34]
-		call	NiMatrix33::Rotate
-		lea		edx, [esi+0x24]
-		mov		ecx, eax
-		call	NiMatrix33::ExtractAngles
+		mov		ecx, esp
+		call	NiMatrix33::RotationMatrixInv
 		push	2
 		mov		ecx, esi
 		CALL_EAX(0x484B60)
-		push	1
-		push	edi
-		CALL_EAX(0xC6BD00)
-		add		esp, 8
-		mov		ecx, esi
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1E4]
+		cmp		dword ptr [esi+0xC], 0x14
+		jz		noNode
+		mov		eax, [esi+0x64]
 		test	eax, eax
-		jnz		done
-		mov		ecx, edi
+		jz		noNode
+		mov		eax, [eax+0x14]
+		test	eax, eax
+		jz		noNode
+		mov		edx, esp
+		lea		ecx, [eax+0x34]
+		push	eax
+		call	NiMatrix33::MultiplyMatrices
+		lea		edx, [esi+0x24]
+		mov		ecx, eax
+		call	NiMatrix33::ExtractAngles
+		mov		ecx, [esp]
+		call	NiNode::ResetCollision
+		pop		ecx
+		mov		eax, [esi]
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
+		jz		done
 		call	NiAVObject::Update
 	done:
-		pop		edi
+		add		esp, 0x24
+		pop		esi
+		retn
+		ALIGN 16
+	noNode:
+		sub		esp, 0x24
+		lea		edx, [esi+0x24]
+		mov		ecx, esp
+		call	NiMatrix33::RotationMatrix
+		lea		edx, [esp+0x24]
+		mov		ecx, eax
+		call	NiMatrix33::MultiplyMatrices
+		lea		edx, [esi+0x24]
+		mov		ecx, eax
+		call	NiMatrix33::ExtractAngles
+		add		esp, 0x48
 		pop		esi
 		retn
 	}
@@ -853,7 +933,7 @@ __declspec(naked) void TESObjectREFR::DeleteReference()
 	}
 }
 
-__declspec(naked) bhkCharacterController *TESObjectREFR::GetCharacterController()
+__declspec(naked) bhkCharacterController *TESObjectREFR::GetCharacterController() const
 {
 	__asm
 	{
@@ -873,7 +953,7 @@ __declspec(naked) bhkCharacterController *TESObjectREFR::GetCharacterController(
 	}
 }
 
-__declspec(naked) double TESObjectREFR::GetWaterImmersionPerc()	// result >= 0.875 --> actor is diving
+__declspec(naked) double TESObjectREFR::GetWaterImmersionPerc() const	// result >= 0.875 --> actor is diving
 {
 	__asm
 	{
@@ -911,7 +991,7 @@ __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const c
 	{
 		push	ebp
 		mov		ebp, esp
-		sub		esp, 8
+		push	0
 		call	TESObjectREFR::GetNiNode
 		test	eax, eax
 		jz		done
@@ -920,49 +1000,35 @@ __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const c
 		call	NiNode::GetBlock
 		test	eax, eax
 		jz		done
-		push	3
+		mov		edx, 3
 		mov		ecx, eax
-		CALL_EAX(0xA59D30)
+		call	NiAVObject::GetProperty
 		test	eax, eax
 		jz		done
-		mov		[ebp-4], eax
+		cmp		dword ptr [eax], kVtbl_BSShaderPPLightingProperty
+		jnz		done
+		mov		edx, [eax+0x1C]
+		cmp		edx, 8
+		jl		done
+		cmp		edx, 0xC
+		jg		done
+		push	eax
 		push	0
 		push	0
-		lea		ecx, [ebp-8]
-		mov		dword ptr [ecx], 0
-		push	ecx
+		lea		eax, [ebp-4]
+		push	eax
 		push	dword ptr [ebp+0xC]
 		mov		ecx, g_TES
 		CALL_EAX(0x4568C0)
-		push	0x11F5AE0
-		mov		ecx, [ebp-4]
-		CALL_EAX(0x653290)
+		mov		eax, [ebp-4]
 		test	eax, eax
-		jz		noLighting
-		mov		edx, [eax+0x1C]
-		cmp		edx, 8
-		jl		noLighting
-		cmp		edx, 0xC
-		jg		noLighting
-		push	dword ptr [ebp-8]
+		jz		done
+		push	eax
 		push	0
 		push	dword ptr [ebp+0x10]
-		mov		ecx, eax
-		mov		eax, [ecx]
-		call	dword ptr [eax+0xF0]
-	noLighting:
-		push	0x11FA05C
-		mov		ecx, [ebp-4]
-		CALL_EAX(0x653290)
-		test	eax, eax
-		jz		release
-		push	dword ptr [ebp-8]
-		mov		ecx, eax
-		CALL_EAX(0x438230)
-	release:
 		mov		ecx, [ebp-8]
-		test	ecx, ecx
-		jz		done
+		CALL_EAX(0xB67200)
+		mov		ecx, [ebp-4]
 		call	NiReleaseObject
 	done:
 		leave
@@ -970,7 +1036,7 @@ __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const c
 	}
 }
 
-__declspec(naked) NiNode *TESObjectREFR::GetNiNode()
+__declspec(naked) NiNode *TESObjectREFR::GetNiNode() const
 {
 	__asm
 	{
@@ -988,7 +1054,7 @@ __declspec(naked) NiNode *TESObjectREFR::GetNiNode()
 	}
 }
 
-__declspec(naked) NiAVObject* __fastcall TESObjectREFR::GetNiBlock(const char *blockName)
+__declspec(naked) NiAVObject* __fastcall TESObjectREFR::GetNiBlock(const char *blockName) const
 {
 	__asm
 	{
@@ -1004,7 +1070,7 @@ __declspec(naked) NiAVObject* __fastcall TESObjectREFR::GetNiBlock(const char *b
 	}
 }
 
-__declspec(naked) NiNode* __fastcall TESObjectREFR::GetNode(const char *nodeName)
+__declspec(naked) NiNode* __fastcall TESObjectREFR::GetNode(const char *nodeName) const
 {
 	__asm
 	{
@@ -1026,7 +1092,7 @@ __declspec(naked) NiNode* __fastcall TESObjectREFR::GetNode(const char *nodeName
 	}
 }
 
-__declspec(naked) hkpRigidBody* __fastcall TESObjectREFR::GetRigidBody(const char *blockName)
+__declspec(naked) hkpRigidBody* __fastcall TESObjectREFR::GetRigidBody(const char *blockName) const
 {
 	__asm
 	{
@@ -1061,10 +1127,9 @@ bool TESObjectREFR::IsGrabbable()
 	return objNode && objNode->IsMovable();
 }
 
-const char kMatchPackageType[] = {0, 1, 2, 3, 4, 13, 14, 15, 16, 17, 18, 19, 36, 37, 35, 34, 33, -1, 5, 20, 7, 8, 10, 11, 9, 12, 21, 24, 6, 28, 29, 32};
-
-__declspec(naked) char Actor::GetCurrentAIPackage()
+__declspec(naked) char Actor::GetCurrentAIPackage() const
 {
+	static const char kMatchPackageType[] = { 0, 1, 2, 3, 4, 13, 14, 15, 16, 17, 18, 19, 36, 37, 35, 34, 33, -1, 5, 20, 7, 8, 10, 11, 9, 12, 21, 24, 6, 28, 29, 32 };
 	__asm
 	{
 		mov		ecx, [ecx+0x68]
@@ -1085,15 +1150,14 @@ __declspec(naked) char Actor::GetCurrentAIPackage()
 	}
 }
 
-const char kMatchProcedureID[] =
+__declspec(naked) char Actor::GetCurrentAIProcedure() const
 {
-	0, 7, 1, 2, 8, 10, 11, 12, 14, 13, 16, 18, 4, 3, 19, 15, 5, 20, 9, -1, 6, -1, 21, 22, 23, 24, -1, 27, 28, 
-	29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 47, -1, 46, 41, -1, -1, 44, -1, 43, 42, 49, 50, -1, 17,
-	45, 48, 8, 10, 7, 46, 4, 45, 21, 0, -1
-};
-
-__declspec(naked) char Actor::GetCurrentAIProcedure()
-{
+	static const char kMatchProcedureID[] =
+	{
+		0, 7, 1, 2, 8, 10, 11, 12, 14, 13, 16, 18, 4, 3, 19, 15, 5, 20, 9, -1, 6, -1, 21, 22, 23, 24, -1, 27, 28,
+		29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 47, -1, 46, 41, -1, -1, 44, -1, 43, 42, 49, 50, -1, 17,
+		45, 48, 8, 10, 7, 46, 4, 45, 21, 0, -1
+	};
 	__asm
 	{
 		push	ebp
@@ -1163,22 +1227,18 @@ __declspec(naked) char Actor::GetCurrentAIProcedure()
 	}
 }
 
-bool Actor::IsFleeing()
+bool Actor::IsFleeing() const
 {
 	if (baseProcess)
 	{
 		TESPackage *package = baseProcess->GetCurrentPackage();
-		if (package)
-		{
-			char pkgType = package->type;
-			if (((pkgType == 0x12) && package->GetFleeCombat()) || (pkgType == 0x16) || (pkgType == 0xA))
-				return true;
-		}
+		if (package && ((package->type == 0xA) || (package->type == 0x16) || ((package->type == 0x12) && package->GetFleeCombat())))
+			return true;
 	}
 	return false;
 }
 
-__declspec(naked) ContChangesEntry *Actor::GetWeaponInfo()
+__declspec(naked) ContChangesEntry *Actor::GetWeaponInfo() const
 {
 	__asm
 	{
@@ -1196,7 +1256,7 @@ __declspec(naked) ContChangesEntry *Actor::GetWeaponInfo()
 	}
 }
 
-__declspec(naked) ContChangesEntry *Actor::GetAmmoInfo()
+__declspec(naked) ContChangesEntry *Actor::GetAmmoInfo() const
 {
 	__asm
 	{
@@ -1214,13 +1274,13 @@ __declspec(naked) ContChangesEntry *Actor::GetAmmoInfo()
 	}
 }
 
-TESObjectWEAP *Actor::GetEquippedWeapon()
+TESObjectWEAP *Actor::GetEquippedWeapon() const
 {
 	ContChangesEntry *weaponInfo = GetWeaponInfo();
 	return weaponInfo ? (TESObjectWEAP*)weaponInfo->type : NULL;
 }
 
-bool Actor::IsItemEquipped(TESForm *item)
+bool Actor::IsItemEquipped(TESForm *item) const
 {
 	if IS_ID(item, TESObjectWEAP)
 		return item == GetEquippedWeapon();
@@ -1243,7 +1303,7 @@ bool Actor::IsItemEquipped(TESForm *item)
 
 bool __fastcall GetEntryDataHasModHook(ContChangesEntry *entry, int EDX, UInt8 modType);
 
-UInt8 Actor::EquippedWeaponHasMod(UInt32 modType)
+UInt8 Actor::EquippedWeaponHasMod(UInt32 modType) const
 {
 	ContChangesEntry *weaponInfo = GetWeaponInfo();
 	if (!weaponInfo) return 0;
@@ -1260,12 +1320,12 @@ UInt8 Actor::EquippedWeaponHasMod(UInt32 modType)
 	return GetEntryDataHasModHook(weaponInfo, 0, modType) ? 2 : 0;
 }
 
-bool Actor::IsSneaking()
+bool Actor::IsSneaking() const
 {
 	return actorMover && ((actorMover->GetMovementFlags() & 0xC00) == 0x400);
 }
 
-__declspec(naked) bool __fastcall Actor::IsInCombatWith(Actor *target)
+__declspec(naked) bool __fastcall Actor::IsInCombatWith(Actor *target) const
 {
 	__asm
 	{
@@ -1339,7 +1399,7 @@ void Actor::UpdateActiveEffects(MagicItem *magicItem, EffectItem *effItem, bool 
 	while (iter = iter->next);
 }
 
-PackageInfo *Actor::GetPackageInfo()
+PackageInfo *Actor::GetPackageInfo() const
 {
 	if (baseProcess)
 	{
@@ -1351,29 +1411,29 @@ PackageInfo *Actor::GetPackageInfo()
 	return NULL;
 }
 
-TESObjectREFR *Actor::GetPackageTarget()
+TESObjectREFR *Actor::GetPackageTarget() const
 {
 	return baseProcess ? baseProcess->currentPackage.targetRef : NULL;
 }
 
-TESCombatStyle *Actor::GetCombatStyle()
+TESCombatStyle *Actor::GetCombatStyle() const
 {
 	ExtraCombatStyle *xCmbStyle = GetExtraType(&extraDataList, CombatStyle);
 	if (xCmbStyle && xCmbStyle->combatStyle) return xCmbStyle->combatStyle;
 	return ((TESActorBase*)baseForm)->GetCombatStyle();
 }
 
-bool Actor::GetKnockedState()
+bool Actor::GetKnockedState() const
 {
 	return baseProcess && (baseProcess->GetKnockedState() == 3);
 }
 
-bool Actor::IsWeaponOut()
+bool Actor::IsWeaponOut() const
 {
 	return baseProcess && baseProcess->IsWeaponOut();
 }
 
-bool Actor::GetIsGhost()
+bool Actor::GetIsGhost() const
 {
 	if (baseProcess && baseProcess->cachedValues)
 		return (baseProcess->cachedValues->flags & 0x10000000) != 0;
@@ -1481,7 +1541,7 @@ __declspec(naked) void Actor::PlayAnimGroup(UInt32 animGroupID)
 	}
 }
 
-__declspec(naked) UInt32 Actor::GetLevel()
+__declspec(naked) UInt32 Actor::GetLevel() const
 {
 	__asm
 	{
@@ -1493,7 +1553,7 @@ __declspec(naked) UInt32 Actor::GetLevel()
 	}
 }
 
-__declspec(naked) double Actor::GetKillXP()
+__declspec(naked) double Actor::GetKillXP() const
 {
 	__asm
 	{
@@ -1542,12 +1602,12 @@ __declspec(naked) double __fastcall AdjustDmgByDifficulty(ActorHitData *hitData)
 	}
 }
 
-void Actor::GetHitDataValue(UInt32 valueType, double *result)
+void Actor::GetHitDataValue(UInt32 valueType, double *result) const
 {
 	*result = 0;
 	if (NOT_ACTOR(this) || !baseProcess || (baseProcess->processLevel > 1))
 		return;
-	ActorHitData *hitData = ((MiddleHighProcess*)baseProcess)->hitData240;
+	ActorHitData *hitData = ((MiddleHighProcess*)baseProcess)->lastHitData;
 	if (!hitData) return;
 	switch (valueType)
 	{
@@ -1659,12 +1719,12 @@ __declspec(naked) void Actor::DismemberLimb(UInt32 bodyPartID, bool explode)
 	}
 }
 
-bool Actor::HasNoPath()
+bool Actor::HasNoPath() const
 {
 	return actorMover && actorMover->pathingRequest && !actorMover->pathingSolution;
 }
 
-__declspec(naked) bool Actor::CanBePushed()
+__declspec(naked) bool Actor::CanBePushed() const
 {
 	__asm
 	{
@@ -1790,7 +1850,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 	}
 }
 
-__declspec(naked) int Actor::GetGroundMaterial()
+__declspec(naked) int Actor::GetGroundMaterial() const
 {
 	__asm
 	{
@@ -1878,23 +1938,38 @@ void MagicTarget::RemoveEffect(EffectItem *effItem)
 	while (iter);
 }
 
-TESObjectREFR *TESObjectREFR::GetMerchantContainer()
+TESObjectREFR *TESObjectREFR::GetMerchantContainer() const
 {
 	ExtraMerchantContainer *xMerchCont = GetExtraType(&extraDataList, MerchantContainer);
 	return xMerchCont ? xMerchCont->containerRef : NULL;
 }
 
-TESActorBase *Actor::GetActorBase()
+__declspec(naked) TESActorBase *Actor::GetActorBase() const
 {
-	if (baseForm->IsCreated())
+	__asm
 	{
-		ExtraLeveledCreature *xLvlCre = GetExtraType(&extraDataList, LeveledCreature);
-		if (xLvlCre) return xLvlCre->actorBase;
+		mov		eax, [ecx+0x20]
+		test	eax, eax
+		jz		done
+		cmp		byte ptr [eax+0xF], 0xFF
+		jnz		done
+		push	eax
+		push	kExtraData_LeveledCreature
+		add		ecx, 0x44
+		call	BaseExtraList::GetByType
+		mov		ecx, eax
+		pop		eax
+		test	ecx, ecx
+		jz		done
+		mov		ecx, [ecx+0x10]
+		test	ecx, ecx
+		cmovnz	eax, ecx
+	done:
+		retn
 	}
-	return (TESActorBase*)baseForm;
 }
 
-TESPackage *Actor::GetStablePackage()
+TESPackage *Actor::GetStablePackage() const
 {
 	if (!baseProcess) return NULL;
 	TESPackage *package = baseProcess->currentPackage.package;
@@ -1904,7 +1979,7 @@ TESPackage *Actor::GetStablePackage()
 	return xPackage ? xPackage->package : NULL;
 }
 
-bool Actor::GetLOS(Actor *target)
+bool Actor::GetLOS(Actor *target) const
 {
 	if (baseProcess && !baseProcess->processLevel)
 	{
@@ -1914,7 +1989,7 @@ bool Actor::GetLOS(Actor *target)
 	return false;
 }
 
-int __fastcall Actor::GetDetectionValue(Actor *detected)
+int __fastcall Actor::GetDetectionValue(Actor *detected) const
 {
 	if (baseProcess && !baseProcess->processLevel)
 	{

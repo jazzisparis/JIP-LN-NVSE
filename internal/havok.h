@@ -140,16 +140,25 @@ struct hkSweptTransform
 // B0
 struct hkMotionState
 {
-	hkTransform			transform;		// 00
-	hkSweptTransform	sweptTransform;	// 40
-	hkVector4			deltaAngle;		// 90
-	float				objectRadius;	// A0	For spheres: actual radius * tan(PI/3)
-	float				linearDamping;	// A4
-	float				angularDamping;	// A8
-	UInt8				byteAC;			// AC
-	UInt8				byteAD;			// AD
-	UInt8				byteAE;			// AE
-	UInt8				byteAF;			// AF
+	enum SolverDeactivation
+	{
+		kSolver_Max,
+		kSolver_Off,
+		kSolver_Low,
+		kSolver_Medium,
+		kSolver_High
+	};
+
+	hkTransform			transform;			// 00
+	hkSweptTransform	sweptTransform;		// 40
+	hkVector4			deltaAngle;			// 90
+	float				objectRadius;		// A0	For spheres: actual radius * tan(PI/3)
+	float				linearDamping;		// A4
+	float				angularDamping;		// A8
+	UInt8				byteAC;				// AC
+	UInt8				byteAD;				// AD
+	UInt8				solverDeactivation;	// AE
+	UInt8				byteAF;				// AF
 };
 static_assert(sizeof(hkMotionState) == 0xB0);
 
@@ -216,6 +225,7 @@ class hkpContactListener;
 class bhkShape;
 class hkpShape;
 class hkpCachingShapePhantom;
+class hkpAllCdPointCollector;
 
 enum CollisionLayerTypes
 {
@@ -268,15 +278,15 @@ enum CollisionLayerTypes
 class hkBaseObject
 {
 public:
-	virtual void	Destroy(bool doFree);
+	/*00*/virtual void		Destroy(bool doFree);
 };
 
 // 08
 class hkReferencedObject : public hkBaseObject
 {
 public:
-	virtual void	CalcStatistics(hkStatisticsCollector *collector);
-	virtual void	Unk_02(void);
+	/*04*/virtual void		CalcStatistics(hkStatisticsCollector *collector);
+	/*08*/virtual void		Unk_02(void);
 
 	UInt16			sizeAndFlags;		// 04
 	UInt16			refCount;			// 06
@@ -345,22 +355,22 @@ struct hkCdPoint
 class hkpEntityListener
 {
 public:
-	virtual void	Destroy(bool doFree);
-	virtual void	Unk_01(UInt32 arg);
-	virtual void	Unk_02(hkpRigidBody *rigidBody);
-	virtual void	Unk_03(UInt32 arg);
-	virtual void	Unk_04(UInt32 arg);
-	virtual void	Unk_05(UInt32 arg);
+	/*00*/virtual void		Destroy(bool doFree);
+	/*04*/virtual void		Unk_01(UInt32 arg);
+	/*08*/virtual void		Unk_02(hkpRigidBody *rigidBody);
+	/*0C*/virtual void		Unk_03(UInt32 arg);
+	/*10*/virtual void		Unk_04(UInt32 arg);
+	/*14*/virtual void		Unk_05(UInt32 arg);
 };
 
 // 10
 class bhkEntityListener : public hkpEntityListener
 {
 public:
-	virtual void	Unk_06(UInt32 arg);
-	virtual bool	Unk_07(hkCdPoint *cdPoint);
-	virtual bool	Unk_08(hkCdPoint *cdPoint);
-	virtual UInt32	Unk_09(UInt32 arg);
+	/*18*/virtual void		Unk_06(UInt32 arg);
+	/*1C*/virtual bool		Unk_07(hkCdPoint *cdPoint);
+	/*20*/virtual bool		Unk_08(hkCdPoint *cdPoint);
+	/*24*/virtual UInt32	Unk_09(UInt32 arg);
 
 	UInt32			unk04;		// 04
 	UInt8			byte08;		// 08
@@ -372,8 +382,8 @@ public:
 class BGSAcousticSpaceListener : public bhkEntityListener
 {
 public:
-	virtual bool	Unk_0A(UInt32 arg1, UInt32 arg2);
-	virtual bool	Unk_0B(UInt32 arg1, UInt32 arg2);
+	/*28*/virtual bool		Unk_0A(UInt32 arg1, UInt32 arg2);
+	/*2C*/virtual bool		Unk_0B(UInt32 arg1, UInt32 arg2);
 
 	UInt32								unk10;		// 10
 	UInt8								byte14;		// 14
@@ -386,19 +396,19 @@ static_assert(sizeof(BGSAcousticSpaceListener) == 0x28);
 class hkpPhantomListener
 {
 public:
-	virtual void	Unk_00(void);
-	virtual void	Unk_01(void);
-	virtual void	Unk_02(void);
-	virtual void	Unk_03(void);
-	virtual void	Unk_04(void);
+	/*00*/virtual void		Unk_00(void);
+	/*04*/virtual void		Unk_01(void);
+	/*08*/virtual void		Unk_02(void);
+	/*0C*/virtual void		Unk_03(void);
+	/*10*/virtual void		Unk_04(void);
 };
 
 // D0
 class hkpCharacterProxy : public hkReferencedObject
 {
 public:
-	virtual void	Unk_03(void);
-	virtual void	Unk_04(void);
+	/*0C*/virtual void		Unk_03(void);
+	/*10*/virtual void		Unk_04(void);
 
 	hkpEntityListener		entityListener;		// 08
 	hkpPhantomListener		phantomListener;	// 0C
@@ -425,8 +435,8 @@ public:
 class hkpWorldObject : public hkReferencedObject
 {
 public:
-	virtual void	Unk_03(void);
-	virtual hkMotionState	*GetMotionState();
+	/*0C*/virtual void		SetShape(hkpShape *shape);
+	/*10*/virtual hkMotionState	*GetMotionState();
 
 	hkpWorld				*pWorld;		// 08
 	bhkWorldObject			*object;		// 0C
@@ -441,7 +451,9 @@ public:
 	UInt8					unk2E[2];		// 2E
 	NiVector4				vector30;		// 30
 	NiVector4				vector40;		// 40
-	UInt32					unk50[3];		// 50
+	UInt32					unk50;			// 50
+	UInt32					*unk54;			// 54
+	UInt32					*unk58;			// 58
 	float					penetrateDepth;	// 5C
 	hkArray<CdBodyLinker>	cdRgdBodies;	// 60
 	UInt32					unk6C[3];		// 6C
@@ -463,15 +475,15 @@ struct hkDiagonal
 class hkpShape : public hkReferencedObject
 {
 public:
-	virtual void	Unk_03(hkVector4 *arg1);
-	virtual UInt32	Unk_04();
-	virtual bool	IsConvex();
-	virtual UInt32	Unk_06(UInt32 arg1, UInt32 arg2);
-	virtual void	GetSpaceDiagonal(hkTransform *arg1, float arg2, hkDiagonal *resPtr);	// arg1 = (hkTransform*)0x1268370; arg2 = 0
-	virtual void	*Unk_08(void *arg1, hkVector4 *arg2, void *arg3);
-	virtual void	Unk_09(void *arg1, void *arg2, void *arg3);
-	virtual void	Unk_0A(hkVector4 *arg1, hkVector4 *arg2, void *arg3, hkVector4 *arg4);
-	virtual UInt32	Unk_0B();
+	/*0C*/virtual void		Unk_03(hkVector4 *arg1);
+	/*10*/virtual UInt32	Unk_04();
+	/*14*/virtual bool		IsConvex();
+	/*18*/virtual UInt32	Unk_06(UInt32 arg1, UInt32 arg2);
+	/*1C*/virtual void		GetSpaceDiagonal(hkTransform *arg1, float arg2, hkDiagonal *resPtr);	// arg1 = (hkTransform*)0x1268370; arg2 = 0
+	/*20*/virtual void		*Unk_08(void *arg1, hkVector4 *arg2, void *arg3);
+	/*24*/virtual void		Unk_09(void *arg1, void *arg2, void *arg3);
+	/*28*/virtual void		Unk_0A(hkVector4 *arg1, hkVector4 *arg2, void *arg3, hkVector4 *arg4);
+	/*2C*/virtual UInt32	Unk_0B();
 
 	bhkShape		*shape;		// 08
 	UInt32			unk0C;		// 0C
@@ -482,28 +494,28 @@ static_assert(sizeof(hkpShape) == 0x10);
 class bhkRefObject : public NiObject
 {
 public:
-	virtual void	SetObject(hkReferencedObject *object);
-	virtual void	UpdateRefCount(bool incRef);	// inc/dec ref, depending on arg
+	/*8C*/virtual void		SetObject(hkReferencedObject *object);
+	/*90*/virtual void		UpdateRefCount(bool incRef);	// inc/dec ref, depending on arg
 
-	hkReferencedObject	*refObject;		// 08
+	hkReferencedObject		*refObject;		// 08
 };
 
 // 10
 class bhkSerializable : public bhkRefObject
 {
 public:
-	virtual void		Unk_25(UInt32 arg);
-	virtual hkpWorld	*GetWorld(void);
-	virtual bool		Unk_27(UInt32 arg);
-	virtual bool		Unk_28(void);
-	virtual void		FreeData(bool del);	// free hkData
-	virtual UInt32		Unk_2A(void);
-	virtual void		LoadHavokData(NiStream *stream);	// called from bhkSerializable::Load after primary load is done
-	virtual void		Unk_2C(void);	// create object
-	virtual void		*CreateHavokData(UInt8 *arg);	// create Cinfo, return hkData
-	virtual void		Unk_2E(void);		// destroy object
-	virtual void		Unk_2F(void);
-	virtual void		Unk_30(void);
+	/*94*/virtual void		Unk_25(UInt32 arg);
+	/*98*/virtual hkpWorld	*GetWorld(void);
+	/*9C*/virtual bool		SetWorld(bhkWorld *inWorld);
+	/*A0*/virtual bool		Unk_28(void);
+	/*A4*/virtual void		FreeData(bool del);	// free hkData
+	/*A8*/virtual UInt32	Unk_2A(void);
+	/*AC*/virtual void		LoadHavokData(NiStream *stream);	// called from bhkSerializable::Load after primary load is done
+	/*B0*/virtual void		Unk_2C(void);	// create object
+	/*B4*/virtual void		*CreateHavokData(UInt8 *arg);	// create Cinfo, return hkData
+	/*B8*/virtual void		Unk_2E(void);		// destroy object
+	/*BC*/virtual void		Unk_2F(void);
+	/*C0*/virtual void		Unk_30(void);
 
 	void				*hkData;	// 0C - stores hkConstraintData (descriptor used to build hkObj)
 };
@@ -512,10 +524,10 @@ public:
 class bhkWorldObject : public bhkSerializable
 {
 public:
-	virtual void		Unk_31(void);
-	virtual void		Unk_32(void);
-	virtual void		Unk_33(void);
-	virtual void		Unk_34(void);
+	/*C4*/virtual void		UpdateCollisionFilter();
+	/*C8*/virtual void		Unk_32(void);
+	/*CC*/virtual void		Unk_33(void);
+	/*D0*/virtual void		Unk_34(void);
 
 	UInt32				bodyFlags;		// 10
 
@@ -535,10 +547,21 @@ class bhkShapePhantom : public bhkPhantom
 public:
 };
 
+struct hkEdge
+{
+	hkVector4	point;
+	float		epsilon0;
+	float		epsilon1;
+};
+
 // 18
 class bhkSimpleShapePhantom : public bhkShapePhantom
 {
 public:
+	__forceinline void CollectCdPoints(hkVector4 *point0, hkEdge *point1, hkpAllCdPointCollector *collector)
+	{
+		ThisCall(0xC9EBA0, this, point0, point1, collector, nullptr);
+	}
 };
 
 class bhkCachingShapePhantom : public bhkShapePhantom
@@ -550,13 +573,13 @@ public:
 class hkpShapeContainer
 {
 public:
-	virtual void	Destroy(bool doFree);
-	virtual UInt32	GetSize();
-	virtual void	Unk_02(void);
-	virtual void	Unk_03(void);
-	virtual void	Unk_04(void);
-	virtual void	Unk_05(void);
-	virtual void	Unk_06(void);
+	/*00*/virtual void		Destroy(bool doFree);
+	/*04*/virtual UInt32	GetSize();
+	/*08*/virtual void		Unk_02(void);
+	/*0C*/virtual void		Unk_03(void);
+	/*10*/virtual void		Unk_04(void);
+	/*14*/virtual void		Unk_05(void);
+	/*18*/virtual void		Unk_06(void);
 
 	// 10
 	struct ShapeItem
@@ -581,14 +604,14 @@ public:
 class bhkShape : public bhkSerializable
 {
 public:
-	virtual void	Unk_31(void);
-	virtual void	Unk_32(void);
-	virtual void	Unk_33(void);
-	virtual void	Unk_34(void);
-	virtual void	Unk_35(void);
-	virtual void	Unk_36(void);
-	virtual void	Unk_37(void);
-	virtual void	Unk_38(void);
+	/*C4*/virtual void		Unk_31(void);
+	/*C8*/virtual void		Unk_32(void);
+	/*CC*/virtual void		Unk_33(void);
+	/*D0*/virtual void		Unk_34(void);
+	/*D4*/virtual void		Unk_35(void);
+	/*D8*/virtual void		Unk_36(void);
+	/*DC*/virtual void		Unk_37(void);
+	/*E0*/virtual void		Unk_38(void);
 
 	UInt32			materialType;	// 10
 };
@@ -603,11 +626,11 @@ public:
 class bhkConstraint : public bhkSerializable
 {
 public:
-	virtual void	Unk_31(void);
-	virtual void	Unk_32(void);
-	virtual void	Unk_33(void);
-	virtual void	Unk_34(void);
-	virtual void	Unk_35(void);
+	/*C4*/virtual void		Unk_31(void);
+	/*C8*/virtual void		Unk_32(void);
+	/*CC*/virtual void		Unk_33(void);
+	/*D0*/virtual void		Unk_34(void);
+	/*D4*/virtual void		Unk_35(void);
 };
 
 // 10
@@ -628,9 +651,9 @@ struct hkpCdBodyPair
 class hkpCdBodyPairCollector
 {
 public:
-	virtual void	Destroy(bool doFree);
-	virtual void	Unk_01(void);
-	virtual void	Unk_02(void);
+	/*00*/virtual void		Destroy(bool doFree);
+	/*04*/virtual void		Unk_01(void);
+	/*08*/virtual void		Unk_02(void);
 
 	UInt32					unk04;			// 04
 	hkArray<hkpCdBodyPair>	cdPairs;		// 08
@@ -648,15 +671,15 @@ static_assert(sizeof(hkpAllCdBodyPairCollector) == 0x114);
 class hkpPhantom : public hkpWorldObject
 {
 public:
-	virtual UInt8	PhantomType();
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
-	virtual void	Unk_08(void);
-	virtual void	Unk_09(void);
-	virtual void	Unk_0A(void);
-	virtual void	Unk_0B(void);
-	virtual void	Unk_0C(void);
-	virtual void	Unk_0D(void);
+	/*14*/virtual UInt8		PhantomType();
+	/*18*/virtual void		Unk_06(void);
+	/*1C*/virtual void		Unk_07(void);
+	/*20*/virtual void		Unk_08(void);
+	/*24*/virtual void		Unk_09(void);
+	/*28*/virtual void		Unk_0A(void);
+	/*2C*/virtual void		Unk_0B(void);
+	/*30*/virtual void		Unk_0C(void);
+	/*34*/virtual void		Unk_0D(void);
 
 	UInt32			unk8C[6];		// 8C
 };
@@ -676,10 +699,10 @@ static_assert(sizeof(hkpAabbPhantom) == 0xE0);
 class hkpShapePhantom : public hkpPhantom
 {
 public:
-	virtual void	Unk_0E(void);
-	virtual void	Unk_0F(void);
-	virtual void	Unk_10(hkpCdBodyPairCollector *pairCollector, UInt32 arg2);
-	virtual void	GetCdBodyData(hkpCdBodyPairCollector *pairCollector, UInt32 arg2);
+	/*38*/virtual void		CollectCdPoints(hkVector4 *point0, hkEdge *point1, hkpAllCdPointCollector *collector0, hkpAllCdPointCollector *collector1);
+	/*3C*/virtual void		Unk_0F(hkTransform *transform, hkEdge *point1, hkpAllCdPointCollector *collector0, hkpAllCdPointCollector *collector1);
+	/*40*/virtual void		Unk_10(hkpCdBodyPairCollector *pairCollector, UInt32 arg2);
+	/*44*/virtual void		GetCdBodyData(hkpCdBodyPairCollector *pairCollector, UInt32 arg2);
 
 	UInt32				unk0A4[3];		// 0A4
 	hkMotionState		motionState;	// 0B0
@@ -691,7 +714,8 @@ class hkpSimpleShapePhantom : public hkpShapePhantom
 {
 public:
 	hkArray<hkCdBody*>		cdBodies;	// 160
-	UInt32					unk16C;		// 16C
+	UInt8					byte16C;	// 16C
+	UInt8					pad16D[3];	// 16D
 };
 static_assert(sizeof(hkpSimpleShapePhantom) == 0x170);
 
@@ -707,10 +731,10 @@ static_assert(sizeof(hkpCachingShapePhantom) == 0x170);
 class hkpConstraintOwner : public hkReferencedObject
 {
 public:
-	virtual void	Unk_03(void);
-	virtual void	Unk_04(void);
-	virtual void	Unk_05(void);
-	virtual void	Unk_06(void);
+	/*0C*/virtual void		Unk_03(void);
+	/*10*/virtual void		Unk_04(void);
+	/*14*/virtual void		Unk_05(void);
+	/*18*/virtual void		Unk_06(void);
 };
 
 // 6C
@@ -770,7 +794,7 @@ public:
 };
 static_assert(sizeof(hkpWorld) == 0x1B8);
 
-// 354
+// 360
 class ahkpWorld : public hkpWorld
 {
 public:
@@ -779,9 +803,11 @@ public:
 	UInt8			byte305;			// 305
 	UInt8			byte306;			// 306
 	UInt8			byte307;			// 307
-	UInt32			unk308[19];			// 308
+	UInt32			unk308[18];			// 308
+	bhkWorld		*world;				// 350
+	UInt32			unk354[3];			// 354
 };
-static_assert(sizeof(ahkpWorld) == 0x354);
+static_assert(sizeof(ahkpWorld) == 0x360);
 
 // 94
 class bhkWorld : public bhkSerializable
@@ -833,20 +859,20 @@ public:
 	hkVector4		borderSize;		// A0
 	hkVector4		worldTotalSize;	// B0
 	hkVector4		broadPhaseSize;	// C0
+
+	__forceinline static bhkWorldM *GetSingleton() {return *(bhkWorldM**)0x11CA0D8;}
 };
 static_assert(sizeof(bhkWorldM) == 0xD0);
-
-extern bhkWorldM **g_bhkWorldM;
 
 // 0C
 class NiCollisionObject : public NiObject
 {
 public:
-	/*08C*/virtual void		Attach(NiAVObject *obj);
-	/*090*/virtual void		Unk_24(UInt32 arg);
-	/*094*/virtual void		Unk_25(void);
-	/*098*/virtual void		LoadBoundingVolume(UInt32 arg);
-	/*09C*/virtual void		Unk_27(UInt32 version, UInt32 arg1);
+	/*8C*/virtual void		Attach(NiAVObject *obj);
+	/*90*/virtual void		Unk_24(UInt32 arg);
+	/*94*/virtual void		Unk_25(void);
+	/*98*/virtual void		Unk_26(UInt32 arg);
+	/*9C*/virtual void		Unk_27(UInt32 version, UInt32 arg1);
 
 	NiNode			*linkedNode;	// 08
 };
@@ -855,22 +881,22 @@ public:
 class bhkNiCollisionObject : public NiCollisionObject
 {
 public:
-	/*0A0*/virtual void		Unk_28(void);
-	/*0A4*/virtual void		Unk_29(void);
-	/*0A8*/virtual void		Unk_2A(void);
-	/*0AC*/virtual void		Unk_2B(void);
-	/*0B0*/virtual void		Unk_2C(UInt32 moType, UInt32 arg2, UInt32 arg3);	//	arg3 unused?
-	/*0B4*/virtual bool		IsMovable();
-	/*0B8*/virtual void		ProcessCollision(UInt32 arg);
-	/*0BC*/virtual bool		Unk_2F();
-	/*0C0*/virtual void		Unk_30(UInt32 arg);
+	/*A0*/virtual NiVector3	*GetLinearVelocityInGameUnits(NiVector3 *outVel);
+	/*A4*/virtual void		CollisionObjTransformToTargetNode();
+	/*A8*/virtual void		TargetNodeTransformToCollisionObj();
+	/*AC*/virtual void		UpdateVelocity();
+	/*B0*/virtual void		SetMotionType(UInt32 moType, bhkRigidBody *body, bool updateMotion);
+	/*B4*/virtual bool		IsFixedMotion();
+	/*B8*/virtual void		SetTargetNodeTransform(NiTransform *transform);
+	/*BC*/virtual bool		Unk_2F();
+	/*C0*/virtual void		ToggleDebugDisplay(bool toggle);	//	TCG
 
 	enum Flags
 	{
 		kFlag_Active =			1,
 		kFlag_Notify =			4,
 		kFlag_SetLocal =		8,
-		kFlag_DebugDisplay =	0x10,
+		kFlag_DebugDisplay =	0x10,	//	TCG
 		kFlag_UseVelocity =		0x20,
 		kFlag_Reset =			0x40,
 		kFlag_SyncOnUpdate =	0x80,
@@ -878,9 +904,11 @@ public:
 		kFlag_DismemberLimb =	0x800
 	};
 
-	UInt16			flags;			// 0C	0x40 is Update? Callbacks array @ 0x11AFE88
+	UInt16			flags;			// 0C
 	UInt16			word0E;			// 0E
 	bhkWorldObject	*worldObj;		// 10
+
+	//	Callbacks array @ 0x11AFE88
 };
 
 // 14
@@ -918,9 +946,9 @@ public:
 class hkpCdPointCollector
 {
 public:
-	virtual void	Unk_00(void);
-	virtual void	Unk_01(void);
-	virtual void	Unk_02(void);
+	/*00*/virtual void		Unk_00(void);
+	/*04*/virtual void		Unk_01(void);
+	/*08*/virtual void		Unk_02(void);
 
 	float			earlyOutDistance;	// 04
 };
@@ -929,7 +957,7 @@ public:
 class hkpAllCdPointCollector : public hkpCdPointCollector
 {
 public:
-	virtual void	Unk_03(void);
+	/*0C*/virtual void		Unk_03(void);
 
 	UInt32					unk008[2];		// 008
 	hkArray<hkCdPoint>		cdPoints;		// 010
@@ -973,12 +1001,12 @@ public:
 		kState_Projectile
 	};
 
-	virtual UInt32	GetStateType();
-	virtual void	Unk_04(void);
-	virtual void	Unk_05(void);
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
-	virtual void	UpdateVelocity(bhkCharacterController *charCtrl);
+	/*0C*/virtual UInt32	GetStateType();
+	/*10*/virtual void		Unk_04(void);
+	/*14*/virtual void		Unk_05(void);
+	/*18*/virtual void		Unk_06(void);
+	/*1C*/virtual void		Unk_07(void);
+	/*20*/virtual void		UpdateVelocity(bhkCharacterController *charCtrl);
 };
 
 class bhkCharacterState : public hkpCharacterState
@@ -1049,12 +1077,12 @@ public:
 class hkpCharacterProxyListener
 {
 public:
-	virtual void	Unk_00(void);
-	virtual void	Unk_01(void);
-	virtual void	Unk_02(void);
-	virtual void	Unk_03(void);
-	virtual void	Unk_04(void);
-	virtual void	Unk_05(void);
+	/*00*/virtual void		Unk_00(void);
+	/*04*/virtual void		Unk_01(void);
+	/*08*/virtual void		Unk_02(void);
+	/*0C*/virtual void		Unk_03(void);
+	/*10*/virtual void		Unk_04(void);
+	/*14*/virtual void		Unk_05(void);
 };
 
 // 70
@@ -1107,12 +1135,12 @@ public:
 class hkpBoxShape : public hkpConvexShape
 {
 public:
-	virtual void	Unk_0C(void *arg1);
-	virtual void	Unk_0D(hkVector4 *vec);
-	virtual void	GetSupportingVertex(hkVector4 *arg1, hkVector4 *outVertex);
-	virtual void	ConvertVertexIdsToVertices(UInt16 *vtxIDsArr, UInt32 numVertices, hkVector4 *outVertices);
-	virtual UInt32	Unk_10(UInt32 arg1, UInt32 arg2, UInt32 arg3, UInt32 arg4, UInt32 arg5, UInt32 arg6, UInt32 arg7);
-	virtual void	Unk_11(hkVector4 *vec);
+	/*30*/virtual void		Unk_0C(void *arg1);
+	/*34*/virtual void		Unk_0D(hkVector4 *vec);
+	/*38*/virtual void		GetSupportingVertex(hkVector4 *arg1, hkVector4 *outVertex);
+	/*3C*/virtual void		ConvertVertexIdsToVertices(UInt16 *vtxIDsArr, UInt32 numVertices, hkVector4 *outVertices);
+	/*40*/virtual UInt32	Unk_10(UInt32 arg1, UInt32 arg2, UInt32 arg3, UInt32 arg4, UInt32 arg5, UInt32 arg6, UInt32 arg7);
+	/*44*/virtual void		Unk_11(hkVector4 *vec);
 
 	hkVector4		dimensions;	// 20
 };
@@ -1129,12 +1157,12 @@ struct VerticesBlock
 class hkpConvexVerticesShape : public hkpConvexShape
 {
 public:
-	virtual void	Unk_0C(void);
-	virtual void	Unk_0D(void);
-	virtual void	Unk_0E(void);
-	virtual void	Unk_0F(void);
-	virtual void	Unk_10(void);
-	virtual void	Unk_11(void);
+	/*30*/virtual void		Unk_0C(void);
+	/*34*/virtual void		Unk_0D(void);
+	/*38*/virtual void		Unk_0E(void);
+	/*3C*/virtual void		Unk_0F(void);
+	/*40*/virtual void		Unk_10(void);
+	/*44*/virtual void		Unk_11(void);
 
 	float			flt20;			// 20
 	float			flt24;			// 24
@@ -1163,19 +1191,19 @@ static_assert(sizeof(hkpConvexVerticesShape) == 0x70);
 class hkCharControllerShape : public hkpConvexVerticesShape
 {
 public:
-	virtual void	Unk_12(void);
+	/*48*/virtual void		Unk_12(void);
 };
 
 // 40
 class hkpCapsuleShape : public hkpConvexShape
 {
 public:
-	virtual void	Unk_0C(void);
-	virtual void	Unk_0D(void);
-	virtual void	Unk_0E(void);
-	virtual void	Unk_0F(void);
-	virtual void	Unk_10(void);
-	virtual void	Unk_11(void);
+	/*30*/virtual void		Unk_0C(void);
+	/*34*/virtual void		Unk_0D(void);
+	/*38*/virtual void		Unk_0E(void);
+	/*3C*/virtual void		Unk_0F(void);
+	/*40*/virtual void		Unk_10(void);
+	/*44*/virtual void		Unk_11(void);
 
 	NiVector3		point1;		// 20
 	float			radius1;	// 2C
@@ -1223,6 +1251,10 @@ public:
 class bhkBoxShape : public bhkConvexShape
 {
 public:
+	__forceinline bhkBoxShape *Init(NiVector3 *dimensions)
+	{
+		return ThisCall<bhkBoxShape*>(0x8E5100, this, dimensions);
+	}
 };
 
 // 14
@@ -1274,10 +1306,10 @@ struct hkStepInfo
 class bhkCharacterController : public bhkCharacterProxy
 {
 public:
-	virtual void	Unk_31(void);
-	virtual void	Unk_32(void);
-	virtual void	Unk_33(void);
-	virtual void	Unk_34(void);
+	/*C4*/virtual void		Unk_31(void);
+	/*C8*/virtual void		Unk_32(void);
+	/*CC*/virtual void		Unk_33(void);
+	/*D0*/virtual void		Unk_34(void);
 
 	hkpCharacterContext		chrContext;			// 3E0
 	bhkCharacterListener	chrListener;		// 410
@@ -1345,9 +1377,9 @@ static_assert(sizeof(bhkCharacterController) == 0x650);
 class bhkCharacterListenerSpell : public bhkCharacterController
 {
 public:
-	virtual void	Unk_35(void);
-	virtual void	Unk_36(void);
-	virtual void	Unk_37(void);
+	/*D4*/virtual void		Unk_35(void);
+	/*D8*/virtual void		Unk_36(void);
+	/*DC*/virtual void		Unk_37(void);
 
 	UInt32			unk650;		// 650
 };
@@ -1355,10 +1387,10 @@ public:
 class bhkCharacterListenerArrow : public bhkCharacterController
 {
 public:
-	virtual void	Unk_35(void);
-	virtual void	Unk_36(void);
-	virtual void	Unk_37(void);
-	virtual void	Unk_38(void);
+	/*D4*/virtual void		Unk_35(void);
+	/*D8*/virtual void		Unk_36(void);
+	/*DC*/virtual void		Unk_37(void);
+	/*E0*/virtual void		Unk_38(void);
 
 	UInt32			unk650;		// 650
 };
@@ -1366,7 +1398,7 @@ public:
 class ProjectileListener : public bhkCharacterController
 {
 public:
-	virtual void	Unk_35(void);
+	/*D4*/virtual void		Unk_35(void);
 
 	UInt32			unk650;		// 650
 };
@@ -1374,36 +1406,36 @@ public:
 class hkpEntity : public hkpWorldObject
 {
 public:
-	virtual void	Unk_05(void);
+	/*14*/virtual void		Unk_05(void);
 };
 
 class hkpConstraintData : public hkReferencedObject
 {
 public:
-	virtual void	Unk_03(void);
-	virtual void	Unk_04(void);
-	virtual void	Unk_05(void);
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
-	virtual void	Unk_08(void);
-	virtual void	Unk_09(void);
-	virtual void	Unk_0A(void);
-	virtual void	Unk_0B(void);
-	virtual void	Unk_0C(void);
-	virtual void	Unk_0D(void);
-	virtual void	Unk_0E(void);
-	virtual void	Unk_0F(void);
+	/*0C*/virtual void		Unk_03(void);
+	/*10*/virtual void		Unk_04(void);
+	/*14*/virtual void		Unk_05(void);
+	/*18*/virtual void		Unk_06(void);
+	/*1C*/virtual void		Unk_07(void);
+	/*20*/virtual void		Unk_08(void);
+	/*24*/virtual void		Unk_09(void);
+	/*28*/virtual void		Unk_0A(void);
+	/*2C*/virtual void		Unk_0B(void);
+	/*30*/virtual void		Unk_0C(void);
+	/*34*/virtual void		Unk_0D(void);
+	/*38*/virtual void		Unk_0E(void);
+	/*3C*/virtual void		Unk_0F(void);
 };
 
 // 38
 class hkpConstraintInstance : public hkReferencedObject
 {
 public:
-	virtual void	Unk_03(void);
-	virtual void	Unk_04(void);
-	virtual void	Unk_05(void);
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
+	/*0C*/virtual void		Unk_03(void);
+	/*10*/virtual void		Unk_04(void);
+	/*14*/virtual void		Unk_05(void);
+	/*18*/virtual void		Unk_06(void);
+	/*1C*/virtual void		Unk_07(void);
 
 	hkpSimulationIsland		*simIsle;			// 08
 	hkpConstraintData		*constraintData;	// 0C
@@ -1419,29 +1451,29 @@ public:
 class hkpMotion : public hkReferencedObject
 {
 public:
-	/*0C*/virtual void	SetBodyMass(float _bodyMass);
-	/*10*/virtual void	SetBodyMassInv(float _bodyMassInv);
-	/*14*/virtual void	GetInertiaLocal(hkMatrix3x4 *outInertia);
-	/*18*/virtual void	GetInertiaWorld(hkMatrix3x4 *outInertia);
-	/*1C*/virtual void	SetInertiaLocal(hkMatrix3x4 *inInertia);
-	/*20*/virtual void	SetInertiaInvLocal(hkMatrix3x4 *inInertia);
-	/*24*/virtual void	GetInertiaInvLocal(hkMatrix3x4 *outInertia);
-	/*28*/virtual void	GetInertiaInvWorld(hkMatrix3x4 *outInertia);
-	/*2C*/virtual void	SetCenterOfMassInLocal(hkVector4 *centerOfMass);
-	/*30*/virtual void	SetPosition(hkVector4 *position);
-	/*34*/virtual void	SetRotation(hkQuaternion *rotation);
-	/*38*/virtual void	SetPositionAndRotation(hkVector4 *position, hkQuaternion *rotation);
-	/*3C*/virtual void	SetTransform(hkTransform *transform);
-	/*40*/virtual void	SetLinearVelocity(hkVector4 *velocity);
-	/*44*/virtual void	SetAngularVelocity(hkVector4 *velocity);
-	/*48*/virtual void	GetProjectedPointVelocity(hkVector4 *point, hkVector4 *normal, float *outVel, float *outInvVirtMass);
-	/*4C*/virtual void	ApplyLinearImpulse(hkVector4 *impulse);
-	/*50*/virtual void	ApplyPointImpulse(hkVector4 *impulse, hkVector4 *point);
-	/*54*/virtual void	ApplyAngularImpulse(hkVector4 *impulse);
-	/*58*/virtual void	ApplyPointForce(float deltaTime, hkVector4 *force, hkVector4 *point);
-	/*5C*/virtual void	ApplyForce(float deltaTime, hkVector4 *force);
-	/*60*/virtual void	ApplyTorque(float deltaTime, hkVector4 *torque);
-	/*64*/virtual void	GetMotionStateAndVelocitiesAndDeactivationType(hkpMotion *outMotion);
+	/*0C*/virtual void		SetBodyMass(float _bodyMass);
+	/*10*/virtual void		SetBodyMassInv(float _bodyMassInv);
+	/*14*/virtual void		GetInertiaLocal(hkMatrix3x4 *outInertia);
+	/*18*/virtual void		GetInertiaWorld(hkMatrix3x4 *outInertia);
+	/*1C*/virtual void		SetInertiaLocal(hkMatrix3x4 *inInertia);
+	/*20*/virtual void		SetInertiaInvLocal(hkMatrix3x4 *inInertia);
+	/*24*/virtual void		GetInertiaInvLocal(hkMatrix3x4 *outInertia);
+	/*28*/virtual void		GetInertiaInvWorld(hkMatrix3x4 *outInertia);
+	/*2C*/virtual void		SetCenterOfMassInLocal(hkVector4 *centerOfMass);
+	/*30*/virtual void		SetPosition(hkVector4 *position);
+	/*34*/virtual void		SetRotation(hkQuaternion *rotation);
+	/*38*/virtual void		SetPositionAndRotation(hkVector4 *position, hkQuaternion *rotation);
+	/*3C*/virtual void		SetTransform(hkTransform *transform);
+	/*40*/virtual void		SetLinearVelocity(hkVector4 *velocity);
+	/*44*/virtual void		SetAngularVelocity(hkVector4 *velocity);
+	/*48*/virtual void		GetProjectedPointVelocity(hkVector4 *point, hkVector4 *normal, float *outVel, float *outInvVirtMass);
+	/*4C*/virtual void		ApplyLinearImpulse(hkVector4 *impulse);
+	/*50*/virtual void		ApplyPointImpulse(hkVector4 *impulse, hkVector4 *point);
+	/*54*/virtual void		ApplyAngularImpulse(hkVector4 *impulse);
+	/*58*/virtual void		ApplyPointForce(float deltaTime, hkVector4 *force, hkVector4 *point);
+	/*5C*/virtual void		ApplyForce(float deltaTime, hkVector4 *force);
+	/*60*/virtual void		ApplyTorque(float deltaTime, hkVector4 *torque);
+	/*64*/virtual void		GetMotionStateAndVelocitiesAndDeactivationType(hkpMotion *outMotion);
 
 	enum MotionType
 	{
@@ -1488,8 +1520,8 @@ public:
 class hkpKeyframedRigidMotion : public hkpMotion
 {
 public:
-	/*68*/virtual void	Unk_1A(UInt32 arg1, UInt32 arg2);	// Null sub
-	/*6C*/virtual void	SetStoredMotion(hkpMotion *savedMotion);
+	/*68*/virtual void		Unk_1A(UInt32 arg1, UInt32 arg2);	// Null sub
+	/*6C*/virtual void		SetStoredMotion(hkpMotion *savedMotion);
 };
 
 class hkpMaxSizeMotion : public hkpKeyframedRigidMotion
@@ -1500,7 +1532,7 @@ public:
 class hkpFixedRigidMotion : public hkpKeyframedRigidMotion
 {
 public:
-	virtual void	GetPositionAndVelocities(hkpMotion *outMotion);
+	/*70*/virtual void		GetPositionAndVelocities(hkpMotion *outMotion);
 };
 
 class hkpCharacterMotion : public hkpMotion
@@ -1523,7 +1555,7 @@ struct ConstraintContact
 class hkpRigidBody : public hkpEntity
 {
 public:
-	virtual void	Unk_06(void);
+	/*18*/virtual void		Unk_06(void);
 
 	UInt8							byte8C;			// 8C
 	UInt8							pad8D[3];		// 8D
@@ -1541,10 +1573,9 @@ public:
 
 	bool IsMobile() const {return (motion.type & 2) != 0;}
 
-	__forceinline void UpdateMotion()
-	{
-		ThisCall(0xC9C1D0, this);
-	}
+	__forceinline void ResetCollision() {CdeclCall(0xCA8700, this);}
+
+	__forceinline void UpdateMotion() {ThisCall(0xC9C1D0, this);}
 };
 
 // 14
@@ -1557,17 +1588,17 @@ public:
 class bhkRigidBody : public bhkEntity
 {
 public:
-	virtual hkVector4	*GetTranslation(hkVector4 *outTransltn);
-	virtual hkQuaternion	*GetRotations(hkQuaternion *outRot);
-	virtual void	Unk_37(void);
-	virtual void	Unk_38(void);
-	virtual void	Unk_39(void);
-	virtual void	Unk_3A(void);
-	virtual hkVector4	*GetCenterOfMassLoc(hkVector4 *outCoM);
-	virtual hkVector4	*GetCenterOfMass(hkVector4 *outCoM);
-	virtual hkTransform	*GetTransform(hkTransform *outTrnsfrm);
-	virtual void	Unk_3E(void);
-	virtual void	Unk_3F(void);
+	/*D4*/virtual hkVector4	*GetPosition(hkVector4 *outTransltn);
+	/*D8*/virtual hkQuaternion	*GetRotation(hkQuaternion *outRot);
+	/*DC*/virtual void		SetPosition(hkVector4 *position);
+	/*E0*/virtual void		SetRotation(hkQuaternion *rotation);
+	/*E4*/virtual bool		SetMotionType(UInt32 motionType);
+	/*E8*/virtual void		SetPositionAndRotation(hkVector4 *position, hkQuaternion *rotation);
+	/*EC*/virtual hkVector4	*GetCenterOfMassLoc(hkVector4 *outCoM);
+	/*F0*/virtual hkVector4	*GetCenterOfMass(hkVector4 *outCoM);
+	/*F4*/virtual hkTransform	*GetTransform(hkTransform *outTrnsfrm);
+	/*F8*/virtual void		GetShapeSpaceDiagonal(hkDiagonal *resPtr);
+	/*FC*/virtual void		Unk_3F(UInt8 arg);
 
 	UInt32			unk14[2];		// 14
 };
@@ -1583,9 +1614,9 @@ public:
 class hkaRaycastInterface
 {
 public:
-	virtual void	Destroy(bool doFree);
-	virtual void	Unk_01(void);
-	virtual void	Unk_02(void);
+	/*00*/virtual void		Destroy(bool doFree);
+	/*04*/virtual void		Unk_01(void);
+	/*08*/virtual void		Unk_02(void);
 };
 
 // 2C0

@@ -76,7 +76,7 @@ DEFINE_COMMAND_PLUGIN(PlayIdleEx, 1, 1, kParams_OneOptionalIdleForm);
 DEFINE_COMMAND_PLUGIN(GetKillXP, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetKiller, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(KillActorAlt, 1, 3, kParams_OneOptionalObjectRef_TwoOptionalInts);
-DEFINE_COMMAND_ALT_PLUGIN(ReloadEquippedModels, ReloadModels, 1, 0, NULL);
+DEFINE_COMMAND_ALT_PLUGIN(ReloadEquippedModels, ReloadModels, 1, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetPlayedIdle, 1, 0, NULL);
 DEFINE_CMD_COND_PLUGIN(IsIdlePlayingEx, 1, 1, kParams_OneIdleForm);
 DEFINE_COMMAND_PLUGIN(SetWeaponOut, 1, 1, kParams_OneInt);
@@ -672,7 +672,7 @@ bool Cmd_SetCombatDisabled_Execute(COMMAND_ARGS)
 			HOOK_MOD(StartCombat, false);
 		else
 		{
-			s_forceCombatTargetMap.Erase(actor);
+			s_forceCombatTargetMap().Erase(actor);
 			HOOK_MOD(SetCombatTarget, false);
 		}
 		actor->jipActorFlags1 &= ~kHookActorFlag1_CombatAIModified;
@@ -686,12 +686,12 @@ bool Cmd_SetCombatDisabled_Execute(COMMAND_ARGS)
 	}
 	else if (!(actor->jipActorFlags1 & flag))
 	{
-		if (!target) s_forceCombatTargetMap.Erase(actor);
+		if (!target) s_forceCombatTargetMap().Erase(actor);
 		HOOK_MOD(StartCombat, !target);
 		HOOK_MOD(SetCombatTarget, target != NULL);
 		actor->jipActorFlags1 ^= kHookActorFlag1_CombatAIModified;
 	}
-	if (target) s_forceCombatTargetMap[actor] = target;
+	if (target) s_forceCombatTargetMap()[actor] = target;
 	else actor->StopCombat();
 	return true;
 }
@@ -943,7 +943,7 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS)
 	AnimEventCallbacks *scriptsMap;
 	if (tempList.Empty())
 	{
-		scriptsMap = animAction ? &s_animActionEventMap : &s_playGroupEventMap;
+		scriptsMap = animAction ? *s_animActionEventMap : *s_playGroupEventMap;
 		EventCallbackScripts *callbacks;
 		if (addEvnt)
 		{
@@ -963,7 +963,7 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS)
 		return true;
 	}
 	ListNode<TESForm> *iter = tempList.Head();
-	ActorAnimEventCallbacks *eventMap = animAction ? &s_animActionEventMapFl : &s_playGroupEventMapFl;
+	ActorAnimEventCallbacks *eventMap = animAction ? *s_animActionEventMapFl : *s_playGroupEventMapFl;
 	Actor *actor;
 	do
 	{
@@ -1023,10 +1023,10 @@ struct ActorEventInfo
 }
 s_actorEventInfos[] =
 {
-	{&s_healthDamageEventMap, nullptr, &s_hookInfos[kHook_DamageActorValue], kHookActorFlag3_OnHealthDamage},
-	{&s_crippledLimbEventMap, nullptr, &s_hookInfos[kHook_DamageActorValue], kHookActorFlag3_OnCrippledLimb},
-	{&s_fireWeaponEventMap, &s_fireWeaponEventScripts, &s_hookInfos[kHook_RemoveAmmo], kHookActorFlag3_OnFireWeapon},
-	{&s_onHitEventMap, &s_onHitEventScripts, &s_hookInfos[kHook_OnHitEvent], kHookActorFlag3_OnHit}
+	{*s_healthDamageEventMap, nullptr, &s_hookInfos[kHook_DamageActorValue], kHookActorFlag3_OnHealthDamage},
+	{*s_crippledLimbEventMap, nullptr, &s_hookInfos[kHook_DamageActorValue], kHookActorFlag3_OnCrippledLimb},
+	{*s_fireWeaponEventMap, *s_fireWeaponEventScripts, &s_hookInfos[kHook_RemoveAmmo], kHookActorFlag3_OnFireWeapon},
+	{*s_onHitEventMap, *s_onHitEventScripts, &s_hookInfos[kHook_OnHitEvent], kHookActorFlag3_OnHit}
 };
 
 UInt32 s_actorEventType = 0;
@@ -1232,7 +1232,7 @@ bool Cmd_ForceActorDetectionValue_Execute(COMMAND_ARGS)
 	if (detectionValue)
 	{
 		UInt32 *valPtr;
-		if (s_forceDetectionValueMap.Insert(actor, &valPtr))
+		if (s_forceDetectionValueMap().Insert(actor, &valPtr))
 		{
 			actor->jipActorFlags2 |= kHookActorFlag2_ForceDetectionVal;
 			HOOK_MOD(GetDetectionValue, true);
@@ -1240,7 +1240,7 @@ bool Cmd_ForceActorDetectionValue_Execute(COMMAND_ARGS)
 		Coordinate packedVal(oprType != 0, detectionValue);
 		*valPtr = packedVal.xy;
 	}
-	else if (s_forceDetectionValueMap.Erase(actor))
+	else if (s_forceDetectionValueMap().Erase(actor))
 	{
 		actor->jipActorFlags2 &= ~kHookActorFlag2_ForceDetectionVal;
 		HOOK_MOD(GetDetectionValue, false);
@@ -1419,12 +1419,14 @@ __declspec(naked) bool Cmd_KillActorAlt_Execute(COMMAND_ARGS)
 
 bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 {
+	SInt32 targetSlot = -1;
 	Character *character = (Character*)thisObj;
-	if (!character->IsCharacter() || !character->GetRefNiNode() || !character->validBip01Names)
+	if (!character->IsCharacter() || !character->GetRefNiNode() || !character->validBip01Names ||
+		(NUM_ARGS_EX && (!ExtractArgsEx(EXTRACT_ARGS_EX, &targetSlot) || (targetSlot > 19) || (targetSlot == 6))))
 		return true;
 	PlayerCharacter *thePlayer = (character->refID == 0x14) ? (PlayerCharacter*)character : nullptr;
 	ValidBip01Names::Data *slotData = character->validBip01Names->slotData;
-	TESObjectWEAP *weapon = slotData[5].weapon;
+	TESObjectWEAP *weapon = ((targetSlot < 0) || (targetSlot == 5)) ? slotData[5].weapon : nullptr;
 	bool doReEquip = weapon && (weapon->weaponFlags1 & 0x10);
 	if (doReEquip)
 	{
@@ -1432,20 +1434,28 @@ bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 		if (backPack)
 			backPack->m_parent->RemoveObject(backPack);
 	}
-	UInt32 slotIdx;
+	SInt32 slotIdx;
 	NiAVObject *object;
 Do1stPerson:
-	slotIdx = 0;
-	do
+	if (targetSlot < 0)
 	{
-		if ((slotIdx != 6) && (object = slotData->object))
+		slotIdx = 0;
+		do
 		{
-			object->m_parent->RemoveObject(object);
-			slotData->object = nullptr;
+			if ((slotIdx != 6) && (object = slotData->object))
+			{
+				object->m_parent->RemoveObject(object);
+				slotData->object = nullptr;
+			}
+			slotData++;
 		}
-		slotData++;
+		while (++slotIdx < 20);
 	}
-	while (++slotIdx < 20);
+	else if (object = slotData[targetSlot].object)
+	{
+		object->m_parent->RemoveObject(object);
+		slotData[targetSlot].object = nullptr;
+	}
 	if (thePlayer)
 	{
 		slotData = thePlayer->VB01N1stPerson->slotData;
@@ -1960,7 +1970,7 @@ bool GetFactionList(Actor *actor, TESActorBase *actorBase, TempFormList *tmpForm
 	{
 		if (!actor || NOT_ACTOR(actor))
 			return false;
-		actorBase = actor->GetActorBase();
+		actorBase = (TESActorBase*)actor->baseForm;
 	}
 	ListNode<FactionListData> *traverse = actorBase->baseData.factionList.Head();
 	FactionListData	*data;
@@ -2060,10 +2070,10 @@ bool Cmd_SetOnReloadWeaponEventHandler_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt) || NOT_ID(script, Script)) return true;
 	if (addEvnt)
 	{
-		if (s_reloadWeaponEventScripts.Insert(script))
+		if (s_reloadWeaponEventScripts().Insert(script))
 			HOOK_MOD(ReloadWeapon, true);
 	}
-	else if (s_reloadWeaponEventScripts.Erase(script))
+	else if (s_reloadWeaponEventScripts().Erase(script))
 		HOOK_MOD(ReloadWeapon, false);
 	return true;
 }
@@ -2081,10 +2091,10 @@ bool Cmd_SetOnRagdollEventHandler_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt) || NOT_ID(script, Script)) return true;
 	if (addEvnt)
 	{
-		if (s_onRagdollEventScripts.Insert(script))
+		if (s_onRagdollEventScripts().Insert(script))
 			HOOK_MOD(OnRagdoll, true);
 	}
-	else if (s_onRagdollEventScripts.Erase(script))
+	else if (s_onRagdollEventScripts().Erase(script))
 		HOOK_MOD(OnRagdoll, false);
 	return true;
 }
@@ -2437,7 +2447,7 @@ bool Cmd_RemoveAllPerks_Execute(COMMAND_ARGS)
 				for (auto perkIter = perksInfo->perkRanks.Begin(); perkIter; ++perkIter)
 					RemovePerkNPCHook(actor, 0, perkIter.Key(), 0);
 				actor->extraDataList.perksInfo = NULL;
-				s_NPCPerksInfoMap.Erase(actor->refID);
+				s_NPCPerksInfoMap().Erase(actor->refID);
 			}
 		}
 	}

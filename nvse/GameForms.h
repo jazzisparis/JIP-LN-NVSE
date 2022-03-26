@@ -153,7 +153,7 @@ class TESForm : public BaseFormComponent
 {
 public:
 	/*010*/virtual void		Destroy(bool doFree);				// func_00C in GECK ?? I think ??
-	/*014*/virtual void		Unk_05(void);						// Might be set default value (called from constructor)
+	/*014*/virtual void		SetToDefault();						// Might be set default value (called from constructor)
 	/*018*/virtual UInt32	Unk_06(void);
 	/*01C*/virtual bool		Unk_07(void);
 	/*020*/virtual bool		LoadForm(ModInfo * modInfo);		// func_010 in GECK
@@ -170,11 +170,11 @@ public:
 	/*048*/virtual void		MarkAsModified(UInt32 changedFlags);		// enable changed flag?
 	/*04C*/virtual void		MarkAsUnmodified(UInt32 changedFlags);		// disable changed flag?
 	/*050*/virtual UInt32	GetSaveSize(UInt32 changedFlags);	// bytes taken by the delta flags for this form, UNRELIABLE, not (always) overriden
-	/*054*/virtual void		Unk_15(void * arg);					// collect referenced forms?
+	/*054*/virtual void		AppendSaveLoadFormBuffer(void *arg);					// collect referenced forms?
 	/*058*/virtual void		SaveGame(UInt32 changedFlags);		// Used as part of CopyFromBase with LoadGame.
 	/*05C*/virtual void		LoadGame(void * arg);				// load from BGSLoadFormBuffer arg
 	/*060*/virtual void		LoadGame2(UInt32 changedFlags);		// load from TESSaveLoadGame
-	/*064*/virtual void		Unk_19(void * arg);
+	/*064*/virtual void		InitLoadGame(void * arg);
 	/*068*/virtual void		Unk_1A(void * arg0, void * arg1);
 	/*06C*/virtual void		Unk_1B(void * arg0, void * arg1);
 	/*070*/virtual void		Revert(UInt32 changedFlags);		// reset changes in form
@@ -183,15 +183,15 @@ public:
 	/*07C*/virtual bool		Unk_1F(void * arg);
 	/*080*/virtual void		Unk_20(void * arg);
 	/*084*/virtual void		Unk_21(void * arg);
-	/*088*/virtual void		InitItem(void);
-	/*08C*/virtual UInt32	GetTypeID(void);
+	/*088*/virtual void		InitItem();
+	/*08C*/virtual UInt32	GetTypeID();
 	/*090*/virtual void		GetDebugName(String * dst);
-	/*094*/virtual bool		IsQuestItem(void);
+	/*094*/virtual bool		IsPersistentOrQuestItem();
 										// Unk_26 though Unk_36 get or set flag bits
-	/*098*/virtual bool		Unk_26(void);		// 00000040
-	/*09C*/virtual bool		Unk_27(void);		// 00010000
+	/*098*/virtual bool		HasTalkedToPC();		// 00000040
+	/*09C*/virtual bool		GetHavokDeath();		// 00010000
 	/*0A0*/virtual bool		Unk_28(void);		// 00010000
-	/*0A4*/virtual bool		Unk_29(void);		// 00020000
+	/*0A4*/virtual bool		GetNeedToChangeProcess();		// 00020000
 	/*0A8*/virtual bool		Unk_2A(void);		// 00020000
 	/*0AC*/virtual bool		Unk_2B(void);		// 00080000
 	/*0B0*/virtual bool		Unk_2C(void);		// 02000000
@@ -199,12 +199,12 @@ public:
 	/*0B8*/virtual bool		Unk_2E(void);		// 00000200
 	/*0BC*/virtual void		Unk_2F(bool set);	// 00000200
 	/*0C0*/virtual bool		Unk_30(void);		// returns false
-	/*0C4*/virtual void		Unk_31(bool set);	// 00000020 then calls Fn12 MarkAsModified
-	/*0C8*/virtual void		Unk_32(bool set);	// 00000002 with a lot of housekeeping
+	/*0C4*/virtual void		UpdateDeleted(bool set);	// 00000020 then calls Fn12 MarkAsModified
+	/*0C8*/virtual void		SetAltered(bool set);	// 00000002 with a lot of housekeeping
 	/*0CC*/virtual void		SetQuestItem(bool set);	// 00000400 then calls Fn12 MarkAsModified
-	/*0D0*/virtual void		Unk_34(bool set);	// 00000040 then calls Fn12 MarkAsModified
-	/*0D4*/virtual void		Unk_35(bool set);	// 00010000 then calls Fn12 MarkAsModified
-	/*0D8*/virtual void		Unk_36(bool set);	// 00020000
+	/*0D0*/virtual void		SetTalkedToPC(bool set);	// 00000040 then calls Fn12 MarkAsModified
+	/*0D4*/virtual void		SetHavokDeath(bool set);	// 00010000 then calls Fn12 MarkAsModified
+	/*0D8*/virtual void		SetNeedToChangeProcess(bool set);	// 00020000
 	/*0DC*/virtual void		Unk_37(void);		// write esp format
 	/*0E0*/virtual void		readOBNDSubRecord(ModInfo * modInfo);	// read esp format
 	/*0E4*/virtual bool		Unk_39(void);		// Identical to IsBoundObject (3A)
@@ -228,14 +228,6 @@ public:
 	/*12C*/virtual const char	*GetName(void);
 	/*130*/virtual const char	*GetEditorID(void);
 	/*134*/virtual bool		SetEditorID(const char * edid);		// simply returns true at run-time
-	// 4E
-
-	struct EditorData {
-		String		editorID;			// 00
-		UInt32		vcMasterFormID;		// 08 - Version control 1 (looks to be a refID inside the Version Control master)
-		UInt32		vcRevision;			// 0C
-	};
-	// 10
 
 	enum
 	{
@@ -253,13 +245,13 @@ public:
 		//	UInt32	flags;
 	};
 
-	UInt8		typeID;				// 004
-	UInt8		jipFormFlags5;		// 005
-	UInt16		jipFormFlags6;		// 006
-	UInt32		flags;				// 008
+	UInt8		typeID;				// 04
+	UInt8		jipFormFlags5;		// 05
+	UInt16		jipFormFlags6;		// 06
+	UInt32		flags;				// 08
 	union
 	{
-		UInt32		refID;
+		UInt32		refID;			// 0C
 		struct
 		{
 			UInt8	id[3];
@@ -267,32 +259,27 @@ public:
 		};
 	};
 
-#ifdef EDITOR
-	EditorData	editorData;			// +10
-#endif
-	tList<ModInfo> mods;			// 010 ModReferenceList in Oblivion	
-	// 018 / 028
+	tList<ModInfo>	mods;			// 10
 
 	bool IsCreated() const {return modIndex == 0xFF;}
 
-	TESFullName *GetFullName();
-	const char *GetTheName();
+	const char *GetTheName() const;
 
 	// adds a new form to the game (from CloneForm or LoadForm)
 	void DoAddForm(TESForm* newForm, bool bPersist = true, bool record = true) const;
 	// return a new base form which is the clone of this form
 	TESForm *CloneForm(bool bPersist = true) const;
 
-	bool HasScript();
-	bool GetScriptAndEventList(Script **script, ScriptEventList **eventList);
-	bool IsItemPlayable();
-	UInt32 GetItemValue();
-	UInt8 GetOverridingModIdx();
+	bool HasScript() const;
+	bool GetScriptAndEventList(Script **script, ScriptEventList **eventList) const;
+	bool IsItemPlayable() const;
+	UInt32 GetItemValue() const;
+	UInt8 GetOverridingModIdx() const;
 	const char *GetDescriptionText();
 	const char *RefToString();
-	const char *GetModelPath();
+	const char *GetModelPath() const;
 	void UnloadModel();
-	TESLeveledList *GetLvlList();
+	TESLeveledList *GetLvlList() const;
 	void SetJIPFlag(UInt16 jipFlag, bool bSet);
 
 	__forceinline void MarkAsTemporary()
@@ -787,7 +774,7 @@ public:
 
 	FormCountList	formCountList;	// 04
 
-	SInt32 __fastcall GetCountForForm(TESForm *form);
+	SInt32 __fastcall GetCountForForm(TESForm *form) const;
 };
 
 // 00C
@@ -901,7 +888,7 @@ public:
 	UInt32			changedFlags;		// 28
 	tList<FactionListData>	factionList;	// 2C
 
-	char GetFactionRank(TESFaction* faction);
+	char GetFactionRank(TESFaction* faction) const;
 	void SetFactionRank(TESFaction* faction, char rank);
 
 	bool IsFemale() { return flags & kFlags_Female ? true : false; }	// place holder until GECK 
@@ -1211,7 +1198,7 @@ public:
 	UInt32			unk01C;			// 01C
 	UInt32			status;			// 020	bit0 = displayed, bit 1 = completed. 1 and 3 significant. If setting it to 3, quest flags bit1 will be set also.
 
-	SInt32 GetTargetIndex(TESObjectREFR *refr);
+	SInt32 GetTargetIndex(TESObjectREFR *refr) const;
 };
 
 typedef BGSQuestObjective::Target ObjectiveTarget;
@@ -2079,7 +2066,7 @@ public:
 	TESSound					*consumeSound;			// C8
 	TESIcon						iconCC;					// CC
 
-	bool IsPoison();
+	bool IsPoison() const;
 };
 static_assert(sizeof(AlchemyItem) == 0xD8);
 
@@ -2767,15 +2754,15 @@ public:
 	UInt32				recharge;			// 380 maybe recharge
 	UInt32				unk384;				// 384
 
-	bool IsAutomatic() const { return (weaponFlags1 & eFlag_IsAutomatic) != 0; }
+	bool IsAutomatic() const {return (weaponFlags1 & eFlag_IsAutomatic) != 0;}
 	void SetIsAutomatic(bool bAuto)
 	{
 		if (bAuto) weaponFlags1 |= eFlag_IsAutomatic;
 		else weaponFlags1 &= ~eFlag_IsAutomatic;
 	}
-	bool HasScope() const { return (weaponFlags1 & eFlag_HasScope) != 0; }
-	bool IsNonPlayable() { return (weaponFlags1 & eflag_NonPlayable) != 0; }
-	bool IsPlayable() { return !IsNonPlayable(); }
+	bool HasScope() const {return (weaponFlags1 & eFlag_HasScope) != 0;}
+	bool IsNonPlayable() const {return (weaponFlags1 & eflag_NonPlayable) != 0;}
+	bool IsPlayable() {return !IsNonPlayable();}
 	void SetPlayable(bool doset)
 	{
 		if (doset) weaponFlags1 &= ~eflag_NonPlayable;
@@ -2786,8 +2773,9 @@ public:
 	UInt8 AttackAnimation() const;
 	void SetAttackAnimation(UInt32 attackAnim);
 	TESObjectIMOD* GetItemMod(UInt8 which);
-	TESAmmo *GetAmmo();
-	float GetModBonuses(UInt8 modFlags, UInt32 effectID);
+	TESAmmo *GetAmmo() const;
+	float GetModBonuses(UInt8 modFlags, UInt32 effectID) const;
+	TESModelTextureSwap *GetWeaponModel(UInt32 modFlags, Actor *actor) const;
 	UInt32 GetItemModEffect(UInt8 which)	{ which -= 1; return (which < 3) ? effectMods[which] : 0; }
 	float GetItemModValue1(UInt8 which)		{ which -= 1; return (which < 3) ? value1Mod[which] : 0; }
 	float GetItemModValue2(UInt8 which)		{ which -= 1; return (which < 3) ? value2Mod[which] : 0; }
@@ -3475,8 +3463,8 @@ public:
 	BGSLightingTemplate		*lightingTemplate;		// D8
 	UInt32					inheritFlags;			// DC
 
-	bool IsInterior() {return (cellFlags & kCellFlag_IsInterior) != 0;}
-	NiNode* __fastcall Get3DNode(UInt32 index);
+	bool IsInterior() const {return (cellFlags & kCellFlag_IsInterior) != 0;}
+	NiNode* __fastcall Get3DNode(UInt32 index) const;
 	void ToggleNodes(UInt32 nodeBits, UInt8 doHide);
 
 	void RefLockEnter()
@@ -3524,7 +3512,7 @@ struct LODdata
 		UInt8			byte5E;			// 5E
 		UInt8			byte5F;			// 5F
 
-		LODNode *GetNodeByCoord(UInt32 coord);
+		LODNode *GetNodeByCoord(UInt32 coord) const;
 	};
 	static_assert(sizeof(LODNode) == 0x60);
 
@@ -3589,7 +3577,7 @@ public:
 		WCoordXY	cellSECoordinates;	// 0C
 	};	// 010
 
-	typedef NiTPointerMap<BSSimpleList<TESObjectREFR> > RefListPointerMap;
+	typedef NiTPointerMap<tList<TESObjectREFR>> RefListPointerMap;
 	typedef NiTMapBase<ModInfo*, TESWorldSpace::Offset_Data*> OffsetDataMap;
 
 	enum
@@ -3609,41 +3597,42 @@ public:
 		kParentFlag_UseISData =			1 << 5,
 	};
 
-	TESFullName			fullName;			// 18
-	TESTexture			worldMap;			// 24
-	CellPointerMap		*cellMap;			// 30
-	TESObjectCELL		*cell;				// 34
-	UInt32				unk38;				// 38
-	LODdata				*lodData;			// 3C
-	TESClimate			*climate;			// 40
-	TESImageSpace		*imageSpace;		// 44
-	ImpactDataSwap		*impactSwap;		// 48
-	UInt8				worldFlags;			// 4C
-	UInt8				unk4D;				// 4D
-	UInt16				parentFlags;		// 4E
-	RefListPointerMap	pointerMap;			// 50
-	tList<void>			lst60;				// 60
-	tList<void>			lst68;				// 68
-	TESWorldSpace		*parent;			// 70
-	TESWaterForm		*waterFormFirst;	// 74
-	TESWaterForm		*waterFormLast;		// 78
-	float				waterLODHeight;		// 7C
-	MapData				mapData;			// 80
-	float				worldMapScale;		// 90
-	float				worldMapCellX;		// 94
-	float				worldMapCellY;		// 98
-	BGSMusicType		*musicType;			// 9C
-	NiPoint2			min;				// A0
-	NiPoint2			max;				// A8
-	OffsetDataMap		offsetMap;			// B0
-	String				editorID;			// C0
-	float				defaultLandHeight;	// C8
-	float				defaultWaterHeight;	// CC
-	BGSEncounterZone	*encounterZone;		// D0
-	TESTexture			canopyShadow;		// D4
-	TESTexture			waterNoiseTexture;	// E0
+	TESFullName				fullName;			// 18
+	TESTexture				worldMap;			// 24
+	CellPointerMap			*cellMap;			// 30
+	TESObjectCELL			*cell;				// 34
+	UInt32					unk38;				// 38
+	LODdata					*lodData;			// 3C
+	TESClimate				*climate;			// 40
+	TESImageSpace			*imageSpace;		// 44
+	ImpactDataSwap			*impactSwap;		// 48
+	UInt8					worldFlags;			// 4C
+	UInt8					unk4D;				// 4D
+	UInt16					parentFlags;		// 4E
+	RefListPointerMap		pointerMap;			// 50
+	tList<TESObjectREFR>	lst60;				// 60
+	tList<void>				lst68;				// 68
+	TESWorldSpace			*parent;			// 70
+	TESWaterForm			*waterFormFirst;	// 74
+	TESWaterForm			*waterFormLast;		// 78
+	float					waterLODHeight;		// 7C
+	MapData					mapData;			// 80
+	float					worldMapScale;		// 90
+	float					worldMapCellX;		// 94
+	float					worldMapCellY;		// 98
+	BGSMusicType			*musicType;			// 9C
+	NiPoint2				min;				// A0
+	NiPoint2				max;				// A8
+	OffsetDataMap			offsetMap;			// B0
+	String					editorID;			// C0
+	float					defaultLandHeight;	// C8
+	float					defaultWaterHeight;	// CC
+	BGSEncounterZone		*encounterZone;		// D0
+	TESTexture				canopyShadow;		// D4
+	TESTexture				waterNoiseTexture;	// E0
 
-	TESWorldSpace *GetRootMapWorld();
+	TESObjectCELL* __fastcall GetCellAtPos(const NiVector3 &pos) const;
+	TESWorldSpace *GetRootMapWorld() const;
 };
 static_assert(sizeof(TESWorldSpace) == 0xEC);
 
@@ -3867,7 +3856,7 @@ public:
 	{
 		return ThisCall<bool>(0x60D510, this, stageID);
 	}
-	BGSQuestObjective *GetObjective(UInt32 objectiveID);
+	BGSQuestObjective *GetObjective(UInt32 objectiveID) const;
 };
 static_assert(sizeof(TESQuest) == 0x6C);
 
@@ -4351,26 +4340,22 @@ public:
 	UInt8		unk0CD[3];		// OCD
 };	// 0D0
 
-typedef struct {
-	float vector[3];
-} ThreeFloatArray;
-
 class FleePackage : public TESPackage
 {
 public:
-	UInt8			unk080;		// 080
-	UInt8			unk081;		// 081
-	UInt8			pad082[2];	// 082
-	ThreeFloatArray	unk084;		// 084	is array of 3 floats, should be Pos
-	float			unk090;		// 090
-	UInt8			unk094;		// 094
-	UInt8			pad095[3];	// 095
-	tList<TESForm*>	list098;	// 098
-	TESForm			* unk0A0;	// 0A0
-	TESForm			* unk0A4;	// 0A4
-	UInt8			unk0A8;		// 0A8
-	UInt8			unk0A9;		// 0A9
-	UInt8			pad0AA[2];	// 0AA
+	UInt8					bEvaluatePoint;	// 80
+	UInt8					bCombatMode;	// 81
+	UInt8					pad82[2];		// 82
+	NiVector3				fleePoint;		// 84
+	float					fleeTimer;		// 90
+	UInt8					bFleeSucceeded;	// 94
+	UInt8					pad95[3];		// 95
+	tList<TESObjectREFR>	avoidRefs;		// 98
+	TESObjectREFR			*teleportDoor;	// A0
+	TESObjectREFR			*refFleeTo;		// A4
+	UInt8					bKnowsTarget;	// A8
+	UInt8					byteA9;			// A9
+	UInt8					padAA[2];		// AA
 };	// 0AC
 
 // 8C
@@ -4401,8 +4386,8 @@ struct SpectatorThreatInfo
 	UInt32			unk008;		// 008
 	UInt32			unk00C;		// 00C	elapsed tick count
 	UInt32			unk010;		// 010
-	ThreeFloatArray	unk014;		// 014	is array of 3 floats, should be Pos
-	ThreeFloatArray	unk020;		// 020	is array of 3 floats, should be Rot
+	NiVector3		unk014;		// 014	is array of 3 floats, should be Pos
+	NiVector3		unk020;		// 020	is array of 3 floats, should be Rot
 	UInt8			unk02C;		// 02C
 	UInt8			unk02D;		// 02D
 	UInt8			pad[2];		// 02E
@@ -4417,7 +4402,7 @@ public:
 	UInt32			unk08C;		// 08C
 	UInt8			unk090;		// 090
 	UInt8			pad091[3];	// 091
-	ThreeFloatArray	unk094;		// 094	is array of 3 floats, should be Pos
+	NiVector3		unk094;		// 094	is array of 3 floats, should be Pos
 	BSSimpleArray<SpectatorThreatInfo>	arr0A0;	// 0A0
 	// There is an object containing a semaphore at B0/B4
 };	// 0B4
@@ -4427,6 +4412,26 @@ class TESFollowPackageData : public TESPackageData
 public:
 	TESPackage::LocationData* endLocation;
 	float	flt008;
+};
+
+// 24
+class TESUseWeaponPackageData : public TESPackageData
+{
+public:
+	TESPackage::TargetData	*targetData;	// 04
+	UInt32					unk08;			// 08
+	bool					autoHit;		// 0C
+	bool					noDamage;		// 0D
+	bool					crouchReload;	// 0E
+	bool					holdWhenBlocked;// 0F
+	UInt8					byte10;			// 10	1
+	UInt8					byte11;			// 11	0
+	UInt16					word12;			// 12
+	UInt16					useTimes0;		// 14
+	UInt16					useTimes1;		// 16
+	float					flt18;			// 18
+	float					flt1C;			// 1C
+	UInt32					unk20;			// 20
 };
 
 // 108

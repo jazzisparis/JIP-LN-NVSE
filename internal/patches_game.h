@@ -671,14 +671,14 @@ __declspec(naked) bool __stdcall TerminalGetLockedHook(TESObjectREFR *terminalRe
 }
 
 TESWorldSpace *s_audioMarkerLastWorld = NULL;
-Vector<MusicMarker> s_musicMarkerList(0x100);
+TempObject<Vector<MusicMarker>> s_musicMarkerList(0x100);
 
 void __fastcall BuildMusicMarkerList(TESWorldSpace *worldspace, tList<TESObjectREFR> *markerRefList)
 {
 	if (s_audioMarkerLastWorld != worldspace)
 	{
 		s_audioMarkerLastWorld = worldspace;
-		s_musicMarkerList.Clear();
+		s_musicMarkerList().Clear();
 		ListNode<TESObjectREFR> *traverse = markerRefList->Head();
 		TESObjectREFR *markerRef;
 		ExtraAudioMarker *xAudioMarker;
@@ -688,13 +688,13 @@ void __fastcall BuildMusicMarkerList(TESWorldSpace *worldspace, tList<TESObjectR
 			if (!markerRef) continue;
 			xAudioMarker = GetExtraType(&markerRef->extraDataList, AudioMarker);
 			if (xAudioMarker && xAudioMarker->data)
-				s_musicMarkerList.InsertSorted(MusicMarker(markerRef, xAudioMarker->data));
+				s_musicMarkerList().InsertSorted(MusicMarker(markerRef, xAudioMarker->data));
 		}
 		while (traverse = traverse->next);
 	}
 	tList<MusicMarker> *musicMarkers = &g_thePlayer->musicMarkers;
 	MusicMarker *musicMarker;
-	for (auto mkIter = s_musicMarkerList.Begin(); mkIter; ++mkIter)
+	for (auto mkIter = s_musicMarkerList().Begin(); mkIter; ++mkIter)
 	{
 		musicMarker = (MusicMarker*)GameHeapAlloc(8);
 		*musicMarker = mkIter();
@@ -1239,36 +1239,31 @@ __declspec(naked) void IsValidAITargetHook()
 	}
 }
 
-__declspec(naked) TESModelTextureSwap* __fastcall GetWeaponModel(TESObjectWEAP *weapon, Actor *actor, UInt32 modFlags)
+__declspec(naked) TESModelTextureSwap *TESObjectWEAP::GetWeaponModel(UInt32 modFlags, Actor *actor) const
 {
-	static const UInt32 k1stPnModelByMod[] = {0x250, 0x254, 0x258, 0x260, 0x25C, 0x268, 0x264, 0x26C};
+	static const UInt32 kModelByMod[] = {0x3C, 0x270, 0x290, 0x2D0, 0x2B0, 0x2F0, 0x310, 0x330, 0x250, 0x254, 0x258, 0x260, 0x25C, 0x268, 0x264, 0x26C};
 	__asm
 	{
-		push	esi
-		mov		esi, ecx
-		cmp		dword ptr [edx+0xC], 0x14
+		mov		eax, [esp+4]
 		mov		edx, [esp+8]
+		and		eax, 7
+		cmp		dword ptr [edx+0xC], 0x14
 		jz		get1stP
-		test	edx, edx
+		test	al, al
 		jz		get3rdP
 		cmp		byte ptr [ecx+0xF4], 8
 		jnz		get3rdP
 	get1stP:
-		and		edx, 7
-		mov		ecx, k1stPnModelByMod[edx*4]
-		mov		eax, [esi+ecx]
-		test	eax, eax
+		mov		edx, kModelByMod[eax*4+0x20]
+		mov		edx, [ecx+edx]
+		test	edx, edx
 		jz		get3rdP
-		add		eax, 0x30
-		pop		esi
-		retn	4
+		lea		eax, [edx+0x30]
+		retn	8
 	get3rdP:
-		push	1
-		push	dword ptr [esp+0xC]
-		mov		ecx, esi
-		CALL_EAX(0x522DF0)
-		pop		esi
-		retn	4
+		mov		edx, kModelByMod[eax*4]
+		lea		eax, [ecx+edx]
+		retn	8
 	}
 }
 
@@ -1294,10 +1289,9 @@ __declspec(naked) void __fastcall SetWeaponSlotHook(ValidBip01Names *vbp01Names,
 		CALL_EAX(0x4AAFF0)
 		mov		ecx, [esp+8]
 		mov		[esi+0x7C], ecx
-		movzx	edx, byte ptr [esp+0xC]
-		push	edx
-		mov		edx, [esi+0x2B0]
-		call	GetWeaponModel
+		push	dword ptr [esi+0x2B0]
+		push	dword ptr [esp+0x10]
+		call	TESObjectWEAP::GetWeaponModel
 		mov		[esi+0x80], eax
 	done:
 		pop		esi
@@ -1322,8 +1316,7 @@ __declspec(naked) void InitWornObjectHook()
 		jz		done
 		call	GetEntryDataModFlagsHook
 	done:
-		movzx	edx, al
-		push	edx
+		push	eax
 		push	dword ptr [ebp+0x10]
 		mov		ecx, [ebp+0xC]
 		call	SetWeaponSlotHook
@@ -1354,19 +1347,18 @@ __declspec(naked) void PickWeaponModelHook()
 		jz		doCall
 		call	GetEntryDataModFlagsHook
 	doCall:
-		movzx	edx, al
 		mov		ecx, [ebp-8]
 		test	ecx, ecx
 		jz		noBip01
-		push	edx
+		push	eax
 		push	dword ptr [ebp+8]
 		CALL_EAX(0x4AB750)
 		retn
 	noBip01:
-		push	edx
-		mov		edx, [ebp-0x30]
+		push	dword ptr [ebp-0x30]
+		push	eax
 		mov		ecx, [ebp+8]
-		call	GetWeaponModel
+		call	TESObjectWEAP::GetWeaponModel
 		mov		[ebp-0x1C], eax
 		retn
 	}
@@ -1627,7 +1619,7 @@ Actor* __fastcall GetNearestLivingAlly(Actor *actor)
 		ally = *iter;
 		if (!ally || (ally == actor) || ally->GetDead() || ThisCall<bool>(0x8A67F0, ally))
 			continue;
-		distance = GetDistance3D(actor, ally);
+		distance = Point3Distance(actor->position, ally->position);
 		if (distance > minDistance)
 			continue;
 		minDistance = distance;
@@ -2119,14 +2111,14 @@ __declspec(naked) void __fastcall LoadIncidentalSoundIDHook(ModInfo *modInfo, in
 }
 
 typedef Vector<MediaSet*, 4> MediaSetArray;
-UnorderedMap<ListNode<MediaSet>*, MediaSetArray> s_pickMediaSetMap(0x40);
+TempObject<UnorderedMap<ListNode<MediaSet>*, MediaSetArray>> s_pickMediaSetMap(0x40);
 
 MediaSet* __stdcall PickMediaSetHook(ListNode<MediaSet> *listHead)
 {
 	if (!listHead->next)
 		return listHead->data;
 	MediaSetArray *msArr;
-	s_pickMediaSetMap.Insert(listHead, &msArr);
+	s_pickMediaSetMap().Insert(listHead, &msArr);
 	if (msArr->Empty())
 	{
 		do {
@@ -2138,7 +2130,7 @@ MediaSet* __stdcall PickMediaSetHook(ListNode<MediaSet> *listHead)
 	return msArr->Pop();
 }
 
-Vector<TESLoadScreen*> s_locationLoadScreens, s_genericLoadScreens;
+TempObject<Vector<TESLoadScreen*>> s_locationLoadScreens, s_genericLoadScreens;
 
 __declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadingMenu, int EDX, BSSimpleArray<TESLoadScreen*> *results)
 {
@@ -2160,8 +2152,8 @@ __declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadin
 		jnz		doGeneric
 		test	eax, eax
 		jz		doGeneric
-		mov		esi, s_locationLoadScreens.data
-		mov		edi, s_locationLoadScreens.numItems
+		mov		esi, s_locationLoadScreens
+		mov		edi, s_locationLoadScreens+4
 		ALIGN 16
 	iter1Head:
 		push	dword ptr [esp]
@@ -2192,10 +2184,10 @@ __declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadin
 		cmp		dword ptr [eax+8], 0
 		jnz		done
 	doGeneric:
-		mov		edi, s_genericLoadScreens.numItems
+		mov		edi, s_genericLoadScreens+4
 		test	edi, edi
 		jz		done
-		mov		esi, s_genericLoadScreens.data
+		mov		esi, s_genericLoadScreens
 		ALIGN 16
 	iter2Head:
 		mov		eax, [esi]
@@ -2252,11 +2244,18 @@ void __fastcall DistributeWeaponMods(Actor *actor)
 	TESObjectWEAP *weapon = (TESObjectWEAP*)weaponInfo->type;
 	if ((weapon->eWeaponType > 9) || (weapon->weaponFlags1 & 0xA0))
 		return;
-	UInt8 modFlags = weapon->itemMod[0] != NULL;
-	if (weapon->itemMod[1])
-		modFlags |= 2;
-	if (weapon->itemMod[2])
-		modFlags |= 4;
+	UInt8 modFlags;
+	__asm
+	{
+		mov		eax, weapon
+		movdqu	xmm0, xmmword ptr [eax+0x350]
+		xorps	xmm1, xmm1
+		pcmpeqd	xmm1, xmm0
+		movmskps	eax, xmm1
+		not		al
+		and		al, 7
+		mov		modFlags, al
+	}
 	if (!modFlags)
 		return;
 	UInt32 chance = actor->GetLevel() * s_uWMChancePerLevel;
@@ -2293,7 +2292,7 @@ const UInt8 kValidEntryPoints[] =
 	15, 0, 0, 0, 16, 17, 0, 0, 18, 0, 0, 0, 0, 0, 19, 0, 0, 0, 20, 0, 21, 22, 0, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 24, 0
 };
 
-Vector<BGSPerk*> s_validNPCPerks(0x40), s_validNPCTraits(0x20), s_NPCPerksPick(0x40);
+TempObject<Vector<BGSPerk*>> s_validNPCPerks(0x40), s_validNPCTraits(0x20), s_NPCPerksPick(0x40);
 
 void BuildValidNPCPerks()
 {
@@ -2306,7 +2305,7 @@ void BuildValidNPCPerks()
 	do
 	{
 		if (!(perk = perkIter->data) || perk->entries.Empty() || !perk->data.isPlayable || perk->data.isHidden)
-			goto isInvalid;
+			continue;
 		auto entryIter = perk->entries.Head();
 		isValid = 0;
 		do
@@ -2340,8 +2339,8 @@ void BuildValidNPCPerks()
 		if (isValid)
 		{
 			if (perk->data.isTrait)
-				s_validNPCTraits.Append(perk);
-			else s_validNPCPerks.Append(perk);
+				s_validNPCTraits().Append(perk);
+			else s_validNPCPerks().Append(perk);
 		}
 	isInvalid:
 		continue;
@@ -2403,7 +2402,7 @@ struct NPCPerksInfo
 	}
 };
 
-UnorderedMap<UInt32, NPCPerksInfo> s_NPCPerksInfoMap(0x80);
+TempObject<UnorderedMap<UInt32, NPCPerksInfo>> s_NPCPerksInfoMap(0x80);
 bool s_NPCPerksAutoAdd = false;
 
 __declspec(naked) bool __fastcall DestroyActorHook(Actor *actor)
@@ -2430,33 +2429,33 @@ NPCPerksInfo* __fastcall AddStartingPerks(Actor *actor, NPCPerksInfo *perksInfo)
 {
 	if (s_NPCPerksAutoAdd && IS_ID(actor, Character))
 	{
-		if (!perksInfo && !s_NPCPerksInfoMap.Insert(actor->refID, &perksInfo))
+		if (!perksInfo && !s_NPCPerksInfoMap().Insert(actor->refID, &perksInfo))
 			perksInfo->Reset();
-		perksInfo->perkRanks.Emplace(s_validNPCTraits[GetRandomInt(s_validNPCTraits.Size())], 1);
+		perksInfo->perkRanks.Emplace(s_validNPCTraits()[GetRandomInt(s_validNPCTraits().Size())], 1);
 		UInt32 level = actor->GetLevel();
 		if (level >= 3)
 		{
-			s_NPCPerksPick.Clear();
+			s_NPCPerksPick().Clear();
 			BGSPerk *perk;
 			UInt8 minLevel = (level * 3) >> 1;
-			for (auto rstIter = s_validNPCPerks.Begin(); rstIter; ++rstIter)
+			for (auto rstIter = s_validNPCPerks().Begin(); rstIter; ++rstIter)
 			{
 				perk = *rstIter;
 				if (perk->data.minLevel > minLevel) continue;
 				for (UInt8 ranks = perk->data.numRanks; ranks; ranks--)
-					s_NPCPerksPick.Append(perk);
+					s_NPCPerksPick().Append(perk);
 			}
-			UInt32 size = s_NPCPerksPick.Size();
+			UInt32 size = s_NPCPerksPick().Size();
 			if (size)
 			{
 				if (level >= 30) level = 10;
 				else level /= 3;
 				if (level < size)
-					s_NPCPerksPick.Shuffle();
+					s_NPCPerksPick().Shuffle();
 				else level = size;
 				do
 				{
-					perksInfo->perkRanks[s_NPCPerksPick[--level]]++;
+					perksInfo->perkRanks[s_NPCPerksPick()[--level]]++;
 				}
 				while (level);
 			}
@@ -2464,7 +2463,7 @@ NPCPerksInfo* __fastcall AddStartingPerks(Actor *actor, NPCPerksInfo *perksInfo)
 	}
 	if (actor->isTeammate && !g_thePlayer->perkRanksTM.Empty())
 	{
-		if (!perksInfo && !s_NPCPerksInfoMap.Insert(actor->refID, &perksInfo))
+		if (!perksInfo && !s_NPCPerksInfoMap().Insert(actor->refID, &perksInfo))
 			perksInfo->Reset();
 		auto perkIter = g_thePlayer->perkRanksTM.Head();
 		PerkRank *perkRank;
@@ -2525,7 +2524,7 @@ void __fastcall SetPerkRankNPCHook(Actor *actor, int EDX, BGSPerk *perk, UInt8 n
 	NPCPerksInfo *perksInfo = actor->extraDataList.perksInfo;
 	if (!perksInfo)
 	{
-		if (!s_NPCPerksInfoMap.Insert(actor->refID, &perksInfo))
+		if (!s_NPCPerksInfoMap().Insert(actor->refID, &perksInfo))
 			perksInfo->Reset();
 		AddStartingPerks(actor, perksInfo);
 	}
@@ -2617,7 +2616,7 @@ void __fastcall RemovePerkNPCHook(Actor *actor, int EDX, BGSPerk *perk, bool for
 	if (perksInfo->perkRanks.Empty())
 	{
 		actor->extraDataList.perksInfo = nullptr;
-		s_NPCPerksInfoMap.Erase(actor->refID);
+		s_NPCPerksInfoMap().Erase(actor->refID);
 	}
 }
 
@@ -3751,7 +3750,7 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		cvtsd2ss	xmm3, xmm1
 		mov		eax, [ecx+0x10]
 		movss	[eax+0x24], xmm3
-		shufps	xmm0, xmm1, 0x44
+		unpcklpd	xmm0, xmm1
 		movaps	hourAndDays, xmm0
 		retn	4
 	}
@@ -3767,36 +3766,20 @@ __declspec(naked) bool __fastcall ModHardcoreNeedsHook(PlayerCharacter *thePlaye
 		cmp		s_hardcoreNeedsFix, 0
 		jz		tracking
 		add		ecx, 0x49C
-		xor		edx, edx
+		movups	xmm0, [eax]
+		movups	xmm1, [ecx]
+		addps	xmm0, xmm1
 		xorps	xmm1, xmm1
-		cmp		[ecx], edx
-		jz		FOD
-		movss	xmm0, [ecx]
-		mov		[ecx], edx
-		addss	xmm0, [eax]
-		maxss	xmm0, xmm1
-		movss	[eax], xmm0
-	FOD:
-		cmp		[ecx+4], edx
-		jz		SLP
-		movss	xmm0, [ecx+4]
-		mov		[ecx+4], edx
-		addss	xmm0, [eax+4]
-		maxss	xmm0, xmm1
-		movss	[eax+4], xmm0
-	SLP:
-		cmp		[ecx+8], edx
-		jz		tracking
-		movss	xmm0, [ecx+8]
-		mov		[ecx+8], edx
-		addss	xmm0, [eax+8]
-		maxss	xmm0, xmm1
+		maxps	xmm0, xmm1
+		movq	qword ptr [eax], xmm0
+		unpckhps	xmm0, xmm0
 		movss	[eax+8], xmm0
+		movq	qword ptr [ecx], xmm1
+		movss	[ecx+8], xmm1
 	tracking:
 		test	s_serializedFlags, kSerializedFlag_NoHardcoreTracking
-		jz		done
-		mov		byte ptr [eax+0x865], 1
-	done:
+		setnz	dl
+		or		[eax+0x865], dl
 		test	byte ptr [eax+0xAC], 4
 		setnz	al
 		retn	4
@@ -3971,11 +3954,10 @@ __declspec(naked) void DoOperatorHook()
 	}
 }
 
-UnorderedMap<const char*, UInt32> s_optionalHacks({{"bIgnoreDTDRFix", 1}, {"bEnableFO3Repair", 2}, {"bEnableBigGunsSkill", 3},
-	{"bProjImpactDmgFix", 4}, {"bGameDaysPassedFix", 5}, {"bHardcoreNeedsFix", 6}, {"bNoFailedScriptLocks", 7}, {"bDoublePrecision", 8},
-	{"bQttSelectShortKeys", 9}, {"bFO3WpnDegradation", 11}, {"bLocalizedDTDR", 12}, {"bVoiceModulationFix", 13}, {"bSneakBoundingBoxFix", 14},
-	{"bEnableNVACAlerts", 15}, {"bLoadScreenFix", 16}, {"bNPCWeaponMods", 17}, {"uNPCPerks", 18}, {"bCreatureSpreadFix", 19},
-	{"uWMChancePerLevel", 20}, {"uWMChanceMin", 21}, {"uWMChanceMax", 22}});
+TempObject<UnorderedMap<const char*, UInt32>> s_optionalHacks(std::initializer_list<MappedPair<const char*, UInt32>>({{"bIgnoreDTDRFix", 1}, {"bEnableFO3Repair", 2},
+	{"bEnableBigGunsSkill", 3}, {"bProjImpactDmgFix", 4}, {"bGameDaysPassedFix", 5}, {"bHardcoreNeedsFix", 6}, {"bNoFailedScriptLocks", 7}, {"bDoublePrecision", 8},
+	{"bQttSelectShortKeys", 9}, {"bFO3WpnDegradation", 11}, {"bLocalizedDTDR", 12}, {"bVoiceModulationFix", 13}, {"bSneakBoundingBoxFix", 14}, {"bEnableNVACAlerts", 15},
+	{"bLoadScreenFix", 16}, {"bNPCWeaponMods", 17}, {"uNPCPerks", 18}, {"bCreatureSpreadFix", 19}, {"uWMChancePerLevel", 20}, {"uWMChanceMin", 21}, {"uWMChanceMax", 22}}));
 
 bool s_bigGunsSkill = false, s_failedScriptLocks = false, s_NVACAlerts = false, s_NPCWeaponMods = false, s_NPCPerks = false;
 UInt32 s_NVACAddress = 0;
@@ -4101,7 +4083,7 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			if (!HOOK_SET(GetSuitableLoadScreens, bEnable))
 				return false;
 			HOOK_SET(PickLoadScreen, bEnable);
-			if (bEnable && s_locationLoadScreens.Empty())
+			if (bEnable && s_locationLoadScreens().Empty())
 			{
 				ListNode<TESLoadScreen> *lscrIter = g_dataHandler->loadScreenList.Head();
 				TESLoadScreen *loadScreen;
@@ -4110,8 +4092,8 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 					loadScreen = lscrIter->data;
 					if (!loadScreen) continue;
 					if (loadScreen->locations.Empty())
-						s_genericLoadScreens.Append(loadScreen);
-					else s_locationLoadScreens.Append(loadScreen);
+						s_genericLoadScreens().Append(loadScreen);
+					else s_locationLoadScreens().Append(loadScreen);
 				}
 				while (lscrIter = lscrIter->next);
 			}
@@ -4156,7 +4138,7 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 	}
 }
 
-UnorderedMap<const char*, FontInfo*> s_fontInfosMap;
+TempObject<UnorderedMap<const char*, FontInfo*>> s_fontInfosMap;
 char *s_extraFontsPaths[80] = {NULL};
 
 __declspec(naked) void InitFontManagerHook()
@@ -4250,7 +4232,7 @@ __declspec(naked) void InitFontManagerHook()
 
 bool ProcessCustomINI()
 {
-	if (s_INISettingsMap.Empty()) InitSettingMaps();
+	if (s_INISettingsMap().Empty()) InitSettingMaps();
 	char customINIPath[MAX_PATH];
 	memcpy(StrCopy(customINIPath, (char*)0x1202FA0), "FalloutCustom.ini", 18);
 	if (FileExists(customINIPath))
@@ -4271,7 +4253,7 @@ bool ProcessCustomINI()
 				*endPtr = ':';
 				StrCopy(endPtr + 1, currName);
 				currPair += pairSize;
-				setting = s_INISettingsMap.Get(settingName);
+				setting = s_INISettingsMap().Get(settingName);
 				if (!setting) continue;
 				switch (*settingName | 0x20)
 				{
@@ -4301,7 +4283,7 @@ bool ProcessCustomINI()
 	return CdeclCall<bool>(0x4DA570);
 }
 
-UnorderedSet<const char*> s_overrideBSAFiles;
+TempObject<UnorderedSet<const char*>> s_overrideBSAFiles;
 
 __declspec(naked) BSArchive* __cdecl LoadBSAFileHook(const char *filename, short arg2, bool isOverride)
 {
@@ -4469,6 +4451,12 @@ void InitGamePatches()
 	//	AdjustExplosionRadius perk entry point affects NPCs
 	SAFE_WRITE_BUF(0x9ACA23, "\x8B\x8A\xFC\x00\x00\x00\x89\x4D\xE8\x85\xC9\x74\x4B\x8B\x01\x81\xB8\x00\x01\x00\x00\x60\x03\x8D\x00\x75\x3D\x8D\x45\xF0\x50\xFF\xB2\xF8\x00\x00\x00\x51\x6A\x48\xE8\xA0\x8E\xC3\xFF\x83\xC4\x10\xE9\xB5\x00\x00\x00");
 
+	//	Make TESObjectREFR::GetActivationIsCrime return 0 for unlocked teleport doors linked to public cells
+	WriteRelJump(0x579942, 0x579AB7);
+
+	//	Update fixed-collision when changing position/rotation
+	SafeWrite8(0xC65B59, 0xEB);
+
 	//	Runtime script compiler recognize NVSE var types
 	SafeWrite32(0x118CBF4, (UInt32)&s_varTypeNameTokens);
 	SafeWrite32(0x118CBCC, (UInt32)&s_varTypeNameTokens[10]);
@@ -4488,9 +4476,6 @@ void InitGamePatches()
 	SAFE_WRITE_BUF(0x601C30, "\x8B\x41\x04\x85\xC0\x74\x01\xC3\x81\xE9\xD8\x00\x00\x00\xF7\x01\x01\x00\x00\x00\xB8\x48\x3E\x1D\x01\xB9\x1C\x27\x1D\x01\x0F\x45\xC1\x8B\x00\xC3");
 	SafeWrite32(0x104A1BC, (UInt32)SetNPCModelHook);
 	SafeWrite8(0x40F75B, 0x18);
-
-	/*SafeWrite8(0x484E02, 0x2C);
-	SafeWrite8(0x484CA4, 0x2C);*/
 
 	SafeWrite32(0x9ED3F8, (UInt32)&s_moveAwayDistance);
 	SafeWrite32(0x9ED528, (UInt32)&s_moveAwayDistance);
@@ -4552,6 +4537,7 @@ void InitGamePatches()
 	SafeWrite8(0xA081A8, 6);
 	SafeWrite32(0xA08718, (UInt32)ProcessGradualSetFloatHook);
 	SafeWrite32(0xA0871C, (UInt32)ProcessGradualSetFloatHook);
+	SAFE_WRITE_BUF(0x87A12A, "\x31\xD2\x66\x89\x50\x26\x89\x50\x28\xC9\xC2\x08\x00");
 	WritePushRetRelJump(0x454576, 0x454580, (UInt32)CloudsFixHook);
 	WriteRelCall(0x9D10F3, (UInt32)ReactionCooldownCheckHook);
 	WritePushRetRelJump(0x9F50C4, 0x9F50E7, (UInt32)IsValidAITargetHook);
@@ -4567,6 +4553,7 @@ void InitGamePatches()
 	WriteRelCall(0x9AE68C, (UInt32)SetExplosionLightFadeHook);
 	WriteRelCall(0x89DC0E, (UInt32)KillChallengeFixHook);
 	WriteRelCall(0x72880D, (UInt32)IsDisposableWeaponHook);
+	//SafeWrite16(0x8EC59B, 0x53EB);
 	WriteRelJump(0x984156, (UInt32)DeathResponseFixHook);
 	SAFE_WRITE_BUF(0x9EE367, "\x8B\x8A\xB0\x00\x00\x00\x83\xB9\x08\x01\x00\x00\x02\x0F\x84\x82\x00\x00\x00\xEB\x41");
 	SafeWrite16(0x54E421, 0x1EEB);
@@ -4647,10 +4634,10 @@ void InitGamePatches()
 		if (dirIter.IsFile())
 		{
 			memcpy(StrCopy(dataPath + 5, *dirIter) - 8, "bsa", 4);
-			s_overrideBSAFiles.Insert(dataPath);
+			s_overrideBSAFiles().Insert(dataPath);
 		}
 	}
-	if (!s_overrideBSAFiles.Empty())
+	if (!s_overrideBSAFiles().Empty())
 		WriteRelCall(0x463855, (UInt32)LoadBSAFileHook);
 
 	lines = GetPrivateProfileSection("GamePatches", buffer, 0x10000, "Data\\NVSE\\plugins\\jip_nvse.ini");
@@ -4659,7 +4646,7 @@ void InitGamePatches()
 	{
 		lines -= size = StrLen(dataPtr) + 1;
 		delim = GetNextToken(dataPtr, '=');
-		index = s_optionalHacks.Get(dataPtr);
+		index = s_optionalHacks().Get(dataPtr);
 		dataPtr += size;
 		if (!index) continue;
 		if (index >= 20)
@@ -4730,6 +4717,7 @@ void DeferredInit()
 	g_gameMonth = timeGlobals->month;
 	g_gameDay = timeGlobals->day;
 	g_gameHour = timeGlobals->hour;
+	g_timeScale = timeGlobals->timeScale;
 	g_capsItem = (TESObjectMISC*)LookupFormByRefID(0xF);
 	g_getHitIMOD = (TESImageSpaceModifier*)LookupFormByRefID(0x162);
 	g_explosionInFaceIMOD = (TESImageSpaceModifier*)LookupFormByRefID(0x166);
@@ -4801,7 +4789,7 @@ void DeferredInit()
 	avInfo->fullName.name = avInfo->avName;
 	avInfo->callback4C = (void*)0x643BD0;
 
-	s_LIGH_EDID = "LIGH_EDID";
+	s_LIGH_EDID() = "LIGH_EDID";
 
 	UInt8 cccIdx = g_dataHandler->GetModIndex("JIP Companions Command & Control.esp");
 	if (cccIdx != 0xFF)

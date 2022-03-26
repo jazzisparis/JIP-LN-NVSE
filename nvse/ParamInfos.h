@@ -1787,3 +1787,26 @@ ParamInfo kParams_TwoDoubles[] =
 	{"Double", kParamType_Double, 0},
 	{"Double", kParamType_Double, 0}
 };
+
+ParamInfo kParams_OneString_SixFloats_OneOptionalFloat[] =
+{
+	{"String", kParamType_String, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 1}
+};
+
+ParamInfo kParams_TwoStrings_FiveFloats[] =
+{
+	{"String", kParamType_String, 0},
+	{"String", kParamType_String, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0}
+};

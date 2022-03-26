@@ -109,7 +109,7 @@ void BaseExtraList::DebugDump() const
 {
 	PrintDebug("\nBaseExtraList Dump:");
 	Console_Print("BaseExtraList Dump:");
-	s_debug.Indent();
+	s_debug().Indent();
 	if (m_data)
 	{
 		char dataStr[0x20];
@@ -126,5 +126,5 @@ void BaseExtraList::DebugDump() const
 		PrintDebug("No data in list");
 		Console_Print("No data in list");
 	}
-	s_debug.Outdent();
+	s_debug().Outdent();
 }

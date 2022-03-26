@@ -411,13 +411,14 @@ public:
 	UInt8										saveMods[255];			// 044
 	UInt8										loadedMods[255];		// 143
 	UInt16										pad242;					// 242
-	UInt32										flg244;					// 244 bit 6 block updating player position/rotation from save, bit 2 set during save
+	UInt32										flags;					// 244 bit 6 block updating player position/rotation from save, bit 2 set during save
 	UInt8										formVersion;			// 248
 	UInt8										pad249[3];				// 249
+
+	__forceinline static BGSSaveLoadGame *GetSingleton() {return *(BGSSaveLoadGame**)0x11DDF38;}
 };
 static_assert(sizeof(BGSSaveLoadGame) == 0x24C);
 
-#if RUNTIME
 class SaveGameManager
 {
 public:
@@ -437,24 +438,26 @@ public:
 	tList<SaveGameData>		* saveList;		// 00
 	UInt32					numSaves;		// 04
 	UInt32					unk08;			// 08
-	UInt8					unk0C;			// 0C	flag for either opened or writable or useSeparator (|)
-	UInt8					unk0D;
-	UInt8					unk0E;
-	UInt8					unk0F;
-/*
-	const char				* unk10;		// 10 name of most recently loaded/saved game?
-	UInt32					unk14;			// 14 init to -1
-	UInt8					unk18;			// 18
-	UInt8					pad19[3];
-	UInt8					unk20;			// 20 init to 1
-	UInt8					unk21;
-	UInt8					pad22[2];
-	UInt32					unk24;			// 24
-	UInt32					unk28;			// 28
-*/
+	UInt8					byte0C;			// 0C	flag for either opened or writable or useSeparator (|)
+	UInt8					byte0D;
+	UInt8					byte0E;
+	UInt8					byte0F;
+	UInt8					byte10;
+	UInt8					byte11;
+	UInt8					pad12[2];
+	UInt32					unk14;
+	UInt32					unk18;
+	UInt8					byte1C;
+	UInt8					pad1D[3];
+	UInt32					unk20;
+	UInt8					byte24;
+	UInt8					byte25;
+	UInt8					byte26;
+	UInt8					pad27;
+	UInt32					unk28;
+	UInt32					unk2C;
+	String					saveName;
 };
-
-#endif
 
 enum Coords
 {

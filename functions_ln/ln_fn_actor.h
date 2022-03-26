@@ -132,11 +132,11 @@ bool Cmd_CopyFaceGenFrom_Execute(COMMAND_ARGS)
 		TESNPC *destNPC = (TESNPC*)thisObj->baseForm;
 		if (srcNPC)
 		{
-			if (!s_appearanceUndoMap.HasKey(destNPC))
+			if (!s_appearanceUndoMap().HasKey(destNPC))
 			{
 				AppearanceUndo *aprUndo = (AppearanceUndo*)malloc(sizeof(AppearanceUndo));
 				new (aprUndo) AppearanceUndo(destNPC);
-				s_appearanceUndoMap[destNPC] = aprUndo;
+				s_appearanceUndoMap()[destNPC] = aprUndo;
 			}
 			destNPC->SetSex(srcNPC->baseData.flags);
 			destNPC->SetRace(srcNPC->race.race);
@@ -144,7 +144,7 @@ bool Cmd_CopyFaceGenFrom_Execute(COMMAND_ARGS)
 		}
 		else
 		{
-			auto aprUndo = s_appearanceUndoMap.Find(destNPC);
+			auto aprUndo = s_appearanceUndoMap().Find(destNPC);
 			if (!aprUndo) return true;
 			aprUndo->Undo(destNPC);
 			aprUndo->Destroy();
@@ -231,7 +231,7 @@ bool Cmd_GetBaseFactionRank_Execute(COMMAND_ARGS)
 	if (!actorBase)
 	{
 		if (!thisObj || NOT_ACTOR(thisObj)) return true;
-		actorBase = ((Actor*)thisObj)->GetActorBase();
+		actorBase = (TESActorBase*)thisObj->baseForm;
 	}
 	*result = actorBase->baseData.GetFactionRank(faction);
 	return true;
@@ -246,7 +246,7 @@ bool Cmd_SetBaseFactionRank_Execute(COMMAND_ARGS)
 	if (!actorBase)
 	{
 		if (!thisObj || NOT_ACTOR(thisObj)) return true;
-		actorBase = ((Actor*)thisObj)->GetActorBase();
+		actorBase = (TESActorBase*)thisObj->baseForm;
 	}
 	if (rank < -1) rank = -1;
 	actorBase->baseData.SetFactionRank(faction, rank);

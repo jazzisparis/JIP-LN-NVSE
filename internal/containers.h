@@ -190,7 +190,7 @@ template <typename T_Data> class LinkedList
 
 public:
 	LinkedList() : head(nullptr), tail(nullptr) {}
-	LinkedList(std::initializer_list<T_Data> inList) : head(nullptr), tail(nullptr) {AppendList(inList);}
+	LinkedList(std::initializer_list<T_Data> &&inList) : head(nullptr), tail(nullptr) {AppendList(std::move(inList));}
 	~LinkedList() {Clear();}
 
 	bool Empty() const {return !head;}
@@ -239,7 +239,7 @@ public:
 		return data;
 	}
 
-	void AppendList(std::initializer_list<T_Data> inList)
+	void AppendList(std::initializer_list<T_Data> &&inList)
 	{
 		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
 			Append(*iter);
@@ -660,7 +660,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_alloc = MAP_DEF
 
 public:
 	Map(UInt32 _alloc = _default_alloc) : entries(nullptr), numEntries(0), numAlloc(_alloc) {}
-	Map(std::initializer_list<M_Pair> inList) : entries(nullptr), numEntries(0), numAlloc(inList.size()) {InsertList(inList);}
+	Map(std::initializer_list<M_Pair> &&inList) : entries(nullptr), numEntries(0), numAlloc(inList.size()) {InsertList(std::move(inList));}
 	~Map()
 	{
 		if (!entries) return;
@@ -696,7 +696,7 @@ public:
 		return outData;
 	}
 
-	void InsertList(std::initializer_list<M_Pair> inList)
+	void InsertList(std::initializer_list<M_Pair> &&inList)
 	{
 		T_Data *outData;
 		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
@@ -909,7 +909,7 @@ template <typename T_Key, const UInt32 _default_alloc = MAP_DEFAULT_ALLOC> class
 
 public:
 	Set(UInt32 _alloc = _default_alloc) : keys(nullptr), numKeys(0), numAlloc(_alloc) {}
-	Set(std::initializer_list<T_Key> inList) : keys(nullptr), numKeys(0), numAlloc(inList.size()) {InsertList(inList);}
+	Set(std::initializer_list<T_Key> &&inList) : keys(nullptr), numKeys(0), numAlloc(inList.size()) {InsertList(std::move(inList));}
 	~Set()
 	{
 		if (!keys) return;
@@ -947,7 +947,7 @@ public:
 		return true;
 	}
 
-	void InsertList(std::initializer_list<T_Key> inList)
+	void InsertList(std::initializer_list<T_Key> &&inList)
 	{
 		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
 			Insert(*iter);
@@ -1268,7 +1268,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = 
 
 public:
 	UnorderedMap(UInt32 _numBuckets = _default_bucket_count) : buckets(nullptr), numBuckets(_numBuckets), numEntries(0) {}
-	UnorderedMap(std::initializer_list<M_Pair> inList) : buckets(nullptr), numBuckets(inList.size()), numEntries(0) {InsertList(inList);}
+	UnorderedMap(std::initializer_list<M_Pair> &&inList) : buckets(nullptr), numBuckets(inList.size()), numEntries(0) {InsertList(std::move(inList));}
 	~UnorderedMap()
 	{
 		if (!buckets) return;
@@ -1330,7 +1330,7 @@ public:
 		return value;
 	}
 
-	void InsertList(std::initializer_list<M_Pair> inList)
+	void InsertList(std::initializer_list<M_Pair> &&inList)
 	{
 		T_Data *outData;
 		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
@@ -1642,7 +1642,7 @@ template <typename T_Key, const UInt32 _default_bucket_count = MAP_DEFAULT_BUCKE
 
 public:
 	UnorderedSet(UInt32 _numBuckets = _default_bucket_count) : buckets(nullptr), numBuckets(_numBuckets), numEntries(0) {}
-	UnorderedSet(std::initializer_list<T_Key> inList) : buckets(nullptr), numBuckets(inList.size()), numEntries(0) {InsertList(inList);}
+	UnorderedSet(std::initializer_list<T_Key> &&inList) : buckets(nullptr), numBuckets(inList.size()), numEntries(0) {InsertList(std::move(inList));}
 	~UnorderedSet()
 	{
 		if (!buckets) return;
@@ -1689,7 +1689,7 @@ public:
 		return true;
 	}
 
-	void InsertList(std::initializer_list<T_Key> inList)
+	void InsertList(std::initializer_list<T_Key> &&inList)
 	{
 		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
 			Insert(*iter);
@@ -1833,7 +1833,7 @@ template <typename T_Data, const UInt32 _default_alloc = VECTOR_DEFAULT_ALLOC> c
 
 public:
 	Vector(UInt32 _alloc = _default_alloc) : data(nullptr), numItems(0), numAlloc(_alloc) {}
-	Vector(std::initializer_list<T_Data> inList) : data(nullptr), numItems(0), numAlloc(inList.size()) {AppendList(inList);}
+	Vector(std::initializer_list<T_Data> &&inList) : data(nullptr), numItems(0), numAlloc(inList.size()) {AppendList(std::move(inList));}
 	~Vector()
 	{
 		if (!data) return;
@@ -1868,7 +1868,7 @@ public:
 		return pData;
 	}
 
-	void AppendList(std::initializer_list<T_Data> inList)
+	void AppendList(std::initializer_list<T_Data> &&inList)
 	{
 		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
 			Append(*iter);
@@ -1968,6 +1968,29 @@ public:
 		}
 		memcpy(pData, &item, sizeof(T_Data));
 		return lBound;
+	}
+
+	bool InsertUnique(T_Data &&item)
+	{
+		UInt32 lBound = 0, uBound = numItems, index;
+		while (lBound != uBound)
+		{
+			index = (lBound + uBound) >> 1;
+			if (item < data[index])
+				uBound = index;
+			else if (data[index] < item)
+				lBound = index + 1;
+			else return false;
+		}
+		uBound = numItems - lBound;
+		T_Data *pData = AllocateData();
+		if (uBound)
+		{
+			pData = data + lBound;
+			memmove(pData + 1, pData, sizeof(T_Data) * uBound);
+		}
+		memcpy(pData, &item, sizeof(T_Data));
+		return true;
 	}
 
 	void MoveToEnd(Data_Arg item)

@@ -171,8 +171,8 @@ bool Cmd_GetQuests_Execute(COMMAND_ARGS)
 	UInt32 completed = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &completed))
 		return true;
-	TempFormList *tmpFormLst = GetTempFormList();
-	tmpFormLst->Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<BGSQuestObjective> *iter = g_thePlayer->questObjectiveList.Head();
 	BGSQuestObjective *objective;
 	TESQuest *quest;
@@ -183,17 +183,11 @@ bool Cmd_GetQuests_Execute(COMMAND_ARGS)
 		if (!objective || !(objective->status & 1)) continue;
 		quest = objective->quest;
 		if (bCompl != !(quest->questFlags & TESQuest::kFlag_Completed))
-			tmpFormLst->Insert(quest);
+			tmpElements->InsertUnique(quest);
 	}
 	while (iter = iter->next);
-	if (!tmpFormLst->Empty())
-	{
-		TempElements *tmpElements = GetTempElements();
-		tmpElements->Clear();
-		for (auto refIter = tmpFormLst->Begin(); refIter; ++refIter)
-			tmpElements->Append(*refIter);
+	if (!tmpElements->Empty())
 		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
-	}
 	return true;
 }
 
@@ -301,7 +295,7 @@ bool Cmd_FailQuest_Execute(COMMAND_ARGS)
 	return true;
 }
 
-TempFormList s_lastQuestTargets(0x40);
+TempObject<TempFormList> s_lastQuestTargets(0x40);
 
 bool Cmd_GetQuestTargetsChanged_Execute(COMMAND_ARGS)
 {
@@ -324,11 +318,11 @@ bool Cmd_GetQuestTargetsChanged_Execute(COMMAND_ARGS)
 		while (trgIter = trgIter->next);
 	}
 	while (objIter = objIter->next);
-	if (s_lastQuestTargets == *tmpFormLst)
+	if (s_lastQuestTargets() == *tmpFormLst)
 		*result = 0;
 	else
 	{
-		s_lastQuestTargets.CopyFrom(*tmpFormLst);
+		s_lastQuestTargets().CopyFrom(*tmpFormLst);
 		*result = 1;
 	}
 	return true;

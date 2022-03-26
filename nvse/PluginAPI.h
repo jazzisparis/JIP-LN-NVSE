@@ -370,6 +370,9 @@ struct NVSEArrayVarInterface
 			dataType = rhs.dataType;
 			return *this;
 		}
+
+		inline bool operator==(const Element &rhs) const {return raw == rhs.raw;}
+		inline bool operator<(const Element &rhs) const {return raw < rhs.raw;}
 	};
 
 	struct ElementR : Element

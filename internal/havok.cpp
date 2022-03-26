@@ -12,13 +12,13 @@ __declspec(naked) hkQuaternion& __fastcall hkQuaternion::FromEulerYPR(const NiVe
 		mulps	xmm0, PS_V3_Half
 		call	GetSinCosV3
 		movaps	xmm2, xmm0
-		shufps	xmm2, xmm1, 0x44
+		unpcklpd	xmm2, xmm1
 		shufps	xmm2, xmm2, 0xD7
 		movaps	xmm3, xmm0
 		pshufd	xmm3, xmm1, 0xFE
 		shufps	xmm3, xmm3, 0x88
 		movaps	xmm4, xmm1
-		shufps	xmm4, xmm0, 0x44
+		unpcklpd	xmm4, xmm0
 		pshufd	xmm0, xmm4, 0xA2
 		shufps	xmm4, xmm4, 8
 		movaps	xmm5, xmm3
@@ -182,7 +182,7 @@ __declspec(naked) hkQuaternion& __fastcall hkQuaternion::operator*=(const hkQuat
 		haddps	xmm3, xmm6
 		haddps	xmm3, xmm6
 		unpcklps	xmm4, xmm3
-		shufps	xmm0, xmm4, 0x44
+		unpcklpd	xmm0, xmm4
 		movaps	[ecx], xmm0
 		mov		eax, ecx
 		retn
@@ -344,7 +344,7 @@ __declspec(naked) __m128 __vectorcall hkMatrix3x4::MultiplyVector(const hkVector
 		mulps	xmm2, xmm1
 		haddps	xmm2, xmm3
 		haddps	xmm2, xmm3
-		shufps	xmm0, xmm2, 0x44
+		unpcklpd	xmm0, xmm2
 		retn
 	}
 }
@@ -432,8 +432,6 @@ __declspec(naked) TESObjectREFR *hkpWorldObject::GetParentRef()
 	}
 }
 
-bhkWorldM **g_bhkWorldM = (bhkWorldM**)0x11CA0D8;
-
 __declspec(naked) void bhkWorldObject::ApplyForce(const NiVector4 &forceVector)
 {
 	static const __m128 kUnitConv = {6.999125481F, 1 / 6.999125481F, 0, 0};
@@ -442,7 +440,7 @@ __declspec(naked) void bhkWorldObject::ApplyForce(const NiVector4 &forceVector)
 		push	ebp
 		mov		ebp, esp
 		and		esp, 0xFFFFFFF0
-		sub		esp, 0x10
+		sub		esp, 0x20
 		mov		eax, esp
 		push	ecx
 		push	eax

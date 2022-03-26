@@ -138,6 +138,7 @@ struct NiVector3
 	void Dump() const;
 };
 
+float __vectorcall Point2Distance(const NiVector3 &pt1, const NiVector3 &pt2);
 float __vectorcall Point3Distance(const NiVector3 &pt1, const NiVector3 &pt2);
 
 struct NiVector4
@@ -172,6 +173,13 @@ struct NiVector4
 	{
 		__m128 m = _mm_load_ss(&value);
 		m = _mm_mul_ps(*this, _mm_shuffle_ps(m, m, 0x40));
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
+		return *this;
+	}
+	inline NiVector4& __vectorcall operator*=(const __m128 packedPS)
+	{
+		__m128 m = _mm_mul_ps(*this, packedPS);
 		_mm_storel_pi((__m64*)this, m);
 		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
 		return *this;
@@ -526,6 +534,13 @@ struct NiColorAlpha
 	inline float& operator[](UInt32 which)
 	{
 		return ((float*)&r)[which];
+	}
+
+	inline NiColorAlpha& operator*=(float value)
+	{
+		__m128 m = _mm_load_ss(&value);
+		_mm_storeu_ps(&r, _mm_mul_ps(_mm_loadu_ps(&r), _mm_shuffle_ps(m, m, 0)));
+		return *this;
 	}
 };
 

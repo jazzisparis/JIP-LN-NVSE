@@ -118,33 +118,41 @@ extern const char kLwrCaseConverter[], kUprCaseConverter[];
 typedef void* (__cdecl *memcpy_t)(void*, const void*, size_t);
 extern memcpy_t MemCopy, MemMove;
 
-//	Workaround for bypassing the compiler calling the d'tor on function-scope objects.
+//	Workaround used for:
+//	* Preventing the compiler from generating _atexit d'tors for static objects.
+//	* Bypassing the compiler calling the d'tor on function-scope objects.
 template <typename T> class TempObject
 {
-	friend T;
-
-	struct Buffer
-	{
-		UInt8	bytes[sizeof(T)];
-	}
-	objData;
+	alignas(T) UInt8	objData[sizeof(T)];
 
 public:
 	TempObject() {Reset();}
-	TempObject(const T &src) {memcpy((void*)&objData, (const void*)&src, sizeof(T));}
+	TempObject(const T &src) {memcpy((void*)this, (const void*)&src, sizeof(T));}
 
-	void Reset() {new ((T*)&objData) T();}
+	template <typename ...Args>
+	TempObject(Args&& ...args)
+	{
+		new (this) T(std::forward<Args>(args)...);
+	}
 
-	T& operator()() {return *(T*)&objData;}
+	void Reset() {new (this) T();}
+
+	void Destroy() {(*this)().~T();}
+
+	T& operator()() {return *(reinterpret_cast<T*>(this));}
+	T* operator*() {return reinterpret_cast<T*>(this);}
+	T* operator->() {return reinterpret_cast<T*>(this);}
+
+	inline operator T&() {return *(reinterpret_cast<T*>(this));}
 
 	TempObject& operator=(const T &rhs)
 	{
-		memcpy((void*)&objData, (const void*)&rhs, sizeof(T));
+		memcpy((void*)this, (const void*)&rhs, sizeof(T));
 		return *this;
 	}
 	TempObject& operator=(const TempObject &rhs)
 	{
-		memcpy((void*)&objData, (const void*)&rhs.objData, sizeof(T));
+		memcpy((void*)this, (const void*)&rhs, sizeof(T));
 		return *this;
 	}
 };
@@ -152,7 +160,7 @@ public:
 //	Swap lhs and rhs, bypassing operator=
 template <typename T> __forceinline void RawSwap(const T &lhs, const T &rhs)
 {
-	UInt8 buffer[sizeof(T)];
+	alignas(T) UInt8	buffer[sizeof(T)];
 	memcpy((void*)buffer, (const void*)&lhs, sizeof(T));
 	memcpy((void*)&lhs, (const void*)&rhs, sizeof(T));
 	memcpy((void*)&rhs, (const void*)buffer, sizeof(T));
@@ -576,7 +584,7 @@ public:
 	void Outdent() {if (indent < 40) indent++;}
 };
 
-extern DebugLog s_log, s_debug;
+extern TempObject<DebugLog> s_log, s_debug;
 
 void PrintLog(const char *fmt, ...);
 void PrintDebug(const char *fmt, ...);

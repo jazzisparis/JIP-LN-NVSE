@@ -175,8 +175,8 @@ public:
 		float	fatigueReturnRate;		// 24
 		float	perceptionCondition;	// 28
 		float	eyeHeight;				// 2C
-		SInt32	unk30;					// 30
-		SInt32	unk34;					// 34
+		SInt32	aggression;				// 30
+		SInt32	assistance;				// 34
 		float	walkSpeed;				// 38
 		float	runSpeed;				// 3C
 		UInt8	hasNoCrippledLegs;		// 40
@@ -185,16 +185,16 @@ public:
 	};
 
 	/*000*/virtual void		Destroy(bool deFree);
-	/*004*/virtual void		Unk_01(void);
+	/*004*/virtual void		Copy(BaseProcess *from);
 	/*008*/virtual void		Unk_02(void);
-	/*00C*/virtual void		Unk_03(void);
-	/*010*/virtual void		Unk_04(void);
+	/*00C*/virtual void		RunProcess(MobileObject *refr, float arg2);
+	/*010*/virtual void		RunProcess2(MobileObject *refr);
 	/*014*/virtual void		Unk_05(void);
 	/*018*/virtual void		Unk_06(void);
 	/*01C*/virtual void		Unk_07(void);
 	/*020*/virtual void		Unk_08(void);
-	/*024*/virtual void		Unk_09(void);
-	/*028*/virtual void		Unk_0A(void);
+	/*024*/virtual bool		CheckForNewPackage(Actor *actor, UInt8 flag);
+	/*028*/virtual void		SetLastTimeProcessed();
 	/*02C*/virtual void		Unk_0B(void);
 	/*030*/virtual void		Unk_0C(void);
 	/*034*/virtual void		Unk_0D(void);
@@ -208,15 +208,15 @@ public:
 	/*054*/virtual void		Unk_15(void);
 	/*058*/virtual void		Unk_16(void);
 	/*05C*/virtual void		Unk_17(void);
-	/*060*/virtual void		Unk_18(void);
+	/*060*/virtual UInt8	GetIdleDoneOnce();
 	/*064*/virtual void		Unk_19(void);
 	/*068*/virtual void		Unk_1A(void);
 	/*06C*/virtual void		Unk_1B(void);
 	/*070*/virtual void		Unk_1C(void);
 	/*074*/virtual void		Unk_1D(void);
 	/*078*/virtual void		Unk_1E(void);
-	/*07C*/virtual void		Unk_1F(void);
-	/*080*/virtual void		Unk_20(void);
+	/*07C*/virtual void		ProcessSandman(Actor *actor);
+	/*080*/virtual void		ProcessCannibal(Actor *actor);
 	/*084*/virtual void		Unk_21(void);
 	/*088*/virtual void		Unk_22(void);
 	/*08C*/virtual void		Unk_23(void);
@@ -283,7 +283,7 @@ public:
 	/*180*/virtual void		RemoveAllItemsFromQueue();
 	/*184*/virtual NiNode	*GetProjectileNode();
 	/*188*/virtual void		SetProjectileNode(NiNode *node);
-	/*18C*/virtual void		Unk_63(NiControllerManager *ctrlMgr, NiNode *node);
+	/*18C*/virtual void		SetWeaponNode(NiControllerManager *ctrlMgr, NiNode *node);
 	/*190*/virtual NiNode	*GetWeaponNode(ValidBip01Names *vbp01Names);
 	/*194*/virtual void		Unk_65(void);
 	/*198*/virtual void		Unk_66(void);
@@ -349,10 +349,10 @@ public:
 	/*288*/virtual void		Unk_A2();
 	/*28C*/virtual bhkCharacterController	*GetCharacterController();
 	/*290*/virtual void		SetCharacterController(bhkCharacterController *charCtrl);
-	/*294*/virtual void		Unk_A5();
+	/*294*/virtual void		StopMoving(Actor *actor);
 	/*298*/virtual void		Unk_A6();
 	/*29C*/virtual void		Unk_A7();
-	/*2A0*/virtual void		Unk_A8();
+	/*2A0*/virtual void		ProcessFlee(Actor *packageUser);
 	/*2A4*/virtual void		Unk_A9();
 	/*2A8*/virtual void		Unk_AA();
 	/*2AC*/virtual void		Unk_AB();
@@ -362,7 +362,7 @@ public:
 	/*2BC*/virtual void		Unk_AF();
 	/*2C0*/virtual void		Unk_B0();
 	/*2C4*/virtual void		Unk_B1();
-	/*2C8*/virtual void		Unk_B2();
+	/*2C8*/virtual void		SetDetectionTimer(float timer);
 	/*2CC*/virtual void		Unk_B3();
 	/*2D0*/virtual void		Unk_B4();
 	/*2D4*/virtual void		Unk_B5();
@@ -397,7 +397,7 @@ public:
 	/*348*/virtual void		Unk_D2();
 	/*34C*/virtual void		Unk_D3();
 	/*350*/virtual void		Unk_D4();
-	/*354*/virtual void		Unk_D5();
+	/*354*/virtual void		FinishDying(Actor *actor);
 	/*358*/virtual void		Unk_D6();
 	/*35C*/virtual void		Unk_D7();
 	/*360*/virtual void		Unk_D8();
@@ -613,11 +613,11 @@ public:
 	/*6A8*/virtual void		Unk_1AA();
 	/*6AC*/virtual void		Unk_1AB();
 	/*6B0*/virtual void		Unk_1AC();
-	/*6B4*/virtual void		Unk_1AD();
+	/*6B4*/virtual void		SetProjectileData(Projectile *projRef, TESObjectREFR *refr);
 	/*6B8*/virtual ProjectileData	*GetProjectileData();
 	/*6BC*/virtual void		Unk_1AF();
 	/*6C0*/virtual void		Unk_1B0();
-	/*6C4*/virtual void		Unk_1B1();
+	/*6C4*/virtual void		ClearProjectileData();
 	/*6C8*/virtual void		Unk_1B2();
 	/*6CC*/virtual void		SetLimbNode(UInt32 limbIdx, NiNode *node);
 	/*6D0*/virtual NiNode	*GetLimbNode(UInt32 limbIdx);
@@ -677,7 +677,7 @@ public:
 	/*7A8*/virtual void		Unk_1EA();
 	/*7AC*/virtual void		Unk_1EB();
 	/*7B0*/virtual void		Unk_1EC();
-	/*7B4*/virtual void		Unk_1ED();	// Leads to Last Target
+	/*7B4*/virtual void		ProcessEscort(Actor *packageUser);
 
 	PackageInfo		currentPackage;	// 04
 	float			unk1C;			// 1C	not initialized, only by descendant!
@@ -712,27 +712,27 @@ public:
 		void						**modifiedAV;	// 0C	array of damaged actorValue
 	};	// 10
 
-	/*7B8*/virtual void		Unk_1EE();
-	/*7BC*/virtual void		Unk_1EF();
+	/*7B8*/virtual void		ProcessSleep(Actor *packageUser);
+	/*7BC*/virtual void		ProcessEat(Actor *packageUser, TESForm *arg2);
 	/*7C0*/virtual void		Unk_1F0();
-	/*7C4*/virtual void		Unk_1F1();
-	/*7C8*/virtual void		Unk_1F2();
-	/*7CC*/virtual void		Unk_1F3();
-	/*7D0*/virtual void		Unk_1F4();
-	/*7D4*/virtual void		Unk_1F5();
-	/*7D8*/virtual void		Unk_1F6();
-	/*7DC*/virtual void		Unk_1F7();
+	/*7C4*/virtual void		ProcessAlarm(Actor *packageUser);
+	/*7C8*/virtual bool		ProcessActivate(Actor *packageUser, bool arg2);
+	/*7CC*/virtual void		ProcessAccompany(Actor *packageUser);
+	/*7D0*/virtual void		ProcessAcquire(Actor *packageUser);
+	/*7D4*/virtual void		ProcessAmbushWait(Actor *packageUser);
+	/*7D8*/virtual void		ProcessUseItemAt(Actor *packageUser);
+	/*7DC*/virtual bool		ProcessUseWeapon(Actor *packageUser);
 	/*7E0*/virtual void		Unk_1F8();
-	/*7E4*/virtual void		Unk_1F9();
-	/*7E8*/virtual void		Unk_1FA();
-	/*7EC*/virtual void		Unk_1FB();
-	/*7F0*/virtual void		Unk_1FC();
-	/*7F4*/virtual void		Unk_1FD();
+	/*7E4*/virtual void		ProcessFleeNonCombat(Actor *packageUser);
+	/*7E8*/virtual void		ProcessAvoidRadiation(Actor *packageUser);
+	/*7EC*/virtual void		ProcessSandbox(Actor *packageUser);
+	/*7F0*/virtual void		ProcessMovementBlocked(Actor *packageUser);
+	/*7F4*/virtual void		ProcessGuard(Actor *packageUser);
 	/*7F8*/virtual void		Unk_1FE();
-	/*7FC*/virtual void		Unk_1FF();
+	/*7FC*/virtual void		ProcessPatrol(Actor *packageUser);
 	/*800*/virtual void		Unk_200();
 	/*804*/virtual void		Unk_201();
-	/*808*/virtual void		Unk_202();
+	/*808*/virtual void		ProcessNotify(Actor *packageUser);
 	/*80C*/virtual void		Unk_203();
 	/*810*/virtual void		Unk_204();
 	/*814*/virtual void		Unk_205();
@@ -979,7 +979,7 @@ public:
 	tList<UInt32>				list0D0;			// 0D0
 	float						flt0D8;				// 0D8
 	float						flt0DC;				// 0DC
-	UInt8						byte0E0;			// 0E0
+	UInt8						idleDoneOnce;		// 0E0
 	UInt8						byte0E1;			// 0E1
 	UInt8						byte0E2;			// 0E2
 	UInt8						byte0E3;			// 0E3
@@ -1005,7 +1005,7 @@ public:
 	UInt8						byte12B;			// 12B
 	NiNode						*weaponNode;		// 12C
 	NiNode						*projectileNode;	// 130
-	UInt8						byt134;				// 134
+	bool						wantWeaponOut;		// 134
 	bool						isWeaponOut;		// 135
 	UInt8						byt136;				// 136
 	UInt8						byt137;				// 137
@@ -1017,7 +1017,7 @@ public:
 	UInt8						byte144;			// 144
 	UInt8						unk145[3];			// 145
 	Unk148						unk148;				// 148
-	UInt32						unk158;				// 158
+	Actor						*commandingActor;	// 158
 	UInt32						unk15C;				// 15C
 	MagicItem					*magicItem160;		// 160
 	UInt32						unk164;				// 164
@@ -1063,8 +1063,8 @@ public:
 	float						flt1D0;				// 1D0
 	float						flt1D4;				// 1D4
 	UInt8						byte1D8;			// 1D8
-	UInt8						byte1D9;			// 1D9
-	UInt8						byte1DA;			// 1DA
+	UInt8						usingAutoWeapon;	// 1D9
+	UInt8						isAttacked;			// 1DA
 	UInt8						byte1DB;			// 1DB
 	NiNode						*limbNodes[15];		// 1DC
 	NiNode						*node218;			// 218
@@ -1079,12 +1079,12 @@ public:
 	float						radsSec234;			// 234
 	float						rads238;			// 238
 	float						waterRadsSec;		// 23C
-	ActorHitData				*hitData240;		// 240
+	ActorHitData				*lastHitData;		// 240
 	UInt32						unk244;				// 244
 	BSFaceGenNiNode				*unk248;			// 248
 	BSFaceGenNiNode				*unk24C;			// 24C
 	NiTriShape					*unk250;			// 250
-	ActorHitData				*hitData254;		// 254
+	ActorHitData				*lastTargetHitData;	// 254
 	UInt32						unk258;				// 258
 };
 static_assert(sizeof(MiddleHighProcess) == 0x25C);
@@ -1122,9 +1122,9 @@ public:
 	float								flt2B4;				// 2B4
 	float								flt2B8;				// 2B8
 	float								flt2BC;				// 2BC
-	UInt16								word2C0;			// 2C0
-	UInt16								word2C2;			// 2C2
-	UInt16								word2C4;			// 2C4
+	SInt16								word2C0;			// 2C0
+	SInt16								word2C2;			// 2C2
+	SInt16								word2C4;			// 2C4
 	UInt8								byte2C6;			// 2C6
 	UInt8								byte2C7;			// 2C7
 	float								flt2C8;				// 2C8
@@ -1144,7 +1144,7 @@ public:
 	BSAnimGroupSequence					*currentSequence;	// 2F0
 	UInt8								forceFireWeapon;	// 2F4
 	UInt8								pad2F5[3];			// 2F5
-	float								flt2F8;				// 2F8
+	float								detectionTimer;		// 2F8
 	UInt32								unk2FC;				// 2FC
 	NiVector3							vec300;				// 300
 	UInt32								unk30C;				// 30C
@@ -1154,7 +1154,7 @@ public:
 	UInt8								byte32D;			// 32D
 	UInt8								byte32E;			// 32E
 	UInt8								byte32F;			// 32F
-	float								flt330;				// 330
+	float								dyingTimer;			// 330
 	float								flt334;				// 334
 	float								flt338;				// 338
 	float								diveBreath;			// 33C
@@ -1177,7 +1177,7 @@ public:
 	UInt8								byte375;			// 375
 	UInt8								byte376;			// 376
 	UInt8								byte377;			// 377
-	float								flt378;				// 378
+	float								VATSDamageMult;		// 378
 	float								flt37C;				// 37C
 	NiRefObject							*object380;			// 380
 	float								flt384;				// 384
@@ -1626,7 +1626,7 @@ public:
 	};
 	static_assert(sizeof(Unk09C) == 0x22C);
 
-	CombatActors					*combatActors;		// 080
+	CombatActors					*combatGroup;		// 080
 	CombatProcedure					*combatProcedure1;	// 084
 	CombatProcedure					*combatProcedure2;	// 088
 	BSSimpleArray<CombatProcedure*>	combatProcedures;	// 08C

@@ -96,6 +96,7 @@ DEFINE_COMMAND_PLUGIN(SetCollisionObjProperty, 1, 3, kParams_OneString_OneInt_On
 DEFINE_COMMAND_PLUGIN(GetCollisionObjLayerType, 1, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(SetCollisionObjLayerType, 1, 2, kParams_OneString_OneInt);
 DEFINE_COMMAND_PLUGIN(SetRefrModelPath, 1, 1, kParams_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(AttachLine, 1, 7, kParams_TwoStrings_FiveFloats);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -635,8 +636,8 @@ bool Cmd_GetHasContactType_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TempFormList *tmpFormLst = GetTempFormList();
-	tmpFormLst->Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	hkpWorldObject **bodies;
 	UInt32 count;
 	TESObjectREFR *refr;
@@ -649,7 +650,7 @@ bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
 			refr = charCtrl->bodyUnderFeet->GetParentRef();
-			if (refr) tmpFormLst->Insert(refr);
+			if (refr) tmpElements->Append(refr);
 		}
 		bodies = charCtrl->pointCollector.contactBodies.data;
 		count = charCtrl->pointCollector.contactBodies.size;
@@ -666,16 +667,10 @@ bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 	for (; count; count--, bodies++)
 	{
 		refr = (*bodies)->GetParentRef();
-		if (refr) tmpFormLst->Insert(refr);
+		if (refr) tmpElements->InsertUnique(refr);
 	}
-	if (!tmpFormLst->Empty())
-	{
-		TempElements *tmpElements = GetTempElements();
-		tmpElements->Clear();
-		for (auto refIter = tmpFormLst->Begin(); refIter; ++refIter)
-			tmpElements->Append(*refIter);
+	if (!tmpElements->Empty())
 		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
-	}
 	return true;
 }
 
@@ -783,8 +778,14 @@ bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 {
 	NiVector4 posVector;
 	UInt32 transform = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posVector.x, &posVector.y, &posVector.z, &transform) && (!transform || thisObj->GetTranslatedPos(posVector)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posVector.x, &posVector.y, &posVector.z, &transform))
+	{
+		if (transform == 2)
+			posVector += thisObj->position;
+		else if ((transform == 1) && !thisObj->GetTranslatedPos(posVector))
+			return true;
 		thisObj->SetPos(posVector);
+	}
 	return true;
 }
 
@@ -810,6 +811,8 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 			}
 			if (numArgs > 1)
 				coords += posMods;
+			if (cell->worldSpace && !(cell = cell->worldSpace->GetCellAtPos(coords)))
+				return true;
 			thisObj->MoveToCell(cell, coords);
 			*result = 1;
 		}
@@ -826,7 +829,7 @@ bool Cmd_SetRefName_Execute(COMMAND_ARGS)
 		if (name[0])
 		{
 			char **namePtr;
-			if (s_refNamesMap.Insert(thisObj, &namePtr))
+			if (s_refNamesMap().Insert(thisObj, &namePtr))
 				HOOK_MOD(GetRefName, true);
 			else free(*namePtr);
 			*namePtr = CopyString(name);
@@ -834,7 +837,7 @@ bool Cmd_SetRefName_Execute(COMMAND_ARGS)
 		}
 		else
 		{
-			if (s_refNamesMap.EraseFree(thisObj))
+			if (s_refNamesMap().EraseFree(thisObj))
 				HOOK_MOD(GetRefName, false);
 			thisObj->extraDataList.jipRefFlags5F &= ~kHookRefFlag5F_AltRefName;
 		}
@@ -894,11 +897,11 @@ bool Cmd_SetOnCriticalHitEventHandler_Execute(COMMAND_ARGS)
 		}
 	}
 	CriticalHitEventData evntData(target, source, weapon, script);
-	if (addEvnt && s_criticalHitEvents.Find(CriticalHitEventFind(evntData)))
+	if (addEvnt && s_criticalHitEvents().Find(CriticalHitEventFind(evntData)))
 		return true;
-	s_criticalHitEvents.Remove(CriticalHitEventRemove(evntData));
+	s_criticalHitEvents().Remove(CriticalHitEventRemove(evntData));
 	if (addEvnt)
-		*s_criticalHitEvents.Append() = evntData;
+		*s_criticalHitEvents().Append() = evntData;
 	return true;
 }
 
@@ -1062,24 +1065,28 @@ bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 	UInt32 pcNode = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &transltn.x, &transltn.y, &transltn.z, &pcNode))
 	{
-		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
-		if (niBlock)
+		if (blockName[0])
 		{
-			niBlock->LocalTranslate() = transltn;
-			niBlock->Update();
-			__asm
+			NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
+			if (niBlock)
 			{
-				mov		ecx, niBlock
-				cmp		dword ptr [ecx], kVtbl_NiPointLight
-				jnz		done
-				test	byte ptr [ecx+0x9F], 1
-				jz		done
-				movups	xmm0, [ecx+0x58]
-				andps	xmm0, PS_XYZ0Mask
-				movups	[ecx+0x100], xmm0
-			done:
+				niBlock->LocalTranslate() = transltn;
+				niBlock->Update();
+				__asm
+				{
+					mov		ecx, niBlock
+					cmp		dword ptr [ecx], kVtbl_NiPointLight
+					jnz		done
+					test	byte ptr [ecx+0x9F], 1
+					jz		done
+					movups	xmm0, [ecx+0x58]
+					andps	xmm0, PS_XYZ0Mask
+					movups	[ecx+0x100], xmm0
+				done:
+				}
 			}
 		}
+		else thisObj->SetPos(transltn);
 	}
 	return true;
 }
@@ -1110,22 +1117,28 @@ bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 {
 	char blockName[0x40];
-	NiVector3 rot;
+	NiVector4 rot;
 	UInt32 transform = 0, pcNode = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &rot.x, &rot.y, &rot.z, &transform, &pcNode))
 	{
-		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
-		if (niBlock)
+		if (blockName[0])
 		{
-			rot *= GET_PS(8);
-			if (!transform)
-				niBlock->LocalRotate().RotationMatrix(rot);
-			else if (transform == 1)
-				niBlock->LocalRotate().Rotate(rot);
-			else
-				niBlock->LocalRotate().RotationMatrixInv(rot);
-			niBlock->Update();
+			NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
+			if (niBlock)
+			{
+				rot *= GET_PS(8);
+				if (!transform)
+					niBlock->LocalRotate().RotationMatrix(rot);
+				else if (transform == 1)
+					niBlock->LocalRotate().Rotate(rot);
+				else
+					niBlock->LocalRotate().RotationMatrixInv(rot);
+				niBlock->Update();
+			}
 		}
+		else if (transform != 1)
+			thisObj->SetAngle(rot, transform);
+		else thisObj->Rotate(rot);
 	}
 	return true;
 }
@@ -1150,12 +1163,16 @@ bool Cmd_SetNifBlockScale_Execute(COMMAND_ARGS)
 	UInt32 pcNode = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &newScale, &pcNode))
 	{
-		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
-		if (niBlock)
+		if (blockName[0])
 		{
-			niBlock->m_transformLocal.scale = newScale;
-			niBlock->Update();
+			NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
+			if (niBlock)
+			{
+				niBlock->m_transformLocal.scale = newScale;
+				niBlock->Update();
+			}
 		}
+		else ThisCall(0x567490, thisObj, newScale);
 	}
 	return true;
 }
@@ -1449,7 +1466,7 @@ __declspec(naked) TESObjectREFR *GetCrosshairRef()
 	{
 		push	ebp
 		mov		ebp, esp
-		sub		esp, 0x64
+		sub		esp, 0x10
 		mov		ecx, g_thePlayer
 		movups	xmm0, [ecx+0xDD4]
 		cmp		byte ptr [ecx+0x64B], 0
@@ -1457,35 +1474,20 @@ __declspec(naked) TESObjectREFR *GetCrosshairRef()
 		movups	xmm1, [ecx+0xD58]
 		addps	xmm0, xmm1
 	firstPerson:
-		movups	[ebp-0x10], xmm0
-		push	dword ptr [ecx+0x24]
-		push	0
-		CALL_EAX(0x953F20)
-		push	ecx
-		fstp	dword ptr [esp]
-		lea		ecx, [ebp-0x40]
-		CALL_EAX(0x4A0C90)
-		lea		ecx, [ebp-0x64]
-		CALL_EAX(0x524AC0)
-		lea		eax, [ebp-0x64]
-		push	eax
-		lea		ecx, [ebp-0x40]
-		push	ecx
-		CALL_EAX(0x43F8D0)
+		lea		edx, [ebp-0x10]
+		movups	[edx], xmm0
+		mov		eax, [ecx+0x64]
+		mov		ecx, [eax+0x14]
+		push	dword ptr [ecx+0x84]
+		push	dword ptr [ecx+0x78]
+		push	dword ptr [ecx+0x6C]
 		lea		ecx, [ebp-0x1C]
-		mov		edx, [eax+4]
-		mov		[ecx], edx
-		mov		edx, [eax+0x10]
-		mov		[ecx+4], edx
-		mov		edx, [eax+0x1C]
-		mov		[ecx+8], edx
-		lea		edx, [ebp-0x64]
-		push	edx
+		lea		eax, [ebp-4]
+		push	eax
 		push	eax
 		push	0x46400000
 		push	ecx
-		lea		eax, [ebp-0x10]
-		push	eax
+		push	edx
 		mov		ecx, g_interfaceManager
 		mov		ecx, [ecx+0x13C]
 		CALL_EAX(0x631D60)
@@ -1658,7 +1660,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 
 	UInt8 flag = ((UInt8*)inData)[1];
 	bool insertNode = flag == kHookFormFlag6_InsertNode;
-	auto formsMap = insertNode ? &s_insertNodeMap : &s_attachModelMap;
+	auto formsMap = insertNode ? *s_insertNodeMap : *s_attachModelMap;
 
 	if (doInsert & 1)
 	{
@@ -1744,7 +1746,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 			}
 		}
 	}
-	s_insertObjects = !s_insertNodeMap.Empty() || !s_attachModelMap.Empty();
+	s_insertObjects = !s_insertNodeMap->Empty() || !s_attachModelMap->Empty();
 	result = true;
 freeDataStr:
 	Pool_Free(inData, 0x80);
@@ -1800,21 +1802,16 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 				cell = targetRef->GetParentCell();
 				if (cell) g_thePlayer->MoveToCell(cell, targetRef->position);
 			}
-			s_syncPositionRef = targetRef;
 			s_syncPositionFlags = (syncRot != 0);
 			s_syncPositionPos = targetRef->position;
-			s_syncPositionNode = nodeName;
-			HOOK_SET(SynchronizePosition, true);
+			s_syncPositionNode() = nodeName;
+			s_syncPositionRef = targetRef;
 		}
-		else
+		else if (targetRef = s_syncPositionRef)
 		{
-			HOOK_SET(SynchronizePosition, false);
-			if (targetRef = s_syncPositionRef)
-			{
-				s_syncPositionRef = NULL;
-				cell = targetRef->GetParentCell();
-				if (cell) g_thePlayer->MoveToCell(cell, s_syncPositionPos);
-			}
+			s_syncPositionRef = NULL;
+			cell = targetRef->GetParentCell();
+			if (cell) g_thePlayer->MoveToCell(cell, s_syncPositionPos);
 		}
 	}
 	return true;
@@ -1831,7 +1828,7 @@ bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 		NiNode *rootNode = refr ? refr->GetNiNode() : NULL;
 		if (rootNode && rootNode->GetBlock(buffer + 1))
 			goto Retn1;
-		NodeNamesMap *namesMap = s_insertNodeMap.GetPtr(form);
+		NodeNamesMap *namesMap = s_insertNodeMap->GetPtr(form);
 		if (namesMap)
 		{
 			for (auto iter = namesMap->Begin(); iter; ++iter)
@@ -1842,7 +1839,7 @@ bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 		{
 			form = refr->GetBaseForm2();
 			if (!form) goto Retn0;
-			namesMap = s_insertNodeMap.GetPtr(form);
+			namesMap = s_insertNodeMap->GetPtr(form);
 			if (namesMap)
 			{
 				for (auto iter = namesMap->Begin(); iter; ++iter)
@@ -1984,22 +1981,53 @@ bool Cmd_GetBlockTextureSet_Execute(COMMAND_ARGS)
 		NiAVObject *block = thisObj->GetNiBlock(blockName);
 		if (block && block->GetTriBasedGeom())
 		{
-			BSShaderPPLightingProperty *shaderProp = (BSShaderPPLightingProperty*)block->GetProperty(3);
-			if (shaderProp && IS_TYPE(shaderProp, BSShaderPPLightingProperty) && shaderProp->textureSet)
+			BSShaderProperty *shaderProp = (BSShaderProperty*)block->GetProperty(3);
+			if (shaderProp)
 			{
-				String *textures = shaderProp->textureSet->textures;
 				ArrayElementL elements[6];
 				const char *filePath;
-				UInt32 index = 0;
-				do
+				bool createArr = false;
+				if IS_TYPE(shaderProp, BSShaderPPLightingProperty)
 				{
-					filePath = textures[index].CStr();
-					if (*filePath && StrBeginsCI(filePath, "data\\textures\\"))
-						filePath += 14;
-					elements[index] = filePath;
+					BSShaderPPLightingProperty *lightingProp = (BSShaderPPLightingProperty*)shaderProp;
+					if (lightingProp->textureSet)
+					{
+						createArr = true;
+						String *textures = lightingProp->textureSet->textures;
+						UInt32 index = 0;
+						do
+						{
+							filePath = textures[index].CStr();
+							if (*filePath && StrBeginsCI(filePath, "data\\textures\\"))
+								filePath += 14;
+							elements[index] = filePath;
+						}
+						while (++index < 6);
+					}
 				}
-				while (++index < 6);
-				AssignCommandResult(CreateArray(elements, 6, scriptObj), result);
+				else if IS_TYPE(shaderProp, BSShaderNoLightingProperty)
+				{
+					BSShaderNoLightingProperty *noLightingProp = (BSShaderNoLightingProperty*)shaderProp;
+					if (noLightingProp->srcTexture && IS_TYPE(noLightingProp->srcTexture, NiSourceTexture))
+					{
+						filePath = ((NiSourceTexture*)noLightingProp->srcTexture)->ddsPath1;
+						if (filePath)
+						{
+							createArr = true;
+							if (StrBeginsCI(filePath, "data\\textures\\"))
+								filePath += 14;
+							UInt32 index = 0;
+							do
+							{
+								elements[index] = filePath;
+								filePath = "";
+							}
+							while (++index < 6);
+						}
+					}
+				}
+				if (createArr)
+					AssignCommandResult(CreateArray(elements, 6, scriptObj), result);
 			}
 		}
 	}
@@ -2020,14 +2048,21 @@ bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 	UInt32 getLocal = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outRot.x, &outRot.y, &outRot.z, &getLocal))
 	{
-		NiVector3 *rotPtr = &thisObj->rotation, locRot;
-		if (getLocal)
+		if (!getLocal)
+			outRot.Set(thisObj->rotation, GET_PS(9));
+		else
 		{
+			NiVector3 locRot;
 			NiNode *rootNode = thisObj->GetRefNiNode();
-			if (rootNode)
-				rotPtr = &rootNode->WorldRotate().ExtractAnglesInv(locRot);
+			if (rootNode && (thisObj->refID != 0x14))
+				rootNode->WorldRotate().ExtractAnglesInv(locRot);
+			else
+			{
+				NiMatrix33 rotMat = thisObj->rotation;
+				rotMat.ExtractAnglesInv(locRot);
+			}
+			outRot.Set(locRot, GET_PS(9));
 		}
-		outRot.Set(*rotPtr, GET_PS(9));
 	}
 	return true;
 }
@@ -2082,7 +2117,7 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 			if (targetNode)
 			{
 				NiCamera **pCamera;
-				if (s_extraCamerasMap.Insert(camName, &pCamera))
+				if (s_extraCamerasMap().Insert(camName, &pCamera))
 				{
 					*pCamera = xCamera = NiCamera::Create();
 					InterlockedIncrement(&xCamera->m_uiRefCount);
@@ -2104,7 +2139,7 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 		}
 		else
 		{
-			auto findCam = s_extraCamerasMap.Find(camName);
+			auto findCam = s_extraCamerasMap().Find(camName);
 			if (findCam)
 			{
 				xCamera = *findCam;
@@ -2167,7 +2202,7 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 	UInt32 pixelSize = 0x100;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &camName, &nodeName, &fov, &pixelSize))
 	{
-		NiCamera *xCamera = s_extraCamerasMap.Get(camName);
+		NiCamera *xCamera = s_extraCamerasMap().Get(camName);
 		if (xCamera && xCamera->m_parent)
 		{
 			NiTexture **pTexture = NULL;
@@ -2453,7 +2488,6 @@ bool Cmd_SetCollisionObjProperty_Execute(COMMAND_ARGS)
 					rigidBody->motion.bodyMassInv = (value > 0) ? (1.0F / value) : 0;
 					break;
 			}
-			//rigidBody->UpdateMotion();
 		}
 	}
 	return true;
@@ -2462,25 +2496,36 @@ bool Cmd_SetCollisionObjProperty_Execute(COMMAND_ARGS)
 bool Cmd_GetCollisionObjLayerType_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char blockName[0x40];
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName))
+	char nodeName[0x40];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &nodeName))
 	{
-		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
-		if (rigidBody)
-			*result = rigidBody->layerType;
+		NiNode *targetNode = thisObj->GetNode(nodeName);
+		if (targetNode && targetNode->m_collisionObject)
+		{
+			bhkWorldObject *worldObj = targetNode->m_collisionObject->worldObj;
+			if (worldObj)
+				*result = ((hkpWorldObject*)worldObj->refObject)->layerType;
+		}
 	}
 	return true;
 }
 
 bool Cmd_SetCollisionObjLayerType_Execute(COMMAND_ARGS)
 {
-	char blockName[0x40];
+	char nodeName[0x40];
 	UInt32 layerType;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &layerType) && layerType && (layerType < LAYER_MAX))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &nodeName, &layerType) && layerType && (layerType < LAYER_MAX))
 	{
-		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
-		if (rigidBody)
-			rigidBody->layerType = layerType;
+		NiNode *targetNode = thisObj->GetNode(nodeName);
+		if (targetNode && targetNode->m_collisionObject)
+		{
+			bhkWorldObject *worldObj = targetNode->m_collisionObject->worldObj;
+			if (worldObj)
+			{
+				((hkpWorldObject*)worldObj->refObject)->layerType = layerType;
+				worldObj->UpdateCollisionFilter();
+			}
+		}
 	}
 	return true;
 }
@@ -2494,7 +2539,7 @@ bool Cmd_SetRefrModelPath_Execute(COMMAND_ARGS)
 		if (modelPath[0])
 		{
 			char **pPath;
-			if (s_refrModelPathMap.Insert(thisObj, &pPath))
+			if (s_refrModelPathMap().Insert(thisObj, &pPath))
 				HOOK_MOD(GetModelPath, true);
 			else free(*pPath);
 			*pPath = CopyString(modelPath);
@@ -2502,9 +2547,34 @@ bool Cmd_SetRefrModelPath_Execute(COMMAND_ARGS)
 		}
 		else
 		{
-			if (s_refrModelPathMap.EraseFree(thisObj))
+			if (s_refrModelPathMap().EraseFree(thisObj))
 				HOOK_MOD(GetModelPath, false);
 			thisObj->extraDataList.jipRefFlags5F &= ~kHookRefFlag5F_RefrModelPath;
+		}
+	}
+	return true;
+}
+
+bool Cmd_AttachLine_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char nodeName[0x40], lineName[0x40];
+	float length;
+	NiColorAlpha color;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &nodeName, &lineName, &length, &color.r, &color.g, &color.b, &color.a))
+	{
+		NiNode *targetNode = thisObj->GetRefNiNode();
+		if (targetNode && (targetNode = targetNode->GetNode(nodeName)))
+		{
+			color *= 1 / 255.0F;
+			NiLines *lines = NiLines::Create(length, color, lineName);
+			targetNode->AddObject(lines, 1);
+			if ((thisObj->refID == 0x14) && (targetNode = s_pc1stPersonNode->GetNode(nodeName)))
+			{
+				lines = NiLines::Create(length, color, lineName);
+				targetNode->AddObject(lines, 1);
+			}
+			*result = 1;
 		}
 	}
 	return true;

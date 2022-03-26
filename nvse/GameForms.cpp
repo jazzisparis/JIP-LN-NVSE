@@ -1,32 +1,60 @@
 #include "nvse/GameForms.h"
 
-TESFullName *TESForm::GetFullName()
+__declspec(naked) const char *TESForm::GetTheName() const
 {
-	if (typeID == kFormType_TESObjectCELL)		// some exterior cells inherit name of parent worldspace
+	static const char kFullNameOffset[] =
 	{
-		TESObjectCELL *cell = (TESObjectCELL*)this;
-		TESFullName *fullName = &cell->fullName;
-		if ((!fullName->name.m_data || !fullName->name.m_dataLen) && cell->worldSpace)
-			return &cell->worldSpace->fullName;
-		return fullName;
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x00,
+		0x00, 0x00, 0x0E, 0x00, 0x00, 0x06, 0x06, 0x0C, 0x0C, 0x0C, 0x0C, 0x0C, 0x00, 0x0F,
+		0x0C, 0x0C, 0x0C, 0x0C, 0x00, 0x00, 0xFB, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x0C, 0x0C,
+		0x34, 0x34, 0x00, 0x00, 0x0C, 0x0C, 0x00, 0x12, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06,
+		0x00, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x0C, 0x00, 0x00,
+		0x00, 0x00, 0x06, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x06, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x06, 0x00, 0x06, 0x06, 0x0C, 0x06, 0x00, 0x06,
+		0x06, 0x06, 0x06, 0x0C, 0x0C, 0x06, 0x00, 0x00, 0x00
+	};
+	__asm
+	{
+		cmp		byte ptr [ecx+4], kFormType_TESObjectCELL
+		jz		isCell
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xF0], ADDR_ReturnTrue
+		mov		eax, [ecx+0x20]
+		cmovz	ecx, eax
+		movzx	edx, byte ptr [ecx+4]
+		movsx	eax, kFullNameOffset[edx]
+		test	eax, eax
+		jz		nullStr
+		lea		edx, [ecx+eax*4]
+		cmp		word ptr [edx+8], 0
+		jle		nullStr
+		mov		eax, [edx+4]
+		retn
+	isCell:
+		mov		eax, [ecx+0x1C]
+		cmp		word ptr [ecx+0x20], 0
+		jg		done
+		mov		ecx, [ecx+0xC0]
+		test	ecx, ecx
+		jz		nullStr
+		mov		eax, [ecx+0x1C]
+		cmp		word ptr [ecx+0x20], 0
+		jg		done
+	nullStr:
+		mov		eax, offset kFullNameOffset
+	done:
+		retn
 	}
-	TESForm *baseForm = GetIsReference() ? ((TESObjectREFR*)this)->baseForm : this;
-	return DYNAMIC_CAST(baseForm, TESForm, TESFullName);
 }
 
-const char *TESForm::GetTheName()
-{
-	TESFullName *fullName = GetFullName();
-	return fullName ? fullName->name.CStr() : "";
-}
-
-bool TESForm::HasScript()
+bool TESForm::HasScript() const
 {
 	TESScriptableForm *scriptable = DYNAMIC_CAST(this, TESForm, TESScriptableForm);
 	return scriptable && scriptable->script;
 }
 
-bool TESForm::GetScriptAndEventList(Script **script, ScriptEventList **eventList)
+bool TESForm::GetScriptAndEventList(Script **script, ScriptEventList **eventList) const
 {
 	if IS_REFERENCE(this)
 	{
@@ -45,7 +73,7 @@ bool TESForm::GetScriptAndEventList(Script **script, ScriptEventList **eventList
 	return *script && *eventList;
 }
 
-__declspec(naked) bool TESForm::IsItemPlayable()
+__declspec(naked) bool TESForm::IsItemPlayable() const
 {
 	__asm
 	{
@@ -73,14 +101,14 @@ __declspec(naked) bool TESForm::IsItemPlayable()
 	}
 }
 
-UInt32 TESForm::GetItemValue()
+UInt32 TESForm::GetItemValue() const
 {
 	if (typeID == kFormType_AlchemyItem) return ((AlchemyItem*)this)->value;
 	TESValueForm *valForm = DYNAMIC_CAST(this, TESForm, TESValueForm);
 	return valForm ? valForm->value : 0;
 }
 
-UInt8 TESForm::GetOverridingModIdx()
+UInt8 TESForm::GetOverridingModIdx() const
 {
 	ModInfo *info = mods.GetLastItem();
 	return info ? info->modIndex : 0xFF;
@@ -103,12 +131,12 @@ const char *TESForm::GetDescriptionText()
 }
 
 extern DataHandler *g_dataHandler;
-UnorderedMap<UInt32, const char*> s_refStrings;
+TempObject<UnorderedMap<UInt32, const char*>> s_refStrings;
 
 const char *TESForm::RefToString()
 {
 	const char **findID;
-	if (!s_refStrings.Insert(refID, &findID)) return *findID;
+	if (!s_refStrings().Insert(refID, &findID)) return *findID;
 	const char *modName = g_dataHandler->GetNthModName(modIndex);
 	UInt32 length = StrLen(modName);
 	char *refStr = (char*)malloc(length + 8);
@@ -119,7 +147,7 @@ const char *TESForm::RefToString()
 	return refStr;
 }
 
-const char *TESForm::GetModelPath()
+const char *TESForm::GetModelPath() const
 {
 	TESModel *baseModel = DYNAMIC_CAST(this, TESForm, TESModel);
 	if (baseModel)
@@ -147,71 +175,14 @@ void TESForm::UnloadModel()
 	}
 }
 
-TESLeveledList *TESForm::GetLvlList()
+TESLeveledList *TESForm::GetLvlList() const
 {
 	if (IS_ID(this, TESLevCreature) || IS_ID(this, TESLevCharacter) || IS_ID(this, TESLevItem))
 		return &((TESLevCreature*)this)->list;
 	return NULL;
 }
 
-__declspec(naked) TESForm *TESObjectREFR::GetBaseForm()
-{
-	__asm
-	{
-		mov		eax, [ecx+0x20]
-		test	eax, eax
-		jz		done
-		cmp		byte ptr [eax+0xF], 0xFF
-		jnz		done
-		mov		edx, [eax]
-		cmp		edx, kVtbl_BGSPlaceableWater
-		jz		isWater
-		cmp		dword ptr [edx+0xF8], ADDR_ReturnTrue
-		jnz		done
-		push	eax
-		push	kExtraData_LeveledCreature
-		add		ecx, 0x44
-		call	BaseExtraList::GetByType
-		pop		ecx
-		test	eax, eax
-		cmovz	eax, ecx
-		jz		done
-		mov		eax, [eax+0xC]
-		retn
-	isWater:
-		mov		eax, [eax+0x4C]
-	done:
-		retn
-	}
-}
-
-__declspec(naked) TESForm *TESObjectREFR::GetBaseForm2()
-{
-	__asm
-	{
-		mov		eax, [ecx+0x20]
-		test	eax, eax
-		jz		done
-		cmp		byte ptr [eax+0xF], 0xFF
-		jnz		done
-		mov		edx, [eax]
-		cmp		dword ptr [edx+0xF8], ADDR_ReturnTrue
-		jnz		retnNULL
-		push	kExtraData_LeveledCreature
-		add		ecx, 0x44
-		call	BaseExtraList::GetByType
-		test	eax, eax
-		jz		done
-		mov		eax, [eax+0x10]
-		retn
-	retnNULL:
-		xor		eax, eax
-	done:
-		retn
-	}
-}
-
-__declspec(naked) SInt32 __fastcall TESContainer::GetCountForForm(TESForm *form)
+__declspec(naked) SInt32 __fastcall TESContainer::GetCountForForm(TESForm *form) const
 {
 	__asm
 	{
@@ -277,7 +248,7 @@ __declspec(naked) void __fastcall TESNPC::SetRace(TESRace *pRace)
 	}
 }
 
-__declspec(naked) NiNode* __fastcall TESObjectCELL::Get3DNode(UInt32 index)
+__declspec(naked) NiNode* __fastcall TESObjectCELL::Get3DNode(UInt32 index) const
 {
 	__asm
 	{
@@ -311,7 +282,27 @@ void TESObjectCELL::ToggleNodes(UInt32 nodeBits, UInt8 doHide)
 	}
 }
 
-__declspec(naked) TESWorldSpace *TESWorldSpace::GetRootMapWorld()
+TESObjectCELL *CellPointerMap::Lookup(UInt32 key) const;
+
+__declspec(naked) TESObjectCELL* __fastcall TESWorldSpace::GetCellAtPos(const NiVector3 &pos) const
+{
+	__asm
+	{
+		movq	xmm0, qword ptr [edx]
+		cvttps2dq	xmm0, xmm0
+		psrad	xmm0, 0xC
+		movd	eax, xmm0
+		shl		eax, 0x10
+		pextrw	edx, xmm0, 2
+		or		eax, edx
+		push	eax
+		mov		ecx, [ecx+0x30]
+		call	CellPointerMap::Lookup
+		retn
+	}
+}
+
+__declspec(naked) TESWorldSpace *TESWorldSpace::GetRootMapWorld() const
 {
 	__asm
 	{
@@ -327,7 +318,7 @@ __declspec(naked) TESWorldSpace *TESWorldSpace::GetRootMapWorld()
 	}
 }
 
-BGSQuestObjective *TESQuest::GetObjective(UInt32 objectiveID)
+BGSQuestObjective *TESQuest::GetObjective(UInt32 objectiveID) const
 {
 	ListNode<void> *iter = lVarOrObjectives.Head();
 	BGSQuestObjective *objective;
@@ -341,7 +332,7 @@ BGSQuestObjective *TESQuest::GetObjective(UInt32 objectiveID)
 	return NULL;
 }
 
-SInt32 BGSQuestObjective::GetTargetIndex(TESObjectREFR *refr)
+SInt32 BGSQuestObjective::GetTargetIndex(TESObjectREFR *refr) const
 {
 	SInt32 index = 0;
 	ListNode<Target> *iter = targets.Head();
@@ -385,7 +376,7 @@ void TESActorBaseData::SetFactionRank(TESFaction *faction, char rank)
 	}
 }
 
-__declspec(naked) LODdata::LODNode *LODdata::LODNode::GetNodeByCoord(UInt32 coord)
+__declspec(naked) LODdata::LODNode *LODdata::LODNode::GetNodeByCoord(UInt32 coord) const
 {
 	__asm
 	{
@@ -430,7 +421,7 @@ __declspec(naked) LODdata::LODNode *LODdata::LODNode::GetNodeByCoord(UInt32 coor
 	}
 }
 
-bool AlchemyItem::IsPoison()
+bool AlchemyItem::IsPoison() const
 {
 	EffectItem *effItem;
 	EffectSetting *effSetting = NULL;
@@ -779,7 +770,7 @@ void __fastcall MagicItem::UpdateEffectsAllActors(EffectItem *effItem, bool addN
 	}
 }
 
-float TESObjectWEAP::GetModBonuses(UInt8 modFlags, UInt32 effectID)
+float TESObjectWEAP::GetModBonuses(UInt8 modFlags, UInt32 effectID) const
 {
 	float result = 0;
 	for (UInt32 idx = 0; idx < 3; idx++)
@@ -919,7 +910,7 @@ const char* TESBipedModelForm::GetPath(UInt32 whichPath, bool bFemalePath)
 		return "";
 }
 
-char TESActorBaseData::GetFactionRank(TESFaction *faction)
+char TESActorBaseData::GetFactionRank(TESFaction *faction) const
 {
 	ListNode<FactionListData> *facIter = factionList.Head();
 	FactionListData	*data;
@@ -1003,7 +994,7 @@ TESObjectIMOD* TESObjectWEAP::GetItemMod(UInt8 which)
 	return itemMod[which - 1];
 }
 
-__declspec(naked) TESAmmo *TESObjectWEAP::GetAmmo()
+__declspec(naked) TESAmmo *TESObjectWEAP::GetAmmo() const
 {
 	__asm
 	{

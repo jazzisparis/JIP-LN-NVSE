@@ -87,7 +87,7 @@ __declspec(naked) void __fastcall NiObjectNET::SetName(const char *newName)
 	}
 }
 
-__declspec(naked) NiExtraData* __fastcall NiObjectNET::GetExtraData(UInt32 vtbl)
+__declspec(naked) NiExtraData* __fastcall NiObjectNET::GetExtraData(UInt32 vtbl) const
 {
 	__asm
 	{
@@ -114,7 +114,7 @@ __declspec(naked) NiExtraData* __fastcall NiObjectNET::GetExtraData(UInt32 vtbl)
 
 void NiObjectNET::DumpExtraData()
 {
-	s_debug.Indent();
+	s_debug().Indent();
 	NiExtraData *xData;
 	for (UInt32 iter = 0; iter < m_extraDataListLen; iter++)
 	{
@@ -122,7 +122,7 @@ void NiObjectNET::DumpExtraData()
 		if (xData)
 			PrintDebug("(X) %08X\t%s\t#%d", xData, xData->GetType()->name, xData->m_uiRefCount);
 	}
-	s_debug.Outdent();
+	s_debug().Outdent();
 }
 
 void __vectorcall NiMaterialProperty::SetTraitValue(UInt32 traitID, float value)
@@ -175,7 +175,7 @@ __declspec(naked) void NiAVObject::Update()
 	}
 }
 
-__declspec(naked) UInt32 NiAVObject::GetIndex()
+__declspec(naked) UInt32 NiAVObject::GetIndex() const
 {
 	__asm
 	{
@@ -230,7 +230,7 @@ __declspec(naked) bool NiAVObject::ReplaceObject(NiAVObject *object)
 	}
 }
 
-__declspec(naked) NiProperty* __fastcall NiAVObject::GetProperty(UInt32 propID)
+__declspec(naked) NiProperty* __fastcall NiAVObject::GetProperty(UInt32 propID) const
 {
 	__asm
 	{
@@ -257,7 +257,7 @@ __declspec(naked) NiProperty* __fastcall NiAVObject::GetProperty(UInt32 propID)
 	}
 }
 
-__declspec(naked) TESObjectREFR *NiAVObject::GetParentRef()
+__declspec(naked) TESObjectREFR *NiAVObject::GetParentRef() const
 {
 	__asm
 	{
@@ -282,7 +282,7 @@ __declspec(naked) TESObjectREFR *NiAVObject::GetParentRef()
 
 void NiAVObject::DumpProperties()
 {
-	s_debug.Indent();
+	s_debug().Indent();
 	NiProperty *niProp;
 	for (DListNode<NiProperty> *traverse = m_propertyList.Head(); traverse; traverse = traverse->next)
 	{
@@ -295,7 +295,7 @@ void NiAVObject::DumpProperties()
 			niProp->DumpExtraData();
 		}
 	}
-	s_debug.Outdent();
+	s_debug().Outdent();
 }
 
 void NiAVObject::DumpParents()
@@ -363,7 +363,7 @@ __declspec(naked) NiNode *NiNode::CreateCopy()
 	}
 }
 
-__declspec(naked) NiAVObject* __fastcall NiNode::GetBlockByName(const char *nameStr)	//	str of NiFixedString
+__declspec(naked) NiAVObject* __fastcall NiNode::GetBlockByName(const char *nameStr) const	//	str of NiFixedString
 {
 	__asm
 	{
@@ -405,7 +405,7 @@ __declspec(naked) NiAVObject* __fastcall NiNode::GetBlockByName(const char *name
 	}
 }
 
-__declspec(naked) NiAVObject* __fastcall NiNode::GetBlock(const char *blockName)
+__declspec(naked) NiAVObject* __fastcall NiNode::GetBlock(const char *blockName) const
 {
 	__asm
 	{
@@ -435,7 +435,7 @@ __declspec(naked) NiAVObject* __fastcall NiNode::GetBlock(const char *blockName)
 	}
 }
 
-__declspec(naked) NiNode* __fastcall NiNode::GetNode(const char *nodeName)
+__declspec(naked) NiNode* __fastcall NiNode::GetNode(const char *nodeName) const
 {
 	__asm
 	{
@@ -463,6 +463,44 @@ bool NiNode::IsMovable()
 		if (*iter && IS_NODE(*iter) && ((NiNode*)*iter)->IsMovable())
 			return true;
 	return false;
+}
+
+__declspec(naked) void NiNode::ResetCollision()
+{
+	__asm
+	{
+		mov		eax, [ecx+0x1C]
+		test	eax, eax
+		jz		noColObj
+		or      byte ptr [eax+0xC], 0x40
+	noColObj:
+		movzx	eax, word ptr [ecx+0xA6]
+		test	eax, eax
+		jz		done
+		push	esi
+		push	edi
+		mov		esi, [ecx+0xA0]
+		mov		edi, eax
+		ALIGN 16
+	iterHead:
+		dec		edi
+		js		iterEnd
+		mov		ecx, [esi]
+		add		esi, 4
+		test	ecx, ecx
+		jz		iterHead
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
+		jnz		iterHead
+		call	NiNode::ResetCollision
+		jmp		iterHead
+		ALIGN 16
+	iterEnd:
+		pop		edi
+		pop		esi
+	done:
+		retn
+	}
 }
 
 __declspec(naked) void NiNode::RemoveCollision()
@@ -507,6 +545,32 @@ __declspec(naked) void NiNode::RemoveCollision()
 		pop		edi
 		pop		esi
 	done:
+		retn
+	}
+}
+
+__declspec(naked) BSXFlags *NiNode::GetBSXFlags()
+{
+	__asm
+	{
+		push	esi
+		mov		esi, [ecx+0x10]
+		movzx	ecx, word ptr [ecx+0x14]
+		mov		edx, kVtbl_BSXFlags
+		ALIGN 16
+	iterHead:
+		dec		ecx
+		js		done
+		mov		eax, [esi+ecx*4]
+		test	eax, eax
+		jz		iterHead
+		cmp		[eax], edx
+		jnz		iterHead
+		pop		esi
+		retn
+	done:
+		xor		eax, eax
+		pop		esi
 		retn
 	}
 }
@@ -559,7 +623,7 @@ bool NiNode::HasPhantom()
 	return false;
 }
 
-__declspec(naked) float __vectorcall NiNode::GetBodyMass(float totalMass)
+__declspec(naked) float __vectorcall NiNode::GetBodyMass(float totalMass) const
 {
 	__asm
 	{
@@ -659,6 +723,70 @@ __declspec(naked) void NiNode::ApplyForce(const NiVector4 &forceVector)
 	}
 }
 
+__declspec(naked) bool __fastcall NiCamera::WorldToScreen(const NiVector3 &worldPos, float zeroTolerance, NiPoint2 &scrPos)
+{
+	__asm
+	{
+		add		ecx, 0x9C
+		movups	xmm0, [ecx]
+		movups	xmm1, [ecx+0x10]
+		movups	xmm2, [ecx+0x30]
+		movups	xmm3, [edx]
+		andps	xmm3, PS_XYZ0Mask
+		pshufd	xmm4, PS_V3_One, 0x3F
+		orps	xmm3, xmm4
+		xorps	xmm4, xmm4
+		mulps	xmm0, xmm3
+		haddps	xmm0, xmm4
+		haddps	xmm0, xmm4
+		mulps	xmm1, xmm3
+		haddps	xmm1, xmm4
+		haddps	xmm1, xmm4
+		unpcklps	xmm0, xmm1
+		mulps	xmm2, xmm3
+		haddps	xmm2, xmm4
+		haddps	xmm2, xmm4
+		comiss	xmm2, xmm4
+		setnz	al
+		jz		done
+		movss	xmm1, [esp+4]
+		cmpnltss	xmm1, xmm2
+		movmskps	eax, xmm1
+		movss	xmm3, PS_FlipSignMask0
+		andps	xmm1, xmm3
+		xorps	xmm2, xmm1
+		unpcklps	xmm2, xmm2
+		divps	xmm0, xmm2
+		movups	xmm1, [ecx+0x64]
+		shufps	xmm1, xmm1, 0xE1
+		pshufd	xmm2, PS_V3_Half, 0
+		mulps	xmm1, xmm2
+		movaps	xmm2, xmm1
+		hsubps	xmm2, xmm4
+		mulps	xmm0, xmm2
+		shufps	xmm3, xmm3, 0x45
+		xorps	xmm1, xmm3
+		haddps	xmm1, xmm4
+		addps	xmm0, xmm1
+		shufps	xmm3, xmm3, 8
+		xorps	xmm0, xmm3
+		xor		al, 1
+		jz		done
+		unpcklpd	xmm0, xmm0
+		movq	xmm1, qword ptr PS_V3_One
+		shufps	xmm3, xmm3, 0x50
+		xorps	xmm0, xmm3
+		cmpnltps	xmm1, xmm0
+		movmskps	eax, xmm1
+		cmp		al, 0xF
+		setz	al
+	done:
+		mov		edx, [esp+8]
+		movq	qword ptr [edx], xmm0
+		retn	8
+	}
+}
+
 __declspec(naked) bool __fastcall NiPick::GetResults(NiCamera *camera)
 {
 	__asm
@@ -733,6 +861,67 @@ __declspec(naked) void __fastcall NiRenderedTexture::SaveToFile(UInt32 fileFmt, 
 	}
 }
 
+__declspec(naked) NiLines* __stdcall NiLines::Create(float length, const NiColorAlpha &color, const char *objName)
+{
+	__asm
+	{
+		push	2
+		GAME_HEAP_ALLOC
+		mov		word ptr [eax], 1
+		push	eax
+		push	0
+		push	0
+		push	0
+		push	0x20
+		GAME_HEAP_ALLOC
+		mov		edx, [esp+0x18]
+		movups	xmm0, [edx]
+		movups	[eax], xmm0
+		movups	[eax+0x10], xmm0
+		push	eax
+		push	0x18
+		GAME_HEAP_ALLOC
+		xorps	xmm0, xmm0
+		movups	[eax], xmm0
+		movq	qword ptr [eax+0x10], xmm0
+		mov		dword ptr [eax+0xC], 0x3F800000
+		push	eax
+		push	2
+		push	0xC4
+		CALL_EAX(0xAA13E0)
+		pop		ecx
+		mov		ecx, eax
+		CALL_EAX(0xA746E0)
+		push	0
+		push	0
+		push	eax
+		push	eax
+		push	eax
+		push	0x80
+		CALL_EAX(0xAA13E0)
+		pop		ecx
+		mov		ecx, eax
+		CALL_EAX(0xB6FC90)
+		pop		ecx
+		push	eax
+		CALL_EAX(0x439410)
+		CALL_EAX(0xA5CEB0)
+		mov		word ptr [eax+0x18], 0x10ED
+		pop		ecx
+		push	eax
+		CALL_EAX(0x439410)
+		CALL_EAX(0xB57E30)
+		mov		edx, [esp+0x18]
+		mov		ecx, [esp]
+		call	NiObjectNET::SetName
+		pop		eax
+		add		esp, 8
+		mov		edx, [esp+4]
+		mov		[eax+0x64], edx
+		retn	0xC
+	}
+}
+
 void NiNode::Dump()
 {
 	PrintDebug("(N) %08X\t%s\t%s\t%08X\t#%d", this, GetType()->name, GetName(), m_flags, m_uiRefCount);
@@ -740,7 +929,7 @@ void NiNode::Dump()
 		PrintDebug("\t(C) %08X\t%s\t#%d", m_controller, m_controller->GetType()->name, m_controller->m_uiRefCount);
 	DumpExtraData();
 	DumpProperties();
-	s_debug.Indent();
+	s_debug().Indent();
 	if (m_collisionObject)
 	{
 		PrintDebug("(H) %08X\t%s\t%08X", m_collisionObject, m_collisionObject->GetType()->name, m_collisionObject->flags);
@@ -764,6 +953,6 @@ void NiNode::Dump()
 			block->DumpProperties();
 		}
 	}
-	s_debug.Outdent();
+	s_debug().Outdent();
 }
 

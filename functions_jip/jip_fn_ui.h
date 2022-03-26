@@ -514,7 +514,7 @@ bool Cmd_SetFontFile_Execute(COMMAND_ARGS)
 	*(UInt32*)dataPathFull = 'atad';
 	dataPathFull[4] = '\\';
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fontID, dataPath) || !fontID || (fontID > 89) || (fontID == 9) || !*dataPath) return true;
-	FontInfo *fontInfo = s_fontInfosMap.Get(dataPath);
+	FontInfo *fontInfo = s_fontInfosMap().Get(dataPath);
 	if (!fontInfo)
 	{
 		if (!FileExists(dataPathFull)) return true;
@@ -525,7 +525,7 @@ bool Cmd_SetFontFile_Execute(COMMAND_ARGS)
 			GameHeapFree(fontInfo);
 			return true;
 		}
-		s_fontInfosMap[dataPath] = fontInfo;
+		s_fontInfosMap()[dataPath] = fontInfo;
 	}
 	g_fontManager->fontInfos[fontID - 1] = fontInfo;
 	*result = 1;
@@ -647,7 +647,7 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		push	0
 		mov		ecx, edi
 		CALL_EAX(0xA1DC20)
-		push	1
+		mov		dl, 1
 		mov		ecx, offset s_hookInfos+kHook_TextInputClose*kHookInfoSize
 		call	HookInfo::Set
 		push	TextInputRefreshHook
@@ -780,7 +780,7 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 		hashPos = FindChr(tilePath, '#');
 		if (hashPos) *hashPos = 0;
 	}
-	UInt32 menuID = s_menuNameToID.Get(tilePath);
+	UInt32 menuID = s_menuNameToID().Get(tilePath);
 	if (!menuID) return true;
 	MenuClickEvent &clickEvent = s_menuClickEventMap[kMenuIDJumpTable[menuID - kMenuType_Min]];
 	if (slashPos) *slashPos = '/';
@@ -792,11 +792,11 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 		{
 			if (clickEvent.Empty())
 				clickEvent.SetHook(true);
-			clickEvent.idsMap[tileID].Insert(script);
+			clickEvent.idsMap()[tileID].Insert(script);
 		}
-		else if (!clickEvent.idsMap.Empty())
+		else if (!clickEvent.idsMap().Empty())
 		{
-			auto findID = clickEvent.idsMap.Find(tileID);
+			auto findID = clickEvent.idsMap().Find(tileID);
 			if (findID)
 			{
 				findID().Erase(script);
@@ -811,16 +811,16 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 	if (addEvnt)
 	{
 		bool match = false;
-		if (!clickEvent.filtersMap.Empty())
+		if (!clickEvent.filtersMap().Empty())
 		{
-			for (auto filterb = clickEvent.filtersMap.FindOpDir(tilePath, false); filterb; --filterb)
+			for (auto filterb = clickEvent.filtersMap().FindOpDir(tilePath, false); filterb; --filterb)
 			{
 				if (!StrBeginsCS(tilePath, filterb.Key())) break;
 				if (filterb().HasKey(script))
 					return true;
 			}
 			char cmpr;
-			for (auto filterf = clickEvent.filtersMap.FindOpDir(tilePath, true); filterf; ++filterf)
+			for (auto filterf = clickEvent.filtersMap().FindOpDir(tilePath, true); filterf; ++filterf)
 			{
 				cmpr = StrBeginsCS(filterf.Key(), tilePath);
 				if (!cmpr) break;
@@ -837,12 +837,12 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 		{
 			if (clickEvent.Empty())
 				clickEvent.SetHook(true);
-			clickEvent.filtersMap[tilePath].Insert(script);
+			clickEvent.filtersMap()[tilePath].Insert(script);
 		}
 	}
-	else if (!clickEvent.filtersMap.Empty())
+	else if (!clickEvent.filtersMap().Empty())
 	{
-		for (auto filterf = clickEvent.filtersMap.FindOpDir(tilePath, true); filterf; ++filterf)
+		for (auto filterf = clickEvent.filtersMap().FindOpDir(tilePath, true); filterf; ++filterf)
 		{
 			if (!StrBeginsCS(filterf.Key(), tilePath)) break;
 			filterf().Erase(script);
@@ -1064,15 +1064,15 @@ bool Cmd_SetTerminalUIModel_Execute(COMMAND_ARGS)
 	{
 		terminal = (BGSTerminal*)lstIter->data;
 		if (!terminal || NOT_ID(terminal, BGSTerminal)) continue;
-		if (bRemove) DoPurgePath(s_terminalAltModelsMap.GetErase(terminal));
+		if (bRemove) DoPurgePath(s_terminalAltModelsMap().GetErase(terminal));
 		else
 		{
-			if (!s_terminalAltModelsMap.Insert(terminal, &pathPtr)) DoPurgePath(*pathPtr);
+			if (!s_terminalAltModelsMap().Insert(terminal, &pathPtr)) DoPurgePath(*pathPtr);
 			*pathPtr = CopyString(modelPath);
 		}
 	}
 	while (lstIter = lstIter->next);
-	HOOK_SET(SetTerminalModel, !s_terminalAltModelsMap.Empty());
+	HOOK_SET(SetTerminalModel, !s_terminalAltModelsMap().Empty());
 	return true;
 }
 
@@ -1086,8 +1086,7 @@ __declspec(naked) void QuantityMenuCallback(int count)
 		test	eax, eax
 		jz		done
 		mov		s_quantityMenuScript, 0
-		mov		ecx, [esp+4]
-		push	ecx
+		push	dword ptr [esp+4]
 		push	1
 		push	0
 		push	eax
@@ -1103,7 +1102,7 @@ bool Cmd_ShowQuantityMenu_Execute(COMMAND_ARGS)
 {
 	Script *callback;
 	int maxCount, defaultCount = -1;
-	if (!QuantityMenu::Get() && !s_quantityMenuScript && ExtractArgsEx(EXTRACT_ARGS_EX, &callback, &maxCount, &defaultCount) && (maxCount > 0) && IS_ID(callback, Script) && 
+	if (!s_quantityMenuScript && !QuantityMenu::Get() && ExtractArgsEx(EXTRACT_ARGS_EX, &callback, &maxCount, &defaultCount) && (maxCount > 0) && IS_ID(callback, Script) &&
 		ShowQuantityMenu(maxCount, QuantityMenuCallback, ((defaultCount < 0) || (defaultCount > maxCount)) ? maxCount : defaultCount))
 	{
 		s_quantityMenuScript = callback;
@@ -1112,21 +1111,20 @@ bool Cmd_ShowQuantityMenu_Execute(COMMAND_ARGS)
 	return true;
 }
 
+bool s_inMsgBoxCallback = false;
+
 __declspec(naked) void MessageBoxCallback()
 {
 	__asm
 	{
-		mov		eax, s_messageBoxScript
-		mov		s_messageBoxScript, 0
 		mov		ecx, g_interfaceManager
-		movzx	edx, byte ptr [ecx+0xE4]
-		cmp		dl, 0xFF
-		jz		done
-		mov		byte ptr [ecx+0xE4], 0xFF
+		add		ecx, 0xE4
+		movzx	edx, byte ptr [ecx]
+		mov		byte ptr [ecx], 0xFF
+		mov		eax, s_messageBoxScript
 		test	eax, eax
 		jz		done
-		cmp		dword ptr [eax], kVtbl_Script
-		jnz		done
+		mov		s_inMsgBoxCallback, 1
 		push	edx
 		push	1
 		push	0
@@ -1134,6 +1132,7 @@ __declspec(naked) void MessageBoxCallback()
 		call	CallFunction
 		call	UncaptureLambdaVars
 		add		esp, 0x10
+		mov		s_inMsgBoxCallback, 0
 	done:
 		retn
 	}
@@ -1145,16 +1144,15 @@ __declspec(naked) void __fastcall MessageBoxExAlt(char **msgStrings)
 	{
 		push	ebp
 		mov		ebp, esp
+		mov		edx, 0x703E80
 		push	0
+		ALIGN 16
 	addButtons:
 		mov		eax, [ecx]
+		push	eax
 		sub		ecx, 4
 		test	eax, eax
-		jz		doneButtons
-		push	eax
-		jmp		addButtons
-	doneButtons:
-		push	0
+		jnz		addButtons
 		push	0
 		push	0x17
 		push	0
@@ -1162,7 +1160,7 @@ __declspec(naked) void __fastcall MessageBoxExAlt(char **msgStrings)
 		push	dword ptr [ecx-4]
 		push	0
 		push	dword ptr [ecx]
-		call	ShowMessageBox
+		call	edx
 		leave
 		retn
 	}
@@ -1172,10 +1170,15 @@ bool Cmd_MessageBoxExAlt_Execute(COMMAND_ARGS)
 {
 	Script *callback;
 	char *buffer = GetStrArgBuffer();
-	if (!s_messageBoxScript && ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_MessageBoxExAlt.numParams, &callback))
+	if ((s_inMsgBoxCallback || !MessageMenu::Get()) && ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_MessageBoxExAlt.numParams, &callback))
 	{
-		s_messageBoxScript = callback;
-		CaptureLambdaVars(callback);
+		s_inMsgBoxCallback = false;
+		if IS_ID(callback, Script)
+		{
+			s_messageBoxScript = callback;
+			CaptureLambdaVars(callback);
+		}
+		else s_messageBoxScript = nullptr;
 		
 		char *msgStrings[0x102], **buttonPtr = msgStrings + 2, *delim = buffer;
 		*buttonPtr = NULL;

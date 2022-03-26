@@ -23,8 +23,8 @@ DEFINE_COMMAND_PLUGIN(CCCSMS, 0, 1, kParams_OneOptionalObjectRef);
 DEFINE_COMMAND_PLUGIN(CCCTaskPackageFlags, 0, 4, kParams_OneAIPackage_ThreeInts);
 
 UInt8 s_CCCModIdx = 0;
-UnorderedMap<const char*, const char*> s_avatarPaths(0x100);
-UnorderedMap<char*, const char*> s_avatarCommon(0x40);
+TempObject<UnorderedMap<const char*, const char*>> s_avatarPaths(0x100);
+TempObject<Map<char*, const char*>> s_avatarCommon(0x30);
 bool s_UILoaded = false;
 Tile::Value **s_UIelements = NULL;
 UInt32 s_savedForms[10] = {};
@@ -56,8 +56,8 @@ bool Cmd_CCCOnLoad_Execute(COMMAND_ARGS)
 		delim = GetNextToken(dataPtr, '=');
 		pathStr = (char*)malloc(StrLen(delim) + 28);
 		memcpy(StrCopy(StrLenCopy(pathStr, "jazzisparis\\ccc\\avatar_", 23), delim), ".dds", 5);
-		if (index < 129) s_avatarPaths[dataPtr] = pathStr;
-		else s_avatarCommon[dataPtr] = pathStr;
+		if (index < 129) s_avatarPaths()[dataPtr] = pathStr;
+		else s_avatarCommon()[dataPtr] = pathStr;
 		index++;
 	}
 
@@ -69,7 +69,7 @@ bool Cmd_CCCOnLoad_Execute(COMMAND_ARGS)
 		pathStr = (char*)malloc(index + 17);
 		StrCopy(StrLenCopy(pathStr, "jazzisparis\\ccc\\", 16), delim);
 		delim[index - 4] = 0;
-		s_avatarPaths[delim + 7] = pathStr;
+		s_avatarPaths()[delim + 7] = pathStr;
 	}
 
 	s_taskFaction = (TESFaction*)LookupFormByRefID((s_CCCModIdx << 24) + 0x2D501);
@@ -235,7 +235,7 @@ bool Cmd_CCCSetString_Execute(COMMAND_ARGS)
 }
 
 const char kAvatarMale[] = "jazzisparis\\ccc\\avatar_male.dds", kAvatarFemale[] = "jazzisparis\\ccc\\avatar_female.dds";
-UnorderedMap<UInt32, const char*> s_pathForID(0x20);
+TempObject<UnorderedMap<UInt32, const char*>> s_pathForID(0x20);
 
 bool Cmd_CCCSetTrait_Execute(COMMAND_ARGS)
 {
@@ -249,14 +249,14 @@ bool Cmd_CCCSetTrait_Execute(COMMAND_ARGS)
 			TESActorBase *actorBase = (TESActorBase*)thisObj->baseForm;
 			const char *fullName = actorBase->fullName.name.m_data, **findID;
 			if (!fullName || !*fullName) return true;
-			if (s_pathForID.Insert(actorBase->refID, &findID))
+			if (s_pathForID().Insert(actorBase->refID, &findID))
 			{
-				const char *findName = s_avatarPaths.Get(fullName);
+				const char *findName = s_avatarPaths().Get(fullName);
 				if (!findName)
 				{
 					if IS_ID(actorBase, TESCreature)
 					{
-						for (auto iter = s_avatarCommon.Begin(); iter; ++iter)
+						for (auto iter = s_avatarCommon().Begin(); iter; ++iter)
 						{
 							if (strstr(fullName, iter.Key()))
 							{
@@ -333,7 +333,7 @@ bool Cmd_CCCGetDistance_Execute(COMMAND_ARGS)
 	{
 		if (axis == 4)
 			*result = abs(thisObj->position.z - objRef->position.z);
-		else *result = GetDistance2D(thisObj, objRef);
+		else *result = Point2Distance(thisObj->position, objRef->position);
 	}
 	else *result = 0;
 	return true;
@@ -350,7 +350,7 @@ bool Cmd_CCCInFaction_Execute(COMMAND_ARGS)
 	return true;
 }
 
-UnorderedSet<TESActorBase*> s_NCCSActors;
+TempObject<Set<TESActorBase*>> s_NCCSActors;
 
 void SetNCCS(TESActorBase *actorBase, bool doSet)
 {
@@ -370,9 +370,9 @@ bool Cmd_CCCSetNCCS_Execute(COMMAND_ARGS)
 		TESActorBase *actorBase = (TESActorBase*)thisObj->baseForm;
 		if (doSet)
 		{
-			if (!s_NCCSActors.Insert(actorBase)) return true;
+			if (!s_NCCSActors().Insert(actorBase)) return true;
 		}
-		else if (!s_NCCSActors.Erase(actorBase)) return true;
+		else if (!s_NCCSActors().Erase(actorBase)) return true;
 		SetNCCS(actorBase, doSet != 0);
 	}
 	return true;
@@ -407,11 +407,11 @@ bool Cmd_GetEncumbranceRate_Eval(COMMAND_ARGS_EVAL)
 
 bool Cmd_CCCLoadNCCS_Execute(COMMAND_ARGS)
 {
-	if (!s_NCCSActors.Empty())
+	if (!s_NCCSActors().Empty())
 	{
-		for (auto nccs = s_NCCSActors.Begin(); nccs; ++nccs)
+		for (auto nccs = s_NCCSActors().Begin(); nccs; ++nccs)
 			SetNCCS(*nccs, false);
-		s_NCCSActors.Clear();
+		s_NCCSActors().Clear();
 	}
 	return true;
 }
@@ -425,7 +425,7 @@ bool Cmd_CCCSavedForm_Execute(COMMAND_ARGS)
 }
 
 typedef UnorderedMap<UInt32, TESObjectREFR*> MapMarkersGrid;
-Map<TESWorldSpace*, MapMarkersGrid> s_worldspaceMap;
+TempObject<Map<TESWorldSpace*, MapMarkersGrid>> s_worldspaceMap;
 
 bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 {
@@ -447,7 +447,7 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 	ExtraMapMarker *xMarker;
 	Coordinate coord;
 	MapMarkersGrid *markersGrid;
-	if (s_worldspaceMap.Insert(currentWspc, &markersGrid))
+	if (s_worldspaceMap().Insert(currentWspc, &markersGrid))
 	{
 		if (currentWspc->cell && (currentWspc->worldMap.ddsPath.m_dataLen || currentWspc->parent))
 		{

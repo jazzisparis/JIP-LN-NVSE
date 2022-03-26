@@ -562,7 +562,7 @@ __declspec(naked) float __vectorcall ATan2(float y, float x)
 		comiss	xmm1, xmm2
 		jz		zeroX
 		movaps	xmm2, xmm0
-		shufps	xmm2, xmm1, 0x44
+		unpcklpd	xmm2, xmm1
 		andps	xmm2, PS_AbsMask
 		movaps	xmm3, xmm2
 		pshufd	xmm4, xmm2, 0xFE
@@ -2121,13 +2121,13 @@ void DebugLog::FmtMessage(const char *fmt, va_list args)
 	fflush(theFile);
 }
 
-DebugLog s_log, s_debug;
+TempObject<DebugLog> s_log, s_debug;
 
 void PrintLog(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	s_log.FmtMessage(fmt, args);
+	s_log().FmtMessage(fmt, args);
 	va_end(args);
 }
 
@@ -2135,7 +2135,7 @@ void PrintDebug(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	s_debug.FmtMessage(fmt, args);
+	s_debug().FmtMessage(fmt, args);
 	va_end(args);
 }
 

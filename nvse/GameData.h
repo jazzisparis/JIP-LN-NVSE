@@ -570,6 +570,17 @@ struct WaterSurfaceManager
 		float					flt1C;			// 1C	-flt0C
 		float					flt20;			// 20	-waterHeight
 		DList<TESObjectREFR>	waterPlanes;	// 24
+		UInt32					unk30;
+		UInt32					unk34;
+		UInt32					unk38;
+		UInt32					unk3C;
+		UInt32					unk40;
+		UInt32					unk44;
+		UInt32					unk48;
+		UInt32					unk4C;
+		UInt32					unk50;
+		UInt32					unk54;
+		WaterShaderProperty		*waterShader;
 	};
 
 	struct Struct8C
@@ -605,8 +616,6 @@ struct WaterSurfaceManager
 	UInt32								unk9C;			// 9C
 };
 static_assert(sizeof(WaterSurfaceManager) == 0xA0);
-
-class BSTempNodeManager;
 
 // C4
 class TES
@@ -653,6 +662,11 @@ public:
 	__forceinline bool GetTerrainHeight(NiPoint2 *posXY, float *result)
 	{
 		return ThisCall<bool>(0x4572E0, this, posXY, result);
+	}
+
+	__forceinline void AddTempNode(NiAVObject *object, float lifetime)
+	{
+		ThisCall(0x458E20, this, object, lifetime);
 	}
 };
 static_assert(sizeof(TES) == 0xC4);
