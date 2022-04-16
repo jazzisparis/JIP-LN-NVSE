@@ -557,30 +557,35 @@ static_assert(sizeof(LoadedAreaBound) == 0x44);
 // A0
 struct WaterSurfaceManager
 {
-	// 30
+	// B0 c'tor @ 0x4ED5F0
 	struct WaterGroup
 	{
 		TESWaterForm			*waterForm;		// 00
-		UInt32					unk04;			// 04
-		UInt32					unk08;			// 08
-		float					flt0C;			// 0C	Always 1.0 ?
-		float					waterHeight;	// 10
-		UInt32					unk14;			// 14
-		UInt32					unk18;			// 18
-		float					flt1C;			// 1C	-flt0C
-		float					flt20;			// 20	-waterHeight
+		NiVector4				vector04;		// 04
+		NiVector4				vector14;		// 14
 		DList<TESObjectREFR>	waterPlanes;	// 24
-		UInt32					unk30;
-		UInt32					unk34;
-		UInt32					unk38;
-		UInt32					unk3C;
-		UInt32					unk40;
-		UInt32					unk44;
-		UInt32					unk48;
-		UInt32					unk4C;
-		UInt32					unk50;
-		UInt32					unk54;
-		WaterShaderProperty		*waterShader;
+		DList<void>				list30;			// 30
+		DList<void>				list3C;			// 3C
+		DList<void>				list48;			// 48
+		NiAVObject				*object54;		// 54
+		NiAVObject				*object58;		// 58
+		UInt8					byte5C;			// 5C
+		UInt8					byte5D;			// 5D
+		UInt8					byte5E;			// 5E
+		UInt8					byte5F;			// 5F
+		UInt8					byte60;			// 60
+		UInt8					pad61[3];		// 61
+		DList<void>				list64;			// 64
+		DList<void>				list70;			// 70
+		DList<void>				list7C;			// 7C
+		DList<void>				list88;			// 88
+		NiObject				*object94;		// 94
+		NiObject				*object98;		// 98
+		UInt32					unk9C;			// 9C
+		UInt32					unkA0;			// A0
+		NiObject				*objectA4;		// A4
+		NiObject				*objectA8;		// A8
+		UInt32					unkAC;			// AC
 	};
 
 	struct Struct8C

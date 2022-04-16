@@ -629,71 +629,73 @@ __declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 	static const __m128 kUnitConv = {PS_DUP_3(1 / 6.999125481F)};
 	__asm
 	{
-		push	ebp
-		mov		ebp, esp
-		and		esp, 0xFFFFFFF0
-		sub		esp, 0x20
-		push	ecx
-		push	dword ptr [ebp+8]
+		push	esi
+		mov		esi, ecx
+		push	dword ptr [esp+8]
 		call	SetRefrPositionHook
-		pop		eax
-		mov		ecx, [eax+0x64]
-		test	ecx, ecx
-		jz		done
-		mov		ecx, [ecx+0x14]
-		test	ecx, ecx
-		jz		done
-		push	ecx
-		mov		edx, [ebp+8]
-		movups	xmm0, [edx]
-		movq	qword ptr [ecx+0x58], xmm0
-		unpckhps	xmm0, xmm0
-		movss	[ecx+0x60], xmm0
-		mov		edx, [eax]
-		cmp		dword ptr [edx+0x100], ADDR_ReturnTrue
+		mov		eax, [esi]
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		doUpdate
-		mov		eax, [eax+0x68]
+		mov		eax, [esi+0x68]
 		test	eax, eax
 		jz		doUpdate
-		cmp		dword ptr [eax+0x28], 1
+		cmp		byte ptr [eax+0x28], 1
 		ja		doUpdate
 		mov		eax, [eax+0x138]
 		test	eax, eax
 		jz		doUpdate
 		cmp		dword ptr [eax+0x3F0], 4
 		jz		doUpdate
-		push	eax
-		lea		edx, [eax+0x570]
-		mov		eax, [edx+0x24]
-		mov		eax, [eax+8]
-		add		eax, 0xB0
-		lea		ecx, [esp+8]
-		push	edx
-		push	eax
-		CALL_EAX(0xC7F700)
-		pop		eax
-		mov		edx, [ebp+8]
+		mov		ecx, [eax+0x594]
+		test	ecx, ecx
+		jz		doUpdate
+		mov		ecx, [ecx+8]
+		test	ecx, ecx
+		jz		doUpdate
+		add		ecx, 0xB0
+		mov		edx, [esp+8]
 		movups	xmm0, [edx]
 		mulps	xmm0, kUnitConv
-		addps	xmm0, xmm1
-		movaps	[ecx], xmm0
-		mov		edx, [eax+8]
-		xorps	xmm0, xmm0
-		movaps	[edx+0x20], xmm0
-		movss	xmm0, [edx+0x58]
-		addss	xmm0, [edx+0x5C]
-		movd	eax, xmm0
+		movaps	xmm1, [eax+0x570]
+		pshufd	xmm2, xmm1, 0
+		mulps	xmm2, [ecx]
+		addps	xmm0, xmm2
+		pshufd	xmm2, xmm1, 0x55
+		mulps	xmm2, [ecx+0x10]
+		addps	xmm0, xmm2
+		pshufd	xmm2, xmm1, 0xAA
+		mulps	xmm2, [ecx+0x20]
+		addps	xmm0, xmm2
+		mov		ecx, [eax+8]
+		movq	xmm1, qword ptr [ecx+0x58]
+		xorps	xmm2, xmm2
+		haddps	xmm1, xmm2
+		movaps	[ecx+0x20], xmm2
+		movd	edx, xmm1
+		mov		ecx, [ecx+0x30]
+		lea		eax, [ecx+0xE0]
+		movaps	[eax], xmm0
+		push	edx
 		push	eax
-		push	ecx
-		mov		ecx, [edx+0x30]
 		CALL_EAX(0xC9E990)
-		mov		ecx, [esp]
 	doUpdate:
+		mov		ecx, [esi+0x64]
+		test	ecx, ecx
+		jz		done
+		mov		ecx, [ecx+0x14]
+		test	ecx, ecx
+		jz		done
+		mov		edx, [esp+8]
+		movups	xmm0, [edx]
+		movq	qword ptr [ecx+0x58], xmm0
+		unpckhpd	xmm0, xmm0
+		movss	[ecx+0x60], xmm0
+		mov		esi, ecx
 		call	NiNode::ResetCollision
-		pop		ecx
+		mov		ecx, esi
 		call	NiAVObject::Update
 	done:
-		leave
+		pop		esi
 		retn	4
 	}
 }
@@ -712,7 +714,7 @@ __declspec(naked) void __fastcall TESObjectREFR::SetAngle(NiVector4 &rotVector, 
 		jnz		localRot
 		lea		edx, [esi+0x24]
 		movq	qword ptr [edx], xmm0
-		unpckhps	xmm0, xmm0
+		unpckhpd	xmm0, xmm0
 		movss	[edx+8], xmm0
 		call	NiMatrix33::RotationMatrix
 		jmp		doneRot
@@ -780,9 +782,7 @@ __declspec(naked) void __fastcall TESObjectREFR::MoveToCell(TESObjectCELL *cell,
 		movups	[eax+0x24], xmm0
 		mov		ecx, [esp+8]
 		movups	xmm0, [ecx]
-		movq	qword ptr [eax+0x30], xmm0
-		unpckhps	xmm0, xmm0
-		movss	[eax+0x38], xmm0
+		movups	[eax+0x30], xmm0
 		push	0
 		push	0
 		push	0
@@ -1005,30 +1005,34 @@ __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const c
 		call	NiAVObject::GetProperty
 		test	eax, eax
 		jz		done
-		cmp		dword ptr [eax], kVtbl_BSShaderPPLightingProperty
-		jnz		done
+		mov		ecx, 0x200100
 		mov		edx, [eax+0x1C]
-		cmp		edx, 8
-		jl		done
-		cmp		edx, 0xC
-		jg		done
+		bt		ecx, edx
+		jnc		done
 		push	eax
 		push	0
 		push	0
 		lea		eax, [ebp-4]
 		push	eax
 		push	dword ptr [ebp+0xC]
-		mov		ecx, g_TES
 		CALL_EAX(0x4568C0)
 		mov		eax, [ebp-4]
 		test	eax, eax
 		jz		done
+		pop		ecx
 		push	eax
-		push	0
-		push	dword ptr [ebp+0x10]
-		mov		ecx, [ebp-8]
-		CALL_EAX(0xB67200)
-		mov		ecx, [ebp-4]
+		cmp		byte ptr [ecx+0x1C], 8
+		jnz		noLighting
+		mov		edx, [ebp+0x10]
+		mov		eax, [ecx+edx*4+0xAC]
+		jmp		doSet
+	noLighting:
+		mov		dword ptr [ecx+0x38], 0
+		lea		eax, [ecx+0x60]
+	doSet:
+		push	eax
+		call	NiReleaseAddRef
+		pop		ecx
 		call	NiReleaseObject
 	done:
 		leave
@@ -1245,7 +1249,7 @@ __declspec(naked) ContChangesEntry *Actor::GetWeaponInfo() const
 		mov		eax, [ecx+0x68]
 		test	eax, eax
 		jz		done
-		cmp		dword ptr [eax+0x28], 1
+		cmp		byte ptr [eax+0x28], 1
 		ja		retnNULL
 		mov		eax, [eax+0x114]
 		retn
@@ -1263,7 +1267,7 @@ __declspec(naked) ContChangesEntry *Actor::GetAmmoInfo() const
 		mov		eax, [ecx+0x68]
 		test	eax, eax
 		jz		done
-		cmp		dword ptr [eax+0x28], 1
+		cmp		byte ptr [eax+0x28], 1
 		ja		retnNULL
 		mov		eax, [eax+0x118]
 		retn
@@ -1423,9 +1427,9 @@ TESCombatStyle *Actor::GetCombatStyle() const
 	return ((TESActorBase*)baseForm)->GetCombatStyle();
 }
 
-bool Actor::GetKnockedState() const
+SInt8 Actor::GetKnockedState() const
 {
-	return baseProcess && (baseProcess->GetKnockedState() == 3);
+	return (baseProcess && (baseProcess->processLevel <= 1)) ? ((MiddleHighProcess*)baseProcess)->knockedState : -1;
 }
 
 bool Actor::IsWeaponOut() const
@@ -1687,7 +1691,7 @@ __declspec(naked) void Actor::DismemberLimb(UInt32 bodyPartID, bool explode)
 		mov		eax, [ecx+0x68]
 		test	eax, eax
 		jz		done
-		cmp		dword ptr [eax+0x28], 0
+		cmp		byte ptr [eax+0x28], 0
 		jnz		done
 		mov		ecx, [eax+edx*4+0x1DC]
 		test	ecx, ecx
@@ -1731,7 +1735,7 @@ __declspec(naked) bool Actor::CanBePushed() const
 		mov		eax, [ecx+0x68]
 		test	eax, eax
 		jz		done
-		cmp		dword ptr [eax+0x28], 0
+		cmp		byte ptr [eax+0x28], 0
 		jnz		retn0
 		cmp		dword ptr [eax+0x140], 0
 		jnz		retn0
@@ -1865,7 +1869,7 @@ __declspec(naked) int Actor::GetGroundMaterial() const
 		mov		eax, [esi+0x68]
 		test	eax, eax
 		jz		invalid
-		cmp		dword ptr [eax+0x28], 1
+		cmp		byte ptr [eax+0x28], 1
 		ja		invalid
 		mov		eax, [eax+0x138]
 		test	eax, eax

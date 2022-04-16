@@ -2167,9 +2167,9 @@ public:
 			}
 			else if (numAlloc < newSize)
 			{
-				newSize = AlignNumAlloc<T_Data>(newSize);
-				data = POOL_REALLOC(data, numAlloc, newSize, T_Data);
-				numAlloc = newSize;
+				UInt32 newAlloc = AlignNumAlloc<T_Data>(newSize);
+				data = POOL_REALLOC(data, numAlloc, newAlloc, T_Data);
+				numAlloc = newAlloc;
 			}
 			pData = data + numItems;
 			pEnd = data + newSize;
@@ -2409,6 +2409,7 @@ public:
 
 	UInt32 Size() const {return numItems;}
 	bool Empty() const {return !numItems;}
+	bool Full() const {return numItems == size;}
 	T_Data *Data() {return data;}
 
 	bool Append(Data_Arg item)

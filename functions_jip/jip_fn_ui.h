@@ -1082,14 +1082,19 @@ __declspec(naked) void QuantityMenuCallback(int count)
 {
 	__asm
 	{
-		mov		eax, s_quantityMenuScript
-		test	eax, eax
+		mov		ecx, s_quantityMenuScript
+		test	ecx, ecx
 		jz		done
 		mov		s_quantityMenuScript, 0
-		push	dword ptr [esp+4]
+		xor		eax, eax
+		cmp		dword ptr [ebp+8], 5
+		setz	al
+		neg		eax
+		add		eax, [esp+4]
+		push	eax
 		push	1
 		push	0
-		push	eax
+		push	ecx
 		call	CallFunction
 		call	UncaptureLambdaVars
 		add		esp, 0x10
@@ -1102,16 +1107,16 @@ bool Cmd_ShowQuantityMenu_Execute(COMMAND_ARGS)
 {
 	Script *callback;
 	int maxCount, defaultCount = -1;
-	if (!s_quantityMenuScript && !QuantityMenu::Get() && ExtractArgsEx(EXTRACT_ARGS_EX, &callback, &maxCount, &defaultCount) && (maxCount > 0) && IS_ID(callback, Script) &&
+	if (!QuantityMenu::Get() && ExtractArgsEx(EXTRACT_ARGS_EX, &callback, &maxCount, &defaultCount) && (maxCount > 0) && IS_ID(callback, Script) &&
 		ShowQuantityMenu(maxCount, QuantityMenuCallback, ((defaultCount < 0) || (defaultCount > maxCount)) ? maxCount : defaultCount))
 	{
 		s_quantityMenuScript = callback;
 		CaptureLambdaVars(callback);
+		*result = 1;
 	}
+	else *result = 0;
 	return true;
 }
-
-bool s_inMsgBoxCallback = false;
 
 __declspec(naked) void MessageBoxCallback()
 {
@@ -1121,10 +1126,12 @@ __declspec(naked) void MessageBoxCallback()
 		add		ecx, 0xE4
 		movzx	edx, byte ptr [ecx]
 		mov		byte ptr [ecx], 0xFF
-		mov		eax, s_messageBoxScript
+		mov		ecx, offset s_messageBoxScripts
+		mov		eax, [ecx]
+		mov		eax, [ecx+eax*4]
+		dec		dword ptr [ecx]
 		test	eax, eax
 		jz		done
-		mov		s_inMsgBoxCallback, 1
 		push	edx
 		push	1
 		push	0
@@ -1132,7 +1139,6 @@ __declspec(naked) void MessageBoxCallback()
 		call	CallFunction
 		call	UncaptureLambdaVars
 		add		esp, 0x10
-		mov		s_inMsgBoxCallback, 0
 	done:
 		retn
 	}
@@ -1170,15 +1176,12 @@ bool Cmd_MessageBoxExAlt_Execute(COMMAND_ARGS)
 {
 	Script *callback;
 	char *buffer = GetStrArgBuffer();
-	if ((s_inMsgBoxCallback || !MessageMenu::Get()) && ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_MessageBoxExAlt.numParams, &callback))
+	if (!s_messageBoxScripts.Full() && ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_MessageBoxExAlt.numParams, &callback))
 	{
-		s_inMsgBoxCallback = false;
 		if IS_ID(callback, Script)
-		{
-			s_messageBoxScript = callback;
 			CaptureLambdaVars(callback);
-		}
-		else s_messageBoxScript = nullptr;
+		else callback = nullptr;
+		s_messageBoxScripts.Append(callback);
 		
 		char *msgStrings[0x102], **buttonPtr = msgStrings + 2, *delim = buffer;
 		*buttonPtr = NULL;
@@ -1731,12 +1734,33 @@ bool Cmd_CloseActiveMenu_Execute(COMMAND_ARGS)
 						renderedMenu->Close();
 					else tileMenu->Destroy(true);
 				}
+				if (menuID == kMenuType_Message)
+				{
+					CdeclCall(0x7AA480);
+					if (!s_messageBoxScripts.Empty())
+					{
+						for (auto scrIter = s_messageBoxScripts.Begin(); scrIter; ++scrIter)
+							if (*scrIter) UncaptureLambdaVars(*scrIter);
+						s_messageBoxScripts.Clear();
+					}
+				}
+				else if (menuID == kMenuType_Quantity)
+				{
+					if (s_quantityMenuScript)
+					{
+						UncaptureLambdaVars(s_quantityMenuScript);
+						s_quantityMenuScript = nullptr;
+					}
+				}
+				else if ((menuID == kMenuType_TextEdit) && HOOK_INSTALLED(TextInputClose))
+					UnsetTextInputHooks(TextEditMenu::Get());
 			}
 			else if (menuID == 1)
 			{
 				intrfcMgr->pipBoyMode = 4;
 				intrfcMgr->pipBoyModeCallback = nullptr;
 			}
+			intrfcMgr->menuStack[index] = 0;
 			if (!closeAll) break;
 		}
 		while (--index >= 0);

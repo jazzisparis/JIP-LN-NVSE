@@ -1987,7 +1987,7 @@ bool Cmd_GetBlockTextureSet_Execute(COMMAND_ARGS)
 				ArrayElementL elements[6];
 				const char *filePath;
 				bool createArr = false;
-				if IS_TYPE(shaderProp, BSShaderPPLightingProperty)
+				if (shaderProp->shaderType == BSShaderProperty::kType_PPLighting)
 				{
 					BSShaderPPLightingProperty *lightingProp = (BSShaderPPLightingProperty*)shaderProp;
 					if (lightingProp->textureSet)
@@ -2005,7 +2005,7 @@ bool Cmd_GetBlockTextureSet_Execute(COMMAND_ARGS)
 						while (++index < 6);
 					}
 				}
-				else if IS_TYPE(shaderProp, BSShaderNoLightingProperty)
+				else if (shaderProp->shaderType == BSShaderProperty::kType_NoLighting)
 				{
 					BSShaderNoLightingProperty *noLightingProp = (BSShaderNoLightingProperty*)shaderProp;
 					if (noLightingProp->srcTexture && IS_TYPE(noLightingProp->srcTexture, NiSourceTexture))
@@ -2218,7 +2218,7 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 				if (targetGeom && targetGeom->GetTriBasedGeom())
 				{
 					BSShaderNoLightingProperty *shaderProp = (BSShaderNoLightingProperty*)targetGeom->GetProperty(3);
-					if (shaderProp && IS_TYPE(shaderProp, BSShaderNoLightingProperty))
+					if (shaderProp && (shaderProp->shaderType == BSShaderProperty::kType_NoLighting))
 						pTexture = &shaderProp->srcTexture;
 				}
 			}
@@ -2366,10 +2366,13 @@ bool Cmd_GetLinearVelocityAlt_Execute(COMMAND_ARGS)
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
 		if (rigidBody && rigidBody->IsMobile())
 		{
-			hkVector4 velocity = rigidBody->motion.linVelocity;
-			if (getLocal)
-				velocity = rigidBody->motion.motionState.transform.rotation.MultiplyVector(velocity);
-			outVel.Set(velocity);
+			if (!getLocal)
+				outVel.Set(rigidBody->motion.linVelocity);
+			else
+			{
+				hkVector4 velocity = rigidBody->motion.linVelocity;
+				outVel.Set(rigidBody->motion.motionState.transform.rotation.MultiplyVector(velocity));
+			}
 			*result = 1;
 		}
 	}
@@ -2387,10 +2390,13 @@ bool Cmd_GetAngularVelocityAlt_Execute(COMMAND_ARGS)
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
 		if (rigidBody && rigidBody->IsMobile())
 		{
-			hkVector4 velocity = rigidBody->motion.angVelocity;
-			if (!getGlobal)
-				velocity = rigidBody->motion.motionState.transform.rotation.MultiplyVector(velocity);
-			outVel.Set(velocity);
+			if (getGlobal)
+				outVel.Set(rigidBody->motion.angVelocity);
+			else
+			{
+				hkVector4 velocity = rigidBody->motion.angVelocity;
+				outVel.Set(rigidBody->motion.motionState.transform.rotation.MultiplyVector(velocity));
+			}
 			*result = 1;
 		}
 	}

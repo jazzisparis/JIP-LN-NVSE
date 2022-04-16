@@ -769,7 +769,7 @@ bool Cmd_SetGameHour_Execute(COMMAND_ARGS)
 	float newHour;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &newHour) && (newHour >= 0))
 	{
-		if (HOOK_INSTALLED(UpdateTimeGlobals))
+		if (HOOK_INSTALLED(UpdateTimeGlobals) && !(s_serializedFlags & kSerializedFlag_NoHardcoreTracking))
 		{
 			double passed = newHour - g_gameHour->data;
 			if (g_gameHour->data > newHour)

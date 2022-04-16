@@ -129,11 +129,10 @@ const char kMenuIDJumpTable[] =
 
 UInt32 s_serializedFlags = 0;
 
-__declspec(naked) void __fastcall ResultVars::Set(const NiVector3 &values)
+__declspec(naked) void __vectorcall ResultVars::Set(__m128 values)
 {
 	__asm
 	{
-		movups	xmm0, [edx]
 		andps	xmm0, PS_XYZ0Mask
 		cvtps2pd	xmm1, xmm0
 		shufps	xmm0, xmm0, 0xFE
@@ -148,11 +147,10 @@ __declspec(naked) void __fastcall ResultVars::Set(const NiVector3 &values)
 	}
 }
 
-__declspec(naked) void __vectorcall ResultVars::Set(const NiVector3 &values, const __m128 modifier)
+__declspec(naked) void __vectorcall ResultVars::Set(__m128 values, const __m128 modifier)
 {
 	__asm
 	{
-		movups	xmm1, [edx]
 		mulps	xmm0, xmm1
 		cvtps2pd	xmm1, xmm0
 		shufps	xmm0, xmm0, 0xFE

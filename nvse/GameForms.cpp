@@ -108,10 +108,24 @@ UInt32 TESForm::GetItemValue() const
 	return valForm ? valForm->value : 0;
 }
 
-UInt8 TESForm::GetOverridingModIdx() const
+__declspec(naked) UInt8 TESForm::GetOverridingModIdx() const
 {
-	ModInfo *info = mods.GetLastItem();
-	return info ? info->modIndex : 0xFF;
+	__asm
+	{
+		lea		edx, [ecx+0x10]
+	iterHead:
+		mov		eax, [edx]
+		mov		edx, [edx+4]
+		test	edx, edx
+		jnz		iterHead
+		test	eax, eax
+		jz		noInfo
+		mov		al, [eax+0x40C]
+		retn
+	noInfo:
+		mov		al, 0xFF
+		retn
+	}
 }
 
 const char *TESForm::GetDescriptionText()
@@ -332,18 +346,16 @@ BGSQuestObjective *TESQuest::GetObjective(UInt32 objectiveID) const
 	return NULL;
 }
 
-SInt32 BGSQuestObjective::GetTargetIndex(TESObjectREFR *refr) const
+ObjectiveTarget *BGSQuestObjective::GetTarget(TESObjectREFR *refr) const
 {
-	SInt32 index = 0;
 	ListNode<Target> *iter = targets.Head();
 	do
 	{
 		if (iter->data && (iter->data->target == refr))
-			return index;
-		index++;
+			return iter->data;
 	}
 	while (iter = iter->next);
-	return -1;
+	return nullptr;
 }
 
 void TESActorBaseData::SetFactionRank(TESFaction *faction, char rank)

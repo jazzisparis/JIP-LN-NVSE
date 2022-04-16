@@ -203,14 +203,12 @@ __declspec(naked) bool HookInfo::DoSet(bool install)
 {
 	__asm
 	{
-		mov		eax, [esp+4]
+		mov		al, [esp+4]
+		and		eax, 1
 		cmp		dword ptr [ecx+0x1C], 0
 		setnz	dl
 		cmp		al, dl
-		jnz		proceed
-		xor		al, al
-		retn	4
-	proceed:
+		jz		retnFalse
 		mov		[ecx+0x1C], eax
 		push	esi
 		mov		esi, ecx
@@ -248,6 +246,9 @@ __declspec(naked) bool HookInfo::DoSet(bool install)
 		pop		ecx
 		mov		al, 1
 		pop		esi
+		retn	4
+	retnFalse:
+		xor		al, al
 		retn	4
 	}
 }
@@ -886,15 +887,13 @@ __declspec(naked) bool __stdcall TextInputKeyPressHook(UInt32 inputKey)
 	}
 }
 
-__declspec(naked) void TextInputCloseHook()
+__declspec(naked) void __fastcall UnsetTextInputHooks(TextEditMenu *menu)
 {
 	__asm
 	{
-		cmp		dword ptr [esp+4], 1
-		jnz		done
-		push	esi
-		mov		esi, ecx
-		mov		byte ptr [ecx+0x55], 0
+		push	dword ptr [ecx+0x58]
+		call	UncaptureLambdaVars
+		pop		ecx
 		push	0x7E65F0
 		push	0x1070060
 		call	SafeWrite32
@@ -904,18 +903,30 @@ __declspec(naked) void TextInputCloseHook()
 		xor		dl, dl
 		mov		ecx, offset s_hookInfos+kHook_TextInputClose*kHookInfoSize
 		call	HookInfo::Set
-		mov		eax, [esi+0x34]
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall TextInputCloseHook(TextEditMenu *menu, int EDX, int tileID, Tile *clicked)
+{
+	__asm
+	{
+		cmp		dword ptr [esp+4], 1
+		jnz		done
+		push	ecx
+		mov		byte ptr [ecx+0x55], 0
+		mov		eax, [ecx+0x34]
 		mov		edx, 0x1011584
 		test	eax, eax
 		cmovz	eax, edx
 		push	eax
 		push	1
 		push	0
-		push	dword ptr [esi+0x58]
+		push	dword ptr [ecx+0x58]
 		call	CallFunction
-		call	UncaptureLambdaVars
 		add		esp, 0x10
-		pop		esi
+		pop		ecx
+		call	UnsetTextInputHooks
 		CALL_EAX(0x7E65B0)
 	done:
 		retn	8
@@ -4057,14 +4068,15 @@ __declspec(naked) void __fastcall SetRefrPositionHook(TESObjectREFR *refr, int E
 	{
 		push	ebp
 		mov		ebp, esp
-		sub		esp, 0x40
-		push	ecx
-		mov		[ebp-0x1D], 0
-		cmp		dword ptr [ecx+0xC], 0x14
-		jnz		doneSync
+		push	0
+		push	0
+		push	esi
+		mov		esi, ecx
 		mov		eax, s_syncPositionRef
 		test	eax, eax
 		jz		doneSync
+		cmp		dword ptr [ecx+0xC], 0x14
+		jnz		doneSync
 		mov		ecx, [ecx+0x40]
 		test	ecx, ecx
 		jz		doneSync
@@ -4105,38 +4117,102 @@ __declspec(naked) void __fastcall SetRefrPositionHook(TESObjectREFR *refr, int E
 		movss	xmm1, [eax+0x68]
 		movss	xmm0, [eax+0x6C]
 		call	ATan2
-		mov		ecx, [ebp-0x44]
-		movss	[ecx+0x2C], xmm0
+		movss	[esi+0x2C], xmm0
 	doneSync:
 		mov		eax, [ebp+8]
-		movups	xmm0, [eax]
+		movups	xmm7, [eax]
+		movaps	xmm0, xmm7
 		andps	xmm0, PS_AbsMask
 		cmpnltps	xmm0, kMaxPos
 		movmskps	edx, xmm0
 		test	dl, 7
-		jz		done
-		mov		ecx, [ebp-0x44]
-		mov		eax, [ecx]
+		jz		donePos
+		xorps	xmm7, xmm7
+		mov		eax, [esi]
 		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		notActor
-		lea		eax, [ecx+0x160]
+		cmp		dword ptr [esi+0x170], 0
+		jz		gotPos
+		movups	xmm7, [esi+0x160]
 		jmp		gotPos
 	notActor:
 		push	kExtraData_StartingPosition
-		add		ecx, 0x44
+		lea		ecx, [esi+0x44]
 		call	BaseExtraList::GetByType
 		test	eax, eax
-		jz		done
-		add		eax, 0xC
+		jz		gotPos
+		movups	xmm7, [eax+0xC]
 	gotPos:
-		movq	xmm0, qword ptr [eax]
-		movq	qword ptr [ebp-0x10], xmm0
-		movss	xmm0, [eax+8]
-		addss	xmm0, SS_10
-		movss	[ebp-8], xmm0
-		mov		[ebp-0x1D], 1
+		andps	xmm7, PS_XYZ0Mask
+		movss	xmm0, SS_10
+		shufps	xmm0, xmm0, 0x45
+		addps	xmm7, xmm0
+		mov		[ebp-8], 1
+	donePos:
+		mov		eax, [esi+0x20]
+		test	eax, eax
+		jz		doneWorld
+		movzx	edx, byte ptr [eax+4]
+		sub		edx, 0xD
+		js		doneWorld
+		cmp		dl, 0x20
+		ja		doneWorld
+		cmp		byte ptr [edx+0x587CE4], 0
+		jnz		doneWorld
+		test	byte ptr [esi+9], 4
+		jnz		doneFlag
+		lea		edx, [esi+0x10]
+	iterHead:
+		mov		eax, [edx]
+		mov		edx, [edx+4]
+		test	edx, edx
+		jnz		iterHead
+		test	eax, eax
+		jz		doneWorld
+		test	byte ptr [eax+0x3E8], 1
+		jz		doneWorld
+	doneFlag:
+		mov		ecx, esi
+		call	TESObjectREFR::GetParentWorld
+		test	eax, eax
+		jz		doneWorld
+		mov		[ebp-4], eax
+		push	esi
+		mov		ecx, eax
+		CALL_EAX(0x587E40)
+	doneWorld:
+		movq	qword ptr [esi+0x30], xmm7
+		pshufd	xmm0, xmm7, 2
+		movss	[esi+0x38], xmm0
+		cmp		[ebp-8], 0
+		jz		doneNode
+		mov		ecx, [esi+0x64]
+		test	ecx, ecx
+		jz		doneNode
+		mov		ecx, [ecx+0x14]
+		test	ecx, ecx
+		jz		doneNode
+		mov		[ebp-8], ecx
+		movq	qword ptr [ecx+0x58], xmm7
+		movss	[ecx+0x60], xmm0
+		call	NiNode::ResetCollision
+		mov		ecx, [ebp-8]
+		CALL_EAX(0xA5A040)
+		mov		ecx, [ebp-8]
+		call	NiAVObject::Update
+	doneNode:
+		mov		ecx, [ebp-4]
+		test	ecx, ecx
+		jz		done
+		push	esi
+		CALL_EAX(0x587D10)
 	done:
-		JMP_EAX(0x575A31)
+		push	2
+		mov		ecx, esi
+		CALL_EAX(0x484B60)
+		pop		esi
+		leave
+		retn	4
 	}
 }
 

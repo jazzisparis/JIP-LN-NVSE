@@ -612,6 +612,8 @@ __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetHealth
 	}
 }
 
+bool __fastcall GetEntryDataHasModHook(ContChangesEntry *entry, int EDX, UInt8 modType);
+
 __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(Actor *owner, float condition, TESForm *ammo)
 {
 	static const double kSplitBeamMult = 1.3;
@@ -649,7 +651,7 @@ __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(
 	noAmmo:
 		push	0xC
 		mov		ecx, esi
-		CALL_EAX(0x4BDA70)
+		call	GetEntryDataHasModHook
 		test	al, al
 		jz		noMod
 		fmul	kSplitBeamMult

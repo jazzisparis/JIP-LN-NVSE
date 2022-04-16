@@ -232,8 +232,8 @@ struct ResultVars
 
 	ResultVars() {}
 
-	void __fastcall Set(const NiVector3 &values);
-	void __vectorcall Set(const NiVector3 &values, const __m128 modifier);
+	void __vectorcall Set(__m128 values);
+	void __vectorcall Set(__m128 values, const __m128 modifier);
 };
 
 typedef Set<TESForm*> TempFormList;

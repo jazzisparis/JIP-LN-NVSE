@@ -193,6 +193,19 @@ __declspec(naked) void MarkCreatureNoFallHook()
 	}
 }
 
+__declspec(naked) void SetPosAndRotHook()
+{
+	__asm
+	{
+		mov		eax, 0xC65B74
+		mov		edx, 0xC65EDA
+		mov		ecx, [esp+0x28]
+		test	byte ptr [ecx+0xC], 0x40
+		cmovz	eax, edx
+		jmp		eax
+	}
+}
+
 __declspec(naked) bool DetectionTeammateHook()
 {
 	__asm
@@ -235,14 +248,14 @@ __declspec(naked) bool WheelTeammateHook()
 	}
 }
 
-Script *s_messageBoxScript = NULL;
+FixedTypeArray<Script*, 0xF> s_messageBoxScripts;
 
 __declspec(naked) float MaxMessageWidthHook()
 {
 	static const float maxWidth = 1200.0F;
 	__asm
 	{
-		cmp		s_messageBoxScript, 0
+		cmp		s_messageBoxScripts, 0
 		jnz		overrideWidth
 		JMP_EAX(ADDR_TileGetFloat)
 	overrideWidth:
@@ -1244,25 +1257,34 @@ __declspec(naked) TESModelTextureSwap *TESObjectWEAP::GetWeaponModel(UInt32 modF
 	static const UInt32 kModelByMod[] = {0x3C, 0x270, 0x290, 0x2D0, 0x2B0, 0x2F0, 0x310, 0x330, 0x250, 0x254, 0x258, 0x260, 0x25C, 0x268, 0x264, 0x26C};
 	__asm
 	{
-		mov		eax, [esp+4]
-		mov		edx, [esp+8]
+		push	esi
+		mov		esi, ecx
+		mov		eax, [esp+8]
 		and		eax, 7
+		mov		edx, kModelByMod[eax*4]
+		add		ecx, edx
+		cmp		word ptr [ecx+8], 0
+		setnz	dl
+		neg		dl
+		and		al, dl
+		mov		edx, [esp+0xC]
 		cmp		dword ptr [edx+0xC], 0x14
 		jz		get1stP
 		test	al, al
 		jz		get3rdP
-		cmp		byte ptr [ecx+0xF4], 8
+		cmp		byte ptr [esi+0xF4], 8
 		jnz		get3rdP
 	get1stP:
 		mov		edx, kModelByMod[eax*4+0x20]
-		mov		edx, [ecx+edx]
+		mov		edx, [esi+edx]
 		test	edx, edx
 		jz		get3rdP
 		lea		eax, [edx+0x30]
+		pop		esi
 		retn	8
 	get3rdP:
-		mov		edx, kModelByMod[eax*4]
-		lea		eax, [ecx+edx]
+		mov		eax, ecx
+		pop		esi
 		retn	8
 	}
 }
@@ -2623,10 +2645,12 @@ void __fastcall RemovePerkNPCHook(Actor *actor, int EDX, BGSPerk *perk, bool for
 void __fastcall RemovePerkPlayerHook(PlayerCharacter *thePlayer, int EDX, BGSPerk *perk, bool forTeammates)
 {
 	PerkRankFinder prFinder(perk);
+	PerkRank *perkRank;
 	if (!forTeammates)
 	{
-		if (thePlayer->perkRanksPC.RemoveIf(prFinder))
+		if (perkRank = thePlayer->perkRanksPC.RemoveIf(prFinder))
 		{
+			GameHeapFree(perkRank);
 			auto entryIter = perk->entries.Head();
 			BGSPerkEntry *entry;
 			do
@@ -2639,8 +2663,9 @@ void __fastcall RemovePerkPlayerHook(PlayerCharacter *thePlayer, int EDX, BGSPer
 			ThisCall(0x8C17C0, thePlayer);
 		}
 	}
-	else if (thePlayer->perkRanksTM.RemoveIf(prFinder))
+	else if (perkRank = thePlayer->perkRanksTM.RemoveIf(prFinder))
 	{
+		GameHeapFree(perkRank);
 		auto tmmIter = thePlayer->teammates.Head();
 		Actor *teammate;
 		do
@@ -2976,7 +3001,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 		if (source)
 		{
 			weaponInfo = source->GetWeaponInfo();
-			if (weaponInfo && ThisCall<bool>(0x4BDA70, weaponInfo, 0xC))
+			if (weaponInfo && GetEntryDataHasModHook(weaponInfo, 0, 0xC))
 			{
 				valueMod1 = (float)ThisCall<UInt8>(0x525B20, hitWeapon, 1, 0, source);
 				dmgThreshold /= valueMod1;
@@ -3772,7 +3797,7 @@ __declspec(naked) bool __fastcall ModHardcoreNeedsHook(PlayerCharacter *thePlaye
 		xorps	xmm1, xmm1
 		maxps	xmm0, xmm1
 		movq	qword ptr [eax], xmm0
-		unpckhps	xmm0, xmm0
+		unpckhpd	xmm0, xmm0
 		movss	[eax+8], xmm0
 		movq	qword ptr [ecx], xmm1
 		movss	[ecx+8], xmm1
@@ -4455,7 +4480,8 @@ void InitGamePatches()
 	WriteRelJump(0x579942, 0x579AB7);
 
 	//	Update fixed-collision when changing position/rotation
-	SafeWrite8(0xC65B59, 0xEB);
+	SafeWrite32(0xC65B47, 0x38F);
+	WriteRelJump(0xC65B5B, (UInt32)SetPosAndRotHook);
 
 	//	Runtime script compiler recognize NVSE var types
 	SafeWrite32(0x118CBF4, (UInt32)&s_varTypeNameTokens);
@@ -4816,5 +4842,6 @@ void DeferredInit()
 
 void InitEditorPatches()
 {
-	
+	//	Make DefaultCmdParse accept exterior cells with kParamType_Cell
+	WriteRelJump(0x5C6C1F, 0x5C7A01);
 }

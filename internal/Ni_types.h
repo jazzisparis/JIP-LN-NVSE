@@ -58,6 +58,7 @@ struct NiVector3
 		_mm_storel_pi((__m64*)this, m);
 		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
 	}
+	inline void operator=(const NiPoint2 &rhs) {_mm_storel_pi((__m64*)this, rhs);}
 
 	inline NiVector3& operator+=(const NiVector3 &rhs)
 	{

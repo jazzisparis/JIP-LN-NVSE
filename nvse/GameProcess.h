@@ -1010,7 +1010,7 @@ public:
 	UInt8						byt136;				// 136
 	UInt8						byt137;				// 137
 	bhkCharacterController		*charCtrl;			// 138
-	UInt8						knockedState;		// 13C
+	SInt8						knockedState;		// 13C
 	UInt8						sitSleepState;		// 13D
 	UInt8						unk13E[2];			// 13E
 	TESObjectREFR				*usedFurniture;		// 140

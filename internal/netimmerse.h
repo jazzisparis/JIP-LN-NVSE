@@ -902,9 +902,33 @@ public:
 	/*BC*/virtual void		Unk_2F(UInt32 arg1, UInt32 arg2);
 	/*C0*/virtual void		Unk_30(void);
 
+	enum ShaderType
+	{
+		kType_Lighting =			1,
+		kType_DistantLOD =			2,
+		kType_GeometryDecal =		3,
+		kType_TallGrass =			4,
+		kType_SpeedTreeLeaf =		6,
+		kType_PPLighting =			8,
+		kType_Hair =				9,
+		kType_SpeedTreeBranch =		0xA,
+		kType_SpeedTreeBillboard =	0xB,
+		kType_Lighting30 =			0xC,
+		kType_Sky =					0xD,
+		kType_Water =				0xE,
+		kType_Bolt =				0xF,
+		kType_Particle =			0x11,
+		kType_Precipitation =		0x12,
+		kType_Tile =				0x13,
+		kType_NoLighting =			0x15,
+		kType_VolumetricFog =		0x16,
+		kType_BloodSplatter =		0x17,
+		kType_DistantTree =			0x18
+	};
+
 	UInt16			unk18;				// 18
 	UInt16			unk1A;				// 1A
-	UInt32			unk1C;				// 1C
+	UInt32			shaderType;			// 1C
 	UInt32			flags20;			// 20
 	UInt32			flags24;			// 24
 	float			alpha;				// 28
@@ -933,15 +957,15 @@ public:
 	/*CC*/virtual void		Unk_33(void);
 	/*D0*/virtual void		Unk_34(void);
 
-	NiTexture		*srcTexture;	// 60
-	UInt32			unk64;			// 64
-	UInt16			word68;			// 68
-	UInt16			word6A;			// 6A
-	UInt32			unk6C;			// 6C
-	float			flt70;			// 70
-	float			flt74;			// 74
-	float			flt78;			// 78
-	float			flt7C;			// 7C
+	NiTexture		*srcTexture;			// 60
+	UInt32			unk64;					// 64
+	UInt16			word68;					// 68
+	UInt16			word6A;					// 6A
+	UInt32			unk6C;					// 6C
+	float			falloffStartAngle;		// 70
+	float			falloffStopAngle;		// 74
+	float			falloffStartOpacity;	// 78
+	float			falloffStopOpacity;		// 7C
 };
 static_assert(sizeof(BSShaderNoLightingProperty) == 0x80);
 
@@ -993,7 +1017,7 @@ public:
 	BSShaderTextureSet	*textureSet;			// 0A4
 	UInt16				word0A8;				// 0A8
 	UInt16				word0AA;				// 0AA
-	NiSourceTexture		*srcTextures[6];		// 0AC
+	NiSourceTexture		**srcTextures[6];		// 0AC
 	void				*ptr0C4;				// 0C4
 	UInt32				unk0C8;					// 0C8
 	void				*ptr0CC;				// 0CC
@@ -1022,15 +1046,15 @@ public:
 	UInt32				unk068;				// 068
 	float				flt06C;				// 06C
 	float				flt070;				// 070
-	UInt32				unk074;				// 074
-	UInt32				unk078;				// 078
+	float				fogDistanceFar;		// 074
+	float				fogDistanceNear;	// 078
 	UInt8				byte07C;			// 07C
 	UInt8				byte07D;			// 07D
 	UInt8				byte07E;			// 07E
 	UInt8				useDefaultWater;	// 07F
 	UInt8				bReflections;		// 080
 	UInt8				bRefractions;		// 081
-	UInt8				byte082;			// 082
+	UInt8				bTextureCoords;		// 082
 	UInt8				byte083;			// 083
 	UInt32				unk084;				// 084
 	NiColorAlpha		shallowColor;		// 088

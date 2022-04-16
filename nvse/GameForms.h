@@ -1198,11 +1198,21 @@ public:
 	UInt32			unk01C;			// 01C
 	UInt32			status;			// 020	bit0 = displayed, bit 1 = completed. 1 and 3 significant. If setting it to 3, quest flags bit1 will be set also.
 
-	SInt32 GetTargetIndex(TESObjectREFR *refr) const;
+	Target *GetTarget(TESObjectREFR *refr) const;
 };
 
 typedef BGSQuestObjective::Target ObjectiveTarget;
 typedef BGSQuestObjective::Target::Data ObjectiveTargetData;
+
+class ObjTargetFinder
+{
+	TESObjectREFR	*m_target;
+
+public:
+	ObjTargetFinder(TESObjectREFR *_target) : m_target(_target) {}
+
+	bool Accept(ObjectiveTarget *objTarget) {return objTarget->target == m_target;}
+};
 
 class BGSOpenCloseForm
 {
@@ -2451,6 +2461,30 @@ static_assert(sizeof(BGSStaticCollection) == 0x50);
 class BGSPlaceableWater : public TESBoundObject
 {
 public:
+	enum WaterFlags
+	{
+		kWtrFlag_Reflects =					1,
+		kWtrFlag_ReflectsActors =			2,
+		kWtrFlag_ReflectsLand =				4,
+		kWtrFlag_ReflectsLODLand =			8,
+		kWtrFlag_ReflectsLODBuildings =		0x10,
+		kWtrFlag_ReflectsLODTrees =			0x20,
+		kWtrFlag_ReflectsSky =				0x40,
+		kWtrFlag_ReflectsDynamicObjects =	0x80,
+		kWtrFlag_ReflectsDeadBodies =		0x100,
+	
+		kWtrFlag_Refracts =					0x200,
+		kWtrFlag_RefractsActors =			0x400,
+		kWtrFlag_RefractsLand =				0x800,
+		kWtrFlag_RefractsDeadBodies =		0x20000,
+		kWtrFlag_RefractsDynamicObjects =	0x10000,
+	
+		kWtrFlag_SilhouetteReflections =	0x40000,
+		kWtrFlag_Depth =					0x10000000,
+		kWtrFlag_ObjectTextureCoords =		0x20000000,
+		kWtrFlag_NoUnderwaterFog =			0x80000000
+	};
+
 	TESModel			model;		// 30
 	UInt32				waterFlags;	// 48
 	TESWaterForm		*water;		// 4C

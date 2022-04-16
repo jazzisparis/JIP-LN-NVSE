@@ -279,12 +279,12 @@ bool Cmd_CCCSetTrait_Execute(COMMAND_ARGS)
 	{
 		if (NOT_ACTOR(thisObj)) return true;
 		Actor *actor = (Actor*)thisObj;
-		if (!actor->GetKnockedState())
+		if (actor->GetKnockedState() != 3)
 		{
 			s_UIelements[10 + child]->SetFloat(64 * actor->avOwner.GetActorValue(kAVCode_Health) / actor->avOwner.GetBaseActorValue(kAVCode_Health));
-			s_UIelements[20 + child]->SetFloat(g_thePlayer->GetDistance(actor) > 8192);
+			s_UIelements[20 + child]->SetFloat(g_thePlayer->GetDistance(actor) > 8192.0F);
 		}
-		else s_UIelements[10 + child]->SetFloat(-1);
+		else s_UIelements[10 + child]->SetFloat(-1.0F);
 		value = actor->extraDataList.GetExtraFactionRank(s_taskFaction);
 		if (value < 7)
 		{

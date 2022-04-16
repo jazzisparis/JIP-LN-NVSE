@@ -774,12 +774,19 @@ __declspec(naked) bool __fastcall NiCamera::WorldToScreen(const NiVector3 &world
 		jz		done
 		unpcklpd	xmm0, xmm0
 		movq	xmm1, qword ptr PS_V3_One
+		pshufd	xmm2, xmm1, 0
 		shufps	xmm3, xmm3, 0x50
 		xorps	xmm0, xmm3
-		cmpnltps	xmm1, xmm0
-		movmskps	eax, xmm1
-		cmp		al, 0xF
-		setz	al
+		xorps	xmm2, xmm3
+		cmpltps	xmm1, xmm0
+		movmskps	edx, xmm1
+		test	dl, dl
+		jz		done
+		andps	xmm1, xmm2
+		shufps	xmm1, xmm1, 0xD8
+		haddps	xmm1, xmm4
+		subps	xmm0, xmm1
+		xor		al, al
 	done:
 		mov		edx, [esp+8]
 		movq	qword ptr [edx], xmm0

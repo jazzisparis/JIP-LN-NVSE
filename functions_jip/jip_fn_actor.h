@@ -1207,20 +1207,15 @@ bool Cmd_SetSpeedMult_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool __fastcall GetIsRagdolled(Actor *actor)
-{
-	return (IS_ACTOR(actor) && actor->baseProcess) ? (actor->baseProcess->GetKnockedState() == 1) : false;
-}
-
 bool Cmd_GetIsRagdolled_Execute(COMMAND_ARGS)
 {
-	*result = GetIsRagdolled((Actor*)thisObj);
+	*result = IS_ACTOR(thisObj) && (((Actor*)thisObj)->GetKnockedState() == 1);
 	return true;
 }
 
 bool Cmd_GetIsRagdolled_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = GetIsRagdolled((Actor*)thisObj);
+	*result = IS_ACTOR(thisObj) && (((Actor*)thisObj)->GetKnockedState() == 1);
 	return true;
 }
 
@@ -2501,10 +2496,14 @@ bool Cmd_GetActorVelocityAlt_Execute(COMMAND_ARGS)
 			NiNode *rootNode = thisObj->GetRefNiNode();
 			if (rootNode)
 			{
-				NiVector3 velocity = charCtrl->velocity;
-				if (getLocal)
+				if (!getLocal)
+					outVel.Set(charCtrl->velocity);
+				else
+				{
+					NiVector3 velocity = charCtrl->velocity;
 					velocity.MultiplyMatrixInv(rootNode->WorldRotate());
-				outVel.Set(velocity);
+					outVel.Set(velocity);
+				}
 				*result = 1;
 			}
 		}

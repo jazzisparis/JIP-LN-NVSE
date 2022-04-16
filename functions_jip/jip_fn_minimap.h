@@ -620,7 +620,7 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 }
 
 TESObjectCELL *s_pcCurrCell0, *s_pcCurrCell, *s_lastInterior;
-Coordinate s_packedCellCoords[9];
+Coordinate s_packedCellCoords[9] = {0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL};
 float s_vertexAlphaLevel[] = {0, 0.25F, 0.5F, 0.75F, 1.0F};
 
 __declspec(naked) void __stdcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
@@ -1716,8 +1716,7 @@ TileImage *s_worldMapTile;
 Tile::Value *s_miniMapMode, *s_pcMarkerRotate, *s_miniMapPosX, *s_miniMapPosY, *s_worldMapZoom;
 TileShaderProperty *s_tileShaderProps[9];
 bool s_defaultGridSize;
-NiColor *g_directionalLightColor;
-BSFogProperty *g_shadowFogProperty;
+NiColor *g_directionalLightColor, *g_shadowFogColor;
 BSParticleSystemManager *g_particleSysMngr;
 
 struct MapMarkerInfo
@@ -1913,7 +1912,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 
 	s_defaultGridSize = *(UInt8*)0x11C63D0 <= 5;
 	g_directionalLightColor = &g_TES->directionalLight->ambientColor;
-	g_shadowFogProperty = *(BSFogProperty**)0x11DEB00;
+	g_shadowFogColor = &(*(BSFogProperty**)0x11DEB00)->color;
 	g_particleSysMngr = *(BSParticleSystemManager**)0x11DED58;
 	SafeWrite16(0x452736, 0x7705);
 	SafeWrite8(0x555C20, 0xC3);
@@ -1927,8 +1926,8 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	return true;
 }
 
-const __m128 kVertexAlphaMults = {0.25, 0.5, 0.75, 1}, kFogPropertyValues = {31 / 255.0F, 47 / 255.0F, 63 / 255.0F, 0};
-alignas(16) const float kDirectionalLightValues[] = {1.0F, 1.0F, 239 / 255.0F, 0, 0, 0, 0, 0, 0, 0};
+const __m128 kVertexAlphaMults = {0.25, 0.5, 0.75, 1};
+alignas(16) const float kDirectionalLightValues[] = {1.0F, 1.0F, 239 / 255.0F, 0, 0, 0, 0, 0, 0, 0}, kFogPropertyValues[] = {31 / 255.0F, 47 / 255.0F, 63 / 255.0F, FLT_MAX, FLT_MAX};
 const UInt8 kSelectImgUpdate[][9] =
 {
 	{8, 2, 0, 4, 1, 0, 0, 0, 0},
@@ -2309,9 +2308,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 						}
 					}
 					GameGlobals::SceneLightsLock()->Leave();
-					_mm_storeu_ps(&g_shadowFogProperty->color.r, kFogPropertyValues);
 					memcpy(g_directionalLightColor, kDirectionalLightValues, sizeof(kDirectionalLightValues));
-					g_shadowFogProperty->power = 1000.0F;
+					memcpy(g_shadowFogColor, kFogPropertyValues, sizeof(kFogPropertyValues));
 					*(UInt8*)0x11FF104 = 1;
 					g_particleSysMngr->m_flags |= 1;
 					for (auto hdnIter = s_hiddenNodes().Begin(); hdnIter; ++hdnIter)

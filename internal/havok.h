@@ -414,7 +414,7 @@ public:
 	hkpPhantomListener		phantomListener;	// 0C
 
 	hkVector4				velocity;			// 10
-	UInt32					unk20[4];			// 20
+	hkVector4				vector20;			// 20
 	hkpCachingShapePhantom	*shapePhantom;		// 30
 	UInt32					unk34[16];			// 34
 	hkArray<hkCdPoint>		cdPoints;			// 74
@@ -479,7 +479,7 @@ public:
 	/*10*/virtual UInt32	Unk_04();
 	/*14*/virtual bool		IsConvex();
 	/*18*/virtual UInt32	Unk_06(UInt32 arg1, UInt32 arg2);
-	/*1C*/virtual void		GetSpaceDiagonal(hkTransform *arg1, float arg2, hkDiagonal *resPtr);	// arg1 = (hkTransform*)0x1268370; arg2 = 0
+	/*1C*/virtual void		GetSpaceDiagonal(hkTransform *arg1, float arg2, hkDiagonal *resPtr);
 	/*20*/virtual void		*Unk_08(void *arg1, hkVector4 *arg2, void *arg3);
 	/*24*/virtual void		Unk_09(void *arg1, void *arg2, void *arg3);
 	/*28*/virtual void		Unk_0A(hkVector4 *arg1, hkVector4 *arg2, void *arg3, hkVector4 *arg4);

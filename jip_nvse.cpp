@@ -90,10 +90,10 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 	s_log().Create("jip_ln_nvse.log");
 	int version = nvse->nvseVersion;
 	s_nvseVersion = (version >> 24) + (((version >> 16) & 0xFF) * 0.1) + (((version & 0xFF) >> 4) * 0.01);
-	if (version < 0x6020050)
+	if (version < 0x6020060)
 	{
-		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.25 minimum.", s_nvseVersion);
-		MessageBox(nullptr, "ERROR!\n\nxNVSE version is outdated.\n\nThis plugin requires v6.2.5 minimum.", "JIP LN NVSE Plugin", MB_OK | MB_ICONWARNING | MB_TOPMOST);
+		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.26 minimum.", s_nvseVersion);
+		MessageBox(nullptr, "ERROR!\n\nxNVSE version is outdated.\n\nThis plugin requires v6.2.6 minimum.", "JIP LN NVSE Plugin", MB_OK | MB_ICONWARNING | MB_TOPMOST);
 		return false;
 	}
 	PrintLog("NVSE version:\t%.2f\nJIP LN version:\t%.2f\n", s_nvseVersion, JIP_LN_VERSION);
@@ -1426,11 +1426,6 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	MemCopy = memcpy;
 	MemMove = memmove;
 
-	//	xNVSE 6.2.5 : Skip ExtraContainerChanges::Cleanup() call in ~InventoryReference()
-	UInt32 patchAddr = (UInt32)nvse - 0x6ABF2;
-	if (*(UInt32*)patchAddr == 0xC1831774)
-		SafeWrite8(patchAddr, 0xEB);
-	
 	return true;
 }
 

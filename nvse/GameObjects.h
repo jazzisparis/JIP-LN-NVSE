@@ -671,7 +671,7 @@ public:
 	PackageInfo *GetPackageInfo() const;
 	TESObjectREFR *GetPackageTarget() const;
 	TESCombatStyle *GetCombatStyle() const;
-	bool GetKnockedState() const;
+	SInt8 GetKnockedState() const;
 	bool IsWeaponOut() const;
 	void UpdateActiveEffects(MagicItem *magicItem, EffectItem *effItem, bool addNew);
 	bool GetIsGhost() const;

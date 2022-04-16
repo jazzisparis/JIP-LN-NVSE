@@ -94,7 +94,7 @@ bool Cmd_GetObjectiveHasTarget_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID, &refr))
 	{
 		BGSQuestObjective *objective = quest->GetObjective(objectiveID);
-		if (objective && (objective->GetTargetIndex(refr) >= 0))
+		if (objective && objective->GetTarget(refr))
 			*result = 1;
 	}
 	return true;
@@ -108,13 +108,13 @@ bool Cmd_AddObjectiveTarget_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID, &refr))
 	{
 		BGSQuestObjective *objective = quest->GetObjective(objectiveID);
-		if (objective && (objective->GetTargetIndex(refr) < 0))
+		if (objective && !objective->GetTarget(refr))
 		{
 			ObjectiveTarget *target = ThisCall<ObjectiveTarget*>(0x60FF70, GameHeapAlloc(sizeof(ObjectiveTarget)));
 			target->target = refr;
 			objective->targets.Prepend(target);
 			if (quest == g_thePlayer->activeQuest)
-				StdCall(0x952D60, target->target, &target->data, 1);
+				ThisCall(0x60F110, quest, &g_thePlayer->questTargetList, &g_thePlayer->questObjectiveList);
 		}
 	}
 	return true;
@@ -128,11 +128,15 @@ bool Cmd_RemoveObjectiveTarget_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID, &refr))
 	{
 		BGSQuestObjective *objective = quest->GetObjective(objectiveID);
-		SInt32 index = objective ? objective->GetTargetIndex(refr) : -1;
-		if (index >= 0)
+		if (objective)
 		{
-			ObjectiveTarget *target = objective->targets.RemoveNth(index);
-			ThisCall(0x5EC4D0, target, 1);
+			ObjectiveTarget *target = objective->targets.RemoveIf(ObjTargetFinder(refr));
+			if (target)
+			{
+				ThisCall(0x5EC4D0, target, 1);
+				if (quest == g_thePlayer->activeQuest)
+					ThisCall(0x60F110, quest, &g_thePlayer->questTargetList, &g_thePlayer->questObjectiveList);
+			}
 		}
 	}
 	return true;
