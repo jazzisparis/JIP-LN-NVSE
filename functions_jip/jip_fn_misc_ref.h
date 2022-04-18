@@ -451,7 +451,7 @@ bool Cmd_SetMaterialPropertyValue_Execute(COMMAND_ARGS)
 		NiNode *niNode = thisObj->GetNiNode();
 		if (niNode)
 		{
-			if ((blockName[0] == '*') && !blockName[1])
+			if (*(UInt16*)blockName == '*')
 				niNode->BulkSetMaterialPropertyTraitValue(traitID, value);
 			else
 			{

@@ -929,7 +929,7 @@ extern double s_nvseVersion;
 
 #define REFR_RES *(UInt32*)result
 #define NUM_ARGS scriptData[*opcodeOffsetPtr]
-#define NUM_ARGS_EX scriptData[*opcodeOffsetPtr - 2] ? scriptData[*opcodeOffsetPtr] : 0
+#define NUM_ARGS_EX (scriptData[*opcodeOffsetPtr - 2] ? scriptData[*opcodeOffsetPtr] : 0)
 
 DEFINE_COMMAND_PLUGIN(EmptyCommand, 0, 0, NULL);
 

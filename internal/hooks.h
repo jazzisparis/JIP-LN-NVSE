@@ -3923,7 +3923,7 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		mulps	xmm2, xmm0
 		addps	xmm1, xmm2
 		movq	qword ptr [ebx+0x10], xmm1
-		shufps	xmm1, xmm1, 0xFE
+		unpckhpd	xmm1, xmm1
 		movss	[ebx+0x18], xmm1
 		pop		ebx
 		pop		ebp
@@ -4066,37 +4066,37 @@ __declspec(naked) void __fastcall SetRefrPositionHook(TESObjectREFR *refr, int E
 	static const __m128 kMaxPos = {PS_DUP_4(4096000.0F)};
 	__asm
 	{
-		push	ebp
-		mov		ebp, esp
-		push	0
-		push	0
+		push	ebx
 		push	esi
+		push	edi
+		mov		ebx, [esp+0x10]
 		mov		esi, ecx
+		xor		edi, edi
+		cmp		dword ptr [ecx+0xC], 0x14
+		jnz		notPlayer
 		mov		eax, s_syncPositionRef
 		test	eax, eax
-		jz		doneSync
-		cmp		dword ptr [ecx+0xC], 0x14
-		jnz		doneSync
+		jz		doneWorld
 		mov		ecx, [ecx+0x40]
 		test	ecx, ecx
-		jz		doneSync
+		jz		doneWorld
 		mov		edx, [eax+0x40]
 		test	edx, edx
-		jz		doneSync
+		jz		doneWorld
 		cmp		ecx, edx
 		jz		sameCell
 		mov		ecx, [ecx+0xC0]
 		test	ecx, ecx
-		jz		doneSync
+		jz		doneWorld
 		cmp		[edx+0xC0], ecx
-		jnz		doneSync
+		jnz		doneWorld
 	sameCell:
 		mov		eax, [eax+0x64]
 		test	eax, eax
-		jz		doneSync
+		jz		doneWorld
 		mov		eax, [eax+0x14]
 		test	eax, eax
-		jz		doneSync
+		jz		doneWorld
 		mov		edx, s_syncPositionNode
 		test	edx, edx
 		jz		useRoot
@@ -4105,50 +4105,20 @@ __declspec(naked) void __fastcall SetRefrPositionHook(TESObjectREFR *refr, int E
 		mov		ecx, eax
 		call	NiNode::GetBlockByName
 		test	eax, eax
-		jz		doneSync
+		jz		doneWorld
 	useRoot:
 		movups	xmm0, [eax+0x8C]
 		addps	xmm0, s_syncPositionMods
-		mov		ecx, offset s_syncPositionPos
-		movaps	[ecx], xmm0
-		mov		[ebp+8], ecx
+		mov		ebx, offset s_syncPositionPos
+		movaps	[ebx], xmm0
 		cmp		s_syncPositionFlags, 0
-		jz		doneSync
+		jz		doneWorld
 		movss	xmm1, [eax+0x68]
 		movss	xmm0, [eax+0x6C]
 		call	ATan2
 		movss	[esi+0x2C], xmm0
-	doneSync:
-		mov		eax, [ebp+8]
-		movups	xmm7, [eax]
-		movaps	xmm0, xmm7
-		andps	xmm0, PS_AbsMask
-		cmpnltps	xmm0, kMaxPos
-		movmskps	edx, xmm0
-		test	dl, 7
-		jz		donePos
-		xorps	xmm7, xmm7
-		mov		eax, [esi]
-		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
-		jnz		notActor
-		cmp		dword ptr [esi+0x170], 0
-		jz		gotPos
-		movups	xmm7, [esi+0x160]
-		jmp		gotPos
-	notActor:
-		push	kExtraData_StartingPosition
-		lea		ecx, [esi+0x44]
-		call	BaseExtraList::GetByType
-		test	eax, eax
-		jz		gotPos
-		movups	xmm7, [eax+0xC]
-	gotPos:
-		andps	xmm7, PS_XYZ0Mask
-		movss	xmm0, SS_10
-		shufps	xmm0, xmm0, 0x45
-		addps	xmm7, xmm0
-		mov		[ebp-8], 1
-	donePos:
+		jmp		doneWorld
+	notPlayer:
 		mov		eax, [esi+0x20]
 		test	eax, eax
 		jz		doneWorld
@@ -4160,7 +4130,10 @@ __declspec(naked) void __fastcall SetRefrPositionHook(TESObjectREFR *refr, int E
 		cmp		byte ptr [edx+0x587CE4], 0
 		jnz		doneWorld
 		test	byte ptr [esi+9], 4
-		jnz		doneFlag
+		jnz		getWorld
+		mov		edx, g_dataHandler
+		test	dword ptr [edx+0x61A], 0xFF0000FF
+		jnz		doneWorld
 		lea		edx, [esi+0x10]
 	iterHead:
 		mov		eax, [edx]
@@ -4170,21 +4143,45 @@ __declspec(naked) void __fastcall SetRefrPositionHook(TESObjectREFR *refr, int E
 		test	eax, eax
 		jz		doneWorld
 		test	byte ptr [eax+0x3E8], 1
-		jz		doneWorld
-	doneFlag:
+		jnz		doneWorld
+	getWorld:
 		mov		ecx, esi
 		call	TESObjectREFR::GetParentWorld
 		test	eax, eax
 		jz		doneWorld
-		mov		[ebp-4], eax
+		mov		edi, eax
 		push	esi
 		mov		ecx, eax
 		CALL_EAX(0x587E40)
 	doneWorld:
-		movq	qword ptr [esi+0x30], xmm7
-		pshufd	xmm0, xmm7, 2
-		movss	[esi+0x38], xmm0
-		cmp		[ebp-8], 0
+		movups	xmm0, [ebx]
+		movaps	xmm1, xmm0
+		andps	xmm1, PS_AbsMask
+		cmpnltps	xmm1, kMaxPos
+		movmskps	eax, xmm1
+		test	al, 7
+		setnz	bl
+		jz		donePos
+		xorps	xmm0, xmm0
+		mov		eax, [esi]
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
+		jnz		notActor
+		cmp		dword ptr [esi+0x170], 0
+		jz		donePos
+		movups	xmm0, [esi+0x160]
+		jmp		donePos
+	notActor:
+		push	kExtraData_StartingPosition
+		lea		ecx, [esi+0x44]
+		call	BaseExtraList::GetByType
+		test	eax, eax
+		jz		donePos
+		movups	xmm0, [eax+0xC]
+	donePos:
+		movq	qword ptr [esi+0x30], xmm0
+		pshufd	xmm1, xmm0, 2
+		movss	[esi+0x38], xmm1
+		test	bl, bl
 		jz		doneNode
 		mov		ecx, [esi+0x64]
 		test	ecx, ecx
@@ -4192,26 +4189,27 @@ __declspec(naked) void __fastcall SetRefrPositionHook(TESObjectREFR *refr, int E
 		mov		ecx, [ecx+0x14]
 		test	ecx, ecx
 		jz		doneNode
-		mov		[ebp-8], ecx
-		movq	qword ptr [ecx+0x58], xmm7
-		movss	[ecx+0x60], xmm0
+		mov		ebx, ecx
+		movq	qword ptr [ecx+0x58], xmm0
+		movss	[ecx+0x60], xmm1
 		call	NiNode::ResetCollision
-		mov		ecx, [ebp-8]
+		mov		ecx, ebx
 		CALL_EAX(0xA5A040)
-		mov		ecx, [ebp-8]
+		mov		ecx, ebx
 		call	NiAVObject::Update
 	doneNode:
-		mov		ecx, [ebp-4]
-		test	ecx, ecx
+		test	edi, edi
 		jz		done
 		push	esi
+		mov		ecx, edi
 		CALL_EAX(0x587D10)
 	done:
 		push	2
 		mov		ecx, esi
 		CALL_EAX(0x484B60)
+		pop		edi
 		pop		esi
-		leave
+		pop		ebx
 		retn	4
 	}
 }
@@ -4947,6 +4945,4 @@ __declspec(noinline) void InitJIPHooks()
 	WriteRelJump(0x815EE6, (UInt32)CastSpellHook);
 	WriteRelCall(0x923299, (UInt32)SkipDrawWeapAnimHook);
 	WriteRelCall(0x55A488, (UInt32)DestroyRefrHook);
-
-	PrintLog("> JIP hooks initialized successfully.");
 }

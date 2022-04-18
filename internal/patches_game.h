@@ -1257,34 +1257,30 @@ __declspec(naked) TESModelTextureSwap *TESObjectWEAP::GetWeaponModel(UInt32 modF
 	static const UInt32 kModelByMod[] = {0x3C, 0x270, 0x290, 0x2D0, 0x2B0, 0x2F0, 0x310, 0x330, 0x250, 0x254, 0x258, 0x260, 0x25C, 0x268, 0x264, 0x26C};
 	__asm
 	{
-		push	esi
-		mov		esi, ecx
-		mov		eax, [esp+8]
+		mov		eax, [esp+4]
 		and		eax, 7
 		mov		edx, kModelByMod[eax*4]
-		add		ecx, edx
-		cmp		word ptr [ecx+8], 0
+		cmp		word ptr [ecx+edx+8], 0
 		setnz	dl
 		neg		dl
 		and		al, dl
-		mov		edx, [esp+0xC]
+		mov		edx, [esp+8]
 		cmp		dword ptr [edx+0xC], 0x14
 		jz		get1stP
 		test	al, al
 		jz		get3rdP
-		cmp		byte ptr [esi+0xF4], 8
+		cmp		byte ptr [ecx+0xF4], 8
 		jnz		get3rdP
 	get1stP:
 		mov		edx, kModelByMod[eax*4+0x20]
-		mov		edx, [esi+edx]
+		mov		edx, [ecx+edx]
 		test	edx, edx
 		jz		get3rdP
 		lea		eax, [edx+0x30]
-		pop		esi
 		retn	8
 	get3rdP:
-		mov		eax, ecx
-		pop		esi
+		mov		edx, kModelByMod[eax*4]
+		lea		eax, [ecx+edx]
 		retn	8
 	}
 }
@@ -4702,8 +4698,6 @@ void InitGamePatches()
 	}
 
 	PatchDisplayTime();
-
-	PrintLog("> Game patches initialized successfully.");
 }
 
 NiCamera* __fastcall GetSingletonsHook(SceneGraph *sceneGraph)

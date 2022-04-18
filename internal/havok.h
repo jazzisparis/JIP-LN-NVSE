@@ -28,7 +28,7 @@ struct alignas(16) hkQuaternion
 
 	inline void operator=(const NiQuaternion &niQt)
 	{
-		_mm_store_si128((__m128i*)&x, _mm_shuffle_epi32(_mm_loadu_si128((__m128i*)&niQt.w), 0x39));
+		_mm_store_si128((__m128i*)this, _mm_shuffle_epi32(_mm_loadu_si128((__m128i*)&niQt), 0x39));
 	}
 
 	inline hkQuaternion& operator+=(const hkQuaternion &rhs)
@@ -779,7 +779,10 @@ public:
 	hkpCollisionDispatcher				*collisionDispatcher;		// 080
 	hkpDefaultConvexListFilter			*convexListFilter;			// 084
 	void								*ptr088;					// 088
-	UInt32								unk08C[13];					// 08C
+	UInt32								unk08C;						// 08C
+	UInt32								unk090;						// 090
+	void								*ptr094;					// 094
+	UInt32								unk098[10];					// 098
 	void								*ptr0C0;					// 0C0
 	UInt32								unk0C4[19];					// 0C4
 	hkArray<hkpPhantom*>				phantoms;					// 110

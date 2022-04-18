@@ -346,18 +346,6 @@ BGSQuestObjective *TESQuest::GetObjective(UInt32 objectiveID) const
 	return NULL;
 }
 
-ObjectiveTarget *BGSQuestObjective::GetTarget(TESObjectREFR *refr) const
-{
-	ListNode<Target> *iter = targets.Head();
-	do
-	{
-		if (iter->data && (iter->data->target == refr))
-			return iter->data;
-	}
-	while (iter = iter->next);
-	return nullptr;
-}
-
 void TESActorBaseData::SetFactionRank(TESFaction *faction, char rank)
 {
 	ListNode<FactionListData> *iter = factionList.Head(), *prev = NULL;

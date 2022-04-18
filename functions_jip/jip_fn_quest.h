@@ -94,7 +94,7 @@ bool Cmd_GetObjectiveHasTarget_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID, &refr))
 	{
 		BGSQuestObjective *objective = quest->GetObjective(objectiveID);
-		if (objective && objective->GetTarget(refr))
+		if (objective && objective->targets.Find(ObjTargetFinder(refr)))
 			*result = 1;
 	}
 	return true;
@@ -108,7 +108,7 @@ bool Cmd_AddObjectiveTarget_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID, &refr))
 	{
 		BGSQuestObjective *objective = quest->GetObjective(objectiveID);
-		if (objective && !objective->GetTarget(refr))
+		if (objective && !objective->targets.Find(ObjTargetFinder(refr)))
 		{
 			ObjectiveTarget *target = ThisCall<ObjectiveTarget*>(0x60FF70, GameHeapAlloc(sizeof(ObjectiveTarget)));
 			target->target = refr;
@@ -180,13 +180,13 @@ bool Cmd_GetQuests_Execute(COMMAND_ARGS)
 	ListNode<BGSQuestObjective> *iter = g_thePlayer->questObjectiveList.Head();
 	BGSQuestObjective *objective;
 	TESQuest *quest;
-	bool bCompl = completed != 0;
+	if (completed) completed = TESQuest::kFlag_Completed;
 	do
 	{
 		objective = iter->data;
 		if (!objective || !(objective->status & 1)) continue;
 		quest = objective->quest;
-		if (bCompl != !(quest->questFlags & TESQuest::kFlag_Completed))
+		if (completed == (quest->questFlags & TESQuest::kFlag_Completed))
 			tmpElements->InsertUnique(quest);
 	}
 	while (iter = iter->next);
@@ -205,11 +205,12 @@ bool Cmd_GetQuestObjectives_Execute(COMMAND_ARGS)
 	tmpElements->Clear();
 	ListNode<void> *iter = quest->lVarOrObjectives.Head();
 	BGSQuestObjective *objective;
-	bool bCompl = completed != 0;
+	if (completed) completed = 2;
+	completed++;
 	do
 	{
 		objective = (BGSQuestObjective*)iter->data;
-		if (objective && IS_TYPE(objective, BGSQuestObjective) && (objective->status & 1) && (bCompl != !(objective->status & 2)))
+		if (objective && IS_TYPE(objective, BGSQuestObjective) && (completed == (objective->status & 3)))
 			tmpElements->Append((int)objective->objectiveId);
 	}
 	while (iter = iter->next);

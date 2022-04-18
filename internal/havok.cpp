@@ -14,8 +14,8 @@ __declspec(naked) hkQuaternion& __fastcall hkQuaternion::FromEulerYPR(const NiVe
 		movaps	xmm2, xmm0
 		unpcklpd	xmm2, xmm1
 		shufps	xmm2, xmm2, 0xD7
-		movaps	xmm3, xmm0
-		pshufd	xmm3, xmm1, 0xFE
+		movaps	xmm3, xmm1
+		unpckhpd	xmm3, xmm0
 		shufps	xmm3, xmm3, 0x88
 		movaps	xmm4, xmm1
 		unpcklpd	xmm4, xmm0
@@ -40,8 +40,8 @@ __declspec(naked) hkQuaternion& __fastcall hkQuaternion::FromRotationMatrix(cons
 {
 	__asm
 	{
-		movss	xmm1, [edx]
-		movss	xmm0, [edx+0x10]
+		movups	xmm1, [edx]
+		movups	xmm0, [edx+0x10]
 		movss	xmm2, [edx+0x20]
 		movaps	xmm3, xmm1
 		addss	xmm3, xmm0
@@ -50,54 +50,54 @@ __declspec(naked) hkQuaternion& __fastcall hkQuaternion::FromRotationMatrix(cons
 		comiss	xmm3, xmm4
 		jbe		t_xyz
 		addss	xmm3, PS_V3_One
-		movaps	xmm2, xmm1
-		pshufd	xmm2, xmm0, 0xFE
+		movaps	xmm2, xmm0
+		unpckhpd	xmm2, xmm1
 		unpcklps	xmm1, xmm0
-		pshufd	xmm1, xmm0, 0xFE
+		unpckhpd	xmm1, xmm0
+		shufps	xmm1, xmm1, 0x4E
 		pshufd	xmm0, xmm1, 0x8C
 		subps	xmm0, xmm2
 		shufps	xmm3, xmm0, 0x30
-		shufps	xmm0, xmm3, 0x49
+		shufps	xmm0, xmm3, 0x29
 		jmp		done
 	t_xyz:
 		movss	xmm3, PS_V3_One
 		pshufd	xmm4, PS_FlipSignMask0, 0x51
 		comiss	xmm1, xmm0
-		jnb		t_xz
+		ja		t_xz
 		comiss	xmm0, xmm2
-		jb		t_z
+		jbe		t_z
 		subss	xmm3, xmm1
 		addss	xmm3, xmm0
 		subss	xmm3, xmm2
-		movaps	xmm2, xmm0
-		pshufd	xmm2, xmm1, 0xFE
-		shufps	xmm2, xmm2, 0xD0
+		movaps	xmm2, xmm1
+		unpckhps	xmm2, xmm0
+		shufps	xmm2, xmm2, 0xE0
 		unpcklps	xmm1, xmm0
-		pshufd	xmm1, xmm0, 0xFE
-		pshufd	xmm0, xmm1, 0xE0
+		shufps	xmm0, xmm1, 0xEA
 		xorps	xmm2, xmm4
 		addps	xmm0, xmm2
 		movaps	xmm2, xmm0
-		shufps	xmm0, xmm3, 2
-		shufps	xmm0, xmm2, 0x78
+		unpcklps	xmm0, xmm3
+		shufps	xmm0, xmm2, 0xE6
 		jmp		done
 	t_xz:
 		comiss	xmm1, xmm2
-		jb		t_z
+		jbe		t_z
 		addss	xmm3, xmm1
 		subss	xmm3, xmm0
 		subss	xmm3, xmm2
 		movaps	xmm2, xmm1
 		unpcklps	xmm2, xmm0
-		pshufd	xmm2, xmm1, 0xFE
-		shufps	xmm2, xmm2, 0x2C
-		pshufd	xmm0, xmm1, 0xFE
-		shufps	xmm0, xmm0, 0x9C
+		unpckhpd	xmm2, xmm1
+		shufps	xmm2, xmm2, 0x86
+		unpckhpd	xmm0, xmm1
+		shufps	xmm0, xmm0, 0x36
 		xorps	xmm0, xmm4
 		addps	xmm0, xmm2
 		movaps	xmm2, xmm0
-		shufps	xmm0, xmm3, 2
-		shufps	xmm0, xmm2, 0x72
+		unpcklps	xmm0, xmm3
+		shufps	xmm0, xmm2, 0xE9
 		jmp		done
 	t_z:
 		subss	xmm3, xmm1
@@ -105,13 +105,14 @@ __declspec(naked) hkQuaternion& __fastcall hkQuaternion::FromRotationMatrix(cons
 		addss	xmm3, xmm2
 		movaps	xmm2, xmm1
 		unpcklps	xmm2, xmm0
-		pshufd	xmm2, xmm1, 0xFE
-		shufps	xmm2, xmm2, 0xC8
-		pshufd	xmm0, xmm1, 0xFE
+		unpckhpd	xmm2, xmm1
+		shufps	xmm2, xmm2, 0x62
+		unpckhpd	xmm0, xmm1
+		shufps	xmm0, xmm0, 0x4E
 		xorps	xmm0, xmm4
 		addps	xmm0, xmm2
-		shufps	xmm3, xmm0, 0x10
-		shufps	xmm0, xmm3, 0x8E
+		shufps	xmm3, xmm0, 0x30
+		shufps	xmm0, xmm3, 0x89
 	done:
 		andps	xmm3, PS_AbsMask0
 		rsqrtss	xmm1, xmm3
@@ -123,7 +124,7 @@ __declspec(naked) hkQuaternion& __fastcall hkQuaternion::FromRotationMatrix(cons
 		mulss	xmm2, SS_1d4
 		shufps	xmm2, xmm2, 0
 		mulps	xmm0, xmm2
-		movaps	[ecx], xmm0
+		movups	[ecx], xmm0
 		mov		eax, ecx
 		retn
 	}
@@ -394,6 +395,8 @@ __declspec(naked) NiNode *hkpWorldObject::GetParentNode()
 		jmp		iterHead
 	foundCol:
 		mov		ecx, [ecx+8]
+		test	ecx, ecx
+		jz		retnNULL
 	done:
 		mov		eax, [ecx+8]
 		retn

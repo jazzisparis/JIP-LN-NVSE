@@ -2363,57 +2363,21 @@ bool Cmd_GetHitNode_Execute(COMMAND_ARGS)
 
 bool Cmd_GetHitExtendedFlag_Execute(COMMAND_ARGS)
 {
-	bool isSet = false;
+	static const UInt32 kHitFlags[] =
+	{
+		ActorHitData::kFlag_TargetIsBlocking, ActorHitData::kFlag_IsCritical, ActorHitData::kFlag_IsFatal,
+		ActorHitData::kFlag_DismemberLimb, ActorHitData::kFlag_ExplodeLimb, ActorHitData::kFlag_CrippleLimb,
+		ActorHitData::kFlag_BreakWeapon, ActorHitData::kFlag_IsSneakAttack, ActorHitData::kFlag_IsExplosionHit
+	};
+	*result = 0;
 	Actor *target = (Actor*)thisObj;
 	UInt32 flagID;
-	if (IS_ACTOR(target) && target->baseProcess && ExtractArgsEx(EXTRACT_ARGS_EX, &flagID))
+	if (IS_ACTOR(target) && target->baseProcess && ExtractArgsEx(EXTRACT_ARGS_EX, &flagID) && (flagID <= 8))
 	{
 		ActorHitData *hitData = target->baseProcess->GetHitData();
-		if (hitData)
-		{
-			UInt32 flags = hitData->flags;
-			switch (flagID)
-			{
-				case 0:
-					if (flags & ActorHitData::kFlag_TargetIsBlocking)
-						isSet = true;
-					break;
-				case 1:
-					if (flags & ActorHitData::kFlag_IsCritical)
-						isSet = true;
-					break;
-				case 2:
-					if (flags & ActorHitData::kFlag_IsFatal)
-						isSet = true;
-					break;
-				case 3:
-					if (flags & ActorHitData::kFlag_DismemberLimb)
-						isSet = true;
-					break;
-				case 4:
-					if (flags & ActorHitData::kFlag_ExplodeLimb)
-						isSet = true;
-					break;
-				case 5:
-					if (flags & ActorHitData::kFlag_CrippleLimb)
-						isSet = true;
-					break;
-				case 6:
-					if (flags & ActorHitData::kFlag_BreakWeapon)
-						isSet = true;
-					break;
-				case 7:
-					if (flags & ActorHitData::kFlag_IsSneakAttack)
-						isSet = true;
-					break;
-				case 8:
-					if (flags & ActorHitData::kFlag_IsExplosionHit)
-						isSet = true;
-					break;
-			}
-		}
+		if (hitData && (hitData->flags & kHitFlags[flagID]))
+			*result = 1;
 	}
-	*result = isSet;
 	return true;
 }
 

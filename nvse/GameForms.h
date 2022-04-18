@@ -1197,8 +1197,6 @@ public:
 	tList<Target>	targets;		// 014
 	UInt32			unk01C;			// 01C
 	UInt32			status;			// 020	bit0 = displayed, bit 1 = completed. 1 and 3 significant. If setting it to 3, quest flags bit1 will be set also.
-
-	Target *GetTarget(TESObjectREFR *refr) const;
 };
 
 typedef BGSQuestObjective::Target ObjectiveTarget;

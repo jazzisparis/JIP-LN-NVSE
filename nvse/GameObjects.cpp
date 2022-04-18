@@ -552,6 +552,8 @@ __declspec(naked) TESWorldSpace *TESObjectREFR::GetParentWorld() const
 		test	eax, eax
 		jz		done
 		mov		eax, [eax+0xC]
+		test	eax, eax
+		jz		done
 	getWorld:
 		mov		eax, [eax+0xC0]
 	done:
@@ -653,8 +655,7 @@ __declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 		test	ecx, ecx
 		jz		doUpdate
 		add		ecx, 0xB0
-		mov		edx, [esp+8]
-		movups	xmm0, [edx]
+		movups	xmm0, [esi+0x30]
 		mulps	xmm0, kUnitConv
 		movaps	xmm1, [eax+0x570]
 		pshufd	xmm2, xmm1, 0
@@ -685,11 +686,8 @@ __declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 		mov		ecx, [ecx+0x14]
 		test	ecx, ecx
 		jz		done
-		mov		edx, [esp+8]
-		movups	xmm0, [edx]
-		movq	qword ptr [ecx+0x58], xmm0
-		unpckhpd	xmm0, xmm0
-		movss	[ecx+0x60], xmm0
+		movups	xmm0, [esi+0x30]
+		movups	[ecx+0x58], xmm0
 		mov		esi, ecx
 		call	NiNode::ResetCollision
 		mov		ecx, esi

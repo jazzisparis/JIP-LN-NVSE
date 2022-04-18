@@ -213,15 +213,18 @@ public:
 	UInt32							nextCreatedRefID;		// 208	Init'd to FF000800
 	UInt32							unk20C;					// 20C	last unselected mod in modList. GECK: active ESM
 	ModList							modList;				// 210
-	UInt8							unk618;					// 618
-	UInt8							unk619;					// 619
-	UInt8							unk61A;					// 61A	referenced during LoadForm (ie TESSpellList). bit 1 might mean refID to pointer conversion not done. For GECK means save in progress
-	UInt8							unk61B;					// 61B
-	UInt32							unk61C;					// 61C
-	UInt8							unk620;					// 620
+	UInt8							byte618;				// 618
+	UInt8							byte619;				// 619
+	UInt8							byte61A;				// 61A	referenced during LoadForm (ie TESSpellList). bit 1 might mean refID to pointer conversion not done. For GECK means save in progress
+	UInt8							byte61B;				// 61B
+	UInt8							byte61C;				// 61C
+	UInt8							byte61D;				// 61D
+	UInt8							byte61E;				// 61E
+	UInt8							byte61F;				// 61F
+	UInt8							byte620;				// 620
 	UInt8							loading;				// 621	Init'd to 0 after loadForms
-	UInt8							unk622;					// 622	referenced during loading of modules
-	UInt8							unk623;					// 623
+	UInt8							byte622;				// 622	referenced during loading of modules
+	UInt8							byte623;				// 623
 	TESRegionManager				*regionManager;			// 624
 	void							*vendorContainer;		// 628	ExtraContainerChanges::Data
 	UInt32							unk62C;					// 62C	
