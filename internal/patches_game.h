@@ -38,7 +38,7 @@ __declspec(naked) void GeneratePlayerNodeHook()
 		lock inc dword ptr [eax+8]
 	skipRefCount:
 		mov		ecx, [eax+0xC]
-		call	NiNode::CreateCopy
+		call	NiAVObject::CreateCopy
 		mov		[ebp-0x18], eax
 		or		byte ptr [eax+0x32], 0x20
 		mov		s_pc1stPersonNode, eax
@@ -1012,68 +1012,23 @@ __declspec(naked) void __fastcall ClearWeaponNodeHook(NiNode *wpnNode)
 
 __declspec(naked) void ConstructItemEntryNameHook()
 {
-	static const char kItemWetnessLevel[] = " (Damp)\0 (Wet)\0 (Frozen)";
 	__asm
 	{
-		push	esi
-		push	edi
-		mov		esi, [ebp+0xC]
-		xor		edi, edi
+		push	ebx
+		xor		ebx, ebx
 		mov		[ebp-8], eax
-		mov		ecx, [esi+8]
-		mov		al, [ecx+4]
-		cmp		al, kFormType_TESObjectARMO
-		jz		getExtra
-		cmp		al, kFormType_TESObjectWEAP
-		jnz		doneExtra
-	getExtra:
-		mov		ecx, [esi]
-		test	ecx, ecx
-		jz		doneExtra
-		mov		ecx, [ecx]
-		test	ecx, ecx
-		jz		doneExtra
-		cmp		al, kFormType_TESObjectARMO
-		jnz		isWeapon
-		push	kExtraData_TimeLeft
-		call	BaseExtraList::GetByType
-		test	eax, eax
-		jz		doneExtra
-		cvtss2si	edx, [eax+0xC]
-		cmp		edx, 30
-		jl		doneExtra
-		mov		edi, offset kItemWetnessLevel
-		cmp		edx, 60
-		jl		doneExtra
-		add		edi, 8
-		cmp		edx, 100
-		jl		doneExtra
-		add		edi, 7
-		jmp		doneExtra
-	isWeapon:
-		push	kExtraData_ItemDropper
-		call	BaseExtraList::GetByType
-		test	eax, eax
-		jz		noDropper
-		mov		eax, [eax+0xC]
-		test	eax, eax
-		jz		noDropper
-		lea		ecx, [eax+0x44]
-	noDropper:
-		push	kExtraData_WeaponModFlags
-		call	BaseExtraList::GetByType
-		test	eax, eax
-		jz		doneExtra
-		cmp		byte ptr [eax+0xC], 0
-		jz		doneExtra
-		mov		edi, '+'
-	doneExtra:
-		test	edi, edi
-		jnz		getName
+		mov		ecx, [ebp+0xC]
+		call	GetEntryDataModFlagsHook
+		test	al, al
+		jz		noModFlags
+		mov		bl, '+'
+		jmp		getName
+	noModFlags:
 		cmp		dword ptr [ebp-8], 1
 		jle		done
 	getName:
-		mov		eax, [esi+8]
+		mov		eax, [ebp+0xC]
+		mov		eax, [eax+8]
 		movzx	edx, word ptr [eax+0x38]
 		test	edx, edx
 		jz		done
@@ -1081,18 +1036,9 @@ __declspec(naked) void ConstructItemEntryNameHook()
 		mov		edx, [eax+0x34]
 		lea		ecx, [ebp-0x88]
 		call	StrLenCopy
-		test	edi, edi
-		jz		doneSuffix
-		cmp		edi, '+'
-		jnz		wetnessLvl
-		mov		[eax], di
-		inc		eax
-		jmp		doneSuffix
-	wetnessLvl:
-		mov		edx, edi
-		mov		ecx, eax
-		call	StrCopy
-	doneSuffix:
+		mov		[eax], ebx
+		and		bl, 1
+		add		eax, ebx
 		mov		edx, [ebp-8]
 		cmp		edx, 1
 		jle		setUIStr
@@ -1108,8 +1054,7 @@ __declspec(naked) void ConstructItemEntryNameHook()
 		mov		ecx, [ebp+8]
 		CALL_EAX(ADDR_TileSetString)
 	done:
-		pop		edi
-		pop		esi
+		pop		ebx
 		retn
 	}
 }
@@ -1254,7 +1199,6 @@ __declspec(naked) void IsValidAITargetHook()
 
 __declspec(naked) TESModelTextureSwap *TESObjectWEAP::GetWeaponModel(UInt32 modFlags, Actor *actor) const
 {
-	static const UInt32 kModelByMod[] = {0x3C, 0x270, 0x290, 0x2D0, 0x2B0, 0x2F0, 0x310, 0x330, 0x250, 0x254, 0x258, 0x260, 0x25C, 0x268, 0x264, 0x26C};
 	__asm
 	{
 		mov		eax, [esp+4]
@@ -1282,6 +1226,12 @@ __declspec(naked) TESModelTextureSwap *TESObjectWEAP::GetWeaponModel(UInt32 modF
 		mov		edx, kModelByMod[eax*4]
 		lea		eax, [ecx+edx]
 		retn	8
+		ALIGN 16
+	kModelByMod:
+		EMIT_DW_1(3C) EMIT_DW_2(02, 70) EMIT_DW_2(02, 90) EMIT_DW_2(02, D0)
+		EMIT_DW_2(02, B0) EMIT_DW_2(02, F0) EMIT_DW_2(03, 10) EMIT_DW_2(03, 30)
+		EMIT_DW_2(02, 50) EMIT_DW_2(02, 54) EMIT_DW_2(02, 58) EMIT_DW_2(02, 60)
+		EMIT_DW_2(02, 5C) EMIT_DW_2(02, 68) EMIT_DW_2(02, 64) EMIT_DW_2(02, 6C)
 	}
 }
 
@@ -1626,24 +1576,65 @@ __declspec(naked) bool __fastcall IsDisposableWeaponHook(TESObjectWEAP *weapon)
 	}
 }
 
-Actor* __fastcall GetNearestLivingAlly(Actor *actor)
+__declspec(naked) Actor* __fastcall GetNearestLivingAlly(Actor *actor)
 {
-	if (!actor->combatAllies)
-		return NULL;
-	Actor *result = NULL, *ally;
-	float minDistance = 12800.0F, distance;
-	for (auto iter = actor->combatAllies->Begin(); iter; ++iter)
+	static const float kMaxDist = 1024.0F;
+	__asm
 	{
-		ally = *iter;
-		if (!ally || (ally == actor) || ally->GetDead() || ThisCall<bool>(0x8A67F0, ally))
-			continue;
-		distance = Point3Distance(actor->position, ally->position);
-		if (distance > minDistance)
-			continue;
-		minDistance = distance;
-		result = ally;
+		push	ebp
+		push	ebx
+		push	esi
+		push	edi
+		mov		ebp, ecx
+		xor		ebx, ebx
+		mov		esi, [ecx+0x130]
+		test	esi, esi
+		jz		done
+		mov		edi, [esi+8]
+		mov		esi, [esi+4]
+		movss	xmm4, kMaxDist
+		ALIGN 16
+	iterHead:
+		dec		edi
+		js		done
+		mov		eax, [esi]
+		add		esi, 4
+		test	eax, eax
+		jz		iterHead
+		cmp		eax, ebp
+		jz		iterHead
+		mov		ecx, [eax+0x68]
+		test	ecx, ecx
+		jz		iterHead
+		mov		dl, [eax+0x108]
+		cmp		dl, 1
+		jz		iterHead
+		cmp		dl, 2
+		jz		iterHead
+		cmp		byte ptr [eax+0x7D], 0
+		jnz		iterHead
+		push	eax
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x4B8]
+		test	al, al
+		jnz		iterHead
+		mov		eax, [esi-4]
+		lea		edx, [eax+0x30]
+		lea		ecx, [ebp+0x30]
+		call	Point3Distance
+		comiss	xmm0, xmm4
+		jnb		iterHead
+		movaps	xmm4, xmm0
+		mov		ebx, eax
+		jmp		iterHead
+	done:
+		mov		eax, ebx
+		pop		edi
+		pop		esi
+		pop		ebx
+		pop		ebp
+		retn
 	}
-	return result;
 }
 
 __declspec(naked) void DeathResponseFixHook()
@@ -1657,7 +1648,7 @@ __declspec(naked) void DeathResponseFixHook()
 		jnz		done
 		cmp		dword ptr [ebp+0x14], 6
 		jnz		done
-		cmp		dword ptr [ebp+0x18], 1
+		cmp		byte ptr [ebp+0x18], 1
 		jnz		done
 		mov		ecx, [ebp+8]
 		test	ecx, ecx
@@ -1668,6 +1659,7 @@ __declspec(naked) void DeathResponseFixHook()
 		jz		done
 		mov		[ebp-0x14], eax
 	done:
+		movzx	edx, dl
 		push	edx
 		push	dword ptr [ebp-0x1C]
 		push	edx

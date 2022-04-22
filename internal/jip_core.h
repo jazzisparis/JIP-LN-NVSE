@@ -921,6 +921,8 @@ int GetIsLAA();
 
 extern double s_nvseVersion;
 
+void InitMemUsageDisplay(UInt32 callDelay);
+
 #define REG_CMD(name) RegisterCommand(&kCommandInfo_##name)
 #define REG_CMD_FRM(name) RegisterTypedCommand(&kCommandInfo_##name, kRetnType_Form)
 #define REG_CMD_STR(name) RegisterTypedCommand(&kCommandInfo_##name, kRetnType_String)

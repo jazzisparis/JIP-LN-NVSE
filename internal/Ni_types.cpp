@@ -1,5 +1,10 @@
 #include "internal/Ni_types.h"
 
+void NiPoint2::Dump() const
+{
+	PrintDebug("%.6f\t%.6f\n", x, y);
+}
+
 __declspec(naked) float __vectorcall NiVector3::Length() const
 {
 	__asm
@@ -956,6 +961,19 @@ __declspec(naked) NiVector3& __fastcall NiTransform::GetTranslatedPos(NiVector3 
 		movss	[eax+8], xmm1
 		retn
 	}
+}
+
+void NiTransform::Dump() const
+{
+	NiVector3 angles;
+	rotate.ExtractAngles(angles);
+	angles *= GET_PS(9);
+	PrintDebug("T (%.4f, %.4f, %.4f) R (%.4f, %.4f, %.4f) S %.4f", translate.x, translate.y, translate.z, angles.x, angles.y, angles.z, scale);
+}
+
+void NiTriangle::Dump() const
+{
+	PrintDebug("%d\t%d\t%d\n", point1, point2, point3);
 }
 
 __declspec(naked) float __vectorcall Point2Distance(const NiVector3 &pt1, const NiVector3 &pt2)

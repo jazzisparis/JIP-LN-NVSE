@@ -805,6 +805,12 @@ public:
 		UInt8		pad09[3];
 	};
 
+	struct CameraCollision		// C'tor @ 0x620850
+	{
+		bhkSimpleShapePhantom	*phantom00;
+		bhkSimpleShapePhantom	*phantom04;
+	};
+
 	UInt32								unk1C8[15];				// 1C8	208 could be a DialogPackage
 	UInt8								byte204;				// 204
 	UInt8								byte205;				// 205
@@ -815,7 +821,7 @@ public:
 	tList<ActiveEffect>					*activeEffects;			// 210
 	MagicItem							*pcMagicItem;			// 214
 	MagicTarget							*pcMagicTarget;			// 218
-	void								*unk21C;				// 21C
+	CameraCollision						*cameaCollision;		// 21C
 	UInt32								unk220[8];				// 220	224 is a package of type 1C
 	bool								showQuestItems;			// 240
 	UInt8								byte241;				// 241

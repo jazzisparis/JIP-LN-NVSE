@@ -115,6 +115,21 @@ struct NiObjectCopyInfo
 	//~NiObjectCopyInfo() {ThisCall(0x4AD1D0, this);}
 };
 
+struct UpdateParams
+{
+	float		timePassed;
+	bool		updateControllers;
+	UInt8		byte05;
+	UInt8		byte06;
+	UInt8		byte07;
+	UInt8		byte08;
+	UInt8		pad09[3];
+
+	UpdateParams() {ZeroMemory(this, sizeof(UpdateParams));}
+};
+
+extern const UpdateParams kUpdateParams;
+
 // 08
 class NiObject : public NiRefObject
 {
@@ -445,7 +460,7 @@ class NiTimeController : public NiObject
 public:
 	/*8C*/virtual void		Unk_23(void);
 	/*90*/virtual void		Unk_24(void);
-	/*94*/virtual void		Unk_25(void);
+	/*94*/virtual void		Update(UpdateParams &updParams);
 	/*98*/virtual void		SetTarget(NiNode *pTarget);
 	/*9C*/virtual void		Unk_27(void);
 	/*A0*/virtual void		Unk_28(void);
@@ -749,7 +764,7 @@ class NiProperty : public NiObjectNET
 {
 public:
 	/*8C*/virtual UInt32	GetPropertyType();
-	/*90*/virtual void		UpdateController(float arg);
+	/*90*/virtual void		UpdateController(UpdateParams &updParams);
 
 	enum PropertyType
 	{
@@ -966,6 +981,8 @@ public:
 	float			falloffStopAngle;		// 74
 	float			falloffStartOpacity;	// 78
 	float			falloffStopOpacity;		// 7C
+
+	__forceinline static BSShaderNoLightingProperty *Create() {return ThisCall<BSShaderNoLightingProperty*>(0xB6FC90, CdeclCall<void*>(0xAA13E0, sizeof(BSShaderNoLightingProperty)));}
 };
 static_assert(sizeof(BSShaderNoLightingProperty) == 0x80);
 
@@ -1137,58 +1154,34 @@ public:
 	void				*ptr94;			// 94
 	UInt16				word98;			// 98
 	UInt16				word9A;			// 9A
-	UInt32				unk9C[4];		// 9C
+	int					minX;			// 9C	min/max values used for clipping
+	int					minY;			// A0
+	int					maxX;			// A4
+	int					maxY;			// A8
 	UInt8				byteAC;			// AC
 	UInt8				padAD[3];		// AD
 };
 static_assert(sizeof(TileShaderProperty) == 0xB0);
 
-struct UpdateInfo
-{
-	float		flt00;
-	UInt8		byte04;
-
-	UpdateInfo() : flt00(0), byte04(0) {}
-};
-
-struct UpdateParams
-{
-	float		flt00;
-	UInt8		byte04;
-	UInt8		byte05;
-	UInt8		byte06;
-	UInt8		byte07;
-	UInt8		byte08;
-	UInt8		pad09[3];
-
-	UpdateParams()
-	{
-		UInt32 *ptr = (UInt32*)&flt00;
-		ptr[0] = 0;
-		ptr[1] = 0;
-		ptr[2] = 0;
-	}
-};
-
 // 9C
 class NiAVObject : public NiObjectNET
 {
 public:
-	/*8C*/virtual void		Unk_23(UInt32 arg1);
+	/*8C*/virtual void		UpdateControllers(const UpdateParams &updParams);
 	/*90*/virtual void		Unk_24(NiMatrix33 *arg1, NiVector3 *arg2, bool arg3);
 	/*94*/virtual void		Unk_25(UInt32 arg1);
 	/*98*/virtual void		Unk_26(UInt32 arg1);
 	/*9C*/virtual NiAVObject	*GetObjectByName(NiFixedString *objName);
 	/*A0*/virtual void		SetSelectiveUpdateFlags(UInt8 *bSelectiveUpdate, UInt32 bSelectiveUpdateTransform, UInt8 *bRigid);
-	/*A4*/virtual void		UpdateDownwardPass(UpdateParams *updParams, UInt32 flags);
-	/*A8*/virtual void		UpdateSelectedDownwardPass(UpdateParams *updParams, UInt32 flags);
-	/*AC*/virtual void		UpdateRigidDownwardPass(UpdateInfo *updInfo, UInt32 flags);
+	/*A4*/virtual void		UpdateDownwardPass(const UpdateParams &updParams, UInt32 flags);
+	/*A8*/virtual void		UpdateSelectedDownwardPass(const UpdateParams &updParams, UInt32 flags);
+	/*AC*/virtual void		UpdateRigidDownwardPass(const UpdateParams &updParams, UInt32 flags);
 	/*B0*/virtual void		Unk_2C(UInt32 arg1);
 	/*B4*/virtual void		Unk_2D(UInt32 arg1);
-	/*B8*/virtual void		UpdateTransform(UpdateInfo *updInfo);
+	/*B8*/virtual void		UpdateTransform(const UpdateParams &updParams);
 	/*BC*/virtual void		UpdateWorldBound();
-	/*C0*/virtual void		UpdateBounds(UpdateInfo *updInfo);
-	/*C4*/virtual void		PreAttachUpdate(NiNode *parent, UpdateInfo *updInfo);
+	/*C0*/virtual void		UpdateBounds(const UpdateParams &updParams);
+	/*C4*/virtual void		PreAttachUpdate(NiNode *parent, const UpdateParams &updParams);
 	/*C8*/virtual void		Unk_32(NiNode *parent);
 	/*CC*/virtual void		Unk_33(UInt32 arg1);
 	/*D0*/virtual void		PostAttachUpdate();
@@ -1244,13 +1237,15 @@ public:
 	inline NiVector3& LocalTranslate() {return m_transformLocal.translate;}
 	inline NiVector3& WorldTranslate() {return m_transformWorld.translate;}
 
+	NiAVObject *CreateCopy();
 	void Update();
 	UInt32 GetIndex() const;
 	bool ReplaceObject(NiAVObject *object);
 	NiProperty* __fastcall GetProperty(UInt32 propID) const;
+	__forceinline void AddProperty(NiProperty *niProperty) {ThisCall(0x439410, this, niProperty);}
 	TESObjectREFR *GetParentRef() const;
 
-	void DumpProperties();
+	void DumpObject();
 	void DumpParents();
 };
 
@@ -1271,7 +1266,6 @@ public:
 	NiTArray<NiAVObject*>	m_children;		// 9C
 
 	static NiNode* __stdcall Create(const char *nameStr);		//	str of NiFixedString
-	NiNode* CreateCopy();
 	NiAVObject* __fastcall GetBlockByName(const char *nameStr) const;	//	str of NiFixedString
 	NiAVObject* __fastcall GetBlock(const char *blockName) const;
 	NiNode* __fastcall GetNode(const char *nodeName) const;
@@ -1313,6 +1307,8 @@ public:
 	UInt32			frameCounter;	// C8
 	TESObjectREFR	*linkedObj;		// CC
 	UInt32			unkD0[5];		// D0
+
+	__forceinline static BSFadeNode *Create() {return ThisCall<BSFadeNode*>(0xB4E150, CdeclCall<void*>(0xAA13E0, sizeof(BSFadeNode)));}
 };
 static_assert(sizeof(BSFadeNode) == 0xE4);
 
@@ -2299,22 +2295,6 @@ public:
 };
 static_assert(sizeof(BSShaderAccumulator) == 0x280);
 
-struct UVCoord
-{
-	float		x;
-	float		y;
-
-	UVCoord() {}
-	UVCoord(float _x, float _y) : x(_x), y(_y) {}
-};
-
-struct NiTriangle
-{
-	UInt16		point1;
-	UInt16		point2;
-	UInt16		point3;
-};
-
 // 54
 class NiGeometryBufferData
 {
@@ -2364,7 +2344,7 @@ public:
 	NiVector3				*vertices;		// 20
 	NiVector3				*normals;		// 24
 	NiColorAlpha			*vertexColors;	// 28
-	UVCoord					*uvCoords;		// 2C
+	NiPoint2				*uvCoords;		// 2C
 	UInt32					unk30;			// 30
 	NiGeometryBufferData	*bufferData;	// 34
 	UInt8					byte38;			// 38

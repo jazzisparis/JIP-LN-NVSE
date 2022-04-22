@@ -136,9 +136,7 @@ bool HookXInput()
 			WriteRelJump(0x9F996E, (UInt32)Hook_XInputGetState);
 			return true;
 		}
-		PrintLog("ERROR: XInputGetStateEx not found.");
 	}
-	else PrintLog("ERROR: XInput module not found.");
 	return false;
 }
 

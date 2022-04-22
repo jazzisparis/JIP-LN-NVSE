@@ -283,6 +283,7 @@ public:
 	void DestroyAllChildren();
 	void __fastcall PokeValue(UInt32 valueID);
 	void FakeClick();
+	__forceinline void ApplyRotationOnChildren() {ThisCall(0xA0B520, this);}
 
 	void Dump();
 };

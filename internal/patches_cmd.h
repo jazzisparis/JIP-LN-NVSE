@@ -525,6 +525,4 @@ void InitCmdPatches()
 	AttachAshPile = GetCmdByOpcode(0x1211)->execute;
 	MoveToFade = GetCmdByOpcode(0x124F)->execute;
 	GetRefs = GetCmdByOpcode(0x15C7)->execute;
-
-	PrintLog("> Command patches initialized successfully.\n");
 }

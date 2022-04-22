@@ -3250,7 +3250,7 @@ __declspec(naked) NiNode* __fastcall LoadModelCopy(const char *filePath)
 		mov		ecx, ebp
 		pop		ebp
 	doCopy:
-		call	NiNode::CreateCopy
+		call	NiAVObject::CreateCopy
 	done:
 		leave
 		retn
@@ -3376,13 +3376,10 @@ __declspec(naked) NiNode* __fastcall DoAttachModel(NiAVObject *targetObj, const 
 		call	dword ptr [eax+0xDC]
 		mov		ecx, [ebp-0xC]
 		CALL_EAX(0xA5A040)
-		push	0
-		push	0
-		push	esp
+		push	offset kUpdateParams
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xC0]
-		add		esp, 8
 		mov		eax, [ebp-0xC]
 		or		byte ptr [eax+0x33], 0x80
 		test	byte ptr [eax+0x33], 0x20
@@ -4061,156 +4058,66 @@ TempObject<NiFixedString> s_syncPositionNode;
 AlignedVector4 s_syncPositionMods(0, 0, 0, 0), s_syncPositionPos;
 UInt8 s_syncPositionFlags = 0;
 
-__declspec(naked) void __fastcall SetRefrPositionHook(TESObjectREFR *refr, int EDX, const NiVector3 &pos)
+__declspec(naked) void SetRefrPositionHook()
 {
-	static const __m128 kMaxPos = {PS_DUP_4(4096000.0F)};
 	__asm
 	{
-		push	ebx
-		push	esi
-		push	edi
-		mov		ebx, [esp+0x10]
-		mov		esi, ecx
-		xor		edi, edi
-		cmp		dword ptr [ecx+0xC], 0x14
-		jnz		notPlayer
 		mov		eax, s_syncPositionRef
 		test	eax, eax
-		jz		doneWorld
+		jz		done
+		mov		ecx, [ebp-0x44]
+		cmp		dword ptr [ecx+0xC], 0x14
+		jnz		done
 		mov		ecx, [ecx+0x40]
 		test	ecx, ecx
-		jz		doneWorld
+		jz		done
 		mov		edx, [eax+0x40]
 		test	edx, edx
-		jz		doneWorld
+		jz		done
 		cmp		ecx, edx
 		jz		sameCell
 		mov		ecx, [ecx+0xC0]
 		test	ecx, ecx
-		jz		doneWorld
+		jz		done
 		cmp		[edx+0xC0], ecx
-		jnz		doneWorld
+		jnz		done
 	sameCell:
 		mov		eax, [eax+0x64]
 		test	eax, eax
-		jz		doneWorld
+		jz		done
 		mov		eax, [eax+0x14]
 		test	eax, eax
-		jz		doneWorld
+		jz		done
 		mov		edx, s_syncPositionNode
 		test	edx, edx
-		jz		useRoot
+		jz		gotNode
 		cmp		[eax+8], edx
-		jz		useRoot
+		jz		gotNode
 		mov		ecx, eax
 		call	NiNode::GetBlockByName
 		test	eax, eax
-		jz		doneWorld
-	useRoot:
+		jz		done
+	gotNode:
 		movups	xmm0, [eax+0x8C]
 		addps	xmm0, s_syncPositionMods
-		mov		ebx, offset s_syncPositionPos
-		movaps	[ebx], xmm0
+		mov		ecx, offset s_syncPositionPos
+		movaps	[ecx], xmm0
+		mov		[ebp+8], ecx
 		cmp		s_syncPositionFlags, 0
-		jz		doneWorld
+		jz		done
 		movss	xmm1, [eax+0x68]
 		movss	xmm0, [eax+0x6C]
 		call	ATan2
-		movss	[esi+0x2C], xmm0
-		jmp		doneWorld
-	notPlayer:
-		mov		eax, [esi+0x20]
-		test	eax, eax
-		jz		doneWorld
-		movzx	edx, byte ptr [eax+4]
-		sub		edx, 0xD
-		js		doneWorld
-		cmp		dl, 0x20
-		ja		doneWorld
-		cmp		byte ptr [edx+0x587CE4], 0
-		jnz		doneWorld
-		test	byte ptr [esi+9], 4
-		jnz		getWorld
-		mov		edx, g_dataHandler
-		test	dword ptr [edx+0x61A], 0xFF0000FF
-		jnz		doneWorld
-		lea		edx, [esi+0x10]
-	iterHead:
-		mov		eax, [edx]
-		mov		edx, [edx+4]
-		test	edx, edx
-		jnz		iterHead
-		test	eax, eax
-		jz		doneWorld
-		test	byte ptr [eax+0x3E8], 1
-		jnz		doneWorld
-	getWorld:
-		mov		ecx, esi
-		call	TESObjectREFR::GetParentWorld
-		test	eax, eax
-		jz		doneWorld
-		mov		edi, eax
-		push	esi
-		mov		ecx, eax
-		CALL_EAX(0x587E40)
-	doneWorld:
-		movups	xmm0, [ebx]
-		movaps	xmm1, xmm0
-		andps	xmm1, PS_AbsMask
-		cmpnltps	xmm1, kMaxPos
-		movmskps	eax, xmm1
-		test	al, 7
-		setnz	bl
-		jz		donePos
-		xorps	xmm0, xmm0
-		mov		eax, [esi]
-		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
-		jnz		notActor
-		cmp		dword ptr [esi+0x170], 0
-		jz		donePos
-		movups	xmm0, [esi+0x160]
-		jmp		donePos
-	notActor:
-		push	kExtraData_StartingPosition
-		lea		ecx, [esi+0x44]
-		call	BaseExtraList::GetByType
-		test	eax, eax
-		jz		donePos
-		movups	xmm0, [eax+0xC]
-	donePos:
-		movq	qword ptr [esi+0x30], xmm0
-		pshufd	xmm1, xmm0, 2
-		movss	[esi+0x38], xmm1
-		test	bl, bl
-		jz		doneNode
-		mov		ecx, [esi+0x64]
-		test	ecx, ecx
-		jz		doneNode
-		mov		ecx, [ecx+0x14]
-		test	ecx, ecx
-		jz		doneNode
-		mov		ebx, ecx
-		movq	qword ptr [ecx+0x58], xmm0
-		movss	[ecx+0x60], xmm1
-		call	NiNode::ResetCollision
-		mov		ecx, ebx
-		CALL_EAX(0xA5A040)
-		mov		ecx, ebx
-		call	NiAVObject::Update
-	doneNode:
-		test	edi, edi
-		jz		done
-		push	esi
-		mov		ecx, edi
-		CALL_EAX(0x587D10)
+		mov		ecx, [ebp-0x44]
+		movss	[ecx+0x2C], xmm0
 	done:
-		push	2
-		mov		ecx, esi
-		CALL_EAX(0x484B60)
-		pop		edi
-		pop		esi
-		pop		ebx
-		retn	4
+		mov		ecx, [ebp-0x44]
+		mov		eax, [ebp+8]
+		movups	xmm0, [eax]
+		movq	qword ptr [ecx+0x30], xmm0
+		unpckhpd	xmm0, xmm0
+		movss	[ecx+0x38], xmm0
+		retn
 	}
 }
 
@@ -4929,7 +4836,7 @@ __declspec(noinline) void InitJIPHooks()
 	WriteRelJump(0x50DE20, (UInt32)UpdateAnimatedLightHook);
 	WriteRelCall(0x8C7C4E, (UInt32)UpdateAnimatedLightsHook);
 	WriteRelCall(0x8C7E18, (UInt32)UpdateAnimatedLightsHook);
-	WriteRelJump(0x575830, (UInt32)SetRefrPositionHook);
+	WritePushRetRelJump(0x575A7F, 0x575B3C, (UInt32)SetRefrPositionHook);
 	//WriteRelJump(0x8706B0, (UInt32)DoRenderFrameHook);
 	SafeWrite32(0x1087FD8, (UInt32)CopyHitDataHook);
 	SafeWrite32(0x10897C0, (UInt32)CopyHitDataHook);

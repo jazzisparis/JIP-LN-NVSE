@@ -12,9 +12,7 @@ struct MemoryPool
 	};
 
 	PrimitiveCS		m_cs;
-	BlockNode		*m_pools[MAX_BLOCK_SIZE >> 4];
-
-	MemoryPool() {ZeroMemory(m_pools, sizeof(m_pools));}
+	BlockNode		*m_pools[MAX_BLOCK_SIZE >> 4] = {nullptr};
 };
 
 alignas(16) MemoryPool s_memoryPool;

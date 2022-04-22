@@ -4,29 +4,34 @@
 #define JMP_EAX(addr)  __asm mov eax, addr __asm jmp eax
 #define JMP_EDX(addr)  __asm mov edx, addr __asm jmp edx
 
+#define DUP_2(a) a a
+#define DUP_3(a) a a a
+#define DUP_4(a) a a a a
+
 // These are used for 10h aligning segments in ASM code (massive performance gain, particularly with loops).
-#define EMIT(bt) __asm _emit bt
-#define NOP_0x1 EMIT(0x90)
+#define EMIT(bt) __asm _emit 0x ## bt
+
+#define NOP_0x1 EMIT(90)
 //	"\x90"
-#define NOP_0x2 EMIT(0x66) NOP_0x1
+#define NOP_0x2 EMIT(66) NOP_0x1
 //	"\x66\x90"
-#define NOP_0x3 EMIT(0x0F) EMIT(0x1F) EMIT(0x00)
+#define NOP_0x3 EMIT(0F) EMIT(1F) EMIT(00)
 //	"\x0F\x1F\x00"
-#define NOP_0x4 EMIT(0x0F) EMIT(0x1F) EMIT(0x40) EMIT(0x00)
+#define NOP_0x4 EMIT(0F) EMIT(1F) EMIT(40) EMIT(00)
 //	"\x0F\x1F\x40\x00"
-#define NOP_0x5 EMIT(0x0F) EMIT(0x1F) EMIT(0x44) EMIT(0x00) EMIT(0x00)
+#define NOP_0x5 EMIT(0F) EMIT(1F) EMIT(44) EMIT(00) EMIT(00)
 //	"\x0F\x1F\x44\x00\x00"
-#define NOP_0x6 EMIT(0x66) NOP_0x5
+#define NOP_0x6 EMIT(66) NOP_0x5
 //	"\x66\x0F\x1F\x44\x00\x00"
-#define NOP_0x7 EMIT(0x0F) EMIT(0x1F) EMIT(0x80) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00)
+#define NOP_0x7 EMIT(0F) EMIT(1F) EMIT(80) EMIT(00) EMIT(00) EMIT(00) EMIT(00)
 //	"\x0F\x1F\x80\x00\x00\x00\x00"
-#define NOP_0x8 EMIT(0x0F) EMIT(0x1F) EMIT(0x84) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00)
+#define NOP_0x8 EMIT(0F) EMIT(1F) EMIT(84) EMIT(00) EMIT(00) EMIT(00) EMIT(00) EMIT(00)
 //	"\x0F\x1F\x84\x00\x00\x00\x00\x00"
-#define NOP_0x9 EMIT(0x66) NOP_0x8
+#define NOP_0x9 EMIT(66) NOP_0x8
 //	"\x66\x0F\x1F\x84\x00\x00\x00\x00\x00"
-#define NOP_0xA EMIT(0x66) NOP_0x9
+#define NOP_0xA EMIT(66) NOP_0x9
 //	"\x66\x66\x0F\x1F\x84\x00\x00\x00\x00\x00"
-#define NOP_0xB EMIT(0x66) NOP_0xA
+#define NOP_0xB EMIT(66) NOP_0xA
 //	"\x66\x66\x66\x0F\x1F\x84\x00\x00\x00\x00\x00"
 #define NOP_0xC NOP_0x8 NOP_0x4
 #define NOP_0xD NOP_0x8 NOP_0x5
@@ -109,11 +114,19 @@ extern const char kLwrCaseConverter[], kUprCaseConverter[];
 #define FltPId2		1.570796371F
 #define FltPI		3.141592741F
 #define FltPIx2		6.283185482F
-#define Flt2dPI		0.6366197467F
 #define FltPId180	0.01745329238F
 #define Flt180dPI	57.29578018F
 #define DblPId180	0.017453292519943295
 #define Dbl180dPI	57.29577951308232
+
+#define EMIT_DW(b0, b1, b2, b3) EMIT(b3) EMIT(b2) EMIT(b1) EMIT(b0)
+#define EMIT_DW_3(b0, b1, b2) EMIT_DW(00, b0, b1, b2)
+#define EMIT_DW_2(b0, b1) EMIT_DW(00, 00, b0, b1)
+#define EMIT_DW_1(b0) EMIT_DW(00, 00, 00, b0)
+#define EMIT_PS_1(b0, b1, b2, b3) EMIT_DW(b0, b1, b2, b3) DUP_3(EMIT_DW_1(00))
+#define EMIT_PS_2(b0, b1, b2, b3) DUP_2(EMIT_DW(b0, b1, b2, b3)) DUP_2(EMIT_DW_1(00))
+#define EMIT_PS_3(b0, b1, b2, b3) DUP_3(EMIT_DW(b0, b1, b2, b3)) EMIT_DW_1(00)
+#define EMIT_PS_4(b0, b1, b2, b3) DUP_4(EMIT_DW(b0, b1, b2, b3))
 
 typedef void* (__cdecl *memcpy_t)(void*, const void*, size_t);
 extern memcpy_t MemCopy, MemMove;

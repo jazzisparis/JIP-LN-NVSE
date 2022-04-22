@@ -437,7 +437,6 @@ __declspec(naked) TESObjectREFR *hkpWorldObject::GetParentRef()
 
 __declspec(naked) void bhkWorldObject::ApplyForce(const NiVector4 &forceVector)
 {
-	static const __m128 kUnitConv = {6.999125481F, 1 / 6.999125481F, 0, 0};
 	__asm
 	{
 		push	ebp
@@ -449,7 +448,8 @@ __declspec(naked) void bhkWorldObject::ApplyForce(const NiVector4 &forceVector)
 		push	eax
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xF0]
-		pshufd	xmm0, kUnitConv, 0x80
+		movss	xmm0, kUnitConv
+		shufps	xmm0, xmm0, 0x40
 		mulps	xmm0, [eax]
 		mov		edx, [ebp+8]
 		movups	xmm1, [edx]
@@ -468,5 +468,8 @@ __declspec(naked) void bhkWorldObject::ApplyForce(const NiVector4 &forceVector)
 		CALL_EAX(0xC9C1D0)
 		leave
 		retn	4
+		ALIGN 16
+	kUnitConv:
+		EMIT_DW(40, DF, F8, D6) EMIT_DW(3E, 12, 4D, D2)
 	}
 }

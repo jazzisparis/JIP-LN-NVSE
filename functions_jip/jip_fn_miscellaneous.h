@@ -1264,12 +1264,11 @@ bool Cmd_PlaceModel_Execute(COMMAND_ARGS)
 				{
 					objNode->RemoveCollision();
 					objParent->AddObject(objNode, 1);
-					ThisCall(0xA5A040, objNode);
 					rot *= GET_PS(8);
 					objNode->LocalRotate().RotationMatrixInv(rot);
 					objNode->LocalTranslate() = pos;
 					objNode->m_transformLocal.scale = scale;
-					objNode->Update();
+					objNode->UpdateDownwardPass(kUpdateParams, 0);
 					if (objNode->m_flags & 0x20000000)
 						AddPointLights(objNode);
 					*result = 1;

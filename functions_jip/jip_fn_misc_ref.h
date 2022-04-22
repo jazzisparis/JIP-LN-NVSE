@@ -1071,19 +1071,15 @@ bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 			if (niBlock)
 			{
 				niBlock->LocalTranslate() = transltn;
-				niBlock->Update();
-				__asm
+				if IS_NODE(niBlock)
+					((NiNode*)niBlock)->ResetCollision();
+				else if IS_TYPE(niBlock, NiPointLight)
 				{
-					mov		ecx, niBlock
-					cmp		dword ptr [ecx], kVtbl_NiPointLight
-					jnz		done
-					test	byte ptr [ecx+0x9F], 1
-					jz		done
-					movups	xmm0, [ecx+0x58]
-					andps	xmm0, PS_XYZ0Mask
-					movups	[ecx+0x100], xmm0
-				done:
+					NiPointLight *ptLight = (NiPointLight*)niBlock;
+					if (ptLight->extraFlags & 1)
+						ptLight->vector100 = transltn;
 				}
+				niBlock->Update();
 			}
 		}
 		else thisObj->SetPos(transltn);
@@ -1133,6 +1129,8 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 					niBlock->LocalRotate().Rotate(rot);
 				else
 					niBlock->LocalRotate().RotationMatrixInv(rot);
+				if IS_NODE(niBlock)
+					((NiNode*)niBlock)->ResetCollision();
 				niBlock->Update();
 			}
 		}
@@ -1169,6 +1167,8 @@ bool Cmd_SetNifBlockScale_Execute(COMMAND_ARGS)
 			if (niBlock)
 			{
 				niBlock->m_transformLocal.scale = newScale;
+				if IS_NODE(niBlock)
+					((NiNode*)niBlock)->ResetCollision();
 				niBlock->Update();
 			}
 		}
@@ -2132,7 +2132,7 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 				if (xCamera->m_parent != targetNode)
 				{
 					targetNode->AddObject(xCamera, 1);
-					xCamera->Update();
+					xCamera->UpdateDownwardPass(kUpdateParams, 0);
 				}
 				*result = 1;
 			}

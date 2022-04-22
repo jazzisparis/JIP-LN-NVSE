@@ -624,17 +624,14 @@ __declspec(naked) float __vectorcall TESObjectREFR::GetDistance(TESObjectREFR *t
 	}
 }
 
-void __fastcall SetRefrPositionHook(TESObjectREFR *refr, int EDX, const NiVector3 &pos);
-
 __declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 {
-	static const __m128 kUnitConv = {PS_DUP_3(1 / 6.999125481F)};
 	__asm
 	{
 		push	esi
 		mov		esi, ecx
 		push	dword ptr [esp+8]
-		call	SetRefrPositionHook
+		CALL_EAX(0x575830)
 		mov		eax, [esi]
 		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jnz		doUpdate
@@ -687,14 +684,22 @@ __declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 		test	ecx, ecx
 		jz		done
 		movups	xmm0, [esi+0x30]
-		movups	[ecx+0x58], xmm0
+		movq	qword ptr [ecx+0x58], xmm0
+		unpckhpd	xmm0, xmm0
+		movss	[ecx+0x60], xmm0
 		mov		esi, ecx
 		call	NiNode::ResetCollision
+		push	0
+		push	offset kUpdateParams
 		mov		ecx, esi
-		call	NiAVObject::Update
+		mov		eax, [ecx]
+		call	dword ptr [eax+0xA4]
 	done:
 		pop		esi
 		retn	4
+		ALIGN 16
+	kUnitConv:
+		EMIT_PS_3(3E, 12, 4D, D2)
 	}
 }
 
@@ -741,7 +746,10 @@ __declspec(naked) void __fastcall TESObjectREFR::SetAngle(NiVector4 &rotVector, 
 		movups	[ecx+0x44], xmm0
 		mov		edx, [esp+0x20]
 		mov		[ecx+0x54], edx
-		call	NiAVObject::Update
+		push	0
+		push	offset kUpdateParams
+		mov		eax, [ecx]
+		call	dword ptr [eax+0xA4]
 	done:
 		push	2
 		mov		ecx, esi
@@ -856,7 +864,10 @@ __declspec(naked) void __fastcall TESObjectREFR::Rotate(NiVector4 &rotVector)
 		mov		eax, [esi]
 		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jz		done
-		call	NiAVObject::Update
+		push	0
+		push	offset kUpdateParams
+		mov		eax, [ecx]
+		call	dword ptr [eax+0xA4]
 	done:
 		add		esp, 0x24
 		pop		esi
@@ -1131,7 +1142,7 @@ bool TESObjectREFR::IsGrabbable()
 
 __declspec(naked) char Actor::GetCurrentAIPackage() const
 {
-	static const char kMatchPackageType[] = { 0, 1, 2, 3, 4, 13, 14, 15, 16, 17, 18, 19, 36, 37, 35, 34, 33, -1, 5, 20, 7, 8, 10, 11, 9, 12, 21, 24, 6, 28, 29, 32 };
+	static const char kMatchPackageType[] = {0, 1, 2, 3, 4, 13, 14, 15, 16, 17, 18, 19, 36, 37, 35, 34, 33, -1, 5, 20, 7, 8, 10, 11, 9, 12, 21, 24, 6, 28, 29, 32};
 	__asm
 	{
 		mov		ecx, [ecx+0x68]
@@ -1788,7 +1799,6 @@ __declspec(naked) float Actor::AdjustPushForce(float baseForce)
 
 __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR *originRef, bool adjustForce)
 {
-	static const float kPushActor[] = {5 / 6.999125481F, 1 / 96.0F};
 	__asm
 	{
 		push	esi
@@ -1849,6 +1859,9 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 	done:
 		pop		esi
 		retn	0x10
+		ALIGN 16
+	kPushActor:
+		EMIT_DW(3F, 36, E1, 47) EMIT_DW(3C, 2A, AA, AB)
 	}
 }
 

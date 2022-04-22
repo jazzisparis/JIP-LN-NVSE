@@ -571,7 +571,7 @@ ScriptVar *Script::AddVariable(char *varName, ScriptEventList *eventList, UInt32
 	if (!varInfo)
 	{
 		varInfo = (VariableInfo*)GameHeapAlloc(sizeof(VariableInfo));
-		MemZero(varInfo, sizeof(VariableInfo));
+		ZeroMemory(varInfo, sizeof(VariableInfo));
 		varInfo->idx = ++info.varCount;
 		varInfo->name.Set(varName);
 		varList.Append(varInfo);
@@ -1286,6 +1286,41 @@ bool Cmd_EmptyCommand_Execute(COMMAND_ARGS)
 	*result = 0;
 	return true;
 }
+
+#if 0
+#include <psapi.h>
+#pragma comment(lib, "psapi.lib")
+
+char s_memUseUI[] = "<text name=\"MemUseDisplay\"><font>3</font><string></string><justify>1</justify><x>40</x><y>40</y><systemcolor>2</systemcolor></text>";
+TileText *s_memUsageTile = nullptr;
+
+void UpdateMemUsageDisplay()
+{
+	Tile::Value *tileStr = s_memUsageTile->GetValue(kTileValue_string);
+	if (tileStr)
+	{
+		PROCESS_MEMORY_COUNTERS_EX pmc;
+		GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
+		size_t physMemUsed = pmc.WorkingSetSize >> 0xA;
+		size_t virtMemUsed = pmc.PrivateUsage >> 0xA;
+		char dataStr[0x80];
+		sprintf_s(dataStr, 0x80, "RAM:   %d\nVRAM:  %d", physMemUsed, virtMemUsed);
+		tileStr->SetString(dataStr);
+	}
+}
+
+Tile* __stdcall InjectUIComponent(Tile *parentTile, char *dataStr);
+bool MainLoopHasCallback(void *cmdPtr, void *thisObj);
+void MainLoopAddCallbackEx(void *cmdPtr, void *thisObj, UInt32 callCount, UInt32 callDelay);
+
+void InitMemUsageDisplay(UInt32 callDelay)
+{
+	if (!s_memUsageTile)
+		s_memUsageTile = (TileText*)InjectUIComponent(g_HUDMainMenu->tile, s_memUseUI);
+	if (s_memUsageTile && !MainLoopHasCallback(UpdateMemUsageDisplay, nullptr))
+		MainLoopAddCallbackEx(UpdateMemUsageDisplay, nullptr, 0xFFFFFFF0, callDelay);
+}
+#endif
 
 #if LOG_HOOKS
 Map<UInt32, UInt8*> s_hookOriginalData(0x200);

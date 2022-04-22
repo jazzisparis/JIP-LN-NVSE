@@ -21,6 +21,8 @@ struct NiPoint2
 
 	inline operator float*() {return &x;}
 	inline operator __m128() const {return _mm_loadu_ps(&x);}
+
+	void Dump() const;
 };
 
 // 0C
@@ -36,27 +38,27 @@ struct NiVector3
 
 	inline void operator=(const NiVector3 &rhs)
 	{
-		x = rhs.x;
-		y = rhs.y;
-		z = rhs.z;
+		__m128 m = _mm_loadu_ps((const float*)&rhs);
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 	}
 	inline void operator=(NiVector3 &&rhs)
 	{
-		x = rhs.x;
-		y = rhs.y;
-		z = rhs.z;
+		__m128 m = _mm_loadu_ps((const float*)&rhs);
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 	}
 	inline void operator=(const NiVector4 &rhs)
 	{
 		__m128 m = _mm_loadu_ps((const float*)&rhs);
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 	}
 	inline void operator=(const AlignedVector4 &rhs)
 	{
 		__m128 m = _mm_load_ps((const float*)&rhs);
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 	}
 	inline void operator=(const NiPoint2 &rhs) {_mm_storel_pi((__m64*)this, rhs);}
 
@@ -64,14 +66,14 @@ struct NiVector3
 	{
 		__m128 m = _mm_add_ps(*this, rhs);
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 		return *this;
 	}
 	inline NiVector3& operator+=(const NiVector4 &rhs)
 	{
 		__m128 m = _mm_add_ps(*this, _mm_loadu_ps((const float*)&rhs));
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 		return *this;
 	}
 	inline NiVector3& operator+=(float value)
@@ -79,14 +81,14 @@ struct NiVector3
 		__m128 m = _mm_load_ss(&value);
 		m = _mm_add_ps(*this, _mm_shuffle_ps(m, m, 0x40));
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 		return *this;
 	}
 	inline NiVector3& operator-=(const NiVector3 &rhs)
 	{
 		__m128 m = _mm_sub_ps(*this, rhs);
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 		return *this;
 	}
 	inline NiVector3& operator-=(float value)
@@ -94,7 +96,7 @@ struct NiVector3
 		__m128 m = _mm_load_ss(&value);
 		m = _mm_sub_ps(*this, _mm_shuffle_ps(m, m, 0x40));
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 		return *this;
 	}
 	inline NiVector3& operator*=(float value)
@@ -102,21 +104,21 @@ struct NiVector3
 		__m128 m = _mm_load_ss(&value);
 		m = _mm_mul_ps(*this, _mm_shuffle_ps(m, m, 0x40));
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 		return *this;
 	}
 	inline NiVector3& operator*=(const NiVector3 &rhs)
 	{
 		__m128 m = _mm_mul_ps(*this, rhs);
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 		return *this;
 	}
 	inline NiVector3& __vectorcall operator*=(const __m128 packedPS)
 	{
 		__m128 m = _mm_mul_ps(*this, packedPS);
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 		return *this;
 	}
 	inline NiVector3& operator*=(const NiMatrix33 &mat) {return MultiplyMatrix(mat);}
@@ -156,9 +158,9 @@ struct NiVector4
 	inline void operator=(const NiVector4 &rhs) {_mm_storeu_ps(&x, rhs);}
 	inline void operator=(const NiVector3 &rhs)
 	{
-		x = rhs.x;
-		y = rhs.y;
-		z = rhs.z;
+		__m128 m = _mm_loadu_ps((const float*)&rhs);
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 	}
 	inline void operator=(const __m128 rhs) {_mm_storeu_ps(&x, rhs);}
 
@@ -166,7 +168,7 @@ struct NiVector4
 	{
 		__m128 m = _mm_add_ps(*this, rhs);
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 		return *this;
 	}
 
@@ -175,14 +177,14 @@ struct NiVector4
 		__m128 m = _mm_load_ss(&value);
 		m = _mm_mul_ps(*this, _mm_shuffle_ps(m, m, 0x40));
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 		return *this;
 	}
 	inline NiVector4& __vectorcall operator*=(const __m128 packedPS)
 	{
 		__m128 m = _mm_mul_ps(*this, packedPS);
 		_mm_storel_pi((__m64*)this, m);
-		_mm_store_ss(&z, _mm_shuffle_ps(m, m, 0xFE));
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 		return *this;
 	}
 
@@ -472,6 +474,8 @@ struct NiTransform
 	float		scale;		// 30
 
 	NiVector3& __fastcall GetTranslatedPos(NiVector3 &posMods);
+
+	void Dump() const;
 };
 
 // 10
@@ -506,11 +510,6 @@ struct NiColor
 
 	NiColor(float _r, float _g, float _b) : r(_r), g(_g), b(_b) {}
 
-	inline float& operator[](UInt32 which)
-	{
-		return ((float*)&r)[which];
-	}
-
 	inline void operator=(NiColor &&rhs)
 	{
 		r = rhs.r;
@@ -524,6 +523,7 @@ struct NiColor
 		b = rhs.z;
 	}
 
+	inline operator float*() {return &r;}
 	inline operator NiVector3() const {return *(NiVector3*)this;}
 };
 
@@ -532,10 +532,14 @@ struct NiColorAlpha
 {
 	float	r, g, b, a;
 
-	inline float& operator[](UInt32 which)
-	{
-		return ((float*)&r)[which];
-	}
+	NiColorAlpha() {}
+	NiColorAlpha(float _r, float _g, float _b, float _a) : r(_r), g(_g), b(_b), a(_a) {}
+	NiColorAlpha(const NiColorAlpha &rhs) {*this = rhs;}
+	explicit NiColorAlpha(const __m128 rhs) {*this = rhs;}
+
+	inline void operator=(NiColorAlpha &&rhs) {_mm_storeu_ps(&r, rhs);}
+	inline void operator=(const NiColorAlpha &rhs) {_mm_storeu_ps(&r, rhs);}
+	inline void operator=(const __m128 rhs) {_mm_storeu_ps(&r, rhs);}
 
 	inline NiColorAlpha& operator*=(float value)
 	{
@@ -543,6 +547,9 @@ struct NiColorAlpha
 		_mm_storeu_ps(&r, _mm_mul_ps(_mm_loadu_ps(&r), _mm_shuffle_ps(m, m, 0)));
 		return *this;
 	}
+
+	inline operator float*() {return &r;}
+	inline operator __m128() const {return _mm_loadu_ps(&r);}
 };
 
 // 10
@@ -550,6 +557,16 @@ struct NiPlane
 {
 	NiVector3	nrm;
 	float		offset;
+};
+
+// 06
+struct NiTriangle
+{
+	UInt16		point1;
+	UInt16		point2;
+	UInt16		point3;
+
+	void Dump() const;
 };
 
 // 10

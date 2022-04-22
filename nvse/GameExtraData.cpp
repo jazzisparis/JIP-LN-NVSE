@@ -67,7 +67,7 @@ ExtraLock *ExtraLock::Create()
 	dataPtr[1] = kExtraData_Lock;
 	dataPtr[2] = 0;
 	UInt32 *lockData = (UInt32*)GameHeapAlloc(sizeof(Data));
-	MemZero(lockData, sizeof(Data));
+	ZeroMemory(lockData, sizeof(Data));
 	dataPtr[3] = (UInt32)lockData;
 	return (ExtraLock*)dataPtr;
 }
@@ -89,7 +89,7 @@ ExtraTeleport *ExtraTeleport::Create()
 	dataPtr[1] = kExtraData_Teleport;
 	dataPtr[2] = 0;
 	UInt32 *teleData = (UInt32*)GameHeapAlloc(sizeof(Data));
-	MemZero(teleData, sizeof(Data));
+	ZeroMemory(teleData, sizeof(Data));
 	dataPtr[3] = (UInt32)teleData;
 	return (ExtraTeleport*)dataPtr;
 }

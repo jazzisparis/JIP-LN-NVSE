@@ -267,32 +267,13 @@ __declspec(naked) float __vectorcall Sin(float angle)
 	}
 }
 
-#define CosConst_1	2.315393249e-05F
-#define CosConst_2	0.001385370386F
-#define CosConst_3	0.04166358337F
-#define CosConst_4	0.4999990463F
-#define CosConst_5	0.9999999404F
-
-alignas(16) constexpr HexFloat kCosConstsPS[] =
-{
-	PS_DUP_3(Flt2dPI),
-	PS_DUP_3(3UL),
-	PS_DUP_3(2UL),
-	PS_DUP_3(CosConst_1),
-	PS_DUP_3(CosConst_2),
-	PS_DUP_3(CosConst_3),
-	PS_DUP_3(CosConst_4),
-	PS_DUP_3(CosConst_5)
-};
-
 __declspec(naked) float __vectorcall Cos(float angle)
 {
-	static const __m128 kCosCst = {CosConst_1, CosConst_2, CosConst_3, CosConst_4};
 	__asm
 	{
 		andps	xmm0, PS_AbsMask0
 		movss	xmm2, PS_V3_PIx2
-		movss	xmm1, kCosConstsPS
+		movss	xmm1, kFlt2dPI
 		mulss	xmm1, xmm0
 		cvttss2si	eax, xmm1
 		cmp		eax, 3
@@ -316,24 +297,29 @@ __declspec(naked) float __vectorcall Cos(float angle)
 		subss	xmm0, xmm2
 	doCalc:
 		mulss	xmm0, xmm0
-		movaps	xmm2, kCosCst
-		movaps	xmm1, xmm2
+		movaps	xmm1, xmm0
+		mulss	xmm1, kCosConsts
+		subss	xmm1, kCosConsts+4
 		mulss	xmm1, xmm0
-		psrldq	xmm2, 4
-		subss	xmm1, xmm2
+		addss	xmm1, kCosConsts+8
 		mulss	xmm1, xmm0
-		psrldq	xmm2, 4
-		addss	xmm1, xmm2
-		mulss	xmm1, xmm0
-		psrldq	xmm2, 4
-		subss	xmm1, xmm2
+		subss	xmm1, kCosConsts+0xC
 		mulss	xmm0, xmm1
-		addss	xmm0, kCosConstsPS+0x70
+		addss	xmm0, kCosConsts+0x10
 		xorps	xmm0, xmm3
 		retn
 	retn1:
 		movss	xmm0, PS_V3_One
 		retn
+		ALIGN 16
+	kFlt2dPI:
+		EMIT_DW(3F, 22, F9, 83)
+	kCosConsts:
+		EMIT_DW(37, C2, 3A, B1)
+		EMIT_DW(3A, B5, 95, 51)
+		EMIT_DW(3D, 2A, A7, 6F)
+		EMIT_DW(3E, FF, FF, E0)
+		EMIT_DW(3F, 7F, FF, FF)
 	}
 }
 
@@ -344,22 +330,22 @@ __declspec(naked) __m128 __vectorcall Cos_PS(__m128 angles)
 		andps	xmm0, PS_AbsMask
 		movaps	xmm1, xmm0
 		movaps	xmm2, PS_V3_PIx2
-		mulps	xmm1, kCosConstsPS
+		mulps	xmm1, kPS2dPI
 		cvttps2dq	xmm1, xmm1
 		movaps	xmm3, xmm1
-		pcmpgtd	xmm3, kCosConstsPS+0x10
+		pcmpgtd	xmm3, kQuadTest
 		movmskps	edx, xmm3
 		test	dl, dl
 		jz		perdOK
 		movaps	xmm3, xmm1
-		andps	xmm1, kCosConstsPS+0x10
+		andps	xmm1, kQuadTest
 		psrld	xmm3, 2
 		cvtdq2ps	xmm3, xmm3
 		mulps	xmm3, xmm2
 		subps	xmm0, xmm3
 	perdOK:
 		movaps	xmm3, xmm1
-		pcmpgtd	xmm1, kCosConstsPS+0x20
+		pcmpgtd	xmm1, kQuadTest+0x10
 		andps	xmm2, xmm1
 		andnps	xmm1, xmm3
 		xorps	xmm3, xmm3
@@ -370,17 +356,29 @@ __declspec(naked) __m128 __vectorcall Cos_PS(__m128 angles)
 		orps	xmm1, xmm2
 		subps	xmm0, xmm1
 		mulps	xmm0, xmm0
-		movaps	xmm1, kCosConstsPS+0x30
+		movaps	xmm1, kCosConsts
 		mulps	xmm1, xmm0
-		subps	xmm1, kCosConstsPS+0x40
+		subps	xmm1, kCosConsts+0x10
 		mulps	xmm1, xmm0
-		addps	xmm1, kCosConstsPS+0x50
+		addps	xmm1, kCosConsts+0x20
 		mulps	xmm1, xmm0
-		subps	xmm1, kCosConstsPS+0x60
+		subps	xmm1, kCosConsts+0x30
 		mulps	xmm0, xmm1
-		addps	xmm0, kCosConstsPS+0x70
+		addps	xmm0, kCosConsts+0x40
 		xorps	xmm0, xmm3
 		retn
+		ALIGN 16
+	kPS2dPI:
+		EMIT_PS_3(3F, 22, F9, 83)
+	kQuadTest:
+		EMIT_PS_3(00, 00, 00, 03)
+		EMIT_PS_3(00, 00, 00, 02)
+	kCosConsts:
+		EMIT_PS_3(37, C2, 3A, B1)
+		EMIT_PS_3(3A, B5, 95, 51)
+		EMIT_PS_3(3D, 2A, A7, 6F)
+		EMIT_PS_3(3E, FF, FF, E0)
+		EMIT_PS_3(3F, 7F, FF, FF)
 	}
 }
 
@@ -553,7 +551,6 @@ __declspec(naked) float __vectorcall ATan(float x)
 
 __declspec(naked) float __vectorcall ATan2(float y, float x)
 {
-	alignas(16) static const float kATanCst[] = {-0.01348046958F, 0.05747731403F, 0.1212390736F, 0.1956359297F, 0.3329946101F, 0.9999956489F};
 	__asm
 	{
 		xorps	xmm2, xmm2
@@ -571,23 +568,17 @@ __declspec(naked) float __vectorcall ATan2(float y, float x)
 		divss	xmm4, xmm3
 		movaps	xmm3, xmm4
 		mulss	xmm3, xmm4
-		movaps	xmm6, kATanCst
-		movaps	xmm5, xmm6
+		movaps	xmm5, xmm3
+		mulss	xmm5, kATanConsts
+		addss	xmm5, kATanConsts+4
 		mulss	xmm5, xmm3
-		psrldq	xmm6, 4
-		addss	xmm5, xmm6
+		subss	xmm5, kATanConsts+8
 		mulss	xmm5, xmm3
-		psrldq	xmm6, 4
-		subss	xmm5, xmm6
+		addss	xmm5, kATanConsts+0xC
 		mulss	xmm5, xmm3
-		psrldq	xmm6, 4
-		addss	xmm5, xmm6
+		subss	xmm5, kATanConsts+0x10
 		mulss	xmm5, xmm3
-		movaps	xmm6, kATanCst+0x10
-		subss	xmm5, xmm6
-		mulss	xmm5, xmm3
-		psrldq	xmm6, 4
-		addss	xmm5, xmm6
+		addss	xmm5, kATanConsts+0x14
 		mulss	xmm4, xmm5
 		movss	xmm3, PS_FlipSignMask0
 		pshufd	xmm5, xmm2, 0xFE
@@ -616,6 +607,14 @@ __declspec(naked) float __vectorcall ATan2(float y, float x)
 		orps	xmm0, xmm1
 	done:
 		retn
+		ALIGN 16
+	kATanConsts:
+		EMIT_DW(BC, 5C, DD, 30)
+		EMIT_DW(3D, 6B, 6D, 55)
+		EMIT_DW(3D, F8, 4C, 31)
+		EMIT_DW(3E, 48, 54, C9)
+		EMIT_DW(3E, AA, 7E, 45)
+		EMIT_DW(3F, 7F, FF, B7)
 	}
 }
 
