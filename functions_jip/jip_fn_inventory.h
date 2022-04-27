@@ -1,6 +1,6 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(AddItemAlt, 1, 4, kParams_OneItemOrList_OneInt_OneOptionalFloat_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(AddItemAlt, 1, 5, kParams_OneItemOrList_OneInt_OneOptionalFloat_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetValueAlt, 0, 1, kParams_OneOptionalObjectID);
 DEFINE_COMMAND_PLUGIN(SetValueAlt, 0, 2, kParams_OneObjectID_OneInt);
 DEFINE_COMMAND_PLUGIN(RemoveItemTarget, 1, 4, kParams_OneItemOrList_OneContainer_TwoOptionalInts);
@@ -33,10 +33,12 @@ bool Cmd_AddItemAlt_Execute(COMMAND_ARGS)
 	TESForm *form;
 	UInt32 count, doEquip = 0;
 	float condition = 100;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &count, &condition, &doEquip) && count && thisObj->GetContainer())
+	UInt32 showMessage = true;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &count, &condition, &doEquip, &showMessage)
+		&& count && thisObj->GetContainer())
 	{
 		condition = GetMin(GetMax(condition, 0.0F), 100.0F) * 0.01F;
-		thisObj->AddItemAlt(form, count, condition, doEquip != 0);
+		thisObj->AddItemAlt(form, count, condition, doEquip != 0, showMessage != 0);
 	}
 	return true;
 }
