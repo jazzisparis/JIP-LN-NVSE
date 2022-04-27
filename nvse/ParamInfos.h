@@ -1401,10 +1401,10 @@ ParamInfo kParams_OneString_ThreeFloats_TwoOptionalInts[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneString_OneAxis[] =
+ParamInfo kParams_OneString_OneOptionalAxis[] =
 {
 	{"String", kParamType_String, 0},
-	{"Axis", kParamType_Axis, 0}
+	{"Axis", kParamType_Axis, 1}
 };
 
 ParamInfo kParams_OneString_OneAxis_OneFloat[] =
@@ -1790,4 +1790,33 @@ ParamInfo kParams_OneString_ThreeScriptVars_OneOptionalInt[] =
 	{"Variable", kParamType_ScriptVariable, 0},
 	{"Variable", kParamType_ScriptVariable, 0},
 	{"Integer", kParamType_Integer, 1}
+};
+
+ParamInfo kParams_TwoDoubles[] =
+{
+	{"Double", kParamType_Double, 0},
+	{"Double", kParamType_Double, 0}
+};
+
+ParamInfo kParams_OneString_SixFloats_OneOptionalFloat[] =
+{
+	{"String", kParamType_String, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 1}
+};
+
+ParamInfo kParams_TwoStrings_FiveFloats[] =
+{
+	{"String", kParamType_String, 0},
+	{"String", kParamType_String, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0}
 };

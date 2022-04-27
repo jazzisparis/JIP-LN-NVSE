@@ -16,15 +16,13 @@ struct NiPoint2
 	NiPoint2(float _x, float _y) : x(_x), y(_y) {}
 	NiPoint2(const NiPoint2 &rhs) {*this = rhs;}
 
-	inline float& operator[](char axis)
-	{
-		return ((float*)&x)[axis];
-	}
+	inline void operator=(const NiPoint2 &rhs) {_mm_storel_pi((__m64*)this, rhs);}
+	inline void operator=(NiPoint2 &&rhs) {_mm_storel_pi((__m64*)this, rhs);}
 
-	inline void operator=(const NiPoint2 &rhs) {_mm_storeu_si64(this, _mm_loadu_si64(&rhs));}
-	inline void operator=(NiPoint2 &&rhs) {_mm_storeu_si64(this, _mm_loadu_si64(&rhs));}
-
+	inline operator float*() {return &x;}
 	inline operator __m128() const {return _mm_loadu_ps(&x);}
+
+	void Dump() const;
 };
 
 // 0C
@@ -38,83 +36,113 @@ struct NiVector3
 	NiVector3(const NiVector4 &rhs) {*this = rhs;}
 	NiVector3(const AlignedVector4 &rhs) {*this = rhs;}
 
-	inline float& operator[](char axis)
-	{
-		return ((float*)&x)[axis];
-	}
-
 	inline void operator=(const NiVector3 &rhs)
 	{
-		x = rhs.x;
-		y = rhs.y;
-		z = rhs.z;
+		__m128 m = _mm_loadu_ps((const float*)&rhs);
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 	}
 	inline void operator=(NiVector3 &&rhs)
 	{
-		x = rhs.x;
-		y = rhs.y;
-		z = rhs.z;
+		__m128 m = _mm_loadu_ps((const float*)&rhs);
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 	}
-	void operator=(const NiVector4 &rhs);
-	void operator=(const AlignedVector4 &rhs);
+	inline void operator=(const NiVector4 &rhs)
+	{
+		__m128 m = _mm_loadu_ps((const float*)&rhs);
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
+	}
+	inline void operator=(const AlignedVector4 &rhs)
+	{
+		__m128 m = _mm_load_ps((const float*)&rhs);
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
+	}
+	inline void operator=(const NiPoint2 &rhs) {_mm_storel_pi((__m64*)this, rhs);}
 
-	inline void operator+=(const NiVector3 &rhs)
+	inline NiVector3& operator+=(const NiVector3 &rhs)
 	{
-		x += rhs.x;
-		y += rhs.y;
-		z += rhs.z;
+		__m128 m = _mm_add_ps(*this, rhs);
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
+		return *this;
 	}
-	void operator+=(const NiVector4 &rhs);
-	inline void operator+=(float value)
+	inline NiVector3& operator+=(const NiVector4 &rhs)
 	{
-		x += value;
-		y += value;
-		z += value;
+		__m128 m = _mm_add_ps(*this, _mm_loadu_ps((const float*)&rhs));
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
+		return *this;
 	}
+	inline NiVector3& operator+=(float value)
+	{
+		__m128 m = _mm_load_ss(&value);
+		m = _mm_add_ps(*this, _mm_shuffle_ps(m, m, 0x40));
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
+		return *this;
+	}
+	inline NiVector3& operator-=(const NiVector3 &rhs)
+	{
+		__m128 m = _mm_sub_ps(*this, rhs);
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
+		return *this;
+	}
+	inline NiVector3& operator-=(float value)
+	{
+		__m128 m = _mm_load_ss(&value);
+		m = _mm_sub_ps(*this, _mm_shuffle_ps(m, m, 0x40));
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
+		return *this;
+	}
+	inline NiVector3& operator*=(float value)
+	{
+		__m128 m = _mm_load_ss(&value);
+		m = _mm_mul_ps(*this, _mm_shuffle_ps(m, m, 0x40));
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
+		return *this;
+	}
+	inline NiVector3& operator*=(const NiVector3 &rhs)
+	{
+		__m128 m = _mm_mul_ps(*this, rhs);
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
+		return *this;
+	}
+	inline NiVector3& __vectorcall operator*=(const __m128 packedPS)
+	{
+		__m128 m = _mm_mul_ps(*this, packedPS);
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
+		return *this;
+	}
+	inline NiVector3& operator*=(const NiMatrix33 &mat) {return MultiplyMatrix(mat);}
+	inline NiVector3& operator*=(const NiQuaternion &qt) {return MultiplyQuaternion(qt);}
 
-	inline void operator-=(const NiVector3 &rhs)
-	{
-		x -= rhs.x;
-		y -= rhs.y;
-		z -= rhs.z;
-	}
-	inline void operator-=(float value)
-	{
-		x -= value;
-		y -= value;
-		z -= value;
-	}
-	inline void operator*=(float value)
-	{
-		x *= value;
-		y *= value;
-		z *= value;
-	}
-	inline void operator*=(const NiVector3 &rhs)
-	{
-		x *= rhs.x;
-		y *= rhs.y;
-		z *= rhs.z;
-	}
-	inline void operator*=(const NiMatrix33 &mat) {MultiplyMatrix(mat);}
-	inline void operator*=(const NiQuaternion &qt) {MultiplyQuaternion(qt);}
-
+	inline operator float*() {return &x;};
+	inline operator NiPoint2&() const {return *(NiPoint2*)this;}
 	inline operator __m128() const {return _mm_loadu_ps(&x);}
 
 	float __vectorcall Length() const;
-	NiVector3* __fastcall MultiplyMatrix(const NiMatrix33 &mat);
-	NiVector3* __fastcall MultiplyMatrixInv(const NiMatrix33 &mat);
-	NiVector3* __fastcall MultiplyMatrixRow(const NiMatrix33 &rotMatrix, UInt32 whichRow);
-	NiVector3* __fastcall MultiplyQuaternion(const NiQuaternion &qt);
-	NiVector3 *Normalize();
-	NiVector3* __fastcall CrossProduct(const NiVector3 &vB);
-	NiVector3* __fastcall Interpolate(const NiVector3 &vB, float t, const NiVector3 &res);
+	NiVector3& __fastcall MultiplyMatrix(const NiMatrix33 &mat);
+	NiVector3& __fastcall MultiplyMatrixInv(const NiMatrix33 &mat);
+	NiVector3& __fastcall MultiplyMatrixRow(const NiMatrix33 &rotMatrix, UInt32 whichRow);
+	NiVector3& __fastcall MultiplyQuaternion(const NiQuaternion &qt);
+	NiVector3& Normalize();
+	NiVector3& __fastcall CrossProduct(const NiVector3 &vB);
+	NiVector3& __fastcall Interpolate(const NiVector3 &vB, float t, const NiVector3 &res);
 	bool RayCastCoords(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt16 filter = 6);
 
 	void Dump() const;
 };
 
-float __vectorcall Point3Distance(NiVector3 *pt1, NiVector3 *pt2);
+float __vectorcall Point2Distance(const NiVector3 &pt1, const NiVector3 &pt2);
+float __vectorcall Point3Distance(const NiVector3 &pt1, const NiVector3 &pt2);
 
 struct NiVector4
 {
@@ -130,32 +158,38 @@ struct NiVector4
 	inline void operator=(const NiVector4 &rhs) {_mm_storeu_ps(&x, rhs);}
 	inline void operator=(const NiVector3 &rhs)
 	{
-		x = rhs.x;
-		y = rhs.y;
-		z = rhs.z;
+		__m128 m = _mm_loadu_ps((const float*)&rhs);
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 	}
 	inline void operator=(const __m128 rhs) {_mm_storeu_ps(&x, rhs);}
 
-	inline float& operator[](char axis)
+	inline NiVector4& operator+=(const NiVector3 &rhs)
 	{
-		return ((float*)&x)[axis];
+		__m128 m = _mm_add_ps(*this, rhs);
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
+		return *this;
 	}
 
-	inline void operator+=(const NiVector3 &rhs)
+	inline NiVector4& operator*=(float value)
 	{
-		x += rhs.x;
-		y += rhs.y;
-		z += rhs.z;
+		__m128 m = _mm_load_ss(&value);
+		m = _mm_mul_ps(*this, _mm_shuffle_ps(m, m, 0x40));
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
+		return *this;
+	}
+	inline NiVector4& __vectorcall operator*=(const __m128 packedPS)
+	{
+		__m128 m = _mm_mul_ps(*this, packedPS);
+		_mm_storel_pi((__m64*)this, m);
+		_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
+		return *this;
 	}
 
-	inline void operator*=(float value)
-	{
-		x *= value;
-		y *= value;
-		z *= value;
-	}
-
-	inline operator NiVector3*() const {return (NiVector3*)this;}
+	inline operator float*() {return &x;};
+	inline operator NiVector3&() const {return *(NiVector3*)this;}
 	inline operator __m128() const {return _mm_loadu_ps(&x);}
 
 	inline float __vectorcall Length() const
@@ -184,18 +218,15 @@ struct alignas(16) AlignedVector4
 	inline void operator=(const __m128 rhs) {_mm_store_ps(&x, rhs);}
 	inline void operator=(float *valPtr) {_mm_store_ps(&x, _mm_loadu_ps(valPtr));}
 
-	inline float& operator[](char axis)
+	inline AlignedVector4& operator*=(float value)
 	{
-		return ((float*)&x)[axis];
+		__m128 m = _mm_load_ss(&value);
+		*this = _mm_mul_ps(*this, _mm_shuffle_ps(m, m, 0));
+		return *this;
 	}
 
-	inline void operator*=(float value)
-	{
-		x *= value;
-		y *= value;
-		z *= value;
-	}
-
+	inline operator float*() {return &x;};
+	inline operator NiVector3&() const {return *(NiVector3*)this;}
 	inline operator __m128() const {return _mm_load_ps(&x);}
 
 	inline float __vectorcall Length() const
@@ -227,15 +258,14 @@ struct AxisAngle
 	inline void operator=(const NiQuaternion &qt) {FromQuaternion(qt);}
 	inline void operator=(const __m128 rhs) {_mm_storeu_ps(&axis.x, rhs);}
 
-	inline float operator[](char _axis) const {return ((float*)&axis)[_axis];}
-
+	inline operator float*() {return &axis.x;};
 	inline operator __m128() const {return _mm_loadu_ps(&axis.x);}
 
-	AxisAngle* __fastcall FromEulerYPR(const NiVector3 &ypr);
-	AxisAngle* __fastcall FromRotationMatrix(const NiMatrix33 &rotMat);
-	AxisAngle* __fastcall FromQuaternion(const NiQuaternion &qt);
+	AxisAngle& __fastcall FromEulerYPR(const NiVector3 &ypr);
+	AxisAngle& __fastcall FromRotationMatrix(const NiMatrix33 &rotMat);
+	AxisAngle& __fastcall FromQuaternion(const NiQuaternion &qt);
 
-	NiVector3 *ToEulerYPR(NiVector3 &ypr) const;
+	NiVector3& ToEulerYPR(NiVector3 &ypr) const;
 
 	void Dump() const;
 };
@@ -281,10 +311,9 @@ struct NiMatrix33
 	inline void operator=(const AxisAngle &axisAngle) {FromAxisAngle(axisAngle);}
 	void __fastcall operator=(const hkMatrix3x4 &inMat);
 
-	inline void operator*=(const NiMatrix33 &rhs) {MultiplyMatrices(rhs);}
+	inline NiMatrix33& operator*=(const NiMatrix33 &rhs) {return MultiplyMatrices(rhs);}
 
-	inline float operator[](UInt32 idx) const {return cr[0][idx];}
-	inline float* operator[](UInt32 idx) {return &cr[0][idx];}
+	inline operator float*() const {return (float*)this;}
 
 	inline bool operator==(const NiMatrix33 &rhs) const
 	{
@@ -294,15 +323,15 @@ struct NiMatrix33
 		return true;
 	}
 
-	NiVector3* __fastcall ExtractAngles(NiVector3 &outAngles) const;
-	NiVector3* __fastcall ExtractAnglesInv(NiVector3 &outAngles) const;
-	NiMatrix33* __fastcall RotationMatrix(const NiVector3 &rot);
-	NiMatrix33* __fastcall RotationMatrixInv(const NiVector3 &rot);
-	NiMatrix33* __fastcall FromQuaternion(const NiQuaternion &qt);
-	NiMatrix33* __fastcall FromAxisAngle(const AxisAngle &axisAngle);
-	NiMatrix33* __fastcall MultiplyMatrices(const NiMatrix33 &matB);
-	NiMatrix33* __fastcall Rotate(const NiVector3 &rot);
-	NiMatrix33 *Transpose();
+	NiVector3& __fastcall ExtractAngles(NiVector3 &outAngles) const;
+	NiVector3& __fastcall ExtractAnglesInv(NiVector3 &outAngles) const;
+	NiMatrix33& __fastcall RotationMatrix(const NiVector3 &rot);
+	NiMatrix33& __fastcall RotationMatrixInv(const NiVector3 &rot);
+	NiMatrix33& __fastcall FromQuaternion(const NiQuaternion &qt);
+	NiMatrix33& __fastcall FromAxisAngle(const AxisAngle &axisAngle);
+	NiMatrix33& __fastcall MultiplyMatrices(const NiMatrix33 &matB);
+	NiMatrix33& __fastcall Rotate(const NiVector3 &rot);
+	NiMatrix33& Transpose();
 
 	void Dump() const;
 };
@@ -329,21 +358,25 @@ struct NiQuaternion
 	void operator=(const hkQuaternion &hkQt);
 	inline void operator=(const __m128 rhs) {_mm_storeu_ps(&w, rhs);}
 
-	inline void operator+=(const NiQuaternion &rhs)
+	inline NiQuaternion& operator+=(const NiQuaternion &rhs)
 	{
 		*this = _mm_add_ps(*this, rhs);
+		return *this;
 	}
 
-	inline void operator-=(const NiQuaternion &rhs)
+	inline NiQuaternion& operator-=(const NiQuaternion &rhs)
 	{
 		*this = _mm_sub_ps(*this, rhs);
+		return *this;
 	}
 
-	inline void operator*=(const NiQuaternion &rhs) {MultiplyQuaternion(rhs);}
+	inline NiQuaternion& operator*=(const NiQuaternion &rhs) {return MultiplyQuaternion(rhs);}
 
-	inline void operator*=(float s)
+	inline NiQuaternion& operator*=(float s)
 	{
-		*this = _mm_mul_ps(*this, _mm_set_ps1(s));
+		__m128 m = _mm_load_ss(&s);
+		*this = _mm_mul_ps(*this, _mm_shuffle_ps(m, m, 0));
+		return *this;
 	}
 
 	inline NiQuaternion operator+(const NiQuaternion &rhs) const
@@ -379,11 +412,11 @@ struct NiQuaternion
 
 	inline operator __m128() const {return _mm_loadu_ps(&w);}
 
-	NiQuaternion* __fastcall FromRotationMatrix(const NiMatrix33 &rotMat);
-	NiQuaternion* __fastcall FromEulerYPR(const NiVector3 &ypr);
-	NiQuaternion* __fastcall FromAxisAngle(const AxisAngle &axisAngle);
+	NiQuaternion& __fastcall FromRotationMatrix(const NiMatrix33 &rotMat);
+	NiQuaternion& __fastcall FromEulerYPR(const NiVector3 &ypr);
+	NiQuaternion& __fastcall FromAxisAngle(const AxisAngle &axisAngle);
 
-	NiQuaternion* __fastcall MultiplyQuaternion(const NiQuaternion &rhs);
+	NiQuaternion& __fastcall MultiplyQuaternion(const NiQuaternion &rhs);
 
 	inline NiQuaternion& Invert()
 	{
@@ -391,9 +424,10 @@ struct NiQuaternion
 		return *this;
 	}
 
-	inline void Negate()
+	inline NiQuaternion& Negate()
 	{
-		*this = _mm_xor_ps(*this, _mm_load_ps((const float*)(kPackedValues + 8)));
+		*this = _mm_xor_ps(*this, GET_PS(2));
+		return *this;
 	}
 
 	inline float __vectorcall DotProduct(const NiQuaternion &rhs) const
@@ -402,8 +436,8 @@ struct NiQuaternion
 		return _mm_hadd_ps(_mm_hadd_ps(m, m), m).m128_f32[0];
 	}
 
-	NiQuaternion *Normalize();
-	NiVector3* __fastcall ToEulerYPR(NiVector3 &ypr) const;
+	NiQuaternion& Normalize();
+	NiVector3& __fastcall ToEulerYPR(NiVector3 &ypr) const;
 
 	NiQuaternion& Rotate(const NiQuaternion &rot)
 	{
@@ -439,7 +473,9 @@ struct NiTransform
 	NiVector3	translate;	// 24
 	float		scale;		// 30
 
-	NiVector4* __fastcall GetTranslatedPos(NiVector4 *posMods);
+	NiVector3& __fastcall GetTranslatedPos(NiVector3 &posMods);
+
+	void Dump() const;
 };
 
 // 10
@@ -474,11 +510,6 @@ struct NiColor
 
 	NiColor(float _r, float _g, float _b) : r(_r), g(_g), b(_b) {}
 
-	inline float& operator[](UInt32 which)
-	{
-		return ((float*)&r)[which];
-	}
-
 	inline void operator=(NiColor &&rhs)
 	{
 		r = rhs.r;
@@ -492,6 +523,7 @@ struct NiColor
 		b = rhs.z;
 	}
 
+	inline operator float*() {return &r;}
 	inline operator NiVector3() const {return *(NiVector3*)this;}
 };
 
@@ -500,10 +532,24 @@ struct NiColorAlpha
 {
 	float	r, g, b, a;
 
-	inline float& operator[](UInt32 which)
+	NiColorAlpha() {}
+	NiColorAlpha(float _r, float _g, float _b, float _a) : r(_r), g(_g), b(_b), a(_a) {}
+	NiColorAlpha(const NiColorAlpha &rhs) {*this = rhs;}
+	explicit NiColorAlpha(const __m128 rhs) {*this = rhs;}
+
+	inline void operator=(NiColorAlpha &&rhs) {_mm_storeu_ps(&r, rhs);}
+	inline void operator=(const NiColorAlpha &rhs) {_mm_storeu_ps(&r, rhs);}
+	inline void operator=(const __m128 rhs) {_mm_storeu_ps(&r, rhs);}
+
+	inline NiColorAlpha& operator*=(float value)
 	{
-		return ((float*)&r)[which];
+		__m128 m = _mm_load_ss(&value);
+		_mm_storeu_ps(&r, _mm_mul_ps(_mm_loadu_ps(&r), _mm_shuffle_ps(m, m, 0)));
+		return *this;
 	}
+
+	inline operator float*() {return &r;}
+	inline operator __m128() const {return _mm_loadu_ps(&r);}
 };
 
 // 10
@@ -511,6 +557,16 @@ struct NiPlane
 {
 	NiVector3	nrm;
 	float		offset;
+};
+
+// 06
+struct NiTriangle
+{
+	UInt16		point1;
+	UInt16		point2;
+	UInt16		point3;
+
+	void Dump() const;
 };
 
 // 10

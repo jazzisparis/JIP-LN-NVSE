@@ -1,5 +1,24 @@
 #include "internal/netimmerse.h"
 
+__declspec(naked) NiObject* __fastcall NiObject::HasBaseType(const NiRTTI *baseType)
+{
+	__asm
+	{
+		mov		eax, [ecx]
+		call	dword ptr [eax+8]
+		ALIGN 16
+	iterHead:
+		test	eax, eax
+		jz		done
+		cmp		eax, edx
+		mov		eax, [eax+4]
+		jnz		iterHead
+		mov		eax, ecx
+	done:
+		retn
+	}
+}
+
 __declspec(naked) bool NiControllerSequence::Play()
 {
 	__asm
@@ -68,7 +87,7 @@ __declspec(naked) void __fastcall NiObjectNET::SetName(const char *newName)
 	}
 }
 
-__declspec(naked) NiExtraData* __fastcall NiObjectNET::GetExtraData(UInt32 vtbl)
+__declspec(naked) NiExtraData* __fastcall NiObjectNET::GetExtraData(UInt32 vtbl) const
 {
 	__asm
 	{
@@ -95,15 +114,10 @@ __declspec(naked) NiExtraData* __fastcall NiObjectNET::GetExtraData(UInt32 vtbl)
 
 void NiObjectNET::DumpExtraData()
 {
-	s_debug.Indent();
 	NiExtraData *xData;
 	for (UInt32 iter = 0; iter < m_extraDataListLen; iter++)
-	{
-		xData = m_extraDataList[iter];
-		if (xData)
+		if (xData = m_extraDataList[iter])
 			PrintDebug("(X) %08X\t%s\t#%d", xData, xData->GetType()->name, xData->m_uiRefCount);
-	}
-	s_debug.Outdent();
 }
 
 void __vectorcall NiMaterialProperty::SetTraitValue(UInt32 traitID, float value)
@@ -131,20 +145,17 @@ void __vectorcall NiMaterialProperty::SetTraitValue(UInt32 traitID, float value)
 	}
 }
 
+const UpdateParams kUpdateParams;
+
 __declspec(naked) void NiAVObject::Update()
 {
 	__asm
 	{
 		push	ecx
 		push	0
-		push	0
-		push	0
-		mov		edx, esp
-		push	0
-		push	edx
+		push	offset kUpdateParams
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xA4]
-		add		esp, 0xC
 		pop		ecx
 		mov		ecx, [ecx+0x18]
 		test	ecx, ecx
@@ -156,7 +167,7 @@ __declspec(naked) void NiAVObject::Update()
 	}
 }
 
-__declspec(naked) UInt32 NiAVObject::GetIndex()
+__declspec(naked) UInt32 NiAVObject::GetIndex() const
 {
 	__asm
 	{
@@ -211,7 +222,7 @@ __declspec(naked) bool NiAVObject::ReplaceObject(NiAVObject *object)
 	}
 }
 
-__declspec(naked) NiProperty* __fastcall NiAVObject::GetProperty(UInt32 propID)
+__declspec(naked) NiProperty* __fastcall NiAVObject::GetProperty(UInt32 propID) const
 {
 	__asm
 	{
@@ -238,7 +249,7 @@ __declspec(naked) NiProperty* __fastcall NiAVObject::GetProperty(UInt32 propID)
 	}
 }
 
-__declspec(naked) TESObjectREFR *NiAVObject::GetParentRef()
+__declspec(naked) TESObjectREFR *NiAVObject::GetParentRef() const
 {
 	__asm
 	{
@@ -261,22 +272,41 @@ __declspec(naked) TESObjectREFR *NiAVObject::GetParentRef()
 	}
 }
 
-void NiAVObject::DumpProperties()
+void NiAVObject::DumpObject()
 {
-	s_debug.Indent();
+	PrintDebug("(B) %08X\t%s\t%s\t%08X\t#%d", this, GetType()->name, GetName(), m_flags, m_uiRefCount);
+	s_debug().Indent();
+	if (m_controller)
+		PrintDebug("(C) %08X\t%s\t#%d", m_controller, m_controller->GetType()->name, m_controller->m_uiRefCount);
+	DumpExtraData();
+	if (m_collisionObject)
+	{
+		PrintDebug("(H) %08X\t%s\t%08X", m_collisionObject, m_collisionObject->GetType()->name, m_collisionObject->flags);
+		bhkWorldObject* hWorldObj = m_collisionObject->worldObj;
+		if (hWorldObj)
+			PrintDebug("\t(H1) %08X\t%s\t%08X", hWorldObj, hWorldObj->GetType()->name, hWorldObj->bodyFlags);
+	}
+	if (GetTriBasedGeom())
+	{
+		NiGeometryData *geomData = ((NiTriBasedGeom*)this)->geometryData;
+		if (geomData)
+			PrintDebug("(G) %08X\t%s\t#%d", geomData, geomData->GetType()->name, geomData->m_uiRefCount);
+	}
 	NiProperty *niProp;
 	for (DListNode<NiProperty> *traverse = m_propertyList.Head(); traverse; traverse = traverse->next)
 	{
-		niProp = traverse->data;
-		if (niProp)
-		{
-			PrintDebug("(P) %08X\t%s\t#%d", niProp, niProp->GetType()->name, niProp->m_uiRefCount);
-			if (niProp->m_controller)
-				PrintDebug("\t(C) %08X\t%s\t#%d", niProp->m_controller, niProp->m_controller->GetType()->name, niProp->m_controller->m_uiRefCount);
-			niProp->DumpExtraData();
-		}
+		if (!(niProp = traverse->data))
+			continue;
+		PrintDebug("(P) %08X\t%s\t#%d", niProp, niProp->GetType()->name, niProp->m_uiRefCount);
+		s_debug().Indent();
+		if (niProp->m_controller)
+			PrintDebug("(C) %08X\t%s\t#%d", niProp->m_controller, niProp->m_controller->GetType()->name, niProp->m_controller->m_uiRefCount);
+		niProp->DumpExtraData();
+		s_debug().Outdent();
 	}
-	s_debug.Outdent();
+	m_transformLocal.Dump();
+	m_transformWorld.Dump();
+	s_debug().Outdent();
 }
 
 void NiAVObject::DumpParents()
@@ -310,7 +340,7 @@ __declspec(noinline) NiObjectCopyInfo *GetNiObjectCopyInfo()
 
 void NiTMapBase<int, int>::FreeBuckets();
 
-__declspec(naked) NiNode *NiNode::CreateCopy()
+__declspec(naked) NiAVObject *NiAVObject::CreateCopy()
 {
 	__asm
 	{
@@ -344,7 +374,7 @@ __declspec(naked) NiNode *NiNode::CreateCopy()
 	}
 }
 
-__declspec(naked) NiAVObject* __fastcall NiNode::GetBlockByName(const char *nameStr)	//	str of NiFixedString
+__declspec(naked) NiAVObject* __fastcall NiNode::GetBlockByName(const char *nameStr) const	//	str of NiFixedString
 {
 	__asm
 	{
@@ -386,7 +416,7 @@ __declspec(naked) NiAVObject* __fastcall NiNode::GetBlockByName(const char *name
 	}
 }
 
-__declspec(naked) NiAVObject* __fastcall NiNode::GetBlock(const char *blockName)
+__declspec(naked) NiAVObject* __fastcall NiNode::GetBlock(const char *blockName) const
 {
 	__asm
 	{
@@ -416,7 +446,7 @@ __declspec(naked) NiAVObject* __fastcall NiNode::GetBlock(const char *blockName)
 	}
 }
 
-__declspec(naked) NiNode* __fastcall NiNode::GetNode(const char *nodeName)
+__declspec(naked) NiNode* __fastcall NiNode::GetNode(const char *nodeName) const
 {
 	__asm
 	{
@@ -437,17 +467,51 @@ bool NiNode::IsMovable()
 	if (m_collisionObject)
 	{
 		bhkWorldObject *hWorldObj = m_collisionObject->worldObj;
-		if (hWorldObj)
-		{
-			UInt8 motionType = ((hkpRigidBody*)hWorldObj->refObject)->motion.type;
-			if ((motionType <= 3) || (motionType == 6))
-				return true;
-		}
+		if (hWorldObj && ((hkpRigidBody*)hWorldObj->refObject)->IsMobile())
+			return true;
 	}
 	for (auto iter = m_children.Begin(); iter; ++iter)
 		if (*iter && IS_NODE(*iter) && ((NiNode*)*iter)->IsMovable())
 			return true;
 	return false;
+}
+
+__declspec(naked) void NiNode::ResetCollision()
+{
+	__asm
+	{
+		mov		eax, [ecx+0x1C]
+		test	eax, eax
+		jz		noColObj
+		or      byte ptr [eax+0xC], 0x40
+	noColObj:
+		movzx	eax, word ptr [ecx+0xA6]
+		test	eax, eax
+		jz		done
+		push	esi
+		push	edi
+		mov		esi, [ecx+0xA0]
+		mov		edi, eax
+		ALIGN 16
+	iterHead:
+		dec		edi
+		js		iterEnd
+		mov		ecx, [esi]
+		add		esi, 4
+		test	ecx, ecx
+		jz		iterHead
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
+		jnz		iterHead
+		call	NiNode::ResetCollision
+		jmp		iterHead
+		ALIGN 16
+	iterEnd:
+		pop		edi
+		pop		esi
+	done:
+		retn
+	}
 }
 
 __declspec(naked) void NiNode::RemoveCollision()
@@ -496,6 +560,32 @@ __declspec(naked) void NiNode::RemoveCollision()
 	}
 }
 
+__declspec(naked) BSXFlags *NiNode::GetBSXFlags()
+{
+	__asm
+	{
+		push	esi
+		mov		esi, [ecx+0x10]
+		movzx	ecx, word ptr [ecx+0x14]
+		mov		edx, kVtbl_BSXFlags
+		ALIGN 16
+	iterHead:
+		dec		ecx
+		js		done
+		mov		eax, [esi+ecx*4]
+		test	eax, eax
+		jz		iterHead
+		cmp		[eax], edx
+		jnz		iterHead
+		pop		esi
+		retn
+	done:
+		xor		eax, eax
+		pop		esi
+		retn
+	}
+}
+
 void NiNode::BulkSetMaterialPropertyTraitValue(UInt32 traitID, float value)
 {
 	NiAVObject *block;
@@ -510,7 +600,7 @@ void NiNode::BulkSetMaterialPropertyTraitValue(UInt32 traitID, float value)
 	}
 }
 
-void NiNode::GetContactObjects(ContactObjects *contactObjs)
+void NiNode::GetContactObjects(ContactObjects &contactObjs)
 {
 	if (m_collisionObject && m_collisionObject->worldObj)
 	{
@@ -521,14 +611,14 @@ void NiNode::GetContactObjects(ContactObjects *contactObjs)
 			ConstraintContact *contactsArr = rigidBody->contactsArr;
 			if (contactsArr)
 				for (UInt16 count = rigidBody->contactsSize; count; count--, contactsArr++)
-					contactObjs->Append(contactsArr->contactBody);
+					contactObjs.Append(contactsArr->contactBody);
 			if (rigidBody->constraintInst.data)
 				for (auto iter = rigidBody->constraintInst.Begin(); iter; ++iter)
-					contactObjs->Append(iter->contactBody);
+					contactObjs.Append(iter->contactBody);
 		}
 		else if IS_TYPE(hWorldObj, hkpSimpleShapePhantom)
 			for (auto iter = ((hkpSimpleShapePhantom*)hWorldObj)->cdBodies.Begin(); iter; ++iter)
-				contactObjs->Append(iter->GetWorldObj());
+				contactObjs.Append(iter->GetWorldObj());
 	}
 	for (auto iter = m_children.Begin(); iter; ++iter)
 		if (*iter && IS_NODE(*iter)) ((NiNode*)*iter)->GetContactObjects(contactObjs);
@@ -544,37 +634,76 @@ bool NiNode::HasPhantom()
 	return false;
 }
 
-void NiNode::GetBodyMass(float *totalMass)
-{
-	if (m_collisionObject && m_collisionObject->worldObj)
-		*totalMass += ((hkpRigidBody*)m_collisionObject->worldObj->refObject)->motion.GetBodyMass();
-	for (auto iter = m_children.Begin(); iter; ++iter)
-		if (*iter && IS_NODE(*iter)) ((NiNode*)*iter)->GetBodyMass(totalMass);
-}
-
-__declspec(naked) void NiNode::ApplyForce(NiVector4 *forceVector)
+__declspec(naked) float __vectorcall NiNode::GetBodyMass(float totalMass) const
 {
 	__asm
 	{
 		mov		eax, [ecx+0x1C]
 		test	eax, eax
-		jz		doneCol
+		jz		doChildren
 		mov		eax, [eax+0x10]
 		test	eax, eax
-		jz		doneCol
+		jz		doChildren
+		mov		eax, [eax+8]
+		cmp		byte ptr [eax+0x28], 1
+		jnz		doChildren
+		mov		eax, [eax+0x1AC]
+		test	eax, eax
+		jz		doChildren
+		movd	xmm1, eax
+		rcpss	xmm1, xmm1
+		addss	xmm0, xmm1
+	doChildren:
+		movzx	eax, word ptr [ecx+0xA6]
+		test	eax, eax
+		jz		done
+		push	esi
+		push	edi
+		mov		esi, [ecx+0xA0]
+		mov		edi, eax
+		ALIGN 16
+	iterHead:
+		dec		edi
+		js		iterEnd
+		mov		ecx, [esi]
+		add		esi, 4
+		test	ecx, ecx
+		jz		iterHead
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
+		jnz		iterHead
+		call	NiNode::GetBodyMass
+		jmp		iterHead
+		ALIGN 16
+	iterEnd:
+		pop		edi
+		pop		esi
+	done:
+		retn
+	}
+}
+
+__declspec(naked) void NiNode::ApplyForce(const NiVector4 &forceVector)
+{
+	__asm
+	{
+		mov		eax, [ecx+0x1C]
+		test	eax, eax
+		jz		doChildren
+		mov		eax, [eax+0x10]
+		test	eax, eax
+		jz		doChildren
 		mov		edx, [eax+8]
-		mov		dl, [edx+0xE8]
-		cmp		dl, 3
-		jbe		doApply
-		cmp		dl, 6
-		jnz		doneCol
-	doApply:
+		cmp		byte ptr [edx+0x28], 1
+		jnz		doChildren
+		test	byte ptr [edx+0xE8], 2
+		jz		doChildren
 		push	ecx
 		push	dword ptr [esp+8]
 		mov		ecx, eax
 		call	bhkWorldObject::ApplyForce
 		pop		ecx
-	doneCol:
+	doChildren:
 		movzx	eax, word ptr [ecx+0xA6]
 		test	eax, eax
 		jz		done
@@ -602,6 +731,77 @@ __declspec(naked) void NiNode::ApplyForce(NiVector4 *forceVector)
 		pop		esi
 	done:
 		retn	4
+	}
+}
+
+__declspec(naked) bool __fastcall NiCamera::WorldToScreen(const NiVector3 &worldPos, float zeroTolerance, NiPoint2 &scrPos)
+{
+	__asm
+	{
+		add		ecx, 0x9C
+		movups	xmm0, [ecx]
+		movups	xmm1, [ecx+0x10]
+		movups	xmm2, [ecx+0x30]
+		movups	xmm3, [edx]
+		andps	xmm3, PS_XYZ0Mask
+		pshufd	xmm4, PS_V3_One, 0x3F
+		orps	xmm3, xmm4
+		xorps	xmm4, xmm4
+		mulps	xmm0, xmm3
+		haddps	xmm0, xmm4
+		haddps	xmm0, xmm4
+		mulps	xmm1, xmm3
+		haddps	xmm1, xmm4
+		haddps	xmm1, xmm4
+		unpcklps	xmm0, xmm1
+		mulps	xmm2, xmm3
+		haddps	xmm2, xmm4
+		haddps	xmm2, xmm4
+		comiss	xmm2, xmm4
+		setnz	al
+		jz		done
+		movss	xmm1, [esp+4]
+		cmpnltss	xmm1, xmm2
+		movmskps	eax, xmm1
+		movss	xmm3, PS_FlipSignMask0
+		andps	xmm1, xmm3
+		xorps	xmm2, xmm1
+		unpcklps	xmm2, xmm2
+		divps	xmm0, xmm2
+		movups	xmm1, [ecx+0x64]
+		shufps	xmm1, xmm1, 0xE1
+		pshufd	xmm2, PS_V3_Half, 0
+		mulps	xmm1, xmm2
+		movaps	xmm2, xmm1
+		hsubps	xmm2, xmm4
+		mulps	xmm0, xmm2
+		shufps	xmm3, xmm3, 0x45
+		xorps	xmm1, xmm3
+		haddps	xmm1, xmm4
+		addps	xmm0, xmm1
+		shufps	xmm3, xmm3, 8
+		xorps	xmm0, xmm3
+		xor		al, 1
+		jz		done
+		unpcklpd	xmm0, xmm0
+		movq	xmm1, qword ptr PS_V3_One
+		pshufd	xmm2, xmm1, 0
+		shufps	xmm3, xmm3, 0x50
+		xorps	xmm0, xmm3
+		xorps	xmm2, xmm3
+		cmpltps	xmm1, xmm0
+		movmskps	edx, xmm1
+		test	dl, dl
+		jz		done
+		andps	xmm1, xmm2
+		shufps	xmm1, xmm1, 0xD8
+		haddps	xmm1, xmm4
+		subps	xmm0, xmm1
+		xor		al, al
+	done:
+		mov		edx, [esp+8]
+		movq	qword ptr [edx], xmm0
+		retn	8
 	}
 }
 
@@ -635,37 +835,121 @@ __declspec(naked) bool __fastcall NiPick::GetResults(NiCamera *camera)
 	}
 }
 
+__declspec(naked) NiSourceTexture* __fastcall NiSourceTexture::Create(const char *ddsPath)
+{
+	__asm
+	{
+		push	eax
+		push	ecx
+		lea		ecx, [esp+4]
+		CALL_EAX(0x438170)
+		push	0
+		push	1
+		push	0x11A9598
+		push	eax
+		CALL_EAX(0xA5FD70)
+		add		esp, 0x10
+		pop		ecx
+		test	ecx, ecx
+		jz		done
+		lock dec dword ptr [ecx-8]
+	done:
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall NiRenderedTexture::SaveToFile(UInt32 fileFmt, char *filePath)
+{
+	__asm
+	{
+		mov		eax, [ecx+0x24]
+		test	eax, eax
+		jz		done
+		mov		ecx, [eax+0x64]
+		test	ecx, ecx
+		jz		done
+		mov		eax, [esp+4]
+		push	0
+		push	ecx
+		push	edx
+		push	eax
+		CALL_EAX(0xEE6DC2)
+	done:
+		retn	4
+	}
+}
+
+__declspec(naked) NiLines* __stdcall NiLines::Create(float length, const NiColorAlpha &color, const char *objName)
+{
+	__asm
+	{
+		push	2
+		GAME_HEAP_ALLOC
+		mov		word ptr [eax], 1
+		push	eax
+		push	0
+		push	0
+		push	0
+		push	0x20
+		GAME_HEAP_ALLOC
+		mov		edx, [esp+0x18]
+		movups	xmm0, [edx]
+		movups	[eax], xmm0
+		movups	[eax+0x10], xmm0
+		push	eax
+		push	0x18
+		GAME_HEAP_ALLOC
+		xorps	xmm0, xmm0
+		movups	[eax], xmm0
+		movq	qword ptr [eax+0x10], xmm0
+		mov		dword ptr [eax+0xC], 0x3F800000
+		push	eax
+		push	2
+		push	0xC4
+		CALL_EAX(0xAA13E0)
+		pop		ecx
+		mov		ecx, eax
+		CALL_EAX(0xA746E0)
+		push	0
+		push	0
+		push	eax
+		push	eax
+		push	eax
+		push	0x80
+		CALL_EAX(0xAA13E0)
+		pop		ecx
+		mov		ecx, eax
+		CALL_EAX(0xB6FC90)
+		pop		ecx
+		push	eax
+		CALL_EAX(0x439410)
+		CALL_EAX(0xA5CEB0)
+		mov		word ptr [eax+0x18], 0x10ED
+		pop		ecx
+		push	eax
+		CALL_EAX(0x439410)
+		CALL_EAX(0xB57E30)
+		mov		edx, [esp+0x18]
+		mov		ecx, [esp]
+		call	NiObjectNET::SetName
+		pop		eax
+		add		esp, 8
+		mov		edx, [esp+4]
+		mov		[eax+0x64], edx
+		retn	0xC
+	}
+}
+
 void NiNode::Dump()
 {
-	PrintDebug("(N) %08X\t%s\t%s\t%08X\t#%d", this, GetType()->name, GetName(), m_flags, m_uiRefCount);
-	if (m_controller)
-		PrintDebug("\t(C) %08X\t%s\t#%d", m_controller, m_controller->GetType()->name, m_controller->m_uiRefCount);
-	DumpExtraData();
-	DumpProperties();
-	s_debug.Indent();
-	if (m_collisionObject)
+	DumpObject();
+	s_debug().Indent();
+	for (auto iter = m_children.Begin(); iter; ++iter)
 	{
-		PrintDebug("(H) %08X\t%s\t%08X", m_collisionObject, m_collisionObject->GetType()->name, m_collisionObject->flags);
-		bhkWorldObject *hWorldObj = m_collisionObject->worldObj;
-		if (hWorldObj)
-			PrintDebug("\t(H1) %08X\t%s\t%08X", hWorldObj, hWorldObj->GetType()->name, hWorldObj->bodyFlags);
+		if (!*iter) continue;
+		if IS_NODE(*iter) ((NiNode*)*iter)->Dump();
+		else iter->DumpObject();
 	}
-
-	NiAVObject *block;
-	for (NiTArray<NiAVObject*>::Iterator iter(m_children); iter; ++iter)
-	{
-		block = *iter;
-		if (!block) continue;
-		if IS_NODE(block) ((NiNode*)block)->Dump();
-		else
-		{
-			PrintDebug("(B) %08X\t%s\t%s\t%08X\t#%d", block, block->GetType()->name, block->GetName(), block->m_flags, block->m_uiRefCount);
-			if (block->m_controller)
-				PrintDebug("\t(C) %08X\t%s\t#%d", block->m_controller, block->m_controller->GetType()->name, block->m_controller->m_uiRefCount);
-			block->DumpExtraData();
-			block->DumpProperties();
-		}
-	}
-	s_debug.Outdent();
+	s_debug().Outdent();
 }
 

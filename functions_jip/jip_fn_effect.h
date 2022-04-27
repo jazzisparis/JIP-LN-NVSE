@@ -321,8 +321,8 @@ bool Cmd_GetActiveEffects_Execute(COMMAND_ARGS)
 	filter = ((filter & 1) ? kFormType_EnchantmentItem : 63) & ((filter & 2) ? kFormType_SpellItem : 63) & ((filter & 4) ? kFormType_AlchemyItem : 63);
 	ActiveEffectList *effList = ((Actor*)thisObj)->magicTarget.GetEffectList();
 	if (!effList) return true;
-	TempFormList *tmpFormLst = GetTempFormList();
-	tmpFormLst->Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ActiveEffect *activeEff;
 	TESForm *form;
 	ListNode<ActiveEffect> *iter = effList->Head();
@@ -333,17 +333,11 @@ bool Cmd_GetActiveEffects_Execute(COMMAND_ARGS)
 			continue;
 		form = DYNAMIC_CAST(activeEff->magicItem, MagicItem, TESForm);
 		if (form && (!filter || ((form->typeID & filter) == filter)))
-			tmpFormLst->Insert(form);
+			tmpElements->InsertUnique(form);
 	}
 	while (iter = iter->next);
-	if (!tmpFormLst->Empty())
-	{
-		TempElements *tmpElements = GetTempElements();
-		tmpElements->Clear();
-		for (auto refIter = tmpFormLst->Begin(); refIter; ++refIter)
-			tmpElements->Append(*refIter);
+	if (!tmpElements->Empty())
 		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
-	}
 	return true;
 }
 
@@ -556,7 +550,7 @@ bool Cmd_CastImmediate_Execute(COMMAND_ARGS)
 {
 	MagicItem *magicItem;
 	Actor *target = (Actor*)thisObj, *caster = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &caster) && IS_ACTOR(target) && target->GetNiNode() && (magicItem->GetType() != 4))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &caster) && IS_ACTOR(target) && target->GetRefNiNode() && (magicItem->GetType() != 4))
 	{
 		if (!caster) caster = target;
 		caster->jipActorFlags2 |= kHookActorFlag2_CastImmediate;

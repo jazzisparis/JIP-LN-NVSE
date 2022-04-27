@@ -1,6 +1,6 @@
 #pragma once
 
-#pragma warning(disable: 4018 4221 4244 4267 4288 4302 4305 4311 4312 4733 4838 4996)
+#pragma warning(disable: 4018 4221 4244 4267 4288 4302 4305 4309 4311 4312 4733 4838 4996)
 
 #define WIN32_LEAN_AND_MEAN
 #define _WIN32_WINNT	0x0501
@@ -399,8 +399,8 @@ struct hkMatrix3x4;
 #include "internal/misc_consts.h"
 #include "internal/utility.h"
 #include "internal/containers.h"
+#include "internal/Ni_types.h"
 
-#include "nvse/NiTypes.h"
 #include "nvse/GameTypes.h"
 #include "nvse/GameRTTI.h"
 #include "nvse/CommandTable.h"

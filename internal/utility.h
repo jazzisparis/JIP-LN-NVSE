@@ -4,29 +4,34 @@
 #define JMP_EAX(addr)  __asm mov eax, addr __asm jmp eax
 #define JMP_EDX(addr)  __asm mov edx, addr __asm jmp edx
 
+#define DUP_2(a) a a
+#define DUP_3(a) a a a
+#define DUP_4(a) a a a a
+
 // These are used for 10h aligning segments in ASM code (massive performance gain, particularly with loops).
-#define EMIT(bt) __asm _emit bt
-#define NOP_0x1 EMIT(0x90)
+#define EMIT(bt) __asm _emit 0x ## bt
+
+#define NOP_0x1 EMIT(90)
 //	"\x90"
-#define NOP_0x2 EMIT(0x66) NOP_0x1
+#define NOP_0x2 EMIT(66) NOP_0x1
 //	"\x66\x90"
-#define NOP_0x3 EMIT(0x0F) EMIT(0x1F) EMIT(0x00)
+#define NOP_0x3 EMIT(0F) EMIT(1F) EMIT(00)
 //	"\x0F\x1F\x00"
-#define NOP_0x4 EMIT(0x0F) EMIT(0x1F) EMIT(0x40) EMIT(0x00)
+#define NOP_0x4 EMIT(0F) EMIT(1F) EMIT(40) EMIT(00)
 //	"\x0F\x1F\x40\x00"
-#define NOP_0x5 EMIT(0x0F) EMIT(0x1F) EMIT(0x44) EMIT(0x00) EMIT(0x00)
+#define NOP_0x5 EMIT(0F) EMIT(1F) EMIT(44) EMIT(00) EMIT(00)
 //	"\x0F\x1F\x44\x00\x00"
-#define NOP_0x6 EMIT(0x66) NOP_0x5
+#define NOP_0x6 EMIT(66) NOP_0x5
 //	"\x66\x0F\x1F\x44\x00\x00"
-#define NOP_0x7 EMIT(0x0F) EMIT(0x1F) EMIT(0x80) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00)
+#define NOP_0x7 EMIT(0F) EMIT(1F) EMIT(80) EMIT(00) EMIT(00) EMIT(00) EMIT(00)
 //	"\x0F\x1F\x80\x00\x00\x00\x00"
-#define NOP_0x8 EMIT(0x0F) EMIT(0x1F) EMIT(0x84) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00)
+#define NOP_0x8 EMIT(0F) EMIT(1F) EMIT(84) EMIT(00) EMIT(00) EMIT(00) EMIT(00) EMIT(00)
 //	"\x0F\x1F\x84\x00\x00\x00\x00\x00"
-#define NOP_0x9 EMIT(0x66) NOP_0x8
+#define NOP_0x9 EMIT(66) NOP_0x8
 //	"\x66\x0F\x1F\x84\x00\x00\x00\x00\x00"
-#define NOP_0xA EMIT(0x66) NOP_0x9
+#define NOP_0xA EMIT(66) NOP_0x9
 //	"\x66\x66\x0F\x1F\x84\x00\x00\x00\x00\x00"
-#define NOP_0xB EMIT(0x66) NOP_0xA
+#define NOP_0xB EMIT(66) NOP_0xA
 //	"\x66\x66\x66\x0F\x1F\x84\x00\x00\x00\x00\x00"
 #define NOP_0xC NOP_0x8 NOP_0x4
 #define NOP_0xD NOP_0x8 NOP_0x5
@@ -62,6 +67,11 @@ __forceinline T_Ret CdeclCall(UInt32 _addr, Args ...args)
 
 #define LOG_HOOKS 0
 
+#define PS_DUP_1(a)	a, 0UL, 0UL, 0UL
+#define PS_DUP_2(a)	a, a, 0UL, 0UL
+#define PS_DUP_3(a)	a, a, a, 0UL
+#define PS_DUP_4(a)	a, a, a, a
+
 union HexFloat
 {
 	float	f;
@@ -74,66 +84,88 @@ union HexFloat
 extern const HexFloat kPackedValues[];
 extern const char kLwrCaseConverter[], kUprCaseConverter[];
 
+#define GET_PS(i)	((const __m128*)kPackedValues)[i]
+
 #define PS_AbsMask			kPackedValues
 #define PS_AbsMask0			kPackedValues+0x10
 #define PS_FlipSignMask		kPackedValues+0x20
 #define PS_FlipSignMask0	kPackedValues+0x30
-#define PS_Discard3rdMask	kPackedValues+0x40
+#define PS_XYZ0Mask			kPackedValues+0x40
 #define PD_AbsMask			kPackedValues+0x50
 #define PD_FlipSignMask		kPackedValues+0x60
 
 #define PS_Epsilon			kPackedValues+0x70
 #define PS_V3_PId180		kPackedValues+0x80
-#define PS_V3_PId2			kPackedValues+0x90
-#define PS_V3_PI			kPackedValues+0xA0
-#define PS_V3_PIx2			kPackedValues+0xB0
-#define PS_V3_Half			kPackedValues+0xC0
-#define PS_V3_One			kPackedValues+0xD0
+#define PS_V3_180dPI		kPackedValues+0x90
+#define PS_V3_PId2			kPackedValues+0xA0
+#define PS_V3_PI			kPackedValues+0xB0
+#define PS_V3_PIx2			kPackedValues+0xC0
+#define PS_V3_Half			kPackedValues+0xD0
+#define PS_V3_One			kPackedValues+0xE0
 
-#define SS_1d1K				kPackedValues+0xE0
-#define SS_1d100			kPackedValues+0xE4
-#define SS_1d10				kPackedValues+0xE8
-#define SS_1d4				kPackedValues+0xEC
-#define SS_3				kPackedValues+0xF0
-#define SS_10				kPackedValues+0xF4
-#define SS_100				kPackedValues+0xF8
+#define SS_1d1K				kPackedValues+0xF0
+#define SS_1d100			kPackedValues+0xF4
+#define SS_1d10				kPackedValues+0xF8
+#define SS_1d4				kPackedValues+0xFC
+#define SS_3				kPackedValues+0x100
+#define SS_10				kPackedValues+0x104
+#define SS_100				kPackedValues+0x108
 
 #define FltPId2		1.570796371F
+#define FltPI		3.141592741F
+#define FltPIx2		6.283185482F
 #define FltPId180	0.01745329238F
 #define Flt180dPI	57.29578018F
 #define DblPId180	0.017453292519943295
 #define Dbl180dPI	57.29577951308232
 
+#define EMIT_DW(b0, b1, b2, b3) EMIT(b3) EMIT(b2) EMIT(b1) EMIT(b0)
+#define EMIT_DW_3(b0, b1, b2) EMIT_DW(00, b0, b1, b2)
+#define EMIT_DW_2(b0, b1) EMIT_DW(00, 00, b0, b1)
+#define EMIT_DW_1(b0) EMIT_DW(00, 00, 00, b0)
+#define EMIT_PS_1(b0, b1, b2, b3) EMIT_DW(b0, b1, b2, b3) DUP_3(EMIT_DW_1(00))
+#define EMIT_PS_2(b0, b1, b2, b3) DUP_2(EMIT_DW(b0, b1, b2, b3)) DUP_2(EMIT_DW_1(00))
+#define EMIT_PS_3(b0, b1, b2, b3) DUP_3(EMIT_DW(b0, b1, b2, b3)) EMIT_DW_1(00)
+#define EMIT_PS_4(b0, b1, b2, b3) DUP_4(EMIT_DW(b0, b1, b2, b3))
+
 typedef void* (__cdecl *memcpy_t)(void*, const void*, size_t);
 extern memcpy_t MemCopy, MemMove;
 
-//	Workaround for bypassing the compiler calling the d'tor on function-scope objects.
+//	Workaround used for:
+//	* Preventing the compiler from generating _atexit d'tors for static objects.
+//	* Bypassing the compiler calling the d'tor on function-scope objects.
 template <typename T> class TempObject
 {
-	friend T;
-
-	struct Buffer
-	{
-		UInt8	bytes[sizeof(T)];
-	}
-	objData;
+	alignas(T) UInt8	objData[sizeof(T)];
 
 public:
 	TempObject() {Reset();}
-	TempObject(const T &src) {memcpy((void*)&objData, (const void*)&src, sizeof(T));}
+	TempObject(const T &src) {memcpy((void*)this, (const void*)&src, sizeof(T));}
 
-	void Reset() {new ((T*)&objData) T();}
+	template <typename ...Args>
+	TempObject(Args&& ...args)
+	{
+		new (this) T(std::forward<Args>(args)...);
+	}
 
-	T& operator()() {return *(T*)&objData;}
+	void Reset() {new (this) T();}
+
+	void Destroy() {(*this)().~T();}
+
+	T& operator()() {return *(reinterpret_cast<T*>(this));}
+	T* operator*() {return reinterpret_cast<T*>(this);}
+	T* operator->() {return reinterpret_cast<T*>(this);}
+
+	inline operator T&() {return *(reinterpret_cast<T*>(this));}
 
 	TempObject& operator=(const T &rhs)
 	{
-		memcpy((void*)&objData, (const void*)&rhs, sizeof(T));
+		memcpy((void*)this, (const void*)&rhs, sizeof(T));
 		return *this;
 	}
 	TempObject& operator=(const TempObject &rhs)
 	{
-		memcpy((void*)&objData, (const void*)&rhs.objData, sizeof(T));
+		memcpy((void*)this, (const void*)&rhs, sizeof(T));
 		return *this;
 	}
 };
@@ -141,7 +173,7 @@ public:
 //	Swap lhs and rhs, bypassing operator=
 template <typename T> __forceinline void RawSwap(const T &lhs, const T &rhs)
 {
-	UInt8 buffer[sizeof(T)];
+	alignas(T) UInt8	buffer[sizeof(T)];
 	memcpy((void*)buffer, (const void*)&lhs, sizeof(T));
 	memcpy((void*)&lhs, (const void*)&rhs, sizeof(T));
 	memcpy((void*)&rhs, (const void*)buffer, sizeof(T));
@@ -195,6 +227,9 @@ public:
 	ScopedLock(T_CS *_cs) : cs(_cs) {cs->Enter();}
 	~ScopedLock() {cs->Leave();}
 };
+
+typedef ScopedLock<PrimitiveCS> ScopedPrimitiveCS;
+typedef ScopedLock<LightCS> ScopedLightCS;
 
 union FunctionArg
 {
@@ -541,7 +576,7 @@ public:
 	void WriteBuf(const void *inData, UInt32 inLength);
 	int WriteFmtStr(const char *fmt, ...);
 
-	static void MakeAllDirs(char *fullPath);
+	static void __fastcall MakeAllDirs(char *fullPath);
 };
 
 extern const char kIndentLevelStr[];
@@ -562,7 +597,7 @@ public:
 	void Outdent() {if (indent < 40) indent++;}
 };
 
-extern DebugLog s_log, s_debug;
+extern TempObject<DebugLog> s_log, s_debug;
 
 void PrintLog(const char *fmt, ...);
 void PrintDebug(const char *fmt, ...);

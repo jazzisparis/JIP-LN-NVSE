@@ -268,7 +268,7 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 			menuRef = ((ComputersMenu*)menu)->targetRef;
 			break;
 		case kMenuType_RepairServices:
-			menuRef = *((Actor**)0x11DA7F4);	//  g_repairServicesVendor
+			menuRef = RepairServicesMenu::Target();
 			break;
 		case kMenuType_ItemMod:
 			menuRef = CreateRefForStack(g_thePlayer, ItemModMenu::Target());
@@ -288,7 +288,7 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 			if (traitMenu->perkListBox.selected)
 				menuRef = traitMenu->perkListBox.GetSelected();
 		}
-	}		
+	}
 	if (menuRef) REFR_RES = menuRef->refID;
 	return true;
 }
@@ -514,7 +514,7 @@ bool Cmd_SetFontFile_Execute(COMMAND_ARGS)
 	*(UInt32*)dataPathFull = 'atad';
 	dataPathFull[4] = '\\';
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fontID, dataPath) || !fontID || (fontID > 89) || (fontID == 9) || !*dataPath) return true;
-	FontInfo *fontInfo = s_fontInfosMap.Get(dataPath);
+	FontInfo *fontInfo = s_fontInfosMap().Get(dataPath);
 	if (!fontInfo)
 	{
 		if (!FileExists(dataPathFull)) return true;
@@ -525,7 +525,7 @@ bool Cmd_SetFontFile_Execute(COMMAND_ARGS)
 			GameHeapFree(fontInfo);
 			return true;
 		}
-		s_fontInfosMap[dataPath] = fontInfo;
+		s_fontInfosMap()[dataPath] = fontInfo;
 	}
 	g_fontManager->fontInfos[fontID - 1] = fontInfo;
 	*result = 1;
@@ -647,7 +647,7 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		push	0
 		mov		ecx, edi
 		CALL_EAX(0xA1DC20)
-		push	1
+		mov		dl, 1
 		mov		ecx, offset s_hookInfos+kHook_TextInputClose*kHookInfoSize
 		call	HookInfo::Set
 		push	TextInputRefreshHook
@@ -780,7 +780,7 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 		hashPos = FindChr(tilePath, '#');
 		if (hashPos) *hashPos = 0;
 	}
-	UInt32 menuID = s_menuNameToID.Get(tilePath);
+	UInt32 menuID = s_menuNameToID().Get(tilePath);
 	if (!menuID) return true;
 	MenuClickEvent &clickEvent = s_menuClickEventMap[kMenuIDJumpTable[menuID - kMenuType_Min]];
 	if (slashPos) *slashPos = '/';
@@ -792,11 +792,11 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 		{
 			if (clickEvent.Empty())
 				clickEvent.SetHook(true);
-			clickEvent.idsMap[tileID].Insert(script);
+			clickEvent.idsMap()[tileID].Insert(script);
 		}
-		else if (!clickEvent.idsMap.Empty())
+		else if (!clickEvent.idsMap().Empty())
 		{
-			auto findID = clickEvent.idsMap.Find(tileID);
+			auto findID = clickEvent.idsMap().Find(tileID);
 			if (findID)
 			{
 				findID().Erase(script);
@@ -811,16 +811,16 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 	if (addEvnt)
 	{
 		bool match = false;
-		if (!clickEvent.filtersMap.Empty())
+		if (!clickEvent.filtersMap().Empty())
 		{
-			for (auto filterb = clickEvent.filtersMap.FindOpDir(tilePath, false); filterb; --filterb)
+			for (auto filterb = clickEvent.filtersMap().FindOpDir(tilePath, false); filterb; --filterb)
 			{
 				if (!StrBeginsCS(tilePath, filterb.Key())) break;
 				if (filterb().HasKey(script))
 					return true;
 			}
 			char cmpr;
-			for (auto filterf = clickEvent.filtersMap.FindOpDir(tilePath, true); filterf; ++filterf)
+			for (auto filterf = clickEvent.filtersMap().FindOpDir(tilePath, true); filterf; ++filterf)
 			{
 				cmpr = StrBeginsCS(filterf.Key(), tilePath);
 				if (!cmpr) break;
@@ -837,12 +837,12 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 		{
 			if (clickEvent.Empty())
 				clickEvent.SetHook(true);
-			clickEvent.filtersMap[tilePath].Insert(script);
+			clickEvent.filtersMap()[tilePath].Insert(script);
 		}
 	}
-	else if (!clickEvent.filtersMap.Empty())
+	else if (!clickEvent.filtersMap().Empty())
 	{
-		for (auto filterf = clickEvent.filtersMap.FindOpDir(tilePath, true); filterf; ++filterf)
+		for (auto filterf = clickEvent.filtersMap().FindOpDir(tilePath, true); filterf; ++filterf)
 		{
 			if (!StrBeginsCS(filterf.Key(), tilePath)) break;
 			filterf().Erase(script);
@@ -1064,15 +1064,15 @@ bool Cmd_SetTerminalUIModel_Execute(COMMAND_ARGS)
 	{
 		terminal = (BGSTerminal*)lstIter->data;
 		if (!terminal || NOT_ID(terminal, BGSTerminal)) continue;
-		if (bRemove) DoPurgePath(s_terminalAltModelsMap.GetErase(terminal));
+		if (bRemove) DoPurgePath(s_terminalAltModelsMap().GetErase(terminal));
 		else
 		{
-			if (!s_terminalAltModelsMap.Insert(terminal, &pathPtr)) DoPurgePath(*pathPtr);
+			if (!s_terminalAltModelsMap().Insert(terminal, &pathPtr)) DoPurgePath(*pathPtr);
 			*pathPtr = CopyString(modelPath);
 		}
 	}
 	while (lstIter = lstIter->next);
-	HOOK_SET(SetTerminalModel, !s_terminalAltModelsMap.Empty());
+	HOOK_SET(SetTerminalModel, !s_terminalAltModelsMap().Empty());
 	return true;
 }
 
@@ -1082,15 +1082,19 @@ __declspec(naked) void QuantityMenuCallback(int count)
 {
 	__asm
 	{
-		mov		eax, s_quantityMenuScript
-		test	eax, eax
+		mov		ecx, s_quantityMenuScript
+		test	ecx, ecx
 		jz		done
 		mov		s_quantityMenuScript, 0
-		mov		ecx, [esp+4]
-		push	ecx
+		xor		eax, eax
+		cmp		dword ptr [ebp+8], 5
+		setz	al
+		neg		eax
+		add		eax, [esp+4]
+		push	eax
 		push	1
 		push	0
-		push	eax
+		push	ecx
 		call	CallFunction
 		call	UncaptureLambdaVars
 		add		esp, 0x10
@@ -1103,12 +1107,14 @@ bool Cmd_ShowQuantityMenu_Execute(COMMAND_ARGS)
 {
 	Script *callback;
 	int maxCount, defaultCount = -1;
-	if (!QuantityMenu::Get() && !s_quantityMenuScript && ExtractArgsEx(EXTRACT_ARGS_EX, &callback, &maxCount, &defaultCount) && (maxCount > 0) && IS_ID(callback, Script) && 
+	if (!QuantityMenu::Get() && ExtractArgsEx(EXTRACT_ARGS_EX, &callback, &maxCount, &defaultCount) && (maxCount > 0) && IS_ID(callback, Script) &&
 		ShowQuantityMenu(maxCount, QuantityMenuCallback, ((defaultCount < 0) || (defaultCount > maxCount)) ? maxCount : defaultCount))
 	{
 		s_quantityMenuScript = callback;
 		CaptureLambdaVars(callback);
+		*result = 1;
 	}
+	else *result = 0;
 	return true;
 }
 
@@ -1116,17 +1122,16 @@ __declspec(naked) void MessageBoxCallback()
 {
 	__asm
 	{
-		mov		eax, s_messageBoxScript
-		mov		s_messageBoxScript, 0
 		mov		ecx, g_interfaceManager
-		movzx	edx, byte ptr [ecx+0xE4]
-		cmp		dl, 0xFF
-		jz		done
-		mov		byte ptr [ecx+0xE4], 0xFF
+		add		ecx, 0xE4
+		movzx	edx, byte ptr [ecx]
+		mov		byte ptr [ecx], 0xFF
+		mov		ecx, offset s_messageBoxScripts
+		mov		eax, [ecx]
+		mov		eax, [ecx+eax*4]
+		dec		dword ptr [ecx]
 		test	eax, eax
 		jz		done
-		cmp		dword ptr [eax], kVtbl_Script
-		jnz		done
 		push	edx
 		push	1
 		push	0
@@ -1145,16 +1150,15 @@ __declspec(naked) void __fastcall MessageBoxExAlt(char **msgStrings)
 	{
 		push	ebp
 		mov		ebp, esp
+		mov		edx, 0x703E80
 		push	0
+		ALIGN 16
 	addButtons:
 		mov		eax, [ecx]
+		push	eax
 		sub		ecx, 4
 		test	eax, eax
-		jz		doneButtons
-		push	eax
-		jmp		addButtons
-	doneButtons:
-		push	0
+		jnz		addButtons
 		push	0
 		push	0x17
 		push	0
@@ -1162,7 +1166,7 @@ __declspec(naked) void __fastcall MessageBoxExAlt(char **msgStrings)
 		push	dword ptr [ecx-4]
 		push	0
 		push	dword ptr [ecx]
-		call	ShowMessageBox
+		call	edx
 		leave
 		retn
 	}
@@ -1172,11 +1176,13 @@ bool Cmd_MessageBoxExAlt_Execute(COMMAND_ARGS)
 {
 	Script *callback;
 	char *buffer = GetStrArgBuffer();
-	if (!s_messageBoxScript && ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_MessageBoxExAlt.numParams, &callback))
+	if (!s_messageBoxScripts.Full() && ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_MessageBoxExAlt.numParams, &callback))
 	{
-		s_messageBoxScript = callback;
-		CaptureLambdaVars(callback);
-		
+		if IS_ID(callback, Script)
+			CaptureLambdaVars(callback);
+		else callback = nullptr;
+		s_messageBoxScripts.Append(callback);
+
 		char *msgStrings[0x102], **buttonPtr = msgStrings + 2, *delim = buffer;
 		*buttonPtr = NULL;
 		for (UInt32 count = 0xFF; count; count--)
@@ -1224,7 +1230,7 @@ bool Cmd_GetVATSTargets_Execute(COMMAND_ARGS)
 
 bool InCharGen()
 {
-	return g_tileMenuArray[kMenuType_CharGen - kMenuType_Min] || g_tileMenuArray[kMenuType_SpecialBook - kMenuType_Min] || 
+	return g_tileMenuArray[kMenuType_CharGen - kMenuType_Min] || g_tileMenuArray[kMenuType_SpecialBook - kMenuType_Min] ||
 		g_tileMenuArray[kMenuType_LoveTester - kMenuType_Min] || g_tileMenuArray[kMenuType_Trait - kMenuType_Min];
 }
 
@@ -1728,12 +1734,33 @@ bool Cmd_CloseActiveMenu_Execute(COMMAND_ARGS)
 						renderedMenu->Close();
 					else tileMenu->Destroy(true);
 				}
+				if (menuID == kMenuType_Message)
+				{
+					CdeclCall(0x7AA480);
+					if (!s_messageBoxScripts.Empty())
+					{
+						for (auto scrIter = s_messageBoxScripts.Begin(); scrIter; ++scrIter)
+							if (*scrIter) UncaptureLambdaVars(*scrIter);
+						s_messageBoxScripts.Clear();
+					}
+				}
+				else if (menuID == kMenuType_Quantity)
+				{
+					if (s_quantityMenuScript)
+					{
+						UncaptureLambdaVars(s_quantityMenuScript);
+						s_quantityMenuScript = nullptr;
+					}
+				}
+				else if ((menuID == kMenuType_TextEdit) && HOOK_INSTALLED(TextInputClose))
+					UnsetTextInputHooks(TextEditMenu::Get());
 			}
 			else if (menuID == 1)
 			{
 				intrfcMgr->pipBoyMode = 4;
 				intrfcMgr->pipBoyModeCallback = nullptr;
 			}
+			intrfcMgr->menuStack[index] = 0;
 			if (!closeAll) break;
 		}
 		while (--index >= 0);
@@ -1819,7 +1846,7 @@ bool Cmd_GetWorldMapPosMults_Execute(COMMAND_ARGS)
 				}
 			}
 			NiPoint2 outPos;
-			GetWorldMapPosMults(thisObj->PosXY(), &worldDimensions, &outPos);
+			GetWorldMapPosMults(thisObj->position, worldDimensions, outPos);
 			outX->data.num = outPos.x;
 			outY->data.num = outPos.y;
 		}

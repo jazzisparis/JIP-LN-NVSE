@@ -1,32 +1,5 @@
 #include "nvse/GameExtraData.h"
 
-void ExtraContainerChanges::EntryData::Cleanup()
-{
-	if (!extendData) return;
-	ListNode<ExtraDataList> *xdlIter = extendData->Head(), *prev = NULL;;
-	ExtraDataList *xData;
-	ExtraCount *xCount;
-	do
-	{
-		xData = xdlIter->data;
-		if (xData)
-		{
-			xCount = GetExtraType(xData, Count);
-			if (xCount && (xCount->count <= 1))
-				xData->RemoveByType(kExtraData_Count);
-			if (xData->m_data)
-			{
-				prev = xdlIter;
-				xdlIter = xdlIter->next;
-				continue;
-			}
-		}
-		GameHeapFree(xData);
-		xdlIter = prev ? prev->RemoveNext() : xdlIter->RemoveMe();
-	}
-	while (xdlIter);
-}
-
 ExtraContainerChanges *ExtraContainerChanges::Create()
 {
 	UInt32 *dataPtr = (UInt32*)GameHeapAlloc(sizeof(ExtraContainerChanges));
@@ -47,20 +20,6 @@ ExtraContainerChanges::Data *ExtraContainerChanges::Data::Create(TESObjectREFR *
 	data->totalWgLast = -1.0F;
 	data->byte10 = 0;
 	return data;
-}
-
-void ExtraContainerChanges::Cleanup()
-{
-	if (data && data->objList)
-	{
-		ListNode<EntryData> *entryIter = data->objList->Head();
-		do
-		{
-			if (entryIter->data)
-				entryIter->data->Cleanup();
-		}
-		while (entryIter = entryIter->next);
-	}
 }
 
 BSExtraData *BSExtraData::Create(UInt8 xType, UInt32 size, UInt32 vtbl)
@@ -108,7 +67,7 @@ ExtraLock *ExtraLock::Create()
 	dataPtr[1] = kExtraData_Lock;
 	dataPtr[2] = 0;
 	UInt32 *lockData = (UInt32*)GameHeapAlloc(sizeof(Data));
-	MemZero(lockData, sizeof(Data));
+	ZeroMemory(lockData, sizeof(Data));
 	dataPtr[3] = (UInt32)lockData;
 	return (ExtraLock*)dataPtr;
 }
@@ -130,7 +89,7 @@ ExtraTeleport *ExtraTeleport::Create()
 	dataPtr[1] = kExtraData_Teleport;
 	dataPtr[2] = 0;
 	UInt32 *teleData = (UInt32*)GameHeapAlloc(sizeof(Data));
-	MemZero(teleData, sizeof(Data));
+	ZeroMemory(teleData, sizeof(Data));
 	dataPtr[3] = (UInt32)teleData;
 	return (ExtraTeleport*)dataPtr;
 }
@@ -379,13 +338,15 @@ ExtraUses *ExtraUses::Create()
 	return (ExtraUses*)dataPtr;
 }
 
-ExtraTimeLeft *ExtraTimeLeft::Create()
+ExtraTimeLeft *ExtraTimeLeft::Create(float _timeLeft)
 {
 	UInt32 *dataPtr = (UInt32*)GameHeapAlloc(sizeof(ExtraTimeLeft));
 	dataPtr[0] = kVtbl_ExtraTimeLeft;
 	dataPtr[1] = kExtraData_TimeLeft;
 	dataPtr[2] = 0;
-	return (ExtraTimeLeft*)dataPtr;
+	ExtraTimeLeft *xTimeLeft = (ExtraTimeLeft*)dataPtr;
+	xTimeLeft->timeLeft = _timeLeft;
+	return xTimeLeft;
 }
 
 ExtraCharge *ExtraCharge::Create(float _charge)
@@ -634,14 +595,14 @@ __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetHealth
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		done
-		movss	xmm2, xmm0
+		movaps	xmm2, xmm0
 		movss	xmm3, [eax+0xC]
 		mov		ecx, esi
 		call	ContChangesEntry::GetBaseHealth
 		divss	xmm3, xmm0
 		mulss	xmm3, xmm2
 		minss	xmm2, xmm3
-		movss	xmm0, xmm2
+		movaps	xmm0, xmm2
 	done:
 		pop		esi
 		retn
@@ -650,6 +611,8 @@ __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetHealth
 		retn
 	}
 }
+
+bool __fastcall GetEntryDataHasModHook(ContChangesEntry *entry, int EDX, UInt8 modType);
 
 __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(Actor *owner, float condition, TESForm *ammo)
 {
@@ -688,7 +651,7 @@ __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(
 	noAmmo:
 		push	0xC
 		mov		ecx, esi
-		CALL_EAX(0x4BDA70)
+		call	GetEntryDataHasModHook
 		test	al, al
 		jz		noMod
 		fmul	kSplitBeamMult

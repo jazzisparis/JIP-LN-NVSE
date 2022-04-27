@@ -278,14 +278,14 @@ bool Cmd_SetOnProjectileImpactEventHandler_Execute(COMMAND_ARGS)
 		if (!projectile || NOT_ID(projectile, BGSProjectile)) continue;
 		if (addEvnt)
 		{
-			if (s_projectileImpactEventMap.Insert(projectile, &callbacks))
+			if (s_projectileImpactEventMap().Insert(projectile, &callbacks))
 				HOOK_MOD(ProjectileImpact, true);
 			callbacks->Insert(script);
 			projectile->SetJIPFlag(kHookFormFlag6_ProjectileImpact, true);
 		}
 		else
 		{
-			auto findProj = s_projectileImpactEventMap.Find(projectile);
+			auto findProj = s_projectileImpactEventMap().Find(projectile);
 			if (!findProj || !findProj().Erase(script) || !findProj().Empty()) continue;
 			findProj.Remove();
 			HOOK_MOD(ProjectileImpact, false);

@@ -2,7 +2,7 @@
 
 #define MENU_VISIBILITY ((bool*)0x11F308F)
 extern TileMenu **g_tileMenuArray;
-extern UnorderedMap<const char*, UInt32> s_menuNameToID;
+extern TempObject<UnorderedMap<const char*, UInt32>> s_menuNameToID;
 
 // 584
 class InterfaceManager
@@ -1653,6 +1653,7 @@ public:
 	UInt8				pad9D[3];		// 9D
 
 	__forceinline static RepairServicesMenu *Get() {return *(RepairServicesMenu**)0x11DA7F0;}
+	__forceinline static Actor *Target() {return *(Actor**)0x11DA7F4;}
 };
 static_assert(sizeof(RepairServicesMenu) == 0xA0);
 
@@ -1805,20 +1806,20 @@ public:
 	/*04C*/virtual void		HandleScanlines(float msPassed);
 	/*050*/virtual void		Unk_14(void);
 
-	NiAVObject			*screenTriShape;		// 04
-	BSFadeNode			*node08;				// 08
-	UInt32				unk0C;					// 0C
+	NiTriStrips			*screenTriShape;		// 04
+	NiNode				*parentNode;			// 08
+	NiScreenElements	*screenElements;		// 0C
 	NiSourceTexture		*srcTexture;			// 10
-	NiNode				*node14;				// 14
+	SceneGraph			*sceneGraph;			// 14
 	TileMenu			*tileMenu;				// 18
 	NiPointLight		*light1C;				// 1C
-	UInt32				unk20;					// 20
+	ShadowSceneNode		*shadowScene;			// 20
 	NiCamera			*camera;				// 24
 	UInt8				isInitialised;			// 28
 	UInt8				pad29[3];				// 29
 	NiVector3			point2C;				// 2C
-	UInt32				unk38;					// 38
-	UInt32				unk3C;					// 3C
+	float				flt38;					// 38
+	float				flt3C;					// 3C
 	float				blurRadius;				// 40
 	float				blurIntensity;			// 44
 	float				scanlineFrequency;		// 48
@@ -1851,17 +1852,14 @@ public:
 	float				interval9C;				// 9C
 	UInt32				rateA0;					// A0
 	float				nextScanlineTime;		// A4
-	NiVector4			pointA8;				// A8
+	NiColorAlpha		systemColor1;			// A8
 	UInt8				renderedMenuOrPipboyOpen;// B8
 	UInt8				byteB9;					// B9
 	UInt8				padBA[2];				// BA
-	UInt32				scanlineTexture;		// BC
-	UInt32				unkC0;					// C0
-	UInt32				unkC4;					// C4
-	UInt32				unkC8;					// C8
-	UInt32				unkCC;					// CC
+	NiSourceTexture		*scanlineTexture;		// BC
+	NiColorAlpha		systemColor2;			// C0
 	UInt32				unkD0;					// D0
-	NiNode				*nodeD4;				// D4
+	BSShaderAccumulator	*shaderAccum;			// D4
 
 	__forceinline void Close() {ThisCall(0x7FFD50, this);}
 };

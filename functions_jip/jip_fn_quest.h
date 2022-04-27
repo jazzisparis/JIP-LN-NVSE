@@ -94,7 +94,7 @@ bool Cmd_GetObjectiveHasTarget_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID, &refr))
 	{
 		BGSQuestObjective *objective = quest->GetObjective(objectiveID);
-		if (objective && (objective->GetTargetIndex(refr) >= 0))
+		if (objective && objective->targets.Find(ObjTargetFinder(refr)))
 			*result = 1;
 	}
 	return true;
@@ -108,13 +108,13 @@ bool Cmd_AddObjectiveTarget_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID, &refr))
 	{
 		BGSQuestObjective *objective = quest->GetObjective(objectiveID);
-		if (objective && (objective->GetTargetIndex(refr) < 0))
+		if (objective && !objective->targets.Find(ObjTargetFinder(refr)))
 		{
 			ObjectiveTarget *target = ThisCall<ObjectiveTarget*>(0x60FF70, GameHeapAlloc(sizeof(ObjectiveTarget)));
 			target->target = refr;
 			objective->targets.Prepend(target);
 			if (quest == g_thePlayer->activeQuest)
-				StdCall(0x952D60, target->target, &target->data, 1);
+				ThisCall(0x60F110, quest, &g_thePlayer->questTargetList, &g_thePlayer->questObjectiveList);
 		}
 	}
 	return true;
@@ -128,11 +128,15 @@ bool Cmd_RemoveObjectiveTarget_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID, &refr))
 	{
 		BGSQuestObjective *objective = quest->GetObjective(objectiveID);
-		SInt32 index = objective ? objective->GetTargetIndex(refr) : -1;
-		if (index >= 0)
+		if (objective)
 		{
-			ObjectiveTarget *target = objective->targets.RemoveNth(index);
-			ThisCall(0x5EC4D0, target, 1);
+			ObjectiveTarget *target = objective->targets.RemoveIf(ObjTargetFinder(refr));
+			if (target)
+			{
+				ThisCall(0x5EC4D0, target, 1);
+				if (quest == g_thePlayer->activeQuest)
+					ThisCall(0x60F110, quest, &g_thePlayer->questTargetList, &g_thePlayer->questObjectiveList);
+			}
 		}
 	}
 	return true;
@@ -171,29 +175,23 @@ bool Cmd_GetQuests_Execute(COMMAND_ARGS)
 	UInt32 completed = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &completed))
 		return true;
-	TempFormList *tmpFormLst = GetTempFormList();
-	tmpFormLst->Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	ListNode<BGSQuestObjective> *iter = g_thePlayer->questObjectiveList.Head();
 	BGSQuestObjective *objective;
 	TESQuest *quest;
-	bool bCompl = completed != 0;
+	if (completed) completed = TESQuest::kFlag_Completed;
 	do
 	{
 		objective = iter->data;
 		if (!objective || !(objective->status & 1)) continue;
 		quest = objective->quest;
-		if (bCompl != !(quest->questFlags & TESQuest::kFlag_Completed))
-			tmpFormLst->Insert(quest);
+		if (completed == (quest->questFlags & TESQuest::kFlag_Completed))
+			tmpElements->InsertUnique(quest);
 	}
 	while (iter = iter->next);
-	if (!tmpFormLst->Empty())
-	{
-		TempElements *tmpElements = GetTempElements();
-		tmpElements->Clear();
-		for (auto refIter = tmpFormLst->Begin(); refIter; ++refIter)
-			tmpElements->Append(*refIter);
+	if (!tmpElements->Empty())
 		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
-	}
 	return true;
 }
 
@@ -207,11 +205,12 @@ bool Cmd_GetQuestObjectives_Execute(COMMAND_ARGS)
 	tmpElements->Clear();
 	ListNode<void> *iter = quest->lVarOrObjectives.Head();
 	BGSQuestObjective *objective;
-	bool bCompl = completed != 0;
+	if (completed) completed = 2;
+	completed++;
 	do
 	{
 		objective = (BGSQuestObjective*)iter->data;
-		if (objective && IS_TYPE(objective, BGSQuestObjective) && (objective->status & 1) && (bCompl != !(objective->status & 2)))
+		if (objective && IS_TYPE(objective, BGSQuestObjective) && (completed == (objective->status & 3)))
 			tmpElements->Append((int)objective->objectiveId);
 	}
 	while (iter = iter->next);
@@ -301,7 +300,7 @@ bool Cmd_FailQuest_Execute(COMMAND_ARGS)
 	return true;
 }
 
-TempFormList s_lastQuestTargets(0x40);
+TempObject<TempFormList> s_lastQuestTargets(0x40);
 
 bool Cmd_GetQuestTargetsChanged_Execute(COMMAND_ARGS)
 {
@@ -324,11 +323,11 @@ bool Cmd_GetQuestTargetsChanged_Execute(COMMAND_ARGS)
 		while (trgIter = trgIter->next);
 	}
 	while (objIter = objIter->next);
-	if (s_lastQuestTargets == *tmpFormLst)
+	if (s_lastQuestTargets() == *tmpFormLst)
 		*result = 0;
 	else
 	{
-		s_lastQuestTargets.CopyFrom(*tmpFormLst);
+		s_lastQuestTargets().CopyFrom(*tmpFormLst);
 		*result = 1;
 	}
 	return true;

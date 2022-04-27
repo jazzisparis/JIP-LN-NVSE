@@ -13,7 +13,7 @@ void Sound::PlayEDID(const char *soundEDID, UInt32 flags, TESObjectREFR *refr)
 
 void Sound::PlayFile(const char *filePath, UInt32 flags, TESObjectREFR *refr)
 {
-	NiNode *refrNode = refr->GetNiNode();
+	NiNode *refrNode = refr->GetRefNiNode();
 	if (!refrNode) return;
 	Sound sound;
 	ThisCall(0xAD7480, BSWin32Audio::Get(), &sound, filePath, flags, nullptr);
@@ -29,7 +29,7 @@ void Sound::PlayTESSound(TESSound *gameSound, UInt32 flags, TESObjectREFR *refr)
 {
 	const char *filePath = gameSound->soundFile.path.m_data;
 	if (!filePath) return;
-	NiNode *refrNode = refr->GetNiNode();
+	NiNode *refrNode = refr->GetRefNiNode();
 	if (!refrNode) return;
 	Sound sound;
 	ThisCall(0xAD7480, BSWin32Audio::Get(), &sound, filePath, flags, gameSound);

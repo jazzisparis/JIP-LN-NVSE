@@ -336,11 +336,6 @@ public:
 		return curIt;
 	}
 
-	const Node *FindString(char *str, Iterator prev) const
-	{
-		return Find(StringFinder_CI(str), prev);
-	}
-
 	template <class Op>
 	UInt32 CountIf(Op &op) const
 	{
@@ -430,22 +425,24 @@ public:
 	}
 
 	template <class Op>
-	bool RemoveIf(Op &op)
+	Item *RemoveIf(Op &op)
 	{
 		Node *curr = Head(), *prev = NULL;
+		Item *item;
 		do
 		{
-			if (curr->data && op.Accept(curr->data))
+			item = curr->data;
+			if (item && op.Accept(item))
 			{
 				if (prev) prev->RemoveNext();
 				else curr->RemoveMe();
-				return true;
+				return item;
 			}
 			prev = curr;
 			curr = curr->next;
 		}
 		while (curr);
-		return false;
+		return nullptr;
 	}
 
 	Item *ReplaceNth(SInt32 index, Item *item)

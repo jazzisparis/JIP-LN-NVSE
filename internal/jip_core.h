@@ -12,8 +12,6 @@ typedef UInt32 (*_ReadRecordData)(void *buffer, UInt32 length);
 extern _ReadRecordData ReadRecordData;
 typedef bool (*_ResolveRefID)(UInt32 refID, UInt32 *outRefID);
 extern _ResolveRefID ResolveRefID;
-typedef const char* (*_GetSavePath)(void);
-extern _GetSavePath GetSavePath;
 typedef void (*_WriteRecord8)(UInt8 inData);
 extern _WriteRecord8 WriteRecord8;
 typedef void (*_WriteRecord16)(UInt16 inData);
@@ -107,7 +105,7 @@ extern float g_screenResConvert, g_screenWidth, g_screenHeight;
 extern const char *g_terminalModelDefault;
 extern TESObjectWEAP *g_fistsWeapon;
 extern TESObjectACTI *g_ashPileACTI, *g_gooPileACTI;
-extern TESGlobal *g_gameYear, *g_gameMonth, *g_gameDay, *g_gameHour;
+extern TESGlobal *g_gameYear, *g_gameMonth, *g_gameDay, *g_gameHour, *g_timeScale;
 extern TESObjectMISC *g_capsItem;
 extern TESImageSpaceModifier *g_getHitIMOD, *g_explosionInFaceIMOD;
 extern double *g_condDmgPenalty;
@@ -118,13 +116,13 @@ __forceinline TESObjectREFR *PlaceAtMe(TESObjectREFR *refr, TESForm *form, UInt3
 {
 	return CdeclCall<TESObjectREFR*>(0x5C4B30, refr, form, count, distance, direction, health);
 }
-__forceinline NiNode *GetCdBodyNode(hkCdBody *cdBody)
+__forceinline NiNode *GetCdBodyNode(hkpWorldObject *object)
 {
-	return CdeclCall<NiNode*>(0xC7FA90, cdBody);
+	return CdeclCall<NiNode*>(0xC7FA90, &object->cdBody);
 }
-__forceinline TESObjectREFR *GetCdBodyRef(hkCdBody *cdBody)
+__forceinline TESObjectREFR *GetCdBodyRef(hkpWorldObject *object)
 {
-	return CdeclCall<TESObjectREFR*>(0x62B4E0, cdBody);
+	return CdeclCall<TESObjectREFR*>(0x62B4E0, &object->cdBody);
 }
 __forceinline void RefreshItemListBox()
 {
@@ -234,8 +232,8 @@ struct ResultVars
 
 	ResultVars() {}
 
-	void __fastcall Set(float *resPtr);
-	void __vectorcall Set(float *resPtr, double modifier);
+	void __vectorcall Set(__m128 values);
+	void __vectorcall Set(__m128 values, const __m128 modifier);
 };
 
 typedef Set<TESForm*> TempFormList;
@@ -336,9 +334,9 @@ struct AppearanceUndo
 	}
 };
 
-extern UnorderedMap<TESNPC*, AppearanceUndo*> s_appearanceUndoMap;
+extern TempObject<UnorderedMap<TESNPC*, AppearanceUndo*>> s_appearanceUndoMap;
 
-extern UnorderedSet<TESGlobal*> s_resolvedGlobals;
+extern TempObject<UnorderedSet<TESGlobal*>> s_resolvedGlobals;
 
 hkpWorld *GethkpWorld();
 
@@ -358,9 +356,8 @@ struct ScriptVariableEntry
 	}
 };
 typedef UnorderedMap<char*, ScriptVariableEntry, 4> ScriptVariablesMap;
-extern UnorderedMap<UInt32, ScriptVariablesMap> s_scriptVariablesBuffer;
+extern TempObject<UnorderedMap<UInt32, ScriptVariablesMap>> s_scriptVariablesBuffer;
 typedef UnorderedSet<const char*> VariableNames;
-extern UnorderedMap<UInt32, VariableNames> s_addedVariables;
 
 bool __fastcall GetVariableAdded(UInt32 ownerID, char *varName);
 
@@ -375,12 +372,10 @@ struct LinkedRefEntry
 		modIdx = _modIdx;
 	}
 };
-extern UnorderedMap<UInt32, LinkedRefEntry> s_linkedRefModified;
-extern UnorderedMap<UInt32, UInt32> s_linkedRefDefault, s_linkedRefsTemp;
+extern TempObject<UnorderedMap<UInt32, LinkedRefEntry>> s_linkedRefModified;
+extern TempObject<UnorderedMap<UInt32, UInt32>> s_linkedRefDefault, s_linkedRefsTemp;
 
 bool SetLinkedRefID(UInt32 thisID, UInt32 linkID = 0, UInt8 modIdx = 0xFF);
-
-extern UInt32 s_serializedVersion;
 
 class AuxVariableValue
 {
@@ -465,41 +460,28 @@ public:
 		return ArrayElementL(num);
 	}
 
-	UInt8 *ReadValData(UInt8 *bufPos)
+	UInt32 ReadValData(UInt8 *bufPos)
 	{
 		if (type == 1)
 		{
-			if (s_serializedVersion < 10)
-			{
-				num = *(float*)bufPos;
-				bufPos += 4;
-			}
-			else
-			{
-				num = *(double*)bufPos;
-				bufPos += 8;
-			}
+			num = *(double*)bufPos;
+			return 8;
 		}
-		else if (type == 2)
+		if (type == 2)
 		{
 			refID = *(UInt32*)bufPos;
-			bufPos += 4;
 			ResolveRefID(refID, &refID);
+			return 4;
 		}
-		else
+		length = *(UInt16*)bufPos;
+		if (length)
 		{
-			length = *(UInt16*)bufPos;
-			bufPos += 2;
-			if (length)
-			{
-				alloc = AlignNumAlloc<char>(length + 1);
-				str = (char*)Pool_Alloc(alloc);
-				memcpy(str, bufPos, length);
-				bufPos += length;
-				str[length] = 0;
-			}
+			alloc = AlignNumAlloc<char>(length + 1);
+			str = (char*)Pool_Alloc(alloc);
+			memcpy(str, bufPos + 2, length);
+			str[length] = 0;
 		}
-		return bufPos;
+		return length + 2;
 	}
 
 	void WriteValData() const
@@ -522,14 +504,16 @@ typedef Vector<AuxVariableValue, 2> AuxVarValsArr;
 typedef UnorderedMap<char*, AuxVarValsArr> AuxVarVarsMap;
 typedef UnorderedMap<UInt32, AuxVarVarsMap> AuxVarOwnersMap;
 typedef UnorderedMap<UInt32, AuxVarOwnersMap> AuxVarModsMap;
-extern AuxVarModsMap s_auxVariablesPerm, s_auxVariablesTemp;
+extern TempObject<AuxVarModsMap> s_auxVariablesPerm, s_auxVariablesTemp;
 
 typedef UnorderedMap<UInt32, AuxVariableValue> RefMapIDsMap;
 typedef UnorderedMap<char*, RefMapIDsMap> RefMapVarsMap;
 typedef UnorderedMap<UInt32, RefMapVarsMap> RefMapModsMap;
-extern RefMapModsMap s_refMapArraysPerm, s_refMapArraysTemp;
+extern TempObject<RefMapModsMap> s_refMapArraysPerm, s_refMapArraysTemp;
 
 UInt32 __fastcall GetSubjectID(TESForm *form, TESObjectREFR *thisObj);
+
+#define JIP_VARS_CS 1
 
 struct AuxVarInfo
 {
@@ -564,7 +548,7 @@ struct AuxVarInfo
 		}
 	}
 
-	AuxVarModsMap& ModsMap() {return isPerm ? s_auxVariablesPerm : s_auxVariablesTemp;}
+	AuxVarModsMap& ModsMap() const {return isPerm ? s_auxVariablesPerm : s_auxVariablesTemp;}
 };
 
 struct RefMapInfo
@@ -584,7 +568,7 @@ struct RefMapInfo
 		modIndex = (type > 1) ? 0xFF : scriptObj->GetOverridingModIdx();
 	}
 
-	RefMapModsMap& ModsMap() {return isPerm ? s_refMapArraysPerm : s_refMapArraysTemp;}
+	RefMapModsMap& ModsMap() const {return isPerm ? s_refMapArraysPerm : s_refMapArraysTemp;}
 };
 
 extern UInt8 s_dataChangedFlags;
@@ -598,8 +582,8 @@ struct EventCallbackScripts : Set<LambdaVarContext, 4>
 	void InvokeEventsThis2(TESObjectREFR *thisObj, UInt32 arg1, UInt32 arg2);
 };
 
-typedef Map<char*, EventCallbackScripts, 2> MenuClickFiltersMap;
-typedef UnorderedMap<int, EventCallbackScripts> MenuClickIDsMap;
+typedef TempObject<Map<char*, EventCallbackScripts, 2>> MenuClickFiltersMap;
+typedef TempObject<UnorderedMap<int, EventCallbackScripts>> MenuClickIDsMap;
 
 struct QuestStageEventCallback
 {
@@ -641,7 +625,7 @@ struct CriticalHitEventData
 };
 
 typedef Vector<CriticalHitEventData> CriticalHitEventCallbacks;
-extern CriticalHitEventCallbacks s_criticalHitEvents;
+extern TempObject<CriticalHitEventCallbacks> s_criticalHitEvents;
 
 class CriticalHitEventFind
 {
@@ -682,7 +666,7 @@ struct DisabledBlockInfo
 };
 
 typedef Vector<DisabledBlockInfo, 4> DisabledScriptBlocks;
-extern UnorderedMap<Script*, DisabledScriptBlocks> s_disabledScriptBlocksMap;
+extern TempObject<UnorderedMap<Script*, DisabledScriptBlocks>> s_disabledScriptBlocksMap;
 
 class DisabledBlockFinder
 {
@@ -870,7 +854,7 @@ enum ScriptRunOn
 	kRunOn_ExitGame =		'xg'
 };
 
-extern UnorderedMap<char*, Script*> s_cachedScripts;
+extern TempObject<UnorderedMap<char*, Script*>> s_cachedScripts;
 
 namespace JIPScriptRunner
 {
@@ -881,7 +865,7 @@ namespace JIPScriptRunner
 	bool __fastcall RunScriptSource(char *scrSource);
 };
 
-extern UnorderedMap<const char*, NiCamera*> s_extraCamerasMap;
+extern TempObject<UnorderedMap<const char*, NiCamera*>> s_extraCamerasMap;
 
 extern bool s_HUDCursorMode;
 
@@ -914,7 +898,7 @@ struct TLSData
 	UInt32			lastVarIndex;		// 280
 	ScriptEventList	*lastEventList;		// 284
 	Script			*lastScript;		// 288
-	UInt32			unk28C;				// 28C
+	UInt32			activateRecursionDepth;	// 28C
 	UInt32			unk290;				// 290
 	UInt32			flags294;			// 294
 	UInt32			unk298[7];			// 298
@@ -927,6 +911,8 @@ static_assert(sizeof(TLSData) == 0x2C0);
 
 TLSData *GetTLSData();
 
+extern TempObject<UnorderedMap<const char*, UInt32>> s_fileExtToType;
+
 bool __fastcall GetFileArchived(const char *filePath);
 
 int __stdcall FileExistsEx(char *filePath, bool isFolder);
@@ -934,6 +920,8 @@ int __stdcall FileExistsEx(char *filePath, bool isFolder);
 int GetIsLAA();
 
 extern double s_nvseVersion;
+
+void InitMemUsageDisplay(UInt32 callDelay);
 
 #define REG_CMD(name) RegisterCommand(&kCommandInfo_##name)
 #define REG_CMD_FRM(name) RegisterTypedCommand(&kCommandInfo_##name, kRetnType_Form)
@@ -943,7 +931,7 @@ extern double s_nvseVersion;
 
 #define REFR_RES *(UInt32*)result
 #define NUM_ARGS scriptData[*opcodeOffsetPtr]
-#define NUM_ARGS_EX scriptData[*opcodeOffsetPtr - 2] ? scriptData[*opcodeOffsetPtr] : 0
+#define NUM_ARGS_EX (scriptData[*opcodeOffsetPtr - 2] ? scriptData[*opcodeOffsetPtr] : 0)
 
 DEFINE_COMMAND_PLUGIN(EmptyCommand, 0, 0, NULL);
 

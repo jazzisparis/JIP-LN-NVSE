@@ -147,33 +147,12 @@ bool Cmd_GetLoadedTypeArray_Execute(COMMAND_ARGS)
 	return true;
 }
 
-struct SearchForm
+const bool kValidSearchTypes[] =
 {
-	TESForm		*form;
-	const char	*name;
-	const char	*EDID;
-
-	SearchForm(TESForm *pForm, const char *pName, const char *pEDID) : form(pForm), name(pName), EDID(pEDID) {}
-
-	static void Add(TESForm *pForm);
-
-	void PrintIfMatch(const char *subStr)
-	{
-		if ((name && SubStrCI(name, subStr)) || (EDID && SubStrCI(EDID, subStr)))
-			Console_Print("[%08X]  %s  %s  %s", form->refID, TypeSignature::Array()[120 - form->typeID].signature, EDID ? EDID : "", name ? name : "");
-	}
+	0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0,
+	0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0
 };
-
-Vector<SearchForm> s_searchForms(0x10000);
-
-void SearchForm::Add(TESForm *pForm)
-{
-	const char *pName = pForm->GetTheName(), *pEDID = pForm->GetEditorID();
-	if (!*pName) pName = NULL;
-	if (pEDID && !*pEDID) pEDID = NULL;
-	if (pName || pEDID)
-		s_searchForms.Append(pForm, pName, pEDID);
-}
 
 bool Cmd_Search_Execute(COMMAND_ARGS)
 {
@@ -188,7 +167,8 @@ bool Cmd_Search_Execute(COMMAND_ARGS)
 		if ((first >= '0') && (first <= '9'))
 		{
 			filter = StrToInt(typeStr);
-			if (filter > 120) filter = 0;
+			if ((filter > 120) || !kValidSearchTypes[filter])
+				return true;
 		}
 		else
 		{
@@ -199,40 +179,31 @@ bool Cmd_Search_Execute(COMMAND_ARGS)
 				filter = 120 - idx;
 				break;
 			}
+			if (!kValidSearchTypes[filter])
+				return true;
 		}
 	}
-	if (s_searchForms.Empty())
+	bool validTypes[124], *pValidTypes;
+	if (!filter)
+		pValidTypes = (bool*)kValidSearchTypes;
+	else
 	{
-		UInt8 formTypes[] =
-		{
-			kFormType_TESGlobal, kFormType_TESClass, kFormType_TESFaction, kFormType_TESHair, kFormType_TESEyes, kFormType_TESRace, 
-			kFormType_BGSNote, kFormType_TESWorldSpace, kFormType_TESQuest, kFormType_TESEffectShader, kFormType_BGSExplosion, 
-			kFormType_BGSListForm, kFormType_BGSPerk, kFormType_BGSVoiceType, kFormType_BGSMessage, kFormType_TESReputation, 
-			kFormType_TESRecipe, kFormType_TESRecipeCategory
-		};
-		ListNode<TESForm> *iter;
-		for (UInt8 type : formTypes)
-		{
-			iter = GetSourceList(type)->Head();
-			do
-			{
-				if (iter->data) SearchForm::Add(iter->data);
-			}
-			while (iter = iter->next);
-		}
-
-		TESObjectCELL **cells = g_dataHandler->cellArray.data;
-		for (UInt32 count = g_dataHandler->cellArray.Length(); count; count--, cells++)
-			SearchForm::Add(*cells);
-
-		for (TESBoundObject *object = g_dataHandler->boundObjectList->first; object; object = object->next)
-			SearchForm::Add(object);
+		MemZero(validTypes, sizeof(validTypes));
+		validTypes[filter] = true;
+		pValidTypes = validTypes;
 	}
-
-	for (auto srch = s_searchForms.Begin(); srch; ++srch)
-		if (!filter || (srch().form->typeID == filter))
-			srch().PrintIfMatch(toFind);
-
+	TESForm *form;
+	const char *pName, *pEDID;
+	for (auto frmIter = GameGlobals::AllFormsMap()->Begin(); frmIter; ++frmIter)
+	{
+		form = frmIter.Get();
+		if (!form || !pValidTypes[form->typeID])
+			continue;
+		pName = form->GetTheName();
+		pEDID = form->GetEditorID();
+		if ((*pName && SubStrCI(pName, toFind)) || (*pEDID && SubStrCI(pEDID, toFind)))
+			Console_Print("[%08X]  %s  %s  %s", form->refID, TypeSignature::Array()[120 - form->typeID].signature, pEDID, pName);
+	}
 	return true;
 }
 
@@ -369,7 +340,7 @@ bool Cmd_GetStringSetting_Execute(COMMAND_ARGS)
 	const char *resStr = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName) && ((settingName[0] | 0x20) == 's'))
 	{
-		Setting *setting = s_gameSettingsMap.Get(settingName);
+		Setting *setting = s_gameSettingsMap().Get(settingName);
 		if (setting)
 			resStr = setting->data.str;
 	}
@@ -383,7 +354,7 @@ bool Cmd_SetStringSetting_Execute(COMMAND_ARGS)
 	char *buffer = GetStrArgBuffer();
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName, buffer) && ((settingName[0] | 0x20) == 's'))
 	{
-		Setting *setting = s_gameSettingsMap.Get(settingName);
+		Setting *setting = s_gameSettingsMap().Get(settingName);
 		if (setting)
 			setting->Set(buffer, true);
 	}
@@ -398,7 +369,7 @@ bool Cmd_GetGameSettings_Execute(COMMAND_ARGS)
 	{
 		NVSEArrayVar *outArray = CreateStringMap(NULL, NULL, 0, scriptObj);
 		char namePrfx;
-		for (auto gmstIter = s_gameSettingsMap.Begin(); gmstIter; ++gmstIter)
+		for (auto gmstIter = s_gameSettingsMap().Begin(); gmstIter; ++gmstIter)
 		{
 			namePrfx = *gmstIter->name | 0x20;
 			if (namePrfx == 's')

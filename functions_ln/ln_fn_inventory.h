@@ -15,7 +15,6 @@ struct HotkeyInfo
 	int			health;
 	int			modFlags;
 
-	HotkeyInfo() : form(NULL) {}
 	HotkeyInfo(TESForm *_form, float _health, int _modFlags) : form(_form), health((int)_health), modFlags(_modFlags) {}
 
 	void Clear()
@@ -25,7 +24,7 @@ struct HotkeyInfo
 		modFlags = 0;
 	}
 }
-s_savedHotkeys[8];
+s_savedHotkeys[8] = {{nullptr, -1, 0}, {nullptr, -1, 0}, {nullptr, -1, 0}, {nullptr, -1, 0}, {nullptr, -1, 0}, {nullptr, -1, 0}, {nullptr, -1, 0}, {nullptr, -1, 0}};
 
 void SetHotkey(UInt8 index, HotkeyInfo &hotkey)
 {
@@ -180,7 +179,7 @@ bool Cmd_ClearAllHotkeys_Execute(COMMAND_ARGS)
 bool Cmd_SaveHotkeys_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	for (HotkeyInfo hotkey : s_savedHotkeys) hotkey.Clear();
+	for (HotkeyInfo &hotkey : s_savedHotkeys) hotkey.Clear();
 	ExtraContainerChanges::EntryDataList *entryList = g_thePlayer->GetContainerChangesList();
 	if (entryList)
 	{
@@ -217,7 +216,7 @@ bool Cmd_SaveHotkeys_Execute(COMMAND_ARGS)
 	}
 	TempElements *tmpElements = GetTempElements();
 	tmpElements->Clear();
-	for (HotkeyInfo hotkey : s_savedHotkeys)
+	for (HotkeyInfo &hotkey : s_savedHotkeys)
 	{
 		ArrayElementL elements[3] = {hotkey.form, hotkey.health, hotkey.modFlags};
 		tmpElements->Append(CreateArray(elements, 3, scriptObj));

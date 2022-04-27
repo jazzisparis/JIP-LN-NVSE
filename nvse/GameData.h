@@ -213,15 +213,18 @@ public:
 	UInt32							nextCreatedRefID;		// 208	Init'd to FF000800
 	UInt32							unk20C;					// 20C	last unselected mod in modList. GECK: active ESM
 	ModList							modList;				// 210
-	UInt8							unk618;					// 618
-	UInt8							unk619;					// 619
-	UInt8							unk61A;					// 61A	referenced during LoadForm (ie TESSpellList). bit 1 might mean refID to pointer conversion not done. For GECK means save in progress
-	UInt8							unk61B;					// 61B
-	UInt32							unk61C;					// 61C
-	UInt8							unk620;					// 620
+	UInt8							byte618;				// 618
+	UInt8							byte619;				// 619
+	UInt8							byte61A;				// 61A	referenced during LoadForm (ie TESSpellList). bit 1 might mean refID to pointer conversion not done. For GECK means save in progress
+	UInt8							byte61B;				// 61B
+	UInt8							byte61C;				// 61C
+	UInt8							byte61D;				// 61D
+	UInt8							byte61E;				// 61E
+	UInt8							byte61F;				// 61F
+	UInt8							byte620;				// 620
 	UInt8							loading;				// 621	Init'd to 0 after loadForms
-	UInt8							unk622;					// 622	referenced during loading of modules
-	UInt8							unk623;					// 623
+	UInt8							byte622;				// 622	referenced during loading of modules
+	UInt8							byte623;				// 623
 	TESRegionManager				*regionManager;			// 624
 	void							*vendorContainer;		// 628	ExtraContainerChanges::Data
 	UInt32							unk62C;					// 62C	
@@ -557,19 +560,35 @@ static_assert(sizeof(LoadedAreaBound) == 0x44);
 // A0
 struct WaterSurfaceManager
 {
-	// 30
+	// B0 c'tor @ 0x4ED5F0
 	struct WaterGroup
 	{
 		TESWaterForm			*waterForm;		// 00
-		UInt32					unk04;			// 04
-		UInt32					unk08;			// 08
-		float					flt0C;			// 0C	Always 1.0 ?
-		float					waterHeight;	// 10
-		UInt32					unk14;			// 14
-		UInt32					unk18;			// 18
-		float					flt1C;			// 1C	-flt0C
-		float					flt20;			// 20	-waterHeight
+		NiVector4				vector04;		// 04
+		NiVector4				vector14;		// 14
 		DList<TESObjectREFR>	waterPlanes;	// 24
+		DList<void>				list30;			// 30
+		DList<void>				list3C;			// 3C
+		DList<void>				list48;			// 48
+		NiAVObject				*object54;		// 54
+		NiAVObject				*object58;		// 58
+		UInt8					byte5C;			// 5C
+		UInt8					byte5D;			// 5D
+		UInt8					byte5E;			// 5E
+		UInt8					byte5F;			// 5F
+		UInt8					byte60;			// 60
+		UInt8					pad61[3];		// 61
+		DList<void>				list64;			// 64
+		DList<void>				list70;			// 70
+		DList<void>				list7C;			// 7C
+		DList<void>				list88;			// 88
+		NiObject				*object94;		// 94
+		NiObject				*object98;		// 98
+		UInt32					unk9C;			// 9C
+		UInt32					unkA0;			// A0
+		NiObject				*objectA4;		// A4
+		NiObject				*objectA8;		// A8
+		UInt32					unkAC;			// AC
 	};
 
 	struct Struct8C
@@ -605,8 +624,6 @@ struct WaterSurfaceManager
 	UInt32								unk9C;			// 9C
 };
 static_assert(sizeof(WaterSurfaceManager) == 0xA0);
-
-class BSTempNodeManager;
 
 // C4
 class TES
@@ -653,6 +670,11 @@ public:
 	__forceinline bool GetTerrainHeight(NiPoint2 *posXY, float *result)
 	{
 		return ThisCall<bool>(0x4572E0, this, posXY, result);
+	}
+
+	__forceinline void AddTempNode(NiAVObject *object, float lifetime)
+	{
+		ThisCall(0x458E20, this, object, lifetime);
 	}
 };
 static_assert(sizeof(TES) == 0xC4);

@@ -58,8 +58,8 @@ bool Cmd_GetFormRecipeOutputs_Execute(COMMAND_ARGS)
 	TESForm *form, *filter;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &filter))
 		return true;
-	TempFormList *tmpFormLst = GetTempFormList();
-	tmpFormLst->Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	if (filter && NOT_ID(filter, TESRecipeCategory)) filter = NULL;
 	ListNode<TESRecipe> *rcpeIter = g_dataHandler->recipeList.Head();
 	TESRecipe *recipe;
@@ -78,21 +78,15 @@ bool Cmd_GetFormRecipeOutputs_Execute(COMMAND_ARGS)
 			do
 			{
 				if (component = outputIter->data)
-					tmpFormLst->Insert(component->item);
+					tmpElements->InsertUnique(component->item);
 			}
 			while (outputIter = outputIter->next);
 		}
 		while (inputIter = inputIter->next);
 	}
 	while (rcpeIter = rcpeIter->next);
-	if (!tmpFormLst->Empty())
-	{
-		TempElements *tmpElements = GetTempElements();
-		tmpElements->Clear();
-		for (auto refIter = tmpFormLst->Begin(); refIter; ++refIter)
-			tmpElements->Append(*refIter);
+	if (!tmpElements->Empty())
 		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
-	}
 	return true;
 }
 

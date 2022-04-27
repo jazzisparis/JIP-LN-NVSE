@@ -7,7 +7,6 @@ _WriteRecordData WriteRecordData;
 _GetNextRecordInfo GetNextRecordInfo;
 _ReadRecordData ReadRecordData;
 _ResolveRefID ResolveRefID;
-_GetSavePath GetSavePath;
 _WriteRecord8 WriteRecord8;
 _WriteRecord16 WriteRecord16;
 _WriteRecord32 WriteRecord32;
@@ -66,7 +65,7 @@ float g_screenResConvert, g_screenWidth, g_screenHeight;
 const char *g_terminalModelDefault;
 TESObjectWEAP *g_fistsWeapon;
 TESObjectACTI *g_ashPileACTI, *g_gooPileACTI;
-TESGlobal *g_gameYear, *g_gameMonth, *g_gameDay, *g_gameHour;
+TESGlobal *g_gameYear, *g_gameMonth, *g_gameDay, *g_gameHour, *g_timeScale;
 TESObjectMISC *g_capsItem;
 TESImageSpaceModifier *g_getHitIMOD, *g_explosionInFaceIMOD;
 double *g_condDmgPenalty;
@@ -130,14 +129,13 @@ const char kMenuIDJumpTable[] =
 
 UInt32 s_serializedFlags = 0;
 
-__declspec(naked) void __fastcall ResultVars::Set(float *resPtr)
+__declspec(naked) void __vectorcall ResultVars::Set(__m128 values)
 {
 	__asm
 	{
-		movups	xmm0, [edx-4]
-		psrldq	xmm0, 4
+		andps	xmm0, PS_XYZ0Mask
 		cvtps2pd	xmm1, xmm0
-		movhlps	xmm0, xmm0
+		shufps	xmm0, xmm0, 0xFE
 		cvtps2pd	xmm0, xmm0
 		mov		eax, [ecx]
 		movq	qword ptr [eax+8], xmm1
@@ -149,46 +147,42 @@ __declspec(naked) void __fastcall ResultVars::Set(float *resPtr)
 	}
 }
 
-__declspec(naked) void __vectorcall ResultVars::Set(float *resPtr, double modifier)
+__declspec(naked) void __vectorcall ResultVars::Set(__m128 values, const __m128 modifier)
 {
 	__asm
 	{
-		movups	xmm1, [edx-4]
-		psrldq	xmm1, 4
-		cvtps2pd	xmm2, xmm1
-		movhlps	xmm1, xmm1
-		cvtps2pd	xmm1, xmm1
-		movddup	xmm0, xmm0
-		mulpd	xmm2, xmm0
-		mulsd	xmm1, xmm0
+		mulps	xmm0, xmm1
+		cvtps2pd	xmm1, xmm0
+		shufps	xmm0, xmm0, 0xFE
+		cvtps2pd	xmm0, xmm0
 		mov		eax, [ecx]
-		movq	qword ptr [eax+8], xmm2
-		mov		eax, [ecx+4]
-		movhpd	qword ptr [eax+8], xmm2
-		mov		eax, [ecx+8]
 		movq	qword ptr [eax+8], xmm1
+		mov		eax, [ecx+4]
+		movhpd	qword ptr [eax+8], xmm1
+		mov		eax, [ecx+8]
+		movq	qword ptr [eax+8], xmm0
 		retn
 	}
 }
 
 __declspec(noinline) TempFormList *GetTempFormList()
 {
-	thread_local TempFormList s_tempFormList(0x40);
-	return &s_tempFormList;
+	thread_local TempObject<TempFormList> s_tempFormList(0x40);
+	return *s_tempFormList;
 }
 
 __declspec(noinline) TempElements *GetTempElements()
 {
-	thread_local TempElements s_tempElements(0x100);
-	return &s_tempElements;
+	thread_local TempObject<TempElements> s_tempElements(0x100);
+	return *s_tempElements;
 }
 
-UnorderedMap<const char*, UInt32> s_strRefs;
+TempObject<UnorderedMap<const char*, UInt32>> s_strRefs;
 
 UInt32 __fastcall StringToRef(char *refStr)
 {
 	UInt32 *findStr;
-	if (!s_strRefs.Insert(refStr, &findStr)) return *findStr;
+	if (!s_strRefs().Insert(refStr, &findStr)) return *findStr;
 	*findStr = 0;
 	char *colon = FindChr(refStr, ':');
 	if (colon)
@@ -210,8 +204,8 @@ UInt32 __fastcall StringToRef(char *refStr)
 
 __declspec(noinline) InventoryItemsMap *GetInventoryItemsMap()
 {
-	thread_local InventoryItemsMap s_inventoryItemsMap(0x40);
-	return &s_inventoryItemsMap;
+	thread_local TempObject<InventoryItemsMap> s_inventoryItemsMap(0x40);
+	return *s_inventoryItemsMap;
 }
 
 bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *invItemsMap)
@@ -294,7 +288,7 @@ __declspec(naked) NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
 		movups	xmm0, [eax]
 		shufps	xmm0, xmm0, 0xC
 		movss	xmm1, [eax+0x18]
-		movlhps	xmm0, xmm1
+		unpcklpd	xmm0, xmm1
 		movss	xmm1, [ebp+0x10]
 		shufps	xmm1, xmm1, 0x40
 		mulps	xmm0, xmm1
@@ -342,7 +336,7 @@ __declspec(naked) NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVec
 		push	ebp
 		mov		ebp, esp
 		and		esp, 0xFFFFFFF0
-		sub		esp, 0xB0
+		sub		esp, 0xC0
 		mov		ecx, esp
 		call	_GetRayCastObject
 		leave
@@ -357,7 +351,7 @@ __declspec(naked) bool NiVector3::RayCastCoords(const NiVector3 &posVector, floa
 		push	ebp
 		mov		ebp, esp
 		and		esp, 0xFFFFFFF0
-		sub		esp, 0xB0
+		sub		esp, 0xC0
 		push	ecx
 		lea		ecx, [esp+4]
 		call	_GetRayCastObject
@@ -378,7 +372,7 @@ __declspec(naked) int __stdcall GetRayCastMaterial(const NiVector3 &posVector, f
 		push	ebp
 		mov		ebp, esp
 		and		esp, 0xFFFFFFF0
-		sub		esp, 0xC0
+		sub		esp, 0xD0
 		lea		ecx, [esp+0x10]
 		call	_GetRayCastObject
 		test	eax, eax
@@ -449,9 +443,9 @@ __declspec(naked) int __stdcall GetRayCastMaterial(const NiVector3 &posVector, f
 	}
 }
 
-UnorderedMap<TESNPC*, AppearanceUndo*> s_appearanceUndoMap;
+TempObject<UnorderedMap<TESNPC*, AppearanceUndo*>> s_appearanceUndoMap;
 
-UnorderedSet<TESGlobal*> s_resolvedGlobals;
+TempObject<UnorderedSet<TESGlobal*>> s_resolvedGlobals;
 
 __declspec(naked) UInt32 TESGlobal::ResolveRefValue()
 {
@@ -486,16 +480,18 @@ __declspec(naked) UInt32 TESGlobal::ResolveRefValue()
 
 hkpWorld *GethkpWorld()
 {
-	if (!g_thePlayer) return NULL;
-	bhkWorld *hkWorld = NULL;
+	bhkWorld *hkWorld = nullptr;
 	TESObjectCELL *cell = g_thePlayer->parentCell;
 	if (cell)
 	{
-		ExtraHavok *xHavok = GetExtraType(&cell->extraDataList, Havok);
-		if (xHavok) hkWorld = xHavok->world;
+		if (cell->cellFlags & 1)
+		{
+			ExtraHavok *xHavok = GetExtraType(&cell->extraDataList, Havok);
+			if (xHavok) hkWorld = xHavok->world;
+		}
+		else hkWorld = bhkWorldM::GetSingleton();
 	}
-	if (!hkWorld) hkWorld = *g_bhkWorldM;
-	return hkWorld ? hkWorld->GetWorld() : NULL;
+	return hkWorld ? (hkpWorld*)hkWorld->refObject : nullptr;
 }
 
 void *TESRecipe::ComponentList::GetComponents(Script *scriptObj)
@@ -559,12 +555,12 @@ float GetDaysPassed(int bgnYear, int bgnMonth, int bgnDay)
 	return (float)totalDays + g_gameHour->data * (1 / 24.0F);
 }
 
-UnorderedMap<UInt32, ScriptVariablesMap> s_scriptVariablesBuffer;
-UnorderedMap<UInt32, VariableNames> s_addedVariables;
+TempObject<UnorderedMap<UInt32, ScriptVariablesMap>> s_scriptVariablesBuffer;
+TempObject<UnorderedMap<UInt32, VariableNames>> s_addedVariables;
 
 bool __fastcall GetVariableAdded(UInt32 ownerID, char *varName)
 {
-	VariableNames *findOwner = s_addedVariables.GetPtr(ownerID);
+	VariableNames *findOwner = s_addedVariables().GetPtr(ownerID);
 	if (!findOwner) return false;
 	return findOwner->HasKey(varName);
 }
@@ -575,11 +571,11 @@ ScriptVar *Script::AddVariable(char *varName, ScriptEventList *eventList, UInt32
 	if (!varInfo)
 	{
 		varInfo = (VariableInfo*)GameHeapAlloc(sizeof(VariableInfo));
-		MemZero(varInfo, sizeof(VariableInfo));
+		ZeroMemory(varInfo, sizeof(VariableInfo));
 		varInfo->idx = ++info.varCount;
 		varInfo->name.Set(varName);
 		varList.Append(varInfo);
-		s_addedVariables[refID].Insert(varName);
+		s_addedVariables()[refID].Insert(varName);
 	}
 	else if (!GetVariableAdded(refID, varName)) return NULL;
 
@@ -594,7 +590,7 @@ ScriptVar *Script::AddVariable(char *varName, ScriptEventList *eventList, UInt32
 	}
 
 	if (varName[0] != '*')
-		s_scriptVariablesBuffer[ownerID][varName].Set(var, modIdx);
+		s_scriptVariablesBuffer()[ownerID][varName].Set(var, modIdx);
 	return var;
 }
 
@@ -626,15 +622,15 @@ __declspec(naked) TESIdleForm *AnimData::GetPlayedIdle()
 	}
 }
 
-UnorderedMap<UInt32, LinkedRefEntry> s_linkedRefModified;
-UnorderedMap<UInt32, UInt32> s_linkedRefDefault, s_linkedRefsTemp;
+TempObject<UnorderedMap<UInt32, LinkedRefEntry>> s_linkedRefModified;
+TempObject<UnorderedMap<UInt32, UInt32>> s_linkedRefDefault, s_linkedRefsTemp;
 
 bool TESObjectREFR::SetLinkedRef(TESObjectREFR *linkObj = NULL, UInt8 modIdx)
 {
 	ExtraLinkedRef *xLinkedRef = GetExtraType(&extraDataList, LinkedRef);
 	if (!linkObj)
 	{
-		auto findDefID = s_linkedRefDefault.Find(refID);
+		auto findDefID = s_linkedRefDefault().Find(refID);
 		if (findDefID)
 		{
 			if (xLinkedRef)
@@ -648,21 +644,21 @@ bool TESObjectREFR::SetLinkedRef(TESObjectREFR *linkObj = NULL, UInt8 modIdx)
 			}
 			findDefID.Remove();
 		}
-		s_linkedRefModified.Erase(refID);
+		s_linkedRefModified().Erase(refID);
 		return true;
 	}
 	if (!xLinkedRef)
 	{
 		extraDataList.AddExtra(ExtraLinkedRef::Create(linkObj));
-		s_linkedRefDefault[refID] = 0;
+		s_linkedRefDefault()[refID] = 0;
 	}
 	else
 	{
 		if (!xLinkedRef->linkedRef) return false;
-		s_linkedRefDefault[refID] = xLinkedRef->linkedRef->refID;
+		s_linkedRefDefault()[refID] = xLinkedRef->linkedRef->refID;
 		xLinkedRef->linkedRef = linkObj;
 	}
-	s_linkedRefModified[refID].Set(linkObj->refID, modIdx);
+	s_linkedRefModified()[refID].Set(linkObj->refID, modIdx);
 	return true;
 }
 
@@ -675,11 +671,9 @@ bool SetLinkedRefID(UInt32 thisID, UInt32 linkID, UInt8 modIdx)
 	return linkObj && IS_REFERENCE(linkObj) && thisObj->SetLinkedRef(linkObj, modIdx);
 }
 
-UInt32 s_serializedVersion = 9;
+TempObject<AuxVarModsMap> s_auxVariablesPerm, s_auxVariablesTemp;
 
-AuxVarModsMap s_auxVariablesPerm, s_auxVariablesTemp;
-
-RefMapModsMap s_refMapArraysPerm, s_refMapArraysTemp;
+TempObject<RefMapModsMap> s_refMapArraysPerm, s_refMapArraysTemp;
 
 UInt32 __fastcall GetSubjectID(TESForm *form, TESObjectREFR *thisObj)
 {
@@ -720,9 +714,9 @@ void EventCallbackScripts::InvokeEventsThis2(TESObjectREFR *thisObj, UInt32 arg1
 		CallFunction(*script, thisObj, 2, arg1, arg2);
 }
 
-CriticalHitEventCallbacks s_criticalHitEvents;
+TempObject<CriticalHitEventCallbacks> s_criticalHitEvents;
 
-UnorderedMap<Script*, DisabledScriptBlocks> s_disabledScriptBlocksMap;
+TempObject<UnorderedMap<Script*, DisabledScriptBlocks>> s_disabledScriptBlocksMap;
 
 ExtraDataList *InventoryRef::CreateExtraData()
 {
@@ -774,7 +768,7 @@ TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 	TESForm *item;
 	ContChangesEntry *entry;
 	ExtraDataList *xData;
-	if (actor->renderState && actor->renderState->niNode14)
+	if (actor->GetRefNiNode())
 	{
 		if (slotIndex == 5)
 		{
@@ -918,7 +912,7 @@ const AnimGroupClassify kAnimGroupClassify[] =
 	{2, 5, 0, 0}, {2, 5, 0, 0}, {2, 5, 0, 0}, {2, 5, 0, 0}
 };
 
-UnorderedMap<char*, Script*> s_cachedScripts;
+TempObject<UnorderedMap<char*, Script*>> s_cachedScripts;
 
 namespace JIPScriptRunner
 {
@@ -943,7 +937,7 @@ namespace JIPScriptRunner
 				case kRunOn_NewGame:
 				case kRunOn_SaveGame:
 				case kRunOn_ExitGame:
-					s_cachedScripts[fileName] = Script::Create(buffer);
+					s_cachedScripts()[fileName] = Script::Create(buffer);
 					break;
 				default:
 					break;
@@ -953,7 +947,7 @@ namespace JIPScriptRunner
 
 	void RunScripts(UInt16 type)
 	{
-		for (auto iter = s_cachedScripts.Begin(); iter; ++iter)
+		for (auto iter = s_cachedScripts().Begin(); iter; ++iter)
 		{
 			if (*(UInt16*)iter.Key() != type) continue;
 			if (iter->info.dataLength)
@@ -1001,7 +995,7 @@ namespace JIPScriptRunner
 	}
 };
 
-UnorderedMap<const char*, NiCamera*> s_extraCamerasMap;
+TempObject<UnorderedMap<const char*, NiCamera*>> s_extraCamerasMap;
 
 bool s_HUDCursorMode = false;
 
@@ -1143,8 +1137,9 @@ __declspec(naked) TLSData *GetTLSData()
 	}
 }
 
-UnorderedMap<const char*, UInt32> s_fileExtToType({{"nif", 1}, {"egm", 1}, {"egt", 1}, {"kf", 1}, {"psa", 1}, {"tri", 1}, {"dds", 2}, {"fnt", 2}, {"psd", 2},
-	{"tai", 2}, {"tex", 2}, {"wav", 8}, {"lip", 0x10}, {"ogg", 0x10}, {"spt", 0x40}, {"ctl", 0x100}, {"dat", 0x100}, {"dlodsettings", 0x100}, {"xml", 0x100}});
+TempObject<UnorderedMap<const char*, UInt32>> s_fileExtToType(std::initializer_list<MappedPair<const char*, UInt32>>({{"nif", 1}, {"egm", 1},
+	{"egt", 1}, {"kf", 1}, {"psa", 1}, {"tri", 1}, {"dds", 2}, {"fnt", 2}, {"psd", 2}, {"tai", 2}, {"tex", 2}, {"wav", 8}, {"lip", 0x10},
+	{"ogg", 0x10}, {"spt", 0x40}, {"ctl", 0x100}, {"dat", 0x100}, {"dlodsettings", 0x100}, {"xml", 0x100}}));
 
 __declspec(naked) bool __fastcall GetFileArchived(const char *filePath)
 {
@@ -1291,6 +1286,41 @@ bool Cmd_EmptyCommand_Execute(COMMAND_ARGS)
 	*result = 0;
 	return true;
 }
+
+#if 0
+#include <psapi.h>
+#pragma comment(lib, "psapi.lib")
+
+char s_memUseUI[] = "<text name=\"MemUseDisplay\"><font>3</font><string></string><justify>1</justify><x>40</x><y>40</y><systemcolor>2</systemcolor></text>";
+TileText *s_memUsageTile = nullptr;
+
+void UpdateMemUsageDisplay()
+{
+	Tile::Value *tileStr = s_memUsageTile->GetValue(kTileValue_string);
+	if (tileStr)
+	{
+		PROCESS_MEMORY_COUNTERS_EX pmc;
+		GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
+		size_t physMemUsed = pmc.WorkingSetSize >> 0xA;
+		size_t virtMemUsed = pmc.PrivateUsage >> 0xA;
+		char dataStr[0x80];
+		sprintf_s(dataStr, 0x80, "RAM:   %d\nVRAM:  %d", physMemUsed, virtMemUsed);
+		tileStr->SetString(dataStr);
+	}
+}
+
+Tile* __stdcall InjectUIComponent(Tile *parentTile, char *dataStr);
+bool MainLoopHasCallback(void *cmdPtr, void *thisObj);
+void MainLoopAddCallbackEx(void *cmdPtr, void *thisObj, UInt32 callCount, UInt32 callDelay);
+
+void InitMemUsageDisplay(UInt32 callDelay)
+{
+	if (!s_memUsageTile)
+		s_memUsageTile = (TileText*)InjectUIComponent(g_HUDMainMenu->tile, s_memUseUI);
+	if (s_memUsageTile && !MainLoopHasCallback(UpdateMemUsageDisplay, nullptr))
+		MainLoopAddCallbackEx(UpdateMemUsageDisplay, nullptr, 0xFFFFFFF0, callDelay);
+}
+#endif
 
 #if LOG_HOOKS
 Map<UInt32, UInt8*> s_hookOriginalData(0x200);

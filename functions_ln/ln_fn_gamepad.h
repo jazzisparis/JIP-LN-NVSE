@@ -392,12 +392,12 @@ bool SetOnTriggerEventHandler_Execute(COMMAND_ARGS)
 	UInt32 eventMask = s_onTriggerEventType ? kLNEventMask_OnTriggerDown : kLNEventMask_OnTriggerUp;
 	if (addEvnt)
 	{
-		if (s_LNOnTriggerEvents[idx + s_onTriggerEventType].Insert(script))
+		if (s_LNOnTriggerEvents[idx + s_onTriggerEventType]().Insert(script))
 			s_LNEventFlags |= eventMask;
 	}
-	else if (s_LNOnTriggerEvents[idx + s_onTriggerEventType].Erase(script))
+	else if (s_LNOnTriggerEvents[idx + s_onTriggerEventType]().Erase(script))
 	{
-		if (s_LNOnTriggerEvents[s_onTriggerEventType].Empty() && s_LNOnTriggerEvents[s_onTriggerEventType + 2].Empty())
+		if (s_LNOnTriggerEvents[s_onTriggerEventType]().Empty() && s_LNOnTriggerEvents[s_onTriggerEventType + 2]().Empty())
 			s_LNEventFlags &= ~eventMask;
 	}
 	return true;

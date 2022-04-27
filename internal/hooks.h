@@ -55,7 +55,7 @@ enum
 	kHook_OnRagdoll,
 	kHook_PlayerMinHealth,
 	kHook_ApplyActorVelocity,
-	kHook_SynchronizePosition,
+	kHook_GetModelPath,
 	kHook_CalculateHitDamage,
 	kHook_EnableRepairButton,
 	kHook_PopulateRepairList,
@@ -86,12 +86,11 @@ enum
 	kHookFormFlag6_NoPCActivation =			1 << 1,
 	kHookFormFlag6_EventDisabled =			1 << 2,
 	kHookFormFlag6_ActivateDisabled =		1 << 3,
-	kHookFormFlag6_AltRefName =				1 << 4,
+	kHookFormFlag6_UniqueItem =				1 << 4,
 	kHookFormFlag6_IsAshPile =				1 << 5,
 	kHookFormFlag6_InsertNode =				1 << 6,
 	kHookFormFlag6_AttachModel =			1 << 7,
 	kHookFormFlag6_InsertObject =			kHookFormFlag6_InsertNode | kHookFormFlag6_AttachModel,
-	kHookFormFlag6_UniqueItem =				1 << 8,
 
 	kHookFormFlag5_FastTravelInformed =		1 << 0,
 	kHookFormFlag5_CellChangeInformed =		1 << 1,
@@ -101,6 +100,9 @@ enum
 
 	kHookRefFlag5F_Update3D =				1 << 0,
 	kHookRefFlag5F_DisableCollision =		1 << 1,
+	kHookRefFlag5F_AltRefName =				1 << 2,
+	kHookRefFlag5F_RefrModelPath =			1 << 3,
+	kHookRefFlag5F_RefNameOrModel =			kHookRefFlag5F_AltRefName | kHookRefFlag5F_RefrModelPath,
 
 	kHookActorFlag1_CombatDisabled =		1 << 0,
 	kHookActorFlag1_ForceCombatTarget =		1 << 1,
@@ -130,7 +132,9 @@ enum
 	kHookActorFlags_DetectionModified =		kHookActorFlag1_DetectionFix | (kHookActorFlag2_ForceDetectionVal << 8),
 };
 
-struct HookInfo
+PrimitiveCS s_hookInfoCS;
+
+class HookInfo
 {
 	UInt32		patchAddr;			// 00
 	UInt8		length;				// 04
@@ -138,9 +142,14 @@ struct HookInfo
 	UInt8		instructions[20];	// 08
 	UInt32		userCount;			// 1C
 
+	bool DoSet(bool install);
+
+public:
 	void Init(UInt32 _patchAddr, void *hookPtr, UInt8 type, UInt32 retAddr = 0);
-	bool Set(bool install);
-	void ModUsers(bool add);
+	bool __fastcall Set(bool install);
+	void __fastcall ModUsers(bool add);
+	inline UInt32 GetCount() const {return userCount;}
+	inline void SetCount(UInt32 count) {userCount = count;}
 }
 s_hookInfos[kHook_Max];
 
@@ -190,18 +199,16 @@ __declspec(naked) void HookInfo::Init(UInt32 _patchAddr, void *hookPtr, UInt8 ty
 	}
 }
 
-__declspec(naked) bool HookInfo::Set(bool install)
+__declspec(naked) bool HookInfo::DoSet(bool install)
 {
 	__asm
 	{
-		mov		eax, [esp+4]
+		mov		al, [esp+4]
+		and		eax, 1
 		cmp		dword ptr [ecx+0x1C], 0
 		setnz	dl
 		cmp		al, dl
-		jnz		proceed
-		xor		al, al
-		retn	4
-	proceed:
+		jz		retnFalse
 		mov		[ecx+0x1C], eax
 		push	esi
 		mov		esi, ecx
@@ -240,52 +247,77 @@ __declspec(naked) bool HookInfo::Set(bool install)
 		mov		al, 1
 		pop		esi
 		retn	4
+	retnFalse:
+		xor		al, al
+		retn	4
 	}
 }
 
-__declspec(naked) void HookInfo::ModUsers(bool add)
+__declspec(naked) bool __fastcall HookInfo::Set(bool install)
 {
 	__asm
 	{
-		mov		edx, [ecx+0x1C]
-		cmp		byte ptr [esp+4], 0
+		push	edx
+		push	ecx
+		mov		ecx, offset s_hookInfoCS
+		call	PrimitiveCS::Enter
+		pop		ecx
+		call	HookInfo::DoSet
+		mov		s_hookInfoCS.owningThread, 0
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall HookInfo::ModUsers(bool add)
+{
+	__asm
+	{
+		push	edx
+		push	ecx
+		mov		ecx, offset s_hookInfoCS
+		call	PrimitiveCS::Enter
+		pop		ecx
+		cmp		byte ptr [esp], 0
 		jz		doDecr
-		test	edx, edx
-		jz		doSet
-		inc		edx
-		jmp		modCount
+		cmp		dword ptr [ecx+0x1C], 0
+		jle		doSet
+		inc		dword ptr [ecx+0x1C]
+		pop		edx
+		mov		s_hookInfoCS.owningThread, 0
+		retn
 	doDecr:
-		test	edx, edx
-		jz		done
-		cmp		edx, 1
+		cmp		dword ptr [ecx+0x1C], 1
 		jz		doSet
-		dec		edx
-	modCount:
-		mov		[ecx+0x1C], edx
+		jl		done
+		dec		dword ptr [ecx+0x1C]
 	done:
-		retn	4
+		pop		edx
+		mov		s_hookInfoCS.owningThread, 0
+		retn
 	doSet:
-		jmp		HookInfo::Set
+		call	HookInfo::DoSet
+		mov		s_hookInfoCS.owningThread, 0
+		retn
 	}
 }
 
 #define HOOK_INIT_CALL(name, baseAddr) s_hookInfos[kHook_##name].Init(baseAddr, ##name##Hook, 0xE8, 0)
 #define HOOK_INIT_JUMP(name, baseAddr) s_hookInfos[kHook_##name].Init(baseAddr, ##name##Hook, 0xE9, 0)
 #define HOOK_INIT_JPRT(name, baseAddr, retAddr) s_hookInfos[kHook_##name].Init(baseAddr, ##name##Hook, 0x68, retAddr)
-#define HOOK_INSTALLED(name) s_hookInfos[kHook_##name].userCount != 0
+#define HOOK_INSTALLED(name) s_hookInfos[kHook_##name].GetCount() != 0
 #define HOOK_MOD(name, add) s_hookInfos[kHook_##name].ModUsers(add)
 #define HOOK_SET(name, install) s_hookInfos[kHook_##name].Set(install)
 
-UnorderedMap<UInt32, UInt32> s_jipFormFlagsMap;
+TempObject<UnorderedMap<UInt32, UInt32>> s_jipFormFlagsMap;
 
 __declspec(noinline) void TESForm::SetJIPFlag(UInt16 jipFlag, bool bSet)
 {
 	if (bSet) jipFormFlags6 |= jipFlag;
 	else jipFormFlags6 &= ~jipFlag;
-	s_jipFormFlagsMap[refID] = jipFormFlags6;
+	s_jipFormFlagsMap()[refID] = jipFormFlags6;
 }
 
-UnorderedSet<UInt32> s_eventInformedObjects;
+TempObject<UnorderedSet<UInt32>> s_eventInformedObjects;
 
 struct MainLoopCallback
 {
@@ -322,7 +354,7 @@ struct MainLoopCallback
 	}
 };
 
-Vector<MainLoopCallback*> s_mainLoopCallbacks(0x50);
+TempObject<Vector<MainLoopCallback*>> s_mainLoopCallbacks(0x50);
 
 MainLoopCallback *MainLoopCallback::Create(void *_cmdPtr, void *_thisObj, UInt32 _callCount, UInt32 _callDelay, UInt8 _numArgs)
 {
@@ -340,7 +372,7 @@ MainLoopCallback *MainLoopCallback::Create(void *_cmdPtr, void *_thisObj, UInt32
 	callback->cycleCount = _callDelay;
 	if (_numArgs > 1)
 		callback->pArgs = POOL_ALLOC(_numArgs, FunctionArg);
-	s_mainLoopCallbacks.Append(callback);
+	s_mainLoopCallbacks().Append(callback);
 	return callback;
 }
 
@@ -374,7 +406,7 @@ __declspec(naked) void MainLoopCallback::Execute()
 
 MainLoopCallback* __fastcall FindMainLoopCallback(void *cmdPtr, void *thisObj = NULL)
 {
-	for (auto iter = s_mainLoopCallbacks.Begin(); iter; ++iter)
+	for (auto iter = s_mainLoopCallbacks().Begin(); iter; ++iter)
 		if ((iter->cmdPtr == cmdPtr) && (iter->thisObj == thisObj))
 			return *iter;
 	return NULL;
@@ -563,23 +595,22 @@ __declspec(naked) void DoQueuedCmdCallHook()
 	}
 }
 
-UnorderedMap<TESDescription*, char*> s_descriptionChanges;
+TempObject<UnorderedMap<TESDescription*, char*>> s_descriptionChanges;
 
 void __fastcall SetDescriptionAltText(TESDescription *description, const char *altText)
 {
 	if (altText && *altText)
 	{
 		char **findDesc;
-		if (s_descriptionChanges.Insert(description, &findDesc))
+		if (s_descriptionChanges().Insert(description, &findDesc))
 			HOOK_MOD(GetDescription, true);
 		else free(*findDesc);
 		*findDesc = CopyString(altText);
 	}
 	else
 	{
-		char *currText = s_descriptionChanges.GetErase(description);
-		if (!currText) return;
-		free(currText);
+		if (!s_descriptionChanges().EraseFree(description))
+			return;
 		HOOK_MOD(GetDescription, false);
 	}
 	*GameGlobals::CurrentDescription() = nullptr;
@@ -604,9 +635,9 @@ __declspec(naked) void GetDescriptionHook()
 	}
 }
 
-EventCallbackScripts s_fastTravelEventScripts;
+TempObject<EventCallbackScripts> s_fastTravelEventScripts;
 typedef UnorderedSet<TESForm*> InformedObjectsMap;
-InformedObjectsMap s_pcFastTravelInformed;
+TempObject<InformedObjectsMap> s_pcFastTravelInformed;
 
 __declspec(naked) InterfaceManager *PCFastTravelHook()
 {
@@ -626,7 +657,7 @@ __declspec(naked) InterfaceManager *PCFastTravelHook()
 	}
 }
 
-InformedObjectsMap s_pcCellChangeInformed;
+TempObject<InformedObjectsMap> s_pcCellChangeInformed;
 
 __declspec(naked) UInt8 PCCellChangeHook()
 {
@@ -856,36 +887,46 @@ __declspec(naked) bool __stdcall TextInputKeyPressHook(UInt32 inputKey)
 	}
 }
 
-__declspec(naked) void TextInputCloseHook()
+__declspec(naked) void __fastcall UnsetTextInputHooks(TextEditMenu *menu)
 {
 	__asm
 	{
-		cmp		dword ptr [esp+4], 1
-		jnz		done
-		push	esi
-		mov		esi, ecx
-		mov		byte ptr [ecx+0x55], 0
+		push	dword ptr [ecx+0x58]
+		call	UncaptureLambdaVars
+		pop		ecx
 		push	0x7E65F0
 		push	0x1070060
 		call	SafeWrite32
 		push	0x7E6620
 		push	0x1070064
 		call	SafeWrite32
-		push	0
+		xor		dl, dl
 		mov		ecx, offset s_hookInfos+kHook_TextInputClose*kHookInfoSize
 		call	HookInfo::Set
-		mov		eax, [esi+0x34]
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall TextInputCloseHook(TextEditMenu *menu, int EDX, int tileID, Tile *clicked)
+{
+	__asm
+	{
+		cmp		dword ptr [esp+4], 1
+		jnz		done
+		push	ecx
+		mov		byte ptr [ecx+0x55], 0
+		mov		eax, [ecx+0x34]
 		mov		edx, 0x1011584
 		test	eax, eax
 		cmovz	eax, edx
 		push	eax
 		push	1
 		push	0
-		push	dword ptr [esi+0x58]
+		push	dword ptr [ecx+0x58]
 		call	CallFunction
-		call	UncaptureLambdaVars
 		add		esp, 0x10
-		pop		esi
+		pop		ecx
+		call	UnsetTextInputHooks
 		CALL_EAX(0x7E65B0)
 	done:
 		retn	8
@@ -909,7 +950,7 @@ struct MenuClickEvent
 		funcPtr = (MenuHandleClick)*(UInt32*)patchAddr;
 	}
 
-	bool Empty() const {return filtersMap.Empty() && idsMap.Empty();}
+	bool Empty() {return filtersMap().Empty() && idsMap().Empty();}
 
 	void SetHook(bool doSet) {SafeWrite32(patchAddr, doSet ? (UInt32)MenuHandleClickHook : (UInt32)funcPtr);}
 }
@@ -927,21 +968,21 @@ s_menuClickEventMap[] =
 void __fastcall MenuHandleClickHook(Menu *menu, int EDX, int tileID, Tile *clickedTile)
 {
 	MenuClickEvent &clickEvent = s_menuClickEventMap[kMenuIDJumpTable[menu->id - kMenuType_Min]];
-	if (clickedTile && !clickEvent.filtersMap.Empty())
+	if (clickedTile && !clickEvent.filtersMap().Empty())
 	{
 		char lastClickedTilePath[0x80];
 		clickedTile->GetComponentFullName(lastClickedTilePath);
 		StrToLower(lastClickedTilePath);
-		for (auto filter = clickEvent.filtersMap.FindOpDir(lastClickedTilePath, false); filter; --filter)
+		for (auto filter = clickEvent.filtersMap().FindOpDir(lastClickedTilePath, false); filter; --filter)
 		{
 			if (!StrBeginsCS(lastClickedTilePath, filter.Key())) break;
 			for (auto script = filter().BeginCp(); script; ++script)
 				CallFunction(*script, NULL, 3, menu->id, tileID, clickedTile->name.m_data);
 		}
 	}
-	if (!clickEvent.idsMap.Empty())
+	if (!clickEvent.idsMap().Empty())
 	{
-		EventCallbackScripts *callbacks = clickEvent.idsMap.GetPtr(tileID);
+		EventCallbackScripts *callbacks = clickEvent.idsMap().GetPtr(tileID);
 		if (callbacks)
 		{
 			const char *tileName = clickedTile ? clickedTile->name.m_data : "";
@@ -969,7 +1010,7 @@ __declspec(naked) void StartCombatHook()
 	}
 }
 
-UnorderedMap<Actor*, Actor*> s_forceCombatTargetMap;
+TempObject<UnorderedMap<Actor*, Actor*>> s_forceCombatTargetMap;
 
 __declspec(naked) void SetCombatTargetHook()
 {
@@ -1082,8 +1123,8 @@ __declspec(naked) void ResetHPWakeUpHook()
 }
 
 typedef UnorderedMap<Actor*, EventCallbackScripts> ActorEventCallbacks;
-ActorEventCallbacks s_fireWeaponEventMap;
-EventCallbackScripts s_fireWeaponEventScripts;
+TempObject<ActorEventCallbacks> s_fireWeaponEventMap;
+TempObject<EventCallbackScripts> s_fireWeaponEventScripts;
 
 __declspec(naked) bool __fastcall RemoveAmmoHook(Actor *actor, int EDX, TESObjectWEAP *weapon)
 {
@@ -1167,18 +1208,18 @@ __declspec(naked) void TeleportWithPCHook()
 {
 	__asm
 	{
+		mov		eax, 0x8AD49C
 		cmp		byte ptr [ecx+0x18D], 0
-		jz		contRetn2
-		mov		al, [ecx+0x105]
-		test	al, kHookActorFlag1_PCTeleportFollow
-		jnz		contRetn2
-		test	al, kHookActorFlag1_PCTeleportWait
-		jz		contRetn1
-		JMP_EAX(0x8AD38B)
-	contRetn1:
-		JMP_EAX(0x8AD47D)
-	contRetn2:
-		JMP_EAX(0x8AD49C)
+		jz		done
+		mov		dl, [ecx+0x105]
+		test	dl, kHookActorFlag1_PCTeleportFollow
+		jnz		done
+		mov		eax, 0x8AD47D
+		mov		ecx, 0x8AD38B
+		test	dl, kHookActorFlag1_PCTeleportWait
+		cmovnz	eax, ecx
+	done:
+		jmp		eax
 	}
 }
 
@@ -1423,7 +1464,7 @@ struct MenuStateCallbacks
 	EventCallbackScripts	onClose;
 	EventCallbackScripts	onMouseover;
 }
-*s_menuStateEventMap[36] = {NULL};
+*s_menuStateEventMap[36] = {nullptr};
 
 __declspec(naked) void MenuStateOpenHook()
 {
@@ -1523,8 +1564,8 @@ __declspec(naked) void MenuHandleMouseoverHook()
 }
 
 typedef UnorderedMap<Actor*, AnimEventCallbacks> ActorAnimEventCallbacks;
-AnimEventCallbacks s_animActionEventMap, s_playGroupEventMap;
-ActorAnimEventCallbacks s_animActionEventMapFl, s_playGroupEventMapFl;
+TempObject<AnimEventCallbacks> s_animActionEventMap, s_playGroupEventMap;
+TempObject<ActorAnimEventCallbacks> s_animActionEventMapFl, s_playGroupEventMapFl;
 
 __declspec(naked) void SetAnimActionHook()
 {
@@ -1625,7 +1666,7 @@ __declspec(naked) void SetAnimGroupHook()
 	}
 }
 
-ActorEventCallbacks s_healthDamageEventMap, s_crippledLimbEventMap;
+TempObject<ActorEventCallbacks> s_healthDamageEventMap, s_crippledLimbEventMap;
 
 __declspec(naked) void DamageActorValueHook()
 {
@@ -1760,7 +1801,7 @@ __declspec(naked) void UpdateWeatherHook()
 	}
 }
 
-UnorderedMap<Actor*, UInt32> s_forceDetectionValueMap;
+TempObject<UnorderedMap<Actor*, UInt32>> s_forceDetectionValueMap;
 
 __declspec(naked) void GetDetectionValueHook()
 {
@@ -1786,7 +1827,7 @@ __declspec(naked) void GetDetectionValueHook()
 	}
 }
 
-EventCallbackScripts s_targetChangeEventScripts;
+TempObject<EventCallbackScripts> s_targetChangeEventScripts;
 
 __declspec(naked) void SetPCTargetHook()
 {
@@ -1868,7 +1909,7 @@ __declspec(naked) void MergeEventMaskHook()
 	}
 }
 
-UnorderedMap<TESForm*, UInt32> s_disabledEventsMap;
+TempObject<UnorderedMap<TESForm*, UInt32>> s_disabledEventsMap;
 
 __declspec(naked) bool __fastcall IsValidReference(void *object)
 {
@@ -1997,13 +2038,13 @@ __declspec(naked) void *CreateMapMarkersHook()
 	}
 }
 
-UnorderedMap<TESObjectREFR*, char*> s_refNamesMap;
+TempObject<UnorderedMap<TESObjectREFR*, char*>> s_refNamesMap;
 
 __declspec(naked) const char* __fastcall GetRefNameHook(TESObjectREFR *refr)
 {
 	__asm
 	{
-		test	byte ptr [ecx+6], kHookFormFlag6_AltRefName
+		test	byte ptr [ecx+0x5F], kHookRefFlag5F_AltRefName
 		jz		baseName
 		push	ecx
 		push	ecx
@@ -2021,7 +2062,7 @@ __declspec(naked) const char* __fastcall GetRefNameHook(TESObjectREFR *refr)
 	}
 }
 
-UnorderedMap<TESQuest*, QuestStageCallbacks> s_questStageEventMap;
+TempObject<UnorderedMap<TESQuest*, QuestStageCallbacks>> s_questStageEventMap;
 
 __declspec(naked) bool __fastcall HandleSetQuestStage(TESQuest *quest, UInt8 stageID)
 {
@@ -2101,7 +2142,7 @@ __declspec(naked) void SetQuestStageHook()
 	}
 }
 
-UnorderedMap<TESForm*, EventCallbackScripts> s_dialogTopicEventMap;
+TempObject<UnorderedMap<TESForm*, EventCallbackScripts>> s_dialogTopicEventMap;
 
 __declspec(naked) void RunResultScriptHook()
 {
@@ -2142,7 +2183,7 @@ __declspec(naked) void RunResultScriptHook()
 
 void __fastcall InvokeActorHitEvents(ActorHitData *hitData)
 {
-	for (auto iter = s_criticalHitEvents.BeginCp(); iter; ++iter)
+	for (auto iter = s_criticalHitEvents().BeginCp(); iter; ++iter)
 		if ((!iter().target || (iter().target == hitData->target)) && (!iter().source || (iter().source == hitData->source)) && (!iter().weapon || (iter().weapon == hitData->weapon)))
 			CallFunction(iter().callback, hitData->target, 2, hitData->source, hitData->weapon);
 }
@@ -2177,7 +2218,7 @@ __declspec(naked) void __fastcall CopyHitDataHook(MiddleHighProcess *process, in
 		mov		[eax+0x60], ecx
 		test	byte ptr [eax+0x58], 4
 		jz		done
-		cmp		s_criticalHitEvents.numItems, 0
+		cmp		s_criticalHitEvents+4, 0
 		jz		done
 		mov		ecx, eax
 		call	InvokeActorHitEvents
@@ -2211,7 +2252,7 @@ struct ScriptWaitInfo
 *s_scriptWaitInfo = NULL;
 
 typedef UnorderedMap<TESForm*, ScriptWaitInfo> ScriptWaitInfoMap;
-ScriptWaitInfoMap s_scriptWaitInfoMap;
+TempObject<ScriptWaitInfoMap> s_scriptWaitInfoMap;
 
 __declspec(naked) Script::ScriptInfo* __fastcall ScriptRunnerHook(Script *script)
 {
@@ -2286,7 +2327,7 @@ __declspec(naked) void EvalEventBlockHook()
 	}
 }
 
-UnorderedMap<BGSTerminal*, char*> s_terminalAltModelsMap;
+TempObject<UnorderedMap<BGSTerminal*, char*>> s_terminalAltModelsMap;
 
 __declspec(naked) TESObjectREFR* __fastcall GetHackingMenuRef(HackingMenu *menu)
 {
@@ -2357,7 +2398,7 @@ __declspec(naked) void AddVATSTargetHook()
 	}
 }
 
-EventCallbackScripts s_locationDiscoverEventScripts;
+TempObject<EventCallbackScripts> s_locationDiscoverEventScripts;
 
 __declspec(naked) void LocationDiscoverHook()
 {
@@ -2375,7 +2416,7 @@ __declspec(naked) void LocationDiscoverHook()
 	}
 }
 
-EventCallbackScripts s_itemCraftedEventScripts;
+TempObject<EventCallbackScripts> s_itemCraftedEventScripts;
 
 __declspec(naked) void ItemCraftedHook()
 {
@@ -2394,7 +2435,7 @@ __declspec(naked) void ItemCraftedHook()
 }
 
 typedef UnorderedSet<UInt32> CellCoordsSet;
-UnorderedMap<UInt32, CellCoordsSet> s_swapObjLODMap;
+TempObject<UnorderedMap<UInt32, CellCoordsSet>> s_swapObjLODMap;
 const char kObjLODPathFormat[] = "Data\\Meshes\\Landscape\\LOD\\%s\\Blocks\\%s.Level%d.X%d.Y%d.AltLOD.nif";
 
 __declspec(naked) void MakeObjLODPathHook()
@@ -2443,8 +2484,8 @@ __declspec(naked) void MakeObjLODPathHook()
 	}
 }
 
-EventCallbackScripts s_onHitEventScripts;
-ActorEventCallbacks s_onHitEventMap;
+TempObject<EventCallbackScripts> s_onHitEventScripts;
+TempObject<ActorEventCallbacks> s_onHitEventMap;
 
 __declspec(naked) void OnHitEventHook()
 {
@@ -2497,7 +2538,7 @@ __declspec(naked) void CheckUniqueItemHook()
 		cmp		eax, esi
 		jnz		done
 		xor		eax, eax
-		test	word ptr [ecx+6], kHookFormFlag6_UniqueItem
+		test	byte ptr [ecx+6], kHookFormFlag6_UniqueItem
 		jnz		done
 		mov		eax, esi
 	done:
@@ -2506,7 +2547,7 @@ __declspec(naked) void CheckUniqueItemHook()
 }
 
 typedef UnorderedMap<BGSProjectile*, EventCallbackScripts> ProjectileEventCallbacks;
-ProjectileEventCallbacks s_projectileImpactEventMap;
+TempObject<ProjectileEventCallbacks> s_projectileImpactEventMap;
 
 __declspec(naked) void ProjectileImpactHook()
 {
@@ -2542,7 +2583,7 @@ __declspec(naked) void ProjectileImpactHook()
 	}
 }
 
-EventCallbackScripts s_noteAddedEventScripts;
+TempObject<EventCallbackScripts> s_noteAddedEventScripts;
 
 __declspec(naked) void AddNoteHook()
 {
@@ -2561,7 +2602,7 @@ __declspec(naked) void AddNoteHook()
 }
 
 typedef UnorderedMap<AlchemyItem*, EventCallbackScripts> EquipAidEventCallbacks;
-EquipAidEventCallbacks s_useAidItemEventMap;
+TempObject<EquipAidEventCallbacks> s_useAidItemEventMap;
 
 __declspec(naked) void EquipAidItemHook()
 {
@@ -2586,7 +2627,7 @@ __declspec(naked) void EquipAidItemHook()
 	}
 }
 
-EventCallbackScripts s_reloadWeaponEventScripts;
+TempObject<EventCallbackScripts> s_reloadWeaponEventScripts;
 
 __declspec(naked) void ReloadWeaponHook()
 {
@@ -2617,7 +2658,7 @@ __declspec(naked) void ReloadWeaponHook()
 	}
 }
 
-EventCallbackScripts s_onRagdollEventScripts;
+TempObject<EventCallbackScripts> s_onRagdollEventScripts;
 
 __declspec(naked) void OnRagdollHook()
 {
@@ -2665,7 +2706,7 @@ __declspec(naked) void PlayerMinHealthHook()
 		cmp		dword ptr [ebp+0xC], 0
 		jge		done
 		movss	xmm0, [ebp-0x40]
-		movss	xmm1, xmm0
+		movaps	xmm1, xmm0
 		addss	xmm1, [ebp+0xC]
 		movss	xmm2, PS_V3_One
 		comiss	xmm1, xmm2
@@ -2699,26 +2740,22 @@ __declspec(naked) void ApplyActorVelocityHook()
 typedef bool (__thiscall *_SetFormEDID)(TESForm *form, const char *EDID);
 _SetFormEDID SetFormEDID = nullptr;
 
-UnorderedMap<const char*, TESForm*> s_lightFormEDIDMap(0x400);
+TempObject<UnorderedMap<const char*, UInt32>> s_lightFormEDIDMap(0x400);
 
 __declspec(naked) bool __fastcall TESObjectLIGHSetEDIDHook(TESObjectLIGH *lightForm, int EDX, const char *EDID)
 {
 	__asm
 	{
 		push	ecx
-		push	ecx
-		push	esp
-		push	dword ptr [esp+0x10]
+		push	dword ptr [esp+8]
 		mov		ecx, offset s_lightFormEDIDMap
-		call	UnorderedMap<const char*, TESForm*>::Insert
-		pop		eax
-		pop		ecx
-		mov		[eax], ecx
+		call	UnorderedMap<const char*, UInt32>::InsertNotIn
+		mov		ecx, eax
 		jmp		SetFormEDID
 	}
 }
 
-NiFixedString s_LIGH_EDID;
+TempObject<NiFixedString> s_LIGH_EDID;
 
 __declspec(naked) void __fastcall InitPointLights(NiNode *niNode)
 {
@@ -2751,7 +2788,7 @@ __declspec(naked) void __fastcall InitPointLights(NiNode *niNode)
 		push	ebx
 		mov		ebx, [ecx+0x10]
 		movzx	eax, word ptr [ecx+0x14]
-		mov		edx, s_LIGH_EDID.str
+		mov		edx, s_LIGH_EDID
 		ALIGN 16
 	xtraIter:
 		dec		eax
@@ -2770,7 +2807,7 @@ __declspec(naked) void __fastcall InitPointLights(NiNode *niNode)
 		jz		removeExtra
 		push	eax
 		mov		ecx, offset s_lightFormEDIDMap
-		call	UnorderedMap<const char*, TESForm*>::Get
+		call	UnorderedMap<const char*, UInt32>::Get
 		test	eax, eax
 		jz		removeExtra
 		mov		ecx, ebx
@@ -2825,7 +2862,7 @@ __declspec(naked) void LoadNifRetnNodeHook()
 	}
 }
 
-Vector<NiPointLight*> s_activePtLights(0x40);
+TempObject<Vector<NiPointLight*>> s_activePtLights(0x40);
 
 __declspec(naked) NiPointLight* __fastcall DestroyNiPointLightHook(NiPointLight *ptLight, int EDX, bool doFree)
 {
@@ -3030,7 +3067,7 @@ __declspec(naked) void __fastcall HidePointLights(NiNode *objNode)
 
 typedef Map<char*, NiFixedString, 2> DataStrings;
 typedef Map<NiFixedString, DataStrings, 2> NodeNamesMap;
-UnorderedMap<TESForm*, NodeNamesMap> s_insertNodeMap, s_attachModelMap;
+TempObject<UnorderedMap<TESForm*, NodeNamesMap>> s_insertNodeMap, s_attachModelMap;
 
 __declspec(naked) void __fastcall DoInsertNode(NiAVObject *targetObj, const char *nodeName, const char *nameStr, NiNode *rootNode)
 {
@@ -3213,60 +3250,43 @@ __declspec(naked) NiNode* __fastcall LoadModelCopy(const char *filePath)
 		mov		ecx, ebp
 		pop		ebp
 	doCopy:
-		call	NiNode::CreateCopy
+		call	NiAVObject::CreateCopy
 	done:
 		leave
 		retn
 	}
 }
 
-__declspec(naked) void __fastcall AppendNameSuffix(NiAVObject *object, const char *suffix)
+__declspec(naked) void __fastcall AppendNameSuffix(NiAVObject *object)
 {
 	__asm
 	{
-		push	ebp
-		mov		ebp, esp
-		sub		esp, 0x50
-		push	ecx
-		push	edx
-		push	ebx
-		lea		ebx, [ebp-0x50]
-		mov		ecx, [ecx+8]
-		test	ecx, ecx
-		jz		cpyIter2
-		ALIGN 16
-	cpyIter1:
-		mov		al, [ecx]
-		test	al, al
-		jz		cpyIter2
-		mov		[ebx], al
-		inc		ecx
-		inc		ebx
-		jmp		cpyIter1
-		ALIGN 16
-	cpyIter2:
-		mov		al, [edx]
-		cmp		al, '*'
+		mov		eax, [ecx+8]
+		test	eax, eax
 		jz		done
-		mov		[ebx], al
-		inc		edx
-		inc		ebx
-		jmp		cpyIter2
-		ALIGN 16
-	done:
-		mov		[ebx], 0
-		lea		edx, [ebp-0x50]
-		mov		ecx, [ebp-0x54]
+		mov		edx, [eax-4]
+		test	edx, edx
+		jz		done
+		movdqu	xmm1, xmmword ptr [eax]
+		movdqu	xmm2, xmmword ptr [eax+0x10]
+		mov		eax, 0x20
+		cmp		edx, eax
+		cmova	edx, eax
+		sub		esp, 0x34
+		movdqu	xmmword ptr [esp], xmm1
+		movdqu	xmmword ptr [esp+0x10], xmm2
+		movdqu	xmmword ptr [esp+edx], xmm0
+		add		edx, ebx
+		mov		[esp+edx], 0
+		mov		edx, esp
 		call	NiObjectNET::SetName
-		pop		ebx
-		pop		edx
-		pop		ecx
-		leave
+		add		esp, 0x34
+	done:
 		retn
 	}
 }
 
-__declspec(naked) void __fastcall AppendBlockNameSuffixes(NiNode *node, const char *suffix)
+__declspec(naked) void __fastcall AppendBlockNameSuffixes(NiNode *node)
 {
 	__asm
 	{
@@ -3312,29 +3332,36 @@ __declspec(naked) NiNode* __fastcall DoAttachModel(NiAVObject *targetObj, const 
 		mov		ebp, esp
 		push	ecx
 		push	edx
+		push	edx
+		push	ebx
+		xor		ebx, ebx
 		mov		ecx, edx
 		cmp		[ecx], '*'
-		setz	al
-		push	eax
 		jnz		noSuffix
 		inc		ecx
 		mov		[ebp-8], ecx
+		sub		ebx, ecx
 		mov		dl, '*'
 		call	FindChr
+		add		ebx, eax
+		mov		ecx, 0x10
+		cmp		ebx, ecx
+		cmova	ebx, ecx
 		lea		ecx, [eax+1]
 	noSuffix:
 		call	LoadModelCopy
 		test	eax, eax
 		jz		done
-		push	eax
+		mov		[ebp-0xC], eax
 		push	1
 		push	eax
 		mov		ecx, eax
-		cmp		byte ptr [ebp-0xC], 0
+		test	ebx, ebx
 		jz		doneSuffix
 		mov		edx, [ebp-8]
+		movdqu	xmm0, xmmword ptr [edx]
 		call	AppendBlockNameSuffixes
-		mov		ecx, [ebp-0x10]
+		mov		ecx, [ebp-0xC]
 	doneSuffix:
 		mov		eax, [ebp+8]
 		cmp		dword ptr [eax], 0
@@ -3347,15 +3374,13 @@ __declspec(naked) NiNode* __fastcall DoAttachModel(NiAVObject *targetObj, const 
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xDC]
-		mov		ecx, [ebp-0x10]
+		mov		ecx, [ebp-0xC]
 		CALL_EAX(0xA5A040)
-		push	0
-		push	0
-		push	esp
+		push	offset kUpdateParams
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xC0]
-		mov		eax, [ebp-0x10]
+		mov		eax, [ebp-0xC]
 		or		byte ptr [eax+0x33], 0x80
 		test	byte ptr [eax+0x33], 0x20
 		jz		done
@@ -3370,6 +3395,7 @@ __declspec(naked) NiNode* __fastcall DoAttachModel(NiAVObject *targetObj, const 
 		cmp		ecx, edx
 		jnz		parentIter
 	done:
+		pop		ebx
 		leave
 		retn	8
 	}
@@ -3451,7 +3477,7 @@ __declspec(naked) void __fastcall DoInsertObjects(TESForm *form1, TESForm *form2
 		push	edi
 		mov		esi, ecx
 		mov		edi, edx
-		cmp		s_insertNodeMap.numEntries, 0
+		cmp		s_insertNodeMap+8, 0
 		jz		doModels
 		test	byte ptr [esi+6], kHookFormFlag6_InsertNode
 		jz		nodeForm2
@@ -3466,7 +3492,7 @@ __declspec(naked) void __fastcall DoInsertObjects(TESForm *form1, TESForm *form2
 		mov		ecx, edi
 		call	DoInsertNodes
 	doModels:
-		cmp		s_attachModelMap.numEntries, 0
+		cmp		s_attachModelMap+8, 0
 		jz		done
 		test	byte ptr [esi+6], kHookFormFlag6_AttachModel
 		jz		modelForm2
@@ -3589,9 +3615,8 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		mov		eax, [ecx]
 		cmp		dword ptr [eax+0x10], ADDR_ReturnThis
 		jnz		doneFade
-		fld1
-		fst		dword ptr [ecx+0xB4]
-		fstp	dword ptr [ecx+0xB8]
+		movaps	xmm0, PS_V3_One
+		movq	qword ptr [ecx+0xB4], xmm0
 		or		byte ptr [ecx+0x31], 0x40
 	doneFade:
 		test	byte ptr [edi+0x5F], kHookRefFlag5F_DisableCollision
@@ -3726,10 +3751,10 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 	{
 		7.5F, 30 / 7.0F, 0.125F, 0.0625F,
 		4.0F, 2.0F, 1 / 210.0F, 0.675F,
-		0.1F, 0.1F, 0.1F, 0UL, 
-		1 / 127.0F, 1 / 127.0F, 1 / 127.0F, 0UL, 
-		0x7FUL, 0x7FUL, 0x7FUL, 0UL,
-		0x3FUL, 0x3FUL, 0x3FUL, 0UL
+		PS_DUP_3(0.1F),
+		PS_DUP_3(1 / 127.0F),
+		PS_DUP_3(0x7FUL),
+		PS_DUP_3(0x3FUL)
 	};
 	__asm
 	{
@@ -3749,8 +3774,8 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		movss	xmm1, [ecx+0x38]
 		movss	xmm2, [ebx]
 		movss	xmm3, [ebx+8]
-		movups	xmm4, [ebx-0x70]
-		psrldq	xmm4, 4
+		movups	xmm4, [ebx-0x6C]
+		andps	xmm4, PS_XYZ0Mask
 		movups	xmm5, [ebx+0x3C]
 		movups	xmm6, [ebx+0x2C]
 		mov		edx, [ebx+4]
@@ -3803,7 +3828,7 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		subps	xmm6, xmm4
 		addps	xmm6, xmm5
 		movups	[ebx+0x2C], xmm6
-		movss	xmm7, xmm0
+		movaps	xmm7, xmm0
 	doneRecalc1:
 		movss	[ebx+4], xmm7
 		mulss	xmm3, xmm0
@@ -3846,8 +3871,8 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		shr		eax, 0xA
 		and		eax, 4
 		mulss	xmm0, [ebp+eax+0x10]
-		movups	xmm1, [ebx+0xC]
-		psrldq	xmm1, 4
+		movups	xmm1, [ebx+0x10]
+		andps	xmm1, PS_XYZ0Mask
 		movups	xmm2, [ebx+0x2C]
 		movups	xmm3, [ebx+0x3C]
 		mov		edx, [ebx+4]
@@ -3888,14 +3913,14 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		mulps	xmm2, xmm3
 		subps	xmm2, xmm1
 		movups	[ebx+0x2C], xmm2
-		movss	xmm4, xmm0
+		movaps	xmm4, xmm0
 	doneRecalc2:
 		movss	[ebx+4], xmm4
 		shufps	xmm0, xmm0, 0x40
 		mulps	xmm2, xmm0
 		addps	xmm1, xmm2
 		movq	qword ptr [ebx+0x10], xmm1
-		movhlps	xmm1, xmm1
+		unpckhpd	xmm1, xmm1
 		movss	[ebx+0x18], xmm1
 		pop		ebx
 		pop		ebp
@@ -4029,24 +4054,23 @@ __declspec(naked) void __fastcall UpdateAnimatedLightsHook(TES *pTES)
 }
 
 TESObjectREFR *s_syncPositionRef = NULL;
-NiFixedString s_syncPositionNode;
+TempObject<NiFixedString> s_syncPositionNode;
 AlignedVector4 s_syncPositionMods(0, 0, 0, 0), s_syncPositionPos;
 UInt8 s_syncPositionFlags = 0;
 
-__declspec(naked) void SynchronizePositionHook()
+__declspec(naked) void SetRefrPositionHook()
 {
 	__asm
 	{
-		mov		[ebp-0x44], ecx
-		mov		[ebp-0x1D], 0
-		mov		eax, ds:[0x11F426C]
-		mov		[ebp-0x10], eax
+		mov		eax, s_syncPositionRef
+		test	eax, eax
+		jz		done
+		mov		ecx, [ebp-0x44]
 		cmp		dword ptr [ecx+0xC], 0x14
 		jnz		done
 		mov		ecx, [ecx+0x40]
 		test	ecx, ecx
 		jz		done
-		mov		eax, s_syncPositionRef
 		mov		edx, [eax+0x40]
 		test	edx, edx
 		jz		done
@@ -4064,16 +4088,16 @@ __declspec(naked) void SynchronizePositionHook()
 		mov		eax, [eax+0x14]
 		test	eax, eax
 		jz		done
-		mov		edx, s_syncPositionNode.str
+		mov		edx, s_syncPositionNode
 		test	edx, edx
-		jz		useRoot
+		jz		gotNode
 		cmp		[eax+8], edx
-		jz		useRoot
+		jz		gotNode
 		mov		ecx, eax
 		call	NiNode::GetBlockByName
 		test	eax, eax
 		jz		done
-	useRoot:
+	gotNode:
 		movups	xmm0, [eax+0x8C]
 		addps	xmm0, s_syncPositionMods
 		mov		ecx, offset s_syncPositionPos
@@ -4081,13 +4105,84 @@ __declspec(naked) void SynchronizePositionHook()
 		mov		[ebp+8], ecx
 		cmp		s_syncPositionFlags, 0
 		jz		done
-		push	dword ptr [eax+0x68]
-		push	dword ptr [eax+0x6C]
-		CALL_EAX(0xA811F0)
-		add		esp, 8
+		movss	xmm1, [eax+0x68]
+		movss	xmm0, [eax+0x6C]
+		call	ATan2
 		mov		ecx, [ebp-0x44]
-		fstp	dword ptr [ecx+0x2C]
+		movss	[ecx+0x2C], xmm0
 	done:
+		mov		ecx, [ebp-0x44]
+		mov		eax, [ebp+8]
+		movups	xmm0, [eax]
+		movq	qword ptr [ecx+0x30], xmm0
+		unpckhpd	xmm0, xmm0
+		movss	[ecx+0x38], xmm0
+		retn
+	}
+}
+
+TempObject<UnorderedMap<TESObjectREFR*, char*>> s_refrModelPathMap;
+
+__declspec(naked) char* __fastcall GetModelPathHook(TESObject *baseForm, int EDX, TESObjectREFR *refr)
+{
+	__asm
+	{
+		mov		eax, [esp+4]
+		test	eax, eax
+		jz		getModel
+		test	byte ptr [eax+0x5F], kHookRefFlag5F_RefrModelPath
+		jz		getModel
+		push	ecx
+		push	eax
+		mov		ecx, offset s_refrModelPathMap
+		call	UnorderedMap<TESObjectREFR*, char*>::Get
+		pop		ecx
+		test	eax, eax
+		jz		getModel
+		retn	4
+	getModel:
+		JMP_EAX(0x50FD90)
+	}
+}
+
+__declspec(naked) bool __fastcall DestroyRefrHook(TESObjectREFR *refr)
+{
+	__asm
+	{
+		push	esi
+		mov		esi, ecx
+		mov		al, [esi+0x5F]
+		test	al, kHookRefFlag5F_RefNameOrModel
+		jz		doneModel
+		test	al, kHookRefFlag5F_AltRefName
+		jz		doneRefName
+		push	esi
+		mov		ecx, offset s_refNamesMap
+		call	UnorderedMap<TESObjectREFR*, char*>::EraseFree
+		test	al, al
+		jz		doneRefName
+		xor		dl, dl
+		mov		ecx, offset s_hookInfos+kHook_GetRefName*kHookInfoSize
+		call	HookInfo::ModUsers
+	doneRefName:
+		test	byte ptr [esi+0x5F], kHookRefFlag5F_RefrModelPath
+		jz		doneModel
+		push	esi
+		mov		ecx, offset s_refrModelPathMap
+		call	UnorderedMap<TESObjectREFR*, char*>::EraseFree
+		test	al, al
+		jz		doneModel
+		xor		dl, dl
+		mov		ecx, offset s_hookInfos+kHook_GetModelPath*kHookInfoSize
+		call	HookInfo::ModUsers
+	doneModel:
+		mov		eax, [esi+0x20]
+		test	eax, eax
+		jz		done
+		cmp		byte ptr [eax+4], kFormType_TESFurniture
+		setz	al
+	done:
+		pop		esi
 		retn
 	}
 }
@@ -4464,13 +4559,19 @@ __declspec(naked) void SkyRefreshClimateHook()
 {
 	__asm
 	{
-		CALL_EAX(0x404F00)
+		mov		eax, fs:[0x2C]
+		mov		ecx, ds:[0x126FD98]
+		mov		edx, [eax+ecx*4]
+		add		edx, 0x2B4
+		mov		eax, [edx]
+		mov		[ebp-0x10], eax
+		mov		dword ptr [edx], 0x21
 		mov		eax, s_forcedClimate
 		test	eax, eax
 		jz		done
 		mov		[ebp+8], eax
 	done:
-		JMP_EAX(0x63C92E)
+		retn
 	}
 }
 
@@ -4576,8 +4677,8 @@ __declspec(naked) void __fastcall ClearHUDOrphanedTiles(HUDMainMenu *hudMain)
 	}
 }
 
-Set<UInt32> s_internalMarkerIDs({1, 2, 3, 4, 5, 6, 0x10, 0x12, 0x15, 0x23, 0x24, 0x32, 0x33, 0x34, 0x3B, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69,
-	0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77});
+TempObject<Set<UInt32>> s_internalMarkerIDs(std::initializer_list<UInt32>({1, 2, 3, 4, 5, 6, 0x10, 0x12, 0x15, 0x23, 0x24, 0x32, 0x33, 0x34,
+	0x3B, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77}));
 
 __declspec(naked) bool __fastcall GetIsInternalMarkerHook(TESForm *form)
 {
@@ -4650,13 +4751,13 @@ __declspec(naked) void SkipDrawWeapAnimHook()
 	}
 }
 
-UnorderedMap<const char*, UInt32> s_eventMasks({{"OnActivate", 0}, {"OnAdd", 1}, {"OnEquip", 2}, {"OnActorEquip", 2}, {"OnDrop", 4}, {"OnUnequip", 8}, {"OnActorUnequip", 8},
-	{"OnDeath", 0x10}, {"OnMurder", 0x20}, {"OnCombatEnd", 0x40}, {"OnHit", 0x80}, {"OnHitWith", 0x100}, {"OnPackageStart", 0x200}, {"OnPackageDone", 0x400},
-	{"OnPackageChange", 0x800}, {"OnLoad", 0x1000}, {"OnMagicEffectHit", 0x2000}, {"OnSell", 0x4000}, {"OnStartCombat", 0x8000}, {"OnOpen", 0x10000}, {"OnClose", 0x20000},
-	{"SayToDone", 0x40000}, {"OnGrab", 0x80000}, {"OnRelease", 0x100000}, {"OnDestructionStageChange", 0x200000}, {"OnFire", 0x400000}, {"OnTrigger", 0x10000000},
-	{"OnTriggerEnter", 0x20000000}, {"OnTriggerLeave", 0x40000000}, {"OnReset", 0x80000000}});
+TempObject<UnorderedMap<const char*, UInt32>> s_eventMasks(std::initializer_list<MappedPair<const char*, UInt32>>({{"OnActivate", 0}, {"OnAdd", 1}, {"OnEquip", 2},
+	{"OnActorEquip", 2}, {"OnDrop", 4}, {"OnUnequip", 8}, {"OnActorUnequip", 8}, {"OnDeath", 0x10}, {"OnMurder", 0x20}, {"OnCombatEnd", 0x40}, {"OnHit", 0x80},
+	{"OnHitWith", 0x100}, {"OnPackageStart", 0x200}, {"OnPackageDone", 0x400}, {"OnPackageChange", 0x800}, {"OnLoad", 0x1000}, {"OnMagicEffectHit", 0x2000},
+	{"OnSell", 0x4000}, {"OnStartCombat", 0x8000}, {"OnOpen", 0x10000}, {"OnClose", 0x20000}, {"SayToDone", 0x40000}, {"OnGrab", 0x80000}, {"OnRelease", 0x100000},
+	{"OnDestructionStageChange", 0x200000}, {"OnFire", 0x400000}, {"OnTrigger", 0x10000000}, {"OnTriggerEnter", 0x20000000}, {"OnTriggerLeave", 0x40000000}, {"OnReset", 0x80000000}}));
 
-void InitJIPHooks()
+__declspec(noinline) void InitJIPHooks()
 {
 	SafeWrite32(0x87CE34, (UInt32)DoQueuedCmdCallHook);
 	WriteRelCall(0x9459ED, (UInt32)GetVanityDisabledHook);
@@ -4714,7 +4815,7 @@ void InitJIPHooks()
 	HOOK_INIT_JUMP(OnRagdoll, 0xC7C151);
 	HOOK_INIT_JPRT(PlayerMinHealth, 0x93B80A, 0x93B84F);
 	HOOK_INIT_JUMP(ApplyActorVelocity, 0xC6D4E4);
-	HOOK_INIT_JPRT(SynchronizePosition, 0x575836, 0x575845);
+	HOOK_INIT_CALL(GetModelPath, 0x50FE8B);
 
 	SetFormEDID = (_SetFormEDID)*(UInt32*)0x1029018;
 
@@ -4735,13 +4836,14 @@ void InitJIPHooks()
 	WriteRelJump(0x50DE20, (UInt32)UpdateAnimatedLightHook);
 	WriteRelCall(0x8C7C4E, (UInt32)UpdateAnimatedLightsHook);
 	WriteRelCall(0x8C7E18, (UInt32)UpdateAnimatedLightsHook);
+	WritePushRetRelJump(0x575A7F, 0x575B3C, (UInt32)SetRefrPositionHook);
 	//WriteRelJump(0x8706B0, (UInt32)DoRenderFrameHook);
 	SafeWrite32(0x1087FD8, (UInt32)CopyHitDataHook);
 	SafeWrite32(0x10897C0, (UInt32)CopyHitDataHook);
 	SAFE_WRITE_BUF(0x92C4A0, "\x8B\x81\x40\x02\x00\x00\x85\xC0\x74\x07\xC7\x40\x10\xFF\xFF\xFF\xFF\xC3");
 	WriteRelJump(0x418B10, (UInt32)GetCannotWearHook);
 	WriteRelJump(0x4AC645, (UInt32)BipedSlotVisibilityHook);
-	WriteRelJump(0x63C929, (UInt32)SkyRefreshClimateHook);
+	WritePushRetRelJump(0x63C918, 0x63C92E, (UInt32)SkyRefreshClimateHook);
 	WriteRelJump(0x87F427, (UInt32)IsActorEssentialHook);
 	WritePushRetRelJump(0x524014, 0x524042, (UInt32)FireWeaponWobbleHook);
 	WriteRelJump(0xA239E0, (UInt32)GetMouseMovementHook);
@@ -4749,6 +4851,5 @@ void InitJIPHooks()
 	WriteRelJump(0x50F9E0, (UInt32)GetIsInternalMarkerHook);
 	WriteRelJump(0x815EE6, (UInt32)CastSpellHook);
 	WriteRelCall(0x923299, (UInt32)SkipDrawWeapAnimHook);
-
-	PrintLog("> JIP hooks initialized successfully.");
+	WriteRelCall(0x55A488, (UInt32)DestroyRefrHook);
 }

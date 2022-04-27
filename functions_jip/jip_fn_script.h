@@ -39,7 +39,7 @@ bool ScriptVariableAction_Execute(COMMAND_ARGS)
 	}
 	if (s_scriptVarActionType == 2)
 	{
-		auto findOwner = s_scriptVariablesBuffer.Find(form->refID);
+		auto findOwner = s_scriptVariablesBuffer().Find(form->refID);
 		if (findOwner)
 		{
 			auto findVar = findOwner().Find(varName);
@@ -62,7 +62,7 @@ bool ScriptVariableAction_Execute(COMMAND_ARGS)
 	}
 	else if (GetVariableAdded(pScript->refID, varName))
 	{
-		auto findOwner = s_scriptVariablesBuffer.Find(form->refID);
+		auto findOwner = s_scriptVariablesBuffer().Find(form->refID);
 		if (findOwner && findOwner().HasKey(varName))
 		{
 			VariableInfo *varInfo = pScript->GetVariableByName(varName);
@@ -108,7 +108,7 @@ bool Cmd_RemoveAllAddedVariables_Execute(COMMAND_ARGS)
 		if (!thisObj) return true;
 		form = thisObj;
 	}
-	auto findOwner = s_scriptVariablesBuffer.Find(form->refID);
+	auto findOwner = s_scriptVariablesBuffer().Find(form->refID);
 	if (!findOwner) return true;
 	UInt8 modIdx = scriptObj->GetOverridingModIdx();
 	for (auto varIter = findOwner().Begin(); varIter; ++varIter)
@@ -210,11 +210,11 @@ bool Cmd_GetScriptEventDisabled_Execute(COMMAND_ARGS)
 	TESForm *form;
 	char evtName[0x40];
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &evtName)) return true;
-	UInt32 *inMask = s_eventMasks.GetPtr(evtName);
+	UInt32 *inMask = s_eventMasks().GetPtr(evtName);
 	if (!inMask) return true;
 	if (*inMask)
 	{
-		if ((form->jipFormFlags6 & kHookFormFlag6_EventDisabled) && (s_disabledEventsMap.Get(form) & *inMask))
+		if ((form->jipFormFlags6 & kHookFormFlag6_EventDisabled) && (s_disabledEventsMap().Get(form) & *inMask))
 			*result = 1;
 	}
 	else if (form->jipFormFlags6 & kHookFormFlag6_ActivateDisabled)
@@ -229,7 +229,7 @@ void __fastcall SetScriptEventDisabled(TESForm *form, UInt32 inMask, bool onActi
 		UInt32 *evntMask;
 		if (bDisable)
 		{
-			if (s_disabledEventsMap.Insert(form, &evntMask))
+			if (s_disabledEventsMap().Insert(form, &evntMask))
 			{
 				form->SetJIPFlag(kHookFormFlag6_EventDisabled, true);
 				HOOK_MOD(MarkScriptEvent, true);
@@ -238,10 +238,10 @@ void __fastcall SetScriptEventDisabled(TESForm *form, UInt32 inMask, bool onActi
 		}
 		else if (form->jipFormFlags6 & kHookFormFlag6_EventDisabled)
 		{
-			evntMask = s_disabledEventsMap.GetPtr(form);
+			evntMask = s_disabledEventsMap().GetPtr(form);
 			if (evntMask && !(*evntMask &= ~inMask))
 			{
-				s_disabledEventsMap.Erase(form);
+				s_disabledEventsMap().Erase(form);
 				form->SetJIPFlag(kHookFormFlag6_EventDisabled, false);
 				HOOK_MOD(MarkScriptEvent, false);
 			}
@@ -266,7 +266,7 @@ bool Cmd_SetScriptEventDisabled_Execute(COMMAND_ARGS)
 	do
 	{
 		delim = GetNextToken(posPtr, ' ');
-		evntMask = s_eventMasks.GetPtr(posPtr);
+		evntMask = s_eventMasks().GetPtr(posPtr);
 		posPtr = delim;
 		if (!evntMask) continue;
 		inMask |= *evntMask;
@@ -301,7 +301,7 @@ bool Cmd_FakeScriptEvent_Execute(COMMAND_ARGS)
 	char evtName[0x40];
 	TESForm *filterForm = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &evtName, &filterForm)) return true;
-	UInt32 inMask = s_eventMasks.Get(evtName);
+	UInt32 inMask = s_eventMasks().Get(evtName);
 	if (!inMask) return true;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 	ExtraDataList *xData = invRef ? invRef->xData : &thisObj->extraDataList;
@@ -335,7 +335,7 @@ bool Cmd_SetOnQuestStageEventHandler_Execute(COMMAND_ARGS)
 	if (addEvnt)
 	{
 		QuestStageCallbacks *callbacks;
-		if (s_questStageEventMap.Insert(quest, &callbacks))
+		if (s_questStageEventMap().Insert(quest, &callbacks))
 		{
 			quest->SetJIPFlag(kHookFormFlag6_SetStageHandlers, true);
 			HOOK_MOD(SetQuestStage, true);
@@ -347,7 +347,7 @@ bool Cmd_SetOnQuestStageEventHandler_Execute(COMMAND_ARGS)
 	}
 	else
 	{
-		auto findQuest = s_questStageEventMap.Find(quest);
+		auto findQuest = s_questStageEventMap().Find(quest);
 		if (!findQuest || !findQuest().Remove(QuestStageEventFinder(pCallback)))
 			return true;
 		*result = 1;
@@ -391,7 +391,7 @@ bool Cmd_ScriptWait_Execute(COMMAND_ARGS)
 	UInt8 *blockType = blockIter.TypePtr();
 	if (!blockType || (*blockType == 0xD))
 		return true;
-	s_scriptWaitInfoMap[owner].Init(owner, iterNum, blockIter.NextOpOffset(), opcodeOffsetPtr);
+	s_scriptWaitInfoMap()[owner].Init(owner, iterNum, blockIter.NextOpOffset(), opcodeOffsetPtr);
 	owner->jipFormFlags5 |= kHookFormFlag5_ScriptOnWait;
 	HOOK_SET(ScriptRunner, true);
 	HOOK_SET(EvalEventBlock, true);
@@ -429,7 +429,7 @@ bool Cmd_StopScriptWaiting_Execute(COMMAND_ARGS)
 		}
 		if (owner->jipFormFlags5 & kHookFormFlag5_ScriptOnWait)
 		{
-			ScriptWaitInfo *waitInfo = s_scriptWaitInfoMap.GetPtr(owner);
+			ScriptWaitInfo *waitInfo = s_scriptWaitInfoMap().GetPtr(owner);
 			if (waitInfo) waitInfo->iterNum = 1;
 		}
 	}
@@ -443,7 +443,7 @@ bool Cmd_GetScriptBlockDisabled_Execute(COMMAND_ARGS)
 	UInt32 blockType;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script, &blockType) && IS_ID(script, Script) && (blockType <= 0x25))
 	{
-		auto findScript = s_disabledScriptBlocksMap.Find(script);
+		auto findScript = s_disabledScriptBlocksMap().Find(script);
 		if (findScript && findScript().Find(DisabledBlockFinder(blockType)))
 			*result = 1;
 	}
@@ -455,7 +455,7 @@ bool Cmd_SetScriptBlockDisabled_Execute(COMMAND_ARGS)
 	Script *script;
 	SInt32 disable, blockType = -1;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &disable, &blockType) || NOT_ID(script, Script) || (blockType > 0x25)) return true;
-	auto findScript = s_disabledScriptBlocksMap.Find(script);
+	auto findScript = s_disabledScriptBlocksMap().Find(script);
 	DisabledScriptBlocks *disabledBlocks = findScript ? &findScript() : NULL;
 	if (disable)
 	{
@@ -465,7 +465,7 @@ bool Cmd_SetScriptBlockDisabled_Execute(COMMAND_ARGS)
 		{
 			typePtr = blockIter.TypePtr();
 			if (*typePtr != blockType) continue;
-			if (!disabledBlocks) disabledBlocks = &s_disabledScriptBlocksMap[script];
+			if (!disabledBlocks) disabledBlocks = &s_disabledScriptBlocksMap()[script];
 			disabledBlocks->Append(typePtr);
 		}
 	}
@@ -554,7 +554,7 @@ bool Cmd_RunBatchScript_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filePath))
 	{
 		Script **cachedScript;
-		if (s_cachedScripts.Insert(filePath, &cachedScript))
+		if (s_cachedScripts().Insert(filePath, &cachedScript))
 		{
 			char *buffer = GetStrArgBuffer();
 			if (FileToBuffer(filePath, buffer))

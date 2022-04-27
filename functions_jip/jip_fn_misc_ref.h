@@ -51,7 +51,7 @@ DEFINE_COMMAND_PLUGIN(SetNifBlockScale, 1, 3, kParams_OneString_OneFloat_OneOpti
 DEFINE_COMMAND_PLUGIN(GetNifBlockFlag, 1, 3, kParams_OneString_OneInt_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetNifBlockFlag, 1, 4, kParams_OneString_TwoInts_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetObjectVelocity, 1, 1, kParams_OneOptionalAxis);
-DEFINE_COMMAND_PLUGIN(GetAngularVelocity, 1, 2, kParams_OneString_OneAxis);
+DEFINE_COMMAND_PLUGIN(GetAngularVelocity, 1, 2, kParams_OneString_OneOptionalAxis);
 DEFINE_COMMAND_PLUGIN(SetAngularVelocity, 1, 3, kParams_OneString_OneAxis_OneFloat);
 DEFINE_COMMAND_PLUGIN(PlaceAtCell, 0, 6, kParams_OneForm_OneInt_OneForm_ThreeFloats);
 DEFINE_COMMAND_PLUGIN(GetRayCastPos, 1, 6, kParams_ThreeGlobals_OneOptionalFloat_OneOptionalInt_OneOptionalString);
@@ -91,15 +91,18 @@ DEFINE_COMMAND_PLUGIN(GetNifBlockRotationAlt, 1, 6, kParams_OneString_ThreeScrip
 DEFINE_COMMAND_PLUGIN(GetLinearVelocityAlt, 1, 5, kParams_OneString_ThreeScriptVars_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetAngularVelocityAlt, 1, 5, kParams_OneString_ThreeScriptVars_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetAngularVelocityEx, 1, 5, kParams_OneString_ThreeFloats_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetCollisionObjProperty, 1, 2, kParams_OneString_OneInt);
+DEFINE_COMMAND_PLUGIN(SetCollisionObjProperty, 1, 3, kParams_OneString_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetCollisionObjLayerType, 1, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(SetCollisionObjLayerType, 1, 2, kParams_OneString_OneInt);
+DEFINE_COMMAND_PLUGIN(SetRefrModelPath, 1, 1, kParams_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(AttachLine, 1, 7, kParams_TwoStrings_FiveFloats);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
-	UInt32 flag;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &flag))
-	{
-		if (flag) thisObj->flags |= TESObjectREFR::kFlags_Persistent;
-		else thisObj->flags &= ~TESObjectREFR::kFlags_Persistent;
-	}
+	UInt32 doSet;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &doSet) && (!doSet != !(thisObj->flags & TESObjectREFR::kFlags_Persistent)))
+		ThisCall(0x565480, thisObj, doSet != 0);
 	return true;
 }
 
@@ -211,7 +214,7 @@ bool Cmd_GetPrimitiveBound_Execute(COMMAND_ARGS)
 	{
 		ExtraPrimitive *xPrimitive = GetExtraType(&thisObj->extraDataList, Primitive);
 		if (xPrimitive && xPrimitive->primitive)
-			*result = xPrimitive->primitive->bounds[axis - 'X'] * 2;
+			*result = xPrimitive->primitive->bounds[axis - 'X'] * 2.0;
 	}
 	return true;
 }
@@ -221,14 +224,17 @@ bool Cmd_SetPrimitiveBound_Execute(COMMAND_ARGS)
 	*result = -1;
 	char axis;
 	float val;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &axis, &val)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &axis, &val))
+		return true;
 	ExtraPrimitive *xPrimitive = GetExtraType(&thisObj->extraDataList, Primitive);
 	if (!xPrimitive || !xPrimitive->primitive) return true;
 	BGSPrimitive *primitive = xPrimitive->primitive;
 	axis -= 'X';
-	*result = primitive->bounds[axis] * 2;
-	if (primitive->type == 2) primitive->bounds[2] = primitive->bounds[1] = primitive->bounds[0] = val * 0.5F;
-	else primitive->bounds[axis] = val * 0.5F;
+	val *= 0.5F;
+	*result = primitive->bounds[axis] * 2.0;
+	if (primitive->type == 2)
+		primitive->bounds = {val, val, val};
+	else primitive->bounds[axis] = val;
 	thisObj->Update3D();
 	return true;
 }
@@ -237,24 +243,29 @@ bool Cmd_AddPrimitive_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 type;
-	float boundX, boundY, boundZ;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type, &boundX, &boundY, &boundZ) && (type >= 1) && (type <= 3) &&
+	NiVector3 bounds;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type, &bounds.x, &bounds.y, &bounds.z) && (type >= 1) && (type <= 3) &&
 		((thisObj->baseForm->refID == 0x21) || (IS_ID(thisObj->baseForm, TESObjectACTI) && (type != 3))) &&
 		!thisObj->extraDataList.HasType(kExtraData_Primitive))
 	{
 		ExtraPrimitive *xPrimitive = ExtraPrimitive::Create();
 		thisObj->extraDataList.AddExtra(xPrimitive);
-		UInt8 size = (type == 1) ? 0x4C : 0x34;
+		UInt32 size = (type == 1) ? 0x4C : 0x34;
 		BGSPrimitive *primitive = (BGSPrimitive*)GameHeapAlloc(size);
 		MemZero(primitive, size);
 		*(UInt32*)primitive = (type == 1) ? kVtbl_BGSPrimitiveBox : ((type == 2) ? kVtbl_BGSPrimitiveSphere : kVtbl_BGSPrimitivePlane);
 		primitive->type = type;
-		primitive->bounds[0] = boundX * 0.5F;
-		if (type == 2) primitive->bounds[2] = primitive->bounds[1] = boundX * 0.5F;
+		bounds *= 0.5F;
+		primitive->bounds.x = bounds.x;
+		if (type == 2)
+		{
+			primitive->bounds.y = bounds.x;
+			primitive->bounds.z = bounds.x;
+		}
 		else
 		{
-			primitive->bounds[1] = (type == 1) ? (boundY * 0.5F) : 1;
-			primitive->bounds[2] = boundZ * 0.5F;
+			primitive->bounds.y = (type == 1) ? bounds.y : 1.0F;
+			primitive->bounds.z = bounds.z;
 		}
 		xPrimitive->primitive = primitive;
 		thisObj->Update3D();
@@ -292,7 +303,7 @@ bool Cmd_MoveToCell_Execute(COMMAND_ARGS)
 				return true;
 			cell = ((TESWorldSpace*)cell)->cell;
 		}
-		thisObj->MoveToCell(cell, &posVector);
+		thisObj->MoveToCell(cell, posVector);
 		*result = 1;
 	}
 	return true;
@@ -339,9 +350,9 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 			return true;
 		cell = ((TESWorldSpace*)cell)->cell;
 	}
-	thisObj->MoveToCell(cell, posVector);
+	thisObj->MoveToCell(cell, *posVector);
 	if (resetRot)
-		thisObj->SetAngle(&rotVector, false);
+		thisObj->SetAngle(rotVector, false);
 	*result = 1;
 	return true;
 }
@@ -388,8 +399,7 @@ bool Cmd_GetRefType_Execute(COMMAND_ARGS)
 bool Cmd_ToggleObjectCollision_Execute(COMMAND_ARGS)
 {
 	UInt32 enable;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && NOT_ACTOR(thisObj) && !kInventoryType[thisObj->baseForm->typeID] && 
-		(!enable == !(thisObj->extraDataList.jipRefFlags5F & kHookRefFlag5F_DisableCollision)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && NOT_ACTOR(thisObj) && (!enable == !(thisObj->extraDataList.jipRefFlags5F & kHookRefFlag5F_DisableCollision)))
 	{
 		thisObj->extraDataList.jipRefFlags5F ^= kHookRefFlag5F_DisableCollision;
 		thisObj->Update3D();
@@ -441,7 +451,7 @@ bool Cmd_SetMaterialPropertyValue_Execute(COMMAND_ARGS)
 		NiNode *niNode = thisObj->GetNiNode();
 		if (niNode)
 		{
-			if ((blockName[0] == '*') && !blockName[1])
+			if (*(UInt16*)blockName == '*')
 				niNode->BulkSetMaterialPropertyTraitValue(traitID, value);
 			else
 			{
@@ -481,8 +491,9 @@ bool __fastcall GetHasContact(TESObjectREFR *thisObj, TESForm *form)
 	TESObjectREFR *refr;
 	if (IS_ACTOR(thisObj))
 	{
-		if (!((Actor*)thisObj)->baseProcess) return false;
-		bhkCharacterController *charCtrl = ((Actor*)thisObj)->baseProcess->GetCharacterController();
+		HighProcess *hiProc = (HighProcess*)((Actor*)thisObj)->baseProcess;
+		if (!hiProc || hiProc->processLevel) return false;
+		bhkCharacterController *charCtrl = hiProc->charCtrl;
 		if (!charCtrl) return false;
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
@@ -495,10 +506,10 @@ bool __fastcall GetHasContact(TESObjectREFR *thisObj, TESForm *form)
 	}
 	else
 	{
-		NiNode *niNode = thisObj->GetNiNode();
+		NiNode *niNode = thisObj->GetRefNiNode();
 		if (!niNode) return false;
 		ContactObjects contactObjs;
-		niNode->GetContactObjects(&contactObjs);
+		niNode->GetContactObjects(contactObjs);
 		bodies = contactObjs.Data();
 		count = contactObjs.Size();
 	}
@@ -529,8 +540,9 @@ bool __fastcall GetHasContactBase(TESObjectREFR *thisObj, TESForm *form)
 	TESObjectREFR *refr;
 	if (IS_ACTOR(thisObj))
 	{
-		if (!((Actor*)thisObj)->baseProcess) return false;
-		bhkCharacterController *charCtrl = ((Actor*)thisObj)->baseProcess->GetCharacterController();
+		HighProcess *hiProc = (HighProcess*)((Actor*)thisObj)->baseProcess;
+		if (!hiProc || hiProc->processLevel) return false;
+		bhkCharacterController *charCtrl = hiProc->charCtrl;
 		if (!charCtrl) return false;
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
@@ -543,10 +555,10 @@ bool __fastcall GetHasContactBase(TESObjectREFR *thisObj, TESForm *form)
 	}
 	else
 	{
-		NiNode *niNode = thisObj->GetNiNode();
+		NiNode *niNode = thisObj->GetRefNiNode();
 		if (!niNode) return false;
 		ContactObjects contactObjs;
-		niNode->GetContactObjects(&contactObjs);
+		niNode->GetContactObjects(contactObjs);
 		bodies = contactObjs.Data();
 		count = contactObjs.Size();
 	}
@@ -575,8 +587,9 @@ bool __fastcall GetHasContactType(TESObjectREFR *thisObj, UInt32 typeID)
 	TESObjectREFR *refr;
 	if (IS_ACTOR(thisObj))
 	{
-		if (!((Actor*)thisObj)->baseProcess) return false;
-		bhkCharacterController *charCtrl = ((Actor*)thisObj)->baseProcess->GetCharacterController();
+		HighProcess *hiProc = (HighProcess*)((Actor*)thisObj)->baseProcess;
+		if (!hiProc || hiProc->processLevel) return false;
+		bhkCharacterController *charCtrl = hiProc->charCtrl;
 		if (!charCtrl) return false;
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
@@ -589,10 +602,10 @@ bool __fastcall GetHasContactType(TESObjectREFR *thisObj, UInt32 typeID)
 	}
 	else
 	{
-		NiNode *niNode = thisObj->GetNiNode();
+		NiNode *niNode = thisObj->GetRefNiNode();
 		if (!niNode) return false;
 		ContactObjects contactObjs;
-		niNode->GetContactObjects(&contactObjs);
+		niNode->GetContactObjects(contactObjs);
 		bodies = contactObjs.Data();
 		count = contactObjs.Size();
 	}
@@ -623,46 +636,41 @@ bool Cmd_GetHasContactType_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TempFormList *tmpFormLst = GetTempFormList();
-	tmpFormLst->Clear();
+	TempElements *tmpElements = GetTempElements();
+	tmpElements->Clear();
 	hkpWorldObject **bodies;
 	UInt32 count;
 	TESObjectREFR *refr;
 	if (IS_ACTOR(thisObj))
 	{
-		if (!((Actor*)thisObj)->baseProcess) return true;
-		bhkCharacterController *charCtrl = ((Actor*)thisObj)->baseProcess->GetCharacterController();
+		HighProcess *hiProc = (HighProcess*)((Actor*)thisObj)->baseProcess;
+		if (!hiProc || hiProc->processLevel) return true;
+		bhkCharacterController *charCtrl = hiProc->charCtrl;
 		if (!charCtrl) return true;
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
 			refr = charCtrl->bodyUnderFeet->GetParentRef();
-			if (refr) tmpFormLst->Insert(refr);
+			if (refr) tmpElements->Append(refr);
 		}
 		bodies = charCtrl->pointCollector.contactBodies.data;
 		count = charCtrl->pointCollector.contactBodies.size;
 	}
 	else
 	{
-		NiNode *niNode = thisObj->GetNiNode();
+		NiNode *niNode = thisObj->GetRefNiNode();
 		if (!niNode) return true;
 		ContactObjects contactObjs;
-		niNode->GetContactObjects(&contactObjs);
+		niNode->GetContactObjects(contactObjs);
 		bodies = contactObjs.Data();
 		count = contactObjs.Size();
 	}
 	for (; count; count--, bodies++)
 	{
 		refr = (*bodies)->GetParentRef();
-		if (refr) tmpFormLst->Insert(refr);
+		if (refr) tmpElements->InsertUnique(refr);
 	}
-	if (!tmpFormLst->Empty())
-	{
-		TempElements *tmpElements = GetTempElements();
-		tmpElements->Clear();
-		for (auto refIter = tmpFormLst->Begin(); refIter; ++refIter)
-			tmpElements->Append(*refIter);
+	if (!tmpElements->Empty())
 		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
-	}
 	return true;
 }
 
@@ -673,7 +681,7 @@ bool Cmd_GetHasPhantom_Execute(COMMAND_ARGS)
 		*result = 1;
 		return true;
 	}
-	NiNode *niNode = thisObj->GetNiNode();
+	NiNode *niNode = thisObj->GetRefNiNode();
 	*result = (niNode && niNode->HasPhantom()) ? 1 : 0;
 	return true;
 }
@@ -770,8 +778,14 @@ bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 {
 	NiVector4 posVector;
 	UInt32 transform = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posVector.x, &posVector.y, &posVector.z, &transform) && (!transform || thisObj->GetTranslatedPos(&posVector)))
-		thisObj->SetPos(&posVector);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posVector.x, &posVector.y, &posVector.z, &transform))
+	{
+		if (transform == 2)
+			posVector += thisObj->position;
+		else if ((transform == 1) && !thisObj->GetTranslatedPos(posVector))
+			return true;
+		thisObj->SetPos(posVector);
+	}
 	return true;
 }
 
@@ -788,15 +802,17 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 		if (cell)
 		{
 			NiCamera *camera = g_sceneGraph->camera;
-			NiVector4 coords;
-			if (!((NiVector3*)&coords)->RayCastCoords(camera->WorldTranslate(), camera->WorldRotate()[0], maxRange))
+			NiVector3 coords;
+			if (!coords.RayCastCoords(camera->WorldTranslate(), camera->WorldRotate(), maxRange))
 			{
 				if (!translate) return true;
-				coords = NiVector4((maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0, 0);
-				camera->m_transformWorld.GetTranslatedPos(&coords);
+				coords = {(maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0};
+				camera->m_transformWorld.GetTranslatedPos(coords);
 			}
 			if (numArgs > 1)
 				coords += posMods;
+			if (cell->worldSpace && !(cell = cell->worldSpace->GetCellAtPos(coords)))
+				return true;
 			thisObj->MoveToCell(cell, coords);
 			*result = 1;
 		}
@@ -806,28 +822,24 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 
 bool Cmd_SetRefName_Execute(COMMAND_ARGS)
 {
-	char name[0x40];
-	UInt8 numArgs = NUM_ARGS;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &name) || !thisObj->ValidForHooks()) return true;
-	if (numArgs)
+	char name[0x80];
+	name[0] = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &name))
 	{
-		char **namePtr;
-		if (s_refNamesMap.Insert(thisObj, &namePtr))
+		if (name[0])
 		{
-			thisObj->SetJIPFlag(kHookFormFlag6_AltRefName, true);
-			HOOK_MOD(GetRefName, true);
+			char **namePtr;
+			if (s_refNamesMap().Insert(thisObj, &namePtr))
+				HOOK_MOD(GetRefName, true);
+			else free(*namePtr);
+			*namePtr = CopyString(name);
+			thisObj->extraDataList.jipRefFlags5F |= kHookRefFlag5F_AltRefName;
 		}
-		else free(*namePtr);
-		*namePtr = CopyString(name);
-	}
-	else
-	{
-		char *refName = s_refNamesMap.GetErase(thisObj);
-		if (refName)
+		else
 		{
-			thisObj->SetJIPFlag(kHookFormFlag6_AltRefName, false);
-			HOOK_MOD(GetRefName, false);
-			free(refName);
+			if (s_refNamesMap().EraseFree(thisObj))
+				HOOK_MOD(GetRefName, false);
+			thisObj->extraDataList.jipRefFlags5F &= ~kHookRefFlag5F_AltRefName;
 		}
 	}
 	return true;
@@ -840,8 +852,8 @@ bool Cmd_SetAngleEx_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &rotVector.x, &rotVector.y, &rotVector.z, &transform))
 	{
 		if (transform <= 1)
-			thisObj->SetAngle(&rotVector, transform);
-		else thisObj->Rotate(&rotVector);
+			thisObj->SetAngle(rotVector, transform);
+		else thisObj->Rotate(rotVector);
 	}
 	return true;
 }
@@ -885,11 +897,11 @@ bool Cmd_SetOnCriticalHitEventHandler_Execute(COMMAND_ARGS)
 		}
 	}
 	CriticalHitEventData evntData(target, source, weapon, script);
-	if (addEvnt && s_criticalHitEvents.Find(CriticalHitEventFind(evntData)))
+	if (addEvnt && s_criticalHitEvents().Find(CriticalHitEventFind(evntData)))
 		return true;
-	s_criticalHitEvents.Remove(CriticalHitEventRemove(evntData));
+	s_criticalHitEvents().Remove(CriticalHitEventRemove(evntData));
 	if (addEvnt)
-		*s_criticalHitEvents.Append() = evntData;
+		*s_criticalHitEvents().Append() = evntData;
 	return true;
 }
 
@@ -945,13 +957,12 @@ bool Cmd_IsAnimPlayingEx_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRigidBodyMass_Execute(COMMAND_ARGS)
 {
-	float totalMass = 0;
+	*result = 0;
 	if (NOT_ACTOR(thisObj))
 	{
-		NiNode *niNode = thisObj->GetNiNode();
-		if (niNode) niNode->GetBodyMass(&totalMass);
+		NiNode *niNode = thisObj->GetRefNiNode();
+		if (niNode) *result = niNode->GetBodyMass(0);
 	}
-	*result = totalMass;
 	return true;
 }
 
@@ -959,14 +970,14 @@ bool Cmd_PushObject_Execute(COMMAND_ARGS)
 {
 	NiVector4 forceVector;
 	TESObjectREFR *refr = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &forceVector.x, &forceVector.y, &forceVector.z, &forceVector.w, &refr))
+	if (NOT_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &forceVector.x, &forceVector.y, &forceVector.z, &forceVector.w, &refr))
 	{
-		NiNode *niNode = thisObj->GetNiNode();
+		NiNode *niNode = thisObj->GetRefNiNode();
 		if (niNode)
 		{
 			if (!refr) refr = thisObj;
 			forceVector += refr->position;
-			niNode->ApplyForce(&forceVector);
+			niNode->ApplyForce(forceVector);
 		}
 	}
 	return true;
@@ -1054,24 +1065,24 @@ bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 	UInt32 pcNode = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &transltn.x, &transltn.y, &transltn.z, &pcNode))
 	{
-		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
-		if (niBlock)
+		if (blockName[0])
 		{
-			niBlock->LocalTranslate() = transltn;
-			niBlock->Update();
-			__asm
+			NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
+			if (niBlock)
 			{
-				mov		ecx, niBlock
-				cmp		dword ptr [ecx], kVtbl_NiPointLight
-				jnz		done
-				test	byte ptr [ecx+0x9F], 1
-				jz		done
-				movups	xmm0, [ecx+0x54]
-				psrldq	xmm0, 4
-				movups	[ecx+0x100], xmm0
-			done:
+				niBlock->LocalTranslate() = transltn;
+				if IS_NODE(niBlock)
+					((NiNode*)niBlock)->ResetCollision();
+				else if IS_TYPE(niBlock, NiPointLight)
+				{
+					NiPointLight *ptLight = (NiPointLight*)niBlock;
+					if (ptLight->extraFlags & 1)
+						ptLight->vector100 = transltn;
+				}
+				niBlock->Update();
 			}
 		}
+		else thisObj->SetPos(transltn);
 	}
 	return true;
 }
@@ -1091,7 +1102,8 @@ bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 			if (!(getMode & 2))
 				rotMat.ExtractAngles(rot);
 			else rotMat.ExtractAnglesInv(rot);
-			ArrayElementL elements[3] = {rot.x * Dbl180dPI, rot.y * Dbl180dPI, rot.z * Dbl180dPI};
+			rot *= GET_PS(9);
+			ArrayElementL elements[3] = {rot.x, rot.y, rot.z};
 			AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
 		}
 	}
@@ -1101,22 +1113,30 @@ bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 {
 	char blockName[0x40];
-	NiVector3 rot;
+	NiVector4 rot;
 	UInt32 transform = 0, pcNode = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &rot.x, &rot.y, &rot.z, &transform, &pcNode))
 	{
-		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
-		if (niBlock)
+		if (blockName[0])
 		{
-			rot *= FltPId180;
-			if (!transform)
-				niBlock->LocalRotate().RotationMatrix(rot);
-			else if (transform == 1)
-				niBlock->LocalRotate().Rotate(rot);
-			else
-				niBlock->LocalRotate().RotationMatrixInv(rot);
-			niBlock->Update();
+			NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
+			if (niBlock)
+			{
+				rot *= GET_PS(8);
+				if (!transform)
+					niBlock->LocalRotate().RotationMatrix(rot);
+				else if (transform == 1)
+					niBlock->LocalRotate().Rotate(rot);
+				else
+					niBlock->LocalRotate().RotationMatrixInv(rot);
+				if IS_NODE(niBlock)
+					((NiNode*)niBlock)->ResetCollision();
+				niBlock->Update();
+			}
 		}
+		else if (transform != 1)
+			thisObj->SetAngle(rot, transform);
+		else thisObj->Rotate(rot);
 	}
 	return true;
 }
@@ -1141,12 +1161,18 @@ bool Cmd_SetNifBlockScale_Execute(COMMAND_ARGS)
 	UInt32 pcNode = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &newScale, &pcNode))
 	{
-		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
-		if (niBlock)
+		if (blockName[0])
 		{
-			niBlock->m_transformLocal.scale = newScale;
-			niBlock->Update();
+			NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
+			if (niBlock)
+			{
+				niBlock->m_transformLocal.scale = newScale;
+				if IS_NODE(niBlock)
+					((NiNode*)niBlock)->ResetCollision();
+				niBlock->Update();
+			}
 		}
+		else ThisCall(0x567490, thisObj, newScale);
 	}
 	return true;
 }
@@ -1187,7 +1213,7 @@ bool Cmd_GetObjectVelocity_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &axis))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody("");
-		if (rigidBody)
+		if (rigidBody && rigidBody->IsMobile())
 		{
 			if (axis) *result = rigidBody->motion.linVelocity[axis - 'X'];
 			else *result = rigidBody->motion.linVelocity.Length();
@@ -1200,25 +1226,33 @@ bool Cmd_GetAngularVelocity_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char blockName[0x40];
-	char axis;
+	char axis = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &axis))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
-		if (rigidBody)
+		if (rigidBody && rigidBody->IsMobile())
 		{
 			__asm
 			{
 				mov		ecx, rigidBody
-				movups	xmm0, [ecx+0x1BC]
-				psrldq	xmm0, 4
+				movaps	xmm0, [ecx+0x1C0]
+				andps	xmm0, PS_XYZ0Mask
+				xorps	xmm1, xmm1
 				xor		eax, eax
 				mov		al, axis
 				sub		al, 'X'
+				js		getNet
 				shl		al, 4
 				mulps	xmm0, [ecx+eax+0xF0]
-				xorps	xmm1, xmm1
 				haddps	xmm0, xmm1
 				haddps	xmm0, xmm1
+				jmp		done
+			getNet:
+				mulps	xmm0, xmm0
+				haddps	xmm0, xmm1
+				haddps	xmm0, xmm1
+				sqrtss	xmm0, xmm0
+			done:
 				cvtps2pd	xmm0, xmm0
 				mov		eax, result
 				movq	qword ptr [eax], xmm0
@@ -1236,7 +1270,7 @@ bool Cmd_SetAngularVelocity_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &axis, &velocity))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
-		if (rigidBody)
+		if (rigidBody && rigidBody->IsMobile())
 		{
 			__asm
 			{
@@ -1293,7 +1327,7 @@ bool Cmd_GetRayCastPos_Execute(COMMAND_ARGS)
 		{
 			NiVector3 coords, posVector = objNode->WorldTranslate();
 			posVector.z += posZmod;
-			if (coords.RayCastCoords(posVector, objNode->WorldRotate()[1], 50000.0F, filter & 0x3F))
+			if (coords.RayCastCoords(posVector, objNode->WorldRotate() + 1, 50000.0F, filter & 0x3F))
 			{
 				outX->data = coords.x;
 				outY->data = coords.y;
@@ -1366,7 +1400,7 @@ bool Cmd_MoveToNode_Execute(COMMAND_ARGS)
 			if (targetNode)
 			{
 				posMods += targetNode->WorldTranslate();
-				thisObj->MoveToCell(cell, &posMods);
+				thisObj->MoveToCell(cell, posMods);
 				*result = 1;
 			}
 		}
@@ -1406,7 +1440,7 @@ bool Cmd_GetNifBlockParentNodes_Execute(COMMAND_ARGS)
 		if (pcNode && (thisObj->refID == 0x14))
 		{
 			if (pcNode & 1)
-				rootNode = thisObj->renderState ? thisObj->renderState->niNode14 : NULL;
+				rootNode = thisObj->GetRefNiNode();
 			else rootNode = ((PlayerCharacter*)thisObj)->node1stPerson;
 		}
 		else rootNode = thisObj->GetNiNode();
@@ -1432,7 +1466,7 @@ __declspec(naked) TESObjectREFR *GetCrosshairRef()
 	{
 		push	ebp
 		mov		ebp, esp
-		sub		esp, 0x64
+		sub		esp, 0x10
 		mov		ecx, g_thePlayer
 		movups	xmm0, [ecx+0xDD4]
 		cmp		byte ptr [ecx+0x64B], 0
@@ -1440,35 +1474,20 @@ __declspec(naked) TESObjectREFR *GetCrosshairRef()
 		movups	xmm1, [ecx+0xD58]
 		addps	xmm0, xmm1
 	firstPerson:
-		movups	[ebp-0x10], xmm0
-		push	dword ptr [ecx+0x24]
-		push	0
-		CALL_EAX(0x953F20)
-		push	ecx
-		fstp	dword ptr [esp]
-		lea		ecx, [ebp-0x40]
-		CALL_EAX(0x4A0C90)
-		lea		ecx, [ebp-0x64]
-		CALL_EAX(0x524AC0)
-		lea		eax, [ebp-0x64]
-		push	eax
-		lea		ecx, [ebp-0x40]
-		push	ecx
-		CALL_EAX(0x43F8D0)
+		lea		edx, [ebp-0x10]
+		movups	[edx], xmm0
+		mov		eax, [ecx+0x64]
+		mov		ecx, [eax+0x14]
+		push	dword ptr [ecx+0x84]
+		push	dword ptr [ecx+0x78]
+		push	dword ptr [ecx+0x6C]
 		lea		ecx, [ebp-0x1C]
-		mov		edx, [eax+4]
-		mov		[ecx], edx
-		mov		edx, [eax+0x10]
-		mov		[ecx+4], edx
-		mov		edx, [eax+0x1C]
-		mov		[ecx+8], edx
-		lea		edx, [ebp-0x64]
-		push	edx
+		lea		eax, [ebp-4]
+		push	eax
 		push	eax
 		push	0x46400000
 		push	ecx
-		lea		eax, [ebp-0x10]
-		push	eax
+		push	edx
 		mov		ecx, g_interfaceManager
 		mov		ecx, [ecx+0x13C]
 		CALL_EAX(0x631D60)
@@ -1553,9 +1572,9 @@ bool Cmd_GetExtraFloat_Execute(COMMAND_ARGS)
 	else xData = &thisObj->extraDataList;
 	if (xData)
 	{
-		ExtraCharge *xCharge = GetExtraType(xData, Charge);
-		if (xCharge)
-			*result = xCharge->charge;
+		ExtraTimeLeft *xTimeLeft = GetExtraType(xData, TimeLeft);
+		if (xTimeLeft)
+			*result = xTimeLeft->timeLeft;
 	}
 	return true;
 }
@@ -1577,16 +1596,16 @@ bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
 					SInt32 count = invRef->GetCount();
 					if (count > 1)
 						xData->AddExtra(ExtraCount::Create(count));
-					xData->AddExtra(ExtraCharge::Create(fltVal));
+					xData->AddExtra(ExtraTimeLeft::Create(fltVal));
 				}
 				return true;
 			}
 		}
 		else xData = &thisObj->extraDataList;
-		ExtraCharge *xCharge = GetExtraType(xData, Charge);
-		if (xCharge)
-			xCharge->charge = fltVal;
-		else xData->AddExtra(ExtraCharge::Create(fltVal));
+		ExtraTimeLeft *xTimeLeft = GetExtraType(xData, TimeLeft);
+		if (xTimeLeft)
+			xTimeLeft->timeLeft = fltVal;
+		else xData->AddExtra(ExtraTimeLeft::Create(fltVal));
 	}
 	return true;
 }
@@ -1600,7 +1619,7 @@ bool Cmd_SetLinearVelocity_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &velocity.x, &velocity.y, &velocity.z, &setLocal))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
-		if (rigidBody)
+		if (rigidBody && rigidBody->IsMobile())
 		{
 			rigidBody->motion.linVelocity = setLocal ? rigidBody->motion.motionState.transform.rotation.MultiplyVectorInv(velocity) : velocity;
 			rigidBody->UpdateMotion();
@@ -1614,12 +1633,12 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 {
 	static char meshesPath[0x80] = "data\\meshes\\";
 	TESObjectREFR *refr = IS_REFERENCE(form) ? (TESObjectREFR*)form : NULL;
-	NiNode *rootNode = (refr && refr->renderState) ? refr->renderState->niNode14 : NULL;
+	NiNode *rootNode = refr ? refr->GetRefNiNode() : NULL;
 	bool result = false, modifyMap = true;
 	char doInsert = *inData;
 	if (refr)
 	{
-		if ((refr->modIndex == 0xFF) || kInventoryType[refr->baseForm->typeID])
+		if (refr->IsCreated() || kInventoryType[refr->baseForm->typeID])
 		{
 			if ((doInsert != 3) || !rootNode)
 				goto freeDataStr;
@@ -1641,7 +1660,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 
 	UInt8 flag = ((UInt8*)inData)[1];
 	bool insertNode = flag == kHookFormFlag6_InsertNode;
-	auto formsMap = insertNode ? &s_insertNodeMap : &s_attachModelMap;
+	auto formsMap = insertNode ? *s_insertNodeMap : *s_attachModelMap;
 
 	if (doInsert & 1)
 	{
@@ -1684,7 +1703,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 				else if ((rootNode = DoAttachModel(targetObj, objectName, pDataStr, rootNode)) && (rootNode->m_flags & 0x20000000))
 					AddPointLights(rootNode);
 			}
-			if (rootNode = s_pc1stPersonNode)
+			if ((refr->refID == 0x14) && (rootNode = s_pc1stPersonNode))
 			{
 				targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName);
 				if (targetObj)
@@ -1709,7 +1728,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 			NiAVObject *object = rootNode->GetBlockByName(findData());
 			if (object)
 				object->m_parent->RemoveObject(object);
-			if (rootNode = s_pc1stPersonNode)
+			if ((refr->refID == 0x14) && (rootNode = s_pc1stPersonNode))
 			{
 				object = rootNode->GetBlockByName(findData());
 				if (object)
@@ -1727,7 +1746,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 			}
 		}
 	}
-	s_insertObjects = !s_insertNodeMap.Empty() || !s_attachModelMap.Empty();
+	s_insertObjects = !s_insertNodeMap->Empty() || !s_attachModelMap->Empty();
 	result = true;
 freeDataStr:
 	Pool_Free(inData, 0x80);
@@ -1781,23 +1800,18 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 			if (g_thePlayer->GetDistance(targetRef) > 1024.0F)
 			{
 				cell = targetRef->GetParentCell();
-				if (cell) g_thePlayer->MoveToCell(cell, &targetRef->position);
+				if (cell) g_thePlayer->MoveToCell(cell, targetRef->position);
 			}
-			s_syncPositionRef = targetRef;
 			s_syncPositionFlags = (syncRot != 0);
 			s_syncPositionPos = targetRef->position;
-			s_syncPositionNode = nodeName;
-			HOOK_SET(SynchronizePosition, true);
+			s_syncPositionNode() = nodeName;
+			s_syncPositionRef = targetRef;
 		}
-		else
+		else if (targetRef = s_syncPositionRef)
 		{
-			HOOK_SET(SynchronizePosition, false);
-			if (targetRef = s_syncPositionRef)
-			{
-				s_syncPositionRef = NULL;
-				cell = targetRef->GetParentCell();
-				if (cell) g_thePlayer->MoveToCell(cell, (NiVector3*)&s_syncPositionPos);
-			}
+			s_syncPositionRef = NULL;
+			cell = targetRef->GetParentCell();
+			if (cell) g_thePlayer->MoveToCell(cell, s_syncPositionPos);
 		}
 	}
 	return true;
@@ -1814,7 +1828,7 @@ bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 		NiNode *rootNode = refr ? refr->GetNiNode() : NULL;
 		if (rootNode && rootNode->GetBlock(buffer + 1))
 			goto Retn1;
-		NodeNamesMap *namesMap = s_insertNodeMap.GetPtr(form);
+		NodeNamesMap *namesMap = s_insertNodeMap->GetPtr(form);
 		if (namesMap)
 		{
 			for (auto iter = namesMap->Begin(); iter; ++iter)
@@ -1825,7 +1839,7 @@ bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 		{
 			form = refr->GetBaseForm2();
 			if (!form) goto Retn0;
-			namesMap = s_insertNodeMap.GetPtr(form);
+			namesMap = s_insertNodeMap->GetPtr(form);
 			if (namesMap)
 			{
 				for (auto iter = namesMap->Begin(); iter; ++iter)
@@ -1863,7 +1877,7 @@ bool Cmd_GetRayCastRef_Execute(COMMAND_ARGS)
 		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
 		{
-			NiAVObject *rcObject = GetRayCastObject(objNode->WorldTranslate(), objNode->WorldRotate()[1], 50000.0F, filter & 0x3F);
+			NiAVObject *rcObject = GetRayCastObject(objNode->WorldTranslate(), objNode->WorldRotate() + 1, 50000.0F, filter & 0x3F);
 			if (rcObject)
 			{
 				TESObjectREFR *resRefr = rcObject->GetParentRef();
@@ -1884,7 +1898,7 @@ bool Cmd_GetRayCastMaterial_Execute(COMMAND_ARGS)
 	{
 		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
-			material = GetRayCastMaterial(objNode->WorldTranslate(), objNode->WorldRotate()[1], 50000.0F, filter & 0x3F);
+			material = GetRayCastMaterial(objNode->WorldTranslate(), objNode->WorldRotate() + 1, 50000.0F, filter & 0x3F);
 	}
 	*result = material;
 	return true;
@@ -1911,7 +1925,7 @@ void GetCollisionNodes(NiNode *node, TempElements *tmpElements)
 bool Cmd_GetCollisionNodes_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	NiNode *rootNode = thisObj->GetNiNode();
+	NiNode *rootNode = thisObj->GetRefNiNode();
 	if (rootNode)
 	{
 		TempElements *tmpElements = GetTempElements();
@@ -1967,22 +1981,53 @@ bool Cmd_GetBlockTextureSet_Execute(COMMAND_ARGS)
 		NiAVObject *block = thisObj->GetNiBlock(blockName);
 		if (block && block->GetTriBasedGeom())
 		{
-			BSShaderPPLightingProperty *shaderProp = (BSShaderPPLightingProperty*)block->GetProperty(3);
-			if (shaderProp && IS_TYPE(shaderProp, BSShaderPPLightingProperty) && shaderProp->textureSet)
+			BSShaderProperty *shaderProp = (BSShaderProperty*)block->GetProperty(3);
+			if (shaderProp)
 			{
-				String *textures = shaderProp->textureSet->textures;
 				ArrayElementL elements[6];
 				const char *filePath;
-				UInt32 index = 0;
-				do
+				bool createArr = false;
+				if (shaderProp->shaderType == BSShaderProperty::kType_PPLighting)
 				{
-					filePath = textures[index].CStr();
-					if (*filePath && StrBeginsCI(filePath, "data\\textures\\"))
-						filePath += 14;
-					elements[index] = filePath;
+					BSShaderPPLightingProperty *lightingProp = (BSShaderPPLightingProperty*)shaderProp;
+					if (lightingProp->textureSet)
+					{
+						createArr = true;
+						String *textures = lightingProp->textureSet->textures;
+						UInt32 index = 0;
+						do
+						{
+							filePath = textures[index].CStr();
+							if (*filePath && StrBeginsCI(filePath, "data\\textures\\"))
+								filePath += 14;
+							elements[index] = filePath;
+						}
+						while (++index < 6);
+					}
 				}
-				while (++index < 6);
-				AssignCommandResult(CreateArray(elements, 6, scriptObj), result);
+				else if (shaderProp->shaderType == BSShaderProperty::kType_NoLighting)
+				{
+					BSShaderNoLightingProperty *noLightingProp = (BSShaderNoLightingProperty*)shaderProp;
+					if (noLightingProp->srcTexture && IS_TYPE(noLightingProp->srcTexture, NiSourceTexture))
+					{
+						filePath = ((NiSourceTexture*)noLightingProp->srcTexture)->ddsPath1;
+						if (filePath)
+						{
+							createArr = true;
+							if (StrBeginsCI(filePath, "data\\textures\\"))
+								filePath += 14;
+							UInt32 index = 0;
+							do
+							{
+								elements[index] = filePath;
+								filePath = "";
+							}
+							while (++index < 6);
+						}
+					}
+				}
+				if (createArr)
+					AssignCommandResult(CreateArray(elements, 6, scriptObj), result);
 			}
 		}
 	}
@@ -1993,7 +2038,7 @@ bool Cmd_GetPosEx_Execute(COMMAND_ARGS)
 {
 	ResultVars outPos;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outPos.x, &outPos.y, &outPos.z))
-		outPos.Set(&thisObj->position.x);
+		outPos.Set(thisObj->position);
 	return true;
 }
 
@@ -2003,14 +2048,21 @@ bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 	UInt32 getLocal = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outRot.x, &outRot.y, &outRot.z, &getLocal))
 	{
-		NiVector3 *rotPtr = &thisObj->rotation, locRot;
-		if (getLocal)
+		if (!getLocal)
+			outRot.Set(thisObj->rotation, GET_PS(9));
+		else
 		{
-			NiNode *rootNode = thisObj->renderState ? thisObj->renderState->niNode14 : nullptr;
-			if (rootNode)
-				rotPtr = rootNode->WorldRotate().ExtractAnglesInv(locRot);
+			NiVector3 locRot;
+			NiNode *rootNode = thisObj->GetRefNiNode();
+			if (rootNode && (thisObj->refID != 0x14))
+				rootNode->WorldRotate().ExtractAnglesInv(locRot);
+			else
+			{
+				NiMatrix33 rotMat = thisObj->rotation;
+				rotMat.ExtractAnglesInv(locRot);
+			}
+			outRot.Set(locRot, GET_PS(9));
 		}
-		outRot.Set(&rotPtr->x, Dbl180dPI);
 	}
 	return true;
 }
@@ -2065,7 +2117,7 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 			if (targetNode)
 			{
 				NiCamera **pCamera;
-				if (s_extraCamerasMap.Insert(camName, &pCamera))
+				if (s_extraCamerasMap().Insert(camName, &pCamera))
 				{
 					*pCamera = xCamera = NiCamera::Create();
 					InterlockedIncrement(&xCamera->m_uiRefCount);
@@ -2080,14 +2132,14 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 				if (xCamera->m_parent != targetNode)
 				{
 					targetNode->AddObject(xCamera, 1);
-					xCamera->Update();
+					xCamera->UpdateDownwardPass(kUpdateParams, 0);
 				}
 				*result = 1;
 			}
 		}
 		else
 		{
-			auto findCam = s_extraCamerasMap.Find(camName);
+			auto findCam = s_extraCamerasMap().Find(camName);
 			if (findCam)
 			{
 				xCamera = *findCam;
@@ -2150,7 +2202,7 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 	UInt32 pixelSize = 0x100;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &camName, &nodeName, &fov, &pixelSize))
 	{
-		NiCamera *xCamera = s_extraCamerasMap.Get(camName);
+		NiCamera *xCamera = s_extraCamerasMap().Get(camName);
 		if (xCamera && xCamera->m_parent)
 		{
 			NiTexture **pTexture = NULL;
@@ -2166,7 +2218,7 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 				if (targetGeom && targetGeom->GetTriBasedGeom())
 				{
 					BSShaderNoLightingProperty *shaderProp = (BSShaderNoLightingProperty*)targetGeom->GetProperty(3);
-					if (shaderProp && IS_TYPE(shaderProp, BSShaderNoLightingProperty))
+					if (shaderProp && (shaderProp->shaderType == BSShaderProperty::kType_NoLighting))
 						pTexture = &shaderProp->srcTexture;
 				}
 			}
@@ -2253,9 +2305,9 @@ bool Cmd_GetTranslatedPos_Execute(COMMAND_ARGS)
 {
 	NiVector4 posMods;
 	ResultVars outPos;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posMods.x, &posMods.y, &posMods.z, &outPos.x, &outPos.y, &outPos.z) && thisObj->GetTranslatedPos(&posMods))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posMods.x, &posMods.y, &posMods.z, &outPos.x, &outPos.y, &outPos.z) && thisObj->GetTranslatedPos(posMods))
 	{
-		outPos.Set(&posMods.x);
+		outPos.Set(posMods);
 		*result = 1;
 	}
 	else *result = 0;
@@ -2273,7 +2325,7 @@ bool Cmd_GetNifBlockTranslationAlt_Execute(COMMAND_ARGS)
 		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
-			outPos.Set(getWorld ? &niBlock->WorldTranslate().x : &niBlock->LocalTranslate().x);
+			outPos.Set(getWorld ? niBlock->WorldTranslate() : niBlock->LocalTranslate());
 			*result = 1;
 		}
 	}
@@ -2296,7 +2348,7 @@ bool Cmd_GetNifBlockRotationAlt_Execute(COMMAND_ARGS)
 			if (!(getMode & 2))
 				rotMat.ExtractAngles(rot);
 			else rotMat.ExtractAnglesInv(rot);
-			outRot.Set(&rot.x, Dbl180dPI);
+			outRot.Set(rot, GET_PS(9));
 			*result = 1;
 		}
 	}
@@ -2312,12 +2364,15 @@ bool Cmd_GetLinearVelocityAlt_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &outVel.x, &outVel.y, &outVel.z, &getLocal))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
-		if (rigidBody)
+		if (rigidBody && rigidBody->IsMobile())
 		{
-			hkVector4 velocity = rigidBody->motion.linVelocity;
-			if (getLocal)
-				velocity = rigidBody->motion.motionState.transform.rotation.MultiplyVector(velocity);
-			outVel.Set(&velocity.x);
+			if (!getLocal)
+				outVel.Set(rigidBody->motion.linVelocity);
+			else
+			{
+				hkVector4 velocity = rigidBody->motion.linVelocity;
+				outVel.Set(rigidBody->motion.motionState.transform.rotation.MultiplyVector(velocity));
+			}
 			*result = 1;
 		}
 	}
@@ -2333,12 +2388,15 @@ bool Cmd_GetAngularVelocityAlt_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &outVel.x, &outVel.y, &outVel.z, &getGlobal))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
-		if (rigidBody)
+		if (rigidBody && rigidBody->IsMobile())
 		{
-			hkVector4 velocity = rigidBody->motion.angVelocity;
-			if (!getGlobal)
-				velocity = rigidBody->motion.motionState.transform.rotation.MultiplyVector(velocity);
-			outVel.Set(&velocity.x);
+			if (getGlobal)
+				outVel.Set(rigidBody->motion.angVelocity);
+			else
+			{
+				hkVector4 velocity = rigidBody->motion.angVelocity;
+				outVel.Set(rigidBody->motion.motionState.transform.rotation.MultiplyVector(velocity));
+			}
 			*result = 1;
 		}
 	}
@@ -2354,10 +2412,174 @@ bool Cmd_SetAngularVelocityEx_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &velocity.x, &velocity.y, &velocity.z, &setGlobal))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
-		if (rigidBody)
+		if (rigidBody && rigidBody->IsMobile())
 		{
 			rigidBody->motion.angVelocity = setGlobal ? velocity : rigidBody->motion.motionState.transform.rotation.MultiplyVectorInv(velocity);
 			rigidBody->UpdateMotion();
+			*result = 1;
+		}
+	}
+	return true;
+}
+
+bool Cmd_GetCollisionObjProperty_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char blockName[0x40];
+	UInt32 propID;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &propID) && (propID <= 7))
+	{
+		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
+		if (rigidBody)
+		{
+			switch (propID)
+			{
+				case 0:
+					*result = rigidBody->friction;
+					break;
+				case 1:
+					*result = rigidBody->restitution;
+					break;
+				case 2:
+					*result = rigidBody->motion.motionState.linearDamping;
+					break;
+				case 3:
+					*result = rigidBody->motion.motionState.angularDamping;
+					break;
+				case 4:
+				case 5:
+				case 6:
+					*result = rigidBody->motion.inertia[propID - 4];
+					break;
+				case 7:
+					if (rigidBody->motion.bodyMassInv > 0)
+						*result = 1.0 / rigidBody->motion.bodyMassInv;
+					break;
+			}
+		}
+	}
+	return true;
+}
+
+bool Cmd_SetCollisionObjProperty_Execute(COMMAND_ARGS)
+{
+	char blockName[0x40];
+	UInt32 propID;
+	float value;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &propID, &value) && (propID <= 7))
+	{
+		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
+		if (rigidBody)
+		{
+			switch (propID)
+			{
+				case 0:
+					rigidBody->friction = value;
+					break;
+				case 1:
+					rigidBody->restitution = value;
+					break;
+				case 2:
+					rigidBody->motion.motionState.linearDamping = value;
+					break;
+				case 3:
+					rigidBody->motion.motionState.angularDamping = value;
+					break;
+				case 4:
+				case 5:
+				case 6:
+					rigidBody->motion.inertia[propID - 4] = value;
+					break;
+				case 7:
+					rigidBody->motion.bodyMassInv = (value > 0) ? (1.0F / value) : 0;
+					break;
+			}
+		}
+	}
+	return true;
+}
+
+bool Cmd_GetCollisionObjLayerType_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char nodeName[0x40];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &nodeName))
+	{
+		NiNode *targetNode = thisObj->GetNode(nodeName);
+		if (targetNode && targetNode->m_collisionObject)
+		{
+			bhkWorldObject *worldObj = targetNode->m_collisionObject->worldObj;
+			if (worldObj)
+				*result = ((hkpWorldObject*)worldObj->refObject)->layerType;
+		}
+	}
+	return true;
+}
+
+bool Cmd_SetCollisionObjLayerType_Execute(COMMAND_ARGS)
+{
+	char nodeName[0x40];
+	UInt32 layerType;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &nodeName, &layerType) && layerType && (layerType < LAYER_MAX))
+	{
+		NiNode *targetNode = thisObj->GetNode(nodeName);
+		if (targetNode && targetNode->m_collisionObject)
+		{
+			bhkWorldObject *worldObj = targetNode->m_collisionObject->worldObj;
+			if (worldObj)
+			{
+				((hkpWorldObject*)worldObj->refObject)->layerType = layerType;
+				worldObj->UpdateCollisionFilter();
+			}
+		}
+	}
+	return true;
+}
+
+bool Cmd_SetRefrModelPath_Execute(COMMAND_ARGS)
+{
+	char modelPath[0x80];
+	modelPath[0] = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &modelPath))
+	{
+		if (modelPath[0])
+		{
+			char **pPath;
+			if (s_refrModelPathMap().Insert(thisObj, &pPath))
+				HOOK_MOD(GetModelPath, true);
+			else free(*pPath);
+			*pPath = CopyString(modelPath);
+			thisObj->extraDataList.jipRefFlags5F |= kHookRefFlag5F_RefrModelPath;
+		}
+		else
+		{
+			if (s_refrModelPathMap().EraseFree(thisObj))
+				HOOK_MOD(GetModelPath, false);
+			thisObj->extraDataList.jipRefFlags5F &= ~kHookRefFlag5F_RefrModelPath;
+		}
+	}
+	return true;
+}
+
+bool Cmd_AttachLine_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char nodeName[0x40], lineName[0x40];
+	float length;
+	NiColorAlpha color;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &nodeName, &lineName, &length, &color.r, &color.g, &color.b, &color.a))
+	{
+		NiNode *targetNode = thisObj->GetRefNiNode();
+		if (targetNode && (targetNode = targetNode->GetNode(nodeName)))
+		{
+			color *= 1 / 255.0F;
+			NiLines *lines = NiLines::Create(length, color, lineName);
+			targetNode->AddObject(lines, 1);
+			if ((thisObj->refID == 0x14) && (targetNode = s_pc1stPersonNode->GetNode(nodeName)))
+			{
+				lines = NiLines::Create(length, color, lineName);
+				targetNode->AddObject(lines, 1);
+			}
 			*result = 1;
 		}
 	}

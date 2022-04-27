@@ -18,12 +18,19 @@ DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayErase, RefMapErase, 0, 2, kParams_OneString
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayValidate, RefMapValidate, 0, 1, kParams_OneString);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayDestroy, RefMapDestroy, 0, 1, kParams_OneString);
 
+#if JIP_VARS_CS
+PrimitiveCS s_refMapCS;
+#define REF_MAP_CS	ScopedPrimitiveCS cs(&s_refMapCS);
+#else
+#define REF_MAP_CS
+#endif
+
 RefMapIDsMap *RMFind(Script *scriptObj, char *varName)
 {
-	if (!varName[0]) return NULL;
+	if (!varName[0]) return nullptr;
 	RefMapInfo varInfo(scriptObj, varName);
 	RefMapVarsMap *findMod = varInfo.ModsMap().GetPtr(varInfo.modIndex);
-	if (!findMod) return NULL;
+	if (!findMod) return nullptr;
 	return findMod->GetPtr(varName);
 }
 
@@ -33,6 +40,7 @@ bool Cmd_RefMapArrayGetSize_Execute(COMMAND_ARGS)
 	char varName[0x50];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName))
 	{
+		REF_MAP_CS
 		RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
 		if (idsMap) *result = (int)idsMap->Size();
 	}
@@ -43,9 +51,10 @@ bool Cmd_RefMapArrayGetType_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char varName[0x50];
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
 	{
+		REF_MAP_CS
 		RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
 		if (idsMap)
 		{
@@ -61,9 +70,10 @@ bool Cmd_RefMapArrayGetFloat_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char varName[0x50];
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
 	{
+		REF_MAP_CS
 		RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
 		if (idsMap)
 		{
@@ -79,9 +89,10 @@ bool Cmd_RefMapArrayGetRef_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char varName[0x50];
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
 	{
+		REF_MAP_CS
 		RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
 		if (idsMap)
 		{
@@ -95,11 +106,12 @@ bool Cmd_RefMapArrayGetRef_Execute(COMMAND_ARGS)
 
 bool Cmd_RefMapArrayGetString_Execute(COMMAND_ARGS)
 {
-	const char *resStr = NULL;
+	const char *resStr = nullptr;
 	char varName[0x50];
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
 	{
+		REF_MAP_CS
 		RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
 		if (idsMap)
 		{
@@ -116,9 +128,10 @@ bool Cmd_RefMapArrayGetValue_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char varName[0x50];
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
 	{
+		REF_MAP_CS
 		RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
 		if (idsMap)
 		{
@@ -137,16 +150,17 @@ RefMapIDsMap::Iterator s_refMapIterator;
 
 NVSEArrayVar* __fastcall RefMapArrayIterator(Script *scriptObj, char *varName, bool getFirst)
 {
+	REF_MAP_CS
 	RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
-	if (!idsMap) return NULL;
+	if (!idsMap) return nullptr;
 	if (getFirst || (s_refMapIterator.Table() != idsMap))
 	{
 		s_refMapIterator.Init(*idsMap);
 		if (!s_refMapIterator)
-			return NULL;
+			return nullptr;
 	}
 	else if (!s_refMapIterator.IsValid())
-		return NULL;
+		return nullptr;
 	ArrayElementL elements[2] = {LookupFormByRefID(s_refMapIterator.Key()), s_refMapIterator().GetAsElement()};
 	++s_refMapIterator;
 	return CreateArray(elements, 2, scriptObj);
@@ -180,7 +194,9 @@ bool Cmd_RefMapArrayGetKeys_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char varName[0x50];
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName))
+		return true;
+	REF_MAP_CS
 	RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
 	if (!idsMap) return true;
 	TempElements *tmpElements = GetTempElements();
@@ -196,11 +212,13 @@ bool Cmd_RefMapArrayGetAll_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 type;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &type)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &type))
+		return true;
 	RefMapInfo varInfo(scriptObj, type);
+	REF_MAP_CS
 	RefMapVarsMap *findMod = varInfo.ModsMap().GetPtr(varInfo.modIndex);
 	if (!findMod || findMod->Empty()) return true;
-	NVSEArrayVar *varsMap = CreateStringMap(NULL, NULL, 0, scriptObj);
+	NVSEArrayVar *varsMap = CreateStringMap(nullptr, nullptr, 0, scriptObj);
 	TempElements *tmpElements = GetTempElements();
 	for (auto varIter = findMod->Begin(); varIter; ++varIter)
 	{
@@ -226,16 +244,17 @@ AuxVariableValue* __fastcall RefMapAddValue(TESForm *form, TESObjectREFR *thisOb
 			return &varInfo.ModsMap()[varInfo.modIndex][varName][keyID];
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 bool Cmd_RefMapArraySetFloat_Execute(COMMAND_ARGS)
 {
 	char varName[0x50];
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	double fltVal;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &fltVal, &form))
 	{
+		REF_MAP_CS
 		AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName);
 		if (value) *value = fltVal;
 	}
@@ -245,9 +264,10 @@ bool Cmd_RefMapArraySetFloat_Execute(COMMAND_ARGS)
 bool Cmd_RefMapArraySetRef_Execute(COMMAND_ARGS)
 {
 	char varName[0x50];
-	TESForm *form = NULL, *refVal;
+	TESForm *form = nullptr, *refVal;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &refVal, &form))
 	{
+		REF_MAP_CS
 		AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName);
 		if (value) *value = refVal;
 	}
@@ -257,9 +277,10 @@ bool Cmd_RefMapArraySetRef_Execute(COMMAND_ARGS)
 bool Cmd_RefMapArraySetString_Execute(COMMAND_ARGS)
 {
 	char varName[0x50], *buffer = GetStrArgBuffer();
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, buffer, &form))
 	{
+		REF_MAP_CS
 		AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName);
 		if (value) *value = buffer;
 	}
@@ -270,17 +291,18 @@ bool Cmd_RefMapArraySetValue_Execute(COMMAND_ARGS)
 {
 	char varName[0x50];
 	UInt32 arrID;
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &arrID, &form))
 	{
 		NVSEArrayVar *srcArr = LookupArrayByID(arrID);
 		if (srcArr && (GetArraySize(srcArr) == 1))
 		{
+			REF_MAP_CS
 			AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName);
 			if (value)
 			{
 				ArrayElementR element;
-				GetElements(srcArr, &element, NULL);
+				GetElements(srcArr, &element, nullptr);
 				*value = element;
 			}
 		}
@@ -292,9 +314,11 @@ bool Cmd_RefMapArrayErase_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char varName[0x50];
-	TESForm *form = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form) || !varName[0]) return true;
+	TESForm *form = nullptr;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form) || !varName[0])
+		return true;
 	RefMapInfo varInfo(scriptObj, varName);
+	REF_MAP_CS
 	auto findMod = varInfo.ModsMap().Find(varInfo.modIndex);
 	if (!findMod) return true;
 	auto findVar = findMod().Find(varName);
@@ -317,8 +341,10 @@ bool Cmd_RefMapArrayValidate_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char varName[0x50];
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName) || !varName[0]) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName) || !varName[0])
+		return true;
 	RefMapInfo varInfo(scriptObj, varName);
+	REF_MAP_CS
 	auto findMod = varInfo.ModsMap().Find(varInfo.modIndex);
 	if (!findMod) return true;
 	auto findVar = findMod().Find(varName);
@@ -344,8 +370,10 @@ bool Cmd_RefMapArrayValidate_Execute(COMMAND_ARGS)
 bool Cmd_RefMapArrayDestroy_Execute(COMMAND_ARGS)
 {
 	char varName[0x50];
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName) || !varName[0]) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName) || !varName[0])
+		return true;
 	RefMapInfo varInfo(scriptObj, varName);
+	REF_MAP_CS
 	auto findMod = varInfo.ModsMap().Find(varInfo.modIndex);
 	if (!findMod) return true;
 	auto findVar = findMod().Find(varName);

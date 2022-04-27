@@ -3,20 +3,21 @@
 
 alignas(16) const HexFloat kPackedValues[] =
 {
-	0x7FFFFFFFUL, 0x7FFFFFFFUL, 0x7FFFFFFFUL, 0x7FFFFFFFUL,
-	0x7FFFFFFFUL, 0UL, 0UL, 0UL,
-	0x80000000UL, 0x80000000UL, 0x80000000UL, 0x80000000UL,
-	0x80000000UL, 0UL, 0UL, 0UL,
-	0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0UL,
+	PS_DUP_4(0x7FFFFFFFUL),
+	PS_DUP_1(0x7FFFFFFFUL),
+	PS_DUP_4(0x80000000UL),
+	PS_DUP_1(0x80000000UL),
+	PS_DUP_3(0xFFFFFFFFUL),
 	0xFFFFFFFFUL, 0x7FFFFFFFUL, 0xFFFFFFFFUL, 0x7FFFFFFFUL,
 	0UL, 0x80000000UL, 0UL, 0x80000000UL,
-	FLT_EPSILON, FLT_EPSILON, FLT_EPSILON, FLT_EPSILON,
-	0.01745329238F, 0.01745329238F, 0.01745329238F, 0UL,
-	1.570796371F, 1.570796371F, 1.570796371F, 0UL,
-	3.141592741F, 3.141592741F, 3.141592741F, 0UL,
-	6.283185482F, 6.283185482F, 6.283185482F, 0UL,
-	0.5F, 0.5F, 0.5F, 0UL,
-	1.0F, 1.0F, 1.0F, 0UL,
+	PS_DUP_4(FLT_EPSILON),
+	PS_DUP_3(FltPId180),
+	PS_DUP_3(Flt180dPI),
+	PS_DUP_3(FltPId2),
+	PS_DUP_3(FltPI),
+	PS_DUP_3(FltPIx2),
+	PS_DUP_3(0.5F),
+	PS_DUP_3(1.0F),
 	0.001F, 0.01F, 0.1F, 0.25F,
 	3.0F, 10.0F, 100.0F, 0UL
 };
@@ -63,8 +64,6 @@ kUprCaseConverter[] =
 
 memcpy_t MemCopy = memcpy, MemMove = memmove;
 
-#define FAST_SLEEP_COUNT 10000UL
-
 __declspec(naked) PrimitiveCS *PrimitiveCS::Enter()
 {
 	__asm
@@ -78,7 +77,6 @@ __declspec(naked) PrimitiveCS *PrimitiveCS::Enter()
 		mov		eax, ebx
 		pop		ebx
 		retn
-		NOP_0xA
 	doSpin:
 		mov		ecx, eax
 		xor		eax, eax
@@ -86,20 +84,15 @@ __declspec(naked) PrimitiveCS *PrimitiveCS::Enter()
 		test	eax, eax
 		jz		done
 		push	esi
-		push	edi
 		mov		esi, ecx
-		mov		edi, FAST_SLEEP_COUNT
+		ALIGN 16
 	spinHead:
-		dec		edi
-		mov		edx, edi
-		shr		edx, 0x1F
-		push	edx
+		push	0
 		call	Sleep
 		xor		eax, eax
 		lock cmpxchg [ebx], esi
 		test	eax, eax
 		jnz		spinHead
-		pop		edi
 		pop		esi
 		mov		eax, ebx
 		pop		ebx
@@ -119,7 +112,7 @@ __declspec(naked) void LightCS::Enter()
 		inc		dword ptr [ebx+4]
 		pop		ebx
 		retn
-		NOP_0x9
+		ALIGN 16
 	doSpin:
 		mov		ecx, eax
 		xor		eax, eax
@@ -127,20 +120,15 @@ __declspec(naked) void LightCS::Enter()
 		test	eax, eax
 		jz		done
 		push	esi
-		push	edi
 		mov		esi, ecx
-		mov		edi, FAST_SLEEP_COUNT
+		ALIGN 16
 	spinHead:
-		dec		edi
-		mov		edx, edi
-		shr		edx, 0x1F
-		push	edx
+		push	0
 		call	Sleep
 		xor		eax, eax
 		lock cmpxchg [ebx], esi
 		test	eax, eax
 		jnz		spinHead
-		pop		edi
 		pop		esi
 	done:
 		mov		dword ptr [ebx+4], 1
@@ -258,7 +246,7 @@ __declspec(naked) float __vectorcall fMod(float numer, float denom)
 {
 	__asm
 	{
-		movss	xmm2, xmm0
+		movaps	xmm2, xmm0
 		divss	xmm2, xmm1
 		cvttps2dq	xmm2, xmm2
 		cvtdq2ps	xmm2, xmm2
@@ -272,7 +260,7 @@ __declspec(naked) float __vectorcall Sin(float angle)
 {
 	__asm
 	{
-		movss	xmm1, xmm0
+		movaps	xmm1, xmm0
 		movss	xmm0, PS_V3_PId2
 		subss	xmm0, xmm1
 		jmp		Cos
@@ -281,26 +269,25 @@ __declspec(naked) float __vectorcall Sin(float angle)
 
 __declspec(naked) float __vectorcall Cos(float angle)
 {
-	alignas(16) static const float kCosCst[] = {2.315393249e-05F, 0.001385370386F, 0.04166358337F, 0.4999990463F, 0.9999999404F, 0.1591549367F, 0.6366197467F};
 	__asm
 	{
 		andps	xmm0, PS_AbsMask0
 		movss	xmm2, PS_V3_PIx2
-		comiss	xmm0, xmm2
-		jb		perdOK
-		movss	xmm1, kCosCst+0x14
+		movss	xmm1, kFlt2dPI
 		mulss	xmm1, xmm0
-		cvttps2dq	xmm1, xmm1
-		cvtdq2ps	xmm1, xmm1
+		cvttss2si	eax, xmm1
+		cmp		eax, 3
+		jle		perdOK
+		mov		edx, eax
+		and		eax, 3
+		shr		edx, 2
+		cvtsi2ss	xmm1, edx
 		mulss	xmm1, xmm2
 		subss	xmm0, xmm1
 	perdOK:
 		xorps	xmm3, xmm3
 		comiss	xmm0, xmm3
 		jbe		retn1
-		movss	xmm1, kCosCst+0x18
-		mulss	xmm1, xmm0
-		cvttss2si	eax, xmm1
 		test	al, al
 		jz		doCalc
 		jp		fourthQ
@@ -310,24 +297,88 @@ __declspec(naked) float __vectorcall Cos(float angle)
 		subss	xmm0, xmm2
 	doCalc:
 		mulss	xmm0, xmm0
-		movaps	xmm2, kCosCst
-		movss	xmm1, xmm2
+		movaps	xmm1, xmm0
+		mulss	xmm1, kCosConsts
+		subss	xmm1, kCosConsts+4
 		mulss	xmm1, xmm0
-		psrldq	xmm2, 4
-		subss	xmm1, xmm2
+		addss	xmm1, kCosConsts+8
 		mulss	xmm1, xmm0
-		psrldq	xmm2, 4
-		addss	xmm1, xmm2
-		mulss	xmm1, xmm0
-		psrldq	xmm2, 4
-		subss	xmm1, xmm2
+		subss	xmm1, kCosConsts+0xC
 		mulss	xmm0, xmm1
-		addss	xmm0, kCosCst+0x10
+		addss	xmm0, kCosConsts+0x10
 		xorps	xmm0, xmm3
 		retn
 	retn1:
 		movss	xmm0, PS_V3_One
 		retn
+		ALIGN 16
+	kFlt2dPI:
+		EMIT_DW(3F, 22, F9, 83)
+	kCosConsts:
+		EMIT_DW(37, C2, 3A, B1)
+		EMIT_DW(3A, B5, 95, 51)
+		EMIT_DW(3D, 2A, A7, 6F)
+		EMIT_DW(3E, FF, FF, E0)
+		EMIT_DW(3F, 7F, FF, FF)
+	}
+}
+
+__declspec(naked) __m128 __vectorcall Cos_PS(__m128 angles)
+{
+	__asm
+	{
+		andps	xmm0, PS_AbsMask
+		movaps	xmm1, xmm0
+		movaps	xmm2, PS_V3_PIx2
+		mulps	xmm1, kPS2dPI
+		cvttps2dq	xmm1, xmm1
+		movaps	xmm3, xmm1
+		pcmpgtd	xmm3, kQuadTest
+		movmskps	edx, xmm3
+		test	dl, dl
+		jz		perdOK
+		movaps	xmm3, xmm1
+		andps	xmm1, kQuadTest
+		psrld	xmm3, 2
+		cvtdq2ps	xmm3, xmm3
+		mulps	xmm3, xmm2
+		subps	xmm0, xmm3
+	perdOK:
+		movaps	xmm3, xmm1
+		pcmpgtd	xmm1, kQuadTest+0x10
+		andps	xmm2, xmm1
+		andnps	xmm1, xmm3
+		xorps	xmm3, xmm3
+		pcmpgtd	xmm1, xmm3
+		movaps	xmm3, xmm1
+		pslld	xmm3, 0x1F
+		andps	xmm1, PS_V3_PI
+		orps	xmm1, xmm2
+		subps	xmm0, xmm1
+		mulps	xmm0, xmm0
+		movaps	xmm1, kCosConsts
+		mulps	xmm1, xmm0
+		subps	xmm1, kCosConsts+0x10
+		mulps	xmm1, xmm0
+		addps	xmm1, kCosConsts+0x20
+		mulps	xmm1, xmm0
+		subps	xmm1, kCosConsts+0x30
+		mulps	xmm0, xmm1
+		addps	xmm0, kCosConsts+0x40
+		xorps	xmm0, xmm3
+		retn
+		ALIGN 16
+	kPS2dPI:
+		EMIT_PS_3(3F, 22, F9, 83)
+	kQuadTest:
+		EMIT_PS_3(00, 00, 00, 03)
+		EMIT_PS_3(00, 00, 00, 02)
+	kCosConsts:
+		EMIT_PS_3(37, C2, 3A, B1)
+		EMIT_PS_3(3A, B5, 95, 51)
+		EMIT_PS_3(3D, 2A, A7, 6F)
+		EMIT_PS_3(3E, FF, FF, E0)
+		EMIT_PS_3(3F, 7F, FF, FF)
 	}
 }
 
@@ -335,101 +386,27 @@ __declspec(naked) __m128 __vectorcall GetSinCos(float angle)
 {
 	__asm
 	{
-		movmskps	edx, xmm0
-		call	Cos
-		movss	xmm1, xmm0
-		mulss	xmm0, xmm0
-		movss	xmm2, PS_V3_One
-		subss	xmm2, xmm0
-		xorps	xmm0, xmm0
-		comiss	xmm2, xmm0
-		jbe		done
-		sqrtss	xmm0, xmm2
-		and		dl, 1
-		neg		dl
-		xor		al, dl
-		test	al, 2
-		jz		done
-		xorps	xmm0, PS_FlipSignMask0
-	done:
+		movaps	xmm1, xmm0
+		movss	xmm0, PS_V3_PId2
+		subss	xmm0, xmm1
 		unpcklps	xmm0, xmm1
+		call	Cos_PS
+		movshdup	xmm1, xmm0
 		retn
 	}
 }
 
 __declspec(naked) __m128 __vectorcall GetSinCosV3(__m128 angles)
 {
-	alignas(16) static constexpr HexFloat kCosV3Consts[] =
-	{
-		0.1591549367F, 0.1591549367F, 0.1591549367F, 0UL,
-		0.6366197467F, 0.6366197467F, 0.6366197467F, 0UL,
-		2UL, 2UL, 2UL, 0UL,
-		2.315393249e-05F, 2.315393249e-05F, 2.315393249e-05F, 0UL,
-		0.001385370386F, 0.001385370386F, 0.001385370386F, 0UL,
-		0.04166358337F, 0.04166358337F, 0.04166358337F, 0UL,
-		0.4999990463F, 0.4999990463F, 0.4999990463F, 0UL,
-		0.9999999404F, 0.9999999404F, 0.9999999404F, 0UL
-	};
 	__asm
 	{
-		mov		edx, offset kPackedValues
 		movaps	xmm5, xmm0
-		andps	xmm0, [edx]
-		movaps	xmm1, xmm0
-		movaps	xmm2, [edx+0xB0]
-		cmpnltps	xmm1, xmm2
-		movmskps	eax, xmm1
-		test	al, 7
-		mov		eax, offset kCosV3Consts
-		jz		perdOK
-		movaps	xmm1, xmm0
-		mulps	xmm1, [eax]
-		cvttps2dq	xmm1, xmm1
-		cvtdq2ps	xmm1, xmm1
-		mulps	xmm1, xmm2
-		subps	xmm0, xmm1
-	perdOK:
-		movaps	xmm1, xmm0
-		mulps	xmm1, [eax+0x10]
-		cvttps2dq	xmm1, xmm1
-		movaps	xmm4, xmm1
-		movaps	xmm6, [eax+0x20]
-		pcmpgtd	xmm1, xmm6
-		andps	xmm2, xmm1
-		xorps	xmm1, [edx+0x40]
-		andps	xmm1, xmm4
-		xorps	xmm3, xmm3
-		pcmpgtd	xmm1, xmm3
-		movaps	xmm3, xmm1
-		andps	xmm1, [edx+0xA0]
-		subps	xmm0, xmm1
-		subps	xmm0, xmm2
-		pslld	xmm3, 0x1F
-		mulps	xmm0, xmm0
-		movaps	xmm1, [eax+0x30]
-		mulps	xmm1, xmm0
-		subps	xmm1, [eax+0x40]
-		mulps	xmm1, xmm0
-		addps	xmm1, [eax+0x50]
-		mulps	xmm1, xmm0
-		subps	xmm1, [eax+0x60]
-		mulps	xmm0, xmm1
-		addps	xmm0, [eax+0x70]
-		xorps	xmm0, xmm3
-		movaps	xmm1, xmm0
-		mulps	xmm0, xmm0
-		movaps	xmm2, [edx+0xD0]
-		subps	xmm2, xmm0
-		movaps	xmm3, xmm2
-		xorps	xmm0, xmm0
-		cmpnleps	xmm3, xmm0
-		andps	xmm2, xmm3
-		sqrtps	xmm0, xmm2
-		psrad	xmm5, 0x1F
-		xorps	xmm4, xmm5
-		andps	xmm4, xmm6
-		pslld	xmm4, 0x1E
-		xorps	xmm0, xmm4
+		call	Cos_PS
+		movaps	xmm4, xmm0
+		movaps	xmm0, PS_V3_PId2
+		subps	xmm0, xmm5
+		call	Cos_PS
+		movaps	xmm1, xmm4
 		retn
 	}
 }
@@ -439,7 +416,7 @@ __declspec(naked) float __vectorcall Tan(float angle)
 	_asm
 	{
 		call	GetSinCos
-		movss	xmm2, xmm1
+		movaps	xmm2, xmm1
 		andps	xmm2, PS_AbsMask0
 		comiss	xmm2, PS_Epsilon
 		jb		ooRange
@@ -476,20 +453,20 @@ __declspec(naked) float __vectorcall ASin(float x)
 {
 	__asm
 	{
-		movss	xmm4, xmm0
+		xorps	xmm4, xmm4
+		comiss	xmm0, xmm4
+		jz		done
+		movaps	xmm4, xmm0
 		andps	xmm4, PS_FlipSignMask0
 		xorps	xmm0, xmm4
-		mov		eax, offset kASinConsts
-		comiss	xmm0, [eax+0x10]
-		jb		done
-		movss	xmm3, [eax+0x14]
+		movss	xmm3, kASinConsts+0x14
 		comiss	xmm0, xmm3
 		jnb		ooRange
-		movss	xmm1, [eax+0x1C]
+		movss	xmm1, kASinConsts+0x1C
 		paddd	xmm1, xmm0
-		movaps	xmm2, [eax]
+		movaps	xmm2, kASinConsts
 		cvttss2si	eax, xmm1
-		movss	xmm1, xmm2
+		movaps	xmm1, xmm2
 		mulss	xmm1, xmm0
 		psrldq	xmm2, 4
 		addss	xmm1, xmm2
@@ -498,7 +475,7 @@ __declspec(naked) float __vectorcall ASin(float x)
 		subss	xmm1, xmm2
 		mulss	xmm1, xmm0
 		subss	xmm3, xmm0
-		pshufd	xmm0, xmm2, 0xA9
+		movshdup	xmm0, xmm2
 		addss	xmm1, xmm0
 		sqrtss	xmm2, xmm3
 		mulss	xmm2, xmm1
@@ -508,7 +485,7 @@ __declspec(naked) float __vectorcall ASin(float x)
 	done:
 		retn
 	ooRange:
-		movss	xmm0, [eax+0xC]
+		movss	xmm0, kASinConsts+0xC
 		xorps	xmm0, xmm4
 		retn
 	}
@@ -518,20 +495,20 @@ __declspec(naked) float __vectorcall ACos(float x)
 {
 	_asm
 	{
-		movss	xmm4, xmm0
+		xorps	xmm4, xmm4
+		comiss	xmm0, xmm4
+		jz		isZero
+		movaps	xmm4, xmm0
 		andps	xmm4, PS_FlipSignMask0
 		xorps	xmm0, xmm4
-		mov		eax, offset kASinConsts
-		comiss	xmm0, [eax+0x10]
-		jb		isZero
-		movq	xmm3, qword ptr [eax+0x14]
+		movss	xmm3, kASinConsts+0x14
 		comiss	xmm0, xmm3
 		jnb		ooRange
-		movss	xmm1, [eax+0x1C]
+		movss	xmm1, kASinConsts+0x1C
 		paddd	xmm1, xmm0
-		movaps	xmm2, [eax]
+		movaps	xmm2, kASinConsts
 		cvttss2si	eax, xmm1
-		movss	xmm1, xmm2
+		movaps	xmm1, xmm2
 		mulss	xmm1, xmm0
 		psrldq	xmm2, 4
 		addss	xmm1, xmm2
@@ -548,16 +525,15 @@ __declspec(naked) float __vectorcall ACos(float x)
 		movmskps	eax, xmm4
 		test	al, al
 		jz		done
-		psrldq	xmm3, 4
 		xorps	xmm0, xmm4
-		addss	xmm0, xmm3
+		addss	xmm0, kASinConsts+0x18
 	done:
 		retn
 	isZero:
-		movss	xmm0, [eax+0xC]
+		movss	xmm0, kASinConsts+0xC
 		retn
 	ooRange:
-		pshufd	xmm0, xmm3, 0xA9
+		movss	xmm0, kASinConsts+0x18
 		psrad	xmm4, 0x1F
 		andps	xmm0, xmm4
 		retn
@@ -575,7 +551,6 @@ __declspec(naked) float __vectorcall ATan(float x)
 
 __declspec(naked) float __vectorcall ATan2(float y, float x)
 {
-	alignas(16) static const float kATanCst[] = {-0.01348046958F, 0.05747731403F, 0.1212390736F, 0.1956359297F, 0.3329946101F, 0.9999956489F};
 	__asm
 	{
 		xorps	xmm2, xmm2
@@ -583,52 +558,43 @@ __declspec(naked) float __vectorcall ATan2(float y, float x)
 		jz		zeroY
 		comiss	xmm1, xmm2
 		jz		zeroX
-		movss	xmm6, PS_AbsMask0
-		movss	xmm2, xmm0
-		andps	xmm2, xmm6
-		movss	xmm3, xmm1
-		andps	xmm3, xmm6
-		movss	xmm4, xmm2
-		movss	xmm5, xmm3
-		maxss	xmm4, xmm5
-		minss	xmm5, xmm2
-		divss	xmm5, xmm4
-		movss	xmm4, xmm5
+		movaps	xmm2, xmm0
+		unpcklpd	xmm2, xmm1
+		andps	xmm2, PS_AbsMask
+		movaps	xmm3, xmm2
+		pshufd	xmm4, xmm2, 0xFE
+		maxss	xmm3, xmm4
+		minss	xmm4, xmm2
+		divss	xmm4, xmm3
+		movaps	xmm3, xmm4
+		mulss	xmm3, xmm4
+		movaps	xmm5, xmm3
+		mulss	xmm5, kATanConsts
+		addss	xmm5, kATanConsts+4
+		mulss	xmm5, xmm3
+		subss	xmm5, kATanConsts+8
+		mulss	xmm5, xmm3
+		addss	xmm5, kATanConsts+0xC
+		mulss	xmm5, xmm3
+		subss	xmm5, kATanConsts+0x10
+		mulss	xmm5, xmm3
+		addss	xmm5, kATanConsts+0x14
 		mulss	xmm4, xmm5
-		movlhps	xmm2, xmm3
-		movaps	xmm3, kATanCst
-		movss	xmm6, xmm3
-		mulss	xmm6, xmm4
-		psrldq	xmm3, 4
-		addss	xmm6, xmm3
-		mulss	xmm6, xmm4
-		psrldq	xmm3, 4
-		subss	xmm6, xmm3
-		mulss	xmm6, xmm4
-		psrldq	xmm3, 4
-		addss	xmm6, xmm3
-		mulss	xmm6, xmm4
-		movaps	xmm3, kATanCst+0x10
-		subss	xmm6, xmm3
-		mulss	xmm6, xmm4
-		psrldq	xmm3, 4
-		addss	xmm6, xmm3
-		mulss	xmm6, xmm5
-		movss	xmm4, PS_FlipSignMask0
-		movhlps	xmm3, xmm2
-		comiss	xmm2, xmm3
+		movss	xmm3, PS_FlipSignMask0
+		pshufd	xmm5, xmm2, 0xFE
+		comiss	xmm2, xmm5
 		jbe		doneCmp1
-		xorps	xmm6, xmm4
-		addss	xmm6, PS_V3_PId2
+		xorps	xmm4, xmm3
+		addss	xmm4, PS_V3_PId2
 	doneCmp1:
 		xorps	xmm2, xmm2
 		comiss	xmm1, xmm2
 		jnb		doneCmp2
-		xorps	xmm6, xmm4
-		addss	xmm6, PS_V3_PI
+		xorps	xmm4, xmm3
+		addss	xmm4, PS_V3_PI
 	doneCmp2:
-		andps	xmm0, xmm4
-		xorps	xmm0, xmm6
+		andps	xmm0, xmm3
+		xorps	xmm0, xmm4
 		retn
 	zeroY:
 		comiss	xmm1, xmm2
@@ -636,12 +602,19 @@ __declspec(naked) float __vectorcall ATan2(float y, float x)
 		movss	xmm0, PS_V3_PI
 		retn
 	zeroX:
-		movss	xmm1, xmm0
-		andps	xmm1, PS_FlipSignMask0
-		movss	xmm0, PS_V3_PId2
-		xorps	xmm0, xmm1
+		movss	xmm1, PS_V3_PId2
+		andps	xmm0, PS_FlipSignMask0
+		orps	xmm0, xmm1
 	done:
 		retn
+		ALIGN 16
+	kATanConsts:
+		EMIT_DW(BC, 5C, DD, 30)
+		EMIT_DW(3D, 6B, 6D, 55)
+		EMIT_DW(3D, F8, 4C, 31)
+		EMIT_DW(3E, 48, 54, C9)
+		EMIT_DW(3E, AA, 7E, 45)
+		EMIT_DW(3F, 7F, FF, B7)
 	}
 }
 
@@ -2087,18 +2060,35 @@ int FileStream::WriteFmtStr(const char *fmt, ...)
 	return iWritten;
 }
 
-void FileStream::MakeAllDirs(char *fullPath)
+__declspec(naked) void __fastcall FileStream::MakeAllDirs(char *fullPath)
 {
-	char *traverse = fullPath, curr;
-	while (curr = *traverse)
+	__asm
 	{
-		if ((curr == '\\') || (curr == '/'))
-		{
-			*traverse = 0;
-			CreateDirectory(fullPath, NULL);
-			*traverse = '\\';
-		}
-		traverse++;
+		push	esi
+		push	edi
+		mov		esi, ecx
+		lea		edi, [ecx-1]
+		ALIGN 16
+	iterHead:
+		inc		edi
+		mov		al, [edi]
+		test	al, al
+		jz		done
+		cmp		al, '/'
+		jz		slash
+		cmp		al, '\\'
+		jnz		iterHead
+	slash:
+		mov		[edi], 0
+		push	0
+		push	esi
+		call	CreateDirectoryA
+		mov		[edi], '\\'
+		jmp		iterHead
+	done:
+		pop		edi
+		pop		esi
+		retn
 	}
 }
 
@@ -2130,13 +2120,13 @@ void DebugLog::FmtMessage(const char *fmt, va_list args)
 	fflush(theFile);
 }
 
-DebugLog s_log, s_debug;
+TempObject<DebugLog> s_log, s_debug;
 
 void PrintLog(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	s_log.FmtMessage(fmt, args);
+	s_log().FmtMessage(fmt, args);
 	va_end(args);
 }
 
@@ -2144,7 +2134,7 @@ void PrintDebug(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	s_debug.FmtMessage(fmt, args);
+	s_debug().FmtMessage(fmt, args);
 	va_end(args);
 }
 

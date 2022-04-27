@@ -207,7 +207,7 @@ bool Cmd_SetNthDestructionStageReplacement_Execute(COMMAND_ARGS)
 	if (!rplc)
 	{
 		destructible->data->stages[idx]->replacement = rplc = (TESModelTextureSwap*)GameHeapAlloc(sizeof(TESModelTextureSwap));
-		MemZero(rplc, sizeof(TESModelTextureSwap));
+		ZeroMemory(rplc, sizeof(TESModelTextureSwap));
 		*(UInt32*)rplc = kVtbl_TESModelTextureSwap;
 	}
 	rplc->SetModelPath(path);
@@ -229,7 +229,7 @@ bool Cmd_AddDestructionStage_Execute(COMMAND_ARGS)
 	if (idx < 0) idx = count;
 	*result = idx;
 	DestructionStage *destrStage = (DestructionStage*)GameHeapAlloc(sizeof(DestructionStage));
-	MemZero(destrStage, sizeof(DestructionStage));
+	ZeroMemory(destrStage, sizeof(DestructionStage));
 	destrStage->healthPrc = health;
 	destrStage->dmgStage = dmgStg;
 	if (!destructible->data)

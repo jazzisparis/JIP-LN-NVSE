@@ -189,7 +189,7 @@ bool Cmd_LNGetName_Execute(COMMAND_ARGS)
 	TESForm *form = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (form || (thisObj && (form = thisObj->baseForm))))
 	{
-		if (thisObj) resStr = s_refNamesMap.Get(thisObj);
+		if (thisObj) resStr = s_refNamesMap().Get(thisObj);
 		if (!resStr) resStr = form->GetTheName();
 	}
 	AssignString(PASS_COMMAND_ARGS, resStr);

@@ -341,7 +341,6 @@ public:
 		{
 			ThisCall(0x4459E0, this, 1);
 		}
-		void Cleanup();
 		bool __fastcall HasExtraType(UInt8 xType);
 		bool HasExtraLeveledItem();
 		ExtraDataList *GetEquippedExtra();
@@ -371,8 +370,6 @@ public:
 	};
 
 	Data	*data;	// 0C
-
-	void Cleanup();	// clean up unneeded extra data from each EntryData
 
 	static ExtraContainerChanges* Create();
 
@@ -435,11 +432,12 @@ class ExtraLock : public BSExtraData
 public:
 	struct Data
 	{
-		UInt32	lockLevel;	// 00
+		UInt8	lockLevel;	// 00
+		UInt8	pad01[3];	// 01
 		TESKey	*key;		// 04
-		UInt8	flags;		// 08
+		UInt8	flags;		// 08	1 - IsLocked
 		UInt8	pad09[3];	// 09
-		UInt32  unk0C;		// 0C introduced since form version 0x10
+		UInt32  unk0C;		// 0C	introduced since form version 0x10
 		UInt32	unk10;		// 10
 	};
 
@@ -766,7 +764,7 @@ class ExtraTimeLeft : public BSExtraData
 public:
 	float		timeLeft;		// 0C
 
-	static ExtraTimeLeft *Create();
+	static ExtraTimeLeft *Create(float _timeLeft);
 };
 
 // 10
@@ -938,6 +936,14 @@ public:
 	static ExtraCellImageSpace* __stdcall Create(TESImageSpace *_imgSpace);
 };
 
+// 14
+class ExtraModelSwap : public BSExtraData
+{
+public:
+	TESModelTextureSwap	*model;		// 0C
+	TESForm				*baseForm;	// 10
+};
+
 // 10
 class ExtraRadius : public BSExtraData
 {
@@ -987,23 +993,32 @@ public:
 	TESObjectREFR		*positionRef;	// 18
 };
 
+class BSMultiBoundShape;
+
 // 34
 class BGSPrimitive
 {
 public:
 	virtual void	Destructor(bool doFree);
-	virtual void	Unk_01(void);
-	virtual void	Unk_02(void);
-	virtual void	Unk_03(void);
-	virtual void	Unk_04(void);
-	virtual void	Unk_05(void);
+	virtual void	CreateFadeNode();
+	virtual void	SetColor(NiColorAlpha *_color);
+	virtual void	SetBounds(NiVector3 *_bounds);
+	virtual bool	TestBounds(NiVector3 *_bounds);
+	virtual BSMultiBoundShape	*CreateShape(NiVector3 *arg);
+
+	enum PrimitiveType
+	{
+		kType_Box =		1,
+		kType_Sphere =	2,
+		kType_Plane =	3
+	};
 
 	UInt32			type;		// 04
-	float			unk08[4];	// 08
-	float			bounds[3];	// 18
+	NiColorAlpha	color;		// 08
+	NiVector3		bounds;		// 18
 	NiRefObject		*unk24;		// 24
 	NiRefObject		*unk28;		// 28
-	NiRefObject		*unk2C;		// 2C
+	BSFadeNode		*node;		// 2C
 	UInt32			unk30;		// 30
 };
 

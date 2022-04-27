@@ -157,11 +157,12 @@ struct NVSEIOInterface
 
 struct NVSEMessagingInterface
 {
-	struct Message {
-		const char	* sender;
+	struct Message
+	{
+		const char	*sender;
 		UInt32		type;
 		UInt32		dataLen;
-		void		* data;
+		void		*data;
 	};
 
 	typedef void (* EventCallback)(Message* msg);
@@ -224,8 +225,11 @@ struct NVSEMessagingInterface
 // added for kVersion == 4 (xNVSE)
 		kMessage_DeferredInit,
 		kMessage_ClearScriptDataCache,
-		kMessage_MainGameLoop,
-		kMessage_ScriptCompile
+		kMessage_MainGameLoop,			// called each game loop
+		kMessage_ScriptCompile,			// EDITOR: called after successful script compilation in GECK. data: pointer to Script
+		kMessage_EventListDestroyed,	// called before a script event list is destroyed, dataLen: 4, data: ScriptEventList* ptr
+		kMessage_PostQueryPlugins		// called after all plugins have been queried
+
 	};
 
 	UInt32	version;
@@ -366,6 +370,9 @@ struct NVSEArrayVarInterface
 			dataType = rhs.dataType;
 			return *this;
 		}
+
+		inline bool operator==(const Element &rhs) const {return raw == rhs.raw;}
+		inline bool operator<(const Element &rhs) const {return raw < rhs.raw;}
 	};
 
 	struct ElementR : Element
@@ -843,15 +850,16 @@ struct ExpressionEvaluatorUtils
 	ScriptVar*				(__fastcall *ScriptTokenGetScriptVar)(PluginScriptToken *scrToken);
 	const PluginTokenPair*	(__fastcall *ScriptTokenGetPair)(PluginScriptToken *scrToken);
 	const PluginTokenSlice*	(__fastcall *ScriptTokenGetSlice)(PluginScriptToken *scrToken);
+	UInt32					(__fastcall *ScriptTokenGetAnimGroup)(PluginScriptToken *scrToken);
+
+	void					(__fastcall *SetExpectedReturnType)(void *expEval, CommandReturnType type);
+	void					(__fastcall *AssignCommandResultFromElement)(void *expEval, NVSEArrayElement &result);
+	void					(__fastcall *ScriptTokenGetElement)(PluginScriptToken *scrToken, ArrayElementR &outElem);
+	bool					(__fastcall *ScriptTokenCanConvertTo)(PluginScriptToken *scrToken, UInt8 toType);
 
 	void					(*Reserved_1)(void) = nullptr;
 	void					(*Reserved_2)(void) = nullptr;
 	void					(*Reserved_3)(void) = nullptr;
-	void					(*Reserved_4)(void) = nullptr;
-	void					(*Reserved_5)(void) = nullptr;
-	void					(*Reserved_6)(void) = nullptr;
-	void					(*Reserved_7)(void) = nullptr;
-	void					(*Reserved_8)(void) = nullptr;
 };
 
 extern ExpressionEvaluatorUtils s_expEvalUtils;
@@ -884,6 +892,18 @@ public:
 	{
 		return s_expEvalUtils.GetNthArg(expEval, argIdx);
 	}
+
+	void SetExpectedReturnType(CommandReturnType type)
+	{
+		s_expEvalUtils.SetExpectedReturnType(expEval, type);
+	}
+
+	//	Will set the expected return type on its own.
+	//	If the Element is invalid, will throw an NVSE error in console about unexpected return type.
+	void AssignCommandResult(NVSEArrayElement &result)
+	{
+		s_expEvalUtils.AssignCommandResultFromElement(expEval, result);
+	}
 };
 
 struct PluginScriptToken
@@ -891,6 +911,11 @@ struct PluginScriptToken
 	Token_Type GetType()
 	{
 		return s_expEvalUtils.ScriptTokenGetType(this);
+	}
+
+	bool CanConvertTo(UInt8 toType)
+	{
+		return s_expEvalUtils.ScriptTokenCanConvertTo(this, toType);
 	}
 
 	double GetFloat()
@@ -933,6 +958,11 @@ struct PluginScriptToken
 		return s_expEvalUtils.ScriptTokenGetActorValue(this);
 	}
 
+	UInt32 GetAnimGroup()
+	{
+		return s_expEvalUtils.ScriptTokenGetAnimGroup(this);
+	}
+
 	ScriptVar *GetScriptVar()
 	{
 		return s_expEvalUtils.ScriptTokenGetScriptVar(this);
@@ -946,6 +976,11 @@ struct PluginScriptToken
 	const PluginTokenSlice *GetSlice()
 	{
 		return s_expEvalUtils.ScriptTokenGetSlice(this);
+	}
+
+	void GetElement(ArrayElementR &outElem)
+	{
+		s_expEvalUtils.ScriptTokenGetElement(this, outElem);
 	}
 };
 

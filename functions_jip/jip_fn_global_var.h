@@ -32,7 +32,7 @@ bool Cmd_GetGlobalRef_Execute(COMMAND_ARGS)
 			REFR_RES = global->uRefID;
 		else
 		{
-			s_resolvedGlobals.Insert(global);
+			s_resolvedGlobals().Insert(global);
 			REFR_RES = global->ResolveRefValue();
 		}
 	}

@@ -30,10 +30,6 @@ DEFINE_COMMAND_PLUGIN(SetOnPCTargetChangeEventHandler, 0, 2, kParams_OneForm_One
 DEFINE_COMMAND_ALT_PLUGIN(FreePlayer, GoodbyeWorldspace, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetLocalGravity, 0, 1, kParams_OneAxis);
 DEFINE_COMMAND_PLUGIN(SetLocalGravityVector, 0, 3, kParams_ThreeFloats);
-DEFINE_COMMAND_PLUGIN(SetOnKeyDownEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetOnKeyUpEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetOnControlDownEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetOnControlUpEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetReticlePos, 0, 2, kParams_OneOptionalInt_OneOptionalFloat);
 DEFINE_COMMAND_PLUGIN(GetReticleRange, 0, 2, kParams_OneOptionalInt_OneOptionalFloat);
 DEFINE_COMMAND_PLUGIN(SetOnDialogTopicEventHandler, 0, 3, kParams_OneForm_OneInt_OneForm);
@@ -75,6 +71,7 @@ DEFINE_COMMAND_PLUGIN(GetReticleNode, 0, 2, kParams_OneOptionalFloat_OneOptional
 DEFINE_COMMAND_PLUGIN(SetInternalMarker, 0, 2, kParams_OneForm_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetPointRayCastPos, 0, 9, kParams_FiveFloats_ThreeScriptVars_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(TogglePlayerSneaking, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(PlaceModel, 0, 8, kParams_OneString_SixFloats_OneOptionalFloat);
 
 bool Cmd_DisableNavMeshAlt_Execute(COMMAND_ARGS)
 {
@@ -235,14 +232,14 @@ bool Cmd_GetPCFastTravelled_Execute(COMMAND_ARGS)
 		if (!thisObj) return true;
 		caller = thisObj;
 	}
-	if (s_pcFastTravelInformed.Empty())
+	if (s_pcFastTravelInformed().Empty())
 		HOOK_MOD(PCFastTravel, true);
-	if (s_pcFastTravelInformed.Insert(caller))
+	if (s_pcFastTravelInformed().Insert(caller))
 	{
 		if (caller->jipFormFlags5 & kHookFormFlag5_FastTravelInformed) *result = 1;
 		else
 		{
-			s_eventInformedObjects.Insert(caller->refID);
+			s_eventInformedObjects().Insert(caller->refID);
 			caller->jipFormFlags5 |= kHookFormFlag5_FastTravelInformed;
 		}
 	}
@@ -258,14 +255,14 @@ bool Cmd_GetPCMovedCell_Execute(COMMAND_ARGS)
 		if (!thisObj) return true;
 		caller = thisObj;
 	}
-	if (s_pcCellChangeInformed.Empty())
+	if (s_pcCellChangeInformed().Empty())
 		HOOK_SET(PCCellChange, true);
-	if (s_pcCellChangeInformed.Insert(caller))
+	if (s_pcCellChangeInformed().Insert(caller))
 	{
 		if (caller->jipFormFlags5 & kHookFormFlag5_CellChangeInformed) *result = 1;
 		else
 		{
-			s_eventInformedObjects.Insert(caller->refID);
+			s_eventInformedObjects().Insert(caller->refID);
 			caller->jipFormFlags5 |= kHookFormFlag5_CellChangeInformed;
 		}
 	}
@@ -373,10 +370,10 @@ bool Cmd_SetOnFastTravelEventHandler_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt) || NOT_ID(script, Script)) return true;
 	if (addEvnt)
 	{
-		if (s_fastTravelEventScripts.Insert(script))
+		if (s_fastTravelEventScripts().Insert(script))
 			HOOK_MOD(PCFastTravel, true);
 	}
-	else if (s_fastTravelEventScripts.Erase(script))
+	else if (s_fastTravelEventScripts().Erase(script))
 		HOOK_MOD(PCFastTravel, false);
 	return true;
 }
@@ -450,10 +447,10 @@ bool Cmd_SetOnPCTargetChangeEventHandler_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt) || NOT_ID(script, Script)) return true;
 	if (addEvnt)
 	{
-		if (s_targetChangeEventScripts.Insert(script))
+		if (s_targetChangeEventScripts().Insert(script))
 			HOOK_MOD(SetPCTarget, true);
 	}
-	else if (s_targetChangeEventScripts.Erase(script))
+	else if (s_targetChangeEventScripts().Erase(script))
 		HOOK_MOD(SetPCTarget, false);
 	return true;
 }
@@ -484,54 +481,6 @@ bool Cmd_SetLocalGravityVector_Execute(COMMAND_ARGS)
 	return true;
 }
 
-UInt32 s_onKeyEventMask = 0;
-
-bool SetOnKeyEventHandler_Execute(COMMAND_ARGS)
-{
-	Script *script;
-	UInt32 addEvnt;
-	SInt32 keyID = -1;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &keyID) && IS_ID(script, Script))
-		SetInputEventHandler(s_onKeyEventMask, script, keyID, addEvnt != 0);
-	return true;
-}
-
-__declspec(naked) bool Cmd_SetOnKeyDownEventHandler_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_onKeyEventMask, kLNEventMask_OnKeyDown
-		jmp		SetOnKeyEventHandler_Execute
-	}
-}
-
-__declspec(naked) bool Cmd_SetOnKeyUpEventHandler_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_onKeyEventMask, kLNEventMask_OnKeyUp
-		jmp		SetOnKeyEventHandler_Execute
-	}
-}
-
-__declspec(naked) bool Cmd_SetOnControlDownEventHandler_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_onKeyEventMask, kLNEventMask_OnControlDown
-		jmp		SetOnKeyEventHandler_Execute
-	}
-}
-
-__declspec(naked) bool Cmd_SetOnControlUpEventHandler_Execute(COMMAND_ARGS)
-{
-	__asm
-	{
-		mov		s_onKeyEventMask, kLNEventMask_OnControlUp
-		jmp		SetOnKeyEventHandler_Execute
-	}
-}
-
 bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 {
 	*result = 0;
@@ -545,12 +494,12 @@ bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 	if (filter < 0) filter = 6;
 	else filter &= 0x3F;
 	NiCamera *camera = g_sceneGraph->camera;
-	NiVector4 coords;
-	if (!((NiVector3*)&coords)->RayCastCoords(camera->WorldTranslate(), camera->WorldRotate()[0], maxRange, filter))
+	NiVector3 coords;
+	if (!coords.RayCastCoords(camera->WorldTranslate(), camera->WorldRotate(), maxRange, filter))
 	{
 		if (numArgs < 2) return true;
-		coords = NiVector4((maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0, 0);
-		camera->m_transformWorld.GetTranslatedPos(&coords);
+		coords = {(maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0};
+		camera->m_transformWorld.GetTranslatedPos(coords);
 	}
 	ArrayElementL elements[3] = {coords.x, coords.y, coords.z};
 	AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
@@ -570,14 +519,14 @@ bool Cmd_GetReticleRange_Execute(COMMAND_ARGS)
 	if (filter < 0) filter = 6;
 	else filter &= 0x3F;
 	NiCamera *camera = g_sceneGraph->camera;
-	NiVector4 coords;
-	if (!((NiVector3*)&coords)->RayCastCoords(camera->WorldTranslate(), camera->WorldRotate()[0], maxRange, filter))
+	NiVector3 coords;
+	if (!coords.RayCastCoords(camera->WorldTranslate(), camera->WorldRotate(), maxRange, filter))
 	{
 		if (numArgs < 2) return true;
-		coords = NiVector4((maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0, 0);
-		camera->m_transformWorld.GetTranslatedPos(&coords);
+		coords = {(maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0};
+		camera->m_transformWorld.GetTranslatedPos(coords);
 	}
-	*result = Point3Distance(coords, &g_thePlayer->position);
+	*result = Point3Distance(coords, g_thePlayer->position);
 	return true;
 }
 
@@ -591,13 +540,13 @@ bool Cmd_SetOnDialogTopicEventHandler_Execute(COMMAND_ARGS)
 		if (addEvnt)
 		{
 			EventCallbackScripts *callbacks;
-			if (s_dialogTopicEventMap.Insert(form, &callbacks))
+			if (s_dialogTopicEventMap().Insert(form, &callbacks))
 				HOOK_MOD(RunResultScript, true);
 			callbacks->Insert(script);
 		}
 		else
 		{
-			auto findTopic = s_dialogTopicEventMap.Find(form);
+			auto findTopic = s_dialogTopicEventMap().Find(form);
 			if (findTopic && findTopic().Erase(script) && findTopic().Empty())
 			{
 				findTopic.Remove();
@@ -717,10 +666,10 @@ bool Cmd_SetOnLocationDiscoverEventHandler_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt) || NOT_ID(script, Script)) return true;
 	if (addEvnt)
 	{
-		if (s_locationDiscoverEventScripts.Insert(script))
+		if (s_locationDiscoverEventScripts().Insert(script))
 			HOOK_MOD(LocationDiscover, true);
 	}
-	else if (s_locationDiscoverEventScripts.Erase(script))
+	else if (s_locationDiscoverEventScripts().Erase(script))
 		HOOK_MOD(LocationDiscover, false);
 	return true;
 }
@@ -732,10 +681,10 @@ bool Cmd_SetOnCraftingEventHandler_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt) || NOT_ID(script, Script)) return true;
 	if (addEvnt)
 	{
-		if (s_itemCraftedEventScripts.Insert(script))
+		if (s_itemCraftedEventScripts().Insert(script))
 			HOOK_MOD(ItemCrafted, true);
 	}
-	else if (s_itemCraftedEventScripts.Erase(script))
+	else if (s_itemCraftedEventScripts().Erase(script))
 		HOOK_MOD(ItemCrafted, false);
 	return true;
 }
@@ -759,7 +708,7 @@ bool Cmd_SwapObjectLOD_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &worldSpc, &cellX, &cellY) && IS_ID(worldSpc, TESWorldSpace))
 	{
 		Coordinate cellXY(cellX, cellY);
-		if (s_swapObjLODMap[(UInt32)worldSpc].Insert(cellXY.xy))
+		if (s_swapObjLODMap()[(UInt32)worldSpc].Insert(cellXY.xy))
 			HOOK_SET(MakeObjLODPath, true);
 	}
 	return true;
@@ -795,7 +744,7 @@ bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 		while (++startIdx < 9);
 		if (rotationKeys)
 		{
-			rotYPR *= FltPId180;
+			rotYPR *= GET_PS(8);
 			NiQuaternion quaternion = rotYPR;
 			rotationKeys[1].value = quaternion;
 			rotationKeys[1].quaternion20 = quaternion;
@@ -818,17 +767,26 @@ bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 bool Cmd_SetGameHour_Execute(COMMAND_ARGS)
 {
 	float newHour;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &newHour))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &newHour) && (newHour >= 0))
 	{
-		if (g_gameHour->data <= newHour)
+		if (HOOK_INSTALLED(UpdateTimeGlobals) && !(s_serializedFlags & kSerializedFlag_NoHardcoreTracking))
+		{
+			double passed = newHour - g_gameHour->data;
+			if (g_gameHour->data > newHour)
+				passed += 24.0;
+			passed /= g_timeScale->data;
+			passed *= 3600.0;
+			UpdateTimeGlobalsHook(GameTimeGlobals::Get(), 0, passed);
+		}
+		else if (g_gameHour->data <= newHour)
 			g_gameHour->data = newHour;
-		else if (newHour >= 0)
+		else
 			g_gameHour->data = 24.0F + newHour;
 	}
 	return true;
 }
 
-UnorderedMap<const char*, UInt32> s_actorValueIDsMap(0x80);
+TempObject<UnorderedMap<const char*, UInt32>> s_actorValueIDsMap(0x80);
 
 bool Cmd_StringToActorValue_Execute(COMMAND_ARGS)
 {
@@ -836,16 +794,16 @@ bool Cmd_StringToActorValue_Execute(COMMAND_ARGS)
 	char avStr[0x40];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &avStr))
 	{
-		if (s_actorValueIDsMap.Empty())
+		if (s_actorValueIDsMap().Empty())
 		{
 			ActorValueInfo *avInfo;
 			for (UInt32 avCode = 0; avCode < 77; avCode++)
 			{
 				avInfo = ActorValueInfo::Array()[avCode];
-				s_actorValueIDsMap[avInfo->infoName] = avCode;
+				s_actorValueIDsMap()[avInfo->infoName] = avCode;
 			}
 		}
-		UInt32 *idPtr = s_actorValueIDsMap.GetPtr(avStr);
+		UInt32 *idPtr = s_actorValueIDsMap().GetPtr(avStr);
 		if (idPtr) *result = (int)*idPtr;
 	}
 	return true;
@@ -885,10 +843,10 @@ bool Cmd_SetOnNoteAddedEventHandler_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt) || NOT_ID(script, Script)) return true;
 	if (addEvnt)
 	{
-		if (s_noteAddedEventScripts.Insert(script))
+		if (s_noteAddedEventScripts().Insert(script))
 			HOOK_MOD(AddNote, true);
 	}
-	else if (s_noteAddedEventScripts.Erase(script))
+	else if (s_noteAddedEventScripts().Erase(script))
 		HOOK_MOD(AddNote, false);
 	return true;
 }
@@ -1021,29 +979,7 @@ bool Cmd_ToggleCameraCollision_Execute(COMMAND_ARGS)
 	return true;
 }
 
-TESObjectWEAP *g_rockItLauncher = NULL;
-
-__declspec(naked) BGSProjectile* __fastcall GetWeaponProjectileHook(TESObjectWEAP *weapon, int EDX, Actor *actor)
-{
-	__asm
-	{
-		push	ecx
-		push	dword ptr [esp+8]
-		CALL_EAX(0x525980)
-		pop		ecx
-		test    eax, eax
-		jz		weapProj
-		cmp		byte ptr [eax+4], kFormType_TESObjectMISC
-		jz		weapProj
-		mov		eax, [eax+0xB4]
-		test	eax, eax
-		jnz		done
-	weapProj:
-		mov		eax, [ecx+0x118]
-	done:
-		retn	4
-	}
-}
+TESObjectWEAP *g_rockItLauncher = nullptr;
 
 __declspec(naked) TESForm* __fastcall GetWeaponAmmoHook(TESObjectWEAP *weapon, int EDX, Actor *actor)
 {
@@ -1089,6 +1025,28 @@ __declspec(naked) TESForm* __fastcall GetWeaponAmmoHook(TESObjectWEAP *weapon, i
 	}
 }
 
+__declspec(naked) BGSProjectile* __fastcall GetWeaponProjectileHook(TESObjectWEAP *weapon, int EDX, Actor *actor)
+{
+	__asm
+	{
+		push	ecx
+		push	dword ptr [esp+8]
+		call	GetWeaponAmmoHook
+		pop		ecx
+		test    eax, eax
+		jz		weapProj
+		cmp		byte ptr [eax+4], kFormType_TESObjectMISC
+		jz		weapProj
+		mov		eax, [eax+0xB4]
+		test	eax, eax
+		jnz		done
+	weapProj:
+		mov		eax, [ecx+0x118]
+	done:
+		retn	4
+	}
+}
+
 __declspec(naked) void RILAmmoFixHook()
 {
 	__asm
@@ -1114,10 +1072,8 @@ __declspec(naked) void PCAmmoSwitchHook()
 
 bool Cmd_InitRockItLauncher_Execute(COMMAND_ARGS)
 {
-	static bool installed = false;
-	if (!installed && ExtractArgsEx(EXTRACT_ARGS_EX, &g_rockItLauncher))
+	if (!g_rockItLauncher && ExtractArgsEx(EXTRACT_ARGS_EX, &g_rockItLauncher))
 	{
-		installed = true;
 		WriteRelJump(0x525980, (UInt32)GetWeaponAmmoHook);
 		WriteRelJump(0x525A90, (UInt32)GetWeaponProjectileHook);
 		WritePushRetRelJump(0x946310, 0x946326, (UInt32)RILAmmoFixHook);
@@ -1173,7 +1129,7 @@ bool Cmd_ClearDeadActors_Execute(COMMAND_ARGS)
 		if (!actor || NOT_ACTOR(actor) || (actor->lifeState != 2) || (actor->flags & 0x200000) || (actor->baseForm->flags & 0x400))
 			continue;
 		hiProcess = (HighProcess*)actor->baseProcess;
-		if (hiProcess && !hiProcess->processLevel && !hiProcess->fadeType && (hiProcess->flt330 < 0) && 
+		if (hiProcess && !hiProcess->processLevel && !hiProcess->fadeType && (hiProcess->dyingTimer < 0) &&
 			!actor->extraDataList.HasType(kExtraData_EnableStateChildren) && !ThisCall<bool>(0x577DE0, actor))
 			ThisCall(0x8FEB60, hiProcess, actor);
 	}
@@ -1234,7 +1190,7 @@ bool Cmd_GetReticleNode_Execute(COMMAND_ARGS)
 	UInt32 filter = 6;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &filter))
 	{
-		NiAVObject *rtclObject = GetRayCastObject(g_thePlayer->cameraPos, g_sceneGraph->camera->WorldRotate()[0], maxRange, filter & 0x3F);
+		NiAVObject *rtclObject = GetRayCastObject(g_thePlayer->cameraPos, g_sceneGraph->camera->WorldRotate(), maxRange, filter & 0x3F);
 		if (rtclObject) nodeName = rtclObject->GetName();
 	}
 	AssignString(PASS_COMMAND_ARGS, nodeName);
@@ -1251,10 +1207,10 @@ bool Cmd_SetInternalMarker_Execute(COMMAND_ARGS)
 		if IS_REFERENCE(form)
 			form = ((TESObjectREFR*)form)->baseForm;
 		if (toggle < 0)
-			*result = s_internalMarkerIDs.HasKey(form->refID);
+			*result = s_internalMarkerIDs().HasKey(form->refID);
 		else if (toggle)
-			s_internalMarkerIDs.Insert(form->refID);
-		else s_internalMarkerIDs.Erase(form->refID);
+			s_internalMarkerIDs().Insert(form->refID);
+		else s_internalMarkerIDs().Erase(form->refID);
 	}
 	return true;
 }
@@ -1267,14 +1223,13 @@ bool Cmd_GetPointRayCastPos_Execute(COMMAND_ARGS)
 	UInt32 filter = 6;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pos.x, &pos.y, &pos.z, &rot.x, &rot.z, &outPos.x, &outPos.y, &outPos.z, &filter))
 	{
-		rot.x *= FltPId180;
 		rot.y = 0;
-		rot.z *= FltPId180;
+		rot *= GET_PS(8);
 		NiMatrix33 rotMat;
 		rotMat.RotationMatrixInv(rot);
-		if (rot.RayCastCoords(pos, rotMat[1], 100000.0F, filter & 0x3F))
+		if (rot.RayCastCoords(pos, rotMat + 1, 100000.0F, filter & 0x3F))
 		{
-			outPos.Set(&rot.x);
+			outPos.Set(rot);
 			*result = 1;
 		}
 	}
@@ -1286,5 +1241,40 @@ bool Cmd_TogglePlayerSneaking_Execute(COMMAND_ARGS)
 	UInt32 toggle;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &toggle))
 		g_thePlayer->ToggleSneak(toggle != 0);
+	return true;
+}
+
+bool Cmd_PlaceModel_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char modelPath[0x80];
+	NiVector3 pos, rot;
+	float scale = 1.0F;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &modelPath, &pos.x, &pos.y, &pos.z, &rot.x, &rot.y, &rot.z, &scale))
+	{
+		PlayerCharacter *thePlayer = g_thePlayer;
+		TESObjectCELL *parentCell = thePlayer->parentCell;
+		if (parentCell && (!parentCell->worldSpace || (parentCell = parentCell->worldSpace->GetCellAtPos(thePlayer->position))))
+		{
+			NiNode *objParent = parentCell->Get3DNode(3);
+			if (objParent)
+			{
+				NiNode *objNode = LoadModelCopy(modelPath);
+				if (objNode)
+				{
+					objNode->RemoveCollision();
+					objParent->AddObject(objNode, 1);
+					rot *= GET_PS(8);
+					objNode->LocalRotate().RotationMatrixInv(rot);
+					objNode->LocalTranslate() = pos;
+					objNode->m_transformLocal.scale = scale;
+					objNode->UpdateDownwardPass(kUpdateParams, 0);
+					if (objNode->m_flags & 0x20000000)
+						AddPointLights(objNode);
+					*result = 1;
+				}
+			}
+		}
+	}
 	return true;
 }

@@ -381,7 +381,7 @@ bool Cmd_GetAllItems_Execute(COMMAND_ARGS)
 	for (auto itemIter = invItemsMap->Begin(); itemIter; ++itemIter)
 	{
 		item = itemIter.Key();
-		if ((noNonPlayable && !item->IsItemPlayable()) || (noQuestItem && item->IsQuestItem()) || (noEquipped && ((Actor*)thisObj)->IsItemEquipped(item)))
+		if ((noNonPlayable && !item->IsItemPlayable()) || (noQuestItem && (item->flags & 0x400)) || (noEquipped && ((Actor*)thisObj)->IsItemEquipped(item)))
 			continue;
 		if (listForm) listForm->list.Prepend(item);
 		else tmpElements->Append(item);
@@ -425,7 +425,7 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 	for (auto dataIter = invItemsMap->Begin(); dataIter; ++dataIter)
 	{
 		item = dataIter.Key();
-		if ((noNonPlayable && !item->IsItemPlayable()) || (noQuestItem && item->IsQuestItem()))
+		if ((noNonPlayable && !item->IsItemPlayable()) || (noQuestItem && (item->flags & 0x400)))
 			continue;
 		baseCount = dataIter().count;
 		entry = dataIter().entry;
@@ -616,14 +616,14 @@ bool Cmd_SetOnUseAidItemEventHandler_Execute(COMMAND_ARGS)
 			continue;
 		if (addEvnt)
 		{
-			if (s_useAidItemEventMap.Insert(alchItem, &callbacks))
+			if (s_useAidItemEventMap().Insert(alchItem, &callbacks))
 				HOOK_MOD(EquipAidItem, true);
 			callbacks->Insert(script);
 			alchItem->SetJIPFlag(kHookFormFlag6_OnEquipHandlers, true);
 		}
 		else
 		{
-			auto findItem = s_useAidItemEventMap.Find(alchItem);
+			auto findItem = s_useAidItemEventMap().Find(alchItem);
 			if (!findItem || !findItem().Erase(script) || !findItem().Empty())
 				continue;
 			findItem.Remove();

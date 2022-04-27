@@ -224,6 +224,21 @@ public:
 		}
 	};
 
+	enum TileFlags
+	{
+		kTileFlag_PositionOrRotation =	1,
+		kTileFlag_Text =				2,
+		kTileFlag_Visibility =			4,
+		kTileFlag_ColorOrBrightness =	8,
+		kTileFlag_Dimensions =			0x10,
+		kTileFlag_ImageFilename =		0x20,
+		kTileFlag_NifFilename =			0x40,
+		kTileFlag_ClipWindow =			0x80,
+		kTileFlag_Clips =				0x100,
+		kTileFlag_Locus =				0x200,
+		kTileFlag_All =					0x3FF
+	};
+
 	DList<Tile>					children;		// 04
 	BSSimpleArray<Value*>		values;			// 10
 	String						name;			// 20
@@ -268,6 +283,7 @@ public:
 	void DestroyAllChildren();
 	void __fastcall PokeValue(UInt32 valueID);
 	void FakeClick();
+	__forceinline void ApplyRotationOnChildren() {ThisCall(0xA0B520, this);}
 
 	void Dump();
 };
@@ -315,6 +331,8 @@ public:
 	TileShaderProperty	*shaderProp;	// 40
 	UInt8				byt044;			// 44
 	UInt8				fill[3];		// 45-47
+
+	void __fastcall SetAlphaTexture(const char *ddsPath);
 };
 
 // 48
