@@ -27,6 +27,7 @@ DEFINE_COMMAND_PLUGIN(SetBaseEffectFlag, 0, 3, kParams_OneForm_TwoInts);
 DEFINE_COMMAND_PLUGIN(GetBaseEffectScript, 0, 1, kParams_OneForm);
 DEFINE_COMMAND_PLUGIN(SetBaseEffectScript, 0, 2, kParams_TwoForms);
 DEFINE_CMD_COND_PLUGIN(IsSpellTargetAlt, 1, 1, kParams_OneMagicItem);
+DEFINE_CMD_COND_PLUGIN(IsSpellTargetInList, 1, 1, kParams_FormList);
 DEFINE_COMMAND_PLUGIN(CastImmediate, 1, 2, kParams_OneMagicItem_OneOptionalActor);
 
 bool Cmd_GetNumEffects_Execute(COMMAND_ARGS)
@@ -539,10 +540,36 @@ bool Cmd_IsSpellTargetAlt_Execute(COMMAND_ARGS)
 	else *result = 0;
 	return true;
 }
-
 bool Cmd_IsSpellTargetAlt_Eval(COMMAND_ARGS_EVAL)
 {
 	*result = IsSpellTargetAlt((Actor*)thisObj, (MagicItem*)arg1);
+	return true;
+}
+
+bool Cmd_IsSpellTargetInList_Eval(COMMAND_ARGS_EVAL)
+{
+	*result = 0;
+	if (!thisObj || NOT_ACTOR(thisObj))
+		return true;
+	auto const list = (BGSListForm*)arg1;
+	for (auto formIter = list->list.Begin();
+		formIter; ++formIter)
+	{
+		auto const magicItem = DYNAMIC_CAST(formIter.Get(), TESForm, MagicItem);
+		*result = IsSpellTargetAlt((Actor*)thisObj, magicItem);
+		if (*result)	//just need one to match
+			break;
+	}
+	return true;
+}
+bool Cmd_IsSpellTargetInList_Execute(COMMAND_ARGS)
+{
+	BGSListForm* list;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &list))
+	{
+		Cmd_IsSpellTargetInList_Eval(thisObj, list, nullptr, result);
+	}
+	else *result = 0;
 	return true;
 }
 

@@ -1362,6 +1362,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v56.52
 	/*2918*/REG_CMD(PlaceModel);
 	/*2919*/REG_CMD(AttachLine);
+	//	v??.??
+	/*291A*/REG_CMD(IsSpellTargetInList);
 
 	//===========================================================
 
