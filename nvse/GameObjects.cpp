@@ -314,13 +314,12 @@ __declspec(naked) SInt32 TESObjectREFR::GetItemCount(TESForm *form) const
 	}
 }
 
-__declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, float condition, bool doEquip, UInt32 showMessage)
+__declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, float condition, bool doEquip)
 {
 	__asm
 	{
 		push	ebp
 		mov		ebp, esp
-
 		push	ecx
 		sub		esp, 0x10
 		push	esi
@@ -406,14 +405,12 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 		mov		ecx, [ebp-0x14]
 		call	ExtraContainerChanges::EntryDataList::FindForItem
 		pop		edx
-
-		push	[ebp+18] // showMessage
-		push	0 //
-		push	eax //
-		push	edx //
+		push	1
+		push	0
+		push	eax
+		push	edx
 		mov		ecx, [ebp-4]
 		call	Actor::EquipItemAlt
-
 		jmp		eqpIter
 		ALIGN 16
 	done:
@@ -470,7 +467,6 @@ __declspec(naked) void Actor::EquipItemAlt(TESForm *itemForm, ContChangesEntry *
 	{
 		push	ebp
 		mov		ebp, esp
-
 		push	ecx
 		mov		ecx, 1
 		mov		eax, [ebp+8]
@@ -490,10 +486,10 @@ __declspec(naked) void Actor::EquipItemAlt(TESForm *itemForm, ContChangesEntry *
 	countMax:
 		xor		ecx, ecx
 	doneType:
-		push	dword ptr [ebp+0x14] // noMessage
-		push	dword ptr [ebp+0x10] // noUnequip
+		push	dword ptr [ebp+0x14]
+		push	dword ptr [ebp+0x10]
 		push	1
-		mov		eax, [ebp+0xC] // entry
+		mov		eax, [ebp+0xC]
 		test	eax, eax
 		jz		noEntry
 		mov		edx, [eax]
@@ -510,10 +506,9 @@ __declspec(naked) void Actor::EquipItemAlt(TESForm *itemForm, ContChangesEntry *
 		push	0
 		push	1
 	doEquip:
-		push	dword ptr [ebp+8] // item
-		mov		ecx, [ebp-4]	// actor (this)
+		push	dword ptr [ebp+8]
+		mov		ecx, [ebp-4]
 		CALL_EAX(ADDR_EquipItem)
-
 	done:
 		leave
 		retn	0x10

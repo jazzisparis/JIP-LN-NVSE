@@ -178,16 +178,6 @@ ParamInfo kParams_OneItemOrList_OneInt_OneOptionalFloat_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneItemOrList_OneInt_OneOptionalFloat_TwoOptionalInts[] =
-{
-	{"Item/List", kParamType_InvObjOrFormList, 0},
-	{"Integer", kParamType_Integer, 0},
-	{"Float", kParamType_Float, 1},
-	{"Integer", kParamType_Integer, 1},
-	{"Integer", kParamType_Integer, 1}
-};
-
-
 ParamInfo kParams_OneString_OneFormatString[] =
 {
 	{"String", kParamType_String, 0},
