@@ -505,7 +505,7 @@ bool Cmd_GetZoneFlag_Execute(COMMAND_ARGS)
 	BGSEncounterZone *encZone;
 	UInt32 flag;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &encZone, &flag) && IS_ID(encZone, BGSEncounterZone))
-		*result = (encZone->flags & flag) ? 1 : 0;
+		*result = (encZone->zoneFlags & flag) ? 1 : 0;
 	else *result = 0;
 	return true;
 }
