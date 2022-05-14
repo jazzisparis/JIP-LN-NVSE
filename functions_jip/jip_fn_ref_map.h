@@ -13,7 +13,7 @@ DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetAll, RefMapGetAll, 0, 1, kParams_OneInt)
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetFloat, RefMapSetFlt, 0, 3, kParams_OneString_OneDouble_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetRef, RefMapSetRef, 0, 3, kParams_OneString_OneForm_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetString, RefMapSetStr, 0, 3, kParams_TwoStrings_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN_EXP(RefMapArraySetValue, RefMapSetVal, false, kNVSEParams_OneString_OneArray_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN_EXP(RefMapArraySetValue, RefMapSetVal, false, kNVSEParams_OneString_OneElem_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayErase, RefMapErase, 0, 2, kParams_OneString_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayValidate, RefMapValidate, 0, 1, kParams_OneString);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayDestroy, RefMapDestroy, 0, 1, kParams_OneString);
