@@ -5,7 +5,7 @@ DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetType, RefMapGetType, 0, 2, kParams_OneSt
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetFloat, RefMapGetFlt, 0, 2, kParams_OneString_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetRef, RefMapGetRef, 0, 2, kParams_OneString_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetString, RefMapGetStr, 0, 2, kParams_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetValue, RefMapGetVal, 0, 2, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN_EXP(RefMapArrayGetValue, RefMapGetVal, false, kNVSEParams_OneString_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetFirst, RefMapFirst, 0, 1, kParams_OneString);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetNext, RefMapNext, 0, 1, kParams_OneString);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetKeys, RefMapKeys, 0, 1, kParams_OneString);
@@ -13,7 +13,7 @@ DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetAll, RefMapGetAll, 0, 1, kParams_OneInt)
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetFloat, RefMapSetFlt, 0, 3, kParams_OneString_OneDouble_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetRef, RefMapSetRef, 0, 3, kParams_OneString_OneForm_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetString, RefMapSetStr, 0, 3, kParams_TwoStrings_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetValue, RefMapSetVal, 0, 3, kParams_OneString_OneInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN_EXP(RefMapArraySetValue, RefMapSetVal, false, kNVSEParams_OneString_OneArray_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayErase, RefMapErase, 0, 2, kParams_OneString_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayValidate, RefMapValidate, 0, 1, kParams_OneString);
 DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayDestroy, RefMapDestroy, 0, 1, kParams_OneString);
@@ -127,10 +127,16 @@ bool Cmd_RefMapArrayGetString_Execute(COMMAND_ARGS)
 bool Cmd_RefMapArrayGetValue_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char varName[0x50];
-	TESForm *form = nullptr;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
+
+	if (PluginExpressionEvaluator eval(PASS_COMMAND_ARGS);
+		eval.ExtractArgs())
 	{
+		char varName[0x50];
+		strcpy_s(varName, 0x50, eval.GetNthArg(0)->GetString());
+		TESForm* form = nullptr;
+		if (eval.NumArgs() >= 2)
+			form = eval.GetNthArg(1)->GetTESForm();
+
 		REF_MAP_CS
 		RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
 		if (idsMap)
@@ -138,8 +144,8 @@ bool Cmd_RefMapArrayGetValue_Execute(COMMAND_ARGS)
 			AuxVariableValue *value = idsMap->GetPtr(GetSubjectID(form, thisObj));
 			if (value)
 			{
-				ArrayElementL element(value->GetAsElement());
-				AssignCommandResult(CreateArray(&element, 1, scriptObj), result);
+				ArrayElementL element{ value->GetAsElement() };
+				eval.AssignCommandResult(element);
 			}
 		}
 	}
@@ -289,21 +295,25 @@ bool Cmd_RefMapArraySetString_Execute(COMMAND_ARGS)
 
 bool Cmd_RefMapArraySetValue_Execute(COMMAND_ARGS)
 {
-	char varName[0x50];
-	UInt32 arrID;
-	TESForm *form = nullptr;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &arrID, &form))
+	if (PluginExpressionEvaluator eval(PASS_COMMAND_ARGS);
+		eval.ExtractArgs())
 	{
-		NVSEArrayVar *srcArr = LookupArrayByID(arrID);
-		if (srcArr && (GetArraySize(srcArr) == 1))
+		char varName[0x50];
+		strcpy_s(varName, 0x50, eval.GetNthArg(0)->GetString());
+
+		ArrayElementR newVal;
+		eval.GetNthArg(1)->GetElement(newVal);
+
+		TESForm* form = nullptr;
+		if (eval.NumArgs() >= 3)
+			form = eval.GetNthArg(2)->GetTESForm();
+
+		if (newVal.IsValid())
 		{
 			REF_MAP_CS
-			AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName);
-			if (value)
+			if (AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName))
 			{
-				ArrayElementR element;
-				GetElements(srcArr, &element, nullptr);
-				*value = element;
+				*value = newVal;
 			}
 		}
 	}

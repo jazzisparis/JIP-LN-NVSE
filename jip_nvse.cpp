@@ -4,6 +4,7 @@
 #include "internal/xinput.h"
 #include "internal/jip_core.h"
 #include "nvse/ParamInfos.h"
+#include "nvse/NVSEParamInfos.h"
 #include "internal/hooks.h"
 #include "internal/patches_cmd.h"
 #include "internal/patches_game.h"
@@ -832,7 +833,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2761*/REG_CMD(IsInCombatWith);
 	/*2762*/REG_CMD_STR(RefToPosStr);
 	/*2763*/REG_CMD(MoveToPosStr);
-	/*2764*/REG_CMD_ARR(RefMapArrayGetValue);
+	/*2764*/REG_CMD_AMB(RefMapArrayGetValue);
 	/*2765*/REG_CMD(RefMapArraySetValue);
 	/*2766*/REG_CMD_ARR(GetAllItems);
 	/*2767*/REG_CMD_ARR(GetAllItemRefs);
@@ -1371,7 +1372,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 		return true;
 	}
 
-	//nvse->InitExpressionEvaluatorUtils(&s_expEvalUtils);
+	nvse->InitExpressionEvaluatorUtils(&s_expEvalUtils);
 
 	PluginHandle pluginHandle = nvse->GetPluginHandle();
 	NVSESerializationInterface *serialization = (NVSESerializationInterface*)nvse->QueryInterface(kInterface_Serialization);

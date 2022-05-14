@@ -15,3 +15,5 @@
 *.db-shm
 *.db-wal
 *.opendb
+.vs/jip_nvse/v17/.suo
+*.ipdb

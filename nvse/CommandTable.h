@@ -139,11 +139,11 @@ struct ParamInfo
 #define DEFINE_COMMAND_ALT_PLUGIN(name, altName, refRequired, numParams, paramInfo) \
 	DEFINE_CMD_FULL(name, altName, refRequired, numParams, paramInfo, NULL)
 
-#define DEFINE_COMMAND_PLUGIN_EXP(name, refRequired, numParams, paramInfo) \
-	DEFINE_CMD_FULL(name, , refRequired, numParams, paramInfo, Cmd_Expression_Plugin_Parse)
+#define DEFINE_COMMAND_PLUGIN_EXP(name, refRequired, paramInfo) \
+	DEFINE_CMD_FULL(name, , refRequired, (sizeof(paramInfo) / sizeof(ParamInfo)), reinterpret_cast<const ParamInfo*>(paramInfo), Cmd_Expression_Plugin_Parse)
 
-#define DEFINE_COMMAND_ALT_PLUGIN_EXP(name, altName, refRequired, numParams, paramInfo) \
-	DEFINE_CMD_FULL(name, altName, refRequired, numParams, paramInfo, Cmd_Expression_Plugin_Parse)
+#define DEFINE_COMMAND_ALT_PLUGIN_EXP(name, altName, refRequired, paramInfo) \
+	DEFINE_CMD_FULL(name, altName, refRequired, (sizeof(paramInfo) / sizeof(ParamInfo)), reinterpret_cast<const ParamInfo*>(paramInfo), Cmd_Expression_Plugin_Parse)
 
 // for commands which can be used as conditionals
 #define DEFINE_CMD_ALT_COND_ANY(name, altName, refRequired, numParams, paramInfo, parser) \
@@ -203,7 +203,7 @@ struct CommandInfo
 	const char	* helpText;		// 0C
 	UInt16		needsParent;	// 10
 	UInt16		numParams;		// 12
-	ParamInfo	* params;		// 14
+	const ParamInfo	* params;	// 14
 
 	// handlers
 	Cmd_Execute	execute;		// 18
