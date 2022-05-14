@@ -1,0 +1,17 @@
+
+*.tlog
+*.pdb
+*.obj
+*.dll
+*.exp
+*.iobj
+*.lib
+*.recipe
+*.res
+*.log
+*.ipch
+.vs/jip_nvse/v16/.suo
+*.db
+*.db-shm
+*.db-wal
+*.opendb
