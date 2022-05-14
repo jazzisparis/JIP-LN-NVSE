@@ -308,7 +308,7 @@ bool Cmd_RefMapArraySetValue_Execute(COMMAND_ARGS)
 		if (eval.NumArgs() >= 3)
 			form = eval.GetNthArg(2)->GetTESForm();
 
-		if (newVal.IsValid())
+		if (newVal.IsValid() && newVal.GetType() != NVSEArrayVarInterface::kType_Array)
 		{
 			REF_MAP_CS
 			if (AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName))
