@@ -563,8 +563,8 @@ bool Cmd_CCCGetReputation_Execute(COMMAND_ARGS)
 
 bool Cmd_CCCSayTo_Execute(COMMAND_ARGS)
 {
-	if (NOT_ACTOR(thisObj)) return true;
-	SayTo(PASS_COMMAND_ARGS);
+	if NOT_ACTOR(thisObj) return true;
+	CdeclCall(0x5C9100, PASS_COMMAND_ARGS);
 	ExtraSayToTopicInfo *xSayTo = GetExtraType(&thisObj->extraDataList, SayToTopicInfo);
 	if (xSayTo)
 	{

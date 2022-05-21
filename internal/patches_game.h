@@ -695,15 +695,17 @@ void __fastcall BuildMusicMarkerList(TESWorldSpace *worldspace, tList<TESObjectR
 		ListNode<TESObjectREFR> *traverse = markerRefList->Head();
 		TESObjectREFR *markerRef;
 		ExtraAudioMarker *xAudioMarker;
-		do
+		while (true)
 		{
+			if (!traverse) break;
 			markerRef = traverse->data;
+			traverse = traverse->next;
 			if (!markerRef) continue;
 			xAudioMarker = GetExtraType(&markerRef->extraDataList, AudioMarker);
-			if (xAudioMarker && xAudioMarker->data)
-				s_musicMarkerList().InsertSorted(MusicMarker(markerRef, xAudioMarker->data));
+			if (!xAudioMarker || !xAudioMarker->data)
+				continue;
+			s_musicMarkerList().InsertSorted(MusicMarker(markerRef, xAudioMarker->data));
 		}
-		while (traverse = traverse->next);
 	}
 	tList<MusicMarker> *musicMarkers = &g_thePlayer->musicMarkers;
 	MusicMarker *musicMarker;
@@ -1080,6 +1082,60 @@ __declspec(naked) const char* __cdecl GetIconPathForItemHook(TESForm *item, TESO
 		retn
 	notFem:
 		mov		eax, [ecx+4]
+		retn
+	}
+}
+
+float s_condDmgPenalty = 0.67F;
+
+__declspec(naked) float __cdecl GetConditionDamagePenaltyHook(float healthPercent)
+{
+	static const float kPenaltyThreshold = 0.75F;
+	__asm
+	{
+		movss	xmm0, PS_V3_One
+		movss	xmm1, [esp+4]
+		movss	xmm2, kPenaltyThreshold
+		comiss	xmm1, xmm2
+		jnb		done
+		subss	xmm2, xmm1
+		mulss	xmm2, s_condDmgPenalty
+		movaps	xmm1, xmm0
+		subss	xmm0, xmm2
+		xorps	xmm2, xmm2
+		minss	xmm0, xmm1
+		maxss	xmm0, xmm2
+	done:
+		movss	[esp+4], xmm0
+		fld		dword ptr [esp+4]
+		retn
+	}
+}
+
+float s_condDRDTPenalty = 1.0F;
+
+__declspec(naked) float __cdecl GetArmorConditionPenaltyHook(UInt16 baseDRDT, float healthPercent)
+{
+	__asm
+	{
+		movzx	eax, word ptr [esp+4]
+		cvtsi2ss	xmm0, eax
+		movss	xmm1, [esp+8]
+		movss	xmm2, PS_V3_Half
+		comiss	xmm1, xmm2
+		jnb		done
+		subss	xmm2, xmm1
+		mulss	xmm2, s_condDRDTPenalty
+		movss	xmm1, PS_V3_One
+		movaps	xmm3, xmm1
+		subss	xmm1, xmm2
+		xorps	xmm2, xmm2
+		minss	xmm1, xmm3
+		maxss	xmm1, xmm2
+		mulss	xmm0, xmm1
+	done:
+		movss	[esp+8], xmm0
+		fld		dword ptr [esp+8]
 		retn
 	}
 }
@@ -4471,6 +4527,10 @@ void InitGamePatches()
 	SafeWrite32(0xC65B47, 0x38F);
 	WriteRelJump(0xC65B5B, (UInt32)SetPosAndRotHook);
 
+	//	Save the player's killer (reset on game-load)
+	SafeWrite8(0x89E790, 8);
+	SafeWrite16(0x89F351, 0x0BEB);
+
 	//	Runtime script compiler recognize NVSE var types
 	SafeWrite32(0x118CBF4, (UInt32)&s_varTypeNameTokens);
 	SafeWrite32(0x118CBCC, (UInt32)&s_varTypeNameTokens[10]);
@@ -4547,6 +4607,8 @@ void InitGamePatches()
 	SAFE_WRITE_BUF(0x72F337, "\x8B\x85\x70\xFF\xFF\xFF");
 	WritePushRetRelJump(0x72F33D, 0x72F37F, (UInt32)ConstructItemEntryNameHook);
 	WriteRelCall(0x48E761, (UInt32)GetIconPathForItemHook);
+	WriteRelJump(0x646D00, (UInt32)GetConditionDamagePenaltyHook);
+	WriteRelJump(0x646360, (UInt32)GetArmorConditionPenaltyHook);
 	WriteRelCall(0x406720, (UInt32)GetEffectHiddenHook);
 	SafeWrite8(0xA081A8, 6);
 	SafeWrite32(0xA08718, (UInt32)ProcessGradualSetFloatHook);
@@ -4751,13 +4813,6 @@ void DeferredInit()
 	eventCmdInfos[1].execute = Hook_MenuMode_Execute;
 	eventCmdInfos[0xE].execute = Cmd_EmptyCommand_Execute;
 
-	g_condDmgPenalty = *(double**)0x646D25;
-	if ((UInt32)g_condDmgPenalty == 0x1051680)
-	{
-		SafeWrite32(0x646D25, (UInt32)&s_condDmgPenalty);
-		g_condDmgPenalty = &s_condDmgPenalty;
-	}
-
 	for (UInt32 index = 0; index <= 19; index++)
 		if (s_deferrSetOptional & (1 << index))
 			SetOptionalPatch(index, true);
@@ -4784,7 +4839,7 @@ void DeferredInit()
 
 	BSWin32Audio::Get()->PickSoundFileFromFolder = PickSoundFileFromFolderHook;
 
-	char filePath[MAX_PATH];
+	/*char filePath[MAX_PATH];
 	GetModuleFileName(GetModuleHandle(NULL), filePath, MAX_PATH);
 	char *delim = SlashPosR(filePath) + 1;
 	memcpy(delim, "d3d9.dll", 9);
@@ -4795,7 +4850,7 @@ void DeferredInit()
 		memcpy(delim, "enbseries.dll", 14);
 		handle = GetModuleHandle(filePath);
 		if (handle) ReloadENB = (_ReloadENB)GetProcAddress(handle, "DirtyHack");
-	}
+	}*/
 
 	ActorValueInfo *avInfo = ActorValueInfo::Array()[kAVCode_BigGuns];
 	avInfo->fullName.name = avInfo->avName;

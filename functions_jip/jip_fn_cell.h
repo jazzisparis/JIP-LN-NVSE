@@ -1,17 +1,17 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(SetCellWaterForm, 0, 2, kParams_OneCell_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetCellClimate, 0, 1, kParams_OneCell);
-DEFINE_COMMAND_PLUGIN(SetCellClimate, 0, 2, kParams_OneCell_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetCellNoiseTexture, 0, 1, kParams_OneCell);
-DEFINE_COMMAND_PLUGIN(SetCellNoiseTexture, 0, 2, kParams_OneCell_OneString);
-DEFINE_COMMAND_PLUGIN(GetOwnerOfCell, 0, 1, kParams_OneCell);
+DEFINE_COMMAND_PLUGIN(SetCellWaterForm, 0, 2, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetCellClimate, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetCellClimate, 0, 2, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetCellNoiseTexture, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetCellNoiseTexture, 0, 2, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetOwnerOfCell, 0, 1, kParams_OneForm);
 
 bool Cmd_SetCellWaterForm_Execute(COMMAND_ARGS)
 {
 	TESObjectCELL *cell;
 	TESWaterForm *water = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &water) && (!water || IS_ID(water, TESWaterForm)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &water) && IS_ID(cell, TESObjectCELL) && (!water || IS_ID(water, TESWaterForm)))
 	{
 		ExtraCellWaterType *xCellWater = GetExtraType(&cell->extraDataList, CellWaterType);
 		if (xCellWater)
@@ -28,7 +28,7 @@ bool Cmd_GetCellClimate_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectCELL *cell;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && IS_ID(cell, TESObjectCELL))
 	{
 		ExtraCellClimate *xCellClimate = GetExtraType(&cell->extraDataList, CellClimate);
 		if (xCellClimate && xCellClimate->climate) REFR_RES = xCellClimate->climate->refID;
@@ -40,7 +40,7 @@ bool Cmd_SetCellClimate_Execute(COMMAND_ARGS)
 {
 	TESObjectCELL *cell;
 	TESClimate *climate = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &climate) && (!climate || IS_ID(climate, TESClimate)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &climate) && IS_ID(cell, TESObjectCELL) && (!climate || IS_ID(climate, TESClimate)))
 	{
 		ExtraCellClimate *xCellClimate = GetExtraType(&cell->extraDataList, CellClimate);
 		if (xCellClimate)
@@ -57,7 +57,7 @@ bool Cmd_GetCellNoiseTexture_Execute(COMMAND_ARGS)
 {
 	const char *resStr;
 	TESObjectCELL *cell;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && IS_ID(cell, TESObjectCELL))
 		resStr = cell->noiseTexture.ddsPath.m_data;
 	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -68,7 +68,7 @@ bool Cmd_SetCellNoiseTexture_Execute(COMMAND_ARGS)
 {
 	TESObjectCELL *cell;
 	char path[0x80];
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &path))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &path) && IS_ID(cell, TESObjectCELL))
 		cell->noiseTexture.ddsPath.Set(path);
 	return true;
 }
@@ -77,11 +77,10 @@ bool Cmd_GetOwnerOfCell_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectCELL *cell;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && IS_ID(cell, TESObjectCELL))
 	{
-		ExtraOwnership *xOwnership = GetExtraType(&cell->extraDataList, Ownership);
-		if (xOwnership && xOwnership->owner)
-			REFR_RES = xOwnership->owner->refID;
+		TESForm *owner = ThisCall<TESForm*>(0x546A40, cell);
+		if (owner) REFR_RES = owner->refID;
 	}
 	return true;
 }

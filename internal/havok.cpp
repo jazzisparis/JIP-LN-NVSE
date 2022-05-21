@@ -1,10 +1,9 @@
 #include "internal/havok.h"
 
-__declspec(naked) hkQuaternion& __fastcall hkQuaternion::FromEulerYPR(const NiVector3 &ypr)
+__declspec(naked) hkQuaternion& __vectorcall hkQuaternion::FromEulerPRY(__m128 pry)
 {
 	__asm
 	{
-		movups	xmm0, [edx]
 		movaps	xmm1, PS_V3_PI
 		cmpltps	xmm1, xmm0
 		andps	xmm1, PS_V3_PIx2
@@ -218,13 +217,13 @@ __declspec(naked) hkQuaternion& hkQuaternion::Normalize()
     }
 }
 
-__declspec(naked) NiVector3& __fastcall hkQuaternion::ToEulerYPR(NiVector3 &ypr) const
+__declspec(naked) __m128 __vectorcall hkQuaternion::ToEulerPRY() const
 {
 	__asm
 	{
-		movaps	xmm7, [ecx]
-		pshufd	xmm0, xmm7, 0x47
-		pshufd	xmm1, xmm7, 0x48
+		movaps	xmm6, [ecx]
+		pshufd	xmm0, xmm6, 0x47
+		pshufd	xmm1, xmm6, 0x48
 		mulps	xmm0, xmm1
 		haddps	xmm0, xmm0
 		addps	xmm0, xmm0
@@ -232,16 +231,16 @@ __declspec(naked) NiVector3& __fastcall hkQuaternion::ToEulerYPR(NiVector3 &ypr)
 		xorps	xmm1, PS_FlipSignMask0
 		addss	xmm1, PS_V3_One
 		call	ATan2
-		movss	[edx], xmm0
-		pshufd	xmm0, xmm7, 0xB
-		pshufd	xmm1, xmm7, 1
+		movaps	xmm7, xmm0
+		pshufd	xmm0, xmm6, 0xB
+		pshufd	xmm1, xmm6, 1
 		mulps	xmm0, xmm1
 		hsubps	xmm0, xmm0
 		addss	xmm0, xmm0
 		call	ASin
-		movss	[edx+4], xmm0
-		pshufd	xmm0, xmm7, 0x93
-		pshufd	xmm1, xmm7, 0x96
+		unpcklps	xmm7, xmm0
+		pshufd	xmm0, xmm6, 0x93
+		pshufd	xmm1, xmm6, 0x96
 		mulps	xmm0, xmm1
 		haddps	xmm0, xmm0
 		addps	xmm0, xmm0
@@ -249,8 +248,8 @@ __declspec(naked) NiVector3& __fastcall hkQuaternion::ToEulerYPR(NiVector3 &ypr)
 		xorps	xmm1, PS_FlipSignMask0
 		addss	xmm1, PS_V3_One
 		call	ATan2
-		movss	[edx+8], xmm0
-		mov		eax, edx
+		unpcklpd	xmm7, xmm0
+		movaps	xmm0, xmm7
 		retn
 	}
 }
@@ -454,9 +453,7 @@ __declspec(naked) void bhkWorldObject::ApplyForce(const NiVector4 &forceVector)
 		mov		edx, [ebp+8]
 		movups	xmm1, [edx]
 		subps	xmm0, xmm1
-		movaps	[eax], xmm0
-		mov		ecx, eax
-		call	NiVector3::Normalize
+		call	NormalizePS
 		movss	xmm1, [edx+0xC]
 		mulss	xmm1, kUnitConv+4
 		shufps	xmm1, xmm1, 0x40

@@ -341,18 +341,19 @@ public:
 		{
 			ThisCall(0x4459E0, this, 1);
 		}
-		bool __fastcall HasExtraType(UInt8 xType);
-		bool HasExtraLeveledItem();
-		ExtraDataList *GetEquippedExtra();
-		float __vectorcall GetWeaponModEffectValue(UInt32 effectType);
-		float __vectorcall GetBaseHealth();
-		float __vectorcall GetHealthPercent();
-		float CalculateWeaponDamage(Actor *owner, float condition, TESForm *ammo);
+		bool __fastcall HasExtraType(UInt32 xType) const;
+		bool HasExtraLeveledItem() const;
+		ExtraDataList *GetEquippedExtra() const;
+		float __vectorcall GetWeaponModEffectValue(UInt32 effectType) const;
+		float __vectorcall GetBaseHealth() const;
+		float __vectorcall GetHealthPercent() const;
+		float CalculateWeaponDamage(Actor *owner, float condition, TESForm *ammo) const;
+		EntryData *CreateCopy(ExtraDataList *xData);
 	};
 
 	struct EntryDataList : tList<EntryData>
 	{
-		EntryData* __fastcall FindForItem(TESForm *item);
+		EntryData* __fastcall FindForItem(TESForm *item) const;
 	};
 
 	// 14
@@ -648,8 +649,9 @@ public:
 	virtual void	LoadGame(UInt32 arg1);
 	virtual void	DoLoad(UInt32 arg1);
 
-	UInt8			seenBits[32];	// 04	256 bitfield
+	UInt16			horizontalSeenBits[16];	// 04	16x16 grid bitfield
 };
+static_assert(sizeof(SeenData) == 0x24);
 
 // 2C
 class IntSeenData : public SeenData
@@ -1071,7 +1073,8 @@ public:
 	TESTopicInfo	*info;		// 0C
 	TESTopic		*topic;		// 10
 	TESQuest		*quest;		// 14
-	Actor			*speaker;	// 18
+	UInt8			byte18;		// 18
+	UInt8			pad19[3];	// 19
 };
 
 // 10

@@ -360,7 +360,7 @@ ExtraCharge *ExtraCharge::Create(float _charge)
 	return xCharge;
 }
 
-__declspec(naked) ContChangesEntry* __fastcall ExtraContainerChanges::EntryDataList::FindForItem(TESForm *item)
+__declspec(naked) ContChangesEntry* __fastcall ExtraContainerChanges::EntryDataList::FindForItem(TESForm *item) const
 {
 	__asm
 	{
@@ -419,7 +419,7 @@ __declspec(naked) double ExtraContainerChanges::Data::GetInventoryWeight()
 	}
 }
 
-__declspec(naked) bool __fastcall ExtraContainerChanges::EntryData::HasExtraType(UInt8 xType)
+__declspec(naked) bool __fastcall ExtraContainerChanges::EntryData::HasExtraType(UInt32 xType) const
 {
 	__asm
 	{
@@ -428,76 +428,74 @@ __declspec(naked) bool __fastcall ExtraContainerChanges::EntryData::HasExtraType
 		jz		done
 		push	esi
 		mov		esi, eax
-		mov		cl, dl
-		movzx	eax, cl
-		shr		al, 3
-		add		al, 8
-		and		cl, 7
-		mov		dl, 1
-		shl		dl, cl
+		mov		ecx, edx
+		shr		ecx, 5
+		lea		eax, [ecx*4+8]
 		ALIGN 16
 	iterHead:
-		mov		ecx, [esi]
-		test	ecx, ecx
-		jz		iterNext
-		test	byte ptr [ecx+eax], dl
-		jnz		retnTrue
-	iterNext:
-		mov		esi, [esi+4]
 		test	esi, esi
-		jnz		iterHead
-		xor		al, al
+		jz		retnFalse
+		mov		ecx, [esi]
+		mov		esi, [esi+4]
+		test	ecx, ecx
+		jz		iterHead
+		mov		ecx, [eax+ecx]
+		bt		ecx, edx
+		jnc		iterHead
+		mov		al, 1
 		pop		esi
 		retn
-	retnTrue:
-		mov		al, 1
+	retnFalse:
+		xor		al, al
 		pop		esi
 	done:
 		retn
 	}
 }
 
-__declspec(naked) bool ExtraContainerChanges::EntryData::HasExtraLeveledItem()
+__declspec(naked) bool ExtraContainerChanges::EntryData::HasExtraLeveledItem() const
 {
 	__asm
 	{
-		mov		ecx, [ecx]
+		mov		eax, [ecx]
 		ALIGN 16
 	iterHead:
+		test	eax, eax
+		jz		done
+		mov		ecx, [eax]
+		mov		eax, [eax+4]
 		test	ecx, ecx
-		jz		retnFalse
-		mov		edx, [ecx]
-		mov		ecx, [ecx+4]
-		test	edx, edx
 		jz		iterHead
-		test	byte ptr [edx+0xD], 0x80
+		test	byte ptr [ecx+0xD], 0x80
 		jz		iterHead
 		mov		al, 1
-		retn
-	retnFalse:
-		xor		al, al
+	done:
 		retn
 	}
 }
 
-ExtraDataList *ExtraContainerChanges::EntryData::GetEquippedExtra()
+__declspec(naked) ExtraDataList *ExtraContainerChanges::EntryData::GetEquippedExtra() const
 {
-	if (extendData)
+	__asm
 	{
-		ExtraDataList *xData;
-		ListNode<ExtraDataList> *xdlIter = extendData->Head();
-		do
-		{
-			xData = xdlIter->data;
-			if (xData && xData->HasType(kExtraData_Worn))
-				return xData;
-		}
-		while (xdlIter = xdlIter->next);
+		mov		eax, [ecx]
+		ALIGN 16
+	iterHead:
+		test	eax, eax
+		jz		done
+		mov		ecx, [eax]
+		mov		eax, [eax+4]
+		test	ecx, ecx
+		jz		iterHead
+		test	byte ptr [ecx+0xA], 0x40
+		jz		iterHead
+		mov		eax, ecx
+	done:
+		retn
 	}
-	return NULL;
 }
 
-__declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetWeaponModEffectValue(UInt32 effectType)
+__declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetWeaponModEffectValue(UInt32 effectType) const
 {
 	__asm
 	{
@@ -547,7 +545,7 @@ __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetWeapon
 	}
 }
 
-__declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetBaseHealth()
+__declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetBaseHealth() const
 {
 	__asm
 	{
@@ -571,7 +569,7 @@ __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetBaseHe
 	}
 }
 
-__declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetHealthPercent()
+__declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetHealthPercent() const
 {
 	static const float kFltMin1 = -1.0F;
 	__asm
@@ -614,7 +612,7 @@ __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetHealth
 
 bool __fastcall GetEntryDataHasModHook(ContChangesEntry *entry, int EDX, UInt8 modType);
 
-__declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(Actor *owner, float condition, TESForm *ammo)
+__declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(Actor *owner, float condition, TESForm *ammo) const
 {
 	static const double kSplitBeamMult = 1.3;
 	__asm
@@ -646,7 +644,7 @@ __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(
 		fstp	dword ptr [esp]
 		push	ecx
 		push	kAmmoEffect_DamageMod
-		CALL_EAX(0x59A030)
+		CALL_EAX(ADDR_ApplyAmmoEffects)
 		add		esp, 0xC
 	noAmmo:
 		push	0xC
@@ -679,6 +677,20 @@ __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(
 		pop		esi
 		retn	0xC
 	}
+}
+
+ContChangesEntry *ContChangesEntry::CreateCopy(ExtraDataList *xData)
+{
+	ContChangesEntry *pCopy = (ContChangesEntry*)GameHeapAlloc(sizeof(ContChangesEntry));
+	pCopy->type = type;
+	pCopy->countDelta = countDelta;
+	if (xData)
+	{
+		pCopy->extendData = (ExtendDataList*)GameHeapAlloc(sizeof(ExtendDataList));
+		pCopy->extendData->Init(xData);
+	}
+	else pCopy->extendData = nullptr;
+	return pCopy;
 }
 
 void ExtraContainerChanges::ExtendDataList::Clear()

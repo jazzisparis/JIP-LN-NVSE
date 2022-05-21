@@ -90,10 +90,10 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 	s_log().Create("jip_ln_nvse.log");
 	int version = nvse->nvseVersion;
 	s_nvseVersion = (version >> 24) + (((version >> 16) & 0xFF) * 0.1) + (((version & 0xFF) >> 4) * 0.01);
-	if (version < 0x6020060)
+	if (version < 0x6020070)
 	{
-		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.26 minimum.", s_nvseVersion);
-		MessageBox(nullptr, "ERROR!\n\nxNVSE version is outdated.\n\nThis plugin requires v6.2.6 minimum.", "JIP LN NVSE Plugin", MB_OK | MB_ICONWARNING | MB_TOPMOST);
+		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.27 minimum.", s_nvseVersion);
+		MessageBox(nullptr, "ERROR!\n\nxNVSE version is outdated.\n\nThis plugin requires v6.2.7 minimum.", "JIP LN NVSE Plugin", MB_OK | MB_ICONWARNING | MB_TOPMOST);
 		return false;
 	}
 	PrintLog("NVSE version:\t%.2f\nJIP LN version:\t%.2f\n", s_nvseVersion, JIP_LN_VERSION);
@@ -134,7 +134,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2213*/REG_CMD(EmptyCommand);
 	//	v4.00
 	/*2214*/REG_CMD_FRM(GetCombatStyle);
-	/*2215*/REG_CMD_ARR(GetCellRefs);
+	/*2215*/REG_CMD(EmptyCommand);
 	/*2216*/REG_CMD_ARR(SaveHotkeys);
 	/*2217*/REG_CMD(RestoreHotkeys);
 	//	v5.00
@@ -363,8 +363,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*22EB*/REG_CMD(PlayerHasKey);
 	/*22EC*/REG_CMD(GetCellFlag);
 	/*22ED*/REG_CMD(SetCellFlag);
-	/*22EE*/REG_CMD(GetENBFloat);
-	/*22EF*/REG_CMD(SetENBFloat);
+	/*22EE*/REG_CMD(/*GetENBFloat*/EmptyCommand);
+	/*22EF*/REG_CMD(/*SetENBFloat*/EmptyCommand);
 	/*22F0*/REG_CMD(fsqrt);
 	/*22F1*/REG_CMD(GetCellWaterHeight);
 	/*22F2*/REG_CMD(SetCellWaterHeight);
@@ -1028,7 +1028,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2809*/REG_CMD(GetKillXP);
 	/*280A*/REG_CMD(EmptyCommand);
 	/*280B*/REG_CMD_FRM(GetKiller);
-	/*280C*/REG_CMD(KillActorAlt);
+	/*280C*/REG_CMD(EmptyCommand);
 	/*280D*/REG_CMD(ReloadEquippedModels);
 	/*280E*/REG_CMD(MoveToFadeDelay);
 	/*280F*/REG_CMD(RunScriptSnippet);
@@ -1085,7 +1085,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2838*/REG_CMD(SetGameDifficulty);
 	/*2839*/REG_CMD_FRM(GetEquippedItemRef);
 	/*283A*/REG_CMD(ExecuteScript);
-	/*283B*/REG_CMD(ReloadENB);
+	/*283B*/REG_CMD(/*ReloadENB*/EmptyCommand);
 	/*283C*/REG_CMD(IsFleeing);
 	/*283D*/REG_CMD_FRM(GetEnemyHealthTarget);
 	/*283E*/REG_CMD(SetCurrentAmmoRounds);
@@ -1298,8 +1298,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v55.82
 	/*28E9*/REG_CMD(ToggleHitEffects);
 	/*28EA*/REG_CMD(ToggleNoMovementCombat);
-	/*28EB*/REG_CMD(SetTeammateKillable);
-	/*28EC*/REG_CMD(SetNoGunWobble);
+	/*28EB*/REG_CMD(ToggleTeammateKillable);
+	/*28EC*/REG_CMD(ToggleNoGunWobble);
 	//	v56.00
 	/*28ED*/REG_CMD(RewardXPExact);
 	/*28EE*/REG_CMD(GetHitExtendedFlag);
@@ -1362,6 +1362,13 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v56.52
 	/*2918*/REG_CMD(PlaceModel);
 	/*2919*/REG_CMD(AttachLine);
+	//	v56.60
+	/*291A*/REG_CMD(IsSpellTargetList);
+	/*291B*/REG_CMD(GetExcludedCombatActions);
+	/*291C*/REG_CMD(SetExcludedCombatActions);
+	/*291D*/REG_CMD(SetArmorConditionPenalty);
+
+	/*----*//*REG_CMD(GetAnglesBetweenPoints);*/
 
 	//===========================================================
 

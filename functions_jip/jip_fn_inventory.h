@@ -1,6 +1,6 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(AddItemAlt, 1, 4, kParams_OneItemOrList_OneInt_OneOptionalFloat_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(AddItemAlt, 1, 5, kParams_OneItemOrList_OneInt_OneOptionalFloat_TwoOptionalInts);
 DEFINE_COMMAND_PLUGIN(GetValueAlt, 0, 1, kParams_OneOptionalObjectID);
 DEFINE_COMMAND_PLUGIN(SetValueAlt, 0, 2, kParams_OneObjectID_OneInt);
 DEFINE_COMMAND_PLUGIN(RemoveItemTarget, 1, 4, kParams_OneItemOrList_OneContainer_TwoOptionalInts);
@@ -31,12 +31,12 @@ DEFINE_COMMAND_PLUGIN(GetHotkeyItemRef, 0, 1, kParams_OneInt);
 bool Cmd_AddItemAlt_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
-	UInt32 count, doEquip = 0;
+	UInt32 count, doEquip = 0, noMessage = 1;
 	float condition = 100;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &count, &condition, &doEquip) && count && thisObj->GetContainer())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &count, &condition, &doEquip, &noMessage) && count && thisObj->baseForm->GetContainer())
 	{
 		condition = GetMin(GetMax(condition, 0.0F), 100.0F) * 0.01F;
-		thisObj->AddItemAlt(form, count, condition, doEquip != 0);
+		thisObj->AddItemAlt(form, count, condition, doEquip, noMessage);
 	}
 	return true;
 }
@@ -68,7 +68,7 @@ bool Cmd_RemoveItemTarget_Execute(COMMAND_ARGS)
 	TESForm *form;
 	TESObjectREFR *target;
 	SInt32 quantity = 0, clrOwner = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &target, &quantity, &clrOwner) && thisObj->GetContainer())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &target, &quantity, &clrOwner) && thisObj->baseForm->GetContainer())
 		thisObj->RemoveItemTarget(form, target, quantity, !clrOwner);
 	return true;
 }
@@ -239,9 +239,9 @@ bool Cmd_EquipItemAlt_Execute(COMMAND_ARGS)
 	UInt32 noUnequip = 0, noMessage = 1;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &item, &noUnequip, &noMessage) && IS_ACTOR(thisObj))
 	{
-		ExtraContainerChanges::EntryDataList *entryList = thisObj->GetContainerChangesList();
-		if (entryList)
-			((Actor*)thisObj)->EquipItemAlt(item, entryList->FindForItem(item), noUnequip != 0, noMessage != 0);
+		ContChangesEntry *entry = thisObj->GetContainerChangesEntry(item);
+		if (entry && !entry->GetEquippedExtra())
+			((Actor*)thisObj)->EquipItemAlt(item, entry, noUnequip, noMessage);
 	}
 	return true;
 }
@@ -254,18 +254,12 @@ bool Cmd_UnequipItemAlt_Execute(COMMAND_ARGS)
 		(NOT_ID(item, TESObjectWEAP) && NOT_TYPE(item, TESObjectARMO)))
 		return true;
 	ContChangesEntry *entry = thisObj->GetContainerChangesEntry(item);
-	if (entry && entry->extendData)
+	ExtraDataList *xData;
+	if (entry && (xData = entry->GetEquippedExtra()))
 	{
-		Actor *actor = (Actor*)thisObj;
-		ListNode<ExtraDataList> *xdlIter = entry->extendData->Head();
-		ExtraDataList *xData;
-		do
-		{
-			xData = xdlIter->data;
-			if (xData && xData->HasType(kExtraData_Worn))
-				actor->UnequipItem(item, 1, xData, 1, noEquip != 0, noMessage != 0);
-		}
-		while (xdlIter = xdlIter->next);
+		((Actor*)thisObj)->UnequipItem(item, 1, xData, 1, noEquip, noMessage);
+		if (!noMessage)
+			ShowItemMessage(item, *(const char**)0x11D4250);
 	}
 	return true;
 }
@@ -274,7 +268,7 @@ bool Cmd_DropAlt_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	SInt32 dropCount = 0, clrOwner = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &dropCount, &clrOwner) || !thisObj->GetContainer())
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &dropCount, &clrOwner) || !thisObj->baseForm->GetContainer())
 		return true;
 	ExtraContainerChanges::EntryDataList *entryList = thisObj->GetContainerChangesList();
 	if (!entryList) return true;
@@ -370,11 +364,7 @@ bool Cmd_GetAllItems_Execute(COMMAND_ARGS)
 	TESForm *item;
 	TempElements *tmpElements;
 	if (listForm) listForm->RemoveAll();
-	else
-	{
-		tmpElements = GetTempElements();
-		tmpElements->Clear();
-	}
+	else tmpElements = GetTempElements();
 	int count = 0;
 	for (auto itemIter = invItemsMap->Begin(); itemIter; ++itemIter)
 	{
@@ -414,11 +404,7 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 	TESObjectREFR *invRef;
 	TempElements *tmpElements;
 	if (listForm) listForm->RemoveAll();
-	else
-	{
-		tmpElements = GetTempElements();
-		tmpElements->Clear();
-	}
+	else tmpElements = GetTempElements();
 	int count = 0;
 	for (auto dataIter = invItemsMap->Begin(); dataIter; ++dataIter)
 	{
@@ -576,10 +562,9 @@ bool Cmd_GetBaseItems_Execute(COMMAND_ARGS)
 		if (!thisObj) return true;
 		baseForm = thisObj->baseForm;
 	}
-	TESContainer *container = DYNAMIC_CAST(baseForm, TESForm, TESContainer);
+	TESContainer *container = baseForm->GetContainer();
 	if (!container) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<TESContainer::FormCount> *traverse = container->formCountList.Head();
 	TESContainer::FormCount *formCount;
 	do
@@ -645,7 +630,6 @@ bool Cmd_GetEquippedArmorRefs_Execute(COMMAND_ARGS)
 			if (entryList)
 			{
 				TempElements *tmpElements = GetTempElements();
-				tmpElements->Clear();
 				ValidBip01Names::Data *slotData = equipment->slotData;
 				TESForm *item;
 				ContChangesEntry *entry;

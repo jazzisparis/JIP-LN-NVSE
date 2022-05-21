@@ -259,13 +259,13 @@ __declspec(naked) bool __fastcall GetBitSeen(SeenData *seenData, SInt16 colrow)
 {
 	__asm
 	{
-		movzx	eax, dh
-		shr		al, 1
-		mov		ecx, [ecx+eax*4+4]
+		xor		eax, eax
 		mov		al, dh
-		and		al, 1
 		shl		al, 4
 		add		al, dl
+		mov		edx, eax
+		shr		dl, 5
+		mov		ecx, [ecx+edx*4+4]
 		bt		ecx, eax
 		setc	al
 		retn
@@ -799,11 +799,10 @@ __declspec(naked) bool __fastcall UpdateSeenBits(SeenData *seenData, SInt32 *pos
 		cmp		eax, 0x10
 		ja		iter2Head
 		mov		cl, bh
-		and		cl, 1
 		shl		cl, 4
 		add		cl, bl
-		mov		al, bh
-		shr		al, 1
+		mov		al, cl
+		shr		al, 5
 		lea		ebp, [esi+eax*4]
 		mov		eax, [ebp]
 		bts		eax, ecx
@@ -1231,7 +1230,7 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, i
 		jz		noCell_1
 		movzx	eax, byte ptr [ebp-0x1D]
 		dec		eax
-		and		eax, 0x1F2F3F
+		and		eax, 0x17332F
 		mov		[ecx+0x5E0], eax
 	noCell_1:
 		mov		ecx, g_shadowSceneNode
@@ -1588,6 +1587,51 @@ __declspec(naked) void __stdcall GenerateLocalMapInterior(TESObjectCELL *cell, C
 	}
 }
 
+__declspec(naked) void __fastcall SetWaterPlanesHidden(bool doSet)
+{
+	__asm
+	{
+		push	esi
+		push	edi
+		mov		eax, g_TES
+		mov		eax, [eax+0x64]
+		mov		esi, [eax+0x3C]
+		mov		dl, 0xFE
+		ALIGN 16
+	groupIter:
+		test	esi, esi
+		jz		done
+		mov		eax, [esi+8]
+		mov		esi, [esi]
+		test	eax, eax
+		jz		groupIter
+		mov		edi, [eax+0x24]
+		ALIGN 16
+	planeIter:
+		test	edi, edi
+		jz		groupIter
+		mov		eax, [edi+8]
+		mov		edi, [edi]
+		test	eax, eax
+		jz		planeIter
+		cmp		byte ptr [eax+0xF], 0xFF
+		jnz		planeIter
+		mov		eax, [eax+0x64]
+		test	eax, eax
+		jz		planeIter
+		mov		eax, [eax+0x14]
+		test	eax, eax
+		jz		planeIter
+		and		[eax+0x30], dl
+		or		[eax+0x30], cl
+		jmp		planeIter
+	done:
+		pop		edi
+		pop		esi
+		retn
+	}
+}
+
 __declspec(naked) void __fastcall SaveLocalMapTexture(TESForm *worldOrCell, NiRenderedTexture *texture, Coordinate coord)
 {
 	static const char kFileFmt[] = "local_maps\\%s.(%d,%d).dds";
@@ -1739,19 +1783,10 @@ TileRect *s_localMapRect, *s_worldMapRect, *s_mapMarkersRect, *s_doorMarkersRect
 TileImage *s_worldMapTile;
 Tile::Value *s_miniMapMode, *s_pcMarkerRotate, *s_miniMapPosX, *s_miniMapPosY, *s_worldMapZoom;
 TileShaderProperty *s_tileShaderProps[9];
-bool s_defaultGridSize;
-NiColor *g_directionalLightColor;
-BSFogProperty *g_fogProperty;
-BSParticleSystemManager *g_particleSysMngr;
-
-WaterSurfaceManager *g_waterSurfaceMngr;
 BSFadeNode *s_fakeWaterPlanes;
-const __m128 kWaterPlaneColor = {23 / 255.0F, 51/ 255.0F, 47 / 255.0F, 0.75F};
-const NiPoint2 kWaterPlanePos[] =
-{
-	{0, -8192.0F}, {0, -4096.0F}, {0, 0}, {4096.0F, -8192.0F}, {4096.0F, -4096.0F},
-	{4096.0F, 0}, {8192.0F, -8192.0F}, {8192.0F, -4096.0F}, {8192.0F, 0}
-};
+bool s_defaultGridSize;
+NiColor *g_directionalLightColor, *g_shadowFogColor;
+BSParticleSystemManager *g_particleSysMngr;
 
 struct MapMarkerInfo
 {
@@ -1765,6 +1800,14 @@ struct MapMarkerInfo
 typedef Vector<MapMarkerInfo, 2> CellMapMarkers;
 typedef UnorderedMap<UInt32, CellMapMarkers> WorldMapMarkers;
 TempObject<Map<TESWorldSpace*, WorldMapMarkers>> s_worldMapMarkers;
+
+const __m128 kWaterPlaneColor = {23 / 255.0F, 51/ 255.0F, 47 / 255.0F, 0.75F};
+const NiPoint2 kWaterPlanePos[] =
+{
+	{2048.0F, -10240.0F}, {2048.0F, -6144.0F}, {2048.0F, -2048.0F},
+	{6144.0F, -10240.0F}, {6144.0F, -6144.0F}, {6144.0F, -2048.0F},
+	{10240.0F, -10240.0F}, {10240.0F, -6144.0F}, {10240.0F, -2048.0F}
+};
 
 bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 {
@@ -1906,10 +1949,10 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	BSFadeNode *waterParent = BSFadeNode::Create();
 
 	shapeVertices = (NiVector3*)GameHeapAlloc(sizeof(NiVector3) * 4);
-	shapeVertices[0] = {0, 0, 0};
-	shapeVertices[1] = {0, -4096.0F, 0};
-	shapeVertices[2] = {4096.0F, 0, 0};
-	shapeVertices[3] = {4096.0F, -4096.0F, 0};
+	shapeVertices[0] = {-2048.0F, 2048.0F, 0};
+	shapeVertices[1] = {-2048.0F, -2048.0F, 0};
+	shapeVertices[2] = {2048.0F, 2048.0F, 0};
+	shapeVertices[3] = {2048.0F, -2048.0F, 0};
 
 	NiColorAlpha *vertexColors = (NiColorAlpha*)GameHeapAlloc(sizeof(NiColorAlpha) * 4);
 	vertexColors[0] = kWaterPlaneColor;
@@ -1939,7 +1982,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	}
 	while (++index < 9);
 
-	CdeclCall(0xB57E30, waterParent, 0, 0);
+	waterParent->RenderGeometryAndShader();
 	g_shadowSceneNode->AddObject(waterParent, 1);
 	s_fakeWaterPlanes = waterParent;
 
@@ -1982,9 +2025,8 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 
 	s_defaultGridSize = *(UInt8*)0x11C63D0 <= 5;
 	g_directionalLightColor = &g_TES->directionalLight->ambientColor;
-	g_fogProperty = *(BSFogProperty**)0x11DEB00;
+	g_shadowFogColor = &(*(BSFogProperty**)0x11DEB00)->color;
 	g_particleSysMngr = *(BSParticleSystemManager**)0x11DED58;
-	g_waterSurfaceMngr = g_TES->waterManager;
 	SafeWrite16(0x452736, 0x7705);
 	SafeWrite8(0x555C20, 0xC3);
 	WriteRelCall(0x9438F6, (UInt32)UpdateCellsSeenBitsHook);
@@ -1999,6 +2041,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 
 const __m128 kVertexAlphaMults = {0.25, 0.5, 0.75, 1};
 alignas(16) const NiColor kDirectionalLightValues[] = {{1.0F, 1.0F, 239 / 255.0F}, {0, 0, 0}};
+alignas(16) const float kFogPropertyValues[] = {23 / 255.0F, 51 / 255.0F, 47 / 255.0F, FLT_MAX, FLT_MAX};
 const UInt8 kSelectImgUpdate[][9] =
 {
 	{8, 2, 0, 4, 1, 0, 0, 0, 0},
@@ -2379,8 +2422,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					}
 					GameGlobals::SceneLightsLock()->Leave();
 					memcpy(g_directionalLightColor, kDirectionalLightValues, sizeof(kDirectionalLightValues));
-					g_fogProperty->distNear = FLT_MAX;
-					g_fogProperty->distFar = FLT_MAX;
+					memcpy(g_shadowFogColor, kFogPropertyValues, sizeof(kFogPropertyValues));
 					*(UInt8*)0x11FF104 = 1;
 					g_particleSysMngr->m_flags |= 1;
 					for (auto hdnIter = s_hiddenNodes().Begin(); hdnIter; ++hdnIter)
@@ -2402,9 +2444,9 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					if (updateTiles)
 					{
 						s_fakeWaterPlanes->LocalTranslate() = nwXY;
-						s_fakeWaterPlanes->UpdateDownwardPass(kUpdateParams, 0);
+						ThisCall(0xA5DD70, s_fakeWaterPlanes, &kUpdateParams, 0);
 					}
-					ThisCall(0x4E6370, g_waterSurfaceMngr, 0, 0, 0);
+					SetWaterPlanesHidden(1);
 				}
 
 				const UInt8 *updateList = kSelectImgUpdate[quadrant];
@@ -2570,7 +2612,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 
 				for (auto plnIter = s_fakeWaterPlanes->m_children.Begin(); plnIter; ++plnIter)
 					plnIter->m_flags |= 1;
-				ThisCall(0x4E6370, g_waterSurfaceMngr, 1, 0, 0);
+				SetWaterPlanesHidden(0);
 			}
 			else *g_lightingPasses = lightingPasses;
 			g_particleSysMngr->m_flags &= ~1;

@@ -1130,7 +1130,7 @@ template <> class HashedKey<char*>
 public:
 	__forceinline bool Match(char*, UInt32 inHash) const {return hashVal == inHash;}
 	__forceinline char *Get() const {return key;}
-	__forceinline void Set(char *inKey, UInt32 inHash)
+	__forceinline void Set(const char *inKey, UInt32 inHash)
 	{
 		hashVal = inHash;
 		key = CopyString(inKey);
@@ -1193,10 +1193,8 @@ template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = 
 
 		UInt32 Size() const
 		{
-			if (!entries) return 0;
-			UInt32 size = 1;
-			Entry *pEntry = entries;
-			while (pEntry = pEntry->next)
+			UInt32 size = 0;
+			for (Entry *pEntry = entries; pEntry; pEntry = pEntry->next)
 				size++;
 			return size;
 		}
@@ -1603,10 +1601,8 @@ template <typename T_Key, const UInt32 _default_bucket_count = MAP_DEFAULT_BUCKE
 
 		UInt32 Size() const
 		{
-			if (!entries) return 0;
-			UInt32 size = 1;
-			Entry *pEntry = entries;
-			while (pEntry = pEntry->next)
+			UInt32 size = 0;
+			for (Entry *pEntry = entries; pEntry; pEntry = pEntry->next)
 				size++;
 			return size;
 		}

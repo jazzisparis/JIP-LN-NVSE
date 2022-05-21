@@ -427,7 +427,6 @@ bool Cmd_GetBarterItems_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &sold) || !brtMenu || !brtMenu->merchantRef) return true;
 	TESObjectREFR *target = sold ? brtMenu->merchantRef->GetMerchantContainer() : g_thePlayer, *itemRef;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<ContChangesEntry> *iter = sold ? brtMenu->rightBarter.Head() : brtMenu->leftBarter.Head();
 	do
 	{
@@ -481,15 +480,24 @@ bool Cmd_MessageExAlt_Execute(COMMAND_ARGS)
 	char *buffer = GetStrArgBuffer();
 	if (!ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_MessageExAlt.numParams, &displayTime))
 		return true;
-	char *msgPtr = GetNextToken(buffer, '|');
-	msgPtr[0x203] = 0;
-	if (*msgPtr)
+	const char *msgIcon = nullptr, *msgSound = nullptr;
+	while (true)
 	{
-		if ((buffer[0] == '#') && (buffer[1] >= '0') && (buffer[1] <= '6') && !buffer[2])
-			QueueUIMessage(msgPtr, 0, (const char*)kMsgIconsPathAddr[buffer[1] - '0'], NULL, displayTime, 0);
-		else QueueUIMessage(msgPtr, 0, buffer, NULL, displayTime, 0);
+		char *barPtr = GetNextToken(buffer, '|');
+		if (!*barPtr) break;
+		if (*buffer == '$')
+			msgSound = buffer + 1;
+		else if (*buffer == '#')
+		{
+			char iconIdx = buffer[1] - '0';
+			if ((iconIdx >= 0) && (iconIdx <= 6))
+				msgIcon = (const char*)kMsgIconsPathAddr[iconIdx];
+		}
+		else msgIcon = buffer;
+		buffer = barPtr;
 	}
-	else QueueUIMessage(buffer, 0, NULL, NULL, displayTime, 0);
+	buffer[0x203] = 0;
+	QueueUIMessage(buffer, 0, msgIcon, msgSound, displayTime, 0);
 	return true;
 }
 
@@ -1213,7 +1221,6 @@ bool Cmd_GetVATSTargets_Execute(COMMAND_ARGS)
 	*result = 0;
 	if (!VATSMenu::Get()) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<VATSTarget> *iter = GameGlobals::VATSTargetList()->Head();
 	VATSTarget *targetInfo;
 	do

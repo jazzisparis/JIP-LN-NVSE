@@ -112,7 +112,7 @@ void DoPreLoadGameHousekeeping()
 		s_scriptWaitInfoMap().Clear();
 		HOOK_SET(ScriptRunner, false);
 		HOOK_SET(EvalEventBlock, false);
-		s_scriptWaitInfo = NULL;
+		s_scriptWaitInfo = nullptr;
 	}
 
 	for (auto lgtIter = s_activePtLights().Begin(); lgtIter; ++lgtIter)
@@ -171,8 +171,10 @@ void DoPreLoadGameHousekeeping()
 	s_gameLoadFlagLN = true;
 	HOOK_SET(OnRagdoll, false);
 	s_onRagdollEventScripts().Clear();
+	s_excludedCombatActionsMap().Clear();
 	MiniMapLoadGame();
-	s_syncPositionRef = NULL;
+	s_syncPositionRef = nullptr;
+	g_thePlayer->killer = nullptr;
 }
 
 void RestoreJIPFormFlags()

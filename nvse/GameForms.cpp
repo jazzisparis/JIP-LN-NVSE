@@ -1,56 +1,117 @@
 #include "nvse/GameForms.h"
 
-__declspec(naked) const char *TESForm::GetTheName() const
+const UInt32 kBaseComponentOffsets[] =
 {
-	static const char kFullNameOffset[] =
-	{
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x00,
-		0x00, 0x00, 0x0E, 0x00, 0x00, 0x06, 0x06, 0x0C, 0x0C, 0x0C, 0x0C, 0x0C, 0x00, 0x0F,
-		0x0C, 0x0C, 0x0C, 0x0C, 0x00, 0x00, 0xFB, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x0C, 0x0C,
-		0x34, 0x34, 0x00, 0x00, 0x0C, 0x0C, 0x00, 0x12, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06,
-		0x00, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x0C, 0x00, 0x00,
-		0x00, 0x00, 0x06, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x06, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x06, 0x00, 0x06, 0x06, 0x0C, 0x06, 0x00, 0x06,
-		0x06, 0x06, 0x06, 0x0C, 0x0C, 0x06, 0x00, 0x00, 0x00
-	};
+	0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000006, 0x000006, 0x000006, 0x000006,
+	0x000006, 0x000006, 0x000000, 0x000000, 0x000000, 0x00000E, 0x000000, 0x000000, 0x000006, 0x000006, 0x1A170C,
+	0x1A170C, 0x1A170C, 0x530F0C, 0x271A0C, 0x000000, 0x1F1A0F, 0x1A170C, 0x251E0C, 0x251E0C, 0x211A0C, 0x000000,
+	0x000000, 0xFE00FB, 0x000000, 0x000000, 0x150000, 0x000000, 0x1A170C, 0x2D1A0C, 0x22270C, 0x413D34, 0x413D34,
+	0x000000, 0x000000, 0x211A0C, 0x29220C, 0x000000, 0x000012, 0x000000, 0x16000C, 0x000000, 0x000000, 0x000000,
+	0x000000, 0x000000, 0x000006, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000006,
+	0x000000, 0x000000, 0x000000, 0x000006, 0x000000, 0x00060C, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000,
+	0x000000, 0x000006, 0x000000, 0x000000, 0x00000C, 0x000000, 0x000000, 0x000000, 0x000000, 0x000006, 0x000000,
+	0x000000, 0x000006, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000006,
+	0x000000, 0x000000, 0x000000, 0x000000, 0x231A0C, 0x000006, 0x000000, 0x000006, 0x000006, 0x20000C, 0x000006,
+	0x000000, 0x000006, 0x000006, 0x000B06, 0x000006, 0x00200C, 0x00000C, 0x000006, 0x000000, 0x000000, 0x000000
+};
+
+__declspec(naked) TESFullName *TESForm::GetFullName() const
+{
 	__asm
 	{
-		cmp		byte ptr [ecx+4], kFormType_TESObjectCELL
+		movzx	edx, byte ptr [ecx+4]
+		cmp		dl, kFormType_TESObjectCELL
 		jz		isCell
 		mov		eax, [ecx]
 		cmp		dword ptr [eax+0xF0], ADDR_ReturnTrue
 		mov		eax, [ecx+0x20]
 		cmovz	ecx, eax
-		movzx	edx, byte ptr [ecx+4]
-		movsx	eax, kFullNameOffset[edx]
+		movsx	eax, byte ptr kBaseComponentOffsets[edx*4]
 		test	eax, eax
-		jz		nullStr
-		lea		edx, [ecx+eax*4]
-		cmp		word ptr [edx+8], 0
-		jle		nullStr
-		mov		eax, [edx+4]
+		jz		done
+		lea		eax, [ecx+eax*4]
 		retn
 	isCell:
-		mov		eax, [ecx+0x1C]
-		cmp		word ptr [ecx+0x20], 0
+		lea		eax, [ecx+0x18]
+		cmp		word ptr [eax+8], 0
 		jg		done
-		mov		ecx, [ecx+0xC0]
-		test	ecx, ecx
-		jz		nullStr
-		mov		eax, [ecx+0x1C]
-		cmp		word ptr [ecx+0x20], 0
-		jg		done
-	nullStr:
-		mov		eax, offset kFullNameOffset
+		mov		eax, [ecx+0xC0]
+		test	eax, eax
+		jz		done
+		add		eax, 0x18
 	done:
+		retn
+	}
+}
+
+__declspec(naked) const char *TESForm::GetTheName() const
+{
+	__asm
+	{
+		call	TESForm::GetFullName
+		test	eax, eax
+		jz		nullStr
+		cmp		word ptr [eax+8], 0
+		jle		nullStr
+		mov		eax, [eax+4]
+		retn
+	nullStr:
+		mov		eax, 0x1011584
+		retn
+	}
+}
+
+__declspec(naked) TESScriptableForm *TESForm::GetScriptableForm() const
+{
+	__asm
+	{
+		movzx	edx, byte ptr [ecx+4]
+		movsx	eax, byte ptr kBaseComponentOffsets[edx*4+1]
+		test	eax, eax
+		jz		done
+		lea		eax, [ecx+eax*4]
+	done:
+		retn
+	}
+}
+
+__declspec(naked) BGSDestructibleObjectForm *TESForm::GetDestructibleForm() const
+{
+	__asm
+	{
+		movzx	edx, byte ptr [ecx+4]
+		movsx	eax, byte ptr kBaseComponentOffsets[edx*4+2]
+		test	eax, eax
+		jz		done
+		lea		eax, [ecx+eax*4]
+	done:
+		retn
+	}
+}
+
+__declspec(naked) TESContainer *TESForm::GetContainer() const
+{
+	__asm
+	{
+		cmp		byte ptr [ecx+4], kFormType_TESObjectCONT
+		jz		isContainer
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xF8], ADDR_ReturnTrue
+		jnz		retnNULL
+		lea		eax, [ecx+0x64]
+		retn
+	isContainer:
+		lea		eax, [ecx+0x30]
+		retn
+	retnNULL:
+		xor		eax, eax
 		retn
 	}
 }
 
 bool TESForm::HasScript() const
 {
-	TESScriptableForm *scriptable = DYNAMIC_CAST(this, TESForm, TESScriptableForm);
+	TESScriptableForm *scriptable = GetScriptableForm();
 	return scriptable && scriptable->script;
 }
 
@@ -189,11 +250,41 @@ void TESForm::UnloadModel()
 	}
 }
 
-TESLeveledList *TESForm::GetLvlList() const
+__declspec(naked) TESLeveledList *TESForm::GetLvlList() const
 {
-	if (IS_ID(this, TESLevCreature) || IS_ID(this, TESLevCharacter) || IS_ID(this, TESLevItem))
-		return &((TESLevCreature*)this)->list;
-	return NULL;
+	__asm
+	{
+		mov		al, [ecx+4]
+		cmp		al, kFormType_TESLevCreature
+		jz		getList
+		cmp		al, kFormType_TESLevCharacter
+		jz		getList
+		cmp		al, kFormType_TESLevItem
+		jz		getList
+		xor		eax, eax
+		retn
+	getList:
+		lea		eax, [ecx+0x30]
+		retn
+	}
+}
+
+__declspec(naked) MagicItem *TESForm::GetMagicItem() const
+{
+	__asm
+	{
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xEC], ADDR_ReturnTrue
+		jnz		retnNULL
+		lea		eax, [ecx+0x18]
+		lea		edx, [ecx+0x30]
+		cmp		byte ptr [ecx+4], kFormType_SpellItem
+		cmovg	eax, edx
+		retn
+	retnNULL:
+		xor		eax, eax
+		retn
+	}
 }
 
 __declspec(naked) SInt32 __fastcall TESContainer::GetCountForForm(TESForm *form) const
@@ -298,11 +389,12 @@ void TESObjectCELL::ToggleNodes(UInt32 nodeBits, UInt8 doHide)
 
 TESObjectCELL *CellPointerMap::Lookup(UInt32 key) const;
 
-__declspec(naked) TESObjectCELL* __fastcall TESWorldSpace::GetCellAtPos(const NiVector3 &pos) const
+__declspec(naked) TESObjectCELL* __vectorcall TESWorldSpace::GetCellAtPos(__m128 pos) const
 {
 	__asm
 	{
-		movq	xmm0, qword ptr [edx]
+		xorps	xmm1, xmm1
+		unpcklpd	xmm0, xmm1
 		cvttps2dq	xmm0, xmm0
 		psrad	xmm0, 0xC
 		movd	eax, xmm0
@@ -986,12 +1078,6 @@ const UInt8 kAttackAnims[] = {255, 38, 44, 50, 56, 62, 68, 26, 74, 32, 80, 86, 1
 void TESObjectWEAP::SetAttackAnimation(UInt32 _attackAnim)
 {
 	attackAnim = kAttackAnims[_attackAnim];
-}
-
-TESObjectIMOD* TESObjectWEAP::GetItemMod(UInt8 which)
-{
-	if ((which < 1) || (which > 3)) return NULL;
-	return itemMod[which - 1];
 }
 
 __declspec(naked) TESAmmo *TESObjectWEAP::GetAmmo() const

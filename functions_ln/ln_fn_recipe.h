@@ -29,7 +29,6 @@ bool Cmd_GetFormRecipes_Execute(COMMAND_ARGS)
 	TESForm *form, *filter = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &filter)) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	if (filter && NOT_ID(filter, TESRecipeCategory)) filter = NULL;
 	ListNode<TESRecipe> *rcpeIter = g_dataHandler->recipeList.Head();
 	TESRecipe *recipe;
@@ -59,7 +58,6 @@ bool Cmd_GetFormRecipeOutputs_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &filter))
 		return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	if (filter && NOT_ID(filter, TESRecipeCategory)) filter = NULL;
 	ListNode<TESRecipe> *rcpeIter = g_dataHandler->recipeList.Head();
 	TESRecipe *recipe;

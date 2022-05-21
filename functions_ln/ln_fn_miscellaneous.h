@@ -3,7 +3,7 @@
 DEFINE_CMD_ALT_COND_PLUGIN(GetArmorClass, GetAC, 0, 1, kParams_OneOptionalObjectID);
 DEFINE_COMMAND_ALT_PLUGIN(SetGlobalValue, SGV, 0, 2, kParams_OneString_OneFloat);
 DEFINE_COMMAND_ALT_PLUGIN(GetWorldspaceParentWorldspace, GetWorldParentWorld, 0, 1, kParams_OneWorldspace);
-DEFINE_COMMAND_PLUGIN(GetCellCoords, 0, 1, kParams_OneOptionalCell);
+DEFINE_COMMAND_PLUGIN(GetCellCoords, 0, 1, kParams_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(GetBipedModelList, GetBMList, 0, 1, kParams_OneOptionalObjectID);
 DEFINE_COMMAND_ALT_PLUGIN(SetBipedModelList, SetBMList, 0, 2, kParams_OneForm_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(GetPCCanUsePowerArmor, 0, 0, NULL);
@@ -118,7 +118,8 @@ bool Cmd_GetCellCoords_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectCELL *cell = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &cell)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &cell) || (cell && NOT_ID(cell, TESObjectCELL)))
+		return true;
 	NVSEArrayVar *outArray = CreateStringMap(NULL, NULL, 0, scriptObj);
 	if (!cell) cell = thisObj ? thisObj->parentCell : g_thePlayer->parentCell;
 	SetElement(outArray, ArrayElementL("x"), (cell && !cell->IsInterior()) ? ArrayElementL(cell->coords.exterior->x) : ArrayElementL(0.0));
@@ -185,12 +186,14 @@ bool Cmd_SetIdleAnimPath_Execute(COMMAND_ARGS)
 
 bool Cmd_LNGetName_Execute(COMMAND_ARGS)
 {
-	const char *resStr = NULL;
-	TESForm *form = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (form || (thisObj && (form = thisObj->baseForm))))
+	const char *resStr = nullptr;
+	TESForm *form = nullptr;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
-		if (thisObj) resStr = s_refNamesMap().Get(thisObj);
-		if (!resStr) resStr = form->GetTheName();
+		if (form)
+			resStr = form->GetTheName();
+		else if (thisObj && !(resStr = s_refNamesMap().Get(thisObj)))
+			resStr = thisObj->baseForm->GetTheName();
 	}
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
@@ -199,15 +202,12 @@ bool Cmd_LNGetName_Execute(COMMAND_ARGS)
 bool Cmd_LNSetName_Execute(COMMAND_ARGS)
 {
 	char nameStr[0x80];
-	TESForm *form = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &nameStr, &form)) return true;
-	if (!form)
+	TESForm *form = nullptr;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &nameStr, &form) && (form || (form = thisObj)))
 	{
-		if (!thisObj) return true;
-		form = thisObj->baseForm;
+		TESFullName *fullName = form->GetFullName();
+		if (fullName) fullName->name.Set(nameStr);
 	}
-	TESFullName *fullName = DYNAMIC_CAST(form, TESForm, TESFullName);
-	if (fullName) fullName->name.Set(nameStr);
 	return true;
 }
 
@@ -489,7 +489,6 @@ bool Cmd_SetContainerCloseSound_Execute(COMMAND_ARGS)
 bool Cmd_GetPlayerRegions_Execute(COMMAND_ARGS)
 {
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<TESRegion> *iter = g_thePlayer->regionsList.list.Head();
 	do
 	{
@@ -505,7 +504,7 @@ bool Cmd_GetZoneFlag_Execute(COMMAND_ARGS)
 	BGSEncounterZone *encZone;
 	UInt32 flag;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &encZone, &flag) && IS_ID(encZone, BGSEncounterZone))
-		*result = (encZone->flags & flag) ? 1 : 0;
+		*result = (encZone->zoneFlags & flag) ? 1 : 0;
 	else *result = 0;
 	return true;
 }
@@ -550,29 +549,33 @@ bool Cmd_LNIsPlayable_Execute(COMMAND_ARGS)
 		if (!thisObj) return true;
 		form = thisObj->baseForm;
 	}
+	bool isPlayable = false;
 	switch (form->typeID)
 	{
-	case kFormType_TESObjectARMO:
-		*result = ((TESObjectARMO*)form)->bipedModel.IsPlayable() ? 1 : 0;
-		break;
-	case kFormType_TESObjectWEAP:
-		*result = ((TESObjectWEAP*)form)->IsPlayable() ? 1 : 0;
-		break;
-	case kFormType_TESAmmo:
-		*result = ((TESAmmo*)form)->IsPlayable() ? 1 : 0;
-		break;
-	case kFormType_BGSPerk:
-		*result = ((BGSPerk*)form)->data.isPlayable ? 1 : 0;
-		break;
-	case kFormType_TESRace:
-		*result = ((TESRace*)form)->IsPlayable() ? 1 : 0;
-		break;
-	case kFormType_TESEyes:
-		*result = ((TESEyes*)form)->IsPlayable() ? 1 : 0;
-		break;
-	case kFormType_TESHair:
-		*result = ((TESHair*)form)->IsPlayable() ? 1 : 0;
+		case kFormType_TESObjectARMO:
+			isPlayable = ((TESObjectARMO*)form)->bipedModel.IsPlayable();
+			break;
+		case kFormType_TESObjectWEAP:
+			isPlayable = ((TESObjectWEAP*)form)->IsPlayable();
+			break;
+		case kFormType_TESAmmo:
+			isPlayable = ((TESAmmo*)form)->IsPlayable();
+			break;
+		case kFormType_BGSPerk:
+			isPlayable = ((BGSPerk*)form)->data.isPlayable;
+			break;
+		case kFormType_TESRace:
+			isPlayable = ((TESRace*)form)->IsPlayable();
+			break;
+		case kFormType_TESEyes:
+			isPlayable = ((TESEyes*)form)->IsPlayable();
+			break;
+		case kFormType_TESHair:
+			isPlayable = ((TESHair*)form)->IsPlayable();
+			break;
 	}
+	if (isPlayable)
+		*result = 1;
 	return true;
 }
 
@@ -586,28 +589,30 @@ bool Cmd_LNSetIsPlayable_Execute(COMMAND_ARGS)
 		if (!thisObj) return true;
 		form = thisObj->baseForm;
 	}
+	bool bPlayable = playable != 0;
 	switch (form->typeID)
 	{
-	case kFormType_TESObjectARMO:
-		((TESObjectARMO*)form)->bipedModel.SetPlayable(playable != 0);
-		break;
-	case kFormType_TESObjectWEAP:
-		((TESObjectWEAP*)form)->SetPlayable(playable != 0);
-		break;
-	case kFormType_TESAmmo:
-		((TESAmmo*)form)->SetPlayable(playable != 0);
-		break;
-	case kFormType_BGSPerk:
-		((BGSPerk*)form)->data.isPlayable = (playable != 0);
-		break;
-	case kFormType_TESRace:
-		((TESRace*)form)->SetPlayable(playable != 0);
-		break;
-	case kFormType_TESEyes:
-		((TESEyes*)form)->SetPlayable(playable != 0);
-		break;
-	case kFormType_TESHair:
-		((TESHair*)form)->SetPlayable(playable != 0);
+		case kFormType_TESObjectARMO:
+			((TESObjectARMO*)form)->bipedModel.SetPlayable(bPlayable);
+			break;
+		case kFormType_TESObjectWEAP:
+			((TESObjectWEAP*)form)->SetPlayable(bPlayable);
+			break;
+		case kFormType_TESAmmo:
+			((TESAmmo*)form)->SetPlayable(bPlayable);
+			break;
+		case kFormType_BGSPerk:
+			((BGSPerk*)form)->data.isPlayable = bPlayable;
+			break;
+		case kFormType_TESRace:
+			((TESRace*)form)->SetPlayable(bPlayable);
+			break;
+		case kFormType_TESEyes:
+			((TESEyes*)form)->SetPlayable(bPlayable);
+			break;
+		case kFormType_TESHair:
+			((TESHair*)form)->SetPlayable(bPlayable);
+			break;
 	}
 	return true;
 }
@@ -625,10 +630,13 @@ bool Cmd_GetZone_Execute(COMMAND_ARGS)
 
 bool Cmd_AddNoteNS_Execute(COMMAND_ARGS)
 {
-	UInt8 savedByte = *(UInt8*)QueueUIMessage;
-	SafeWrite8((UInt32)QueueUIMessage, 0xC3);	// RETN
-	AddNote(PASS_COMMAND_ARGS);
-	SafeWrite8((UInt32)QueueUIMessage, savedByte);
+	BGSNote *note;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &note))
+	{
+		tList<BGSNote> &notesList = g_thePlayer->notes;
+		if (!notesList.IsInList(note))
+			notesList.Prepend(note);
+	}
 	return true;
 }
 
@@ -679,19 +687,19 @@ bool Cmd_GetWaterTrait_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &water, &traitID) || NOT_ID(water, TESWaterForm) || (traitID > 50)) return true;
 	switch (traitID)
 	{
-	case 0:
-		*result = water->opacity;
-		break;
-	case 1:
-		*result = water->waterFlags;
-		break;
-	case 12:
-	case 13:
-	case 14:
-		cvtui2d(RGBHexToDec(*(UInt32*)&water->visData[traitID - 2]), result);
-		break;
-	default:
-		*result = water->visData[traitID - 2];
+		case 0:
+			*result = water->opacity;
+			break;
+		case 1:
+			*result = water->waterFlags;
+			break;
+		case 12:
+		case 13:
+		case 14:
+			cvtui2d(RGBHexToDec(*(UInt32*)&water->visData[traitID - 2]), result);
+			break;
+		default:
+			*result = water->visData[traitID - 2];
 	}
 	return true;
 }
@@ -705,19 +713,19 @@ bool Cmd_SetWaterTrait_Execute(COMMAND_ARGS)
 	UInt32 intVal = (int)value;
 	switch (traitID)
 	{
-	case 0:
-		if (intVal <= 100) water->opacity = intVal;
-		break;
-	case 1:
-		if (intVal <= 3) water->waterFlags = intVal;
-		break;
-	case 12:
-	case 13:
-	case 14:
-		if (intVal <= 255255255) *(UInt32*)&water->visData[traitID - 2] = RGBDecToHex(intVal);
-		break;
-	default:
-		water->visData[traitID - 2] = value;
+		case 0:
+			if (intVal <= 100) water->opacity = intVal;
+			break;
+		case 1:
+			if (intVal <= 3) water->waterFlags = intVal;
+			break;
+		case 12:
+		case 13:
+		case 14:
+			if (intVal <= 255255255) *(UInt32*)&water->visData[traitID - 2] = RGBDecToHex(intVal);
+			break;
+		default:
+			water->visData[traitID - 2] = value;
 	}
 	return true;
 }

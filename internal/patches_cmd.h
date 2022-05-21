@@ -94,7 +94,8 @@ UInt8 __fastcall DoGetPerkRank(Actor *actor, BGSPerk *perk, bool forTeammates)
 	{
 		if (s_NPCPerks)
 			return actor->GetPerkRank(perk, forTeammates);
-		return g_thePlayer->GetPerkRank(perk, forTeammates | actor->isTeammate);
+		else if ((actor->refID == 0x14) || actor->isTeammate)
+			g_thePlayer->GetPerkRank(perk, forTeammates | actor->isTeammate);
 	}
 	return 0;
 }
@@ -518,11 +519,4 @@ void InitCmdPatches()
 	cmdInfo->execute = Hook_IsPluginInstalled_Execute;
 	cmdInfo = GetCmdByOpcode(0x15E0);
 	cmdInfo->execute = Hook_GetPluginVersion_Execute;
-
-	SayTo = GetCmdByOpcode(0x1034)->execute;
-	KillActor = GetCmdByOpcode(0x108B)->execute;
-	AddNote = GetCmdByOpcode(0x117C)->execute;
-	AttachAshPile = GetCmdByOpcode(0x1211)->execute;
-	MoveToFade = GetCmdByOpcode(0x124F)->execute;
-	GetRefs = GetCmdByOpcode(0x15C7)->execute;
 }

@@ -618,3 +618,9 @@ struct BSSimpleArray
 		ThisCall(0x7CB2E0, this, item);
 	}
 };
+
+struct TimePair
+{
+	float	start;
+	float	cooldown;
+};

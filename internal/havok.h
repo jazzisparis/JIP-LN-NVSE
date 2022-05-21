@@ -9,74 +9,75 @@ struct alignas(16) hkQuaternion
 	hkQuaternion() {}
 	hkQuaternion(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
 	hkQuaternion(const hkQuaternion &from) {*this = from;}
-	hkQuaternion(const NiVector3 &ypr) {*this = ypr;}
+	hkQuaternion(const NiVector3 &pry) {*this = pry;}
 	hkQuaternion(const NiMatrix33 &rotMat) {*this = rotMat;}
 	hkQuaternion(const hkMatrix3x4 &rotMat) {*this = rotMat;}
 	hkQuaternion(const hkVector4 &from) {*this = from;}
 	hkQuaternion(const AxisAngle &axisAngle) {*this = axisAngle;}
 	hkQuaternion(const NiQuaternion &niQt) {*this = niQt;}
-	explicit hkQuaternion(const __m128 rhs) {*this = rhs;}
+	hkQuaternion(const __m128 rhs) {*this = rhs;}
 
-	inline void operator=(const hkQuaternion &from) {_mm_store_ps(&x, from);}
-	inline void operator=(hkQuaternion &&from) {_mm_store_ps(&x, from);}
-	inline void operator=(const NiVector3 &ypr) {FromEulerYPR(ypr);}
+	inline void operator=(const hkQuaternion &from) {_mm_store_ps(&x, from.PS());}
+	inline void operator=(hkQuaternion &&from) {_mm_store_ps(&x, from.PS());}
+	inline void operator=(const NiVector3 &pry) {FromEulerPRY(pry.PS());}
 	inline void operator=(const NiMatrix33 &rotMat) {FromRotationMatrix(rotMat);}
 	inline void operator=(const hkMatrix3x4 &rotMat) {ThisCall(0xCB26E0, this, &rotMat);}
-	inline void operator=(const hkVector4 &from) {_mm_store_ps(&x, from);}
+	inline void operator=(const hkVector4 &from) {_mm_store_ps(&x, from.PS());}
 	inline void operator=(const AxisAngle &axisAngle) {FromAxisAngle(axisAngle);}
-	inline void operator=(const __m128 rhs) {_mm_store_ps(&x, rhs);}
+	inline void __vectorcall operator=(const __m128 rhs) {_mm_store_ps(&x, rhs);}
 
 	inline void operator=(const NiQuaternion &niQt)
 	{
-		_mm_store_si128((__m128i*)this, _mm_shuffle_epi32(_mm_loadu_si128((__m128i*)&niQt), 0x39));
+		__m128 m = _mm_loadu_ps(&niQt.w);
+		_mm_store_ps(&x, _mm_shuffle_ps(m, m, 0x39));
 	}
 
 	inline hkQuaternion& operator+=(const hkQuaternion &rhs)
 	{
-		*this = _mm_add_ps(*this, rhs);
+		*this = _mm_add_ps(PS(), rhs.PS());
 		return *this;
 	}
 
 	inline hkQuaternion& operator-=(const hkQuaternion &rhs)
 	{
-		*this = _mm_sub_ps(*this, rhs);
+		*this = _mm_sub_ps(PS(), rhs.PS());
 		return *this;
 	}
 
 	inline hkQuaternion& operator*=(float s)
 	{
-		*this = _mm_mul_ps(*this, _mm_set_ps1(s));
+		*this = _mm_mul_ps(PS(), _mm_set_ps1(s));
 		return *this;
 	}
 
 	hkQuaternion& __fastcall operator*=(const hkQuaternion &rhs);
 
-	inline operator __m128() const {return _mm_load_ps(&x);}
+	inline __m128 PS() const {return _mm_load_ps(&x);}
 
-	hkQuaternion& __fastcall FromEulerYPR(const NiVector3 &ypr);
+	hkQuaternion& __vectorcall FromEulerPRY(__m128 pry);
 	hkQuaternion& __fastcall FromRotationMatrix(const NiMatrix33 &rotMat);
 	hkQuaternion& __fastcall FromAxisAngle(const AxisAngle &axisAngle);
 
 	inline hkQuaternion& Invert()
 	{
-		*this = _mm_xor_ps(*this, _mm_load_ps((const float*)0x10C4C00));
+		*this = _mm_xor_ps(PS(), _mm_load_ps((const float*)0x10C4C00));
 		return *this;
 	}
 
 	inline hkQuaternion& Negate()
 	{
-		*this = _mm_xor_ps(*this, GET_PS(2));
+		*this = _mm_xor_ps(PS(), GET_PS(2));
 		return *this;
 	}
 
 	inline float __vectorcall DotProduct(const hkQuaternion &rhs) const
 	{
-		__m128 m = _mm_mul_ps(*this, rhs);
+		__m128 m = _mm_mul_ps(PS(), rhs.PS());
 		return _mm_hadd_ps(_mm_hadd_ps(m, m), m).m128_f32[0];
 	}
 
 	hkQuaternion& Normalize();
-	NiVector3& __fastcall ToEulerYPR(NiVector3 &ypr) const;
+	__m128 __vectorcall ToEulerPRY() const;
 
 	void Dump() const;
 };

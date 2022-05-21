@@ -372,31 +372,49 @@ enum
 // 288
 struct PlayingMusic
 {
+	struct PerTrack
+	{
+		UInt32		trackType;
+		int			offset;
+		int			position;
+		int			duration;
+		UInt32		unk10;
+		int			recoveryTime;
+		UInt32		unk18;
+		UInt32		unk1C;
+		UInt32		count20;
+	};
+
 	char					track1Path[MAX_PATH];	// 000
 	FAMThread				*famThread;				// 104
 	char					track2Path[MAX_PATH];	// 108
 	UInt32					unk20C;					// 20C
 	float					flt210;					// 210
 	float					flt214;					// 214
-	float					flt218;					// 218
-	float					flt21C;					// 21C
+	float					track1CalculatedVolume;	// 218
+	float					track1Volume;			// 21C
 	UInt8					track1Flags;			// 220
 	UInt8					track2Flags;			// 221
 	bool					isPaused;				// 222
-	bool					isMusicON;				// 223
-	UInt32					unk224;					// 224
-	UInt32					unk228[8];				// 228
+	bool					isPipboyRadioPlaying;	// 223
+	PerTrack				track1;					// 224
 	float					flt248;					// 248
 	float					flt24C;					// 24C
-	float					flt250;					// 250
-	float					flt254;					// 254
-	UInt32					unk258;					// 258
-	UInt32					unk25C[8];				// 25C
+	float					track2CalculatedVolume;	// 250
+	float					track2Volume;			// 254
+	PerTrack				track2;					// 258
 	UInt32					track1Active;			// 27C
 	UInt32					unk280;					// 280
 	MediaLocationController	*medLocCtrl;			// 284
 
 	__forceinline static PlayingMusic *Get() {return (PlayingMusic*)0x11DD0F0;}
+
+	__forceinline static void SetPlayingMusic(UInt32 musicType, const char *filePath, int recoveryTime, bool shouldLoop, bool forcePlay, float volume, int offset)
+	{
+		CdeclCall(0x8300C0, musicType, filePath, recoveryTime, shouldLoop, forcePlay, volume, offset);
+	}
+
+	__forceinline static void StopPlayingMusic() {CdeclCall(0x8304A0);}
 };
 static_assert(sizeof(PlayingMusic) == 0x288);
 

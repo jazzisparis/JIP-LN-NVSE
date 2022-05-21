@@ -1132,6 +1132,8 @@ __declspec(naked) bool __fastcall RemoveAmmoHook(Actor *actor, int EDX, TESObjec
 	{
 		push	esi
 		mov		esi, ecx
+		cmp		dword ptr [esp+4], 0x8A86B5
+		jz		doneFiltered
 		mov		ecx, offset s_fireWeaponEventScripts
 		cmp		dword ptr [ecx+4], 0
 		jz		doneUnfiltered
@@ -1258,23 +1260,70 @@ __declspec(naked) void EquipItemHook()
 	}
 }
 
+__declspec(naked) void __fastcall ReApplyEnchantments(Actor *actor)
+{
+	__asm
+	{
+		push	ebx
+		push	esi
+		push	edi
+		mov		ebx, ecx
+		call	TESObjectREFR::GetContainerChangesList
+		mov		esi, eax
+		ALIGN 16
+	iterHead:
+		test	esi, esi
+		jz		done
+		mov		edi, [esi]
+		mov		esi, [esi+4]
+		test	edi, edi
+		jz		iterHead
+		mov		eax, [edi+8]
+		cmp		byte ptr [eax+4], kFormType_TESObjectARMO
+		jnz		iterHead
+		cmp		dword ptr [eax+0x4C], 0
+		jz		iterHead
+		mov		ecx, edi
+		call	ContChangesEntry::GetEquippedExtra
+		test	eax, eax
+		jz		iterHead
+		push	0
+		mov		eax, [edi+8]
+		push	eax
+		mov		eax, [eax+0x4C]
+		add		eax, 0x18
+		push	eax
+		lea		ecx, [ebx+0x88]
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x14]
+		jmp		iterHead
+		ALIGN 16
+	done:
+		pop		edi
+		pop		esi
+		pop		ebx
+		retn
+	}
+}
+
 __declspec(naked) void ReEquipAllHook()
 {
 	__asm
 	{
-		mov		[ebp-0x50], ecx
-		mov		ecx, [ebp+8]
-		test	byte ptr [ecx+0x105], kHookActorFlag1_LockedEquipment
+		push	ebp
+		mov		ebp, esp
+		sub		esp, 0x6C
+		mov		eax, [ebp+8]
+		test	byte ptr [eax+0x105], kHookActorFlag1_LockedEquipment
 		jnz		proceed
-		mov		byte ptr [ebp-0x11], 1
-		JMP_EAX(0x6047CE)
+		JMP_EAX(0x6047C6)
 	proceed:
-		mov		eax, [ebp]
-		cmp		dword ptr [eax+4], 0x5CD73B	//	Cmd_SetCombatStyle_Execute
+		mov		ecx, [ebp]
+		cmp		dword ptr [ecx+4], 0x5CD73B	//	Cmd_SetCombatStyle_Execute
 		jnz		skipRetn
-		mov		ecx, [ecx+0x68]
+		mov		ecx, [eax+0x68]
 		test	ecx, ecx
-		jz		skipRetn
+		jz		done
 		cmp		byte ptr [ecx+0x28], 1
 		ja		getPrefWpn
 		mov		eax, [ecx+0x114]
@@ -1286,27 +1335,27 @@ __declspec(naked) void ReEquipAllHook()
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
 		test	eax, eax
-		jz		skipRetn
+		jz		done
 		mov		eax, [eax+0xC]
 		test	eax, eax
-		jz		skipRetn
+		jz		done
 		mov		al, [eax+0x40]
 		test	al, al
-		jz		skipRetn
+		jz		done
 		and		al, 1
 		mov		ecx, [ebp-0x28]
 		mov		ecx, [ecx+8]
 		cmp		byte ptr [ecx+0xF4], 2
 		setbe	cl
 		cmp		al, cl
-		jz		skipRetn
+		jz		done
 	getPrefWpn:
 		push	6
 		mov		ecx, [ebp+8]
 		mov		eax, [ecx]
 		call	dword ptr [eax+0x3BC]
 		test	eax, eax
-		jz		skipRetn
+		jz		done
 		mov		[ebp-0x28], eax
 		mov		ecx, [eax+8]
 		mov		edx, 1
@@ -1331,8 +1380,15 @@ __declspec(naked) void ReEquipAllHook()
 		push	1
 		mov		ecx, [ebp-0x28]
 		CALL_EAX(0x4459E0)
+		jmp		done
 	skipRetn:
-		pop		esi
+		cmp		dword ptr [eax+0x64], 0
+		jnz		done
+		test	byte ptr [eax+0x5F], kHookRefFlag5F_Update3D
+		jnz		done
+		mov		ecx, eax
+		call	ReApplyEnchantments
+	done:
 		leave
 		retn	0x14
 	}
@@ -4553,6 +4609,64 @@ __declspec(naked) void BipedSlotVisibilityHook()
 	}
 }
 
+TempObject<UnorderedMap<TESObjectREFR*, UInt32>> s_excludedCombatActionsMap;
+
+__declspec(naked) void InitCombatControllerHook()
+{
+	__asm
+	{
+		push	dword ptr [ebp+8]
+		mov		ecx, offset s_excludedCombatActionsMap
+		call	UnorderedMap<TESObjectREFR*, UInt32>::Get
+		mov		ecx, [ebp-0x1C]
+		mov		[ecx+0x188], eax
+		JMP_EAX(0x980AE0)
+	}
+}
+
+__declspec(naked) bool __fastcall CombatActionApplicableHook(CombatAction *action, int EDX, void *arg1)
+{
+	__asm
+	{
+		push	esi
+		mov		eax, [ebp-0xAC]
+		mov		eax, [eax+0x2058]
+		mov		eax, [eax+0x188]
+		mov		edx, [ecx+0x24]
+		bt		eax, edx
+		jc		retnFalse
+		lea		esi, [ecx+0x14]
+		mov		eax, [esp+8]
+		mov		ecx, [eax]
+		mov		edx, [eax+4]
+		ALIGN 16
+	iterHead:
+		test	esi, esi
+		jz		retnFalse
+		mov		eax, [esi]
+		mov		esi, [esi+4]
+		test	eax, eax
+		jz		iterHead
+		cmp		[eax], ecx
+		jnz		iterHead
+		mov		eax, [eax+4]
+		cmp		eax, edx
+		jz		retnTrue
+		cmp		edx, 0xFFFFFFFF
+		jz		retnTrue
+		cmp		eax, 0xFFFFFFFF
+		jnz		iterHead
+	retnTrue:
+		mov		al, 1
+		pop		esi
+		retn	4
+	retnFalse:
+		xor		al, al
+		pop		esi
+		retn	4
+	}
+}
+
 TESClimate *s_forcedClimate = NULL;
 
 __declspec(naked) void SkyRefreshClimateHook()
@@ -4774,7 +4888,7 @@ __declspec(noinline) void InitJIPHooks()
 	HOOK_INIT_JUMP(ActivateDoor, 0x573673);
 	HOOK_INIT_JUMP(TeleportWithPC, 0x8AD471);
 	HOOK_INIT_JUMP(EquipItem, 0x88C87A);
-	HOOK_INIT_JUMP(ReEquipAll, 0x6047C7);
+	HOOK_INIT_JUMP(ReEquipAll, 0x6047C0);
 	HOOK_INIT_JPRT(WeaponSwitchSelect, 0x999857, 0x99987A);
 	HOOK_INIT_JPRT(WeaponSwitchUnequip, 0x9DA8E3, 0x9DA900);
 	HOOK_INIT_JUMP(GetPreferedWeapon, 0x891C86);
@@ -4843,6 +4957,13 @@ __declspec(noinline) void InitJIPHooks()
 	SAFE_WRITE_BUF(0x92C4A0, "\x8B\x81\x40\x02\x00\x00\x85\xC0\x74\x07\xC7\x40\x10\xFF\xFF\xFF\xFF\xC3");
 	WriteRelJump(0x418B10, (UInt32)GetCannotWearHook);
 	WriteRelJump(0x4AC645, (UInt32)BipedSlotVisibilityHook);
+	SafeWrite8(0x670C30, 0x8C);
+	SafeWrite8(0x9921C2, 0x8C);
+	SafeWrite8(0x992352, 0x8C);
+	SafeWrite8(0x992416, 0x8C);
+	SafeWrite8(0x97D55F, 0x40);
+	WriteRelCall(0x97D71F, (UInt32)InitCombatControllerHook);
+	WriteRelCall(0x9951B3, (UInt32)CombatActionApplicableHook);
 	WritePushRetRelJump(0x63C918, 0x63C92E, (UInt32)SkyRefreshClimateHook);
 	WriteRelJump(0x87F427, (UInt32)IsActorEssentialHook);
 	WritePushRetRelJump(0x524014, 0x524042, (UInt32)FireWeaponWobbleHook);

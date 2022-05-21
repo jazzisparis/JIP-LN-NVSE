@@ -579,7 +579,7 @@ public:
 	/*620*/virtual void		UnsetQueuedIdleFlag(UInt32 flag);
 	/*624*/virtual void		Unk_189();
 	/*628*/virtual void		Unk_18A(Actor *actor);
-	/*62C*/virtual void		Unk_18B();
+	/*62C*/virtual void		Unk_18B(TESObjectREFR *target);
 	/*630*/virtual void		Unk_18C();
 	/*634*/virtual void		Unk_18D();
 	/*638*/virtual void		Unk_18E();
@@ -1056,7 +1056,7 @@ public:
 	UInt32						unk1A8;				// 1A8
 	tList<void>					*list1AC;			// 1AC
 	tList<void>					list1B0;			// 1B0
-	tList<void>					*list1B8;			// 1B8
+	tList<ActiveEffect>			*activeEffects;		// 1B8
 	MagicTarget					*magicTarget1BC;	// 1BC
 	AnimData					*animData;			// 1C0
 	BSAnimGroupSequence			*animSequence[3];	// 1C4
@@ -1095,6 +1095,12 @@ class HighProcess : public MiddleHighProcess
 public:
 	/*870*/virtual tList<void>	*GetList394();
 
+	struct MoveToInfo
+	{
+		TESObjectREFR	*destRef;
+		NiVector3		posMods;
+	};
+
 	tList<DetectionData>				*detectedActors;	// 25C
 	tList<DetectionData>				*detectingActors;	// 260
 	tList<void>							*lstPtr264;			// 264
@@ -1108,8 +1114,8 @@ public:
 	tList<void>							list27C;			// 27C
 	tList<void>							list284;			// 284
 	tList<void>							list28C;			// 28C
-	float								flt294;				// 294
-	float								flt298;				// 298
+	float								detectListTimer;	// 294
+	float								idleChatterCommentTimer;// 298
 	UInt8								byte29C;			// 29C
 	UInt8								byte29D;			// 29D
 	UInt8								byte29E;			// 29E
@@ -1117,10 +1123,10 @@ public:
 	float								flt2A0;				// 2A0
 	UInt32								unk2A4;				// 2A4
 	float								flt2A8;				// 2A8
-	UInt32								unk2AC;				// 2AC
+	TESObjectREFR						*turnToTarget;		// 2AC
 	float								actorAlpha2;		// 2B0
-	float								flt2B4;				// 2B4
-	float								flt2B8;				// 2B8
+	float								packageEvalTimer;	// 2B4
+	float								useItemTimer;		// 2B8
 	float								flt2BC;				// 2BC
 	SInt16								word2C0;			// 2C0
 	SInt16								word2C2;			// 2C2
@@ -1149,8 +1155,8 @@ public:
 	NiVector3							vec300;				// 300
 	UInt32								unk30C;				// 30C
 	float								flt310;				// 310
-	UInt32								unk314[6];			// 314
-	UInt8								byte32C;			// 32C
+	Sound								playedSounds[2];	// 314
+	UInt8								greetingFlag;		// 32C
 	UInt8								byte32D;			// 32D
 	UInt8								byte32E;			// 32E
 	UInt8								byte32F;			// 32F
@@ -1159,12 +1165,12 @@ public:
 	float								flt338;				// 338
 	float								diveBreath;			// 33C
 	UInt32								unk340;				// 340
-	float								flt344;				// 344
+	float								painSoundTimer;		// 344
 	UInt8								byte348;			// 348
-	UInt8								byte349;			// 349
+	UInt8								weaponAlertDrawn;	// 349
 	UInt8								byte34A;			// 34A
 	UInt8								byte34B;			// 34B
-	float								flt34C;				// 34C
+	float								awarePlayerTimer;	// 34C
 	TESIdleForm							*queuedIdle;		// 350
 	NiRefObject							*object354;			// 354
 	NiRefObject							*object358;			// 358
@@ -1173,7 +1179,7 @@ public:
 	NiBSplineCompTransformInterpolator	**ptr364;			// 364
 	void								*ptr368;			// 368
 	UInt32								unk36C[2];			// 36C
-	UInt8								byte374;			// 374
+	UInt8								continueIfPCNear;	// 374
 	UInt8								byte375;			// 375
 	UInt8								byte376;			// 376
 	UInt8								byte377;			// 377
@@ -1184,8 +1190,8 @@ public:
 	float								flt388;				// 388
 	tList<void>							list38C;			// 38C
 	tList<void>							list394;			// 394
-	UInt32								unk39C;				// 39C
-	UInt8								byte3A0;			// 3A0
+	UInt32								numGuardsPursuing;	// 39C
+	UInt8								bStop;				// 3A0
 	UInt8								byte3A1;			// 3A1
 	UInt8								byte3A2;			// 3A2
 	UInt8								byte3A3;			// 3A3
@@ -1204,7 +1210,7 @@ public:
 	float								flt3BC;				// 3BC
 	float								detectionActionTimer;	// 3C0
 	float								lightAmount;		// 3C4
-	float								flt3C8;				// 3C8
+	float								lightUpdateTimer;	// 3C8
 	void								*ptr3CC;			// 3CC
 	UInt8								byte3D0;			// 3D0
 	UInt8								byte3D1;			// 3D1
@@ -1221,10 +1227,13 @@ public:
 	UInt32								fadeType;			// 3E8
 	float								delayTime;			// 3EC
 	UInt32								unk3F0;				// 3F0
-	UInt32								unk3F4;				// 3F4
-	UInt32								unk3F8[3];			// 3F8
-	Actor								*combatTarget;		// 404
-	UInt32								unk408[2];			// 408
+	MoveToInfo							*delayedMoveTo;		// 3F4
+	TESObjectREFR						*defaultHeadTrack;	// 3F8
+	TESObjectREFR						*actionHeadTrack;	// 3FC
+	TESObjectREFR						*scriptHeadTrack;	// 400
+	Actor								*combatHeadTrack;	// 404
+	Actor								*dialogHeadTrack;	// 408
+	TESObjectREFR						*procedureHeadTrack;// 40C
 	UInt8								byte410;			// 410
 	UInt8								byte411;			// 411
 	UInt8								byte412;			// 412
@@ -1233,7 +1242,7 @@ public:
 	UInt8								byte415;			// 415
 	UInt8								byte416;			// 416
 	UInt8								byte417;			// 417
-	float								flt418;				// 418
+	float								headTrackTimer;		// 418
 	TESObjectREFR						*packageTarget;		// 41C
 	UInt8								byte420;			// 420
 	UInt8								byte421;			// 421
@@ -1245,18 +1254,18 @@ public:
 	UInt32								unk430;				// 430
 	bhkShapePhantom						*ptr434;			// 434
 	UInt32								unk438;				// 438
-	float								unk43C;				// 43C
+	float								radReevalTimer;		// 43C
 	float								radsSec440;			// 440
 	UInt8								plantedExplosive;	// 444
-	UInt8								byte445;			// 445
+	UInt8								forceTalkToPCAfterGettingUp;// 445
 	UInt8								byte446;			// 446
 	UInt8								byte447;			// 447
-	float								flt448;				// 448
+	float								takeBackTimer;		// 448
 	UInt32								unk44C;				// 44C
 	float								flt450;				// 450
 	UInt32								unk454;				// 454
-	UInt8								byte458;			// 458
-	UInt8								byte459;			// 459
+	UInt8								isHiding;			// 458
+	UInt8								isDoingSayTo;		// 459
 	UInt8								byte45A;			// 45A
 	UInt8								byte45B;			// 45B
 	NiRefObject							*object45C;			// 45C
@@ -1388,16 +1397,16 @@ struct ProcessManager
 	UInt32									unk044[5];			// 044
 	tList<void>								list058;			// 058
 	tList<BSTempEffect>						tempEffects;		// 060
-	tList<void>								list068;			// 068
+	tList<ProjectileData>					projDataList;		// 068
 	tList<void>								list070;			// 070
 	tList<void>								list078;			// 078
 	tList<Actor>							highActors;			// 080
 	Actor									*nearestActors[50];	// 088
 	UInt32									nearestActorsCount;	// 150
-	float									flt154;				// 154
-	float									flt158;				// 158
-	UInt8									byte15C;			// 15C
-	UInt8									byte15D;			// 15D
+	float									commentPCActionsTimer;	// 154
+	float									commentPCKnockingTimer;	// 158
+	UInt8									pcInRadiation1;		// 15C
+	UInt8									pcInRadiation2;		// 15D
 	UInt8									pad15E[2];			// 15E
 	DetectionTaskData						detectionTasks;		// 160
 	AnimationTaskData						animationTasks;		// 1A0
@@ -1420,9 +1429,9 @@ struct ProcessManager
 	UInt8									showSubtitle;		// 103AD
 	UInt8									byte103AE;			// 103AE
 	UInt8									byte103AF;			// 103AF
-	UInt32									unk103B0;			// 103B0
-	float									flt103B4;			// 103B4
-	UInt32									unk103B8;			// 103B8
+	UInt32									numHighActors;		// 103B0
+	float									crimeUpdateTimer;	// 103B4
+	UInt32									crimeNumber;		// 103B8
 	float									removeDeadActorsTime;	// 103BC
 	UInt32									unk103C0[3];		// 103C0
 
@@ -1435,7 +1444,6 @@ struct ProcessManager
 };
 static_assert(sizeof(ProcessManager) == 0x103CC);
 
-class CombatGoal;
 struct CombatSearchLocation;
 struct CombatSearchDoor;
 struct CombatGroupCluster;
@@ -1443,87 +1451,139 @@ class PathingCoverLocation;
 struct UnreachableLocation;
 struct UnreachableCoverLocation;
 
+// 1C
+class CombatGoal
+{
+public:
+	virtual void	Unk_00(void);
+	virtual void	Unk_01(void);
+
+	tList<void>		list04;		// 04
+	tList<void>		list0C;		// 0C
+	UInt32			type;		// 14
+	UInt32			unk18;		// 18
+};
+
 // 0C
 struct CombatActionInfo
 {
-	char		*name;	// 00
+	const char	*name;	// 00
 	float		cost;	// 04
-	UInt32		unk08;	// 08
+	UInt32		flags;	// 08
+
+	__forceinline static CombatActionInfo *Array() {return (CombatActionInfo*)0x11A4280;}
 };
 
 enum CombatActions
 {
-	COMBAT_ACTION_ATTACK_RANGED_EXPLOSIVE,
-	COMBAT_ACTION_ATTACK_RANGED_EXPLOSIVE_F,
-	COMBAT_ACTION_ATTACK_RANGED,
-	COMBAT_ACTION_ATTACK_RANGED_FROM_COVER,
-	COMBAT_ACTION_ATTACK_GRENADE,
-	COMBAT_ACTION_ATTACK_GRENADE_FLUSH_TARG,
-	COMBAT_ACTION_ATTACK_GRENADE_FROM_COVER,
-	COMBAT_ACTION_ATTACK_MELEE,
-	COMBAT_ACTION_ATTACK_HAND_TO_HAND,
-	COMBAT_ACTION_MOVE,
-	COMBAT_ACTION_MOVE_AND_SWITCH_TO_MELEE,
-	COMBAT_ACTION_MOVE_AND_ATTACK_RANGED,
-	COMBAT_ACTION_MOVE_AND_ATTACK_RANGED_EX,
-	COMBAT_ACTION_MOVE_AND_ATTACK_GRENADE,
-	COMBAT_ACTION_DRAW_WEAPON,
-	COMBAT_ACTION_SWITCH_WEAPON,
-	COMBAT_ACTION_AVOID_THREAT,
-	COMBAT_ACTION_SEARCH,
-	COMBAT_ACTION_INVESTIGATE,
-	COMBAT_ACTION_DODGE,
-	COMBAT_ACTION_IGNORE_BLOCKED_TARGET,
-	COMBAT_ACTION_FLEE,
-	COMBAT_ACTION_ACTIVATE_COMBAT_ITEM,
-	COMBAT_ACTION_USE_COMBAT_ITEM,
-	COMBAT_ACTION_ACQUIRE_LINE_OF_SIGHT,
-	COMBAT_ACTION_HIDE,
-	COMBAT_ACTION_APPROACH_TARGET
+	/*00*/COMBAT_ACTION_ATTACK_RANGED_EXPLOSIVE,
+	/*01*/COMBAT_ACTION_ATTACK_RANGED_EXPLOSIVE_FROM_COVER,
+	/*02*/COMBAT_ACTION_ATTACK_RANGED,
+	/*03*/COMBAT_ACTION_ATTACK_RANGED_FROM_COVER,
+	/*04*/COMBAT_ACTION_ATTACK_GRENADE,
+	/*05*/COMBAT_ACTION_ATTACK_GRENADE_FLUSH_TARGET,
+	/*06*/COMBAT_ACTION_ATTACK_GRENADE_FROM_COVER,
+	/*07*/COMBAT_ACTION_ATTACK_MELEE,
+	/*08*/COMBAT_ACTION_ATTACK_HAND_TO_HAND,
+	/*09*/COMBAT_ACTION_MOVE,
+	/*0A*/COMBAT_ACTION_MOVE_AND_SWITCH_TO_MELEE,
+	/*0B*/COMBAT_ACTION_MOVE_AND_ATTACK_RANGED,
+	/*0C*/COMBAT_ACTION_MOVE_AND_ATTACK_RANGED_EXPLOSIVE,
+	/*0D*/COMBAT_ACTION_MOVE_AND_ATTACK_GRENADE,
+	/*0E*/COMBAT_ACTION_DRAW_WEAPON,
+	/*0F*/COMBAT_ACTION_SWITCH_WEAPON,
+	/*10*/COMBAT_ACTION_AVOID_THREAT,
+	/*11*/COMBAT_ACTION_SEARCH,
+	/*12*/COMBAT_ACTION_INVESTIGATE,
+	/*13*/COMBAT_ACTION_DODGE,
+	/*14*/COMBAT_ACTION_IGNORE_BLOCKED_TARGET,
+	/*15*/COMBAT_ACTION_FLEE,
+	/*16*/COMBAT_ACTION_ACTIVATE_COMBAT_ITEM,
+	/*17*/COMBAT_ACTION_USE_COMBAT_ITEM,
+	/*18*/COMBAT_ACTION_ACQUIRE_LINE_OF_SIGHT,
+	/*19*/COMBAT_ACTION_HIDE,
+	/*1A*/COMBAT_ACTION_APPROACH_TARGET
+};
+
+enum CombatProcedures
+{
+	/*00*/COMBAT_PROCEDURE_ATTACK_RANGED,
+	/*01*/COMBAT_PROCEDURE_ATTACK_MELEE,
+	/*02*/COMBAT_PROCEDURE_ATTACK_GRENADE,
+	/*03*/COMBAT_PROCEDURE_ATTACK_LOW,
+	/*04*/COMBAT_PROCEDURE_EVADE,
+	/*05*/COMBAT_PROCEDURE_SWITCH_WEAPON,
+	/*06*/COMBAT_PROCEDURE_MOVE,
+	/*07*/COMBAT_PROCEDURE_BE_IN_COVER,
+	/*08*/COMBAT_PROCEDURE_ACTIVATE_OBJECT,
+	/*09*/COMBAT_PROCEDURE_HIDE_FROM_TARGET,
+	/*0A*/COMBAT_PROCEDURE_SEARCH,
+	/*0B*/COMBAT_PROCEDURE_USE_COMBAT_ITEM,
+	/*0C*/COMBAT_PROCEDURE_ENGAGE_TARGET
 };
 
 // 2C
 class CombatAction
 {
 public:
-	virtual void	IsApplicable(void);
-	virtual void	AddProcedureToController(CombatController *combatCtrl, void *a2);
-	virtual void	Unk_02(void);
-	virtual void	GetCost(CombatController *combatCtrl, int a2);
+	/*00*/virtual bool	IsApplicable(CombatController *combatCtrl, void *worldState, UInt32 moveType);
+	/*04*/virtual void	AddProcedureToController(CombatController *combatCtrl, void *a2);
+	/*08*/virtual bool	Unk_02();
+	/*0C*/virtual float	GetCost(CombatController *combatCtrl, int a2);
+	/*10*/virtual void	GetName(char *buffer, UInt32 bufferSize, UInt32 subType);
 
 	tList<void>		list04;		// 04
 	tList<void>		list0C;		// 0C
 	tList<void>		list14;		// 14
 	tList<void>		list1C;		// 1C
 	UInt32			actionID;	// 24
-	UInt32			unk28;		// 28
+	UInt32			flags;		// 28
 };
 static_assert(sizeof(CombatAction) == 0x2C);
 
 class CombatProcedure
 {
 public:
-	virtual void	Destroy(bool doFree);
-	virtual void	Update(void);
-	virtual void	SetCombatController(CombatController *_combatCtrl);
-	virtual void	Unk_03(void);
-	virtual void	ClearTargettedRefIfEqualTo(TESObjectREFR *targettedRef);
-	virtual void	DebugPrint(void);
-	virtual void	Unk_06(NiVector3 *out, NiVector3 *in);
-	virtual void	SetLastError_Disarmed(int unused);
-	virtual void	Unk_08(int a1);
-	virtual void	Unk_09(void);
-	virtual void	Unk_0A(int a1, int a2, int a3, int a4);
-	virtual void	Unk_0B(void);
-	virtual void	Unk_0C(void);
-	virtual void	Unk_0D(void);
-	virtual void	SaveGame(int a1);
-	virtual void	LoadGame(int a1);
-	virtual void	LoadGame2(int a1);
+	/*00*/virtual void	Destroy(bool doFree);
+	/*04*/virtual void	Update();
+	/*08*/virtual void	SetCombatController(CombatController *_combatCtrl);
+	/*0C*/virtual void	OnStop();
+	/*10*/virtual void	ClearTargettedRefIfEqualTo(TESObjectREFR *targettedRef);
+	/*14*/virtual void	DebugPrint(void);
+	/*18*/virtual void	Unk_06(NiVector3 *out, NiVector3 *in);
+	/*1C*/virtual void	SetLastError_Disarmed(int unused);
+	/*20*/virtual void	Unk_08(int a1);
+	/*24*/virtual void	Unk_09(void);
+	/*28*/virtual void	Unk_0A(int a1, int a2, int a3, int a4);
+	/*2C*/virtual void	Unk_0B(void);
+	/*30*/virtual void	Unk_0C(void);
+	/*34*/virtual UInt32	GetType();
+	/*38*/virtual void	SaveGame(int a1);
+	/*3C*/virtual void	LoadGame(int a1);
+	/*40*/virtual void	LoadGame2(int a1);
 
 	CombatController	*combatCtrl;	// 04
-	UInt32				*status;		// 08
+	UInt32				state;			// 08
 	char				*errorText;		// 0C
+};
+
+// 18
+struct CombatPlan
+{
+	struct Action
+	{
+		CombatAction	*action;
+		Action			*next;
+		UInt32			unk08;
+		UInt32			unk0C;
+	};
+
+	Action				**actionStack;
+	UInt32				numActions;
+	UInt32				counter08;
+	CombatGoal			*goal;
+	UInt32				unk10;
+	CombatController	*combatCtrl;
 };
 
 // 14
@@ -1542,7 +1602,8 @@ struct CombatActors
 		UInt32			unk0C;
 	};
 
-	UInt32									unk000[2];			// 000
+	UInt32									unk000;				// 000
+	UInt32									groupID;			// 004
 	BSSimpleArray<CombatTarget>				targets;			// 008
 	BSSimpleArray<CombatAlly>				allies;				// 018
 	UInt32									unk028;				// 028
@@ -1567,8 +1628,8 @@ struct CombatActors
 	NiPoint2								unk0A8;				// 0A8
 	NiPoint2								unk0B0;				// 0B0
 	NiPoint2								unk0B8;				// 0B8
-	float									flt0C0;				// 0C0
-	float									flt0C4;				// 0C4
+	float									sumThreatValue;		// 0C0
+	float									averageDPS;			// 0C4
 	float									flt0C8;				// 0C8
 	float									flt0CC;				// 0CC
 	UInt32									targetSearchState;	// 0D0	0 - Not searching; 1-2 - Searching
@@ -1595,69 +1656,84 @@ struct CombatActors
 };
 static_assert(sizeof(CombatActors) == 0x15C);
 
+// 22C
+struct CombatState
+{
+	UInt8									byte000;				// 000
+	UInt8									pad001[3];				// 001
+	UInt32									flags;					// 004
+	float									fleeThreshold;			// 008
+	TESObjectWEAP							*weaponsByType[6];		// 00C
+	BSSimpleArray<TESObjectWEAP*>			arr024;					// 024
+	TESObjectWEAP							*weapon034;				// 034
+	UInt32									availableWeaponTypes;	// 038
+	float									maxDPSPerWeaponType[7];	// 03C
+	float									meleeDPS;				// 058
+	float									rangedDPS;				// 05C
+	UInt32									unk060[13];				// 060
+	float									detectionBufferTimer;	// 094
+	UInt32									unk098[11];				// 098
+	void									*ptr0C4;				// 0C4
+	UInt32									unk0C8[17];				// 0C8
+	BSSimpleArray<PathingCoverLocation*>	arr10C;					// 10C
+	UInt32									unk11C[11];				// 11C
+	BSSimpleArray<PathingCoverLocation*>	arr148;					// 148
+	UInt32									unk158[3];				// 158
+	BSSimpleArray<UnreachableCoverLocation*>	arr164;				// 164
+	BSSimpleArray<UnreachableLocation*>		arr174;					// 174
+	UInt32									unk184[15];				// 184
+	Actor									*actor1C0;				// 1C0
+	CombatController						*cmbtCtrl;				// 1C4
+	UInt32									unk1C8[25];				// 1C8
+};
+static_assert(sizeof(CombatState) == 0x22C);
+
 // 188
 class CombatController : public TESPackage
 {
 public:
-	struct Unk09C
-	{
-		UInt32									unk000[4];	// 000
-		TESObjectWEAP							*weapon1;	// 010
-		TESObjectWEAP							*weapon2;	// 014
-		TESObjectWEAP							*weapon3;	// 018
-		TESObjectWEAP							*weapon4;	// 01C
-		UInt32									unk020;		// 020
-		BSSimpleArray<TESObjectWEAP*>			arr024;		// 024
-		UInt32									unk034[24];	// 034
-		float									flt094;		// 094
-		UInt32									unk098[11];	// 098
-		void									*ptr0C4;	// 0C4
-		UInt32									unk0C8[17];	// 0C8
-		BSSimpleArray<PathingCoverLocation*>	arr10C;		// 10C
-		UInt32									unk11C[11];	// 11C
-		BSSimpleArray<PathingCoverLocation*>	arr148;		// 148
-		UInt32									unk158[3];	// 158
-		BSSimpleArray<UnreachableCoverLocation*>	arr164;		// 164
-		BSSimpleArray<UnreachableLocation*>		arr174;		// 174
-		UInt32									unk184[15];	// 184
-		Actor									*actor1C0;	// 1C0
-		CombatController						*cmbtCtrl;	// 1C4
-		UInt32									unk1C8[25];	// 1C8
-	};
-	static_assert(sizeof(Unk09C) == 0x22C);
-
 	CombatActors					*combatGroup;		// 080
 	CombatProcedure					*combatProcedure1;	// 084
 	CombatProcedure					*combatProcedure2;	// 088
 	BSSimpleArray<CombatProcedure*>	combatProcedures;	// 08C
-	Unk09C							*struct09C;			// 09C
-	void							*ptr0A0;			// 0A0
+	CombatState						*combatState;		// 09C
+	CombatPlan						*combatPlan;		// 0A0
 	UInt32							unk0A4;				// 0A4
 	CombatAction					*combatAction;		// 0A8
 	CombatGoal						*combatGoal;		// 0AC
 	UInt32							unk0B0;				// 0B0
-	float							flt0B4[2];			// 0B4
+	TimePair						combatStyleChangeTimer;	// 0B4
 	Actor							*packageOwner;		// 0BC
 	Actor							*packageTarget;		// 0C0
-	UInt32							unk0C4[2];			// 0C4
-	float							flt0CC;				// 0CC
-	float							flt0D0;				// 0D0
-	UInt8							byte0D4;			// 0D4
-	UInt8							byte0D5;			// 0D5
+	UInt8							byte0C4;			// 0C4
+	UInt8							byte0C5;			// 0C5
+	UInt8							isInIronSights;		// 0C6
+	UInt8							shouldSneak;		// 0C7
+	UInt32							movementFlagsToClear;	// 0C8
+	float							actorHeight;		// 0CC
+	float							eyeHeight;			// 0D0
+	UInt8							isCharacter;		// 0D4
+	UInt8							isMobile;			// 0D5
 	UInt8							pad0D6[2];			// 0D6
-	float							flt0D8;				// 0D8
-	float							flt0DC;				// 0DC
+	float							walkSpeedMult;		// 0D8
+	float							runSpeedMult;		// 0DC
 	float							flt0E0;				// 0E0
-	UInt32							unk0E4[3];			// 0E4
+	UInt32							unk0E4;				// 0E4
+	NiObject						*object0E8;			// 0E8
+	NiObject						*object0EC;			// 0EC
 	TESObjectWEAP					*weapon;			// 0F0
 	TESCombatStyle					*combatStyle;		// 0F4
 	UInt32							unk0F8[11];			// 0F8
-	UInt8							byte124;			// 124
+	UInt8							canPowerAttack;		// 124
 	bool							stopCombat;			// 125
-	UInt8							byte126;			// 126
+	UInt8							stoppingCombat;		// 126
 	UInt8							byte127;			// 127
-	UInt32							unk128[8];			// 128
+	NiVector3						pos128;				// 128
+	NiVector3						pos134;				// 134
+	UInt32							flags140;			// 140
+	UInt32							unk144;				// 144
 	float							flt148;				// 148
 	UInt32							unk14C[15];			// 14C
+	SInt32							excludedActionsMask;// 188	JIP only!
 };
-static_assert(sizeof(CombatController) == 0x188);
+static_assert(sizeof(CombatController) == 0x18C);

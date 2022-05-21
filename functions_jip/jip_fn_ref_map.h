@@ -200,7 +200,6 @@ bool Cmd_RefMapArrayGetKeys_Execute(COMMAND_ARGS)
 	RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
 	if (!idsMap) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	for (auto idIter = idsMap->Begin(); idIter; ++idIter)
 		tmpElements->Append(LookupFormByRefID(idIter.Key()));
 	if (!tmpElements->Empty())
@@ -222,10 +221,10 @@ bool Cmd_RefMapArrayGetAll_Execute(COMMAND_ARGS)
 	TempElements *tmpElements = GetTempElements();
 	for (auto varIter = findMod->Begin(); varIter; ++varIter)
 	{
-		tmpElements->Clear();
 		for (auto idIter = varIter().Begin(); idIter; ++idIter)
 			tmpElements->Append(LookupFormByRefID(idIter.Key()));
 		SetElement(varsMap, ArrayElementL(varIter.Key()), ArrayElementL(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj)));
+		tmpElements->Clear();
 	}
 	AssignCommandResult(varsMap, result);
 	return true;

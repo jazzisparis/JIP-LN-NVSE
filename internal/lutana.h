@@ -254,7 +254,7 @@ bool __stdcall ProcessLNEventHandler(UInt32 eventMask, Script *udfScript, bool a
 				if ((evntData.typeID > kFormType_TESCaravanMoney) || !kValidFilterForm[evntData.typeID])
 					return false;
 			}
-			else if (!s_controllerReady || (evntData.typeID > 0xFFFF))
+			else if (evntData.typeID > 0xFFFF)
 				return false;
 			evntData.filterType = 4;
 		}
@@ -308,49 +308,52 @@ void LN_ProcessEvents()
 		}
 	}
 
-	if (s_LNEventFlags & kLNEventMask_OnButton)
+	if (s_controllerReady)
 	{
-		static UInt16 lastButtonState = 0;
-		UInt16 currButtonState = s_gamePad.wButtons, changes = currButtonState ^ lastButtonState;
-		if (changes)
+		if (s_LNEventFlags & kLNEventMask_OnButton)
 		{
-			UInt16 cmprMask = changes & currButtonState;
-			UInt32 outMask;
-			if (cmprMask)
+			static UInt16 lastButtonState = 0;
+			UInt16 currButtonState = s_gamePad.wButtons, changes = currButtonState ^ lastButtonState;
+			if (changes)
 			{
-				for (auto data = s_LNEvents[kLNEventID_OnButtonDown]().BeginCp(); data; ++data)
+				UInt16 cmprMask = changes & currButtonState;
+				UInt32 outMask;
+				if (cmprMask)
 				{
-					outMask = cmprMask & data().typeID;
-					if (outMask) CallFunction(data().callback, NULL, 1, outMask);
+					for (auto data = s_LNEvents[kLNEventID_OnButtonDown]().BeginCp(); data; ++data)
+					{
+						outMask = cmprMask & data().typeID;
+						if (outMask) CallFunction(data().callback, NULL, 1, outMask);
+					}
 				}
-			}
-			cmprMask = changes & lastButtonState;
-			if (cmprMask)
-			{
-				for (auto data = s_LNEvents[kLNEventID_OnButtonUp]().BeginCp(); data; ++data)
+				cmprMask = changes & lastButtonState;
+				if (cmprMask)
 				{
-					outMask = cmprMask & data().typeID;
-					if (outMask) CallFunction(data().callback, NULL, 1, outMask);
+					for (auto data = s_LNEvents[kLNEventID_OnButtonUp]().BeginCp(); data; ++data)
+					{
+						outMask = cmprMask & data().typeID;
+						if (outMask) CallFunction(data().callback, NULL, 1, outMask);
+					}
 				}
+				lastButtonState = currButtonState;
 			}
-			lastButtonState = currButtonState;
 		}
-	}
 
-	if (s_LNEventFlags & kLNEventMask_OnTrigger)
-	{
-		static bool lastLTriggerState = 0, lastRTriggerState = 0;
-		bool currTriggerState = s_gamePad.bLeftTrigger != 0;
-		if (lastLTriggerState != currTriggerState)
+		if (s_LNEventFlags & kLNEventMask_OnTrigger)
 		{
-			s_LNOnTriggerEvents[currTriggerState]().InvokeEvents(0);
-			lastLTriggerState = currTriggerState;
-		}
-		currTriggerState = s_gamePad.bRightTrigger != 0;
-		if (lastRTriggerState != currTriggerState)
-		{
-			s_LNOnTriggerEvents[currTriggerState + 2]().InvokeEvents(1);
-			lastRTriggerState = currTriggerState;
+			static bool lastLTriggerState = 0, lastRTriggerState = 0;
+			bool currTriggerState = s_gamePad.bLeftTrigger != 0;
+			if (lastLTriggerState != currTriggerState)
+			{
+				s_LNOnTriggerEvents[currTriggerState]().InvokeEvents(0);
+				lastLTriggerState = currTriggerState;
+			}
+			currTriggerState = s_gamePad.bRightTrigger != 0;
+			if (lastRTriggerState != currTriggerState)
+			{
+				s_LNOnTriggerEvents[currTriggerState + 2]().InvokeEvents(1);
+				lastRTriggerState = currTriggerState;
+			}
 		}
 	}
 

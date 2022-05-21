@@ -68,12 +68,7 @@ TESObjectACTI *g_ashPileACTI, *g_gooPileACTI;
 TESGlobal *g_gameYear, *g_gameMonth, *g_gameDay, *g_gameHour, *g_timeScale;
 TESObjectMISC *g_capsItem;
 TESImageSpaceModifier *g_getHitIMOD, *g_explosionInFaceIMOD;
-double *g_condDmgPenalty;
-double s_condDmgPenalty = 0.67;
-UInt32 s_mainThreadID;
-UInt32 s_initialTickCount;
-
-Cmd_Execute SayTo, KillActor, AddNote, AttachAshPile, MoveToFade, GetRefs;
+UInt32 s_mainThreadID, s_initialTickCount;
 
 const bool kInventoryType[] =
 {
@@ -168,12 +163,14 @@ __declspec(naked) void __vectorcall ResultVars::Set(__m128 values, const __m128 
 __declspec(noinline) TempFormList *GetTempFormList()
 {
 	thread_local TempObject<TempFormList> s_tempFormList(0x40);
+	s_tempFormList().Clear();
 	return *s_tempFormList;
 }
 
 __declspec(noinline) TempElements *GetTempElements()
 {
 	thread_local TempObject<TempElements> s_tempElements(0x100);
+	s_tempElements().Clear();
 	return *s_tempElements;
 }
 
@@ -205,16 +202,16 @@ UInt32 __fastcall StringToRef(char *refStr)
 __declspec(noinline) InventoryItemsMap *GetInventoryItemsMap()
 {
 	thread_local TempObject<InventoryItemsMap> s_inventoryItemsMap(0x40);
+	s_inventoryItemsMap().Clear();
 	return *s_inventoryItemsMap;
 }
 
 bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *invItemsMap)
 {
-	TESContainer *container = refr->GetContainer();
+	TESContainer *container = refr->baseForm->GetContainer();
 	if (!container) return false;
 	ExtraContainerChanges::EntryDataList *entryList = refr->GetContainerChangesList();
 	if (!entryList) return false;
-	invItemsMap->Clear();
 
 	TESContainer::FormCount *formCount;
 	TESForm *item;
@@ -255,6 +252,39 @@ bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *inv
 	while (xtraIter = xtraIter->next);
 
 	return !invItemsMap->Empty();
+}
+
+__declspec(naked) void __fastcall ShowItemMessage(TESForm *item, const char *msgStr)
+{
+	__asm
+	{
+		push	ebp
+		mov		ebp, esp
+		push	edx
+		call	TESForm::GetTheName
+		cmp		[eax], 0
+		jz		done
+		sub		esp, 0x70
+		mov		edx, eax
+		lea		ecx, [ebp-0x74]
+		call	StrCopy
+		mov		[eax], ' '
+		mov		edx, [ebp-4]
+		lea		ecx, [eax+1]
+		call	StrCopy
+		mov		word ptr [eax], '.'
+		push	0
+		push	0x40000000
+		push	0
+		push	0x10208E0
+		push	0
+		lea		eax, [ebp-0x74]
+		push	eax
+		CALL_EAX(0x7052F0)
+	done:
+		leave
+		retn
+	}
 }
 
 struct alignas(16) RayCastData
@@ -344,7 +374,7 @@ __declspec(naked) NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVec
 	}
 }
 
-__declspec(naked) bool NiVector3::RayCastCoords(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt16 filter)
+__declspec(naked) bool NiVector4::RayCastCoords(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt16 filter)
 {
 	__asm
 	{
@@ -355,11 +385,20 @@ __declspec(naked) bool NiVector3::RayCastCoords(const NiVector3 &posVector, floa
 		push	ecx
 		lea		ecx, [esp+4]
 		call	_GetRayCastObject
-		lea		ecx, [esp+4]
-		CALL_EAX(0x5DBE60)
-		push	eax
-		mov		ecx, g_TES
-		CALL_EAX(0x451110)
+		pop		ecx
+		test	eax, eax
+		jz		noObject
+		movss	xmm0, [esp+0x40]
+		shufps	xmm0, xmm0, 0x40
+		movaps	xmm1, PS_V3_One
+		subps	xmm1, xmm0
+		mulps	xmm0, [esp+0x10]
+		mulps	xmm1, [esp]
+		addps	xmm0, xmm1
+		mulps	xmm0, PS_HKUnitCnvrt
+		movups	[ecx], xmm0
+		mov		al, 1
+	noObject:
 		leave
 		retn	0x10
 	}
@@ -413,16 +452,18 @@ __declspec(naked) int __stdcall GetRayCastMaterial(const NiVector3 &posVector, f
 		mov		ecx, [ecx+8]
 		test	ecx, ecx
 		jz		invalid
-		push	0
-		CALL_EAX(0xC84F10)
+		mov		eax, [ecx+0x10]
 		jmp		convert
 	isTerrain:
-		push	esp
-		lea		ecx, [esp+0x14]
-		CALL_EAX(0x5DBE60)
-		push	esp
-		mov		ecx, g_TES
-		CALL_EAX(0x451110)
+		movss	xmm0, [esp+0x50]
+		shufps	xmm0, xmm0, 0x40
+		movaps	xmm1, PS_V3_One
+		subps	xmm1, xmm0
+		mulps	xmm0, [esp+0x20]
+		mulps	xmm1, [esp+0x10]
+		addps	xmm0, xmm1
+		mulps	xmm0, PS_HKUnitCnvrt
+		movaps	[esp], xmm0
 		push	esp
 		mov		ecx, g_TES
 		CALL_EAX(0x457720)
@@ -497,7 +538,6 @@ hkpWorld *GethkpWorld()
 void *TESRecipe::ComponentList::GetComponents(Script *scriptObj)
 {
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	Node *iter = Head();
 	RecipeComponent *component;
 	do

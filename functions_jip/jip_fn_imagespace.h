@@ -106,7 +106,6 @@ bool Cmd_GetActiveIMODs_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<ImageSpaceModifierInstance> *traverse = g_TES->activeIMODs.Head();
 	ImageSpaceModifierInstance *imodInstance;
 	TESImageSpaceModifier *imod;
@@ -114,7 +113,7 @@ bool Cmd_GetActiveIMODs_Execute(COMMAND_ARGS)
 	{
 		imodInstance = traverse->data;
 		if (!imodInstance || NOT_TYPE(imodInstance, ImageSpaceModifierInstanceForm) || imodInstance->hidden) continue;
-		imod = ((ImageSpaceModifierInstanceForm*)imodInstance)->imageSpace;
+		imod = ((ImageSpaceModifierInstanceForm*)imodInstance)->imageSpaceMod;
 		if (imod) tmpElements->Append(imod);
 	}
 	while (traverse = traverse->next);

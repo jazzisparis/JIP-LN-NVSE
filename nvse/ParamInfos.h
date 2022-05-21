@@ -1,60 +1,60 @@
 #pragma once
 
-ParamInfo kParams_OneInt[] =
+constexpr ParamInfo kParams_OneInt[] =
 {
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_TwoInts[] =
+constexpr ParamInfo kParams_TwoInts[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneOptionalInt[] =
 {
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneInt_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneInt_OneOptionalInt[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneFloat[] =
+constexpr ParamInfo kParams_OneFloat[] =
 {
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneString[] =
+constexpr ParamInfo kParams_OneString[] =
 {
 	{"String", kParamType_String, 0}
 };
 
-ParamInfo kParams_OneString_OneFloat[] =
+constexpr ParamInfo kParams_OneString_OneFloat[] =
 {
 	{"String", kParamType_String, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_TwoFloats[] =
+constexpr ParamInfo kParams_TwoFloats[] =
 {
 	{"Float", kParamType_Float, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneObjectID[] =
+constexpr ParamInfo kParams_OneObjectID[] =
 {
 	{"Object ID", kParamType_ObjectID, 0}
 };
 
-ParamInfo kParams_OneOptionalObjectID[] =
+constexpr ParamInfo kParams_OneOptionalObjectID[] =
 {
 	{"Object ID", kParamType_ObjectID, 1}
 };
 
-ParamInfo kParams_OneObjectID_OneInt[] =
+constexpr ParamInfo kParams_OneObjectID_OneInt[] =
 {
 	{"Object ID", kParamType_ObjectID, 0},
 	{"Integer", kParamType_Integer, 0}
@@ -83,188 +83,189 @@ ParamInfo kParams_OneObjectID_OneInt[] =
 	{"variable",		kParamType_Float, 1}, \
 	{"variable",		kParamType_Float, 1} 
 
-ParamInfo kParams_FormatString[] =
+constexpr ParamInfo kParams_FormatString[] =
 {
 	FORMAT_STRING_PARAMS
 };
 
-ParamInfo kParams_OneActor[] =
+constexpr ParamInfo kParams_OneActor[] =
 {
 	{"Actor", kParamType_Actor, 0}
 };
 
-ParamInfo kParams_OneAxis[] = 
+constexpr ParamInfo kParams_OneAxis[] =
 {
 	{"Axis", kParamType_Axis, 0}
 };
 
-ParamInfo kParams_FormList[] =
+constexpr ParamInfo kParams_FormList[] =
 {
 	{"List", kParamType_FormList, 0}
 };
 
-ParamInfo kParams_TwoStrings[] =
+constexpr ParamInfo kParams_TwoStrings[] =
 {
 	{"String", kParamType_String, 0},
 	{"String", kParamType_String, 0}
 };
 
- ParamInfo kParams_OneOptionalObject[] =
+constexpr ParamInfo kParams_OneOptionalObject[] =
  {
 	 {"TESObject", kParamType_TESObject, 1}
  };
  
-ParamInfo kParams_OneInt_OneOptionalObject[] =
+constexpr ParamInfo kParams_OneInt_OneOptionalObject[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"TESObject", kParamType_TESObject, 1}
 };
 
-ParamInfo kParams_OneQuest[] =
+constexpr ParamInfo kParams_OneQuest[] =
 {
 	{"Quest", kParamType_Quest, 0}
 };
 
-ParamInfo kParams_OneOptionalObjectRef[] =
+constexpr ParamInfo kParams_OneOptionalObjectRef[] =
 {
 	{"Object Ref", kParamType_ObjectRef, 1}
 };
 
-ParamInfo kParams_OneForm_OneInt[] =
+constexpr ParamInfo kParams_OneForm_OneInt[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneForm[] =
+constexpr ParamInfo kParams_OneForm[] =
 {
 	{"Form", kParamType_AnyForm, 0}
 };
 
-ParamInfo kParams_OneForm_OneFloat[] =
+constexpr ParamInfo kParams_OneForm_OneFloat[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneOptionalForm[] =
 {
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_OneObjectID_TwoOptionalInts[] =
+constexpr ParamInfo kParams_OneObjectID_TwoOptionalInts[] =
 {
 	{"Object ID", kParamType_ObjectID, 0},
 	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneOptionalActorBase[] =
+constexpr ParamInfo kParams_OneOptionalActorBase[] =
 {
 	{"Actor Base", kParamType_ActorBase, 1}
 };
 
-ParamInfo kParams_OneInt_OneOptionalActorBase[] =
+constexpr ParamInfo kParams_OneInt_OneOptionalActorBase[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"Actor Base", kParamType_ActorBase, 1}
 };
 
-ParamInfo kParams_OneItemOrList_OneInt_OneOptionalFloat_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneItemOrList_OneInt_OneOptionalFloat_TwoOptionalInts[] =
 {
 	{"Item/List", kParamType_InvObjOrFormList, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Float", kParamType_Float, 1},
+	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneString_OneFormatString[] =
+constexpr ParamInfo kParams_OneString_OneFormatString[] =
 {
 	{"String", kParamType_String, 0},
 	FORMAT_STRING_PARAMS
 };
 
-ParamInfo kParams_OneForm_OneInt_OneFloat[] =
+constexpr ParamInfo kParams_OneForm_OneInt_OneFloat[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneForm_TwoInts[] =
+constexpr ParamInfo kParams_OneForm_TwoInts[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_TwoForms[] =
+constexpr ParamInfo kParams_TwoForms[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Form", kParamType_AnyForm, 0}
 };
 
-ParamInfo kParams_OneForm_OneInt_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneForm_OneInt_OneOptionalForm[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_OneString_OneOptionalQuest[] =
+constexpr ParamInfo kParams_OneString_OneOptionalQuest[] =
 {
 	{"String", kParamType_String, 0},
 	{"Quest", kParamType_Quest, 1}
 };
 
-ParamInfo kParams_OneQuest_OneFloat[] =
+constexpr ParamInfo kParams_OneQuest_OneFloat[] =
 {
 	{"Quest", kParamType_Quest, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneAIPackage_OneInt[] =
+constexpr ParamInfo kParams_OneAIPackage_OneInt[] =
 {
 	{"Package", kParamType_AIPackage, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneAIPackage_TwoInts[] =
+constexpr ParamInfo kParams_OneAIPackage_TwoInts[] =
 {
 	{"Package", kParamType_AIPackage, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneGlobal[] =
+constexpr ParamInfo kParams_OneGlobal[] =
 {
 	{"Global", kParamType_Global, 0}
 };
 
-ParamInfo kParams_OneGlobal_OneFloat[] =
+constexpr ParamInfo kParams_OneGlobal_OneFloat[] =
 {
 	{"Global", kParamType_Global, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneFaction[] =
+constexpr ParamInfo kParams_OneFaction[] =
 {
 	{"Faction", kParamType_Faction, 0}
 };
 
-ParamInfo kParams_OneFaction_OneOptionalReputation[] =
+constexpr ParamInfo kParams_OneFaction_OneOptionalReputation[] =
 {
 	{"Faction", kParamType_Faction, 0},
 	{"Reputation", kParamType_Reputation, 1}
 };
 
-ParamInfo kParams_OneAxis_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneAxis_OneOptionalForm[] =
 {
 	{"Axis", kParamType_Axis, 0},
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_TwoDoubles_ThreeOptionalDoubles[] =
+constexpr ParamInfo kParams_TwoDoubles_ThreeOptionalDoubles[] =
 {
 	{"Double", kParamType_Double, 0},
 	{"Double", kParamType_Double, 0},
@@ -273,133 +274,133 @@ ParamInfo kParams_TwoDoubles_ThreeOptionalDoubles[] =
 	{"Double", kParamType_Double, 1}
 };
 
-ParamInfo kParams_OneCombatStyle_OneInt[] =
+constexpr ParamInfo kParams_OneCombatStyle_OneInt[] =
 {
 	{"Combat Style", kParamType_CombatStyle, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneCombatStyle_OneInt_OneFloat[] =
+constexpr ParamInfo kParams_OneCombatStyle_OneInt_OneFloat[] =
 {
 	{"Combat Style", kParamType_CombatStyle, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneCombatStyle_TwoInts[] =
+constexpr ParamInfo kParams_OneCombatStyle_TwoInts[] =
 {
 	{"Combat Style", kParamType_CombatStyle, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneString_TwoOptionalInts[] =
+constexpr ParamInfo kParams_OneString_TwoOptionalInts[] =
 {
 	{"String", kParamType_String, 0},
 	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneString_TwoInts[] =
+constexpr ParamInfo kParams_OneString_TwoInts[] =
 {
 	{"String", kParamType_String, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneString_OneInt_OneFormatString[] =
+constexpr ParamInfo kParams_OneString_OneInt_OneFormatString[] =
 {
 	{"String", kParamType_String, 0},
 	{"Integer", kParamType_Integer, 0},
 	FORMAT_STRING_PARAMS
 };
 
-ParamInfo kParams_OneClass_OneInt[] =
+constexpr ParamInfo kParams_OneClass_OneInt[] =
 {
 	{"Class", kParamType_Class, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneClass_TwoInts[] =
+constexpr ParamInfo kParams_OneClass_TwoInts[] =
 {
 	{"Class", kParamType_Class, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneSound_OneInt[] =
+constexpr ParamInfo kParams_OneSound_OneInt[] =
 {
 	{"Sound", kParamType_Sound, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneSound_OneInt_OneFloat[] =
+constexpr ParamInfo kParams_OneSound_OneInt_OneFloat[] =
 {
 	{"Sound", kParamType_Sound, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneSound_TwoInts[] =
+constexpr ParamInfo kParams_OneSound_TwoInts[] =
 {
 	{"Sound", kParamType_Sound, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneForm_OneInt_OneOptionalSound[] =
+constexpr ParamInfo kParams_OneForm_OneInt_OneOptionalSound[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Sound", kParamType_Sound, 1}
 };
 
-ParamInfo kParams_OneForm_OneInt_OneOptionalObjectID[] =
+constexpr ParamInfo kParams_OneForm_OneInt_OneOptionalObjectID[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Object ID", kParamType_ObjectID, 1}
 };
 
-ParamInfo kParams_OneWeatherID_OneInt[] =
+constexpr ParamInfo kParams_OneWeatherID_OneInt[] =
 {
 	{"Weather ID", kParamType_WeatherID, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneWeatherID_OneInt_OneOptionalImageSpaceMod[] =
+constexpr ParamInfo kParams_OneWeatherID_OneInt_OneOptionalImageSpaceMod[] =
 {
 	{"Weather ID", kParamType_WeatherID, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Image Space Mod", kParamType_ImageSpaceModifier, 1}
 };
 
-ParamInfo kParams_OneWeatherID_OneInt_OneString[] =
+constexpr ParamInfo kParams_OneWeatherID_OneInt_OneString[] =
 {
 	{"Weather ID", kParamType_WeatherID, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"String", kParamType_String, 0}
 };
 
-ParamInfo kParams_OneWeatherID[] =
+constexpr ParamInfo kParams_OneWeatherID[] =
 {
 	{"Weather ID", kParamType_WeatherID, 0}
 };
 
-ParamInfo kParams_OneWeatherID_OneString[] =
+constexpr ParamInfo kParams_OneWeatherID_OneString[] =
 {
 	{"Weather ID", kParamType_WeatherID, 0},
 	{"String", kParamType_String, 0}
 };
 
-ParamInfo kParams_OneWeatherID_OneInt_OneDouble[] =
+constexpr ParamInfo kParams_OneWeatherID_OneInt_OneDouble[] =
 {
 	{"Weather ID", kParamType_WeatherID, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Double", kParamType_Double, 0}
 };
 
-ParamInfo kParams_OneWeatherID_TwoInts_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneWeatherID_TwoInts_OneOptionalInt[] =
 {
 	{"Weather ID", kParamType_WeatherID, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -407,7 +408,7 @@ ParamInfo kParams_OneWeatherID_TwoInts_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneWeatherID_ThreeInts_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneWeatherID_ThreeInts_OneOptionalInt[] =
 {
 	{"Weather ID", kParamType_WeatherID, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -416,20 +417,20 @@ ParamInfo kParams_OneWeatherID_ThreeInts_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneForm_OneInt_OneString[] =
+constexpr ParamInfo kParams_OneForm_OneInt_OneString[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"String", kParamType_String, 0}
 };
 
-ParamInfo kParams_OneForm_OneString[] =
+constexpr ParamInfo kParams_OneForm_OneString[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"String", kParamType_String, 0}
 };
 
-ParamInfo kParams_OneForm_OneWeatherID_OneInt_OneOptionalGlobal[] =
+constexpr ParamInfo kParams_OneForm_OneWeatherID_OneInt_OneOptionalGlobal[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Weather ID", kParamType_WeatherID, 0},
@@ -437,19 +438,19 @@ ParamInfo kParams_OneForm_OneWeatherID_OneInt_OneOptionalGlobal[] =
 	{"Global", kParamType_Global, 1}
 };
 
-ParamInfo kParams_OneForm_OneWeatherID[] =
+constexpr ParamInfo kParams_OneForm_OneWeatherID[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Weather ID", kParamType_WeatherID, 0}
 };
 
-ParamInfo kParams_OneAxis_OneFloat[] =
+constexpr ParamInfo kParams_OneAxis_OneFloat[] =
 {
 	{"Axis", kParamType_Axis, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneForm_ThreeInts[] =
+constexpr ParamInfo kParams_OneForm_ThreeInts[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -457,7 +458,7 @@ ParamInfo kParams_OneForm_ThreeInts[] =
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneItemOrList_OneContainer_TwoOptionalInts[] =
+constexpr ParamInfo kParams_OneItemOrList_OneContainer_TwoOptionalInts[] =
 {
 	{"Item/List", kParamType_InvObjOrFormList, 0},
 	{"Container", kParamType_Container, 0},
@@ -465,27 +466,27 @@ ParamInfo kParams_OneItemOrList_OneContainer_TwoOptionalInts[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneInt_OneFloat_OneOptionalActorBase[] =
+constexpr ParamInfo kParams_OneInt_OneFloat_OneOptionalActorBase[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"Float", kParamType_Float, 0},
 	{"Actor Base", kParamType_ActorBase, 1}
 };
 
-ParamInfo kParams_OneMagicItem_OneInt[] =
+constexpr ParamInfo kParams_OneMagicItem_OneInt[] =
 {
 	{"Magic Item", kParamType_MagicItem, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneMagicItem_TwoInts[] =
+constexpr ParamInfo kParams_OneMagicItem_TwoInts[] =
 {
 	{"Magic Item", kParamType_MagicItem, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneMagicItem_ThreeInts[] =
+constexpr ParamInfo kParams_OneMagicItem_ThreeInts[] =
 {
 	{"Magic Item", kParamType_MagicItem, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -493,32 +494,32 @@ ParamInfo kParams_OneMagicItem_ThreeInts[] =
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneMagicItem_OneInt_OneMagicEffect[] =
+constexpr ParamInfo kParams_OneMagicItem_OneInt_OneMagicEffect[] =
 {
 	{"Magic Item", kParamType_MagicItem, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Magic Effect", kParamType_MagicEffect, 0}
 };
 
-ParamInfo kParams_OneOptionalQuest[] =
+constexpr ParamInfo kParams_OneOptionalQuest[] =
 {
 	{"Quest", kParamType_Quest, 1}
 };
 
-ParamInfo kParams_OneString_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneString_OneOptionalForm[] =
 {
 	{"String", kParamType_String, 0},
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_OneString_OneOptionalInt_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneString_OneOptionalInt_OneOptionalForm[] =
 {
 	{"String", kParamType_String, 0},
 	{"Integer", kParamType_Integer, 1},
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_OneString_OneDouble_OneOptionalInt_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneString_OneDouble_OneOptionalInt_OneOptionalForm[] =
 {
 	{"String", kParamType_String, 0},
 	{"Double", kParamType_Double, 0},
@@ -526,7 +527,7 @@ ParamInfo kParams_OneString_OneDouble_OneOptionalInt_OneOptionalForm[] =
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_OneString_OneForm_OneOptionalInt_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneString_OneForm_OneOptionalInt_OneOptionalForm[] =
 {
 	{"String", kParamType_String, 0},
 	{"Form", kParamType_AnyForm, 0},
@@ -534,7 +535,7 @@ ParamInfo kParams_OneString_OneForm_OneOptionalInt_OneOptionalForm[] =
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_TwoStrings_OneOptionalInt_OneOptionalForm[] =
+constexpr ParamInfo kParams_TwoStrings_OneOptionalInt_OneOptionalForm[] =
 {
 	{"String", kParamType_String, 0},
 	{"String", kParamType_String, 0},
@@ -542,41 +543,41 @@ ParamInfo kParams_TwoStrings_OneOptionalInt_OneOptionalForm[] =
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_OneInt_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneInt_OneOptionalForm[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_OneString_OneInt_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneString_OneInt_OneOptionalForm[] =
 {
 	{"String", kParamType_String, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_OneString_OneDouble_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneString_OneDouble_OneOptionalForm[] =
 {
 	{"String", kParamType_String, 0},
 	{"Double", kParamType_Double, 0},
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_OneString_OneForm_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneString_OneForm_OneOptionalForm[] =
 {
 	{"String", kParamType_String, 0},
 	{"Form", kParamType_AnyForm, 0},
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_TwoStrings_OneOptionalForm[] =
+constexpr ParamInfo kParams_TwoStrings_OneOptionalForm[] =
 {
 	{"String", kParamType_String, 0},
 	{"String", kParamType_String, 0},
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_FourInts[] =
+constexpr ParamInfo kParams_FourInts[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -584,7 +585,7 @@ ParamInfo kParams_FourInts[] =
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneForm_TwoInts_OneFloat[] =
+constexpr ParamInfo kParams_OneForm_TwoInts_OneFloat[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -592,7 +593,7 @@ ParamInfo kParams_OneForm_TwoInts_OneFloat[] =
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneForm_TwoInts_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneForm_TwoInts_OneOptionalForm[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -600,116 +601,116 @@ ParamInfo kParams_OneForm_TwoInts_OneOptionalForm[] =
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_OneForm_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneForm_OneOptionalForm[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_OneSound[] =
+constexpr ParamInfo kParams_OneSound[] =
 {
 	{"Sound", kParamType_Sound, 0}
 };
 
-ParamInfo kParams_OneSound_OneString[] =
+constexpr ParamInfo kParams_OneSound_OneString[] =
 {
 	{"Sound", kParamType_Sound, 0},
 	{"String", kParamType_String, 0}
 };
 
-ParamInfo kParams_OneWorldspace[] =
+constexpr ParamInfo kParams_OneWorldspace[] =
 {
 	{"Worldspace", kParamType_WorldSpace, 0}
 };
 
-ParamInfo kParams_OneWorldspace_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneWorldspace_OneOptionalForm[] =
 {
 	{"Worldspace", kParamType_WorldSpace, 0},
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_OneForm_OneOptionalActorBase[] =
+constexpr ParamInfo kParams_OneForm_OneOptionalActorBase[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Actor Base", kParamType_ActorBase, 1}
 };
 
-ParamInfo kParams_OneInt_OneFloat[] =
+constexpr ParamInfo kParams_OneInt_OneFloat[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneInt_OneFormatString[] =
+constexpr ParamInfo kParams_OneInt_OneFormatString[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	FORMAT_STRING_PARAMS
 };
 
-ParamInfo kParams_TwoInts_OneOptionalInt[] =
+constexpr ParamInfo kParams_TwoInts_OneOptionalInt[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneObjectRef_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneObjectRef_OneOptionalInt[] =
 {
 	{"Object Ref", kParamType_ObjectRef, 0},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneList_TwoOptionalInts[] =
+constexpr ParamInfo kParams_OneList_TwoOptionalInts[] =
 {
 	{"List", kParamType_FormList, 0},
 	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneFaction_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneFaction_OneOptionalInt[] =
 {
 	{"Faction", kParamType_Faction, 0},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneQuest_OneInt[] =
+constexpr ParamInfo kParams_OneQuest_OneInt[] =
 {
 	{"Quest", kParamType_Quest, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneWorldspace_OneInt[] =
+constexpr ParamInfo kParams_OneWorldspace_OneInt[] =
 {
 	{"Worldspace", kParamType_WorldSpace, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneWorldspace_TwoInts[] =
+constexpr ParamInfo kParams_OneWorldspace_TwoInts[] =
 {
 	{"Worldspace", kParamType_WorldSpace, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneString_OneInt_OneOptionalActorBase[] =
+constexpr ParamInfo kParams_OneString_OneInt_OneOptionalActorBase[] =
 {
 	{"String", kParamType_String, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Actor Base", kParamType_ActorBase, 1}
 };
 
-ParamInfo kParams_OneString_OneOptionalActorBase[] =
+constexpr ParamInfo kParams_OneString_OneOptionalActorBase[] =
 {
 	{"String", kParamType_String, 0},
 	{"Actor Base", kParamType_ActorBase, 1}
 };
 
-ParamInfo kParams_OneObjectRef[] =
+constexpr ParamInfo kParams_OneObjectRef[] =
 {
 	{"Object Ref", kParamType_ObjectRef, 0}
 };
 
-ParamInfo kParams_OneInt_ThreeFloats[] =
+constexpr ParamInfo kParams_OneInt_ThreeFloats[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"Float", kParamType_Float, 0},
@@ -717,7 +718,7 @@ ParamInfo kParams_OneInt_ThreeFloats[] =
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneMagicItem_OneEffect_TwoInts_ThreeOptionalInts[] =
+constexpr ParamInfo kParams_OneMagicItem_OneEffect_TwoInts_ThreeOptionalInts[] =
 {
 	{"Magic Item", kParamType_MagicItem, 0},
 	{"Magic Effect", kParamType_MagicEffect, 0},
@@ -728,50 +729,45 @@ ParamInfo kParams_OneMagicItem_OneEffect_TwoInts_ThreeOptionalInts[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneItemOrList_TwoOptionalInts[] =
+constexpr ParamInfo kParams_OneItemOrList_TwoOptionalInts[] =
 {
 	{"Item/List", kParamType_InvObjOrFormList, 0},
 	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_TwoOptionalInts[] =
+constexpr ParamInfo kParams_TwoOptionalInts[] =
 {
 	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneActorValue_OneFloat_OneOptionalActorBase[] =
+constexpr ParamInfo kParams_OneActorValue_OneFloat_OneOptionalActorBase[] =
 {
 	{"Actor Value", kParamType_ActorValue, 0},
 	{"Float", kParamType_Float, 0},
 	{"Actor Base", kParamType_ActorBase, 1}
 };
 
-ParamInfo kParams_OneOptionalCell[] =
-{
-	{"Cell", kParamType_Cell, 1}
-};
-
-ParamInfo kParams_OneFloat_OneFormatString[] =
+constexpr ParamInfo kParams_OneFloat_OneFormatString[] =
 {
 	{"Float", kParamType_Float, 0},
 	FORMAT_STRING_PARAMS
 };
 
-ParamInfo kParams_OneForm_OneFormatString[] =
+constexpr ParamInfo kParams_OneForm_OneFormatString[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	FORMAT_STRING_PARAMS
 };
 
-ParamInfo kParams_OneInt_OneString[] =
+constexpr ParamInfo kParams_OneInt_OneString[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"String", kParamType_String, 0}
 };
 
-ParamInfo kParams_OneForm_TwoFloats_OneFormatString[] =
+constexpr ParamInfo kParams_OneForm_TwoFloats_OneFormatString[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Float", kParamType_Float, 0},
@@ -779,7 +775,7 @@ ParamInfo kParams_OneForm_TwoFloats_OneFormatString[] =
 	FORMAT_STRING_PARAMS
 };
 
-ParamInfo kParams_OneActor_OneTopic_TwoOptionalInts[] =
+constexpr ParamInfo kParams_OneActor_OneTopic_TwoOptionalInts[] =
 {
 	{"Actor", kParamType_Actor, 0},
 	{"Topic", kParamType_Topic, 0},
@@ -787,12 +783,12 @@ ParamInfo kParams_OneActor_OneTopic_TwoOptionalInts[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneTopic[] =
+constexpr ParamInfo kParams_OneTopic[] =
 {
 	{"Topic", kParamType_Topic, 0}
 };
 
-ParamInfo kParams_OneForm_ThreeFloats[] =
+constexpr ParamInfo kParams_OneForm_ThreeFloats[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Float", kParamType_Float, 0},
@@ -800,7 +796,7 @@ ParamInfo kParams_OneForm_ThreeFloats[] =
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_FourOptionalInts_OneOptionalList[] =
+constexpr ParamInfo kParams_FourOptionalInts_OneOptionalList[] =
 {
 	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1},
@@ -809,41 +805,36 @@ ParamInfo kParams_FourOptionalInts_OneOptionalList[] =
 	{"List", kParamType_FormList, 1}
 };
 
-ParamInfo kParams_OneInt_OneOptionalActor[] =
+constexpr ParamInfo kParams_OneInt_OneOptionalActor[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"Actor", kParamType_Actor, 1}
 };
 
-ParamInfo kParams_OneAIPackage[] =
-{
-	{"Package", kParamType_AIPackage, 0}
-};
-
-ParamInfo kParams_OneObjectID_OneActorValue[] =
+constexpr ParamInfo kParams_OneObjectID_OneActorValue[] =
 {
 	{"Object ID", kParamType_ObjectID, 0},
 	{"Actor Value", kParamType_ActorValue, 0}
 };
 
-ParamInfo kParams_OneMessage[] =
+constexpr ParamInfo kParams_OneMessage[] =
 {
 	{"Message", kParamType_Message, 0}
 };
 
-ParamInfo kParams_OneMessage_OneInt[2] =
+constexpr ParamInfo kParams_OneMessage_OneInt[2] =
 {
 	{"Message", kParamType_Message, 0},
 	{"Integer", kParamType_Integer, 0},
 };
 
-ParamInfo kParams_OneSound_OneOptionalObjectRef[] =
+constexpr ParamInfo kParams_OneSound_OneOptionalObjectRef[] =
 {
 	{"Sound", kParamType_Sound, 0},
 	{"Object Ref", kParamType_ObjectRef, 1}
 };
 
-ParamInfo kParams_OneObjectRef_TwoStrings_OneOtionalInt[] =
+constexpr ParamInfo kParams_OneObjectRef_TwoStrings_OneOtionalInt[] =
 {
 	{"Object Ref", kParamType_ObjectRef, 0},
 	{"String", kParamType_String, 0},
@@ -851,20 +842,20 @@ ParamInfo kParams_OneObjectRef_TwoStrings_OneOtionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneString_OneInt[] =
+constexpr ParamInfo kParams_OneString_OneInt[] =
 {
 	{"String", kParamType_String, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneString_OneInt_OneFloat[] =
+constexpr ParamInfo kParams_OneString_OneInt_OneFloat[] =
 {
 	{"String", kParamType_String, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneForm_OneInt_OneForm_OneInt[] =
+constexpr ParamInfo kParams_OneForm_OneInt_OneForm_OneInt[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -872,7 +863,7 @@ ParamInfo kParams_OneForm_OneInt_OneForm_OneInt[] =
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneForm_OneInt_OneForm_OneAnimGroup[] =
+constexpr ParamInfo kParams_OneForm_OneInt_OneForm_OneAnimGroup[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -880,45 +871,45 @@ ParamInfo kParams_OneForm_OneInt_OneForm_OneAnimGroup[] =
 	{"Anim Group", kParamType_AnimationGroup, 0}
 };
 
-ParamInfo kParams_OneForm_OneInt_OneForm[] =
+constexpr ParamInfo kParams_OneForm_OneInt_OneForm[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Form", kParamType_AnyForm, 0}
 };
 
-ParamInfo kParams_OneActorValue_OneOptionalActorBase[] =
+constexpr ParamInfo kParams_OneActorValue_OneOptionalActorBase[] =
 {
 	{"Actor Value", kParamType_ActorValue, 0},
 	{"Actor Base", kParamType_ActorBase, 1}
 };
 
-ParamInfo kParams_ThreeFloats[] =
+constexpr ParamInfo kParams_ThreeFloats[] =
 {
 	{"Float", kParamType_Float, 0},
 	{"Float", kParamType_Float, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneOptionalAxis[] =
+constexpr ParamInfo kParams_OneOptionalAxis[] =
 {
 	{"Axis", kParamType_Axis, 1}
 };
 
-ParamInfo kParams_OnePerk_OneInt[] =
+constexpr ParamInfo kParams_OnePerk_OneInt[] =
 {
 	{"Perk", kParamType_Perk, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OnePerk_TwoInts[] =
+constexpr ParamInfo kParams_OnePerk_TwoInts[] =
 {
 	{"Perk", kParamType_Perk, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneList_OneInt_TwoOptionalInts[] =
+constexpr ParamInfo kParams_OneList_OneInt_TwoOptionalInts[] =
 {
 	{"List", kParamType_FormList, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -926,20 +917,20 @@ ParamInfo kParams_OneList_OneInt_TwoOptionalInts[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneString_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneString_OneOptionalInt[] =
 {
 	{"String", kParamType_String, 0},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_ThreeForms[] =
+constexpr ParamInfo kParams_ThreeForms[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Form", kParamType_AnyForm, 0},
 	{"Form", kParamType_AnyForm, 0}
 };
 
-ParamInfo kParams_TwoForms_TwoInts_OneFloat[] =
+constexpr ParamInfo kParams_TwoForms_TwoInts_OneFloat[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Form", kParamType_AnyForm, 0},
@@ -948,13 +939,13 @@ ParamInfo kParams_TwoForms_TwoInts_OneFloat[] =
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneDouble_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneDouble_OneOptionalInt[] =
 {
 	{"Double", kParamType_Double, 0},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneForm_OneInt_OneFloat_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneForm_OneInt_OneFloat_OneOptionalForm[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -962,21 +953,14 @@ ParamInfo kParams_OneForm_OneInt_OneFloat_OneOptionalForm[] =
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_TwoForms_OneOptionalForm[] =
-{
-	{"Form", kParamType_AnyForm, 0},
-	{"Form", kParamType_AnyForm, 0},
-	{"Form", kParamType_AnyForm, 1}
-};
-
-ParamInfo kParams_OneInt_TwoOptionalInts[] =
+constexpr ParamInfo kParams_OneInt_TwoOptionalInts[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneObjectID_OneOptionalFloat_ThreeOptionalInts[] =
+constexpr ParamInfo kParams_OneObjectID_OneOptionalFloat_ThreeOptionalInts[] =
 {
 	{"Object ID", kParamType_ObjectID, 0},
 	{"Float", kParamType_Float, 1},
@@ -985,30 +969,13 @@ ParamInfo kParams_OneObjectID_OneOptionalFloat_ThreeOptionalInts[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneFloat_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneFloat_OneOptionalForm[] =
 {
 	{"Float", kParamType_Float, 0},
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_OneForm_OneInt_ThreeFloat[] =
-{
-	{"Form", kParamType_AnyForm, 0},
-	{"Integer", kParamType_Integer, 0},
-	{"Float", kParamType_Float, 0},
-	{"Float", kParamType_Float, 0},
-	{"Float", kParamType_Float, 0}
-};
-
-ParamInfo kParams_OneInt_TwoOptionalInts_OneOptionalCell[] =
-{
-	{"Integer", kParamType_Integer, 0},
-	{"Integer", kParamType_Integer, 1},
-	{"Integer", kParamType_Integer, 1},
-	{"Cell", kParamType_Cell, 1}
-};
-
-ParamInfo kParams_OneInt_OneForm_OneOptionalFloat_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneInt_OneForm_OneOptionalFloat_OneOptionalInt[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"Form", kParamType_AnyForm, 0},
@@ -1016,27 +983,27 @@ ParamInfo kParams_OneInt_OneForm_OneOptionalFloat_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneForm_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneForm_OneOptionalInt[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneForm_OneInt_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneForm_OneInt_OneOptionalInt[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_TwoForms_OneInt[] =
+constexpr ParamInfo kParams_TwoForms_OneInt[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_FormCondition[] =
+constexpr ParamInfo kParams_FormCondition[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -1045,133 +1012,103 @@ ParamInfo kParams_FormCondition[] =
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneString_OneOptionalString[] =
+constexpr ParamInfo kParams_OneString_OneOptionalString[] =
 {
 	{"String", kParamType_String, 0},
 	{"String", kParamType_String, 1}
 };
 
-ParamInfo kParams_OneString_OneDouble_OneOptionalString[] =
+constexpr ParamInfo kParams_OneString_OneDouble_OneOptionalString[] =
 {
 	{"String", kParamType_String, 0},
 	{"Double", kParamType_Double, 0},
 	{"String", kParamType_String, 1}
 };
 
-ParamInfo kParams_TwoString_OneOptionalString[] =
+constexpr ParamInfo kParams_TwoString_OneOptionalString[] =
 {
 	{"String", kParamType_String, 0},
 	{"String", kParamType_String, 0},
 	{"String", kParamType_String, 1}
 };
 
-ParamInfo kParams_OneString_OneInt_OneOptionalString[] =
+constexpr ParamInfo kParams_OneString_OneInt_OneOptionalString[] =
 {
 	{"String", kParamType_String, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"String", kParamType_String, 1}
 };
 
-ParamInfo kParams_OneOptionalString[] =
+constexpr ParamInfo kParams_OneOptionalString[] =
 {
 	{"String", kParamType_String, 1}
 };
 
-ParamInfo kParams_OneInt_OneOptionalObjectRef[] =
+constexpr ParamInfo kParams_OneInt_OneOptionalObjectRef[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"Object Ref", kParamType_ObjectRef, 1}
 };
 
-ParamInfo kParams_OneActorBase[] =
+constexpr ParamInfo kParams_OneActorBase[] =
 {
 	{"Actor Base", kParamType_ActorBase, 0}
 };
 
-ParamInfo kParams_OneFloat_OneOptionalCell[] =
-{
-	{"Float", kParamType_Float, 0},
-	{"Cell", kParamType_Cell, 1}
-};
-
-ParamInfo kParams_OneActorBase_OneInt[] =
+constexpr ParamInfo kParams_OneActorBase_OneInt[] =
 {
 	{"Actor Base", kParamType_ActorBase, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneActorBase_TwoInts[] =
+constexpr ParamInfo kParams_OneActorBase_TwoInts[] =
 {
 	{"Actor Base", kParamType_ActorBase, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneCell[] =
-{
-	{"Cell", kParamType_Cell, 0}
-};
-
-ParamInfo kParams_OneCell_OneOptionalForm[] =
-{
-	{"Cell", kParamType_Cell, 0},
-	{"Form", kParamType_AnyForm, 1}
-};
-
-ParamInfo kParams_OneCell_OneInt[] =
-{
-	{"Cell", kParamType_Cell, 0},
-	{"Integer", kParamType_Integer, 0}
-};
-
-ParamInfo kParams_OneCell_TwoInts[] =
-{
-	{"Cell", kParamType_Cell, 0},
-	{"Integer", kParamType_Integer, 0},
-	{"Integer", kParamType_Integer, 0}
-};
-
-ParamInfo kParams_TwoInts_OneOptionalActorBase[] =
+constexpr ParamInfo kParams_TwoInts_OneOptionalActorBase[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Actor Base", kParamType_ActorBase, 1}
 };
 
-ParamInfo kParams_OneFaction_OneInt_OneOptionalActorBase[] =
+constexpr ParamInfo kParams_OneFaction_OneInt_OneOptionalActorBase[] =
 {
 	{"Faction", kParamType_Faction, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Actor Base", kParamType_ActorBase, 1}
 };
 
-ParamInfo kParams_OneImageSpace_OneInt[] =
+constexpr ParamInfo kParams_OneImageSpace_OneInt[] =
 {
 	{"Image Space", kParamType_ImageSpace, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneImageSpace_OneInt_OneFloat[] =
+constexpr ParamInfo kParams_OneImageSpace_OneInt_OneFloat[] =
 {
 	{"Image Space", kParamType_ImageSpace, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneIMOD_OneInt[] =
+constexpr ParamInfo kParams_OneIMOD_OneInt[] =
 {
 	{"IMOD", kParamType_ImageSpaceModifier, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneIMOD_OneInt_OneFloat[] =
+constexpr ParamInfo kParams_OneIMOD_OneInt_OneFloat[] =
 {
 	{"IMOD", kParamType_ImageSpaceModifier, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneForm_OneInt_TwoOptionalInts[] =
+constexpr ParamInfo kParams_OneForm_OneInt_TwoOptionalInts[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -1179,45 +1116,39 @@ ParamInfo kParams_OneForm_OneInt_TwoOptionalInts[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_TwoStrings_OneFloat[] =
+constexpr ParamInfo kParams_TwoStrings_OneFloat[] =
 {
 	{"String", kParamType_String, 0},
 	{"String", kParamType_String, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneGlobal_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneGlobal_OneOptionalForm[] =
 {
 	{"Global", kParamType_Global, 0},
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_OneCell_OneString[] =
-{
-	{"Cell", kParamType_Cell, 0},
-	{"String", kParamType_String, 0}
-};
-
-ParamInfo kParams_TwoOptionalInts_OneOptionalContainer[] =
+constexpr ParamInfo kParams_TwoOptionalInts_OneOptionalContainer[] =
 {
 	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1},
 	{"Container", kParamType_Container, 1}
 };
 
-ParamInfo kParams_OneForm_OneString_OneInt[] =
+constexpr ParamInfo kParams_OneForm_OneString_OneInt[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"String", kParamType_String, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneMagicItem[] =
+constexpr ParamInfo kParams_OneMagicItem[] =
 {
 	{"Magic Item", kParamType_MagicItem, 0}
 };
 
-ParamInfo kParams_FourOptionalFloats_OneOptionalInt[] =
+constexpr ParamInfo kParams_FourOptionalFloats_OneOptionalInt[] =
 {
 	{"Float", kParamType_Float, 1},
 	{"Float", kParamType_Float, 1},
@@ -1226,7 +1157,7 @@ ParamInfo kParams_FourOptionalFloats_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneInt_OneFloat_TwoOptionalForms[] =
+constexpr ParamInfo kParams_OneInt_OneFloat_TwoOptionalForms[] =
 {
 	{"Integer", kParamType_Integer, 0},
 	{"Float", kParamType_Float, 0},
@@ -1234,7 +1165,7 @@ ParamInfo kParams_OneInt_OneFloat_TwoOptionalForms[] =
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_OneForm_OneInt_OneQuest_OneInt_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneForm_OneInt_OneQuest_OneInt_OneOptionalInt[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -1243,7 +1174,7 @@ ParamInfo kParams_OneForm_OneInt_OneQuest_OneInt_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneForm_OneInt_ThreeOptionalForms[] =
+constexpr ParamInfo kParams_OneForm_OneInt_ThreeOptionalForms[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -1252,27 +1183,20 @@ ParamInfo kParams_OneForm_OneInt_ThreeOptionalForms[] =
 	{"Form", kParamType_AnyForm, 1}
 };
 
-ParamInfo kParams_OneObjectID_OneInt_OneFormatString[] =
+constexpr ParamInfo kParams_OneObjectID_OneInt_OneFormatString[] =
 {
 	{"Object ID", kParamType_ObjectID, 0},
 	{"Integer", kParamType_Integer, 0},
 	FORMAT_STRING_PARAMS
 };
 
-ParamInfo kParams_OneOptionalObjectRef_TwoOptionalInts[] =
-{
-	{"Object Ref", kParamType_ObjectRef, 1},
-	{"Integer", kParamType_Integer, 1},
-	{"Integer", kParamType_Integer, 1}
-};
-
-ParamInfo kParams_OneObjectRef_OneFloat[] =
+constexpr ParamInfo kParams_OneObjectRef_OneFloat[] =
 {
 	{"Object Ref", kParamType_ObjectRef, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneQuest_TwoInts_OneObjectRef[] =
+constexpr ParamInfo kParams_OneQuest_TwoInts_OneObjectRef[] =
 {
 	{"Quest", kParamType_Quest, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -1280,52 +1204,52 @@ ParamInfo kParams_OneQuest_TwoInts_OneObjectRef[] =
 	{"Object Ref", kParamType_ObjectRef, 0}
 };
 
-ParamInfo kParams_OneQuest_OneInt_OneObjectRef[] =
+constexpr ParamInfo kParams_OneQuest_OneInt_OneObjectRef[] =
 {
 	{"Quest", kParamType_Quest, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Object Ref", kParamType_ObjectRef, 0}
 };
 
-ParamInfo kParams_OneQuest_OneInt_OneFormatString[] =
+constexpr ParamInfo kParams_OneQuest_OneInt_OneFormatString[] =
 {
 	{"Quest", kParamType_Quest, 0},
 	{"Integer", kParamType_Integer, 0},
 	FORMAT_STRING_PARAMS
 };
 
-ParamInfo kParams_OneObjectID_OneOptionalObjectID[] =
+constexpr ParamInfo kParams_OneObjectID_OneOptionalObjectID[] =
 {
 	{"Object ID", kParamType_ObjectID, 0},
 	{"Object ID", kParamType_ObjectID, 1}
 };
 
-ParamInfo kParams_OneForm_OneOptionalString[] =
+constexpr ParamInfo kParams_OneForm_OneOptionalString[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"String", kParamType_String, 1}
 };
 
-ParamInfo kParams_OneSpellItem_OneOptionalActorBase[] =
+constexpr ParamInfo kParams_OneSpellItem_OneOptionalActorBase[] =
 {
 	{"Spell Item", kParamType_SpellItem, 0},
 	{"Actor Base", kParamType_ActorBase, 1}
 };
 
-ParamInfo kParams_OneMagicItem_OneOptionalActor[] =
+constexpr ParamInfo kParams_OneMagicItem_OneOptionalActor[] =
 {
 	{"Magic Item", kParamType_MagicItem, 0},
 	{"Actor", kParamType_Actor, 1}
 };
 
-ParamInfo kParams_ThreeOptionalInts[] =
+constexpr ParamInfo kParams_ThreeOptionalInts[] =
 {
 	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneAIPackage_ThreeInts[] =
+constexpr ParamInfo kParams_OneAIPackage_ThreeInts[] =
 {
 	{"Package", kParamType_AIPackage, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -1333,19 +1257,19 @@ ParamInfo kParams_OneAIPackage_ThreeInts[] =
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneForm_OneInt_OneDouble[] =
+constexpr ParamInfo kParams_OneForm_OneInt_OneDouble[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Double", kParamType_Double, 0}
 };
 
-ParamInfo kParams_OneDouble[] =
+constexpr ParamInfo kParams_OneDouble[] =
 {
 	{"Double", kParamType_Double, 0}
 };
 
-ParamInfo kParams_FourFloats_OneOptionalObjectRef[] =
+constexpr ParamInfo kParams_FourFloats_OneOptionalObjectRef[] =
 {
 	{"Float", kParamType_Float, 0},
 	{"Float", kParamType_Float, 0},
@@ -1354,25 +1278,25 @@ ParamInfo kParams_FourFloats_OneOptionalObjectRef[] =
 	{"Object Ref", kParamType_ObjectRef, 1}
 };
 
-ParamInfo kParams_OneActorBase_OneOptionalString[] =
+constexpr ParamInfo kParams_OneActorBase_OneOptionalString[] =
 {
 	{"Actor Base", kParamType_ActorBase, 0},
 	{"String", kParamType_String, 1}
 };
 
-ParamInfo kParams_OneActorBase_OneString[] =
+constexpr ParamInfo kParams_OneActorBase_OneString[] =
 {
 	{"Actor Base", kParamType_ActorBase, 0},
 	{"String", kParamType_String, 0}
 };
 
-ParamInfo kParams_OneActorBase_OneForm[] =
+constexpr ParamInfo kParams_OneActorBase_OneForm[] =
 {
 	{"Actor Base", kParamType_ActorBase, 0},
 	{"Form", kParamType_AnyForm, 0}
 };
 
-ParamInfo kParams_OneString_ThreeFloats_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneString_ThreeFloats_OneOptionalInt[] =
 {
 	{"String", kParamType_String, 0},
 	{"Float", kParamType_Float, 0},
@@ -1381,7 +1305,7 @@ ParamInfo kParams_OneString_ThreeFloats_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneString_ThreeFloats_TwoOptionalInts[] =
+constexpr ParamInfo kParams_OneString_ThreeFloats_TwoOptionalInts[] =
 {
 	{"String", kParamType_String, 0},
 	{"Float", kParamType_Float, 0},
@@ -1391,20 +1315,20 @@ ParamInfo kParams_OneString_ThreeFloats_TwoOptionalInts[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneString_OneOptionalAxis[] =
+constexpr ParamInfo kParams_OneString_OneOptionalAxis[] =
 {
 	{"String", kParamType_String, 0},
 	{"Axis", kParamType_Axis, 1}
 };
 
-ParamInfo kParams_OneString_OneAxis_OneFloat[] =
+constexpr ParamInfo kParams_OneString_OneAxis_OneFloat[] =
 {
 	{"String", kParamType_String, 0},
 	{"Axis", kParamType_Axis, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneForm_OneInt_OneForm_ThreeFloats[] =
+constexpr ParamInfo kParams_OneForm_OneInt_OneForm_ThreeFloats[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -1414,13 +1338,13 @@ ParamInfo kParams_OneForm_OneInt_OneForm_ThreeFloats[] =
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneActorValue_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneActorValue_OneOptionalInt[] =
 {
 	{"Actor Value", kParamType_ActorValue, 0},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_ThreeGlobals_OneOptionalFloat_OneOptionalInt_OneOptionalString[] =
+constexpr ParamInfo kParams_ThreeGlobals_OneOptionalFloat_OneOptionalInt_OneOptionalString[] =
 {
 	{"Global", kParamType_Global, 0},
 	{"Global", kParamType_Global, 0},
@@ -1430,7 +1354,7 @@ ParamInfo kParams_ThreeGlobals_OneOptionalFloat_OneOptionalInt_OneOptionalString
 	{"String", kParamType_String, 1}
 };
 
-ParamInfo kParams_OneObjectRef_OneString_ThreeOptionalFloats[] =
+constexpr ParamInfo kParams_OneObjectRef_OneString_ThreeOptionalFloats[] =
 {
 	{"Object Ref", kParamType_ObjectRef, 0},
 	{"String", kParamType_String, 0},
@@ -1439,20 +1363,13 @@ ParamInfo kParams_OneObjectRef_OneString_ThreeOptionalFloats[] =
 	{"Float", kParamType_Float, 1}
 };
 
-ParamInfo kParams_OneObjectID_OneOptionalActorBase[] =
+constexpr ParamInfo kParams_OneObjectID_OneOptionalActorBase[] =
 {
 	{"Object ID", kParamType_ObjectID, 0},
 	{"Actor Base", kParamType_ActorBase, 1}
 };
 
-ParamInfo kParams_TwoStrings_OneInt[] =
-{
-	{"String", kParamType_String, 0},
-	{"String", kParamType_String, 0},
-	{"Integer", kParamType_Integer, 0}
-};
-
-ParamInfo kParams_OneString_OneForm_ThreeOptionalFloats[] =
+constexpr ParamInfo kParams_OneString_OneForm_ThreeOptionalFloats[] =
 {
 	{"String", kParamType_String, 0},
 	{"Form", kParamType_AnyForm, 0},
@@ -1461,19 +1378,19 @@ ParamInfo kParams_OneString_OneForm_ThreeOptionalFloats[] =
 	{"Float", kParamType_Float, 1}
 };
 
-ParamInfo kParams_OneEffect[] =
+constexpr ParamInfo kParams_OneEffect[] =
 {
 	{"Magic Effect", kParamType_MagicEffect, 0}
 };
 
-ParamInfo kParams_OneQuest_TwoInts[] =
+constexpr ParamInfo kParams_OneQuest_TwoInts[] =
 {
 	{"Quest", kParamType_Quest, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneFloat_ThreeOptionalFloats_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneFloat_ThreeOptionalFloats_OneOptionalInt[] =
 {
 	{"Float", kParamType_Float, 0},
 	{"Float", kParamType_Float, 1},
@@ -1482,28 +1399,28 @@ ParamInfo kParams_OneFloat_ThreeOptionalFloats_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneString_OneOptionalString_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneString_OneOptionalString_OneOptionalInt[] =
 {
 	{"String", kParamType_String, 0},
 	{"String", kParamType_String, 1},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneObjectRef_OneFloat_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneObjectRef_OneFloat_OneOptionalInt[] =
 {
 	{"Object Ref", kParamType_ObjectRef, 0},
 	{"Float", kParamType_Float, 0},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneObjectID_OneInt_OneFloat[] =
+constexpr ParamInfo kParams_OneObjectID_OneInt_OneFloat[] =
 {
 	{"Object ID", kParamType_ObjectID, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_TwoFloats_ThreeOptionalInts[] =
+constexpr ParamInfo kParams_TwoFloats_ThreeOptionalInts[] =
 {
 	{"Float", kParamType_Float, 0},
 	{"Float", kParamType_Float, 0},
@@ -1512,31 +1429,18 @@ ParamInfo kParams_TwoFloats_ThreeOptionalInts[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneNote[] =
+constexpr ParamInfo kParams_OneNote[] =
 {
 	{"Note", kParamType_Note, 0}
 };
 
-ParamInfo kParams_OneForm_OneOptionalSpellItem[] =
+constexpr ParamInfo kParams_OneForm_OneOptionalSpellItem[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Spell Item", kParamType_SpellItem, 1}
 };
 
-ParamInfo kParams_OneString_TwoFloats[] =
-{
-	{"String", kParamType_String, 0},
-	{"Float", kParamType_Float, 0},
-	{"Float", kParamType_Float, 0}
-};
-
-ParamInfo kParams_OneActorBase_OneOptionalActorBase[] =
-{
-	{"Actor Base", kParamType_ActorBase, 0},
-	{"Actor Base", kParamType_ActorBase, 1}
-};
-
-ParamInfo kParams_TwoFloats_OneOptionalObjectRef_OneOptionalInt[] =
+constexpr ParamInfo kParams_TwoFloats_OneOptionalObjectRef_OneOptionalInt[] =
 {
 	{"Float", kParamType_Float, 0},
 	{"Float", kParamType_Float, 0},
@@ -1544,7 +1448,7 @@ ParamInfo kParams_TwoFloats_OneOptionalObjectRef_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneString_ThreeOptionalFloats_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneString_ThreeOptionalFloats_OneOptionalInt[] =
 {
 	{"String", kParamType_String, 0},
 	{"Float", kParamType_Float, 1},
@@ -1553,22 +1457,14 @@ ParamInfo kParams_OneString_ThreeOptionalFloats_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneString_ThreeFloats[] =
-{
-	{"String", kParamType_String, 0},
-	{"Float", kParamType_Float, 0},
-	{"Float", kParamType_Float, 0},
-	{"Float", kParamType_Float, 0}
-};
-
-ParamInfo kParams_OneForm_OneInt_OneFormatString[] =
+constexpr ParamInfo kParams_OneForm_OneInt_OneFormatString[] =
 {
 	{"Form", kParamType_AnyForm, 0},
 	{"Integer", kParamType_Integer, 0},
 	FORMAT_STRING_PARAMS
 };
 
-ParamInfo kParams_OneOptionalObjectRef_OneOptionalInt_OneOptionalFloat_OneOptionalString[] =
+constexpr ParamInfo kParams_OneOptionalObjectRef_OneOptionalInt_OneOptionalFloat_OneOptionalString[] =
 {
 	{"Object Ref", kParamType_ObjectRef, 1},
 	{"Integer", kParamType_Integer, 1},
@@ -1576,50 +1472,45 @@ ParamInfo kParams_OneOptionalObjectRef_OneOptionalInt_OneOptionalFloat_OneOption
 	{"String", kParamType_String, 1}
 };
 
-ParamInfo kParams_OneScriptVar[] =
-{
-	{"Variable", kParamType_ScriptVariable, 0}
-};
-
-ParamInfo kParams_OneOptionalInt_OneOptionalString[] =
+constexpr ParamInfo kParams_OneOptionalInt_OneOptionalString[] =
 {
 	{"Integer", kParamType_Integer, 1},
 	{"String", kParamType_String, 1}
 };
 
-ParamInfo kParams_OneObjectID_OneOptionalString[] =
+constexpr ParamInfo kParams_OneObjectID_OneOptionalString[] =
 {
 	{"Object ID", kParamType_ObjectID, 0},
 	{"String", kParamType_String, 1}
 };
 
-ParamInfo kParams_OneString_OneDouble[] =
+constexpr ParamInfo kParams_OneString_OneDouble[] =
 {
 	{"String", kParamType_String, 0},
 	{"Double", kParamType_Double, 0}
 };
 
-ParamInfo kParams_TwoScriptVars[] =
+constexpr ParamInfo kParams_TwoScriptVars[] =
 {
 	{"Variable", kParamType_ScriptVariable, 0},
 	{"Variable", kParamType_ScriptVariable, 0}
 };
 
-ParamInfo kParams_OneString_OneFloat_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneString_OneFloat_OneOptionalInt[] =
 {
 	{"String", kParamType_String, 0},
 	{"Float", kParamType_Float, 0},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneString_OneInt_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneString_OneInt_OneOptionalInt[] =
 {
 	{"String", kParamType_String, 0},
 	{"Integer", kParamType_Integer, 0},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneString_TwoInts_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneString_TwoInts_OneOptionalInt[] =
 {
 	{"String", kParamType_String, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -1627,26 +1518,26 @@ ParamInfo kParams_OneString_TwoInts_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneOptionalFloat_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneOptionalFloat_OneOptionalInt[] =
 {
 	{"Float", kParamType_Float, 1},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneOptionalString_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneOptionalString_OneOptionalInt[] =
 {
 	{"String", kParamType_String, 1},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_ThreeScriptVars[] =
+constexpr ParamInfo kParams_ThreeScriptVars[] =
 {
 	{"Variable", kParamType_ScriptVariable, 0},
 	{"Variable", kParamType_ScriptVariable, 0},
 	{"Variable", kParamType_ScriptVariable, 0}
 };
 
-ParamInfo kParams_ThreeScriptVars_OneOptionalInt[] =
+constexpr ParamInfo kParams_ThreeScriptVars_OneOptionalInt[] =
 {
 	{"Variable", kParamType_ScriptVariable, 0},
 	{"Variable", kParamType_ScriptVariable, 0},
@@ -1654,7 +1545,7 @@ ParamInfo kParams_ThreeScriptVars_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneString_TwoInts_OneFloat[] =
+constexpr ParamInfo kParams_OneString_TwoInts_OneFloat[] =
 {
 	{"String", kParamType_String, 0},
 	{"Integer", kParamType_Integer, 0},
@@ -1662,7 +1553,7 @@ ParamInfo kParams_OneString_TwoInts_OneFloat[] =
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_TwoStrings_OneFloat_OneOptionalInt[] =
+constexpr ParamInfo kParams_TwoStrings_OneFloat_OneOptionalInt[] =
 {
 	{"String", kParamType_String, 0},
 	{"String", kParamType_String, 0},
@@ -1670,53 +1561,53 @@ ParamInfo kParams_TwoStrings_OneFloat_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_TwoStrings_OneOptionalInt[] =
+constexpr ParamInfo kParams_TwoStrings_OneOptionalInt[] =
 {
 	{"String", kParamType_String, 0},
 	{"String", kParamType_String, 0},
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OnePerk[] =
+constexpr ParamInfo kParams_OnePerk[] =
 {
 	{"Perk", kParamType_Perk, 0}
 };
 
-ParamInfo kParams_OneChallenge[] =
+constexpr ParamInfo kParams_OneChallenge[] =
 {
 	{"Challenge", kParamType_Challenge, 0}
 };
 
-ParamInfo kParams_OneChallenge_OneInt[] =
+constexpr ParamInfo kParams_OneChallenge_OneInt[] =
 {
 	{"Challenge", kParamType_Challenge, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneChallenge_OneForm[] =
+constexpr ParamInfo kParams_OneChallenge_OneForm[] =
 {
 	{"Challenge", kParamType_Challenge, 0},
 	{"Form", kParamType_AnyForm, 0}
 };
 
-ParamInfo kParams_OneCasino[] =
+constexpr ParamInfo kParams_OneCasino[] =
 {
 	{"Casino", kParamType_Casino, 0}
 };
 
-ParamInfo kParams_OneCasino_OneInt[] =
+constexpr ParamInfo kParams_OneCasino_OneInt[] =
 {
 	{"Casino", kParamType_Casino, 0},
 	{"Integer", kParamType_Integer, 0}
 };
 
-ParamInfo kParams_OneCasino_OneFloat[] =
+constexpr ParamInfo kParams_OneCasino_OneFloat[] =
 {
 	{"Casino", kParamType_Casino, 0},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_FiveFloats_ThreeScriptVars_OneOptionalInt[] =
+constexpr ParamInfo kParams_FiveFloats_ThreeScriptVars_OneOptionalInt[] =
 {
 	{"Float", kParamType_Float, 0},
 	{"Float", kParamType_Float, 0},
@@ -1729,7 +1620,7 @@ ParamInfo kParams_FiveFloats_ThreeScriptVars_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_ThreeFloats_OneOptionalInt[] =
+constexpr ParamInfo kParams_ThreeFloats_OneOptionalInt[] =
 {
 	{"Float", kParamType_Float, 0},
 	{"Float", kParamType_Float, 0},
@@ -1737,7 +1628,7 @@ ParamInfo kParams_ThreeFloats_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_ThreeFloats_ThreeScriptVars[] =
+constexpr ParamInfo kParams_ThreeFloats_ThreeScriptVars[] =
 {
 	{"Float", kParamType_Float, 0},
 	{"Float", kParamType_Float, 0},
@@ -1747,23 +1638,23 @@ ParamInfo kParams_ThreeFloats_ThreeScriptVars[] =
 	{"Variable", kParamType_ScriptVariable, 0}
 };
 
-ParamInfo kParams_OneIdleForm[] =
+constexpr ParamInfo kParams_OneIdleForm[] =
 {
 	{"Idle Form", kParamType_IdleForm, 0}
 };
 
-ParamInfo kParams_OneOptionalIdleForm[] =
+constexpr ParamInfo kParams_OneOptionalIdleForm[] =
 {
 	{"Idle Form", kParamType_IdleForm, 1}
 };
 
-ParamInfo kParams_OneOptionalInt_OneOptionalFloat[] =
+constexpr ParamInfo kParams_OneOptionalInt_OneOptionalFloat[] =
 {
 	{"Integer", kParamType_Integer, 1},
 	{"Float", kParamType_Float, 0}
 };
 
-ParamInfo kParams_OneString_ThreeScriptVars_TwoOptionalInts[] =
+constexpr ParamInfo kParams_OneString_ThreeScriptVars_TwoOptionalInts[] =
 {
 	{"String", kParamType_String, 0},
 	{"Variable", kParamType_ScriptVariable, 0},
@@ -1773,7 +1664,7 @@ ParamInfo kParams_OneString_ThreeScriptVars_TwoOptionalInts[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_OneString_ThreeScriptVars_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneString_ThreeScriptVars_OneOptionalInt[] =
 {
 	{"String", kParamType_String, 0},
 	{"Variable", kParamType_ScriptVariable, 0},
@@ -1782,13 +1673,7 @@ ParamInfo kParams_OneString_ThreeScriptVars_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-ParamInfo kParams_TwoDoubles[] =
-{
-	{"Double", kParamType_Double, 0},
-	{"Double", kParamType_Double, 0}
-};
-
-ParamInfo kParams_OneString_SixFloats_OneOptionalFloat[] =
+constexpr ParamInfo kParams_OneString_SixFloats_OneOptionalFloat[] =
 {
 	{"String", kParamType_String, 0},
 	{"Float", kParamType_Float, 0},
@@ -1800,7 +1685,7 @@ ParamInfo kParams_OneString_SixFloats_OneOptionalFloat[] =
 	{"Float", kParamType_Float, 1}
 };
 
-ParamInfo kParams_TwoStrings_FiveFloats[] =
+constexpr ParamInfo kParams_TwoStrings_FiveFloats[] =
 {
 	{"String", kParamType_String, 0},
 	{"String", kParamType_String, 0},
@@ -1809,4 +1694,21 @@ ParamInfo kParams_TwoStrings_FiveFloats[] =
 	{"Float", kParamType_Float, 0},
 	{"Float", kParamType_Float, 0},
 	{"Float", kParamType_Float, 0}
+};
+
+constexpr ParamInfo kParams_SixFloats_TwoScriptVars[] =
+{
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 0}
+};
+
+constexpr ParamInfo kParams_OneOptionalFloat[] =
+{
+	{"Float", kParamType_Float, 1}
 };
