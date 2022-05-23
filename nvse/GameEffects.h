@@ -46,7 +46,7 @@ public:
 	Sound			sound;				// 30
 	TESForm			*enchantObject;		// 3C	Object responsible for effect
 	tList<void>		*list40;			// 40
-	UInt32			unk44;				// 44
+	MagicItem*		unk44;				// 44 - checked at 0x825691
 
 	__forceinline void Remove(bool immediate)
 	{

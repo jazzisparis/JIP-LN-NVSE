@@ -258,7 +258,7 @@ public:
 	/*030*/virtual NiNode	*GetMagicNode();
 	/*034*/virtual MagicItem	*GetMagicItem();
 	/*038*/virtual bool		Unk_0E(ActiveEffect *activeEffect);
-	/*03C*/virtual float	Unk_0F(UInt8 arg1, float arg2);
+	/*03C*/virtual float	Unk_0F(UInt8 arg1, float arg2); //related to magnitude/duration (0x8172B9)
 	/*040*/virtual void		SetMagicItem(MagicItem *spell);
 	/*044*/virtual MagicTarget	*GetMagicTarget();
 	/*048*/virtual void		SetMagicTarget(MagicTarget *magicTarget);
@@ -285,7 +285,17 @@ public:
 	/*028*/virtual void		Unk_0A(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect, bool arg4);
 	/*02C*/virtual bool		Unk_0B(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect);
 
-	UInt32	unk04[3];	// 04
+	struct SpellInfos
+	{
+		MagicItem* item;
+		MagicCaster* caster;
+		ActiveEffect* eff;
+	};
+
+	UInt8 byte04;	// 04
+	UInt8 byte05;
+	UInt16 gap06;
+	tList<SpellInfos> list08;
 
 	void RemoveEffect(EffectItem *effItem);
 };

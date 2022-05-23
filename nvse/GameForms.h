@@ -1830,7 +1830,7 @@ public:
 static_assert(sizeof(TESSkill) == 0x60);
 
 // B0
-class EffectSetting : public TESForm
+class EffectSetting : public TESForm   // "Base Effect" in GECK
 {
 public:
 	enum
@@ -1909,7 +1909,7 @@ public:
 static_assert(sizeof(EffectSetting) == 0xB0);
 
 // 24
-class EffectItem
+class EffectItem  // Effect Entry using a Base Effect
 {
 public:
 	enum
@@ -1940,7 +1940,9 @@ public:
 static_assert(sizeof(EffectItemList) == 0x10);
 
 // 1C
-class MagicItem : public TESFullName
+// Contains multiple Effect Items (w/ magnitudes and Base Effects).
+// Ex: AlchemyItem
+class MagicItem : public TESFullName 
 {
 public:
 	/*010*/virtual bool		Unk_04();

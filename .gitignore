@@ -18,3 +18,6 @@
 *.lastbuildstate
 *.tlog
 .vs/jip_nvse/v16/.suo
+.vs/jip_nvse/v17/.suo
+*.idb
+.vs/jip_nvse/v17/.suo
