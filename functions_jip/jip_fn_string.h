@@ -26,7 +26,6 @@ bool Cmd_sv_RegexSearch_Execute(COMMAND_ARGS)
 	const char *srcStr = GetStringVar(strID);
 	if (!srcStr) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	std::regex rgx(buffer);
 	std::cmatch matches;
 	while (std::regex_search(srcStr, matches, rgx))

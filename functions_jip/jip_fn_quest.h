@@ -47,7 +47,6 @@ bool Cmd_GetObjectiveTargets_Execute(COMMAND_ARGS)
 	BGSQuestObjective *objective = quest->GetObjective(objectiveID);
 	if (!objective || ((objective->status & 3) != 1) || objective->targets.Empty()) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<ObjectiveTarget> *iter = objective->targets.Head();
 	ObjectiveTarget *target;
 	bool evalRes;
@@ -176,7 +175,6 @@ bool Cmd_GetQuests_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &completed))
 		return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<BGSQuestObjective> *iter = g_thePlayer->questObjectiveList.Head();
 	BGSQuestObjective *objective;
 	TESQuest *quest;
@@ -202,7 +200,6 @@ bool Cmd_GetQuestObjectives_Execute(COMMAND_ARGS)
 	UInt32 completed;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &completed)) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<void> *iter = quest->lVarOrObjectives.Head();
 	BGSQuestObjective *objective;
 	if (completed) completed = 2;
@@ -224,7 +221,6 @@ bool Cmd_GetActiveObjectives_Execute(COMMAND_ARGS)
 	*result = 0;
 	if (!g_thePlayer->activeQuest) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<void> *iter = g_thePlayer->activeQuest->lVarOrObjectives.Head();
 	BGSQuestObjective *objective;
 	do
@@ -259,11 +255,11 @@ bool Cmd_GetObjectiveTeleportLinks_Execute(COMMAND_ARGS)
 			continue;
 		if (quest != activeQuest)
 			StdCall(0x952D60, target->target, &target->data, 1);
-		tmpElements->Clear();
 		for (auto lnkIter = target->data.teleportLinks.Begin(); lnkIter; ++lnkIter)
 			tmpElements->Append(lnkIter.Get().door);
 		tmpElements->Append(target->target);
 		AppendElement(linksArr, ArrayElementL(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj)));
+		tmpElements->Clear();
 	}
 	while (trgIter = trgIter->next);
 	if (GetArraySize(linksArr)) AssignCommandResult(linksArr, result);
@@ -305,7 +301,6 @@ TempObject<TempFormList> s_lastQuestTargets(0x40);
 bool Cmd_GetQuestTargetsChanged_Execute(COMMAND_ARGS)
 {
 	TempFormList *tmpFormLst = GetTempFormList();
-	tmpFormLst->Clear();
 	auto objIter = g_thePlayer->questObjectiveList.Head();
 	BGSQuestObjective *objective;
 	ObjectiveTarget *target;

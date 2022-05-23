@@ -273,11 +273,7 @@ bool Cmd_LeveledListHasFormDeep_Execute(COMMAND_ARGS)
 	TESForm *list, *form;
 	TESLeveledList *lvlList;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &list, &form) && (lvlList = list->GetLvlList()))
-	{
-		TempFormList *tmpFormLst = GetTempFormList();
-		tmpFormLst->Clear();
-		*result = LeveledListHasFormDeep(lvlList, form, tmpFormLst);
-	}
+		*result = LeveledListHasFormDeep(lvlList, form, GetTempFormList());
 	else *result = 0;
 	return true;
 }

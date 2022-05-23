@@ -59,7 +59,7 @@ public:
 	/*208*/virtual void		Unk_82(void);
 	/*20C*/virtual NiNode	*GetProjectileNode();
 	/*210*/virtual void		SetProjectileNode(NiNode *node);
-	/*214*/virtual UInt32	GetSitSleepState();			
+	/*214*/virtual UInt32	GetSitSleepState();
 	/*218*/virtual bool		IsCharacter();			// return false for Actor and Creature, true for character and PlayerCharacter
 	/*21C*/virtual bool		IsCreature();
 	/*220*/virtual bool		IsExplosion();
@@ -80,7 +80,7 @@ public:
 		kFlags_Temporary			= 0x00004000,
 		kFlags_IgnoreFriendlyHits	= 0x00100000,
 		kFlags_Destroyed			= 0x00800000,
-		
+
 		kChanged_Inventory			= 0x08000000,
 	};
 
@@ -101,7 +101,7 @@ public:
 	TESForm			*baseForm;		// 20
 	NiVector3		rotation;		// 24
 	NiVector3		position;		// 30
-	float			scale;			// 3C 
+	float			scale;			// 3C
 	TESObjectCELL	*parentCell;	// 40
 	ExtraDataList	extraDataList;	// 44
 	RenderState		*renderState;	// 64
@@ -120,24 +120,23 @@ public:
 	ScriptEventList *GetEventList() const;
 
 	void Update3D();
-	TESContainer *GetContainer() const;
 	bool IsMapMarker() const {return baseForm->refID == 0x10;}
 
 	bool GetDisabled() const;
 	ExtraContainerChanges::EntryDataList *GetContainerChangesList() const;
 	ContChangesEntry *GetContainerChangesEntry(TESForm *itemForm) const;
 	SInt32 GetItemCount(TESForm *form) const;
-	void AddItemAlt(TESForm *item, UInt32 count, float condition, bool doEquip);
+	void AddItemAlt(TESForm *item, UInt32 count, float condition, UInt32 doEquip = 0, UInt32 noMessage = 1);
 	void RemoveItemTarget(TESForm *itemForm, TESObjectREFR *target, SInt32 quantity, bool keepOwner);
 	TESObjectCELL *GetParentCell() const;
 	TESWorldSpace *GetParentWorld() const;
 	bool __fastcall GetInSameCellOrWorld(TESObjectREFR *target) const;
 	float __vectorcall GetDistance(TESObjectREFR *target) const;
 	void SetPos(const NiVector3 &posVector);
-	void __fastcall SetAngle(NiVector4 &rotVector, UInt8 setLocal);
+	void __vectorcall SetAngle(__m128 rotVector, UInt8 setLocal);
 	void __fastcall MoveToCell(TESObjectCELL *cell, const NiVector3 &posVector);
-	bool __fastcall GetTranslatedPos(NiVector4 &posMods);
-	void __fastcall Rotate(NiVector4 &rotVector);
+	NiVector4& __fastcall GetTranslatedPos(NiVector4 &posMods);
+	void __vectorcall Rotate(__m128 rotVector);
 	bool Disable();
 	void DeleteReference();
 	bhkCharacterController *GetCharacterController() const;
@@ -216,23 +215,23 @@ public:
 	/*2F8*/virtual void		Update(float deltaTime);
 	/*2FC*/virtual void		Unk_BF(void);
 	/*300*/virtual void		Unk_C0(void);
-	
+
 	BaseProcess		*baseProcess;	// 68
-	UInt32			unk6C;			// 6C - loaded
-	TESObjectREFR	*unk70;			// 70 - loaded
-	UInt32			unk74;			// 74 - loaded
-	UInt32			unk78;			// 78 - loaded
-	UInt8			unk7C;			// 7C - loaded
-	UInt8			unk7D;			// 7D - loaded
-	UInt8			unk7E;			// 7E - loaded
-	UInt8			unk7F;			// 7F - loaded
-	UInt8			unk80;			// 80 - loaded
-	UInt8			unk81;			// 81 - loaded
+	UInt32			unk6C;			// 6C
+	TESObjectREFR	*unk70;			// 70
+	UInt32			unk74;			// 74
+	UInt32			unk78;			// 78
+	UInt8			unk7C;			// 7C
+	UInt8			isTalking;		// 7D
+	UInt8			unk7E;			// 7E
+	UInt8			unk7F;			// 7F
+	UInt8			unk80;			// 80
+	UInt8			unk81;			// 81
 	UInt8			unk82;			// 82
-	UInt8			unk83;			// 83 - loaded
-	UInt8			unk84;			// 84 - loaded
-	UInt8			unk85;			// 85 - loaded
-	UInt8			unk86;			// 86 - loaded
+	UInt8			unk83;			// 83
+	UInt8			unk84;			// 84
+	UInt8			unk85;			// 85
+	UInt8			unk86;			// 86
 	UInt8			unk87;			// 87	Init'd to the inverse of NoLowLevelProcessing
 };
 static_assert(sizeof(MobileObject) == 0x88);
@@ -285,17 +284,17 @@ public:
 	/*028*/virtual void		Unk_0A(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect, bool arg4);
 	/*02C*/virtual bool		Unk_0B(MagicCaster *magicCaster, MagicItem *magicItem, ActiveEffect *activeEffect);
 
-	struct SpellInfos
+	struct SpellInfo
 	{
-		MagicItem* item;
-		MagicCaster* caster;
-		ActiveEffect* eff;
+		MagicItem		*magItem;
+		MagicCaster		*magCaster;
+		ActiveEffect	*activeEff;
 	};
 
-	UInt8 byte04;	// 04
-	UInt8 byte05;
-	UInt16 gap06;
-	tList<SpellInfos> list08;
+	UInt8				byte04;		// 04
+	UInt8				byte05;		// 05
+	UInt8				pad06[2];	// 06
+	tList<SpellInfo>	spellInfos;	// 08
 
 	void RemoveEffect(EffectItem *effItem);
 };
@@ -532,7 +531,7 @@ public:
 		kLifeState_Reanimate =		4,
 		kLifeState_Restrained =		5
 	};
-	
+
 	MagicCaster			magicCaster;			// 088
 	MagicTarget			magicTarget;			// 094
 	ActorValueOwner		avOwner;				// 0A4
@@ -542,7 +541,7 @@ public:
 	bhkRagdollPenetrationUtil			*ragDollPentrationUtil;		// 0B0
 	UInt32								unk0B4;						// 0B4-
 	float								flt0B8;						// 0B8
-	UInt8								byte0BC;					// 0BC-
+	bool								bAIState;					// 0BC-
 	UInt8								byte0BD;					// 0BD
 	UInt8								byte0BE;					// 0BE
 	UInt8								byte0BF;					// 0BF
@@ -644,7 +643,7 @@ public:
 	UInt8								byte1B2;					// 1B2
 	UInt8								byte1B3;					// 1B3
 
-	// OBSE: unk1 looks like quantity, usu. 1; ignored for ammo (equips entire stack). In NVSE, pretty much always forced internally to 1 
+	// OBSE: unk1 looks like quantity, usu. 1; ignored for ammo (equips entire stack). In NVSE, pretty much always forced internally to 1
 	// OBSE: itemExtraList is NULL as the container changes entry is not resolved before the call
 	// NVSE: Default values are those used by the vanilla script functions.
 	__forceinline void EquipItem(TESForm *objType, UInt32 equipCount = 1, ExtraDataList *itemExtraList = NULL, bool applyEnchantment = 1, bool lockEquip = 0, bool noMessage = 1)
@@ -694,7 +693,7 @@ public:
 	double GetKillXP() const;
 	void GetHitDataValue(UInt32 valueType, double *result) const;
 	void DismemberLimb(UInt32 bodyPartID, bool explode);
-	void EquipItemAlt(TESForm *itemForm, ContChangesEntry *entry, UInt32 noUnequip, UInt32 noMessage);
+	void EquipItemAlt(TESForm *itemForm, ContChangesEntry *entry, UInt32 noUnequip = 0, UInt32 noMessage = 1);
 	bool HasNoPath() const;
 	bool CanBePushed() const;
 	float AdjustPushForce(float baseForce);
@@ -1002,7 +1001,7 @@ public:
 	UInt8								byteE3B;				// E3B
 	BSSimpleArray<TESAmmo*>				hotkeyedWeaponAmmos;	// E3C
 	UInt32								unkE4C;					// E4C
-		// 7C6 is a boolean meaning toddler, 
+		// 7C6 is a boolean meaning toddler,
 		// 7C7 byte bool PCCanUsePowerArmor, Byt0E39 referenced during LoadGame
 		// Used by TFC : 7E8/EC/F0 stores Pos, 7F0 adjusted by scaledHeight , 7E0 stores RotZ, 7E4 RotX
 		// Quest Stage LogEntry at 6B0.

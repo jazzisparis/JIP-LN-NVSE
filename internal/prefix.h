@@ -391,6 +391,7 @@ struct NiVector4;
 struct AlignedVector4;
 struct NiQuaternion;
 struct NiMatrix33;
+struct NiTransform;
 struct hkQuaternion;
 struct hkMatrix3x4;
 

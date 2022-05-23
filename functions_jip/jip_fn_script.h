@@ -490,7 +490,7 @@ bool Cmd_HasScriptBlock_Execute(COMMAND_ARGS)
 		script = (Script*)form;
 	else
 	{
-		TESScriptableForm *scriptable = DYNAMIC_CAST(form, TESForm, TESScriptableForm);
+		TESScriptableForm *scriptable = form->GetScriptableForm();
 		script = scriptable ? scriptable->script : NULL;
 		if (!script) return true;
 	}

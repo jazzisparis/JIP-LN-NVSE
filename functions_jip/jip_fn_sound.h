@@ -242,7 +242,6 @@ bool Cmd_GetSoundPlayers_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm))
 	{
 		TempElements *tmpElements = GetTempElements();
-		tmpElements->Clear();
 		BSAudioManager *audioMngr = BSAudioManager::Get();
 		BSGameSound *gameSound;
 		BSFadeNode *fadeNode;

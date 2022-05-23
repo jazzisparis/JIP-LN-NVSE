@@ -87,8 +87,74 @@ enum ParamType
 	kParamType_Array =				0x100,	// only usable with compiler override; StandardCompile() will report unrecognized param type
 };
 
+enum TokenTypes
+{
+	kTokenType_Number,
+	kTokenType_Boolean,
+	kTokenType_String,
+	kTokenType_Form,
+	kTokenType_Ref,
+	kTokenType_Global,
+	kTokenType_Array,
+	kTokenType_ArrayElement,
+	kTokenType_Slice,
+	kTokenType_Command,
+	kTokenType_Variable,
+	kTokenType_NumericVar,
+	kTokenType_RefVar,
+	kTokenType_StringVar,
+	kTokenType_ArrayVar,
+	kTokenType_Ambiguous,
+	kTokenType_Operator,
+	kTokenType_ForEachContext,
 
-enum CommandReturnType : UInt8
+	// numeric literals can optionally be encoded as one of the following
+	// all are converted to _Number on evaluation
+	kTokenType_Byte,
+	kTokenType_Short,		// 2 bytes
+	kTokenType_Int,			// 4 bytes
+
+	kTokenType_Pair,
+	kTokenType_AssignableString,
+	// xNVSE 6.1.0
+	kTokenType_Lambda,
+
+	kTokenType_Invalid,
+	kTokenType_Max = kTokenType_Invalid,
+
+	// sigil value, returned when an empty expression is parsed
+	kTokenType_Empty = kTokenType_Max + 1,
+};
+
+enum NVSEParamTypes
+{
+	kNVSEParamType_Number =				(1 << kTokenType_Number) | (1 << kTokenType_Ambiguous),
+	kNVSEParamType_Boolean =			(1 << kTokenType_Boolean) | (1 << kTokenType_Ambiguous),
+	kNVSEParamType_String =				(1 << kTokenType_String) | (1 << kTokenType_Ambiguous),
+	kNVSEParamType_Form =				(1 << kTokenType_Form) | (1 << kTokenType_Ambiguous),
+	kNVSEParamType_Array =				(1 << kTokenType_Array) | (1 << kTokenType_Ambiguous),
+	kNVSEParamType_ArrayElement =		(1 << kTokenType_ArrayElement) | (1 << kTokenType_Ambiguous),
+	kNVSEParamType_Slice =				1 << kTokenType_Slice,
+	kNVSEParamType_Command =			1 << kTokenType_Command,
+	kNVSEParamType_Variable =			1 << kTokenType_Variable,
+	kNVSEParamType_NumericVar =			1 << kTokenType_NumericVar,
+	kNVSEParamType_RefVar =				1 << kTokenType_RefVar,
+	kNVSEParamType_StringVar =			1 << kTokenType_StringVar,
+	kNVSEParamType_ArrayVar =			1 << kTokenType_ArrayVar,
+	kNVSEParamType_ForEachContext =		1 << kTokenType_ForEachContext,
+
+	kNVSEParamType_Collection =			kNVSEParamType_Array | kNVSEParamType_String,
+	kNVSEParamType_ArrayVarOrElement =	kNVSEParamType_ArrayVar | kNVSEParamType_ArrayElement,
+	kNVSEParamType_ArrayIndex =			kNVSEParamType_String | kNVSEParamType_Number,
+	kNVSEParamType_BasicType =			kNVSEParamType_Array | kNVSEParamType_String | kNVSEParamType_Number | kNVSEParamType_Form,
+	kNVSEParamType_NoTypeCheck =		0,
+
+	kNVSEParamType_FormOrNumber =		kNVSEParamType_Form | kNVSEParamType_Number,
+	kNVSEParamType_StringOrNumber =		kNVSEParamType_String | kNVSEParamType_Number,
+	kNVSEParamType_Pair	=				1 << kTokenType_Pair
+};
+
+enum CommandReturnType
 {
 	kRetnType_Default,
 	kRetnType_Form,
@@ -96,7 +162,6 @@ enum CommandReturnType : UInt8
 	kRetnType_Array,
 	kRetnType_ArrayIndex,
 	kRetnType_Ambiguous,
-
 	kRetnType_Max
 };
 
@@ -197,18 +262,18 @@ bool Cmd_Default_Eval(COMMAND_ARGS_EVAL);
 
 struct CommandInfo
 {
-	const char	* longName;		// 00
-	const char	* shortName;	// 04
-	UInt32		opcode;			// 08
-	const char	* helpText;		// 0C
-	UInt16		needsParent;	// 10
-	UInt16		numParams;		// 12
-	ParamInfo	* params;		// 14
+	const char		*longName;		// 00
+	const char		*shortName;		// 04
+	UInt32			opcode;			// 08
+	const char		*helpText;		// 0C
+	UInt16			needsParent;	// 10
+	UInt16			numParams;		// 12
+	const ParamInfo	*params;		// 14
 
 	// handlers
-	Cmd_Execute	execute;		// 18
-	Cmd_Parse	parse;			// 1C
-	Cmd_Eval	eval;			// 20
+	Cmd_Execute		execute;		// 18
+	Cmd_Parse		parse;			// 1C
+	Cmd_Eval		eval;			// 20
 
-	UInt32		flags;			// 24		might be more than one field (reference to 25 as a byte)
+	UInt32			flags;			// 24		might be more than one field (reference to 25 as a byte)
 };

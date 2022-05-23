@@ -75,7 +75,6 @@ DEFINE_COMMAND_PLUGIN(CrippleLimb, 1, 2, kParams_OneInt_OneOptionalObjectRef);
 DEFINE_COMMAND_PLUGIN(PlayIdleEx, 1, 1, kParams_OneOptionalIdleForm);
 DEFINE_COMMAND_PLUGIN(GetKillXP, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetKiller, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(KillActorAlt, 1, 3, kParams_OneOptionalObjectRef_TwoOptionalInts);
 DEFINE_COMMAND_ALT_PLUGIN(ReloadEquippedModels, ReloadModels, 1, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetPlayedIdle, 1, 0, NULL);
 DEFINE_CMD_COND_PLUGIN(IsIdlePlayingEx, 1, 1, kParams_OneIdleForm);
@@ -128,8 +127,8 @@ DEFINE_CMD_COND_PLUGIN(GetGroundMaterial, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(FireWeaponEx, 1, 2, kParams_OneObjectID_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetActorGravityMult, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(SetActorGravityMult, 1, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(SetTeammateKillable, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(SetNoGunWobble, 1, 1, kParams_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(ToggleTeammateKillable, SetTeammateKillable, 1, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_ALT_PLUGIN(ToggleNoGunWobble, SetNoGunWobble, 1, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetHitNode, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitExtendedFlag, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(RemoveAllPerks, 1, 1, kParams_OneOptionalInt);
@@ -138,6 +137,8 @@ DEFINE_COMMAND_PLUGIN(GetHitBaseWeaponDamage, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetHitFatigueDamage, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(RefreshAnimData, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetActorVelocityAlt, 1, 4, kParams_ThreeScriptVars_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetExcludedCombatActions, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetExcludedCombatActions, 1, 1, kParams_OneInt);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -228,7 +229,6 @@ bool Cmd_GetFollowers_Execute(COMMAND_ARGS)
 	ExtraFollower *xFollower = GetExtraType(&thisObj->extraDataList, Follower);
 	if (!xFollower || !xFollower->followers) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<Actor> *iter = xFollower->followers->Head();
 	do
 	{
@@ -363,7 +363,7 @@ bool Cmd_PickFromList_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSListForm *listForm;
 	SInt32 start = 0, len = -1;
-	if (!thisObj->GetContainer() || !ExtractArgsEx(EXTRACT_ARGS_EX, &listForm, &start, &len) || (start < 0)) return true;
+	if (!thisObj->baseForm->GetContainer() || !ExtractArgsEx(EXTRACT_ARGS_EX, &listForm, &start, &len) || (start < 0)) return true;
 	ListNode<TESForm> *iter = listForm->list.Head();
 	TESForm *item;
 	do
@@ -423,7 +423,6 @@ bool Cmd_GetCreatureModels_Execute(COMMAND_ARGS)
 	}
 	if NOT_ID(creature, TESCreature) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<char> *iter = creature->modelList.modelList.Head();
 	do
 	{
@@ -465,7 +464,6 @@ bool Cmd_GetActorsByProcessingLevel_Execute(COMMAND_ARGS)
 	UInt32 procLevel;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &procLevel) || (procLevel > 3)) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ProcessManager *procMngr = ProcessManager::Get();
 	MobileObject **objArray = procMngr->objects.data, **arrEnd = objArray;
 	objArray += procMngr->beginOffsets[procLevel];
@@ -529,7 +527,6 @@ void __fastcall GetCombatActors(TESObjectREFR *thisObj, Script *scriptObj, bool 
 	UInt32 count;
 	Actor *actor;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	if (thisObj->refID == 0x14)
 	{
 		CombatActors *cmbActors = g_thePlayer->combatActors;
@@ -599,7 +596,6 @@ void __fastcall GetDetectionData(TESObjectREFR *thisObj, Script *scriptObj, bool
 	*result = 0;
 	if (NOT_ACTOR(thisObj)) return;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	Actor *actor = (Actor*)thisObj;
 	if (actor->refID == 0x14)
 	{
@@ -878,7 +874,6 @@ bool Cmd_GetDroppedRefs_Execute(COMMAND_ARGS)
 	ExtraDroppedItemList *xDropped = GetExtraType(&thisObj->extraDataList, DroppedItemList);
 	if (!xDropped) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<TESObjectREFR> *iter = xDropped->itemRefs.Head();
 	do
 	{
@@ -1401,15 +1396,11 @@ bool Cmd_GetKiller_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	Actor *actor = (Actor*)thisObj;
-	actor = (IS_ACTOR(actor) && actor->GetDead()) ? actor->killer : NULL;
-	if (actor) REFR_RES = actor->refID;
-	DoConsolePrint(actor);
+	TESObjectREFR *killer = nullptr;
+	if (IS_ACTOR(actor) && actor->GetDead() && (killer = actor->killer))
+		REFR_RES = killer->refID;
+	DoConsolePrint(killer);
 	return true;
-}
-
-__declspec(naked) bool Cmd_KillActorAlt_Execute(COMMAND_ARGS)
-{
-	__asm	jmp		KillActor
 }
 
 bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
@@ -1609,7 +1600,7 @@ bool Cmd_IsFleeing_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_SetCurrentAmmoRounds_Execute(COMMAND_ARGS)
 {
 	SInt32 ammoRounds;
-	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &ammoRounds))
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &ammoRounds) && (ammoRounds >= 0))
 	{
 		ContChangesEntry *ammoInfo = ((Actor*)thisObj)->GetAmmoInfo();
 		if (ammoInfo) ammoInfo->countDelta = ammoRounds;
@@ -1617,15 +1608,35 @@ bool Cmd_SetCurrentAmmoRounds_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool Cmd_AttachAshPileEx_Execute(COMMAND_ARGS)
+__declspec(naked) bool __cdecl Cmd_AttachAshPileEx_Execute(COMMAND_ARGS)
 {
-	TESForm *form;
-	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (form->jipFormFlags6 & kHookFormFlag6_IsAshPile))
+	__asm
 	{
-		s_altAshPile = form;
-		AttachAshPile(PASS_COMMAND_ARGS);
+		mov		ecx, [esp+0xC]
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
+		jnz		done
+		push	eax
+		mov		eax, esp
+		push	eax
+		push	dword ptr [eax+0x1C]
+		push	dword ptr [eax+0x18]
+		push	dword ptr [eax+0x24]
+		push	dword ptr [eax+0xC]
+		push	dword ptr [eax+8]
+		call	ExtractArgsEx
+		add		esp, 0x18
+		pop		ecx
+		test	al, al
+		jz		done
+		test	byte ptr [ecx+6], kHookFormFlag6_IsAshPile
+		jz		done
+		mov		s_altAshPile, ecx
+		JMP_EAX(0x5DB870)
+	done:
+		mov		al, 1
+		retn
 	}
-	return true;
 }
 
 bool Cmd_SetActorVelocity_Execute(COMMAND_ARGS)
@@ -1958,7 +1969,6 @@ bool Cmd_TestEquippedSlots_Execute(COMMAND_ARGS)
 
 bool GetFactionList(Actor *actor, TESActorBase *actorBase, TempFormList *tmpFormLst)
 {
-	tmpFormLst->Clear();
 	if (actorBase)
 		actor = NULL;
 	else
@@ -2002,7 +2012,6 @@ bool Cmd_GetFactions_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase) && GetFactionList((Actor*)thisObj, actorBase, tmpFormLst))
 	{
 		TempElements *tmpElements = GetTempElements();
-		tmpElements->Clear();
 		for (auto lstIter = tmpFormLst->Begin(); lstIter; ++lstIter)
 			tmpElements->Append(*lstIter);
 		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
@@ -2310,25 +2319,33 @@ bool Cmd_SetActorGravityMult_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool Cmd_SetTeammateKillable_Execute(COMMAND_ARGS)
+bool Cmd_ToggleTeammateKillable_Execute(COMMAND_ARGS)
 {
-	UInt32 doSet;
-	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &doSet))
+	if IS_ACTOR(thisObj)
 	{
-		if (doSet) ((Actor*)thisObj)->jipActorFlags2 |= kHookActorFlag2_TeammateKillable;
-		else ((Actor*)thisObj)->jipActorFlags2 &= ~kHookActorFlag2_TeammateKillable;
+		Actor *actor = (Actor*)thisObj;
+		bool state = (actor->jipActorFlags2 & kHookActorFlag2_TeammateKillable) != 0;
+		*result = state;
+		UInt32 doSet;
+		if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &doSet) && (!doSet == state))
+			actor->jipActorFlags2 ^= kHookActorFlag2_TeammateKillable;
 	}
+	else *result = 0;
 	return true;
 }
 
-bool Cmd_SetNoGunWobble_Execute(COMMAND_ARGS)
+bool Cmd_ToggleNoGunWobble_Execute(COMMAND_ARGS)
 {
-	UInt32 doSet;
-	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &doSet))
+	if IS_ACTOR(thisObj)
 	{
-		if (doSet) ((Actor*)thisObj)->jipActorFlags2 |= kHookActorFlag2_NoGunWobble;
-		else ((Actor*)thisObj)->jipActorFlags2 &= ~kHookActorFlag2_NoGunWobble;
+		Actor *actor = (Actor*)thisObj;
+		bool state = (actor->jipActorFlags2 & kHookActorFlag2_NoGunWobble) != 0;
+		*result = state;
+		UInt32 doSet;
+		if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &doSet) && (!doSet == state))
+			actor->jipActorFlags2 ^= kHookActorFlag2_NoGunWobble;
 	}
+	else *result = 0;
 	return true;
 }
 
@@ -2461,16 +2478,38 @@ bool Cmd_GetActorVelocityAlt_Execute(COMMAND_ARGS)
 			if (rootNode)
 			{
 				if (!getLocal)
-					outVel.Set(charCtrl->velocity);
+					outVel.Set(charCtrl->velocity.PS());
 				else
 				{
 					NiVector3 velocity = charCtrl->velocity;
 					velocity.MultiplyMatrixInv(rootNode->WorldRotate());
-					outVel.Set(velocity);
+					outVel.Set(velocity.PS());
 				}
 				*result = 1;
 			}
 		}
+	}
+	return true;
+}
+
+bool Cmd_GetExcludedCombatActions_Execute(COMMAND_ARGS)
+{
+	*result = (int)s_excludedCombatActionsMap().Get(thisObj);
+	return true;
+}
+
+bool Cmd_SetExcludedCombatActions_Execute(COMMAND_ARGS)
+{
+	UInt32 excludeMask;
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &excludeMask))
+	{
+		excludeMask &= 0x7FFFFFF;
+		if (excludeMask)
+			s_excludedCombatActionsMap()[thisObj] = excludeMask;
+		else s_excludedCombatActionsMap().Erase(thisObj);
+		CombatController *combatCtrl = ((Actor*)thisObj)->GetCombatController();
+		if (combatCtrl)
+			combatCtrl->excludedActionsMask = excludeMask;
 	}
 	return true;
 }

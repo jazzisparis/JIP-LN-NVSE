@@ -18,8 +18,9 @@ alignas(16) const HexFloat kPackedValues[] =
 	PS_DUP_3(FltPIx2),
 	PS_DUP_3(0.5F),
 	PS_DUP_3(1.0F),
+	PS_DUP_3(0x40DFF8D6UL),
 	0.001F, 0.01F, 0.1F, 0.25F,
-	3.0F, 10.0F, 100.0F, 0UL
+	3.0F, 10.0F, 100.0F, 6144.0F
 };
 
 alignas(16) const char
@@ -616,6 +617,32 @@ __declspec(naked) float __vectorcall ATan2(float y, float x)
 		EMIT_DW(3E, AA, 7E, 45)
 		EMIT_DW(3F, 7F, FF, B7)
 	}
+}
+
+__declspec(naked) __m128 __vectorcall NormalizePS(__m128 inPS)
+{
+	__asm
+    {
+		movaps	xmm1, xmm0
+		movaps	xmm2, xmm1
+		mulps	xmm2, xmm2
+		xorps	xmm0, xmm0
+		haddps	xmm2, xmm0
+		haddps	xmm2, xmm0
+		comiss	xmm2, PS_Epsilon
+		jb		zeroLen
+		rsqrtss	xmm3, xmm2
+		movss	xmm0, SS_3
+		mulss	xmm2, xmm3
+		mulss	xmm2, xmm3
+		subss	xmm0, xmm2
+		mulss	xmm0, xmm3
+		mulss	xmm0, PS_V3_Half
+		shufps	xmm0, xmm0, 0xC0
+		mulps	xmm0, xmm1
+	zeroLen:
+        retn
+    }
 }
 
 __declspec(noinline) char *GetStrArgBuffer()

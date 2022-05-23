@@ -65,29 +65,6 @@ ScriptEventList *TESObjectREFR::GetEventList() const
 	return xScript ? xScript->eventList : NULL;
 }
 
-__declspec(naked) TESContainer *TESObjectREFR::GetContainer() const
-{
-	__asm
-	{
-		mov		eax, [ecx+0x20]
-		mov		dl, [eax+4]
-		cmp		dl, kFormType_TESNPC
-		jz		isActor
-		cmp		dl, kFormType_TESCreature
-		jz		isActor
-		cmp		dl, kFormType_TESObjectCONT
-		jnz		retnNULL
-		add		eax, 0x30
-		retn
-	isActor:
-		add		eax, 0x64
-		retn
-	retnNULL:
-		xor		eax, eax
-		retn
-	}
-}
-
 void __fastcall HidePointLights(NiNode *objNode);
 extern ModelLoader *g_modelLoader;
 
@@ -266,9 +243,12 @@ __declspec(naked) SInt32 TESObjectREFR::GetItemCount(TESForm *form) const
 	{
 		push	ebp
 		mov		ebp, esp
-		call	TESObjectREFR::GetContainer
+		push	ecx
+		mov		ecx, [ecx+0x20]
+		call	TESForm::GetContainer
 		test	eax, eax
 		jz		done
+		pop		ecx
 		add		eax, 4
 		push	eax
 		call	TESObjectREFR::GetContainerChangesList
@@ -314,7 +294,7 @@ __declspec(naked) SInt32 TESObjectREFR::GetItemCount(TESForm *form) const
 	}
 }
 
-__declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, float condition, bool doEquip)
+__declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, float condition, UInt32 doEquip, UInt32 noMessage)
 {
 	__asm
 	{
@@ -377,7 +357,7 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 		push	dword ptr [ebp+0x10]
 		lea		ecx, [ebp-0x10]
 		CALL_EAX(0x482090)
-		push	1
+		push	dword ptr [ebp+0x18]
 		push	dword ptr [ebp-4]
 		lea		ecx, [ebp-0x10]
 		CALL_EAX(0x4821A0)
@@ -405,7 +385,9 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 		mov		ecx, [ebp-0x14]
 		call	ExtraContainerChanges::EntryDataList::FindForItem
 		pop		edx
-		push	1
+		test	eax, eax
+		jz		eqpIter
+		push	dword ptr [ebp+0x18]
 		push	0
 		push	eax
 		push	edx
@@ -418,7 +400,7 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 		CALL_EAX(0x481680)
 		pop		esi
 		leave
-		retn	0x10
+		retn	0x14
 	}
 }
 
@@ -461,6 +443,8 @@ void TESObjectREFR::RemoveItemTarget(TESForm *itemForm, TESObjectREFR *target, S
 	}
 }
 
+void __fastcall ShowItemMessage(TESForm *item, const char *msgStr);
+
 __declspec(naked) void Actor::EquipItemAlt(TESForm *itemForm, ContChangesEntry *entry, UInt32 noUnequip, UInt32 noMessage)
 {
 	__asm
@@ -486,29 +470,28 @@ __declspec(naked) void Actor::EquipItemAlt(TESForm *itemForm, ContChangesEntry *
 	countMax:
 		xor		ecx, ecx
 	doneType:
-		push	dword ptr [ebp+0x14]
+		push	1
 		push	dword ptr [ebp+0x10]
 		push	1
 		mov		eax, [ebp+0xC]
-		test	eax, eax
-		jz		noEntry
 		mov		edx, [eax]
 		test	edx, edx
 		jz		noExtra
 		mov		edx, [edx]
 	noExtra:
 		push	edx
+		mov		edx, [eax+4]
 		test	ecx, ecx
-		cmovz	ecx, [eax+4]
+		cmovz	ecx, edx
 		push	ecx
-		jmp		doEquip
-	noEntry:
-		push	0
-		push	1
-	doEquip:
 		push	dword ptr [ebp+8]
 		mov		ecx, [ebp-4]
 		CALL_EAX(ADDR_EquipItem)
+		cmp		byte ptr [ebp+0x14], 0
+		jnz		done
+		mov		edx, ds:0x11D2A10
+		mov		ecx, [ebp+8]
+		call	ShowItemMessage
 	done:
 		leave
 		retn	0x10
@@ -637,20 +620,20 @@ __declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 		jnz		doUpdate
 		mov		eax, [esi+0x68]
 		test	eax, eax
-		jz		doUpdate
+		jz		done
 		cmp		byte ptr [eax+0x28], 1
-		ja		doUpdate
+		ja		done
 		mov		eax, [eax+0x138]
 		test	eax, eax
-		jz		doUpdate
+		jz		done
 		cmp		dword ptr [eax+0x3F0], 4
-		jz		doUpdate
+		jz		done
 		mov		ecx, [eax+0x594]
 		test	ecx, ecx
-		jz		doUpdate
+		jz		done
 		mov		ecx, [ecx+8]
 		test	ecx, ecx
-		jz		doUpdate
+		jz		done
 		add		ecx, 0xB0
 		movups	xmm0, [esi+0x30]
 		mulps	xmm0, kUnitConv
@@ -676,6 +659,9 @@ __declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 		push	edx
 		push	eax
 		CALL_EAX(0xC9E990)
+	done:
+		pop		esi
+		retn	4
 	doUpdate:
 		mov		ecx, [esi+0x64]
 		test	ecx, ecx
@@ -692,9 +678,7 @@ __declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 		push	0
 		push	offset kUpdateParams
 		mov		ecx, esi
-		mov		eax, [ecx]
-		call	dword ptr [eax+0xA4]
-	done:
+		CALL_EAX(0xA5DD70)
 		pop		esi
 		retn	4
 		ALIGN 16
@@ -703,42 +687,37 @@ __declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 	}
 }
 
-__declspec(naked) void __fastcall TESObjectREFR::SetAngle(NiVector4 &rotVector, UInt8 setLocal)
+__declspec(naked) void __vectorcall TESObjectREFR::SetAngle(__m128 rotVector, UInt8 setLocal)
 {
 	__asm
 	{
 		push	esi
 		mov		esi, ecx
 		sub		esp, 0x24
-		movups	xmm0, [edx]
 		mulps	xmm0, PS_V3_PId180
 		mov		ecx, esp
-		cmp		byte ptr [ecx+0x2C], 0
+		test	dl, dl
 		jnz		localRot
-		lea		edx, [esi+0x24]
-		movq	qword ptr [edx], xmm0
-		unpckhpd	xmm0, xmm0
-		movss	[edx+8], xmm0
-		call	NiMatrix33::RotationMatrix
+		movq	qword ptr [esi+0x24], xmm0
+		pshufd	xmm1, xmm0, 2
+		movss	[esi+0x2C], xmm1
+		call	NiMatrix33::FromEulerPRY
 		jmp		doneRot
 	localRot:
-		movups	[edx], xmm0
-		call	NiMatrix33::RotationMatrixInv
-		lea		edx, [esi+0x24]
+		call	NiMatrix33::FromEulerPRYInv
 		mov		ecx, eax
-		call	NiMatrix33::ExtractAngles
+		call	NiMatrix33::ToEulerPRY
+		movq	qword ptr [esi+0x24], xmm0
+		movss	[esi+0x2C], xmm6
 	doneRot:
+		mov		eax, [esi]
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
+		jz		done
 		mov		eax, [esi+0x64]
 		test	eax, eax
 		jz		done
 		mov		ecx, [eax+0x14]
 		test	ecx, ecx
-		jz		done
-		push	ecx
-		call	NiNode::ResetCollision
-		pop		ecx
-		mov		eax, [esi]
-		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jz		done
 		movups	xmm0, [esp]
 		movups	[ecx+0x34], xmm0
@@ -746,17 +725,19 @@ __declspec(naked) void __fastcall TESObjectREFR::SetAngle(NiVector4 &rotVector, 
 		movups	[ecx+0x44], xmm0
 		mov		edx, [esp+0x20]
 		mov		[ecx+0x54], edx
+		push	ecx
+		call	NiNode::ResetCollision
+		pop		ecx
 		push	0
 		push	offset kUpdateParams
-		mov		eax, [ecx]
-		call	dword ptr [eax+0xA4]
+		CALL_EAX(0xA5DD70)
 	done:
 		push	2
 		mov		ecx, esi
 		CALL_EAX(0x484B60)
 		add		esp, 0x24
 		pop		esi
-		retn	4
+		retn
 	}
 }
 
@@ -806,40 +787,52 @@ __declspec(naked) void __fastcall TESObjectREFR::MoveToCell(TESObjectCELL *cell,
 	}
 }
 
-__declspec(naked) bool __fastcall TESObjectREFR::GetTranslatedPos(NiVector4 &posMods)
+__declspec(naked) NiVector4& __fastcall TESObjectREFR::GetTranslatedPos(NiVector4 &posMods)
 {
 	__asm
 	{
 		mov		eax, [ecx+0x64]
 		test	eax, eax
-		jz		done
+		jz		noNode
 		mov		eax, [eax+0x14]
 		test	eax, eax
-		jz		done
+		jz		noNode
 		mov		ecx, edx
 		lea		edx, [eax+0x68]
 		call	NiVector3::MultiplyMatrix
 		movups	xmm1, [edx+0x24]
 		addps	xmm0, xmm1
 		movups	[eax], xmm0
-		mov		al, 1
-	done:
+		retn
+	noNode:
+		sub		esp, 0x24
+		push	ecx
+		push	edx
+		movups	xmm0, [ecx+0x24]
+		lea		ecx, [esp+8]
+		call	NiMatrix33::FromEulerPRY
+		mov		edx, eax
+		pop		ecx
+		call	NiVector3::MultiplyMatrix
+		pop		ecx
+		movups	xmm1, [ecx+0x30]
+		addps	xmm0, xmm1
+		movups	[eax], xmm0
+		add		esp, 0x24
 		retn
 	}
 }
 
-__declspec(naked) void __fastcall TESObjectREFR::Rotate(NiVector4 &rotVector)
+__declspec(naked) void __vectorcall TESObjectREFR::Rotate(__m128 rotVector)
 {
 	__asm
 	{
 		push	esi
 		mov		esi, ecx
 		sub		esp, 0x24
-		movups	xmm0, [edx]
 		mulps	xmm0, PS_V3_PId180
-		movups	[edx], xmm0
 		mov		ecx, esp
-		call	NiMatrix33::RotationMatrixInv
+		call	NiMatrix33::FromEulerPRYInv
 		push	2
 		mov		ecx, esi
 		CALL_EAX(0x484B60)
@@ -855,35 +848,36 @@ __declspec(naked) void __fastcall TESObjectREFR::Rotate(NiVector4 &rotVector)
 		lea		ecx, [eax+0x34]
 		push	eax
 		call	NiMatrix33::MultiplyMatrices
-		lea		edx, [esi+0x24]
 		mov		ecx, eax
-		call	NiMatrix33::ExtractAngles
-		mov		ecx, [esp]
-		call	NiNode::ResetCollision
-		pop		ecx
+		call	NiMatrix33::ToEulerPRY
+		movq	qword ptr [esi+0x24], xmm0
+		movss	[esi+0x2C], xmm6
 		mov		eax, [esi]
 		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
 		jz		done
+		mov		ecx, [esp]
+		call	NiNode::ResetCollision
+		mov		ecx, [esp]
 		push	0
 		push	offset kUpdateParams
-		mov		eax, [ecx]
-		call	dword ptr [eax+0xA4]
+		CALL_EAX(0xA5DD70)
 	done:
-		add		esp, 0x24
+		add		esp, 0x28
 		pop		esi
 		retn
 		ALIGN 16
 	noNode:
 		sub		esp, 0x24
-		lea		edx, [esi+0x24]
+		movups	xmm0, [esi+0x24]
 		mov		ecx, esp
-		call	NiMatrix33::RotationMatrix
+		call	NiMatrix33::FromEulerPRY
 		lea		edx, [esp+0x24]
 		mov		ecx, eax
 		call	NiMatrix33::MultiplyMatrices
-		lea		edx, [esi+0x24]
 		mov		ecx, eax
-		call	NiMatrix33::ExtractAngles
+		call	NiMatrix33::ToEulerPRY
+		movq	qword ptr [esi+0x24], xmm0
+		movss	[esi+0x2C], xmm6
 		add		esp, 0x48
 		pop		esi
 		retn

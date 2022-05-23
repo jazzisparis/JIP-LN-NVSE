@@ -941,11 +941,72 @@ public:
 		kType_DistantTree =			0x18
 	};
 
+	enum ShaderFlag
+	{
+		kFlag1_Specular =					1,
+		kFlag1_Skinned =					2,
+		kFlag1_LowDetail =					4,
+		kFlag1_VertexAlpha =				8,
+		kFlag1_MotionBlur =					0x10,
+		kFlag1_SinglePass =					0x20,
+		kFlag1_Empty =						0x40,
+		kFlag1_EnvironmentMapping =			0x80,
+		kFlag1_AlphaTexture =				0x100,
+		kFlag1_ZPrepass =					0x200,
+		kFlag1_Facegen =					0x400,
+		kFlag1_Parallax =					0x800,
+		kFlag1_ModelSpaceNormals =			0x1000,
+		kFlag1_NonProjectiveShadows =		0x2000,
+		kFlag1_Landscape =					0x4000,
+		kFlag1_Refraction =					0x8000,
+		kFlag1_FireRefraction =				0x10000,
+		kFlag1_EyeEnvironmentMapping =		0x20000,
+		kFlag1_Hair =						0x40000,
+		kFlag1_DynamicAlpha =				0x80000,
+		kFlag1_LocalMapHideSecret =			0x100000,
+		kFlag1_WindowEnvironmentMapping =	0x200000,
+		kFlag1_TreeBillboard =				0x400000,
+		kFlag1_ShadowFrustum =				0x800000,
+		kFlag1_MultipleTextures =			0x1000000,
+		kFlag1_RemappableTextures =			0x2000000,
+		kFlag1_Decal =						0x4000000,
+		kFlag1_DynamicDecal =				0x8000000,
+		kFlag1_ParallaxOcclusion =			0x10000000,
+		kFlag1_ExternalEmittance =			0x20000000,
+		kFlag1_Shadowmap =					0x40000000,
+		kFlag1_ZbufferTest =				0x80000000,
+		
+		kFlag2_ZbufferWrite =				1,
+		kFlag2_LODLandscape =				2,
+		kFlag2_LODBuilding =				4,
+		kFlag2_NoFade =						8,
+		kFlag2_RefractionTint =				0x10,
+		kFlag2_VertexColors =				0x20,
+		kFlag2_1stPerson =					0x40,
+		kFlag2_1stLightIsPointLight =		0x80,
+		kFlag2_2ndLight =					0x100,
+		kFlag2_3rdLight =					0x200,
+		kFlag2_VertexLighting =				0x400,
+		kFlag2_UniformScale =				0x800,
+		kFlag2_FitSlope =					0x1000,
+		kFlag2_Billboard =					0x2000,
+		kFlag2_NoLODLandBlend =				0x4000,
+		kFlag2_EnvmapLightFade =			0x8000,
+		kFlag2_Wireframe =					0x10000,
+		kFlag2_VatsSelection =				0x20000,
+		kFlag2_ShowInLocalMap =				0x40000,
+		kFlag2_PremultAlpha =				0x80000,
+		kFlag2_SkipNormalMaps =				0x100000,
+		kFlag2_AlphaDecal =					0x200000,
+		kFlag2_NoTransparencyMultisampling =0x400000,
+		kFlag2_StingerProp =				0x800000
+	};
+
 	UInt16			unk18;				// 18
 	UInt16			unk1A;				// 1A
 	UInt32			shaderType;			// 1C
-	UInt32			flags20;			// 20
-	UInt32			flags24;			// 24
+	UInt32			flags1;				// 20
+	UInt32			flags2;				// 24
 	float			alpha;				// 28
 	float			fadeAlpha;			// 2C
 	float			envMapScale;		// 30
@@ -1244,6 +1305,7 @@ public:
 	NiProperty* __fastcall GetProperty(UInt32 propID) const;
 	__forceinline void AddProperty(NiProperty *niProperty) {ThisCall(0x439410, this, niProperty);}
 	TESObjectREFR *GetParentRef() const;
+	__forceinline void RenderGeometryAndShader() {CdeclCall(0xB57E30, this, 0, 0);}
 
 	void DumpObject();
 	void DumpParents();

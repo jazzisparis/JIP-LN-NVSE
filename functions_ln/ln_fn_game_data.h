@@ -140,7 +140,6 @@ bool Cmd_GetLoadedTypeArray_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &formType, &index))
 	{
 		TempElements *tmpElements = GetTempElements();
-		tmpElements->Clear();
 		GetLoadedType(formType, index, NULL, tmpElements);
 		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	}
@@ -232,7 +231,6 @@ bool Cmd_GetFormMods_Execute(COMMAND_ARGS)
 		form = thisObj->baseForm;
 	}
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<ModInfo> *iter = form->mods.Head();
 	do
 	{
@@ -250,7 +248,6 @@ bool Cmd_GetFormRefs_Execute(COMMAND_ARGS)
 	UInt32 scanGrid = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &scanGrid)) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<TESObjectREFR> *refrIter;
 	TESObjectREFR *refr;
 	for (auto intrIter = g_dataHandler->cellArray.Begin(); intrIter; ++intrIter)

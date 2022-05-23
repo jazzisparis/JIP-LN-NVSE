@@ -215,7 +215,6 @@ bool Cmd_SaveHotkeys_Execute(COMMAND_ARGS)
 		while (entryIter = entryIter->next);
 	}
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	for (HotkeyInfo &hotkey : s_savedHotkeys)
 	{
 		ArrayElementL elements[3] = {hotkey.form, hotkey.health, hotkey.modFlags};
@@ -257,7 +256,7 @@ bool Cmd_BaseGetItemCount_Execute(COMMAND_ARGS)
 		if (!thisObj) return true;
 		base = thisObj->baseForm;
 	}
-	TESContainer *container = DYNAMIC_CAST(base, TESForm, TESContainer);
+	TESContainer *container = base->GetContainer();
 	if (container)
 	{
 		SInt32 count = 0;
@@ -285,7 +284,7 @@ bool Cmd_BaseAddItem_Execute(COMMAND_ARGS)
 		if (!thisObj) return true;
 		base = thisObj->baseForm;
 	}
-	TESContainer *container = DYNAMIC_CAST(base, TESForm, TESContainer);
+	TESContainer *container = base->GetContainer();
 	if (!container) return true;
 	ListNode<TESContainer::FormCount> *iter = container->formCountList.Head();
 	TESContainer::FormCount *formCount;
@@ -321,7 +320,7 @@ bool Cmd_BaseAddItemHealth_Execute(COMMAND_ARGS)
 		if (!thisObj) return true;
 		base = thisObj->baseForm;
 	}
-	TESContainer *container = DYNAMIC_CAST(base, TESForm, TESContainer);
+	TESContainer *container = base->GetContainer();
 	if (!container) return true;
 	ListNode<TESContainer::FormCount> *iter = container->formCountList.Head();
 	TESContainer::FormCount *formCount;
@@ -356,7 +355,7 @@ bool Cmd_BaseRemoveItem_Execute(COMMAND_ARGS)
 		if (!thisObj) return true;
 		base = thisObj->baseForm;
 	}
-	TESContainer *container = DYNAMIC_CAST(base, TESForm, TESContainer);
+	TESContainer *container = base->GetContainer();
 	if (!container) return true;
 	ListNode<TESContainer::FormCount> *iter = container->formCountList.Head(), *prev = NULL;
 	TESContainer::FormCount *formCount;

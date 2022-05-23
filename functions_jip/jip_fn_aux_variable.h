@@ -163,7 +163,6 @@ bool Cmd_AuxiliaryVariableGetAsArray_Execute(COMMAND_ARGS)
 			if (valsArr)
 			{
 				TempElements *tmpElements = GetTempElements();
-				tmpElements->Clear();
 				for (auto value = valsArr->Begin(); value; ++value)
 					tmpElements->Append(value().GetAsElement());
 				if (!tmpElements->Empty())
@@ -195,10 +194,10 @@ bool Cmd_AuxiliaryVariableGetAll_Execute(COMMAND_ARGS)
 					TempElements *tmpElements = GetTempElements();
 					for (auto varIter = findOwner->Begin(); varIter; ++varIter)
 					{
-						tmpElements->Clear();
 						for (auto value = varIter().Begin(); value; ++value)
 							tmpElements->Append(value().GetAsElement());
 						SetElement(varsMap, ArrayElementL(varIter.Key()), ArrayElementL(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj)));
+						tmpElements->Clear();
 					}
 					if (GetArraySize(varsMap)) AssignCommandResult(varsMap, result);
 				}

@@ -111,7 +111,6 @@ bool Cmd_ReadArrayFromFile_Execute(COMMAND_ARGS)
 	LineIterator lineIter(filePath, GetStrArgBuffer());
 	if (!lineIter) return true;
 	TempElements *tempElems = GetTempElements();
-	tempElems->Clear();
 	char *dataPtr = *lineIter, *pos;
 	++lineIter;
 	while (true)

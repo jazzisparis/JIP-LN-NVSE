@@ -108,8 +108,6 @@ extern TESObjectACTI *g_ashPileACTI, *g_gooPileACTI;
 extern TESGlobal *g_gameYear, *g_gameMonth, *g_gameDay, *g_gameHour, *g_timeScale;
 extern TESObjectMISC *g_capsItem;
 extern TESImageSpaceModifier *g_getHitIMOD, *g_explosionInFaceIMOD;
-extern double *g_condDmgPenalty;
-extern double s_condDmgPenalty;
 extern UInt32 s_mainThreadID, s_initialTickCount;
 
 __forceinline TESObjectREFR *PlaceAtMe(TESObjectREFR *refr, TESForm *form, UInt32 count, UInt32 distance, UInt32 direction, float health)
@@ -168,8 +166,6 @@ __forceinline void *NiDeallocator(void *blockPtr, UInt32 size)
 {
 	return CdeclCall<void*>(0xAA1460, blockPtr, size);
 }
-
-extern Cmd_Execute SayTo, KillActor, AddNote, AttachAshPile, MoveToFade, GetRefs;
 
 enum
 {
@@ -256,6 +252,8 @@ typedef UnorderedMap<TESForm*, InventoryItemData> InventoryItemsMap;
 InventoryItemsMap *GetInventoryItemsMap();
 
 bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *invItemsMap);
+
+void __fastcall ShowItemMessage(TESForm *item, const char *msgStr);
 
 NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt16 filter);
 
@@ -425,7 +423,7 @@ public:
 		refID = value ? value->refID : 0;
 	}
 
-	inline void operator=(const char *value)
+	__declspec(noinline) void operator=(const char *value)
 	{
 		type = 4;
 		length = StrLen(value);
@@ -460,7 +458,7 @@ public:
 		return ArrayElementL(num);
 	}
 
-	UInt32 ReadValData(UInt8 *bufPos)
+	__declspec(noinline) UInt32 ReadValData(UInt8 *bufPos)
 	{
 		if (type == 1)
 		{

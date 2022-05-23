@@ -269,11 +269,11 @@ public:
 class ImageSpaceModifierInstanceForm : public ImageSpaceModifierInstance
 {
 public:
-	TESImageSpaceModifier	*imageSpace;	// 1C
-	void					*ptr20;			// 20
-	float					flt24;			// 24
-	NiObject				*obj28;			// 28
-	float					flt2C;			// 2C
+	TESImageSpaceModifier	*imageSpaceMod;		// 1C
+	TESImageSpaceModifier	*lastImageSpaceMod;	// 20
+	float					lastStrength;		// 24
+	NiObject				*lastTarget;		// 28
+	float					transitionTime;		// 2C
 };
 
 // 30

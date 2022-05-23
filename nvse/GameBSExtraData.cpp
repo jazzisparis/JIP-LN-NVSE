@@ -13,10 +13,9 @@ __declspec(naked) BSExtraData *BaseExtraList::GetByType(UInt32 xType) const
 		cmp		dword ptr [ecx+4], 0
 		jz		retnNULL
 		mov		edx, [esp+4]
-		shr		edx, 3
-		movzx	eax, byte ptr [ecx+edx+8]
+		shr		edx, 5
+		mov		eax, [ecx+edx*4+8]
 		mov		edx, [esp+4]
-		and		edx, 7
 		bt		eax, edx
 		jnc		retnNULL
 		push	ecx

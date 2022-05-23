@@ -102,14 +102,16 @@ extern const char kLwrCaseConverter[], kUprCaseConverter[];
 #define PS_V3_PIx2			kPackedValues+0xC0
 #define PS_V3_Half			kPackedValues+0xD0
 #define PS_V3_One			kPackedValues+0xE0
+#define PS_HKUnitCnvrt		kPackedValues+0xF0
 
-#define SS_1d1K				kPackedValues+0xF0
-#define SS_1d100			kPackedValues+0xF4
-#define SS_1d10				kPackedValues+0xF8
-#define SS_1d4				kPackedValues+0xFC
-#define SS_3				kPackedValues+0x100
-#define SS_10				kPackedValues+0x104
-#define SS_100				kPackedValues+0x108
+#define SS_1d1K				kPackedValues+0x100
+#define SS_1d100			kPackedValues+0x104
+#define SS_1d10				kPackedValues+0x108
+#define SS_1d4				kPackedValues+0x10C
+#define SS_3				kPackedValues+0x110
+#define SS_10				kPackedValues+0x114
+#define SS_100				kPackedValues+0x118
+#define SS_6144				kPackedValues+0x11C
 
 #define FltPId2		1.570796371F
 #define FltPI		3.141592741F
@@ -323,6 +325,8 @@ float __vectorcall ASin(float x);
 float __vectorcall ACos(float x);
 float __vectorcall ATan(float x);
 float __vectorcall ATan2(float y, float x);
+
+__m128 __vectorcall NormalizePS(__m128 inPS);
 
 char *GetStrArgBuffer();
 

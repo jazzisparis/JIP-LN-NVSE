@@ -50,7 +50,6 @@ bool Cmd_ListToArray_Execute(COMMAND_ARGS)
 	BGSListForm *listForm;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &listForm)) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<TESForm> *iter = listForm->list.Head();
 	do
 	{
@@ -213,7 +212,6 @@ bool Cmd_GetINISectionNames_Execute(COMMAND_ARGS)
 	*iniPath = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, iniPath) || !GetINIPath(iniPath, scriptObj)) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	char *buffer = GetStrArgBuffer();
 	SInt32 length = GetPrivateProfileSectionNames(buffer, kMaxMessageLength, configPath), size;
 	while (length > 0)
@@ -297,7 +295,6 @@ bool Cmd_SortFormsByType_Execute(COMMAND_ARGS)
 	UInt32 nForms = GetArraySize(formArray), nTypes = GetArraySize(typeArray);
 	if (!nForms || !nTypes) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	Vector<TESForm*> tempForms(nForms);
 	UInt32 size = GetMax(nForms, nTypes) * sizeof(ArrayElementL);
 	ArrayElementL *elements = (ArrayElementL*)AuxBuffer::Get(2, size);

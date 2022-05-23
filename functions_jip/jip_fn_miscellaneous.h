@@ -7,7 +7,7 @@ DEFINE_COMMAND_PLUGIN(GetFormDescription, 0, 1, kParams_OneForm);
 DEFINE_COMMAND_PLUGIN(GetContainerRespawns, 0, 1, kParams_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(SetContainerRespawns, 0, 2, kParams_OneInt_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(GetExteriorCell, 0, 3, kParams_OneWorldspace_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetCellBuffered, 0, 1, kParams_OneOptionalCell);
+DEFINE_COMMAND_PLUGIN(GetCellBuffered, 0, 1, kParams_OneOptionalForm);
 DEFINE_CMD_COND_PLUGIN(GetGameDifficulty, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(ToggleFirstPerson, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(SetFormDescription, 0, 22, kParams_OneForm_OneFormatString);
@@ -57,7 +57,7 @@ DEFINE_COMMAND_PLUGIN(SetHardcoreStageEffect, 0, 2, kParams_OneForm_OneOptionalS
 DEFINE_COMMAND_PLUGIN(GetDebugModeState, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(FreezeTime, 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetConditionDamagePenalty, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetConditionDamagePenalty, 0, 1, kParams_OneDouble);
+DEFINE_COMMAND_PLUGIN(SetConditionDamagePenalty, 0, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(ToggleBipedSlotVisibility, 0, 2, kParams_OneInt_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ToggleImmortalMode, 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ToggleCameraCollision, 0, 1, kParams_OneOptionalInt);
@@ -72,6 +72,8 @@ DEFINE_COMMAND_PLUGIN(SetInternalMarker, 0, 2, kParams_OneForm_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetPointRayCastPos, 0, 9, kParams_FiveFloats_ThreeScriptVars_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(TogglePlayerSneaking, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(PlaceModel, 0, 8, kParams_OneString_SixFloats_OneOptionalFloat);
+DEFINE_COMMAND_PLUGIN(SetArmorConditionPenalty, 0, 1, kParams_OneOptionalFloat);
+DEFINE_COMMAND_PLUGIN(GetAnglesBetweenPoints, 0, 8, kParams_SixFloats_TwoScriptVars);
 
 bool Cmd_DisableNavMeshAlt_Execute(COMMAND_ARGS)
 {
@@ -162,7 +164,14 @@ bool Cmd_GetCellBuffered_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectCELL *cell = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &cell) || (!cell && (!thisObj || !(cell = thisObj->parentCell))))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &cell))
+		return true;
+	if (!cell)
+	{
+		if (!thisObj || !(cell = thisObj->parentCell))
+			return true;
+	}
+	else if NOT_ID(cell, TESObjectCELL)
 		return true;
 	TESObjectCELL **cellsBuffer = cell->worldSpace ? g_TES->exteriorsBuffer : g_TES->interiorsBuffer;
 	if (cellsBuffer)
@@ -494,12 +503,17 @@ bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 	if (filter < 0) filter = 6;
 	else filter &= 0x3F;
 	NiCamera *camera = g_sceneGraph->camera;
-	NiVector3 coords;
+	NiVector4 coords;
 	if (!coords.RayCastCoords(camera->WorldTranslate(), camera->WorldRotate(), maxRange, filter))
 	{
 		if (numArgs < 2) return true;
-		coords = {(maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0};
-		camera->m_transformWorld.GetTranslatedPos(coords);
+		__asm
+		{
+			movss	xmm0, maxRange
+			minss	xmm0, SS_6144
+			movups	coords, xmm0
+		}
+		coords = coords.GetTranslatedPos(camera->m_transformWorld);
 	}
 	ArrayElementL elements[3] = {coords.x, coords.y, coords.z};
 	AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
@@ -519,12 +533,17 @@ bool Cmd_GetReticleRange_Execute(COMMAND_ARGS)
 	if (filter < 0) filter = 6;
 	else filter &= 0x3F;
 	NiCamera *camera = g_sceneGraph->camera;
-	NiVector3 coords;
+	NiVector4 coords;
 	if (!coords.RayCastCoords(camera->WorldTranslate(), camera->WorldRotate(), maxRange, filter))
 	{
 		if (numArgs < 2) return true;
-		coords = {(maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0};
-		camera->m_transformWorld.GetTranslatedPos(coords);
+		__asm
+		{
+			movss	xmm0, maxRange
+			minss	xmm0, SS_6144
+			movups	coords, xmm0
+		}
+		coords = coords.GetTranslatedPos(camera->m_transformWorld);
 	}
 	*result = Point3Distance(coords, g_thePlayer->position);
 	return true;
@@ -641,7 +660,6 @@ bool Cmd_GetBufferedCells_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &interiors))
 	{
 		TempElements *tmpElements = GetTempElements();
-		tmpElements->Clear();
 		TESObjectCELL **cellsBuffer = interiors ? g_TES->interiorsBuffer : g_TES->exteriorsBuffer, *cell;
 		if (cellsBuffer)
 		{
@@ -719,8 +737,8 @@ QuaternionKey *g_wobbleAnimRotations[9] = {};
 
 bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 {
-	NiVector3 rotYPR;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &rotYPR.x, &rotYPR.y, &rotYPR.z))
+	NiVector3 rotPRY;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &rotPRY.x, &rotPRY.y, &rotPRY.z))
 	{
 		if (!g_wobbleAnimations)
 		{
@@ -744,16 +762,16 @@ bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 		while (++startIdx < 9);
 		if (rotationKeys)
 		{
-			rotYPR *= GET_PS(8);
-			NiQuaternion quaternion = rotYPR;
+			rotPRY *= GET_PS(8);
+			NiQuaternion quaternion = rotPRY;
 			rotationKeys[1].value = quaternion;
 			rotationKeys[1].quaternion20 = quaternion;
 			rotationKeys[1].quaternion30 = quaternion;
 			rotationKeys[2].value = quaternion;
 			rotationKeys[2].quaternion20 = quaternion;
 			rotationKeys[2].quaternion30 = quaternion;
-			rotYPR *= -0.5;
-			quaternion = rotYPR;
+			rotPRY *= -0.5;
+			quaternion = rotPRY;
 			rotationKeys[0].quaternion20 = quaternion;
 			rotationKeys[0].quaternion30 = quaternion;
 			while (++startIdx < 8)
@@ -921,15 +939,15 @@ bool Cmd_FreezeTime_Execute(COMMAND_ARGS)
 
 bool Cmd_GetConditionDamagePenalty_Execute(COMMAND_ARGS)
 {
-	*result = *g_condDmgPenalty;
+	*result = s_condDmgPenalty;
 	return true;
 }
 
 bool Cmd_SetConditionDamagePenalty_Execute(COMMAND_ARGS)
 {
-	double value;
+	float value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		*g_condDmgPenalty = value;
+		s_condDmgPenalty = value;
 	return true;
 }
 
@@ -1218,18 +1236,18 @@ bool Cmd_SetInternalMarker_Execute(COMMAND_ARGS)
 bool Cmd_GetPointRayCastPos_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	NiVector3 pos, rot;
+	NiVector3 pos;
+	NiVector4 rot;
 	ResultVars outPos;
 	UInt32 filter = 6;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pos.x, &pos.y, &pos.z, &rot.x, &rot.z, &outPos.x, &outPos.y, &outPos.z, &filter))
 	{
 		rot.y = 0;
-		rot *= GET_PS(8);
 		NiMatrix33 rotMat;
-		rotMat.RotationMatrixInv(rot);
+		rotMat.FromEulerPRYInv(rot * GET_PS(8));
 		if (rot.RayCastCoords(pos, rotMat + 1, 100000.0F, filter & 0x3F))
 		{
-			outPos.Set(rot);
+			outPos.Set(rot.PS());
 			*result = 1;
 		}
 	}
@@ -1248,13 +1266,14 @@ bool Cmd_PlaceModel_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char modelPath[0x80];
-	NiVector3 pos, rot;
+	NiVector3 pos;
+	NiVector4 rot;
 	float scale = 1.0F;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &modelPath, &pos.x, &pos.y, &pos.z, &rot.x, &rot.y, &rot.z, &scale))
 	{
 		PlayerCharacter *thePlayer = g_thePlayer;
 		TESObjectCELL *parentCell = thePlayer->parentCell;
-		if (parentCell && (!parentCell->worldSpace || (parentCell = parentCell->worldSpace->GetCellAtPos(thePlayer->position))))
+		if (parentCell && (!parentCell->worldSpace || (parentCell = parentCell->worldSpace->GetCellAtPos(thePlayer->position.PS()))))
 		{
 			NiNode *objParent = parentCell->Get3DNode(3);
 			if (objParent)
@@ -1264,8 +1283,7 @@ bool Cmd_PlaceModel_Execute(COMMAND_ARGS)
 				{
 					objNode->RemoveCollision();
 					objParent->AddObject(objNode, 1);
-					rot *= GET_PS(8);
-					objNode->LocalRotate().RotationMatrixInv(rot);
+					objNode->LocalRotate().FromEulerPRYInv(rot * GET_PS(8));
 					objNode->LocalTranslate() = pos;
 					objNode->m_transformLocal.scale = scale;
 					objNode->UpdateDownwardPass(kUpdateParams, 0);
@@ -1276,5 +1294,26 @@ bool Cmd_PlaceModel_Execute(COMMAND_ARGS)
 			}
 		}
 	}
+	return true;
+}
+
+bool Cmd_GetAnglesBetweenPoints_Execute(COMMAND_ARGS)
+{
+	NiVector3 point1, point2;
+	ResultVars outAngles;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &point1.x, &point1.y, &point1.z, &point2.x, &point2.y, &point2.z, &outAngles.x, &outAngles.z))
+	{
+		outAngles.y = outAngles.z;
+		outAngles.Set(point1.GetAnglesBetweenPoints(point2), GET_PS(9));
+	}
+	return true;
+}
+
+bool Cmd_SetArmorConditionPenalty_Execute(COMMAND_ARGS)
+{
+	*result = s_condDRDTPenalty;
+	float value;
+	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &value))
+		s_condDRDTPenalty = value;
 	return true;
 }

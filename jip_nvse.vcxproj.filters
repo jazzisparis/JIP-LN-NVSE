@@ -304,9 +304,6 @@
     <ClInclude Include="functions_jip\jip_fn_minimap.h">
       <Filter>functions_jip</Filter>
     </ClInclude>
-    <ClInclude Include="internal\dinput.h">
-      <Filter>internal</Filter>
-    </ClInclude>
     <ClInclude Include="internal\prefix.h">
       <Filter>internal</Filter>
     </ClInclude>
@@ -386,6 +383,9 @@
       <Filter>internal</Filter>
     </ClInclude>
     <ClInclude Include="internal\Ni_types.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\dinput.h">
       <Filter>internal</Filter>
     </ClInclude>
   </ItemGroup>

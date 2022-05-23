@@ -130,10 +130,12 @@ bool Cmd_GetObjectDimensions_Execute(COMMAND_ARGS)
 		form = thisObj->baseForm;
 	}
 	else scale = 1;
-	TESBoundObject *object = DYNAMIC_CAST(form, TESForm, TESBoundObject);
-	if (!object) return true;
-	axis -= 'X';
-	*result = abs(object->bounds[axis + 3] - object->bounds[axis]) * scale;
+	TESBoundObject *object = (TESBoundObject*)form;
+	if (object->IsBoundObject())
+	{
+		axis -= 'X';
+		*result = abs(object->bounds[axis + 3] - object->bounds[axis]) * scale;
+	}
 	return true;
 }
 
@@ -169,7 +171,6 @@ bool Cmd_GetEnableChildren_Execute(COMMAND_ARGS)
 	ExtraEnableStateChildren *xEnableChildren = GetExtraType(&thisObj->extraDataList, EnableStateChildren);
 	if (!xEnableChildren) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<TESObjectREFR> *iter = xEnableChildren->children.Head();
 	do
 	{
@@ -187,7 +188,6 @@ bool Cmd_GetLinkedChildren_Execute(COMMAND_ARGS)
 	ExtraLinkedRefChildren *xLinkedChildren = GetExtraType(&thisObj->extraDataList, LinkedRefChildren);
 	if (!xLinkedChildren) return true;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<TESObjectREFR> *iter = xLinkedChildren->children.Head();
 	do
 	{
@@ -278,7 +278,6 @@ bool Cmd_GetTeammates_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<TESObjectREFR> *iter = g_thePlayer->teammates.Head();
 	do
 	{
@@ -352,7 +351,7 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 	}
 	thisObj->MoveToCell(cell, *posVector);
 	if (resetRot)
-		thisObj->SetAngle(rotVector, false);
+		thisObj->SetAngle(rotVector.PS(), false);
 	*result = 1;
 	return true;
 }
@@ -375,8 +374,8 @@ bool Cmd_GetCenterPos_Execute(COMMAND_ARGS)
 		}
 		else
 		{
-			TESBoundObject *object = DYNAMIC_CAST(thisObj->baseForm, TESForm, TESBoundObject);
-			if (object)
+			TESBoundObject *object = (TESBoundObject*)thisObj->baseForm;
+			if (object->IsBoundObject())
 				*result += (object->bounds[axis] + object->bounds[axis + 3]) * thisObj->scale * 0.5F;
 		}
 	}
@@ -469,7 +468,6 @@ bool Cmd_SetMaterialPropertyValue_Execute(COMMAND_ARGS)
 
 void __fastcall PopulateFormSet(TESForm *form, TempFormList *tmpFormLst)
 {
-	tmpFormLst->Clear();
 	if IS_ID(form, BGSListForm)
 	{
 		ListNode<TESForm> *traverse = ((BGSListForm*)form)->list.Head();
@@ -637,7 +635,6 @@ bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	hkpWorldObject **bodies;
 	UInt32 count;
 	TESObjectREFR *refr;
@@ -780,11 +777,12 @@ bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 	UInt32 transform = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posVector.x, &posVector.y, &posVector.z, &transform))
 	{
-		if (transform == 2)
-			posVector += thisObj->position;
-		else if ((transform == 1) && !thisObj->GetTranslatedPos(posVector))
-			return true;
-		thisObj->SetPos(posVector);
+		if (!transform)
+			thisObj->SetPos(posVector);
+		else if (transform == 1)
+			thisObj->SetPos(thisObj->GetTranslatedPos(posVector));
+		else if (transform == 2)
+			thisObj->SetPos(posVector += thisObj->position);
 	}
 	return true;
 }
@@ -802,16 +800,21 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 		if (cell)
 		{
 			NiCamera *camera = g_sceneGraph->camera;
-			NiVector3 coords;
+			NiVector4 coords;
 			if (!coords.RayCastCoords(camera->WorldTranslate(), camera->WorldRotate(), maxRange))
 			{
 				if (!translate) return true;
-				coords = {(maxRange < 6144.0F) ? maxRange : 6144.0F, 0, 0};
-				camera->m_transformWorld.GetTranslatedPos(coords);
+				__asm
+				{
+					movss	xmm0, maxRange
+					minss	xmm0, SS_6144
+					movups	coords, xmm0
+				}
+				coords = coords.GetTranslatedPos(camera->m_transformWorld);
 			}
 			if (numArgs > 1)
 				coords += posMods;
-			if (cell->worldSpace && !(cell = cell->worldSpace->GetCellAtPos(coords)))
+			if (cell->worldSpace && !(cell = cell->worldSpace->GetCellAtPos(coords.PS())))
 				return true;
 			thisObj->MoveToCell(cell, coords);
 			*result = 1;
@@ -852,8 +855,8 @@ bool Cmd_SetAngleEx_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &rotVector.x, &rotVector.y, &rotVector.z, &transform))
 	{
 		if (transform <= 1)
-			thisObj->SetAngle(rotVector, transform);
-		else thisObj->Rotate(rotVector);
+			thisObj->SetAngle(rotVector.PS(), transform);
+		else thisObj->Rotate(rotVector.PS());
 	}
 	return true;
 }
@@ -861,7 +864,7 @@ bool Cmd_SetAngleEx_Execute(COMMAND_ARGS)
 bool Cmd_GetTeleportDoor_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if IS_ID(thisObj->baseForm, TESObjectDOOR)
+	if (thisObj->baseForm && IS_ID(thisObj->baseForm, TESObjectDOOR))
 	{
 		ExtraTeleport *xTeleport = GetExtraType(&thisObj->extraDataList, Teleport);
 		if (xTeleport && xTeleport->data && xTeleport->data->linkedDoor)
@@ -907,12 +910,22 @@ bool Cmd_SetOnCriticalHitEventHandler_Execute(COMMAND_ARGS)
 
 bool Cmd_MoveToFadeDelay_Execute(COMMAND_ARGS)
 {
-	UInt8 *data = scriptData + *opcodeOffsetPtr;
-	*data = 1;
-	Actor *actor = (Actor*)thisObj;
-	if (IS_ACTOR(actor) && actor->baseProcess && !actor->baseProcess->processLevel)
-		((HighProcess*)actor->baseProcess)->delayTime = *(double*)(data + 6);
-	MoveToFade(PASS_COMMAND_ARGS);
+	TESObjectREFR *destRef;
+	float delayTime;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &destRef, &delayTime))
+	{
+		if IS_ACTOR(thisObj)
+		{
+			HighProcess *hiProcess = (HighProcess*)((Actor*)thisObj)->baseProcess;
+			if (hiProcess && !hiProcess->processLevel)
+			{
+				hiProcess->delayTime = delayTime;
+				ThisCall(0x8FE9E0, hiProcess, thisObj, destRef, 0, 0, 0);
+				return true;
+			}
+		}
+		CdeclCall(ADDR_MoveToMarker, thisObj, destRef, 0, 0, 0);
+	}
 	return true;
 }
 
@@ -987,7 +1000,7 @@ bool Cmd_MoveToContainer_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *target;
 	UInt32 clrOwner = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &target, &clrOwner) && kInventoryType[thisObj->baseForm->typeID] && target->GetContainer())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &target, &clrOwner) && kInventoryType[thisObj->baseForm->typeID] && target->baseForm->GetContainer())
 	{
 		if (thisObj == g_HUDMainMenu->crosshairRef)
 			CdeclCall(0x775A00, 0, 0, 0);
@@ -1072,14 +1085,17 @@ bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 			{
 				niBlock->LocalTranslate() = transltn;
 				if IS_NODE(niBlock)
-					((NiNode*)niBlock)->ResetCollision();
+				{
+					if NOT_ACTOR(thisObj)
+						((NiNode*)niBlock)->ResetCollision();
+				}
 				else if IS_TYPE(niBlock, NiPointLight)
 				{
 					NiPointLight *ptLight = (NiPointLight*)niBlock;
 					if (ptLight->extraFlags & 1)
 						ptLight->vector100 = transltn;
 				}
-				niBlock->Update();
+				niBlock->UpdateDownwardPass(kUpdateParams, 0);
 			}
 		}
 		else thisObj->SetPos(transltn);
@@ -1097,12 +1113,22 @@ bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
-			NiVector3 rot;
-			NiMatrix33 &rotMat = (getMode & 1) ? niBlock->WorldRotate() : niBlock->LocalRotate();
-			if (!(getMode & 2))
-				rotMat.ExtractAngles(rot);
-			else rotMat.ExtractAnglesInv(rot);
-			rot *= GET_PS(9);
+			NiVector4 rot;
+			__asm
+			{
+				mov		ecx, niBlock
+				lea		eax, [ecx+0x68]
+				add		ecx, 0x34
+				test	getMode, 1
+				cmovnz	ecx, eax
+				mov		eax, NiMatrix33::ToEulerPRY
+				mov		edx, NiMatrix33::ToEulerPRYInv
+				test	getMode, 2
+				cmovnz	eax, edx
+				call	eax
+				mulps	xmm0, PS_V3_180dPI
+				movups	rot, xmm0
+			}
 			ArrayElementL elements[3] = {rot.x, rot.y, rot.z};
 			AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
 		}
@@ -1122,21 +1148,20 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 			NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 			if (niBlock)
 			{
-				rot *= GET_PS(8);
 				if (!transform)
-					niBlock->LocalRotate().RotationMatrix(rot);
+					niBlock->LocalRotate().FromEulerPRY(rot * GET_PS(8));
 				else if (transform == 1)
-					niBlock->LocalRotate().Rotate(rot);
+					niBlock->LocalRotate().Rotate(rot * GET_PS(8));
 				else
-					niBlock->LocalRotate().RotationMatrixInv(rot);
-				if IS_NODE(niBlock)
+					niBlock->LocalRotate().FromEulerPRYInv(rot * GET_PS(8));
+				if (IS_NODE(niBlock) && NOT_ACTOR(thisObj))
 					((NiNode*)niBlock)->ResetCollision();
-				niBlock->Update();
+				niBlock->UpdateDownwardPass(kUpdateParams, 0);
 			}
 		}
 		else if (transform != 1)
-			thisObj->SetAngle(rot, transform);
-		else thisObj->Rotate(rot);
+			thisObj->SetAngle(rot.PS(), transform);
+		else thisObj->Rotate(rot.PS());
 	}
 	return true;
 }
@@ -1167,9 +1192,9 @@ bool Cmd_SetNifBlockScale_Execute(COMMAND_ARGS)
 			if (niBlock)
 			{
 				niBlock->m_transformLocal.scale = newScale;
-				if IS_NODE(niBlock)
+				if (IS_NODE(niBlock) && NOT_ACTOR(thisObj))
 					((NiNode*)niBlock)->ResetCollision();
-				niBlock->Update();
+				niBlock->UpdateDownwardPass(kUpdateParams, 0);
 			}
 		}
 		else ThisCall(0x567490, thisObj, newScale);
@@ -1325,8 +1350,9 @@ bool Cmd_GetRayCastPos_Execute(COMMAND_ARGS)
 		NiNode *objNode = thisObj->GetNode(nodeName);
 		if (objNode)
 		{
-			NiVector3 coords, posVector = objNode->WorldTranslate();
+			NiVector3 posVector = objNode->WorldTranslate();
 			posVector.z += posZmod;
+			NiVector4 coords;
 			if (coords.RayCastCoords(posVector, objNode->WorldRotate() + 1, 50000.0F, filter & 0x3F))
 			{
 				outX->data = coords.x;
@@ -1412,7 +1438,6 @@ bool Cmd_GetPlayerPerks_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TempElements *tmpElements = GetTempElements();
-	tmpElements->Clear();
 	ListNode<PerkRank> *iter = g_thePlayer->perkRanksPC.Head();
 	BGSPerk *perk;
 	do
@@ -1450,7 +1475,6 @@ bool Cmd_GetNifBlockParentNodes_Execute(COMMAND_ARGS)
 			if (niBlock)
 			{
 				TempElements *tmpElements = GetTempElements();
-				tmpElements->Clear();
 				while ((niBlock != rootNode) && (niBlock = niBlock->m_parent))
 					tmpElements->Append(niBlock->GetName());
 				AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
@@ -1929,7 +1953,6 @@ bool Cmd_GetCollisionNodes_Execute(COMMAND_ARGS)
 	if (rootNode)
 	{
 		TempElements *tmpElements = GetTempElements();
-		tmpElements->Clear();
 		GetCollisionNodes(rootNode, tmpElements);
 		if (!tmpElements->Empty())
 			AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
@@ -1962,7 +1985,6 @@ bool Cmd_GetChildBlocks_Execute(COMMAND_ARGS)
 		if (objNode && IS_NODE(objNode))
 		{
 			TempElements *tmpElements = GetTempElements();
-			tmpElements->Clear();
 			GetChildBlocks(objNode, tmpElements);
 			UInt32 size = tmpElements->Size();
 			if (size > 1)
@@ -2038,7 +2060,7 @@ bool Cmd_GetPosEx_Execute(COMMAND_ARGS)
 {
 	ResultVars outPos;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outPos.x, &outPos.y, &outPos.z))
-		outPos.Set(thisObj->position);
+		outPos.Set(thisObj->position.PS());
 	return true;
 }
 
@@ -2049,19 +2071,17 @@ bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outRot.x, &outRot.y, &outRot.z, &getLocal))
 	{
 		if (!getLocal)
-			outRot.Set(thisObj->rotation, GET_PS(9));
+			outRot.Set(thisObj->rotation.PS(), GET_PS(9));
 		else
 		{
-			NiVector3 locRot;
 			NiNode *rootNode = thisObj->GetRefNiNode();
 			if (rootNode && (thisObj->refID != 0x14))
-				rootNode->WorldRotate().ExtractAnglesInv(locRot);
+				outRot.Set(rootNode->WorldRotate().ToEulerPRYInv(), GET_PS(9));
 			else
 			{
 				NiMatrix33 rotMat = thisObj->rotation;
-				rotMat.ExtractAnglesInv(locRot);
+				outRot.Set(rotMat.ToEulerPRYInv(), GET_PS(9));
 			}
-			outRot.Set(locRot, GET_PS(9));
 		}
 	}
 	return true;
@@ -2305,9 +2325,9 @@ bool Cmd_GetTranslatedPos_Execute(COMMAND_ARGS)
 {
 	NiVector4 posMods;
 	ResultVars outPos;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posMods.x, &posMods.y, &posMods.z, &outPos.x, &outPos.y, &outPos.z) && thisObj->GetTranslatedPos(posMods))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posMods.x, &posMods.y, &posMods.z, &outPos.x, &outPos.y, &outPos.z))
 	{
-		outPos.Set(posMods);
+		outPos.Set(thisObj->GetTranslatedPos(posMods).PS());
 		*result = 1;
 	}
 	else *result = 0;
@@ -2325,7 +2345,7 @@ bool Cmd_GetNifBlockTranslationAlt_Execute(COMMAND_ARGS)
 		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
-			outPos.Set(getWorld ? niBlock->WorldTranslate() : niBlock->LocalTranslate());
+			outPos.Set(getWorld ? niBlock->WorldTranslate().PS() : niBlock->LocalTranslate().PS());
 			*result = 1;
 		}
 	}
@@ -2343,12 +2363,8 @@ bool Cmd_GetNifBlockRotationAlt_Execute(COMMAND_ARGS)
 		NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName);
 		if (niBlock)
 		{
-			NiVector3 rot;
 			NiMatrix33 &rotMat = (getMode & 1) ? niBlock->WorldRotate() : niBlock->LocalRotate();
-			if (!(getMode & 2))
-				rotMat.ExtractAngles(rot);
-			else rotMat.ExtractAnglesInv(rot);
-			outRot.Set(rot, GET_PS(9));
+			outRot.Set((getMode & 2) ? rotMat.ToEulerPRYInv() : rotMat.ToEulerPRY(), GET_PS(9));
 			*result = 1;
 		}
 	}
@@ -2367,7 +2383,7 @@ bool Cmd_GetLinearVelocityAlt_Execute(COMMAND_ARGS)
 		if (rigidBody && rigidBody->IsMobile())
 		{
 			if (!getLocal)
-				outVel.Set(rigidBody->motion.linVelocity);
+				outVel.Set(rigidBody->motion.linVelocity.PS());
 			else
 			{
 				hkVector4 velocity = rigidBody->motion.linVelocity;
@@ -2391,7 +2407,7 @@ bool Cmd_GetAngularVelocityAlt_Execute(COMMAND_ARGS)
 		if (rigidBody && rigidBody->IsMobile())
 		{
 			if (getGlobal)
-				outVel.Set(rigidBody->motion.angVelocity);
+				outVel.Set(rigidBody->motion.angVelocity.PS());
 			else
 			{
 				hkVector4 velocity = rigidBody->motion.angVelocity;
