@@ -649,7 +649,7 @@ public:
 	virtual void	LoadGame(UInt32 arg1);
 	virtual void	DoLoad(UInt32 arg1);
 
-	UInt16			horizontalSeenBits[16];	// 04	16x16 grid bitfield
+	BitField<16>	verticalSeenBits[16];	// 04	16x16 grid bitfield
 };
 static_assert(sizeof(SeenData) == 0x24);
 

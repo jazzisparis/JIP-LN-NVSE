@@ -212,16 +212,15 @@ __declspec(naked) __m128 __vectorcall NiVector3::GetAnglesBetweenPoints(const Ni
 		movups	xmm1, [edx]
 		subps	xmm0, xmm1
 		andps	xmm0, PS_XYZ0Mask
-		shufps	xmm0, xmm0, 0xE1
-		pshufd	xmm1, xmm0, 0xFC
-		pshufd	xmm5, xmm0, 0xF4
-		mulps	xmm5, xmm5
-		xorps	xmm6, xmm6
-		haddps	xmm5, xmm6
-		sqrtss	xmm6, xmm5
-		pshufd	xmm7, xmm0, 0xFE
-		shufps	xmm0, xmm0, 0xFD
+		pshufd	xmm1, xmm0, 0xFD
 		xorps	xmm1, PS_FlipSignMask0
+		movaps	xmm2, xmm0
+		xorps	xmm6, xmm6
+		unpcklpd	xmm2, xmm6
+		mulps	xmm2, xmm2
+		haddps	xmm2, xmm6
+		sqrtss	xmm6, xmm2
+		pshufd	xmm7, xmm0, 0xFE
 		call	ATan2
 		movaps	xmm1, xmm6
 		movaps	xmm6, xmm0

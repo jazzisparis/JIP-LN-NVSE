@@ -20,7 +20,7 @@ alignas(16) const HexFloat kPackedValues[] =
 	PS_DUP_3(1.0F),
 	PS_DUP_3(0x40DFF8D6UL),
 	0.001F, 0.01F, 0.1F, 0.25F,
-	3.0F, 10.0F, 100.0F, 6144.0F
+	3.0F, 10.0F, 100.0F, 8192.0F
 };
 
 alignas(16) const char

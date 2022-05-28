@@ -97,6 +97,7 @@ DEFINE_COMMAND_PLUGIN(GetCollisionObjLayerType, 1, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(SetCollisionObjLayerType, 1, 2, kParams_OneString_OneInt);
 DEFINE_COMMAND_PLUGIN(SetRefrModelPath, 1, 1, kParams_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(AttachLine, 1, 7, kParams_TwoStrings_FiveFloats);
+DEFINE_COMMAND_PLUGIN(ToggleNoZPosReset, 1, 1, kParams_OneInt);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -398,9 +399,9 @@ bool Cmd_GetRefType_Execute(COMMAND_ARGS)
 bool Cmd_ToggleObjectCollision_Execute(COMMAND_ARGS)
 {
 	UInt32 enable;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && NOT_ACTOR(thisObj) && (!enable == !(thisObj->extraDataList.jipRefFlags5F & kHookRefFlag5F_DisableCollision)))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && NOT_ACTOR(thisObj) && (!enable == !(thisObj->JIPRefFlags() & kHookRefFlag5F_DisableCollision)))
 	{
-		thisObj->extraDataList.jipRefFlags5F ^= kHookRefFlag5F_DisableCollision;
+		thisObj->JIPRefFlags() ^= kHookRefFlag5F_DisableCollision;
 		thisObj->Update3D();
 	}
 	return true;
@@ -807,7 +808,8 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 				__asm
 				{
 					movss	xmm0, maxRange
-					minss	xmm0, SS_6144
+					maxss	xmm0, SS_10
+					minss	xmm0, SS_8192
 					movups	coords, xmm0
 				}
 				coords = coords.GetTranslatedPos(camera->m_transformWorld);
@@ -836,13 +838,13 @@ bool Cmd_SetRefName_Execute(COMMAND_ARGS)
 				HOOK_MOD(GetRefName, true);
 			else free(*namePtr);
 			*namePtr = CopyString(name);
-			thisObj->extraDataList.jipRefFlags5F |= kHookRefFlag5F_AltRefName;
+			thisObj->JIPRefFlags() |= kHookRefFlag5F_AltRefName;
 		}
 		else
 		{
 			if (s_refNamesMap().EraseFree(thisObj))
 				HOOK_MOD(GetRefName, false);
-			thisObj->extraDataList.jipRefFlags5F &= ~kHookRefFlag5F_AltRefName;
+			thisObj->JIPRefFlags() &= ~kHookRefFlag5F_AltRefName;
 		}
 	}
 	return true;
@@ -2565,13 +2567,13 @@ bool Cmd_SetRefrModelPath_Execute(COMMAND_ARGS)
 				HOOK_MOD(GetModelPath, true);
 			else free(*pPath);
 			*pPath = CopyString(modelPath);
-			thisObj->extraDataList.jipRefFlags5F |= kHookRefFlag5F_RefrModelPath;
+			thisObj->JIPRefFlags() |= kHookRefFlag5F_RefrModelPath;
 		}
 		else
 		{
 			if (s_refrModelPathMap().EraseFree(thisObj))
 				HOOK_MOD(GetModelPath, false);
-			thisObj->extraDataList.jipRefFlags5F &= ~kHookRefFlag5F_RefrModelPath;
+			thisObj->JIPRefFlags() &= ~kHookRefFlag5F_RefrModelPath;
 		}
 	}
 	return true;
@@ -2598,6 +2600,44 @@ bool Cmd_AttachLine_Execute(COMMAND_ARGS)
 			}
 			*result = 1;
 		}
+	}
+	return true;
+}
+
+__declspec(naked) void GetPosInAreaBoundHook()
+{
+	__asm
+	{
+		mov		eax, [esp+4]
+		test	eax, eax
+		jz		done
+		test	byte ptr [eax+0x5F], kHookRefFlag5F_NoZPosReset
+		jz		done
+		mov		eax, [esp+8]
+		mov		edx, [eax+8]
+		mov		eax, [esp+0xC]
+		mov		[eax+8], edx
+	done:
+		retn	0xC
+	}
+}
+
+bool Cmd_ToggleNoZPosReset_Execute(COMMAND_ARGS)
+{
+	static bool hookInstalled = false;
+	UInt32 toggle;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &toggle))
+	{
+		if (toggle)
+		{
+			if (!hookInstalled)
+			{
+				hookInstalled = true;
+				WriteRelJump(0x629924, (UInt32)GetPosInAreaBoundHook);
+			}
+			thisObj->JIPRefFlags() |= kHookRefFlag5F_NoZPosReset;
+		}
+		else thisObj->JIPRefFlags() &= ~kHookRefFlag5F_NoZPosReset;
 	}
 	return true;
 }

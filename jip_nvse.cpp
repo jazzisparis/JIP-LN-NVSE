@@ -683,7 +683,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*26D8*/REG_CMD(GetIsImmobile);
 	/*26D9*/REG_CMD(PickFromList);
 	/*26DA*/REG_CMD(SetStageAlt);
-	/*26DB*/REG_CMD(EmptyCommand);
+	/*26DB*/REG_CMD(ToggleNoZPosReset);
 	/*26DC*/REG_CMD_FRM(GetProjectileRefSource);
 	/*26DD*/REG_CMD(SetProjectileRefSource);
 	/*26DE*/REG_CMD_FRM(GetProjectileRefWeapon);
@@ -1028,7 +1028,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2809*/REG_CMD(GetKillXP);
 	/*280A*/REG_CMD(EmptyCommand);
 	/*280B*/REG_CMD_FRM(GetKiller);
-	/*280C*/REG_CMD(EmptyCommand);
+	/*280C*/REG_CMD(KillActorAlt);
 	/*280D*/REG_CMD(ReloadEquippedModels);
 	/*280E*/REG_CMD(MoveToFadeDelay);
 	/*280F*/REG_CMD(RunScriptSnippet);

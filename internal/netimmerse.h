@@ -1697,7 +1697,7 @@ public:
 
 	__forceinline static NiCamera *Create() {return CdeclCall<NiCamera*>(0xA71430);}
 
-	bool __fastcall WorldToScreen(const NiVector3 &worldPos, float zeroTolerance, NiPoint2 &scrPos);
+	bool __fastcall WorldToScreen(const NiVector3 &worldPos, NiPoint2 &scrPos);
 };
 static_assert(sizeof(NiCamera) == 0x114);
 

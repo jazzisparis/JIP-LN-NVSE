@@ -255,23 +255,6 @@ __declspec(naked) SeenData* __fastcall GetSeenData(TESObjectCELL *cell)
 	}
 }
 
-__declspec(naked) bool __fastcall GetBitSeen(SeenData *seenData, SInt16 colrow)
-{
-	__asm
-	{
-		xor		eax, eax
-		mov		al, dh
-		shl		al, 4
-		add		al, dl
-		mov		edx, eax
-		shr		dl, 5
-		mov		ecx, [ecx+edx*4+4]
-		bt		ecx, eax
-		setc	al
-		retn
-	}
-}
-
 __declspec(naked) IntSeenData* __fastcall GetSectionSeenData(IntSeenData *seenData, SInt16 section)
 {
 	__asm
@@ -288,19 +271,13 @@ __declspec(naked) IntSeenData* __fastcall GetSectionSeenData(IntSeenData *seenDa
 	}
 }
 
-struct SectionSeenInfo
+union SectionSeenInfo
 {
-	union
-	{
-		CellPointerMap	*cellMap;
-		IntSeenData		*seenData;
-	};
-	Coordinate			cellCoord;
-	UInt8				row;
-	UInt8				col;
+	CellPointerMap	*cellMap;
+	IntSeenData		*seenData;
 };
 
-__declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInfo)
+__declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo seenInfo, UInt32 packedBit, Coordinate cellCoord)
 {
 	__asm
 	{
@@ -311,27 +288,31 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		push	esi
 		push	edi
 		mov		esi, ecx
-		mov		bl, [esi+8]
-		cmp		bl, 0xF
+		and		edx, 0xF0F
+		movzx	ebx, dl
+		shl		bl, 4
+		or		bl, dh
+		cmp		dh, 0xF
 		setz	al
 		shl		al, 1
-		mov		bh, [esi+9]
-		cmp		bh, 0xF
-		setz	dl
-		or		al, dl
+		cmp		dl, 0xF
+		setz	cl
+		or		al, cl
 		mov		[ebp-3], al
-		mov		ecx, [esi]
+		mov		ecx, esi
 		cmp		byte ptr [ecx], 0xE4
 		jnz		isExterior
-		mov		dl, [esi+6]
-		mov		dh, [esi+4]
+		mov		dl, [ebp+0xA]
+		mov		dh, [ebp+8]
 		call	GetSectionSeenData
 		mov		edi, eax
 		test	eax, eax
 		jz		noData0Int
 		mov		edx, ebx
-		mov		ecx, eax
-		call	GetBitSeen
+		shr		dl, 5
+		mov		ecx, [eax+edx*4+4]
+		bt		ecx, ebx
+		setc	al
 		add		[ebp-4], al
 	noData0Int:
 		mov		ecx, edi
@@ -344,79 +325,94 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		jnz		case3Int
 		test	ecx, ecx
 		jz		noData1Int
-		mov		edx, ebx
-		inc		dl
-		call	GetBitSeen
+		lea		edx, [ebx+1]
+		mov		eax, edx
+		shr		dl, 5
+		mov		ecx, [ecx+edx*4+4]
+		bt		ecx, eax
+		setc	al
 		add		[ebp-4], al
 	noData1Int:
-		mov		dl, [esi+6]
-		mov		dh, [esi+4]
+		mov		dl, [ebp+0xA]
+		mov		dh, [ebp+8]
 		inc		dh
-		mov		ecx, [esi]
+		mov		ecx, esi
 		call	GetSectionSeenData
 		test	eax, eax
 		jz		done
+		cmp		byte ptr [eax+0x26], 0
+		jnz		caseAdd2
 		jmp		case1Both
 		ALIGN 16
 	case2Int:
 		test	ecx, ecx
 		jz		noData2Int
-		mov		edx, ebx
-		inc		dh
-		call	GetBitSeen
+		lea		edx, [ebx+0x10]
+		mov		eax, edx
+		shr		dl, 5
+		mov		ecx, [ecx+edx*4+4]
+		bt		ecx, eax
+		setc	al
 		add		[ebp-4], al
 	noData2Int:
-		mov		dl, [esi+6]
+		mov		dl, [ebp+0xA]
 		inc		dl
-		mov		dh, [esi+4]
-		mov		ecx, [esi]
+		mov		dh, [ebp+8]
+		mov		ecx, esi
 		call	GetSectionSeenData
 		test	eax, eax
 		jz		done
+		cmp		byte ptr [eax+0x26], 0
+		jnz		caseAdd2
 		jmp		case2Both
 		ALIGN 16
 	case3Int:
-		mov		dl, [esi+6]
-		mov		dh, [esi+4]
+		mov		dl, [ebp+0xA]
+		mov		dh, [ebp+8]
 		inc		dh
-		mov		ecx, [esi]
+		mov		ecx, esi
 		call	GetSectionSeenData
 		test	eax, eax
 		jz		noData3Int
-		movzx	edx, bl
-		mov		ecx, eax
-		call	GetBitSeen
+		mov		edx, ebx
+		and		dl, 0xF
+		mov		ecx, [eax+4]
+		bt		ecx, edx
+		setc	al
 		add		[ebp-4], al
 	noData3Int:
-		mov		dl, [esi+6]
+		mov		dl, [ebp+0xA]
 		inc		dl
-		mov		dh, [esi+4]
-		mov		ecx, [esi]
+		mov		dh, [ebp+8]
+		mov		ecx, esi
 		call	GetSectionSeenData
 		test	eax, eax
 		jz		noData4Int
 		mov		edx, ebx
-		xor		dl, dl
-		mov		ecx, eax
-		call	GetBitSeen
+		and		dl, 0xF0
+		mov		ecx, edx
+		shr		dl, 5
+		mov		eax, [eax+edx*4+4]
+		bt		eax, ecx
+		setc	al
 		add		[ebp-4], al
 	noData4Int:
-		mov		dl, [esi+6]
+		mov		dl, [ebp+0xA]
 		inc		dl
-		mov		dh, [esi+4]
+		mov		dh, [ebp+8]
 		inc		dh
-		mov		ecx, [esi]
+		mov		ecx, esi
 		call	GetSectionSeenData
 		test	eax, eax
 		jz		done
-		xor		edx, edx
-		mov		ecx, eax
-		call	GetBitSeen
+		mov		ecx, [eax+4]
+		bt		ecx, 0
+		setc	al
 		add		[ebp-4], al
 		jmp		done
 		ALIGN 16
 	isExterior:
-		push	dword ptr [esi+4]
+		push	dword ptr [ebp+8]
 		call	CellPointerMap::Lookup
 		mov		edi, eax
 		test	eax, eax
@@ -431,8 +427,10 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		test	eax, eax
 		jz		noDataExt
 		mov		edx, ebx
-		mov		ecx, eax
-		call	GetBitSeen
+		shr		dl, 5
+		mov		ecx, [eax+edx*4+4]
+		bt		ecx, ebx
+		setc	al
 	modRes0:
 		add		[ebp-4], al
 	noDataExt:
@@ -453,20 +451,26 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 	case0Both:
 		test	ecx, ecx
 		jz		done
-		mov		edx, ebx
-		inc		dh
-		call	GetBitSeen
+		lea		edx, [ebx+0x10]
+		mov		eax, edx
+		shr		dl, 5
+		mov		ecx, [ecx+edx*4+4]
+		bt		ecx, eax
+		setc	al
 		add		[ebp-4], al
-		mov		edx, ebx
-		inc		dl
-		mov		ecx, edi
-		call	GetBitSeen
+		lea		edx, [ebx+1]
+		mov		eax, edx
+		shr		dl, 5
+		mov		ecx, [edi+edx*4+4]
+		bt		ecx, eax
+		setc	al
 		add		[ebp-4], al
-		mov		edx, ebx
-		inc		dl
-		inc		dh
-		mov		ecx, edi
-		call	GetBitSeen
+		lea		edx, [ebx+0x11]
+		mov		eax, edx
+		shr		dl, 5
+		mov		ecx, [edi+edx*4+4]
+		bt		ecx, eax
+		setc	al
 		add		[ebp-4], al
 		jmp		done
 		ALIGN 16
@@ -475,21 +479,25 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		jnz		modRes1
 		test	ecx, ecx
 		jz		getCell2
-		mov		edx, ebx
-		inc		dl
-		call	GetBitSeen
+		lea		edx, [ebx+1]
+		mov		eax, edx
+		shr		dl, 5
+		mov		ecx, [ecx+edx*4+4]
+		bt		ecx, eax
+		setc	al
 	modRes1:
 		add		[ebp-4], al
 	getCell2:
-		mov		eax, [esi+4]
+		mov		eax, [ebp+8]
 		inc		ax
 		push	eax
-		mov		ecx, [esi]
+		mov		ecx, esi
 		call	CellPointerMap::Lookup
 		test	eax, eax
 		jz		done
 		test	byte ptr [eax+0x25], 1
 		jz		getData1
+	caseAdd2:
 		add		[ebp-4], 2
 		jmp		done
 		ALIGN 16
@@ -500,14 +508,17 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		jz		done
 	case1Both:
 		mov		edi, eax
-		movzx	edx, bl
-		mov		ecx, eax
-		call	GetBitSeen
+		mov		edx, ebx
+		and		dl, 0xF
+		mov		ecx, [eax+4]
+		bt		ecx, edx
+		setc	al
 		add		[ebp-4], al
-		movzx	edx, bl
-		inc		dl
-		mov		ecx, edi
-		call	GetBitSeen
+		lea		edx, [ebx+1]
+		and		dl, 0xF
+		mov		ecx, [edi+4]
+		bt		ecx, edx
+		setc	al
 		add		[ebp-4], al
 		jmp		done
 		ALIGN 16
@@ -516,16 +527,19 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		jnz		modRes2
 		test	ecx, ecx
 		jz		getCell3
-		mov		edx, ebx
-		inc		dh
-		call	GetBitSeen
+		lea		edx, [ebx+0x10]
+		mov		eax, edx
+		shr		dl, 5
+		mov		ecx, [ecx+edx*4+4]
+		bt		ecx, eax
+		setc	al
 	modRes2:
 		add		[ebp-4], al
 	getCell3:
-		mov		eax, [esi+4]
+		mov		eax, [ebp+8]
 		add		eax, 0x10000
 		push	eax
-		mov		ecx, [esi]
+		mov		ecx, esi
 		call	CellPointerMap::Lookup
 		test	eax, eax
 		jz		done
@@ -542,23 +556,28 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 	case2Both:
 		mov		edi, eax
 		mov		edx, ebx
-		xor		dl, dl
-		mov		ecx, eax
-		call	GetBitSeen
+		and		dl, 0xF0
+		mov		ecx, edx
+		shr		dl, 5
+		mov		eax, [eax+edx*4+4]
+		bt		eax, ecx
+		setc	al
 		add		[ebp-4], al
-		mov		edx, ebx
-		xor		dl, dl
-		inc		dh
-		mov		ecx, edi
-		call	GetBitSeen
+		lea		edx, [ebx+0x10]
+		and		dl, 0xF0
+		mov		ecx, edx
+		shr		dl, 5
+		mov		eax, [edi+edx*4+4]
+		bt		eax, ecx
+		setc	al
 		add		[ebp-4], al
 		jmp		done
 		ALIGN 16
 	case3Ext:
-		mov		eax, [esi+4]
+		mov		eax, [ebp+8]
 		inc		ax
 		push	eax
-		mov		ecx, [esi]
+		mov		ecx, esi
 		call	CellPointerMap::Lookup
 		test	eax, eax
 		jz		getCell4
@@ -569,16 +588,18 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		call	GetSeenData
 		test	eax, eax
 		jz		getCell4
-		movzx	edx, bl
-		mov		ecx, eax
-		call	GetBitSeen
+		mov		edx, ebx
+		and		dl, 0xF
+		mov		ecx, [eax+4]
+		bt		ecx, edx
+		setc	al
 	modRes3:
 		add		[ebp-4], al
 	getCell4:
-		mov		eax, [esi+4]
+		mov		eax, [ebp+8]
 		add		eax, 0x10000
 		push	eax
-		mov		ecx, [esi]
+		mov		ecx, esi
 		call	CellPointerMap::Lookup
 		test	eax, eax
 		jz		getCell5
@@ -590,17 +611,20 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		test	eax, eax
 		jz		getCell5
 		mov		edx, ebx
-		xor		dl, dl
-		mov		ecx, eax
-		call	GetBitSeen
+		and		dl, 0xF0
+		mov		ecx, edx
+		shr		dl, 5
+		mov		eax, [eax+edx*4+4]
+		bt		eax, ecx
+		setc	al
 	modRes4:
 		add		[ebp-4], al
 	getCell5:
-		mov		eax, [esi+4]
+		mov		eax, [ebp+8]
 		inc		ax
 		add		eax, 0x10000
 		push	eax
-		mov		ecx, [esi]
+		mov		ecx, esi
 		call	CellPointerMap::Lookup
 		test	eax, eax
 		jz		done
@@ -611,9 +635,9 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		call	GetSeenData
 		test	eax, eax
 		jz		done
-		xor		edx, edx
-		mov		ecx, eax
-		call	GetBitSeen
+		mov		ecx, [eax+4]
+		bt		ecx, 0
+		setc	al
 	modRes5:
 		add		[ebp-4], al
 	done:
@@ -622,7 +646,7 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo *seenInf
 		pop		esi
 		pop		ebx
 		leave
-		retn
+		retn	4
 	}
 }
 
@@ -635,12 +659,9 @@ __declspec(naked) void __stdcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
 	__asm
 	{
 		push	ebp
-		mov		ebp, esp
-		sub		esp, 0x10
 		push	ebx
 		push	esi
 		push	edi
-		lea		edi, [ebp-0xC]
 		mov		ecx, s_pcCurrCell
 		test	byte ptr [ecx+0x24], 1
 		jz		isExterior
@@ -653,46 +674,40 @@ __declspec(naked) void __stdcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
 		mov		eax, [ecx+0xC0]
 		mov		eax, [eax+0x30]
 	proceed:
-		mov		[edi], eax
-		mov		eax, [ebp+8]
+		mov		ebp, eax
+		mov		eax, [esp+0x14]
 		mov		ecx, s_localMapShapeDatas[eax*4]
-		mov		[ebp-0x10], ecx
+		push	ecx
 		mov		esi, [ecx+0x28]
 		add		esi, 0xC
-		mov		edx, s_packedCellCoords[eax*4]
-		mov		[edi+4], edx
-		xor		bl, bl
-		xor		al, al
+		mov		edi, s_packedCellCoords[eax*4]
+		inc		di
+		mov		ebx, 0x10
 		ALIGN 16
-	iter1Head:
-		mov		[edi+8], al
-		mov		bh, 0x10
-		mov		[edi+9], 0
-		inc		word ptr [edi+4]
-		ALIGN 16
-	iter2Head:
-		mov		ecx, edi
+	iterHead:
+		push	edi
+		mov		edx, ebx
+		mov		ecx, ebp
 		call	GetSectionSeenLevel
 		mov		ecx, s_vertexAlphaLevel[eax*4]
 		mov		[esi], ecx
 		add		esi, 0x10
-		mov		al, bh
-		shr		al, 4
-		sub		[edi+4], ax
-		dec		bh
-		mov		[edi+9], bh
-		jns		iter2Head
-		inc		bl
-		cmp		bl, 0x10
-		ja		iter1End
 		mov		al, bl
-		jb		iter1Head
-		xor		al, al
-		inc		word ptr [edi+6]
-		jmp		iter1Head
+		shr		al, 4
+		sub		di, ax
+		dec		bl
+		jns		iterHead
+		mov		bl, 0x10
+		inc		di
+		inc		bh
+		cmp		bh, 0x10
+		jb		iterHead
+		ja		iterEnd
+		add		edi, 0x10000
+		jmp		iterHead
 		ALIGN 16
-	iter1End:
-		mov		ecx, [ebp-0x10]
+	iterEnd:
+		pop		ecx
 		mov		ecx, [ecx+0x34]
 		test	ecx, ecx
 		jz		done
@@ -701,7 +716,7 @@ __declspec(naked) void __stdcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
 		pop		edi
 		pop		esi
 		pop		ebx
-		leave
+		pop		ebp
 		retn	4
 	}
 }

@@ -2235,8 +2235,9 @@ public:
 	UInt16						armorRating;			// 178
 	UInt16						modifiesVoice;			// 17A
 	float						damageThreshold;		// 17C
-	UInt32						armorFlags;				// 180
-	UInt32						unk184;					// 184
+	UInt8						armorFlags;				// 180
+	UInt8						pad181[3];				// 181
+	float						armorHealthDmgMult;		// 184	JIP only!
 	union												// 188
 	{
 		TESObjectARMO			*audioTemplate;
@@ -2835,8 +2836,23 @@ public:
 	UInt32			operation;		// 28
 	float			value;			// 2C
 };
-
 static_assert(sizeof(TESAmmoEffect) == 0x30);
+
+class AmmoEffectList : public tList<TESAmmoEffect>
+{
+public:
+	bool HasEffect(UInt32 type) const
+	{
+		auto iter = Head();
+		do
+		{
+			if (iter->data && (iter->data->type == type))
+				return true;
+		}
+		while (iter = iter->next);
+		return false;
+	}
+};
 
 // DC
 class TESAmmo : public TESBoundObject
@@ -2868,7 +2884,7 @@ public:
 	float						ammoPercentConsumed;	// 0C0
 	String						shortName;				// 0C4
 	String						abbreviation;			// 0CC
-	tList<TESAmmoEffect>		effectList;				// 0D4
+	AmmoEffectList				effectList;				// 0D4
 
 	bool IsNonPlayable() {return (ammoFlags & kFlags_NonPlayable) == kFlags_NonPlayable;}
 	bool IsPlayable() {return !IsNonPlayable();}

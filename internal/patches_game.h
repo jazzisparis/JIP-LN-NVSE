@@ -2878,7 +2878,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	TESObjectWEAP *hitWeapon = hitData->weapon;
 	hitData->wpnBaseDmg = hitData->healthDmg;
 	TESAmmo *ammo = NULL;
-	tList<TESAmmoEffect> *ammoEffects = NULL;
+	AmmoEffectList *ammoEffects = NULL;
 	if (hitWeapon && hitWeapon->ammo.ammo)
 	{
 		if (source)
@@ -2916,7 +2916,6 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 		dmgResist = 1.0F;
 		dmgThreshold = 0;
 		cpyThreshold = 0;
-		hitData->armorDmg = 0;
 	}
 	else
 	{
@@ -3026,7 +3025,6 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 		hitData->weapon = g_fistsWeapon;
 		hitWeapon = g_fistsWeapon;
 	}
-	valueMod2 = hitData->healthDmg;
 	hitData->healthDmg *= dmgResist;
 	valueMod1 = 0;
 	if (flagPCTM & 7)
@@ -3068,23 +3066,9 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 			hitData->healthDmg *= valueMod1;
 	}
 	else hitData->healthDmg -= dmgThreshold;
-	valueMod1 = *(float*)0x11CED50 * valueMod2;	// fMinDamMultiplier
-	valueMod2 = hitData->healthDmg - valueMod1;
-	hitData->armorDmg = 0;
-	if (valueMod2 > 0)
+	valueMod1 = *(float*)0x11CED50 * hitData->wpnBaseDmg;	// fMinDamMultiplier
+	if (hitData->healthDmg > valueMod1)
 	{
-		if ((flagPCTM & 8) && (hitData->fatigueDmg <= 0))
-		{
-			hitLocDT *= dmgResist;
-			valueMod2 -= hitLocDT;
-			if (valueMod2 > 0)
-			{
-				dmgThreshold += hitLocDT;
-				if (valueMod2 > dmgThreshold)
-					valueMod2 = dmgThreshold;
-				hitData->armorDmg = *(float*)0x11CF100 * valueMod2;	// fDamageToArmorPercentage
-			}
-		}
 		hitData->flags |= 0x80000000;
 		if (flagArg)
 		{
@@ -3104,6 +3088,14 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 		if (flagPCTM & 2)
 			CdeclCall(0x8D5CB0, source, 9);
 	}
+	if ((flagPCTM & 8) && (hitData->fatigueDmg <= 0))
+	{
+		valueMod2 = hitData->wpnBaseDmg;
+		if (valueMod2 > dmgThreshold)
+			valueMod2 = dmgThreshold;
+		hitData->armorDmg = *(float*)0x11CF100 * valueMod2 * 0.75F;	// fDamageToArmorPercentage
+	}
+	else hitData->armorDmg = 0;
 	if (hitWeapon && (hitWeapon->resistType != -1) && (!ammo || !(ammo->ammoFlags & 1)))
 	{
 		valueMod1 = target->avOwner.GetActorValue(hitWeapon->resistType);
@@ -4623,8 +4615,8 @@ void InitGamePatches()
 	WritePushRetRelJump(0x83AD97, 0x83AE4F, (UInt32)PlayAttackSoundHook);
 	WriteRelCall(0x9BDC92, (UInt32)AddProjectileLightHook);
 	WriteRelCall(0x9BC6D9, (UInt32)RemoveProjectileLightHook);
-	WriteRelCall(0x9AD024, (UInt32)AddExplosionLightHook);
-	WriteRelCall(0x9AC6A5, (UInt32)RemoveExplosionLightHook);
+	/*WriteRelCall(0x9AD024, (UInt32)AddExplosionLightHook);
+	WriteRelCall(0x9AC6A5, (UInt32)RemoveExplosionLightHook);*/
 	WriteRelJump(0x9BB906, (UInt32)SetMuzzleFlashFadeHook);
 	WriteRelCall(0x9AE68C, (UInt32)SetExplosionLightFadeHook);
 	WriteRelCall(0x89DC0E, (UInt32)KillChallengeFixHook);

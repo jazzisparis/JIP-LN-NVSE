@@ -126,7 +126,7 @@ __forceinline void RefreshItemListBox()
 {
 	CdeclCall(0x704AF0);
 }
-__forceinline float ApplyAmmoEffects(UInt32 effType, tList<TESAmmoEffect> *effList, float baseValue)
+__forceinline float ApplyAmmoEffects(UInt32 effType, AmmoEffectList *effList, float baseValue)
 {
 	return CdeclCall<float>(0x59A030, effType, effList, baseValue);
 }
