@@ -510,7 +510,8 @@ bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 		__asm
 		{
 			movss	xmm0, maxRange
-			minss	xmm0, SS_6144
+			maxss	xmm0, SS_10
+			minss	xmm0, SS_8192
 			movups	coords, xmm0
 		}
 		coords = coords.GetTranslatedPos(camera->m_transformWorld);
@@ -540,7 +541,8 @@ bool Cmd_GetReticleRange_Execute(COMMAND_ARGS)
 		__asm
 		{
 			movss	xmm0, maxRange
-			minss	xmm0, SS_6144
+			maxss	xmm0, SS_10
+			minss	xmm0, SS_8192
 			movups	coords, xmm0
 		}
 		coords = coords.GetTranslatedPos(camera->m_transformWorld);
@@ -1297,6 +1299,15 @@ bool Cmd_PlaceModel_Execute(COMMAND_ARGS)
 	return true;
 }
 
+bool Cmd_SetArmorConditionPenalty_Execute(COMMAND_ARGS)
+{
+	*result = s_condDRDTPenalty;
+	float value;
+	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &value))
+		s_condDRDTPenalty = value;
+	return true;
+}
+
 bool Cmd_GetAnglesBetweenPoints_Execute(COMMAND_ARGS)
 {
 	NiVector3 point1, point2;
@@ -1306,14 +1317,5 @@ bool Cmd_GetAnglesBetweenPoints_Execute(COMMAND_ARGS)
 		outAngles.y = outAngles.z;
 		outAngles.Set(point1.GetAnglesBetweenPoints(point2), GET_PS(9));
 	}
-	return true;
-}
-
-bool Cmd_SetArmorConditionPenalty_Execute(COMMAND_ARGS)
-{
-	*result = s_condDRDTPenalty;
-	float value;
-	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		s_condDRDTPenalty = value;
 	return true;
 }

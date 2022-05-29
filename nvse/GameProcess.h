@@ -104,19 +104,19 @@ struct DetectionEvent
 };
 
 // 20
-struct ProjectileData
+struct MuzzleFlash
 {
-	UInt8				byte00;			// 00
-	UInt8				byte01;			// 01
-	UInt8				byte02;			// 02
+	UInt8				bEnabled;		// 00
+	UInt8				bMPSEnabled;	// 01
+	UInt8				bUpdateLight;	// 02
 	UInt8				byte03;			// 03
-	float				flt04;			// 04
+	float				enableTimer;	// 04
 	float				flashDuration;	// 08
 	NiNode				*muzzleFlash;	// 0C
 	NiPointLight		*flashLight;	// 10
 	BGSProjectile		*baseProj;		// 14
 	TESObjectWEAP		*sourceWeap;	// 18
-	TESObjectREFR		*refr;			// 1C
+	TESObjectREFR		*sourceRefr;	// 1C
 };
 
 class NiBSBoneLODController;
@@ -613,11 +613,11 @@ public:
 	/*6A8*/virtual void		Unk_1AA();
 	/*6AC*/virtual void		Unk_1AB();
 	/*6B0*/virtual void		Unk_1AC();
-	/*6B4*/virtual void		SetProjectileData(Projectile *projRef, TESObjectREFR *refr);
-	/*6B8*/virtual ProjectileData	*GetProjectileData();
+	/*6B4*/virtual void		SetMuzzleFlash(Projectile *projRef, TESObjectREFR *refr);
+	/*6B8*/virtual MuzzleFlash	*GetMuzzleFlash();
 	/*6BC*/virtual void		Unk_1AF();
 	/*6C0*/virtual void		Unk_1B0();
-	/*6C4*/virtual void		ClearProjectileData();
+	/*6C4*/virtual void		ClearMuzzleFlash();
 	/*6C8*/virtual void		Unk_1B2();
 	/*6CC*/virtual void		SetLimbNode(UInt32 limbIdx, NiNode *node);
 	/*6D0*/virtual NiNode	*GetLimbNode(UInt32 limbIdx);
@@ -760,7 +760,7 @@ public:
 	UInt32				unk8C;				// 8C
 	UInt32				unk90;				// 90
 	ActorValueModifiers	damageModifiers;	// 94
-	float				fltA4;				// A4
+	float				essentialDownTimer;	// A4
 	float				gameDayDied;		// A8
 	float				fltAC;				// AC
 	UInt32				unkB0;				// B0
@@ -951,11 +951,11 @@ public:
 	};
 
 	// 10
-	struct Unk148
+	struct FurnitureMark
 	{
-		NiVector3	vec00;
-		UInt16		word0C;
-		UInt8		byte0E;
+		NiVector3	pos;
+		UInt16		rotation;
+		UInt8		type;
 		UInt8		byte0F;
 	};
 
@@ -976,16 +976,16 @@ public:
 	};
 
 	tList<TESForm>				list0C8;			// 0C8
-	tList<UInt32>				list0D0;			// 0D0
-	float						flt0D8;				// 0D8
+	tList<TESObjectREFR>		furnitureRefList;	// 0D0
+	float						pursueTimer;		// 0D8
 	float						flt0DC;				// 0DC
 	UInt8						idleDoneOnce;		// 0E0
 	UInt8						byte0E1;			// 0E1
 	UInt8						byte0E2;			// 0E2
 	UInt8						byte0E3;			// 0E3
 	PackageInfo					interruptPackage;	// 0E4
-	UInt8						unk0FC[12];			// 0FC
-	UInt32						unk108;				// 108
+	NiVector3					lastSeenPosition;	// 0FC
+	UInt32						packageObjType;		// 108
 	TESIdleForm					*lastPlayedIdle;	// 10C
 	UInt8						byte110;			// 110
 	UInt8						byte111;			// 111
@@ -1000,7 +1000,7 @@ public:
 	UInt8						usingOneHandThrown;	// 126
 	UInt8						wearingHeavyArmor;	// 127
 	UInt8						wearingPowerArmorTorso;	// 128
-	UInt8						wearingPowerArmorHelmet;	// 129
+	UInt8						wearingPowerArmorHelmet;// 129
 	UInt8						wearingBackpack;	// 12A
 	UInt8						byte12B;			// 12B
 	NiNode						*weaponNode;		// 12C
@@ -1014,9 +1014,9 @@ public:
 	UInt8						sitSleepState;		// 13D
 	UInt8						unk13E[2];			// 13E
 	TESObjectREFR				*usedFurniture;		// 140
-	UInt8						byte144;			// 144
+	UInt8						markerIndex;		// 144
 	UInt8						unk145[3];			// 145
-	Unk148						unk148;				// 148
+	FurnitureMark				furnitureData;		// 148
 	Actor						*commandingActor;	// 158
 	UInt32						unk15C;				// 15C
 	MagicItem					*magicItem160;		// 160
@@ -1043,7 +1043,7 @@ public:
 	UInt8						byte18A;			// 18A
 	UInt8						byte18B;			// 18B
 	UInt8						byte18C;			// 18C
-	UInt8						byte18D;			// 18D
+	UInt8						forceNextUpdate;	// 18D
 	UInt8						pad18E[2];			// 18E
 	UInt32						unk190[2];			// 190
 	float						flt198;				// 198
@@ -1054,7 +1054,7 @@ public:
 	void						*ptr1A0;			// 1A0
 	UInt32						unk1A4;				// 1A4
 	UInt32						unk1A8;				// 1A8
-	tList<void>					*list1AC;			// 1AC
+	tList<Projectile>			*arrowProjectiles;	// 1AC
 	tList<void>					list1B0;			// 1B0
 	tList<ActiveEffect>			*activeEffects;		// 1B8
 	MagicTarget					*magicTarget1BC;	// 1BC
@@ -1216,7 +1216,7 @@ public:
 	UInt8								byte3D1;			// 3D1
 	UInt8								byte3D2;			// 3D2
 	UInt8								byte3D3;			// 3D3
-	ProjectileData						*projData;			// 3D4
+	MuzzleFlash							*muzzleFlash;		// 3D4
 	UInt32								unk3D8;				// 3D8
 	DetectionEvent						*detectionEvent;	// 3DC
 	UInt8								byte3E0;			// 3E0
@@ -1397,7 +1397,7 @@ struct ProcessManager
 	UInt32									unk044[5];			// 044
 	tList<void>								list058;			// 058
 	tList<BSTempEffect>						tempEffects;		// 060
-	tList<ProjectileData>					projDataList;		// 068
+	tList<MuzzleFlash>						muzzFlashList;		// 068
 	tList<void>								list070;			// 070
 	tList<void>								list078;			// 078
 	tList<Actor>							highActors;			// 080

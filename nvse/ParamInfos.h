@@ -1190,6 +1190,13 @@ constexpr ParamInfo kParams_OneObjectID_OneInt_OneFormatString[] =
 	FORMAT_STRING_PARAMS
 };
 
+constexpr ParamInfo kParams_OneOptionalObjectRef_TwoOptionalInts[] =
+{
+	{"Object Ref", kParamType_ObjectRef, 1},
+	{"Integer", kParamType_Integer, 1},
+	{"Integer", kParamType_Integer, 1}
+};
+
 constexpr ParamInfo kParams_OneObjectRef_OneFloat[] =
 {
 	{"Object Ref", kParamType_ObjectRef, 0},

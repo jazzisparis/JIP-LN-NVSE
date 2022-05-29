@@ -119,6 +119,8 @@ public:
 
 	ScriptEventList *GetEventList() const;
 
+	UInt8& JIPRefFlags() {return extraDataList.jipRefFlags5F;}
+
 	void Update3D();
 	bool IsMapMarker() const {return baseForm->refID == 0x10;}
 
@@ -137,6 +139,7 @@ public:
 	void __fastcall MoveToCell(TESObjectCELL *cell, const NiVector3 &posVector);
 	NiVector4& __fastcall GetTranslatedPos(NiVector4 &posMods);
 	void __vectorcall Rotate(__m128 rotVector);
+	float __vectorcall GetHeadingAngle(TESObjectREFR *to) const;
 	bool Disable();
 	void DeleteReference();
 	bhkCharacterController *GetCharacterController() const;
@@ -218,9 +221,9 @@ public:
 
 	BaseProcess		*baseProcess;	// 68
 	UInt32			unk6C;			// 6C
-	TESObjectREFR	*unk70;			// 70
+	Actor			*talkedToActor;	// 70
 	UInt32			unk74;			// 74
-	UInt32			unk78;			// 78
+	float			voiceTimer;		// 78
 	UInt8			unk7C;			// 7C
 	UInt8			isTalking;		// 7D
 	UInt8			unk7E;			// 7E
@@ -355,7 +358,8 @@ public:
 		kMoveFlag_Slide =		0x8000
 	};
 
-	UInt32						unk04[6];			// 04
+	UInt32						unk04[3];			// 04
+	NiVector3					overrideMovement;	// 10
 	PathingRequest				*pathingRequest;	// 1C
 	PathingSolution				*pathingSolution;	// 20
 	DetailedActorPathHandler	*pathHandler;		// 24
@@ -368,16 +372,20 @@ public:
 	UInt32						unk40;				// 40
 	PathingLocation				pathingLocation;	// 44
 	UInt32						unk6C;				// 6C
-	UInt8						byte70;				// 70
+	UInt8						bPathingFailed;		// 70
 	UInt8						byte71;				// 71
 	UInt8						byte72;				// 72
 	UInt8						byte73;				// 73
-	UInt32						unk74;				// 74
+	UInt8						bWaitingOnPath;		// 74
+	UInt8						byte75;				// 75
+	UInt8						byte76;				// 76
+	UInt8						bOverrideMovement;	// 77
 	UInt32						unk78;				// 78
 	UInt32						unk7C;				// 7C
 	UInt32						unk80;				// 80
 	UInt32						unk84;				// 84
 };
+static_assert(sizeof(ActorMover) == 0x88);
 
 // A0
 class PlayerMover : public ActorMover
@@ -452,7 +460,7 @@ public:
 	/*3BC*/virtual ContChangesEntry *GetPreferedWeapon(UInt32 unk);
 	/*3C0*/virtual void		Unk_F0(void);
 	/*3C4*/virtual void		ResetArmorDRDT();
-	/*3C8*/virtual bool		DamageWeaponHealth(ContChangesEntry *weapomInfo, float damage, int unused);
+	/*3C8*/virtual bool		DamageItem(ContChangesEntry *itemEntry, float damage, int unused);
 	/*3CC*/virtual void		DropItem(TESForm *itemForm, ExtraDataList *xDataList, SInt32 count, NiVector3 *pos, int arg5);
 	/*3D0*/virtual void		DoActivate(TESObjectREFR *activatedRef, UInt32 count, bool arg3);
 	/*3D4*/virtual void		Unk_F5(void);
@@ -552,13 +560,13 @@ public:
 	UInt8								byte0C7;					// 0C7
 	float								flt0C8;						// 0C8
 	float								flt0CC;						// 0CC
-	tList<ActorValueMod>				list0D0;					// 0D0
+	tList<ActorValueMod>				forceAVList;				// 0D0
 	UInt8								byte0D8;					// 0D8
 	UInt8								byte0D9;					// 0D9
 	UInt8								byte0DA;					// 0DA
 	UInt8								byte0DB;					// 0DB
 	UInt32								unk0DC;						// 0DC
-	tList<void>							list0E0;					// 0E0
+	tList<ActorValueMod>				setAVList;					// 0E0
 	UInt8								byte0E8;					// 0E8	const 1
 	UInt8								byte0E9;					// 0E9
 	UInt8								byte0EA;					// 0EA
@@ -577,7 +585,7 @@ public:
 	UInt32								lifeState;					// 108	saved as byte HasHealth
 	UInt32								criticalStage;				// 10C
 	UInt32								unk110;						// 110-
-	float								flt114;						// 114
+	float								painSoundTimer;				// 114
 	UInt8								byte118;					// 118-
 	UInt8								byte119;					// 119+
 	UInt8								byte11A;					// 11A
@@ -596,7 +604,7 @@ public:
 	UInt8								byte136;					// 136
 	UInt8								byte137;					// 137
 	UInt32								unk138;						// 138-
-	UInt32								unk13C;						// 13C-
+	UInt32								minorCrimeCount;			// 13C
 	UInt32								actorFlags;					// 140	0x80000000 - IsEssential
 	bool								ignoreCrime;				// 144
 	UInt8								byte145;					// 145	Has to do with package evaluation
@@ -696,8 +704,8 @@ public:
 	void EquipItemAlt(TESForm *itemForm, ContChangesEntry *entry, UInt32 noUnequip = 0, UInt32 noMessage = 1);
 	bool HasNoPath() const;
 	bool CanBePushed() const;
-	float AdjustPushForce(float baseForce);
-	void PushActor(float force, float angle, TESObjectREFR *originRef, bool adjustForce);
+	float __vectorcall AdjustPushForce(float baseForce);
+	void PushActor(float force, float angle, TESObjectREFR *originRef);
 	int GetGroundMaterial() const;
 	__forceinline void RefreshAnimData()
 	{
@@ -936,19 +944,17 @@ public:
 	UInt8								byte7BE;				// 7BE
 	UInt8								byte7BF;				// 7BF
 	UInt32								killCamMode;			// 7C0
-	UInt8								byte7C4;				// 7C4
-	UInt8								byte7C5;				// 7C5
+	UInt8								inCombatWithGuard;		// 7C4
+	bool								isYoung;				// 7C5
 	bool								isToddler;				// 7C6
 	bool								canUsePA;				// 7C7
 	tList<MapMarkerInfo>				mapMarkers;				// 7C8
-	TESWorldSpace						*worldSpc7D0;			// 7D0
+	TESWorldSpace						*mapMarkersWorldspace;	// 7D0
 	tList<MusicMarker>					musicMarkers;			// 7D4
 	MusicMarker							*currMusicMarker;		// 7DC
 	float								flycamZRot;				// 7E0
 	float								flycamXRot;				// 7E4
-	float								flycamPosX;				// 7E8
-	float								flycamPosY;				// 7EC
-	float								flycamPosZ;				// 7F0
+	NiVector3							flycamPos;				// 7E8
 	UInt32								unk7F4[33];				// 7F4
 	PCLevelData							*pcLevelData;			// 878
 	tList<PerkRank>						perkRanksPC;			// 87C
@@ -963,7 +969,10 @@ public:
 	tList<CompassTarget>				*compassTargets;		// D48
 	UInt32								unkD4C;					// D4C
 	float								lastAmmoSwapTime;		// D50
-	UInt32								unkD54;					// D54
+	UInt8								shouldOpenPipboy;		// D54
+	UInt8								byteD55;				// D55
+	UInt8								byteD56;				// D56
+	UInt8								byteD57;				// D57
 	NiVector3							vectorD58;				// D58
 	CombatActors						*combatActors;			// D64
 	UInt32								teammateCount;			// D68
@@ -977,22 +986,25 @@ public:
 	bhkRigidBody						*rigidBody;				// DEC
 	bool								pcInCombat;				// DF0
 	bool								pcUnseen;				// DF1
-	UInt8								byteDF2;				// DF2
+	UInt8								isLODApocalypse;		// DF2
 	UInt8								byteDF3;				// DF3
-	BSSimpleArray<ContChangesEntry*>	itemChanges;			// DF4
-	float								fltE04;					// E04
-	UInt8								byteE08;				// E08
+	BSSimpleArray<ContChangesEntry*>	rockItLauncherContainer;// DF4
+	float								rockItLauncherWeight;	// E04
+	UInt8								nightVisionApplied;		// E08
 	UInt8								padE09[3];				// E09
 	UInt32								unkE0C[3];				// E0C
 	float								killCamTimer;			// E18
 	float								killCamCooldown;		// E1C
 	UInt8								byteE20;				// E20
-	UInt8								byteE21;				// E21
+	UInt8								isUsingTurbo;			// E21
 	UInt8								byteE22;				// E22
 	UInt8								byteE23;				// E23
 	float								fltE24;					// E24
 	float								counterAttackTimer;		// E28
-	UInt32								unkE2C;					// E2C
+	UInt8								byteE2C;				// E2C
+	UInt8								cateyeEnabled;			// E2D
+	UInt8								spottingEnabled;		// E2E
+	UInt8								byteE2F;				// E2F
 	UInt32								itemDetectionTimer;		// E30
 	NiNode								*ironSightNode;			// E34
 	bool								noHardcoreTracking;		// E38	Appears to be unused

@@ -111,7 +111,7 @@ extern const char kLwrCaseConverter[], kUprCaseConverter[];
 #define SS_3				kPackedValues+0x110
 #define SS_10				kPackedValues+0x114
 #define SS_100				kPackedValues+0x118
-#define SS_6144				kPackedValues+0x11C
+#define SS_8192				kPackedValues+0x11C
 
 #define FltPId2		1.570796371F
 #define FltPI		3.141592741F
@@ -247,6 +247,22 @@ union FunctionArg
 };
 
 TESForm* __stdcall LookupFormByRefID(UInt32 refID);
+
+template <const size_t numBits> struct BitField
+{
+	static_assert((numBits == 8) || (numBits == 16) || (numBits == 32));
+	using BITS = std::conditional_t<(numBits == 8), UInt8, std::conditional_t<(numBits == 16), UInt16, UInt32>>;
+	
+	BITS		bits;
+
+	inline bool operator()(BITS bitMask) const {return (bits & bitMask) != 0;}
+	inline void operator|=(BITS bitMask) {bits |= bitMask;}
+	inline void operator&=(BITS bitMask) {bits &= ~bitMask;}
+	inline void operator^=(BITS bitMask) {bits ^= bitMask;}
+	inline bool operator[](UInt8 bitIndex) const {return (bits & (1 << bitIndex)) != 0;}
+	inline void operator+=(UInt8 bitIndex) {bits |= (1 << bitIndex);}
+	inline void operator-=(UInt8 bitIndex) {bits &= ~(1 << bitIndex);}
+};
 
 union Coordinate
 {

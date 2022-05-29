@@ -884,6 +884,28 @@ __declspec(naked) void __vectorcall TESObjectREFR::Rotate(__m128 rotVector)
 	}
 }
 
+__declspec(naked) float __vectorcall TESObjectREFR::GetHeadingAngle(TESObjectREFR *to) const
+{
+	__asm
+	{
+		movq	xmm0, qword ptr [edx+0x30]
+		movq	xmm1, qword ptr [ecx+0x30]
+		subps	xmm0, xmm1
+		movshdup	xmm1, xmm0
+		call	ATan2
+		subss	xmm0, [ecx+0x2C]
+		movaps	xmm2, xmm0
+		andps	xmm2, PS_FlipSignMask0
+		movaps	xmm1, xmm0
+		xorps	xmm1, xmm2
+		cmpnless	xmm1, PS_V3_PI
+		andps	xmm1, PS_V3_PIx2
+		xorps	xmm1, xmm2
+		subss	xmm0, xmm1
+		retn
+	}
+}
+
 __declspec(naked) bool TESObjectREFR::Disable()
 {
 	__asm
@@ -1768,30 +1790,29 @@ __declspec(naked) bool Actor::CanBePushed() const
 	}
 }
 
-__declspec(naked) float Actor::AdjustPushForce(float baseForce)
+__declspec(naked) float __vectorcall Actor::AdjustPushForce(float baseForce)
 {
 	__asm
 	{
 		push	0xA
 		add		ecx, 0xA4
 		CALL_EAX(0x66EF50)
-		fmul	dword ptr SS_10
-		fmul	dword ptr ds:[0x11CEA6C]
-		fadd	dword ptr ds:[0x11CE664]
-		fld		dword ptr [esp+4]
-		fmul	dword ptr ds:[0x11CFA20]
-		fld		dword ptr ds:[0x11CF9C0]
-		test	byte ptr [esp+7], 0x80
-		jz		posForce
-		fchs
-	posForce:
-		faddp	st(1), st
-		fmulp	st(1), st
-		retn	4
+		fstp	dword ptr [esp-4]
+		movss	xmm1, [esp-4]
+		mulss	xmm1, SS_10
+		mulss	xmm1, ds:[0x11CEA6C]
+		addss	xmm1, ds:[0x11CE664]
+		movaps	xmm2, xmm0
+		andps	xmm2, PS_FlipSignMask0
+		xorps	xmm2, ds:[0x11CF9C0]
+		mulss	xmm0, ds:[0x11CFA20]
+		addss	xmm0, xmm2
+		mulss	xmm0, xmm1
+		retn
 	}
 }
 
-__declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR *originRef, bool adjustForce)
+__declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR *originRef)
 {
 	__asm
 	{
@@ -1829,13 +1850,6 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		unpcklps	xmm1, xmm1
 		mulps	xmm0, xmm1
 	doneAngle:
-		cmp		[esp+0x14], 0
-		jz		doneForce
-		push	dword ptr [esp+8] 
-		mov		ecx, esi
-		call	Actor::AdjustPushForce
-		fstp	dword ptr [esp+8]
-	doneForce:
 		mov		edx, [esp+8]
 		movd	xmm2, edx
 		mulss	xmm2, kPushActor
@@ -1852,7 +1866,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		or		byte ptr [esi+0x417], 0x80
 	done:
 		pop		esi
-		retn	0x10
+		retn	0xC
 		ALIGN 16
 	kPushActor:
 		EMIT_DW(3F, 36, E1, 47) EMIT_DW(3C, 2A, AA, AB)

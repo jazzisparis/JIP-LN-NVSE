@@ -734,7 +734,7 @@ __declspec(naked) void NiNode::ApplyForce(const NiVector4 &forceVector)
 	}
 }
 
-__declspec(naked) bool __fastcall NiCamera::WorldToScreen(const NiVector3 &worldPos, float zeroTolerance, NiPoint2 &scrPos)
+__declspec(naked) bool __fastcall NiCamera::WorldToScreen(const NiVector3 &worldPos, NiPoint2 &scrPos)
 {
 	__asm
 	{
@@ -760,7 +760,8 @@ __declspec(naked) bool __fastcall NiCamera::WorldToScreen(const NiVector3 &world
 		comiss	xmm2, xmm4
 		setnz	al
 		jz		done
-		movss	xmm1, [esp+4]
+		mov		edx, 0x3727C5AC
+		movd	xmm1, edx
 		cmpnltss	xmm1, xmm2
 		movmskps	eax, xmm1
 		movss	xmm3, PS_FlipSignMask0
@@ -799,9 +800,9 @@ __declspec(naked) bool __fastcall NiCamera::WorldToScreen(const NiVector3 &world
 		subps	xmm0, xmm1
 		xor		al, al
 	done:
-		mov		edx, [esp+8]
+		mov		edx, [esp+4]
 		movq	qword ptr [edx], xmm0
-		retn	8
+		retn	4
 	}
 }
 

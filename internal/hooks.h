@@ -103,6 +103,7 @@ enum
 	kHookRefFlag5F_AltRefName =				1 << 2,
 	kHookRefFlag5F_RefrModelPath =			1 << 3,
 	kHookRefFlag5F_RefNameOrModel =			kHookRefFlag5F_AltRefName | kHookRefFlag5F_RefrModelPath,
+	kHookRefFlag5F_NoZPosReset =			1 << 4,
 
 	kHookActorFlag1_CombatDisabled =		1 << 0,
 	kHookActorFlag1_ForceCombatTarget =		1 << 1,

@@ -386,8 +386,6 @@ __declspec(naked) bool NiVector4::RayCastCoords(const NiVector3 &posVector, floa
 		lea		ecx, [esp+4]
 		call	_GetRayCastObject
 		pop		ecx
-		test	eax, eax
-		jz		noObject
 		movss	xmm0, [esp+0x40]
 		shufps	xmm0, xmm0, 0x40
 		movaps	xmm1, PS_V3_One
@@ -397,8 +395,14 @@ __declspec(naked) bool NiVector4::RayCastCoords(const NiVector3 &posVector, floa
 		addps	xmm0, xmm1
 		mulps	xmm0, PS_HKUnitCnvrt
 		movups	[ecx], xmm0
-		mov		al, 1
-	noObject:
+		mov		eax, g_TES
+		cmp		dword ptr [eax+0x34], 0
+		jnz		done
+		mov		ecx, [eax+0x88]
+		call	TESWorldSpace::GetCellAtPos
+		test	eax, eax
+	done:
+		setnz	al
 		leave
 		retn	0x10
 	}

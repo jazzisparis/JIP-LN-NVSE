@@ -75,6 +75,7 @@ DEFINE_COMMAND_PLUGIN(CrippleLimb, 1, 2, kParams_OneInt_OneOptionalObjectRef);
 DEFINE_COMMAND_PLUGIN(PlayIdleEx, 1, 1, kParams_OneOptionalIdleForm);
 DEFINE_COMMAND_PLUGIN(GetKillXP, 1, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetKiller, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(KillActorAlt, 1, 3, kParams_OneOptionalObjectRef_TwoOptionalInts);
 DEFINE_COMMAND_ALT_PLUGIN(ReloadEquippedModels, ReloadModels, 1, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetPlayedIdle, 1, 0, NULL);
 DEFINE_CMD_COND_PLUGIN(IsIdlePlayingEx, 1, 1, kParams_OneIdleForm);
@@ -1403,6 +1404,11 @@ bool Cmd_GetKiller_Execute(COMMAND_ARGS)
 	return true;
 }
 
+__declspec(naked) bool Cmd_KillActorAlt_Execute(COMMAND_ARGS)
+{
+	JMP_EAX(0x5BE2A0)
+}
+
 bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 {
 	SInt32 targetSlot = -1;
@@ -2110,10 +2116,13 @@ bool Cmd_PushActorNoRagdoll_Execute(COMMAND_ARGS)
 	UInt32 doAdjust = 1;
 	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &force, &angle, &originRef, &doAdjust))
 	{
-		if (originRef == thisObj)
-			originRef = NULL;
 		HOOK_SET(ApplyActorVelocity, true);
-		((Actor*)thisObj)->PushActor(force, angle, originRef, doAdjust != 0);
+		Actor *actor = (Actor*)thisObj;
+		if (originRef == actor)
+			originRef = NULL;
+		if (doAdjust)
+			force = actor->AdjustPushForce(force);
+		actor->PushActor(force, angle, originRef);
 	}
 	return true;
 }
@@ -2224,7 +2233,7 @@ bool Cmd_GetGroundMaterial_Eval(COMMAND_ARGS_EVAL)
 	return true;
 }
 
-__declspec(naked) ProjectileData* __fastcall GetProjectileDataHook(HighProcess *hiProc)
+__declspec(naked) MuzzleFlash* __fastcall GetMuzzleFlashHook(HighProcess *hiProc)
 {
 	__asm
 	{
@@ -2282,7 +2291,7 @@ bool Cmd_FireWeaponEx_Execute(COMMAND_ARGS)
 		if (!hookInstalled)
 		{
 			hookInstalled = true;
-			SafeWrite32(0x1087F1C, (UInt32)GetProjectileDataHook);
+			SafeWrite32(0x1087F1C, (UInt32)GetMuzzleFlashHook);
 			SAFE_WRITE_BUF(0x9BAD66, "\xC7\x01\x00\x00\x00\x00\xEB\x0C");
 		}
 
