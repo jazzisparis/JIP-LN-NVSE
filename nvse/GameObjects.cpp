@@ -65,6 +65,7 @@ ScriptEventList *TESObjectREFR::GetEventList() const
 	return xScript ? xScript->eventList : NULL;
 }
 
+#ifndef JIP_AS_LIBRARY
 void __fastcall HidePointLights(NiNode *objNode);
 extern ModelLoader *g_modelLoader;
 
@@ -106,6 +107,7 @@ __declspec(naked) void TESObjectREFR::Update3D()
 		retn
 	}
 }
+#endif JIP_AS_LIBRARY
 
 TESObjectREFR *TESObjectREFR::Create(bool bTemp)
 {
@@ -1330,6 +1332,7 @@ bool Actor::IsItemEquipped(TESForm *item) const
 	return false;
 }
 
+#ifndef JIP_AS_LIBRARY
 bool __fastcall GetEntryDataHasModHook(ContChangesEntry *entry, int EDX, UInt8 modType);
 
 UInt8 Actor::EquippedWeaponHasMod(UInt32 modType) const
@@ -1348,6 +1351,7 @@ UInt8 Actor::EquippedWeaponHasMod(UInt32 modType) const
 		return 1;
 	return GetEntryDataHasModHook(weaponInfo, 0, modType) ? 2 : 0;
 }
+#endif
 
 bool Actor::IsSneaking() const
 {
