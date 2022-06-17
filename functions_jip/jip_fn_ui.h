@@ -1259,7 +1259,7 @@ bool Cmd_ToggleCraftingMessages_Execute(COMMAND_ARGS)
 {
 	*result = s_craftingMessages;
 	UInt32 toggle;
-	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle) && (s_craftingMessages == !toggle))
+	if (NUM_ARGS_JIP && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle) && (s_craftingMessages == !toggle))
 	{
 		s_craftingMessages = !s_craftingMessages;
 		SafeWriteBuf(0x728933, s_craftingMessages ? "\x8D\x4D\xCC\xE8\x75" : "\xE9\xC4\x00\x00\x00", 5);
@@ -1528,7 +1528,7 @@ bool Cmd_TogglePipBoyLight_Execute(COMMAND_ARGS)
 	SpellItem *pipBoyLight = GameGlobals::PipBoyLight();
 	UInt32 turnON, currState = ThisCall<bool>(0x822B90, &g_thePlayer->magicTarget, &pipBoyLight->magicItem, 1);
 	*result = (int)currState;
-	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &turnON) && (turnON != currState))
+	if (NUM_ARGS_JIP && ExtractArgsEx(EXTRACT_ARGS_EX, &turnON) && (turnON != currState))
 		TogglePipBoyLight(g_thePlayer, pipBoyLight, turnON);
 	return true;
 }
@@ -1627,7 +1627,7 @@ bool Cmd_ToggleHUDCursor_Execute(COMMAND_ARGS)
 {
 	*result = s_HUDCursorMode;
 	UInt32 toggle;
-	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle) && (g_interfaceManager->currentMode == 1) && !s_controllerReady && (s_HUDCursorMode == !toggle))
+	if (NUM_ARGS_JIP && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle) && (g_interfaceManager->currentMode == 1) && !s_controllerReady && (s_HUDCursorMode == !toggle))
 	{
 		s_HUDCursorMode = !s_HUDCursorMode;
 		if (toggle)

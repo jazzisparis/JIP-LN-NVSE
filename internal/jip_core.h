@@ -928,7 +928,7 @@ void InitMemUsageDisplay(UInt32 callDelay);
 #define REG_CMD_AMB(name) RegisterTypedCommand(&kCommandInfo_##name, kRetnType_Ambiguous)
 
 #define REFR_RES *(UInt32*)result
-#define NUM_ARGS scriptData[*opcodeOffsetPtr]
+#define NUM_ARGS_JIP scriptData[*opcodeOffsetPtr]
 #define NUM_ARGS_EX (scriptData[*opcodeOffsetPtr - 2] ? scriptData[*opcodeOffsetPtr] : 0)
 
 DEFINE_COMMAND_PLUGIN(EmptyCommand, 0, 0, NULL);

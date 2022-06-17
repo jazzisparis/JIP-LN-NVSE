@@ -934,7 +934,7 @@ bool Cmd_FreezeTime_Execute(COMMAND_ARGS)
 {
 	*result = g_OSGlobals->freezeTime;
 	UInt32 toggle;
-	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle) && (g_OSGlobals->freezeTime == !toggle))
+	if (NUM_ARGS_JIP && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle) && (g_OSGlobals->freezeTime == !toggle))
 		g_OSGlobals->freezeTime = toggle != 0;
 	return true;
 }
@@ -976,7 +976,7 @@ bool Cmd_ToggleImmortalMode_Execute(COMMAND_ARGS)
 {
 	*result = s_playerMinHPMode;
 	UInt32 toggle;
-	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle))
+	if (NUM_ARGS_JIP && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle))
 	{
 		s_playerMinHPMode = toggle;
 		HOOK_SET(PlayerMinHealth, toggle == 1);
@@ -991,7 +991,7 @@ bool Cmd_ToggleCameraCollision_Execute(COMMAND_ARGS)
 	static bool cameraCollision = true;
 	*result = cameraCollision;
 	UInt32 toggle;
-	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle) && (!toggle == cameraCollision))
+	if (NUM_ARGS_JIP && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle) && (!toggle == cameraCollision))
 	{
 		cameraCollision = !cameraCollision;
 		SafeWrite8(0x94A34E, toggle ? 0x74 : 0xEB);
@@ -1107,7 +1107,7 @@ bool Cmd_ToggleHitEffects_Execute(COMMAND_ARGS)
 {
 	*result = !s_disableHitEffects;
 	UInt32 toggle;
-	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle))
+	if (NUM_ARGS_JIP && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle))
 	{
 		if (toggle) s_disableHitEffects &= 2;
 		else s_disableHitEffects |= 1;
@@ -1119,7 +1119,7 @@ bool Cmd_ToggleNoMovementCombat_Execute(COMMAND_ARGS)
 {
 	*result = s_noMovementCombat;
 	UInt32 toggle;
-	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle))
+	if (NUM_ARGS_JIP && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle))
 		s_noMovementCombat = toggle != 0;
 	return true;
 }
@@ -1303,7 +1303,7 @@ bool Cmd_SetArmorConditionPenalty_Execute(COMMAND_ARGS)
 {
 	*result = s_condDRDTPenalty;
 	float value;
-	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &value))
+	if (NUM_ARGS_JIP && ExtractArgsEx(EXTRACT_ARGS_EX, &value))
 		s_condDRDTPenalty = value;
 	return true;
 }

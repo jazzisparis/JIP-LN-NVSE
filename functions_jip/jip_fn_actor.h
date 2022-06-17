@@ -2336,7 +2336,7 @@ bool Cmd_ToggleTeammateKillable_Execute(COMMAND_ARGS)
 		bool state = (actor->jipActorFlags2 & kHookActorFlag2_TeammateKillable) != 0;
 		*result = state;
 		UInt32 doSet;
-		if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &doSet) && (!doSet == state))
+		if (NUM_ARGS_JIP && ExtractArgsEx(EXTRACT_ARGS_EX, &doSet) && (!doSet == state))
 			actor->jipActorFlags2 ^= kHookActorFlag2_TeammateKillable;
 	}
 	else *result = 0;
@@ -2351,7 +2351,7 @@ bool Cmd_ToggleNoGunWobble_Execute(COMMAND_ARGS)
 		bool state = (actor->jipActorFlags2 & kHookActorFlag2_NoGunWobble) != 0;
 		*result = state;
 		UInt32 doSet;
-		if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &doSet) && (!doSet == state))
+		if (NUM_ARGS_JIP && ExtractArgsEx(EXTRACT_ARGS_EX, &doSet) && (!doSet == state))
 			actor->jipActorFlags2 ^= kHookActorFlag2_NoGunWobble;
 	}
 	else *result = 0;
