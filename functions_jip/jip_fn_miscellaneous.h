@@ -956,7 +956,7 @@ bool Cmd_SetConditionDamagePenalty_Execute(COMMAND_ARGS)
 bool Cmd_ToggleBipedSlotVisibility_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	UInt8 numArgs = NUM_ARGS;
+	UInt8 numArgs = NUM_ARGS_JIP;
 	UInt32 slotID, toggle;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &slotID, &toggle) && (slotID <= 19))
 	{

@@ -1696,7 +1696,7 @@ bool Cmd_SetUIFloatGradual_Execute(COMMAND_ARGS)
 	char tilePath[0x100];
 	float startVal, endVal, timer;
 	UInt32 changeMode = 0;
-	UInt8 numArgs = NUM_ARGS;
+	UInt8 numArgs = NUM_ARGS_JIP;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &tilePath, &startVal, &endVal, &timer, &changeMode))
 	{
 		Tile::Value *tileVal = NULL;

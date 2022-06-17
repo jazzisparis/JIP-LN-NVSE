@@ -25,7 +25,7 @@ DEFINE_COMMAND_PLUGIN(GetSessionTime, 0, 0, NULL);
 bool Cmd_RefToString_Execute(COMMAND_ARGS)
 {
 	TESForm *form = NULL;
-	if (!NUM_ARGS)
+	if (!NUM_ARGS_JIP)
 		form = thisObj;
 	else if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && IS_REFERENCE(form))
 		form = ((TESObjectREFR*)form)->baseForm;
@@ -44,7 +44,7 @@ bool Cmd_StringToRef_Execute(COMMAND_ARGS)
 
 bool Cmd_GetMinOf_Execute(COMMAND_ARGS)
 {
-	UInt8 numArgs = NUM_ARGS;
+	UInt8 numArgs = NUM_ARGS_JIP;
 	double val1, val2, val3, val4, val5;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &val1, &val2, &val3, &val4, &val5))
 	{
@@ -73,7 +73,7 @@ bool Cmd_GetMinOf_Execute(COMMAND_ARGS)
 
 bool Cmd_GetMaxOf_Execute(COMMAND_ARGS)
 {
-	UInt8 numArgs = NUM_ARGS;
+	UInt8 numArgs = NUM_ARGS_JIP;
 	double val1, val2, val3, val4, val5;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &val1, &val2, &val3, &val4, &val5))
 	{
