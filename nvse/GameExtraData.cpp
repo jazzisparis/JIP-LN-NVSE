@@ -612,6 +612,7 @@ __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetHealth
 
 bool __fastcall GetEntryDataHasModHook(ContChangesEntry *entry, int EDX, UInt8 modType);
 
+#ifndef JIP_AS_LIBRARY
 __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(Actor *owner, float condition, TESForm *ammo) const
 {
 	static const double kSplitBeamMult = 1.3;
@@ -678,6 +679,7 @@ __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(
 		retn	0xC
 	}
 }
+#endif
 
 ContChangesEntry *ContChangesEntry::CreateCopy(ExtraDataList *xData)
 {

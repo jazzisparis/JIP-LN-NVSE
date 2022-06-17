@@ -347,7 +347,9 @@ public:
 		float __vectorcall GetWeaponModEffectValue(UInt32 effectType) const;
 		float __vectorcall GetBaseHealth() const;
 		float __vectorcall GetHealthPercent() const;
+#ifndef JIP_AS_LIBRARY
 		float CalculateWeaponDamage(Actor *owner, float condition, TESForm *ammo) const;
+#endif
 		EntryData *CreateCopy(ExtraDataList *xData);
 	};
 
