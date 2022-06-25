@@ -19,13 +19,13 @@ __declspec(naked) TESFullName *TESForm::GetFullName() const
 {
 	__asm
 	{
+		mov		eax, [ecx+0x20]
+		mov		edx, [ecx]
+		cmp		dword ptr [edx+0xF0], ADDR_ReturnTrue
+		cmovz	ecx, eax
 		movzx	edx, byte ptr [ecx+4]
 		cmp		dl, kFormType_TESObjectCELL
 		jz		isCell
-		mov		eax, [ecx]
-		cmp		dword ptr [eax+0xF0], ADDR_ReturnTrue
-		mov		eax, [ecx+0x20]
-		cmovz	ecx, eax
 		movsx	eax, byte ptr kBaseComponentOffsets[edx*4]
 		test	eax, eax
 		jz		done
@@ -468,7 +468,7 @@ void TESActorBaseData::SetFactionRank(TESFaction *faction, char rank)
 	}
 }
 
-__declspec(naked) LODdata::LODNode *LODdata::LODNode::GetNodeByCoord(UInt32 coord) const
+__declspec(naked) LODdata::LODNode *LODdata::LODNode::GetNodeByCoord(Coordinate coord) const
 {
 	__asm
 	{

@@ -192,7 +192,7 @@ bool Cmd_SetScriptDisabled_Execute(COMMAND_ARGS)
 		tList<TESForm> tempList(form);
 		if IS_ID(form, BGSListForm)
 			tempList = ((BGSListForm*)form)->list;
-		ListNode<TESForm> *iter = tempList.Head();
+		auto iter = tempList.Head();
 		do
 		{
 			form = iter->data;
@@ -277,7 +277,7 @@ bool Cmd_SetScriptEventDisabled_Execute(COMMAND_ARGS)
 	tList<TESForm> tempList(form);
 	if IS_ID(form, BGSListForm)
 		tempList = ((BGSListForm*)form)->list;
-	ListNode<TESForm> *iter = tempList.Head();
+	auto iter = tempList.Head();
 	TESForm *refBase;
 	do
 	{
@@ -321,7 +321,7 @@ bool Cmd_SetOnQuestStageEventHandler_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &quest, &stageID, &skipRes) || NOT_ID(script, Script))
 		return true;
 	TESQuest::StageInfo *info = NULL;
-	ListNode<TESQuest::StageInfo> *iter = quest->stages.Head();
+	auto iter = quest->stages.Head();
 	do
 	{
 		if (!iter->data || (iter->data->stage != stageID))

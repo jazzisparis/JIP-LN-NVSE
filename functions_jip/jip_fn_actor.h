@@ -199,7 +199,7 @@ bool __fastcall GetIsPoisoned(Actor *actor)
 	if (NOT_ACTOR(actor)) return false;
 	ActiveEffectList *effList = actor->magicTarget.GetEffectList();
 	if (!effList) return false;
-	ListNode<ActiveEffect> *iter = effList->Head();
+	auto iter = effList->Head();
 	ActiveEffect *activeEff;
 	do
 	{
@@ -230,7 +230,7 @@ bool Cmd_GetFollowers_Execute(COMMAND_ARGS)
 	ExtraFollower *xFollower = GetExtraType(&thisObj->extraDataList, Follower);
 	if (!xFollower || !xFollower->followers) return true;
 	TempElements *tmpElements = GetTempElements();
-	ListNode<Actor> *iter = xFollower->followers->Head();
+	auto iter = xFollower->followers->Head();
 	do
 	{
 		if (iter->data) tmpElements->Append(iter->data);
@@ -365,7 +365,7 @@ bool Cmd_PickFromList_Execute(COMMAND_ARGS)
 	BGSListForm *listForm;
 	SInt32 start = 0, len = -1;
 	if (!thisObj->baseForm->GetContainer() || !ExtractArgsEx(EXTRACT_ARGS_EX, &listForm, &start, &len) || (start < 0)) return true;
-	ListNode<TESForm> *iter = listForm->list.Head();
+	auto iter = listForm->list.Head();
 	TESForm *item;
 	do
 	{
@@ -424,7 +424,7 @@ bool Cmd_GetCreatureModels_Execute(COMMAND_ARGS)
 	}
 	if NOT_ID(creature, TESCreature) return true;
 	TempElements *tmpElements = GetTempElements();
-	ListNode<char> *iter = creature->modelList.modelList.Head();
+	auto iter = creature->modelList.modelList.Head();
 	do
 	{
 		if (iter->data)
@@ -624,7 +624,7 @@ void __fastcall GetDetectionData(TESObjectREFR *thisObj, Script *scriptObj, bool
 	{
 		if (!actor->baseProcess || actor->baseProcess->processLevel) return;
 		HighProcess *hiProcess = (HighProcess*)actor->baseProcess;
-		ListNode<DetectionData> *iter = detecting ? hiProcess->detectingActors->Head() : hiProcess->detectedActors->Head();
+		auto iter = detecting ? hiProcess->detectingActors->Head() : hiProcess->detectedActors->Head();
 		DetectionData *data;
 		do
 		{
@@ -875,7 +875,7 @@ bool Cmd_GetDroppedRefs_Execute(COMMAND_ARGS)
 	ExtraDroppedItemList *xDropped = GetExtraType(&thisObj->extraDataList, DroppedItemList);
 	if (!xDropped) return true;
 	TempElements *tmpElements = GetTempElements();
-	ListNode<TESObjectREFR> *iter = xDropped->itemRefs.Head();
+	auto iter = xDropped->itemRefs.Head();
 	do
 	{
 		if (iter->data) tmpElements->Append(iter->data);
@@ -958,7 +958,7 @@ bool SetOnAnimationEventHandler_Execute(COMMAND_ARGS)
 		}
 		return true;
 	}
-	ListNode<TESForm> *iter = tempList.Head();
+	auto iter = tempList.Head();
 	ActorAnimEventCallbacks *eventMap = animAction ? *s_animActionEventMapFl : *s_playGroupEventMapFl;
 	Actor *actor;
 	do
@@ -1053,7 +1053,7 @@ bool SetActorEventHandler_Execute(COMMAND_ARGS)
 	tList<TESForm> tempList(actorOrList);
 	if IS_ID(actorOrList, BGSListForm)
 		tempList = ((BGSListForm*)actorOrList)->list;
-	ListNode<TESForm> *iter = tempList.Head();
+	auto iter = tempList.Head();
 	Actor *actor;
 	do
 	{
@@ -1291,7 +1291,7 @@ bool Cmd_GetActorValueModifier_Execute(COMMAND_ARGS)
 	float modifier = 0;
 	ActiveEffect *activeEff;
 	EffectSetting *effSetting;
-	ListNode<ActiveEffect> *iter = effList->Head();
+	auto iter = effList->Head();
 	do
 	{
 		activeEff = iter->data;
@@ -1469,6 +1469,7 @@ Do1stPerson:
 		if (weapInfo && (weapInfo->type == weapon))
 			character->EquipItem(weapon, 1, weapInfo->extendData ? weapInfo->extendData->GetFirstItem() : nullptr, 1, 0, 1);
 	}
+	character->RefreshAnimData();
 	return true;
 }
 
@@ -1983,7 +1984,7 @@ bool GetFactionList(Actor *actor, TESActorBase *actorBase, TempFormList *tmpForm
 			return false;
 		actorBase = (TESActorBase*)actor->baseForm;
 	}
-	ListNode<FactionListData> *traverse = actorBase->baseData.factionList.Head();
+	auto traverse = actorBase->baseData.factionList.Head();
 	FactionListData	*data;
 	do
 	{
@@ -2154,7 +2155,7 @@ bool __fastcall GetInFactionList(Actor *actor, BGSListForm *facList)
 	TempFormList *tmpFormLst = GetTempFormList();
 	if (GetFactionList(actor, NULL, tmpFormLst))
 	{
-		ListNode<TESForm> *listIter = facList->list.Head();
+		auto listIter = facList->list.Head();
 		do
 		{
 			if (tmpFormLst->HasKey(listIter->data))

@@ -1836,5 +1836,6 @@ enum ClassVtblAddress
 	kVtbl_NiMaterialResource =							0x1101464,
 };
 
-#define IS_TYPE(objPtr, className) (*(UInt32*)objPtr == kVtbl_##className)
-#define NOT_TYPE(objPtr, className) (*(UInt32*)objPtr != kVtbl_##className)
+#define VTBL(objPtr) *(UInt32*)objPtr
+#define IS_TYPE(objPtr, className) (VTBL(objPtr) == kVtbl_##className)
+#define NOT_TYPE(objPtr, className) (VTBL(objPtr) != kVtbl_##className)

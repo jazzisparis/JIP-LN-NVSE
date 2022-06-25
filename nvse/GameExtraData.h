@@ -596,31 +596,15 @@ public:
 	struct MarkerData
 	{
 		TESFullName		fullName;		// 00
-		UInt16			flags;			// 0C
-		UInt16			type;			// 0E
+		UInt8			flags;			// 0C
+		UInt8			pad0D;			// 0D
+		UInt8			type;			// 0E
+		UInt8			pad0F;			// 0F
 		TESForm			*reputation;	// 10
 	};
 	MarkerData		*data;	// 0C
-
-	bool IsVisible() {return (data->flags & kFlag_Visible) != 0;}
-	bool CanTravel() {return (data->flags & kFlag_CanTravel) != 0;}
-	bool IsHidden() {return (data->flags & kFlag_Hidden) != 0;}
-	void SetVisible(bool visible)
-	{
-		if (visible) data->flags |= kFlag_Visible;
-		else data->flags &= ~kFlag_Visible;
-	}
-	void SetCanTravel(bool travel)
-	{
-		if (travel) data->flags |= kFlag_CanTravel;
-		else data->flags &= ~kFlag_CanTravel;
-	}
-	void SetHidden(bool hidden)
-	{
-		if (hidden) data->flags |= kFlag_Hidden;
-		else data->flags &= ~kFlag_Hidden;
-	}
 };
+typedef ExtraMapMarker::MarkerData MapMarkerData;
 
 // 14
 class ExtraHavok : public BSExtraData

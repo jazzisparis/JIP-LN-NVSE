@@ -225,7 +225,7 @@ class QueuedReference : public QueuedFile
 public:
 	virtual void Unk_0B(void);			// Initialize validBip01Names (and cretae the 3D model?)
 	virtual void Unk_0C(void);
-	virtual void Unk_0D(NiNode *arg0);
+	virtual void AttachDistant3D(NiNode *arg0);
 	virtual bool Unk_0E(void);
 	virtual void Unk_0F(void);
 	virtual void Unk_10(void);

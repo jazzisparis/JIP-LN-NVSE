@@ -320,7 +320,7 @@ bool Cmd_GetActiveEffects_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &filter) || NOT_ACTOR(thisObj))
 		return true;
 	filter = ((filter & 1) ? kFormType_EnchantmentItem : 63) & ((filter & 2) ? kFormType_SpellItem : 63) & ((filter & 4) ? kFormType_AlchemyItem : 63);
-	ListNode<ActiveEffect> *iter = ((Actor*)thisObj)->magicTarget.GetEffectList()->Head();
+	auto iter = ((Actor*)thisObj)->magicTarget.GetEffectList()->Head();
 	if (!iter) return true;
 	TempElements *tmpElements = GetTempElements();
 	ActiveEffect *activeEff;
@@ -361,7 +361,7 @@ bool Cmd_GetTempEffects_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	if (NOT_ACTOR(thisObj)) return true;
-	ListNode<ActiveEffect> *iter = ((Actor*)thisObj)->magicTarget.GetEffectList()->Head();
+	auto iter = ((Actor*)thisObj)->magicTarget.GetEffectList()->Head();
 	if (!iter) return true;
 	Vector<SortEffectsEntry> sortEffects;
 	ActiveEffect *activeEff;
@@ -403,7 +403,7 @@ bool Cmd_RemoveNthTempEffect_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &index) || NOT_ACTOR(thisObj))
 		return true;
 	ActiveEffect *activeEff;
-	for (ListNode<ActiveEffect> *iter = ((Actor*)thisObj)->magicTarget.GetEffectList()->Head(); iter; iter = iter->next)
+	for (auto iter = ((Actor*)thisObj)->magicTarget.GetEffectList()->Head(); iter; iter = iter->next)
 	{
 		activeEff = iter->data;
 		if (!activeEff || !activeEff->bActive || activeEff->bTerminated || !ValidTempEffect(activeEff->effectItem) || !activeEff->magicItem ||
@@ -509,7 +509,7 @@ bool __fastcall IsSpellTargetAlt(Actor *actor, MagicItem *magicItem)
 {
 	if (NOT_ACTOR(actor)) return false;
 	ActiveEffect *activeEff;
-	for (ListNode<ActiveEffect> *iter = actor->magicTarget.GetEffectList()->Head(); iter; iter = iter->next)
+	for (auto iter = actor->magicTarget.GetEffectList()->Head(); iter; iter = iter->next)
 	{
 		activeEff = iter->data;
 		if (activeEff && (activeEff->magicItem == magicItem) && activeEff->bActive && !activeEff->bTerminated)
@@ -550,11 +550,11 @@ bool Cmd_CastImmediate_Execute(COMMAND_ARGS)
 bool __fastcall IsSpellTargetList(Actor *actor, BGSListForm *splList)
 {
 	if (NOT_ACTOR(actor)) return false;
-	ListNode<ActiveEffect> *effIter = actor->magicTarget.GetEffectList()->Head();
+	auto effIter = actor->magicTarget.GetEffectList()->Head();
 	if (!effIter) return false;
 	TempFormList *tmpFormLst = GetTempFormList();
 	MagicItem *magicItem;
-	ListNode<TESForm> *lstIter = splList->list.Head();
+	auto lstIter = splList->list.Head();
 	do
 	{
 		if (lstIter->data && (magicItem = lstIter->data->GetMagicItem()))

@@ -155,15 +155,6 @@ __declspec(naked) void TESGlobalLoadFormHook()
 	}
 }
 
-__declspec(naked) bool SetNPCModelHook()
-{
-	__asm
-	{
-		mov		al, 1
-		retn	4
-	}
-}
-
 __declspec(naked) void MarkCreatureNoFallHook()
 {
 	__asm
@@ -190,19 +181,6 @@ __declspec(naked) void MarkCreatureNoFallHook()
 		CALL_EAX(0x8E4E50)
 	done:
 		retn
-	}
-}
-
-__declspec(naked) void SetPosAndRotHook()
-{
-	__asm
-	{
-		mov		eax, 0xC65B74
-		mov		edx, 0xC65EDA
-		mov		ecx, [esp+0x28]
-		test	byte ptr [ecx+0xC], 0x40
-		cmovz	eax, edx
-		jmp		eax
 	}
 }
 
@@ -692,7 +670,7 @@ void __fastcall BuildMusicMarkerList(TESWorldSpace *worldspace, tList<TESObjectR
 	{
 		s_audioMarkerLastWorld = worldspace;
 		s_musicMarkerList().Clear();
-		ListNode<TESObjectREFR> *traverse = markerRefList->Head();
+		auto traverse = markerRefList->Head();
 		TESObjectREFR *markerRef;
 		ExtraAudioMarker *xAudioMarker;
 		while (true)
@@ -2977,7 +2955,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	}
 	HighProcess *hiProcess = (HighProcess*)target->baseProcess;
 	ContChangesEntry *weaponInfo;
-	if (!noBlock && (hiProcess->currentAction == kAnimAction_Block) && !target->GetIsParalyzed() &&
+	if (!noBlock && hiProcess && !hiProcess->processLevel && (hiProcess->currentAction == kAnimAction_Block) && !target->GetIsParalyzed() &&
 		CdeclCall<bool>(0x9A6AE0, target, hitData->projectile ? hitData->projectile : (TESObjectREFR*)source, 0))
 	{
 		weaponInfo = hiProcess->weaponInfo;
@@ -3573,7 +3551,7 @@ __declspec(naked) void VoiceModulationFixHook()
 	}
 }
 
-__m128 s_shapeVerticesZ[10];
+AlignedVector4 s_shapeVerticesZ[10];
 bhkCharControllerShape *s_pcControllerShape = NULL;
 
 __declspec(naked) void InitControllerShapeHook()
@@ -3586,7 +3564,7 @@ __declspec(naked) void InitControllerShapeHook()
 		test	ecx, ecx
 		jz		done
 		mov		ecx, [ecx+0xCC]
-		cmp		ecx, ds:[0x11DEA3C]
+		cmp		dword ptr [ecx+0xC], 0x14
 		jz		proceed
 		cmp		byte ptr [ecx+0x18D], 0
 		jz		done
@@ -3639,10 +3617,9 @@ __declspec(naked) void InitControllerShapeHook()
 	}
 }
 
-bool s_playerIsSneaking = false;
-
 __declspec(naked) bool __fastcall SneakBoundingBoxFixHook(PlayerCharacter *thePlayer)
 {
+	static bool playerIsSneaking = false;
 	__asm
 	{
 		mov		eax, [ecx+0x190]
@@ -3652,12 +3629,12 @@ __declspec(naked) bool __fastcall SneakBoundingBoxFixHook(PlayerCharacter *thePl
 		and		eax, 0xC00
 		cmp		eax, 0x400
 		setz	al
-		cmp		s_playerIsSneaking, al
+		cmp		playerIsSneaking, al
 		jz		done
 		mov		ecx, s_pcControllerShape
 		test	ecx, ecx
 		jz		done
-		mov		s_playerIsSneaking, al
+		mov		playerIsSneaking, al
 		mov		ecx, [ecx+8]
 		mov		ecx, [ecx+0x40]
 		movzx	edx, al
@@ -3724,9 +3701,11 @@ __declspec(naked) bool __fastcall CreatureSpreadFixHook(Actor *actor)
     }
 }
 
+bool s_forceHCNeedsUpdate = false;
+
 __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlobals, int EDX, float secPassed)
 {
-	static const double kMults[] = {24.0, 1 / 3600.0, 0.1};
+	static const double kMults[] = {24.0, 1 / 3600.0, 0.05, -0.05};
 	alignas(16) static double hourAndDays[] = {0, 0};
 	__asm
 	{
@@ -3745,13 +3724,20 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		subsd	xmm1, xmm3
 		comisd	xmm1, kMults+0x10
 		ja		doRecalc
+		comisd	xmm1, kMults+0x18
+		jb		backWrds
 		movaps	xmm0, xmm3
-		pshufd	xmm1, xmm3, 0xFE
+		pshufd	xmm1, xmm0, 0xFE
 		jmp		proceed
+	backWrds:
+		addsd	xmm0, xmm4
 	doRecalc:
 		mov		[ecx+0x1C], 0
+		mov		al, s_forceHCNeedsUpdate
+		xor		al, 1
+		mov		s_forceHCNeedsUpdate, 0
 		mov		edx, g_thePlayer
-		mov		[edx+0xE39], 1
+		mov		[edx+0xE39], al
 		movaps	xmm1, xmm0
 		divsd	xmm1, xmm4
 		mov		eax, [ecx+0x10]
@@ -3769,8 +3755,13 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		cvttss2si	esi, [eax+0x24]
 		mov		eax, [ecx+8]
 		cvttss2si	edi, [eax+0x24]
+	getDPM:
 		movzx	edx, kDaysPerMonth[esi]
+		ALIGN 16
 	iterHead:
+		comisd	xmm0, xmm4
+		jbe		iterEnd
+		subsd	xmm0, xmm4
 		cmp		edi, edx
 		jb		incDay
 		mov		edi, 1
@@ -3782,17 +3773,14 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		movss	xmm3, [eax+0x24]
 		addss	xmm3, PS_V3_One
 		movss	[eax+0x24], xmm3
-		jmp		iterNext
+		jmp		iterHead
 	incDay:
 		inc		edi
-		jmp		iterNext
+		jmp		iterHead
 	incMonth:
 		inc		esi
-		movzx	edx, kDaysPerMonth[esi]
-	iterNext:
-		subsd	xmm0, xmm4
-		comisd	xmm0, xmm4
-		ja		iterHead
+		jmp		getDPM
+	iterEnd:
 		cvtsi2ss	xmm3, esi
 		mov		eax, [ecx+4]
 		movss	[eax+0x24], xmm3
@@ -4146,7 +4134,7 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			HOOK_SET(PickLoadScreen, bEnable);
 			if (bEnable && s_locationLoadScreens().Empty())
 			{
-				ListNode<TESLoadScreen> *lscrIter = g_dataHandler->loadScreenList.Head();
+				auto lscrIter = g_dataHandler->loadScreenList.Head();
 				TESLoadScreen *loadScreen;
 				do
 				{
@@ -4456,7 +4444,7 @@ void InitGamePatches()
 	SafeWrite8(0x63E705, 1);
 
 	//	1st person shell casing lifetime fix
-	WriteRelCall(0x5251A9, 0x8D0360);
+	WriteRelJump(0x5251A3, 0x52528C);
 
 	//	TileMenu::DoDestroy fix for OnMenuClose
 	SafeWrite16(0xA1F035, 0x30EB);
@@ -4517,11 +4505,14 @@ void InitGamePatches()
 
 	//	Update fixed-collision when changing position/rotation
 	SafeWrite32(0xC65B47, 0x38F);
-	WriteRelJump(0xC65B5B, (UInt32)SetPosAndRotHook);
+	SAFE_WRITE_BUF(0xC65B5B, "\x8B\x4C\x24\x28\xF6\x41\x0C\x40\x0F\x84\x71\x03\x00\x00\x90");
 
 	//	Save the player's killer (reset on game-load)
 	SafeWrite8(0x89E790, 8);
 	SafeWrite16(0x89F351, 0x0BEB);
+
+	//	PlaySound3D
+	SAFE_WRITE_BUF(0x5C240D, "\x8B\x41\x64\x8B\x40\x14\x66\x90");
 
 	//	Runtime script compiler recognize NVSE var types
 	SafeWrite32(0x118CBF4, (UInt32)&s_varTypeNameTokens);
@@ -4540,7 +4531,7 @@ void InitGamePatches()
 	WritePushRetRelJump(0x94E4A1, 0x94E4D9, (UInt32)GeneratePlayerNodeHook);
 	SafeWrite32(0x1016DB8, (UInt32)DoQueuedPlayerHook);
 	SAFE_WRITE_BUF(0x601C30, "\x8B\x41\x04\x85\xC0\x74\x01\xC3\x81\xE9\xD8\x00\x00\x00\xF7\x01\x01\x00\x00\x00\xB8\x48\x3E\x1D\x01\xB9\x1C\x27\x1D\x01\x0F\x45\xC1\x8B\x00\xC3");
-	SafeWrite32(0x104A1BC, (UInt32)SetNPCModelHook);
+	SafeWrite32(0x104A1BC, 0x401290);
 	SafeWrite8(0x40F75B, 0x18);
 
 	SafeWrite32(0x9ED3F8, (UInt32)&s_moveAwayDistance);
@@ -4586,7 +4577,7 @@ void InitGamePatches()
 	WriteRelJump(0x4C3976, (UInt32)HotkeyFixRemoveItemHook);
 	WriteRelJump(0x95400F, (UInt32)HotkeyFixPlayerActivateHook);
 	SafeWrite8(0x412675, 1);
-	SAFE_WRITE_BUF(0x9B6335, "\xF3\x0F\x10\x45\xF4\x0F\x2F\x41\x14\x0F\x87\x8E\x00\x00\x00\x80\x49\x5B\x80\xF3\x0F\x11\x41\x14\x0F\x1F\x40\x00");
+	SAFE_WRITE_BUF(0x9B6335, "\xF3\x0F\x10\x45\xF4\x0F\x2F\x41\x14\x0F\x86\x8E\x00\x00\x00\x80\x49\x5B\x80\xF3\x0F\x11\x41\x14\x0F\x1F\x40\x00");
 	WritePushRetRelJump(0x5674D5, 0x567554, (UInt32)SetScaleHook);
 	SafeWrite16(0x567709, 0x15EB);
 	WriteRelJump(0x4BD820, (UInt32)GetEntryDataModFlagsHook);
@@ -4673,7 +4664,6 @@ void InitGamePatches()
 	char filePath[0x80], dataPath[0x80], *namePtr = filePath + 25, *buffer = GetStrArgBuffer(), *dataPtr, *delim;
 	memcpy(filePath, "Data\\NVSE\\plugins\\xfonts\\*.txt", 31);
 	memcpy(dataPath, "data\\", 5);
-	SInt32 lines;
 	UInt32 size, index, value;
 	for (DirectoryIterator dirIter(filePath); dirIter; ++dirIter)
 	{
@@ -4708,7 +4698,7 @@ void InitGamePatches()
 	if (!s_overrideBSAFiles().Empty())
 		WriteRelCall(0x463855, (UInt32)LoadBSAFileHook);
 
-	lines = GetPrivateProfileSection("GamePatches", buffer, 0x10000, "Data\\NVSE\\plugins\\jip_nvse.ini");
+	SInt32 lines = GetPrivateProfileSection("GamePatches", buffer, 0x10000, "Data\\NVSE\\plugins\\jip_nvse.ini");
 	dataPtr = buffer;
 	while (lines > 0)
 	{
@@ -4748,7 +4738,7 @@ void InitGamePatches()
 
 NiCamera* __fastcall GetSingletonsHook(SceneGraph *sceneGraph)
 {
-	g_sceneGraph = sceneGraph;
+	g_mainCamera = sceneGraph->camera;
 	g_modelLoader = ModelLoader::GetSingleton();
 	g_dataHandler = DataHandler::GetSingleton();
 	g_loadedReferences = LoadedReferenceCollection::Get();

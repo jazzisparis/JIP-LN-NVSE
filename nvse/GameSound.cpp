@@ -3,7 +3,7 @@
 void Sound::PlayEDID(const char *soundEDID, UInt32 flags, TESObjectREFR *refr)
 {
 	Sound sound;
-	ThisCall(0xAD7550, BSWin32Audio::Get(), &sound, soundEDID, flags);
+	BSAudioManager::Get()->InitSoundEDID(sound, soundEDID, flags);
 	if (sound.soundKey != 0xFFFFFFFF)
 	{
 		sound.SetPos(refr->position);
@@ -16,7 +16,7 @@ void Sound::PlayFile(const char *filePath, UInt32 flags, TESObjectREFR *refr)
 	NiNode *refrNode = refr->GetRefNiNode();
 	if (!refrNode) return;
 	Sound sound;
-	ThisCall(0xAD7480, BSWin32Audio::Get(), &sound, filePath, flags, nullptr);
+	BSAudioManager::Get()->InitSoundPath(sound, filePath, flags);
 	if (sound.soundKey != 0xFFFFFFFF)
 	{
 		sound.SetPos(refrNode->WorldTranslate());
@@ -25,14 +25,12 @@ void Sound::PlayFile(const char *filePath, UInt32 flags, TESObjectREFR *refr)
 	}
 }
 
-void Sound::PlayTESSound(TESSound *gameSound, UInt32 flags, TESObjectREFR *refr)
+void Sound::PlayTESSound(TESSound *soundForm, UInt32 flags, TESObjectREFR *refr)
 {
-	const char *filePath = gameSound->soundFile.path.m_data;
-	if (!filePath) return;
 	NiNode *refrNode = refr->GetRefNiNode();
 	if (!refrNode) return;
 	Sound sound;
-	ThisCall(0xAD7480, BSWin32Audio::Get(), &sound, filePath, flags, gameSound);
+	BSAudioManager::Get()->InitSoundForm(sound, soundForm->refID, flags);
 	if (sound.soundKey != 0xFFFFFFFF)
 	{
 		sound.SetPos(refrNode->WorldTranslate());

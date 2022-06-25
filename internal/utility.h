@@ -111,7 +111,6 @@ extern const char kLwrCaseConverter[], kUprCaseConverter[];
 #define SS_3				kPackedValues+0x110
 #define SS_10				kPackedValues+0x114
 #define SS_100				kPackedValues+0x118
-#define SS_8192				kPackedValues+0x11C
 
 #define FltPId2		1.570796371F
 #define FltPI		3.141592741F
@@ -196,13 +195,13 @@ public:
 
 class PrimitiveCS
 {
-	UInt32	owningThread;
+	void		*selfPtr;
 
 public:
-	PrimitiveCS() : owningThread(0) {}
+	PrimitiveCS() : selfPtr(nullptr) {}
 
 	PrimitiveCS *Enter();
-	__forceinline void Leave() {owningThread = 0;}
+	__forceinline void Leave() {selfPtr = nullptr;}
 };
 
 class LightCS
@@ -335,14 +334,16 @@ __m128 __vectorcall GetSinCos(float angle);
 //	Takes:   xmm0 = {x, y, z, 0};
 //	Returns: xmm0 = {sin(x), sin(y), sin(z), 0},
 //			 xmm1 = {cos(x), cos(y), cos(z), 0}
-__m128 __vectorcall GetSinCosV3(__m128 angles);
+__m128 __vectorcall GetSinCos_V3(__m128 angles);
 
 float __vectorcall ASin(float x);
 float __vectorcall ACos(float x);
 float __vectorcall ATan(float x);
 float __vectorcall ATan2(float y, float x);
 
-__m128 __vectorcall NormalizePS(__m128 inPS);
+__m128 __vectorcall Normalize_V4(__m128 inPS);
+bool __vectorcall Equal_V3(__m128 v1, __m128 v2);
+bool __vectorcall Equal_V4(__m128 v1, __m128 v2);
 
 char *GetStrArgBuffer();
 

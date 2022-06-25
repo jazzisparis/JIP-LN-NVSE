@@ -451,7 +451,7 @@ public:
 	/*420*/virtual void		Unk_108();
 	/*424*/virtual void		SetNthAnimSequenceWeight(UInt32 index, BSAnimGroupSequence *animSeq);
 	/*428*/virtual void		Unk_10A();
-	/*42C*/virtual void		Unk_10B();
+	/*42C*/virtual float	GetFlt1D0();
 	/*430*/virtual void		Unk_10C();
 	/*434*/virtual void		ResetAttackLoopTimer(bool setToFull);
 	/*438*/virtual void		DecreaseAttackLoopShootTime(Actor *actor);
@@ -1069,7 +1069,7 @@ public:
 	NiNode						*limbNodes[15];		// 1DC
 	NiNode						*node218;			// 218
 	NiNode						*node21C;			// 21C
-	BSShaderProperty			*shaderProp220;		// 220
+	BSShaderLightingProperty	*shaderProp220;		// 220
 	BSBound						*boundingBox;		// 224
 	bool						isAiming;			// 228
 	UInt8						byte229;			// 229

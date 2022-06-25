@@ -90,10 +90,10 @@ bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 	s_log().Create("jip_ln_nvse.log");
 	int version = nvse->nvseVersion;
 	s_nvseVersion = (version >> 24) + (((version >> 16) & 0xFF) * 0.1) + (((version & 0xFF) >> 4) * 0.01);
-	if (version < 0x6020070)
+	if (version < 0x6020060)
 	{
-		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.27 minimum.", s_nvseVersion);
-		MessageBox(nullptr, "ERROR!\n\nxNVSE version is outdated.\n\nThis plugin requires v6.2.7 minimum.", "JIP LN NVSE Plugin", MB_OK | MB_ICONWARNING | MB_TOPMOST);
+		PrintLog("ERROR: NVSE version is outdated (v%.2f). This plugin requires v6.26 minimum.", s_nvseVersion);
+		MessageBox(nullptr, "ERROR!\n\nxNVSE version is outdated.\n\nThis plugin requires v6.2.6 minimum.", "JIP LN NVSE Plugin", MB_OK | MB_ICONWARNING | MB_TOPMOST);
 		return false;
 	}
 	PrintLog("NVSE version:\t%.2f\nJIP LN version:\t%.2f\n", s_nvseVersion, JIP_LN_VERSION);
@@ -249,7 +249,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*227E*/REG_CMD_ARR(GetINISection);
 	/*227F*/REG_CMD(SetINISection);
 	/*2280*/REG_CMD(IsParentActivateOnly);
-	/*2281*/REG_CMD(SetLinkedRef);
+	/*2281*/REG_CMD(SetLinkedReference);
 	/*2282*/REG_CMD(SetBaseForm);
 	/*2283*/REG_CMD_STR(GetStringSetting);
 	/*2284*/REG_CMD(SetStringSetting);
@@ -1367,8 +1367,12 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*291B*/REG_CMD(GetExcludedCombatActions);
 	/*291C*/REG_CMD(SetExcludedCombatActions);
 	/*291D*/REG_CMD(SetArmorConditionPenalty);
-
-	/*----*//*REG_CMD(GetAnglesBetweenPoints);*/
+	//	v56.65
+	/*291E*/REG_CMD(PlaySound3DNode);
+	/*291F*/REG_CMD(GetReticlePosAlt);
+	/*2920*/REG_CMD(GetLightAmountAtPoint);
+	/*2921*/REG_CMD(TransformWorldToLocal);
+	/*2922*/REG_CMD(GetAnglesBetweenPoints);
 
 	//===========================================================
 

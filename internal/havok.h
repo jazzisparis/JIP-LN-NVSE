@@ -1,6 +1,6 @@
 #pragma once
 
-typedef AlignedVector4 hkVector4;
+__declspec(align(16)) typedef NiVector4 hkVector4;
 
 struct alignas(16) hkQuaternion
 {
@@ -54,6 +54,9 @@ struct alignas(16) hkQuaternion
 
 	inline __m128 PS() const {return _mm_load_ps(&x);}
 
+	inline bool operator==(const hkQuaternion &rhs) const {return Equal_V4(PS(), rhs.PS());}
+	inline bool operator!=(const hkQuaternion &rhs) const {return !(*this == rhs);}
+
 	hkQuaternion& __vectorcall FromEulerPRY(__m128 pry);
 	hkQuaternion& __fastcall FromRotationMatrix(const NiMatrix33 &rotMat);
 	hkQuaternion& __fastcall FromAxisAngle(const AxisAngle &axisAngle);
@@ -76,7 +79,12 @@ struct alignas(16) hkQuaternion
 		return _mm_hadd_ps(_mm_hadd_ps(m, m), m).m128_f32[0];
 	}
 
-	hkQuaternion& Normalize();
+	hkQuaternion& Normalize()
+	{
+		*this = Normalize_V4(PS());
+		return *this;
+	}
+
 	__m128 __vectorcall ToEulerPRY() const;
 
 	void Dump() const;
@@ -203,30 +211,6 @@ public:
 
 	Iterator Begin() {return Iterator(*this);}
 };
-
-class hkStatisticsCollector;
-class hkpSimpleConstraintContactMgr;
-class bhkWorldObject;
-class NiStream;
-class ahkpWorld;
-class TESTrapListener;
-class TESWaterListener;
-class hkpContinuousSimulation;
-class hkpDefaultWorldMaintenanceMgr;
-class hkpBroadPhase;
-class hkpBroadPhaseListener;
-class hkpPhantomBroadPhaseListener;
-class hkpEntityEntityBroadPhaseListener;
-class hkpBroadPhaseBorderListener;
-class hkpCollisionDispatcher;
-class bhkCollisionFilter;
-class hkpDefaultConvexListFilter;
-class hkpEntityListener;
-class hkpContactListener;
-class bhkShape;
-class hkpShape;
-class hkpCachingShapePhantom;
-class hkpAllCdPointCollector;
 
 enum CollisionLayerTypes
 {
@@ -672,7 +656,7 @@ static_assert(sizeof(hkpAllCdBodyPairCollector) == 0x114);
 class hkpPhantom : public hkpWorldObject
 {
 public:
-	/*14*/virtual UInt8		PhantomType();
+	/*14*/virtual UInt32	PhantomType();
 	/*18*/virtual void		Unk_06(void);
 	/*1C*/virtual void		Unk_07(void);
 	/*20*/virtual void		Unk_08(void);
@@ -681,6 +665,13 @@ public:
 	/*2C*/virtual void		Unk_0B(void);
 	/*30*/virtual void		Unk_0C(void);
 	/*34*/virtual void		Unk_0D(void);
+
+	enum PhantomType
+	{
+		kPhantom_Aabb,
+		kPhantom_SimpleShape,
+		kPhantom_CachingShape
+	};
 
 	UInt32			unk8C[6];		// 8C
 };
@@ -752,13 +743,89 @@ public:
 	ContactData				*data68;		// 68
 };
 
+// 14
+class hkpBroadPhase : public hkReferencedObject
+{
+public:
+	/*0C*/virtual void		Unk_03(void);
+	/*10*/virtual void		Unk_04(void);
+	/*14*/virtual void		Unk_05(void);
+	/*18*/virtual void		Unk_06(void);
+	/*1C*/virtual void		Unk_07(void);
+	/*20*/virtual void		Unk_08(void);
+	/*24*/virtual void		Unk_09(void);
+	/*28*/virtual void		Unk_0A(void);
+	/*2C*/virtual void		Unk_0B(void);
+	/*30*/virtual void		Unk_0C(void);
+	/*34*/virtual void		Unk_0D(void);
+	/*38*/virtual void		Unk_0E(void);
+	/*3C*/virtual void		Unk_0F(void);
+	/*40*/virtual void		Unk_10(void);
+	/*44*/virtual void		Unk_11(void);
+	/*48*/virtual void		Unk_12(void);
+	/*4C*/virtual void		Unk_13(void);
+	/*50*/virtual void		Unk_14(void);
+	/*54*/virtual void		Unk_15(void);
+	/*58*/virtual void		Unk_16(void);
+	/*5C*/virtual void		Unk_17(void);
+	/*60*/virtual void		Unk_18(void);
+	/*64*/virtual void		Unk_19(void);
+	/*68*/virtual void		Unk_1A(void);
+	/*6C*/virtual void		Unk_1B(void);
+	/*70*/virtual void		Unk_1C(void);
+
+	UInt32			unk08;		// 08
+	UInt16			word0C;		// 0C
+	UInt16			word0E;		// 0E
+	UInt32			unk10;		// 10
+};
+
+// E0
+class hkp3AxisSweep : public hkpBroadPhase
+{
+public:
+	/*74*/virtual void		Unk_1D(void);
+
+	UInt32			unk14[11];	// 14
+	hkVector4		vector40;	// 40
+	hkVector4		vector50;	// 50
+	hkVector4		vector60;	// 60
+	UInt32			unk70[13];	// 70
+	UInt16			wordA4;		// A4
+	UInt16			wordA6;		// A6
+	UInt32			unkA8[2];	// A8
+	UInt16			wordB0;		// B0
+	UInt16			wordB2;		// B2
+	UInt32			unkB4[2];	// B4
+	UInt16			wordBC;		// BC
+	UInt16			wordBE;		// BE
+	UInt32			unkC0[2];	// C0
+	UInt16			wordC8;		// C8
+	UInt16			wordCA;		// CA
+	UInt32			unkCC[4];	// CC
+	float			fltDC;		// DC
+};
+static_assert(sizeof(hkp3AxisSweep) == 0xE0);
+
 // 1B8
 class hkpWorld : public hkReferencedObject
 {
 public:
+	struct UnkStruct
+	{
+		float		flt00;
+		float		flt04;
+		float		flt08;
+		float		flt0C;
+		float		flt10;
+		float		flt14;
+		UInt16		word18;
+		UInt16		word1A;
+	};
+
 	hkpContinuousSimulation				*simulation;				// 008
 	float								flt00C;						// 00C
-	NiVector4							gravity;					// 010
+	hkVector4							gravity;					// 010
 	hkpSimulationIsland					*fixedIsland;				// 020
 	hkpRigidBody						*fixedRigidBody;			// 024
 	hkArray<hkpSimulationIsland*>		activeSimulationIslands;	// 028
@@ -766,10 +833,12 @@ public:
 	hkArray<hkpSimulationIsland*>		dirtySimulationIslands;		// 040
 	hkpDefaultWorldMaintenanceMgr		*maintenanceMgr;			// 04C
 	UInt32								unk050;						// 050
-	UInt32								unk054;						// 054
+	UInt8								byte054;					// 054
+	UInt8								pad055[3];					// 055
 	hkpBroadPhase						*broadPhase;				// 058
 	UInt32								unk05C;						// 05C
-	UInt32								unk060;						// 060
+	UInt8								byte060;					// 060
+	UInt8								pad061[3];					// 061
 	hkpBroadPhaseListener				**broadPhaseListeners;		// 064
 	hkpPhantomBroadPhaseListener		*phantomBroadPhaseListener;	// 068
 	hkpEntityEntityBroadPhaseListener	*entityBroadPhaseListener;	// 06C
@@ -783,9 +852,36 @@ public:
 	UInt32								unk08C;						// 08C
 	UInt32								unk090;						// 090
 	void								*ptr094;					// 094
-	UInt32								unk098[10];					// 098
-	void								*ptr0C0;					// 0C0
-	UInt32								unk0C4[19];					// 0C4
+	UInt32								unk098;						// 098
+	UInt8								byte09C;					// 09C
+	UInt8								byte09D;					// 09D
+	UInt8								pad09E[2];					// 09E
+	UInt32								unk0A0;						// 0A0
+	UInt8								byte0A4;					// 0A4
+	UInt8								pad0A5[3];					// 0A5
+	UInt32								unk0A8;						// 0A8
+	UInt16								word0AC;					// 0AC
+	UInt8								pad0AE[2];					// 0AE
+	UInt8								byte0B0;					// 0B0
+	UInt8								byte0B1;					// 0B1
+	UInt8								pad0B2[2];					// 0B2
+	UInt32								unk0B4[5];					// 0B4
+	UInt8								byte0C8;					// 0C8
+	UInt8								pad0C9[3];					// 0C9
+	float								flt0CC;						// 0CC
+	float								flt0D0;						// 0D0
+	UInt8								byte0D4;					// 0D4
+	UInt8								byte0D5;					// 0D5
+	UInt8								byte0D6;					// 0D6
+	UInt8								pad0D7;						// 0D7
+	float								flt0D8;						// 0D8
+	float								flt0DC;						// 0DC
+	UInt32								unk0E0;						// 0E0
+	UInt8								byte0E4;					// 0E4
+	UInt8								pad0E5[3];					// 0E5
+	UInt32								unk0E8[3];					// 0E8
+	float								flt0F4[4];					// 0F4
+	UInt32								unk104[3];					// 104
 	hkArray<hkpPhantom*>				phantoms;					// 110
 	UInt32								unk11C[3];					// 11C
 	hkArray<hkpEntityListener*>			entityListeners1;			// 128
@@ -794,20 +890,35 @@ public:
 	hkArray<hkpContactListener*>		contactListeners;			// 158
 	UInt32								unk164[15];					// 164
 	hkArray<hkpContactListener*>		collisionListeners;			// 1A0
-	UInt32								unk1AC[3];					// 1AC
+	UInt32								unk1AC[9];					// 1AC
+	float								flt1D0[5];					// 1D0
+	UInt32								unk1E4[23];					// 1E4
+	float								flt240;						// 240
+	UnkStruct							unkStruct[6];				// 244
+	float								flt2EC;						// 2EC
+	float								flt2F0;						// 2F0
+	UInt32								unk2F4[2];					// 2F4
+	float								flt2FC;						// 2FC
+	float								flt300;						// 300
+	UInt8								byte304;					// 304
+	UInt8								byte305;					// 305
+	UInt8								byte306;					// 306
+	UInt8								byte307;					// 307
+	float								flt308;						// 308
+	UInt32								unk30C;						// 30C
+	hkVector4							vector310;					// 310
+	hkVector4							vector320;					// 320
+	UInt32								unk330[4];					// 330
+	UInt8								byte340;					// 340
+	UInt8								pad341[3];					// 341
+	UInt32								unk344[3];					// 344
 };
-static_assert(sizeof(hkpWorld) == 0x1B8);
+static_assert(sizeof(hkpWorld) == 0x350);
 
 // 360
 class ahkpWorld : public hkpWorld
 {
 public:
-	UInt32			unk1B8[83];			// 1B8
-	UInt8			byte304;			// 304
-	UInt8			byte305;			// 305
-	UInt8			byte306;			// 306
-	UInt8			byte307;			// 307
-	UInt32			unk308[18];			// 308
 	bhkWorld		*world;				// 350
 	UInt32			unk354[3];			// 354
 };

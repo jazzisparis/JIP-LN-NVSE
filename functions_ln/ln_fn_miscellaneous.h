@@ -91,7 +91,7 @@ bool Cmd_SetGlobalValue_Execute(COMMAND_ARGS)
 	char varName[0x40];
 	float value;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &value)) return true;
-	ListNode<TESGlobal> *iter = g_dataHandler->globalList.Head();
+	auto iter = g_dataHandler->globalList.Head();
 	TESGlobal *global;
 	do
 	{
@@ -305,7 +305,7 @@ bool Cmd_IsSkillMagazine_Execute(COMMAND_ARGS)
 	*result = 0;
 	AlchemyItem *ingestible;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &ingestible) || NOT_ID(ingestible, AlchemyItem)) return true;
-	ListNode<EffectItem> *effIter = ingestible->magicItem.list.list.Head();
+	auto effIter = ingestible->magicItem.list.list.Head();
 	EffectItem *effItem;
 	ListNode<Condition> *condIter;
 	Condition *condition;
@@ -489,7 +489,7 @@ bool Cmd_SetContainerCloseSound_Execute(COMMAND_ARGS)
 bool Cmd_GetPlayerRegions_Execute(COMMAND_ARGS)
 {
 	TempElements *tmpElements = GetTempElements();
-	ListNode<TESRegion> *iter = g_thePlayer->regionsList.list.Head();
+	auto iter = g_thePlayer->regionsList.list.Head();
 	do
 	{
 		if (iter->data) tmpElements->Append(iter->data);
@@ -645,7 +645,7 @@ UInt8 __fastcall CrosshairRefInList(BGSListForm *listForm)
 	TESObjectREFR *refr = g_interfaceManager->crosshairRef;
 	if (!refr) return 0;
 	TESForm *base = IS_ID(refr->baseForm, BGSPlaceableWater) ? ((BGSPlaceableWater*)refr->baseForm)->water : refr->baseForm, *form;
-	ListNode<TESForm> *iter = listForm->list.Head();
+	auto iter = listForm->list.Head();
 	do
 	{
 		form = iter->data;

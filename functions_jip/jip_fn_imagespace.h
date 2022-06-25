@@ -106,7 +106,7 @@ bool Cmd_GetActiveIMODs_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TempElements *tmpElements = GetTempElements();
-	ListNode<ImageSpaceModifierInstance> *traverse = g_TES->activeIMODs.Head();
+	auto traverse = g_TES->activeIMODs.Head();
 	ImageSpaceModifierInstance *imodInstance;
 	TESImageSpaceModifier *imod;
 	do

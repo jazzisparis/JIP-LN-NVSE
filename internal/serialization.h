@@ -193,8 +193,8 @@ void DoLoadGameHousekeeping()
 
 	if (g_thePlayer->teammateCount)
 	{
-		ListNode<PerkRank>* perkIter = g_thePlayer->perkRanksTM.Head();
-		PerkRank* perkRank;
+		auto perkIter = g_thePlayer->perkRanksTM.Head();
+		PerkRank *perkRank;
 		do
 		{
 			perkRank = perkIter->data;

@@ -183,7 +183,7 @@ __declspec(naked) __m128 __vectorcall NiVector3::CrossProduct(const NiVector3 &v
 		pshufd	xmm4, xmm2, 9
 		mulps	xmm3, xmm4
 		subps	xmm0, xmm3
-		jmp		NormalizePS
+		jmp		Normalize_V4
 	}
 }
 
@@ -237,6 +237,20 @@ void NiVector3::Dump() const
 	PrintDebug("%.6f\t%.6f\t%.6f\n", x, y, z);
 }
 
+__declspec(naked) float __vectorcall NiVector4::Length() const
+{
+	__asm
+	{
+		movups	xmm0, [ecx]
+		xorps	xmm1, xmm1
+		mulps	xmm0, xmm0
+		haddps	xmm0, xmm1
+		haddps	xmm0, xmm1
+		sqrtss	xmm0, xmm0
+		retn
+	}
+}
+
 __declspec(naked) __m128 __vectorcall NiVector4::GetTranslatedPos(const NiTransform &transfrm) const
 {
 	__asm
@@ -253,11 +267,6 @@ void NiVector4::Dump() const
 	PrintDebug("%.6f\t%.6f\t%.6f\t%.6f\n", x, y, z, w);
 }
 
-void AlignedVector4::Dump() const
-{
-	PrintDebug("%.6f\t%.6f\t%.6f\t%.6f\n", x, y, z, w);
-}
-
 __declspec(naked) AxisAngle& __vectorcall AxisAngle::FromEulerPRY(__m128 pry)
 {
 	__asm
@@ -267,7 +276,7 @@ __declspec(naked) AxisAngle& __vectorcall AxisAngle::FromEulerPRY(__m128 pry)
 		andps	xmm1, PS_V3_PIx2
 		subps	xmm0, xmm1
 		mulps	xmm0, PS_V3_Half
-		call	GetSinCosV3
+		call	GetSinCos_V3
 		movaps	xmm4, xmm0
 		unpcklps	xmm4, xmm1
 		shufps	xmm4, xmm1, 0xF0
@@ -446,7 +455,7 @@ __declspec(naked) NiMatrix33& __vectorcall NiMatrix33::FromEulerPRY(__m128 pry)
 	__asm
 	{
 		andps	xmm0, PS_XYZ0Mask
-		call	GetSinCosV3
+		call	GetSinCos_V3
 		movshdup	xmm2, xmm0
 		movshdup	xmm3, xmm1
 		pshufd	xmm4, xmm0, 0xFE
@@ -711,22 +720,6 @@ void NiMatrix33::Dump() const
 	PrintDebug("%.6f\t%.6f\t%.6f\n%.6f\t%.6f\t%.6f\n%.6f\t%.6f\t%.6f\n", cr[0][0], cr[1][0], cr[2][0], cr[0][1], cr[1][1], cr[2][1], cr[0][2], cr[1][2], cr[2][2]);
 }
 
-__declspec(naked) bool __fastcall NiQuaternion::operator==(const NiQuaternion &rhs) const
-{
-	__asm
-	{
-		movups	xmm0, [ecx]
-		movups	xmm1, [edx]
-		subps	xmm0, xmm1
-		andps	xmm0, PS_AbsMask
-		cmpltps	xmm0, PS_Epsilon
-		movmskps	eax, xmm0
-		cmp		al, 0xF
-		setz	al
-		retn
-	}
-}
-
 __declspec(naked) NiQuaternion& __fastcall NiQuaternion::FromRotationMatrix(const NiMatrix33 &rotMat)
 {
 	__asm
@@ -830,7 +823,7 @@ __declspec(naked) NiQuaternion& __vectorcall NiQuaternion::FromEulerPRY(__m128 p
 		andps	xmm1, PS_V3_PIx2
 		subps	xmm0, xmm1
 		mulps	xmm0, PS_V3_Half
-		call	GetSinCosV3
+		call	GetSinCos_V3
 		movaps	xmm2, xmm0
 		unpcklpd	xmm2, xmm1
 		shufps	xmm2, xmm2, 0xD7
@@ -877,7 +870,8 @@ __declspec(naked) NiQuaternion& __fastcall NiQuaternion::FromAxisAngle(const Axi
 
 void NiQuaternion::operator=(const hkQuaternion &hkQt)
 {
-	_mm_storeu_si128((__m128i*)this, _mm_shuffle_epi32(_mm_load_si128((__m128i*)&hkQt), 0x93));
+	__m128 m = _mm_load_ps(&hkQt.x);
+	*this = _mm_shuffle_ps(m, m, 0x93);
 }
 
 __declspec(naked) NiQuaternion& __fastcall NiQuaternion::MultiplyQuaternion(const NiQuaternion &rhs)
@@ -920,34 +914,6 @@ __declspec(naked) NiQuaternion& __fastcall NiQuaternion::MultiplyQuaternion(cons
 		mov		eax, ecx
 		retn
 	}
-}
-
-__declspec(naked) NiQuaternion& NiQuaternion::Normalize()
-{
-    __asm
-    {
-		mov		eax, ecx
-		movups	xmm1, [eax]
-		movaps	xmm2, xmm1
-		mulps	xmm2, xmm2
-		xorps	xmm0, xmm0
-		haddps	xmm2, xmm0
-		haddps	xmm2, xmm0
-		comiss	xmm2, PS_Epsilon
-		jb		zeroLen
-		rsqrtss	xmm3, xmm2
-		movss	xmm0, SS_3
-		mulss	xmm2, xmm3
-		mulss	xmm2, xmm3
-		subss	xmm0, xmm2
-		mulss	xmm0, xmm3
-		mulss	xmm0, PS_V3_Half
-		shufps	xmm0, xmm0, 0
-		mulps	xmm0, xmm1
-	zeroLen:
-		movups	[eax], xmm0
-        retn
-    }
 }
 
 __declspec(naked) __m128 __vectorcall NiQuaternion::ToEulerPRY() const
@@ -1042,6 +1008,23 @@ void NiTransform::Dump() const
 	PrintDebug("T (%.4f, %.4f, %.4f) R (%.4f, %.4f, %.4f) S %.4f", translate.x, translate.y, translate.z, angles.x, angles.y, angles.z, scale);
 }
 
+__declspec(naked) void __vectorcall NiViewport::SetFOV(float fov)
+{
+	__asm
+	{
+		call	Tan
+		mulss	xmm0, kFlt2d3
+		movsldup	xmm0, xmm0
+		xorps	xmm0, PS_FlipSignMask0
+		shufps	xmm0, xmm0, 0x14
+		movups	[ecx], xmm0
+		retn
+		ALIGN 16
+	kFlt2d3:
+		EMIT_DW(3F,2A,AA,AB)
+	}
+}
+
 void NiTriangle::Dump() const
 {
 	PrintDebug("%d\t%d\t%d\n", point1, point2, point3);
@@ -1076,6 +1059,55 @@ __declspec(naked) float __vectorcall Point3Distance(const NiVector3 &pt1, const 
 		haddps	xmm0, xmm1
 		haddps	xmm0, xmm1
 		sqrtss	xmm0, xmm0
+		retn
+	}
+}
+
+__declspec(naked) __m128 __vectorcall TransformWorldToLocal(const NiVector3 &origin, const NiVector3 &target, __m128 rotation)
+{
+	__asm
+	{
+		push	ebp
+		mov		ebp, esp
+		sub		esp, 0x24
+		push	ecx
+		push	edx
+		lea		ecx, [ebp-0x24]
+		call	NiMatrix33::FromEulerPRYInv
+		pop		edx
+		pop		ecx
+		movups	xmm4, [edx]
+		movups	xmm1, [ecx]
+		subps	xmm4, xmm1
+		andps	xmm4, PS_XYZ0Mask
+		xorps	xmm5, xmm5
+		movups	xmm0, [eax]
+		mulps	xmm0, xmm4
+		haddps	xmm0, xmm5
+		haddps	xmm0, xmm5
+		movups	xmm1, [eax+0xC]
+		mulps	xmm1, xmm4
+		haddps	xmm1, xmm5
+		haddps	xmm1, xmm5
+		movups	xmm2, [eax+0x18]
+		mulps	xmm2, xmm4
+		haddps	xmm2, xmm5
+		haddps	xmm2, xmm5
+		movaps	xmm7, xmm0
+		unpcklps	xmm7, xmm1
+		unpcklpd	xmm7, xmm5
+		mulps	xmm7, xmm7
+		haddps	xmm7, xmm5
+		sqrtss	xmm7, xmm7
+		unpcklpd	xmm7, xmm2
+		call	ATan2
+		movaps	xmm6, xmm0
+		pshufd	xmm0, xmm7, 0xFE
+		pshufd	xmm1, xmm7, 0xFC
+		call	ATan2
+		xorps	xmm0, PS_FlipSignMask0
+		unpcklpd	xmm0, xmm6
+		leave
 		retn
 	}
 }

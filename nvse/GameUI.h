@@ -767,14 +767,14 @@ public:
 	UInt32							unk184;				// 184
 	float							flt188;				// 188
 	tList<QueuedMessage>			queuedMessages;		// 18C
-	UInt32							currMsgKey;			// 194
+	UInt32							currMsgStartTime;	// 194
 	BSSimpleArray<SubtitleData>		subtitlesArr;		// 198
 	SubtitleData					*currentSubtitle;	// 1A8 
 	Sound							radiationSound;		// 1AC
 	TESObjectREFR					*crosshairRef;		// 1B8
 	UInt32							visibilityFlags;	// 1BC
 	UInt32							visibilityOverrides;	// 1C0
-	UInt32							stage;				// 1C4
+	UInt32							state;				// 1C4
 	HotKeyWheel						hotKeyWheel;		// 1C8
 	UInt8							isUsingScope;		// 1FC
 	UInt8							byte1FD[3];			// 1FD

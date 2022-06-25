@@ -444,20 +444,18 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 		return true;
 	}
 	TESObjectREFR *mkRefr;
-	ExtraMapMarker *xMarker;
+	MapMarkerData *markerData;
 	Coordinate coord;
 	MapMarkersGrid *markersGrid;
 	if (s_worldspaceMap().Insert(currentWspc, &markersGrid))
 	{
 		if (currentWspc->cell && (currentWspc->worldMap.ddsPath.m_dataLen || currentWspc->parent))
 		{
-			ListNode<TESObjectREFR> *objIter = currentWspc->cell->objectList.Head();
+			auto objIter = currentWspc->cell->objectList.Head();
 			do
 			{
-				mkRefr = objIter->data;
-				if (!mkRefr || (mkRefr->baseForm->refID != 0x10)) continue;
-				xMarker = GetExtraType(&mkRefr->extraDataList, MapMarker);
-				if (!xMarker || !xMarker->data || !xMarker->data->fullName.name.m_dataLen) continue;
+				if (!(mkRefr = objIter->data) || !(markerData = mkRefr->GetMapMarkerData()) || !markerData->fullName.name.m_dataLen)
+					continue;
 				coord.x = ifloor(mkRefr->position.x * (1 / 4096.0F));
 				coord.y = ifloor(mkRefr->position.y * (1 / 4096.0F));
 				(*markersGrid)[coord] = mkRefr;
@@ -503,8 +501,8 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 		}
 		if (mkRefr)
 		{
-			xMarker = GetExtraType(&mkRefr->extraDataList, MapMarker);
-			if (xMarker && xMarker->data)
+			markerData = mkRefr->GetMapMarkerData();
+			if (markerData)
 			{
 				if (distMin > 4096)
 				{
@@ -517,7 +515,7 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 					else StrCopy(locName, (distMin > 0) ? "NW of " : "SW of ");
 				}
 				else memcpy(locName, "at ", 4);
-				StrCat(locName, xMarker->data->fullName.name.m_data);
+				StrCat(locName, markerData->fullName.name.m_data);
 				AssignString(PASS_COMMAND_ARGS, locName);
 				return true;
 			}
@@ -532,7 +530,7 @@ bool Cmd_CCCGetReputation_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	if (NOT_ACTOR(thisObj)) return true;
-	ListNode<FactionListData> *baseFacIt = ((TESActorBase*)thisObj->baseForm)->baseData.factionList.Head();
+	auto baseFacIt = ((TESActorBase*)thisObj->baseForm)->baseData.factionList.Head();
 	FactionListData *facData;
 	do
 	{
@@ -546,7 +544,7 @@ bool Cmd_CCCGetReputation_Execute(COMMAND_ARGS)
 	while (baseFacIt = baseFacIt->next);
 	ExtraFactionChanges *xChanges = GetExtraType(&thisObj->extraDataList, FactionChanges);
 	if (!xChanges || !xChanges->data) return true;
-	ListNode<FactionListData> *refFacIt = xChanges->data->Head();
+	auto refFacIt = xChanges->data->Head();
 	FactionListData *fclData;
 	do
 	{
@@ -792,7 +790,7 @@ bool Cmd_CCCSMS_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *objRefr = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &objRefr) || !objRefr) return true;
-	ListNode<BSTempEffect> *effIter = ProcessManager::Get()->tempEffects.Head();
+	auto effIter = ProcessManager::Get()->tempEffects.Head();
 	MagicShaderHitEffect *mshEff;
 	do
 	{

@@ -6,7 +6,7 @@ DEFINE_COMMAND_PLUGIN(UpdateMiniMap, 0, 2, kParams_OneInt_OneOptionalInt);
 #define CACHED_TEXTURES_MAX 60
 #define CACHED_TEXTURES_MIN 42
 
-Tile::Value *s_miniMapVisible = NULL, *s_miniMapScale, *s_localMapZoom;
+Tile::Value /**s_miniMapVisible, */*s_miniMapScale, *s_localMapZoom;
 BSScissorTriShape *s_localMapShapes[9];
 NiTriShapeData *s_localMapShapeDatas[9];
 UInt32 s_texturePixelSize = 0x110;
@@ -654,7 +654,7 @@ TESObjectCELL *s_pcCurrCell0, *s_pcCurrCell, *s_lastInterior;
 Coordinate s_packedCellCoords[9] = {0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL};
 float s_vertexAlphaLevel[] = {0, 0.25F, 0.5F, 0.75F, 1.0F};
 
-__declspec(naked) void __stdcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
+__declspec(naked) void __fastcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
 {
 	__asm
 	{
@@ -662,6 +662,7 @@ __declspec(naked) void __stdcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
 		push	ebx
 		push	esi
 		push	edi
+		mov		ebx, ecx
 		mov		ecx, s_pcCurrCell
 		test	byte ptr [ecx+0x24], 1
 		jz		isExterior
@@ -675,14 +676,13 @@ __declspec(naked) void __stdcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
 		mov		eax, [eax+0x30]
 	proceed:
 		mov		ebp, eax
-		mov		eax, [esp+0x14]
-		mov		ecx, s_localMapShapeDatas[eax*4]
+		mov		ecx, s_localMapShapeDatas[ebx*4]
 		push	ecx
 		mov		esi, [ecx+0x28]
 		add		esi, 0xC
-		mov		edi, s_packedCellCoords[eax*4]
+		mov		edi, s_packedCellCoords[ebx*4]
 		inc		di
-		mov		ebx, 0x10
+		mov		bl, 0x10
 		ALIGN 16
 	iterHead:
 		push	edi
@@ -717,7 +717,7 @@ __declspec(naked) void __stdcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
 		pop		esi
 		pop		ebx
 		pop		ebp
-		retn	4
+		retn
 	}
 }
 
@@ -725,14 +725,15 @@ __declspec(naked) UInt32 __vectorcall GetFOWUpdateMask(__m128i inPos)
 {
 	__asm
 	{
-		unpcklpd	xmm0, xmm0
-		andps	xmm0, kTruncMask
-		pcmpgtd	xmm0, kGridSlice
-		psrld	xmm0, 0x1F
-		pshufd	xmm1, xmm0, 0xE
-		paddd	xmm0, xmm1
-		movd	eax, xmm0
-		pextrw	ecx, xmm0, 2
+		movaps	xmm1, xmm0
+		unpcklpd	xmm1, xmm0
+		andps	xmm1, kTruncMask
+		pcmpgtd	xmm1, kGridSlice
+		psrld	xmm1, 0x1F
+		pshufd	xmm2, xmm1, 0xE
+		paddd	xmm1, xmm2
+		movd	eax, xmm1
+		pextrw	ecx, xmm1, 2
 		lea		edx, [eax+eax*2]
 		add		ecx, edx
 		mov		eax, kUpdateMask[ecx*4]
@@ -767,7 +768,7 @@ __declspec(naked) void __fastcall DoSelectiveFOWUpdate(const NiPoint2 &adjustedP
 		shr		esi, 1
 		ja		iterHead
 		jnb		done
-		push	edi
+		mov		ecx, edi
 		call	CalcVtxAlphaBySeenData
 		jmp		iterHead
 		ALIGN 16
@@ -789,40 +790,46 @@ __declspec(naked) bool __fastcall UpdateSeenBits(SeenData *seenData, SInt32 *pos
 		push	esi
 		push	edi
 		push	0
-		lea		esi, [ecx+4]
-		mov		edi, edx
-		xor		ecx, ecx
+		push	0x02030304
+		push	dword ptr [edx]
+		push	0
+		lea		ebp, [ecx+4]
+		mov		esi, [edx+4]
 		mov		bl, 0x10
 		ALIGN 16
 	iter1Head:
-		sub		bl, 1
+		dec		bl
 		js		iter1End
-		movzx	edx, bl
-		add		edx, [edi]
-		imul	edx, edx
-		cmp		edx, 0x10
+		movzx	eax, bl
+		add		eax, [esp+4]
+		mov		edx, eax
+		neg		eax
+		cmovs	eax, edx
+		cmp		al, 4
 		ja		iter1Head
+		mov		cl, [esp+eax+8]
 		mov		bh, 0x10
 		ALIGN 16
 	iter2Head:
 		dec		bh
 		js		iter1Head
 		movzx	eax, bh
-		add		eax, [edi+4]
-		imul	eax, eax
-		add		eax, edx
-		cmp		eax, 0x10
+		add		eax, esi
+		mov		edx, eax
+		neg		eax
+		cmovs	eax, edx
+		cmp		al, cl
 		ja		iter2Head
-		mov		cl, bh
-		shl		cl, 4
-		add		cl, bl
-		mov		al, cl
+		mov		dl, bh
+		shl		dl, 4
+		add		dl, bl
+		mov		al, dl
 		shr		al, 5
-		lea		ebp, [esi+eax*4]
-		mov		eax, [ebp]
-		bts		eax, ecx
+		lea		edi, [ebp+eax*4]
+		mov		eax, [edi]
+		bts		eax, edx
 		jc		iter2Head
-		mov		[ebp], eax
+		mov		[edi], eax
 		mov		[esp], 1
 		jmp		iter2Head
 		ALIGN 16
@@ -830,18 +837,19 @@ __declspec(naked) bool __fastcall UpdateSeenBits(SeenData *seenData, SInt32 *pos
 		pop		eax
 		or		s_updateFogOfWar, al
 		pcmpeqd	xmm0, xmm0
-		movups	xmm1, [esi]
+		movups	xmm1, [ebp]
 		pcmpeqd	xmm1, xmm0
 		movmskps	eax, xmm1
 		cmp		al, 0xF
 		jnz		done
-		movups	xmm1, [esi+0x10]
+		movups	xmm1, [ebp+0x10]
 		pcmpeqd	xmm1, xmm0
 		movmskps	eax, xmm1
 		cmp		al, 0xF
 	done:
 		setz	al
-		lea		ecx, [esi-4]
+		lea		ecx, [ebp-4]
+		add		esp, 0xC
 		pop		edi
 		pop		esi
 		pop		ebx
@@ -977,24 +985,19 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		jz		doneExt
 		mov		[ebp-0x10], eax
 		cvtps2dq	xmm0, xmm0
-		movq	qword ptr [ebp-8], xmm0
 		call	GetFOWUpdateMask
 		mov		edi, eax
 		mov		eax, [esi+0x48]
-		mov		ecx, [eax]
-		dec		ecx
-		mov		[ebp-0xA], cx
-		mov		edx, [eax+4]
-		dec		edx
-		mov		[ebp-0xC], dx
-		shl		ecx, 0xC
-		sub		ecx, [ebp-8]
-		sar		ecx, 8
-		mov		[ebp-8], ecx
-		shl		edx, 0xC
-		sub		edx, [ebp-4]
-		sar		edx, 8
-		mov		[ebp-4], edx
+		movq	xmm1, qword ptr [eax]
+		psubd	xmm1, kExtPosMod
+		movd	eax, xmm1
+		mov		[ebp-0xA], ax
+		pextrw	eax, xmm1, 2
+		mov		[ebp-0xC], ax
+		pslld	xmm1, 0xC
+		psubd	xmm1, xmm0
+		psrad	xmm1, 8
+		movq	qword ptr [ebp-8], xmm1
 		xor		ebx, ebx
 		ALIGN 16
 	iterHeadExt:
@@ -1048,7 +1051,6 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		pop		ebx
 		leave
 		retn
-		ALIGN 16
 	isInterior:
 		cmp		s_cellNorthRotation, 0
 		jz		noRotation
@@ -1061,27 +1063,18 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 	noRotation:
 		cvtps2dq	xmm0, xmm0
 		psubd	xmm0, kIntPosMod
-		movq	qword ptr [ebp-8], xmm0
 		call	GetFOWUpdateMask
 		mov		edi, eax
-		mov		ecx, [ebp-8]
-		mov		eax, ecx
-		sar		eax, 0xC
-		dec		eax
-		mov		bl, al
-		shl		eax, 0xC
-		sub		eax, ecx
-		sar		eax, 8
-		mov		[ebp-8], eax
-		mov		edx, [ebp-4]
-		mov		eax, edx
-		sar		eax, 0xC
-		dec		eax
+		movaps	xmm1, xmm0
+		psrad	xmm1, 0xC
+		psubd	xmm1, kExtPosMod
+		movd	ebx, xmm1
+		pextrw	eax, xmm1, 2
 		mov		bh, al
-		shl		eax, 0xC
-		sub		eax, edx
-		sar		eax, 8
-		mov		[ebp-4], eax
+		pslld	xmm1, 0xC
+		psubd	xmm1, xmm0
+		psrad	xmm1, 8
+		movq	qword ptr [ebp-8], xmm1
 		mov		[ebp-0xC], ebx
 		mov		ecx, esi
 		call	AddExtraSeenData
@@ -1122,6 +1115,8 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		leave
 		retn
 		ALIGN 16
+	kExtPosMod:
+		EMIT_PS_2(00, 00, 00, 01)
 	kIntPosMod:
 		EMIT_PS_2(00, 00, 08, 00)
 	kFlt6400:
@@ -1253,11 +1248,6 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, i
 		mov		dl, [ecx+0x130]
 		mov		[ebp-0x1E], dl
 		mov		[ecx+0x130], 1
-		mov		eax, ds:[0x11D5C48]
-		mov		[ebp-0x1C], eax
-		mov		dl, [eax+0x18]
-		mov		[ebp-0x1F], dl
-		mov		[eax+0x18], 0
 		mov		ecx, [ebp-0xC]
 		mov		eax, ds:[0x11F4748]
 		cmp		dword ptr [eax+0x200], 0
@@ -1330,9 +1320,6 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, i
 		cmp		[ebp-0x20], 0
 		cmovz	eax, ecx
 		call	eax
-		mov		eax, [ebp-0x1C]
-		mov		dl, [ebp-0x1F]
-		mov		[eax+0x18], dl
 		mov		al, [ebp-0x1E]
 		mov		ecx, [ebp-8]
 		mov		[ecx+0x130], al
@@ -1398,15 +1385,9 @@ __declspec(naked) void __stdcall GenerateLocalMapExterior(TESObjectCELL *cell, _
 		test	ecx, ecx
 		jz		done
 		sub		esp, 0x28
-		mov		edx, [eax]
-		shl		edx, 0xC
-		add		edx, 0x800
-		mov		[ebp-8], edx
-		mov		edx, [eax+4]
-		shl		edx, 0xC
-		add		edx, 0x800
-		mov		[ebp-4], edx
-		movq	xmm0, qword ptr [ebp-8]
+		movq	xmm0, qword ptr [eax]
+		pslld	xmm0, 0xC
+		paddd	xmm0, kExtPosMod
 		cvtdq2ps	xmm0, xmm0
 		mov		eax, [ecx+0xA0]
 		mov		ecx, [eax]
@@ -1528,6 +1509,9 @@ __declspec(naked) void __stdcall GenerateLocalMapExterior(TESObjectCELL *cell, _
 	done:
 		leave
 		retn	0xC
+		ALIGN 16
+	kExtPosMod:
+		EMIT_PS_2(00, 00, 08, 00)
 	}
 }
 
@@ -1544,16 +1528,14 @@ __declspec(naked) void __stdcall GenerateLocalMapInterior(TESObjectCELL *cell, C
 		mov		ecx, [eax]
 		test	ecx, ecx
 		jz		done
-		sub		esp, 8
-		movsx	edx, word ptr [ebp+0xE]
-		shl		edx, 0xC
-		add		edx, 0x1000
-		mov		[ebp-8], edx
 		movsx	edx, word ptr [ebp+0xC]
-		shl		edx, 0xC
-		add		edx, 0x1000
-		mov		[ebp-4], edx
-		movq	xmm0, qword ptr [ebp-8]
+		inc		edx
+		push	edx
+		movsx	edx, word ptr [ebp+0xE]
+		inc		edx
+		push	edx
+		movq	xmm0, qword ptr [esp]
+		pslld	xmm0, 0xC
 		cvtdq2ps	xmm0, xmm0
 		cmp		s_cellNorthRotation, 0
 		jz		noRot
@@ -1805,11 +1787,11 @@ BSParticleSystemManager *g_particleSysMngr;
 
 struct MapMarkerInfo
 {
-	TESObjectREFR				*refr;
-	ExtraMapMarker::MarkerData	*data;
-	NiPoint2					pos;
+	TESObjectREFR		*refr;
+	MapMarkerData		*data;
+	NiPoint2			pos;
 
-	MapMarkerInfo(TESObjectREFR *_refr, ExtraMapMarker::MarkerData *_data, const NiPoint2 &posXY) :
+	MapMarkerInfo(TESObjectREFR *_refr, MapMarkerData *_data, const NiPoint2 &posXY) :
 		refr(_refr), data(_data), pos(posXY) {}
 };
 typedef Vector<MapMarkerInfo, 2> CellMapMarkers;
@@ -1835,8 +1817,15 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	Tile *tile = g_HUDMainMenu->tile->GetComponentTile("JIPMiniMap");
 	if (!tile) return true;
 
+	UInt8 *codePtr = scriptData + 0x2FE5;
+	if (*(UInt32*)codePtr == 0x173031)
+	{
+		*codePtr = 0x33;
+		scriptObj->quest->questDelayTime = 1 / 60.0F;
+	}
+
 	s_miniMapIndex = modIndex;
-	s_miniMapVisible = tile->GetValue(kTileValue_visible);
+	//s_miniMapVisible = tile->GetValue(kTileValue_visible);
 	s_miniMapScale = tile->GetValue(kTileValue_user1);
 	auto node = tile->children.Tail()->prev;
 	s_pcMarkerRotate = node->data->GetValue(kTileValue_rotateangle);
@@ -2006,7 +1995,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	TESObjectCELL *rootCell;
 	WorldMapMarkers *worldMarkers;
 	TESObjectREFR *markerRef;
-	ExtraMapMarker *xMarker;
+	MapMarkerData *markerData;
 	NiPoint2 posXY;
 	Coordinate coord;
 	do
@@ -2024,15 +2013,12 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 		auto refrIter = rootCell->objectList.Head();
 		do
 		{
-			if (!(markerRef = refrIter->data) || (markerRef->baseForm->refID != 0x10))
-				continue;
-			xMarker = GetExtraType(&markerRef->extraDataList, MapMarker);
-			if (!xMarker || !xMarker->data)
+			if (!(markerRef = refrIter->data) || !(markerData = markerRef->GetMapMarkerData()))
 				continue;
 			GetWorldMapPosMults(markerRef->position, s_rootWorldDimensions, posXY, &coord);
 			if (!worldMarkers)
 				worldMarkers = &s_worldMapMarkers()[rootWorld];
-			(*worldMarkers)[coord].Append(markerRef, xMarker->data, posXY);
+			(*worldMarkers)[coord].Append(markerRef, markerData, posXY);
 		}
 		while (refrIter = refrIter->next);
 	}

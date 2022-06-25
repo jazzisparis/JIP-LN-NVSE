@@ -152,8 +152,14 @@ public:
 	bool ValidForHooks();
 	NiNode *GetNiNode() const;
 	NiAVObject* __fastcall GetNiBlock(const char *blockName) const;
+	NiAVObject* __fastcall GetNiBlock2(const char *blockName) const;
 	NiNode* __fastcall GetNode(const char *nodeName) const;
+	NiNode* __fastcall GetNode2(const char *nodeName) const;
 	hkpRigidBody* __fastcall GetRigidBody(const char *blockName) const;
+	BSBound *GetBoundingBox() const;
+	MapMarkerData *GetMapMarkerData() const;
+
+	__forceinline float GetScale() {return ThisCall<float>(0x567400, this);}
 
 	static TESObjectREFR* __stdcall Create(bool bTemp = false);
 
@@ -1059,27 +1065,27 @@ public:
 
 	enum
 	{
-		kProjFlag_Bit00Unk =			0x1,
-		kProjFlag_Bit01Unk =			0x2,
-		kProjFlag_Bit02Unk =			0x4,
-		kProjFlag_Bit03Unk =			0x8,
-		kProjFlag_Bit04Unk =			0x10,
-		kProjFlag_Bit05Unk =			0x20,
-		kProjFlag_Bit06Unk =			0x40,
-		kProjFlag_Bit07Unk =			0x80,
-		kProjFlag_Bit08Unk =			0x100,
-		kProjFlag_MineDisarmed =		0x200,
-		kProjFlag_Bit0AUnk =			0x400,
-		kProjFlag_Bit0BUnk =			0x800,
-		kProjFlag_Bit0CUnk =			0x1000,
-		kProjFlag_Bit0DUnk =			0x2000,
-		kProjFlag_Bit0EUnk =			0x4000,
-		kProjFlag_Bit0FUnk =			0x8000,		// Don't apply source-weapon's damage upon impact
-		kProjFlag_Bit10Unk =			0x10000,
-		kProjFlag_Bit11Unk =			0x20000,
-		kProjFlag_Bit12Unk =			0x40000,
-		kProjFlag_Bit13Unk =			0x80000,
-		kProjFlag_Bit14Unk =			0x100000,
+		kProjFlag_IsHitScan =					0x1,
+		kProjFlag_Bit01Unk =					0x2,
+		kProjFlag_IsStuck =						0x4,
+		kProjFlag_Bit03Unk =					0x8,
+		kProjFlag_IsTracer =					0x10,
+		kProjFlag_Fades =						0x20,
+		kProjFlag_HasGravity =					0x40,
+		kProjFlag_Bit07Unk =					0x80,
+		kProjFlag_Bit08Unk =					0x100,
+		kProjFlag_MineDisarmed =				0x200,
+		kProjFlag_IsPickpocketLiveExplosive =	0x400,
+		kProjFlag_Bit0BUnk =					0x800,
+		kProjFlag_Bit0CUnk =					0x1000,
+		kProjFlag_Bit0DUnk =					0x2000,
+		kProjFlag_MineIgnoresPlayer =			0x4000,
+		kProjFlag_Bit0FUnk =					0x8000,		// Don't apply source-weapon's damage upon impact
+		kProjFlag_Bit10Unk =					0x10000,
+		kProjFlag_IgnoreGravity =				0x20000,
+		kProjFlag_Bit12Unk =					0x40000,
+		kProjFlag_SourceActorInCombat =			0x80000,
+		kProjFlag_Bit14Unk =					0x100000
 	};
 
 	struct ImpactData
@@ -1097,50 +1103,40 @@ public:
 		UInt32			unk2C;			// 2C
 	};
 
-	struct Struct128
-	{
-		UInt32			unk00;
-		UInt8			byte04;
-		UInt8			pad05[3];
-		UInt32			status;		//	0 - Not triggered, 1 - Triggered, 2 - Disarmed
-	};
-
-	tList<ImpactData>	impactDataList;	// 088
-	UInt8				hasImpacted;	// 090
-	UInt8				pad091[3];		// 091
-	NiTransform			transform;		// 094
-	UInt32				projFlags;		// 0C8
-	float				speedMult1;		// 0CC
-	float				speedMult2;		// 0D0
-	float				flt0D4;			// 0D4
-	float				elapsedTime;	// 0D8
-	float				hitDamage;		// 0DC
-	float				flt0E0;			// 0E0
-	float				detonationTime;	// 0E4
-	float				flt0E8;			// 0E8
-	float				flt0EC;			// 0EC
-	float				flt0F0;			// 0F0
-	float				wpnHealthPerc;	// 0F4
-	TESObjectWEAP		*sourceWeap;	// 0F8
-	TESObjectREFR		*sourceRef;		// 0FC
-	UInt32				unk100;			// 100
-	float				flt104;			// 104
-	float				flt108;			// 108
-	float				flt10C;			// 10C
-	float				distTravelled;	// 110
-	NiPointLight		*projLight;		// 114
-	UInt8				byte118;		// 118
-	UInt8				pad119[3];		// 119
-	NiNode				*node11C;		// 11C
-	UInt32				unk120;			// 120
-	float				flt124;			// 124
-	Struct128			unk128;			// 128
-	Struct128			unk134;			// 134
-	UInt32				unk140;			// 140
-	ContChangesEntry	*rockItEntry;	// 144
-	UInt8				byte148;		// 148
-	UInt8				pad149[3];		// 149
-	float				range;			// 14C
+	tList<ImpactData>	impactDataList;		// 088
+	UInt8				hasImpacted;		// 090
+	UInt8				pad091[3];			// 091
+	NiTransform			transform;			// 094
+	UInt32				projFlags;			// 0C8
+	float				power;				// 0CC
+	float				speedMult;			// 0D0
+	float				flt0D4;				// 0D4
+	float				lifeTime;			// 0D8
+	float				hitDamage;			// 0DC
+	float				alpha;				// 0E0
+	float				detonationTime;		// 0E4
+	float				blinkTimer;			// 0E8
+	float				flt0EC;				// 0EC
+	float				flt0F0;				// 0F0
+	float				wpnHealthPerc;		// 0F4
+	TESObjectWEAP		*sourceWeap;		// 0F8
+	TESObjectREFR		*sourceRef;			// 0FC
+	TESObjectREFR		*liveGrenadeTarget;	// 100
+	NiVector3			vector104;			// 104
+	float				distTravelled;		// 110
+	NiPointLight		*projLight;			// 114
+	UInt8				byte118;			// 118
+	UInt8				pad119[3];			// 119
+	NiNode				*node11C;			// 11C
+	UInt32				unk120;				// 120
+	float				decalSize;			// 124
+	Sound				passPlayerSound;	// 128
+	Sound				countDownSound;		// 134
+	UInt32				unk140;				// 140
+	ContChangesEntry	*rockItEntry;		// 144
+	UInt8				byte148;			// 148
+	UInt8				pad149[3];			// 149
+	float				range;				// 14C
 
 	void GetData(UInt32 dataType, double *result);
 };

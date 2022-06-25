@@ -554,6 +554,11 @@ public:
 	float								flt38;			// 38
 	float								flt3C;			// 3C
 	float								flt40;			// 40
+
+	__forceinline void GetGroundPos(TESObjectREFR *refr, NiVector3 *currPos, NiVector3 *outPos)
+	{
+		ThisCall(0x6296D0, this, refr, currPos, outPos);
+	}
 };
 static_assert(sizeof(LoadedAreaBound) == 0x44);
 

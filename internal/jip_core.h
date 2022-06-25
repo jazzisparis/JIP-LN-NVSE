@@ -255,9 +255,9 @@ bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *inv
 
 void __fastcall ShowItemMessage(TESForm *item, const char *msgStr);
 
-NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt16 filter);
+NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt32 filter);
 
-int __stdcall GetRayCastMaterial(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt16 filter);
+int __stdcall GetRayCastMaterial(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt32 filter);
 
 struct AppearanceUndo
 {
@@ -278,7 +278,7 @@ struct AppearanceUndo
 		memcpy(values0, npc->faceGenData[0].values, sizeof(values0));
 		memcpy(values1, npc->faceGenData[1].values, sizeof(values1));
 		memcpy(values2, npc->faceGenData[2].values, sizeof(values2));
-		ListNode<BGSHeadPart> *partIter = npc->headPart.Head();
+		auto partIter = npc->headPart.Head();
 		do
 		{
 			if (partIter->data)
@@ -832,6 +832,8 @@ ContChangesEntry* __fastcall GetHotkeyItemEntry(UInt8 index, ExtraDataList **out
 bool __fastcall ClearHotkey(UInt8 index);
 
 float __fastcall GetModBonuses(TESObjectREFR *wpnRef, UInt32 effectID);
+
+float __vectorcall GetLightAmountAtPoint(const NiVector3 &pos);
 
 struct AnimGroupClassify
 {

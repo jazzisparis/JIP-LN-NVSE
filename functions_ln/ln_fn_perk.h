@@ -107,7 +107,7 @@ bool Cmd_GetNthPerkEntryType_Execute(COMMAND_ARGS)
 	if (!entry) return true;
 	if IS_TYPE(entry, BGSEntryPointPerkEntry)
 	{
-		switch (*(UInt32*)(((BGSEntryPointPerkEntry*)entry)->data))
+		switch (VTBL(((BGSEntryPointPerkEntry*)entry)->data))
 		{
 		case kVtbl_BGSEntryPointFunctionDataOneValue:
 			*result = 1;
@@ -161,7 +161,7 @@ bool Cmd_GetNthPerkEntryForm_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index)) return true;
 	BGSPerkEntry *entry = perk->entries.GetNthItem(index);
 	if (!entry) return true;
-	switch (*(UInt32*)entry)
+	switch (VTBL(entry))
 	{
 		case kVtbl_BGSEntryPointPerkEntry:
 		{

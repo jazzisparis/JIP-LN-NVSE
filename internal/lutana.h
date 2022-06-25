@@ -95,7 +95,7 @@ bool LNEventData::EvalFilter()
 		case 2: return form == s_evalBase;
 		case 3:
 		{
-			ListNode<TESForm> *iter = list->Head();
+			auto iter = list->Head();
 			do
 			{
 				if ((iter->data == s_evalRefr) || (iter->data == s_evalBase))

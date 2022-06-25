@@ -8,11 +8,12 @@ DEFINE_COMMAND_PLUGIN(GetSoundSourceFile, 0, 1, kParams_OneSound);
 DEFINE_COMMAND_PLUGIN(SetSoundSourceFile, 0, 2, kParams_OneSound_OneString);
 DEFINE_COMMAND_PLUGIN(IsSoundPlaying, 0, 2, kParams_OneSound_OneOptionalObjectRef);
 DEFINE_COMMAND_PLUGIN(GetSoundPlayers, 0, 1, kParams_OneSound);
-DEFINE_COMMAND_PLUGIN(StopSound, 0, 1, kParams_OneSound);
+DEFINE_COMMAND_PLUGIN(StopSound, 0, 2, kParams_OneSound_OneOptionalObjectRef);
 DEFINE_COMMAND_PLUGIN(IsMusicPlaying, 0, 1, kParams_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(SetMusicState, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetGameVolume, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(SetGameVolume, 0, 2, kParams_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(PlaySound3DNode, 1, 2, kParams_OneSound_OneString);
 
 bool Cmd_GetSoundTraitNumeric_Execute(COMMAND_ARGS)
 {
@@ -197,41 +198,48 @@ bool Cmd_SetSoundSourceFile_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool Cmd_IsSoundPlaying_Execute(COMMAND_ARGS)
+bool __fastcall PlayingSoundsIterator(TESSound *soundForm, bool doStop, TESObjectREFR *refr)
 {
-	*result = 0;
-	TESSound *soundForm;
-	TESObjectREFR *refr = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm, &refr))
+	BSAudioManager *audioMngr = BSAudioManager::Get();
+	auto sndIter = audioMngr->playingSounds.Begin();
+	BSGameSound *gameSound;
+	if (refr)
 	{
-		BSAudioManager *audioMngr = BSAudioManager::Get();
-		auto sndIter = audioMngr->playingSounds.Begin();
-		BSGameSound *gameSound;
-		if (refr)
+		if (!refr->GetRefNiNode())
+			return false;
+		auto playingObjMap = &audioMngr->soundPlayingObjects;
+		NiAVObject *soundObj;
+		for (; sndIter; ++sndIter)
 		{
-			NiAVObject *refNode = refr->GetRefNiNode();
-			if (!refNode) return true;
-			for (; sndIter; ++sndIter)
-			{
-				gameSound = sndIter.Get();
-				if (!gameSound || (gameSound->sourceSound != soundForm) || (refNode != audioMngr->soundPlayingObjects.Lookup(sndIter.Key())))
-					continue;
-				*result = 1;
-				break;
-			}
-		}
-		else
-		{
-			for (; sndIter; ++sndIter)
-			{
-				gameSound = sndIter.Get();
-				if (!gameSound || (gameSound->sourceSound != soundForm))
-					continue;
-				*result = 1;
-				break;
-			}
+			if (!(gameSound = sndIter.Get()) || (gameSound->sourceSound != soundForm) || !(soundObj = playingObjMap->Lookup(sndIter.Key())) || (soundObj->GetParentRef() != refr))
+				continue;
+			if (!doStop) return true;
+			gameSound->stateFlags &= 0xFFFFFF0F;
+			gameSound->stateFlags |= 0x10;
 		}
 	}
+	else
+	{
+		for (; sndIter; ++sndIter)
+		{
+			if (!(gameSound = sndIter.Get()) || (gameSound->sourceSound != soundForm))
+				continue;
+			if (!doStop) return true;
+			gameSound->stateFlags &= 0xFFFFFF0F;
+			gameSound->stateFlags |= 0x10;
+		}
+	}
+	return false;
+}
+
+bool Cmd_IsSoundPlaying_Execute(COMMAND_ARGS)
+{
+	TESSound *soundForm;
+	TESObjectREFR *refr = NULL;
+	bool bResult = false;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm, &refr))
+		bResult = PlayingSoundsIterator(soundForm, false, refr);
+	*result = bResult;
 	return true;
 }
 
@@ -243,17 +251,13 @@ bool Cmd_GetSoundPlayers_Execute(COMMAND_ARGS)
 	{
 		TempElements *tmpElements = GetTempElements();
 		BSAudioManager *audioMngr = BSAudioManager::Get();
+		auto playingObjMap = &audioMngr->soundPlayingObjects;
 		BSGameSound *gameSound;
-		BSFadeNode *fadeNode;
+		NiAVObject *object;
+		TESObjectREFR *refr;
 		for (auto sndIter = audioMngr->playingSounds.Begin(); sndIter; ++sndIter)
-		{
-			gameSound = sndIter.Get();
-			if (!gameSound || (gameSound->sourceSound != soundForm))
-				continue;
-			fadeNode = (BSFadeNode*)audioMngr->soundPlayingObjects.Lookup(gameSound->mapKey);
-			if (fadeNode && fadeNode->GetFadeNode() && fadeNode->linkedObj)
-				tmpElements->Append(fadeNode->linkedObj);
-		}
+			if ((gameSound = sndIter.Get()) && (gameSound->sourceSound == soundForm) && (object = playingObjMap->Lookup(gameSound->mapKey)) && (refr = object->GetParentRef()))
+				tmpElements->Append(refr);
 		if (!tmpElements->Empty())
 			AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
 	}
@@ -263,18 +267,9 @@ bool Cmd_GetSoundPlayers_Execute(COMMAND_ARGS)
 bool Cmd_StopSound_Execute(COMMAND_ARGS)
 {
 	TESSound *soundForm;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm))
-	{
-		BSGameSound *gameSound;
-		for (auto sndIter = BSAudioManager::Get()->playingSounds.Begin(); sndIter; ++sndIter)
-		{
-			gameSound = sndIter.Get();
-			if (!gameSound || (gameSound->sourceSound != soundForm))
-				continue;
-			gameSound->stateFlags &= 0xFFFFFF0F;
-			gameSound->stateFlags |= 0x10;
-		}
-	}
+	TESObjectREFR *refr = NULL;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm, &refr))
+		PlayingSoundsIterator(soundForm, true, refr);
 	return true;
 }
 
@@ -343,5 +338,27 @@ bool Cmd_SetGameVolume_Execute(COMMAND_ARGS)
 	int volLevel = -1;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &volType, &volLevel) && (volType <= 5) && (volLevel <= 100))
 		BSAudioManager::Get()->volumes[volType] = (volLevel < 0) ? *(float*)(0x11F6E18 + volType * 0xC) : (volLevel * 0.01F);
+	return true;
+}
+
+bool Cmd_PlaySound3DNode_Execute(COMMAND_ARGS)
+{
+	TESSound *soundForm;
+	char nodeName[0x40];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm, &nodeName))
+	{
+		NiNode *targetNode = thisObj->GetNode2(nodeName);
+		if (targetNode)
+		{
+			Sound sound;
+			BSAudioManager::Get()->InitSoundForm(sound, soundForm->refID, 0x102);
+			if (sound.soundKey != 0xFFFFFFFF)
+			{
+				sound.SetPos(targetNode->WorldTranslate());
+				sound.SetNiNode(targetNode);
+				sound.Play();
+			}
+		}
+	}
 	return true;
 }

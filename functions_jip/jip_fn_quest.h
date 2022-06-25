@@ -47,7 +47,7 @@ bool Cmd_GetObjectiveTargets_Execute(COMMAND_ARGS)
 	BGSQuestObjective *objective = quest->GetObjective(objectiveID);
 	if (!objective || ((objective->status & 3) != 1) || objective->targets.Empty()) return true;
 	TempElements *tmpElements = GetTempElements();
-	ListNode<ObjectiveTarget> *iter = objective->targets.Head();
+	auto iter = objective->targets.Head();
 	ObjectiveTarget *target;
 	bool evalRes;
 	do
@@ -175,7 +175,7 @@ bool Cmd_GetQuests_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &completed))
 		return true;
 	TempElements *tmpElements = GetTempElements();
-	ListNode<BGSQuestObjective> *iter = g_thePlayer->questObjectiveList.Head();
+	auto iter = g_thePlayer->questObjectiveList.Head();
 	BGSQuestObjective *objective;
 	TESQuest *quest;
 	if (completed) completed = TESQuest::kFlag_Completed;
@@ -200,7 +200,7 @@ bool Cmd_GetQuestObjectives_Execute(COMMAND_ARGS)
 	UInt32 completed;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &completed)) return true;
 	TempElements *tmpElements = GetTempElements();
-	ListNode<void> *iter = quest->lVarOrObjectives.Head();
+	auto iter = quest->lVarOrObjectives.Head();
 	BGSQuestObjective *objective;
 	if (completed) completed = 2;
 	completed++;
@@ -221,7 +221,7 @@ bool Cmd_GetActiveObjectives_Execute(COMMAND_ARGS)
 	*result = 0;
 	if (!g_thePlayer->activeQuest) return true;
 	TempElements *tmpElements = GetTempElements();
-	ListNode<void> *iter = g_thePlayer->activeQuest->lVarOrObjectives.Head();
+	auto iter = g_thePlayer->activeQuest->lVarOrObjectives.Head();
 	BGSQuestObjective *objective;
 	do
 	{
@@ -245,7 +245,7 @@ bool Cmd_GetObjectiveTeleportLinks_Execute(COMMAND_ARGS)
 	if (!objective || ((objective->status & 3) != 1)) return true;
 	NVSEArrayVar *linksArr = CreateArray(NULL, 0, scriptObj);
 	TempElements *tmpElements = GetTempElements();
-	ListNode<ObjectiveTarget> *trgIter = objective->targets.Head();
+	auto trgIter = objective->targets.Head();
 	ObjectiveTarget *target;
 	TESQuest *activeQuest = g_thePlayer->activeQuest;
 	bool evalRes;

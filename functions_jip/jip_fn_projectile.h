@@ -204,7 +204,7 @@ bool Cmd_SetProjectileRefSpeedMult_Execute(COMMAND_ARGS)
 {
 	float speedMult;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &speedMult) && thisObj->IsProjectile())
-		((Projectile*)thisObj)->speedMult2 = speedMult;
+		((Projectile*)thisObj)->speedMult = speedMult;
 	return true;
 }
 
@@ -269,7 +269,7 @@ bool Cmd_SetOnProjectileImpactEventHandler_Execute(COMMAND_ARGS)
 	tList<TESForm> tempList(projectileOrList);
 	if IS_ID(projectileOrList, BGSListForm)
 		tempList = ((BGSListForm*)projectileOrList)->list;
-	ListNode<TESForm> *iter = tempList.Head();
+	auto iter = tempList.Head();
 	BGSProjectile *projectile;
 	EventCallbackScripts *callbacks;
 	do

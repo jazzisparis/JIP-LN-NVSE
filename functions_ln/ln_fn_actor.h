@@ -67,7 +67,7 @@ bool __fastcall IsRaceInList(TESObjectREFR *thisObj, BGSListForm *listForm)
 		TESRace *race = ((TESNPC*)thisObj->baseForm)->race.race;
 		if (race)
 		{
-			ListNode<TESForm> *iter = listForm->list.Head();
+			auto iter = listForm->list.Head();
 			do
 			{
 				if (iter->data == race)
@@ -129,26 +129,22 @@ bool Cmd_CopyFaceGenFrom_Execute(COMMAND_ARGS)
 	TESNPC *srcNPC = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &srcNPC) && thisObj->IsCharacter() && (!srcNPC || IS_ID(srcNPC, TESNPC)))
 	{
-		TESNPC *destNPC = (TESNPC*)thisObj->baseForm;
+		TESNPC *destNPC = (TESNPC*)((Actor*)thisObj)->GetActorBase();
 		if (srcNPC)
 		{
-			if (!s_appearanceUndoMap().HasKey(destNPC))
-			{
-				AppearanceUndo *aprUndo = (AppearanceUndo*)malloc(sizeof(AppearanceUndo));
-				new (aprUndo) AppearanceUndo(destNPC);
-				s_appearanceUndoMap()[destNPC] = aprUndo;
-			}
+			AppearanceUndo **pAprUndo;
+			if (s_appearanceUndoMap().Insert(destNPC, &pAprUndo))
+				*pAprUndo = new (malloc(sizeof(AppearanceUndo))) AppearanceUndo(destNPC);
 			destNPC->SetSex(srcNPC->baseData.flags);
 			destNPC->SetRace(srcNPC->race.race);
 			destNPC->CopyAppearance(srcNPC);
 		}
 		else
 		{
-			auto aprUndo = s_appearanceUndoMap().Find(destNPC);
+			AppearanceUndo *aprUndo = s_appearanceUndoMap().GetErase(destNPC);
 			if (!aprUndo) return true;
 			aprUndo->Undo(destNPC);
 			aprUndo->Destroy();
-			aprUndo.Remove();
 		}
 		*(bool*)0x11D5AE0 = true;
 		ThisCall(0x8D3FA0, thisObj);
@@ -263,7 +259,7 @@ bool Cmd_GetEquippedData_Execute(COMMAND_ARGS)
 	if (!xChanges || !xChanges->data || !xChanges->data->objList)
 		return true;
 	slot = TESBipedModelForm::MaskForSlot(slot);
-	ListNode<ContChangesEntry> *traverse = xChanges->data->objList->Head();
+	auto traverse = xChanges->data->objList->Head();
 	ContChangesEntry *entry;
 	TESForm *item;
 	ExtraDataList *xDataList;
@@ -299,7 +295,7 @@ void SetEquippedData(Actor *actor, TESForm *form, float health, UInt8 flags, boo
 {
 	ContChangesEntry *entry = actor->GetContainerChangesEntry(form);
 	if (!entry || !entry->extendData) return;
-	ListNode<ExtraDataList> *xdlIter = entry->extendData->Head();
+	auto xdlIter = entry->extendData->Head();
 	ExtraDataList *xData;
 	ExtraHealth *xHealth;
 	ExtraWeaponModFlags *xModFlags;
@@ -382,7 +378,7 @@ bool __fastcall ActorHasEffect(Actor *actor, EffectSetting *effSetting)
 		ActiveEffectList *effList = actor->magicTarget.GetEffectList();
 		if (effList)
 		{
-			ListNode<ActiveEffect> *iter = effList->Head();
+			auto iter = effList->Head();
 			ActiveEffect *effect;
 			do
 			{

@@ -161,7 +161,7 @@ __declspec(naked) NiAVObject *InterfaceManager::GetCursorPick()
 		push	0
 		mov		eax, g_thePlayer
 		push	dword ptr [eax+0x670]
-		mov		ecx, g_sceneGraph
+		mov		ecx, ds:[0x11DEB7C]
 		CALL_EAX(0xC52020)
 		lea     edx, [ebp-0x4C]
 		lea     eax, [ebp-0x40]
@@ -175,8 +175,7 @@ __declspec(naked) NiAVObject *InterfaceManager::GetCursorPick()
 		push	edx
 		cvttss2si	edx, [esi+0x38]
 		push	edx
-		mov		ecx, g_sceneGraph
-		mov		ecx, [ecx+0xAC]
+		mov		ecx, g_mainCamera
 		CALL_EAX(0xA71080)
 		mov     ecx, edi
 		CALL_EAX(0xE98E20)

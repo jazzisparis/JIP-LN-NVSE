@@ -45,26 +45,25 @@ bool Cmd_SetLoadScreenType_Execute(COMMAND_ARGS)
 	return true;
 }
 
+const char *kRGBPrefixes[] = {"r", "g", "b"};
+
 bool Cmd_GetLoadScreenTypeTextRGB_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESLoadScreenType *loadScrType;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &loadScrType) || NOT_ID(loadScrType, TESLoadScreenType)) return true;
-	NVSEArrayVar *outArray = CreateStringMap(NULL, NULL, 0, scriptObj);
-	SetElement(outArray, ArrayElementL("r"), ArrayElementL(loadScrType->fontcolor1.R));
-	SetElement(outArray, ArrayElementL("g"), ArrayElementL(loadScrType->fontcolor1.G));
-	SetElement(outArray, ArrayElementL("b"), ArrayElementL(loadScrType->fontcolor1.B));
-	AssignCommandResult(outArray, result);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &loadScrType) && IS_ID(loadScrType, TESLoadScreenType))
+	{
+		ArrayElementL values[3] = {loadScrType->fontColor1.r, loadScrType->fontColor1.g, loadScrType->fontColor1.b};
+		AssignCommandResult(CreateStringMap(kRGBPrefixes, values, 3, scriptObj), result);
+	}
 	return true;
 }
 
 bool Cmd_SetLoadScreenTypeTextRGB_Execute(COMMAND_ARGS)
 {
 	TESLoadScreenType *loadScrType;
-	float inR, inG, inB;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &loadScrType, &inR, &inG, &inB) || NOT_ID(loadScrType, TESLoadScreenType)) return true;
-	loadScrType->fontcolor1.R = inR;
-	loadScrType->fontcolor1.G = inG;
-	loadScrType->fontcolor1.B = inB;
+	NiColor inRGB;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &loadScrType, &inRGB.r, &inRGB.g, &inRGB.b) && IS_ID(loadScrType, TESLoadScreenType))
+		loadScrType->fontColor1 = inRGB;
 	return true;
 }

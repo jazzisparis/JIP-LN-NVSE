@@ -231,12 +231,24 @@ public:
 
 	enum
 	{
-		kFormFlags_Initialized =	0x00000008,	// set by TESForm::InitItem()
-		kFormFlags_CastShadows =	0x00000200,
-		kFormFlags_QuestItem =		0x00000400,
-		kFormFlags_Disabled =		0x00000800,
-		kFormFlags_DontSaveForm =	0x00004000,	// TODO: investigate
-		kFormFlags_Compressed =		0x00040000,
+		kFormFlag_IsMaster =			1,
+		kFormFlag_IsAltered =			2,
+		kFormFlag_Initialized =			8,
+		kFormFlag_DroppedRef =			0x100,
+		kFormFlag_CastShadows =			0x200,
+		kFormFlag_QuestItem =			0x400,
+		kFormFlag_IsRefPersistent =		0x400,
+		kFormFlag_IsPermanent =			0x800,
+		kFormFlag_DontSaveForm =		0x4000,
+		kFormFlag_VisibleDistant =		0x8000,
+		kFormFlag_HavokDeath =			0x10000,
+		kFormFlag_NeedToChangeProcess =	0x20000,
+		kFormFlag_Compressed =			0x40000,
+		kFormFlag_CenterRefOnCreation =	0x100000,
+		kFormFlag_StillLoading =		0x200000,
+		kFormFlag_IsVATSTargettable =	0x4000000,
+		kFormFlag_DisableFade =			0x8000000,
+		kFormFlag_TalkingActivator = 	0x40000000
 	};
 
 	enum
@@ -986,7 +998,7 @@ public:
 	}
 
 	// removes all packages and returns how many were removed
-	UInt32 RemoveAllPackages() const
+	UInt32 RemoveAllPackages()
 	{
 		UInt32 cCount = GetPackageCount();
 		packageList.RemoveAll();
@@ -3521,10 +3533,32 @@ public:
 };
 static_assert(sizeof(TESObjectCELL) == 0xE0);
 
-// 3C	Init proc: 0x6FC490
+// 3C	C'tor @ 0x6FC490
 struct LODdata
 {
-	// 60
+	struct LODNode;
+
+	// 2C	C'tor @ 0x6F5160
+	struct DistantObject
+	{
+		LODNode				*node;			// 00
+		NiRefObject			*object04;		// 04
+		NiRefObject			*object08;		// 08
+		NiRefObject			*object0C;		// 0C
+		NiRefObject			*object10;		// 10
+		NiRefObject			*object14;		// 14
+		BGSDistantObjectBlockLoadTask	*loadTask;	// 18
+		NiRefObject			*object1C;		// 1C
+		UInt8				byte20;			// 20
+		UInt8				byte21;			// 21
+		UInt8				byte22;			// 22
+		UInt8				isHigh;			// 23
+		UInt8				byte24;			// 24
+		UInt8				pad25[3];		// 25
+		UInt32				unk28;			// 28
+	};
+
+	// 60	C'tor @ 0x6FD210
 	struct LODNode
 	{
 		LODdata			*parent;		// 00
@@ -3535,45 +3569,43 @@ struct LODdata
 		UInt8			byte0E;			// 0E
 		UInt8			byte0F;			// 0F
 		UInt32			ukn10;			// 10
-		void			*object;		// 14
+		DistantObject	*object;		// 14
 		UInt32			ukn18;			// 18
 		UInt32			ukn1C;			// 1C
 		LODNode			*linked[4];		// 20
 		UInt32			unk30;			// 30
-		float			flt34;			// 34
-		float			flt38;			// 38
-		float			flt3C;			// 3C
+		NiVector3		pos34;			// 34
 		float			flt40;			// 40
-		float			flt44;			// 44
-		float			flt48;			// 48
-		float			flt4C;			// 4C
+		float			splitDist;		// 44
+		float			morphStartDist;	// 48
+		float			morphEndDist;	// 4C
 		UInt32			unk50;			// 50
 		UInt32			ukn54;			// 54
-		UInt32			ukn58;			// 58
-		UInt8			byte5C;			// 5C
+		UInt32			linkID;			// 58
+		UInt8			shouldShow;		// 5C
 		UInt8			byte5D;			// 5D
 		UInt8			byte5E;			// 5E
 		UInt8			byte5F;			// 5F
 
-		LODNode *GetNodeByCoord(UInt32 coord) const;
+		LODNode *GetNodeByCoord(Coordinate coord) const;
 	};
 	static_assert(sizeof(LODNode) == 0x60);
 
-	TESWorldSpace					*world;		// 00
-	LODNode							*lodNode;	// 04
-	NiNode							*node08;	// 08
-	NiNode							*node0C;	// 0C
-	Coordinate						coordNW;	// 10
-	Coordinate						coordSE;	// 14
-	UInt32							ukn18;		// 18
-	UInt32							ukn1C;		// 1C
-	UInt32							ukn20;		// 20
-	UInt32							lodLevel;	// 24
-	UInt8							byte28;		// 28
-	UInt8							byte29;		// 29
-	UInt8							byte2A;		// 2A
-	UInt8							byte2B;		// 2B
-	BSSimpleArray<TESObjectREFR*>	array2C;	// 2C
+	TESWorldSpace					*world;			// 00
+	LODNode							*lodNode;		// 04
+	NiNode							*node08;		// 08
+	NiNode							*waterLODNode;	// 0C
+	Coordinate						coordNW;		// 10
+	Coordinate						coordSE;		// 14
+	UInt32							lodLevelMax;	// 18
+	UInt32							lodLevelMin;	// 1C
+	UInt32							stride;			// 20
+	UInt32							lodLevel;		// 24
+	UInt8							byte28;			// 28
+	UInt8							byte29;			// 29
+	UInt8							byte2A;			// 2A
+	UInt8							byte2B;			// 2B
+	BSSimpleArray<TESObjectREFR*>	array2C;		// 2C
 };
 static_assert(sizeof(LODdata) == 0x3C);
 
@@ -4634,27 +4666,22 @@ public:
 		kScrType_Stats
 	};
 
-	struct floatRGB
-	{
-		float R, G, B;
-	};
-
-	UInt32			type;						// 018
+	UInt32			type;			// 18
 	// Data 1
-	UInt32			x;							// 01C
-	UInt32			y;							// 020
-	UInt32			width;						// 024
-	UInt32			height;						// 028
-	UInt32			orientation;				// 02C
-	UInt32			font1;						// 030
-	floatRGB		fontcolor1;					// 034
-	UInt32			justification;				// 040
-	UInt32			unk044[(0x58 - 0x44) >> 2];	// 044
+	UInt32			x;				// 1C
+	UInt32			y;				// 20
+	UInt32			width;			// 24
+	UInt32			height;			// 28
+	UInt32			orientation;	// 2C
+	UInt32			font1;			// 30
+	NiColor			fontColor1;		// 34
+	UInt32			justification;	// 40
+	UInt32			unk044[5];		// 44
 	// Data 2
-	UInt32			font2;						// 058
-	floatRGB		fontcolor2;					// 05C
-	UInt32			unk068;						// 068
-	UInt32			stats;						// 06C
+	UInt32			font2;			// 58
+	NiColor			fontColor2;		// 5C
+	UInt32			unk068;			// 68
+	UInt32			stats;			// 6C
 };
 
 // 40

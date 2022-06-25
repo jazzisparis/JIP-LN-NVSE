@@ -2,6 +2,34 @@
 
 class BSAudioManagerThread;
 
+// 0C
+struct Sound
+{
+	UInt32		soundKey;	// 00
+	UInt8		byte04;		// 04
+	UInt8		pad05[3];	// 05
+	UInt32		unk08;		// 08
+
+	Sound() : soundKey(0xFFFFFFFF), byte04(0), unk08(0) {}
+
+	__forceinline void SetPos(const NiVector3 &posVec)
+	{
+		ThisCall(0xAD8B60, this, posVec.x, posVec.y, posVec.z);
+	}
+	__forceinline void SetNiNode(NiNode *node)
+	{
+		ThisCall(0xAD8F20, this, node);
+	}
+	__forceinline void Play()
+	{
+		ThisCall(0xAD8830, this, 0);
+	}
+
+	static void PlayEDID(const char *soundEDID, UInt32 flags, TESObjectREFR *refr);
+	static void PlayFile(const char *filePath, UInt32 flags, TESObjectREFR *refr);
+	static void PlayTESSound(TESSound *gameSound, UInt32 flags, TESObjectREFR *refr);
+};
+
 // 254
 class BSSoundInfo
 {
@@ -15,34 +43,34 @@ public:
 class BSGameSound
 {
 public:
-	virtual BSGameSound	*Destroy(bool doFree);
-	virtual bool	CheckStateFlagsBit5();
-	virtual bool	CheckStateFlagsBit19();
-	virtual bool	CheckStateFlagsBit6();
-	virtual float	GetVolume();
-	virtual void	SetIsLooping(bool doSet);
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
-	virtual void	Unk_08(void);
-	virtual void	Unk_09(void);
-	virtual void	Unk_0A(void);
-	virtual void	CopyFrom(BSGameSound *source, bool arg2);
-	virtual void	Unk_0C(void);
-	virtual bool	Unk_0D(void);
-	virtual bool	Unk_0E(void);
-	virtual bool	SetVolume(float inVol);
-	virtual void	Unk_10(void);
-	virtual bool	Unk_11(void);
-	virtual void	Unk_12(void);
-	virtual void	Unk_13(float arg1, float arg2, float arg3);
-	virtual void	Unk_14(float arg1, float arg2, float arg3);
-	virtual void	Unk_15(NiVector3 &arg1);
-	virtual void	Unk_16(void);
-	virtual void	Unk_17(float arg1, float arg2);
-	virtual void	Unk_18(UInt16 arg1, UInt16 arg2, UInt16 arg3, UInt16 arg4, UInt16 arg5);
-	virtual bool	SetFrameFrequencyPerc(float freqPerc);
-	virtual float	GetFrameFrequencyPerc();
-	virtual void	Seek(UInt32 timePoint);
+	/*00*/virtual BSGameSound *Destroy(bool doFree);
+	/*04*/virtual bool	CheckStateFlagsBit5();
+	/*08*/virtual bool	CheckStateFlagsBit19();
+	/*0C*/virtual bool	CheckStateFlagsBit6();
+	/*10*/virtual float	GetVolume();
+	/*14*/virtual void	SetIsLooping(bool doSet);
+	/*18*/virtual void	Unk_06(void);
+	/*1C*/virtual void	Unk_07(void);
+	/*20*/virtual void	Unk_08(void);
+	/*24*/virtual void	Unk_09(void);
+	/*28*/virtual void	Unk_0A(void);
+	/*2C*/virtual void	CopyFrom(BSGameSound *source, bool arg2);
+	/*30*/virtual void	Unk_0C(void);
+	/*34*/virtual bool	Unk_0D(void);
+	/*38*/virtual bool	Unk_0E(void);
+	/*3C*/virtual bool	SetVolume(float inVol);
+	/*40*/virtual void	Unk_10(void);
+	/*44*/virtual bool	Unk_11(void);
+	/*48*/virtual void	Unk_12(void);
+	/*4C*/virtual void	Unk_13(float arg1, float arg2, float arg3);
+	/*50*/virtual void	Unk_14(float arg1, float arg2, float arg3);
+	/*54*/virtual void	Unk_15(NiVector3 &arg1);
+	/*58*/virtual void	Unk_16(void);
+	/*5C*/virtual void	Unk_17(float arg1, float arg2);
+	/*60*/virtual void	Unk_18(UInt16 arg1, UInt16 arg2, UInt16 arg3, UInt16 arg4, UInt16 arg5);
+	/*64*/virtual bool	SetFrameFrequencyPerc(float freqPerc);
+	/*68*/virtual float	GetFrameFrequencyPerc();
+	/*6C*/virtual void	Seek(UInt32 timePoint);
 
 	enum SoundFlags
 	{
@@ -262,25 +290,38 @@ public:
 	UInt8						pad185[3];			// 185
 
 	__forceinline static BSAudioManager *Get() {return (BSAudioManager*)0x11F6EF0;}
+
+	__forceinline void InitSoundEDID(Sound &sound, const char *soundEDID, UInt32 flags)
+	{
+		ThisCall(0xAE5680, this, &sound, soundEDID, flags);
+	}
+	__forceinline void InitSoundPath(Sound &sound, const char *filePath, UInt32 flags)
+	{
+		ThisCall(0xAE5A50, this, &sound, filePath, flags, nullptr);
+	}
+	__forceinline void InitSoundForm(Sound &sound, UInt32 formRefID, UInt32 flags)
+	{
+		ThisCall(0xAE5870, this, &sound, formRefID, flags);
+	}
 };
 static_assert(sizeof(BSAudioManager) == 0x188);
 
 class BSAudioListener
 {
 public:
-	virtual void	Destroy(bool doFree);
-	virtual void	Unk_01(void);
-	virtual void	SetOriginWorldPos(NiVector3 *pos);
-	virtual void	Unk_03(void);
-	virtual void	UpdatePositionAndOrientation();
-	virtual void	SetFrontAndTopOrientation(NiVector3 *front, NiVector3 *top);
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
-	virtual void	SetVelocity(NiVector3 *pVelocity);
-	virtual void	Unk_09(void);
-	virtual void	Unk_0A(void);
-	virtual void	Unk_0B(void);
-	virtual void	SetRolloffFactor(float factor);
+	/*00*/virtual void	Destroy(bool doFree);
+	/*04*/virtual void	Unk_01(void);
+	/*08*/virtual void	SetOriginWorldPos(NiVector3 *pos);
+	/*0C*/virtual void	Unk_03(void);
+	/*10*/virtual void	UpdatePositionAndOrientation();
+	/*14*/virtual void	SetFrontAndTopOrientation(NiVector3 *front, NiVector3 *top);
+	/*18*/virtual void	Unk_06(void);
+	/*1C*/virtual void	Unk_07(void);
+	/*20*/virtual void	SetVelocity(NiVector3 *pVelocity);
+	/*24*/virtual void	Unk_09(void);
+	/*28*/virtual void	Unk_0A(void);
+	/*2C*/virtual void	Unk_0B(void);
+	/*30*/virtual void	SetRolloffFactor(float factor);
 };
 
 class IDirectSound3DListener;
@@ -310,14 +351,14 @@ class IDirectSoundBuffer;
 class BSWin32Audio
 {
 public:
-	virtual void	Destroy(bool doFree);
-	virtual void	CreateAudioListener(HWND _window);
-	virtual void	Unk_02(void);
-	virtual void	Unk_03(void);	// Does nothing
-	virtual void	Unk_04(void);	// Does nothing
-	virtual BSGameSound	*CreateGameSound(const char *filePath);
-	virtual void	InsertPathPrefix(char *filePath);	// Prefixes path with data\\sound\\ if fx\\ or song\\.
-	virtual void	Unk_07(void);	// Does nothing
+	/*00*/virtual void	Destroy(bool doFree);
+	/*04*/virtual void	CreateAudioListener(HWND _window);
+	/*08*/virtual void	Unk_02(void);
+	/*0C*/virtual void	Unk_03(void);	// Does nothing
+	/*10*/virtual void	Unk_04(void);	// Does nothing
+	/*14*/virtual BSGameSound	*CreateGameSound(const char *filePath);
+	/*18*/virtual void	InsertPathPrefix(char *filePath);	// Prefixes path with data\\sound\\ if fx\\ or song\\.
+	/*1C*/virtual void	Unk_07(void);	// Does nothing
 
 	UInt8					byte04;			// 04
 	UInt8					byte05;			// 05
@@ -417,31 +458,3 @@ struct PlayingMusic
 	__forceinline static void StopPlayingMusic() {CdeclCall(0x8304A0);}
 };
 static_assert(sizeof(PlayingMusic) == 0x288);
-
-// 0C
-struct Sound
-{
-	UInt32		soundKey;	// 00
-	UInt8		byte04;		// 04
-	UInt8		pad05[3];	// 05
-	UInt32		unk08;		// 08
-
-	Sound() : soundKey(0xFFFFFFFF), byte04(0), unk08(0) {}
-
-	__forceinline void SetPos(const NiVector3 &posVec)
-	{
-		ThisCall(0xAD8B60, this, posVec.x, posVec.y, posVec.z);
-	}
-	__forceinline void SetNiNode(NiNode *node)
-	{
-		ThisCall(0xAD8F20, this, node);
-	}
-	__forceinline void Play()
-	{
-		ThisCall(0xAD8830, this, 0);
-	}
-
-	static void PlayEDID(const char *soundEDID, UInt32 flags, TESObjectREFR *refr);
-	static void PlayFile(const char *filePath, UInt32 flags, TESObjectREFR *refr);
-	static void PlayTESSound(TESSound *gameSound, UInt32 flags, TESObjectREFR *refr);
-};

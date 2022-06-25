@@ -51,7 +51,7 @@ InterfaceManager *g_interfaceManager;
 OSGlobals *g_OSGlobals;
 TES *g_TES;
 PlayerCharacter *g_thePlayer;
-SceneGraph *g_sceneGraph;
+NiCamera *g_mainCamera;
 void *g_scrapHeapQueue;
 FontManager *g_fontManager;
 OSInputGlobals *g_inputGlobals;
@@ -218,7 +218,7 @@ bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *inv
 	SInt32 contCount, countDelta;
 	ContChangesEntry *entry;
 
-	ListNode<TESContainer::FormCount> *contIter = container->formCountList.Head();
+	auto contIter = container->formCountList.Head();
 	do
 	{
 		if (!(formCount = contIter->data)) continue;
@@ -238,7 +238,7 @@ bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *inv
 	}
 	while (contIter = contIter->next);
 
-	ListNode<ContChangesEntry> *xtraIter = entryList->Head();
+	auto xtraIter = entryList->Head();
 	do
 	{
 		if (!(entry = xtraIter->data)) continue;
@@ -308,7 +308,6 @@ static_assert(sizeof(RayCastData) == 0xB0);
 
 __declspec(naked) NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
 {
-	static const float kUnitConv = 1 / 6.999125481F;
 	__asm
 	{
 		push	ebx
@@ -323,8 +322,7 @@ __declspec(naked) NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
 		shufps	xmm1, xmm1, 0x40
 		mulps	xmm0, xmm1
 		movups	xmm1, [ecx]
-		movss	xmm2, kUnitConv
-		shufps	xmm2, xmm2, 0x40
+		movaps	xmm2, kUnitConv
 		mulps	xmm1, xmm2
 		movaps	[ebx], xmm1
 		mulps	xmm0, xmm2
@@ -348,7 +346,12 @@ __declspec(naked) NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
 		mov		ecx, [eax+0x594]
 		mov		eax, [ecx+8]
 		mov		ecx, [eax+0x2C]
-		mov		cx, [ebp+0x14]
+		mov		eax, [ebp+0x14]
+		mov		edx, 6
+		test	eax, eax
+		cmovs	eax, edx
+		and		eax, 0x3F
+		mov		cx, ax
 		mov		[ebx+0x24], ecx
 		push	1
 		push	ebx
@@ -356,10 +359,13 @@ __declspec(naked) NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
 		CALL_EAX(0x458440)
 		pop		ebx
 		retn
+		ALIGN 16
+	kUnitConv:
+		EMIT_PS_3(3E, 12, 4D, D2)
 	}
 }
 
-__declspec(naked) NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt16 filter)
+__declspec(naked) NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt32 filter)
 {
 	__asm
 	{
@@ -374,7 +380,7 @@ __declspec(naked) NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVec
 	}
 }
 
-__declspec(naked) bool NiVector4::RayCastCoords(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt16 filter)
+__declspec(naked) bool NiVector4::RayCastCoords(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt32 filter)
 {
 	__asm
 	{
@@ -395,6 +401,8 @@ __declspec(naked) bool NiVector4::RayCastCoords(const NiVector3 &posVector, floa
 		addps	xmm0, xmm1
 		mulps	xmm0, PS_HKUnitCnvrt
 		movups	[ecx], xmm0
+		test	eax, eax
+		jnz		done
 		mov		eax, g_TES
 		cmp		dword ptr [eax+0x34], 0
 		jnz		done
@@ -408,7 +416,7 @@ __declspec(naked) bool NiVector4::RayCastCoords(const NiVector3 &posVector, floa
 	}
 }
 
-__declspec(naked) int __stdcall GetRayCastMaterial(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt16 filter)
+__declspec(naked) int __stdcall GetRayCastMaterial(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt32 filter)
 {
 	__asm
 	{
@@ -556,7 +564,7 @@ void *TESRecipe::ComponentList::GetComponents(Script *scriptObj)
 
 bool LeveledListHasFormDeep(TESLeveledList *pLvlList, TESForm *form, TempFormList *tmpFormLst)
 {
-	ListNode<TESLeveledList::ListData> *iter = pLvlList->list.Head();
+	auto iter = pLvlList->list.Head();
 	TESLeveledList::ListData *data;
 	TESLeveledList *lvlList;
 	do
@@ -840,7 +848,7 @@ TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 	}
 	else
 	{
-		ListNode<ContChangesEntry> *listIter = entryList->Head();
+		auto listIter = entryList->Head();
 		do
 		{
 			entry = listIter->data;
@@ -866,7 +874,7 @@ ContChangesEntry* __fastcall GetHotkeyItemEntry(UInt8 index, ExtraDataList **out
 {
 	ExtraContainerChanges::EntryDataList *entryList = g_thePlayer->GetContainerChangesList();
 	if (!entryList) return NULL;
-	ListNode<ContChangesEntry> *entryIter = entryList->Head();
+	auto entryIter = entryList->Head();
 	ContChangesEntry *entry;
 	UInt8 type;
 	ListNode<ExtraDataList> *xdlIter;
@@ -923,6 +931,93 @@ float __fastcall GetModBonuses(TESObjectREFR *wpnRef, UInt32 effectID)
 		if ((xModFlags->flags & (1 << idx)) && (weapon->effectMods[idx] == effectID))
 			result += weapon->value1Mod[idx];
 	return result;
+}
+
+__declspec(naked) float __vectorcall GetLightAmountAtPoint(const NiVector3 &pos)
+{
+	__asm
+	{
+		push	ebx
+		push	esi
+		push	edi
+		push	ecx
+		mov		esi, g_shadowSceneNode
+		mov		edi, [esi+0xE0]
+		xorps	xmm6, xmm6
+		test	edi, edi
+		jz		done
+		mov		ebx, 0xB9BC50
+		movups	xmm7, [ecx]
+		andps	xmm7, PS_XYZ0Mask
+		mov		eax, g_TES
+		cmp		dword ptr [eax+0x34], 0
+		jnz		isInterior
+		mov		ecx, [eax+0x88]
+		test	ecx, ecx
+		jz		done
+		movaps	xmm0, xmm7
+		call	TESWorldSpace::GetCellAtPos
+		test	eax, eax
+		jz		done
+		sub		esp, 0x10
+		movups	[esp], xmm7
+		mov		ecx, edi
+		call	ebx
+		fstp	dword ptr [esp]
+		movss	xmm6, [esp]
+		jmp		doneCell
+		ALIGN 16
+	isInterior:
+		mov		eax, [edi+0xF8]
+		add		eax, 0xC8
+		movss	xmm0, [eax]
+		maxss	xmm0, [eax+4]
+		maxss	xmm0, [eax+8]
+		movss	xmm6, [eax+0xC]
+		maxss	xmm6, [eax+0x10]
+		maxss	xmm6, [eax+0x14]
+		addss	xmm6, xmm0
+	doneCell:
+		mov		ecx, 0x11F9EA0
+		call	LightCS::Enter
+		mov		esi, [esi+0xB4]
+		ALIGN 16
+	iterHead:
+		test	esi, esi
+		jz		doClamp
+		mov		ecx, [esi+8]
+		mov		esi, [esi]
+		test	ecx, ecx
+		jz		iterHead
+		mov		eax, [ecx+0xF8]
+		test	eax, eax
+		jz		iterHead
+		test	byte ptr [eax+0x30], 1
+		jnz		iterHead
+		sub		esp, 0x10
+		movups	[esp], xmm7
+		call	ebx
+		fstp	dword ptr [esp]
+		addss	xmm6, [esp]
+		jmp		iterHead
+	doClamp:
+		xorps	xmm0, xmm0
+		maxss	xmm6, xmm0
+		movss	xmm0, SS_100
+		mulss	xmm6, xmm0
+		minss	xmm6, xmm0
+		mov		ecx, 0x11F9EA0
+		dec		dword ptr [ecx+4]
+		jnz		done
+		mov		dword ptr [ecx], 0
+	done:
+		movaps	xmm0, xmm6
+		pop		ecx
+		pop		edi
+		pop		esi
+		pop		ebx
+		retn
+	}
 }
 
 const AnimGroupClassify kAnimGroupClassify[] =

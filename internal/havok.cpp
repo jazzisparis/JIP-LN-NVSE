@@ -9,7 +9,7 @@ __declspec(naked) hkQuaternion& __vectorcall hkQuaternion::FromEulerPRY(__m128 p
 		andps	xmm1, PS_V3_PIx2
 		subps	xmm0, xmm1
 		mulps	xmm0, PS_V3_Half
-		call	GetSinCosV3
+		call	GetSinCos_V3
 		movaps	xmm2, xmm0
 		unpcklpd	xmm2, xmm1
 		shufps	xmm2, xmm2, 0xD7
@@ -187,34 +187,6 @@ __declspec(naked) hkQuaternion& __fastcall hkQuaternion::operator*=(const hkQuat
 		mov		eax, ecx
 		retn
 	}
-}
-
-__declspec(naked) hkQuaternion& hkQuaternion::Normalize()
-{
-    __asm
-    {
-		mov		eax, ecx
-		movaps	xmm1, [eax]
-		movaps	xmm2, xmm1
-		mulps	xmm2, xmm2
-		xorps	xmm0, xmm0
-		haddps	xmm2, xmm0
-		haddps	xmm2, xmm0
-		comiss	xmm2, PS_Epsilon
-		jb		zeroLen
-		rsqrtss	xmm3, xmm2
-		movss	xmm0, SS_3
-		mulss	xmm2, xmm3
-		mulss	xmm2, xmm3
-		subss	xmm0, xmm2
-		mulss	xmm0, xmm3
-		mulss	xmm0, PS_V3_Half
-		shufps	xmm0, xmm0, 0
-		mulps	xmm0, xmm1
-	zeroLen:
-		movaps	[eax], xmm0
-        retn
-    }
 }
 
 __declspec(naked) __m128 __vectorcall hkQuaternion::ToEulerPRY() const
@@ -410,26 +382,20 @@ __declspec(naked) TESObjectREFR *hkpWorldObject::GetParentRef()
 	__asm
 	{
 		call	hkpWorldObject::GetParentNode
-		push	esi
-		mov		esi, eax
-		mov		edx, ADDR_ReturnThis
+		mov		edx, kVtbl_BSFadeNode
 		ALIGN 16
 	iterHead:
-		test	esi, esi
-		jz		retnNULL
-		mov		eax, esi
-		mov		esi, [esi+0x18]
-		mov		ecx, [eax]
-		cmp		[ecx+0x10], edx
-		jnz		iterHead
-		mov		eax, [eax+0xCC]
 		test	eax, eax
+		jz		done
+		mov		ecx, eax
+		mov		eax, [eax+0x18]
+		cmp		[ecx], edx
+		jnz		iterHead
+		mov		ecx, [ecx+0xCC]
+		test	ecx, ecx
 		jz		iterHead
-		pop		esi
-		retn
-	retnNULL:
-		xor		eax, eax
-		pop		esi
+		mov		eax, ecx
+	done:
 		retn
 	}
 }
@@ -452,8 +418,9 @@ __declspec(naked) void bhkWorldObject::ApplyForce(const NiVector4 &forceVector)
 		mulps	xmm0, [eax]
 		mov		edx, [ebp+8]
 		movups	xmm1, [edx]
+		andps	xmm1, PS_XYZ0Mask
 		subps	xmm0, xmm1
-		call	NormalizePS
+		call	Normalize_V4
 		movss	xmm1, [edx+0xC]
 		mulss	xmm1, kUnitConv+4
 		shufps	xmm1, xmm1, 0x40

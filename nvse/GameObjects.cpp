@@ -612,30 +612,41 @@ __declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 	__asm
 	{
 		push	esi
+		push	edi
 		mov		esi, ecx
-		push	dword ptr [esp+8]
+		push	dword ptr [esp+0xC]
 		CALL_EAX(0x575830)
+		mov		eax, [esi+0x64]
+		test	eax, eax
+		jz		done
+		mov		ecx, [eax+0x14]
+		test	ecx, ecx
+		jz		done
+		mov		edi, ecx
+		movups	xmm0, [esi+0x30]
+		movq	qword ptr [ecx+0x58], xmm0
+		pshufd	xmm1, xmm0, 2
+		movss	[ecx+0x60], xmm1
 		mov		eax, [esi]
 		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
-		jnz		doUpdate
+		jnz		resetClsn
 		mov		eax, [esi+0x68]
 		test	eax, eax
-		jz		done
+		jz		doUpdate
 		cmp		byte ptr [eax+0x28], 1
-		ja		done
+		ja		doUpdate
 		mov		eax, [eax+0x138]
 		test	eax, eax
-		jz		done
+		jz		doUpdate
 		cmp		dword ptr [eax+0x3F0], 4
-		jz		done
+		jz		doUpdate
 		mov		ecx, [eax+0x594]
 		test	ecx, ecx
-		jz		done
+		jz		doUpdate
 		mov		ecx, [ecx+8]
 		test	ecx, ecx
-		jz		done
+		jz		doUpdate
 		add		ecx, 0xB0
-		movups	xmm0, [esi+0x30]
 		mulps	xmm0, kUnitConv
 		movaps	xmm1, [eax+0x570]
 		pshufd	xmm2, xmm1, 0
@@ -659,26 +670,16 @@ __declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 		push	edx
 		push	eax
 		CALL_EAX(0xC9E990)
-	done:
-		pop		esi
-		retn	4
-	doUpdate:
-		mov		ecx, [esi+0x64]
-		test	ecx, ecx
-		jz		done
-		mov		ecx, [ecx+0x14]
-		test	ecx, ecx
-		jz		done
-		movups	xmm0, [esi+0x30]
-		movq	qword ptr [ecx+0x58], xmm0
-		unpckhpd	xmm0, xmm0
-		movss	[ecx+0x60], xmm0
-		mov		esi, ecx
+		jmp		doUpdate
+	resetClsn:
 		call	NiNode::ResetCollision
+	doUpdate:
 		push	0
 		push	offset kUpdateParams
-		mov		ecx, esi
+		mov		ecx, edi
 		CALL_EAX(0xA5DD70)
+	done:
+		pop		edi
 		pop		esi
 		retn	4
 		ALIGN 16
@@ -1099,6 +1100,25 @@ __declspec(naked) NiAVObject* __fastcall TESObjectREFR::GetNiBlock(const char *b
 	}
 }
 
+__declspec(naked) NiAVObject* __fastcall TESObjectREFR::GetNiBlock2(const char *blockName) const
+{
+	__asm
+	{
+		mov		eax, [ecx+0x64]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x14]
+		test	eax, eax
+		jz		done
+		cmp		[edx], 0
+		jz		done
+		mov		ecx, eax
+		call	NiNode::GetBlock
+	done:
+		retn
+	}
+}
+
 __declspec(naked) NiNode* __fastcall TESObjectREFR::GetNode(const char *nodeName) const
 {
 	__asm
@@ -1121,11 +1141,36 @@ __declspec(naked) NiNode* __fastcall TESObjectREFR::GetNode(const char *nodeName
 	}
 }
 
+__declspec(naked) NiNode* __fastcall TESObjectREFR::GetNode2(const char *nodeName) const
+{
+	__asm
+	{
+		mov		eax, [ecx+0x64]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x14]
+		test	eax, eax
+		jz		done
+		cmp		[edx], 0
+		jz		done
+		mov		ecx, eax
+		call	NiNode::GetBlock
+		test	eax, eax
+		jz		done
+		xor		edx, edx
+		mov		ecx, [eax]
+		cmp		dword ptr [ecx+0xC], ADDR_ReturnThis
+		cmovnz	eax, edx
+	done:
+		retn
+	}
+}
+
 __declspec(naked) hkpRigidBody* __fastcall TESObjectREFR::GetRigidBody(const char *blockName) const
 {
 	__asm
 	{
-		call	TESObjectREFR::GetNiBlock
+		call	TESObjectREFR::GetNiBlock2
 		test	eax, eax
 		jz		done
 		mov		eax, [eax+0x1C]
@@ -1138,6 +1183,56 @@ __declspec(naked) hkpRigidBody* __fastcall TESObjectREFR::GetRigidBody(const cha
 		cmp		byte ptr [eax+0x28], 1
 		jz		done
 		xor		eax, eax
+	done:
+		retn
+	}
+}
+
+__declspec(naked) BSBound *TESObjectREFR::GetBoundingBox() const
+{
+	__asm
+	{
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xFC], ADDR_ReturnTrue
+		jnz		getFromNode
+		mov		eax, [ecx+0x68]
+		test	eax, eax
+		jz		getFromNode
+		cmp		[eax+0x28], 1
+		ja		getFromNode
+		mov		eax, [eax+0x224]
+		retn
+	getFromNode:
+		mov		eax, [ecx+0x64]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x14]
+		test	eax, eax
+		jz		done
+		mov		edx, kVtbl_BSBound
+		mov		ecx, eax
+		jmp		NiObjectNET::GetExtraData
+	done:
+		retn
+	}
+}
+
+__declspec(naked) MapMarkerData *TESObjectREFR::GetMapMarkerData() const
+{
+	__asm
+	{
+		xor		eax, eax
+		mov		edx, [ecx+0x20]
+		test	edx, edx
+		jz		done
+		cmp		dword ptr [edx+0xC], 0x10
+		jnz		done
+		push	kExtraData_MapMarker
+		add		ecx, 0x44
+		call	BaseExtraList::GetByType
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0xC]
 	done:
 		retn
 	}
@@ -2145,7 +2240,7 @@ void Projectile::GetData(UInt32 dataType, double *result)
 				*(UInt32*)result = sourceWeap->refID;
 			break;
 		case 2:
-			*result = elapsedTime;
+			*result = lifeTime;
 			break;
 		case 3:
 			*result = distTravelled;
@@ -2154,7 +2249,7 @@ void Projectile::GetData(UInt32 dataType, double *result)
 			*result = hitDamage;
 			break;
 		case 5:
-			*result = speedMult2;
+			*result = speedMult;
 			break;
 		case 6:
 		{

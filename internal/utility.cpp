@@ -20,7 +20,7 @@ alignas(16) const HexFloat kPackedValues[] =
 	PS_DUP_3(1.0F),
 	PS_DUP_3(0x40DFF8D6UL),
 	0.001F, 0.01F, 0.1F, 0.25F,
-	3.0F, 10.0F, 100.0F, 8192.0F
+	3.0F, 10.0F, 100.0F, 0UL
 };
 
 alignas(16) const char
@@ -69,34 +69,23 @@ __declspec(naked) PrimitiveCS *PrimitiveCS::Enter()
 {
 	__asm
 	{
-		push	ebx
-		mov		ebx, ecx
-		call	GetCurrentThreadId
-		cmp		[ebx], eax
-		jnz		doSpin
-	done:
-		mov		eax, ebx
-		pop		ebx
-		retn
-	doSpin:
-		mov		ecx, eax
-		xor		eax, eax
-		lock cmpxchg [ebx], ecx
-		test	eax, eax
-		jz		done
 		push	esi
+		push	edi
 		mov		esi, ecx
+		mov		edi, Sleep
 		ALIGN 16
 	spinHead:
-		push	0
-		call	Sleep
 		xor		eax, eax
-		lock cmpxchg [ebx], esi
-		test	eax, eax
-		jnz		spinHead
+		lock cmpxchg [esi], esi
+		jz		done
+		push	0
+		call	edi
+		jmp		spinHead
+		ALIGN 16
+	done:
+		mov		eax, esi
+		pop		edi
 		pop		esi
-		mov		eax, ebx
-		pop		ebx
 		retn
 	}
 }
@@ -109,30 +98,29 @@ __declspec(naked) void LightCS::Enter()
 		mov		ebx, ecx
 		call	GetCurrentThreadId
 		cmp		[ebx], eax
-		jnz		doSpin
-		inc		dword ptr [ebx+4]
+		jz		incRefCnt
+		push	esi
+		push	edi
+		mov		esi, eax
+		mov		edi, Sleep
+		ALIGN 16
+	spinHead:
+		xor		eax, eax
+		lock cmpxchg [ebx], esi
+		jz		done
+		push	0
+		call	edi
+		jmp		spinHead
+		ALIGN 16
+	done:
+		mov		dword ptr [ebx+4], 1
+		pop		edi
+		pop		esi
 		pop		ebx
 		retn
 		ALIGN 16
-	doSpin:
-		mov		ecx, eax
-		xor		eax, eax
-		lock cmpxchg [ebx], ecx
-		test	eax, eax
-		jz		done
-		push	esi
-		mov		esi, ecx
-		ALIGN 16
-	spinHead:
-		push	0
-		call	Sleep
-		xor		eax, eax
-		lock cmpxchg [ebx], esi
-		test	eax, eax
-		jnz		spinHead
-		pop		esi
-	done:
-		mov		dword ptr [ebx+4], 1
+	incRefCnt:
+		inc		dword ptr [ebx+4]
 		pop		ebx
 		retn
 	}
@@ -324,7 +312,7 @@ __declspec(naked) float __vectorcall Cos(float angle)
 	}
 }
 
-__declspec(naked) __m128 __vectorcall Cos_PS(__m128 angles)
+__declspec(naked) __m128 __vectorcall Cos_V3(__m128 angles)
 {
 	__asm
 	{
@@ -391,22 +379,22 @@ __declspec(naked) __m128 __vectorcall GetSinCos(float angle)
 		movss	xmm0, PS_V3_PId2
 		subss	xmm0, xmm1
 		unpcklps	xmm0, xmm1
-		call	Cos_PS
+		call	Cos_V3
 		movshdup	xmm1, xmm0
 		retn
 	}
 }
 
-__declspec(naked) __m128 __vectorcall GetSinCosV3(__m128 angles)
+__declspec(naked) __m128 __vectorcall GetSinCos_V3(__m128 angles)
 {
 	__asm
 	{
 		movaps	xmm5, xmm0
-		call	Cos_PS
+		call	Cos_V3
 		movaps	xmm4, xmm0
 		movaps	xmm0, PS_V3_PId2
 		subps	xmm0, xmm5
-		call	Cos_PS
+		call	Cos_V3
 		movaps	xmm1, xmm4
 		retn
 	}
@@ -619,7 +607,7 @@ __declspec(naked) float __vectorcall ATan2(float y, float x)
 	}
 }
 
-__declspec(naked) __m128 __vectorcall NormalizePS(__m128 inPS)
+__declspec(naked) __m128 __vectorcall Normalize_V4(__m128 inPS)
 {
 	__asm
     {
@@ -638,11 +626,40 @@ __declspec(naked) __m128 __vectorcall NormalizePS(__m128 inPS)
 		subss	xmm0, xmm2
 		mulss	xmm0, xmm3
 		mulss	xmm0, PS_V3_Half
-		shufps	xmm0, xmm0, 0xC0
+		shufps	xmm0, xmm0, 0
 		mulps	xmm0, xmm1
 	zeroLen:
         retn
     }
+}
+
+__declspec(naked) bool __vectorcall Equal_V3(__m128 v1, __m128 v2)
+{
+	__asm
+	{
+		subps	xmm0, xmm1
+		pshufd	xmm1, PS_AbsMask0, 0x40
+		andps	xmm0, xmm1
+		cmpltps	xmm0, PS_Epsilon
+		movmskps	eax, xmm0
+		cmp		al, 0xF
+		setz	al
+		retn
+	}
+}
+
+__declspec(naked) bool __vectorcall Equal_V4(__m128 v1, __m128 v2)
+{
+	__asm
+	{
+		subps	xmm0, xmm1
+		andps	xmm0, PS_AbsMask
+		cmpltps	xmm0, PS_Epsilon
+		movmskps	eax, xmm0
+		cmp		al, 0xF
+		setz	al
+		retn
+	}
 }
 
 __declspec(noinline) char *GetStrArgBuffer()

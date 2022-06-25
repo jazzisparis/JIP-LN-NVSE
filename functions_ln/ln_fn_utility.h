@@ -21,7 +21,7 @@ DEFINE_COMMAND_ALT_PLUGIN(GetDefaultMessageTime, GetDMT, 0, 0, NULL);
 DEFINE_COMMAND_ALT_PLUGIN(SetDefaultMessageTime, SetDMT, 0, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(Console, 0, 21, kParams_FormatString);
 DEFINE_COMMAND_PLUGIN(GetENBFloat, 0, 2, kParams_TwoStrings);
-DEFINE_COMMAND_PLUGIN(SetENBFloat, 0, 3, kParams_TwoStrings_OneFloat);
+DEFINE_COMMAND_PLUGIN(SetENBFloat, 0, 3, kParams_TwoStrings_OneDouble);
 DEFINE_COMMAND_PLUGIN(ReloadENB, 0, 0, NULL);
 
 bool Cmd_GetLNVersion_Execute(COMMAND_ARGS)
@@ -97,7 +97,8 @@ bool Cmd_GetINIFloat_Execute(COMMAND_ARGS)
 	*result = 0;
 	char configPath[0x80], valueName[0x80], *iniPath = configPath + 12;
 	*iniPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) || !GetINIPath(iniPath, scriptObj)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) || !GetINIPath(iniPath, scriptObj))
+		return true;
 	char *delim = GetNextToken(valueName, ":\\/");
 	if (!*delim) return true;
 	char valStr[0x20];
@@ -113,7 +114,8 @@ bool Cmd_SetINIFloat_Execute(COMMAND_ARGS)
 	char configPath[0x80], valueName[0x80], *iniPath = configPath + 12;
 	double value;
 	*iniPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, &value, iniPath) || !GetINIPath(iniPath, scriptObj)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, &value, iniPath) || !GetINIPath(iniPath, scriptObj))
+		return true;
 	char *delim = GetNextToken(valueName, ":\\/");
 	if (!*delim) return true;
 	if (!FileExists(configPath)) FileStream::MakeAllDirs(configPath);
@@ -143,7 +145,8 @@ bool Cmd_SetINIString_Execute(COMMAND_ARGS)
 	*result = 0;
 	char configPath[0x80], valueName[0x80], *iniPath = configPath + 12, *buffer = GetStrArgBuffer();
 	*iniPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, buffer, iniPath) || !GetINIPath(iniPath, scriptObj)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, buffer, iniPath) || !GetINIPath(iniPath, scriptObj))
+		return true;
 	char *delim = GetNextToken(valueName, ":\\/");
 	if (!*delim) return true;
 	if (!FileExists(configPath)) FileStream::MakeAllDirs(configPath);
@@ -158,7 +161,8 @@ bool Cmd_GetINISection_Execute(COMMAND_ARGS)
 	char configPath[0x80], secName[0x40], *iniPath = configPath + 12;
 	*iniPath = 0;
 	UInt32 getNumeric = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &secName, iniPath, &getNumeric) || !GetINIPath(iniPath, scriptObj)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &secName, iniPath, &getNumeric) || !GetINIPath(iniPath, scriptObj))
+		return true;
 	NVSEArrayVar *outArray = CreateStringMap(NULL, NULL, 0, scriptObj);
 	char *buffer = GetStrArgBuffer(), *delim;
 	SInt32 length = GetPrivateProfileSection(secName, buffer, 0x10000, configPath), size;
@@ -210,7 +214,8 @@ bool Cmd_GetINISectionNames_Execute(COMMAND_ARGS)
 	*result = 0;
 	char configPath[0x80], *iniPath = configPath + 12;
 	*iniPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, iniPath) || !GetINIPath(iniPath, scriptObj)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, iniPath) || !GetINIPath(iniPath, scriptObj))
+		return true;
 	TempElements *tmpElements = GetTempElements();
 	char *buffer = GetStrArgBuffer();
 	SInt32 length = GetPrivateProfileSectionNames(buffer, kMaxMessageLength, configPath), size;
@@ -229,7 +234,8 @@ bool Cmd_RemoveINIKey_Execute(COMMAND_ARGS)
 	*result = 0;
 	char configPath[0x80], valueName[0x80], *iniPath = configPath + 12;
 	*iniPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) || !GetINIPath(iniPath, scriptObj) || !FileExists(configPath)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) || !GetINIPath(iniPath, scriptObj) || !FileExists(configPath))
+		return true;
 	char *key = GetNextToken(valueName, ":\\/");
 	if (*key && WritePrivateProfileString(valueName, key, NULL, configPath))
 		*result = 1;
@@ -382,7 +388,8 @@ bool Cmd_GetENBFloat_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char fileName[0x40], valueName[0x80];
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fileName, &valueName) || !FileExists(fileName)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fileName, &valueName) || !FileExists(fileName))
+		return true;
 	char *delim = GetNextToken(valueName, ":\\/");
 	if (!*delim) return true;
 	char strVal[0x20];
@@ -395,8 +402,9 @@ bool Cmd_SetENBFloat_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char fileName[0x40], valueName[0x80];
-	float value;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fileName, &valueName, &value) || !FileExists(fileName)) return true;
+	double value;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fileName, &valueName, &value) || !FileExists(fileName))
+		return true;
 	char *delim = GetNextToken(valueName, ":\\/");
 	if (!*delim) return true;
 	char strVal[0x20];

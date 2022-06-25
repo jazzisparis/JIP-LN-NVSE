@@ -47,7 +47,7 @@ __declspec(naked) void* __fastcall Pool_Alloc(UInt32 size)
 		mov		ecx, [eax]
 		mov		[edx], ecx
 		xor		edx, edx
-		mov		s_memoryPool.m_cs.owningThread, edx
+		mov		s_memoryPool.m_cs.selfPtr, edx
 		retn
 		NOP_0x2
 	allocPool:
@@ -77,7 +77,7 @@ __declspec(naked) void* __fastcall Pool_Alloc(UInt32 size)
 		jnz		linkHead
 		mov		[eax], ecx
 		mov		eax, edx
-		mov		s_memoryPool.m_cs.owningThread, ecx
+		mov		s_memoryPool.m_cs.selfPtr, ecx
 		pop		esi
 		retn
 	}
@@ -108,7 +108,7 @@ __declspec(naked) void __fastcall Pool_Free(void *pBlock, UInt32 size)
 		mov		eax, [edx]
 		mov		[ecx], eax
 		mov		[edx], ecx
-		mov		s_memoryPool.m_cs.owningThread, 0
+		mov		s_memoryPool.m_cs.selfPtr, 0
 	nullPtr:
 		retn
 		ALIGN 16

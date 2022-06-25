@@ -356,32 +356,28 @@ public:
 		bool Accept(Item *item) {return true;}
 	};
 
-	void RemoveAll() const
+	void RemoveAll()
 	{
-		Node *nextNode = Head(), *currNode = nextNode->next;
-		nextNode->data = NULL;
-		nextNode->next = NULL;
-		while (currNode)
+		auto topNode = Head();
+		while (auto iter = topNode->next)
 		{
-			nextNode = currNode->next;
-			GameHeapFree(currNode);
-			currNode = nextNode;
+			topNode->next = iter->next;
+			GameHeapFree(iter);
 		}
+		topNode->data = nullptr;
 	}
 
-	void DeleteAll() const
+	void DeleteAll()
 	{
-		Node *nextNode = Head(), *currNode = nextNode->next;
-		GameHeapFree(nextNode->data);
-		nextNode->data = NULL;
-		nextNode->next = NULL;
-		while (currNode)
+		auto topNode = Head();
+		while (auto iter = topNode->next)
 		{
-			nextNode = currNode->next;
-			GameHeapFree(currNode->data);
-			GameHeapFree(currNode);
-			currNode = nextNode;
+			GameHeapFree(iter->data);
+			topNode->next = iter->next;
+			GameHeapFree(iter);
 		}
+		GameHeapFree(topNode->data);
+		topNode->data = nullptr;
 	}
 
 	Item *RemoveNth(SInt32 idx)

@@ -427,7 +427,7 @@ bool Cmd_GetBarterItems_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &sold) || !brtMenu || !brtMenu->merchantRef) return true;
 	TESObjectREFR *target = sold ? brtMenu->merchantRef->GetMerchantContainer() : g_thePlayer, *itemRef;
 	TempElements *tmpElements = GetTempElements();
-	ListNode<ContChangesEntry> *iter = sold ? brtMenu->rightBarter.Head() : brtMenu->leftBarter.Head();
+	auto iter = sold ? brtMenu->rightBarter.Head() : brtMenu->leftBarter.Head();
 	do
 	{
 		if (itemRef = CreateRefForStack(target, iter->data))
@@ -729,7 +729,7 @@ bool Cmd_SetMessageDisabled_Execute(COMMAND_ARGS)
 	tList<TESForm> tempList(form);
 	if IS_ID(form, BGSListForm)
 		tempList = ((BGSListForm*)form)->list;
-	ListNode<TESForm> *iter = tempList.Head();
+	auto iter = tempList.Head();
 	do
 	{
 		if (!(form = iter->data) || NOT_ID(form, BGSMessage)) continue;
@@ -1065,7 +1065,7 @@ bool Cmd_SetTerminalUIModel_Execute(COMMAND_ARGS)
 	tList<TESForm> tempList(form);
 	if IS_ID(form, BGSListForm)
 		tempList = ((BGSListForm*)form)->list;
-	ListNode<TESForm> *lstIter = tempList.Head();
+	auto lstIter = tempList.Head();
 	BGSTerminal *terminal;
 	char **pathPtr;
 	do
@@ -1221,7 +1221,7 @@ bool Cmd_GetVATSTargets_Execute(COMMAND_ARGS)
 	*result = 0;
 	if (!VATSMenu::Get()) return true;
 	TempElements *tmpElements = GetTempElements();
-	ListNode<VATSTarget> *iter = GameGlobals::VATSTargetList()->Head();
+	auto iter = GameGlobals::VATSTargetList()->Head();
 	VATSTarget *targetInfo;
 	do
 	{
@@ -1293,21 +1293,14 @@ bool Cmd_UnloadUIComponent_Execute(COMMAND_ARGS)
 
 bool Cmd_ClearMessageQueue_Execute(COMMAND_ARGS)
 {
-	if (!g_HUDMainMenu->queuedMessages.Empty())
+	HUDMainMenu *hudMain = g_HUDMainMenu;
+	if (!hudMain->queuedMessages.Empty())
 	{
-		ListNode<HUDMainMenu::QueuedMessage> *headNode = g_HUDMainMenu->queuedMessages.Head(), *msgIter = headNode->next;
-		while (msgIter)
-		{
-			GameHeapFree(msgIter->data);
-			msgIter = msgIter->RemoveMe();
-		}
-		if (!g_HUDMainMenu->currMsgKey)
-		{
-			GameHeapFree(headNode->data);
-			headNode->RemoveMe();
-		}
-		else if (headNode->next)
-			headNode->RemoveNext();
+		hudMain->queuedMessages.DeleteAll();
+		hudMain->currMsgStartTime = 0;
+		hudMain->tile08C->SetFloat(kTileValue_alpha, 0);
+		hudMain->tile090->SetFloat(kTileValue_alpha, 0);
+		hudMain->tile094->SetFloat(kTileValue_alpha, 0);
 	}
 	return true;
 }
@@ -1317,7 +1310,7 @@ bool Cmd_SetSystemColor_Execute(COMMAND_ARGS)
 	UInt32 type, red, green, blue;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type, &red, &green, &blue) && type && (type <= 5))
 	{
-		DListNode<SystemColorManager::SystemColor> *colorNode = SystemColorManager::GetSingleton()->sysColors.Head()->Advance(type - 1);
+		auto colorNode = SystemColorManager::GetSingleton()->sysColors.Head()->Advance(type - 1);
 		if (colorNode && colorNode->data)
 		{
 			colorNode->data->SetColorRGB(red, green, blue);

@@ -258,8 +258,7 @@ __declspec(naked) TESObjectREFR *NiAVObject::GetParentRef() const
 		jz		retnNULL
 		mov		eax, ecx
 		mov		ecx, [ecx+0x18]
-		mov		edx, [eax]
-		cmp		dword ptr [edx+0x10], ADDR_ReturnThis
+		cmp		dword ptr [eax], kVtbl_BSFadeNode
 		jnz		iterHead
 		mov		eax, [eax+0xCC]
 		test	eax, eax

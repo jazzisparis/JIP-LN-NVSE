@@ -275,7 +275,7 @@ bool Cmd_DropAlt_Execute(COMMAND_ARGS)
 	tList<TESForm> tempList(form);
 	if IS_ID(form, BGSListForm)
 		tempList = ((BGSListForm*)form)->list;
-	ListNode<TESForm> *iter = tempList.Head();
+	auto iter = tempList.Head();
 	TESForm *item;
 	SInt32 total, subCount;
 	bool keepOwner = !clrOwner, hasScript, stacked;
@@ -536,7 +536,7 @@ bool Cmd_ToggleItemUnique_Execute(COMMAND_ARGS)
 			tempList = ((BGSListForm*)itemOrList)->list;
 		else if (NOT_ID(itemOrList, TESObjectWEAP) && NOT_TYPE(itemOrList, TESObjectARMO))
 			return true;
-		ListNode<TESForm> *traverse = tempList.Head();
+		auto traverse = tempList.Head();
 		bool bToggle = toggle != 0;
 		TESForm *item;
 		do
@@ -565,7 +565,7 @@ bool Cmd_GetBaseItems_Execute(COMMAND_ARGS)
 	TESContainer *container = baseForm->GetContainer();
 	if (!container) return true;
 	TempElements *tmpElements = GetTempElements();
-	ListNode<TESContainer::FormCount> *traverse = container->formCountList.Head();
+	auto traverse = container->formCountList.Head();
 	TESContainer::FormCount *formCount;
 	do
 	{
@@ -589,7 +589,7 @@ bool Cmd_SetOnUseAidItemEventHandler_Execute(COMMAND_ARGS)
 	tList<TESForm> tempList(itemOrList);
 	if IS_ID(itemOrList, BGSListForm)
 		tempList = ((BGSListForm*)itemOrList)->list;
-	ListNode<TESForm> *iter = tempList.Head();
+	auto iter = tempList.Head();
 	AlchemyItem *alchItem;
 	EventCallbackScripts *callbacks;
 	do

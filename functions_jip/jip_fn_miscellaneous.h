@@ -69,10 +69,13 @@ DEFINE_COMMAND_PLUGIN(ClearDeadActors, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(GetCameraMovement, 0, 2, kParams_TwoScriptVars);
 DEFINE_COMMAND_PLUGIN(GetReticleNode, 0, 2, kParams_OneOptionalFloat_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetInternalMarker, 0, 2, kParams_OneForm_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetPointRayCastPos, 0, 9, kParams_FiveFloats_ThreeScriptVars_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetPointRayCastPos, 0, 10, kParams_FiveFloats_ThreeScriptVars_OneOptionalInt_OneOptionalFloat);
 DEFINE_COMMAND_PLUGIN(TogglePlayerSneaking, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(PlaceModel, 0, 8, kParams_OneString_SixFloats_OneOptionalFloat);
 DEFINE_COMMAND_PLUGIN(SetArmorConditionPenalty, 0, 1, kParams_OneOptionalFloat);
+DEFINE_COMMAND_PLUGIN(GetReticlePosAlt, 0, 5, kParams_ThreeScriptVars_OneOptionalInt_OneOptionalFloat);
+DEFINE_COMMAND_PLUGIN(GetLightAmountAtPoint, 0, 3, kParams_ThreeFloats);
+DEFINE_COMMAND_PLUGIN(TransformWorldToLocal, 0, 11, kParams_NineFloats_TwoScriptVars);
 DEFINE_COMMAND_PLUGIN(GetAnglesBetweenPoints, 0, 8, kParams_SixFloats_TwoScriptVars);
 
 bool Cmd_DisableNavMeshAlt_Execute(COMMAND_ARGS)
@@ -477,7 +480,7 @@ bool Cmd_GetLocalGravity_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &axis))
 	{
 		hkpWorld *world = GethkpWorld();
-		if (world) *result = ((float*)&world->gravity)[axis - 'X'];
+		if (world) *result = world->gravity[axis - 'X'];
 	}
 	DoConsolePrint(result);
 	return true;
@@ -500,24 +503,12 @@ bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 	UInt8 numArgs = NUM_ARGS_EX;
 	if (numArgs && !ExtractArgsEx(EXTRACT_ARGS_EX, &filter, &maxRange))
 		return true;
-	if (filter < 0) filter = 6;
-	else filter &= 0x3F;
-	NiCamera *camera = g_sceneGraph->camera;
 	NiVector4 coords;
-	if (!coords.RayCastCoords(camera->WorldTranslate(), camera->WorldRotate(), maxRange, filter))
+	if (coords.RayCastCoords(g_mainCamera->WorldTranslate(), g_mainCamera->WorldRotate(), maxRange, filter) || (numArgs >= 2))
 	{
-		if (numArgs < 2) return true;
-		__asm
-		{
-			movss	xmm0, maxRange
-			maxss	xmm0, SS_10
-			minss	xmm0, SS_8192
-			movups	coords, xmm0
-		}
-		coords = coords.GetTranslatedPos(camera->m_transformWorld);
+		ArrayElementL elements[3] = {coords.x, coords.y, coords.z};
+		AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
 	}
-	ArrayElementL elements[3] = {coords.x, coords.y, coords.z};
-	AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
 	return true;
 }
 
@@ -531,23 +522,9 @@ bool Cmd_GetReticleRange_Execute(COMMAND_ARGS)
 	UInt8 numArgs = NUM_ARGS_EX;
 	if (numArgs && !ExtractArgsEx(EXTRACT_ARGS_EX, &filter, &maxRange))
 		return true;
-	if (filter < 0) filter = 6;
-	else filter &= 0x3F;
-	NiCamera *camera = g_sceneGraph->camera;
 	NiVector4 coords;
-	if (!coords.RayCastCoords(camera->WorldTranslate(), camera->WorldRotate(), maxRange, filter))
-	{
-		if (numArgs < 2) return true;
-		__asm
-		{
-			movss	xmm0, maxRange
-			maxss	xmm0, SS_10
-			minss	xmm0, SS_8192
-			movups	coords, xmm0
-		}
-		coords = coords.GetTranslatedPos(camera->m_transformWorld);
-	}
-	*result = Point3Distance(coords, g_thePlayer->position);
+	if (coords.RayCastCoords(g_mainCamera->WorldTranslate(), g_mainCamera->WorldRotate(), maxRange, filter) || (numArgs >= 2))
+		*result = Point3Distance(g_thePlayer->position, coords);
 	return true;
 }
 
@@ -639,7 +616,7 @@ bool Cmd_MarkActivatorAshPile_Execute(COMMAND_ARGS)
 		}
 		else if IS_ID(form, BGSListForm)
 		{
-			ListNode<TESForm> *iter = ((BGSListForm*)form)->list.Head();
+			auto iter = ((BGSListForm*)form)->list.Head();
 			do
 			{
 				form = iter->data;
@@ -734,31 +711,30 @@ bool Cmd_SwapObjectLOD_Execute(COMMAND_ARGS)
 	return true;
 }
 
-BSFadeNode **g_wobbleAnimations = NULL;
-QuaternionKey *g_wobbleAnimRotations[9] = {};
-
 bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 {
+	/*static BSFadeNode **wobbleAnimations = NULL;
+	static QuaternionKey *wobbleAnimRotations[9] = {};
 	NiVector3 rotPRY;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &rotPRY.x, &rotPRY.y, &rotPRY.z))
 	{
-		if (!g_wobbleAnimations)
+		if (!wobbleAnimations)
 		{
-			g_wobbleAnimations = (BSFadeNode**)0x11E0110;
+			wobbleAnimations = (BSFadeNode**)0x11E0110;
 			NiTransformData *transData;
 			for (UInt32 index = 0; index < 9; index++)
 			{
-				if (!g_wobbleAnimations[index]) continue;
-				transData = ((NiTransformInterpolator*)((NiTransformController*)g_wobbleAnimations[index]->m_controller)->interpolator)->transData;
+				if (!wobbleAnimations[index]) continue;
+				transData = ((NiTransformInterpolator*)((NiTransformController*)wobbleAnimations[index]->m_controller)->interpolator)->transData;
 				if ((transData->rotationKeyType == 3) && (transData->numRotationKeys == 3))
-					g_wobbleAnimRotations[index] = (QuaternionKey*)transData->rotationKeys;
+					wobbleAnimRotations[index] = (QuaternionKey*)transData->rotationKeys;
 			}
 		}
 		QuaternionKey *rotationKeys = NULL;
 		UInt32 startIdx = 0;
 		do
 		{
-			rotationKeys = g_wobbleAnimRotations[startIdx];
+			rotationKeys = wobbleAnimRotations[startIdx];
 			if (rotationKeys) break;
 		}
 		while (++startIdx < 9);
@@ -777,10 +753,10 @@ bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 			rotationKeys[0].quaternion20 = quaternion;
 			rotationKeys[0].quaternion30 = quaternion;
 			while (++startIdx < 8)
-				if (g_wobbleAnimRotations[startIdx])
-					memmove(g_wobbleAnimRotations[startIdx], rotationKeys, sizeof(QuaternionKey) * 3);
+				if (wobbleAnimRotations[startIdx])
+					memmove(wobbleAnimRotations[startIdx], rotationKeys, sizeof(QuaternionKey) * 3);
 		}
-	}
+	}*/
 	return true;
 }
 
@@ -789,19 +765,11 @@ bool Cmd_SetGameHour_Execute(COMMAND_ARGS)
 	float newHour;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &newHour) && (newHour >= 0))
 	{
-		if (HOOK_INSTALLED(UpdateTimeGlobals) && !(s_serializedFlags & kSerializedFlag_NoHardcoreTracking))
-		{
-			double passed = newHour - g_gameHour->data;
-			if (g_gameHour->data > newHour)
-				passed += 24.0;
-			passed /= g_timeScale->data;
-			passed *= 3600.0;
-			UpdateTimeGlobalsHook(GameTimeGlobals::Get(), 0, passed);
-		}
-		else if (g_gameHour->data <= newHour)
+		if (g_gameHour->data <= newHour)
 			g_gameHour->data = newHour;
 		else
 			g_gameHour->data = 24.0F + newHour;
+		s_forceHCNeedsUpdate = g_thePlayer->isHardcore;
 	}
 	return true;
 }
@@ -1210,7 +1178,7 @@ bool Cmd_GetReticleNode_Execute(COMMAND_ARGS)
 	UInt32 filter = 6;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &filter))
 	{
-		NiAVObject *rtclObject = GetRayCastObject(g_thePlayer->cameraPos, g_sceneGraph->camera->WorldRotate(), maxRange, filter & 0x3F);
+		NiAVObject *rtclObject = GetRayCastObject(g_thePlayer->cameraPos, g_mainCamera->WorldRotate(), maxRange, filter & 0x3F);
 		if (rtclObject) nodeName = rtclObject->GetName();
 	}
 	AssignString(PASS_COMMAND_ARGS, nodeName);
@@ -1239,15 +1207,16 @@ bool Cmd_GetPointRayCastPos_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	NiVector3 pos;
-	NiVector4 rot;
+	NiVector4 rot(_mm_setzero_ps());
 	ResultVars outPos;
 	UInt32 filter = 6;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pos.x, &pos.y, &pos.z, &rot.x, &rot.z, &outPos.x, &outPos.y, &outPos.z, &filter))
+	float maxRange = 50000.0F;
+	UInt8 numArgs = NUM_ARGS;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pos.x, &pos.y, &pos.z, &rot.x, &rot.z, &outPos.x, &outPos.y, &outPos.z, &filter, &maxRange))
 	{
-		rot.y = 0;
 		NiMatrix33 rotMat;
 		rotMat.FromEulerPRYInv(rot * GET_PS(8));
-		if (rot.RayCastCoords(pos, rotMat + 1, 100000.0F, filter & 0x3F))
+		if (rot.RayCastCoords(pos, rotMat + 1, maxRange, filter) || (numArgs >= 10))
 		{
 			outPos.Set(rot.PS());
 			*result = 1;
@@ -1308,6 +1277,48 @@ bool Cmd_SetArmorConditionPenalty_Execute(COMMAND_ARGS)
 	return true;
 }
 
+bool Cmd_GetReticlePosAlt_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	ResultVars outPos;
+	int filter = 6;
+	float maxRange = 50000.0F;
+	UInt8 numArgs = NUM_ARGS;
+	if (!g_thePlayer->parentCell || !ExtractArgsEx(EXTRACT_ARGS_EX, &outPos.x, &outPos.y, &outPos.z, &filter, &maxRange))
+		return true;
+	NiVector4 coords;
+	if (coords.RayCastCoords(g_mainCamera->WorldTranslate(), g_mainCamera->WorldRotate(), maxRange, filter) || (numArgs >= 5))
+	{
+		outPos.Set(coords.PS());
+		*result = 1;
+	}
+	return true;
+}
+
+bool Cmd_GetLightAmountAtPoint_Execute(COMMAND_ARGS)
+{
+	NiVector3 pos;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pos.x, &pos.y, &pos.z))
+		*result = GetLightAmountAtPoint(pos);
+	else *result = 0;
+	return true;
+}
+
+bool Cmd_TransformWorldToLocal_Execute(COMMAND_ARGS)
+{
+	NiVector3 origin, target;
+	NiVector4 rotation;
+	ResultVars outAngles;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &origin.x, &origin.y, &origin.z, &target.x, &target.y, &target.z, &rotation.x, &rotation.y, &rotation.z, &outAngles.x, &outAngles.z))
+	{
+		outAngles.y = outAngles.z;
+		__m128 angles = _mm_mul_ps(rotation.PS(), GET_PS(8));
+		angles = TransformWorldToLocal(origin, target, angles);
+		outAngles.Set(angles, GET_PS(9));
+	}
+	return true;
+}
+
 bool Cmd_GetAnglesBetweenPoints_Execute(COMMAND_ARGS)
 {
 	NiVector3 point1, point2;
@@ -1315,7 +1326,8 @@ bool Cmd_GetAnglesBetweenPoints_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &point1.x, &point1.y, &point1.z, &point2.x, &point2.y, &point2.z, &outAngles.x, &outAngles.z))
 	{
 		outAngles.y = outAngles.z;
-		outAngles.Set(point1.GetAnglesBetweenPoints(point2), GET_PS(9));
+		__m128 angles = point1.GetAnglesBetweenPoints(point2);
+		outAngles.Set(angles, GET_PS(9));
 	}
 	return true;
 }

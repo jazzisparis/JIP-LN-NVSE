@@ -264,7 +264,7 @@ __declspec(naked) bool __fastcall HookInfo::Set(bool install)
 		call	PrimitiveCS::Enter
 		pop		ecx
 		call	HookInfo::DoSet
-		mov		s_hookInfoCS.owningThread, 0
+		mov		s_hookInfoCS.selfPtr, 0
 		retn
 	}
 }
@@ -284,7 +284,7 @@ __declspec(naked) void __fastcall HookInfo::ModUsers(bool add)
 		jle		doSet
 		inc		dword ptr [ecx+0x1C]
 		pop		edx
-		mov		s_hookInfoCS.owningThread, 0
+		mov		s_hookInfoCS.selfPtr, 0
 		retn
 	doDecr:
 		cmp		dword ptr [ecx+0x1C], 1
@@ -293,11 +293,11 @@ __declspec(naked) void __fastcall HookInfo::ModUsers(bool add)
 		dec		dword ptr [ecx+0x1C]
 	done:
 		pop		edx
-		mov		s_hookInfoCS.owningThread, 0
+		mov		s_hookInfoCS.selfPtr, 0
 		retn
 	doSet:
 		call	HookInfo::DoSet
-		mov		s_hookInfoCS.owningThread, 0
+		mov		s_hookInfoCS.selfPtr, 0
 		retn
 	}
 }
@@ -1114,7 +1114,8 @@ __declspec(naked) void ResetHPWakeUpHook()
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xC]
 		fsubp	st(1), st
-		fstp	dword ptr [ebp-0x10]
+		push	ecx
+		fstp	dword ptr [esp]
 		push	kAVCode_Health
 		mov		ecx, [ebp-8]
 		CALL_EAX(0x88B740)
@@ -4694,13 +4695,17 @@ __declspec(naked) void IsActorEssentialHook()
 {
 	__asm
 	{
-		test	byte ptr [ecx+0x106], kHookActorFlag2_TeammateKillable
-		jnz		done
-		mov		ecx, g_thePlayer
+		mov		eax, [ebp-8]
+		test	byte ptr [eax+0x106], kHookActorFlag2_TeammateKillable
+		jnz		contRetn
 		cmp		byte ptr [ecx+0x7BC], 0
-	done:
-		setnz	al
-		JMP_EDX(0x87F432)
+		jz		retnTrue
+	contRetn:
+		JMP_EAX(0x87F43D)
+	retnTrue:
+		mov		al, 1
+		leave
+		retn
 	}
 }
 
@@ -4709,15 +4714,18 @@ __declspec(naked) void FireWeaponWobbleHook()
 	__asm
 	{
 		mov		ecx, [ebp-0x2C]
+		mov		eax, [ecx+0x68]
+		fld		dword ptr [ebp-0x1C]
+		fadd	dword ptr [eax+0x1D0]
 		test	byte ptr [ecx+0x106], kHookActorFlag2_NoGunWobble
 		jnz		done
 		push	2
 		CALL_EAX(0x8B0DD0)
 		fmul	dword ptr ds:[0x11CE038]
-		fmul	qword ptr ds:[0x1023128]
-		fadd	dword ptr [ebp-0x1C]
-		fstp	dword ptr [ebp-0x1C]
+		fmul	dword ptr PS_V3_PId180
+		faddp	st(1), st
 	done:
+		fstp	dword ptr [ebp-0x1C]
 		retn
 	}
 }
@@ -4966,8 +4974,8 @@ __declspec(noinline) void InitJIPHooks()
 	WriteRelCall(0x97D71F, (UInt32)InitCombatControllerHook);
 	WriteRelCall(0x9951B3, (UInt32)CombatActionApplicableHook);
 	WritePushRetRelJump(0x63C918, 0x63C92E, (UInt32)SkyRefreshClimateHook);
-	WriteRelJump(0x87F427, (UInt32)IsActorEssentialHook);
-	WritePushRetRelJump(0x524014, 0x524042, (UInt32)FireWeaponWobbleHook);
+	WriteRelJump(0x87F42D, (UInt32)IsActorEssentialHook);
+	WritePushRetRelJump(0x524014, 0x524072, (UInt32)FireWeaponWobbleHook);
 	WriteRelJump(0xA239E0, (UInt32)GetMouseMovementHook);
 	WriteRelCall(0x7704AE, (UInt32)ClearHUDOrphanedTiles);
 	WriteRelJump(0x50F9E0, (UInt32)GetIsInternalMarkerHook);

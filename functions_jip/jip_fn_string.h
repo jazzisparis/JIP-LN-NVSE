@@ -30,7 +30,7 @@ bool Cmd_sv_RegexSearch_Execute(COMMAND_ARGS)
 	std::cmatch matches;
 	while (std::regex_search(srcStr, matches, rgx))
 	{
-		tmpElements->Append(matches.str(0).c_str());
+		tmpElements->Append(matches.str().c_str());
 		srcStr = matches.suffix().str().c_str();
 	}
 	if (!tmpElements->Empty())
