@@ -300,6 +300,13 @@ public:
 	void	* niTexture;	// 030
 };
 
+// 60
+class BGSTerrainChunkLoadTask : public QueuedFileEntry
+{
+public:
+	UInt32			unk30[12];		// 30
+};
+
 // 58
 class BGSDistantObjectBlockLoadTask : public QueuedFileEntry
 {
@@ -324,6 +331,13 @@ public:
 	UInt32			unk54;			// 54
 };
 static_assert(sizeof(BGSDistantObjectBlockLoadTask) == 0x58);
+
+// 48
+class BGSDistantTreeBlockLoadTask : public QueuedFileEntry
+{
+public:
+	UInt32			unk30[6];		// 30
+};
 
 // 14
 struct KFModel
@@ -563,6 +577,27 @@ struct ModelLoader
 };
 
 extern ModelLoader *g_modelLoader;
+
+class ExteriorCellLoaderTask;
+typedef LockFreeMap<UInt32, ExteriorCellLoaderTask*> ExteriorCellLoader;
+
+// 20
+class ExteriorCellLoaderTask : public IOTask
+{
+public:
+	struct TaskData
+	{
+		SInt32			cellX;
+		SInt32			cellY;
+		TESWorldSpace	*worldspace;
+		UInt32			unk0C;
+		UInt8			byte10;
+		UInt8			pad11[3];
+	};
+
+	ExteriorCellLoader	*extCellLoader;	// 18
+	TaskData			*tastData;		// 1C
+};
 
 // A0
 class IOManager

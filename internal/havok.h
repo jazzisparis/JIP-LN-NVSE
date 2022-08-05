@@ -527,6 +527,12 @@ public:
 };
 
 // 18
+class bhkAabbPhantom : public bhkPhantom
+{
+public:
+};
+
+// 18
 class bhkShapePhantom : public bhkPhantom
 {
 public:
@@ -952,14 +958,10 @@ public:
 	UInt32						unk58;					// 58
 	UInt32						unk5C;					// 5C
 	hkVector4					origin;					// 60
-	bhkEntityListener			**listenerArray;		// 70
-	UInt32						numListeners;			// 74
-	UInt32						unk78;					// 78
-	UInt32						unk7C;					// 7C
-	UInt32						unk80;					// 80
-	UInt32						unk84;					// 84
-	UInt32						unk88;					// 88
-	UInt32						unk8C;					// 8C
+	hkArray<bhkEntityListener*>	listeners;				// 70
+	hkArray<void*>				array7C;				// 7C
+	float						flt88;					// 88
+	float						flt8C;					// 8C
 	UInt32						unk90;					// 90
 	UInt32						unk94;					// 94
 	UInt32						unk98;					// 98
@@ -1055,6 +1057,12 @@ public:
 	UInt32		unk20;		// 20
 	UInt32		unk24;		// 24
 	UInt32		unk28;		// 28
+};
+
+// 2C
+class WeaponObject : public bhkBlendCollisionObject
+{
+public:
 };
 
 // 08

@@ -271,40 +271,57 @@ __declspec(naked) TESObjectREFR *NiAVObject::GetParentRef() const
 	}
 }
 
-void NiAVObject::DumpObject()
+/*
+Controller	1
+ExtraData	2
+Collision	4
+Properties	8
+Transform	0x10
+*/
+void NiAVObject::DumpObject(UInt8 dumpFlags)
 {
 	PrintDebug("(B) %08X\t%s\t%s\t%08X\t#%d", this, GetType()->name, GetName(), m_flags, m_uiRefCount);
 	s_debug().Indent();
-	if (m_controller)
+	if (m_controller && (dumpFlags & 1))
 		PrintDebug("(C) %08X\t%s\t#%d", m_controller, m_controller->GetType()->name, m_controller->m_uiRefCount);
-	DumpExtraData();
-	if (m_collisionObject)
+	if (dumpFlags & 2)
+		DumpExtraData();
+	if (m_collisionObject && (dumpFlags & 4))
 	{
 		PrintDebug("(H) %08X\t%s\t%08X", m_collisionObject, m_collisionObject->GetType()->name, m_collisionObject->flags);
 		bhkWorldObject* hWorldObj = m_collisionObject->worldObj;
 		if (hWorldObj)
 			PrintDebug("\t(H1) %08X\t%s\t%08X", hWorldObj, hWorldObj->GetType()->name, hWorldObj->bodyFlags);
 	}
-	if (GetTriBasedGeom())
+	if (dumpFlags & 8)
 	{
-		NiGeometryData *geomData = ((NiTriBasedGeom*)this)->geometryData;
-		if (geomData)
-			PrintDebug("(G) %08X\t%s\t#%d", geomData, geomData->GetType()->name, geomData->m_uiRefCount);
+		if (GetTriBasedGeom())
+		{
+			NiGeometryData *geomData = ((NiTriBasedGeom*)this)->geometryData;
+			if (geomData)
+				PrintDebug("(G) %08X\t%s\t#%d", geomData, geomData->GetType()->name, geomData->m_uiRefCount);
+		}
+		NiProperty *niProp;
+		for (DListNode<NiProperty> *traverse = m_propertyList.Head(); traverse; traverse = traverse->next)
+		{
+			if (!(niProp = traverse->data))
+				continue;
+			PrintDebug("(P) %08X\t%s\t#%d", niProp, niProp->GetType()->name, niProp->m_uiRefCount);
+			s_debug().Indent();
+			if (niProp->m_controller && (dumpFlags & 1))
+				PrintDebug("(C) %08X\t%s\t#%d", niProp->m_controller, niProp->m_controller->GetType()->name, niProp->m_controller->m_uiRefCount);
+			if (dumpFlags & 2)
+				niProp->DumpExtraData();
+			s_debug().Outdent();
+		}
 	}
-	NiProperty *niProp;
-	for (DListNode<NiProperty> *traverse = m_propertyList.Head(); traverse; traverse = traverse->next)
+	if (dumpFlags & 0x10)
 	{
-		if (!(niProp = traverse->data))
-			continue;
-		PrintDebug("(P) %08X\t%s\t#%d", niProp, niProp->GetType()->name, niProp->m_uiRefCount);
-		s_debug().Indent();
-		if (niProp->m_controller)
-			PrintDebug("(C) %08X\t%s\t#%d", niProp->m_controller, niProp->m_controller->GetType()->name, niProp->m_controller->m_uiRefCount);
-		niProp->DumpExtraData();
-		s_debug().Outdent();
+		if (m_kWorldBound)
+			PrintDebug("(WB) (%.4f, %.4f, %.4f) R = %.4f", m_kWorldBound->x, m_kWorldBound->y, m_kWorldBound->z, m_kWorldBound->radius);
+		m_transformLocal.Dump();
+		m_transformWorld.Dump();
 	}
-	m_transformLocal.Dump();
-	m_transformWorld.Dump();
 	s_debug().Outdent();
 }
 
@@ -940,15 +957,15 @@ __declspec(naked) NiLines* __stdcall NiLines::Create(float length, const NiColor
 	}
 }
 
-void NiNode::Dump()
+void NiNode::Dump(UInt8 dumpFlags)
 {
-	DumpObject();
+	DumpObject(dumpFlags);
 	s_debug().Indent();
 	for (auto iter = m_children.Begin(); iter; ++iter)
 	{
 		if (!*iter) continue;
-		if IS_NODE(*iter) ((NiNode*)*iter)->Dump();
-		else iter->DumpObject();
+		if IS_NODE(*iter) ((NiNode*)*iter)->Dump(dumpFlags);
+		else iter->DumpObject(dumpFlags);
 	}
 	s_debug().Outdent();
 }

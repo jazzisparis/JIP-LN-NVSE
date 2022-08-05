@@ -75,7 +75,7 @@ extern UInt8 *g_numPreloadMods;
 typedef Tile* (__stdcall *_UIOInjectComponent)(Tile *parentTile, const char *dataStr);
 extern _UIOInjectComponent UIOInjectComponent;
 
-#define MSGBOX_ARGS 0, 0, ShowMessageBox_Callback, 0, 0x17, 0, 0, "OK", NULL
+#define MSGBOX_ARGS 0, 0, ShowMessageBox_Callback, 0, 0x17, 0, 0, "OK", nullptr
 
 struct GameGlobals
 {
@@ -94,6 +94,7 @@ struct GameGlobals
 	__forceinline static UInt32 TickCount() {return *(UInt32*)0x11F63A8;}
 	__forceinline static tList<Archive> *ArchivesList() {return *(tList<Archive>**)0x11F8160;}
 	__forceinline static LightCS *SceneLightsLock() {return (LightCS*)0x11F9EA0;}
+	__forceinline static UInt32 *LightingPasses() {return (UInt32*)0x11F91D8;}
 	__forceinline static tList<ListBox<int>> *ActiveListBoxes() {return (tList<ListBox<int>>*)0x11D8B54;}
 	__forceinline static tList<GradualSetFloat> *QueuedGradualSetFloat() {return (tList<GradualSetFloat>*)0x11F3348;}
 	__forceinline static RadioEntry *PipboyRadio() {return *(RadioEntry**)0x11DD42C;}
@@ -144,7 +145,7 @@ __forceinline void ApplyPerkModifiers(UInt32 entryPointID, TESObjectREFR *perkOw
 }
 __forceinline TESTopicInfo *GetTopicInfo(TESTopic *topic, bool *result, Actor *actor, Actor *target)
 {
-	return CdeclCall<TESTopicInfo*>(0x61A7D0, topic, result, actor, target, true, NULL, NULL);
+	return CdeclCall<TESTopicInfo*>(0x61A7D0, topic, result, actor, target, true, nullptr, nullptr);
 }
 __forceinline ImageSpaceModifierInstanceForm *ApplyIMOD(TESImageSpaceModifier *imod, float percent, NiObject *obj10)
 {
@@ -296,12 +297,12 @@ struct AppearanceUndo
 			}
 			while (partIter = partIter->next);
 		}
-		else headParts = NULL;
+		else headParts = nullptr;
 	}
 
 	void Undo(TESNPC *npc)
 	{
-		npc->copyFrom = NULL;
+		npc->copyFrom = nullptr;
 		npc->SetSex(flags);
 		npc->SetRace(race);
 		memcpy(npc->faceGenData[0].values, values0, sizeof(values0));
@@ -709,7 +710,7 @@ public:
 		if (currOffset < length)
 		{
 			if (EvalBlock()) return;
-			typePtr = NULL;
+			typePtr = nullptr;
 		}
 		length = 0;
 	}
@@ -723,7 +724,7 @@ public:
 		if (!dataPtr || (*(UInt32*)dataPtr != 0x1D) || !EvalBlock())
 		{
 			length = 0;
-			typePtr = NULL;
+			typePtr = nullptr;
 		}
 	}
 };
@@ -741,9 +742,9 @@ struct TempArrayElements
 		if (size)
 		{
 			elements = (ArrayElementR*)calloc(size, sizeof(ArrayElementR));
-			GetElements(srcArr, elements, NULL);
+			GetElements(srcArr, elements, nullptr);
 		}
-		else elements = NULL;
+		else elements = nullptr;
 	}
 	TempArrayElements(ArrayElementR *element) : size(1), elements(element), doFree(false) {}
 	~TempArrayElements()
@@ -933,6 +934,6 @@ void InitMemUsageDisplay(UInt32 callDelay);
 #define NUM_ARGS scriptData[*opcodeOffsetPtr]
 #define NUM_ARGS_EX (scriptData[*opcodeOffsetPtr - 2] ? scriptData[*opcodeOffsetPtr] : 0)
 
-DEFINE_COMMAND_PLUGIN(EmptyCommand, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(EmptyCommand, 0, 0, nullptr);
 
 void __stdcall StoreOriginalData(UInt32 addr, UInt8 size);

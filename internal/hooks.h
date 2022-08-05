@@ -405,20 +405,20 @@ __declspec(naked) void MainLoopCallback::Execute()
 	}
 }
 
-MainLoopCallback* __fastcall FindMainLoopCallback(void *cmdPtr, void *thisObj = NULL)
+MainLoopCallback* __fastcall FindMainLoopCallback(void *cmdPtr, void *thisObj = nullptr)
 {
 	for (auto iter = s_mainLoopCallbacks().Begin(); iter; ++iter)
 		if ((iter->cmdPtr == cmdPtr) && (iter->thisObj == thisObj))
 			return *iter;
-	return NULL;
+	return nullptr;
 }
 
-bool MainLoopHasCallback(void *cmdPtr, void *thisObj = NULL)
+bool MainLoopHasCallback(void *cmdPtr, void *thisObj = nullptr)
 {
-	return FindMainLoopCallback(cmdPtr, thisObj) != NULL;
+	return FindMainLoopCallback(cmdPtr, thisObj) != nullptr;
 }
 
-bool MainLoopRemoveCallback(void *cmdPtr, void *thisObj = NULL)
+bool MainLoopRemoveCallback(void *cmdPtr, void *thisObj = nullptr)
 {
 	MainLoopCallback *callback = FindMainLoopCallback(cmdPtr, thisObj);
 	if (!callback) return false;
@@ -426,7 +426,7 @@ bool MainLoopRemoveCallback(void *cmdPtr, void *thisObj = NULL)
 	return true;
 }
 
-void MainLoopAddCallback(void *cmdPtr, void *thisObj = NULL)
+void MainLoopAddCallback(void *cmdPtr, void *thisObj = nullptr)
 {
 	MainLoopCallback::Create(cmdPtr, thisObj);
 }
@@ -621,7 +621,7 @@ __declspec(naked) void GetDescriptionHook()
 {
 	__asm
 	{
-		mov		ds:[0x11C5490], ecx
+		mov		ds:0x11C5490, ecx
 		push	ecx
 		mov		ecx, offset s_descriptionChanges
 		call	UnorderedMap<TESDescription*, char*>::Get
@@ -646,7 +646,7 @@ __declspec(naked) InterfaceManager *PCFastTravelHook()
 	{
 		cmp		dword ptr s_fastTravelEventScripts+4, 0
 		jz		noEvents
-		mov		eax, ds:[0x11DA368]
+		mov		eax, ds:0x11DA368
 		push	dword ptr [eax+0x118]
 		mov		ecx, offset s_fastTravelEventScripts
 		call	EventCallbackScripts::InvokeEvents
@@ -662,7 +662,7 @@ TempObject<InformedObjectsMap> s_pcCellChangeInformed;
 
 __declspec(naked) UInt8 PCCellChangeHook()
 {
-	static TESObjectCELL *pcLastCell = NULL;
+	static TESObjectCELL *pcLastCell = nullptr;
 	__asm
 	{
 		test	eax, eax
@@ -673,7 +673,7 @@ __declspec(naked) UInt8 PCCellChangeHook()
 		mov		ecx, offset s_pcCellChangeInformed
 		call	InformedObjectsMap::Clear
 	done:
-		mov		al, byte ptr ds:[0x11C7A5A]
+		mov		al, byte ptr ds:0x11C7A5A
 		retn
 	}
 }
@@ -686,7 +686,7 @@ __declspec(naked) void __fastcall TextInputRefreshHook(TextEditMenu *menu)
 		cmp		byte ptr [ecx+0x55], 0
 		jz		done
 		mov		esi, ecx
-		mov		eax, ds:[0x11F63A8]
+		mov		eax, ds:0x11F63A8
 		mov		edx, eax
 		sub		edx, [ecx+0x50]
 		cmp		edx, 0x1F4
@@ -855,7 +855,7 @@ __declspec(naked) bool __stdcall TextInputKeyPressHook(UInt32 inputKey)
 		mov		ecx, esi
 		push	dword ptr [ecx+0x2C]
 		push	1
-		call	dword ptr ds:[0x1070040]
+		call	dword ptr ds:0x1070040
 	done:
 		mov		al, 1
 		pop		esi
@@ -978,7 +978,7 @@ void __fastcall MenuHandleClickHook(Menu *menu, int EDX, int tileID, Tile *click
 		{
 			if (!StrBeginsCS(lastClickedTilePath, filter.Key())) break;
 			for (auto script = filter().BeginCp(); script; ++script)
-				CallFunction(*script, NULL, 3, menu->id, tileID, clickedTile->name.m_data);
+				CallFunction(*script, nullptr, 3, menu->id, tileID, clickedTile->name.m_data);
 		}
 	}
 	if (!clickEvent.idsMap().Empty())
@@ -988,7 +988,7 @@ void __fastcall MenuHandleClickHook(Menu *menu, int EDX, int tileID, Tile *click
 		{
 			const char *tileName = clickedTile ? clickedTile->name.m_data : "";
 			for (auto script = callbacks->BeginCp(); script; ++script)
-				CallFunction(*script, NULL, 3, menu->id, tileID, tileName);
+				CallFunction(*script, nullptr, 3, menu->id, tileID, tileName);
 		}
 	}
 	return clickEvent.funcPtr(menu, tileID, clickedTile);
@@ -1054,7 +1054,7 @@ __declspec(naked) void ResetHPCommandHook()
 		jz		contRetn
 		cmp		dword ptr [ebp+0x1C], 0
 		jz		contRetn
-		cmp		byte ptr ds:[0x11DEA2E], 0
+		cmp		byte ptr ds:0x11DEA2E, 0
 		jnz		contRetn
 		push	kExtraData_Script
 		add		ecx, 0x44
@@ -1804,13 +1804,13 @@ const char *kMoonTexturesDefault[] =
 	"textures\\sky\\masser_three_wan.dds",
 	"textures\\sky\\masser_half_wan.dds",
 	"textures\\sky\\masser_one_wan.dds",
-	NULL,
+	nullptr,
 	"textures\\sky\\masser_one_wax.dds",
 	"textures\\sky\\masser_half_wax.dds",
 	"textures\\sky\\masser_three_wax.dds"
 };
-const char *s_moonTexturesOverride[8] = {NULL};
-const char *s_moonTexturesSet[8] = {NULL};
+const char *s_moonTexturesOverride[8] = {nullptr};
+const char *s_moonTexturesSet[8] = {nullptr};
 
 __declspec(naked) void InitMoonHook()
 {
@@ -1889,7 +1889,7 @@ TempObject<EventCallbackScripts> s_targetChangeEventScripts;
 
 __declspec(naked) void SetPCTargetHook()
 {
-	static Actor *lastTarget = NULL;
+	static Actor *lastTarget = nullptr;
 	__asm
 	{
 		mov		edx, [ebp-0x1C]
@@ -2307,7 +2307,7 @@ struct ScriptWaitInfo
 		memcpy(savedIfStack, &scrRunner->ifStackDepth, 0x30);
 	}
 }
-*s_scriptWaitInfo = NULL;
+*s_scriptWaitInfo = nullptr;
 
 typedef UnorderedMap<TESForm*, ScriptWaitInfo> ScriptWaitInfoMap;
 TempObject<ScriptWaitInfoMap> s_scriptWaitInfoMap;
@@ -2410,13 +2410,13 @@ __declspec(naked) void SetTerminalModelHook()
 		mov		eax, [eax]
 		test	eax, eax
 		jnz		done
-		mov		eax, ds:[0x11D9334]
+		mov		eax, ds:0x11D9334
 		test	eax, eax
 		jz		getHacking
 		mov		eax, [eax+0xAC]
 		jmp		checkTarget
 	getHacking:
-		mov		eax, ds:[0x11D95B8]
+		mov		eax, ds:0x11D95B8
 		test	eax, eax
 		jz		done
 		mov		ecx, eax
@@ -2429,7 +2429,7 @@ __declspec(naked) void SetTerminalModelHook()
 		call	UnorderedMap<BGSTerminal*, char*>::Get
 		test	eax, eax
 		cmovz	eax, g_terminalModelDefault
-		mov		ds:[0x11A0BB0], eax
+		mov		ds:0x11A0BB0, eax
 		xor		eax, eax
 	done:
 		retn
@@ -2493,11 +2493,11 @@ __declspec(naked) void ItemCraftedHook()
 }
 
 typedef UnorderedSet<UInt32> CellCoordsSet;
-TempObject<UnorderedMap<UInt32, CellCoordsSet>> s_swapObjLODMap;
-const char kObjLODPathFormat[] = "Data\\Meshes\\Landscape\\LOD\\%s\\Blocks\\%s.Level%d.X%d.Y%d.AltLOD.nif";
+TempObject<UnorderedMap<TESWorldSpace*, CellCoordsSet>> s_swapObjLODMap;
 
 __declspec(naked) void MakeObjLODPathHook()
 {
+	static const char kObjLODPathFormat[] = "Data\\Meshes\\Landscape\\LOD\\%s\\Blocks\\%s.Level%d.X%d.Y%d.AltLOD.nif";
 	__asm
 	{
 		cmp		byte ptr [ebp+0x20], 0
@@ -2505,7 +2505,7 @@ __declspec(naked) void MakeObjLODPathHook()
 		mov		eax, [ebp-0x120]
 		push	dword ptr [eax+0x44]
 		mov		ecx, offset s_swapObjLODMap
-		call	UnorderedMap<UInt32, CellCoordsSet>::GetPtr
+		call	UnorderedMap<TESWorldSpace*, CellCoordsSet>::GetPtr
 		test	eax, eax
 		jz		contRetn
 		mov		ecx, eax
@@ -2530,7 +2530,7 @@ __declspec(naked) void MakeObjLODPathHook()
 		push	0x104
 		lea		eax, [ebp-0x11C]
 		push	eax
-		CALL_EAX(0x406D00)
+		call	sprintf_s
 		add		esp, 0x20
 		JMP_EAX(0x6F6EC0)
 	contRetn:
@@ -3160,6 +3160,8 @@ __declspec(naked) void __fastcall DoInsertNode(NiAVObject *targetObj, const char
 		call	NiNode::GetBlockByName
 		test	eax, eax
 		jz		doCreate
+		cmp		[ebx+0x18], eax
+		jz		done
 		mov		edx, [eax]
 		cmp		dword ptr [edx+0xC], ADDR_ReturnThis
 		jnz		done
@@ -3609,7 +3611,7 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		mov		esi, ecx
 		mov		edi, [ecx+0x28]
 		mov		eax, fs:[0x2C]
-		mov		ecx, ds:[0x126FD98]
+		mov		ecx, ds:0x126FD98
 		mov		edx, [eax+ecx*4]
 		add		edx, 0x2B4
 		push	dword ptr [edx]
@@ -3718,7 +3720,7 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		mov		dword ptr [ecx], 0
 	popTLS:
 		mov		eax, fs:[0x2C]
-		mov		ecx, ds:[0x126FD98]
+		mov		ecx, ds:0x126FD98
 		mov		edx, [eax+ecx*4]
 		pop		dword ptr [edx+0x2B4]
 		pop		edi
@@ -4004,7 +4006,7 @@ __declspec(naked) void __fastcall UpdateAnimatedLightsHook(TES *pTES)
 {
 	__asm
 	{
-		mov		dword ptr ds:[0x11C56E8], 0
+		mov		dword ptr ds:0x11C56E8, 0
 		mov		edx, [ecx+0x34]
 		mov		ecx, [ecx+8]
 		test	edx, edx
@@ -4111,7 +4113,7 @@ __declspec(naked) void __fastcall UpdateAnimatedLightsHook(TES *pTES)
 	}
 }
 
-TESObjectREFR *s_syncPositionRef = NULL;
+TESObjectREFR *s_syncPositionRef = nullptr;
 TempObject<NiFixedString> s_syncPositionNode;
 AlignedVector4 s_syncPositionMods(0, 0, 0, 0), s_syncPositionPos;
 UInt8 s_syncPositionFlags = 0;
@@ -4259,8 +4261,8 @@ void __fastcall DoRenderFrameHook(OSGlobals *osGlobals, int EDX, NiObject *rende
 		jnz		skipHandle
 		call	HandleFramePreRender
 	skipHandle:
-		mov		eax, ds:[0x11F91C8]
-		mov		ecx, ds:[0x11DEB7C]
+		mov		eax, ds:0x11F91C8
+		mov		ecx, ds:0x11DEB7C
 		mov		ecx, [ecx+0xAC]
 		mov		edx, [ecx+0x8C]
 		mov		[eax+0x1F0], edx
@@ -4271,7 +4273,7 @@ void __fastcall DoRenderFrameHook(OSGlobals *osGlobals, int EDX, NiObject *rende
 		mov		dl, [eax+0x131]
 		cmp		[esp+0xC], 0
 		jz		notMenu
-		cmp		byte ptr ds:[0x11F3484], 0
+		cmp		byte ptr ds:0x11F3484, 0
 		jnz		notMenu
 		mov		[esp+0x10], dl
 		mov		eax, 0x8707C0
@@ -4669,14 +4671,14 @@ __declspec(naked) bool __fastcall CombatActionApplicableHook(CombatAction *actio
 	}
 }
 
-TESClimate *s_forcedClimate = NULL;
+TESClimate *s_forcedClimate = nullptr;
 
 __declspec(naked) void SkyRefreshClimateHook()
 {
 	__asm
 	{
 		mov		eax, fs:[0x2C]
-		mov		ecx, ds:[0x126FD98]
+		mov		ecx, ds:0x126FD98
 		mov		edx, [eax+ecx*4]
 		add		edx, 0x2B4
 		mov		eax, [edx]
@@ -4695,17 +4697,13 @@ __declspec(naked) void IsActorEssentialHook()
 {
 	__asm
 	{
-		mov		eax, [ebp-8]
-		test	byte ptr [eax+0x106], kHookActorFlag2_TeammateKillable
-		jnz		contRetn
+		test	byte ptr [ecx+0x106], kHookActorFlag2_TeammateKillable
+		jnz		done
+		mov		ecx, g_thePlayer
 		cmp		byte ptr [ecx+0x7BC], 0
-		jz		retnTrue
-	contRetn:
-		JMP_EAX(0x87F43D)
-	retnTrue:
-		mov		al, 1
-		leave
-		retn
+	done:
+		setnz	al
+		JMP_EDX(0x87F432)
 	}
 }
 
@@ -4721,11 +4719,45 @@ __declspec(naked) void FireWeaponWobbleHook()
 		jnz		done
 		push	2
 		CALL_EAX(0x8B0DD0)
-		fmul	dword ptr ds:[0x11CE038]
+		fmul	dword ptr ds:0x11CE038
 		fmul	dword ptr PS_V3_PId180
 		faddp	st(1), st
 	done:
 		fstp	dword ptr [ebp-0x1C]
+		retn
+	}
+}
+
+TESObjectREFR *s_crosshairRefEx = nullptr;
+
+__declspec(naked) void SetCrosshairRefHook()
+{
+	__asm
+	{
+		mov		edi, [ebp-0x168]
+		lea		eax, [edi+0x110]
+		push	eax
+		lea		eax, [ebp-0x70]
+		lea		edx, [eax-0x10]
+		push	edx
+		push	0x46400000
+		lea		edx, [ebp-0x7C]
+		push	edx
+		push	eax
+		mov		ecx, [edi+0x13C]
+		CALL_EAX(0x631D60)
+		mov		s_crosshairRefEx, eax
+		test	eax, eax
+		jz		done
+		xor		edx, edx
+		mov		ecx, [edi+0x18]
+		//add		ecx, 0x18
+		cvtsi2ss	xmm0, ecx
+		comiss 	xmm0, [ebp-0x80]
+		setnb	dl
+		neg		edx
+		and		eax, edx
+	done:
 		retn
 	}
 }
@@ -4974,8 +5006,9 @@ __declspec(noinline) void InitJIPHooks()
 	WriteRelCall(0x97D71F, (UInt32)InitCombatControllerHook);
 	WriteRelCall(0x9951B3, (UInt32)CombatActionApplicableHook);
 	WritePushRetRelJump(0x63C918, 0x63C92E, (UInt32)SkyRefreshClimateHook);
-	WriteRelJump(0x87F42D, (UInt32)IsActorEssentialHook);
+	WriteRelJump(0x87F427, (UInt32)IsActorEssentialHook);
 	WritePushRetRelJump(0x524014, 0x524072, (UInt32)FireWeaponWobbleHook);
+	//WritePushRetRelJump(0x70C105, 0x70C135, (UInt32)SetCrosshairRefHook);
 	WriteRelJump(0xA239E0, (UInt32)GetMouseMovementHook);
 	WriteRelCall(0x7704AE, (UInt32)ClearHUDOrphanedTiles);
 	WriteRelJump(0x50F9E0, (UInt32)GetIsInternalMarkerHook);

@@ -363,6 +363,7 @@ struct NiMatrix33
 	NiMatrix33& __fastcall MultiplyMatrices(const NiMatrix33 &matB);
 	NiMatrix33& __vectorcall Rotate(__m128 rot);
 	NiMatrix33& Transpose();
+	float __vectorcall From2Points(const NiVector3 &pt1, const NiVector3 &pt2);
 
 	void Dump() const;
 };
@@ -782,9 +783,9 @@ public:
 		}
 
 	public:
-		Iterator(NiTPointerMap &_table) : table(&_table), bucket(table->m_buckets), entry(NULL) {FindNonEmpty();}
+		Iterator(NiTPointerMap &_table) : table(&_table), bucket(table->m_buckets), entry(nullptr) {FindNonEmpty();}
 
-		explicit operator bool() const {return entry != NULL;}
+		explicit operator bool() const {return entry != nullptr;}
 		void operator++()
 		{
 			entry = entry->next;
@@ -860,7 +861,7 @@ public:
 	{
 		for (Entry *entry = buckets[CalculateBucket(key)]; entry; entry = entry->next)
 			if (Equal(key, entry->key)) return entry->data;
-		return NULL;
+		return nullptr;
 	}
 
 	void FreeBuckets();
@@ -880,9 +881,9 @@ public:
 		}
 
 	public:
-		Iterator(NiTMapBase &_table) : table(&_table), bucket(table->buckets), entry(NULL) {FindNonEmpty();}
+		Iterator(NiTMapBase &_table) : table(&_table), bucket(table->buckets), entry(nullptr) {FindNonEmpty();}
 
-		explicit operator bool() const {return entry != NULL;}
+		explicit operator bool() const {return entry != nullptr;}
 		void operator++()
 		{
 			entry = entry->next;

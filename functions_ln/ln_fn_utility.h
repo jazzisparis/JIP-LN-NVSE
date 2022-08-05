@@ -1,9 +1,9 @@
 #pragma once
 
-DEFINE_COMMAND_ALT_PLUGIN(GetLNVersion, GetJIPLNVersion, 0, 0, NULL);
+DEFINE_COMMAND_ALT_PLUGIN(GetLNVersion, GetJIPLNVersion, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(FileExists, 0, 2, kParams_OneString_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ListToArray, 0, 1, kParams_FormList);
-DEFINE_COMMAND_PLUGIN(GetTimeStamp, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetTimeStamp, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetINIFloat, 0, 2, kParams_OneString_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(SetINIFloat, 0, 3, kParams_OneString_OneDouble_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetINIString, 0, 2, kParams_OneString_OneOptionalString);
@@ -17,12 +17,12 @@ DEFINE_COMMAND_ALT_PLUGIN(GetFilesInFolder, GetFiles, 0, 2, kParams_OneString_On
 DEFINE_COMMAND_ALT_PLUGIN(GetFoldersInFolder, GetFolders, 0, 2, kParams_OneString_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(SortFormsByType, 0, 2, kParams_TwoInts);
 DEFINE_COMMAND_PLUGIN(GetFormCountType, 0, 2, kParams_TwoInts);
-DEFINE_COMMAND_ALT_PLUGIN(GetDefaultMessageTime, GetDMT, 0, 0, NULL);
+DEFINE_COMMAND_ALT_PLUGIN(GetDefaultMessageTime, GetDMT, 0, 0, nullptr);
 DEFINE_COMMAND_ALT_PLUGIN(SetDefaultMessageTime, SetDMT, 0, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(Console, 0, 21, kParams_FormatString);
 DEFINE_COMMAND_PLUGIN(GetENBFloat, 0, 2, kParams_TwoStrings);
 DEFINE_COMMAND_PLUGIN(SetENBFloat, 0, 3, kParams_TwoStrings_OneDouble);
-DEFINE_COMMAND_PLUGIN(ReloadENB, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(ReloadENB, 0, 0, nullptr);
 
 bool Cmd_GetLNVersion_Execute(COMMAND_ARGS)
 {
@@ -103,7 +103,7 @@ bool Cmd_GetINIFloat_Execute(COMMAND_ARGS)
 	if (!*delim) return true;
 	char valStr[0x20];
 	valStr[0] = 0;
-	if (GetPrivateProfileString(valueName, delim, NULL, valStr, 0x20, configPath) && valStr[0])
+	if (GetPrivateProfileString(valueName, delim, nullptr, valStr, 0x20, configPath) && valStr[0])
 		*result = StrToDbl(valStr);
 	return true;
 }
@@ -134,7 +134,7 @@ bool Cmd_GetINIString_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) && GetINIPath(iniPath, scriptObj))
 	{
 		char *delim = GetNextToken(valueName, ":\\/");
-		if (*delim) GetPrivateProfileString(valueName, delim, NULL, buffer, kMaxMessageLength, configPath);
+		if (*delim) GetPrivateProfileString(valueName, delim, nullptr, buffer, kMaxMessageLength, configPath);
 	}
 	AssignString(PASS_COMMAND_ARGS, buffer);
 	return true;
@@ -163,7 +163,7 @@ bool Cmd_GetINISection_Execute(COMMAND_ARGS)
 	UInt32 getNumeric = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &secName, iniPath, &getNumeric) || !GetINIPath(iniPath, scriptObj))
 		return true;
-	NVSEArrayVar *outArray = CreateStringMap(NULL, NULL, 0, scriptObj);
+	NVSEArrayVar *outArray = CreateStringMap(nullptr, nullptr, 0, scriptObj);
 	char *buffer = GetStrArgBuffer(), *delim;
 	SInt32 length = GetPrivateProfileSection(secName, buffer, 0x10000, configPath), size;
 	while (length > 0)
@@ -237,7 +237,7 @@ bool Cmd_RemoveINIKey_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) || !GetINIPath(iniPath, scriptObj) || !FileExists(configPath))
 		return true;
 	char *key = GetNextToken(valueName, ":\\/");
-	if (*key && WritePrivateProfileString(valueName, key, NULL, configPath))
+	if (*key && WritePrivateProfileString(valueName, key, nullptr, configPath))
 		*result = 1;
 	return true;
 }
@@ -247,7 +247,7 @@ bool Cmd_RemoveINISection_Execute(COMMAND_ARGS)
 	char configPath[0x80], secName[0x40], *iniPath = configPath + 12;
 	*iniPath = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &secName, iniPath) && GetINIPath(iniPath, scriptObj) && FileExists(configPath) && 
-		WritePrivateProfileStruct(secName, NULL, NULL, 0, configPath)) *result = 1;
+		WritePrivateProfileStruct(secName, nullptr, nullptr, 0, configPath)) *result = 1;
 	else *result = 0;
 	return true;
 }
@@ -264,7 +264,7 @@ bool Cmd_GetFilesInFolder_Execute(COMMAND_ARGS)
 	char *pathEnd = dataPath + StrLen(dataPath);
 	if (pathEnd[-1] != '\\') *pathEnd++ = '\\';
 	StrCopy(pathEnd, filter);
-	NVSEArrayVar *outArray = CreateArray(NULL, 0, scriptObj);
+	NVSEArrayVar *outArray = CreateArray(nullptr, 0, scriptObj);
 	for (DirectoryIterator iter(dataPathFull); iter; ++iter)
 		if (iter.IsFile()) AppendElement(outArray, ArrayElementL(*iter));
 	AssignCommandResult(outArray, result);
@@ -283,7 +283,7 @@ bool Cmd_GetFoldersInFolder_Execute(COMMAND_ARGS)
 	char *pathEnd = dataPath + StrLen(dataPath);
 	if (pathEnd[-1] != '\\') *pathEnd++ = '\\';
 	StrCopy(pathEnd, filter);
-	NVSEArrayVar *outArray = CreateArray(NULL, 0, scriptObj);
+	NVSEArrayVar *outArray = CreateArray(nullptr, 0, scriptObj);
 	for (DirectoryIterator iter(dataPathFull); iter; ++iter)
 		if (iter.IsFolder()) AppendElement(outArray, ArrayElementL(*iter));
 	AssignCommandResult(outArray, result);
@@ -305,14 +305,14 @@ bool Cmd_SortFormsByType_Execute(COMMAND_ARGS)
 	UInt32 size = GetMax(nForms, nTypes) * sizeof(ArrayElementL);
 	ArrayElementL *elements = (ArrayElementL*)AuxBuffer::Get(2, size);
 	MemZero(elements, size);
-	GetElements(formArray, elements, NULL);
+	GetElements(formArray, elements, nullptr);
 	TESForm *form;
 	for (int idx = 0; idx < nForms; idx++)
 	{
 		form = elements[idx].Form();
 		if (form) tempForms.Append(form);
 	}
-	GetElements(typeArray, elements, NULL);
+	GetElements(typeArray, elements, nullptr);
 	UInt8 typeID;
 	for (UInt32 idx = 0; idx < nTypes; idx++)
 	{
@@ -346,7 +346,7 @@ bool Cmd_GetFormCountType_Execute(COMMAND_ARGS)
 	if (!size) return true;
 	ArrayElementR *elements = (ArrayElementR*)AuxBuffer::Get(2, size * sizeof(ArrayElementR));
 	MemZero(elements, size * sizeof(ArrayElementR));
-	if (!GetElements(formArray, elements, NULL))
+	if (!GetElements(formArray, elements, nullptr))
 		return true;
 	int count = 0;
 	TESForm *form;
@@ -393,7 +393,7 @@ bool Cmd_GetENBFloat_Execute(COMMAND_ARGS)
 	char *delim = GetNextToken(valueName, ":\\/");
 	if (!*delim) return true;
 	char strVal[0x20];
-	if (GetPrivateProfileString(valueName, delim, NULL, strVal, 0x20, fileName) && *strVal)
+	if (GetPrivateProfileString(valueName, delim, nullptr, strVal, 0x20, fileName) && *strVal)
 		*result = StrToDbl(strVal);
 	return true;
 }

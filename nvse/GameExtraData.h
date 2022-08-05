@@ -785,6 +785,21 @@ public:
 };
 
 // 14
+class ExtraEnableStateParent : public BSExtraData
+{
+public:
+	enum EnableStateFlags
+	{
+		kEnableFlag_OppositeOfParent =	1,
+		kEnableFlag_PopIn =				2
+	};
+
+	TESObjectREFR		*parentRef;		// 0C
+	UInt8				flags;			// 10
+	UInt8				pad11[3];		// 11
+};
+
+// 14
 class ExtraEnableStateChildren : public BSExtraData
 {
 public:

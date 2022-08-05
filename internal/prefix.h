@@ -322,7 +322,9 @@ class BSFile;
 class QueuedFile;
 struct KFModel;
 struct ModelLoader;
+class BGSTerrainChunkLoadTask;
 class BGSDistantObjectBlockLoadTask;
+class BGSDistantTreeBlockLoadTask;
 struct InventoryRef;
 class AuxVariableValue;
 
@@ -387,6 +389,9 @@ class BSResizableTriShape;
 class BSFaceGenNiNode;
 class BSShaderAccumulator;
 class BSFaceGenAnimationData;
+class Ni2DBuffer;
+class NiDX92DBufferData;
+class IDirect3DBaseTexture9;
 
 class hkReferencedObject;
 class hkpWorldObject;

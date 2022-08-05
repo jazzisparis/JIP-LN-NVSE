@@ -4,7 +4,7 @@
 extern TileMenu **g_tileMenuArray;
 extern TempObject<UnorderedMap<const char*, UInt32>> s_menuNameToID;
 
-// 584
+// 580
 class InterfaceManager
 {
 public:
@@ -790,11 +790,17 @@ public:
 	Actor							*healthTarget;		// 21C
 	UInt32							unk220;				// 220
 	Timer							timer;				// 224
-	UInt32							unk244;				// 244
-	UInt32							unk248[4];			// 248
+	UInt32							enemyHealthBarTime;	// 244
+	UInt32							lastQuestUpdReminderTime;	// 248
+	UInt32							timeArmorIcon;		// 24C
+	UInt32							timeDTIcon;			// 250
+	UInt8							doClearQuestUpdates;// 254
+	UInt8							byte255;			// 255
+	UInt8							byte256;			// 256
+	UInt8							byte257;			// 257
 	tList<QueuedQuestText>			queuedQuestTextList;// 258
-	UInt8							byte260;			// 260
-	UInt8							byte261;			// 261
+	UInt8							isQuestAddedTextVisible;// 260
+	UInt8							isQuestStagesTextVisible;	// 261
 	UInt8							pad262[2];			// 262
 	tList<UInt32>					xpMessages;			// 264
 	tList<UInt32>					list26C;			// 26C
@@ -1648,7 +1654,7 @@ public:
 	TileImage			*tile60;		// 60
 	TileImage			*tile64;		// 64
 	MenuItemEntryList	itemList;		// 68
-	UInt32				unk98;			// 98
+	UInt32				repairAllCost;	// 98
 	UInt8				skill;			// 9C
 	UInt8				pad9D[3];		// 9D
 
@@ -1733,9 +1739,9 @@ public:
 	TileText					*tile05C;		// 05C	RM_SkillRequirementHeader
 	TESObjectREFR				*sourceRef;		// 060
 	TESRecipeCategory			*category;		// 064
-	UInt32						unk068;			// 068
+	UInt32						menuSoundID;	// 068
 	ListBox<TESRecipe*>			recipeList;		// 06C
-	ListBox<TESRecipe*>			*unk09C;		// 09C
+	ListBox<TESRecipe*>			*currentItems;	// 09C
 	ListBox<RecipeComponent*>	componentList;	// 0A0
 	ListBox<Condition*>			conditionList;	// 0D0
 	UInt32						unk100;			// 100

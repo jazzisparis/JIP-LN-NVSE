@@ -423,11 +423,11 @@ class TempCString
 	{
 		if (!str) return;
 		free(str);
-		str = NULL;
+		str = nullptr;
 	}
 
 public:
-	TempCString() : str(NULL) {}
+	TempCString() : str(nullptr) {}
 	TempCString(UInt32 initSize)
 	{
 		str = (char*)malloc(initSize + 1);
@@ -435,11 +435,11 @@ public:
 	}
 	TempCString(const char *src)
 	{
-		str = src ? CopyString(src) : NULL;
+		str = src ? CopyString(src) : nullptr;
 	}
 	TempCString(const TempCString &src)
 	{
-		str = src.str ? CopyString(src.str) : NULL;
+		str = src.str ? CopyString(src.str) : nullptr;
 	}
 
 	~TempCString() {Clear();}
@@ -484,7 +484,7 @@ class DString
 	DString(char *_str, UInt16 _length, UInt16 _alloc) : str(_str), alloc(_alloc), length(_length) {}
 
 public:
-	DString() : str(NULL) {*(UInt32*)&alloc = 0;}
+	DString() : str(nullptr) {*(UInt32*)&alloc = 0;}
 	DString(const char *from);
 	DString(const DString &from);
 	DString(UInt16 _alloc);
@@ -494,7 +494,7 @@ public:
 		if (str)
 		{
 			Pool_Free(str, alloc);
-			str = NULL;
+			str = nullptr;
 			*(UInt32*)&alloc = 0;
 		}
 	}
@@ -558,7 +558,7 @@ class AuxBuffer
 	UInt32		size;
 
 public:
-	AuxBuffer() : ptr(NULL), size(AUX_BUFFER_INIT_SIZE) {}
+	AuxBuffer() : ptr(nullptr), size(AUX_BUFFER_INIT_SIZE) {}
 
 	static UInt8 *Get(UInt32 bufIdx, UInt32 reqSize);
 };
@@ -570,7 +570,7 @@ class FileStream
 	FILE		*theFile;
 
 public:
-	FileStream() : theFile(NULL) {}
+	FileStream() : theFile(nullptr) {}
 	FileStream(const char *filePath);
 	FileStream(const char *filePath, UInt32 inOffset);
 	~FileStream() {if (theFile) fclose(theFile);}
@@ -583,10 +583,10 @@ public:
 	void Close()
 	{
 		fclose(theFile);
-		theFile = NULL;
+		theFile = nullptr;
 	}
 
-	explicit operator bool() const {return theFile != NULL;}
+	explicit operator bool() const {return theFile != nullptr;}
 
 	FILE *GetStream() const {return theFile;}
 	UInt32 GetLength() const;
@@ -608,7 +608,7 @@ class DebugLog
 	UInt32			indent;
 
 public:
-	DebugLog() : theFile(NULL), indent(40) {}
+	DebugLog() : theFile(nullptr), indent(40) {}
 	~DebugLog() {if (theFile) fclose(theFile);}
 
 	bool Create(const char *filePath);
@@ -701,4 +701,4 @@ const char* __fastcall GetDXDescription(UInt32 keyID);
 
 UInt32 __fastcall ByteSwap(UInt32 dword);
 
-void DumpMemImg(void *data, UInt32 size, UInt8 extra = 0);
+void __stdcall DumpMemImg(void *data, UInt32 size, UInt8 extra = 0);

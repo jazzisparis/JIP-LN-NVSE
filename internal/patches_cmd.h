@@ -1,6 +1,6 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetNVSEVersionFull, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetNVSEVersionFull, 0, 0, nullptr);
 
 bool Cmd_GetNVSEVersionFull_Execute(COMMAND_ARGS)
 {

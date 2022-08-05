@@ -1737,3 +1737,32 @@ public:
 	SInt32							excludedActionsMask;// 188	JIP only!
 };
 static_assert(sizeof(CombatController) == 0x18C);
+
+class BSTempEffectSimpleDecal;
+class BSTempEffectParticle;
+
+struct DecalManager
+{
+	struct List08Item
+	{
+		BSTempEffectSimpleDecal	*decal;
+	};
+	
+	struct List14Item
+	{
+		UInt32					sevrDecalCount;
+		UInt8					byte04[4];
+		BGSImpactData			*impactData;
+		BSTempEffectParticle	*effectParticle;
+	};
+
+	NiObject			*object00;		// 00
+	UInt8				byte04;			// 04
+	UInt8				pad05[3];		// 05
+	DList<List08Item>	list08;			// 08
+	DList<List14Item>	list14;			// 14
+	BSShaderAccumulator	*shaderAccum;	// 20
+	NiCamera			*camera;		// 24
+
+	__forceinline static DecalManager *GetSingleton() {return *(DecalManager**)0x11C57F8;}
+};

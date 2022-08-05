@@ -86,13 +86,13 @@ public:
 
 	struct RenderState
 	{
-		TESObjectREFR	*waterRef;		// 00
-		UInt32			unk04;			// 04	0-0x13 when fully-underwater; exterior only
-		float			waterLevel;		// 08
-		float			unk0C;			// 0C
-		UInt32			flags;			// 10
-		NiNode			*niNode14;		// 14
-		NiNode			*niNode18;		// 18
+		TESObjectREFR	*currWaterRef;		// 00
+		UInt32			underwaterCount;	// 04	0-0x13 when fully-underwater; exterior only
+		float			waterLevel;			// 08
+		float			revealDistance;		// 0C
+		UInt32			flags;				// 10
+		NiNode			*rootNode;			// 14
+		bhkPhantom		*phantom;			// 18	Used with trigger volume
 	};
 
 	TESChildCell	childCell;		// 18
@@ -112,7 +112,7 @@ public:
 	bool IsDeleted() const {return (flags & kFlags_Deleted) != 0;}
 	bool IsDestroyed() const {return (flags & kFlags_Destroyed) != 0;}
 
-	__forceinline NiNode *GetRefNiNode() const {return renderState ? renderState->niNode14 : nullptr;}
+	__forceinline NiNode *GetRefNiNode() const {return renderState ? renderState->rootNode : nullptr;}
 
 	TESForm *GetBaseForm() const;
 	TESForm *GetBaseForm2() const;
@@ -309,10 +309,10 @@ public:
 };
 static_assert(sizeof(MagicTarget) == 0x10);
 
-class PathingRequest;
 class PathingSolution;
 class DetailedActorPathHandler;
 class ActorPathingMessageQueue;
+class PathingAvoidNodeArray;
 
 // 28
 class PathingLocation
@@ -323,6 +323,58 @@ public:
 	virtual void	Unk_02(void);
 
 	UInt32			unk04[9];	// 04
+};
+
+// B0
+class PathingRequest : public NiRefObject
+{
+public:
+	/*08*/virtual void	Unk_02(void);
+	/*0C*/virtual void	Unk_03(void);
+	/*10*/virtual void	Unk_04(void);
+	/*14*/virtual void	Unk_05(void);
+	/*18*/virtual void	Unk_06(void);
+	/*1C*/virtual void	Unk_07(void);
+	/*20*/virtual void	Unk_08(void);
+
+	struct ActorData
+	{
+		TESForm		*baseForm;
+		void		*inventoryChanges;
+		bool		isAlarmed;
+	};
+
+	UInt32					unk08;					// 08
+	PathingLocation			start;					// 0C
+	PathingLocation			dest;					// 34
+	ActorData				actorData;				// 5C
+	float					actorRadius;			// 68
+	float					flt6C;					// 6C
+	float					goalZDelta;				// 70
+	float					targetRadius;			// 74
+	float					centerRadius;			// 78
+	NiVector3				targetPt;				// 7C
+	float					unk88;					// 88
+	float					goalAngle;				// 8C
+	float					initialPathHeading;		// 90
+	PathingAvoidNodeArray	*avoidNodeArray;		// 94
+	UInt8					bCantOpenDoors;			// 98
+	UInt8					bFaceTargetAtGoal;		// 99
+	UInt8					byte9A;					// 9A
+	UInt8					bAllowIncompletePath;	// 9B
+	UInt8					byte9C;					// 9C
+	UInt8					bCanSwim;				// 9D
+	UInt8					bCanFly;				// 9E
+	UInt8					byte9F;					// 9F
+	UInt8					bInitialPathHeading;	// A0
+	UInt8					byteA1;					// A1
+	UInt8					bCurvedPath;			// A2
+	UInt8					byteA3;					// A3
+	UInt8					bIgnoreLocks;			// A4
+	UInt8					padA5[3];				// A5
+	UInt32					iSmoothingRetryCount;	// A8
+	UInt8					byteAC;					// AC
+	UInt8					padAD[3];				// AD
 };
 
 // 88
@@ -707,7 +759,7 @@ public:
 	double GetKillXP() const;
 	void GetHitDataValue(UInt32 valueType, double *result) const;
 	void DismemberLimb(UInt32 bodyPartID, bool explode);
-	void EquipItemAlt(TESForm *itemForm, ContChangesEntry *entry, UInt32 noUnequip = 0, UInt32 noMessage = 1);
+	void EquipItemAlt(ContChangesEntry *entry, UInt32 noUnequip = 0, UInt32 noMessage = 1);
 	bool HasNoPath() const;
 	bool CanBePushed() const;
 	float __vectorcall AdjustPushForce(float baseForce);
@@ -930,7 +982,7 @@ public:
 	UInt32								unk734[10];				// 734
 	bool								inCharGen;				// 75C
 	UInt8								byte75D;				// 75D
-	UInt8								byte75E;				// 75E
+	UInt8								canUseTelekinesis;		// 75E
 	UInt8								byte75F;				// 75F
 	TESRegion							*currentRegion;			// 760
 	TESRegionList						regionsList;			// 764
@@ -979,7 +1031,7 @@ public:
 	UInt8								byteD55;				// D55
 	UInt8								byteD56;				// D56
 	UInt8								byteD57;				// D57
-	NiVector3							vectorD58;				// D58
+	NiVector3							cameraPos3rdPerson;		// D58
 	CombatActors						*combatActors;			// D64
 	UInt32								teammateCount;			// D68
 	UInt32								unkD6C[5];				// D6C
@@ -987,7 +1039,7 @@ public:
 	UInt32								unkD84[12];				// D84
 	NiNode								*niNodeDB4;				// DB4
 	UInt32								unkDB8[7];				// DB8
-	NiVector3							vectorDD4;				// DD4
+	NiVector3							cameraPos1stPerson;		// DD4
 	NiVector3							cameraPos;				// DE0
 	bhkRigidBody						*rigidBody;				// DEC
 	bool								pcInCombat;				// DF0

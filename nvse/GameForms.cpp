@@ -194,15 +194,15 @@ const char *TESForm::GetDescriptionText()
 	if (typeID == kFormType_BGSNote)
 	{
 		BGSNote *note = (BGSNote*)this;
-		return ((note->noteType == 1) && note->noteText) ? note->noteText->Get(this, 'MANT') : NULL;
+		return ((note->noteType == 1) && note->noteText) ? note->noteText->Get(this, 'MANT') : nullptr;
 	}
 	if (typeID == kFormType_TESLoadScreen)
 	{
 		TESLoadScreen *loadScreen = (TESLoadScreen*)this;
-		return loadScreen->screenText.m_dataLen ? loadScreen->screenText.m_data : NULL;
+		return loadScreen->screenText.m_dataLen ? loadScreen->screenText.m_data : nullptr;
 	}
 	TESDescription *description = DYNAMIC_CAST(this, TESForm, TESDescription);
-	return description ? description->Get(this, 'CSED') : NULL;
+	return description ? description->Get(this, 'CSED') : nullptr;
 }
 
 extern DataHandler *g_dataHandler;
@@ -231,7 +231,7 @@ const char *TESForm::GetModelPath() const
 		if (modelPath && *modelPath)
 			return modelPath;
 	}
-	return NULL;
+	return nullptr;
 }
 
 extern ModelLoader *g_modelLoader;
@@ -241,7 +241,7 @@ void TESForm::UnloadModel()
 	const char *modelPath = GetModelPath();
 	if (modelPath)
 	{
-		Model *model = NULL;
+		Model *model = nullptr;
 		if (g_modelLoader->modelMap->Lookup(modelPath, &model))
 		{
 			g_modelLoader->modelMap->EraseKey(modelPath);
@@ -363,13 +363,8 @@ __declspec(naked) NiNode* __fastcall TESObjectCELL::Get3DNode(UInt32 index) cons
 		mov		eax, [eax]
 		test	eax, eax
 		jz		done
-		cmp		[eax+0xA6], dx
-		jbe		retnNULL
 		mov		ecx, [eax+0xA0]
 		mov		eax, [ecx+edx*4]
-		retn
-	retnNULL:
-		xor		eax, eax
 	done:
 		retn
 	}
@@ -435,12 +430,12 @@ BGSQuestObjective *TESQuest::GetObjective(UInt32 objectiveID) const
 			return objective;
 	}
 	while (iter = iter->next);
-	return NULL;
+	return nullptr;
 }
 
 void TESActorBaseData::SetFactionRank(TESFaction *faction, char rank)
 {
-	ListNode<FactionListData> *iter = factionList.Head(), *prev = NULL;
+	ListNode<FactionListData> *iter = factionList.Head(), *prev = nullptr;
 	FactionListData *data;
 	do
 	{
@@ -516,7 +511,7 @@ __declspec(naked) LODdata::LODNode *LODdata::LODNode::GetNodeByCoord(Coordinate 
 bool AlchemyItem::IsPoison() const
 {
 	EffectItem *effItem;
-	EffectSetting *effSetting = NULL;
+	EffectSetting *effSetting = nullptr;
 	ListNode<EffectItem> *iter = magicItem.list.list.Head();
 	do
 	{
@@ -525,12 +520,12 @@ bool AlchemyItem::IsPoison() const
 		if (effSetting && !(effSetting->effectFlags & 4)) return false;
 	}
 	while (iter = iter->next);
-	return effSetting != NULL;
+	return effSetting != nullptr;
 }
 
 bool TESModelList::ModelListAction(char *path, char action)
 {
-	ListNode<char> *iter = modelList.Head(), *prev = NULL;
+	ListNode<char> *iter = modelList.Head(), *prev = nullptr;
 	char *nifPath;
 	do
 	{
@@ -562,8 +557,8 @@ void TESModelList::CopyFrom(TESModelList *source)
 	unk10 = source->unk10;
 	ListNode<char> *nextNode = modelList.Head(), *currNode = nextNode->next;
 	GameHeapFree(nextNode->data);
-	nextNode->data = NULL;
-	nextNode->next = NULL;
+	nextNode->data = nullptr;
+	nextNode->next = nullptr;
 	while (currNode)
 	{
 		nextNode = currNode->next;
@@ -584,7 +579,7 @@ void TESModelList::CopyFrom(TESModelList *source)
 
 WeatherEntry *TESClimate::GetWeatherEntry(TESWeather *weather, bool remove)
 {
-	ListNode<WeatherEntry> *iter = weatherTypes.Head(), *prev = NULL;
+	ListNode<WeatherEntry> *iter = weatherTypes.Head(), *prev = nullptr;
 	WeatherEntry *entry;
 	do
 	{
@@ -601,7 +596,7 @@ WeatherEntry *TESClimate::GetWeatherEntry(TESWeather *weather, bool remove)
 		prev = iter;
 	}
 	while (iter = iter->next);
-	if (remove) return NULL;
+	if (remove) return nullptr;
 	entry = (WeatherEntry*)GameHeapAlloc(sizeof(WeatherEntry));
 	weatherTypes.Prepend(entry);
 	return entry;
@@ -617,7 +612,7 @@ void TESRecipe::ComponentList::AddComponent(TESForm *form, UInt32 quantity)
 
 UInt32 TESRecipe::ComponentList::RemoveComponent(TESForm *form)
 {
-	Node *iter = Head(), *prev = NULL;
+	Node *iter = Head(), *prev = nullptr;
 	RecipeComponent *component;
 	do
 	{
@@ -691,8 +686,8 @@ void TESLeveledList::AddItem(TESForm *form, UInt16 level, UInt16 count, float he
 	while (iter = iter->next);
 	ListData *newData = (ListData*)GameHeapAlloc(sizeof(ListData));
 	LvlListExtra *newExtra = (LvlListExtra*)GameHeapAlloc(sizeof(LvlListExtra));
-	newExtra->ownerFaction = NULL;
-	newExtra->globalVar = NULL;
+	newExtra->ownerFaction = nullptr;
+	newExtra->globalVar = nullptr;
 	newExtra->health = health;
 	newData->form = form;
 	newData->level = level;
@@ -704,7 +699,7 @@ void TESLeveledList::AddItem(TESForm *form, UInt16 level, UInt16 count, float he
 UInt32 TESLeveledList::RemoveItem(TESForm *form)
 {
 	UInt32 numRemoved = 0;
-	ListNode<ListData> *iter = list.Head(), *prev = NULL;
+	ListNode<ListData> *iter = list.Head(), *prev = nullptr;
 	ListData *data;
 	do
 	{
@@ -783,9 +778,9 @@ void TESLeveledList::Dump()
 TESIdleForm *TESIdleForm::FindIdle(Actor *animActor)
 {
 	bool eval;
-	if (!conditions.Evaluate(animActor, 0, &eval, 0)) return NULL;
+	if (!conditions.Evaluate(animActor, 0, &eval, 0)) return nullptr;
 	if (!children) return this;
-	TESIdleForm **idles = children->data, *result = NULL;
+	TESIdleForm **idles = children->data, *result = nullptr;
 	for (UInt32 count = children->size; count && !result; count--, idles++)
 		result = (*idles)->FindIdle(animActor);
 	return result;
@@ -794,7 +789,7 @@ TESIdleForm *TESIdleForm::FindIdle(Actor *animActor)
 bool EffectItemList::RemoveNthEffect(UInt32 index)
 {
 	if (!list.GetNthItem(1)) return false;
-	ListNode<EffectItem> *iter = list.Head(), *prev = NULL;
+	ListNode<EffectItem> *iter = list.Head(), *prev = nullptr;
 	do
 	{
 		if (index)
@@ -960,7 +955,7 @@ void TESBipedModelForm::SetBipedMask(UInt32 mask)
 
 void  TESBipedModelForm::SetPath(const char* newPath, UInt32 whichPath, bool bFemalePath)
 {
-	String* toSet = NULL;
+	String* toSet = nullptr;
 
 	switch (whichPath)
 	{
@@ -981,7 +976,7 @@ void  TESBipedModelForm::SetPath(const char* newPath, UInt32 whichPath, bool bFe
 
 const char* TESBipedModelForm::GetPath(UInt32 whichPath, bool bFemalePath)
 {
-	String* pathStr = NULL;
+	String* pathStr = nullptr;
 
 	switch (whichPath)
 	{

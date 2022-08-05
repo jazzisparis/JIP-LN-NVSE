@@ -4,13 +4,13 @@ DEFINE_COMMAND_PLUGIN(SetPersistent, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetObjectDimensions, 0, 2, kParams_OneAxis_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(GetIsItem, 0, 1, kParams_OneOptionalObjectID);
 DEFINE_COMMAND_ALT_PLUGIN(SetLinkedReference, SetLinkedRef, 1, 1, kParams_OneOptionalObjectRef);
-DEFINE_COMMAND_PLUGIN(GetEnableChildren, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetLinkedChildren, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(HasPrimitive, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetEnableChildren, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetLinkedChildren, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(HasPrimitive, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetPrimitiveBound, 1, 1, kParams_OneAxis);
 DEFINE_COMMAND_PLUGIN(SetPrimitiveBound, 1, 2, kParams_OneAxis_OneFloat);
 DEFINE_COMMAND_PLUGIN(AddPrimitive, 1, 4, kParams_OneInt_ThreeFloats);
-DEFINE_COMMAND_PLUGIN(GetTeammates, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetTeammates, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(MoveToCell, 1, 4, kParams_OneForm_ThreeFloats);
 DEFINE_COMMAND_PLUGIN(MoveToEditorPosition, 1, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetCenterPos, 1, 1, kParams_OneAxis);
@@ -21,25 +21,25 @@ DEFINE_COMMAND_PLUGIN(SetMaterialPropertyValue, 1, 3, kParams_OneString_OneInt_O
 DEFINE_COMMAND_PLUGIN(GetHasContact, 1, 1, kParams_OneForm);
 DEFINE_COMMAND_PLUGIN(GetHasContactBase, 1, 1, kParams_OneForm);
 DEFINE_CMD_COND_PLUGIN(GetHasContactType, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetContactRefs, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetHasPhantom, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetContactRefs, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetHasPhantom, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetInteractionDisabled, 0, 1, kParams_OneOptionalObject);
 DEFINE_COMMAND_PLUGIN(SetInteractionDisabled, 0, 2, kParams_OneInt_OneOptionalObject);
 DEFINE_COMMAND_PLUGIN(GetInteractionDisabledType, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(SetInteractionDisabledType, 0, 2, kParams_TwoInts);
-DEFINE_COMMAND_PLUGIN(AddRefMapMarker, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(RemoveRefMapMarker, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(RefHasMapMarker, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(AddRefMapMarker, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(RemoveRefMapMarker, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(RefHasMapMarker, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetPosEx, 1, 4, kParams_ThreeFloats_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(MoveToReticle, 1, 5, kParams_FourOptionalFloats_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetRefName, 1, 1, kParams_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(SetAngleEx, 1, 4, kParams_ThreeFloats_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetTeleportDoor, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetTeleportDoor, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetOnCriticalHitEventHandler, 0, 5, kParams_OneForm_OneInt_ThreeOptionalForms);
 DEFINE_COMMAND_PLUGIN(MoveToFadeDelay, 1, 2, kParams_OneObjectRef_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetCrosshairWater, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetCrosshairWater, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(IsAnimPlayingEx, 1, 3, kParams_OneInt_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(GetRigidBodyMass, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetRigidBodyMass, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(PushObject, 1, 5, kParams_FourFloats_OneOptionalObjectRef);
 DEFINE_COMMAND_PLUGIN(MoveToContainer, 1, 2, kParams_OneObjectRef_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetNifBlockTranslation, 1, 3, kParams_OneString_TwoOptionalInts);
@@ -58,14 +58,14 @@ DEFINE_COMMAND_PLUGIN(GetRayCastPos, 1, 7, kParams_ThreeGlobals_OneOptFloat_OneO
 DEFINE_COMMAND_PLUGIN(GetAnimSequenceFrequency, 1, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(SetAnimSequenceFrequency, 1, 2, kParams_OneString_OneFloat);
 DEFINE_COMMAND_PLUGIN(MoveToNode, 1, 5, kParams_OneObjectRef_OneString_ThreeOptionalFloats);
-DEFINE_COMMAND_PLUGIN(GetPlayerPerks, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetPlayerPerks, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetNifBlockParentNodes, 1, 2, kParams_OneString_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetCrosshairRefEx, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(IsMobile, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(IsGrabbable, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetCrosshairRefEx, 0, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(IsMobile, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(IsGrabbable, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(AttachLight, 1, 5, kParams_OneString_OneForm_ThreeOptionalFloats);
 DEFINE_COMMAND_PLUGIN(RemoveLight, 1, 1, kParams_OneString);
-DEFINE_COMMAND_PLUGIN(GetExtraFloat, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetExtraFloat, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetExtraFloat, 1, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(SetLinearVelocity, 1, 5, kParams_OneString_ThreeFloats_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(InsertNode, 0, 23, kParams_OneForm_OneInt_OneFormatString);
@@ -74,14 +74,14 @@ DEFINE_COMMAND_ALT_PLUGIN(SynchronizePosition, SyncPos, 0, 4, kParams_OneOptiona
 DEFINE_COMMAND_PLUGIN(ModelHasBlock, 0, 22, kParams_OneForm_OneFormatString);
 DEFINE_COMMAND_PLUGIN(GetRayCastRef, 1, 2, kParams_OneOptionalInt_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetRayCastMaterial, 1, 2, kParams_OneOptionalInt_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(GetCollisionNodes, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetCollisionNodes, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetChildBlocks, 1, 2, kParams_OneOptionalString_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetBlockTextureSet, 1, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(GetPosEx, 1, 3, kParams_ThreeScriptVars);
 DEFINE_COMMAND_PLUGIN(GetAngleEx, 1, 4, kParams_ThreeScriptVars_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetTextureTransformKey, 1, 4, kParams_OneString_TwoInts_OneFloat);
 DEFINE_COMMAND_PLUGIN(AttachExtraCamera, 1, 3, kParams_OneString_OneInt_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(ProjectExtraCamera, 0, 4, kParams_TwoStrings_OneFloat_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(ProjectExtraCamera, 0, 5, kParams_TwoStrings_OneFloat_TwoOptionalInt);
 DEFINE_COMMAND_PLUGIN(RenameNifBlock, 1, 3, kParams_TwoStrings_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(RemoveNifBlock, 1, 2, kParams_OneString_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(PlayAnimSequence, 1, 2, kParams_OneString_OneOptionalString);
@@ -111,7 +111,7 @@ bool Cmd_GetObjectDimensions_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char axis;
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &axis, &form)) return true;
 	axis -= 'X';
 	float scale = 1.0F;
@@ -136,7 +136,7 @@ bool Cmd_GetObjectDimensions_Execute(COMMAND_ARGS)
 bool Cmd_GetIsItem_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form)) return true;
 	if (!form)
 	{
@@ -150,7 +150,7 @@ bool Cmd_GetIsItem_Execute(COMMAND_ARGS)
 bool Cmd_SetLinkedReference_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESObjectREFR *linkRef = NULL;
+	TESObjectREFR *linkRef = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &linkRef) && thisObj->SetLinkedRef(linkRef, scriptObj->GetOverridingModIdx()))
 	{
 		*result = 1;
@@ -370,7 +370,7 @@ bool Cmd_GetCenterPos_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRefType_Execute(COMMAND_ARGS)
 {
-	TESObjectREFR *objRefr = NULL;
+	TESObjectREFR *objRefr = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &objRefr) && (objRefr || (objRefr = thisObj)))
 	{
 		*result = objRefr->typeID;
@@ -465,6 +465,22 @@ void __fastcall PopulateFormSet(TESForm *form, TempFormList *tmpFormLst)
 	else tmpFormLst->Insert(form);
 }
 
+void __fastcall GetRefrContactObjects(TESObjectREFR *thisObj, ContactObjects &contactObjs)
+{
+	TESObjectREFR::RenderState *renderState = thisObj->renderState;
+	if (renderState)
+	{
+		NiNode *niNode = renderState->rootNode;
+		if (niNode)
+		{
+			if (renderState->phantom && IS_TYPE(renderState->phantom, bhkSimpleShapePhantom))
+				for (auto iter = ((hkpSimpleShapePhantom*)renderState->phantom->refObject)->cdBodies.Begin(); iter; ++iter)
+					contactObjs.Append(iter->GetWorldObj());
+			niNode->GetContactObjects(contactObjs);
+		}
+	}
+}
+
 bool __fastcall GetHasContact(TESObjectREFR *thisObj, TESForm *form)
 {
 	TempFormList *tmpFormLst = GetTempFormList();
@@ -474,9 +490,7 @@ bool __fastcall GetHasContact(TESObjectREFR *thisObj, TESForm *form)
 	TESObjectREFR *refr;
 	if (IS_ACTOR(thisObj))
 	{
-		HighProcess *hiProc = (HighProcess*)((Actor*)thisObj)->baseProcess;
-		if (!hiProc || hiProc->processLevel) return false;
-		bhkCharacterController *charCtrl = hiProc->charCtrl;
+		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 		if (!charCtrl) return false;
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
@@ -489,10 +503,8 @@ bool __fastcall GetHasContact(TESObjectREFR *thisObj, TESForm *form)
 	}
 	else
 	{
-		NiNode *niNode = thisObj->GetRefNiNode();
-		if (!niNode) return false;
 		ContactObjects contactObjs;
-		niNode->GetContactObjects(contactObjs);
+		GetRefrContactObjects(thisObj, contactObjs);
 		bodies = contactObjs.Data();
 		count = contactObjs.Size();
 	}
@@ -523,9 +535,7 @@ bool __fastcall GetHasContactBase(TESObjectREFR *thisObj, TESForm *form)
 	TESObjectREFR *refr;
 	if (IS_ACTOR(thisObj))
 	{
-		HighProcess *hiProc = (HighProcess*)((Actor*)thisObj)->baseProcess;
-		if (!hiProc || hiProc->processLevel) return false;
-		bhkCharacterController *charCtrl = hiProc->charCtrl;
+		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 		if (!charCtrl) return false;
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
@@ -538,10 +548,8 @@ bool __fastcall GetHasContactBase(TESObjectREFR *thisObj, TESForm *form)
 	}
 	else
 	{
-		NiNode *niNode = thisObj->GetRefNiNode();
-		if (!niNode) return false;
 		ContactObjects contactObjs;
-		niNode->GetContactObjects(contactObjs);
+		GetRefrContactObjects(thisObj, contactObjs);
 		bodies = contactObjs.Data();
 		count = contactObjs.Size();
 	}
@@ -570,9 +578,7 @@ bool __fastcall GetHasContactType(TESObjectREFR *thisObj, UInt32 typeID)
 	TESObjectREFR *refr;
 	if (IS_ACTOR(thisObj))
 	{
-		HighProcess *hiProc = (HighProcess*)((Actor*)thisObj)->baseProcess;
-		if (!hiProc || hiProc->processLevel) return false;
-		bhkCharacterController *charCtrl = hiProc->charCtrl;
+		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 		if (!charCtrl) return false;
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
@@ -585,10 +591,8 @@ bool __fastcall GetHasContactType(TESObjectREFR *thisObj, UInt32 typeID)
 	}
 	else
 	{
-		NiNode *niNode = thisObj->GetRefNiNode();
-		if (!niNode) return false;
 		ContactObjects contactObjs;
-		niNode->GetContactObjects(contactObjs);
+		GetRefrContactObjects(thisObj, contactObjs);
 		bodies = contactObjs.Data();
 		count = contactObjs.Size();
 	}
@@ -625,9 +629,7 @@ bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 	TESObjectREFR *refr;
 	if (IS_ACTOR(thisObj))
 	{
-		HighProcess *hiProc = (HighProcess*)((Actor*)thisObj)->baseProcess;
-		if (!hiProc || hiProc->processLevel) return true;
-		bhkCharacterController *charCtrl = hiProc->charCtrl;
+		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
 		if (!charCtrl) return true;
 		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
 		{
@@ -639,10 +641,8 @@ bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 	}
 	else
 	{
-		NiNode *niNode = thisObj->GetRefNiNode();
-		if (!niNode) return true;
 		ContactObjects contactObjs;
-		niNode->GetContactObjects(contactObjs);
+		GetRefrContactObjects(thisObj, contactObjs);
 		bodies = contactObjs.Data();
 		count = contactObjs.Size();
 	}
@@ -658,19 +658,20 @@ bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 
 bool Cmd_GetHasPhantom_Execute(COMMAND_ARGS)
 {
-	if (IS_ACTOR(thisObj))
+	*result = 0;
+	TESObjectREFR::RenderState *renderState = thisObj->renderState;
+	if (renderState)
 	{
-		*result = 1;
-		return true;
+		NiNode *niNode = renderState->rootNode;
+		if (niNode && (IS_ACTOR(thisObj) || (renderState->phantom && IS_TYPE(renderState->phantom, bhkSimpleShapePhantom)) || niNode->HasPhantom()))
+			*result = 1;
 	}
-	NiNode *niNode = thisObj->GetRefNiNode();
-	*result = (niNode && niNode->HasPhantom()) ? 1 : 0;
 	return true;
 }
 
 bool Cmd_GetInteractionDisabled_Execute(COMMAND_ARGS)
 {
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (form || (form = thisObj)))
 		*result = (form->jipFormFlags6 & kHookFormFlag6_NoPCActivation) ? 1 : 0;
 	else *result = 0;
@@ -680,7 +681,7 @@ bool Cmd_GetInteractionDisabled_Execute(COMMAND_ARGS)
 bool Cmd_SetInteractionDisabled_Execute(COMMAND_ARGS)
 {
 	UInt32 disable;
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &disable, &form)) return true;
 	if (!form)
 	{
@@ -850,23 +851,23 @@ bool Cmd_SetOnCriticalHitEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt;
-	Actor *target = NULL;
-	TESObjectREFR *source = NULL;
-	TESObjectWEAP *weapon = NULL;
+	Actor *target = nullptr;
+	TESObjectREFR *source = nullptr;
+	TESObjectWEAP *weapon = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &target, &source, &weapon) || NOT_ID(script, Script)) return true;
 	if (target)
 	{
 		if (NOT_ACTOR(target))
 		{
 			if (!source) return true;
-			target = NULL;
+			target = nullptr;
 		}
 		if (source)
 		{
 			if NOT_REFERENCE(source)
 			{
 				if (!weapon) return true;
-				source = NULL;
+				source = nullptr;
 			}
 			if (weapon && NOT_ID(weapon, TESObjectWEAP))
 				return true;
@@ -905,7 +906,7 @@ bool Cmd_MoveToFadeDelay_Execute(COMMAND_ARGS)
 bool Cmd_GetCrosshairWater_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESWaterForm *water = NULL;
+	TESWaterForm *water = nullptr;
 	TESObjectREFR *refr = g_interfaceManager->crosshairRef;
 	if (refr && IS_ID(refr->baseForm, BGSPlaceableWater))
 		water = ((BGSPlaceableWater*)refr->baseForm)->water;
@@ -955,7 +956,7 @@ bool Cmd_GetRigidBodyMass_Execute(COMMAND_ARGS)
 bool Cmd_PushObject_Execute(COMMAND_ARGS)
 {
 	NiVector4 forceVector;
-	TESObjectREFR *refr = NULL;
+	TESObjectREFR *refr = nullptr;
 	if (NOT_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &forceVector.x, &forceVector.y, &forceVector.z, &forceVector.w, &refr))
 	{
 		NiNode *niNode = thisObj->GetRefNiNode();
@@ -1509,6 +1510,9 @@ bool Cmd_GetCrosshairRefEx_Execute(COMMAND_ARGS)
 		if (!resRefr) return true;
 	}
 	REFR_RES = resRefr->refID;
+
+	/*if (s_crosshairRefEx)
+		REFR_RES = s_crosshairRefEx->refID;*/
 	return true;
 }
 
@@ -1568,7 +1572,7 @@ bool Cmd_RemoveLight_Execute(COMMAND_ARGS)
 bool Cmd_GetExtraFloat_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	ExtraDataList *xData = NULL;
+	ExtraDataList *xData = nullptr;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 	if (invRef)
 		xData = invRef->xData;
@@ -1587,7 +1591,7 @@ bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
 	float fltVal;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &fltVal))
 	{
-		ExtraDataList *xData = NULL;
+		ExtraDataList *xData = nullptr;
 		InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 		if (invRef)
 		{
@@ -1635,8 +1639,8 @@ bool Cmd_SetLinearVelocity_Execute(COMMAND_ARGS)
 bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 {
 	static char meshesPath[0x80] = "data\\meshes\\";
-	TESObjectREFR *refr = IS_REFERENCE(form) ? (TESObjectREFR*)form : NULL;
-	NiNode *rootNode = refr ? refr->GetRefNiNode() : NULL;
+	TESObjectREFR *refr = IS_REFERENCE(form) ? (TESObjectREFR*)form : nullptr;
+	NiNode *rootNode = refr ? refr->GetRefNiNode() : nullptr;
 	bool result = false, modifyMap = true;
 	char doInsert = *inData;
 	if (refr)
@@ -1651,7 +1655,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 	else if (!form->IsBoundObject())
 		goto freeDataStr;
 
-	char *pInData = inData + 2, *nodeName = NULL, *objectName = FindChr(pInData, '|'), *suffix;
+	char *pInData = inData + 2, *nodeName = nullptr, *objectName = FindChr(pInData, '|'), *suffix;
 	if (objectName)
 	{
 		*objectName++ = 0;
@@ -1790,7 +1794,7 @@ bool Cmd_AttachModel_Execute(COMMAND_ARGS)
 
 bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 {
-	TESObjectREFR *targetRef = NULL;
+	TESObjectREFR *targetRef = nullptr;
 	UInt32 syncRot = 0;
 	s_syncPositionMods.z = 0;
 	char nodeName[0x40];
@@ -1812,7 +1816,7 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 		}
 		else if (targetRef = s_syncPositionRef)
 		{
-			s_syncPositionRef = NULL;
+			s_syncPositionRef = nullptr;
 			cell = targetRef->GetParentCell();
 			if (cell) g_thePlayer->MoveToCell(cell, s_syncPositionPos);
 		}
@@ -1827,8 +1831,8 @@ bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 	TESForm *form;
 	if (ExtractFormatStringArgs(1, buffer + 1, EXTRACT_ARGS_EX, kCommandInfo_ModelHasBlock.numParams, &form))
 	{
-		TESObjectREFR *refr = IS_REFERENCE(form) ? (TESObjectREFR*)form : NULL;
-		NiNode *rootNode = refr ? refr->GetNiNode() : NULL;
+		TESObjectREFR *refr = IS_REFERENCE(form) ? (TESObjectREFR*)form : nullptr;
+		NiNode *rootNode = refr ? refr->GetNiNode() : nullptr;
 		if (rootNode && rootNode->GetBlock(buffer + 1))
 			goto Retn1;
 		NodeNamesMap *namesMap = s_insertNodeMap->GetPtr(form);
@@ -2123,6 +2127,7 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 					*pCamera = xCamera = NiCamera::Create();
 					InterlockedIncrement(&xCamera->m_uiRefCount);
 					xCamera->SetName(camName);
+					xCamera->m_transformLocal.scale = 0;
 					xCamera->frustum.n = 5.0F;
 					xCamera->frustum.f = 353840.0F;
 					xCamera->minNearPlaneDist = 1.0F;
@@ -2149,53 +2154,18 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 	return true;
 }
 
-void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, int EDX, NiCamera *camera, RenderTarget **outTexture);
-
-__declspec(naked) void __stdcall ProjectExtraCamera(NiCamera *camera, NiTexture **pTexture)
-{
-	__asm
-	{
-		push	ebp
-		mov		ebp, esp
-		mov		byte ptr ds:[0x11AD7B4], 0
-		push	0
-		push	esp
-		push	dword ptr [ebp+8]
-		xor		ecx, ecx
-		call	GenerateRenderedTexture
-		mov		byte ptr ds:[0x11AD7B4], 1
-		mov		ecx, [ebp-4]
-		test	ecx, ecx
-		jz		done
-		mov		eax, [ecx+0x30]
-		test	eax, eax
-		jz		doRelease
-		push	eax
-		push	dword ptr [ebp+0xC]
-		call	NiReleaseAddRef
-		mov		ecx, [ebp-4]
-	doRelease:
-		call	NiReleaseObject
-	done:
-		leave
-		retn	8
-	}
-}
-
-UInt32 s_projectPixelSize = 0x100;
-
 bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char camName[0x40], nodeName[0x40];
 	float fov;
-	UInt32 pixelSize = 0x100;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &camName, &nodeName, &fov, &pixelSize))
+	UInt32 pixelSize = 0x100, grayscale = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &camName, &nodeName, &fov, &pixelSize, &grayscale))
 	{
 		NiCamera *xCamera = s_extraCamerasMap().Get(camName);
 		if (xCamera && xCamera->m_parent)
 		{
-			NiTexture **pTexture = NULL;
+			NiTexture **pTexture = nullptr;
 			if (nodeName[0] == '*')
 			{
 				TileImage *targetTile = (TileImage*)GetTargetComponent(nodeName + 1);
@@ -2214,10 +2184,14 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 			}
 			if (pTexture)
 			{
-				xCamera->frustum.viewPort.SetFOV(fov * FltPId180);
+				if (xCamera->m_transformLocal.scale != fov)
+				{
+					xCamera->m_transformLocal.scale = fov;
+					xCamera->frustum.viewPort.SetFOV(fov * FltPId180);
+				}
 				s_projectPixelSize = pixelSize;
 				HighActorCuller::Run(xCamera);
-				ProjectExtraCamera(xCamera, pTexture);
+				GenerateRenderedTexture(nullptr, grayscale ? TEXTURE_FMT_BW : TEXTURE_FMT_RGB, xCamera, pTexture);
 				*result = 1;
 			}
 		}

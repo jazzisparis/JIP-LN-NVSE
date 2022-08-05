@@ -30,6 +30,8 @@ public:
 	NiFixedString(const NiFixedString &inStr) {Set(inStr.str);}
 	~NiFixedString() {Unset();}
 
+	const char *Get() const {return str ? str : "";}
+
 	UInt32 Length() const {return str ? *(UInt32*)(str - 4) : 0;}
 
 	explicit operator bool() const {return str != nullptr;}
@@ -437,7 +439,7 @@ class NiTimeController : public NiObject
 public:
 	/*8C*/virtual void		Unk_23(void);
 	/*90*/virtual void		Unk_24(void);
-	/*94*/virtual void		Update(UpdateParams &updParams);
+	/*94*/virtual void		Update(const UpdateParams &updParams);
 	/*98*/virtual void		SetTarget(NiNode *pTarget);
 	/*9C*/virtual void		Unk_27(void);
 	/*A0*/virtual void		Unk_28(void);
@@ -456,7 +458,7 @@ public:
 	float				lastTime;			// 20
 	float				weightedLastTime;	// 24
 	float				scaledTime;			// 28
-	NiNode				*target;			// 2C
+	NiObjectNET			*target;			// 2C
 	NiTimeController	*nextCtrl;			// 30
 };
 
@@ -508,6 +510,19 @@ public:
 	/*E8*/virtual void		Unk_3A(void);
 
 	NiInterpolator		*interpolator;		// 34
+};
+
+// 38
+class NiBoolInterpController : public NiSingleInterpController
+{
+public:
+	/*EC*/virtual void		Unk_3B(void);
+};
+
+// 38
+class NiVisController : public NiBoolInterpController
+{
+public:
 };
 
 // 38
@@ -767,7 +782,7 @@ class NiProperty : public NiObjectNET
 {
 public:
 	/*8C*/virtual UInt32	GetPropertyType();
-	/*90*/virtual void		UpdateController(UpdateParams &updParams);
+	/*90*/virtual void		UpdateController(const UpdateParams &updParams);
 
 	enum PropertyType
 	{
@@ -1311,7 +1326,7 @@ public:
 	TESObjectREFR *GetParentRef() const;
 	__forceinline void RenderGeometryAndShader() {CdeclCall(0xB57E30, this, 0, 0);}
 
-	void DumpObject();
+	void DumpObject(UInt8 dumpFlags = 0xF);
 	void DumpParents();
 };
 
@@ -1344,7 +1359,7 @@ public:
 	bool HasPhantom();
 	float __vectorcall GetBodyMass(float totalMass) const;
 	void ApplyForce(const NiVector4 &forceVector);
-	void Dump();
+	void Dump(UInt8 dumpFlags = 0xF);
 };
 static_assert(sizeof(NiNode) == 0xAC);
 
@@ -1397,7 +1412,11 @@ class BSParticleSystemManager : public NiNode
 public:
 	/*100*/virtual void		Unk_40(void);
 
-	UInt32			unkAC[3];		// AC
+	UInt32			*pcmArray;		// AC
+	UInt32			arraySize;		// B0
+	void			*ptrB4;			// B4
+
+	__forceinline static BSParticleSystemManager *GetSingleton() {return *(BSParticleSystemManager**)0x11DED58;}
 };
 
 // B4
@@ -1451,6 +1470,20 @@ class BSTempNodeManager : public NiNode
 public:
 	UInt32			unkAC;		// AC
 };
+
+// B8
+class BSClearZNode : public NiNode
+{
+public:
+	UInt8			byteAC;		// AC
+	UInt8			byteAD;		// AD
+	UInt8			padAE[2];	// AE
+	float			fltB0;		// B0
+	float			fltB4;		// B4
+
+	__forceinline static BSClearZNode *GetSingleton() {return *(BSClearZNode**)0x11DEA18;}
+};
+extern BSClearZNode *g_LODRootNode;
 
 // 64
 class BSFogProperty : public NiProperty
@@ -1663,7 +1696,7 @@ public:
 	BSCubeMapCamera					*cubeMapCam;	// 128
 	UInt32							unk12C;			// 12C
 	UInt8							byte130;		// 130
-	UInt8							byte131;		// 131
+	UInt8							isWireFrameMode;// 131
 	UInt8							pad132[2];		// 132
 	BSFogProperty					*fogProperty;	// 134
 	UInt32							unk138;			// 138
@@ -1873,7 +1906,7 @@ public:
 	TESAnimGroup	*animGroup;		// 74
 };
 
-enum TexturePixelLayout
+enum TexturePixelLayout : UInt32
 {
 	kPixelLayout_Palettized8,
 	kPixelLayout_HighColor16,
@@ -1893,7 +1926,7 @@ enum TexturePixelLayout
 	kPixelLayout_SingleColor4
 };
 
-enum TextureAlphaFormat
+enum TextureAlphaFormat : UInt32
 {
 	kAlphaFormat_None,
 	kAlphaFormat_Binary,
@@ -1901,11 +1934,18 @@ enum TextureAlphaFormat
 	kAlphaFormat_Default
 };
 
-enum TextureMipMapFlag
+enum TextureMipMapFlag : UInt32
 {
 	kMipMapFlag_Disabled,
 	kMipMapFlag_Enabled,
 	kMipMapFlag_Default
+};
+
+struct TextureFormatPrefs
+{
+	TexturePixelLayout	pixelLayout;
+	TextureAlphaFormat	alpha;
+	TextureMipMapFlag	mipMaps;
 };
 
 // 0C
@@ -1950,6 +1990,19 @@ public:
 };
 static_assert(sizeof(NiPixelData) == 0x74);
 
+// 24
+class NiDX92DBufferData : public NiRefObject
+{
+public:
+	Ni2DBuffer				*buffer;		// 08
+	void					*ptr0C;			// 0C
+	UInt32					unk10;			// 10
+	void					*ptr14;			// 14
+	UInt32					unk18;			// 18
+	UInt32					unk1C;			// 1C
+	IDirect3DBaseTexture9	*d3dBaseTexture;// 20
+};
+
 // 14
 class Ni2DBuffer : public NiObject
 {
@@ -1958,9 +2011,9 @@ public:
 	/*90*/virtual void		Unk_24(void);
 	/*94*/virtual void		Unk_25(void);
 
-	UInt32		width;		// 08
-	UInt32		height;		// 0C
-	UInt32		unk10;		// 10
+	UInt32				width;			// 08
+	UInt32				height;			// 0C
+	NiDX92DBufferData	*bufferData;	// 10
 };
 
 // 28
@@ -2018,6 +2071,77 @@ enum D3DXIMAGE_FILEFORMAT
 	D3DXIFF_DIB,
 	D3DXIFF_HDR,
 	D3DXIFF_PFM
+};
+
+enum D3DFORMAT : UInt32
+{
+	D3DFMT_R8G8B8 =					0x14,
+	D3DFMT_A8R8G8B8 =				0x15,
+	D3DFMT_X8R8G8B8 =				0x16,
+	D3DFMT_R5G6B5 =					0x17,
+	D3DFMT_X1R5G5B5 =				0x18,
+	D3DFMT_A1R5G5B5 =				0x19,
+	D3DFMT_A4R4G4B4 =				0x1A,
+	D3DFMT_R3G3B2 =					0x1B,
+	D3DFMT_A8 =						0x1C,
+	D3DFMT_A8R3G3B2 =				0x1D,
+	D3DFMT_X4R4G4B4 =				0x1E,
+	D3DFMT_A2B10G10R10 =			0x1F,
+	D3DFMT_A8B8G8R8 =				0x20,
+	D3DFMT_X8B8G8R8 =				0x21,
+	D3DFMT_G16R16 =					0x22,
+	D3DFMT_A2R10G10B10 =			0x23,
+	D3DFMT_A16B16G16R16 =			0x24,
+	D3DFMT_A8P8 =					0x28,
+	D3DFMT_P8 =						0x29,
+	D3DFMT_L8 =						0x32,
+	D3DFMT_A8L8 =					0x33,
+	D3DFMT_A4L4 =					0x34,
+	D3DFMT_V8U8 =					0x3C,
+	D3DFMT_L6V5U5 =					0x3D,
+	D3DFMT_X8L8V8U8 =				0x3E,
+	D3DFMT_Q8W8V8U8 =				0x3F,
+	D3DFMT_V16U16 =					0x40,
+	D3DFMT_A2W10V10U10 =			0x43,
+	D3DFMT_D16_LOCKABLE =			0x46,
+	D3DFMT_D32 =					0x47,
+	D3DFMT_D15S1 =					0x49,
+	D3DFMT_D24S8 =					0x4B,
+	D3DFMT_D24X8 =					0x4D,
+	D3DFMT_D24X4S4 =				0x4F,
+	D3DFMT_D16 =					0x50,
+	D3DFMT_L16 =					0x51,
+	D3DFMT_D32F_LOCKABLE =			0x52,
+	D3DFMT_D24FS8 =					0x53,
+	D3DFMT_VERTEXDATA =				0x64,
+	D3DFMT_INDEX16 =				0x65,
+	D3DFMT_INDEX32 =				0x66,
+	D3DFMT_Q16W16V16U16 =			0x6E,
+	D3DFMT_R16F =					0x6F,
+	D3DFMT_G16R16F =				0x70,
+	D3DFMT_A16B16G16R16F =			0x71,
+	D3DFMT_R32F =					0x72,
+	D3DFMT_G32R32F =				0x73,
+	D3DFMT_A32B32G32R32F =			0x74,
+	D3DFMT_CxV8U8 =					0x75,
+	D3DFMT_A1 =						0x76,
+	D3DFMT_A2B10G10R10_XR_BIAS =	0x77,
+	D3DFMT_BINARYBUFFER =			0xC7,
+	D3DFMT_DXT1 =					0x31545844,
+	D3DFMT_DXT2 =					0x32545844,
+	D3DFMT_DXT3 =					0x33545844,
+	D3DFMT_DXT4 =					0x34545844,
+	D3DFMT_DXT5 =					0x35545844
+};
+
+// ???
+class IDirect3DBaseTexture9
+{
+public:
+	void			**vtbl;		// 00
+	void			*ptr04;		// 04
+	D3DFORMAT		texFormat;	// 08
+	//	And unknown more.
 };
 
 class NiDX9Renderer : public NiRenderer
@@ -2240,8 +2364,6 @@ public:
 };
 static_assert(sizeof(NiDX9Renderer) == 0xB80);
 
-class IDirect3DBaseTexture9;
-
 // 70
 class NiDX9TextureData : public NiObject
 {
@@ -2284,13 +2406,12 @@ public:
 	/*9C*/virtual void		Unk_27(void);
 	/*A0*/virtual void		Unk_28(void);
 
-	UInt32				pixelLayout;	// 18
-	UInt32				alphaFormat;	// 1C
-	UInt32				mipmapFormat;	// 20
+	TextureFormatPrefs	formatPrefs;	// 18
 	NiDX9TextureData	*textureData;	// 24
 	NiTexture			*prev;			// 28
 	NiTexture			*next;			// 2C
 };
+static_assert(sizeof(NiTexture) == 0x30);
 
 // 48
 class NiSourceTexture : public NiTexture
@@ -2333,7 +2454,7 @@ public:
 	UInt8				byte40;		// 40
 	UInt8				byte41;		// 41
 	UInt8				pad42[2];	// 42
-	UInt32				unk44;		// 44
+	D3DFORMAT			texFormat;	// 44
 
 	void __fastcall SaveToFile(UInt32 fileFmt, char *filePath);
 };
@@ -2351,6 +2472,7 @@ public:
 	NiRenderedTexture		*textures[4];	// 30
 };
 
+// 0C
 class NiAccumulator : public NiObject
 {
 public:
@@ -2360,19 +2482,29 @@ public:
 	/*98*/virtual void		Unk_26(UInt32 arg);
 	/*9C*/virtual void		Unk_27(void);
 	/*A0*/virtual void		Unk_28(void);
+
+	UInt32			unk08;			// 08
 };
 
+// 2C
 class NiBackToFrontAccumulator : public NiAccumulator
 {
 public:
 	/*A4*/virtual void		Unk_29(void);
+
+	DList<void>		list0C;			// 0C
+	UInt32			unk18[5];		// 18
 };
 
 // 34
 class NiAlphaAccumulator : public NiBackToFrontAccumulator
 {
 public:
-	UInt32			unk08[11];		// 08
+	UInt32			unk2C;			// 2C
+	UInt8			byte30;			// 30
+	UInt8			byte31;			// 31
+	UInt8			byte32;			// 32
+	UInt8			pad33;			// 33
 };
 
 // 98
@@ -2394,6 +2526,17 @@ public:
 	/*AC*/virtual void		Unk_2B(void);
 	/*B0*/virtual void		Unk_2C(UInt32 arg1, UInt32 arg2);
 
+	// 14
+	struct Struct48
+	{
+		UInt32		unk00;
+		UInt8		byte04;
+		UInt8		pad05[3];
+		float		flt08;
+		UInt32		unk0C;
+		UInt32		unk10;
+	};
+
 	struct AccumStruct	//	Temp name
 	{
 		void		*_vtbl;	// 0x10B7DC0
@@ -2403,29 +2546,63 @@ public:
 		UInt32		unk10;
 	};
 
-	UInt32				unk034[4];		// 034
-	float				flt044;			// 044
-	UInt32				unk048[21];		// 048
-	AccumStruct			accum09C;		// 09C
-	AccumStruct			accum0B0;		// 0B0
-	AccumStruct			accum0C4;		// 0C4
-	AccumStruct			accum0D8;		// 0D8
-	AccumStruct			accum0EC;		// 0EC
-	AccumStruct			accum100;		// 100
-	AccumStruct			accum114;		// 114
-	AccumStruct			accum128;		// 128
-	UInt32				unk13C[6];		// 13C
-	float				flt154;			// 154
-	float				flt158;			// 158
-	float				flt15C;			// 15C
-	float				flt160;			// 160
-	UInt32				unk164[4];		// 164
-	BSBatchRenderer		*batchRenderer;	// 174
-	UInt32				unk178[7];		// 178
-	ShadowSceneNode		*shadowScene;	// 194
-	UInt32				unk198;			// 198
-	UInt32				unk19C;			// 19C
-	UInt32				unk1A0[56];		// 1A0
+	UInt32					unk034;			// 034
+	UInt8					byte038;		// 038
+	UInt8					byte039;		// 039
+	UInt8					byte03A;		// 03A
+	UInt8					byte03B;		// 03B
+	UInt32					unk03C;			// 03C
+	UInt8					byte040;		// 040
+	UInt8					pad041[3];		// 041
+	float					flt044;			// 044
+	Struct48				unk048;			// 048
+	Struct48				unk05C;			// 05C
+	Struct48				unk070;			// 070
+	UInt8					byte084;		// 084
+	UInt8					byte085;		// 085
+	UInt8					byte086;		// 086
+	UInt8					byte087;		// 087
+	UInt16					word088;		// 088
+	UInt16					word08A;		// 08A
+	void					*ptr08C;		// 08C	Array of 200 DWORDS, or pointers
+	UInt32					unk090[3];		// 090
+	AccumStruct				accum09C;		// 09C
+	AccumStruct				accum0B0;		// 0B0
+	AccumStruct				accum0C4;		// 0C4
+	AccumStruct				accum0D8;		// 0D8
+	AccumStruct				accum0EC;		// 0EC
+	AccumStruct				accum100;		// 100
+	AccumStruct				accum114;		// 114
+	AccumStruct				accum128;		// 128
+	UInt32					unk13C[5];		// 13C
+	UInt8					byte150;		// 150
+	UInt8					pad151[3];		// 151
+	float					flt154;			// 154
+	float					flt158;			// 158
+	float					flt15C;			// 15C
+	float					flt160;			// 160
+	UInt8					byte164;		// 164
+	UInt8					byte165;		// 165
+	UInt8					byte166;		// 166
+	UInt8					byte167;		// 167
+	UInt32					unk168;			// 168
+	UInt8					bRenderDecals;	// 16C
+	UInt8					pad16D[3];		// 16D
+	void					*ptr170;		// 170
+	BSBatchRenderer			*renderer174;	// 174
+	BSBatchRenderer			*renderer178;	// 178
+	void					*ptr17C;		// 17C
+	void					*ptr180;		// 180
+	void					*ptr184;		// 184
+	void					*ptr188;		// 188
+	UInt32					unk18C;			// 18C
+	UInt32					unk190;			// 190
+	ShadowSceneNode			*shadowScene;	// 194
+	UInt32					unk198;			// 198
+	UInt32					callbackIndex;	// 19C	Index of a callback in 2 arrays @ 0x11F9F40 & 0x11F9F80
+	UInt32					unk1A0[5];		// 1A0
+	NiTPointerMap<void*>	map1B4;			// 1B4
+	UInt32					unk1C4[47];		// 1C4
 };
 static_assert(sizeof(BSShaderAccumulator) == 0x280);
 
@@ -2612,7 +2789,20 @@ public:
 class BSSegmentedTriShape : public NiTriShape
 {
 public:
-	UInt32		unkC4[3];		// C4
+	// 14
+	struct Segment
+	{
+		UInt32		startIndex;
+		UInt32		numPrimitives;
+		UInt32		unk08;
+		UInt32		unk0C;
+		UInt32		unk10;
+	};
+
+	Segment			*segments;		// C4
+	UInt32			numSegments;	// C8
+	UInt8			byteCC;			// CC
+	UInt8			padCD[3];		// CD
 };
 
 // 18
@@ -2710,18 +2900,17 @@ public:
 };
 static_assert(sizeof(NiCullingProcess) == 0x90);
 
-// CC
+// C8
 class BSCullingProcess : public NiCullingProcess
 {
 public:
-	UInt32					unk90;			// 90
-	UInt32					unk94[10];		// 94
-	UInt32					unkBC;			// BC
-	UInt32					unkC0;			// C0
-	BSShaderAccumulator		*shaderAccum;	// C4
-	UInt32					unkC8;			// C8
+	UInt32					topCullMode;		// 90
+	UInt32					cullModeStack[10];	// 94
+	UInt32					stackSize;			// BC
+	UInt32					unkC0;				// C0
+	BSShaderAccumulator		*shaderAccum;		// C4
 };
-static_assert(sizeof(BSCullingProcess) == 0xCC);
+static_assert(sizeof(BSCullingProcess) == 0xC8);
 
 // 90
 class BSFadeNodeCuller : public NiCullingProcess

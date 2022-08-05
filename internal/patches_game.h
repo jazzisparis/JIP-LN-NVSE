@@ -28,7 +28,7 @@ __declspec(naked) void GeneratePlayerNodeHook()
 	{
 		push	0
 		push	esp
-		push	dword ptr ds:[0x11CDD7C]
+		push	dword ptr ds:0x11CDD7C
 		mov		eax, g_modelLoader
 		mov		ecx, [eax]
 		CALL_EAX(0x4493D0)
@@ -87,7 +87,7 @@ __declspec(naked) void __fastcall DoQueuedPlayerHook(QueuedPlayer *queuedPlayer)
 		call	dword ptr [eax+0xE8]
 	done694:
 		xorps	xmm0, xmm0
-		movups	ds:[0x11E07CC], xmm0
+		movups	ds:0x11E07CC, xmm0
 		lea		ecx, [ebx+0xD74]
 		movups	[ecx], xmm0
 		movups	[ecx+0x10], xmm0
@@ -290,9 +290,9 @@ __declspec(naked) UInt32 GamePadRumbleHook()
 {
 	__asm
 	{
-		cmp		byte ptr ds:[0x11E0854], 0
+		cmp		byte ptr ds:0x11E0854, 0
 		jz		noRumble
-		jmp		dword ptr ds:[0xFDF398]
+		jmp		dword ptr ds:0xFDF398
 	noRumble:
 		xor		eax, eax
 		retn	8
@@ -661,7 +661,7 @@ __declspec(naked) bool __stdcall TerminalGetLockedHook(TESObjectREFR *terminalRe
 	}
 }
 
-TESWorldSpace *s_audioMarkerLastWorld = NULL;
+TESWorldSpace *s_audioMarkerLastWorld = nullptr;
 TempObject<Vector<MusicMarker>> s_musicMarkerList(0x100);
 
 void __fastcall BuildMusicMarkerList(TESWorldSpace *worldspace, tList<TESObjectREFR> *markerRefList)
@@ -706,7 +706,7 @@ __declspec(naked) void BuildMusicMarkerListHook()
 	}
 }
 
-TESForm *s_altAshPile = NULL;
+TESForm *s_altAshPile = nullptr;
 
 __declspec(naked) void AttachAshPileHook()
 {
@@ -1125,7 +1125,7 @@ __declspec(naked) bool __fastcall GetEffectHiddenHook(EffectItem *effItem)
 		mov		ecx, [ecx+0x14]
 		test	ecx, ecx
 		jz		retnTrue
-		cmp		ecx, ds:[0x11C33F4]
+		cmp		ecx, ds:0x11C33F4
 		jz		retnTrue
 		test	byte ptr [ecx+0x58], 8
 		setnz	al
@@ -1209,7 +1209,7 @@ __declspec(naked) bool ReactionCooldownCheckHook()
 		sub		eax, lastTickCount
 		cvtsi2ss	xmm0, eax
 		mulss	xmm0, SS_1d1K
-		comiss	xmm0, ds:[0x11CE9B8]
+		comiss	xmm0, ds:0x11CE9B8
 		seta	al
 		jbe		done
 		mov		lastTickCount, edx
@@ -1423,7 +1423,7 @@ __declspec(naked) void PlayAttackSoundHook()
 	}
 }
 
-const char *g_attachLightString = NULL;
+const char *g_attachLightString = nullptr;
 
 __declspec(naked) NiNode* __fastcall GetAttachParentNode(TESObjectREFR *refr)
 {
@@ -1748,11 +1748,11 @@ __declspec(naked) void SetAcousticSpaceFixHook()
 {
 	__asm
 	{
-		mov		byte ptr ds:[0x11DCFB1], 0
+		mov		byte ptr ds:0x11DCFB1, 0
 		test	eax, eax
 		jz		done
-		mov		dword ptr ds:[0x11DCFB8], 0
-		cmp		eax, ds:[0x11DCFB4]
+		mov		dword ptr ds:0x11DCFB8, 0
+		cmp		eax, ds:0x11DCFB4
 		jz		done
 		push	eax
 		CALL_EAX(0x82EAE0)
@@ -1777,7 +1777,7 @@ __declspec(naked) bool __cdecl PickSoundFileFromFolderHook(char *outFilePath)
 		mov		edi, eax
 		mov		word ptr [eax], '.*'
 		mov		dword ptr [eax+2], '\0vaw'
-		cmp		byte ptr ds:[0x11ACDF9], 0
+		cmp		byte ptr ds:0x11ACDF9, 0
 		jnz		invalidate
 		push	8
 		push	dword ptr [ebp+8]
@@ -2016,7 +2016,7 @@ __declspec(naked) BGSImpactData* __fastcall GetImpactDataHook(BGSImpactDataSet *
 		mov		eax, [ecx+edx*4+0x1C]
 		test	eax, eax
 		jz		done
-		mov		ecx, ds:[0x11CA834]
+		mov		ecx, ds:0x11CA834
 		test	ecx, ecx
 		jz		done
 		push	eax
@@ -2057,7 +2057,7 @@ __declspec(naked) void __fastcall MarkRefAsModifiedHook(TESObjectREFR *refr, int
 		push	0
 		push	eax
 		push	ecx
-		mov		ecx, ds:[0x11DDF38]
+		mov		ecx, ds:0x11DDF38
 		CALL_EAX(0x84A690)
 		retn	4
 	}
@@ -2185,7 +2185,7 @@ __declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadin
 		push	edi
 		test	byte ptr [ecx+0x222], 0x20
 		setnz	bl
-		mov		bh, byte ptr ds:[0x11D8907]
+		mov		bh, byte ptr ds:0x11D8907
 		mov		eax, g_OSGlobals
 		or		bh, byte ptr [eax+2]
 		mov		eax, [esp+0x10]
@@ -2855,8 +2855,8 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	Actor *source = hitData->source;
 	TESObjectWEAP *hitWeapon = hitData->weapon;
 	hitData->wpnBaseDmg = hitData->healthDmg;
-	TESAmmo *ammo = NULL;
-	AmmoEffectList *ammoEffects = NULL;
+	TESAmmo *ammo = nullptr;
+	AmmoEffectList *ammoEffects = nullptr;
 	if (hitWeapon && hitWeapon->ammo.ammo)
 	{
 		if (source)
@@ -2960,7 +2960,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	{
 		weaponInfo = hiProcess->weaponInfo;
 		bool noInfo = !weaponInfo;
-		TESObjectWEAP *pWeapon = weaponInfo ? (TESObjectWEAP*)weaponInfo->type : NULL;
+		TESObjectWEAP *pWeapon = weaponInfo ? (TESObjectWEAP*)weaponInfo->type : nullptr;
 		hitData->flags |= 1;
 		if (flagPCTM & 8)
 			g_thePlayer->counterAttackTimer = *(float*)0x11D0BE8;	// fCounterAttackTimer
@@ -3117,7 +3117,7 @@ __declspec(naked) void SetHitLocationHook()
 		mov		dword ptr [eax+0x14], 0
 		cmp		dword ptr [eax+0x54], 0
 		jz		skipMod
-		mulss	xmm0, ds:[0x11CE5D4]
+		mulss	xmm0, ds:0x11CE5D4
 	skipMod:
 		movss	[eax+0x20], xmm0
 	done:
@@ -3133,7 +3133,7 @@ __declspec(naked) float __cdecl GetVATSTargetDTHook(PlayerCharacter *thePlayer, 
 		mov		ebp, esp
 		push	0
 		push	esi
-		mov		esi, ds:[0x11D98D4]
+		mov		esi, ds:0x11D98D4
 		test	esi, esi
 		cmovz	esi, g_fistsWeapon
 		push	kAVCode_DamageThreshold
@@ -3204,13 +3204,13 @@ __declspec(naked) bool PlayerCannotBeHitHook()
 {
 	__asm
 	{
-		mov		al, ds:[0x11E0898]
+		mov		al, ds:0x11E0898
 		test	al, al
 		jnz		done
 		cmp		s_playerMinHPMode, 2
 		setz	al
 		jz		done
-		mov		al, ds:[0x11E07BA]
+		mov		al, ds:0x11E07BA
 	done:
 		retn
 	}
@@ -3222,7 +3222,7 @@ __declspec(naked) TESImageSpaceModifier *GetHitIMODHook()
 {
 	__asm
 	{
-		cmp		byte ptr ds:[0x118ABB1], 0
+		cmp		byte ptr ds:0x118ABB1, 0
 		jz		retnNULL
 		cmp		s_disableHitEffects, 0
 		jnz		retnNULL
@@ -3340,10 +3340,10 @@ __declspec(naked) void EnableRepairButtonHook()
 		movss	xmm0, [ebp-0x44]
 		xorps	xmm1, xmm1
 		maxss	xmm0, xmm1
-		movss	xmm1, ds:[0x11D0FF4]	// fRepairSkillBase
+		movss	xmm1, ds:0x11D0FF4	// fRepairSkillBase
 		movss	xmm2, SS_10
 		mulss	xmm1, xmm2
-		mulss	xmm2, ds:[0x11D0190]	// fRepairSkillMax
+		mulss	xmm2, ds:0x11D0190	// fRepairSkillMax
 		subss	xmm2, xmm1
 		mulss	xmm0, xmm2
 		mulss	xmm0, SS_1d100
@@ -3390,10 +3390,10 @@ __declspec(naked) float __vectorcall GetRepairAmount(float itemToRepairHealth, f
 		mulss	xmm2, SS_1d100
 		movaps	xmm3, xmm0
 		minss	xmm3, xmm1
-		mulss	xmm3, ds:[0x11D074C]	// fRepairScavengeMult
+		mulss	xmm3, ds:0x11D074C	// fRepairScavengeMult
 		maxss	xmm0, xmm1
-		movss	xmm1, ds:[0x11D0884]	// fRepairMin
-		movss	xmm4, ds:[0x11CFFA4]	// fRepairMax
+		movss	xmm1, ds:0x11D0884	// fRepairMin
+		movss	xmm4, ds:0x11CFFA4	// fRepairMax
 		subss	xmm4, xmm1
 		mulss	xmm4, xmm2
 		addss	xmm0, xmm1
@@ -3424,7 +3424,7 @@ __declspec(naked) void DoRepairItemHook()
 		mov		ecx, [ebp+8]
 		call	ContChangesEntry::GetHealthPercent
 		movaps	xmm5, xmm0
-		mov		ecx, ds:[0x11DA760]
+		mov		ecx, ds:0x11DA760
 		call	ContChangesEntry::GetHealthPercent
 		movaps	xmm1, xmm5
 		call	GetRepairAmount
@@ -3437,7 +3437,7 @@ __declspec(naked) void RepairMenuClickHook()
 {
 	__asm
 	{
-		mov		ecx, ds:[0x11DA760]
+		mov		ecx, ds:0x11DA760
 		call	ContChangesEntry::GetHealthPercent
 		addss	xmm0, PS_V3_One
 		comiss	xmm0, s_pcRepairSkill
@@ -3552,7 +3552,7 @@ __declspec(naked) void VoiceModulationFixHook()
 }
 
 AlignedVector4 s_shapeVerticesZ[10];
-bhkCharControllerShape *s_pcControllerShape = NULL;
+bhkCharControllerShape *s_pcControllerShape = nullptr;
 
 __declspec(naked) void InitControllerShapeHook()
 {
@@ -3573,7 +3573,7 @@ __declspec(naked) void InitControllerShapeHook()
 		cmp		dword ptr [eax], 0
 		jnz		done
 		mov		eax, offset s_shapeVerticesZ
-		mov		ecx, ds:[0x1267BE0]
+		mov		ecx, ds:0x1267BE0
 		mov		ecx, [ecx+8]
 		mov		ecx, [ecx+0x40]
 		add		ecx, 0x20
@@ -3676,7 +3676,7 @@ void CheckNVACLog()
 	srcFile.ReadBuf(endPtr, length);
 	memcpy(endPtr + length, "\n<<<<<<<<<<<< END NVAC REPORT <<<<<<<<<<<<\n", 44);
 	Console_Print(buffer);
-	QueueUIMessage("NVAC log updated (see console print).", 0, (const char*)0x1049638, NULL, 2.5F, 0);
+	QueueUIMessage("NVAC log updated (see console print).", 0, (const char*)0x1049638, nullptr, 2.5F, 0);
 }
 
 __declspec(naked) bool __fastcall CreatureSpreadFixHook(Actor *actor)
@@ -4117,7 +4117,7 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 				*(UInt32*)(buffer + 2) = (UInt32)&s_NVACLogUpdated;
 				*(UInt32*)(buffer + 6) = 0x8C201;
 				SafeWriteBuf(patchAddr, buffer, sizeof(buffer));
-				MainLoopAddCallbackEx(CheckNVACLog, NULL, 0, 60);
+				MainLoopAddCallbackEx(CheckNVACLog, nullptr, 0, 60);
 				s_NVACLogUpdated = true;
 			}
 			else
@@ -4188,7 +4188,7 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 }
 
 TempObject<UnorderedMap<const char*, FontInfo*>> s_fontInfosMap;
-char *s_extraFontsPaths[80] = {NULL};
+char *s_extraFontsPaths[80] = {nullptr};
 
 __declspec(naked) void InitFontManagerHook()
 {
@@ -4347,7 +4347,7 @@ __declspec(naked) BSArchive* __cdecl LoadBSAFileHook(const char *filename, short
 }
 
 float s_msgDisplayTime = 2;				// Replacement float for 0x010162C0
-const UInt32 kDisplayTimePatches[] =	// Instances of "D905 C0620101" (FLD DWORD PTR DS:[010162C0]) related to default UI messages.
+const UInt32 kDisplayTimePatches[] =	// Instances of "D905 C0620101" (FLD DWORD PTR DS:010162C0) related to default UI messages.
 {
 	0x4825C7, 0x48261B, 0x4C5625, 0x4CB8FE, 0x4CEBE0, 0x4CEC36, 0x4CF150, 0x4CF1A9, 0x4CF57D, 0x4CF5D6, 0x4CF7FD, 0x4CF856, 0x4CFB17, 0x4CFB70,
 	0x4FEEEA, 0x5013FF, 0x501494, 0x5016EA, 0x508C81, 0x508D21, 0x509695, 0x5096ED, 0x50973E, 0x50978B, 0x5097C9, 0x50980B, 0x5150C8, 0x5151CF,
@@ -4537,6 +4537,7 @@ void InitGamePatches()
 	SafeWrite32(0x9ED3F8, (UInt32)&s_moveAwayDistance);
 	SafeWrite32(0x9ED528, (UInt32)&s_moveAwayDistance);
 
+	SAFE_WRITE_BUF(0x40EB90, "\x0F\x57\xC9\xF3\x0F\x10\x44\x24\x04\xF3\x0F\x5D\x41\x08\xF3\x0F\x5F\xC1\xF3\x0F\x5D\x05\xE0\x31\x02\x01\xF3\x0F\x11\x41\x08\xC2\x04\x00");
 	SAFE_WRITE_BUF(0x4F15A0, "\x0F\xB6\x44\x24\x04\x89\x41\x04\x3C\x3B\x74\x07\x3C\x3C\x74\x03\xC2\x04\x00\x31\xD2\x89\x91\x04\x01\x00\x00\xC2\x04\x00");
 	WriteRelJump(0x5A64C0, (UInt32)TESGlobalLoadFormHook);
 	WriteRelCall(0x8A0DAB, (UInt32)DetectionTeammateHook);
@@ -4752,8 +4753,10 @@ NiCamera* __fastcall GetSingletonsHook(SceneGraph *sceneGraph)
 	return sceneGraph->camera;
 }
 
+void InitMiniMap(UInt8 modIdx);
+
 typedef int (*_ReloadENB)(UInt32 type, void *data);
-_ReloadENB ReloadENB = NULL;
+_ReloadENB ReloadENB = nullptr;
 
 void DeferredInit()
 {
@@ -4766,6 +4769,7 @@ void DeferredInit()
 	g_screenWidth = *(int*)0x11C73E0 * converter;
 	g_screenHeight = *(int*)0x11C7190 * converter;
 	g_shadowSceneNode = *(ShadowSceneNode**)0x11F91C8;
+	//g_LODRootNode = BSClearZNode::GetSingleton();
 	g_terminalModelDefault = *GameGlobals::TerminalModelPtr();
 	g_attachLightString = **(const char***)0x11C620C;
 	GameTimeGlobals *timeGlobals = GameTimeGlobals::Get();
@@ -4822,7 +4826,7 @@ void DeferredInit()
 	BSWin32Audio::Get()->PickSoundFileFromFolder = PickSoundFileFromFolderHook;
 
 	/*char filePath[MAX_PATH];
-	GetModuleFileName(GetModuleHandle(NULL), filePath, MAX_PATH);
+	GetModuleFileName(GetModuleHandle(nullptr), filePath, MAX_PATH);
 	char *delim = SlashPosR(filePath) + 1;
 	memcpy(delim, "d3d9.dll", 9);
 	HMODULE handle = GetModuleHandle(filePath);
@@ -4840,13 +4844,17 @@ void DeferredInit()
 
 	s_LIGH_EDID() = "LIGH_EDID";
 
-	UInt8 cccIdx = g_dataHandler->GetModIndex("JIP Companions Command & Control.esp");
-	if (cccIdx != 0xFF)
+	UInt8 modIdx = g_dataHandler->GetModIndex("JIP Companions Command & Control.esp");
+	if (modIdx != 0xFF)
 	{
-		Script *cccMain = (Script*)LookupFormByRefID((cccIdx << 24) | 0xADE);
+		Script *cccMain = (Script*)LookupFormByRefID((modIdx << 24) | 0xADE);
 		if (cccMain && (*(UInt32*)(cccMain->data + 0x29C) == ' 931'))
 			*(UInt32*)(cccMain->data + 0x29C) = ' 552';
 	}
+
+	modIdx = g_dataHandler->GetModIndex("JIP MiniMap.esp");
+	if (modIdx != 0xFF)
+		InitMiniMap(modIdx);
 
 	if (s_NVACAddress)
 	{

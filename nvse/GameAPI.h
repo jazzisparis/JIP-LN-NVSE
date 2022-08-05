@@ -116,14 +116,16 @@ struct ScriptEventList
 	{
 		bool	effectStart;
 		bool	effectFinish;
-		UInt8	unk03[6];
+		UInt8	unk03[2];
+		float	secondsElapsed;
 	};
 
 	typedef tList<Event> EventList;
 	typedef tList<ScriptVar> VarList;
 
 	Script				*m_script;		// 00
-	UInt32				unk04;			// 04
+	UInt8				m_flags;		// 04
+	UInt8				pad05[5];		// 05
 	EventList			*m_eventList;	// 08
 	VarList				*m_vars;		// 0C
 	EffectScriptFlags	*m_effScrFlags;	// 10

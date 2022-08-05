@@ -130,7 +130,7 @@ __declspec(naked) TESForm* __stdcall LookupFormByRefID(UInt32 refID)
 {
 	__asm
 	{
-		mov		ecx, ds:[0x11C54C0]
+		mov		ecx, ds:0x11C54C0
 		mov		eax, [esp+4]
 		xor		edx, edx
 		div		dword ptr [ecx+4]
@@ -664,7 +664,7 @@ __declspec(naked) bool __vectorcall Equal_V4(__m128 v1, __m128 v2)
 
 __declspec(noinline) char *GetStrArgBuffer()
 {
-	thread_local char *s_strBuffer = NULL;
+	thread_local char *s_strBuffer = nullptr;
 	if (!s_strBuffer)
 		s_strBuffer = (char*)_aligned_malloc(0x20000, 0x10);
 	return s_strBuffer;
@@ -1109,11 +1109,11 @@ __declspec(naked) char* __fastcall FindChrR(const char *str, UInt32 length, char
 __declspec(noinline) char* __fastcall SubStrCI(const char *srcStr, const char *subStr)
 {
 	int srcLen = StrLen(srcStr);
-	if (!srcLen) return NULL;
+	if (!srcLen) return nullptr;
 	int subLen = StrLen(subStr);
-	if (!subLen) return NULL;
+	if (!subLen) return nullptr;
 	srcLen -= subLen;
-	if (srcLen < 0) return NULL;
+	if (srcLen < 0) return nullptr;
 	int index;
 	do
 	{
@@ -1128,7 +1128,7 @@ __declspec(noinline) char* __fastcall SubStrCI(const char *srcStr, const char *s
 		srcStr++;
 	}
 	while (--srcLen >= 0);
-	return NULL;
+	return nullptr;
 }
 
 __declspec(naked) char* __fastcall SlashPos(const char *str)
@@ -1183,7 +1183,7 @@ __declspec(naked) char* __fastcall SlashPosR(const char *str)
 
 __declspec(noinline) char* __fastcall GetNextToken(char *str, char delim)
 {
-	if (!str) return NULL;
+	if (!str) return nullptr;
 	bool found = false;
 	char chr;
 	while (chr = *str)
@@ -1202,7 +1202,7 @@ __declspec(noinline) char* __fastcall GetNextToken(char *str, char delim)
 
 __declspec(noinline) char* __fastcall GetNextToken(char *str, const char *delims)
 {
-	if (!str) return NULL;
+	if (!str) return nullptr;
 	bool table[0x100];
 	MemZero(table, 0x100);
 	UInt8 curr;
@@ -1672,7 +1672,7 @@ DString::DString(const char *from)
 	}
 	else
 	{
-		str = NULL;
+		str = nullptr;
 		alloc = 0;
 	}
 }
@@ -1688,7 +1688,7 @@ DString::DString(const DString &from)
 	}
 	else
 	{
-		str = NULL;
+		str = nullptr;
 		alloc = 0;
 	}
 }
@@ -1703,7 +1703,7 @@ DString::DString(UInt16 _alloc) : length(0)
 	}
 	else
 	{
-		str = NULL;
+		str = nullptr;
 		alloc = 0;
 	}
 }
@@ -1910,7 +1910,7 @@ DString& DString::Replace(UInt16 bgnIdx, const DString &other)
 
 DString DString::SubString(UInt16 bgnIdx, UInt16 endIdx)
 {
-	char *resStr = NULL;
+	char *resStr = nullptr;
 	UInt16 resLen = 0, resAlloc = 0;
 	if (bgnIdx < length)
 	{
@@ -1959,7 +1959,7 @@ DString operator+(const DString &lStr, char rChr)
 
 DString operator+(const DString &lStr, const char *rStr)
 {
-	char *resStr = NULL;
+	char *resStr = nullptr;
 	UInt16 rLen = StrLen(rStr), resLen = lStr.length + rLen, resAlloc = 0;
 	if (resLen)
 	{
@@ -1974,7 +1974,7 @@ DString operator+(const DString &lStr, const char *rStr)
 
 DString operator+(const char *lStr, const DString &rStr)
 {
-	char *resStr = NULL;
+	char *resStr = nullptr;
 	UInt16 lLen = StrLen(lStr), resLen = lLen + rStr.length, resAlloc = 0;
 	if (resLen)
 	{
@@ -2014,7 +2014,7 @@ bool FileStream::Open(const char *filePath)
 {
 	if (theFile) fclose(theFile);
 	theFile = fopen(filePath, "rb");
-	return theFile != NULL;
+	return theFile != nullptr;
 }
 
 bool FileStream::OpenAt(const char *filePath, UInt32 inOffset)
@@ -2048,7 +2048,7 @@ bool FileStream::OpenWrite(char *filePath, bool append)
 	}
 	else MakeAllDirs(filePath);
 	theFile = fopen(filePath, "wb");
-	return theFile != NULL;
+	return theFile != nullptr;
 }
 
 UInt32 FileStream::GetLength() const
@@ -2139,7 +2139,7 @@ __declspec(naked) void __fastcall FileStream::MakeAllDirs(char *fullPath)
 bool DebugLog::Create(const char *filePath)
 {
 	theFile = _fsopen(filePath, "wb", 0x20);
-	return theFile != NULL;
+	return theFile != nullptr;
 }
 
 const char kIndentLevelStr[] = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
@@ -2488,7 +2488,7 @@ __declspec(naked) void __stdcall WritePushRetRelJump(UInt32 baseAddr, UInt32 ret
 
 void __fastcall GetTimeStamp(char *buffer)
 {
-	time_t rawTime = time(NULL);
+	time_t rawTime = time(nullptr);
 	tm timeInfo;
 	localtime_s(&timeInfo, &rawTime);
 	sprintf_s(buffer, 0x10, "%02d-%02d-%02d", timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec);
@@ -2549,7 +2549,7 @@ __declspec(naked) UInt32 __fastcall ByteSwap(UInt32 dword)
 	}
 }
 
-void DumpMemImg(void *data, UInt32 size, UInt8 extra)
+void __stdcall DumpMemImg(void *data, UInt32 size, UInt8 extra)
 {
 	UInt32 *ptr = (UInt32*)data;
 	//Console_Print("Output");

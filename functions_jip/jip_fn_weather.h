@@ -256,7 +256,7 @@ bool Cmd_ResetClouds_Execute(COMMAND_ARGS)
 	__asm
 	{
 		xorps	xmm0, xmm0
-		movups	ds:[0x11FF8B4], xmm0
+		movups	ds:0x11FF8B4, xmm0
 	}
 	return true;
 }

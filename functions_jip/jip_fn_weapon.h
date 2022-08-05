@@ -2,8 +2,8 @@
 
 DEFINE_COMMAND_PLUGIN(GetWeaponDetectionSoundLevel, 0, 1, kParams_OneObjectID);
 DEFINE_COMMAND_PLUGIN(SetWeaponDetectionSoundLevel, 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_CMD_COND_PLUGIN(IsEquippedWeaponSilenced, 1, 0, NULL);
-DEFINE_CMD_COND_PLUGIN(IsEquippedWeaponScoped, 1, 0, NULL);
+DEFINE_CMD_COND_PLUGIN(IsEquippedWeaponSilenced, 1, 0, nullptr);
+DEFINE_CMD_COND_PLUGIN(IsEquippedWeaponScoped, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetWeaponSound, 0, 2, kParams_OneObjectID_OneInt);
 DEFINE_COMMAND_PLUGIN(SetWeaponSound, 0, 3, kParams_OneForm_OneInt_OneOptionalSound);
 DEFINE_COMMAND_PLUGIN(SetWeaponItemMod, 0, 3, kParams_OneForm_OneInt_OneOptionalObjectID);
@@ -23,6 +23,7 @@ DEFINE_COMMAND_PLUGIN(SetWeaponSemiAutoFireDelay, 0, 3, kParams_OneObjectID_OneI
 DEFINE_COMMAND_PLUGIN(GetWeaponModel, 0, 2, kParams_OneObjectID_OneInt);
 DEFINE_COMMAND_PLUGIN(SetWeaponModel, 0, 3, kParams_OneForm_OneInt_OneString);
 DEFINE_CMD_COND_PLUGIN(EquippedWeaponHasModType, 1, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(WeaponHasModType, 0, 2, kParams_OneForm_OneInt);
 
 bool Cmd_GetWeaponDetectionSoundLevel_Execute(COMMAND_ARGS)
 {
@@ -83,7 +84,7 @@ bool Cmd_SetWeaponSound_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
 	UInt32 type;
-	TESSound *newSound = NULL;
+	TESSound *newSound = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &type, &newSound) || NOT_ID(weapon, TESObjectWEAP) || (type > 13)) return true;
 	if (type < 12)
 		weapon->sounds[type] = newSound;
@@ -98,9 +99,9 @@ bool Cmd_SetWeaponItemMod_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
 	UInt32 idx;
-	TESObjectIMOD *wmod = NULL;
+	TESObjectIMOD *wmod = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &idx, &wmod) && IS_ID(weapon, TESObjectWEAP) && idx && (idx <= 3))
-		weapon->itemMod[idx - 1] = (wmod && IS_ID(wmod, TESObjectIMOD)) ? wmod : NULL;
+		weapon->itemMod[idx - 1] = (wmod && IS_ID(wmod, TESObjectIMOD)) ? wmod : nullptr;
 	return true;
 }
 
@@ -147,7 +148,7 @@ bool Cmd_GetWeaponShellCasingModel_Execute(COMMAND_ARGS)
 	TESObjectWEAP *weapon;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon) && IS_ID(weapon, TESObjectWEAP))
 		resStr = weapon->shellCasingModel.GetModelPath();
-	else resStr = NULL;
+	else resStr = nullptr;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
@@ -182,12 +183,12 @@ bool Cmd_SetEmbeddedWeaponAV_Execute(COMMAND_ARGS)
 bool Cmd_GetCalculatedWeaponDamage_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESObjectWEAP *weapon = NULL;
+	TESObjectWEAP *weapon = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &weapon)) return true;
 	float condition = 1.0F;
-	InventoryRef *invRef = NULL;
+	InventoryRef *invRef = nullptr;
 	Actor *owner = g_thePlayer;
-	ContChangesEntry tempEntry(NULL, 1, weapon);
+	ContChangesEntry tempEntry(nullptr, 1, weapon);
 	ExtraContainerChanges::ExtendDataList extendData;
 	if (!weapon)
 	{
@@ -210,19 +211,19 @@ bool Cmd_GetCalculatedWeaponDamage_Execute(COMMAND_ARGS)
 	}
 	else if NOT_ID(weapon, TESObjectWEAP)
 		return true;
-	MiddleHighProcess *midHiProc = (owner->baseProcess && (owner->baseProcess->processLevel <= 1)) ? (MiddleHighProcess*)owner->baseProcess : NULL;
-	ContChangesEntry *weaponInfo = NULL;
-	TESForm *ammo = NULL;
+	MiddleHighProcess *midHiProc = (owner->baseProcess && (owner->baseProcess->processLevel <= 1)) ? (MiddleHighProcess*)owner->baseProcess : nullptr;
+	ContChangesEntry *weaponInfo = nullptr;
+	TESForm *ammo = nullptr;
 	if (midHiProc)
 	{
 		weaponInfo = midHiProc->weaponInfo;
-		midHiProc->weaponInfo = NULL;
+		midHiProc->weaponInfo = nullptr;
 		if (invRef && weaponInfo && midHiProc->ammoInfo && (weaponInfo->type == weapon))
 			ammo = midHiProc->ammoInfo->type;
 	}
 	if (!ammo) ammo = weapon->GetAmmo();
 	if (ammo && NOT_TYPE(ammo, TESAmmo))
-		ammo = NULL;
+		ammo = nullptr;
 	*result = tempEntry.CalculateWeaponDamage(owner, condition, ammo);
 	if (weaponInfo)
 		midHiProc->weaponInfo = weaponInfo;
@@ -289,7 +290,7 @@ bool Cmd_GetWeaponModel_Execute(COMMAND_ARGS)
 			resStr = weapon->modModels[modFlags - 1].GetModelPath();
 		}
 	}
-	else resStr = NULL;
+	else resStr = nullptr;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
@@ -331,5 +332,32 @@ bool Cmd_EquippedWeaponHasModType_Execute(COMMAND_ARGS)
 bool Cmd_EquippedWeaponHasModType_Eval(COMMAND_ARGS_EVAL)
 {
 	*result = (IS_ACTOR(thisObj) && ((Actor*)thisObj)->EquippedWeaponHasMod((UInt32)arg1)) ? 1 : 0;
+	return true;
+}
+
+bool Cmd_WeaponHasModType_Execute(COMMAND_ARGS)
+{
+	TESForm *inForm;
+	UInt32 modType;
+	int slotIdx = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &inForm, &modType))
+	{
+		if IS_REFERENCE(inForm)
+			inForm = ((TESObjectREFR*)inForm)->baseForm;
+		if IS_ID(inForm, TESObjectWEAP)
+		{
+			TESObjectWEAP *inWeapon = (TESObjectWEAP*)inForm;
+			int idx = 0;
+			do
+			{
+				if (!inWeapon->itemMod[idx] || (inWeapon->effectMods[idx] != modType))
+					continue;
+				slotIdx = idx + 1;
+				break;
+			}
+			while (++idx < 3);
+		}
+	}
+	*result = slotIdx;
 	return true;
 }

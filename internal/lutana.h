@@ -323,7 +323,7 @@ void LN_ProcessEvents()
 					for (auto data = s_LNEvents[kLNEventID_OnButtonDown]().BeginCp(); data; ++data)
 					{
 						outMask = cmprMask & data().typeID;
-						if (outMask) CallFunction(data().callback, NULL, 1, outMask);
+						if (outMask) CallFunction(data().callback, nullptr, 1, outMask);
 					}
 				}
 				cmprMask = changes & lastButtonState;
@@ -332,7 +332,7 @@ void LN_ProcessEvents()
 					for (auto data = s_LNEvents[kLNEventID_OnButtonUp]().BeginCp(); data; ++data)
 					{
 						outMask = cmprMask & data().typeID;
-						if (outMask) CallFunction(data().callback, NULL, 1, outMask);
+						if (outMask) CallFunction(data().callback, nullptr, 1, outMask);
 					}
 				}
 				lastButtonState = currButtonState;
@@ -359,7 +359,7 @@ void LN_ProcessEvents()
 
 	if (g_interfaceManager->currentMode > 1) return;
 
-	static TESObjectCELL *lastCell = NULL;
+	static TESObjectCELL *lastCell = nullptr;
 	TESObjectCELL *currCell = g_thePlayer->parentCell;
 	if (!currCell) return;
 
@@ -372,23 +372,23 @@ void LN_ProcessEvents()
 		{
 			if (s_LNEventFlags & kLNEventMask_OnCellExit)
 			{
-				s_evalRefr = NULL;
+				s_evalRefr = nullptr;
 				s_evalBase = lastCell;
 				for (auto data = s_LNEvents[kLNEventID_OnCellExit]().BeginCp(); data; ++data)
-					if (data().EvalFilter()) CallFunction(data().callback, NULL, 1, lastCell);
+					if (data().EvalFilter()) CallFunction(data().callback, nullptr, 1, lastCell);
 			}
 			if (s_LNEventFlags & kLNEventMask_OnCellEnter)
 			{
-				s_evalRefr = NULL;
+				s_evalRefr = nullptr;
 				s_evalBase = currCell;
 				for (auto data = s_LNEvents[kLNEventID_OnCellEnter]().BeginCp(); data; ++data)
-					if (data().EvalFilter()) CallFunction(data().callback, NULL, 1, currCell);
+					if (data().EvalFilter()) CallFunction(data().callback, nullptr, 1, currCell);
 			}
 		}
 		lastCell = currCell;
 	}
 
-	static TESObjectREFR *lastGrabbed = NULL;
+	static TESObjectREFR *lastGrabbed = nullptr;
 	static UInt32 lastGrabID = 0;
 	TESObjectREFR *currGrabbed = g_thePlayer->grabbedRef;
 
@@ -403,7 +403,7 @@ void LN_ProcessEvents()
 					s_evalRefr = lastGrabbed;
 					s_evalBase = lastGrabbed->baseForm;
 					for (auto data = s_LNEvents[kLNEventID_OnPlayerRelease]().BeginCp(); data; ++data)
-						if (data().EvalFilter()) CallFunction(data().callback, NULL, 1, lastGrabbed);
+						if (data().EvalFilter()) CallFunction(data().callback, nullptr, 1, lastGrabbed);
 				}
 			}
 			if (currGrabbed && (s_LNEventFlags & kLNEventMask_OnPlayerGrab))
@@ -411,14 +411,14 @@ void LN_ProcessEvents()
 				s_evalRefr = currGrabbed;
 				s_evalBase = currGrabbed->baseForm;
 				for (auto data = s_LNEvents[kLNEventID_OnPlayerGrab]().BeginCp(); data; ++data)
-					if (data().EvalFilter()) CallFunction(data().callback, NULL, 1, currGrabbed);
+					if (data().EvalFilter()) CallFunction(data().callback, nullptr, 1, currGrabbed);
 			}
 		}
 		lastGrabbed = currGrabbed;
 		if (currGrabbed) lastGrabID = currGrabbed->refID;
 	}
 
-	static TESObjectREFR *lastCrosshair = NULL;
+	static TESObjectREFR *lastCrosshair = nullptr;
 	static UInt32 lastCrshrID = 0;
 	TESObjectREFR *currCrosshair = g_interfaceManager->crosshairRef;
 
@@ -433,7 +433,7 @@ void LN_ProcessEvents()
 					s_evalRefr = lastCrosshair;
 					s_evalBase = lastCrosshair->GetBaseForm();
 					for (auto data = s_LNEvents[kLNEventID_OnCrosshairOff]().BeginCp(); data; ++data)
-						if (data().EvalFilter()) CallFunction(data().callback, NULL, 1, lastCrosshair);
+						if (data().EvalFilter()) CallFunction(data().callback, nullptr, 1, lastCrosshair);
 				}
 			}
 			if (currCrosshair && (s_LNEventFlags & kLNEventMask_OnCrosshairOn))
@@ -441,7 +441,7 @@ void LN_ProcessEvents()
 				s_evalRefr = currCrosshair;
 				s_evalBase = currCrosshair->GetBaseForm();
 				for (auto data = s_LNEvents[kLNEventID_OnCrosshairOn]().BeginCp(); data; ++data)
-					if (data().EvalFilter()) CallFunction(data().callback, NULL, 1, currCrosshair);
+					if (data().EvalFilter()) CallFunction(data().callback, nullptr, 1, currCrosshair);
 			}
 		}
 		lastCrosshair = currCrosshair;

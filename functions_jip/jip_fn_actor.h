@@ -1,11 +1,11 @@
 #pragma once
 
 DEFINE_COMMAND_PLUGIN(GetActorTemplate, 0, 1, kParams_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(GetLeveledActorBase, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetLeveledActorBase, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetCreatureDamage, 0, 1, kParams_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(SetCreatureDamage, 0, 2, kParams_OneInt_OneOptionalActorBase);
-DEFINE_CMD_COND_PLUGIN(GetIsPoisoned, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetFollowers, 1, 0, NULL);
+DEFINE_CMD_COND_PLUGIN(GetIsPoisoned, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetFollowers, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetActorLevelingData, 0, 2, kParams_OneInt_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(SetActorLevelingData, 0, 3, kParams_OneInt_OneFloat_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(GetActorVoiceType, 0, 1, kParams_OneOptionalActorBase);
@@ -17,92 +17,92 @@ DEFINE_COMMAND_PLUGIN(ToggleCreatureModel, 0, 3, kParams_OneString_OneInt_OneOpt
 DEFINE_COMMAND_PLUGIN(CreatureHasModel, 0, 2, kParams_OneString_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(GetCreatureModels, 0, 1, kParams_OneOptionalActorBase);
 DEFINE_COMMAND_ALT_PLUGIN(ModBaseActorValue, ModBaseAV, 0, 3, kParams_OneActorValue_OneFloat_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(GetActorProcessingLevel, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetActorProcessingLevel, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetActorsByProcessingLevel, 0, 1, kParams_OneInt);
-DEFINE_CMD_COND_PLUGIN(GetActorLightAmount, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetActorAlpha, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetActorDiveBreath, 1, 0, NULL);
+DEFINE_CMD_COND_PLUGIN(GetActorLightAmount, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetActorAlpha, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetActorDiveBreath, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetActorDiveBreath, 1, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetCombatTargets, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetCombatAllies, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetDetectedActors, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetDetectingActors, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetCombatDisabled, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetCombatTargets, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetCombatAllies, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetDetectedActors, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetDetectingActors, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetCombatDisabled, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetCombatDisabled, 1, 2, kParams_OneInt_OneOptionalActor);
 DEFINE_COMMAND_PLUGIN(ToggleNoHealthReset, 0, 2, kParams_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetCurrentStablePackage, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetTeammateUsingAmmo, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetCurrentStablePackage, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetTeammateUsingAmmo, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetTeammateUsingAmmo, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(ToggleDetectionFix, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(ToggleIgnoreLockedDoors, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(IsInCombatWith, 1, 1, kParams_OneActor);
-DEFINE_CMD_COND_PLUGIN(IsAttacking, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(StopIdle, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(HolsterWeapon, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetFallTimeElapsed, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetFallTimeRemaining, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(ResetFallTime, 1, 0, NULL);
-DEFINE_CMD_COND_PLUGIN(GetRadiationLevelAlt, 1, 0, NULL);
-DEFINE_CMD_COND_PLUGIN(IsInWater, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetDroppedRefs, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(MoveAwayFromPlayer, 1, 0, NULL);
+DEFINE_CMD_COND_PLUGIN(IsAttacking, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(StopIdle, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(HolsterWeapon, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetFallTimeElapsed, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetFallTimeRemaining, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(ResetFallTime, 1, 0, nullptr);
+DEFINE_CMD_COND_PLUGIN(GetRadiationLevelAlt, 1, 0, nullptr);
+DEFINE_CMD_COND_PLUGIN(IsInWater, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetDroppedRefs, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(MoveAwayFromPlayer, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(FaceObject, 1, 1, kParams_OneObjectRef);
 DEFINE_COMMAND_PLUGIN(Turn, 1, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetAshPileSource, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetAshPileSource, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetOnAnimActionEventHandler, 0, 4, kParams_OneForm_OneInt_OneForm_OneInt);
 DEFINE_COMMAND_PLUGIN(SetOnPlayGroupEventHandler, 0, 4, kParams_OneForm_OneInt_OneForm_OneAnimGroup);
 DEFINE_COMMAND_PLUGIN(SetOnHealthDamageEventHandler, 0, 3, kParams_OneForm_OneInt_OneForm);
 DEFINE_COMMAND_PLUGIN(SetOnCrippledLimbEventHandler, 0, 3, kParams_OneForm_OneInt_OneForm);
 DEFINE_COMMAND_PLUGIN(SetOnFireWeaponEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetCurrentAmmo, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetCurrentAmmoRounds, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetCurrentAmmo, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetCurrentAmmoRounds, 1, 0, nullptr);
 DEFINE_COMMAND_ALT_PLUGIN(SetFullNameAlt, SetActorFullNameAlt, 0, 2, kParams_OneString_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(GetDetectionValue, 1, 1, kParams_OneActor);
 DEFINE_COMMAND_ALT_PLUGIN(GetBaseActorValueAlt, GetBaseAVAlt, 0, 2, kParams_OneActorValue_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(SetSpeedMult, 1, 1, kParams_OneOptionalInt);
-DEFINE_CMD_COND_PLUGIN(GetIsRagdolled, 1, 0, NULL);
+DEFINE_CMD_COND_PLUGIN(GetIsRagdolled, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(ForceActorDetectionValue, 1, 2, kParams_TwoOptionalInts);
 DEFINE_COMMAND_PLUGIN(GetActorVelocity, 1, 1, kParams_OneOptionalAxis);
-DEFINE_CMD_COND_PLUGIN(IsInAir, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetObjectUnderFeet, 1, 0, NULL);
+DEFINE_CMD_COND_PLUGIN(IsInAir, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetObjectUnderFeet, 1, 0, nullptr);
 DEFINE_COMMAND_ALT_PLUGIN(GetActorValueModifier, GetAVMod, 1, 2, kParams_OneActorValue_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetPerkModifier, 1, 4, kParams_OneInt_OneFloat_TwoOptionalForms);
-DEFINE_COMMAND_PLUGIN(GetWheelDisabled, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetWheelDisabled, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetWheelDisabled, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetHitHealthDamage, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetHitLimbDamage, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetHitHealthDamage, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetHitLimbDamage, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(CrippleLimb, 1, 2, kParams_OneInt_OneOptionalObjectRef);
 DEFINE_COMMAND_PLUGIN(PlayIdleEx, 1, 1, kParams_OneOptionalIdleForm);
-DEFINE_COMMAND_PLUGIN(GetKillXP, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetKiller, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetKillXP, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetKiller, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(KillActorAlt, 1, 3, kParams_OneOptionalObjectRef_TwoOptionalInts);
 DEFINE_COMMAND_ALT_PLUGIN(ReloadEquippedModels, ReloadModels, 1, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetPlayedIdle, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetPlayedIdle, 1, 0, nullptr);
 DEFINE_CMD_COND_PLUGIN(IsIdlePlayingEx, 1, 1, kParams_OneIdleForm);
 DEFINE_COMMAND_PLUGIN(SetWeaponOut, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(AddBaseEffectListEffect, 0, 2, kParams_OneSpellItem_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(RemoveBaseEffectListEffect, 0, 2, kParams_OneSpellItem_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(GetHitAttacker, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetHitProjectile, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetHitWeapon, 1, 0, NULL);
-DEFINE_CMD_COND_PLUGIN(GetWaterImmersionPerc, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetHitAttacker, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetHitProjectile, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetHitWeapon, 1, 0, nullptr);
+DEFINE_CMD_COND_PLUGIN(GetWaterImmersionPerc, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(DismemberLimb, 1, 2, kParams_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetInterruptPackage, 1, 0, NULL);
-DEFINE_CMD_COND_PLUGIN(IsFleeing, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetInterruptPackage, 1, 0, nullptr);
+DEFINE_CMD_COND_PLUGIN(IsFleeing, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetCurrentAmmoRounds, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(AttachAshPileEx, 1, 1, kParams_OneForm);
 DEFINE_COMMAND_PLUGIN(SetActorVelocity, 1, 2, kParams_OneAxis_OneFloat);
 DEFINE_COMMAND_PLUGIN(GetSkeletonModel, 0, 1, kParams_OneActorBase);
 DEFINE_COMMAND_PLUGIN(SetNPCSkeletonModel, 0, 2, kParams_OneActorBase_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(SetCRESkeletonModel, 0, 2, kParams_OneActorBase_OneString);
-DEFINE_CMD_COND_PLUGIN(GetTargetUnreachable, 1, 0, NULL);
+DEFINE_CMD_COND_PLUGIN(GetTargetUnreachable, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetVATSTargetable, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetCreatureWeaponList, 0, 1, kParams_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(GetDeathItem, 0, 1, kParams_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(SetDeathItem, 0, 2, kParams_OneObjectID_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(GetActorLeveledList, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetActorLeveledList, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetOnHitEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetArmourPenetrated, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetArmourPenetrated, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetImpactMaterialType, 0, 1, kParams_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(SetImpactMaterialType, 0, 2, kParams_OneInt_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(PushActorAwayAlt, 1, 5, kParams_OneFloat_ThreeOptionalFloats_OneOptionalInt);
@@ -116,35 +116,35 @@ DEFINE_COMMAND_PLUGIN(GetHit3DData, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetCreatureSoundsTemplate, 0, 1, kParams_OneActorBase);
 DEFINE_COMMAND_PLUGIN(SetCreatureSoundsTemplate, 0, 2, kParams_OneForm_OneOptionalActorBase);
 DEFINE_COMMAND_PLUGIN(SetOnReloadWeaponEventHandler, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(UpdatePlayer3D, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(UpdatePlayer3D, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetOnRagdollEventHandler, 0, 2, kParams_OneForm_OneInt);
 DEFINE_COMMAND_PLUGIN(PushActorNoRagdoll, 1, 4, kParams_TwoFloats_OneOptionalObjectRef_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetBodyPartVATSTarget, 0, 2, kParams_OneInt_OneOptionalActorBase);
 DEFINE_CMD_COND_PLUGIN(GetInFactionList, 1, 1, kParams_FormList);
 DEFINE_COMMAND_PLUGIN(GetActorTiltAngle, 1, 1, kParams_OneAxis);
 DEFINE_COMMAND_PLUGIN(SetActorTiltAngle, 1, 2, kParams_OneAxis_OneFloat);
-DEFINE_COMMAND_PLUGIN(ReloadCharController, 1, 0, NULL);
-DEFINE_CMD_COND_PLUGIN(GetGroundMaterial, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(ReloadCharController, 1, 0, nullptr);
+DEFINE_CMD_COND_PLUGIN(GetGroundMaterial, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(FireWeaponEx, 1, 2, kParams_OneObjectID_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(GetActorGravityMult, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetActorGravityMult, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetActorGravityMult, 1, 1, kParams_OneFloat);
 DEFINE_COMMAND_ALT_PLUGIN(ToggleTeammateKillable, SetTeammateKillable, 1, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_ALT_PLUGIN(ToggleNoGunWobble, SetNoGunWobble, 1, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetHitNode, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetHitNode, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetHitExtendedFlag, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(RemoveAllPerks, 1, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetActorMovementFlags, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetHitBaseWeaponDamage, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetHitFatigueDamage, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(RefreshAnimData, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetActorMovementFlags, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetHitBaseWeaponDamage, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetHitFatigueDamage, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(RefreshAnimData, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetActorVelocityAlt, 1, 4, kParams_ThreeScriptVars_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetExcludedCombatActions, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetExcludedCombatActions, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetExcludedCombatActions, 1, 1, kParams_OneInt);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESActorBase *actorBase = NULL;
+	TESActorBase *actorBase = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
 	{
@@ -167,7 +167,7 @@ bool Cmd_GetLeveledActorBase_Execute(COMMAND_ARGS)
 bool Cmd_GetCreatureDamage_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESCreature *creature = NULL;
+	TESCreature *creature = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &creature)) return true;
 	if (!creature)
 	{
@@ -182,7 +182,7 @@ bool Cmd_GetCreatureDamage_Execute(COMMAND_ARGS)
 bool Cmd_SetCreatureDamage_Execute(COMMAND_ARGS)
 {
 	int dmg;
-	TESCreature *creature = NULL;
+	TESCreature *creature = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &dmg, &creature)) return true;
 	if (!creature)
 	{
@@ -245,7 +245,7 @@ bool Cmd_GetActorLevelingData_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 valID;
-	TESActorBase *actorBase = NULL;
+	TESActorBase *actorBase = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valID, &actorBase) || (valID > 2)) return true;
 	if (!actorBase)
 	{
@@ -263,7 +263,7 @@ bool Cmd_SetActorLevelingData_Execute(COMMAND_ARGS)
 {
 	UInt32 valID;
 	float val;
-	TESActorBase *actorBase = NULL;
+	TESActorBase *actorBase = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valID, &val, &actorBase) || (valID > 2)) return true;
 	if (!actorBase)
 	{
@@ -303,7 +303,7 @@ bool Cmd_SetActorLevelingData_Execute(COMMAND_ARGS)
 bool Cmd_GetActorVoiceType_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESActorBase *actorBase = NULL;
+	TESActorBase *actorBase = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
 	{
@@ -318,7 +318,7 @@ bool Cmd_GetActorVoiceType_Execute(COMMAND_ARGS)
 bool Cmd_SetActorVoiceType_Execute(COMMAND_ARGS)
 {
 	BGSVoiceType *form;
-	TESActorBase *actorBase = NULL;
+	TESActorBase *actorBase = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &actorBase) || NOT_ID(form, BGSVoiceType)) return true;
 	if (!actorBase)
 	{
@@ -332,7 +332,7 @@ bool Cmd_SetActorVoiceType_Execute(COMMAND_ARGS)
 bool Cmd_GetCreatureReach_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESCreature *creature = NULL;
+	TESCreature *creature = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &creature)) return true;
 	if (!creature)
 	{
@@ -347,7 +347,7 @@ bool Cmd_GetCreatureReach_Execute(COMMAND_ARGS)
 bool Cmd_GetIsImmobile_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESCreature *creature = NULL;
+	TESCreature *creature = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &creature)) return true;
 	if (!creature)
 	{
@@ -384,7 +384,7 @@ bool Cmd_ToggleCreatureModel_Execute(COMMAND_ARGS)
 	*result = 0;
 	char path[0x100];
 	UInt32 enable;
-	TESCreature *creature = NULL;
+	TESCreature *creature = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &path, &enable, &creature)) return true;
 	if (!creature)
 	{
@@ -400,7 +400,7 @@ bool Cmd_CreatureHasModel_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char path[0x100];
-	TESCreature *creature = NULL;
+	TESCreature *creature = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &path, &creature)) return true;
 	if (!creature)
 	{
@@ -415,7 +415,7 @@ bool Cmd_CreatureHasModel_Execute(COMMAND_ARGS)
 bool Cmd_GetCreatureModels_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESCreature *creature = NULL;
+	TESCreature *creature = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &creature)) return true;
 	if (!creature)
 	{
@@ -440,7 +440,7 @@ bool Cmd_ModBaseActorValue_Execute(COMMAND_ARGS)
 {
 	UInt32 actorVal;
 	float value;
-	TESActorBase *actorBase = NULL;
+	TESActorBase *actorBase = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorVal, &value, &actorBase)) return true;
 	if (!actorBase)
 	{
@@ -556,7 +556,7 @@ void __fastcall GetCombatActors(TESObjectREFR *thisObj, Script *scriptObj, bool 
 	{
 		if (NOT_ACTOR(thisObj)) return;
 		actor = (Actor*)thisObj;
-		Actor **actorsArr = NULL;
+		Actor **actorsArr = nullptr;
 		if (getAllies)
 		{
 			if (!actor->combatAllies) return;
@@ -659,7 +659,7 @@ bool Cmd_GetCombatDisabled_Execute(COMMAND_ARGS)
 bool Cmd_SetCombatDisabled_Execute(COMMAND_ARGS)
 {
 	SInt32 disable;
-	Actor *target = NULL;
+	Actor *target = nullptr;
 	if (NOT_ACTOR(thisObj) || !ExtractArgsEx(EXTRACT_ARGS_EX, &disable, &target)) return true;
 	Actor *actor = (Actor*)thisObj;
 	if (disable <= 0)
@@ -685,7 +685,7 @@ bool Cmd_SetCombatDisabled_Execute(COMMAND_ARGS)
 	{
 		if (!target) s_forceCombatTargetMap().Erase(actor);
 		HOOK_MOD(StartCombat, !target);
-		HOOK_MOD(SetCombatTarget, target != NULL);
+		HOOK_MOD(SetCombatTarget, target != nullptr);
 		actor->jipActorFlags1 ^= kHookActorFlag1_CombatAIModified;
 	}
 	if (target) s_forceCombatTargetMap()[actor] = target;
@@ -707,7 +707,7 @@ bool Cmd_ToggleNoHealthReset_Execute(COMMAND_ARGS)
 bool Cmd_GetCurrentStablePackage_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESPackage *package = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->GetStablePackage() : NULL;
+	TESPackage *package = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->GetStablePackage() : nullptr;
 	if (package) REFR_RES = package->refID;
 	DoConsolePrint(package);
 	return true;
@@ -1031,7 +1031,7 @@ bool SetActorEventHandler_Execute(COMMAND_ARGS)
 {
 	Script *script;
 	UInt32 addEvnt;
-	TESForm *actorOrList = NULL;
+	TESForm *actorOrList = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &actorOrList) || NOT_ID(script, Script))
 		return true;
 	ActorEventInfo &eventInfo = s_actorEventInfos[s_actorEventType];
@@ -1142,7 +1142,7 @@ bool Cmd_GetCurrentAmmoRounds_Execute(COMMAND_ARGS)
 bool Cmd_SetFullNameAlt_Execute(COMMAND_ARGS)
 {
 	char name[0x100];
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &name, &form)) return true;
 	if (!form)
 	{
@@ -1179,7 +1179,7 @@ bool Cmd_GetBaseActorValueAlt_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 actorVal;
-	TESActorBase *actorBase = NULL;
+	TESActorBase *actorBase = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &actorVal, &actorBase))
 	{
 		if (actorBase)
@@ -1312,7 +1312,7 @@ bool Cmd_GetPerkModifier_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 entryPointID;
 	float baseValue;
-	TESForm *filterForm1 = NULL, *filterForm2 = NULL;
+	TESForm *filterForm1 = nullptr, *filterForm2 = nullptr;
 	if (NOT_ACTOR(thisObj) || !ExtractArgsEx(EXTRACT_ARGS_EX, &entryPointID, &baseValue, &filterForm1, &filterForm2) || (entryPointID > 73))
 		return true;
 	switch (EntryPointConditionInfo::Array()[entryPointID].numTabs)
@@ -1360,7 +1360,7 @@ bool Cmd_GetHitLimbDamage_Execute(COMMAND_ARGS)
 bool Cmd_CrippleLimb_Execute(COMMAND_ARGS)
 {
 	UInt32 limbID;
-	Actor *attacker = NULL;
+	Actor *attacker = nullptr;
 	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &limbID, &attacker) && (limbID <= 6))
 		((Actor*)thisObj)->DamageActorValue(kAVCode_PerceptionCondition + limbID, -100, attacker);
 	return true;
@@ -1368,7 +1368,7 @@ bool Cmd_CrippleLimb_Execute(COMMAND_ARGS)
 
 bool Cmd_PlayIdleEx_Execute(COMMAND_ARGS)
 {
-	TESIdleForm *idleAnim = NULL;
+	TESIdleForm *idleAnim = nullptr;
 	Actor *actor = (Actor*)thisObj;
 	if (IS_ACTOR(actor) && actor->baseProcess && !actor->baseProcess->processLevel && ExtractArgsEx(EXTRACT_ARGS_EX, &idleAnim))
 	{
@@ -1517,7 +1517,7 @@ bool Cmd_SetWeaponOut_Execute(COMMAND_ARGS)
 bool Cmd_AddBaseEffectListEffect_Execute(COMMAND_ARGS)
 {
 	SpellItem *spell;
-	TESActorBase *actorBase = NULL;
+	TESActorBase *actorBase = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &spell, &actorBase)) return true;
 	if (!actorBase)
 	{
@@ -1532,7 +1532,7 @@ bool Cmd_AddBaseEffectListEffect_Execute(COMMAND_ARGS)
 bool Cmd_RemoveBaseEffectListEffect_Execute(COMMAND_ARGS)
 {
 	SpellItem *spell;
-	TESActorBase *actorBase = NULL;
+	TESActorBase *actorBase = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &spell, &actorBase)) return true;
 	if (!actorBase)
 	{
@@ -1688,7 +1688,7 @@ bool Cmd_GetSkeletonModel_Execute(COMMAND_ARGS)
 	TESActorBase *actorBase;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase))
 		resStr = GetActorModel(actorBase)->GetModelPath();
-	else resStr = NULL;
+	else resStr = nullptr;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
@@ -1739,7 +1739,7 @@ bool Cmd_SetVATSTargetable_Execute(COMMAND_ARGS)
 bool Cmd_GetCreatureWeaponList_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESCreature *creature = NULL;
+	TESCreature *creature = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &creature)) return true;
 	if (!creature)
 	{
@@ -1754,7 +1754,7 @@ bool Cmd_GetCreatureWeaponList_Execute(COMMAND_ARGS)
 bool Cmd_GetDeathItem_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESActorBase *actorBase = NULL;
+	TESActorBase *actorBase = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
 	{
@@ -1769,7 +1769,7 @@ bool Cmd_GetDeathItem_Execute(COMMAND_ARGS)
 bool Cmd_SetDeathItem_Execute(COMMAND_ARGS)
 {
 	TESForm *item;
-	TESActorBase *actorBase = NULL;
+	TESActorBase *actorBase = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &item, &actorBase)) return true;
 	if (!actorBase)
 	{
@@ -1805,7 +1805,7 @@ bool Cmd_GetArmourPenetrated_Execute(COMMAND_ARGS)
 bool Cmd_GetImpactMaterialType_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESActorBase *actorBase = NULL;
+	TESActorBase *actorBase = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
 	{
@@ -1822,7 +1822,7 @@ bool Cmd_GetImpactMaterialType_Execute(COMMAND_ARGS)
 bool Cmd_SetImpactMaterialType_Execute(COMMAND_ARGS)
 {
 	UInt32 type;
-	TESActorBase *actorBase = NULL;
+	TESActorBase *actorBase = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &type, &actorBase) || (type > 11)) return true;
 	if (!actorBase)
 	{
@@ -1892,7 +1892,7 @@ bool Cmd_TravelToRef_Execute(COMMAND_ARGS)
 			flagsMask |= kPackageFlag_AlwaysRun;
 		if (flags & 2)
 			flagsMask |= kPackageFlag_AlwaysSneak;
-		((Actor*)thisObj)->AddBackUpPackage(target, NULL, flagsMask);
+		((Actor*)thisObj)->AddBackUpPackage(target, nullptr, flagsMask);
 	}
 	return true;
 }
@@ -1977,7 +1977,7 @@ bool Cmd_TestEquippedSlots_Execute(COMMAND_ARGS)
 bool GetFactionList(Actor *actor, TESActorBase *actorBase, TempFormList *tmpFormLst)
 {
 	if (actorBase)
-		actor = NULL;
+		actor = nullptr;
 	else
 	{
 		if (!actor || NOT_ACTOR(actor))
@@ -2014,7 +2014,7 @@ bool GetFactionList(Actor *actor, TESActorBase *actorBase, TempFormList *tmpForm
 
 bool Cmd_GetFactions_Execute(COMMAND_ARGS)
 {
-	TESActorBase *actorBase = NULL;
+	TESActorBase *actorBase = nullptr;
 	TempFormList *tmpFormLst = GetTempFormList();
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase) && GetFactionList((Actor*)thisObj, actorBase, tmpFormLst))
 	{
@@ -2068,7 +2068,7 @@ bool Cmd_GetCreatureSoundsTemplate_Execute(COMMAND_ARGS)
 
 bool Cmd_SetCreatureSoundsTemplate_Execute(COMMAND_ARGS)
 {
-	TESCreature *creature, *audioTemplate = NULL;
+	TESCreature *creature, *audioTemplate = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &creature, &audioTemplate) && IS_ID(creature, TESCreature) && (!audioTemplate || IS_ID(audioTemplate, TESCreature)))
 		creature->audioTemplate = audioTemplate;
 	return true;
@@ -2113,14 +2113,14 @@ bool Cmd_SetOnRagdollEventHandler_Execute(COMMAND_ARGS)
 bool Cmd_PushActorNoRagdoll_Execute(COMMAND_ARGS)
 {
 	float force, angle;
-	TESObjectREFR *originRef = NULL;
+	TESObjectREFR *originRef = nullptr;
 	UInt32 doAdjust = 1;
 	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &force, &angle, &originRef, &doAdjust))
 	{
 		HOOK_SET(ApplyActorVelocity, true);
 		Actor *actor = (Actor*)thisObj;
 		if (originRef == actor)
-			originRef = NULL;
+			originRef = nullptr;
 		if (doAdjust)
 			force = actor->AdjustPushForce(force);
 		actor->PushActor(force, angle, originRef);
@@ -2132,7 +2132,7 @@ bool Cmd_GetBodyPartVATSTarget_Execute(COMMAND_ARGS)
 {
 	const char *resStr = "";
 	UInt32 partID;
-	TESActorBase *actorBase = NULL;
+	TESActorBase *actorBase = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &partID, &actorBase) && (partID <= 14))
 	{
 		if (actorBase || (thisObj && IS_ACTOR(thisObj) && (actorBase = ((Actor *)thisObj)->GetActorBase())))
@@ -2153,7 +2153,7 @@ bool Cmd_GetBodyPartVATSTarget_Execute(COMMAND_ARGS)
 bool __fastcall GetInFactionList(Actor *actor, BGSListForm *facList)
 {
 	TempFormList *tmpFormLst = GetTempFormList();
-	if (GetFactionList(actor, NULL, tmpFormLst))
+	if (GetFactionList(actor, nullptr, tmpFormLst))
 	{
 		auto listIter = facList->list.Head();
 		do
@@ -2215,7 +2215,7 @@ bool Cmd_ReloadCharController_Execute(COMMAND_ARGS)
 		MiddleHighProcess *process = (MiddleHighProcess*)actor->baseProcess;
 		if (process->processLevel <= 1)
 		{
-			process->SetCharacterController(NULL);
+			process->SetCharacterController(nullptr);
 			actor->AnimateNiNode();
 		}
 	}
@@ -2296,7 +2296,7 @@ bool Cmd_FireWeaponEx_Execute(COMMAND_ARGS)
 			SAFE_WRITE_BUF(0x9BAD66, "\xC7\x01\x00\x00\x00\x00\xEB\x0C");
 		}
 
-		NiNode *altProjNode = nodeName[0] ? thisObj->GetNode(nodeName) : NULL;
+		NiNode *altProjNode = nodeName[0] ? thisObj->GetNode(nodeName) : nullptr;
 		if (altProjNode)
 			hiProc->projectileNode = altProjNode;
 
@@ -2432,7 +2432,7 @@ bool Cmd_RemoveAllPerks_Execute(COMMAND_ARGS)
 			{
 				for (auto perkIter = perksInfo->perkRanks.Begin(); perkIter; ++perkIter)
 					RemovePerkNPCHook(actor, 0, perkIter.Key(), 0);
-				actor->extraDataList.perksInfo = NULL;
+				actor->extraDataList.perksInfo = nullptr;
 				s_NPCPerksInfoMap().Erase(actor->refID);
 			}
 		}

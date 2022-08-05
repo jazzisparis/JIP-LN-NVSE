@@ -8,46 +8,46 @@ DEFINE_COMMAND_PLUGIN(GetContainerRespawns, 0, 1, kParams_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(SetContainerRespawns, 0, 2, kParams_OneInt_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(GetExteriorCell, 0, 3, kParams_OneWorldspace_TwoInts);
 DEFINE_COMMAND_PLUGIN(GetCellBuffered, 0, 1, kParams_OneOptionalForm);
-DEFINE_CMD_COND_PLUGIN(GetGameDifficulty, 0, 0, NULL);
+DEFINE_CMD_COND_PLUGIN(GetGameDifficulty, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(ToggleFirstPerson, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(SetFormDescription, 0, 22, kParams_OneForm_OneFormatString);
-DEFINE_COMMAND_PLUGIN(GetPCFastTravelled, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetPCMovedCell, 0, 0, NULL);
-DEFINE_CMD_COND_PLUGIN(GetPCDetectionState, 0, 0, NULL);
-DEFINE_CMD_COND_PLUGIN(GetPipboyRadio, 0, 0, NULL);
-DEFINE_CMD_COND_PLUGIN(GetPCUsingScope, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetPCFastTravelled, 0, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetPCMovedCell, 0, 0, nullptr);
+DEFINE_CMD_COND_PLUGIN(GetPCDetectionState, 0, 0, nullptr);
+DEFINE_CMD_COND_PLUGIN(GetPipboyRadio, 0, 0, nullptr);
+DEFINE_CMD_COND_PLUGIN(GetPCUsingScope, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetIdleLoopTimes, 0, 2, kParams_OneForm_OneInt);
 DEFINE_COMMAND_PLUGIN(SetIdleLoopTimes, 0, 3, kParams_OneForm_TwoInts);
-DEFINE_CMD_COND_PLUGIN(GetPCUsingIronSights, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetPCLastExteriorDoor, 0, 0, NULL);
+DEFINE_CMD_COND_PLUGIN(GetPCUsingIronSights, 0, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetPCLastExteriorDoor, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SwapTextureEx, 0, 4, kParams_OneObjectRef_TwoStrings_OneOtionalInt);
 DEFINE_COMMAND_PLUGIN(SetOnFastTravelEventHandler, 0, 2, kParams_OneForm_OneInt);
 DEFINE_COMMAND_PLUGIN(GetMoonTexture, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(SetMoonTexture, 0, 2, kParams_OneInt_OneString);
-DEFINE_CMD_COND_PLUGIN(GetAlwaysRun, 0, 0, NULL);
-DEFINE_CMD_COND_PLUGIN(GetAutoMove, 0, 0, NULL);
+DEFINE_CMD_COND_PLUGIN(GetAlwaysRun, 0, 0, nullptr);
+DEFINE_CMD_COND_PLUGIN(GetAutoMove, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetOnPCTargetChangeEventHandler, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(FreePlayer, GoodbyeWorldspace, 0, 0, NULL);
+DEFINE_COMMAND_ALT_PLUGIN(FreePlayer, GoodbyeWorldspace, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetLocalGravity, 0, 1, kParams_OneAxis);
 DEFINE_COMMAND_PLUGIN(SetLocalGravityVector, 0, 3, kParams_ThreeFloats);
 DEFINE_COMMAND_PLUGIN(GetReticlePos, 0, 2, kParams_OneOptionalInt_OneOptionalFloat);
 DEFINE_COMMAND_PLUGIN(GetReticleRange, 0, 2, kParams_OneOptionalInt_OneOptionalFloat);
 DEFINE_COMMAND_PLUGIN(SetOnDialogTopicEventHandler, 0, 3, kParams_OneForm_OneInt_OneForm);
 DEFINE_COMMAND_PLUGIN(GetGameDaysPassed, 0, 3, kParams_ThreeOptionalInts);
-DEFINE_CMD_COND_PLUGIN(IsPCInCombat, 0, 0, NULL);
+DEFINE_CMD_COND_PLUGIN(IsPCInCombat, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(ToggleHardcoreTracking, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(SetGameDifficulty, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetEnemyHealthTarget, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetEnemyHealthTarget, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(MarkActivatorAshPile, 0, 1, kParams_OneForm);
 DEFINE_COMMAND_PLUGIN(GetBufferedCells, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(SetOnLocationDiscoverEventHandler, 0, 2, kParams_OneForm_OneInt);
 DEFINE_COMMAND_PLUGIN(SetOnCraftingEventHandler, 0, 2, kParams_OneForm_OneInt);
-DEFINE_CMD_COND_PLUGIN(IsInKillCam, 0, 0, NULL);
+DEFINE_CMD_COND_PLUGIN(IsInKillCam, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SwapObjectLOD, 0, 3, kParams_OneForm_TwoInts);
 DEFINE_COMMAND_PLUGIN(SetWobblesRotation, 0, 3, kParams_ThreeFloats);
 DEFINE_COMMAND_PLUGIN(SetGameHour, 0, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(StringToActorValue, 0, 1, kParams_OneString);
-DEFINE_CMD_COND_PLUGIN(GetHardcoreTracking, 0, 0, NULL);
+DEFINE_CMD_COND_PLUGIN(GetHardcoreTracking, 0, 0, nullptr);
 DEFINE_CMD_COND_PLUGIN(GetNoteRead, 0, 1, kParams_OneNote);
 DEFINE_COMMAND_PLUGIN(SetOnNoteAddedEventHandler, 0, 2, kParams_OneForm_OneInt);
 DEFINE_COMMAND_PLUGIN(GetHardcoreStageThreshold, 0, 1, kParams_OneForm);
@@ -56,7 +56,7 @@ DEFINE_COMMAND_PLUGIN(GetHardcoreStageEffect, 0, 1, kParams_OneForm);
 DEFINE_COMMAND_PLUGIN(SetHardcoreStageEffect, 0, 2, kParams_OneForm_OneOptionalSpellItem);
 DEFINE_COMMAND_PLUGIN(GetDebugModeState, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(FreezeTime, 0, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetConditionDamagePenalty, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetConditionDamagePenalty, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetConditionDamagePenalty, 0, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(ToggleBipedSlotVisibility, 0, 2, kParams_OneInt_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ToggleImmortalMode, 0, 1, kParams_OneOptionalInt);
@@ -65,7 +65,7 @@ DEFINE_COMMAND_PLUGIN(InitRockItLauncher, 0, 1, kParams_OneObjectID);
 DEFINE_COMMAND_PLUGIN(ToggleHitEffects, 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ToggleNoMovementCombat, 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(RewardXPExact, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(ClearDeadActors, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(ClearDeadActors, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetCameraMovement, 0, 2, kParams_TwoScriptVars);
 DEFINE_COMMAND_PLUGIN(GetReticleNode, 0, 2, kParams_OneOptionalFloat_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetInternalMarker, 0, 2, kParams_OneForm_OneOptionalInt);
@@ -77,6 +77,7 @@ DEFINE_COMMAND_PLUGIN(GetReticlePosAlt, 0, 5, kParams_ThreeScriptVars_OneOptiona
 DEFINE_COMMAND_PLUGIN(GetLightAmountAtPoint, 0, 3, kParams_ThreeFloats);
 DEFINE_COMMAND_PLUGIN(TransformWorldToLocal, 0, 11, kParams_NineFloats_TwoScriptVars);
 DEFINE_COMMAND_PLUGIN(GetAnglesBetweenPoints, 0, 8, kParams_SixFloats_TwoScriptVars);
+DEFINE_COMMAND_PLUGIN(GetP2PRayCastRange, 0, 7, kParams_SixFloats_OneOptionalInt);
 
 bool Cmd_DisableNavMeshAlt_Execute(COMMAND_ARGS)
 {
@@ -109,7 +110,7 @@ bool Cmd_GetFormDescription_Execute(COMMAND_ARGS)
 	const char *resStr;
 	TESForm *form;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form)) resStr = form->GetDescriptionText();
-	else resStr = NULL;
+	else resStr = nullptr;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
@@ -117,7 +118,7 @@ bool Cmd_GetFormDescription_Execute(COMMAND_ARGS)
 bool Cmd_GetContainerRespawns_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESObjectCONT *container = NULL;
+	TESObjectCONT *container = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &container)) return true;
 	if (!container)
 	{
@@ -132,7 +133,7 @@ bool Cmd_GetContainerRespawns_Execute(COMMAND_ARGS)
 bool Cmd_SetContainerRespawns_Execute(COMMAND_ARGS)
 {
 	UInt32 respawn;
-	TESObjectCONT *container = NULL;
+	TESObjectCONT *container = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &respawn, &container)) return true;
 	if (!container)
 	{
@@ -166,7 +167,7 @@ bool Cmd_GetExteriorCell_Execute(COMMAND_ARGS)
 bool Cmd_GetCellBuffered_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESObjectCELL *cell = NULL;
+	TESObjectCELL *cell = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &cell))
 		return true;
 	if (!cell)
@@ -397,7 +398,7 @@ bool Cmd_GetMoonTexture_Execute(COMMAND_ARGS)
 	Sky *currSky = Sky::Get();
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &textureID) && (textureID <= 7) && currSky && currSky->masserMoon)
 		texturePath = currSky->masserMoon->moonTexture[textureID].m_data;
-	else texturePath = NULL;
+	else texturePath = nullptr;
 	AssignString(PASS_COMMAND_ARGS, texturePath);
 	return true;
 }
@@ -705,7 +706,7 @@ bool Cmd_SwapObjectLOD_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &worldSpc, &cellX, &cellY) && IS_ID(worldSpc, TESWorldSpace))
 	{
 		Coordinate cellXY(cellX, cellY);
-		if (s_swapObjLODMap()[(UInt32)worldSpc].Insert(cellXY.xy))
+		if (s_swapObjLODMap()[worldSpc].Insert(cellXY.xy))
 			HOOK_SET(MakeObjLODPath, true);
 	}
 	return true;
@@ -713,7 +714,7 @@ bool Cmd_SwapObjectLOD_Execute(COMMAND_ARGS)
 
 bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 {
-	/*static BSFadeNode **wobbleAnimations = NULL;
+	/*static BSFadeNode **wobbleAnimations = nullptr;
 	static QuaternionKey *wobbleAnimRotations[9] = {};
 	NiVector3 rotPRY;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &rotPRY.x, &rotPRY.y, &rotPRY.z))
@@ -730,7 +731,7 @@ bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 					wobbleAnimRotations[index] = (QuaternionKey*)transData->rotationKeys;
 			}
 		}
-		QuaternionKey *rotationKeys = NULL;
+		QuaternionKey *rotationKeys = nullptr;
 		UInt32 startIdx = 0;
 		do
 		{
@@ -769,7 +770,7 @@ bool Cmd_SetGameHour_Execute(COMMAND_ARGS)
 			g_gameHour->data = newHour;
 		else
 			g_gameHour->data = 24.0F + newHour;
-		s_forceHCNeedsUpdate = g_thePlayer->isHardcore;
+		s_forceHCNeedsUpdate = g_thePlayer->isHardcore && !(s_serializedFlags & kSerializedFlag_NoHardcoreTracking);
 	}
 	return true;
 }
@@ -874,7 +875,7 @@ bool Cmd_GetHardcoreStageEffect_Execute(COMMAND_ARGS)
 bool Cmd_SetHardcoreStageEffect_Execute(COMMAND_ARGS)
 {
 	BGSRadiationStage *hcStage;
-	SpellItem *effect = NULL;
+	SpellItem *effect = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &hcStage, &effect) && IsHardcoreStage(hcStage))
 		hcStage->effect = effect;
 	return true;
@@ -1052,7 +1053,7 @@ __declspec(naked) void PCAmmoSwitchHook()
 {
 	__asm
 	{
-		mov		ecx, ds:[0x11D98D4]
+		mov		ecx, ds:0x11D98D4
 		cmp		ecx, g_rockItLauncher
 		retn
 	}
@@ -1328,6 +1329,22 @@ bool Cmd_GetAnglesBetweenPoints_Execute(COMMAND_ARGS)
 		outAngles.y = outAngles.z;
 		__m128 angles = point1.GetAnglesBetweenPoints(point2);
 		outAngles.Set(angles, GET_PS(9));
+	}
+	return true;
+}
+
+bool Cmd_GetP2PRayCastRange_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	NiVector3 point1, point2;
+	int filter = 6;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &point1.x, &point1.y, &point1.z, &point2.x, &point2.y, &point2.z, &filter))
+	{
+		NiMatrix33 rotMat;
+		float length = rotMat.From2Points(point1, point2);
+		NiVector4 rcPos;
+		if (rcPos.RayCastCoords(point1, rotMat + 1, length, filter))
+			*result = Point3Distance(rcPos, point2);
 	}
 	return true;
 }

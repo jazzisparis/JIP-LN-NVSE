@@ -62,7 +62,7 @@ __declspec(naked) TESForm *TESObjectREFR::GetBaseForm2() const
 ScriptEventList *TESObjectREFR::GetEventList() const
 {
 	ExtraScript *xScript = GetExtraType(&extraDataList, Script);
-	return xScript ? xScript->eventList : NULL;
+	return xScript ? xScript->eventList : nullptr;
 }
 
 void __fastcall HidePointLights(NiNode *objNode);
@@ -381,16 +381,13 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 		test	eax, eax
 		jz		eqpIter
 		mov		edx, [eax+4]
-		push	edx
 		mov		ecx, [ebp-0x14]
 		call	ExtraContainerChanges::EntryDataList::FindForItem
-		pop		edx
 		test	eax, eax
 		jz		eqpIter
 		push	dword ptr [ebp+0x18]
 		push	0
 		push	eax
-		push	edx
 		mov		ecx, [ebp-4]
 		call	Actor::EquipItemAlt
 		jmp		eqpIter
@@ -439,21 +436,23 @@ void TESObjectREFR::RemoveItemTarget(TESForm *itemForm, TESObjectREFR *target, S
 			}
 		}
 		if (total > 0)
-			RemoveItem(itemForm, NULL, total, keepOwner, 0, target, 0, 0, 1, 0);
+			RemoveItem(itemForm, nullptr, total, keepOwner, 0, target, 0, 0, 1, 0);
 	}
 }
 
 void __fastcall ShowItemMessage(TESForm *item, const char *msgStr);
 
-__declspec(naked) void Actor::EquipItemAlt(TESForm *itemForm, ContChangesEntry *entry, UInt32 noUnequip, UInt32 noMessage)
+__declspec(naked) void Actor::EquipItemAlt(ContChangesEntry *entry, UInt32 noUnequip, UInt32 noMessage)
 {
 	__asm
 	{
 		push	ebp
 		mov		ebp, esp
 		push	ecx
+		mov		ecx, [ebp+8]
+		mov		eax, [ecx+8]
+		push	eax
 		mov		ecx, 1
-		mov		eax, [ebp+8]
 		mov		dl, [eax+4]
 		cmp		dl, kFormType_TESObjectARMO
 		jz		doneType
@@ -471,9 +470,9 @@ __declspec(naked) void Actor::EquipItemAlt(TESForm *itemForm, ContChangesEntry *
 		xor		ecx, ecx
 	doneType:
 		push	1
-		push	dword ptr [ebp+0x10]
+		push	dword ptr [ebp+0xC]
 		push	1
-		mov		eax, [ebp+0xC]
+		mov		eax, [ebp+8]
 		mov		edx, [eax]
 		test	edx, edx
 		jz		noExtra
@@ -484,17 +483,17 @@ __declspec(naked) void Actor::EquipItemAlt(TESForm *itemForm, ContChangesEntry *
 		test	ecx, ecx
 		cmovz	ecx, edx
 		push	ecx
-		push	dword ptr [ebp+8]
+		push	dword ptr [ebp-8]
 		mov		ecx, [ebp-4]
 		CALL_EAX(ADDR_EquipItem)
-		cmp		byte ptr [ebp+0x14], 0
+		cmp		byte ptr [ebp+0x10], 0
 		jnz		done
 		mov		edx, ds:0x11D2A10
-		mov		ecx, [ebp+8]
+		mov		ecx, [ebp-8]
 		call	ShowItemMessage
 	done:
 		leave
-		retn	0x10
+		retn	0xC
 	}
 }
 
@@ -1401,7 +1400,7 @@ __declspec(naked) ContChangesEntry *Actor::GetAmmoInfo() const
 TESObjectWEAP *Actor::GetEquippedWeapon() const
 {
 	ContChangesEntry *weaponInfo = GetWeaponInfo();
-	return weaponInfo ? (TESObjectWEAP*)weaponInfo->type : NULL;
+	return weaponInfo ? (TESObjectWEAP*)weaponInfo->type : nullptr;
 }
 
 bool Actor::IsItemEquipped(TESForm *item) const
@@ -1532,12 +1531,12 @@ PackageInfo *Actor::GetPackageInfo() const
 		if (baseProcess->currentPackage.package)
 			return &baseProcess->currentPackage;
 	}
-	return NULL;
+	return nullptr;
 }
 
 TESObjectREFR *Actor::GetPackageTarget() const
 {
-	return baseProcess ? baseProcess->currentPackage.targetRef : NULL;
+	return baseProcess ? baseProcess->currentPackage.targetRef : nullptr;
 }
 
 TESCombatStyle *Actor::GetCombatStyle() const
@@ -1569,10 +1568,10 @@ float Actor::GetRadiationLevel()
 	float result = 0;
 	if (inWater)
 	{
-		TESWaterForm *waterForm = NULL;
-		if (renderState && renderState->waterRef)
+		TESWaterForm *waterForm = nullptr;
+		if (renderState && renderState->currWaterRef)
 		{
-			waterForm = ((BGSPlaceableWater*)renderState->waterRef->baseForm)->water;
+			waterForm = ((BGSPlaceableWater*)renderState->currWaterRef->baseForm)->water;
 			if (waterForm && waterForm->waterForm) waterForm = waterForm->waterForm;
 		}
 		else waterForm = ThisCall<TESWaterForm*>(0x547770, parentCell);
@@ -1895,12 +1894,12 @@ __declspec(naked) float __vectorcall Actor::AdjustPushForce(float baseForce)
 		fstp	dword ptr [esp-4]
 		movss	xmm1, [esp-4]
 		mulss	xmm1, SS_10
-		mulss	xmm1, ds:[0x11CEA6C]
-		addss	xmm1, ds:[0x11CE664]
+		mulss	xmm1, ds:0x11CEA6C
+		addss	xmm1, ds:0x11CE664
 		movaps	xmm2, xmm0
 		andps	xmm2, PS_FlipSignMask0
-		xorps	xmm2, ds:[0x11CF9C0]
-		mulss	xmm0, ds:[0x11CFA20]
+		xorps	xmm2, ds:0x11CF9C0
+		mulss	xmm0, ds:0x11CFA20
 		addss	xmm0, xmm2
 		mulss	xmm0, xmm1
 		retn
@@ -2036,7 +2035,7 @@ void MagicTarget::RemoveEffect(EffectItem *effItem)
 {
 	ActiveEffectList *effList = GetEffectList();
 	if (!effList) return;
-	ListNode<ActiveEffect> *iter = effList->Head(), *prev = NULL;
+	ListNode<ActiveEffect> *iter = effList->Head(), *prev = nullptr;
 	ActiveEffect *activeEff;
 	do
 	{
@@ -2059,7 +2058,7 @@ void MagicTarget::RemoveEffect(EffectItem *effItem)
 TESObjectREFR *TESObjectREFR::GetMerchantContainer() const
 {
 	ExtraMerchantContainer *xMerchCont = GetExtraType(&extraDataList, MerchantContainer);
-	return xMerchCont ? xMerchCont->containerRef : NULL;
+	return xMerchCont ? xMerchCont->containerRef : nullptr;
 }
 
 __declspec(naked) TESActorBase *Actor::GetActorBase() const
@@ -2089,12 +2088,12 @@ __declspec(naked) TESActorBase *Actor::GetActorBase() const
 
 TESPackage *Actor::GetStablePackage() const
 {
-	if (!baseProcess) return NULL;
+	if (!baseProcess) return nullptr;
 	TESPackage *package = baseProcess->currentPackage.package;
-	if (!package) return NULL;
+	if (!package) return nullptr;
 	if ((package->type < 18) || (package->type == 26) || (package->type == 30)) return package;
 	ExtraPackage *xPackage = GetExtraType(&extraDataList, Package);
-	return xPackage ? xPackage->package : NULL;
+	return xPackage ? xPackage->package : nullptr;
 }
 
 bool Actor::GetLOS(Actor *target) const

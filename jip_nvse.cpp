@@ -32,6 +32,7 @@
 #include "functions_jip/jip_fn_inventory.h"
 #include "functions_jip/jip_fn_land_texture.h"
 #include "functions_jip/jip_fn_light.h"
+#include "functions_jip/jip_fn_minimap.h"
 #include "functions_jip/jip_fn_misc_ref.h"
 #include "functions_jip/jip_fn_miscellaneous.h"
 #include "functions_jip/jip_fn_package.h"
@@ -43,7 +44,6 @@
 #include "functions_jip/jip_fn_sound.h"
 #include "functions_jip/jip_fn_string.h"
 #include "functions_jip/jip_fn_texture_set.h"
-#include "functions_jip/jip_fn_minimap.h"
 #include "functions_jip/jip_fn_ui.h"
 #include "functions_jip/jip_fn_utility.h"
 #include "functions_jip/jip_fn_water.h"
@@ -1373,6 +1373,9 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2920*/REG_CMD(GetLightAmountAtPoint);
 	/*2921*/REG_CMD(TransformWorldToLocal);
 	/*2922*/REG_CMD(GetAnglesBetweenPoints);
+	//	v56.68
+	/*2923*/REG_CMD(GetP2PRayCastRange);
+	/*2924*/REG_CMD(WeaponHasModType);
 
 	//===========================================================
 

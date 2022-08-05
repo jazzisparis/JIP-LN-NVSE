@@ -25,7 +25,18 @@ __declspec(naked) float __vectorcall NiVector3::Length() const
 		mulps	xmm0, xmm0
 		haddps	xmm0, xmm1
 		haddps	xmm0, xmm1
-		sqrtss	xmm0, xmm0
+		comiss	xmm0, xmm1
+		jz		done
+		movaps	xmm1, xmm0
+		rsqrtss	xmm2, xmm0
+		mulss	xmm1, xmm2
+		mulss	xmm1, xmm2
+		movss	xmm3, SS_3
+		subss	xmm3, xmm1
+		mulss	xmm3, xmm2
+		mulss	xmm3, PS_V3_Half
+		mulss	xmm0, xmm3
+	done:
 		retn
 	}
 }
@@ -246,7 +257,18 @@ __declspec(naked) float __vectorcall NiVector4::Length() const
 		mulps	xmm0, xmm0
 		haddps	xmm0, xmm1
 		haddps	xmm0, xmm1
-		sqrtss	xmm0, xmm0
+		comiss	xmm0, xmm1
+		jz		done
+		movaps	xmm1, xmm0
+		rsqrtss	xmm2, xmm0
+		mulss	xmm1, xmm2
+		mulss	xmm1, xmm2
+		movss	xmm3, SS_3
+		subss	xmm3, xmm1
+		mulss	xmm3, xmm2
+		mulss	xmm3, PS_V3_Half
+		mulss	xmm0, xmm3
+	done:
 		retn
 	}
 }
@@ -715,6 +737,89 @@ __declspec(naked) NiMatrix33& NiMatrix33::Transpose()
 	}
 }
 
+__declspec(naked) float __vectorcall NiMatrix33::From2Points(const NiVector3 &pt1, const NiVector3 &pt2)
+{
+	__asm
+	{
+		mov		eax, [esp+4]
+		push	0
+		movups	xmm0, [edx]
+		movups	xmm1, [eax]
+		subps	xmm0, xmm1
+		andps	xmm0, PS_XYZ0Mask
+		xorps	xmm4, xmm4
+		movaps	xmm1, xmm0
+		mulps	xmm1, xmm1
+		movaps	xmm2, xmm1
+		haddps	xmm2, xmm4
+		haddps	xmm2, xmm4
+		comiss	xmm2, xmm4
+		jz		allZero
+		pshufd	xmm3, xmm0, 0xFE
+		xorps	xmm3, PS_FlipSignMask0
+		unpcklpd	xmm1, xmm4
+		haddps	xmm1, xmm4
+		comiss	xmm1, xmm4
+		jz		zZero
+		unpcklpd	xmm2, xmm1
+		movaps	xmm5, xmm2
+		rsqrtps	xmm6, xmm2
+		mulps	xmm2, xmm6
+		mulps	xmm2, xmm6
+		movss	xmm7, SS_3
+		unpcklpd	xmm7, xmm7
+		subps	xmm7, xmm2
+		mulps	xmm7, xmm6
+		mulps	xmm7, PS_V3_Half
+		movaps	xmm2, xmm7
+		mulps	xmm5, xmm2
+		movss	[esp], xmm5
+		movsldup	xmm2, xmm2
+		unpckhpd	xmm5, xmm5
+		unpcklps	xmm3, xmm5
+		unpcklpd	xmm3, xmm0
+		movaps	xmm1, xmm0
+		cmpeqps	xmm1, xmm4
+		movmskps	eax, xmm1
+		and		al, 3
+		cmp		al, 2
+		jz		getSC
+		pshufd	xmm1, PS_FlipSignMask0, 0x15
+		xorps	xmm3, xmm1
+	getSC:
+		mulps	xmm3, xmm2
+		jmp		makeMat
+	zZero:
+		movaps	xmm1, xmm3
+		pshufd	xmm0, PS_V3_One, 0x3C
+		andps	xmm3, PS_FlipSignMask0
+		xorps	xmm1, xmm3
+		xorps	xmm3, xmm0
+		movss	[esp], xmm1
+		jmp		makeMat
+	allZero:
+		pshufd	xmm3, PS_V3_One, 0x33
+	makeMat:
+		movshdup	xmm1, xmm3
+		pshufd	xmm2, xmm3, 0xA
+		pshufd	xmm5, xmm3, 0xF
+		movss	[ecx], xmm5
+		movss	[ecx+0xC], xmm2
+		movss	[ecx+0x18], xmm4
+		movq	qword ptr [ecx+0x1C], xmm3
+		shufps	xmm3, xmm4, 1
+		mulps	xmm2, xmm3
+		movq	qword ptr [ecx+4], xmm2
+		xor		byte ptr [ecx+7], 0x80
+		mulps	xmm3, xmm5
+		movq	qword ptr [ecx+0x10], xmm3
+		xor		byte ptr [ecx+0x17], 0x80
+		movss	xmm0, [esp]
+		pop		eax
+		retn	4
+	}
+}
+
 void NiMatrix33::Dump() const
 {
 	PrintDebug("%.6f\t%.6f\t%.6f\n%.6f\t%.6f\t%.6f\n%.6f\t%.6f\t%.6f\n", cr[0][0], cr[1][0], cr[2][0], cr[0][1], cr[1][1], cr[2][1], cr[0][2], cr[1][2], cr[2][2]);
@@ -1038,8 +1143,20 @@ __declspec(naked) float __vectorcall Point2Distance(const NiVector3 &pt1, const 
 		movq	xmm1, qword ptr [edx]
 		subps	xmm0, xmm1
 		mulps	xmm0, xmm0
-		haddps	xmm0, xmm0
-		sqrtss	xmm0, xmm0
+		xorps	xmm1, xmm1
+		haddps	xmm0, xmm1
+		comiss	xmm0, xmm1
+		jz		done
+		movaps	xmm1, xmm0
+		rsqrtss	xmm2, xmm0
+		mulss	xmm1, xmm2
+		mulss	xmm1, xmm2
+		movss	xmm3, SS_3
+		subss	xmm3, xmm1
+		mulss	xmm3, xmm2
+		mulss	xmm3, PS_V3_Half
+		mulss	xmm0, xmm3
+	done:
 		retn
 	}
 }
@@ -1058,7 +1175,18 @@ __declspec(naked) float __vectorcall Point3Distance(const NiVector3 &pt1, const 
 		xorps	xmm1, xmm1
 		haddps	xmm0, xmm1
 		haddps	xmm0, xmm1
-		sqrtss	xmm0, xmm0
+		comiss	xmm0, xmm1
+		jz		done
+		movaps	xmm1, xmm0
+		rsqrtss	xmm2, xmm0
+		mulss	xmm1, xmm2
+		mulss	xmm1, xmm2
+		movss	xmm3, SS_3
+		subss	xmm3, xmm1
+		mulss	xmm3, xmm2
+		mulss	xmm3, PS_V3_Half
+		mulss	xmm0, xmm3
+	done:
 		retn
 	}
 }

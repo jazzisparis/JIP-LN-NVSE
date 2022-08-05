@@ -94,7 +94,7 @@ ScriptEventList *ScriptEventList::CreateCopy()
 {
 	ScriptEventList *pEventList = (ScriptEventList*)GameHeapAlloc(sizeof(ScriptEventList));
 	pEventList->m_script = m_script;
-	pEventList->unk04 = unk04;
+	pEventList->m_flags = m_flags;
 	pEventList->m_eventList = nullptr;
 	pEventList->m_vars = nullptr;
 	pEventList->m_effScrFlags = nullptr;

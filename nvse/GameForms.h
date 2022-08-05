@@ -3460,7 +3460,7 @@ public:
 	struct CellRenderData
 	{
 		NiNode											*masterNode;// 00
-		tList<TESObjectREFR>							list04;		// 04
+		tList<TESObjectREFR>							largeRefs;	// 04	refs with bound size > 3000
 		NiTMapBase<TESObjectREFR*, NiNode*>				map0C;		// 0C
 		NiTMapBase<TESForm*, TESObjectREFR*>			map1C;		// 1C
 		NiTMapBase<TESObjectREFR*, NiNode*>				map2C;		// 2C
@@ -3538,54 +3538,91 @@ struct LODdata
 {
 	struct LODNode;
 
+	// 30
+	struct TerrainChunk
+	{
+		LODNode						*node;			// 00
+		NiAVObject					*object04;		// 04
+		NiAVObject					*object08;		// 08
+		NiAVObject					*object0C;		// 0C
+		NiObject					*object10;		// 10
+		NiObject					*object14;		// 14
+		NiObject					*object18;		// 18
+		UInt32						unk1C;			// 1C
+		UInt32						unk20;			// 20
+		BGSTerrainChunkLoadTask		*loadTask;		// 24
+		UInt8						byte28;			// 28
+		UInt8						byte29;			// 29
+		UInt8						byte2A;			// 2A
+		UInt8						pad2B;			// 2B
+		NiObject					*object2C;		// 2C
+	};
+
 	// 2C	C'tor @ 0x6F5160
 	struct DistantObject
 	{
-		LODNode				*node;			// 00
-		NiRefObject			*object04;		// 04
-		NiRefObject			*object08;		// 08
-		NiRefObject			*object0C;		// 0C
-		NiRefObject			*object10;		// 10
-		NiRefObject			*object14;		// 14
+		LODNode						*node;			// 00
+		NiAVObject					*object04;		// 04
+		NiAVObject					*object08;		// 08
+		NiAVObject					*object0C;		// 0C
+		NiObject					*object10;		// 10
+		NiObject					*object14;		// 14
 		BGSDistantObjectBlockLoadTask	*loadTask;	// 18
-		NiRefObject			*object1C;		// 1C
-		UInt8				byte20;			// 20
-		UInt8				byte21;			// 21
-		UInt8				byte22;			// 22
-		UInt8				isHigh;			// 23
-		UInt8				byte24;			// 24
-		UInt8				pad25[3];		// 25
-		UInt32				unk28;			// 28
+		NiObject					*object1C;		// 1C
+		UInt8						byte20;			// 20
+		UInt8						byte21;			// 21
+		UInt8						byte22;			// 22
+		UInt8						isHigh;			// 23
+		UInt8						byte24;			// 24
+		UInt8						pad25[3];		// 25
+		UInt32						unk28;			// 28
+	};
+
+	// 4C
+	struct DistantTreeBlock
+	{
+		struct TreeGroup;
+		struct InstanceData;
+
+		BGSDistantTreeBlockLoadTask	*loadTask;		// 00
+		BSSimpleArray<TreeGroup>	treeGroups;		// 04
+		NiTPointerMap<InstanceData>	instanceMap;	// 14
+		NiTPointerMap<TreeGroup>	groupMap;		// 24
+		BSSimpleArray<UInt32>		array34;		// 34
+		LODNode						*node;			// 44
+		UInt8						byte48;			// 48
+		UInt8						byte49;			// 49
+		UInt8						pad4A[2];		// 4A
 	};
 
 	// 60	C'tor @ 0x6FD210
 	struct LODNode
 	{
-		LODdata			*parent;		// 00
-		UInt32			lodLevel;		// 04
-		Coordinate		cellXY;			// 08
-		UInt8			byte0C;			// 0C
-		UInt8			byte0D;			// 0D
-		UInt8			byte0E;			// 0E
-		UInt8			byte0F;			// 0F
-		UInt32			ukn10;			// 10
-		DistantObject	*object;		// 14
-		UInt32			ukn18;			// 18
-		UInt32			ukn1C;			// 1C
-		LODNode			*linked[4];		// 20
-		UInt32			unk30;			// 30
-		NiVector3		pos34;			// 34
-		float			flt40;			// 40
-		float			splitDist;		// 44
-		float			morphStartDist;	// 48
-		float			morphEndDist;	// 4C
-		UInt32			unk50;			// 50
-		UInt32			ukn54;			// 54
-		UInt32			linkID;			// 58
-		UInt8			shouldShow;		// 5C
-		UInt8			byte5D;			// 5D
-		UInt8			byte5E;			// 5E
-		UInt8			byte5F;			// 5F
+		LODdata				*parent;		// 00
+		UInt32				lodLevel;		// 04
+		Coordinate			cellXY;			// 08
+		UInt8				byte0C;			// 0C
+		UInt8				byte0D;			// 0D
+		UInt8				byte0E;			// 0E
+		UInt8				byte0F;			// 0F
+		TerrainChunk		*trrChunk;		// 10
+		DistantObject		*object;		// 14
+		DistantTreeBlock	*distTree;		// 18
+		UInt32				ukn1C;			// 1C
+		LODNode				*linked[4];		// 20
+		void				*ptr30;			// 30
+		NiVector3			pos34;			// 34
+		float				flt40;			// 40
+		float				splitDist;		// 44
+		float				morphStartDist;	// 48
+		float				morphEndDist;	// 4C
+		UInt32				unk50;			// 50
+		UInt32				ukn54;			// 54
+		UInt32				linkID;			// 58
+		UInt8				shouldShow;		// 5C
+		UInt8				byte5D;			// 5D
+		UInt8				byte5E;			// 5E
+		UInt8				byte5F;			// 5F
 
 		LODNode *GetNodeByCoord(Coordinate coord) const;
 	};

@@ -1,12 +1,12 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(AddItemAlt, 1, 5, kParams_OneItemOrList_OneInt_OneOptionalFloat_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(AddItemAlt, 1, 5, kParams_OneItemOrList_OneOptInt_OneOptFloat_TwoOptInts);
 DEFINE_COMMAND_PLUGIN(GetValueAlt, 0, 1, kParams_OneOptionalObjectID);
 DEFINE_COMMAND_PLUGIN(SetValueAlt, 0, 2, kParams_OneObjectID_OneInt);
 DEFINE_COMMAND_PLUGIN(RemoveItemTarget, 1, 4, kParams_OneItemOrList_OneContainer_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(GetWeaponRefModFlags, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetWeaponRefModFlags, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetWeaponRefModFlags, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetItemRefCurrentHealth, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetItemRefCurrentHealth, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetItemRefCurrentHealth, 1, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(SetHotkeyItemRef, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(EquipItemAlt, 1, 3, kParams_OneObjectID_TwoOptionalInts);
@@ -17,33 +17,30 @@ DEFINE_COMMAND_PLUGIN(GetAllItems, 1, 5, kParams_FourOptionalInts_OneOptionalLis
 DEFINE_COMMAND_PLUGIN(GetAllItemRefs, 1, 5, kParams_FourOptionalInts_OneOptionalList);
 DEFINE_COMMAND_PLUGIN(RemoveMeIRAlt, 1, 3, kParams_TwoOptionalInts_OneOptionalContainer);
 DEFINE_COMMAND_PLUGIN(GetEquippedItemRef, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetNoUnequip, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetNoUnequip, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetNoUnequip, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetEquippedWeaponPoison, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetEquippedWeaponPoison, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(ToggleItemUnique, 0, 2, kParams_OneForm_OneInt);
 DEFINE_COMMAND_PLUGIN(GetBaseItems, 0, 1, kParams_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(SetOnUseAidItemEventHandler, 0, 3, kParams_OneForm_OneInt_OneForm);
-DEFINE_COMMAND_PLUGIN(GetEquippedArmorRefs, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDT, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDR, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetEquippedArmorRefs, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDT, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDR, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetHotkeyItemRef, 0, 1, kParams_OneInt);
 
 bool Cmd_AddItemAlt_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
-	UInt32 count, doEquip = 0, noMessage = 1;
-	float condition = 100;
+	UInt32 count = 1, doEquip = 0, noMessage = 1;
+	float condition = 100.0F;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &count, &condition, &doEquip, &noMessage) && count && thisObj->baseForm->GetContainer())
-	{
-		condition = GetMin(GetMax(condition, 0.0F), 100.0F) * 0.01F;
-		thisObj->AddItemAlt(form, count, condition, doEquip, noMessage);
-	}
+		thisObj->AddItemAlt(form, count, condition * 0.01F, doEquip, noMessage);
 	return true;
 }
 
 bool Cmd_GetValueAlt_Execute(COMMAND_ARGS)
 {
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (form || (thisObj && (form = thisObj->baseForm) && kInventoryType[form->typeID])))
 		*result = (int)form->GetItemValue();
 	else *result = 0;
@@ -238,11 +235,8 @@ bool Cmd_EquipItemAlt_Execute(COMMAND_ARGS)
 	TESForm *item;
 	UInt32 noUnequip = 0, noMessage = 1;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &item, &noUnequip, &noMessage) && IS_ACTOR(thisObj))
-	{
-		ContChangesEntry *entry = thisObj->GetContainerChangesEntry(item);
-		if (entry && !entry->GetEquippedExtra())
-			((Actor*)thisObj)->EquipItemAlt(item, entry, noUnequip, noMessage);
-	}
+		if (ContChangesEntry *entry = thisObj->GetContainerChangesEntry(item))
+			((Actor*)thisObj)->EquipItemAlt(entry, noUnequip, noMessage);
 	return true;
 }
 
@@ -311,15 +305,15 @@ bool Cmd_DropAlt_Execute(COMMAND_ARGS)
 				}
 				total -= subCount;
 				if (stacked)
-					thisObj->RemoveItem(item, xData, subCount, keepOwner, 1, NULL, 0, 0, 1, 0);
+					thisObj->RemoveItem(item, xData, subCount, keepOwner, 1, nullptr, 0, 0, 1, 0);
 				else while (subCount-- > 0)
-					thisObj->RemoveItem(item, xData, 1, keepOwner, 1, NULL, 0, 0, 1, 0);
+					thisObj->RemoveItem(item, xData, 1, keepOwner, 1, nullptr, 0, 0, 1, 0);
 			}
 		}
 		while (total > 0)
 		{
 			subCount = (total < 0x7FFF) ? total : 0x7FFF;
-			thisObj->RemoveItem(item, NULL, subCount, keepOwner, 1, NULL, 0, 0, 1, 0);
+			thisObj->RemoveItem(item, nullptr, subCount, keepOwner, 1, nullptr, 0, 0, 1, 0);
 			total -= subCount;
 		}
 	}
@@ -342,8 +336,8 @@ bool Cmd_DropMeAlt_Execute(COMMAND_ARGS)
 		dropCount = countExtra;
 	TESForm *item = invRef->type;
 	bool stacked = IS_ID(item, TESObjectWEAP) ? (((TESObjectWEAP*)item)->eWeaponType > 9) : NOT_TYPE(item, TESObjectARMO);
-	if (stacked) invRef->containerRef->RemoveItem(item, xData, dropCount, !clrOwner, 1, NULL, 0, 0, 1, 0);
-	else while (dropCount-- > 0) invRef->containerRef->RemoveItem(item, xData, 1, !clrOwner, 1, NULL, 0, 0, 1, 0);
+	if (stacked) invRef->containerRef->RemoveItem(item, xData, dropCount, !clrOwner, 1, nullptr, 0, 0, 1, 0);
+	else while (dropCount-- > 0) invRef->containerRef->RemoveItem(item, xData, 1, !clrOwner, 1, nullptr, 0, 0, 1, 0);
 	invRef->removed = true;
 	return true;
 }
@@ -352,7 +346,7 @@ bool Cmd_GetAllItems_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 typeID = 0, noNonPlayable = 0, noQuestItem = 0, noEquipped = 0;
-	BGSListForm *listForm = NULL;
+	BGSListForm *listForm = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &typeID, &noNonPlayable, &noQuestItem, &noEquipped, &listForm))
 		return true;
 	if (typeID && !kInventoryType[typeID])
@@ -387,7 +381,7 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	UInt32 typeID = 0, noNonPlayable = 0, noQuestItem = 0, noEquipped = 0;
-	BGSListForm *listForm = NULL;
+	BGSListForm *listForm = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &typeID, &noNonPlayable, &noQuestItem, &noEquipped, &listForm))
 		return true;
 	if (typeID && !kInventoryType[typeID])
@@ -436,7 +430,7 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 		}
 		if (baseCount > 0)
 		{
-			invRef = InventoryRefCreate(thisObj, item, baseCount, NULL);
+			invRef = InventoryRefCreate(thisObj, item, baseCount, nullptr);
 			if (listForm) listForm->list.Prepend(invRef);
 			else tmpElements->Append(invRef);
 			count++;
@@ -453,7 +447,7 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 bool Cmd_RemoveMeIRAlt_Execute(COMMAND_ARGS)
 {
 	SInt32 quantity = 0, clrOwner = 0;
-	TESObjectREFR *destRef = NULL;
+	TESObjectREFR *destRef = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &quantity, &clrOwner, &destRef))
 		return true;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
@@ -493,7 +487,7 @@ bool Cmd_SetNoUnequip_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &noUnequip))
 	{
 		InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
-		ExtraDataList *xData = invRef ? invRef->xData : NULL;
+		ExtraDataList *xData = invRef ? invRef->xData : nullptr;
 		if (xData)
 		{
 			if (!noUnequip)
@@ -554,7 +548,7 @@ bool Cmd_ToggleItemUnique_Execute(COMMAND_ARGS)
 bool Cmd_GetBaseItems_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESForm *baseForm = NULL;
+	TESForm *baseForm = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &baseForm))
 		return true;
 	if (!baseForm)

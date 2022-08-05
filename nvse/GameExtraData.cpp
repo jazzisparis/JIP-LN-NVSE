@@ -412,9 +412,9 @@ __declspec(naked) double ExtraContainerChanges::Data::GetInventoryWeight()
 		mov		eax, g_thePlayer
 		movzx	eax, byte ptr [eax+0x7BC]
 		push	eax
-		mov		byte ptr ds:[0x11E0898], 1
+		mov		byte ptr ds:0x11E0898, 1
 		CALL_EAX(0x4D0900)
-		mov		byte ptr ds:[0x11E0898], 0
+		mov		byte ptr ds:0x11E0898, 0
 		retn
 	}
 }

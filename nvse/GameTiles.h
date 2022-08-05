@@ -355,8 +355,8 @@ public:
 class Tile3D : public Tile
 {
 public:
-	UInt32			unk38;		// 38
-	UInt32			unk3C;		// 3C
-	String			string40;	// 40
-	String			fileName;	// 48
+	NiControllerManager		*ctrlManager;	// 38
+	BSAnimGroupSequence		*animSequence;	// 3C
+	String					animStr;		// 40
+	String					fileName;		// 48
 };

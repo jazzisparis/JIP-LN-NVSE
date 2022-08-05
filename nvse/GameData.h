@@ -252,17 +252,24 @@ extern DataHandler *g_dataHandler;
 class ImageSpaceModifierInstance : public NiObject
 {
 public:
-	virtual void	Unk_23(void);
-	virtual void	Unk_24(void);
-	virtual ImageSpaceModifierInstanceForm	*GetInstanceForm();
-	virtual void	Unk_26(char *buffer);
+	/*8C*/virtual void	Unk_23(void);
+	/*90*/virtual void	Unk_24(void);
+	/*94*/virtual ImageSpaceModifierInstanceForm* GetInstanceForm();
+	/*98*/virtual void	Unk_26(char *buffer);
 
 	UInt8					hidden;			// 08
 	UInt8					pad09[3];		// 09
 	float					percent;		// 0C
-	NiObject				*obj10;			// 10
-	float					flt14;			// 14
-	UInt32					unk18;			// 18
+	NiObject				*target;		// 10
+	float					age;			// 14
+	UInt32					flags;			// 18
+};
+
+// 20
+class ImageSpaceModifierInstanceTemp : public ImageSpaceModifierInstance
+{
+public:
+	float					duration;		// 1C
 };
 
 // 30
@@ -277,21 +284,30 @@ public:
 };
 
 // 30
-class ImageSpaceModifierInstanceDOF : public ImageSpaceModifierInstance
+class ImageSpaceModifierInstanceDOF : public ImageSpaceModifierInstanceTemp
 {
 public:
-	float					flt1C;			// 1C
-	float					flt20;			// 20
-	float					flt24;			// 24
+	float					distance;		// 20
+	float					focalDepthRange;// 24
 	float					flt28;			// 28
 	UInt32					unk2C;			// 2C
 };
 
-// 44
-class ImageSpaceModifierInstanceDRB : public ImageSpaceModifierInstance
+// 38
+class ImageSpaceModifierInstanceRB : public ImageSpaceModifierInstanceTemp
 {
 public:
-	float					flt1C;			// 1C
+	float					rampUp;			// 20
+	float					start;			// 24
+	float					rampDown;		// 28
+	float					downStart;		// 2C
+	NiPoint2				centre;			// 30
+};
+
+// 44
+class ImageSpaceModifierInstanceDRB : public ImageSpaceModifierInstanceTemp
+{
+public:
 	float					flt20;			// 20
 	float					flt24;			// 24
 	float					flt28;			// 28
@@ -512,8 +528,7 @@ public:
 	SInt32			worldY;			// 08	Y coord "
 	UInt32			gridSize;		// 0C	Init'd to uGridsToLoad
 	TESObjectCELL	**gridCells;	// 10	Size is gridSize^2
-	float			posX;			// 14	worldX * 4096
-	float			posY;			// 18	worldY * 4096
+	NiPoint2		posXY;			// 14	worldXY * 4096
 	UInt32			unk1C;			// 1C
 	UInt8			byte20;			// 20
 	UInt8			pad21[3];		// 21
@@ -541,6 +556,8 @@ public:
 	};
 
 	Iterator Begin() {return Iterator(*this);}
+
+	TESObjectCELL *GetCell(Coordinate cellXY);
 };
 
 // 44

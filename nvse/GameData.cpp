@@ -92,3 +92,25 @@ __declspec(naked) bool Sky::GetIsRaining()
 		retn
 	}
 }
+
+__declspec(naked) TESObjectCELL *GridCellArray::GetCell(Coordinate cellXY)
+{
+	__asm
+	{
+		push	ebx
+		mov		edx, [ecx+0xC]
+		shr		edx, 1
+		movsx	eax, word ptr [esp+0xA]
+		sub		eax, [ecx+4]
+		add		eax, edx
+		imul	eax, [ecx+0xC]
+		movsx	ebx, word ptr [esp+8]
+		sub		ebx, [ecx+8]
+		add		edx, ebx
+		add		edx, eax
+		mov		ebx, [ecx+0x10]
+		mov		eax, [ebx+edx*4]
+		pop		ebx
+		retn	4
+	}
+}

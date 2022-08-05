@@ -3,7 +3,7 @@
 char s_lastLoadedPath[0x80] = {0};
 UInt8 s_lastChangedFlags = 0;
 
-void __fastcall RestoreLinkedRefs(UnorderedMap<UInt32, UInt32> *tempMap = NULL)
+void __fastcall RestoreLinkedRefs(UnorderedMap<UInt32, UInt32> *tempMap = nullptr)
 {
 	if (s_linkedRefDefault().Empty()) return;
 	UInt32 key;
@@ -54,7 +54,7 @@ void DoPreLoadGameHousekeeping()
 		for (auto refIter = s_NPCPerksInfoMap().Begin(); refIter; ++refIter)
 		{
 			if ((actor = (Actor*)LookupFormByRefID(refIter.Key())) && IS_ACTOR(actor))
-				actor->extraDataList.perksInfo = NULL;
+				actor->extraDataList.perksInfo = nullptr;
 			if (!--size) break;
 		}
 		s_NPCPerksInfoMap().Clear();
@@ -339,7 +339,7 @@ void LoadGameCallback(void*)
 					nRecs--;
 					if ((buffer1 > 5) && (ResolveRefID(buffer1 << 24, &buffer4)))
 					{
-						ownersMap = NULL;
+						ownersMap = nullptr;
 						modIdx = buffer4 >> 24;
 						nRefs = *(UInt16*)bufPos;
 						bufPos += 2;
@@ -453,7 +453,7 @@ void LoadGameCallback(void*)
 					bufPos += 2;
 					if ((buffer1 > 5) && (ResolveRefID(buffer1 << 24, &buffer4)))
 					{
-						rVarsMap = NULL;
+						rVarsMap = nullptr;
 						modIdx = buffer4 >> 24;
 						while (nVars)
 						{
@@ -465,7 +465,7 @@ void LoadGameCallback(void*)
 							nRefs = *(UInt16*)bufPos;
 							*bufPos = 0;
 							bufPos += 2;
-							idsMap = NULL;
+							idsMap = nullptr;
 							while (nRefs)
 							{
 								refID = *(UInt32*)bufPos;
@@ -572,7 +572,7 @@ void LoadGameCallback(void*)
 					}
 					while (--buffer1);
 				}
-				else aprUndo->headParts = NULL;
+				else aprUndo->headParts = nullptr;
 				s_appearanceUndoMap()[(TESNPC*)g_thePlayer->baseForm] = aprUndo;
 				break;
 			}
@@ -597,7 +597,7 @@ void LoadGameCallback(void*)
 						bufPos += buffer1 * 5;
 						continue;
 					}
-					perksInfo = NULL;
+					perksInfo = nullptr;
 					while (buffer1)
 					{
 						buffer1--;
@@ -728,7 +728,7 @@ void SaveGameCallback(void*)
 			{
 				if (!refIter().perkRanks.Empty() && !actor->lifeState && (actor->isTeammate || !(((TESActorBase*)actor->baseForm)->baseData.flags & 8) || actor->GetRefNiNode()))
 					goto isValid;
-				actor->extraDataList.perksInfo = NULL;
+				actor->extraDataList.perksInfo = nullptr;
 			}
 			refIter.Remove();
 		isValid:

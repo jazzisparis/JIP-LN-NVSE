@@ -60,6 +60,7 @@ HUDMainMenu *g_HUDMainMenu;
 ConsoleManager *g_consoleManager;
 NiNode *s_pc1stPersonNode = nullptr, *g_cursorNode;
 ShadowSceneNode *g_shadowSceneNode;
+BSClearZNode *g_LODRootNode;
 TESObjectREFR *s_tempPosMarker;
 float g_screenResConvert, g_screenWidth, g_screenHeight;
 const char *g_terminalModelDefault;
@@ -534,16 +535,13 @@ __declspec(naked) UInt32 TESGlobal::ResolveRefValue()
 hkpWorld *GethkpWorld()
 {
 	bhkWorld *hkWorld = nullptr;
-	TESObjectCELL *cell = g_thePlayer->parentCell;
+	TESObjectCELL *cell = g_TES->currentInterior;
 	if (cell)
 	{
-		if (cell->cellFlags & 1)
-		{
-			ExtraHavok *xHavok = GetExtraType(&cell->extraDataList, Havok);
-			if (xHavok) hkWorld = xHavok->world;
-		}
-		else hkWorld = bhkWorldM::GetSingleton();
+		ExtraHavok *xHavok = GetExtraType(&cell->extraDataList, Havok);
+		if (xHavok) hkWorld = xHavok->world;
 	}
+	else hkWorld = bhkWorldM::GetSingleton();
 	return hkWorld ? (hkpWorld*)hkWorld->refObject : nullptr;
 }
 
@@ -629,14 +627,14 @@ ScriptVar *Script::AddVariable(char *varName, ScriptEventList *eventList, UInt32
 		varList.Append(varInfo);
 		s_addedVariables()[refID].Insert(varName);
 	}
-	else if (!GetVariableAdded(refID, varName)) return NULL;
+	else if (!GetVariableAdded(refID, varName)) return nullptr;
 
 	ScriptVar *var = eventList->GetVariable(varInfo->idx);
 	if (!var)
 	{
 		var = (ScriptVar*)GameHeapAlloc(sizeof(ScriptVar));
 		var->id = varInfo->idx;
-		var->next = NULL;
+		var->next = nullptr;
 		var->data.num = 0;
 		eventList->m_vars->Append(var);
 	}
@@ -677,7 +675,7 @@ __declspec(naked) TESIdleForm *AnimData::GetPlayedIdle()
 TempObject<UnorderedMap<UInt32, LinkedRefEntry>> s_linkedRefModified;
 TempObject<UnorderedMap<UInt32, UInt32>> s_linkedRefDefault, s_linkedRefsTemp;
 
-bool TESObjectREFR::SetLinkedRef(TESObjectREFR *linkObj = NULL, UInt8 modIdx)
+bool TESObjectREFR::SetLinkedRef(TESObjectREFR *linkObj = nullptr, UInt8 modIdx)
 {
 	ExtraLinkedRef *xLinkedRef = GetExtraType(&extraDataList, LinkedRef);
 	if (!linkObj)
@@ -739,13 +737,13 @@ UInt8 s_dataChangedFlags = 0;
 void EventCallbackScripts::InvokeEvents(UInt32 arg)
 {
 	for (auto script = BeginCp(); script; ++script)
-		CallFunction(*script, NULL, 1, arg);
+		CallFunction(*script, nullptr, 1, arg);
 }
 
 void EventCallbackScripts::InvokeEvents2(UInt32 arg1, UInt32 arg2)
 {
 	for (auto script = BeginCp(); script; ++script)
-		CallFunction(*script, NULL, 2, arg1, arg2);
+		CallFunction(*script, nullptr, 2, arg1, arg2);
 }
 
 void EventCallbackScripts::InvokeEventsThis(TESObjectREFR *thisObj)
@@ -773,7 +771,7 @@ TempObject<UnorderedMap<Script*, DisabledScriptBlocks>> s_disabledScriptBlocksMa
 ExtraDataList *InventoryRef::CreateExtraData()
 {
 	ContChangesEntry *pEntry = containerRef->GetContainerChangesEntry(type);
-	if (!pEntry) return NULL;
+	if (!pEntry) return nullptr;
 	xData = ExtraDataList::Create();
 	if (pEntry->extendData)
 		pEntry->extendData->Prepend(xData);
@@ -788,7 +786,7 @@ ExtraDataList *InventoryRef::CreateExtraData()
 
 TESObjectREFR* __fastcall CreateRefForStack(TESObjectREFR *container, ContChangesEntry *menuEntry)
 {
-	return (container && menuEntry) ? InventoryRefCreate(container, menuEntry->type, menuEntry->countDelta, menuEntry->extendData ? menuEntry->extendData->GetFirstItem() : NULL) : NULL;
+	return (container && menuEntry) ? InventoryRefCreate(container, menuEntry->type, menuEntry->countDelta, menuEntry->extendData ? menuEntry->extendData->GetFirstItem() : nullptr) : nullptr;
 }
 
 ExtraDataList* __fastcall SplitFromStack(ContChangesEntry *entry, ExtraDataList *xDataIn)
@@ -815,7 +813,7 @@ ExtraDataList* __fastcall SplitFromStack(ContChangesEntry *entry, ExtraDataList 
 TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 {
 	ExtraContainerChanges::EntryDataList *entryList = actor->GetContainerChangesList();
-	if (!entryList) return NULL;
+	if (!entryList) return nullptr;
 	UInt32 partMask = 1 << slotIndex;
 	TESForm *item;
 	ContChangesEntry *entry;
@@ -867,13 +865,13 @@ TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 		}
 		while (listIter = listIter->next);
 	}
-	return NULL;
+	return nullptr;
 }
 
 ContChangesEntry* __fastcall GetHotkeyItemEntry(UInt8 index, ExtraDataList **outXData)
 {
 	ExtraContainerChanges::EntryDataList *entryList = g_thePlayer->GetContainerChangesList();
-	if (!entryList) return NULL;
+	if (!entryList) return nullptr;
 	auto entryIter = entryList->Head();
 	ContChangesEntry *entry;
 	UInt8 type;
@@ -900,7 +898,7 @@ ContChangesEntry* __fastcall GetHotkeyItemEntry(UInt8 index, ExtraDataList **out
 		while (xdlIter = xdlIter->next);
 	}
 	while (entryIter = entryIter->next);
-	return NULL;
+	return nullptr;
 }
 
 bool __fastcall ClearHotkey(UInt8 index)
@@ -933,89 +931,114 @@ float __fastcall GetModBonuses(TESObjectREFR *wpnRef, UInt32 effectID)
 	return result;
 }
 
+__declspec(naked) float __vectorcall GetLightAmount(LightingData *lightingData, __m128 pos)
+{
+	__asm
+	{
+		xorps	xmm3, xmm3
+		cmp		[ecx+0xEC], 1
+		jz		done
+		mov		eax, [ecx+0xF8]
+		test	byte ptr [eax+0x30], 1
+		jnz		done
+		add		eax, 0x8C
+		movss	xmm1, PS_V3_One
+		cmp		[ecx+0xF4], 0
+		jz		skipDist
+		movups	xmm2, [eax]
+		andps	xmm2, PS_XYZ0Mask
+		subps	xmm2, xmm0
+		mulps	xmm2, xmm2
+		haddps	xmm2, xmm3
+		haddps	xmm2, xmm3
+		sqrtss	xmm2, xmm2
+		divss	xmm2, [eax+0x54]
+		comiss	xmm2, xmm1
+		jnb		done
+		mulss	xmm2, xmm2
+		subss	xmm1, xmm2
+	skipDist:
+		movss	xmm3, [eax+0x48]
+		maxss	xmm3, [eax+0x4C]
+		maxss	xmm3, [eax+0x50]
+		mulss	xmm3, [eax+0x38]
+		mulss	xmm3, xmm1
+	done:
+		movaps	xmm0, xmm3
+		retn
+	}
+}
+
 __declspec(naked) float __vectorcall GetLightAmountAtPoint(const NiVector3 &pos)
 {
 	__asm
 	{
-		push	ebx
 		push	esi
-		push	edi
-		push	ecx
 		mov		esi, g_shadowSceneNode
-		mov		edi, [esi+0xE0]
-		xorps	xmm6, xmm6
-		test	edi, edi
-		jz		done
-		mov		ebx, 0xB9BC50
-		movups	xmm7, [ecx]
-		andps	xmm7, PS_XYZ0Mask
-		mov		eax, g_TES
-		cmp		dword ptr [eax+0x34], 0
-		jnz		isInterior
-		mov		ecx, [eax+0x88]
-		test	ecx, ecx
-		jz		done
-		movaps	xmm0, xmm7
-		call	TESWorldSpace::GetCellAtPos
+		mov		eax, [esi+0xE0]
+		xorps	xmm5, xmm5
 		test	eax, eax
 		jz		done
-		sub		esp, 0x10
-		movups	[esp], xmm7
-		mov		ecx, edi
-		call	ebx
-		fstp	dword ptr [esp]
-		movss	xmm6, [esp]
+		movups	xmm6, [ecx]
+		andps	xmm6, PS_XYZ0Mask
+		mov		edx, g_TES
+		cmp		dword ptr [edx+0x34], 0
+		jnz		isInterior
+		mov		ecx, [edx+0x88]
+		test	ecx, ecx
+		jz		done
+		push	eax
+		movaps	xmm0, xmm6
+		call	TESWorldSpace::GetCellAtPos
+		pop		ecx
+		test	eax, eax
+		jz		done
+		movaps	xmm0, xmm6
+		call	GetLightAmount
+		movaps	xmm5, xmm0
 		jmp		doneCell
-		ALIGN 16
 	isInterior:
-		mov		eax, [edi+0xF8]
+		mov		eax, [eax+0xF8]
 		add		eax, 0xC8
 		movss	xmm0, [eax]
 		maxss	xmm0, [eax+4]
 		maxss	xmm0, [eax+8]
-		movss	xmm6, [eax+0xC]
-		maxss	xmm6, [eax+0x10]
-		maxss	xmm6, [eax+0x14]
-		addss	xmm6, xmm0
+		movss	xmm5, [eax+0xC]
+		maxss	xmm5, [eax+0x10]
+		maxss	xmm5, [eax+0x14]
+		addss	xmm5, xmm0
 	doneCell:
 		mov		ecx, 0x11F9EA0
 		call	LightCS::Enter
 		mov		esi, [esi+0xB4]
+		movss	xmm7, PS_V3_One
 		ALIGN 16
 	iterHead:
+		comiss	xmm5, xmm7
+		jnb		doClamp
 		test	esi, esi
 		jz		doClamp
 		mov		ecx, [esi+8]
 		mov		esi, [esi]
 		test	ecx, ecx
 		jz		iterHead
-		mov		eax, [ecx+0xF8]
-		test	eax, eax
-		jz		iterHead
-		test	byte ptr [eax+0x30], 1
-		jnz		iterHead
-		sub		esp, 0x10
-		movups	[esp], xmm7
-		call	ebx
-		fstp	dword ptr [esp]
-		addss	xmm6, [esp]
+		movaps	xmm0, xmm6
+		call	GetLightAmount
+		addss	xmm5, xmm0
 		jmp		iterHead
 	doClamp:
 		xorps	xmm0, xmm0
-		maxss	xmm6, xmm0
+		maxss	xmm5, xmm0
 		movss	xmm0, SS_100
-		mulss	xmm6, xmm0
-		minss	xmm6, xmm0
+		mulss	xmm5, xmm0
+		minss	xmm5, xmm0
 		mov		ecx, 0x11F9EA0
 		dec		dword ptr [ecx+4]
 		jnz		done
 		mov		dword ptr [ecx], 0
 	done:
-		movaps	xmm0, xmm6
-		pop		ecx
-		pop		edi
+		movaps	xmm0, xmm5
 		pop		esi
-		pop		ebx
 		retn
 	}
 }
@@ -1147,11 +1170,11 @@ __declspec(naked) bool IsConsoleOpen()
 {
 	__asm
 	{
-		mov		al, byte ptr ds:[0x11DEA2E]
+		mov		al, byte ptr ds:0x11DEA2E
 		test	al, al
 		jz		done
 		mov		eax, fs:[0x2C]
-		mov		edx, ds:[0x126FD98]
+		mov		edx, ds:0x126FD98
 		mov		eax, [eax+edx*4]
 		mov		al, [eax+0x268]
 	done:
@@ -1164,7 +1187,7 @@ __declspec(naked) void SuppressConsoleOutput()
 	__asm
 	{
 		mov		eax, fs:[0x2C]
-		mov		edx, ds:[0x126FD98]
+		mov		edx, ds:0x126FD98
 		mov		eax, [eax+edx*4]
 		mov		[eax+0x268], 0
 		retn
@@ -1270,7 +1293,7 @@ __declspec(naked) TLSData *GetTLSData()
 	__asm
 	{
 		mov		eax, fs:[0x2C]
-		mov		edx, ds:[0x126FD98]
+		mov		edx, ds:0x126FD98
 		mov		eax, [eax+edx*4]
 		retn
 	}
@@ -1317,7 +1340,7 @@ __declspec(naked) bool __fastcall GetFileArchived(const char *filePath)
 		push	esi
 		CALL_EAX(0xAFD270)
 		add		esp, 0xC
-		mov		edi, ds:[0x11F8160]
+		mov		edi, ds:0x11F8160
 		ALIGN 16
 	iterHead:
 		test	edi, edi
@@ -1389,7 +1412,7 @@ int GetIsLAA()
 	static int isLAA = -1;
 	if (isLAA == -1)
 	{
-		HMODULE gameHandle = GetModuleHandle(NULL);
+		HMODULE gameHandle = GetModuleHandle(nullptr);
 		UInt8 *dataPtr = (UInt8*)gameHandle + *(UInt32*)((UInt8*)gameHandle + 0x3C) + 0x16;
 		isLAA = (*dataPtr & 0x20) ? 1 : 0;
 		if (isLAA)
