@@ -109,15 +109,20 @@ constexpr ParamInfo kParams_TwoStrings[] =
 	{"String", kParamType_String, 0}
 };
 
-constexpr ParamInfo kParams_OneOptionalObject[] =
- {
-	 {"TESObject", kParamType_TESObject, 1}
- };
+constexpr ParamInfo kParams_OneBoundObject[] =
+{
+	{"Bound Object", kParamType_BoundObject, 0}
+};
+
+constexpr ParamInfo kParams_OneOptionalBoundObject[] =
+{
+	{"Bound Object", kParamType_BoundObject, 1}
+};
  
-constexpr ParamInfo kParams_OneInt_OneOptionalObject[] =
+constexpr ParamInfo kParams_OneInt_OneOptionalBoundObject[] =
 {
 	{"Integer", kParamType_Integer, 0},
-	{"TESObject", kParamType_TESObject, 1}
+	{"Bound Object", kParamType_BoundObject, 1}
 };
 
 constexpr ParamInfo kParams_OneQuest[] =
@@ -259,10 +264,10 @@ constexpr ParamInfo kParams_OneFaction_OneOptionalReputation[] =
 	{"Reputation", kParamType_Reputation, 1}
 };
 
-constexpr ParamInfo kParams_OneAxis_OneOptionalForm[] =
+constexpr ParamInfo kParams_OneAxis_OneOptionalBoundObject[] =
 {
 	{"Axis", kParamType_Axis, 0},
-	{"Form", kParamType_AnyForm, 1}
+	{"Bound Object", kParamType_BoundObject, 1}
 };
 
 constexpr ParamInfo kParams_TwoDoubles_ThreeOptionalDoubles[] =

@@ -2360,7 +2360,9 @@ public:
 	FrameBufferMode						frameBufferMode;			// AC4
 	UInt32								backBufferCount;			// AC8
 	RefreshRate							refreshRate;				// ACC
-	UInt32								unkAD0[44];					// AD0
+	UInt32								unkAD0[17];					// AD0
+	NiTMapBase<D3DFORMAT, NiPixelFormat*>	formatMatchMao;			// B14
+	UInt32								unkB24[23];					// B24
 };
 static_assert(sizeof(NiDX9Renderer) == 0xB80);
 

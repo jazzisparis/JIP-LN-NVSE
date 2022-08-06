@@ -9,10 +9,19 @@ DEFINE_COMMAND_PLUGIN(UpdateMiniMap, 0, 2, kParams_OneInt_OneOptionalInt);
 #define TEXTURE_FMT_RGB D3DFMT_X8R8G8B8
 #define TEXTURE_FMT_BW D3DFMT_L8
 
+struct TextureParams
+{
+	UInt32		width;
+	UInt32		height;
+	D3DFORMAT	d3dFormat;
+
+	TextureParams(UInt32 _width, UInt32 _height, D3DFORMAT _d3dFmt) : width(_width), height(_height), d3dFormat(_d3dFmt) {}
+}
+s_mmTextureParams(0x140, 0x140, TEXTURE_FMT_RGB);
+
 Tile::Value /**s_miniMapVisible, */*s_miniMapScale, *s_localMapZoom;
 BSScissorTriShape *s_localMapShapes[9];
 NiTriShapeData *s_localMapShapeDatas[9];
-UInt32 s_texturePixelSize = 0x110, s_projectPixelSize = 0x100;
 
 __declspec(naked) void UpdateTileScales()
 {
@@ -24,19 +33,20 @@ __declspec(naked) void UpdateTileScales()
 		addss	xmm1, xmm0
 		mov		eax, s_miniMapScale
 		mulss	xmm1, [eax+8]
-		mov		ecx, offset s_localMapShapes
-		mov		edx, 8
+		movd	edx, xmm1
+		mov		eax, 8
 		ALIGN 16
 	iterHead:
-		mov		eax, [ecx+edx*4]
-		movss	[eax+0x64], xmm1
-		dec		dl
+		mov		ecx, s_localMapShapes[eax*4]
+		mov		[ecx+0x64], edx
+		dec		al
 		jns		iterHead
 		mulss	xmm0, SS_10
-		cvttss2si	eax, xmm0
+		cvtss2si	eax, xmm0
 		shl		eax, 4
-		add		eax, 0x70
-		mov		s_texturePixelSize, eax
+		add		eax, 0xA0
+		mov		s_mmTextureParams.width, eax
+		mov		s_mmTextureParams.height, eax
 		retn
 	}
 }
@@ -68,24 +78,7 @@ __declspec(naked) __m128* __fastcall GetNorthRotation(TESObjectCELL *cell)
 		ALIGN 16
 	noRotation:
 		mov		s_cellNorthRotation, eax
-		retn
-	}
-}
-
-NiCamera *s_localMapCamera = nullptr;
-
-__declspec(naked) void __fastcall SetCameraRotation(TESObjectCELL *cell)
-{
-	__asm
-	{
-		call	GetNorthRotation
-		mov		ecx, s_localMapCamera
-		mov		edx, offset kNoRotation
-		test	eax, eax
-		cmovz	eax, edx
-		movaps	xmm0, [eax]
-		movq	qword ptr [ecx+0x38], xmm0
-		movhps	[ecx+0x44], xmm0
+		mov		eax, offset kNoRotation
 		retn
 		ALIGN 16
 	kNoRotation:
@@ -243,7 +236,7 @@ __declspec(naked) void __fastcall GetLocalMapPosMults(const NiPoint2 &inPos, con
 		ALIGN 16
 	kPosMults:
 		EMIT_DW(38, AA, AA, AB) EMIT_DW(B8, AA, AA, AB)
-		EMIT_DW_1(00) EMIT_DW_1(00)
+		DUP_2(EMIT_DW_1(00))
 	}
 }
 
@@ -1187,59 +1180,49 @@ __declspec(naked) float* __fastcall GetVtxAlphaPtr(const NiPoint2 &posMult)
 	}
 }
 
-__declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, D3DFORMAT texFormat, NiCamera *camera, NiTexture **pTexture)
+__declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, const TextureParams &texParams, NiCamera *camera, NiTexture **pTexture)
 {
 	__asm
 	{
 		push	ebp
 		mov		ebp, esp
 		push	ecx
-		sub		esp, 0xE8
+		sub		esp, 0xDC
 		test	ecx, ecx
 		jz		noCell
-		mov		cl, [ecx+0x24]
-		and		cl, 1
+		test	byte ptr [ecx+0x24], 1
 	noCell:
-		mov		[ebp-0x1D], cl
-		mov		eax, fs:[0x2C]
-		mov		ecx, ds:0x126FD98
-		mov		ecx, [eax+ecx*4]
-		add		ecx, 0x2B4
-		mov		eax, [ecx]
-		mov		[ebp-0x10], eax
-		mov		dword ptr [ecx], 0xE
+		setnz	al
+		mov		[ebp-0x15], al
 		mov		byte ptr ds:0x11AD7B4, 0
 		push	0
 		push	0
 		push	0
 		push	0x1E
 		push	0
-		push	edx
+		push	dword ptr [edx+8]
 		push	0
-		cmp		dword ptr [ebp-4], 0
-		mov		edx, s_texturePixelSize
-		cmovz	edx, s_projectPixelSize
-		push	edx
-		push	edx
+		push	dword ptr [edx+4]
+		push	dword ptr [edx]
 		mov		eax, ds:0x11F9508
-		mov		[ebp-0x14], eax
+		mov		[ebp-0x10], eax
 		push	eax
 		mov		ecx, ds:0x11F91A8
 		CALL_EAX(0xB6D5E0)
 		test	eax, eax
 		jz		done
 		mov		[ebp-0xC], eax
-		mov		ecx, [ebp-0x14]
+		mov		ecx, [ebp-0x10]
 		mov		eax, [ecx+0x5E0]
-		mov		[ebp-0x18], eax
+		mov		[ebp-0x14], eax
 		mov		dword ptr [ecx+0x5E0], 0
 		push	0
-		lea		ecx, [ebp-0xEC]
+		lea		ecx, [ebp-0xE0]
 		CALL_EAX(0x4A0EB0)
 		mov		ecx, g_shadowSceneNode
 		mov		[ebp-8], ecx
 		mov		dl, [ecx+0x130]
-		mov		[ebp-0x1E], dl
+		mov		[ebp-0x16], dl
 		mov		[ecx+0x130], 1
 		mov		edx, [ebp-0xC]
 		mov		edx, [edx+8]
@@ -1247,7 +1230,7 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, D
 		mov		ecx, ds:0x11F4748
 		cmp		dword ptr [ecx+0x200], 0
 		setnz	al
-		mov		[ebp-0x20], al
+		mov		[ebp-0x17], al
 		mov		ecx, 7
 		cmovnz	edx, ecx
 		cmovnz	ecx, [ebp-0xC]
@@ -1263,16 +1246,16 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, D
 		push	0x63
 		mov		ecx, eax
 		CALL_EAX(0xB660D0)
-		mov		[ebp-0x28], eax
+		mov		[ebp-0x1C], eax
 		mov		byte ptr [eax+0x16C], 0
 		mov		edx, [ebp-8]
 		mov		[eax+0x194], edx
-		mov		dl, [ebp-0x1D]
+		mov		dl, [ebp-0x15]
 		neg		dl
 		and		edx, 0xC
 		mov		[eax+0x19C], edx
-		mov		dword ptr [ebp-0x5C], 3
-		lea		edx, [ebp-0xEC]
+		mov		dword ptr [ebp-0x50], 3
+		lea		edx, [ebp-0xE0]
 		push	edx
 		push	dword ptr [ebp-8]
 		push	dword ptr [ebp+8]
@@ -1282,8 +1265,8 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, D
 		mov		eax, [ecx+0x34]
 		test	eax, eax
 		jz		skipPortals
-		mov		dword ptr [ebp-0x5C], 1
-		lea		edx, [ebp-0xEC]
+		mov		dword ptr [ebp-0x50], 1
+		lea		edx, [ebp-0xE0]
 		push	edx
 		mov		ecx, [eax+0xC4]
 		mov		eax, [ecx]
@@ -1293,19 +1276,19 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, D
 		CALL_EAX(0xB6BEE0)
 		add		esp, 0xC
 	skipPortals:
-		push	dword ptr [ebp-0x28]
+		push	dword ptr [ebp-0x1C]
 		push	dword ptr [ebp+8]
 		CALL_EAX(0xB6C0D0)
 		add		esp, 8
-		movzx	eax, byte ptr [ebp-0x20]
+		movzx	eax, byte ptr [ebp-0x17]
 		call	kScnCallbacks[eax*4+8]
-		mov		al, [ebp-0x1E]
+		mov		al, [ebp-0x16]
 		mov		ecx, [ebp-8]
 		mov		[ecx+0x130], al
 		mov		eax, ds:0x11F95EC
 		mov		[eax+0x86], 1
-		mov		ecx, [ebp-0x14]
-		mov		eax, [ebp-0x18]
+		mov		ecx, [ebp-0x10]
+		mov		eax, [ebp-0x14]
 		mov		[ecx+0x5E0], eax
 		mov		ecx, [ebp-0xC]
 		mov		eax, [ecx+0x30]
@@ -1319,11 +1302,6 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, D
 		call	NiReleaseObject
 	done:
 		mov		byte ptr ds:0x11AD7B4, 1
-		mov		eax, fs:[0x2C]
-		mov		ecx, ds:0x126FD98
-		mov		edx, [eax+ecx*4]
-		mov		eax, [ebp-0x10]
-		mov		[edx+0x2B4], eax
 		leave
 		retn	8
 		ALIGN 16
@@ -1333,7 +1311,9 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, D
 	}
 }
 
-__declspec(naked) void __stdcall GenerateLocalMapExterior(TESObjectCELL *cell, D3DFORMAT texFormat, NiRenderedTexture **renderedTexture)
+NiCamera *s_localMapCamera = nullptr;
+
+__declspec(naked) void __stdcall GenerateLocalMapExterior(TESObjectCELL *cell, NiRenderedTexture **renderedTexture)
 {
 	__asm
 	{
@@ -1399,14 +1379,14 @@ __declspec(naked) void __stdcall GenerateLocalMapExterior(TESObjectCELL *cell, D
 		mov		eax, ds:0x11D5C48
 		mov		[ebp-0x28], eax
 		mov		byte ptr [eax+0x1B], 1
-		push	dword ptr [ebp+0x10]
+		push	dword ptr [ebp+0xC]
 		mov		ecx, s_localMapCamera
 		movq	qword ptr [ecx+0x58], xmm0
 		push	ecx
 		push	0
 		push	offset kUpdateParams
 		CALL_EAX(0xA59F90)
-		mov		edx, [ebp+0xC]
+		mov		edx, offset s_mmTextureParams
 		mov		ecx, [ebp+8]
 		call	GenerateRenderedTexture
 		mov		dl, 0xFE
@@ -1439,14 +1419,14 @@ __declspec(naked) void __stdcall GenerateLocalMapExterior(TESObjectCELL *cell, D
 		jmp		undoIter
 	done:
 		leave
-		retn	0xC
+		retn	8
 		ALIGN 16
 	kExtPosMod:
 		EMIT_PS_2(00, 00, 08, 00)
 	}
 }
 
-__declspec(naked) void __stdcall GenerateLocalMapInterior(TESObjectCELL *cell, Coordinate coord, D3DFORMAT texFormat, NiRenderedTexture **renderedTexture)
+__declspec(naked) void __stdcall GenerateLocalMapInterior(TESObjectCELL *cell, Coordinate coord, NiRenderedTexture **renderedTexture)
 {
 	__asm
 	{
@@ -1481,14 +1461,14 @@ __declspec(naked) void __stdcall GenerateLocalMapInterior(TESObjectCELL *cell, C
 		mov		ecx, [eax+4]
 		mov		[ebp-8], ecx
 		or		byte ptr [ecx+0x30], 1
-		push	dword ptr [ebp+0x14]
+		push	dword ptr [ebp+0x10]
 		mov		ecx, s_localMapCamera
 		movq	qword ptr [ecx+0x58], xmm0
 		push	ecx
 		push	0
 		push	offset kUpdateParams
 		CALL_EAX(0xA59F90)
-		mov		edx, [ebp+0x10]
+		mov		edx, offset s_mmTextureParams
 		mov		ecx, [ebp+8]
 		call	GenerateRenderedTexture
 		mov		ecx, [ebp-4]
@@ -1497,7 +1477,7 @@ __declspec(naked) void __stdcall GenerateLocalMapInterior(TESObjectCELL *cell, C
 		and		byte ptr [ecx+0x30], 0xFE
 	done:
 		leave
-		retn	0x10
+		retn	0xC
 	}
 }
 
@@ -1675,6 +1655,7 @@ __declspec(naked) void RendererRecreateHook()
 }
 
 UInt8 s_miniMapIndex = 0;
+bool s_initMiniMap = false;
 TileRect *s_localMapRect, *s_worldMapRect, *s_mapMarkersRect, *s_doorMarkersRect, *s_lQuestMarkersRect, *s_wQuestMarkersRect;
 TileImage *s_worldMapTile;
 Tile::Value *s_miniMapMode, *s_pcMarkerRotate, *s_miniMapPosX, *s_miniMapPosY, *s_worldMapZoom;
@@ -1707,24 +1688,20 @@ const NiPoint2 kWaterPlanePos[] =
 
 bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 {
-	if (s_miniMapIndex == scriptObj->modIndex)
-	{
-		UInt8 *codePtr = scriptData + 0x2FE5;
-		if (*(UInt32*)codePtr == 0x173031)
-		{
-			*codePtr = 0x33;
-			scriptObj->quest->questDelayTime = 1 / 60.0F;
-		}
-	}
-	return true;
-}
+	if (s_initMiniMap || (scriptObj->modIndex != s_miniMapIndex))
+		return true;
 
-__declspec(noinline) void InitMiniMap(UInt8 modIdx)
-{
 	Tile *tile = g_HUDMainMenu->tile->GetComponentTile("JIPMiniMap");
-	if (!tile) return;
+	if (!tile) return true;
 
-	s_miniMapIndex = modIdx;
+	UInt8 *codePtr = scriptData + 0x2FE5;
+	if (*(UInt32*)codePtr == 0x173031)
+	{
+		*codePtr = 0x33;
+		scriptObj->quest->questDelayTime = 1 / 60.0F;
+	}
+
+	s_initMiniMap = true;
 	//s_miniMapVisible = tile->GetValue(kTileValue_visible);
 	s_miniMapScale = tile->GetValue(kTileValue_user1);
 	auto node = tile->children.Tail()->prev;
@@ -1928,16 +1905,12 @@ __declspec(noinline) void InitMiniMap(UInt8 modIdx)
 	SafeWrite16(0x452736, 0x7705);
 	SafeWrite8(0x555C20, 0xC3);
 	WriteRelCall(0x9438F6, (UInt32)UpdateCellsSeenBitsHook);
-	WriteRelJump(0x54914D, (UInt32)AttachRefToCellHook);
 	WritePushRetRelJump(0x779567, 0x7795E8, (UInt32)DiscoverLocationHook);
 	WritePushRetRelJump(0x60F13A, 0x60F145, (UInt32)SetQuestTargetsHook);
 	WriteRelCall(0x952C69, (UInt32)UpdatePlacedMarkerHook);
 	WriteRelCall(0x952F6B, (UInt32)UpdatePlacedMarkerHook);
 	WritePushRetRelJump(0xE7D13A, 0xE7D144, (UInt32)RendererRecreateHook);
-
-	TESModel *baseModel = DYNAMIC_CAST(LookupFormByRefID(0x15A1F2), TESForm, TESModel);
-	if (baseModel)
-		baseModel->SetPath("Clutter\\BlackRefBlock256.NIF");
+	return true;
 }
 
 const __m128 kVertexAlphaMults = {0.25, 0.5, 0.75, 1};
@@ -2025,7 +1998,7 @@ void MiniMapLoadGame()
 bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 {
 	UInt32 updateType, showFlags = 0x100;
-	if ((scriptObj->modIndex != s_miniMapIndex) || !ExtractArgsEx(EXTRACT_ARGS_EX, &updateType, &showFlags))
+	if (!s_initMiniMap || (scriptObj->modIndex != s_miniMapIndex) || !ExtractArgsEx(EXTRACT_ARGS_EX, &updateType, &showFlags))
 		return true;
 
 	if (updateType == 3)
@@ -2044,8 +2017,16 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 	bool updateTiles = s_pcCurrCell != parentCell;
 	if (updateTiles)
 	{
-		s_pcCurrCell = parentCell;
-		SetCameraRotation(parentCell);
+		__asm
+		{
+			mov		ecx, parentCell
+			mov		s_pcCurrCell, ecx
+			call	GetNorthRotation
+			mov		ecx, s_localMapCamera
+			movaps	xmm0, [eax]
+			movq	qword ptr [ecx+0x38], xmm0
+			movhps	[ecx+0x44], xmm0
+		}
 	}
 
 	bool updQuestTargets = s_updateQuestTargets;
@@ -2211,10 +2192,10 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		TESObjectCELL *cell;
 		NiNode *intDynamicNode;
 		UInt32 gridIdx, lightingPasses;
-		D3DFORMAT texFormat = (showFlags & 8) ? TEXTURE_FMT_RGB : TEXTURE_FMT_BW;
 		NiPointLight *pntLight;
 		bool restore = false, showDoors = (showFlags & 2) != 0, updateFogOfWar = useFogOfWar && s_updateFogOfWar/*, saveToFile = (showFlags & 0x20) != 0*/;
 		s_updateFogOfWar = false;
+		s_mmTextureParams.d3dFormat = (showFlags & 8) ? TEXTURE_FMT_RGB : TEXTURE_FMT_BW;
 
 		if (s_regenTextures)
 		{
@@ -2347,7 +2328,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 
 					if (s_renderedExteriors().Insert(cell->refID, &exteriorEntry))
 					{
-						GenerateLocalMapExterior(cell, texFormat, &exteriorEntry->texture);
+						GenerateLocalMapExterior(cell, &exteriorEntry->texture);
 						s_exteriorKeys().Append(cell->refID);
 						/*if (saveToFile)
 							SaveLocalMapTexture(parentWorld, exteriorEntry->texture, s_currLocalCoords + kGridAdjustCoord[gridIdx]);*/
@@ -2358,7 +2339,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					{
 						if (gridIdx == 4) exteriorEntry->regenFlags = 0xF;
 						else exteriorEntry->regenFlags |= quadrant;
-						GenerateLocalMapExterior(cell, texFormat, &exteriorEntry->texture);
+						GenerateLocalMapExterior(cell, &exteriorEntry->texture);
 						/*if (saveToFile)
 							SaveLocalMapTexture(parentWorld, exteriorEntry->texture, s_currLocalCoords + kGridAdjustCoord[gridIdx]);*/
 					}
@@ -2452,7 +2433,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					if (s_renderedInterior().Insert(coord, &renderedTexture))
 					{
 						*renderedTexture = nullptr;
-						GenerateLocalMapInterior(parentCell, coord, texFormat, renderedTexture);
+						GenerateLocalMapInterior(parentCell, coord, renderedTexture);
 						/*if (saveToFile)
 							SaveLocalMapTexture(parentCell, *renderedTexture, coord);*/
 					}

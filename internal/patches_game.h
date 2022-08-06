@@ -4753,10 +4753,11 @@ NiCamera* __fastcall GetSingletonsHook(SceneGraph *sceneGraph)
 	return sceneGraph->camera;
 }
 
-void InitMiniMap(UInt8 modIdx);
-
 typedef int (*_ReloadENB)(UInt32 type, void *data);
 _ReloadENB ReloadENB = nullptr;
+
+extern UInt8 s_miniMapIndex;
+void AttachRefToCellHook();
 
 void DeferredInit()
 {
@@ -4854,7 +4855,12 @@ void DeferredInit()
 
 	modIdx = g_dataHandler->GetModIndex("JIP MiniMap.esp");
 	if (modIdx != 0xFF)
-		InitMiniMap(modIdx);
+	{
+		s_miniMapIndex = modIdx;
+		WriteRelJump(0x54914D, (UInt32)AttachRefToCellHook);
+		if (TESModel *baseModel = DYNAMIC_CAST(LookupFormByRefID(0x15A1F2), TESForm, TESModel))
+			baseModel->SetPath("Clutter\\BlackRefBlock256.NIF");
+	}
 
 	if (s_NVACAddress)
 	{

@@ -28,7 +28,7 @@ enum ParamType
 	kParamType_Sex =					0x12,	// GetIsSex					UInt32 *, immediate UInt16
 	kParamType_Global =					0x13,	// GetGlobalValue			TESForm *, kFormType_Global
 	kParamType_Furniture =				0x14,	// IsCurrentFurnitureObj	TESForm *, kFormType_Furniture or kFormType_ListForm
-	kParamType_TESObject =				0x15,	// PlaceAtMe				TESObject *, must pass TESForm::Unk_3A
+	kParamType_BoundObject =			0x15,	// PlaceAtMe				TESObject *, must pass TESForm::Unk_3A
 	kParamType_VariableName =			0x16,	// GetQuestVariable			only works in conditionals
 	kParamType_QuestStage =				0x17,	// SetStage					handled like integer
 	kParamType_MapMarker =				0x18,	// ShowMap					TESObjectREFR *, see ObjectRef

@@ -1,7 +1,7 @@
 #pragma once
 
 DEFINE_COMMAND_PLUGIN(SetPersistent, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetObjectDimensions, 0, 2, kParams_OneAxis_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetObjectDimensions, 0, 2, kParams_OneAxis_OneOptionalBoundObject);
 DEFINE_COMMAND_PLUGIN(GetIsItem, 0, 1, kParams_OneOptionalObjectID);
 DEFINE_COMMAND_ALT_PLUGIN(SetLinkedReference, SetLinkedRef, 1, 1, kParams_OneOptionalObjectRef);
 DEFINE_COMMAND_PLUGIN(GetEnableChildren, 1, 0, nullptr);
@@ -23,8 +23,8 @@ DEFINE_COMMAND_PLUGIN(GetHasContactBase, 1, 1, kParams_OneForm);
 DEFINE_CMD_COND_PLUGIN(GetHasContactType, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetContactRefs, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetHasPhantom, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(GetInteractionDisabled, 0, 1, kParams_OneOptionalObject);
-DEFINE_COMMAND_PLUGIN(SetInteractionDisabled, 0, 2, kParams_OneInt_OneOptionalObject);
+DEFINE_COMMAND_PLUGIN(GetInteractionDisabled, 0, 1, kParams_OneOptionalBoundObject);
+DEFINE_COMMAND_PLUGIN(SetInteractionDisabled, 0, 2, kParams_OneInt_OneOptionalBoundObject);
 DEFINE_COMMAND_PLUGIN(GetInteractionDisabledType, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(SetInteractionDisabledType, 0, 2, kParams_TwoInts);
 DEFINE_COMMAND_PLUGIN(AddRefMapMarker, 1, 0, nullptr);
@@ -111,11 +111,11 @@ bool Cmd_GetObjectDimensions_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char axis;
-	TESForm *form = nullptr;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &axis, &form)) return true;
+	TESBoundObject *boundObj = nullptr;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &axis, &boundObj)) return true;
 	axis -= 'X';
 	float scale = 1.0F;
-	if (!form)
+	if (!boundObj)
 	{
 		if (!thisObj) return true;
 		scale = thisObj->GetScale();
@@ -125,11 +125,9 @@ bool Cmd_GetObjectDimensions_Execute(COMMAND_ARGS)
 			*result = (bounds->centre[axis] + bounds->dimensions[axis]) * scale;
 			return true;
 		}
-		form = thisObj->baseForm;
+		boundObj = (TESBoundObject*)thisObj->baseForm;
 	}
-	TESBoundObject *object = (TESBoundObject*)form;
-	if (object->IsBoundObject())
-		*result = abs(object->bounds[axis + 3] - object->bounds[axis]) * scale;
+	*result = abs(boundObj->bounds[axis + 3] - boundObj->bounds[axis]) * scale;
 	return true;
 }
 
@@ -2189,9 +2187,9 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 					xCamera->m_transformLocal.scale = fov;
 					xCamera->frustum.viewPort.SetFOV(fov * FltPId180);
 				}
-				s_projectPixelSize = pixelSize;
+				TextureParams texParams(pixelSize, pixelSize, grayscale ? TEXTURE_FMT_BW : TEXTURE_FMT_RGB);
 				HighActorCuller::Run(xCamera);
-				GenerateRenderedTexture(nullptr, grayscale ? TEXTURE_FMT_BW : TEXTURE_FMT_RGB, xCamera, pTexture);
+				GenerateRenderedTexture(nullptr, texParams, xCamera, pTexture);
 				*result = 1;
 			}
 		}
