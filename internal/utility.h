@@ -306,6 +306,11 @@ template <typename T> inline T sqr(T value)
 	return value * value;
 }
 
+__forceinline bool __vectorcall FloatsEqual(float fVal1, float fVal2)
+{
+	return abs(fVal1 - fVal2) <= FLT_EPSILON;
+}
+
 UInt32 __vectorcall cvtd2ui(double value);
 
 double __fastcall cvtui2d(UInt32 value);

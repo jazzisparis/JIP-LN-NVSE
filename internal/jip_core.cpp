@@ -407,8 +407,17 @@ __declspec(naked) bool NiVector4::RayCastCoords(const NiVector3 &posVector, floa
 		mov		eax, g_TES
 		cmp		dword ptr [eax+0x34], 0
 		jnz		done
-		mov		ecx, [eax+0x88]
-		call	TESWorldSpace::GetCellAtPos
+		mov		ecx, [eax+8]
+		xorps	xmm1, xmm1
+		unpcklpd	xmm0, xmm1
+		cvttps2dq	xmm0, xmm0
+		psrad	xmm0, 0xC
+		movd	eax, xmm0
+		shl		eax, 0x10
+		pextrw	edx, xmm0, 2
+		or		eax, edx
+		push	eax
+		call	GridCellArray::GetCell
 		test	eax, eax
 	done:
 		setnz	al
@@ -984,12 +993,18 @@ __declspec(naked) float __vectorcall GetLightAmountAtPoint(const NiVector3 &pos)
 		mov		edx, g_TES
 		cmp		dword ptr [edx+0x34], 0
 		jnz		isInterior
-		mov		ecx, [edx+0x88]
-		test	ecx, ecx
-		jz		done
 		push	eax
+		mov		ecx, [edx+8]
 		movaps	xmm0, xmm6
-		call	TESWorldSpace::GetCellAtPos
+		unpcklpd	xmm0, xmm5
+		cvttps2dq	xmm0, xmm0
+		psrad	xmm0, 0xC
+		movd	eax, xmm0
+		shl		eax, 0x10
+		pextrw	edx, xmm0, 2
+		or		eax, edx
+		push	eax
+		call	GridCellArray::GetCell
 		pop		ecx
 		test	eax, eax
 		jz		done

@@ -9,6 +9,8 @@ DEFINE_COMMAND_PLUGIN(UpdateMiniMap, 0, 2, kParams_OneInt_OneOptionalInt);
 #define TEXTURE_FMT_RGB D3DFMT_X8R8G8B8
 #define TEXTURE_FMT_BW D3DFMT_L8
 
+#define INTERIOR_ZOOM_MOD 0.3F
+
 struct TextureParams
 {
 	UInt32		width;
@@ -21,14 +23,11 @@ s_mmTextureParams(0x140, 0x140, TEXTURE_FMT_RGB);
 
 Tile::Value /**s_miniMapVisible, */*s_miniMapScale, *s_localMapZoom;
 BSScissorTriShape *s_localMapShapes[9];
-NiTriShapeData *s_localMapShapeDatas[9];
 
-__declspec(naked) void UpdateTileScales()
+__declspec(naked) void __vectorcall UpdateTileScales(float fZoom)
 {
 	__asm
 	{
-		mov		eax, s_localMapZoom
-		movss	xmm0, [eax+8]
 		movss	xmm1, PS_V3_Half
 		addss	xmm1, xmm0
 		mov		eax, s_miniMapScale
@@ -41,12 +40,17 @@ __declspec(naked) void UpdateTileScales()
 		mov		[ecx+0x64], edx
 		dec		al
 		jns		iterHead
+		movd	edx, xmm0
 		mulss	xmm0, SS_10
 		cvtss2si	eax, xmm0
 		shl		eax, 4
 		add		eax, 0xA0
 		mov		s_mmTextureParams.width, eax
 		mov		s_mmTextureParams.height, eax
+		push	1
+		push	edx
+		mov		ecx, s_localMapZoom
+		CALL_EAX(0xA0A270)
 		retn
 	}
 }
@@ -652,6 +656,7 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo seenInfo
 	}
 }
 
+NiTriShapeData *s_localMapShapeDatas[9];
 TESObjectCELL *s_pcCurrCell0, *s_pcCurrCell, *s_lastInterior;
 Coordinate s_packedCellCoords[9] = {0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL};
 float s_vertexAlphaLevel[] = {0, 0.25F, 0.5F, 0.75F, 1.0F};
@@ -1133,6 +1138,7 @@ typedef Vector<DoorRef> DoorRefsList;
 
 void __fastcall GetTeleportDoors(TESObjectCELL *cell, DoorRefsList *doorRefsList)
 {
+	if (!cell) return;
 	for (auto iter = g_loadedReferences->teleportDoors.Begin(); iter; ++iter)
 	{
 		TESObjectREFR *refr = iter.Get();
@@ -1194,7 +1200,6 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, c
 	noCell:
 		setnz	al
 		mov		[ebp-0x15], al
-		mov		byte ptr ds:0x11AD7B4, 0
 		push	0
 		push	0
 		push	0
@@ -1205,20 +1210,22 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, c
 		push	dword ptr [edx+4]
 		push	dword ptr [edx]
 		mov		eax, ds:0x11F9508
-		mov		[ebp-0x10], eax
 		push	eax
+		add		eax, 0x5E0
+		mov		[ebp-0x10], eax
 		mov		ecx, ds:0x11F91A8
 		CALL_EAX(0xB6D5E0)
 		test	eax, eax
 		jz		done
 		mov		[ebp-0xC], eax
+		mov		byte ptr ds:0x11AD7B4, 0
 		mov		ecx, [ebp-0x10]
-		mov		eax, [ecx+0x5E0]
+		mov		eax, [ecx]
 		mov		[ebp-0x14], eax
-		mov		dword ptr [ecx+0x5E0], 0
+		mov		dword ptr [ecx], 0
 		push	0
 		lea		ecx, [ebp-0xE0]
-		CALL_EAX(0x4A0EB0)
+		CALL_EAX(0x4A0EB0)	//	BSCullingProcess::BSCullingProcess
 		mov		ecx, g_shadowSceneNode
 		mov		[ebp-8], ecx
 		mov		dl, [ecx+0x130]
@@ -1245,7 +1252,7 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, c
 		push	1
 		push	0x63
 		mov		ecx, eax
-		CALL_EAX(0xB660D0)
+		CALL_EAX(0xB660D0)	//	BSShaderAccumulator::BSShaderAccumulator
 		mov		[ebp-0x1C], eax
 		mov		byte ptr [eax+0x16C], 0
 		mov		edx, [ebp-8]
@@ -1282,14 +1289,13 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, c
 		add		esp, 8
 		movzx	eax, byte ptr [ebp-0x17]
 		call	kScnCallbacks[eax*4+8]
+		mov		byte ptr ds:0x11AD7B4, 1
 		mov		al, [ebp-0x16]
 		mov		ecx, [ebp-8]
 		mov		[ecx+0x130], al
-		mov		eax, ds:0x11F95EC
-		mov		[eax+0x86], 1
 		mov		ecx, [ebp-0x10]
 		mov		eax, [ebp-0x14]
-		mov		[ecx+0x5E0], eax
+		mov		[ecx], eax
 		mov		ecx, [ebp-0xC]
 		mov		eax, [ecx+0x30]
 		test	eax, eax
@@ -1301,7 +1307,6 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, c
 	doRelease:
 		call	NiReleaseObject
 	done:
-		mov		byte ptr ds:0x11AD7B4, 1
 		leave
 		retn	8
 		ALIGN 16
@@ -1481,30 +1486,17 @@ __declspec(naked) void __stdcall GenerateLocalMapInterior(TESObjectCELL *cell, C
 	}
 }
 
-__declspec(naked) void AttachRefToCellHook()
+TempObject<NiFixedString> s_AutoWaterFadeNode;
+
+__declspec(naked) void __fastcall InitAutoWaterHook(BSFadeNode *node, int EDX, bool doSet)
 {
 	__asm
 	{
-		cmp		al, kFormType_BGSProjectile
-		jz		contRetn
-		cmp		al, kFormType_BGSExplosion
-		jz		contRetn
-		cmp		byte ptr [ecx+0xF], 0xFF
-		jz		contRetn
-		mov		ecx, [ebp+8]
-		mov		eax, [ecx+0x64]
-		mov		ecx, [eax+0x14]
-		call	NiNode::GetBSXFlags
-		test	eax, eax
-		jz		skipRetn
-		mov		dl, [eax+0xC]
-		and		dl, 0x21
-		cmp		dl, 0x21
-		jz		contRetn
-	skipRetn:
-		JMP_EAX(0x549179)
-	contRetn:
-		JMP_EAX(0x549164)
+		or		byte ptr [ecx+0x31], 0x80
+		mov		eax, s_AutoWaterFadeNode
+		lock inc dword ptr [eax-8]
+		mov		[ecx+8], eax
+		retn	4
 	}
 }
 
@@ -1660,8 +1652,9 @@ TileRect *s_localMapRect, *s_worldMapRect, *s_mapMarkersRect, *s_doorMarkersRect
 TileImage *s_worldMapTile;
 Tile::Value *s_miniMapMode, *s_pcMarkerRotate, *s_miniMapPosX, *s_miniMapPosY, *s_worldMapZoom;
 TileShaderProperty *s_tileShaderProps[9];
+float s_fLocalMapZoomCurr;
 BSFadeNode *s_fakeWaterPlanes;
-bool s_defaultGridSize;
+bool s_isInInterior = false, s_defaultGridSize;
 NiColor *g_directionalLightColor, *g_shadowFogColor;
 BSParticleSystemManager *g_particleSysMngr;
 
@@ -1804,7 +1797,6 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 		NiReleaseAddRef(&sciTriShp->alphaProp, alphaProp);
 	}
 	while (++index < 9);
-	UpdateTileScales();
 
 	s_doorMarkersRect = (TileRect*)node->data;
 	s_lQuestMarkersRect = (TileRect*)node->prev->data;
@@ -1812,6 +1804,14 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	s_worldMapTile = (TileImage*)node->data;
 	s_mapMarkersRect = (TileRect*)node->prev->data;
 	s_wQuestMarkersRect = (TileRect*)node->prev->prev->data;
+
+	s_fLocalMapZoomCurr = s_localMapZoom->num;
+	if (g_TES->currentInterior)
+	{
+		s_isInInterior = true;
+		s_fLocalMapZoomCurr += INTERIOR_ZOOM_MOD;
+	}
+	UpdateTileScales(s_fLocalMapZoomCurr);
 
 	NiCamera *lmCamera = NiCamera::Create();
 	s_localMapCamera = lmCamera;
@@ -1853,7 +1853,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 		NiTriShape *waterPlane = ThisCall<NiTriShape*>(0xA74480, NiAllocator(sizeof(NiTriShape)), shapeData);
 		waterPlane->AddProperty(alphaProp);
 		waterPlane->AddProperty(BSShaderNoLightingProperty::Create());
-		waterPlane->m_flags |= 1;
+		waterPlane->Hide();
 		waterPlane->LocalTranslate() = kWaterPlanePos[index];
 		waterParent->AddObject(waterPlane, 1);
 	}
@@ -1979,6 +1979,7 @@ TempObject<Vector<UInt32>> s_exteriorKeys(0x60);
 TempObject<UnorderedMap<UInt32, NiRenderedTexture*>> s_renderedInterior(0x20);
 TempObject<UnorderedMap<UInt32, DoorRefsList>> s_exteriorDoorRefs(0x20);
 TempObject<DoorRefsList> s_doorRefsList(0x40);
+TempObject<Vector<NiNode*>> s_hiddenNodes(0x40);
 TESQuest *s_activeQuest = nullptr;
 TESObjectREFR *s_placedMarker = nullptr;
 TempObject<Map<TESObjectREFR*, QuestMarkerTile>> s_questMarkers(0x10);
@@ -2003,8 +2004,13 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 
 	if (updateType == 3)
 	{
-		UpdateTileScales();
-		s_regenTextures = true;
+		if (fabs(s_fLocalMapZoomCurr - s_localMapZoom->num) > 0.001F)
+		{
+			s_fLocalMapZoomCurr = s_localMapZoom->num;
+			if (s_isInInterior) s_fLocalMapZoomCurr += INTERIOR_ZOOM_MOD;
+			s_regenTextures = true;
+		}
+		UpdateTileScales(s_fLocalMapZoomCurr);
 		if (showFlags == 0x100)
 			return true;
 	}
@@ -2034,13 +2040,13 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 
 	if (s_currentMapMode != updateType)
 	{
-		if (updateType >= 2)
-			s_regenTextures = true;
-		else
+		if (updateType <= 1)
 		{
 			s_currentMapMode = updateType;
 			s_miniMapMode->SetFloat((int)updateType);
 		}
+		else if (showFlags & 8)
+			s_regenTextures = true;
 		updateTiles = true;
 		updQuestTargets = true;
 	}
@@ -2190,7 +2196,6 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 	else
 	{
 		TESObjectCELL *cell;
-		NiNode *intDynamicNode;
 		UInt32 gridIdx, lightingPasses;
 		NiPointLight *pntLight;
 		bool restore = false, showDoors = (showFlags & 2) != 0, updateFogOfWar = useFogOfWar && s_updateFogOfWar/*, saveToFile = (showFlags & 0x20) != 0*/;
@@ -2209,6 +2214,13 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			}
 			s_lastInterior = nullptr;
 			updateTiles = true;
+		}
+
+		if (s_isInInterior != !parentWorld)
+		{
+			s_isInInterior = !parentWorld;
+			s_fLocalMapZoomCurr += parentWorld ? -INTERIOR_ZOOM_MOD : INTERIOR_ZOOM_MOD;
+			UpdateTileScales(s_fLocalMapZoomCurr);
 		}
 
 		if (parentWorld)
@@ -2296,20 +2308,34 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				memcpy(g_directionalLightColor, kDirectionalLightValues, sizeof(kDirectionalLightValues));
 				memcpy(g_shadowFogColor, kFogPropertyValues, sizeof(kFogPropertyValues));
 				*(UInt8*)0x11FF104 = 1;
-				g_particleSysMngr->m_flags |= 1;
+				g_particleSysMngr->Hide();
 
+				s_hiddenNodes().Clear();
+				NiNode *hideNode;
+				BSXFlags *bsxFlags;
+				NiAVObject **pWaterPlanes = s_fakeWaterPlanes->m_children.data;
 				gridIdx = 0;
 				do
 				{
 					if (!(cell = s_currCellGrid[gridIdx]))
 						continue;
-					cell->Get3DNode(4)->m_flags |= 1;
+					hideNode = cell->Get3DNode(4);
+					hideNode->Hide();
+					s_hiddenNodes().Append(hideNode);
+					for (auto chlIter = cell->Get3DNode(3)->m_children.Begin(); chlIter; ++chlIter)
+					{
+						if ((hideNode = (NiNode*)*chlIter) && ((hideNode->m_blockName == s_AutoWaterFadeNode) ||
+							((bsxFlags = hideNode->GetBSXFlags()) && ((bsxFlags->flags & 0x23) == 0x21))))
+						{
+							hideNode->Hide();
+							s_hiddenNodes().Append(hideNode);
+						}
+					}
 					if (!(cell->cellFlags & 2))
 						continue;
-					NiAVObject *waterPlane = s_fakeWaterPlanes->m_children[gridIdx];
-					waterPlane->m_flags &= ~1;
+					pWaterPlanes[gridIdx]->Show();
 					if (updateTiles)
-						waterPlane->LocalTranslate().z = (cell->waterHeight == FLT_MAX) ? parentWorld->defaultWaterHeight : cell->waterHeight;
+						pWaterPlanes[gridIdx]->LocalTranslate().z = (cell->waterHeight == FLT_MAX) ? parentWorld->defaultWaterHeight : cell->waterHeight;
 				}
 				while (++gridIdx < 9);
 				if (updateTiles)
@@ -2419,9 +2445,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			if (updateTiles)
 			{
 				restore = true;
-				intDynamicNode = parentCell->Get3DNode(4);
-				intDynamicNode->m_flags |= 1;
-				g_particleSysMngr->m_flags |= 1;
+				parentCell->Get3DNode(4)->Hide();
+				g_particleSysMngr->Hide();
 				lightingPasses = *GameGlobals::LightingPasses();
 				*GameGlobals::LightingPasses() = 0x34;
 
@@ -2454,8 +2479,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		{
 			if (parentWorld)
 			{
-				for (auto cellIter : s_currCellGrid)
-					if (cellIter) cellIter->Get3DNode(4)->m_flags &= ~1;
+				for (auto hdnIter = s_hiddenNodes().Begin(); hdnIter; ++hdnIter)
+					hdnIter->Show();
 
 				GameGlobals::SceneLightsLock()->Enter();
 				for (auto lgtNode = g_shadowSceneNode->lgtList0B4.Head(); lgtNode; lgtNode = lgtNode->next)
@@ -2464,14 +2489,14 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				GameGlobals::SceneLightsLock()->Leave();
 
 				for (auto plnIter = s_fakeWaterPlanes->m_children.Begin(); plnIter; ++plnIter)
-					plnIter->m_flags |= 1;
+					plnIter->Hide();
 			}
 			else
 			{
-				intDynamicNode->m_flags &= ~1;
+				parentCell->Get3DNode(4)->Show();
 				*GameGlobals::LightingPasses() = lightingPasses;
 			}
-			g_particleSysMngr->m_flags &= ~1;
+			g_particleSysMngr->Show();
 		}
 
 		if (showDoors)

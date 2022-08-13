@@ -93,7 +93,7 @@ __declspec(naked) bool Sky::GetIsRaining()
 	}
 }
 
-__declspec(naked) TESObjectCELL *GridCellArray::GetCell(Coordinate cellXY)
+__declspec(naked) TESObjectCELL *GridCellArray::GetCell(Coordinate cellXY) const
 {
 	__asm
 	{
@@ -103,13 +103,22 @@ __declspec(naked) TESObjectCELL *GridCellArray::GetCell(Coordinate cellXY)
 		movsx	eax, word ptr [esp+0xA]
 		sub		eax, [ecx+4]
 		add		eax, edx
-		imul	eax, [ecx+0xC]
+		cmp		eax, [ecx+0xC]
+		jnb		retnNull
 		movsx	ebx, word ptr [esp+8]
 		sub		ebx, [ecx+8]
-		add		edx, ebx
-		add		edx, eax
-		mov		ebx, [ecx+0x10]
-		mov		eax, [ebx+edx*4]
+		add		ebx, edx
+		mov		edx, [ecx+0xC]
+		cmp		ebx, edx
+		jnb		retnNull
+		imul	eax, edx
+		add		ebx, eax
+		mov		ecx, [ecx+0x10]
+		mov		eax, [ecx+ebx*4]
+		pop		ebx
+		retn	4
+	retnNull:
+		xor		eax, eax
 		pop		ebx
 		retn	4
 	}

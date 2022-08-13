@@ -4757,7 +4757,8 @@ typedef int (*_ReloadENB)(UInt32 type, void *data);
 _ReloadENB ReloadENB = nullptr;
 
 extern UInt8 s_miniMapIndex;
-void AttachRefToCellHook();
+extern TempObject<NiFixedString> s_AutoWaterFadeNode;
+void __fastcall InitAutoWaterHook(BSFadeNode *node, int EDX, bool doSet);
 
 void DeferredInit()
 {
@@ -4857,7 +4858,8 @@ void DeferredInit()
 	if (modIdx != 0xFF)
 	{
 		s_miniMapIndex = modIdx;
-		WriteRelJump(0x54914D, (UInt32)AttachRefToCellHook);
+		s_AutoWaterFadeNode() = "AutoWaterFadeNode";
+		WriteRelCall(0x49E776, (UInt32)InitAutoWaterHook);
 		if (TESModel *baseModel = DYNAMIC_CAST(LookupFormByRefID(0x15A1F2), TESForm, TESModel))
 			baseModel->SetPath("Clutter\\BlackRefBlock256.NIF");
 	}

@@ -4205,6 +4205,20 @@ __declspec(naked) char* __fastcall GetModelPathHook(TESObject *baseForm, int EDX
 	}
 }
 
+bool __fastcall ClearRefAuxVars(AuxVarModsMap *varMap, UInt32 refID)
+{
+	bool removed = false;
+	for (auto prmIter = varMap->Begin(); prmIter; ++prmIter)
+	{
+		if (!prmIter().Erase(refID))
+			continue;
+		removed = true;
+		if (prmIter().Empty())
+			prmIter.Remove();
+	}
+	return removed;
+}
+
 __declspec(naked) bool __fastcall DestroyRefrHook(TESObjectREFR *refr)
 {
 	__asm
@@ -4236,6 +4250,16 @@ __declspec(naked) bool __fastcall DestroyRefrHook(TESObjectREFR *refr)
 		mov		ecx, offset s_hookInfos+kHook_GetModelPath*kHookInfoSize
 		call	HookInfo::ModUsers
 	doneModel:
+		cmp		byte ptr [esi+0xF], 0xFF
+		jnz		doneVars
+		mov		edx, [esi+0xC]
+		mov		ecx, offset s_auxVariablesPerm
+		call	ClearRefAuxVars
+		or		s_dataChangedFlags, al
+		mov		edx, [esi+0xC]
+		mov		ecx, offset s_auxVariablesTemp
+		call	ClearRefAuxVars
+	doneVars:
 		mov		eax, [esi+0x20]
 		test	eax, eax
 		jz		done

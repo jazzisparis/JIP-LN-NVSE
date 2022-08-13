@@ -511,7 +511,7 @@ public:
 	virtual void	Fn_01(void);
 	virtual void	Fn_02(void);
 	virtual void	Fn_03(void);
-	virtual bool	Fn_04(UInt32 arg1, UInt32 arg2);
+	virtual bool	SetPosXY(float posX, float posY);
 	virtual void	Fn_05(UInt32 arg1, UInt32 arg2);
 };
 
@@ -528,11 +528,10 @@ public:
 	SInt32			worldY;			// 08	Y coord "
 	UInt32			gridSize;		// 0C	Init'd to uGridsToLoad
 	TESObjectCELL	**gridCells;	// 10	Size is gridSize^2
-	NiPoint2		posXY;			// 14	worldXY * 4096
-	UInt32			unk1C;			// 1C
+	NiVector3		posXY;			// 14	worldXY * 4096
 	UInt8			byte20;			// 20
 	UInt8			pad21[3];		// 21
-	UInt32			unk24;			// 24
+	NiObject		*object24;		// 24
 
 	class Iterator
 	{
@@ -557,7 +556,7 @@ public:
 
 	Iterator Begin() {return Iterator(*this);}
 
-	TESObjectCELL *GetCell(Coordinate cellXY);
+	TESObjectCELL *GetCell(Coordinate cellXY) const;
 };
 
 // 44

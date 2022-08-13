@@ -631,16 +631,16 @@ class BSXFlags : public NiExtraData
 public:
 	enum BSXFlag
 	{
-		kBSXFlag_Animated =					1 << 0,
-		kBSXFlag_Havok =					1 << 1,
-		kBSXFlag_Ragdoll =					1 << 2,
-		kBSXFlag_Complex =					1 << 3,
-		kBSXFlag_Addon =					1 << 4,
-		kBSXFlag_EditorMarker =				1 << 5,
-		kBSXFlag_Dynamic =					1 << 6,
-		kBSXFlag_Articulated =				1 << 7,
-		kBSXFlag_NeedsTransformUpdates =	1 << 8,
-		kBSXFlag_ExternalEmit =				1 << 9,
+		kBSXFlag_Animated =					1,
+		kBSXFlag_Havok =					2,
+		kBSXFlag_Ragdoll =					4,
+		kBSXFlag_Complex =					8,
+		kBSXFlag_Addon =					0x10,
+		kBSXFlag_EditorMarker =				0x20,
+		kBSXFlag_Dynamic =					0x40,
+		kBSXFlag_Articulated =				0x80,
+		kBSXFlag_NeedsTransformUpdates =	0x100,
+		kBSXFlag_ExternalEmit =				0x200
 	};
 
 	UInt32			flags;		// 0C
@@ -1316,6 +1316,9 @@ public:
 	inline NiMatrix33& WorldRotate() {return m_transformWorld.rotate;}
 	inline NiVector3& LocalTranslate() {return m_transformLocal.translate;}
 	inline NiVector3& WorldTranslate() {return m_transformWorld.translate;}
+
+	inline void Hide() {m_flags |= 1;}
+	inline void Show() {m_flags &= ~1;}
 
 	NiAVObject *CreateCopy();
 	void Update();

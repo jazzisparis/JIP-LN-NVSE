@@ -117,7 +117,7 @@ void NiObjectNET::DumpExtraData()
 	NiExtraData *xData;
 	for (UInt32 iter = 0; iter < m_extraDataListLen; iter++)
 		if (xData = m_extraDataList[iter])
-			PrintDebug("(X) %08X\t%s\t#%d", xData, xData->GetType()->name, xData->m_uiRefCount);
+			PrintDebug("(X) %08X\t%s\t%08X\t#%d", xData, xData->GetType()->name, ((UInt32*)xData)[3], xData->m_uiRefCount);
 }
 
 void __vectorcall NiMaterialProperty::SetTraitValue(UInt32 traitID, float value)
