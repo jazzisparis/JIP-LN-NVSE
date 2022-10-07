@@ -2559,9 +2559,9 @@ bool Cmd_ToggleNoZPosReset_Execute(COMMAND_ARGS)
 
 bool Cmd_RotateAroundPoint_Execute(COMMAND_ARGS)
 {
-	NiVector3 rotation, origin;
+	NiVector3 origin, rotation;
 	UInt32 skipAngles = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &rotation.x, &rotation.y, &rotation.z, &origin.x, &origin.y, &origin.z, &skipAngles))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &origin.x, &origin.y, &origin.z, &rotation.x, &rotation.y, &rotation.z, &skipAngles))
 		thisObj->RotateAroundPoint(rotation * GET_PS(8), origin, skipAngles);
 	return true;
 }
