@@ -1318,16 +1318,10 @@ __declspec(naked) char* __fastcall CopyString(const char *key)
 		push	eax
 		call	malloc
 		pop		ecx
-		cmp		ecx, 1
-		jz		nullStr
 		push	edi
 		mov		edi, eax
 		rep movsb
 		pop		edi
-		pop		esi
-		retn
-	nullStr:
-		mov		[eax], 0
 		pop		esi
 		retn
 	}
@@ -1345,16 +1339,10 @@ __declspec(naked) char* __fastcall CopyCString(const char *src)
 		push	eax
 		GAME_HEAP_ALLOC
 		pop		ecx
-		cmp		ecx, 1
-		jz		nullStr
 		push	edi
 		mov		edi, eax
 		rep movsb
 		pop		edi
-		pop		esi
-		retn
-	nullStr:
-		mov		[eax], 0
 		pop		esi
 		retn
 	}

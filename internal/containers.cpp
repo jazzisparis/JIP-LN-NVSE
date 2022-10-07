@@ -19,16 +19,9 @@ __declspec(naked) char* __fastcall CopyStringKey(const char *key)
 		call	MemoryPool::Alloc
 		pop		dword ptr [eax]
 		add		eax, 4
-		cmp		edi, 1
-		jz		nullStr
 		mov		ecx, edi
 		mov		edi, eax
 		rep movsb
-		pop		edi
-		pop		esi
-		retn
-	nullStr:
-		mov		[eax], 0
 		pop		edi
 		pop		esi
 		retn

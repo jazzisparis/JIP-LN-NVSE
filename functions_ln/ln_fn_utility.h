@@ -92,6 +92,45 @@ bool __fastcall GetINIPath(char *iniPath, Script *scriptObj)
 	return true;
 }
 
+__declspec(naked) char* __fastcall GetValueDelim(char *valueName)
+{
+	__asm
+	{
+		movaps	xmm7, kINIDelims
+		pshufd	xmm6, xmm7, 0x55
+		pshufd	xmm5, xmm7, 0xAA
+		shufps	xmm7, xmm7, 0
+		ALIGN 16
+	iterHead:
+		movups	xmm4, [ecx]
+		add		ecx, 0x10
+		xorps	xmm3, xmm3
+		movaps	xmm2, xmm4
+		pcmpeqb	xmm3, xmm4
+		pcmpeqb	xmm2, xmm7
+		por		xmm3, xmm2
+		movaps	xmm2, xmm4
+		pcmpeqb	xmm2, xmm6
+		por		xmm3, xmm2
+		pcmpeqb	xmm4, xmm5
+		por		xmm3, xmm4
+		pmovmskb	edx, xmm3
+		bsf		edx, edx
+		jz		iterHead
+		lea		eax, [ecx+edx-0x10]
+		cmp		[eax], 0
+		jz		done
+		mov		[eax], 0
+		inc		eax
+	done:
+		retn
+		ALIGN 16
+	kINIDelims:
+		EMIT_DW(3A, 3A, 3A, 3A) EMIT_DW(2F, 2F, 2F, 2F)
+		EMIT_DW(5C, 5C, 5C, 5C) EMIT_DW(00, 00, 00, 00)
+	}
+}
+
 bool Cmd_GetINIFloat_Execute(COMMAND_ARGS)
 {
 	*result = 0;
@@ -99,7 +138,7 @@ bool Cmd_GetINIFloat_Execute(COMMAND_ARGS)
 	*iniPath = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) || !GetINIPath(iniPath, scriptObj))
 		return true;
-	char *delim = GetNextToken(valueName, ':');
+	char *delim = GetValueDelim(valueName);
 	if (!*delim) return true;
 	char valStr[0x20];
 	valStr[0] = 0;
@@ -116,7 +155,7 @@ bool Cmd_SetINIFloat_Execute(COMMAND_ARGS)
 	*iniPath = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, &value, iniPath) || !GetINIPath(iniPath, scriptObj))
 		return true;
-	char *delim = GetNextToken(valueName, ':');
+	char *delim = GetValueDelim(valueName);
 	if (!*delim) return true;
 	if (!FileExists(configPath)) FileStream::MakeAllDirs(configPath);
 	char valStr[0x20];
@@ -133,7 +172,7 @@ bool Cmd_GetINIString_Execute(COMMAND_ARGS)
 	*iniPath = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) && GetINIPath(iniPath, scriptObj))
 	{
-		char *delim = GetNextToken(valueName, ':');
+		char *delim = GetValueDelim(valueName);
 		if (*delim) GetPrivateProfileString(valueName, delim, nullptr, buffer, kMaxMessageLength, configPath);
 	}
 	AssignString(PASS_COMMAND_ARGS, buffer);
@@ -147,7 +186,7 @@ bool Cmd_SetINIString_Execute(COMMAND_ARGS)
 	*iniPath = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, buffer, iniPath) || !GetINIPath(iniPath, scriptObj))
 		return true;
-	char *delim = GetNextToken(valueName, ':');
+	char *delim = GetValueDelim(valueName);
 	if (!*delim) return true;
 	if (!FileExists(configPath)) FileStream::MakeAllDirs(configPath);
 	if (WritePrivateProfileString(valueName, delim, buffer, configPath))
@@ -236,7 +275,7 @@ bool Cmd_RemoveINIKey_Execute(COMMAND_ARGS)
 	*iniPath = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) || !GetINIPath(iniPath, scriptObj) || !FileExists(configPath))
 		return true;
-	char *key = GetNextToken(valueName, ':');
+	char *key = GetValueDelim(valueName);
 	if (*key && WritePrivateProfileString(valueName, key, nullptr, configPath))
 		*result = 1;
 	return true;
