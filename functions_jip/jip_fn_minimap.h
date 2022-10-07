@@ -419,7 +419,8 @@ __declspec(naked) UInt32 __fastcall GetSectionSeenLevel(SectionSeenInfo seenInfo
 		jz		noDataExt
 		mov		ecx, eax
 		test	byte ptr [eax+0x25], 1
-		setnz	[ebp-2]
+		setnz	al
+		mov		[ebp-2], al
 		jnz		modRes0
 		call	GetSeenData
 		mov		edi, eax
