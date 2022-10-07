@@ -1,5 +1,40 @@
 #include "internal/netimmerse.h"
 
+TempObject<UnorderedMap<UInt32, const char*>> s_NiFixedStringsMap(0x80);
+
+__declspec(naked) const char* __stdcall GetNiFixedString(const char *inStr)
+{
+	__asm
+	{
+		mov		ecx, [esp+4]
+		test	ecx, ecx
+		jz		retnNull
+		call	StrHashCS
+		push	ecx
+		push	esp
+		push	eax
+		mov		ecx, offset s_NiFixedStringsMap
+		call	UnorderedMap<UInt32, const char*>::InsertKey
+		test	al, al
+		jnz		addNew
+		pop		ecx
+		mov		eax, [ecx]
+		retn	4
+	retnNull:
+		xor		eax, eax
+		retn	4
+		ALIGN 16
+	addNew:
+		push	dword ptr [esp+8]
+		CALL_EAX(0xA5B690)
+		pop		ecx
+		lock inc dword ptr [eax-8]
+		pop		ecx
+		mov		[ecx], eax
+		retn	4
+	}
+}
+
 __declspec(naked) NiObject* __fastcall NiObject::HasBaseType(const NiRTTI *baseType)
 {
 	__asm
@@ -24,12 +59,13 @@ __declspec(naked) bool NiControllerSequence::Play()
 	__asm
 	{
 		push	ecx
-		push	0
-		push	0
-		push	0
+		xor		eax, eax
+		push	eax
+		push	eax
+		push	eax
 		push	0x3F800000
-		push	0
-		push	0
+		push	eax
+		push	eax
 		CALL_EAX(0xA34F20)
 		pop		ecx
 		test	al, al
@@ -47,7 +83,7 @@ __declspec(naked) bool NiControllerSequence::Play()
 NiControllerSequence *NiControllerManager::FindSequence(const char *seqName)
 {
 	for (auto iter = sequences.Begin(); iter; ++iter)
-		if (!StrCompare(iter->sequenceName, seqName))
+		if (!StrCompareCI(seqName, iter->sequenceName))
 			return *iter;
 	return nullptr;
 }
@@ -66,23 +102,9 @@ __declspec(naked) void __fastcall NiObjectNET::SetName(const char *newName)
 	{
 		push	ecx
 		push	edx
-		CALL_EAX(0xA5B690)
+		call	GetNiFixedString
 		pop		ecx
-		pop		ecx
-		mov		edx, [ecx+8]
-		cmp		eax, edx
-		jz		decCount
-		test	edx, edx
-		jz		noCurrName
-		lock dec dword ptr [edx-8]
-	noCurrName:
 		mov		[ecx+8], eax
-		retn
-	decCount:
-		test	eax, eax
-		jz		done
-		lock dec dword ptr [eax-8]
-	done:
 		retn
 	}
 }
@@ -436,27 +458,18 @@ __declspec(naked) NiAVObject* __fastcall NiNode::GetBlock(const char *blockName)
 {
 	__asm
 	{
-		cmp		[edx], 0
-		jz		retnNULL
 		push	ecx
 		push	edx
-		CALL_EAX(0xA5B690)
-		pop		ecx
+		call	GetNiFixedString
 		pop		ecx
 		test	eax, eax
 		jz		done
-		lock dec dword ptr [eax-8]
-		jz		retnNULL
 		cmp		[ecx+8], eax
 		jz		found
 		mov		edx, eax
-		call	NiNode::GetBlockByName
-		retn
+		jmp		NiNode::GetBlockByName
 	found:
 		mov		eax, ecx
-		retn
-	retnNULL:
-		xor		eax, eax
 	done:
 		retn
 	}
@@ -490,6 +503,49 @@ bool NiNode::IsMovable()
 		if (*iter && IS_NODE(*iter) && ((NiNode*)*iter)->IsMovable())
 			return true;
 	return false;
+}
+
+__declspec(naked) void __fastcall NiNode::ToggleCollision(UInt8 flag)
+{
+	__asm
+	{
+		mov		eax, [ecx+0x1C]
+		test	eax, eax
+		jz		noColObj
+		mov		eax, [eax+0x10]
+		test	eax, eax
+		jz		noColObj
+		mov		eax, [eax+8]
+		and     byte ptr [eax+0x2D], 0xBF
+		or      [eax+0x2D], dl
+	noColObj:
+		movzx	eax, word ptr [ecx+0xA6]
+		test	eax, eax
+		jz		done
+		push	esi
+		push	edi
+		mov		esi, [ecx+0xA0]
+		mov		edi, eax
+		ALIGN 16
+	iterHead:
+		dec		edi
+		js		iterEnd
+		mov		ecx, [esi]
+		add		esi, 4
+		test	ecx, ecx
+		jz		iterHead
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
+		jnz		iterHead
+		call	NiNode::ToggleCollision
+		jmp		iterHead
+		ALIGN 16
+	iterEnd:
+		pop		edi
+		pop		esi
+	done:
+		retn
+	}
 }
 
 __declspec(naked) void NiNode::ResetCollision()

@@ -79,7 +79,7 @@ void Setting::Set(double newVal)
 			data.i = newVal;
 			break;
 		case 'u':
-			data.uint = cvtd2ui(newVal);
+			data.uint = cvtd2ul(newVal);
 			break;
 		default:
 			break;
@@ -89,9 +89,7 @@ void Setting::Set(double newVal)
 void Setting::Set(const char *strVal, bool doFree)
 {
 	if (doFree) GameHeapFree(data.str);
-	UInt32 length = StrLen(strVal) + 1;
-	data.str = (char*)GameHeapAlloc(length);
-	memcpy(data.str, strVal, length);
+	data.str = CopyCString(strVal);
 }
 
 __declspec(naked) bool GameSettingCollection::GetGameSetting(char *settingName, Setting **out)

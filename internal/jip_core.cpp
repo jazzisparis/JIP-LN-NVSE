@@ -62,7 +62,7 @@ NiNode *s_pc1stPersonNode = nullptr, *g_cursorNode;
 ShadowSceneNode *g_shadowSceneNode;
 BSClearZNode *g_LODRootNode;
 TESObjectREFR *s_tempPosMarker;
-float g_screenResConvert, g_screenWidth, g_screenHeight;
+float g_screenWidth, g_screenHeight;
 const char *g_terminalModelDefault;
 TESObjectWEAP *g_fistsWeapon;
 TESObjectACTI *g_ashPileACTI, *g_gooPileACTI;
@@ -163,15 +163,15 @@ __declspec(naked) void __vectorcall ResultVars::Set(__m128 values, const __m128 
 
 __declspec(noinline) TempFormList *GetTempFormList()
 {
-	thread_local TempObject<TempFormList> s_tempFormList(0x40);
-	s_tempFormList().Clear();
+	thread_local static TempObject<TempFormList> s_tempFormList(0x40);
+	s_tempFormList->Clear();
 	return *s_tempFormList;
 }
 
 __declspec(noinline) TempElements *GetTempElements()
 {
-	thread_local TempObject<TempElements> s_tempElements(0x100);
-	s_tempElements().Clear();
+	thread_local static TempObject<TempElements> s_tempElements(0x100);
+	s_tempElements->Clear();
 	return *s_tempElements;
 }
 
@@ -180,7 +180,7 @@ TempObject<UnorderedMap<const char*, UInt32>> s_strRefs;
 UInt32 __fastcall StringToRef(char *refStr)
 {
 	UInt32 *findStr;
-	if (!s_strRefs().Insert(refStr, &findStr)) return *findStr;
+	if (!s_strRefs->InsertKey(refStr, &findStr)) return *findStr;
 	*findStr = 0;
 	char *colon = FindChr(refStr, ':');
 	if (colon)
@@ -202,8 +202,8 @@ UInt32 __fastcall StringToRef(char *refStr)
 
 __declspec(noinline) InventoryItemsMap *GetInventoryItemsMap()
 {
-	thread_local TempObject<InventoryItemsMap> s_inventoryItemsMap(0x40);
-	s_inventoryItemsMap().Clear();
+	thread_local static TempObject<InventoryItemsMap> s_inventoryItemsMap(0x40);
+	s_inventoryItemsMap->Clear();
 	return *s_inventoryItemsMap;
 }
 
@@ -296,10 +296,12 @@ struct alignas(16) RayCastData
 	UInt8			pad21[3];	// 21
 	UInt8			layerType;	// 24
 	UInt8			filterFlags;// 25
-	UInt8			pad26[2];	// 26
+	UInt16			group;		// 26
 	UInt32			unk28[6];	// 28
 	float			flt40;		// 40
-	UInt32			unk44[19];	// 44
+	UInt32			unk44[15];	// 44
+	hkCdBody		*cdBody;	// 80
+	UInt32			unk84[3];	// 84
 	AlignedVector4	vector90;	// 90
 	UInt32			unkA0[3];	// A0
 	UInt8			byteAC;		// AC
@@ -351,7 +353,7 @@ __declspec(naked) NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
 		mov		edx, 6
 		test	eax, eax
 		cmovs	eax, edx
-		and		eax, 0x3F
+		and		eax, 0x7F
 		mov		cx, ax
 		mov		[ebx+0x24], ecx
 		push	1
@@ -366,7 +368,7 @@ __declspec(naked) NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
 	}
 }
 
-__declspec(naked) NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt32 filter)
+__declspec(naked) NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType)
 {
 	__asm
 	{
@@ -381,7 +383,7 @@ __declspec(naked) NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVec
 	}
 }
 
-__declspec(naked) bool NiVector4::RayCastCoords(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt32 filter)
+__declspec(naked) bool NiVector4::RayCastCoords(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType)
 {
 	__asm
 	{
@@ -426,7 +428,7 @@ __declspec(naked) bool NiVector4::RayCastCoords(const NiVector3 &posVector, floa
 	}
 }
 
-__declspec(naked) int __stdcall GetRayCastMaterial(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt32 filter)
+__declspec(naked) int __stdcall GetRayCastMaterial(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType)
 {
 	__asm
 	{
@@ -619,7 +621,7 @@ TempObject<UnorderedMap<UInt32, VariableNames>> s_addedVariables;
 
 bool __fastcall GetVariableAdded(UInt32 ownerID, char *varName)
 {
-	VariableNames *findOwner = s_addedVariables().GetPtr(ownerID);
+	VariableNames *findOwner = s_addedVariables->GetPtr(ownerID);
 	if (!findOwner) return false;
 	return findOwner->HasKey(varName);
 }
@@ -644,7 +646,7 @@ ScriptVar *Script::AddVariable(char *varName, ScriptEventList *eventList, UInt32
 		var = (ScriptVar*)GameHeapAlloc(sizeof(ScriptVar));
 		var->id = varInfo->idx;
 		var->next = nullptr;
-		var->data.num = 0;
+		var->data = 0.0;
 		eventList->m_vars->Append(var);
 	}
 
@@ -689,7 +691,7 @@ bool TESObjectREFR::SetLinkedRef(TESObjectREFR *linkObj = nullptr, UInt8 modIdx)
 	ExtraLinkedRef *xLinkedRef = GetExtraType(&extraDataList, LinkedRef);
 	if (!linkObj)
 	{
-		auto findDefID = s_linkedRefDefault().Find(refID);
+		auto findDefID = s_linkedRefDefault->Find(refID);
 		if (findDefID)
 		{
 			if (xLinkedRef)
@@ -703,7 +705,7 @@ bool TESObjectREFR::SetLinkedRef(TESObjectREFR *linkObj = nullptr, UInt8 modIdx)
 			}
 			findDefID.Remove();
 		}
-		s_linkedRefModified().Erase(refID);
+		s_linkedRefModified->Erase(refID);
 		return true;
 	}
 	if (!xLinkedRef)
@@ -1124,7 +1126,7 @@ namespace JIPScriptRunner
 
 	void RunScripts(UInt16 type)
 	{
-		for (auto iter = s_cachedScripts().Begin(); iter; ++iter)
+		for (auto iter = s_cachedScripts->Begin(); iter; ++iter)
 		{
 			if (*(UInt16*)iter.Key() != type) continue;
 			if (iter->info.dataLength)
@@ -1179,6 +1181,31 @@ bool s_HUDCursorMode = false;
 bool GetMenuMode()
 {
 	return (g_interfaceManager->currentMode > 1) || s_HUDCursorMode;
+}
+
+void __fastcall RefreshRecipeMenu(RecipeMenu *menu);
+
+__declspec(noinline) void RefreshItemListBox()
+{
+	if (MENU_VISIBILITY[kMenuType_Inventory])
+		CdeclCall(0x782A90);
+	else if (MENU_VISIBILITY[kMenuType_Stats])
+		ThisCall(0x7DF230, StatsMenu::Get(), 4);
+	else if (MENU_VISIBILITY[kMenuType_Container])
+		ContainerMenu::Get()->Refresh(nullptr);
+	else if (MENU_VISIBILITY[kMenuType_Map])
+	{
+		MapMenu *mapMenu = MapMenu::Get();
+		if (mapMenu->currentTab == MapMenu::kTab_WorldMap)
+		{
+			s_mapMenuSkipSetXY = true;
+			ThisCall(0x79DBB0, mapMenu);
+		}
+	}
+	else if (MENU_VISIBILITY[kMenuType_Barter])
+		CdeclCall(0x730690, 1);
+	else if (MENU_VISIBILITY[kMenuType_Recipe])
+		RefreshRecipeMenu(RecipeMenu::Get());
 }
 
 __declspec(naked) bool IsConsoleOpen()
@@ -1314,9 +1341,7 @@ __declspec(naked) TLSData *GetTLSData()
 	}
 }
 
-TempObject<UnorderedMap<const char*, UInt32>> s_fileExtToType(std::initializer_list<MappedPair<const char*, UInt32>>({{"nif", 1}, {"egm", 1},
-	{"egt", 1}, {"kf", 1}, {"psa", 1}, {"tri", 1}, {"dds", 2}, {"fnt", 2}, {"psd", 2}, {"tai", 2}, {"tex", 2}, {"wav", 8}, {"lip", 0x10},
-	{"ogg", 0x10}, {"spt", 0x40}, {"ctl", 0x100}, {"dat", 0x100}, {"dlodsettings", 0x100}, {"xml", 0x100}}));
+TempObject<UnorderedMap<const char*, UInt32>> s_fileExtToType(0x20);
 
 __declspec(naked) bool __fastcall GetFileArchived(const char *filePath)
 {
@@ -1328,9 +1353,7 @@ __declspec(naked) bool __fastcall GetFileArchived(const char *filePath)
 		push	esi
 		push	edi
 		mov		esi, ecx
-		call	StrLen
-		push	'.'
-		mov		edx, eax
+		mov		dl, '.'
 		call	FindChrR
 		test	eax, eax
 		jz		retnFalse
@@ -1433,7 +1456,7 @@ int GetIsLAA()
 		if (isLAA)
 		{
 			void *blockPtrs[20], *block;
-			MemZero(blockPtrs, 0x50);
+			MEM_ZERO(blockPtrs, 0x50);
 			int idx = 0;
 			do
 			{

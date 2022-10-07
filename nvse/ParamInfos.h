@@ -944,12 +944,6 @@ constexpr ParamInfo kParams_TwoForms_TwoInts_OneFloat[] =
 	{"Float", kParamType_Float, 0}
 };
 
-constexpr ParamInfo kParams_OneDouble_OneOptionalInt[] =
-{
-	{"Double", kParamType_Double, 0},
-	{"Integer", kParamType_Integer, 1}
-};
-
 constexpr ParamInfo kParams_OneForm_OneInt_OneFloat_OneOptionalForm[] =
 {
 	{"Form", kParamType_AnyForm, 0},
@@ -1700,6 +1694,16 @@ constexpr ParamInfo kParams_OneString_SixFloats_OneOptionalFloat[] =
 	{"Float", kParamType_Float, 1}
 };
 
+constexpr ParamInfo kParams_TwoStrings_FourFloats[] =
+{
+	{"String", kParamType_String, 0},
+	{"String", kParamType_String, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0},
+	{"Float", kParamType_Float, 0}
+};
+
 constexpr ParamInfo kParams_TwoStrings_FiveFloats[] =
 {
 	{"String", kParamType_String, 0},
@@ -1760,5 +1764,23 @@ constexpr ParamInfo kParams_SixFloats_OneOptionalInt[] =
 	{"Float", kParamType_Float, 0},
 	{"Float", kParamType_Float, 0},
 	{"Float", kParamType_Float, 0},
+	{"Integer", kParamType_Integer, 1}
+};
+
+constexpr ParamInfo kParams_OneString_OneInt_OneFloat_ThreeScriptVars[] =
+{
+	{"String", kParamType_String, 0},
+	{"Integer", kParamType_Integer, 0},
+	{"Float", kParamType_Float, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 0}
+};
+
+constexpr ParamInfo kParams_OneString_OneInt_OneOptionalString_OneOptionalInt[] =
+{
+	{"String", kParamType_String, 0},
+	{"Integer", kParamType_Integer, 0},
+	{"String", kParamType_String, 1},
 	{"Integer", kParamType_Integer, 1}
 };

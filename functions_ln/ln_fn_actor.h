@@ -129,12 +129,15 @@ bool Cmd_CopyFaceGenFrom_Execute(COMMAND_ARGS)
 	TESNPC *srcNPC = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &srcNPC) && thisObj->IsCharacter() && (!srcNPC || IS_ID(srcNPC, TESNPC)))
 	{
-		TESNPC *destNPC = (TESNPC*)((Actor*)thisObj)->GetActorBase();
+		TESNPC *destNPC = (TESNPC*)thisObj->baseForm;
 		if (srcNPC)
 		{
 			AppearanceUndo **pAprUndo;
-			if (s_appearanceUndoMap().Insert(destNPC, &pAprUndo))
-				*pAprUndo = new (malloc(sizeof(AppearanceUndo))) AppearanceUndo(destNPC);
+			if (s_appearanceUndoMap().InsertKey(destNPC, &pAprUndo))
+			{
+				*pAprUndo = (AppearanceUndo*)malloc(sizeof(AppearanceUndo));
+				new (*pAprUndo) AppearanceUndo(destNPC);
+			}
 			destNPC->SetSex(srcNPC->baseData.flags);
 			destNPC->SetRace(srcNPC->race.race);
 			destNPC->CopyAppearance(srcNPC);
@@ -282,7 +285,7 @@ bool Cmd_GetEquippedData_Execute(COMMAND_ARGS)
 		{
 			ExtraHealth *xHealth = GetExtraType(xDataList, Health);
 			ExtraWeaponModFlags *xModFlags = GetExtraType(xDataList, WeaponModFlags);
-			ArrayElementL elements[3] = { item, xHealth ? xHealth->health : -1, xModFlags ? xModFlags->flags : 0 };
+			ArrayElementL elements[3] = {item, xHealth ? xHealth->health : -1, xModFlags ? xModFlags->flags : 0};
 			AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
 			break;
 		}
@@ -305,7 +308,7 @@ void SetEquippedData(Actor *actor, TESForm *form, float health, UInt8 flags, boo
 		if (health > 0)
 		{
 			xHealth = GetExtraType(xData, Health);
-			if (!xHealth || (health != xHealth->health)) continue;
+			if (!xHealth || !FloatsEqual(health, xHealth->health)) continue;
 		}
 		xModFlags = GetExtraType(xData, WeaponModFlags);
 		if (flags)

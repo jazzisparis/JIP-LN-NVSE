@@ -233,7 +233,6 @@ public:
 	UInt32							unk638;					// 638
 
 	__forceinline static DataHandler *GetSingleton() {return *(DataHandler**)0x11C3F2C;}
-	const ModInfo ** GetActiveModList();		// returns array of modEntry* corresponding to loaded mods sorted by mod index
 	const ModInfo* LookupModByName(const char* modName);
 	UInt8 GetModIndex(const char* modName);
 	UInt8 GetActiveModCount() const {return modList.modInfoList.Count();}
@@ -252,10 +251,10 @@ extern DataHandler *g_dataHandler;
 class ImageSpaceModifierInstance : public NiObject
 {
 public:
-	/*8C*/virtual void	Unk_23(void);
-	/*90*/virtual void	Unk_24(void);
+	/*8C*/virtual bool	IsExpired();
+	/*90*/virtual void	Apply();
 	/*94*/virtual ImageSpaceModifierInstanceForm* GetInstanceForm();
-	/*98*/virtual void	Unk_26(char *buffer);
+	/*98*/virtual void	PrintInfo(char *buffer);
 
 	UInt8					hidden;			// 08
 	UInt8					pad09[3];		// 09

@@ -133,16 +133,16 @@ public:
 	UInt8					byte07D;			// 07D
 	UInt8					byte07E;			// 07E
 	UInt8					byte07F;			// 07F
-	NiNode					*niNode080;			// 080
-	NiNode					*niNode084;			// 084
+	NiNode					*uiRootNode;		// 080
+	NiNode					*cursorRootNode;	// 084
 	UInt32					unk088;				// 088
 	BSShaderAccumulator		*shaderAccum08C;	// 08C
 	BSShaderAccumulator		*shaderAccum090;	// 090
-	ShadowSceneNode			*shadowScene094;	// 094
-	ShadowSceneNode			*shadowScene098;	// 098
+	ShadowSceneNode			*shadowScene1;		// 094
+	ShadowSceneNode			*shadowScene3;		// 098
 	TileRect				*menuRoot;			// 09C
 	TileRect				*globalsTile;		// 0A0	globals.xml
-	NiNode					*niNode0A4;			// 0A4
+	NiNode					*debugTextRoot;		// 0A4
 	UInt32					unk0A8;				// 0A8
 	NiObject				*unk0AC;			// 0AC seen NiAlphaProperty
 	UInt32					unk0B0[3];			// 0B0
@@ -1790,27 +1790,27 @@ extern HUDMainMenu *g_HUDMainMenu;
 class FORenderedMenu
 {
 public:
-	/*000*/virtual void		Destructor(bool doFree);
-	/*004*/virtual void		Unk_01(void);
-	/*008*/virtual void		Unk_02(void);
-	/*00C*/virtual void		Unk_03(void);
-	/*010*/virtual void		Unk_04(void);
-	/*014*/virtual void		Update(void);
-	/*018*/virtual void		Unk_06(void);
-	/*01C*/virtual void		Unk_07(void);
-	/*020*/virtual void		Unk_08(void);
-	/*024*/virtual void		Init(void);
-	/*028*/virtual void		ResetNifs(void);
-	/*02C*/virtual void		Unk_0B(void);
-	/*030*/virtual void		OnMenuOpen(void);
-	/*034*/virtual void		OnMenuClose(void);
-	/*038*/virtual void		HandleStaticEffect(float msPassed);
-	/*03C*/virtual void		HandleVerticalHoldEffect(float msPassed);
-	/*040*/virtual void		HandleShudderEffect(float msPassed);
-	/*044*/virtual void		Unk_11(void);
-	/*048*/virtual void		Unk_12(void);
-	/*04C*/virtual void		HandleScanlines(float msPassed);
-	/*050*/virtual void		Unk_14(void);
+	/*00*/virtual void		Destructor(bool doFree);
+	/*04*/virtual void		Unk_01(void);
+	/*08*/virtual void		Unk_02(void);
+	/*0C*/virtual void		Render(void);
+	/*10*/virtual void		Unk_04(void);
+	/*14*/virtual void		Update(void);
+	/*18*/virtual void		Unk_06(void);
+	/*1C*/virtual void		Unk_07(void);
+	/*20*/virtual void		Unk_08(void);
+	/*24*/virtual void		Init(void);
+	/*28*/virtual void		ResetNifs(void);
+	/*2C*/virtual void		Unk_0B(void);
+	/*30*/virtual void		OnMenuOpen(void);
+	/*34*/virtual void		OnMenuClose(void);
+	/*38*/virtual void		HandleStaticEffect(float msPassed);
+	/*3C*/virtual void		HandleVerticalHoldEffect(float msPassed);
+	/*40*/virtual void		HandleShudderEffect(float msPassed);
+	/*44*/virtual void		Unk_11(void);
+	/*48*/virtual void		Unk_12(void);
+	/*4C*/virtual void		HandleScanlines(float msPassed);
+	/*50*/virtual void		Unk_14(void);
 
 	NiTriStrips			*screenTriShape;		// 04
 	NiNode				*parentNode;			// 08
@@ -1819,7 +1819,7 @@ public:
 	SceneGraph			*sceneGraph;			// 14
 	TileMenu			*tileMenu;				// 18
 	NiPointLight		*light1C;				// 1C
-	ShadowSceneNode		*shadowScene;			// 20
+	ShadowSceneNode		*shadowScene0;			// 20
 	NiCamera			*camera;				// 24
 	UInt8				isInitialised;			// 28
 	UInt8				pad29[3];				// 29
@@ -1990,9 +1990,9 @@ public:
 	FontInfo		*extraFonts[80];	// 24
 
 										//	outDims.x := width (pxl); outDims.y := height (pxl); outDims.z := numLines
-	__forceinline NiVector3 *GetStringDimensions(NiVector3 *outDims, const char *srcString, UInt32 fontID, UInt32 maxFlt = 0x7F7FFFFF, UInt32 startIdx = 0)
+	__forceinline NiVector3 *GetStringDimensions(NiVector3 *outDims, const char *srcString, UInt32 fontID, float wrapWidth = FLT_MAX, UInt32 startIdx = 0)
 	{
-		return ThisCall<NiVector3*>(0xA1B020, this, outDims, srcString, fontID, maxFlt, startIdx);
+		return ThisCall<NiVector3*>(0xA1B020, this, outDims, srcString, fontID, wrapWidth, startIdx);
 	}
 
 	__forceinline static FontManager *GetSingleton() {return *(FontManager**)0x11F33F8;}

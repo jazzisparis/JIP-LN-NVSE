@@ -65,7 +65,7 @@ UInt32 ScriptEventList::ResetAllVariables()
 		scriptVar = varIter->data;
 		if (scriptVar)
 		{
-			scriptVar->data.num = 0;
+			scriptVar->data = 0.0;
 			numVars++;
 		}
 	}

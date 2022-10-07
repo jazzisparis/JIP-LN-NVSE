@@ -34,8 +34,7 @@ __declspec(naked) UInt32 __stdcall Hook_XInputGetState(UInt32 index, XINPUT_GAME
 		mov		result, eax
 		or		al, ds:0x11D8C50
 		test	eax, eax
-		setz	al
-		mov		s_controllerReady, al
+		setz	s_controllerReady
 		jnz		done
 		push	esi
 		mov		esi, [esp+0xC]

@@ -56,6 +56,9 @@ union VarData
 		UInt32		refID;
 		UInt32		pad;
 	};
+
+	inline void operator=(double dVal) {num = dVal;}
+	inline void operator=(UInt32 uVal) {refID = uVal;}
 };
 
 struct ScriptVar

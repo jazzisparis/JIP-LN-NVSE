@@ -71,7 +71,7 @@ bool Cmd_GetImpactDataTrait_Execute(COMMAND_ARGS)
 		*result = (impactData->decalFlags << 1) | impactData->noDecalData;
 		break;
 	case 17:
-		cvtui2d(RGBHexToDec(impactData->decalColor), result);
+		cvtul2d(RGBHexToDec(impactData->decalColor), result);
 	}
 	return true;
 }

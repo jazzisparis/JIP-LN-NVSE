@@ -294,6 +294,8 @@ __declspec(naked) SInt32 TESObjectREFR::GetItemCount(TESForm *form) const
 	}
 }
 
+void __fastcall SetContainerItemsHealthHook(TESContainer *container, int EDX, float healthPerc);
+
 __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, float condition, UInt32 doEquip, UInt32 noMessage)
 {
 	__asm
@@ -356,7 +358,7 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 	doMove:
 		push	dword ptr [ebp+0x10]
 		lea		ecx, [ebp-0x10]
-		CALL_EAX(0x482090)
+		call	SetContainerItemsHealthHook
 		push	dword ptr [ebp+0x18]
 		push	dword ptr [ebp-4]
 		lea		ecx, [ebp-0x10]
@@ -694,7 +696,6 @@ __declspec(naked) void __vectorcall TESObjectREFR::SetAngle(__m128 rotVector, UI
 		push	esi
 		mov		esi, ecx
 		sub		esp, 0x24
-		mulps	xmm0, PS_V3_PId180
 		mov		ecx, esp
 		test	dl, dl
 		jnz		localRot
@@ -704,7 +705,7 @@ __declspec(naked) void __vectorcall TESObjectREFR::SetAngle(__m128 rotVector, UI
 		call	NiMatrix33::FromEulerPRY
 		jmp		doneRot
 	localRot:
-		call	NiMatrix33::FromEulerPRYInv
+		call	NiMatrix33::FromEulerYPR
 		mov		ecx, eax
 		call	NiMatrix33::ToEulerPRY
 		movq	qword ptr [esi+0x24], xmm0
@@ -732,9 +733,7 @@ __declspec(naked) void __vectorcall TESObjectREFR::SetAngle(__m128 rotVector, UI
 		push	offset kUpdateParams
 		CALL_EAX(0xA5DD70)
 	done:
-		push	2
-		mov		ecx, esi
-		CALL_EAX(0x484B60)
+		MARK_MODIFIED(esi, 2)
 		add		esp, 0x24
 		pop		esi
 		retn
@@ -787,7 +786,7 @@ __declspec(naked) void __fastcall TESObjectREFR::MoveToCell(TESObjectCELL *cell,
 	}
 }
 
-__declspec(naked) NiVector4& __fastcall TESObjectREFR::GetTranslatedPos(NiVector4 &posMods)
+__declspec(naked) __m128 __vectorcall TESObjectREFR::GetTranslatedPos(const NiVector3 &posMods) const
 {
 	__asm
 	{
@@ -797,12 +796,11 @@ __declspec(naked) NiVector4& __fastcall TESObjectREFR::GetTranslatedPos(NiVector
 		mov		eax, [eax+0x14]
 		test	eax, eax
 		jz		noNode
-		mov		ecx, edx
-		lea		edx, [eax+0x68]
-		call	NiVector3::MultiplyMatrix
-		movups	xmm1, [edx+0x24]
+		movups	xmm0, [edx]
+		lea		ecx, [eax+0x68]
+		call	NiMatrix33::MultiplyVector
+		movups	xmm1, [ecx+0x24]
 		addps	xmm0, xmm1
-		movups	[eax], xmm0
 		retn
 	noNode:
 		sub		esp, 0x24
@@ -811,31 +809,28 @@ __declspec(naked) NiVector4& __fastcall TESObjectREFR::GetTranslatedPos(NiVector
 		movups	xmm0, [ecx+0x24]
 		lea		ecx, [esp+8]
 		call	NiMatrix33::FromEulerPRY
-		mov		edx, eax
-		pop		ecx
-		call	NiVector3::MultiplyMatrix
+		pop		edx
+		movups	xmm0, [edx]
+		mov		ecx, eax
+		call	NiMatrix33::MultiplyVector
 		pop		ecx
 		movups	xmm1, [ecx+0x30]
 		addps	xmm0, xmm1
-		movups	[eax], xmm0
 		add		esp, 0x24
 		retn
 	}
 }
 
-__declspec(naked) void __vectorcall TESObjectREFR::Rotate(__m128 rotVector)
+__declspec(naked) void __vectorcall TESObjectREFR::Rotate(__m128 pry)
 {
 	__asm
 	{
 		push	esi
 		mov		esi, ecx
 		sub		esp, 0x24
-		mulps	xmm0, PS_V3_PId180
 		mov		ecx, esp
-		call	NiMatrix33::FromEulerPRYInv
-		push	2
-		mov		ecx, esi
-		CALL_EAX(0x484B60)
+		call	NiMatrix33::FromEulerYPR
+		MARK_MODIFIED(esi, 2)
 		cmp		dword ptr [esi+0xC], 0x14
 		jz		noNode
 		mov		eax, [esi+0x64]
@@ -881,6 +876,54 @@ __declspec(naked) void __vectorcall TESObjectREFR::Rotate(__m128 rotVector)
 		add		esp, 0x48
 		pop		esi
 		retn
+	}
+}
+
+__declspec(naked) void __vectorcall TESObjectREFR::RotateAroundPoint(__m128 pry, const NiVector3 &origin, UInt32 skipAngles)
+{
+	__asm
+	{
+		cmp		[esp+4], 0
+		jnz		noAngles
+		mov		eax, [ecx+0x64]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x14]
+		test	eax, eax
+		jz		done
+		push	ebp
+		mov		ebp, esp
+		push	ecx
+		push	eax
+		sub		esp, 0x34
+		mov		ecx, esp
+		movups	xmm1, [edx]
+		movups	[ecx+0x24], xmm1
+		call	NiMatrix33::FromEulerYPR
+		mov		edx, eax
+		mov		ecx, [ebp-8]
+		add		ecx, 0x34
+		call	NiTransform::RotateOrigin
+		call	NiMatrix33::ToEulerPRY
+		mov		ecx, [ebp-4]
+		movups	[ecx+0x24], xmm0
+		mov		eax, [ebp-8]
+		add		eax, 0x58
+		mov		[ebp+8], eax
+		leave
+		jmp		TESObjectREFR::SetPos
+	done:
+		retn	4
+	noAngles:
+		push	ecx
+		add		ecx, 0x30
+		call	NiVector3::GetRotatedPos
+		pop		ecx
+		movq	qword ptr [eax], xmm0
+		unpckhpd	xmm0, xmm0
+		movss	[eax+8], xmm0
+		mov		[esp+4], eax
+		jmp		TESObjectREFR::SetPos
 	}
 }
 
@@ -1008,6 +1051,44 @@ bool TESObjectREFR::IsMobile()
 		return true;
 	NiNode *objNode = GetRefNiNode();
 	return objNode && objNode->IsMovable();
+}
+
+__declspec(naked) NiTexture** __fastcall TESObjectREFR::GetTexturePtr(const char *blockName) const
+{
+	__asm
+	{
+		cmp		[edx], 0
+		jz		retnNull
+		call	TESObjectREFR::GetNiNode
+		test	eax, eax
+		jz		done
+		mov		ecx, eax
+		call	NiNode::GetBlock
+		test	eax, eax
+		jz		done
+		mov		ecx, [eax]
+		cmp		dword ptr [ecx+0x1C], 0xE68810
+		jnz		retnNull
+		mov		edx, 3
+		mov		ecx, eax
+		call	NiAVObject::GetProperty
+		test	eax, eax
+		jz		done
+		mov		dl, [eax+0x1C]
+		cmp		dl, 8
+		jz		ppLighting
+		cmp		dl, 0x15
+		jnz		retnNull
+		add		eax, 0x60
+		retn
+	ppLighting:
+		mov		eax, [eax+0xAC]
+		retn
+	retnNull:
+		xor		eax, eax
+	done:
+		retn
+	}
 }
 
 __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const char *filePath, UInt32 texIdx)
@@ -1179,9 +1260,47 @@ __declspec(naked) hkpRigidBody* __fastcall TESObjectREFR::GetRigidBody(const cha
 		test	eax, eax
 		jz		done
 		mov		eax, [eax+8]
+		xor		edx, edx
 		cmp		byte ptr [eax+0x28], 1
+		cmovnz	eax, edx
+	done:
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall TESObjectREFR::ToggleCollision(bool toggle)
+{
+	__asm
+	{
+		dec		dl
+		and		dl, 0x40
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
+		jnz		notActor
+		mov		eax, [ecx+0x68]
+		test	eax, eax
+		jz		notActor
+		cmp		byte ptr [eax+0x28], 1
+		ja		notActor
+		mov		eax, [eax+0x138]
+		test	eax, eax
+		jz		notActor
+		mov		eax, [eax+0x594]
+		test	eax, eax
+		jz		notActor
+		mov		eax, [eax+8]
+		test	eax, eax
+		jz		notActor
+		and     byte ptr [eax+0x2D], 0xBF
+		or      [eax+0x2D], dl
+	notActor:
+		mov		eax, [ecx+0x64]
+		test	eax, eax
 		jz		done
-		xor		eax, eax
+		mov		ecx, [eax+0x14]
+		test	ecx, ecx
+		jz		done
+		call	NiNode::ToggleCollision
 	done:
 		retn
 	}
@@ -1633,9 +1752,7 @@ __declspec(naked) void Actor::PlayAnimGroup(UInt32 animGroupID)
 		test	eax, eax
 		jz		done
 		mov		edi, eax
-		push	0x10000000
-		mov		ecx, esi
-		CALL_EAX(0x484B60)
+		MARK_MODIFIED(esi, 0x10000000)
 		mov		edx, [esp+0xC]
 		push	edi
 		push	0

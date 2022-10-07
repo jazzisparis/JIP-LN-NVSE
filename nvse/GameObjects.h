@@ -135,10 +135,11 @@ public:
 	bool __fastcall GetInSameCellOrWorld(TESObjectREFR *target) const;
 	float __vectorcall GetDistance(TESObjectREFR *target) const;
 	void SetPos(const NiVector3 &posVector);
-	void __vectorcall SetAngle(__m128 rotVector, UInt8 setLocal);
+	void __vectorcall SetAngle(__m128 pry, UInt8 setLocal);
 	void __fastcall MoveToCell(TESObjectCELL *cell, const NiVector3 &posVector);
-	NiVector4& __fastcall GetTranslatedPos(NiVector4 &posMods);
+	__m128 __vectorcall GetTranslatedPos(const NiVector3 &posMods) const;
 	void __vectorcall Rotate(__m128 rotVector);
+	void __vectorcall RotateAroundPoint(__m128 pry, const NiVector3 &origin, UInt32 skipAngles = 0);
 	float __vectorcall GetHeadingAngle(TESObjectREFR *to) const;
 	bool Disable();
 	void DeleteReference();
@@ -147,6 +148,7 @@ public:
 	double GetWaterImmersionPerc() const;
 	bool IsMobile();
 	bool IsGrabbable();
+	NiTexture** __fastcall GetTexturePtr(const char *blockName) const;
 	void SwapTexture(const char *blockName, const char *filePath, UInt32 texIdx);
 	bool SetLinkedRef(TESObjectREFR *linkObj, UInt8 modIdx = 0xFF);
 	bool ValidForHooks();
@@ -156,6 +158,7 @@ public:
 	NiNode* __fastcall GetNode(const char *nodeName) const;
 	NiNode* __fastcall GetNode2(const char *nodeName) const;
 	hkpRigidBody* __fastcall GetRigidBody(const char *blockName) const;
+	void __fastcall ToggleCollision(bool toggle);
 	BSBound *GetBoundingBox() const;
 	MapMarkerData *GetMapMarkerData() const;
 

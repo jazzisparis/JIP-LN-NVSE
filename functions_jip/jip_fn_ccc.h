@@ -55,7 +55,7 @@ bool Cmd_CCCOnLoad_Execute(COMMAND_ARGS)
 		++lineIter;
 		delim = GetNextToken(dataPtr, '=');
 		pathStr = (char*)malloc(StrLen(delim) + 28);
-		memcpy(StrCopy(StrLenCopy(pathStr, "jazzisparis\\ccc\\avatar_", 23), delim), ".dds", 5);
+		memcpy(StrCopy(CPY_RET_END(pathStr, "jazzisparis\\ccc\\avatar_", 23), delim), ".dds", 5);
 		if (index < 129) s_avatarPaths()[dataPtr] = pathStr;
 		else s_avatarCommon()[dataPtr] = pathStr;
 		index++;
@@ -67,7 +67,7 @@ bool Cmd_CCCOnLoad_Execute(COMMAND_ARGS)
 		delim = const_cast<char*>(*iter);
 		index = StrLen(delim);
 		pathStr = (char*)malloc(index + 17);
-		StrCopy(StrLenCopy(pathStr, "jazzisparis\\ccc\\", 16), delim);
+		StrCopy(CPY_RET_END(pathStr, "jazzisparis\\ccc\\", 16), delim);
 		delim[index - 4] = 0;
 		s_avatarPaths()[delim + 7] = pathStr;
 	}
@@ -249,14 +249,14 @@ bool Cmd_CCCSetTrait_Execute(COMMAND_ARGS)
 			TESActorBase *actorBase = (TESActorBase*)thisObj->baseForm;
 			const char *fullName = actorBase->fullName.name.m_data, **findID;
 			if (!fullName || !*fullName) return true;
-			if (s_pathForID().Insert(actorBase->refID, &findID))
+			if (s_pathForID->InsertKey(actorBase->refID, &findID))
 			{
-				const char *findName = s_avatarPaths().Get(fullName);
+				const char *findName = s_avatarPaths->Get(fullName);
 				if (!findName)
 				{
 					if IS_ID(actorBase, TESCreature)
 					{
-						for (auto iter = s_avatarCommon().Begin(); iter; ++iter)
+						for (auto iter = s_avatarCommon->Begin(); iter; ++iter)
 						{
 							if (strstr(fullName, iter.Key()))
 							{
@@ -370,9 +370,9 @@ bool Cmd_CCCSetNCCS_Execute(COMMAND_ARGS)
 		TESActorBase *actorBase = (TESActorBase*)thisObj->baseForm;
 		if (doSet)
 		{
-			if (!s_NCCSActors().Insert(actorBase)) return true;
+			if (!s_NCCSActors->Insert(actorBase)) return true;
 		}
-		else if (!s_NCCSActors().Erase(actorBase)) return true;
+		else if (!s_NCCSActors->Erase(actorBase)) return true;
 		SetNCCS(actorBase, doSet != 0);
 	}
 	return true;
@@ -407,11 +407,11 @@ bool Cmd_GetEncumbranceRate_Eval(COMMAND_ARGS_EVAL)
 
 bool Cmd_CCCLoadNCCS_Execute(COMMAND_ARGS)
 {
-	if (!s_NCCSActors().Empty())
+	if (!s_NCCSActors->Empty())
 	{
-		for (auto nccs = s_NCCSActors().Begin(); nccs; ++nccs)
+		for (auto nccs = s_NCCSActors->Begin(); nccs; ++nccs)
 			SetNCCS(*nccs, false);
-		s_NCCSActors().Clear();
+		s_NCCSActors->Clear();
 	}
 	return true;
 }
@@ -439,7 +439,7 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 	TESWorldSpace *currentWspc = cell->worldSpace;
 	if (!currentWspc)
 	{
-		memcpy(StrLenCopy(locName, "in ", 3), cell->fullName.name.m_data, cell->fullName.name.m_dataLen + 1);
+		COPY_BYTES(CPY_RET_END(locName, "in ", 3), cell->fullName.name.m_data, cell->fullName.name.m_dataLen + 1);
 		AssignString(PASS_COMMAND_ARGS, locName);
 		return true;
 	}
@@ -447,7 +447,7 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 	MapMarkerData *markerData;
 	Coordinate coord;
 	MapMarkersGrid *markersGrid;
-	if (s_worldspaceMap().Insert(currentWspc, &markersGrid))
+	if (s_worldspaceMap->Insert(currentWspc, &markersGrid))
 	{
 		if (currentWspc->cell && (currentWspc->worldMap.ddsPath.m_dataLen || currentWspc->parent))
 		{
@@ -521,7 +521,7 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 			}
 		}
 	}
-	memcpy(StrLenCopy(locName, "at ", 3), currentWspc->fullName.name.m_data, currentWspc->fullName.name.m_dataLen + 1);
+	COPY_BYTES(CPY_RET_END(locName, "at ", 3), currentWspc->fullName.name.m_data, currentWspc->fullName.name.m_dataLen + 1);
 	AssignString(PASS_COMMAND_ARGS, locName);
 	return true;
 }

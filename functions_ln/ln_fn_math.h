@@ -3,9 +3,9 @@
 DEFINE_COMMAND_PLUGIN(fsqrt, 0, 1, kParams_OneDouble);
 DEFINE_CMD_COND_PLUGIN(GetDistance2D, 1, 1, kParams_OneObjectRef);
 DEFINE_CMD_COND_PLUGIN(GetDistance3D, 1, 1, kParams_OneObjectRef);
-DEFINE_COMMAND_PLUGIN(fSin, 0, 2, kParams_OneDouble_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(fCos, 0, 2, kParams_OneDouble_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(fTan, 0, 1, kParams_OneDouble);
+DEFINE_COMMAND_PLUGIN(fSin, 0, 1, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(fCos, 0, 1, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(fTan, 0, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(fAsin, 0, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(fAcos, 0, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(fAtan, 0, 1, kParams_OneFloat);
@@ -62,29 +62,27 @@ bool Cmd_GetDistance3D_Eval(COMMAND_ARGS_EVAL)
 
 bool Cmd_fSin_Execute(COMMAND_ARGS)
 {
-	double value;
-	UInt32 precision;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value, &precision))
-		*result = Cos(1.5707963267948966 - value * DblPId180);
+	float value;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
+		*result = Sin(value * FltPId180);
 	else *result = 0;
 	return true;
 }
 
 bool Cmd_fCos_Execute(COMMAND_ARGS)
 {
-	double value;
-	UInt32 precision;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value, &precision))
-		*result = Cos(value * DblPId180);
+	float value;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
+		*result = Cos(value * FltPId180);
 	else *result = 0;
 	return true;
 }
 
 bool Cmd_fTan_Execute(COMMAND_ARGS)
 {
-	double value;
+	float value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		*result = Tan(value * DblPId180);
+		*result = Tan(value * FltPId180);
 	else *result = 0;
 	return true;
 }
@@ -111,7 +109,7 @@ bool Cmd_fAtan_Execute(COMMAND_ARGS)
 {
 	float value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		*result = ATan2(value, 1.0F) * Dbl180dPI;
+		*result = ATan(value) * Dbl180dPI;
 	else *result = 0;
 	return true;
 }

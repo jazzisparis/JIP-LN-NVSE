@@ -95,7 +95,7 @@ bool Cmd_SetGlobalValue_Execute(COMMAND_ARGS)
 	TESGlobal *global;
 	do
 	{
-		if ((global = iter->data) && !StrCompare(global->name.m_data, varName))
+		if ((global = iter->data) && !StrCompareCI(varName, global->name.m_data))
 		{
 			global->data = value;
 			break;
@@ -192,7 +192,7 @@ bool Cmd_LNGetName_Execute(COMMAND_ARGS)
 	{
 		if (form)
 			resStr = form->GetTheName();
-		else if (thisObj && !(resStr = s_refNamesMap().Get(thisObj)))
+		else if (thisObj && !(resStr = s_refNamesMap->Get(thisObj)))
 			resStr = thisObj->baseForm->GetTheName();
 	}
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -696,7 +696,7 @@ bool Cmd_GetWaterTrait_Execute(COMMAND_ARGS)
 		case 12:
 		case 13:
 		case 14:
-			cvtui2d(RGBHexToDec(*(UInt32*)&water->visData[traitID - 2]), result);
+			cvtul2d(RGBHexToDec(*(UInt32*)&water->visData[traitID - 2]), result);
 			break;
 		default:
 			*result = water->visData[traitID - 2];

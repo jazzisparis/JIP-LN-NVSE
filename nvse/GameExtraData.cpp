@@ -25,7 +25,7 @@ ExtraContainerChanges::Data *ExtraContainerChanges::Data::Create(TESObjectREFR *
 BSExtraData *BSExtraData::Create(UInt8 xType, UInt32 size, UInt32 vtbl)
 {
 	BSExtraData *xData = (BSExtraData*)GameHeapAlloc(size);
-	MemZero(xData, size);
+	MEM_ZERO(xData, size);
 	*(UInt32*)xData = vtbl;
 	xData->type = xType;
 	return xData;

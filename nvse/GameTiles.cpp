@@ -81,13 +81,13 @@ void Tile::GetComponentFullName(char *resStr)
 		pTile = parents[--count];
 		pName = pTile->name.m_data;
 		length = pTile->name.m_dataLen;
-		memcpy(resStr, pName, length);
+		COPY_BYTES(resStr, pName, length);
 		resStr += length;
 		node = pTile->parent->children.Tail();
 		while (node->data != pTile)
 			node = node->prev;
 		index = 0;
-		while ((node = node->prev) && !strcmp(pName, node->data->name.m_data))
+		while ((node = node->prev) && !StrCompareCS(pName, node->data->name.m_data))
 			index++;
 		if (index)
 		{
@@ -123,11 +123,11 @@ __declspec(naked) void __fastcall Tile::PokeValue(UInt32 valueID)
 		push	1
 		push	0x3F800000
 		mov		ecx, eax
-		CALL_EAX(0xA0A270)
+		CALL_EAX(ADDR_TileValSetFloat)
 		pop		ecx
 		push	1
 		push	0
-		CALL_EAX(0xA0A270)
+		CALL_EAX(ADDR_TileValSetFloat)
 	done:
 		retn
 	}
@@ -145,11 +145,11 @@ __declspec(naked) void Tile::FakeClick()
 		push	1
 		push	0x3F800000
 		mov		ecx, eax
-		CALL_EAX(0xA0A270)
+		CALL_EAX(ADDR_TileValSetFloat)
 		pop		ecx
 		push	1
 		push	0
-		CALL_EAX(0xA0A270)
+		CALL_EAX(ADDR_TileValSetFloat)
 	done:
 		retn
 	}
@@ -196,7 +196,7 @@ Tile *Tile::GetChild(const char *childName)
 	bool wildcard = *childName == '*';
 	for (DListNode<Tile> *node = children.Head(); node; node = node->next)
 	{
-		if (node->data && (wildcard || !StrCompare(node->data->name.m_data, childName)) && !childIndex--)
+		if (node->data && (wildcard || !StrCompareCI(childName, node->data->name.m_data)) && !childIndex--)
 		{
 			result = node->data;
 			break;

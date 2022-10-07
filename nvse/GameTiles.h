@@ -216,7 +216,7 @@ public:
 
 		__forceinline void SetFloat(float fltVal, bool bPropagate = true)
 		{
-			ThisCall(0xA0A270, this, fltVal, bPropagate);
+			ThisCall(ADDR_TileValSetFloat, this, fltVal, bPropagate);
 		}
 		__forceinline void SetString(const char *strVal, bool bPropagate = true)
 		{
@@ -255,7 +255,7 @@ public:
 	Value *GetValueName(const char *valueName);
 	__forceinline float GetValueFloat(UInt32 id)
 	{
-		return ThisCall<float>(0xA011B0, this, id);
+		return ThisCall<float>(ADDR_TileGetFloat, this, id);
 	}
 	DListNode<Tile> *GetNthChild(UInt32 index);
 	Tile *GetChild(const char *childName);
@@ -269,11 +269,11 @@ public:
 	void GetComponentFullName(char *resStr);
 	__forceinline void SetFloat(UInt32 id, float fltVal, bool bPropagate = true)
 	{
-		ThisCall(0xA012D0, this, id, fltVal, bPropagate);
+		ThisCall(ADDR_TileSetFloat, this, id, fltVal, bPropagate);
 	}
 	__forceinline void SetString(UInt32 id, const char *strVal, bool bPropagate = true)
 	{
-		ThisCall(0xA01350, this, id, strVal, bPropagate);
+		ThisCall(ADDR_TileSetString, this, id, strVal, bPropagate);
 	}
 	__forceinline void GradualSetFloat(UInt32 id, float startVal, float endVal, float seconds, UInt32 changeMode = 0)
 	{

@@ -50,7 +50,7 @@ bool Cmd_GetTextureSetTraitNumeric_Execute(COMMAND_ARGS)
 			*result = texSet->decalInfo->parallaxPasses;
 			break;
 		case 8:
-			cvtui2d(RGBHexToDec(texSet->decalInfo->color), result);
+			cvtul2d(RGBHexToDec(texSet->decalInfo->color), result);
 	}
 	return true;
 }

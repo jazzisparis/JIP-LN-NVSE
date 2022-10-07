@@ -173,11 +173,12 @@ __declspec(naked) UInt8 TESForm::GetOverridingModIdx() const
 {
 	__asm
 	{
-		lea		edx, [ecx+0x10]
+		add		ecx, 0x10
+		ALIGN 16
 	iterHead:
-		mov		eax, [edx]
-		mov		edx, [edx+4]
-		test	edx, edx
+		mov		eax, [ecx]
+		mov		ecx, [ecx+4]
+		test	ecx, ecx
 		jnz		iterHead
 		test	eax, eax
 		jz		noInfo
@@ -211,11 +212,12 @@ TempObject<UnorderedMap<UInt32, const char*>> s_refStrings;
 const char *TESForm::RefToString()
 {
 	const char **findID;
-	if (!s_refStrings().Insert(refID, &findID)) return *findID;
+	if (!s_refStrings().InsertKey(refID, &findID))
+		return *findID;
 	const char *modName = g_dataHandler->GetNthModName(modIndex);
 	UInt32 length = StrLen(modName);
-	char *refStr = (char*)malloc(length + 8);
-	if (length) memcpy(refStr, modName, length);
+	char *refStr = Pool_CAlloc(AlignNumAlloc(length + 8));
+	if (length) COPY_BYTES(refStr, modName, length);
 	refStr[length++] = ':';
 	UIntToHex(refStr + length, refID & 0xFFFFFF);
 	*findID = refStr;
@@ -530,7 +532,7 @@ bool TESModelList::ModelListAction(char *path, char action)
 	do
 	{
 		nifPath = iter->data;
-		if (!StrCompare(path, nifPath))
+		if (!StrCompareCI(path, nifPath))
 		{
 			if (action < 0)
 			{
@@ -544,10 +546,7 @@ bool TESModelList::ModelListAction(char *path, char action)
 	}
 	while (iter = iter->next);
 	if (action <= 0) return false;
-	UInt32 length = StrLen(path) + 1;
-	nifPath = (char*)GameHeapAlloc(length);
-	memcpy(nifPath, path, length);
-	modelList.Prepend(nifPath);
+	modelList.Prepend(CopyCString(path));
 	return true;
 }
 
@@ -685,7 +684,7 @@ void TESLeveledList::AddItem(TESForm *form, UInt16 level, UInt16 count, float he
 	}
 	while (iter = iter->next);
 	ListData *newData = (ListData*)GameHeapAlloc(sizeof(ListData));
-	LvlListExtra *newExtra = (LvlListExtra*)GameHeapAlloc(sizeof(LvlListExtra));
+	ContainerExtra *newExtra = (ContainerExtra*)GameHeapAlloc(sizeof(ContainerExtra));
 	newExtra->ownerFaction = nullptr;
 	newExtra->globalVar = nullptr;
 	newExtra->health = health;

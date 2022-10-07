@@ -102,7 +102,7 @@ struct GameGlobals
 
 extern void *g_scrapHeapQueue;
 extern NiNode *s_pc1stPersonNode, *g_cursorNode;
-extern float g_screenResConvert, g_screenWidth, g_screenHeight;
+extern float g_screenWidth, g_screenHeight;
 extern const char *g_terminalModelDefault;
 extern TESObjectWEAP *g_fistsWeapon;
 extern TESObjectACTI *g_ashPileACTI, *g_gooPileACTI;
@@ -110,6 +110,8 @@ extern TESGlobal *g_gameYear, *g_gameMonth, *g_gameDay, *g_gameHour, *g_timeScal
 extern TESObjectMISC *g_capsItem;
 extern TESImageSpaceModifier *g_getHitIMOD, *g_explosionInFaceIMOD;
 extern UInt32 s_mainThreadID, s_initialTickCount;
+
+#define SCREEN_RES_CONVERT (1 / 1.05F)
 
 __forceinline TESObjectREFR *PlaceAtMe(TESObjectREFR *refr, TESForm *form, UInt32 count, UInt32 distance, UInt32 direction, float health)
 {
@@ -122,10 +124,6 @@ __forceinline NiNode *GetCdBodyNode(hkpWorldObject *object)
 __forceinline TESObjectREFR *GetCdBodyRef(hkpWorldObject *object)
 {
 	return CdeclCall<TESObjectREFR*>(0x62B4E0, &object->cdBody);
-}
-__forceinline void RefreshItemListBox()
-{
-	CdeclCall(0x704AF0);
 }
 __forceinline float ApplyAmmoEffects(UInt32 effType, AmmoEffectList *effList, float baseValue)
 {
@@ -153,7 +151,7 @@ __forceinline ImageSpaceModifierInstanceForm *ApplyIMOD(TESImageSpaceModifier *i
 }
 __forceinline void *PurgeTerminalModel()
 {
-	return CdeclCall<void*>(0x7FFE00);
+	return CdeclCall<void*>(ADDR_PurgeTerminalModel);
 }
 __forceinline TileMenu *ShowQuantityMenu(int maxCount, void (*callback)(int), int defaultCount)
 {
@@ -231,6 +229,12 @@ struct ResultVars
 
 	void __vectorcall Set(__m128 values);
 	void __vectorcall Set(__m128 values, const __m128 modifier);
+	inline void Set(double _x, double _y, double _z)
+	{
+		x->data = _x;
+		y->data = _y;
+		z->data = _z;
+	}
 };
 
 typedef Set<TESForm*> TempFormList;
@@ -256,9 +260,9 @@ bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *inv
 
 void __fastcall ShowItemMessage(TESForm *item, const char *msgStr);
 
-NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt32 filter);
+NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType);
 
-int __stdcall GetRayCastMaterial(const NiVector3 &posVector, float *rotMatRow, float maxRange, UInt32 filter);
+int __stdcall GetRayCastMaterial(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType);
 
 struct AppearanceUndo
 {
@@ -393,7 +397,7 @@ class AuxVariableValue
 	{
 		if (alloc)
 		{
-			Pool_Free(str, alloc);
+			Pool_CFree(str, alloc);
 			alloc = 0;
 		}
 	}
@@ -433,11 +437,11 @@ public:
 			UInt16 size = length + 1;
 			if (alloc < size)
 			{
-				if (alloc) Pool_Free(str, alloc);
-				alloc = AlignNumAlloc<char>(size);
-				str = (char*)Pool_Alloc(alloc);
+				if (alloc) Pool_CFree(str, alloc);
+				alloc = AlignNumAlloc(size);
+				str = Pool_CAlloc(alloc);
 			}
-			memcpy(str, value, size);
+			COPY_BYTES(str, value, size);
 		}
 		else if (alloc)
 			*str = 0;
@@ -475,9 +479,9 @@ public:
 		length = *(UInt16*)bufPos;
 		if (length)
 		{
-			alloc = AlignNumAlloc<char>(length + 1);
-			str = (char*)Pool_Alloc(alloc);
-			memcpy(str, bufPos + 2, length);
+			alloc = AlignNumAlloc(length + 1);
+			str = Pool_CAlloc(alloc);
+			COPY_BYTES(str, bufPos + 2, length);
 			str[length] = 0;
 		}
 		return length + 2;
@@ -778,7 +782,7 @@ struct ArrayData
 			if (!isPacked) alloc *= 2;
 			vals = (ArrayElementR*)AuxBuffer::Get(2, alloc);
 			keys = isPacked ? nullptr : (vals + size);
-			MemZero(vals, alloc);
+			MEM_ZERO(vals, alloc);
 			if (!GetElements(srcArr, vals, keys))
 				size = 0;
 		}
@@ -871,6 +875,10 @@ extern TempObject<UnorderedMap<const char*, NiCamera*>> s_extraCamerasMap;
 extern bool s_HUDCursorMode;
 
 bool GetMenuMode();
+
+extern bool s_mapMenuSkipSetXY;
+
+void RefreshItemListBox();
 
 bool IsConsoleOpen();
 

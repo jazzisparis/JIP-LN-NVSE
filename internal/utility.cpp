@@ -42,25 +42,17 @@ kLwrCaseConverter[] =
 	'\xD0', '\xD1', '\xD2', '\xD3', '\xD4', '\xD5', '\xD6', '\xD7', '\xD8', '\xD9', '\xDA', '\xDB', '\xDC', '\xDD', '\xDE', '\xDF',
 	'\xE0', '\xE1', '\xE2', '\xE3', '\xE4', '\xE5', '\xE6', '\xE7', '\xE8', '\xE9', '\xEA', '\xEB', '\xEC', '\xED', '\xEE', '\xEF',
 	'\xF0', '\xF1', '\xF2', '\xF3', '\xF4', '\xF5', '\xF6', '\xF7', '\xF8', '\xF9', '\xFA', '\xFB', '\xFC', '\xFD', '\xFE', '\xFF'
-},
-kUprCaseConverter[] =
+};
+
+alignas(16) const UInt32 kStringMasks[] =
 {
-	'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07', '\x08', '\x09', '\x0A', '\x0B', '\x0C', '\x0D', '\x0E', '\x0F',
-	'\x10', '\x11', '\x12', '\x13', '\x14', '\x15', '\x16', '\x17', '\x18', '\x19', '\x1A', '\x1B', '\x1C', '\x1D', '\x1E', '\x1F',
-	'\x20', '\x21', '\x22', '\x23', '\x24', '\x25', '\x26', '\x27', '\x28', '\x29', '\x2A', '\x2B', '\x2C', '\x2D', '\x2E', '\x2F',
-	'\x30', '\x31', '\x32', '\x33', '\x34', '\x35', '\x36', '\x37', '\x38', '\x39', '\x3A', '\x3B', '\x3C', '\x3D', '\x3E', '\x3F',
-	'\x40', '\x41', '\x42', '\x43', '\x44', '\x45', '\x46', '\x47', '\x48', '\x49', '\x4A', '\x4B', '\x4C', '\x4D', '\x4E', '\x4F',
-	'\x50', '\x51', '\x52', '\x53', '\x54', '\x55', '\x56', '\x57', '\x58', '\x59', '\x5A', '\x5B', '\x5C', '\x5D', '\x5E', '\x5F',
-	'\x60', '\x41', '\x42', '\x43', '\x44', '\x45', '\x46', '\x47', '\x48', '\x49', '\x4A', '\x4B', '\x4C', '\x4D', '\x4E', '\x4F',
-	'\x50', '\x51', '\x52', '\x53', '\x54', '\x55', '\x56', '\x57', '\x58', '\x59', '\x5A', '\x7B', '\x7C', '\x7D', '\x7E', '\x7F',
-	'\x80', '\x81', '\x82', '\x83', '\x84', '\x85', '\x86', '\x87', '\x88', '\x89', '\x8A', '\x8B', '\x8C', '\x8D', '\x8E', '\x8F',
-	'\x90', '\x91', '\x92', '\x93', '\x94', '\x95', '\x96', '\x97', '\x98', '\x99', '\x9A', '\x9B', '\x9C', '\x9D', '\x9E', '\x9F',
-	'\xA0', '\xA1', '\xA2', '\xA3', '\xA4', '\xA5', '\xA6', '\xA7', '\xA8', '\xA9', '\xAA', '\xAB', '\xAC', '\xAD', '\xAE', '\xAF',
-	'\xB0', '\xB1', '\xB2', '\xB3', '\xB4', '\xB5', '\xB6', '\xB7', '\xB8', '\xB9', '\xBA', '\xBB', '\xBC', '\xBD', '\xBE', '\xBF',
-	'\xC0', '\xC1', '\xC2', '\xC3', '\xC4', '\xC5', '\xC6', '\xC7', '\xC8', '\xC9', '\xCA', '\xCB', '\xCC', '\xCD', '\xCE', '\xCF',
-	'\xD0', '\xD1', '\xD2', '\xD3', '\xD4', '\xD5', '\xD6', '\xD7', '\xD8', '\xD9', '\xDA', '\xDB', '\xDC', '\xDD', '\xDE', '\xDF',
-	'\xE0', '\xE1', '\xE2', '\xE3', '\xE4', '\xE5', '\xE6', '\xE7', '\xE8', '\xE9', '\xEA', '\xEB', '\xEC', '\xED', '\xEE', '\xEF',
-	'\xF0', '\xF1', '\xF2', '\xF3', '\xF4', '\xF5', '\xF6', '\xF7', '\xF8', '\xF9', '\xFA', '\xFB', '\xFC', '\xFD', '\xFE', '\xFF'
+	PS_DUP_4(0xFFFFFFFF),
+	PS_DUP_4(0x00000000),
+	PS_DUP_4(0x41414141),
+	PS_DUP_4(0x61616161),
+	PS_DUP_4(0x7F7F7F7F),
+	PS_DUP_4(0x19191919),
+	PS_DUP_4(0x20202020)
 };
 
 memcpy_t MemCopy = memcpy, MemMove = memmove;
@@ -154,7 +146,7 @@ __declspec(naked) TESForm* __stdcall LookupFormByRefID(UInt32 refID)
 	}
 }
 
-__declspec(naked) UInt32 __vectorcall cvtd2ui(double value)
+__declspec(naked) UInt32 __vectorcall cvtd2ul(double value)
 {
 	__asm
 	{
@@ -167,7 +159,7 @@ __declspec(naked) UInt32 __vectorcall cvtd2ui(double value)
 	}
 }
 
-__declspec(naked) double __fastcall cvtui2d(UInt32 value)
+__declspec(naked) double __fastcall cvtul2d(UInt32 value)
 {
 	__asm
 	{
@@ -179,7 +171,7 @@ __declspec(naked) double __fastcall cvtui2d(UInt32 value)
 	}
 }
 
-__declspec(naked) void __fastcall cvtui2d(UInt32 value, double *result)
+__declspec(naked) void __fastcall cvtul2d(UInt32 value, double *result)
 {
 	__asm
 	{
@@ -242,17 +234,6 @@ __declspec(naked) float __vectorcall fMod(float numer, float denom)
 		mulss	xmm2, xmm1
 		subss	xmm0, xmm2
 		retn
-	}
-}
-
-__declspec(naked) float __vectorcall Sin(float angle)
-{
-	__asm
-	{
-		movaps	xmm1, xmm0
-		movss	xmm0, PS_V3_PId2
-		subss	xmm0, xmm1
-		jmp		Cos
 	}
 }
 
@@ -529,15 +510,6 @@ __declspec(naked) float __vectorcall ACos(float x)
 	}
 }
 
-__declspec(naked) float __vectorcall ATan(float x)
-{
-	_asm
-	{
-		movss	xmm1, PS_V3_One
-		jmp		ATan2
-	}
-}
-
 __declspec(naked) float __vectorcall ATan2(float y, float x)
 {
 	__asm
@@ -662,11 +634,13 @@ __declspec(naked) bool __vectorcall Equal_V4(__m128 v1, __m128 v2)
 	}
 }
 
+#define STR_BUFFER_SIZE 0x20000
+
 __declspec(noinline) char *GetStrArgBuffer()
 {
-	thread_local char *s_strBuffer = nullptr;
+	thread_local static char *s_strBuffer = nullptr;
 	if (!s_strBuffer)
-		s_strBuffer = (char*)_aligned_malloc(0x20000, 0x10);
+		s_strBuffer = (char*)VirtualAlloc(nullptr, STR_BUFFER_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 	return s_strBuffer;
 }
 
@@ -751,60 +725,22 @@ __declspec(naked) UInt32 __fastcall StrLen(const char *str)
 {
 	__asm
 	{
-		test	ecx, ecx
+		mov		eax, ecx
+		test	eax, eax
 		jz		nullPtr
-		push	ecx
-		test	ecx, 3
-		jz		iter4
+		xorps	xmm7, xmm7
 		ALIGN 16
-	iter1:
-		mov		al, [ecx]
-		inc		ecx
-		test	al, al
-		jz		done1
-		test	ecx, 3
-		jnz		iter1
-		ALIGN 16
-	iter4:
-		mov		eax, [ecx]
-		mov		edx, 0x7EFEFEFF
-		add		edx, eax
-		not		eax
-		xor		eax, edx
-		add		ecx, 4
-		test	eax, 0x81010100
-		jz		iter4
-		mov		eax, [ecx-4]
-		test	al, al
-		jz		done4
-		test	ah, ah
-		jz		done3
-		test	eax, 0xFF0000
-		jz		done2
-		test	eax, 0xFF000000
-		jnz		iter4
-	done1:
-		lea		eax, [ecx-1]
-		pop		ecx
+	iterHead:
+		movups	xmm6, [eax]
+		add		eax, 0x10
+		pcmpeqb	xmm6, xmm7
+		pmovmskb	edx, xmm6
+		bsf		edx, edx
+		jz		iterHead
+		lea		eax, [eax+edx-0x10]
+		mov		edx, eax
 		sub		eax, ecx
-		retn
-	done2:
-		lea		eax, [ecx-2]
-		pop		ecx
-		sub		eax, ecx
-		retn
-	done3:
-		lea		eax, [ecx-3]
-		pop		ecx
-		sub		eax, ecx
-		retn
-	done4:
-		lea		eax, [ecx-4]
-		pop		ecx
-		sub		eax, ecx
-		retn
 	nullPtr:
-		xor		eax, eax
 		retn
 	}
 }
@@ -827,25 +763,6 @@ __declspec(naked) bool __fastcall MemCmp(const void *ptr1, const void *ptr2, UIn
 	}
 }
 
-__declspec(naked) void __fastcall MemZero(void *dest, UInt32 bsize)
-{
-	__asm
-	{
-		test	ecx, ecx
-		jz		done
-		shr		edx, 2
-		jz		done
-		push	edi
-		mov		edi, ecx
-		xor		eax, eax
-		mov		ecx, edx
-		rep stosd
-		pop		edi
-	done:
-		retn
-	}
-}
-
 __declspec(naked) char* __fastcall StrCopy(char *dest, const char *src)
 {
 	__asm
@@ -855,20 +772,30 @@ __declspec(naked) char* __fastcall StrCopy(char *dest, const char *src)
 		jz		done
 		test	edx, edx
 		jz		nullTerm
-		push	ecx
-		mov		ecx, edx
-		call	StrLen
-		pop		edx
-		push	eax
-		inc		eax
-		push	eax
-		push	ecx
-		push	edx
-		call	MemMove
-		add		esp, 0xC
-		pop		ecx
-		add		eax, ecx
-		retn
+		ALIGN 16
+	iterHead:
+		movups	xmm7, [edx]
+		xorps	xmm6, xmm6
+		pcmpeqb	xmm6, xmm7
+		pmovmskb	ecx, xmm6
+		test	ecx, ecx
+		jnz		foundNull
+		movups	[eax], xmm7
+		add		eax, 0x10
+		add		edx, 0x10
+		jmp		iterHead
+		ALIGN 16
+	foundNull:
+		bsf		ecx, ecx
+		jz		nullTerm
+		push	esi
+		push	edi
+		mov		esi, edx
+		mov		edi, eax
+		rep movsb
+		mov		eax, edi
+		pop		edi
+		pop		esi
 	nullTerm:
 		mov		[eax], 0
 	done:
@@ -888,45 +815,14 @@ __declspec(naked) char* __fastcall StrNCopy(char *dest, const char *src, UInt32 
 		cmp		dword ptr [esp+4], 0
 		jz		nullTerm
 		push	esi
-		mov		esi, ecx
-		mov		ecx, edx
-		call	StrLen
-		mov		edx, [esp+8]
-		cmp		edx, eax
-		cmova	edx, eax
-		push	edx
-		push	ecx
-		push	esi
-		add		esi, edx
-		call	MemMove
-		add		esp, 0xC
-		mov		eax, esi
+		push	edi
+		mov		esi, edx
+		mov		edi, ecx
+		mov		ecx, [esp+0xC]
+		rep movsb
+		mov		eax, edi
+		pop		edi
 		pop		esi
-	nullTerm:
-		mov		[eax], 0
-	done:
-		retn	4
-	}
-}
-
-__declspec(naked) char* __fastcall StrLenCopy(char *dest, const char *src, UInt32 length)
-{
-	__asm
-	{
-		mov		eax, ecx
-		test	ecx, ecx
-		jz		done
-		test	edx, edx
-		jz		nullTerm
-		mov		ecx, [esp+4]
-		test	ecx, ecx
-		jz		nullTerm
-		push	ecx
-		push	edx
-		push	eax
-		call	MemMove
-		add		esp, 0xC
-		add		eax, [esp+4]
 	nullTerm:
 		mov		[eax], 0
 	done:
@@ -942,8 +838,8 @@ __declspec(naked) char* __fastcall StrCat(char *dest, const char *src)
 		jz		nullPtr
 		push	edx
 		call	StrLen
+		mov		ecx, edx
 		pop		edx
-		add		ecx, eax
 		jmp		StrCopy
 	nullPtr:
 		xor		eax, eax
@@ -951,93 +847,226 @@ __declspec(naked) char* __fastcall StrCat(char *dest, const char *src)
 	}
 }
 
-__declspec(noinline) char __fastcall StrCompare(const char *lstr, const char *rstr)
+__declspec(naked) char __fastcall StrCompareCS(const char *lstr, const char *rstr)
 {
-	if (!lstr) return rstr ? -1 : 0;
-	if (!rstr) return 1;
-	UInt8 lchr, rchr;
-	while (*lstr)
+	__asm
 	{
-		lchr = kLwrCaseConverter[*(UInt8*)lstr];
-		rchr = kLwrCaseConverter[*(UInt8*)rstr];
-		if (lchr == rchr)
-		{
-			lstr++;
-			rstr++;
-			continue;
-		}
-		return (lchr < rchr) ? -1 : 1;
-	}
-	return *rstr ? -1 : 0;
-}
-
-__declspec(noinline) char __fastcall StrBeginsCS(const char *lstr, const char *rstr)
-{
-	if (!lstr || !rstr) return 0;
-	UInt32 length = StrLen(rstr);
-	while (length >= 4)
-	{
-		if (*(UInt32*)lstr != *(UInt32*)rstr)
-			return 0;
-		lstr += 4;
-		rstr += 4;
-		length -= 4;
-	}
-	while (length)
-	{
-		if (*lstr != *rstr)
-			return 0;
-		lstr++;
-		rstr++;
-		length--;
-	}
-	return *lstr ? 1 : 2;
-}
-
-__declspec(noinline) char __fastcall StrBeginsCI(const char *lstr, const char *rstr)
-{
-	if (!lstr || !rstr) return 0;
-	UInt32 length = StrLen(rstr);
-	while (length)
-	{
-		if (kLwrCaseConverter[*(UInt8*)lstr] != kLwrCaseConverter[*(UInt8*)rstr])
-			return 0;
-		lstr++;
-		rstr++;
-		length--;
-	}
-	return *lstr ? 1 : 2;
-}
-
-__declspec(noinline) void __fastcall FixPath(char *str)
-{
-	UInt8 curr;
-	while (curr = *str)
-	{
-		if (curr == '\\')
-			*str = '/';
-		else *str = kLwrCaseConverter[curr];
-		str++;
+		push	esi
+		push	edi
+		mov		esi, ecx
+		mov		edi, edx
+		ALIGN 16
+	iterHead:
+		movups	xmm0, [esi]
+		movups	xmm1, [edi]
+		xorps	xmm2, xmm2
+		pcmpeqb	xmm2, xmm0
+		pmovmskb	ecx, xmm2
+		xorps	xmm2, xmm2
+		pcmpeqb	xmm2, xmm1
+		pmovmskb	edx, xmm2
+		movaps	xmm2, xmm0
+		pcmpeqb	xmm2, xmm1
+		pmovmskb	eax, xmm2
+		not		ax
+		or		edx, ecx
+		jnz		foundEnd
+		add		esi, 0x10
+		add		edi, 0x10
+		test	eax, eax
+		jz		iterHead
+		bsf		ecx, eax
+		pcmpgtb	xmm0, xmm1
+		pmovmskb	edx, xmm0
+		bsf		edx, edx
+		cmp		cl, dl
+		setz	al
+		setnz	dl
+		sub		al, dl
+		lea		ecx, [edi+ecx-0x10]
+		pop		edi
+		pop		esi
+		retn
+		ALIGN 16
+	foundEnd:
+		test	eax, eax
+		jz		done
+		bsf		ecx, eax
+		bsf		edx, edx
+		xor		al, al
+		cmp		cl, dl
+		ja		done
+		pcmpgtb	xmm0, xmm1
+		pmovmskb	edx, xmm0
+		bsf		edx, edx
+		cmp		cl, dl
+		setz	al
+		setnz	dl
+		sub		al, dl
+		add		ecx, edi
+	done:
+		pop		edi
+		pop		esi
+		retn
 	}
 }
 
-__declspec(noinline) void __fastcall StrToLower(char *str)
+__declspec(naked) char __fastcall StrCompareCI(const char *lstr, const char *rstr)
 {
-	UInt8 curr;
-	while (curr = *str)
+	__asm
 	{
-		*str = kLwrCaseConverter[curr];
-		str++;
+		push	esi
+		push	edi
+		mov		esi, ecx
+		mov		edi, edx
+		mov		eax, offset kStringMasks+0x20
+		movaps	xmm3, [eax]
+		movaps	xmm4, [eax+0x20]
+		movaps	xmm5, [eax+0x30]
+		movaps	xmm6, [eax+0x40]
+		ALIGN 16
+	iterHead:
+		movups	xmm0, [esi]
+		movups	xmm1, [edi]
+		xorps	xmm2, xmm2
+		pcmpeqb	xmm2, xmm0
+		pmovmskb	ecx, xmm2
+		xorps	xmm2, xmm2
+		pcmpeqb	xmm2, xmm1
+		pmovmskb	edx, xmm2
+		movaps	xmm2, xmm0
+		psubb	xmm2, xmm3
+		pand	xmm2, xmm4
+		pcmpgtb	xmm2, xmm5
+		pandn	xmm2, xmm6
+		pxor	xmm0, xmm2
+		movaps	xmm2, xmm1
+		psubb	xmm2, xmm3
+		pand	xmm2, xmm4
+		pcmpgtb	xmm2, xmm5
+		pandn	xmm2, xmm6
+		pxor	xmm1, xmm2
+		movaps	xmm2, xmm0
+		pcmpeqb	xmm2, xmm1
+		pmovmskb	eax, xmm2
+		not		ax
+		or		edx, ecx
+		jnz		foundEnd
+		add		esi, 0x10
+		add		edi, 0x10
+		test	eax, eax
+		jz		iterHead
+		bsf		ecx, eax
+		pcmpgtb	xmm0, xmm1
+		pmovmskb	edx, xmm0
+		bsf		edx, edx
+		cmp		cl, dl
+		setz	al
+		setnz	dl
+		sub		al, dl
+		lea		ecx, [edi+ecx-0x10]
+		pop		edi
+		pop		esi
+		retn
+		ALIGN 16
+	foundEnd:
+		test	eax, eax
+		jz		done
+		bsf		ecx, eax
+		bsf		edx, edx
+		xor		al, al
+		cmp		cl, dl
+		ja		done
+		pcmpgtb	xmm0, xmm1
+		pmovmskb	edx, xmm0
+		bsf		edx, edx
+		cmp		cl, dl
+		setz	al
+		setnz	dl
+		sub		al, dl
+		add		ecx, edi
+	done:
+		pop		edi
+		pop		esi
+		retn
 	}
 }
 
-__declspec(noinline) void __fastcall StrToUpper(char *str)
+__declspec(naked) char __fastcall StrBeginsCS(const char *lstr, const char *rstr)
 {
-	UInt8 curr;
-	while (curr = *str)
+	__asm
 	{
-		*str = kUprCaseConverter[curr];
-		str++;
+		call	StrCompareCS
+		test	al, al
+		js		retn0
+		jz		retn2
+		cmp		[ecx], 0
+		setz	al
+		retn
+	retn0:
+		xor		al, al
+		retn
+	retn2:
+		mov		al, 2
+		retn
+	}
+}
+
+__declspec(naked) char __fastcall StrBeginsCI(const char *lstr, const char *rstr)
+{
+	__asm
+	{
+		call	StrCompareCI
+		test	al, al
+		js		retn0
+		jz		retn2
+		cmp		[ecx], 0
+		setz	al
+		retn
+	retn0:
+		xor		al, al
+		retn
+	retn2:
+		mov		al, 2
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall StrToCase(char *str, UInt32 upper)
+{
+	__asm
+	{
+		mov		eax, offset kStringMasks+0x10
+		movaps	xmm2, [eax+edx+0x10]
+		movaps	xmm3, [eax+0x30]
+		movaps	xmm4, [eax+0x40]
+		movaps	xmm5, [eax+0x50]
+		ALIGN 16
+	iterHead:
+		movups	xmm0, [ecx]
+		xorps	xmm1, xmm1
+		pcmpeqb	xmm1, xmm0
+		pmovmskb	edx, xmm1
+		movaps	xmm1, xmm0
+		psubb	xmm1, xmm2
+		pand	xmm1, xmm3
+		pcmpgtb	xmm1, xmm4
+		pandn	xmm1, xmm5
+		test	edx, edx
+		jnz		foundEnd
+		pxor	xmm0, xmm1
+		movups	[ecx], xmm0
+		add		ecx, 0x10
+		jmp		iterHead
+		ALIGN 16
+	foundEnd:
+		bsf		edx, edx
+		sub		eax, edx
+		movups	xmm2, [eax]
+		pand	xmm1, xmm2
+		pxor	xmm0, xmm1
+		movups	[ecx], xmm0
+		retn
 	}
 }
 
@@ -1045,17 +1074,50 @@ __declspec(naked) void __fastcall ReplaceChr(char *str, char from, char to)
 {
 	__asm
 	{
-	iterHead:
-		mov		al, [ecx]
-		test	al, al
-		jz		done
-		inc		ecx
-		cmp		al, dl
-		jnz		iterHead
+		mov		dh, dl
+		movd	xmm7, edx
+		pshuflw	xmm7, xmm7, 0
+		unpcklpd	xmm7, xmm7
 		mov		al, [esp+4]
-		mov		[ecx-1], al
+		mov		ah, al
+		movd	xmm6, eax
+		pshuflw	xmm6, xmm6, 0
+		unpcklpd	xmm6, xmm6
+		mov		eax, ecx
+		ALIGN 16
+	iterHead:
+		movups	xmm5, [eax]
+		movaps	xmm3, xmm5
+		pcmpeqb	xmm3, xmm7
+		pmovmskb	ecx, xmm3
+		xorps	xmm4, xmm4
+		pcmpeqb	xmm4, xmm5
+		pmovmskb	edx, xmm4
+		test	edx, edx
+		jnz		foundEnd
+		add		eax, 0x10
+		test	ecx, ecx
+		jz		iterHead
+		movaps	xmm4, xmm3
+		pandn	xmm4, xmm5
+		pand	xmm3, xmm6
+		por		xmm3, xmm4
+		movups	[eax-0x10], xmm3
 		jmp		iterHead
 		ALIGN 16
+	foundEnd:
+		test	ecx, ecx
+		jz		done
+		bsf		edx, edx
+		mov		ecx, offset kStringMasks+0x10
+		sub		ecx, edx
+		movups	xmm4, [ecx]
+		pand	xmm3, xmm4
+		movaps	xmm4, xmm3
+		pandn	xmm4, xmm5
+		pand	xmm3, xmm6
+		por		xmm3, xmm4
+		movups	[eax], xmm3
 	done:
 		retn	4
 	}
@@ -1065,44 +1127,69 @@ __declspec(naked) char* __fastcall FindChr(const char *str, char chr)
 {
 	__asm
 	{
-	iterHead:
-		mov		al, [ecx]
-		test	al, al
-		jz		retnNULL
-		cmp		al, dl
-		jz		found
-		inc		ecx
-		jmp		iterHead
-		ALIGN 16
-	found:
-		mov		eax, ecx
-		retn
-		ALIGN 16
-	retnNULL:
+		mov		dh, dl
+		movd	xmm7, edx
+		pshuflw	xmm7, xmm7, 0
+		unpcklps	xmm7, xmm7
 		xor		eax, eax
+		ALIGN 16
+	iterHead:
+		movups	xmm6, [ecx]
+		add		ecx, 0x10
+		xorps	xmm5, xmm5
+		pcmpeqb	xmm5, xmm6
+		pcmpeqb	xmm6, xmm7
+		por		xmm5, xmm6
+		pmovmskb	edx, xmm5
+		bsf		edx, edx
+		jz		iterHead
+		lea		ecx, [ecx+edx-0x10]
+		cmp		[ecx], 0
+		cmovnz	eax, ecx
 		retn
 	}
 }
 
-__declspec(naked) char* __fastcall FindChrR(const char *str, UInt32 length, char chr)
+__declspec(naked) char* __fastcall FindChrR(const char *str, char chr)
 {
 	__asm
 	{
-		lea		eax, [ecx+edx]
-		mov		dl, [esp+4]
+		push	ebx
+		mov		ebx, ecx
+		mov		dh, dl
+		movd	xmm7, edx
+		pshuflw	xmm7, xmm7, 0
+		unpcklpd	xmm7, xmm7
+		xor		eax, eax
 		ALIGN 16
 	iterHead:
-		cmp		eax, ecx
-		jz		retnNULL
-		dec		eax
-		mov		dh, [eax]
-		cmp		dl, dh
-		jnz		iterHead
-		retn	4
-		ALIGN 16
-	retnNULL:
-		xor		eax, eax
-		retn	4
+		movups	xmm6, [ebx]
+		xorps	xmm5, xmm5
+		pcmpeqb	xmm5, xmm6
+		pmovmskb	ecx, xmm5
+		pcmpeqb	xmm6, xmm7
+		pmovmskb	edx, xmm6
+		test	ecx, ecx
+		jnz		foundEnd
+		add		ebx, 0x10
+		bsr		ecx, edx
+		jz		iterHead
+		lea		eax, [ebx+ecx-0x10]
+		jmp		iterHead
+	foundEnd:
+		push	esi
+		mov		esi, 0xFFFFFFFF
+		bsf		ecx, ecx
+		shl		esi, cl
+		not		esi
+		and		edx, esi
+		jz		done
+		bsr		eax, edx
+		add		eax, ebx
+	done:
+		pop		esi
+		pop		ebx
+		retn
 	}
 }
 
@@ -1135,76 +1222,70 @@ __declspec(naked) char* __fastcall SlashPos(const char *str)
 {
 	__asm
 	{
-	iterHead:
-		mov		dl, [ecx]
-		test	dl, dl
-		jz		retnNULL
-		cmp		dl, '\\'
-		jz		found
-		cmp		dl, '/'
-		jz		found
-		inc		ecx
-		jmp		iterHead
-		ALIGN 16
-	found:
-		mov		eax, ecx
-		retn
-		ALIGN 16
-	retnNULL:
+		movaps	xmm7, kBFSlash
+		pshufd	xmm6, xmm7, 0xAA
+		unpcklpd	xmm7, xmm7
 		xor		eax, eax
+		ALIGN 16
+	iterHead:
+		movups	xmm5, [ecx]
+		add		ecx, 0x10
+		xorps	xmm4, xmm4
+		movaps	xmm3, xmm5
+		pcmpeqb	xmm4, xmm5
+		pcmpeqb	xmm3, xmm7
+		pcmpeqb	xmm5, xmm6
+		por		xmm4, xmm3
+		por		xmm4, xmm5
+		pmovmskb	edx, xmm4
+		bsf		edx, edx
+		jz		iterHead
+		lea		ecx, [ecx+edx-0x10]
+		cmp		[ecx], 0
+		cmovnz	eax, ecx
 		retn
+		ALIGN 16
+	kBFSlash:
+		DUP_2(EMIT_DW(2F, 2F, 2F, 2F)) DUP_2(EMIT_DW(5C, 5C, 5C, 5C))
 	}
 }
 
-__declspec(naked) char* __fastcall SlashPosR(const char *str)
+__declspec(naked) char* __fastcall GetNextToken(char *str, char delim)
 {
 	__asm
 	{
-		call	StrLen
-		add		eax, ecx
+		mov		dh, dl
+		movd	xmm7, edx
+		pshuflw	xmm7, xmm7, 0
+		unpcklpd	xmm7, xmm7
 		ALIGN 16
-	iterHead:
-		cmp		eax, ecx
-		jz		retnNULL
-		dec		eax
-		mov		dl, [eax]
-		cmp		dl, '\\'
-		jz		found
-		cmp		dl, '/'
-		jnz		iterHead
-	found:
-		retn
+	lookup:
+		movups	xmm6, [ecx]
+		add		ecx, 0x10
+		xorps	xmm5, xmm5
+		pcmpeqb	xmm5, xmm6
+		pcmpeqb	xmm6, xmm7
+		por		xmm5, xmm6
+		pmovmskb	eax, xmm5
+		bsf		eax, eax
+		jz		lookup
+		lea		eax, [eax+ecx-0x10]
 		ALIGN 16
-	retnNULL:
-		xor		eax, eax
+	nextNon:
+		cmp		[eax], dl
+		jnz		done
+		mov		[eax], 0
+		inc		eax
+		jmp		nextNon
+	done:
 		retn
 	}
-}
-
-__declspec(noinline) char* __fastcall GetNextToken(char *str, char delim)
-{
-	if (!str) return nullptr;
-	bool found = false;
-	char chr;
-	while (chr = *str)
-	{
-		if (chr == delim)
-		{
-			*str = 0;
-			found = true;
-		}
-		else if (found)
-			break;
-		str++;
-	}
-	return str;
 }
 
 __declspec(noinline) char* __fastcall GetNextToken(char *str, const char *delims)
 {
-	if (!str) return nullptr;
 	bool table[0x100];
-	MemZero(table, 0x100);
+	MEM_ZERO(table, 0x100);
 	UInt8 curr;
 	while (curr = *delims)
 	{
@@ -1230,16 +1311,24 @@ __declspec(naked) char* __fastcall CopyString(const char *key)
 {
 	__asm
 	{
+		push	esi
+		mov		esi, ecx
 		call	StrLen
 		inc		eax
 		push	eax
-		push	ecx
-		push	eax
 		call	malloc
 		pop		ecx
-		push	eax
-		call	MemCopy
-		add		esp, 0xC
+		cmp		ecx, 1
+		jz		nullStr
+		push	edi
+		mov		edi, eax
+		rep movsb
+		pop		edi
+		pop		esi
+		retn
+	nullStr:
+		mov		[eax], 0
+		pop		esi
 		retn
 	}
 }
@@ -1248,18 +1337,25 @@ __declspec(naked) char* __fastcall CopyCString(const char *src)
 {
 	__asm
 	{
+		push	esi
+		mov		esi, ecx
 		call	StrLen
-		test	eax, eax
-		jz		done
 		inc		eax
 		push	eax
-		push	ecx
 		push	eax
 		GAME_HEAP_ALLOC
-		push	eax
-		call	MemCopy
-		add		esp, 0xC
-	done:
+		pop		ecx
+		cmp		ecx, 1
+		jz		nullStr
+		push	edi
+		mov		edi, eax
+		rep movsb
+		pop		edi
+		pop		esi
+		retn
+	nullStr:
+		mov		[eax], 0
+		pop		esi
 		retn
 	}
 }
@@ -1577,7 +1673,6 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 
 __declspec(naked) char* __fastcall UIntToHex(char *str, UInt32 num)
 {
-	static const char kCharAtlas[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 	__asm
 	{
 		bsr		eax, edx
@@ -1591,7 +1686,7 @@ __declspec(naked) char* __fastcall UIntToHex(char *str, UInt32 num)
 	workIter:
 		mov		al, dl
 		and		al, 0xF
-		mov		cl, kCharAtlas[eax]
+		mov		cl, byte ptr kCharAtlas[eax]
 		dec		esi
 		mov		[esi], cl
 		shr		edx, 4
@@ -1605,6 +1700,10 @@ __declspec(naked) char* __fastcall UIntToHex(char *str, UInt32 num)
 		mov		word ptr [ecx], '0'
 		lea		eax, [ecx+1]
 		retn
+		ALIGN 16
+	kCharAtlas:
+		EMIT(30) EMIT(31) EMIT(32) EMIT(33) EMIT(34) EMIT(35) EMIT(36) EMIT(37)
+		EMIT(38) EMIT(39) EMIT(41) EMIT(42) EMIT(43) EMIT(44) EMIT(45) EMIT(46)
 	}
 }
 
@@ -1620,6 +1719,7 @@ __declspec(naked) UInt32 __fastcall HexToUInt(const char *str)
 		mov		ch, al
 		xor		eax, eax
 		xor		cl, cl
+		ALIGN 16
 	hexToInt:
 		dec		esi
 		movsx	edx, byte ptr [esi]
@@ -1647,7 +1747,7 @@ __declspec(naked) UInt32 __fastcall HexToUInt(const char *str)
 
 __declspec(noinline) UInt8 *AuxBuffer::Get(UInt32 bufIdx, UInt32 reqSize)
 {
-	thread_local AuxBuffer s_auxBuffers[3];
+	thread_local static AuxBuffer s_auxBuffers[3];
 	AuxBuffer *auxBuf = &s_auxBuffers[bufIdx];
 	if (auxBuf->size < reqSize)
 	{
@@ -1666,9 +1766,9 @@ DString::DString(const char *from)
 	length = StrLen(from);
 	if (length)
 	{
-		alloc = AlignNumAlloc<char>(length + 1);
-		str = (char*)Pool_Alloc(alloc);
-		memcpy(str, from, length + 1);
+		alloc = AlignNumAlloc(length + 1);
+		str = Pool_CAlloc(alloc);
+		COPY_BYTES(str, from, length + 1);
 	}
 	else
 	{
@@ -1682,9 +1782,9 @@ DString::DString(const DString &from)
 	length = from.length;
 	if (length)
 	{
-		alloc = AlignNumAlloc<char>(length + 1);
-		str = (char*)Pool_Alloc(alloc);
-		memcpy(str, from.str, length + 1);
+		alloc = AlignNumAlloc(length + 1);
+		str = Pool_CAlloc(alloc);
+		COPY_BYTES(str, from.str, length + 1);
 	}
 	else
 	{
@@ -1697,8 +1797,8 @@ DString::DString(UInt16 _alloc) : length(0)
 {
 	if (_alloc)
 	{
-		alloc = AlignNumAlloc<char>(_alloc + 1);
-		str = (char*)Pool_Alloc(alloc);
+		alloc = AlignNumAlloc(_alloc + 1);
+		str = Pool_CAlloc(alloc);
 		*str = 0;
 	}
 	else
@@ -1711,12 +1811,12 @@ DString::DString(UInt16 _alloc) : length(0)
 void DString::Reserve(UInt16 size)
 {
 	if (alloc > size) return;
-	UInt16 newAlloc = AlignNumAlloc<char>(size + 1);
-	char *newStr = (char*)Pool_Alloc(newAlloc);
+	UInt16 newAlloc = AlignNumAlloc(size + 1);
+	char *newStr = Pool_CAlloc(newAlloc);
 	if (str)
 	{
-		if (length) memcpy(newStr, str, length);
-		Pool_Free(str, alloc);
+		if (length) COPY_BYTES(newStr, str, length);
+		Pool_CFree(str, alloc);
 	}
 	str = newStr;
 	str[length] = 0;
@@ -1732,11 +1832,11 @@ DString& DString::operator=(const char *other)
 		{
 			if (alloc <= length)
 			{
-				if (str) Pool_Free(str, alloc);
-				alloc = AlignNumAlloc<char>(length + 1);
-				str = (char*)Pool_Alloc(alloc);
+				if (str) Pool_CFree(str, alloc);
+				alloc = AlignNumAlloc(length + 1);
+				str = Pool_CAlloc(alloc);
 			}
-			memcpy(str, other, length + 1);
+			COPY_BYTES(str, other, length + 1);
 		}
 		else if (str)
 			*str = 0;
@@ -1753,11 +1853,11 @@ DString& DString::operator=(const DString &other)
 		{
 			if (alloc <= length)
 			{
-				if (str) Pool_Free(str, alloc);
-				alloc = AlignNumAlloc<char>(length + 1);
-				str = (char*)Pool_Alloc(alloc);
+				if (str) Pool_CFree(str, alloc);
+				alloc = AlignNumAlloc(length + 1);
+				str = Pool_CAlloc(alloc);
 			}
-			memcpy(str, other.str, length + 1);
+			COPY_BYTES(str, other.str, length + 1);
 		}
 		else if (str)
 			*str = 0;
@@ -1780,7 +1880,7 @@ DString& DString::operator+=(const char *other)
 	{
 		UInt16 newLen = length + otherLen;
 		Reserve(newLen);
-		memcpy(str + length, other, otherLen + 1);
+		COPY_BYTES(str + length, other, otherLen + 1);
 		length = newLen;
 	}
 	return *this;
@@ -1792,7 +1892,7 @@ DString& DString::operator+=(const DString &other)
 	{
 		UInt16 newLen = length + other.length;
 		Reserve(newLen);
-		memcpy(str + length, other.str, other.length + 1);
+		COPY_BYTES(str + length, other.str, other.length + 1);
 		length = newLen;
 	}
 	return *this;
@@ -1800,12 +1900,12 @@ DString& DString::operator+=(const DString &other)
 
 bool DString::operator==(const char *other)
 {
-	return !strcmp(str, other);
+	return !StrCompareCS(str, other);
 }
 
 bool DString::operator==(const DString &other)
 {
-	return !strcmp(str, other.str);
+	return !StrCompareCS(str, other.str);
 }
 
 DString& DString::Insert(UInt16 index, char chr)
@@ -1829,7 +1929,7 @@ DString& DString::Insert(UInt16 index, const char *other)
 		UInt16 newLen = length + otherLen;
 		Reserve(newLen);
 		memmove(str + index + otherLen, str + index, length - index + 1);
-		memcpy(str + index, other, otherLen);
+		COPY_BYTES(str + index, other, otherLen);
 		length = newLen;
 	}
 	return *this;
@@ -1844,7 +1944,7 @@ DString& DString::Insert(UInt16 index, const DString &other)
 		UInt16 newLen = length + other.length;
 		Reserve(newLen);
 		memmove(str + index + other.length, str + index, length - index + 1);
-		memcpy(str + index, other.str, other.length);
+		COPY_BYTES(str + index, other.str, other.length);
 		length = newLen;
 	}
 	return *this;
@@ -1857,7 +1957,7 @@ DString& DString::Erase(UInt16 index, UInt16 count)
 		UInt16 endIdx = index + count;
 		if (endIdx < length)
 		{
-			memmove(str + index, str + endIdx, length - endIdx + 1);
+			COPY_BYTES(str + index, str + endIdx, length - endIdx + 1);
 			length -= count;
 		}
 		else
@@ -1882,7 +1982,7 @@ DString& DString::Replace(UInt16 bgnIdx, const char *other)
 			Reserve(endIdx);
 			length = endIdx;
 		}
-		memcpy(str + bgnIdx, other, otLen);
+		COPY_BYTES(str + bgnIdx, other, otLen);
 	}
 	else length = bgnIdx;
 	str[length] = 0;
@@ -1901,7 +2001,7 @@ DString& DString::Replace(UInt16 bgnIdx, const DString &other)
 			Reserve(endIdx);
 			length = endIdx;
 		}
-		memcpy(str + bgnIdx, other.str, other.length);
+		COPY_BYTES(str + bgnIdx, other.str, other.length);
 	}
 	else length = bgnIdx;
 	str[length] = 0;
@@ -1919,9 +2019,9 @@ DString DString::SubString(UInt16 bgnIdx, UInt16 endIdx)
 		resLen = endIdx - bgnIdx;
 		if (resLen)
 		{
-			resAlloc = AlignNumAlloc<char>(resLen + 1);
-			resStr = (char*)Pool_Alloc(resAlloc);
-			memcpy(resStr, str + bgnIdx, resLen);
+			resAlloc = AlignNumAlloc(resLen + 1);
+			resStr = Pool_CAlloc(resAlloc);
+			COPY_BYTES(resStr, str + bgnIdx, resLen);
 			resStr[resLen] = 0;
 		}
 	}
@@ -1931,9 +2031,9 @@ DString DString::SubString(UInt16 bgnIdx, UInt16 endIdx)
 DString DString::ToLower()
 {
 	if (!length) return DString();
-	UInt16 resAlloc = AlignNumAlloc<char>(length + 1);
-	char *resStr = (char*)Pool_Alloc(resAlloc);
-	memcpy(resStr, str, length + 1);
+	UInt16 resAlloc = AlignNumAlloc(length + 1);
+	char *resStr = Pool_CAlloc(resAlloc);
+	COPY_BYTES(resStr, str, length + 1);
 	StrToLower(resStr);
 	return DString(resStr, length, resAlloc);
 }
@@ -1941,18 +2041,18 @@ DString DString::ToLower()
 DString DString::ToUpper()
 {
 	if (!length) return DString();
-	UInt16 resAlloc = AlignNumAlloc<char>(length + 1);
-	char *resStr = (char*)Pool_Alloc(resAlloc);
-	memcpy(resStr, str, length + 1);
+	UInt16 resAlloc = AlignNumAlloc(length + 1);
+	char *resStr = Pool_CAlloc(resAlloc);
+	COPY_BYTES(resStr, str, length + 1);
 	StrToUpper(resStr);
 	return DString(resStr, length, resAlloc);
 }
 
 DString operator+(const DString &lStr, char rChr)
 {
-	UInt16 resLen = lStr.length + 1, resAlloc = AlignNumAlloc<char>(resLen + 1);
-	char *resStr = (char*)Pool_Alloc(resAlloc);
-	if (lStr.length) memcpy(resStr, lStr.str, lStr.length);
+	UInt16 resLen = lStr.length + 1, resAlloc = AlignNumAlloc(resLen + 1);
+	char *resStr = Pool_CAlloc(resAlloc);
+	if (lStr.length) COPY_BYTES(resStr, lStr.str, lStr.length);
 	*(UInt16*)(resStr + lStr.length) = rChr;
 	return DString(resStr, resLen, resAlloc);
 }
@@ -1963,10 +2063,10 @@ DString operator+(const DString &lStr, const char *rStr)
 	UInt16 rLen = StrLen(rStr), resLen = lStr.length + rLen, resAlloc = 0;
 	if (resLen)
 	{
-		resAlloc = AlignNumAlloc<char>(resLen + 1);
-		resStr = (char*)Pool_Alloc(resAlloc);
-		if (lStr.length) memcpy(resStr, lStr.str, lStr.length);
-		if (rLen) memcpy(resStr + lStr.length, rStr, rLen);
+		resAlloc = AlignNumAlloc(resLen + 1);
+		resStr = Pool_CAlloc(resAlloc);
+		if (lStr.length) COPY_BYTES(resStr, lStr.str, lStr.length);
+		if (rLen) COPY_BYTES(resStr + lStr.length, rStr, rLen);
 		resStr[resLen] = 0;
 	}
 	return DString(resStr, resLen, resAlloc);
@@ -1978,10 +2078,10 @@ DString operator+(const char *lStr, const DString &rStr)
 	UInt16 lLen = StrLen(lStr), resLen = lLen + rStr.length, resAlloc = 0;
 	if (resLen)
 	{
-		resAlloc = AlignNumAlloc<char>(resLen + 1);
-		resStr = (char*)Pool_Alloc(resAlloc);
-		if (lLen) memcpy(resStr, lStr, lLen);
-		if (rStr.length) memcpy(resStr + lLen, rStr.str, rStr.length);
+		resAlloc = AlignNumAlloc(resLen + 1);
+		resStr = Pool_CAlloc(resAlloc);
+		if (lLen) COPY_BYTES(resStr, lStr, lLen);
+		if (rStr.length) COPY_BYTES(resStr + lLen, rStr.str, rStr.length);
 		resStr[resLen] = 0;
 	}
 	return DString(resStr, resLen, resAlloc);
@@ -2111,23 +2211,19 @@ __declspec(naked) void __fastcall FileStream::MakeAllDirs(char *fullPath)
 		push	esi
 		push	edi
 		mov		esi, ecx
-		lea		edi, [ecx-1]
 		ALIGN 16
 	iterHead:
-		inc		edi
-		mov		al, [edi]
-		test	al, al
+		mov		dl, '\\'
+		call	FindChr
+		test	eax, eax
 		jz		done
-		cmp		al, '/'
-		jz		slash
-		cmp		al, '\\'
-		jnz		iterHead
-	slash:
-		mov		[edi], 0
+		mov		edi, eax
+		mov		[eax], 0
 		push	0
 		push	esi
 		call	CreateDirectoryA
 		mov		[edi], '\\'
+		lea		ecx, [edi+1]
 		jmp		iterHead
 	done:
 		pop		edi
@@ -2188,8 +2284,9 @@ __declspec(naked) LineIterator::LineIterator(const char *filePath, char *buffer)
 	{
 		push	ebx
 		mov		ebx, ecx
-		mov		edx, [esp+0xC]
-		mov		[ebx], edx
+		mov		eax, [esp+0xC]
+		mov		[eax], 3
+		mov		[ebx], eax
 		push	'br'
 		push	esp
 		push	dword ptr [esp+0x10]
@@ -2197,58 +2294,40 @@ __declspec(naked) LineIterator::LineIterator(const char *filePath, char *buffer)
 		add		esp, 0xC
 		test	eax, eax
 		jz		openFail
-		push	esi
-		push	edi
 		push	SEEK_END
 		push	0
 		push	eax
 		call	fseek
 		call	ftell
-		mov		edi, eax
+		mov		[esp+8], eax
 		call	rewind
 		push	1
-		push	edi
+		push	dword ptr [esp+0xC]
 		push	dword ptr [ebx]
 		call	fread
 		add		esp, 0xC
 		call	fclose
-		add		esp, 0xC
-		mov		esi, [ebx]
-		mov		word ptr [esi+edi], 0x300
-		dec		esi
+		add		esp, 8
+		pop		eax
+		mov		ecx, [ebx]
+		mov		word ptr [eax+ecx], 0x300
+		push	'\n'
+		mov		dl, '\r'
+		call	ReplaceChr
+		push	0
+		mov		dl, '\n'
+		mov		ecx, [ebx]
+		call	ReplaceChr
+		mov		eax, [ebx]
 		ALIGN 16
-	iterHead:
-		dec		edi
-		js		iterEnd
-		inc		esi
-		mov		al, [esi]
-		cmp		al, '\r'
-		ja		iterHead
-		jz		nullTerm
-		cmp		al, '\n'
-		jnz		iterHead
-	nullTerm:
-		mov		[esi], 0
-		jmp		iterHead
-		NOP_0x9
-	iterEnd:
-		mov		esi, [ebx]
 	findBgn:
-		cmp		[esi], 0
+		cmp		[eax], 0
 		jnz		done
-		inc		esi
+		inc		eax
 		jmp		findBgn
-		ALIGN 16
 	done:
-		mov		[ebx], esi
-		pop		edi
-		pop		esi
-		pop		ebx
-		retn	8
-		ALIGN 16
+		mov		[ebx], eax
 	openFail:
-		mov		edx, [ebx]
-		mov		[edx], 3
 		pop		ebx
 		retn	8
 	}
@@ -2261,8 +2340,8 @@ UInt32 __fastcall FileToBuffer(const char *filePath, char *buffer)
 	UInt32 length = srcFile.GetLength();
 	if (length)
 	{
-		if (length > kMaxMessageLength)
-			length = kMaxMessageLength;
+		if (length > (STR_BUFFER_SIZE - 1))
+			length = STR_BUFFER_SIZE - 1;
 		srcFile.ReadBuf(buffer, length);
 		buffer[length] = 0;
 	}
@@ -2293,6 +2372,10 @@ __declspec(naked) void __stdcall SafeWrite8(UInt32 addr, UInt32 data)
 		push	4
 		push	eax
 		call	VirtualProtect
+		push	4
+		push	dword ptr [esp+0xC]
+		push	0xFFFFFFFF
+		call	FlushInstructionCache
 		pop		ecx
 		retn	8
 	}
@@ -2322,6 +2405,10 @@ __declspec(naked) void __stdcall SafeWrite16(UInt32 addr, UInt32 data)
 		push	4
 		push	eax
 		call	VirtualProtect
+		push	4
+		push	dword ptr [esp+0xC]
+		push	0xFFFFFFFF
+		call	FlushInstructionCache
 		pop		ecx
 		retn	8
 	}
@@ -2351,6 +2438,10 @@ __declspec(naked) void __stdcall SafeWrite32(UInt32 addr, UInt32 data)
 		push	4
 		push	eax
 		call	VirtualProtect
+		push	4
+		push	dword ptr [esp+0xC]
+		push	0xFFFFFFFF
+		call	FlushInstructionCache
 		pop		ecx
 		retn	8
 	}
@@ -2371,17 +2462,24 @@ __declspec(naked) void __stdcall SafeWriteBuf(UInt32 addr, void *data, UInt32 le
 		push	dword ptr [esp+0x18]
 		push	dword ptr [esp+0x14]
 		call	VirtualProtect
-		push	dword ptr [esp+0x10]
-		push	dword ptr [esp+0x10]
-		push	dword ptr [esp+0x10]
-		call	MemCopy
-		add		esp, 0xC
+		push	esi
+		push	edi
+		mov		esi, [esp+0x14]
+		mov		edi, [esp+0x10]
+		mov		ecx, [esp+0x18]
+		rep movsb
+		pop		edi
+		pop		esi
 		mov		edx, [esp]
 		push	esp
 		push	edx
 		push	dword ptr [esp+0x18]
 		push	eax
 		call	VirtualProtect
+		push	dword ptr [esp+0x10]
+		push	dword ptr [esp+0xC]
+		push	0xFFFFFFFF
+		call	FlushInstructionCache
 		pop		ecx
 		retn	0xC
 	}
@@ -2414,6 +2512,10 @@ __declspec(naked) void __stdcall WriteRelJump(UInt32 jumpSrc, UInt32 jumpTgt)
 		push	5
 		push	eax
 		call	VirtualProtect
+		push	5
+		push	dword ptr [esp+0xC]
+		push	0xFFFFFFFF
+		call	FlushInstructionCache
 		pop		ecx
 		retn	8
 	}
@@ -2446,6 +2548,10 @@ __declspec(naked) void __stdcall WriteRelCall(UInt32 jumpSrc, UInt32 jumpTgt)
 		push	5
 		push	eax
 		call	VirtualProtect
+		push	5
+		push	dword ptr [esp+0xC]
+		push	0xFFFFFFFF
+		call	FlushInstructionCache
 		pop		ecx
 		retn	8
 	}
@@ -2481,6 +2587,10 @@ __declspec(naked) void __stdcall WritePushRetRelJump(UInt32 baseAddr, UInt32 ret
 		push	0xA
 		push	eax
 		call	VirtualProtect
+		push	0xA
+		push	dword ptr [esp+0xC]
+		push	0xFFFFFFFF
+		call	FlushInstructionCache
 		pop		ecx
 		retn	0xC
 	}
@@ -2539,16 +2649,6 @@ const char* __fastcall GetDXDescription(UInt32 keyID)
 	return "<no key>";
 }
 
-__declspec(naked) UInt32 __fastcall ByteSwap(UInt32 dword)
-{
-	__asm
-	{
-		mov		eax, ecx
-		bswap	eax
-		retn
-	}
-}
-
 void __stdcall DumpMemImg(void *data, UInt32 size, UInt8 extra)
 {
 	UInt32 *ptr = (UInt32*)data;
@@ -2557,8 +2657,8 @@ void __stdcall DumpMemImg(void *data, UInt32 size, UInt8 extra)
 	for (UInt32 iter = 0; iter < size; iter += 4, ptr++)
 	{
 		if (!extra) PrintDebug("%03X\t\t%08X\t", iter, *ptr);
-		else if (extra == 1) PrintDebug("%03X\t\t%08X\t[%08X]\t", iter, *ptr, ByteSwap(*ptr));
+		else if (extra == 1) PrintDebug("%03X\t\t%08X\t[%08X]\t", iter, *ptr, _byteswap_ulong(*ptr));
 		else if (extra == 2) PrintDebug("%04X\t\t%08X\t%f", iter, *ptr, *(float*)ptr);
-		else if (extra == 3) PrintDebug("%03X\t\t%08X\t[%08X]\t%f", iter, *ptr, ByteSwap(*ptr), *(float*)ptr);
+		else if (extra == 3) PrintDebug("%03X\t\t%08X\t[%08X]\t%f", iter, *ptr, _byteswap_ulong(*ptr), *(float*)ptr);
 	}
 }

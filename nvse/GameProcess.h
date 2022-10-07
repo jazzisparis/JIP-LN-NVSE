@@ -240,9 +240,9 @@ public:
 	/*0D4*/virtual void		Unk_35(void);
 	/*0D8*/virtual void		StopIdle(Actor *actor);
 	/*0DC*/virtual void		Unk_37(void);
-	/*0E0*/virtual void		Unk_38(void);
-	/*0E4*/virtual void		Unk_39(void);
-	/*0E8*/virtual void		Unk_3A(void);
+	/*0E0*/virtual void		UpdateEssentialDownTimer();
+	/*0E4*/virtual float	GetEssentialDownTimer();
+	/*0E8*/virtual void		SetEssentialDownTimer(float _downTimer);
 	/*0EC*/virtual void		Unk_3B(void);
 	/*0F0*/virtual void		Unk_3C(void);
 	/*0F4*/virtual void		Unk_3D(void);
@@ -681,8 +681,8 @@ public:
 
 	PackageInfo		currentPackage;	// 04
 	float			unk1C;			// 1C	not initialized, only by descendant!
-	float			unk20;			// 20	not initialized, only by descendant to -1.0! flt020 gets set to GameHour minus one on package evaluation
-	UInt32			unk24;			// 24	not initialized, only by descendant!
+	float			hourLastProcessed;	// 20	not initialized, only by descendant to -1.0! flt020 gets set to GameHour minus one on package evaluation
+	UInt32			dateLastProcessed;	// 24	not initialized, only by descendant!
 	UInt32			processLevel;	// 28	not initialized, only by descendant to 3 for Low, 2 for MidlleLow, 1 MiddleHighProcess and 0 for HigProcess
 	CachedValues	*cachedValues;	// 2C
 };

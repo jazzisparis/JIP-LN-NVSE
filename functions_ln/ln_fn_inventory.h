@@ -12,19 +12,16 @@ DEFINE_COMMAND_PLUGIN(BaseRemoveItem, 0, 3, kParams_OneForm_OneInt_OneOptionalFo
 struct HotkeyInfo
 {
 	TESForm		*form;
-	int			health;
+	float		health;
 	int			modFlags;
 
-	HotkeyInfo(TESForm *_form, float _health, int _modFlags) : form(_form), health((int)_health), modFlags(_modFlags) {}
-
-	void Clear()
-	{
-		form = NULL;
-		health = -1;
-		modFlags = 0;
-	}
+	HotkeyInfo(TESForm *_form, float _health, int _modFlags) : form(_form), health(_health), modFlags(_modFlags) {}
 }
-s_savedHotkeys[8] = {{nullptr, -1, 0}, {nullptr, -1, 0}, {nullptr, -1, 0}, {nullptr, -1, 0}, {nullptr, -1, 0}, {nullptr, -1, 0}, {nullptr, -1, 0}, {nullptr, -1, 0}};
+s_savedHotkeys[8] =
+{
+	{nullptr, -1.0F, 0}, {nullptr, -1.0F, 0}, {nullptr, -1.0F, 0}, {nullptr, -1.0F, 0},
+	{nullptr, -1.0F, 0}, {nullptr, -1.0F, 0}, {nullptr, -1.0F, 0}, {nullptr, -1.0F, 0}
+};
 
 void SetHotkey(UInt8 index, HotkeyInfo &hotkey)
 {
@@ -76,10 +73,10 @@ void SetHotkey(UInt8 index, HotkeyInfo &hotkey)
 				xHotkey = GetExtraType(xData, Hotkey);
 				if (type != kFormType_AlchemyItem)
 				{
-					if (hotkey.health != -2)
+					if (hotkey.health != -2.0F)
 					{
 						xHealth = GetExtraType(xData, Health);
-						matching = xHealth ? ((int)xHealth->health == hotkey.health) : (hotkey.health < 0);
+						matching = xHealth ? FloatsEqual(xHealth->health, hotkey.health) : (hotkey.health < 0);
 					}
 					else matching = true;
 					if (matching && (hotkey.modFlags >= 0))
@@ -179,7 +176,7 @@ bool Cmd_ClearAllHotkeys_Execute(COMMAND_ARGS)
 bool Cmd_SaveHotkeys_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	for (HotkeyInfo &hotkey : s_savedHotkeys) hotkey.Clear();
+	for (HotkeyInfo &hotkey : s_savedHotkeys) hotkey = HotkeyInfo(nullptr, -1.0F, 0);
 	ExtraContainerChanges::EntryDataList *entryList = g_thePlayer->GetContainerChangesList();
 	if (entryList)
 	{
@@ -206,7 +203,7 @@ bool Cmd_SaveHotkeys_Execute(COMMAND_ARGS)
 				s_savedHotkeys[index].form = entry->type;
 				if (type == kFormType_AlchemyItem) continue;
 				xHealth = GetExtraType(xData, Health);
-				if (xHealth) s_savedHotkeys[index].health = (int)xHealth->health;
+				if (xHealth) s_savedHotkeys[index].health = xHealth->health;
 				xModFlags = GetExtraType(xData, WeaponModFlags);
 				if (xModFlags) s_savedHotkeys[index].modFlags = xModFlags->flags;
 			}
@@ -299,7 +296,7 @@ bool Cmd_BaseAddItem_Execute(COMMAND_ARGS)
 	}
 	while (iter = iter->next);
 	formCount = (TESContainer::FormCount*)GameHeapAlloc(sizeof(TESContainer::FormCount));
-	formCount->contExtraData = (LvlListExtra*)GameHeapAlloc(sizeof(LvlListExtra));
+	formCount->contExtraData = (ContainerExtra*)GameHeapAlloc(sizeof(ContainerExtra));
 	formCount->contExtraData->ownerFaction = NULL;
 	formCount->contExtraData->globalVar = NULL;
 	formCount->contExtraData->health = 1;
@@ -335,7 +332,7 @@ bool Cmd_BaseAddItemHealth_Execute(COMMAND_ARGS)
 	}
 	while (iter = iter->next);
 	formCount = (TESContainer::FormCount*)GameHeapAlloc(sizeof(TESContainer::FormCount));
-	formCount->contExtraData = (LvlListExtra*)GameHeapAlloc(sizeof(LvlListExtra));
+	formCount->contExtraData = (ContainerExtra*)GameHeapAlloc(sizeof(ContainerExtra));
 	formCount->contExtraData->ownerFaction = NULL;
 	formCount->contExtraData->globalVar = NULL;
 	formCount->contExtraData->health = health;

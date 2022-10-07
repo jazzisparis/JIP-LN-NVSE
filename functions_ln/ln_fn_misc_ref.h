@@ -66,7 +66,7 @@ bool Cmd_SetReferenceFlag_Execute(COMMAND_ARGS)
 	{
 		if (inval) thisObj->flags |= flag;
 		else thisObj->flags &= ~flag;
-		//ThisCall(0x484B60, thisObj, 1);
+		//ThisCall(0x84A690, *(void**)0x11DDF38, thisObj, 1, 0);
 	}
 	return true;
 }

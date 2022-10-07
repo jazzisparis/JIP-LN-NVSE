@@ -159,10 +159,15 @@ struct NVSEMessagingInterface
 {
 	struct Message
 	{
-		const char	*sender;
-		UInt32		type;
-		UInt32		dataLen;
-		void		*data;
+		const char		*sender;
+		UInt32			type;
+		UInt32			dataLen;
+		union
+		{
+			void		*data;
+			const char	*fosPath;
+			bool		fosLoaded;
+		};
 	};
 
 	typedef void (* EventCallback)(Message* msg);

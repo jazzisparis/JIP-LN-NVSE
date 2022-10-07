@@ -762,7 +762,7 @@ public:
 };
 
 // 0C
-struct LvlListExtra
+struct ContainerExtra
 {
 	union						// 00
 	{
@@ -785,7 +785,7 @@ public:
 	{
 		SInt32				count;			//	00
 		TESForm				*form;			//	04
-		LvlListExtra		*contExtraData;	//	08
+		ContainerExtra		*contExtraData;	//	08
 	};
 	typedef tList<FormCount> FormCountList;
 
@@ -3079,7 +3079,7 @@ public:
 		TESForm			*form;		// 00
 		SInt16			count;		// 04
 		SInt16			level;		// 06
-		LvlListExtra	*extra;		// 08
+		ContainerExtra	*extra;		// 08
 	}; // 0C
 
 	enum

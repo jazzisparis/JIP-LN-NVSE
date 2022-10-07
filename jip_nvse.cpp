@@ -1376,6 +1376,10 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v56.68
 	/*2923*/REG_CMD(GetP2PRayCastRange);
 	/*2924*/REG_CMD(WeaponHasModType);
+	//	v56.74
+	/*2925*/REG_CMD(ProjectUITile);
+	/*2926*/REG_CMD(RotateAroundPoint);
+	/*2927*/REG_CMD(GetStringUIDimensions);
 
 	//===========================================================
 
@@ -1443,18 +1447,57 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	return true;
 }
 
+__declspec(noinline) void InitContainers()
+{
+	s_fileExtToType->InsertList({{"nif", 1}, {"egm", 1}, {"egt", 1}, {"kf", 1}, {"psa", 1}, {"tri", 1}, {"dds", 2},
+		{"fnt", 2}, {"psd", 2}, {"tai", 2}, {"tex", 2}, {"wav", 8}, {"lip", 0x10}, {"ogg", 0x10}, {"spt", 0x40},
+		{"ctl", 0x100}, {"dat", 0x100}, {"dlodsettings", 0x100}, {"xml", 0x100}});
+
+	s_internalMarkerIDs->InsertList({1, 2, 3, 4, 5, 6, 0x10, 0x12, 0x15, 0x23, 0x24, 0x32, 0x33, 0x34, 0x3B, 0x64, 0x65, 0x66,
+		0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77});
+
+	s_eventMasks->InsertList({{"OnActivate", 0}, {"OnAdd", 1}, {"OnEquip", 2}, {"OnActorEquip", 2}, {"OnDrop", 4}, {"OnUnequip", 8},
+		{"OnActorUnequip", 8}, {"OnDeath", 0x10}, {"OnMurder", 0x20}, {"OnCombatEnd", 0x40}, {"OnHit", 0x80}, {"OnHitWith", 0x100},
+		{"OnPackageStart", 0x200}, {"OnPackageDone", 0x400}, {"OnPackageChange", 0x800}, {"OnLoad", 0x1000}, {"OnMagicEffectHit", 0x2000},
+		{"OnSell", 0x4000}, {"OnStartCombat", 0x8000}, {"OnOpen", 0x10000}, {"OnClose", 0x20000}, {"SayToDone", 0x40000}, {"OnGrab", 0x80000},
+		{"OnRelease", 0x100000}, {"OnDestructionStageChange", 0x200000}, {"OnFire", 0x400000}, {"OnTrigger", 0x10000000},
+		{"OnTriggerEnter", 0x20000000}, {"OnTriggerLeave", 0x40000000}, {"OnReset", 0x80000000}});
+
+	s_optionalHacks->InsertList({{"bIgnoreDTDRFix", 1}, {"bEnableFO3Repair", 2}, {"bEnableBigGunsSkill", 3}, {"bProjImpactDmgFix", 4}, {"bGameDaysPassedFix", 5},
+		{"bHardcoreNeedsFix", 6}, {"bNoFailedScriptLocks", 7}, {"bDoublePrecision", 8}, {"bQttSelectShortKeys", 9}, {"bFO3WpnDegradation", 11},
+		{"bLocalizedDTDR", 12}, {"bVoiceModulationFix", 13}, {"bSneakBoundingBoxFix", 14}, {"bEnableNVACAlerts", 15}, {"bLoadScreenFix", 16},
+		{"bNPCWeaponMods", 17}, {"uNPCPerks", 18}, {"bCreatureSpreadFix", 19}, {"uWMChancePerLevel", 20}, {"uWMChanceMin", 21}, {"uWMChanceMax", 22}});
+
+	s_LNEventNames->InsertList({{"OnCellEnter", kLNEventMask_OnCellEnter}, {"OnCellExit", kLNEventMask_OnCellExit}, {"OnPlayerGrab", kLNEventMask_OnPlayerGrab},
+		{"OnPlayerRelease", kLNEventMask_OnPlayerRelease}, {"OnCrosshairOn", kLNEventMask_OnCrosshairOn}, {"OnCrosshairOff", kLNEventMask_OnCrosshairOff},
+		{"OnButtonDown", kLNEventMask_OnButtonDown}, {"OnButtonUp", kLNEventMask_OnButtonUp}, {"OnKeyDown", kLNEventMask_OnKeyDown},
+		{"OnKeyUp", kLNEventMask_OnKeyUp}, {"OnControlDown", kLNEventMask_OnControlDown}, {"OnControlUp", kLNEventMask_OnControlUp}});
+
+	s_menuNameToID->InsertList({{"MessageMenu", kMenuType_Message}, {"InventoryMenu", kMenuType_Inventory}, {"StatsMenu", kMenuType_Stats},
+		{"HUDMainMenu", kMenuType_HUDMain}, {"LoadingMenu", kMenuType_Loading}, {"ContainerMenu", kMenuType_Container}, {"DialogMenu", kMenuType_Dialog},
+		{"SleepWaitMenu", kMenuType_SleepWait}, {"StartMenu", kMenuType_Start}, {"LockpickMenu", kMenuType_LockPick}, {"QuantityMenu", kMenuType_Quantity},
+		{"MapMenu", kMenuType_Map}, {"BookMenu", kMenuType_Book}, {"LevelUpMenu", kMenuType_LevelUp}, {"RepairMenu", kMenuType_Repair},
+		{"RaceSexMenu", kMenuType_RaceSex}, {"CharGenMenu", kMenuType_CharGen}, {"TextEditMenu", kMenuType_TextEdit}, {"BarterMenu", kMenuType_Barter},
+		{"SurgeryMenu", kMenuType_Surgery}, {"HackingMenu", kMenuType_Hacking}, {"VATSMenu", kMenuType_VATS}, {"ComputersMenu", kMenuType_Computers},
+		{"RepairServicesMenu", kMenuType_RepairServices}, {"TutorialMenu", kMenuType_Tutorial}, {"SpecialBookMenu", kMenuType_SpecialBook},
+		{"ItemModMenu", kMenuType_ItemMod}, {"LoveTesterMenu", kMenuType_LoveTester}, {"CompanionWheelMenu", kMenuType_CompanionWheel},
+		{"TraitSelectMenu", kMenuType_TraitSelect}, {"RecipeMenu", kMenuType_Recipe}, {"SlotMachineMenu", kMenuType_SlotMachine},
+		{"BlackjackMenu", kMenuType_Blackjack}, {"RouletteMenu", kMenuType_Roulette}, {"CaravanMenu", kMenuType_Caravan}, {"TraitMenu", kMenuType_Trait}});
+	
+	*s_NiFixedStringsMap;
+	*s_lightFormEDIDMap;
+}
+
 void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 {
 	switch (nvseMsg->type)
 	{
 		case NVSEMessagingInterface::kMessage_PostLoad:
 		{
-			*s_lightFormEDIDMap;
-			*s_fileExtToType;
-
 			WriteRelCall(0x86B0F4, (UInt32)GetSingletonsHook);
 			SAFE_WRITE_BUF(0x86B1EE, "\x0F\x1F\x44\x00\x00");
 
+			InitContainers();
 			InitJIPHooks();
 			InitGamePatches();
 			InitCmdPatches();
@@ -1470,7 +1513,7 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			JIPScriptRunner::RunScripts(kRunOn_ExitGame);
 			break;
 		case NVSEMessagingInterface::kMessage_ExitToMainMenu:
-			s_dataChangedFlags = kChangedFlag_All;
+			ProcessDataChangedFlags(kChangedFlag_All);
 			DoPreLoadGameHousekeeping();
 			RestoreLinkedRefs();
 			s_lastLoadedPath[0] = 0;
@@ -1479,23 +1522,26 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 		case NVSEMessagingInterface::kMessage_LoadGame:
 			break;
 		case NVSEMessagingInterface::kMessage_SaveGame:
-			memcpy(s_lastLoadedPath, nvseMsg->data, nvseMsg->dataLen + 1);
+			COPY_BYTES(s_lastLoadedPath, nvseMsg->fosPath, nvseMsg->dataLen + 1);
 			s_dataChangedFlags = 0;
 			JIPScriptRunner::RunScripts(kRunOn_SaveGame);
 			break;
 		case NVSEMessagingInterface::kMessage_Precompile:
 			break;
 		case NVSEMessagingInterface::kMessage_PreLoadGame:
-			if (strcmp(s_lastLoadedPath, (const char*)nvseMsg->data))
+			if (StrCompareCS(s_lastLoadedPath, nvseMsg->fosPath))
 			{
-				memcpy(s_lastLoadedPath, nvseMsg->data, nvseMsg->dataLen + 1);
+				COPY_BYTES(s_lastLoadedPath, nvseMsg->fosPath, nvseMsg->dataLen + 1);
 				s_dataChangedFlags = kChangedFlag_All;
 			}
 			DoPreLoadGameHousekeeping();
 			break;
 		case NVSEMessagingInterface::kMessage_PostLoadGame:
-			DoLoadGameHousekeeping();
-			JIPScriptRunner::RunScripts(kRunOn_LoadGame);
+			if (nvseMsg->fosLoaded)
+			{
+				DoLoadGameHousekeeping();
+				JIPScriptRunner::RunScripts(kRunOn_LoadGame);
+			}
 			break;
 		case NVSEMessagingInterface::kMessage_PostPostLoad:
 			break;
@@ -1524,7 +1570,7 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			break;
 		case NVSEMessagingInterface::kMessage_MainGameLoop:
 		{
-			if (!s_mainLoopCallbacks().Empty())
+			if (!s_mainLoopCallbacks->Empty())
 				CycleMainLoopCallbacks(*s_mainLoopCallbacks);
 			if (s_LNEventFlags)
 				LN_ProcessEvents();

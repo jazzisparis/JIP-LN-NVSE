@@ -173,7 +173,7 @@ bool Cmd_Search_Execute(COMMAND_ARGS)
 		{
 			for (UInt32 idx = 3; idx <= 120; idx++)
 			{
-				if (StrCompare(typeStr, TypeSignature::Array()[idx].signature) != 0)
+				if (StrCompareCI(typeStr, TypeSignature::Array()[idx].signature) != 0)
 					continue;
 				filter = 120 - idx;
 				break;
@@ -187,7 +187,7 @@ bool Cmd_Search_Execute(COMMAND_ARGS)
 		pValidTypes = (bool*)kValidSearchTypes;
 	else
 	{
-		MemZero(validTypes, sizeof(validTypes));
+		MEM_ZERO(validTypes, sizeof(validTypes));
 		validTypes[filter] = true;
 		pValidTypes = validTypes;
 	}
@@ -320,7 +320,7 @@ bool Cmd_GetFormFromMod_Execute(COMMAND_ARGS)
 	char modName[0x80], refIDStr[0x10];
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &modName, &refIDStr)) return true;
 	UInt8 modIndex;
-	if (StrCompare(modName, "NONE") != 0)
+	if (StrCompareCI(modName, "NONE") != 0)
 	{
 		modIndex = g_dataHandler->GetModIndex(modName);
 		if (modIndex == 0xFF) return true;
@@ -337,7 +337,7 @@ bool Cmd_GetStringSetting_Execute(COMMAND_ARGS)
 	const char *resStr = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName) && ((settingName[0] | 0x20) == 's'))
 	{
-		Setting *setting = s_gameSettingsMap().Get(settingName);
+		Setting *setting = s_gameSettingsMap->Get(settingName);
 		if (setting)
 			resStr = setting->data.str;
 	}
@@ -351,7 +351,7 @@ bool Cmd_SetStringSetting_Execute(COMMAND_ARGS)
 	char *buffer = GetStrArgBuffer();
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName, buffer) && ((settingName[0] | 0x20) == 's'))
 	{
-		Setting *setting = s_gameSettingsMap().Get(settingName);
+		Setting *setting = s_gameSettingsMap->Get(settingName);
 		if (setting)
 			setting->Set(buffer, true);
 	}
@@ -366,7 +366,7 @@ bool Cmd_GetGameSettings_Execute(COMMAND_ARGS)
 	{
 		NVSEArrayVar *outArray = CreateStringMap(NULL, NULL, 0, scriptObj);
 		char namePrfx;
-		for (auto gmstIter = s_gameSettingsMap().Begin(); gmstIter; ++gmstIter)
+		for (auto gmstIter = s_gameSettingsMap->Begin(); gmstIter; ++gmstIter)
 		{
 			namePrfx = *gmstIter->name | 0x20;
 			if (namePrfx == 's')

@@ -329,7 +329,7 @@ bool Hook_GetNumericGameSetting_Execute(COMMAND_ARGS)
 	char settingName[0x80];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName) && ((settingName[0] | 0x20) != 's'))
 	{
-		Setting *setting = s_gameSettingsMap().Get(settingName);
+		Setting *setting = s_gameSettingsMap->Get(settingName);
 		if (setting)
 		{
 			setting->Get(result);
@@ -348,7 +348,7 @@ bool Hook_SetNumericGameSetting_Execute(COMMAND_ARGS)
 	double newVal;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName, &newVal) && ((settingName[0] | 0x20) != 's'))
 	{
-		Setting *setting = s_gameSettingsMap().Get(settingName);
+		Setting *setting = s_gameSettingsMap->Get(settingName);
 		if (setting)
 		{
 			setting->Set(newVal);
@@ -366,7 +366,7 @@ bool Hook_GetNumericINISetting_Execute(COMMAND_ARGS)
 	char settingName[0x80];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName) && ((settingName[0] | 0x20) != 's'))
 	{
-		Setting *setting = s_INISettingsMap().Get(settingName);
+		Setting *setting = s_INISettingsMap->Get(settingName);
 		if (setting)
 		{
 			setting->Get(result);
@@ -385,7 +385,7 @@ bool Hook_SetNumericINISetting_Execute(COMMAND_ARGS)
 	double newVal;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName, &newVal) && ((settingName[0] | 0x20) != 's'))
 	{
-		Setting *setting = s_INISettingsMap().Get(settingName);
+		Setting *setting = s_INISettingsMap->Get(settingName);
 		if (setting)
 		{
 			setting->Set(newVal);
@@ -433,7 +433,7 @@ bool Hook_Update3D_Execute(COMMAND_ARGS)
 
 bool __fastcall IsJIPAlias(const char *pluginName)
 {
-	return !StrCompare(pluginName, "JIP NVSE Plugin") || !StrCompare(pluginName, "lutana_nvse") || StrBeginsCI(pluginName, "JIP LN NVSE");
+	return !StrCompareCI(pluginName, "JIP NVSE Plugin") || !StrCompareCI(pluginName, "lutana_nvse") || StrBeginsCI(pluginName, "JIP LN NVSE");
 }
 
 bool Hook_IsPluginInstalled_Execute(COMMAND_ARGS)

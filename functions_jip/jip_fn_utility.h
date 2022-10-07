@@ -292,6 +292,7 @@ bool Cmd_ReadStringFromFile_Execute(COMMAND_ARGS)
 		ReplaceChr(filePath, '/', '\\');
 		if (FileToBuffer(filePath, buffer) && (startAt || lineCount))
 		{
+			buffer[kMaxMessageLength - 1] = 0;
 			if (startAt) startAt--;
 			char data;
 			while (data = *buffer)
@@ -382,22 +383,22 @@ bool Cmd_ClearJIPSavedData_Execute(COMMAND_ARGS)
 	UInt8 modIdx = scriptObj->GetOverridingModIdx();
 	if (scrVars)
 	{
-		for (auto ownerIter = s_scriptVariablesBuffer().Begin(); ownerIter; ++ownerIter)
+		for (auto ownerIter = s_scriptVariablesBuffer->Begin(); ownerIter; ++ownerIter)
 		{
 			for (auto varIter = ownerIter().Begin(); varIter; ++varIter)
 				if (varIter().modIdx == modIdx) varIter.Remove();
 			if (ownerIter().Empty()) ownerIter.Remove();
 		}
 	}
-	if (lnkRefs && !s_linkedRefModified().Empty())
+	if (lnkRefs && !s_linkedRefModified->Empty())
 	{
-		for (auto refIter = s_linkedRefModified().Begin(); refIter; ++refIter)
+		for (auto refIter = s_linkedRefModified->Begin(); refIter; ++refIter)
 			if (refIter().modIdx == modIdx) refIter.Remove();
 		s_dataChangedFlags |= kChangedFlag_LinkedRefs;
 	}
-	if (auxVars && s_auxVariablesPerm().Erase((auxVars == 2) ? 0xFF : modIdx))
+	if (auxVars && s_auxVariablesPerm->Erase((auxVars == 2) ? 0xFF : modIdx))
 		s_dataChangedFlags |= kChangedFlag_AuxVars;
-	if (refMaps && s_refMapArraysPerm().Erase((refMaps == 2) ? 0xFF : modIdx))
+	if (refMaps && s_refMapArraysPerm->Erase((refMaps == 2) ? 0xFF : modIdx))
 		s_dataChangedFlags |= kChangedFlag_RefMaps;
 	return true;
 }
@@ -438,7 +439,7 @@ bool Cmd_ModLogPrint_Execute(COMMAND_ARGS)
 	*(UInt32*)endPtr = 'gol.';
 	endPtr[4] = 0;
 	FileStream outputFile;
-	if (outputFile.OpenWrite(modLogPath, !s_openLogs().Insert(modIdx)))
+	if (outputFile.OpenWrite(modLogPath, !s_openLogs->Insert(modIdx)))
 	{
 		if (indentLevel)
 		{
@@ -458,7 +459,7 @@ bool Cmd_GetOptionalPatch_Execute(COMMAND_ARGS)
 	int enabled = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &patchName))
 	{
-		switch (s_optionalHacks().Get(patchName))
+		switch (s_optionalHacks->Get(patchName))
 		{
 			case 1:
 				enabled = HOOK_INSTALLED(CalculateHitDamage);
@@ -526,7 +527,7 @@ bool Cmd_SetOptionalPatch_Execute(COMMAND_ARGS)
 	char patchName[0x40];
 	UInt32 enable;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &patchName, &enable))
-		SetOptionalPatch(s_optionalHacks().Get(patchName), enable != 0);
+		SetOptionalPatch(s_optionalHacks->Get(patchName), enable != 0);
 	return true;
 }
 

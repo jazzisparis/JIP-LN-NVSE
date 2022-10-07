@@ -147,7 +147,38 @@ __declspec(naked) hkQuaternion& __fastcall hkQuaternion::FromAxisAngle(const Axi
 	}
 }
 
-__declspec(naked) hkQuaternion& __fastcall hkQuaternion::operator*=(const hkQuaternion &rhs)
+__declspec(naked) __m128 __vectorcall hkQuaternion::MultiplyVector(__m128 vec) const
+{
+	__asm
+	{
+		andps	xmm0, PS_XYZ0Mask
+		pshufd	xmm1, [ecx], 0x93
+		pshufd	xmm2, xmm1, 0
+		psrldq	xmm1, 4
+		movaps	xmm3, xmm1
+		pshufd	xmm4, xmm0, 0xC9
+		pshufd	xmm5, xmm3, 0x12
+		mulps	xmm4, xmm5
+		pshufd	xmm5, xmm0, 0xD2
+		pshufd	xmm6, xmm3, 9
+		mulps	xmm5, xmm6
+		subps	xmm4, xmm5
+		addps	xmm4, xmm4
+		mulps	xmm2, xmm4
+		addps	xmm2, xmm0
+		pshufd	xmm0, xmm4, 0xC9
+		pshufd	xmm5, xmm1, 0x12
+		mulps	xmm0, xmm5
+		pshufd	xmm5, xmm4, 0xD2
+		pshufd	xmm6, xmm1, 9
+		mulps	xmm5, xmm6
+		subps	xmm0, xmm5
+		addps	xmm0, xmm2
+		retn
+	}
+}
+
+__declspec(naked) __m128 __vectorcall hkQuaternion::MultiplyQuaternion(const hkQuaternion &rhs) const
 {
 	__asm
 	{
@@ -156,7 +187,7 @@ __declspec(naked) hkQuaternion& __fastcall hkQuaternion::operator*=(const hkQuat
 		xorps	xmm6, xmm6
 		movaps	xmm3, xmm1
 		mulps	xmm3, xmm2
-		movss	xmm5, PS_FlipSignMask0
+		pshufd	xmm5, PS_FlipSignMask0, 1
 		xorps	xmm3, xmm5
 		haddps	xmm3, xmm6
 		haddps	xmm3, xmm6
@@ -183,8 +214,7 @@ __declspec(naked) hkQuaternion& __fastcall hkQuaternion::operator*=(const hkQuat
 		haddps	xmm3, xmm6
 		unpcklps	xmm4, xmm3
 		unpcklpd	xmm0, xmm4
-		movaps	[ecx], xmm0
-		mov		eax, ecx
+		shufps	xmm0, xmm0, 0x39
 		retn
 	}
 }
@@ -194,35 +224,18 @@ __declspec(naked) __m128 __vectorcall hkQuaternion::ToEulerPRY() const
 	__asm
 	{
 		movaps	xmm6, [ecx]
-		pshufd	xmm0, xmm6, 0x47
-		pshufd	xmm1, xmm6, 0x48
-		mulps	xmm0, xmm1
-		haddps	xmm0, xmm0
-		addps	xmm0, xmm0
-		pshufd	xmm1, xmm0, 1
-		xorps	xmm1, PS_FlipSignMask0
-		addss	xmm1, PS_V3_One
-		call	ATan2
-		movaps	xmm7, xmm0
-		pshufd	xmm0, xmm6, 0xB
-		pshufd	xmm1, xmm6, 1
-		mulps	xmm0, xmm1
-		hsubps	xmm0, xmm0
-		addss	xmm0, xmm0
-		call	ASin
-		unpcklps	xmm7, xmm0
-		pshufd	xmm0, xmm6, 0x93
-		pshufd	xmm1, xmm6, 0x96
-		mulps	xmm0, xmm1
-		haddps	xmm0, xmm0
-		addps	xmm0, xmm0
-		pshufd	xmm1, xmm0, 1
-		xorps	xmm1, PS_FlipSignMask0
-		addss	xmm1, PS_V3_One
-		call	ATan2
-		unpcklpd	xmm7, xmm0
-		movaps	xmm0, xmm7
-		retn
+		shufps	xmm6, xmm6, 0x93
+		jmp		NiQuaternion::ToEulerPRY+3
+	}
+}
+
+__declspec(naked) __m128 __vectorcall hkQuaternion::ToEulerYPR() const
+{
+	__asm
+	{
+		movaps	xmm6, [ecx]
+		shufps	xmm6, xmm6, 0x93
+		jmp		NiQuaternion::ToEulerYPR+3
 	}
 }
 
@@ -296,11 +309,11 @@ __declspec(naked) void __fastcall hkMatrix3x4::operator=(const hkQuaternion &inQ
 	}
 }
 
-__declspec(naked) __m128 __vectorcall hkMatrix3x4::MultiplyVector(const hkVector4 &vec) const
+__declspec(naked) __m128 __vectorcall hkMatrix3x4::MultiplyVector(__m128 vec) const
 {
 	__asm
 	{
-		movups	xmm1, [edx]
+		movaps	xmm1, xmm0
 		andps	xmm1, PS_XYZ0Mask
 		xorps	xmm3, xmm3
 		movaps	xmm0, [ecx]
@@ -321,11 +334,11 @@ __declspec(naked) __m128 __vectorcall hkMatrix3x4::MultiplyVector(const hkVector
 	}
 }
 
-__declspec(naked) __m128 __vectorcall hkMatrix3x4::MultiplyVectorInv(const hkVector4 &vec) const
+__declspec(naked) __m128 __vectorcall hkMatrix3x4::MultiplyVectorInv(__m128 vec) const
 {
 	__asm
 	{
-		movups	xmm3, [edx]
+		movaps	xmm3, xmm0
 		andps	xmm3, PS_XYZ0Mask
 		movaps	xmm0, [ecx]
 		pshufd	xmm1, xmm3, 0xC0

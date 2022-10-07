@@ -141,6 +141,75 @@ __declspec(naked) void __fastcall DoQueuedPlayerHook(QueuedPlayer *queuedPlayer)
 	}
 }
 
+__declspec(naked) void __fastcall SetContainerItemsHealthHook(TESContainer *container, int EDX, float healthPerc)
+{
+	__asm
+	{
+		push	esi
+		push	edi
+		movss	xmm0, [esp+0xC]
+		minss	xmm0, kMaxHealth
+		xorps	xmm1, xmm1
+		maxss	xmm0, xmm1
+		movss	[esp+0xC], xmm0
+		lea		esi, [ecx+4]
+		ALIGN 16
+	iterHead:
+		test	esi, esi
+		jz		done
+		mov		edi, [esi]
+		mov		esi, [esi+4]
+		test	edi, edi
+		jz		iterHead
+		mov		eax, [edi+8]
+		mov		ecx, [edi+4]
+		mov		dl, [ecx+4]
+		cmp		dl, kFormType_TESObjectARMO
+		jz		hasHealth
+		cmp		dl, kFormType_TESObjectWEAP
+		jnz		clrExtra
+		cmp		byte ptr [ecx+0xF4], 0xA
+		jb		hasHealth
+	clrExtra:
+		test	eax, eax
+		jz		iterHead
+		mov		dword ptr [eax+8], 0x3F800000
+		mov		edx, [eax]
+		test	edx, edx
+		jnz		iterHead
+		mov		[edi+8], edx
+		push	eax
+		GAME_HEAP_FREE
+		jmp		iterHead
+		ALIGN 16
+	hasHealth:
+		test	eax, eax
+		jnz		hasExtra
+		push	0xC
+		GAME_HEAP_ALLOC
+		mov		[edi+8], eax
+		xor		edx, edx
+		mov		[eax], edx
+		mov		[eax+4], edx
+		mov		edx, [esp+0xC]
+		mov		[eax+8], edx
+		jmp		iterHead
+		ALIGN 16
+	hasExtra:
+		movss	xmm0, [esp+0xC]
+		minss	xmm0, [eax+8]
+		movss	[eax+8], xmm0
+		jmp		iterHead
+	done:
+		pop		edi
+		pop		esi
+		retn	4
+		ALIGN 16
+	kMaxHealth:
+		EMIT_DW(3F, 7F, BE, 77)
+	}
+}
+
 __declspec(naked) void TESGlobalLoadFormHook()
 {
 	__asm
@@ -475,14 +544,13 @@ __declspec(naked) void BarterSellFixHook()
 
 __declspec(naked) void JumpHeightFixHook()
 {
-	static const float kUnitConv = 6.999125481F;
 	__asm
 	{
 		add		esp, 8
 		mov		dword ptr [esi+0x3F0], 2
 		mov		dword ptr [esi+0x520], 0xB
 		movss	xmm0, [esi+0x540]
-		mulss	xmm0, kUnitConv
+		mulss	xmm0, PS_HKUnitCnvrt
 		addss	xmm0, [esp+0x28]
 		movss	[esi+0x544], xmm0
 		JMP_EAX(0xCD4486)
@@ -669,7 +737,7 @@ void __fastcall BuildMusicMarkerList(TESWorldSpace *worldspace, tList<TESObjectR
 	if (s_audioMarkerLastWorld != worldspace)
 	{
 		s_audioMarkerLastWorld = worldspace;
-		s_musicMarkerList().Clear();
+		s_musicMarkerList->Clear();
 		auto traverse = markerRefList->Head();
 		TESObjectREFR *markerRef;
 		ExtraAudioMarker *xAudioMarker;
@@ -682,12 +750,12 @@ void __fastcall BuildMusicMarkerList(TESWorldSpace *worldspace, tList<TESObjectR
 			xAudioMarker = GetExtraType(&markerRef->extraDataList, AudioMarker);
 			if (!xAudioMarker || !xAudioMarker->data)
 				continue;
-			s_musicMarkerList().InsertSorted(MusicMarker(markerRef, xAudioMarker->data));
+			s_musicMarkerList->InsertSorted(MusicMarker(markerRef, xAudioMarker->data));
 		}
 	}
 	tList<MusicMarker> *musicMarkers = &g_thePlayer->musicMarkers;
 	MusicMarker *musicMarker;
-	for (auto mkIter = s_musicMarkerList().Begin(); mkIter; ++mkIter)
+	for (auto mkIter = s_musicMarkerList->Begin(); mkIter; ++mkIter)
 	{
 		musicMarker = (MusicMarker*)GameHeapAlloc(8);
 		*musicMarker = mkIter();
@@ -1009,13 +1077,17 @@ __declspec(naked) void ConstructItemEntryNameHook()
 	getName:
 		mov		eax, [ebp+0xC]
 		mov		eax, [eax+8]
-		movzx	edx, word ptr [eax+0x38]
-		test	edx, edx
+		movzx	ecx, word ptr [eax+0x38]
+		test	ecx, ecx
 		jz		done
-		push	edx
-		mov		edx, [eax+0x34]
-		lea		ecx, [ebp-0x88]
-		call	StrLenCopy
+		push	esi
+		push	edi
+		mov		esi, [eax+0x34]
+		lea		edi, [ebp-0x88]
+		rep movsb
+		mov		eax, edi
+		pop		edi
+		pop		esi
 		mov		[eax], ebx
 		and		bl, 1
 		add		eax, ebx
@@ -1133,6 +1205,28 @@ __declspec(naked) bool __fastcall GetEffectHiddenHook(EffectItem *effItem)
 	retnTrue:
 		mov		al, 1
 		retn
+	}
+}
+
+bool s_mapMenuSkipSetXY = false;
+
+__declspec(naked) void RefreshMapMenuHook()
+{
+	__asm
+	{
+		cmp		s_mapMenuSkipSetXY, 0
+		jnz		skipRetn
+		push	0
+		push	kTileValue_width
+		mov		ecx, [ebp-0xD4]
+		mov		eax, [ecx+0x84]
+		mov		ecx, [eax+0x28]
+		CALL_EAX(ADDR_TileGetFloat)
+		fmul	dword ptr PS_V3_Half
+		JMP_EAX(0x79DF98)
+	skipRetn:
+		mov		s_mapMenuSkipSetXY, 0
+		JMP_EAX(0x79E053)
 	}
 }
 
@@ -2054,11 +2148,7 @@ __declspec(naked) void __fastcall MarkRefAsModifiedHook(TESObjectREFR *refr, int
 		jz		proceed
 		retn	4
 	proceed:
-		push	0
-		push	eax
-		push	ecx
-		mov		ecx, ds:0x11DDF38
-		CALL_EAX(0x84A690)
+		MARK_MODIFIED(ecx, eax)
 		retn	4
 	}
 }
@@ -2161,17 +2251,16 @@ MediaSet* __stdcall PickMediaSetHook(ListNode<MediaSet> *listHead)
 {
 	if (!listHead->next)
 		return listHead->data;
-	MediaSetArray *msArr;
-	s_pickMediaSetMap().Insert(listHead, &msArr);
-	if (msArr->Empty())
+	MediaSetArray &msArr = s_pickMediaSetMap()[listHead];
+	if (msArr.Empty())
 	{
 		do {
 			if (listHead->data)
-				msArr->Append(listHead->data);
+				msArr.Append(listHead->data);
 		} while (listHead = listHead->next);
-		msArr->Shuffle();
+		msArr.Shuffle();
 	}
-	return msArr->Pop();
+	return msArr.Pop();
 }
 
 TempObject<Vector<TESLoadScreen*>> s_locationLoadScreens, s_genericLoadScreens;
@@ -2292,7 +2381,7 @@ void __fastcall DistributeWeaponMods(Actor *actor)
 	__asm
 	{
 		mov		eax, weapon
-		movdqu	xmm0, xmmword ptr [eax+0x350]
+		movups	xmm0, [eax+0x350]
 		xorps	xmm1, xmm1
 		pcmpeqd	xmm1, xmm0
 		movmskps	eax, xmm1
@@ -2383,8 +2472,8 @@ void BuildValidNPCPerks()
 		if (isValid)
 		{
 			if (perk->data.isTrait)
-				s_validNPCTraits().Append(perk);
-			else s_validNPCPerks().Append(perk);
+				s_validNPCTraits->Append(perk);
+			else s_validNPCPerks->Append(perk);
 		}
 	isInvalid:
 		continue;
@@ -2408,8 +2497,8 @@ class NPCPerkEntryPoints
 public:
 	static NPCPerkEntryPoints *Create()
 	{
-		NPCPerkEntryPoints *lists = POOL_ALLOC(1, NPCPerkEntryPoints);
-		MemZero(lists, sizeof(NPCPerkEntryPoints));
+		NPCPerkEntryPoints *lists = Pool_Alloc<NPCPerkEntryPoints>();
+		MEM_ZERO(lists, sizeof(NPCPerkEntryPoints));
 		return lists;
 	}
 
@@ -2423,7 +2512,7 @@ public:
 	{
 		for (auto &iter : perkEntries)
 			iter.RemoveAll();
-		POOL_FREE(this, 1, NPCPerkEntryPoints);
+		Pool_Free<NPCPerkEntryPoints>(this);
 	}
 };
 
@@ -2473,29 +2562,29 @@ NPCPerksInfo* __fastcall AddStartingPerks(Actor *actor, NPCPerksInfo *perksInfo)
 {
 	if (s_NPCPerksAutoAdd && IS_ID(actor, Character))
 	{
-		if (!perksInfo && !s_NPCPerksInfoMap().Insert(actor->refID, &perksInfo))
+		if (!perksInfo && !s_NPCPerksInfoMap->Insert(actor->refID, &perksInfo))
 			perksInfo->Reset();
-		perksInfo->perkRanks.Emplace(s_validNPCTraits()[GetRandomInt(s_validNPCTraits().Size())], 1);
+		perksInfo->perkRanks.Emplace(s_validNPCTraits()[GetRandomInt(s_validNPCTraits->Size())], 1);
 		UInt32 level = actor->GetLevel();
 		if (level >= 3)
 		{
-			s_NPCPerksPick().Clear();
+			s_NPCPerksPick->Clear();
 			BGSPerk *perk;
 			UInt8 minLevel = (level * 3) >> 1;
-			for (auto rstIter = s_validNPCPerks().Begin(); rstIter; ++rstIter)
+			for (auto rstIter = s_validNPCPerks->Begin(); rstIter; ++rstIter)
 			{
 				perk = *rstIter;
 				if (perk->data.minLevel > minLevel) continue;
 				for (UInt8 ranks = perk->data.numRanks; ranks; ranks--)
-					s_NPCPerksPick().Append(perk);
+					s_NPCPerksPick->Append(perk);
 			}
-			UInt32 size = s_NPCPerksPick().Size();
+			UInt32 size = s_NPCPerksPick->Size();
 			if (size)
 			{
 				if (level >= 30) level = 10;
 				else level /= 3;
 				if (level < size)
-					s_NPCPerksPick().Shuffle();
+					s_NPCPerksPick->Shuffle();
 				else level = size;
 				do
 				{
@@ -2507,14 +2596,14 @@ NPCPerksInfo* __fastcall AddStartingPerks(Actor *actor, NPCPerksInfo *perksInfo)
 	}
 	if (actor->isTeammate && !g_thePlayer->perkRanksTM.Empty())
 	{
-		if (!perksInfo && !s_NPCPerksInfoMap().Insert(actor->refID, &perksInfo))
+		if (!perksInfo && !s_NPCPerksInfoMap->Insert(actor->refID, &perksInfo))
 			perksInfo->Reset();
 		auto perkIter = g_thePlayer->perkRanksTM.Head();
 		PerkRank *perkRank;
 		UInt8 *rankPtr;
 		do
 		{
-			if ((perkRank = perkIter->data) && (perksInfo->perkRanks.Insert(perkRank->perk, &rankPtr) || (*rankPtr < perkRank->rank)))
+			if ((perkRank = perkIter->data) && (perksInfo->perkRanks.InsertKey(perkRank->perk, &rankPtr) || (*rankPtr < perkRank->rank)))
 				*rankPtr = perkRank->rank;
 		}
 		while (perkIter = perkIter->next);
@@ -2568,12 +2657,12 @@ void __fastcall SetPerkRankNPCHook(Actor *actor, int EDX, BGSPerk *perk, UInt8 n
 	NPCPerksInfo *perksInfo = actor->extraDataList.perksInfo;
 	if (!perksInfo)
 	{
-		if (!s_NPCPerksInfoMap().Insert(actor->refID, &perksInfo))
+		if (!s_NPCPerksInfoMap->Insert(actor->refID, &perksInfo))
 			perksInfo->Reset();
 		AddStartingPerks(actor, perksInfo);
 	}
 	UInt8 *rankPtr;
-	if (perksInfo->perkRanks.Insert(perk, &rankPtr) || (*rankPtr < newRank))
+	if (perksInfo->perkRanks.InsertKey(perk, &rankPtr) || (*rankPtr < newRank))
 	{
 		*rankPtr = newRank;
 		s_dataChangedFlags |= kChangedFlag_NPCPerks;
@@ -2660,7 +2749,7 @@ void __fastcall RemovePerkNPCHook(Actor *actor, int EDX, BGSPerk *perk, bool for
 	if (perksInfo->perkRanks.Empty())
 	{
 		actor->extraDataList.perksInfo = nullptr;
-		s_NPCPerksInfoMap().Erase(actor->refID);
+		s_NPCPerksInfoMap->Erase(actor->refID);
 	}
 }
 
@@ -3551,7 +3640,7 @@ __declspec(naked) void VoiceModulationFixHook()
 	}
 }
 
-AlignedVector4 s_shapeVerticesZ[10];
+__m128 s_shapeVerticesZ[10];
 bhkCharControllerShape *s_pcControllerShape = nullptr;
 
 __declspec(naked) void InitControllerShapeHook()
@@ -3672,7 +3761,7 @@ void CheckNVACLog()
 	if (!startAt) return;
 	srcFile.SetOffset(startAt);
 	length -= startAt + 2;
-	char *buffer = GetStrArgBuffer(), *endPtr = StrLenCopy(buffer, "\n>>>>>>>>>>> BEGIN NVAC REPORT >>>>>>>>>>>\n", 43);
+	char *buffer = GetStrArgBuffer(), *endPtr = CPY_RET_END(buffer, "\n>>>>>>>>>>> BEGIN NVAC REPORT >>>>>>>>>>>\n", 43);
 	srcFile.ReadBuf(endPtr, length);
 	memcpy(endPtr + length, "\n<<<<<<<<<<<< END NVAC REPORT <<<<<<<<<<<<\n", 44);
 	Console_Print(buffer);
@@ -4003,10 +4092,7 @@ __declspec(naked) void DoOperatorHook()
 	}
 }
 
-TempObject<UnorderedMap<const char*, UInt32>> s_optionalHacks(std::initializer_list<MappedPair<const char*, UInt32>>({{"bIgnoreDTDRFix", 1}, {"bEnableFO3Repair", 2},
-	{"bEnableBigGunsSkill", 3}, {"bProjImpactDmgFix", 4}, {"bGameDaysPassedFix", 5}, {"bHardcoreNeedsFix", 6}, {"bNoFailedScriptLocks", 7}, {"bDoublePrecision", 8},
-	{"bQttSelectShortKeys", 9}, {"bFO3WpnDegradation", 11}, {"bLocalizedDTDR", 12}, {"bVoiceModulationFix", 13}, {"bSneakBoundingBoxFix", 14}, {"bEnableNVACAlerts", 15},
-	{"bLoadScreenFix", 16}, {"bNPCWeaponMods", 17}, {"uNPCPerks", 18}, {"bCreatureSpreadFix", 19}, {"uWMChancePerLevel", 20}, {"uWMChanceMin", 21}, {"uWMChanceMax", 22}}));
+TempObject<UnorderedMap<const char*, UInt32>> s_optionalHacks(0x20);
 
 bool s_bigGunsSkill = false, s_failedScriptLocks = false, s_NVACAlerts = false, s_NPCWeaponMods = false, s_NPCPerks = false;
 UInt32 s_NVACAddress = 0;
@@ -4132,7 +4218,7 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			if (!HOOK_SET(GetSuitableLoadScreens, bEnable))
 				return false;
 			HOOK_SET(PickLoadScreen, bEnable);
-			if (bEnable && s_locationLoadScreens().Empty())
+			if (bEnable && s_locationLoadScreens->Empty())
 			{
 				auto lscrIter = g_dataHandler->loadScreenList.Head();
 				TESLoadScreen *loadScreen;
@@ -4141,8 +4227,8 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 					loadScreen = lscrIter->data;
 					if (!loadScreen) continue;
 					if (loadScreen->locations.Empty())
-						s_genericLoadScreens().Append(loadScreen);
-					else s_locationLoadScreens().Append(loadScreen);
+						s_genericLoadScreens->Append(loadScreen);
+					else s_locationLoadScreens->Append(loadScreen);
 				}
 				while (lscrIter = lscrIter->next);
 			}
@@ -4219,11 +4305,19 @@ __declspec(naked) void InitFontManagerHook()
 		push	ebx
 		mov		ecx, eax
 		CALL_EAX(ADDR_InitFontInfo)
-		mov		[esi], eax
 		push	eax
+		push	ecx
+		push	esp
 		push	dword ptr [edi]
 		mov		ecx, offset s_fontInfosMap
-		call	UnorderedMap<const char*, FontInfo*>::InsertNotIn
+		call	UnorderedMap<const char*, FontInfo*>::InsertKey
+		test	al, al
+		pop		ecx
+		pop		eax
+		jz		defFontNext
+		mov		[ecx], eax
+	defFontNext:
+		mov		[esi], eax
 		add		esi, 4
 		add		edi, 0xC
 		inc		ebx
@@ -4253,9 +4347,14 @@ __declspec(naked) void InitFontManagerHook()
 		cmp		dword ptr [eax+0x38], 0
 		jz		doFree
 		push	eax
+		push	ecx
+		push	esp
 		push	dword ptr [edi]
 		mov		ecx, offset s_fontInfosMap
-		call	UnorderedMap<const char*, FontInfo*>::InsertNotIn
+		call	UnorderedMap<const char*, FontInfo*>::InsertKey
+		pop		ecx
+		pop		eax
+		mov		[ecx], eax
 		jmp		extFontNext
 		ALIGN 16
 	doFree:
@@ -4281,7 +4380,7 @@ __declspec(naked) void InitFontManagerHook()
 
 bool ProcessCustomINI()
 {
-	if (s_INISettingsMap().Empty()) InitSettingMaps();
+	if (s_INISettingsMap->Empty()) InitSettingMaps();
 	char customINIPath[MAX_PATH];
 	memcpy(StrCopy(customINIPath, (char*)0x1202FA0), "FalloutCustom.ini", 18);
 	if (FileExists(customINIPath))
@@ -4302,7 +4401,7 @@ bool ProcessCustomINI()
 				*endPtr = ':';
 				StrCopy(endPtr + 1, currName);
 				currPair += pairSize;
-				setting = s_INISettingsMap().Get(settingName);
+				setting = s_INISettingsMap->Get(settingName);
 				if (!setting) continue;
 				switch (*settingName | 0x20)
 				{
@@ -4537,8 +4636,15 @@ void InitGamePatches()
 	SafeWrite32(0x9ED3F8, (UInt32)&s_moveAwayDistance);
 	SafeWrite32(0x9ED528, (UInt32)&s_moveAwayDistance);
 
-	SAFE_WRITE_BUF(0x40EB90, "\x0F\x57\xC9\xF3\x0F\x10\x44\x24\x04\xF3\x0F\x5D\x41\x08\xF3\x0F\x5F\xC1\xF3\x0F\x5D\x05\xE0\x31\x02\x01\xF3\x0F\x11\x41\x08\xC2\x04\x00");
+	SAFE_WRITE_BUF(0xA5B318, "\x0F\x1F\x84\x00\x00\x00\x00\x00\x66\x0F\x1F\x84\x00\x00\x00\x00\x00");
+	SAFE_WRITE_BUF(0xA5B391, "\x66\x66\x66\x0F\x1F\x84\x00\x00\x00\x00\x00");
+	SAFE_WRITE_BUF(0xA5B3A6, "\x66\x66\x66\x0F\x1F\x84\x00\x00\x00\x00\x00");
+	SAFE_WRITE_BUF(0xA5B5DD, "\x89\xC7\x0F\x1F\x84\x00\x00\x00\x00\x00\x0F\x1F\x44\x00\x00");
+	SAFE_WRITE_BUF(0xA5B615, "\x0F\x1F\x80\x00\x00\x00\x00");
+
 	SAFE_WRITE_BUF(0x4F15A0, "\x0F\xB6\x44\x24\x04\x89\x41\x04\x3C\x3B\x74\x07\x3C\x3C\x74\x03\xC2\x04\x00\x31\xD2\x89\x91\x04\x01\x00\x00\xC2\x04\x00");
+	WriteRelJump(0x482090, (UInt32)SetContainerItemsHealthHook);
+	SafeWrite16(0x5B4DBC, 0x19EB);
 	WriteRelJump(0x5A64C0, (UInt32)TESGlobalLoadFormHook);
 	WriteRelCall(0x8A0DAB, (UInt32)DetectionTeammateHook);
 	WriteRelCall(0x8A1291, (UInt32)DetectionTeammateHook);
@@ -4594,6 +4700,7 @@ void InitGamePatches()
 	WriteRelJump(0x646D00, (UInt32)GetConditionDamagePenaltyHook);
 	WriteRelJump(0x646360, (UInt32)GetArmorConditionPenaltyHook);
 	WriteRelCall(0x406720, (UInt32)GetEffectHiddenHook);
+	WriteRelJump(0x79DF73, (UInt32)RefreshMapMenuHook);
 	SafeWrite8(0xA081A8, 6);
 	SafeWrite32(0xA08718, (UInt32)ProcessGradualSetFloatHook);
 	SafeWrite32(0xA0871C, (UInt32)ProcessGradualSetFloatHook);
@@ -4676,13 +4783,12 @@ void InitGamePatches()
 			dataPtr = *lineIter;
 			++lineIter;
 			delim = GetNextToken(dataPtr, '=');
-			size = StrLen(delim);
-			if (!size) continue;
+			if (!*delim) continue;
 			index = StrToInt(dataPtr) - 10;
 			if ((index > 79) || s_extraFontsPaths[index]) continue;
 			StrCopy(dataPath + 5, delim);
 			if (FileExists(dataPath))
-				s_extraFontsPaths[index] = (char*)memcpy(malloc(size + 1), delim, size + 1);
+				s_extraFontsPaths[index] = CopyString(delim);
 		}
 	}
 	WriteRelCall(0x70B285, (UInt32)InitFontManagerHook);
@@ -4693,10 +4799,10 @@ void InitGamePatches()
 		if (dirIter.IsFile())
 		{
 			memcpy(StrCopy(dataPath + 5, *dirIter) - 8, "bsa", 4);
-			s_overrideBSAFiles().Insert(dataPath);
+			s_overrideBSAFiles->Insert(dataPath);
 		}
 	}
-	if (!s_overrideBSAFiles().Empty())
+	if (!s_overrideBSAFiles->Empty())
 		WriteRelCall(0x463855, (UInt32)LoadBSAFileHook);
 
 	SInt32 lines = GetPrivateProfileSection("GamePatches", buffer, 0x10000, "Data\\NVSE\\plugins\\jip_nvse.ini");
@@ -4705,7 +4811,7 @@ void InitGamePatches()
 	{
 		lines -= size = StrLen(dataPtr) + 1;
 		delim = GetNextToken(dataPtr, '=');
-		index = s_optionalHacks().Get(dataPtr);
+		index = s_optionalHacks->Get(dataPtr);
 		dataPtr += size;
 		if (!index) continue;
 		if (index >= 20)
@@ -4765,11 +4871,8 @@ void DeferredInit()
 	g_HUDMainMenu = HUDMainMenu::Get();
 	g_consoleManager = ConsoleManager::GetSingleton();
 	g_cursorNode = g_interfaceManager->cursor->node;
-	float converter = g_interfaceManager->menuRoot->GetValue(kTileValue_resolutionconverter)->num;
-	g_screenResConvert = converter;
-	converter *= 0.5F;
-	g_screenWidth = *(int*)0x11C73E0 * converter;
-	g_screenHeight = *(int*)0x11C7190 * converter;
+	g_screenWidth = *(int*)0x11C73E0 * SCREEN_RES_CONVERT * 0.5F;
+	g_screenHeight = *(int*)0x11C7190 * SCREEN_RES_CONVERT * 0.5F;
 	g_shadowSceneNode = *(ShadowSceneNode**)0x11F91C8;
 	//g_LODRootNode = BSClearZNode::GetSingleton();
 	g_terminalModelDefault = *GameGlobals::TerminalModelPtr();

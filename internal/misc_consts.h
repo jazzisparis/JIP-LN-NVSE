@@ -254,6 +254,7 @@ enum MaterialType
 #define ADDR_TileGetFloat		0xA011B0
 #define ADDR_TileSetFloat		0xA012D0
 #define ADDR_TileSetString		0xA01350
+#define ADDR_TileValSetFloat	0xA0A270
 #define ADDR_InitFontInfo		0xA12020
 
 #define IS_REFERENCE(form) ((*(UInt32**)form)[0x3C] == ADDR_ReturnTrue)

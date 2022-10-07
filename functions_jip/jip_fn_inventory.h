@@ -593,14 +593,14 @@ bool Cmd_SetOnUseAidItemEventHandler_Execute(COMMAND_ARGS)
 			continue;
 		if (addEvnt)
 		{
-			if (s_useAidItemEventMap().Insert(alchItem, &callbacks))
+			if (s_useAidItemEventMap->Insert(alchItem, &callbacks))
 				HOOK_MOD(EquipAidItem, true);
 			callbacks->Insert(script);
 			alchItem->SetJIPFlag(kHookFormFlag6_OnEquipHandlers, true);
 		}
 		else
 		{
-			auto findItem = s_useAidItemEventMap().Find(alchItem);
+			auto findItem = s_useAidItemEventMap->Find(alchItem);
 			if (!findItem || !findItem().Erase(script) || !findItem().Empty())
 				continue;
 			findItem.Remove();

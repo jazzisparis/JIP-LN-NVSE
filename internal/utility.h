@@ -41,6 +41,8 @@
 #define GAME_HEAP_ALLOC __asm mov ecx, 0x11F6238 CALL_EAX(0xAA3E40)
 #define GAME_HEAP_FREE  __asm mov ecx, 0x11F6238 CALL_EAX(0xAA4060)
 
+#define MARK_MODIFIED(form, flag) __asm push 0 __asm push flag __asm push form __asm mov ecx, ds:0x11DDF38 __asm mov eax, 0x84A690 __asm call eax
+
 template <typename T_Ret = void, typename ...Args>
 __forceinline T_Ret ThisCall(UInt32 _addr, void *_this, Args ...args)
 {
@@ -82,7 +84,7 @@ union HexFloat
 };
 
 extern const HexFloat kPackedValues[];
-extern const char kLwrCaseConverter[], kUprCaseConverter[];
+extern const char kLwrCaseConverter[];
 
 #define GET_PS(i)	((const __m128*)kPackedValues)[i]
 
@@ -131,6 +133,11 @@ extern const char kLwrCaseConverter[], kUprCaseConverter[];
 
 typedef void* (__cdecl *memcpy_t)(void*, const void*, size_t);
 extern memcpy_t MemCopy, MemMove;
+
+#define COPY_BYTES(dest, src, count) __movsb((UInt8*)(dest), (const UInt8*)(src), count)
+#define COPY_DWORDS(dest, src, count) __movsd((UInt32*)(dest), (const UInt32*)(src), count)
+#define MEM_ZERO(addr, size) __stosd((UInt32*)(addr), 0, (size) >> 2)
+#define CPY_RET_END(dest, src, length) ((char*)memcpy(dest, src, length + 1) + length)
 
 //	Workaround used for:
 //	* Preventing the compiler from generating _atexit d'tors for static objects.
@@ -291,30 +298,30 @@ union Coordinate
 	inline operator UInt32() const {return xy;}
 };
 
-template <typename T1, typename T2> inline T1 GetMin(T1 value1, T2 value2)
+template <typename T1, typename T2> __forceinline T1 GetMin(T1 value1, T2 value2)
 {
 	return (value1 < value2) ? value1 : value2;
 }
 
-template <typename T1, typename T2> inline T1 GetMax(T1 value1, T2 value2)
+template <typename T1, typename T2> __forceinline T1 GetMax(T1 value1, T2 value2)
 {
 	return (value1 > value2) ? value1 : value2;
 }
 
-template <typename T> inline T sqr(T value)
+template <typename T> __forceinline T sqr(T value)
 {
 	return value * value;
 }
 
-__forceinline bool __vectorcall FloatsEqual(float fVal1, float fVal2)
+__forceinline bool FloatsEqual(float fVal1, float fVal2)
 {
-	return abs(fVal1 - fVal2) <= FLT_EPSILON;
+	return *(UInt32*)&fVal1 == *(UInt32*)&fVal2;
 }
 
-UInt32 __vectorcall cvtd2ui(double value);
+UInt32 __vectorcall cvtd2ul(double value);
 
-double __fastcall cvtui2d(UInt32 value);
-void __fastcall cvtui2d(UInt32 value, double *result);
+double __fastcall cvtul2d(UInt32 value);
+void __fastcall cvtul2d(UInt32 value, double *result);
 
 int __vectorcall ifloor(float value);
 
@@ -327,8 +334,11 @@ __forceinline int iround(float value)
 
 float __vectorcall fMod(float numer, float denom);
 
-float __vectorcall Sin(float angle);
 float __vectorcall Cos(float angle);
+__forceinline float Sin(float angle)
+{
+	return Cos(FltPId2 - angle);
+}
 float __vectorcall Tan(float angle);
 
 //	Takes:   xmm0 = {a, 0, 0, 0};
@@ -343,8 +353,11 @@ __m128 __vectorcall GetSinCos_V3(__m128 angles);
 
 float __vectorcall ASin(float x);
 float __vectorcall ACos(float x);
-float __vectorcall ATan(float x);
 float __vectorcall ATan2(float y, float x);
+__forceinline float ATan(float x)
+{
+	return ATan2(x, 1.0F);
+}
 
 __m128 __vectorcall Normalize_V4(__m128 inPS);
 bool __vectorcall Equal_V3(__m128 v1, __m128 v2);
@@ -364,39 +377,40 @@ UInt32 __fastcall StrLen(const char *str);
 
 bool __fastcall MemCmp(const void *ptr1, const void *ptr2, UInt32 bsize);
 
-void __fastcall MemZero(void *dest, UInt32 bsize);
-
 char* __fastcall StrCopy(char *dest, const char *src);
 
 char* __fastcall StrNCopy(char *dest, const char *src, UInt32 length);
 
-char* __fastcall StrLenCopy(char *dest, const char *src, UInt32 length);
-
 char* __fastcall StrCat(char *dest, const char *src);
 
-char __fastcall StrCompare(const char *lstr, const char *rstr);
+char __fastcall StrCompareCS(const char *lstr, const char *rstr);
+
+char __fastcall StrCompareCI(const char *lstr, const char *rstr);
 
 char __fastcall StrBeginsCS(const char *lstr, const char *rstr);
 
 char __fastcall StrBeginsCI(const char *lstr, const char *rstr);
 
-void __fastcall FixPath(char *str);
+void __fastcall StrToCase(char *str, UInt32 upper);
 
-void __fastcall StrToLower(char *str);
-
-void __fastcall StrToUpper(char *str);
+__forceinline void StrToLower(char *str)
+{
+	StrToCase(str, 0);
+}
+__forceinline void StrToUpper(char *str)
+{
+	StrToCase(str, 0x10);
+}
 
 void __fastcall ReplaceChr(char *str, char from, char to);
 
 char* __fastcall FindChr(const char *str, char chr);
 
-char* __fastcall FindChrR(const char *str, UInt32 length, char chr);
+char* __fastcall FindChrR(const char *str, char chr);
 
 char* __fastcall SubStrCI(const char *srcStr, const char *subStr);
 
 char* __fastcall SlashPos(const char *str);
-
-char* __fastcall SlashPosR(const char *str);
 
 char* __fastcall GetNextToken(char *str, char delim);
 
@@ -452,9 +466,9 @@ public:
 	const char *CString() const {return str ? str : "";}
 	char *Data() {return str;}
 
-	bool operator==(const TempCString &rhs) {return !StrCompare(str, rhs.str);}
-	bool operator<(const TempCString &rhs) {return StrCompare(str, rhs.str) < 0;}
-	bool operator>(const TempCString &rhs) {return StrCompare(str, rhs.str) > 0;}
+	bool operator==(const TempCString &rhs) {return !StrCompareCI(str, rhs.str);}
+	bool operator<(const TempCString &rhs) {return StrCompareCI(str, rhs.str) < 0;}
+	bool operator>(const TempCString &rhs) {return StrCompareCI(str, rhs.str) > 0;}
 
 	char& operator[](UInt32 index) {return str[index];}
 
@@ -498,7 +512,7 @@ public:
 	{
 		if (str)
 		{
-			Pool_Free(str, alloc);
+			Pool_CFree(str, alloc);
 			str = nullptr;
 			*(UInt32*)&alloc = 0;
 		}
@@ -639,8 +653,7 @@ public:
 	char* operator*() {return dataPtr;}
 	void operator++()
 	{
-		while (*dataPtr)
-			dataPtr++;
+		dataPtr += StrLen(dataPtr);
 		while (!*dataPtr)
 			dataPtr++;
 	}
@@ -703,7 +716,5 @@ void __fastcall GetTimeStamp(char *buffer);
 UInt64 GetTimeMs64();
 
 const char* __fastcall GetDXDescription(UInt32 keyID);
-
-UInt32 __fastcall ByteSwap(UInt32 dword);
 
 void __stdcall DumpMemImg(void *data, UInt32 size, UInt8 extra = 0);

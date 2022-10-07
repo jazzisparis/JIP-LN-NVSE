@@ -114,7 +114,7 @@ bool Cmd_GetWeatherTraitNumeric_Execute(COMMAND_ARGS)
 			*result = weather->weatherClassification;
 			break;
 		case 14:
-			cvtui2d(RGBHexToDec(weather->lightningColor), result);
+			cvtul2d(RGBHexToDec(weather->lightningColor), result);
 			break;
 		default:
 			*result = weather->fogDistance[traitID - 15];
@@ -175,9 +175,9 @@ bool Cmd_GetWeatherRGBColor_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &type, &time, &layer) && (type <= 9) && (time <= 5))
 	{
 		if (type != 2)
-			cvtui2d(RGBHexToDec(weather->colors[type][time]), result);
+			cvtul2d(RGBHexToDec(weather->colors[type][time]), result);
 		else if (layer <= 3)
-			cvtui2d(RGBHexToDec(weather->cloudColor[layer][time]), result);
+			cvtul2d(RGBHexToDec(weather->cloudColor[layer][time]), result);
 	}
 	return true;
 }

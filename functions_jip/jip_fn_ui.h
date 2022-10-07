@@ -61,6 +61,8 @@ DEFINE_COMMAND_PLUGIN(ShowLevelUpMenuEx, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(AttachUIXML, 1, 2, kParams_TwoStrings);
 DEFINE_COMMAND_PLUGIN(AttachUIComponent, 1, 22, kParams_OneString_OneFormatString);
 DEFINE_COMMAND_PLUGIN(GetWorldMapPosMults, 1, 2, kParams_TwoScriptVars);
+DEFINE_COMMAND_PLUGIN(ProjectUITile, 1, 6, kParams_TwoStrings_FourFloats);
+DEFINE_COMMAND_PLUGIN(GetStringUIDimensions, 0, 6, kParams_OneString_OneInt_OneFloat_ThreeScriptVars);
 
 bool Cmd_IsComponentLoaded_Execute(COMMAND_ARGS)
 {
@@ -164,7 +166,7 @@ bool Cmd_GetActiveUIComponentName_Execute(COMMAND_ARGS)
 	{
 		char tilePath[0x100];
 		activeTile->GetComponentFullName(tilePath);
-		tileName = SlashPosR(tilePath);
+		tileName = FindChrR(tilePath, '/');
 		if (tileName) tileName++;
 	}
 	AssignString(PASS_COMMAND_ARGS, tileName);
@@ -522,7 +524,7 @@ bool Cmd_SetFontFile_Execute(COMMAND_ARGS)
 	*(UInt32*)dataPathFull = 'atad';
 	dataPathFull[4] = '\\';
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fontID, dataPath) || !fontID || (fontID > 89) || (fontID == 9) || !*dataPath) return true;
-	FontInfo *fontInfo = s_fontInfosMap().Get(dataPath);
+	FontInfo *fontInfo = s_fontInfosMap->Get(dataPath);
 	if (!fontInfo)
 	{
 		if (!FileExists(dataPathFull)) return true;
@@ -788,7 +790,7 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 		hashPos = FindChr(tilePath, '#');
 		if (hashPos) *hashPos = 0;
 	}
-	UInt32 menuID = s_menuNameToID().Get(tilePath);
+	UInt32 menuID = s_menuNameToID->Get(tilePath);
 	if (!menuID) return true;
 	MenuClickEvent &clickEvent = s_menuClickEventMap[kMenuIDJumpTable[menuID - kMenuType_Min]];
 	if (slashPos) *slashPos = '/';
@@ -815,7 +817,8 @@ bool Cmd_SetOnMenuClickEventHandler_Execute(COMMAND_ARGS)
 		}
 		return true;
 	}
-	FixPath(tilePath);
+	ReplaceChr(tilePath, '\\', '/');
+	StrToLower(tilePath);
 	if (addEvnt)
 	{
 		bool match = false;
@@ -870,7 +873,7 @@ void SetOnMenuStateEvent(Script *script, bool doAdd, char idx)
 	if (!callbacks)
 	{
 		if (!doAdd) return;
-		callbacks = (MenuStateCallbacks*)malloc(sizeof(MenuStateCallbacks));
+		callbacks = Pool_Alloc<MenuStateCallbacks>();
 		new (callbacks) MenuStateCallbacks();
 		s_menuStateEventMap[idx] = callbacks;
 	}
@@ -955,68 +958,9 @@ __declspec(naked) bool Cmd_SetOnMouseoverChangeEventHandler_Execute(COMMAND_ARGS
 	}
 }
 
-__declspec(naked) void __fastcall RefreshRecipeMenu(RecipeMenu *menu)
-{
-	_asm
-	{
-		push	esi
-		push	edi
-		mov		esi, ecx
-		add		ecx, 0x6C
-		mov		eax, [ecx]
-		call	dword ptr [eax+0x1C]
-		mov		ecx, esi
-		push	dword ptr [ecx+0x64]
-		push	0
-		CALL_EAX(0x727680)
-		add		esi, 0x6C
-		mov		ecx, esi
-		mov		edi, [ecx]
-		push	0
-		push	0
-		call	dword ptr [edi+0x14]
-		push	eax
-		mov		ecx, esi
-		call	dword ptr [edi]
-		mov		ecx, esi
-		call	dword ptr [edi+0x10]
-		mov		ecx, esi
-		CALL_EAX(0x7312E0)
-		mov		eax, 0x727637
-		push	dword ptr [eax]
-		mov		ecx, esi
-		CALL_EAX(0x729FE0)
-		push	1
-		mov		ecx, esi
-		CALL_EAX(0x72A660)
-		pop		edi
-		pop		esi
-		retn
-	}
-}
-
 bool Cmd_RefreshItemsList_Execute(COMMAND_ARGS)
 {
-	if (MENU_VISIBILITY[kMenuType_Inventory])
-		CdeclCall(0x782A90);
-	else if (MENU_VISIBILITY[kMenuType_Stats])
-		ThisCall(0x7DF230, StatsMenu::Get(), 4);
-	else if (MENU_VISIBILITY[kMenuType_Container])
-		ContainerMenu::Get()->Refresh(nullptr);
-	else if (MENU_VISIBILITY[kMenuType_Map])
-	{
-		MapMenu *mapMenu = MapMenu::Get();
-		if (mapMenu->currentTab == MapMenu::kTab_WorldMap)
-		{
-			WriteRelJump(0x79DF73, 0x79E053);
-			ThisCall(0x79DBB0, mapMenu);
-			SAFE_WRITE_BUF(0x79DF73, "\x6A\x00\x68\xB1\x0F");
-		}
-	}
-	else if (MENU_VISIBILITY[kMenuType_Barter])
-		CdeclCall(0x730690, 1);
-	else if (MENU_VISIBILITY[kMenuType_Recipe])
-		RefreshRecipeMenu(RecipeMenu::Get());
+	RefreshItemListBox();
 	return true;
 }
 
@@ -1072,15 +1016,16 @@ bool Cmd_SetTerminalUIModel_Execute(COMMAND_ARGS)
 	{
 		terminal = (BGSTerminal*)lstIter->data;
 		if (!terminal || NOT_ID(terminal, BGSTerminal)) continue;
-		if (bRemove) DoPurgePath(s_terminalAltModelsMap().GetErase(terminal));
+		if (bRemove) DoPurgePath(s_terminalAltModelsMap->GetErase(terminal));
 		else
 		{
-			if (!s_terminalAltModelsMap().Insert(terminal, &pathPtr)) DoPurgePath(*pathPtr);
+			if (!s_terminalAltModelsMap->InsertKey(terminal, &pathPtr))
+				DoPurgePath(*pathPtr);
 			*pathPtr = CopyString(modelPath);
 		}
 	}
 	while (lstIter = lstIter->next);
-	HOOK_SET(SetTerminalModel, !s_terminalAltModelsMap().Empty());
+	HOOK_SET(SetTerminalModel, !s_terminalAltModelsMap->Empty());
 	return true;
 }
 
@@ -1274,8 +1219,8 @@ bool Cmd_SetCursorPos_Execute(COMMAND_ARGS)
 	{
 		g_interfaceManager->cursorX = posX;
 		g_interfaceManager->cursorY = posY;
-		g_cursorNode->LocalTranslate().x = (posX * g_screenResConvert) - g_screenWidth;
-		g_cursorNode->LocalTranslate().z = g_screenHeight - (posY * g_screenResConvert);
+		g_cursorNode->LocalTranslate().x = (posX * SCREEN_RES_CONVERT) - g_screenWidth;
+		g_cursorNode->LocalTranslate().z = g_screenHeight - (posY * SCREEN_RES_CONVERT);
 	}
 	return true;
 }
@@ -1389,6 +1334,46 @@ __declspec(naked) void RecipeMenuAcceptHook()
 	done:
 		leave
 		retn	8
+	}
+}
+
+__declspec(naked) void __fastcall RefreshRecipeMenu(RecipeMenu *menu)
+{
+	_asm
+	{
+		push	esi
+		push	edi
+		mov		esi, ecx
+		add		ecx, 0x6C
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x1C]
+		mov		ecx, esi
+		push	dword ptr [ecx+0x64]
+		push	0
+		CALL_EAX(0x727680)
+		add		esi, 0x6C
+		mov		ecx, esi
+		mov		edi, [ecx]
+		push	0
+		push	0
+		call	dword ptr [edi+0x14]
+		push	eax
+		mov		ecx, esi
+		call	dword ptr [edi]
+		mov		ecx, esi
+		call	dword ptr [edi+0x10]
+		mov		ecx, esi
+		CALL_EAX(0x7312E0)
+		mov		eax, 0x727637
+		push	dword ptr [eax]
+		mov		ecx, esi
+		CALL_EAX(0x729FE0)
+		push	1
+		mov		ecx, esi
+		CALL_EAX(0x72A660)
+		pop		edi
+		pop		esi
+		retn
 	}
 }
 
@@ -1847,9 +1832,175 @@ bool Cmd_GetWorldMapPosMults_Execute(COMMAND_ARGS)
 			}
 			NiPoint2 outPos;
 			GetWorldMapPosMults(thisObj->position, worldDimensions, outPos);
-			outX->data.num = outPos.x;
-			outY->data.num = outPos.y;
+			outX->data = outPos.x;
+			outY->data = outPos.y;
 		}
+	}
+	return true;
+}
+
+__declspec(naked) void __stdcall GenerateRenderedUITexture(NiNode *tileNode, const NiVector4 &scrArea, NiTexture **pTexture)
+{
+	static BSCullingProcess *s_cullingProcess = nullptr;
+	__asm
+	{
+		push	ebp
+		mov		ebp, esp
+		mov		ecx, ds:0x11F4748
+		push	ecx
+		xor		eax, eax
+		push	eax
+		push	eax
+		push	eax
+		push	eax
+		push	eax
+		push	D3DFMT_A8R8G8B8
+		push	eax
+		mov		eax, [ebp+0xC]
+		movq	xmm0, qword ptr [eax+8]
+		cvtps2dq	xmm0, xmm0
+		sub		esp, 8
+		movq	qword ptr [esp], xmm0
+		push	ecx
+		mov		ecx, ds:0x11F91A8
+		CALL_EAX(0xB6D5E0)
+		test	eax, eax
+		jz		done
+		push	eax
+		mov		eax, s_cullingProcess
+		test	eax, eax
+		jnz		hasCulling
+		push	0x280
+		CALL_EAX(0xAA13E0)
+		pop		ecx
+		push	0x2F7
+		push	1
+		push	0x64
+		mov		ecx, eax
+		CALL_EAX(0xB660D0)
+		lock inc dword ptr [eax+4]
+		mov		dword ptr [eax+0x19C], 0xA
+		push	eax
+		push	0xC8
+		GAME_HEAP_ALLOC
+		push	0
+		mov		ecx, eax
+		CALL_EAX(0x4A0EB0)
+		pop		dword ptr [eax+0xC4]
+		mov		dword ptr [eax+0x90], 1
+		mov		s_cullingProcess, eax
+	hasCulling:
+		push	eax
+		push	dword ptr [eax+0xC4]
+		mov		ecx, g_interfaceManager
+		mov		ecx, [ecx+4]
+		push	dword ptr [ecx+0xAC]
+		mov		ecx, [ebp-4]
+		push	dword ptr [ecx+0x5E0]
+		mov		dword ptr [ecx+0x5E0], 0
+		cmp		dword ptr [ecx+0x200], 0
+		jnz		scnActive
+		mov		ecx, [ebp-8]
+		push	dword ptr [ecx+8]
+		push	1
+		CALL_EAX(0xB6B8D0)
+		add		esp, 8
+	scnActive:
+		sub		esp, 0x14
+		mov		ecx, [ebp-0x14]
+		movups	xmm0, [ecx+0xDC]
+		movups	[ebp-0x28], xmm0
+		mov		eax, [ebp+0xC]
+		movq	xmm0, qword ptr [eax]
+		movq	xmm1, qword ptr [eax+8]
+		pshufd	xmm2, PS_FlipSignMask0, 0x51
+		xorps	xmm0, xmm2
+		xorps	xmm1, xmm2
+		movss	xmm2, g_screenHeight
+		addss	xmm2, xmm2
+		pslldq	xmm2, 4
+		addps	xmm0, xmm2
+		addps	xmm1, xmm0
+		unpcklps	xmm0, xmm1
+		movups	[ecx+0xDC], xmm0
+		mov		eax, [ebp+8]
+		test	byte ptr [eax+0x30], 1
+		setnz	[ebp-0x29]
+		and		byte ptr [eax+0x30], 0xFE
+		push	dword ptr [ebp-0xC]
+		push	eax
+		push	ecx
+		CALL_EAX(0xB6BEE0)
+		add		esp, 0xC
+		push	dword ptr [ebp-0x10]
+		push	dword ptr [ebp-0x14]
+		CALL_EAX(0xB6C0D0)
+		add		esp, 8
+		CALL_EAX(0xB6B790)
+		mov		eax, [ebp+8]
+		mov		dl, [ebp-0x29]
+		or		[eax+0x30], dl
+		mov		eax, [ebp-4]
+		mov		edx, [ebp-0x18]
+		mov		[eax+0x5E0], edx
+		mov		ecx, [ebp-0x14]
+		movups	xmm0, [ebp-0x28]
+		movups	[ecx+0xDC], xmm0
+		mov		ecx, [ebp-8]
+		mov		eax, [ecx+0x30]
+		test	eax, eax
+		jz		doRelease
+		push	eax
+		push	dword ptr [ebp+0x10]
+		call	NiReleaseAddRef
+		mov		ecx, [ebp-8]
+	doRelease:
+		call	NiReleaseObject
+	done:
+		leave
+		retn	0xC
+	}
+}
+
+bool Cmd_ProjectUITile_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	char tilePath[0x100], blockName[0x40];
+	NiVector4 scrArea;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &tilePath, &blockName, &scrArea.x, &scrArea.y, &scrArea.z, &scrArea.w))
+	{
+		if (auto pTexture = thisObj->GetTexturePtr(blockName))
+		{
+			NiNode *tileNode = nullptr;
+			if (tilePath[0])
+			{
+				if (auto component = GetTargetComponent(tilePath))
+					tileNode = component->node;
+			}
+			else tileNode = g_interfaceManager->uiRootNode;
+			if (tileNode)
+			{
+				GenerateRenderedUITexture(tileNode, scrArea, pTexture);
+				*result = 1;
+			}
+		}
+	}
+	return true;
+}
+
+bool Cmd_GetStringUIDimensions_Execute(COMMAND_ARGS)
+{
+	char *buffer = GetStrArgBuffer();
+	UInt32 fontID;
+	float wrapWidth;
+	ResultVars outDims;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, buffer, &fontID, &wrapWidth, &outDims.x, &outDims.y, &outDims.z))
+	{
+		if (wrapWidth <= 0)
+			wrapWidth = FLT_MAX;
+		NiVector3 resDims;
+		g_fontManager->GetStringDimensions(&resDims, buffer, fontID, wrapWidth);
+		outDims.Set(resDims.PS());
 	}
 	return true;
 }

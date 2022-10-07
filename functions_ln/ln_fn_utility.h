@@ -78,11 +78,11 @@ bool __fastcall GetINIPath(char *iniPath, Script *scriptObj)
 		StrCopy(iniPath, g_dataHandler->GetNthModName(modIdx));
 	}
 	else ReplaceChr(iniPath, '/', '\\');
-	UInt32 length = StrLen(iniPath);
-	char *dotPos = FindChrR(iniPath, length, '.');
+	char *dotPos = FindChrR(iniPath, '.');
 	if (dotPos) *(UInt32*)(dotPos + 1) = 'ini';
 	else
 	{
+		UInt32 length = StrLen(iniPath);
 		*(UInt32*)(iniPath + length) = 'ini.';
 		iniPath[length + 4] = 0;
 	}
@@ -99,7 +99,7 @@ bool Cmd_GetINIFloat_Execute(COMMAND_ARGS)
 	*iniPath = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) || !GetINIPath(iniPath, scriptObj))
 		return true;
-	char *delim = GetNextToken(valueName, ":\\/");
+	char *delim = GetNextToken(valueName, ':');
 	if (!*delim) return true;
 	char valStr[0x20];
 	valStr[0] = 0;
@@ -116,7 +116,7 @@ bool Cmd_SetINIFloat_Execute(COMMAND_ARGS)
 	*iniPath = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, &value, iniPath) || !GetINIPath(iniPath, scriptObj))
 		return true;
-	char *delim = GetNextToken(valueName, ":\\/");
+	char *delim = GetNextToken(valueName, ':');
 	if (!*delim) return true;
 	if (!FileExists(configPath)) FileStream::MakeAllDirs(configPath);
 	char valStr[0x20];
@@ -133,7 +133,7 @@ bool Cmd_GetINIString_Execute(COMMAND_ARGS)
 	*iniPath = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) && GetINIPath(iniPath, scriptObj))
 	{
-		char *delim = GetNextToken(valueName, ":\\/");
+		char *delim = GetNextToken(valueName, ':');
 		if (*delim) GetPrivateProfileString(valueName, delim, nullptr, buffer, kMaxMessageLength, configPath);
 	}
 	AssignString(PASS_COMMAND_ARGS, buffer);
@@ -147,7 +147,7 @@ bool Cmd_SetINIString_Execute(COMMAND_ARGS)
 	*iniPath = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, buffer, iniPath) || !GetINIPath(iniPath, scriptObj))
 		return true;
-	char *delim = GetNextToken(valueName, ":\\/");
+	char *delim = GetNextToken(valueName, ':');
 	if (!*delim) return true;
 	if (!FileExists(configPath)) FileStream::MakeAllDirs(configPath);
 	if (WritePrivateProfileString(valueName, delim, buffer, configPath))
@@ -236,7 +236,7 @@ bool Cmd_RemoveINIKey_Execute(COMMAND_ARGS)
 	*iniPath = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) || !GetINIPath(iniPath, scriptObj) || !FileExists(configPath))
 		return true;
-	char *key = GetNextToken(valueName, ":\\/");
+	char *key = GetNextToken(valueName, ':');
 	if (*key && WritePrivateProfileString(valueName, key, nullptr, configPath))
 		*result = 1;
 	return true;
@@ -304,7 +304,7 @@ bool Cmd_SortFormsByType_Execute(COMMAND_ARGS)
 	Vector<TESForm*> tempForms(nForms);
 	UInt32 size = GetMax(nForms, nTypes) * sizeof(ArrayElementL);
 	ArrayElementL *elements = (ArrayElementL*)AuxBuffer::Get(2, size);
-	MemZero(elements, size);
+	MEM_ZERO(elements, size);
 	GetElements(formArray, elements, nullptr);
 	TESForm *form;
 	for (int idx = 0; idx < nForms; idx++)
@@ -345,7 +345,7 @@ bool Cmd_GetFormCountType_Execute(COMMAND_ARGS)
 	UInt32 size = GetArraySize(formArray);
 	if (!size) return true;
 	ArrayElementR *elements = (ArrayElementR*)AuxBuffer::Get(2, size * sizeof(ArrayElementR));
-	MemZero(elements, size * sizeof(ArrayElementR));
+	MEM_ZERO(elements, size * sizeof(ArrayElementR));
 	if (!GetElements(formArray, elements, nullptr))
 		return true;
 	int count = 0;
@@ -390,7 +390,7 @@ bool Cmd_GetENBFloat_Execute(COMMAND_ARGS)
 	char fileName[0x40], valueName[0x80];
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fileName, &valueName) || !FileExists(fileName))
 		return true;
-	char *delim = GetNextToken(valueName, ":\\/");
+	char *delim = GetNextToken(valueName, ':');
 	if (!*delim) return true;
 	char strVal[0x20];
 	if (GetPrivateProfileString(valueName, delim, nullptr, strVal, 0x20, fileName) && *strVal)
@@ -405,7 +405,7 @@ bool Cmd_SetENBFloat_Execute(COMMAND_ARGS)
 	double value;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fileName, &valueName, &value) || !FileExists(fileName))
 		return true;
-	char *delim = GetNextToken(valueName, ":\\/");
+	char *delim = GetNextToken(valueName, ':');
 	if (!*delim) return true;
 	char strVal[0x20];
 	FltToStr(strVal, value);

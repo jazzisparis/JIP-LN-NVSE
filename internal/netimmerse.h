@@ -1,34 +1,17 @@
 #pragma once
 
-typedef FixedTypeArray<hkpWorldObject*, 0x40> ContactObjects;
+extern TempObject<UnorderedMap<UInt32, const char*>> s_NiFixedStringsMap;
+const char* __stdcall GetNiFixedString(const char *inStr);
 
 class NiFixedString
 {
 	const char		*str;
 
-	void Set(const char *inStr)
-	{
-		str = inStr;
-		if (str) InterlockedIncrement((UInt32*)(str - 8));
-	}
-
-	void Unset()
-	{
-		if (str)
-		{
-			InterlockedDecrement((UInt32*)(str - 8));
-			str = nullptr;
-		}
-	}
-
 public:
 	NiFixedString() : str(nullptr) {}
-	NiFixedString(const char *inStr)
-	{
-		str = (inStr && *inStr) ? CdeclCall<const char*>(0xA5B690, inStr) : nullptr;
-	}
-	NiFixedString(const NiFixedString &inStr) {Set(inStr.str);}
-	~NiFixedString() {Unset();}
+	NiFixedString(const char *inStr) : str(GetNiFixedString(inStr)) {}
+	NiFixedString(const NiFixedString &inStr) : str(inStr.str) {}
+	~NiFixedString() {}
 
 	const char *Get() const {return str ? str : "";}
 
@@ -38,17 +21,8 @@ public:
 
 	operator const char*() const {return str;}
 
-	inline void operator=(const char *inStr)
-	{
-		Unset();
-		if (inStr && *inStr)
-			str = CdeclCall<const char*>(0xA5B690, inStr);
-	}
-	inline void operator=(const NiFixedString &inStr)
-	{
-		if (str != inStr.str)
-			Set(inStr.str);
-	}
+	inline void operator=(const char *inStr) {str = GetNiFixedString(inStr);}
+	inline void operator=(const NiFixedString &inStr) {str = inStr.str;}
 
 	inline bool operator==(const NiFixedString &rhs) const {return str == rhs.str;}
 	inline bool operator<(const NiFixedString &rhs) const {return str < rhs.str;}
@@ -1114,7 +1088,7 @@ public:
 	BSShaderTextureSet	*textureSet;			// 0A4
 	UInt16				word0A8;				// 0A8
 	UInt16				word0AA;				// 0AA
-	NiSourceTexture		**srcTextures[6];		// 0AC
+	NiTexture			**srcTextures[6];		// 0AC
 	void				*ptr0C4;				// 0C4
 	UInt32				unk0C8;					// 0C8
 	void				*ptr0CC;				// 0CC
@@ -1333,6 +1307,8 @@ public:
 	void DumpParents();
 };
 
+typedef FixedTypeArray<hkpWorldObject*, 0x40> ContactObjects;
+
 // AC
 class NiNode : public NiAVObject
 {
@@ -1354,6 +1330,7 @@ public:
 	NiAVObject* __fastcall GetBlock(const char *blockName) const;
 	NiNode* __fastcall GetNode(const char *nodeName) const;
 	bool IsMovable();
+	void __fastcall ToggleCollision(UInt8 flag);
 	void ResetCollision();
 	void RemoveCollision();
 	BSXFlags *GetBSXFlags();
@@ -1683,7 +1660,7 @@ public:
 	UInt32							unk0AC[2];		// 0AC
 	DList<LightingData>				lgtList0B4;		// 0B4
 	DList<LightingData>				lgtList0C0;		// 0C0
-	UInt32							unk0CC;			// 0CC
+	DListNode<LightingData>			*node0CC;		// 0CC
 	DListNode<LightingData>			*node0D0;		// 0D0
 	DListNode<LightingData>			*node0D4;		// 0D4
 	LightingData					*data0D8;		// 0D8
@@ -2159,84 +2136,84 @@ public:
 		kClear_ALL =			kClear_BACKBUFFER | kClear_STENCIL | kClear_ZBUFFER
 	};
 
-	virtual void		Unk_24(void);
-	virtual void		Unk_25(void);
-	virtual void		Unk_26(void);
-	virtual void		Unk_27(void);
-	virtual void		Unk_28(void);
-	virtual void		Unk_29(void);
-	virtual void		Unk_2A(void);
-	virtual void		SetBackgroundColor(NiVector4 *inARGB);
-	virtual void		Unk_2C(void);
-	virtual void		GetBackgroundColor(NiVector4 *outARGB);
-	virtual void		Unk_2E(void);
-	virtual void		Unk_2F(void);
-	virtual void		Unk_30(void);
-	virtual void		Unk_31(void);
-	virtual NiRenderTargetGroup *GetDefaultRT();	// get back buffer rt
-	virtual NiRenderTargetGroup *GetCurrentRT();	// get currentRTGroup
-	virtual void		Unk_34(void);
-	virtual void		Unk_35(void);
-	virtual void		Unk_36(void);
-	virtual void		Unk_37(void);
-	virtual void 		Unk_38(void);
-	virtual void 		Unk_39(void);
-	virtual void		Unk_3A(void);
-	virtual void		Unk_3B(void);
-	virtual void		PurgeGeometry(NiGeometryData *geo);
-	virtual void		PurgeMaterial(NiMaterialProperty *material);
-	virtual void		PurgeEffect(NiDynamicEffect *effect);
-	virtual void		PurgeScreenTexture();
-	virtual void		PurgeSkinPartition(NiSkinPartition *skinPartition);
-	virtual void		PurgeSkinInstance(NiSkinInstance *skinInstance);
-	virtual void		Unk_42(void);
-	virtual bool		Unk_43(void);
-	virtual void		Unk_44(void);
-	virtual bool		FastCopy(void *src, void *dst, RECT *srcRect, SInt32 xOffset, SInt32 yOffset);
-	virtual bool		Copy(void *src, void *dst, RECT *srcRect, RECT *dstRect, UInt32 filterMode);
-	virtual void		Unk_47(void);
-	virtual bool		Unk_48(void *arg);
-	virtual void		Unk_49(void);
-	virtual void		Unk_4A(float arg);
-	virtual void 		Unk_4B(UInt32 size);
-	virtual void		Unk_4C(UInt32 arg0, UInt32 arg1);
-	virtual void		Unk_4D(UInt32 arg0, UInt32 arg1);
-	virtual void		Unk_4E(void *buf);
-	virtual void		CreateSourceTexture(NiSourceTexture *texture);
-	virtual bool		CreateRenderedTexture(NiRenderedTexture *arg);
-	virtual bool		CreateSourceCubeMap(NiSourceCubeMap *arg);
-	virtual bool		CreateRenderedCubeMap(NiRenderedCubeMap *arg);
-	virtual bool		CreateDynamicTexture(void *arg);
-	virtual void		Unk_54(void);
-	virtual bool		CreateDepthStencil(NiDepthStencilBuffer *arg, void *textureFormat);
-	virtual void		Unk_56(void);
-	virtual void		Unk_57(void);
-	virtual void		Unk_58(void);
-	virtual void		Unk_59(void);
-	virtual void		Unk_5A(void);
-	virtual void		Unk_5B(void);
-	virtual void		Unk_5C(void);
-	virtual void		Unk_5D(void);
-	virtual void		Unk_5E(void);
-	virtual bool		BeginScene();
-	virtual bool		EndScene();
-	virtual void		DisplayScene();
-	virtual void		Clear(float *rect, UInt32 flags);
-	virtual void		SetupCamera(NiVector3 * pos, NiVector3 * at, NiVector3 * up, NiVector3 * right, NiFrustum * frustum, float * viewport);
-	virtual void		SetupScreenSpaceCamera(float* viewport);
-	virtual bool		BeginUsingRenderTargetGroup(NiRenderTargetGroup* renderTarget, ClearFlags clearFlags);
-	virtual bool		EndUsingRenderTargetGroup();
-	virtual void		BeginBatch(UInt32 arg0, UInt32 arg1);
-	virtual void		EndBatch();
-	virtual void		BatchRenderShape(void *arg);
-	virtual void		BatchRenderStrips(void *arg);
-	virtual void		RenderTriShape(NiTriShape *obj);
-	virtual void		RenderTriStrips(NiTriStrips *obj);
-	virtual void		RenderTriShape2(NiTriShape *obj);
-	virtual void		RenderTriStrips2(NiTriStrips *obj);
-	virtual void		RenderParticles(NiParticles *obj);
-	virtual void		RenderLines(NiLines *obj);
-	virtual void		RenderScreenTexture();
+	/*090*/virtual void		Unk_24(void);
+	/*094*/virtual void		Unk_25(void);
+	/*098*/virtual void		Unk_26(void);
+	/*09C*/virtual void		Unk_27(void);
+	/*0A0*/virtual void		Unk_28(void);
+	/*0A4*/virtual void		Unk_29(void);
+	/*0A8*/virtual void		Unk_2A(void);
+	/*0AC*/virtual void		SetBackgroundColor(NiVector4* inARGB);
+	/*0B0*/virtual void		Unk_2C(void);
+	/*0B4*/virtual void		GetBackgroundColor(NiVector4* outARGB);
+	/*0B8*/virtual void		Unk_2E(void);
+	/*0BC*/virtual void		Unk_2F(void);
+	/*0C0*/virtual void		Unk_30(void);
+	/*0C4*/virtual void		Unk_31(void);
+	/*0C8*/virtual NiRenderTargetGroup* GetDefaultRT();	// get back buffer rt
+	/*0CC*/virtual NiRenderTargetGroup* GetCurrentRT();	// get currentRTGroup
+	/*0D0*/virtual void		Unk_34(void);
+	/*0D4*/virtual void		Unk_35(void);
+	/*0D8*/virtual void		Unk_36(void);
+	/*0DC*/virtual void		Unk_37(void);
+	/*0E0*/virtual void 	Unk_38(void);
+	/*0E4*/virtual void 	Unk_39(void);
+	/*0E8*/virtual void		Unk_3A(void);
+	/*0EC*/virtual void		Unk_3B(void);
+	/*0F0*/virtual void		PurgeGeometry(NiGeometryData* geo);
+	/*0F4*/virtual void		PurgeMaterial(NiMaterialProperty* material);
+	/*0F8*/virtual void		PurgeEffect(NiDynamicEffect* effect);
+	/*0FC*/virtual void		PurgeScreenTexture();
+	/*100*/virtual void		PurgeSkinPartition(NiSkinPartition* skinPartition);
+	/*104*/virtual void		PurgeSkinInstance(NiSkinInstance* skinInstance);
+	/*108*/virtual void		Unk_42(void);
+	/*10C*/virtual bool		Unk_43(void);
+	/*110*/virtual void		Unk_44(void);
+	/*114*/virtual bool		FastCopy(void* src, void* dst, RECT* srcRect, SInt32 xOffset, SInt32 yOffset);
+	/*118*/virtual bool		Copy(void* src, void* dst, RECT* srcRect, RECT* dstRect, UInt32 filterMode);
+	/*11C*/virtual void		Unk_47(void);
+	/*120*/virtual bool		Unk_48(void* arg);
+	/*124*/virtual void		Unk_49(void);
+	/*128*/virtual void		Unk_4A(float arg);
+	/*12C*/virtual void 	Unk_4B(UInt32 size);
+	/*130*/virtual void		Unk_4C(UInt32 arg0, UInt32 arg1);
+	/*134*/virtual void		Unk_4D(UInt32 arg0, UInt32 arg1);
+	/*138*/virtual void		Unk_4E(void* buf);
+	/*13C*/virtual void		CreateSourceTexture(NiSourceTexture* texture);
+	/*140*/virtual bool		CreateRenderedTexture(NiRenderedTexture* arg);
+	/*144*/virtual bool		CreateSourceCubeMap(NiSourceCubeMap* arg);
+	/*148*/virtual bool		CreateRenderedCubeMap(NiRenderedCubeMap* arg);
+	/*14C*/virtual bool		CreateDynamicTexture(void* arg);
+	/*150*/virtual void		Unk_54(void);
+	/*154*/virtual bool		CreateDepthStencil(NiDepthStencilBuffer* arg, void* textureFormat);
+	/*158*/virtual void		Unk_56(void);
+	/*15C*/virtual void		Unk_57(void);
+	/*160*/virtual void		Unk_58(void);
+	/*164*/virtual void		Unk_59(void);
+	/*168*/virtual void		Unk_5A(void);
+	/*16C*/virtual void		Unk_5B(void);
+	/*170*/virtual void		Unk_5C(void);
+	/*174*/virtual void		Unk_5D(void);
+	/*178*/virtual void		Unk_5E(void);
+	/*17C*/virtual bool		BeginScene();
+	/*180*/virtual bool		EndScene();
+	/*184*/virtual void		DisplayScene();
+	/*188*/virtual void		Clear(float* rect, UInt32 flags);
+	/*18C*/virtual void		SetupCamera(NiVector3* pos, NiVector3* at, NiVector3* up, NiVector3* right, NiFrustum* frustum, float* viewport);
+	/*190*/virtual void		SetupScreenSpaceCamera(float* viewport);
+	/*194*/virtual bool		BeginUsingRenderTargetGroup(NiRenderTargetGroup* renderTarget, ClearFlags clearFlags);
+	/*198*/virtual bool		EndUsingRenderTargetGroup();
+	/*19C*/virtual void		BeginBatch(UInt32 arg0, UInt32 arg1);
+	/*1A0*/virtual void		EndBatch();
+	/*1A4*/virtual void		BatchRenderShape(void* arg);
+	/*1A8*/virtual void		BatchRenderStrips(void* arg);
+	/*1AC*/virtual void		RenderTriShape(NiTriShape* obj);
+	/*1B0*/virtual void		RenderTriStrips(NiTriStrips* obj);
+	/*1B4*/virtual void		RenderTriShape2(NiTriShape* obj);
+	/*1B8*/virtual void		RenderTriStrips2(NiTriStrips* obj);
+	/*1BC*/virtual void		RenderParticles(NiParticles* obj);
+	/*1C0*/virtual void		RenderLines(NiLines* obj);
+	/*1C4*/virtual void		RenderScreenTexture();
 
 	class PrePackObject;
 
@@ -2481,14 +2458,14 @@ public:
 class NiAccumulator : public NiObject
 {
 public:
-	/*8C*/virtual void		Unk_23(void);
+	/*8C*/virtual void		SetCamera(NiCamera *_camera);
 	/*90*/virtual void		Unk_24(void);
 	/*94*/virtual void		Unk_25(void);
 	/*98*/virtual void		Unk_26(UInt32 arg);
 	/*9C*/virtual void		Unk_27(void);
 	/*A0*/virtual void		Unk_28(void);
 
-	UInt32			unk08;			// 08
+	NiCamera		*camera;		// 08
 };
 
 // 2C
@@ -2622,7 +2599,8 @@ public:
 	NiUnsharedGeometryGroup		*unsharedGeom;	// 08
 	UInt32						unk0C;			// 0C
 	void						*ptr10;			// 10
-	UInt32						unk14;			// 14
+	UInt8						byte14;			// 14
+	UInt8						pad15[3];		// 15
 	UInt32						unk18;			// 18	Vertices/Normals count
 	UInt32						unk1C;			// 1C		"			"
 	UInt32						finished;		// 20
@@ -2654,8 +2632,8 @@ public:
 
 	UInt16					numVertices;	// 08
 	UInt16					word0A;			// 0A
-	UInt16					word0C;			// 0C
-	UInt16					word0E;			// 0E
+	UInt16					word0C;			// 0C	NormalBinormalTangent
+	UInt16					dirtyFlags;		// 0E
 	NiSphere				bounds;			// 10
 	NiVector3				*vertices;		// 20
 	NiVector3				*normals;		// 24
@@ -2663,8 +2641,8 @@ public:
 	NiPoint2				*uvCoords;		// 2C
 	UInt32					unk30;			// 30
 	NiGeometryBufferData	*bufferData;	// 34
-	UInt8					byte38;			// 38
-	UInt8					byte39;			// 39
+	UInt8					keepFlags;		// 38
+	UInt8					compressFlags;	// 39
 	UInt8					byte3A;			// 3A
 	UInt8					byte3B;			// 3B
 	UInt8					byte3C;			// 3C

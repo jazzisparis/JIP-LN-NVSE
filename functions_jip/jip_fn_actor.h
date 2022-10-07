@@ -518,7 +518,7 @@ bool Cmd_SetActorDiveBreath_Execute(COMMAND_ARGS)
 {
 	float breath;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &breath) && IS_ACTOR(thisObj) && ((Actor*)thisObj)->baseProcess)
-		((Actor*)thisObj)->baseProcess->SetDiveBreath(GetMax(breath, 0));
+		((Actor*)thisObj)->baseProcess->SetDiveBreath(GetMax(breath, 0.0F));
 	return true;
 }
 
@@ -669,7 +669,7 @@ bool Cmd_SetCombatDisabled_Execute(COMMAND_ARGS)
 			HOOK_MOD(StartCombat, false);
 		else
 		{
-			s_forceCombatTargetMap().Erase(actor);
+			s_forceCombatTargetMap->Erase(actor);
 			HOOK_MOD(SetCombatTarget, false);
 		}
 		actor->jipActorFlags1 &= ~kHookActorFlag1_CombatAIModified;
@@ -683,7 +683,7 @@ bool Cmd_SetCombatDisabled_Execute(COMMAND_ARGS)
 	}
 	else if (!(actor->jipActorFlags1 & flag))
 	{
-		if (!target) s_forceCombatTargetMap().Erase(actor);
+		if (!target) s_forceCombatTargetMap->Erase(actor);
 		HOOK_MOD(StartCombat, !target);
 		HOOK_MOD(SetCombatTarget, target != nullptr);
 		actor->jipActorFlags1 ^= kHookActorFlag1_CombatAIModified;
@@ -1223,7 +1223,7 @@ bool Cmd_ForceActorDetectionValue_Execute(COMMAND_ARGS)
 	if (detectionValue)
 	{
 		UInt32 *valPtr;
-		if (s_forceDetectionValueMap().Insert(actor, &valPtr))
+		if (s_forceDetectionValueMap->InsertKey(actor, &valPtr))
 		{
 			actor->jipActorFlags2 |= kHookActorFlag2_ForceDetectionVal;
 			HOOK_MOD(GetDetectionValue, true);
@@ -1231,7 +1231,7 @@ bool Cmd_ForceActorDetectionValue_Execute(COMMAND_ARGS)
 		Coordinate packedVal(oprType != 0, detectionValue);
 		*valPtr = packedVal.xy;
 	}
-	else if (s_forceDetectionValueMap().Erase(actor))
+	else if (s_forceDetectionValueMap->Erase(actor))
 	{
 		actor->jipActorFlags2 &= ~kHookActorFlag2_ForceDetectionVal;
 		HOOK_MOD(GetDetectionValue, false);
@@ -1522,7 +1522,7 @@ bool Cmd_AddBaseEffectListEffect_Execute(COMMAND_ARGS)
 	if (!actorBase)
 	{
 		if (!thisObj || NOT_ACTOR(thisObj)) return true;
-		actorBase = ((Actor*)thisObj)->GetActorBase();
+		actorBase = (TESActorBase*)thisObj->baseForm;
 	}
 	if (!actorBase->spellList.spellList.IsInList(spell))
 		actorBase->spellList.spellList.Prepend(spell);
@@ -1537,7 +1537,7 @@ bool Cmd_RemoveBaseEffectListEffect_Execute(COMMAND_ARGS)
 	if (!actorBase)
 	{
 		if (!thisObj || NOT_ACTOR(thisObj)) return true;
-		actorBase = ((Actor*)thisObj)->GetActorBase();
+		actorBase = (TESActorBase*)thisObj->baseForm;
 	}
 	actorBase->spellList.spellList.Remove(spell);
 	return true;
@@ -1847,7 +1847,7 @@ bool Cmd_PushActorAwayAlt_Execute(COMMAND_ARGS)
 		BaseProcess *process = actor->baseProcess;
 		if (process && !process->processLevel)
 		{
-			if (!absPos) posVector += actor->position;
+			if (!absPos) posVector += actor->position.PS();
 			process->PushActorAway(actor, posVector.x, posVector.y, posVector.z, actor->AdjustPushForce(force));
 		}
 	}
@@ -1916,8 +1916,7 @@ bool Cmd_DonnerReedKuruParty_Execute(COMMAND_ARGS)
 		}
 		else if (doSet)
 		{
-			xDismembered = (ExtraDismemberedLimbs*)GameHeapAlloc(sizeof(ExtraDismemberedLimbs));
-			ThisCall(0x430200, xDismembered);
+			xDismembered = ThisCall<ExtraDismemberedLimbs*>(0x430200, GameHeapAlloc(sizeof(ExtraDismemberedLimbs)));
 			xDismembered->wasEaten = true;
 			thisObj->extraDataList.AddExtra(xDismembered);
 			thisObj->MarkAsModified(0x20000);
@@ -2081,10 +2080,10 @@ bool Cmd_SetOnReloadWeaponEventHandler_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt) || NOT_ID(script, Script)) return true;
 	if (addEvnt)
 	{
-		if (s_reloadWeaponEventScripts().Insert(script))
+		if (s_reloadWeaponEventScripts->Insert(script))
 			HOOK_MOD(ReloadWeapon, true);
 	}
-	else if (s_reloadWeaponEventScripts().Erase(script))
+	else if (s_reloadWeaponEventScripts->Erase(script))
 		HOOK_MOD(ReloadWeapon, false);
 	return true;
 }
@@ -2102,10 +2101,10 @@ bool Cmd_SetOnRagdollEventHandler_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt) || NOT_ID(script, Script)) return true;
 	if (addEvnt)
 	{
-		if (s_onRagdollEventScripts().Insert(script))
+		if (s_onRagdollEventScripts->Insert(script))
 			HOOK_MOD(OnRagdoll, true);
 	}
-	else if (s_onRagdollEventScripts().Erase(script))
+	else if (s_onRagdollEventScripts->Erase(script))
 		HOOK_MOD(OnRagdoll, false);
 	return true;
 }
@@ -2433,7 +2432,7 @@ bool Cmd_RemoveAllPerks_Execute(COMMAND_ARGS)
 				for (auto perkIter = perksInfo->perkRanks.Begin(); perkIter; ++perkIter)
 					RemovePerkNPCHook(actor, 0, perkIter.Key(), 0);
 				actor->extraDataList.perksInfo = nullptr;
-				s_NPCPerksInfoMap().Erase(actor->refID);
+				s_NPCPerksInfoMap->Erase(actor->refID);
 			}
 		}
 	}
@@ -2490,11 +2489,7 @@ bool Cmd_GetActorVelocityAlt_Execute(COMMAND_ARGS)
 				if (!getLocal)
 					outVel.Set(charCtrl->velocity.PS());
 				else
-				{
-					NiVector3 velocity = charCtrl->velocity;
-					velocity.MultiplyMatrixInv(rootNode->WorldRotate());
-					outVel.Set(velocity.PS());
-				}
+					outVel.Set(rootNode->WorldRotate().MultiplyVectorInv(_mm_load_ps(charCtrl->velocity)));
 				*result = 1;
 			}
 		}
@@ -2504,7 +2499,7 @@ bool Cmd_GetActorVelocityAlt_Execute(COMMAND_ARGS)
 
 bool Cmd_GetExcludedCombatActions_Execute(COMMAND_ARGS)
 {
-	*result = (int)s_excludedCombatActionsMap().Get(thisObj);
+	*result = (int)s_excludedCombatActionsMap->Get(thisObj);
 	return true;
 }
 
@@ -2516,7 +2511,7 @@ bool Cmd_SetExcludedCombatActions_Execute(COMMAND_ARGS)
 		excludeMask &= 0x7FFFFFF;
 		if (excludeMask)
 			s_excludedCombatActionsMap()[thisObj] = excludeMask;
-		else s_excludedCombatActionsMap().Erase(thisObj);
+		else s_excludedCombatActionsMap->Erase(thisObj);
 		CombatController *combatCtrl = ((Actor*)thisObj)->GetCombatController();
 		if (combatCtrl)
 			combatCtrl->excludedActionsMask = excludeMask;

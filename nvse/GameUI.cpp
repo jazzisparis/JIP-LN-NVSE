@@ -1,16 +1,6 @@
 #include "nvse/GameUI.h"
 
-TempObject<UnorderedMap<const char*, UInt32>> s_menuNameToID(std::initializer_list<MappedPair<const char*, UInt32>>({{"MessageMenu", kMenuType_Message},
-	{"InventoryMenu", kMenuType_Inventory}, {"StatsMenu", kMenuType_Stats}, {"HUDMainMenu", kMenuType_HUDMain}, {"LoadingMenu", kMenuType_Loading},
-	{"ContainerMenu", kMenuType_Container}, {"DialogMenu", kMenuType_Dialog}, {"SleepWaitMenu", kMenuType_SleepWait}, {"StartMenu", kMenuType_Start},
-	{"LockpickMenu", kMenuType_LockPick}, {"QuantityMenu", kMenuType_Quantity}, {"MapMenu", kMenuType_Map}, {"BookMenu", kMenuType_Book},
-	{"LevelUpMenu", kMenuType_LevelUp}, {"RepairMenu", kMenuType_Repair}, {"RaceSexMenu", kMenuType_RaceSex}, {"CharGenMenu", kMenuType_CharGen},
-	{"TextEditMenu", kMenuType_TextEdit}, {"BarterMenu", kMenuType_Barter}, {"SurgeryMenu", kMenuType_Surgery}, {"HackingMenu", kMenuType_Hacking},
-	{"VATSMenu", kMenuType_VATS}, {"ComputersMenu", kMenuType_Computers}, {"RepairServicesMenu", kMenuType_RepairServices}, {"TutorialMenu", kMenuType_Tutorial},
-	{"SpecialBookMenu", kMenuType_SpecialBook}, {"ItemModMenu", kMenuType_ItemMod}, {"LoveTesterMenu", kMenuType_LoveTester},
-	{"CompanionWheelMenu", kMenuType_CompanionWheel}, {"TraitSelectMenu", kMenuType_TraitSelect}, {"RecipeMenu", kMenuType_Recipe},
-	{"SlotMachineMenu", kMenuType_SlotMachine}, {"BlackjackMenu", kMenuType_Blackjack}, {"RouletteMenu", kMenuType_Roulette},
-	{"CaravanMenu", kMenuType_Caravan}, {"TraitMenu", kMenuType_Trait}}));
+TempObject<UnorderedMap<const char*, UInt32>> s_menuNameToID(0x40);
 
 TileMenu* __fastcall GetMenuTile(const char *componentPath)
 {

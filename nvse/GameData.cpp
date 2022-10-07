@@ -9,61 +9,31 @@ public:
 
 	bool Accept(ModInfo* modInfo)
 	{
-		return !StrCompare(modInfo->name, m_stringToFind);
+		return !StrCompareCI(m_stringToFind, modInfo->name);
 	}
 };
 
-const ModInfo * DataHandler::LookupModByName(const char * modName)
+const ModInfo *DataHandler::LookupModByName(const char *modName)
 {
 	return modList.modInfoList.Find(LoadedModFinder(modName));
 }
 
-const ModInfo ** DataHandler::GetActiveModList()
-{
-	static const ModInfo *activeModList[0x100] = {NULL};
-
-	if (!activeModList[0])
-	{
-		UInt32 index = 0;
-		auto iter = modList.modInfoList.Head();
-		do
-		{
-			activeModList[index++] = iter->data;
-		}
-		while (iter = iter->next);
-	}
-
-	return activeModList;
-}
-
 UInt8 DataHandler::GetModIndex(const char *modName)
 {
-	ListNode<ModInfo> *iter = modList.modInfoList.Head();
-	ModInfo *modInfo;
-	do
-	{
-		modInfo = iter->data;
-		if (modInfo && !StrCompare(modInfo->name, modName))
-			return modInfo->modIndex;
-	}
-	while (iter = iter->next);
-	return 0xFF;
+	auto modInfo = modList.modInfoList.Find(LoadedModFinder(modName));
+	return modInfo ? modInfo->modIndex : 0xFF;
 }
 
-const char* DataHandler::GetNthModName(UInt32 modIndex)
+const char *DataHandler::GetNthModName(UInt32 modIndex)
 {
-	const ModInfo** activeModList = GetActiveModList();
-	if (modIndex < GetActiveModCount() && activeModList[modIndex])
-		return activeModList[modIndex]->name;
-	else
-		return "";
+	auto modInfo = modList.modInfoList.GetNthItem(modIndex);
+	return modInfo ? modInfo->name : "";
 }
 
 void Sky::RefreshMoon()
 {
 	if (masserMoon) masserMoon->Destroy(true);
-	masserMoon = (Moon*)GameHeapAlloc(sizeof(Moon));
-	ThisCall(0x634A70, masserMoon, (const char*)0x104EEB0, *(UInt32*)0x11CCCBC, *(UInt32*)0x11CCC98, *(UInt32*)0x11CCBA8, *(UInt32*)0x11CCC00, *(UInt32*)0x11CCC58, *(UInt32*)0x11CCC1C);
+	masserMoon = ThisCall<Moon*>(0x634A70, GameHeapAlloc(sizeof(Moon)), (const char*)0x104EEB0, *(UInt32*)0x11CCCBC, *(UInt32*)0x11CCC98, *(UInt32*)0x11CCBA8, *(UInt32*)0x11CCC00, *(UInt32*)0x11CCC58, *(UInt32*)0x11CCC1C);
 	masserMoon->Refresh(niNode008, (const char*)0x104EEB0);
 }
 
@@ -98,23 +68,24 @@ __declspec(naked) TESObjectCELL *GridCellArray::GetCell(Coordinate cellXY) const
 	__asm
 	{
 		push	ebx
-		mov		edx, [ecx+0xC]
-		shr		edx, 1
+		mov		ebx, ecx
+		mov		ecx, [ebx+0xC]
+		shr		ecx, 1
 		movsx	eax, word ptr [esp+0xA]
-		sub		eax, [ecx+4]
-		add		eax, edx
-		cmp		eax, [ecx+0xC]
+		sub		eax, [ebx+4]
+		add		eax, ecx
+		cmp		eax, [ebx+0xC]
 		jnb		retnNull
-		movsx	ebx, word ptr [esp+8]
-		sub		ebx, [ecx+8]
-		add		ebx, edx
-		mov		edx, [ecx+0xC]
-		cmp		ebx, edx
+		movsx	edx, word ptr [esp+8]
+		sub		edx, [ebx+8]
+		add		edx, ecx
+		cmp		edx, [ebx+0xC]
 		jnb		retnNull
-		imul	eax, edx
-		add		ebx, eax
-		mov		ecx, [ecx+0x10]
-		mov		eax, [ecx+ebx*4]
+		add		edx, eax
+		shl		eax, cl
+		add		edx, eax
+		mov		ecx, [ebx+0x10]
+		mov		eax, [ecx+edx*4]
 		pop		ebx
 		retn	4
 	retnNull:

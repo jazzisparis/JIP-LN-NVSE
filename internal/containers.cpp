@@ -1,20 +1,36 @@
 #include "internal/containers.h"
 
-__declspec(naked) void* __fastcall Pool_Alloc_Buckets(UInt32 numBuckets)
+__declspec(naked) char* __fastcall CopyStringKey(const char *key)
 {
 	__asm
 	{
-		push	ecx
-		shl		ecx, 2
-		call	Pool_Alloc
-		pop		ecx
-		push	eax
+		push	esi
 		push	edi
+		mov		esi, ecx
+		call	StrLen
+		lea		edi, [eax+1]
+		lea		ecx, [edi+4]
+		test	cl, 0xF
+		jz		isAligned
+		and		cl, 0xF0
+		add		ecx, 0x10
+	isAligned:
+		push	ecx
+		call	MemoryPool::Alloc
+		pop		dword ptr [eax]
+		add		eax, 4
+		cmp		edi, 1
+		jz		nullStr
+		mov		ecx, edi
 		mov		edi, eax
-		xor		eax, eax
-		rep stosd
+		rep movsb
 		pop		edi
-		pop		eax
+		pop		esi
+		retn
+	nullStr:
+		mov		[eax], 0
+		pop		edi
+		pop		esi
 		retn
 	}
 }
