@@ -3413,7 +3413,7 @@ __declspec(naked) NiNode* __fastcall DoAttachModel(NiAVObject *targetObj, const 
 		cmp		dword ptr [eax], 0
 		jnz		doneName
 		mov		edx, [ecx+8]
-		//lock inc dword ptr [edx-8]
+		lock inc dword ptr [edx-8]
 		mov		[eax], edx
 	doneName:
 		call	NiNode::RemoveCollision

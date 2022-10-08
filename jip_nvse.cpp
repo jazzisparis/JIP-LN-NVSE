@@ -1484,7 +1484,6 @@ __declspec(noinline) void InitContainers()
 		{"TraitSelectMenu", kMenuType_TraitSelect}, {"RecipeMenu", kMenuType_Recipe}, {"SlotMachineMenu", kMenuType_SlotMachine},
 		{"BlackjackMenu", kMenuType_Blackjack}, {"RouletteMenu", kMenuType_Roulette}, {"CaravanMenu", kMenuType_Caravan}, {"TraitMenu", kMenuType_Trait}});
 	
-	*s_NiFixedStringsMap;
 	*s_lightFormEDIDMap;
 }
 

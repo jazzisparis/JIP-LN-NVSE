@@ -1,17 +1,34 @@
 #pragma once
 
-extern TempObject<UnorderedMap<UInt32, const char*>> s_NiFixedStringsMap;
-const char* __stdcall GetNiFixedString(const char *inStr);
+typedef FixedTypeArray<hkpWorldObject*, 0x40> ContactObjects;
 
 class NiFixedString
 {
 	const char		*str;
 
+	void Set(const char *inStr)
+	{
+		str = inStr;
+		if (str) InterlockedIncrement((UInt32*)(str - 8));
+	}
+
+	void Unset()
+	{
+		if (str)
+		{
+			InterlockedDecrement((UInt32*)(str - 8));
+			str = nullptr;
+		}
+	}
+
 public:
 	NiFixedString() : str(nullptr) {}
-	NiFixedString(const char *inStr) : str(GetNiFixedString(inStr)) {}
-	NiFixedString(const NiFixedString &inStr) : str(inStr.str) {}
-	~NiFixedString() {}
+	NiFixedString(const char *inStr)
+	{
+		str = (inStr && *inStr) ? CdeclCall<const char*>(0xA5B690, inStr) : nullptr;
+	}
+	NiFixedString(const NiFixedString &inStr) {Set(inStr.str);}
+	~NiFixedString() {Unset();}
 
 	const char *Get() const {return str ? str : "";}
 
@@ -21,8 +38,17 @@ public:
 
 	operator const char*() const {return str;}
 
-	inline void operator=(const char *inStr) {str = GetNiFixedString(inStr);}
-	inline void operator=(const NiFixedString &inStr) {str = inStr.str;}
+	inline void operator=(const char *inStr)
+	{
+		Unset();
+		if (inStr && *inStr)
+			str = CdeclCall<const char*>(0xA5B690, inStr);
+	}
+	inline void operator=(const NiFixedString &inStr)
+	{
+		if (str != inStr.str)
+			Set(inStr.str);
+	}
 
 	inline bool operator==(const NiFixedString &rhs) const {return str == rhs.str;}
 	inline bool operator<(const NiFixedString &rhs) const {return str < rhs.str;}
@@ -1306,8 +1332,6 @@ public:
 	void DumpObject(UInt8 dumpFlags = 0xF);
 	void DumpParents();
 };
-
-typedef FixedTypeArray<hkpWorldObject*, 0x40> ContactObjects;
 
 // AC
 class NiNode : public NiAVObject

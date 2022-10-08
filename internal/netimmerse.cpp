@@ -1,40 +1,5 @@
 #include "internal/netimmerse.h"
 
-TempObject<UnorderedMap<UInt32, const char*>> s_NiFixedStringsMap(0x80);
-
-__declspec(naked) const char* __stdcall GetNiFixedString(const char *inStr)
-{
-	__asm
-	{
-		mov		ecx, [esp+4]
-		test	ecx, ecx
-		jz		retnNull
-		call	StrHashCS
-		push	ecx
-		push	esp
-		push	eax
-		mov		ecx, offset s_NiFixedStringsMap
-		call	UnorderedMap<UInt32, const char*>::InsertKey
-		test	al, al
-		jnz		addNew
-		pop		ecx
-		mov		eax, [ecx]
-		retn	4
-	retnNull:
-		xor		eax, eax
-		retn	4
-		ALIGN 16
-	addNew:
-		push	dword ptr [esp+8]
-		CALL_EAX(0xA5B690)
-		pop		ecx
-		lock inc dword ptr [eax-8]
-		pop		ecx
-		mov		[ecx], eax
-		retn	4
-	}
-}
-
 __declspec(naked) NiObject* __fastcall NiObject::HasBaseType(const NiRTTI *baseType)
 {
 	__asm
@@ -102,9 +67,23 @@ __declspec(naked) void __fastcall NiObjectNET::SetName(const char *newName)
 	{
 		push	ecx
 		push	edx
-		call	GetNiFixedString
+		CALL_EAX(0xA5B690)
 		pop		ecx
+		pop		ecx
+		mov		edx, [ecx+8]
+		cmp		eax, edx
+		jz		decCount
+		test	edx, edx
+		jz		noCurrName
+		lock dec dword ptr [edx-8]
+	noCurrName:
 		mov		[ecx+8], eax
+		retn
+	decCount:
+		test	eax, eax
+		jz		done
+		lock dec dword ptr [eax-8]
+	done:
 		retn
 	}
 }
@@ -458,19 +437,24 @@ __declspec(naked) NiAVObject* __fastcall NiNode::GetBlock(const char *blockName)
 {
 	__asm
 	{
+		cmp		[edx], 0
+		jz		retnNULL
 		push	ecx
 		push	edx
-		call	GetNiFixedString
+		CALL_EAX(0xA5B690)
 		pop		ecx
-		test	eax, eax
-		jz		done
+		pop		ecx
+		lock dec dword ptr [eax-8]
+		jz		retnNULL
 		cmp		[ecx+8], eax
 		jz		found
 		mov		edx, eax
 		jmp		NiNode::GetBlockByName
 	found:
 		mov		eax, ecx
-	done:
+		retn
+	retnNULL:
+		xor		eax, eax
 		retn
 	}
 }
