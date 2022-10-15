@@ -2,6 +2,8 @@
 
 typedef FixedTypeArray<hkpWorldObject*, 0x40> ContactObjects;
 
+const char* __cdecl GetNiFixedString(const char *inStr);
+
 class NiFixedString
 {
 	const char		*str;
@@ -23,10 +25,7 @@ class NiFixedString
 
 public:
 	NiFixedString() : str(nullptr) {}
-	NiFixedString(const char *inStr)
-	{
-		str = (inStr && *inStr) ? CdeclCall<const char*>(0xA5B690, inStr) : nullptr;
-	}
+	NiFixedString(const char *inStr) : str(GetNiFixedString(inStr))	{}
 	NiFixedString(const NiFixedString &inStr) {Set(inStr.str);}
 	~NiFixedString() {Unset();}
 
@@ -41,8 +40,7 @@ public:
 	inline void operator=(const char *inStr)
 	{
 		Unset();
-		if (inStr && *inStr)
-			str = CdeclCall<const char*>(0xA5B690, inStr);
+		str = GetNiFixedString(inStr);
 	}
 	inline void operator=(const NiFixedString &inStr)
 	{

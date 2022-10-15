@@ -363,6 +363,7 @@ __m128 __vectorcall Normalize_V4(__m128 inPS);
 bool __vectorcall Equal_V3(__m128 v1, __m128 v2);
 bool __vectorcall Equal_V4(__m128 v1, __m128 v2);
 
+#define STR_BUFFER_SIZE 0x20000
 char *GetStrArgBuffer();
 
 void __fastcall NiReleaseObject(NiRefObject *toRelease);
@@ -693,7 +694,7 @@ public:
 	void operator++() {if (!FindNextFile(handle, &fndData)) Close();}
 };
 
-UInt32 __fastcall FileToBuffer(const char *filePath, char *buffer);
+UInt32 __fastcall FileToBuffer(const char *filePath, char *buffer, UInt32 maxLen);
 
 void __stdcall StoreOriginalData(UInt32 addr, UInt8 size);
 

@@ -45,7 +45,7 @@ public:
 
 	bool Accept(VariableInfo *varInfo)
 	{
-		return !StrCompareCI(m_varName, varInfo->name.m_data);
+		return !StrCompareCI(varInfo->name.m_data, m_varName);
 	}
 };
 
@@ -56,7 +56,7 @@ VariableInfo *Script::GetVariableByName(const char *varName)
 	do
 	{
 		varInfo = varIter->data;
-		if (varInfo && !StrCompareCI(varName, varInfo->name.m_data))
+		if (varInfo && !StrCompareCI(varInfo->name.m_data, varName))
 			return varInfo;
 	}
 	while (varIter = varIter->next);

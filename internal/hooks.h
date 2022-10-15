@@ -311,6 +311,8 @@ __declspec(naked) void __fastcall HookInfo::ModUsers(bool add)
 #define HOOK_INIT_JPRT(name, baseAddr, retAddr) s_hookInfos[kHook_##name].Init(baseAddr, ##name##Hook, 0x68, retAddr)
 #define HOOK_INSTALLED(name) s_hookInfos[kHook_##name].GetCount() != 0
 #define HOOK_MOD(name, add) s_hookInfos[kHook_##name].ModUsers(add)
+#define HOOK_INC(name) HOOK_MOD(name, true)
+#define HOOK_DEC(name) HOOK_MOD(name, false)
 #define HOOK_SET(name, install) s_hookInfos[kHook_##name].Set(install)
 
 TempObject<UnorderedMap<UInt32, UInt32>> s_jipFormFlagsMap;
@@ -586,16 +588,16 @@ void __fastcall SetDescriptionAltText(TESDescription *description, const char *a
 	{
 		char **findDesc;
 		if (s_descriptionChanges->InsertKey(description, &findDesc))
-			HOOK_MOD(GetDescription, true);
+			HOOK_INC(GetDescription);
 		else free(*findDesc);
 		*findDesc = CopyString(altText);
 	}
-	else
+	else if (char *pDesc = s_descriptionChanges->GetErase(description))
 	{
-		if (!s_descriptionChanges->EraseFree(description))
-			return;
-		HOOK_MOD(GetDescription, false);
+		free(pDesc);
+		HOOK_DEC(GetDescription);
 	}
+	else return;
 	*GameGlobals::CurrentDescription() = nullptr;
 }
 
@@ -2777,10 +2779,16 @@ __declspec(naked) void ApplyActorVelocityHook()
 	}
 }
 
-typedef bool (__thiscall *_SetFormEDID)(TESForm *form, const char *EDID);
-_SetFormEDID SetFormEDID = nullptr;
+typedef bool (__thiscall *_SetFormEDID)(TESForm*, const char*);
+_SetFormEDID SetFormEDID;
 
-TempObject<UnorderedMap<const char*, UInt32>> s_lightFormEDIDMap(0x400);
+typedef UnorderedMap<const char*, UInt32, 0x400, false> FormEDIDMap;
+TempObject<FormEDIDMap> s_lightFormEDIDMap;
+
+bool __stdcall InsertFormEDID(const char *EDID, UInt32 **pForm)
+{
+	return s_lightFormEDIDMap->InsertKey(EDID, pForm);
+}
 
 __declspec(naked) bool __fastcall TESObjectLIGHSetEDIDHook(TESObjectLIGH *lightForm, int EDX, const char *EDID)
 {
@@ -2790,8 +2798,7 @@ __declspec(naked) bool __fastcall TESObjectLIGHSetEDIDHook(TESObjectLIGH *lightF
 		push	ecx
 		push	esp
 		push	dword ptr [esp+0x10]
-		mov		ecx, offset s_lightFormEDIDMap
-		call	UnorderedMap<const char*, UInt32>::InsertKey
+		call	InsertFormEDID
 		pop		eax
 		pop		ecx
 		mov		[eax], ecx
@@ -2851,7 +2858,7 @@ __declspec(naked) void __fastcall InitPointLights(NiNode *niNode)
 		jz		removeExtra
 		push	eax
 		mov		ecx, offset s_lightFormEDIDMap
-		call	UnorderedMap<const char*, UInt32>::Get
+		call	FormEDIDMap::Get
 		test	eax, eax
 		jz		removeExtra
 		mov		ecx, ebx
@@ -4191,18 +4198,74 @@ __declspec(naked) char* __fastcall GetModelPathHook(TESObject *baseForm, int EDX
 	}
 }
 
-bool __fastcall ClearRefAuxVars(AuxVarModsMap *varMap, UInt32 refID)
+bool __fastcall EraseRefID(AuxVarOwnersMap *pMap, int EDX, UInt32 refID)
 {
-	bool removed = false;
-	for (auto prmIter = varMap->Begin(); prmIter; ++prmIter)
+	return pMap->Erase(refID);
+}
+
+__declspec(naked) bool __stdcall ClearRefAuxVars(AuxVarModsMap *varMap, UInt32 refID)
+{
+	__asm
 	{
-		if (!prmIter().Erase(refID))
-			continue;
-		removed = true;
-		if (prmIter().Empty())
-			prmIter.Remove();
+		mov		ecx, [esp+4]
+		cmp		dword ptr [ecx+8], 0
+		jz		retn0
+		push	ebp
+		push	ebx
+		push	esi
+		push	edi
+		push	0
+		mov		ebp, [ecx]
+		mov		eax, [ecx+4]
+		lea		ebx, [ebp+eax*4]
+		ALIGN 16
+	bucketIter:
+		cmp		ebp, ebx
+		jz		done
+		mov		esi, ebp
+		mov		edi, [esi]
+		add		ebp, 4
+		ALIGN 16
+	entryIter:
+		test	edi, edi
+		jz		bucketIter
+		lea		ecx, [edi+8]
+		push	dword ptr [esp+0x1C]
+		call	EraseRefID
+		mov		ecx, edi
+		mov		edi, [edi]
+		test	al, al
+		cmovz	esi, ecx
+		jz		entryIter
+		mov		[esp], 1
+		cmp		dword ptr [ecx+0x10], 0
+		cmovnz	esi, ecx
+		jnz		entryIter
+		mov		eax, [esp+0x18]
+		dec		dword ptr [eax+8]
+		mov		[esi], edi
+		push	ecx
+		mov		edx, [ecx+0xC]
+		shl		edx, 2
+		mov		ecx, [ecx+8]
+		call	MemoryPool::Free
+		mov		edx, 0x20
+		pop		ecx
+		call	MemoryPool::Free
+		jmp		entryIter
+		ALIGN 16
+	retn0:
+		xor		al, al
+		retn	8
+		ALIGN 16
+	done:
+		pop		eax
+		pop		edi
+		pop		esi
+		pop		ebx
+		pop		ebp
+		retn	8
 	}
-	return removed;
 }
 
 extern PrimitiveCS s_auxVarCS;
@@ -4220,9 +4283,12 @@ __declspec(naked) bool __fastcall DestroyRefrHook(TESObjectREFR *refr)
 		jz		doneRefName
 		push	esi
 		mov		ecx, offset s_refNamesMap
-		call	UnorderedMap<TESObjectREFR*, char*>::EraseFree
-		test	al, al
+		call	UnorderedMap<TESObjectREFR*, char*>::GetErase
+		test	eax, eax
 		jz		doneRefName
+		lea		ecx, [eax-4]
+		mov		edx, [ecx]
+		call	MemoryPool::Free
 		xor		dl, dl
 		mov		ecx, offset s_hookInfos+kHook_GetRefName*kHookInfoSize
 		call	HookInfo::ModUsers
@@ -4231,9 +4297,12 @@ __declspec(naked) bool __fastcall DestroyRefrHook(TESObjectREFR *refr)
 		jz		doneModel
 		push	esi
 		mov		ecx, offset s_refrModelPathMap
-		call	UnorderedMap<TESObjectREFR*, char*>::EraseFree
-		test	al, al
+		call	UnorderedMap<TESObjectREFR*, char*>::GetErase
+		test	eax, eax
 		jz		doneModel
+		lea		ecx, [eax-4]
+		mov		edx, [ecx]
+		call	MemoryPool::Free
 		xor		dl, dl
 		mov		ecx, offset s_hookInfos+kHook_GetModelPath*kHookInfoSize
 		call	HookInfo::ModUsers
@@ -4245,14 +4314,15 @@ __declspec(naked) bool __fastcall DestroyRefrHook(TESObjectREFR *refr)
 		jz		doneVars
 		mov		ecx, offset s_auxVarCS
 		call	PrimitiveCS::Enter
-		mov		edx, [esi+0xC]
-		mov		ecx, offset s_auxVariablesPerm
+		mov		eax, [esi+0xC]
+		push	eax
+		push	eax
+		push	offset s_auxVariablesPerm
 		call	ClearRefAuxVars
 		or		s_dataChangedFlags, al
-		mov		edx, [esi+0xC]
-		mov		ecx, offset s_auxVariablesTemp
+		push	offset s_auxVariablesTemp
 		call	ClearRefAuxVars
-		mov		s_auxVarCS, 0
+		mov		s_auxVarCS.selfPtr, 0
 	doneVars:
 		mov		eax, [esi+0x20]
 		test	eax, eax
@@ -4923,7 +4993,7 @@ __declspec(naked) void SkipDrawWeapAnimHook()
 	}
 }
 
-TempObject<UnorderedMap<const char*, UInt32>> s_eventMasks(0x20);
+TempObject<UnorderedMap<const char*, UInt32, 0x20, false>> s_eventMasks;
 
 __declspec(noinline) void InitJIPHooks()
 {
@@ -4985,11 +5055,10 @@ __declspec(noinline) void InitJIPHooks()
 	HOOK_INIT_JUMP(ApplyActorVelocity, 0xC6D4E4);
 	HOOK_INIT_CALL(GetModelPath, 0x50FE8B);
 
-	SetFormEDID = (_SetFormEDID)*(UInt32*)0x1029018;
-
 	for (UInt32 addr : {0x50DA73, 0x792DC0, 0x7C6F86, 0x7FC4DA, 0x7FD49F, 0x80EA39, 0x81C095, 0x9C6CB6, 0x9C6D3D, 0xA7D6E2, 0xA7D7C3, 0xB5CD2A})
 		SafeWrite32(addr, 0x110);
 
+	SetFormEDID = (_SetFormEDID)*(UInt32*)0x1029018;
 	SafeWrite32(0x1029018, (UInt32)TESObjectLIGHSetEDIDHook);
 	SAFE_WRITE_BUF(0xA68D6B, "\x8B\x86\x9C\x00\x00\x00\x89\x87\x9C\x00\x00\x00");
 	WritePushRetRelJump(0x447155, 0x447171, (UInt32)LoadNifRetnNodeHook);

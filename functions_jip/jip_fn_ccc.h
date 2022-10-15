@@ -23,7 +23,7 @@ DEFINE_COMMAND_PLUGIN(CCCSMS, 0, 1, kParams_OneOptionalObjectRef);
 DEFINE_COMMAND_PLUGIN(CCCTaskPackageFlags, 0, 4, kParams_OneAIPackage_ThreeInts);
 
 UInt8 s_CCCModIdx = 0;
-TempObject<UnorderedMap<const char*, const char*>> s_avatarPaths(0x100);
+TempObject<UnorderedMap<const char*, const char*, 0x80, false>> s_avatarPaths;
 TempObject<Map<char*, const char*>> s_avatarCommon(0x30);
 bool s_UILoaded = false;
 Tile::Value **s_UIelements = NULL;
@@ -186,7 +186,7 @@ bool Cmd_CCCOnLoad_Execute(COMMAND_ARGS)
 	s_UIelements[113] = node0->data->children.Tail()->data->GetValue(kTileValue_string);
 	tile = tile->parent->parent;
 
-	char compPath[] = "SneakMeter\\y\0QuestWrap\\QuestReminder\\x\0XPWrap\\x\0EH_Wrap\\EnemyHealth\\y\0QuestReminder\\x\0XPMeter\\x\0Info\\y\0EnemyHealth\\y\0InfoWrap\\Info\\y";
+	char compPath[] = "SneakMeter/y\0QuestWrap/QuestReminder/x\0XPWrap/x\0EH_Wrap/EnemyHealth/y\0QuestReminder/x\0XPMeter/x\0Info/y\0EnemyHealth/y\0InfoWrap/Info/y";
 	s_UIelements[114] = tile->GetComponentValue(compPath);
 	if (tile->GetValueName("_DUIF3")->num)
 	{
@@ -235,7 +235,7 @@ bool Cmd_CCCSetString_Execute(COMMAND_ARGS)
 }
 
 const char kAvatarMale[] = "jazzisparis\\ccc\\avatar_male.dds", kAvatarFemale[] = "jazzisparis\\ccc\\avatar_female.dds";
-TempObject<UnorderedMap<UInt32, const char*>> s_pathForID(0x20);
+TempObject<UnorderedMap<UInt32, const char*, 0x20, false>> s_pathForID;
 
 bool Cmd_CCCSetTrait_Execute(COMMAND_ARGS)
 {
@@ -598,7 +598,7 @@ bool Cmd_CCCSetFollowState_Execute(COMMAND_ARGS)
 	{
 		if (!(actor->jipActorFlags1 & kHookActorFlag1_PCTeleportAI)) return true;
 		actor->jipActorFlags1 &= ~kHookActorFlag1_PCTeleportAI;
-		HOOK_MOD(TeleportWithPC, false);
+		HOOK_DEC(TeleportWithPC);
 	}
 	else
 	{
@@ -609,7 +609,7 @@ bool Cmd_CCCSetFollowState_Execute(COMMAND_ARGS)
 		else
 		{
 			actor->jipActorFlags1 |= flag;
-			HOOK_MOD(TeleportWithPC, true);
+			HOOK_INC(TeleportWithPC);
 		}
 	}
 	return true;

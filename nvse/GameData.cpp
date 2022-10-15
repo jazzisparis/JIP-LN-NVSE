@@ -1,32 +1,56 @@
 #include "nvse/GameData.h"
 
-class LoadedModFinder
-{
-	const char * m_stringToFind;
-
-public:
-	LoadedModFinder(const char * str) : m_stringToFind(str) { }
-
-	bool Accept(ModInfo* modInfo)
-	{
-		return !StrCompareCI(m_stringToFind, modInfo->name);
-	}
-};
-
 const ModInfo *DataHandler::LookupModByName(const char *modName)
 {
-	return modList.modInfoList.Find(LoadedModFinder(modName));
+	ModList *pModList = &modList;
+	for (UInt32 idx = 0; idx < pModList->loadedModCount; idx++)
+	{
+		ModInfo *pInfo = pModList->loadedMods[idx];
+		if (!StrCompareCI(pInfo->name, modName))
+			return pInfo;
+	}
+	return nullptr;
 }
 
-UInt8 DataHandler::GetModIndex(const char *modName)
+__declspec(naked) UInt8 __fastcall DataHandler::GetModIndex(const char *modName)
 {
-	auto modInfo = modList.modInfoList.Find(LoadedModFinder(modName));
-	return modInfo ? modInfo->modIndex : 0xFF;
+	__asm
+	{
+		push	ebx
+		push	esi
+		push	edi
+		lea		ebx, [ecx+0x21C]
+		mov		esi, edx
+		mov		edi, [ebx-4]
+		ALIGN 16
+	iterHead:
+		mov		edx, esi
+		mov		ecx, [ebx]
+		add		ecx, 0x20
+		call	StrCompareCI
+		test	al, al
+		jz		found
+		add		ebx, 4
+		dec		edi
+		jnz		iterHead
+		mov		al, 0xFF
+		pop		edi
+		pop		esi
+		pop		ebx
+		retn
+	found:
+		mov		ecx, [ebx]
+		mov		al, [ecx+0x40C]
+		pop		edi
+		pop		esi
+		pop		ebx
+		retn
+	}
 }
 
 const char *DataHandler::GetNthModName(UInt32 modIndex)
 {
-	auto modInfo = modList.modInfoList.GetNthItem(modIndex);
+	auto modInfo = modList.loadedMods[modIndex];
 	return modInfo ? modInfo->name : "";
 }
 

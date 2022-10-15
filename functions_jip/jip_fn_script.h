@@ -232,7 +232,7 @@ void __fastcall SetScriptEventDisabled(TESForm *form, UInt32 inMask, bool onActi
 			if (s_disabledEventsMap->InsertKey(form, &evntMask))
 			{
 				form->SetJIPFlag(kHookFormFlag6_EventDisabled, true);
-				HOOK_MOD(MarkScriptEvent, true);
+				HOOK_INC(MarkScriptEvent);
 			}
 			*evntMask |= inMask;
 		}
@@ -243,7 +243,7 @@ void __fastcall SetScriptEventDisabled(TESForm *form, UInt32 inMask, bool onActi
 			{
 				s_disabledEventsMap->Erase(form);
 				form->SetJIPFlag(kHookFormFlag6_EventDisabled, false);
-				HOOK_MOD(MarkScriptEvent, false);
+				HOOK_DEC(MarkScriptEvent);
 			}
 		}
 	}
@@ -338,7 +338,7 @@ bool Cmd_SetOnQuestStageEventHandler_Execute(COMMAND_ARGS)
 		if (s_questStageEventMap->Insert(quest, &callbacks))
 		{
 			quest->SetJIPFlag(kHookFormFlag6_SetStageHandlers, true);
-			HOOK_MOD(SetQuestStage, true);
+			HOOK_INC(SetQuestStage);
 		}
 		else if (callbacks->Find(QuestStageEventFinder(pCallback)))
 			return true;
@@ -355,7 +355,7 @@ bool Cmd_SetOnQuestStageEventHandler_Execute(COMMAND_ARGS)
 		{
 			findQuest.Remove();
 			quest->SetJIPFlag(kHookFormFlag6_SetStageHandlers, false);
-			HOOK_MOD(SetQuestStage, false);
+			HOOK_DEC(SetQuestStage);
 		}
 	}
 	return true;
@@ -557,7 +557,7 @@ bool Cmd_RunBatchScript_Execute(COMMAND_ARGS)
 		if (s_cachedScripts->InsertKey(filePath, &cachedScript))
 		{
 			char *buffer = GetStrArgBuffer();
-			if (FileToBuffer(filePath, buffer))
+			if (FileToBuffer(filePath, buffer, STR_BUFFER_SIZE - 1))
 				*cachedScript = Script::Create(buffer);
 		}
 		if (*cachedScript && JIPScriptRunner::RunScript(*cachedScript, 1, thisObj ? thisObj : g_thePlayer))

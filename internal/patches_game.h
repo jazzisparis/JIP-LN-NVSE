@@ -141,6 +141,117 @@ __declspec(naked) void __fastcall DoQueuedPlayerHook(QueuedPlayer *queuedPlayer)
 	}
 }
 
+typedef UnorderedMap<const UInt8*, const char*, 0x800, false> NiFixedStringsMap;
+TempObject<NiFixedStringsMap> s_NiFixedStringsMap;
+PrimitiveCS s_NiFixedStringsCS;
+
+bool __stdcall InsertNiFixedString(const UInt8 *inStr, const char ***outStr)
+{
+	return s_NiFixedStringsMap->InsertKey(inStr, outStr);
+}
+
+__declspec(naked) const char* __cdecl GetNiFixedString(const char *inStr)
+{
+	__asm
+	{
+		//JMP_EAX(0xA5B690)
+
+		mov		eax, [esp+4]
+		test	eax, eax
+		jz		done
+		push	esi
+		mov		esi, eax
+		mov		ecx, offset s_NiFixedStringsCS
+		call	PrimitiveCS::Enter
+		push	ecx
+		push	esp
+		push	esi
+		call	InsertNiFixedString
+		test	al, al
+		jnz		addNew
+		pop		ecx
+		mov		eax, [ecx]
+		lock inc dword ptr [eax-8]
+		mov		s_NiFixedStringsCS.selfPtr, 0
+		pop		esi
+	done:
+		retn
+		ALIGN 16
+	addNew:
+		mov		ecx, esi
+		call	StrLen
+		push	edi
+		mov		edi, eax
+		lea		ecx, [eax+0x19]
+		and		cl, 0xF0
+		call	MemoryPool::Alloc
+		mov		dword ptr [eax], 1
+		mov		[eax+4], edi
+		add		eax, 8
+		lea		ecx, [edi+1]
+		mov		edi, eax
+		rep movsb
+		pop		edi
+		pop		ecx
+		mov		[ecx], eax
+		mov		s_NiFixedStringsCS.selfPtr, 0
+		pop		esi
+		retn
+	}
+}
+
+__declspec(naked) void FreeUnusedNiFixedStrings()
+{
+	__asm
+	{
+		push	ebp
+		push	ebx
+		push	esi
+		push	edi
+		mov		ecx, offset s_NiFixedStringsCS
+		call	PrimitiveCS::Enter
+		mov		ebp, s_NiFixedStringsMap
+		lea		ebx, [ebp+0x2000]
+		ALIGN 16
+	bucketIter:
+		cmp		ebp, ebx
+		jz		done
+		mov		esi, ebp
+		mov		edi, [esi]
+		add		ebp, 4
+		ALIGN 16
+	entryIter:
+		test	edi, edi
+		jz		bucketIter
+		mov		eax, edi
+		mov		edi, [edi]
+		mov		ecx, [eax+8]
+		cmp		dword ptr [ecx-8], 0
+		cmovnz	esi, eax
+		jnz		entryIter
+		dec		dword ptr s_NiFixedStringsMap+8
+		mov		[esi], edi
+		push	eax
+		and		cl, 0xF0
+		mov		edx, [ecx+4]
+		add		edx, 0x19
+		and		dl, 0xF0
+		call	MemoryPool::Free
+		mov		edx, 0x10
+		pop		ecx
+		call	MemoryPool::Free
+		jmp		entryIter
+		ALIGN 16
+	done:
+		mov		s_NiFixedStringsCS.selfPtr, 0
+		pop		edi
+		pop		esi
+		pop		ebx
+		pop		ebp
+		retn
+	}
+}
+
 __declspec(naked) void __fastcall SetContainerItemsHealthHook(TESContainer *container, int EDX, float healthPerc)
 {
 	__asm
@@ -3019,8 +3130,8 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 					}
 				}
 			}
-			s_VATSHitLocDT = hitLocDT;
 		}
+		s_VATSHitLocDT = hitLocDT;
 		valueMod1 = 1.0F;
 		if (flagPCTM & 0x10)
 			valueMod1 += ThisCall<float>(0x66EF50, &g_thePlayer->avOwner, kAVCode_Charisma) * 0.05F;
@@ -3230,10 +3341,7 @@ __declspec(naked) float __cdecl GetVATSTargetDTHook(PlayerCharacter *thePlayer, 
 		add		ecx, 0xA4
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xC]
-		cmp		s_localizedDTDR, 0
-		jz		noLocalized
 		fsub	s_VATSHitLocDT
-	noLocalized:
 		lea		eax, [ebp-4]
 		push	eax
 		push	dword ptr [ebp+0xC]
@@ -3241,22 +3349,16 @@ __declspec(naked) float __cdecl GetVATSTargetDTHook(PlayerCharacter *thePlayer, 
 		push	dword ptr [ebp+8]
 		push	kPerkEntry_ModifyDamageThresholdAttacker
 		CALL_EAX(ADDR_ApplyPerkModifiers)
-		add		esp, 0x14
+		add		esp, 0x10
 		fsub	dword ptr [ebp-4]
-		mov		ecx, [ebp+0xC]
-		cmp		byte ptr [ecx+0x18D], 0
-		jz		notTeammate
-		lea		eax, [ebp-4]
-		mov		dword ptr [eax], 0
-		push	eax
+		mov		dword ptr [ebp-4], 0
 		push	esi
 		push	dword ptr [ebp+8]
-		push	ecx
+		push	dword ptr [ebp+0xC]
 		push	kPerkEntry_ModifyDamageThresholdDefender
 		CALL_EAX(ADDR_ApplyPerkModifiers)
 		add		esp, 0x14
 		fadd	dword ptr [ebp-4]
-	notTeammate:
 		cmp		dword ptr [esi+0xA8], 0
 		jz		done
 		mov		ecx, [ebp+8]
@@ -4092,7 +4194,7 @@ __declspec(naked) void DoOperatorHook()
 	}
 }
 
-TempObject<UnorderedMap<const char*, UInt32>> s_optionalHacks(0x20);
+TempObject<UnorderedMap<const char*, UInt32, 0x20, false>> s_optionalHacks;
 
 bool s_bigGunsSkill = false, s_failedScriptLocks = false, s_NVACAlerts = false, s_NPCWeaponMods = false, s_NPCPerks = false;
 UInt32 s_NVACAddress = 0;
@@ -4108,7 +4210,11 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 		case 1:
 			if (HOOK_SET(CalculateHitDamage, bEnable))
 			{
-				if (!bEnable) s_localizedDTDR = false;
+				if (!bEnable)
+				{
+					s_localizedDTDR = false;
+					s_VATSHitLocDT = 0;
+				}
 				return true;
 			}
 			return false;
@@ -4380,7 +4486,7 @@ __declspec(naked) void InitFontManagerHook()
 
 bool ProcessCustomINI()
 {
-	if (s_INISettingsMap->Empty()) InitSettingMaps();
+	if (s_gameSettingsMap->Empty()) InitSettingMaps();
 	char customINIPath[MAX_PATH];
 	memcpy(StrCopy(customINIPath, (char*)0x1202FA0), "FalloutCustom.ini", 18);
 	if (FileExists(customINIPath))
@@ -4401,7 +4507,7 @@ bool ProcessCustomINI()
 				*endPtr = ':';
 				StrCopy(endPtr + 1, currName);
 				currPair += pairSize;
-				setting = s_INISettingsMap->Get(settingName);
+				setting = s_gameSettingsMap->Get(settingName);
 				if (!setting) continue;
 				switch (*settingName | 0x20)
 				{
@@ -4636,11 +4742,9 @@ void InitGamePatches()
 	SafeWrite32(0x9ED3F8, (UInt32)&s_moveAwayDistance);
 	SafeWrite32(0x9ED528, (UInt32)&s_moveAwayDistance);
 
-	SAFE_WRITE_BUF(0xA5B318, "\x0F\x1F\x84\x00\x00\x00\x00\x00\x66\x0F\x1F\x84\x00\x00\x00\x00\x00");
-	SAFE_WRITE_BUF(0xA5B391, "\x66\x66\x66\x0F\x1F\x84\x00\x00\x00\x00\x00");
-	SAFE_WRITE_BUF(0xA5B3A6, "\x66\x66\x66\x0F\x1F\x84\x00\x00\x00\x00\x00");
-	SAFE_WRITE_BUF(0xA5B5DD, "\x89\xC7\x0F\x1F\x84\x00\x00\x00\x00\x00\x0F\x1F\x44\x00\x00");
-	SAFE_WRITE_BUF(0xA5B615, "\x0F\x1F\x80\x00\x00\x00\x00");
+	SafeWrite8(0xA5B630, 0xC3);
+	WriteRelJump(0xA5B690, (UInt32)GetNiFixedString);
+	WriteRelCall(0x878203, (UInt32)FreeUnusedNiFixedStrings);
 
 	SAFE_WRITE_BUF(0x4F15A0, "\x0F\xB6\x44\x24\x04\x89\x41\x04\x3C\x3B\x74\x07\x3C\x3C\x74\x03\xC2\x04\x00\x31\xD2\x89\x91\x04\x01\x00\x00\xC2\x04\x00");
 	WriteRelJump(0x482090, (UInt32)SetContainerItemsHealthHook);
@@ -4871,8 +4975,9 @@ void DeferredInit()
 	g_HUDMainMenu = HUDMainMenu::Get();
 	g_consoleManager = ConsoleManager::GetSingleton();
 	g_cursorNode = g_interfaceManager->cursor->node;
-	g_screenWidth = *(int*)0x11C73E0 * SCREEN_RES_CONVERT * 0.5F;
-	g_screenHeight = *(int*)0x11C7190 * SCREEN_RES_CONVERT * 0.5F;
+	float converter = *(float*)0x11D8A48 * 0.5F;
+	g_screenWidth = *(int*)0x11C73E0 * converter;
+	g_screenHeight = *(int*)0x11C7190 * converter;
 	g_shadowSceneNode = *(ShadowSceneNode**)0x11F91C8;
 	//g_LODRootNode = BSClearZNode::GetSingleton();
 	g_terminalModelDefault = *GameGlobals::TerminalModelPtr();

@@ -48,7 +48,7 @@ __declspec(naked) bool NiControllerSequence::Play()
 NiControllerSequence *NiControllerManager::FindSequence(const char *seqName)
 {
 	for (auto iter = sequences.Begin(); iter; ++iter)
-		if (!StrCompareCI(seqName, iter->sequenceName))
+		if (*iter && !StrCompareCI(iter->sequenceName, seqName))
 			return *iter;
 	return nullptr;
 }
@@ -67,7 +67,7 @@ __declspec(naked) void __fastcall NiObjectNET::SetName(const char *newName)
 	{
 		push	ecx
 		push	edx
-		CALL_EAX(0xA5B690)
+		call	GetNiFixedString
 		pop		ecx
 		pop		ecx
 		mov		edx, [ecx+8]
@@ -441,7 +441,7 @@ __declspec(naked) NiAVObject* __fastcall NiNode::GetBlock(const char *blockName)
 		jz		retnNULL
 		push	ecx
 		push	edx
-		CALL_EAX(0xA5B690)
+		call	GetNiFixedString
 		pop		ecx
 		pop		ecx
 		lock dec dword ptr [eax-8]

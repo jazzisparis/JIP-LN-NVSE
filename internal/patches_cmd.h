@@ -275,8 +275,7 @@ bool Hook_IsControlPressed_Eval(TESObjectREFR *thisObj, UInt32 ctrlID, UInt32 fl
 	return true;
 }
 
-typedef UnorderedMap<const char*, Setting*> GameSettingMap;
-TempObject<GameSettingMap> s_gameSettingsMap(0x1000), s_INISettingsMap(0x800);
+TempObject<UnorderedMap<const char*, Setting*, 0x1000, false>> s_gameSettingsMap;
 
 void InitSettingMaps()
 {
@@ -294,7 +293,7 @@ void InitSettingMaps()
 	{
 		setting = istIter->data;
 		if (setting && setting->ValidType())
-			s_INISettingsMap()[setting->name] = setting;
+			s_gameSettingsMap()[setting->name] = setting;
 	}
 	while (istIter = istIter->next);
 	istIter = (*(IniSettingCollection**)0x11F35A0)->settings.Head();
@@ -302,7 +301,7 @@ void InitSettingMaps()
 	{
 		setting = istIter->data;
 		if (setting && setting->ValidType())
-			s_INISettingsMap()[setting->name] = setting;
+			s_gameSettingsMap()[setting->name] = setting;
 	}
 	while (istIter = istIter->next);
 	istIter = (*(IniSettingCollection**)0x11CC694)->settings.Head();
@@ -310,7 +309,7 @@ void InitSettingMaps()
 	{
 		setting = istIter->data;
 		if (setting && setting->ValidType())
-			s_INISettingsMap()[setting->name] = setting;
+			s_gameSettingsMap()[setting->name] = setting;
 	}
 	while (istIter = istIter->next);
 	istIter = (*(IniSettingCollection**)0x11F35A4)->settings.Head();
@@ -318,7 +317,7 @@ void InitSettingMaps()
 	{
 		setting = istIter->data;
 		if (setting && setting->ValidType())
-			s_INISettingsMap()[setting->name] = setting;
+			s_gameSettingsMap()[setting->name] = setting;
 	}
 	while (istIter = istIter->next);
 }
@@ -366,7 +365,7 @@ bool Hook_GetNumericINISetting_Execute(COMMAND_ARGS)
 	char settingName[0x80];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName) && ((settingName[0] | 0x20) != 's'))
 	{
-		Setting *setting = s_INISettingsMap->Get(settingName);
+		Setting *setting = s_gameSettingsMap->Get(settingName);
 		if (setting)
 		{
 			setting->Get(result);
@@ -385,7 +384,7 @@ bool Hook_SetNumericINISetting_Execute(COMMAND_ARGS)
 	double newVal;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName, &newVal) && ((settingName[0] | 0x20) != 's'))
 	{
-		Setting *setting = s_INISettingsMap->Get(settingName);
+		Setting *setting = s_gameSettingsMap->Get(settingName);
 		if (setting)
 		{
 			setting->Set(newVal);

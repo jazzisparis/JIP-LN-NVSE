@@ -2,7 +2,7 @@
 
 #define MENU_VISIBILITY ((bool*)0x11F308F)
 extern TileMenu **g_tileMenuArray;
-extern TempObject<UnorderedMap<const char*, UInt32>> s_menuNameToID;
+extern TempObject<UnorderedMap<const char*, UInt32, 0x20, false>> s_menuNameToID;
 
 // 580
 class InterfaceManager

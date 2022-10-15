@@ -634,8 +634,6 @@ __declspec(naked) bool __vectorcall Equal_V4(__m128 v1, __m128 v2)
 	}
 }
 
-#define STR_BUFFER_SIZE 0x20000
-
 __declspec(noinline) char *GetStrArgBuffer()
 {
 	thread_local static char *s_strBuffer = nullptr;
@@ -725,6 +723,7 @@ __declspec(naked) UInt32 __fastcall StrLen(const char *str)
 {
 	__asm
 	{
+		xor		edx, edx
 		mov		eax, ecx
 		test	eax, eax
 		jz		nullPtr
@@ -768,7 +767,7 @@ __declspec(naked) char* __fastcall StrCopy(char *dest, const char *src)
 	__asm
 	{
 		mov		eax, ecx
-		test	ecx, ecx
+		test	eax, eax
 		jz		done
 		test	edx, edx
 		jz		nullTerm
@@ -812,8 +811,6 @@ __declspec(naked) char* __fastcall StrNCopy(char *dest, const char *src, UInt32 
 		jz		done
 		test	edx, edx
 		jz		nullTerm
-		cmp		dword ptr [esp+4], 0
-		jz		nullTerm
 		push	esi
 		push	edi
 		mov		esi, edx
@@ -834,16 +831,11 @@ __declspec(naked) char* __fastcall StrCat(char *dest, const char *src)
 {
 	__asm
 	{
-		test	ecx, ecx
-		jz		nullPtr
 		push	edx
 		call	StrLen
 		mov		ecx, edx
 		pop		edx
 		jmp		StrCopy
-	nullPtr:
-		xor		eax, eax
-		retn
 	}
 }
 
@@ -851,6 +843,8 @@ __declspec(naked) char __fastcall StrCompareCS(const char *lstr, const char *rst
 {
 	__asm
 	{
+		test	ecx, ecx
+		jz		retnLT
 		push	esi
 		push	edi
 		mov		esi, ecx
@@ -887,6 +881,9 @@ __declspec(naked) char __fastcall StrCompareCS(const char *lstr, const char *rst
 		pop		edi
 		pop		esi
 		retn
+	retnLT:
+		mov		al, 0xFF
+		retn
 		ALIGN 16
 	foundEnd:
 		test	eax, eax
@@ -915,15 +912,16 @@ __declspec(naked) char __fastcall StrCompareCI(const char *lstr, const char *rst
 {
 	__asm
 	{
+		test	ecx, ecx
+		jz		retnLT
 		push	esi
 		push	edi
 		mov		esi, ecx
 		mov		edi, edx
-		mov		eax, offset kStringMasks+0x20
-		movaps	xmm3, [eax]
-		movaps	xmm4, [eax+0x20]
-		movaps	xmm5, [eax+0x30]
-		movaps	xmm6, [eax+0x40]
+		movaps	xmm3, kStringMasks+0x20
+		movaps	xmm4, kStringMasks+0x40
+		movaps	xmm5, kStringMasks+0x50
+		movaps	xmm6, kStringMasks+0x60
 		ALIGN 16
 	iterHead:
 		movups	xmm0, [esi]
@@ -967,6 +965,9 @@ __declspec(naked) char __fastcall StrCompareCI(const char *lstr, const char *rst
 		lea		ecx, [edi+ecx-0x10]
 		pop		edi
 		pop		esi
+		retn
+	retnLT:
+		mov		al, 0xFF
 		retn
 		ALIGN 16
 	foundEnd:
@@ -1754,7 +1755,7 @@ DString::DString(const char *from)
 	length = StrLen(from);
 	if (length)
 	{
-		alloc = AlignNumAlloc(length + 1);
+		alloc = (length + 0x11) & 0xFFF0;
 		str = Pool_CAlloc(alloc);
 		COPY_BYTES(str, from, length + 1);
 	}
@@ -1770,7 +1771,7 @@ DString::DString(const DString &from)
 	length = from.length;
 	if (length)
 	{
-		alloc = AlignNumAlloc(length + 1);
+		alloc = (length + 0x11) & 0xFFF0;
 		str = Pool_CAlloc(alloc);
 		COPY_BYTES(str, from.str, length + 1);
 	}
@@ -1785,7 +1786,7 @@ DString::DString(UInt16 _alloc) : length(0)
 {
 	if (_alloc)
 	{
-		alloc = AlignNumAlloc(_alloc + 1);
+		alloc = (_alloc + 0x11) & 0xFFF0;
 		str = Pool_CAlloc(alloc);
 		*str = 0;
 	}
@@ -1799,7 +1800,7 @@ DString::DString(UInt16 _alloc) : length(0)
 void DString::Reserve(UInt16 size)
 {
 	if (alloc > size) return;
-	UInt16 newAlloc = AlignNumAlloc(size + 1);
+	UInt16 newAlloc = (size + 0x11) & 0xFFF0;
 	char *newStr = Pool_CAlloc(newAlloc);
 	if (str)
 	{
@@ -1821,7 +1822,7 @@ DString& DString::operator=(const char *other)
 			if (alloc <= length)
 			{
 				if (str) Pool_CFree(str, alloc);
-				alloc = AlignNumAlloc(length + 1);
+				alloc = (length + 0x11) & 0xFFF0;
 				str = Pool_CAlloc(alloc);
 			}
 			COPY_BYTES(str, other, length + 1);
@@ -1842,7 +1843,7 @@ DString& DString::operator=(const DString &other)
 			if (alloc <= length)
 			{
 				if (str) Pool_CFree(str, alloc);
-				alloc = AlignNumAlloc(length + 1);
+				alloc = (length + 0x11) & 0xFFF0;
 				str = Pool_CAlloc(alloc);
 			}
 			COPY_BYTES(str, other.str, length + 1);
@@ -2007,7 +2008,7 @@ DString DString::SubString(UInt16 bgnIdx, UInt16 endIdx)
 		resLen = endIdx - bgnIdx;
 		if (resLen)
 		{
-			resAlloc = AlignNumAlloc(resLen + 1);
+			resAlloc = (resLen + 0x11) & 0xFFF0;
 			resStr = Pool_CAlloc(resAlloc);
 			COPY_BYTES(resStr, str + bgnIdx, resLen);
 			resStr[resLen] = 0;
@@ -2019,7 +2020,7 @@ DString DString::SubString(UInt16 bgnIdx, UInt16 endIdx)
 DString DString::ToLower()
 {
 	if (!length) return DString();
-	UInt16 resAlloc = AlignNumAlloc(length + 1);
+	UInt16 resAlloc = (length + 0x11) & 0xFFF0;
 	char *resStr = Pool_CAlloc(resAlloc);
 	COPY_BYTES(resStr, str, length + 1);
 	StrToLower(resStr);
@@ -2029,7 +2030,7 @@ DString DString::ToLower()
 DString DString::ToUpper()
 {
 	if (!length) return DString();
-	UInt16 resAlloc = AlignNumAlloc(length + 1);
+	UInt16 resAlloc = (length + 0x11) & 0xFFF0;
 	char *resStr = Pool_CAlloc(resAlloc);
 	COPY_BYTES(resStr, str, length + 1);
 	StrToUpper(resStr);
@@ -2038,7 +2039,7 @@ DString DString::ToUpper()
 
 DString operator+(const DString &lStr, char rChr)
 {
-	UInt16 resLen = lStr.length + 1, resAlloc = AlignNumAlloc(resLen + 1);
+	UInt16 resLen = lStr.length + 1, resAlloc = (resLen + 0x11) & 0xFFF0;
 	char *resStr = Pool_CAlloc(resAlloc);
 	if (lStr.length) COPY_BYTES(resStr, lStr.str, lStr.length);
 	*(UInt16*)(resStr + lStr.length) = rChr;
@@ -2051,7 +2052,7 @@ DString operator+(const DString &lStr, const char *rStr)
 	UInt16 rLen = StrLen(rStr), resLen = lStr.length + rLen, resAlloc = 0;
 	if (resLen)
 	{
-		resAlloc = AlignNumAlloc(resLen + 1);
+		resAlloc = (resLen + 0x11) & 0xFFF0;
 		resStr = Pool_CAlloc(resAlloc);
 		if (lStr.length) COPY_BYTES(resStr, lStr.str, lStr.length);
 		if (rLen) COPY_BYTES(resStr + lStr.length, rStr, rLen);
@@ -2066,7 +2067,7 @@ DString operator+(const char *lStr, const DString &rStr)
 	UInt16 lLen = StrLen(lStr), resLen = lLen + rStr.length, resAlloc = 0;
 	if (resLen)
 	{
-		resAlloc = AlignNumAlloc(resLen + 1);
+		resAlloc = (resLen + 0x11) & 0xFFF0;
 		resStr = Pool_CAlloc(resAlloc);
 		if (lLen) COPY_BYTES(resStr, lStr, lLen);
 		if (rStr.length) COPY_BYTES(resStr + lLen, rStr.str, rStr.length);
@@ -2321,15 +2322,15 @@ __declspec(naked) LineIterator::LineIterator(const char *filePath, char *buffer)
 	}
 }
 
-UInt32 __fastcall FileToBuffer(const char *filePath, char *buffer)
+UInt32 __fastcall FileToBuffer(const char *filePath, char *buffer, UInt32 maxLen)
 {
 	FileStream srcFile(filePath);
 	if (!srcFile) return 0;
 	UInt32 length = srcFile.GetLength();
 	if (length)
 	{
-		if (length > (STR_BUFFER_SIZE - 1))
-			length = STR_BUFFER_SIZE - 1;
+		if (length > maxLen)
+			length = maxLen;
 		srcFile.ReadBuf(buffer, length);
 		buffer[length] = 0;
 	}

@@ -69,27 +69,57 @@ bool Cmd_GetTimeStamp_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool __fastcall GetINIPath(char *iniPath, Script *scriptObj)
+__declspec(naked) bool __fastcall GetINIPath(char *iniPath, Script *scriptObj)
 {
-	if (!*iniPath)
+	__asm
 	{
-		UInt8 modIdx = scriptObj->GetOverridingModIdx();
-		if (modIdx == 0xFF) return false;
-		StrCopy(iniPath, g_dataHandler->GetNthModName(modIdx));
+		mov		dword ptr [ecx], 'atad'
+		mov		dword ptr [ecx+4], 'noc\\'
+		mov		dword ptr [ecx+8], '\\gif'
+		add		ecx, 0xC
+		push	esi
+		mov		esi, ecx
+		cmp		[ecx], 0
+		jnz		hasPath
+		mov		al, [edx+0xF]
+		cmp		al, 0xFF
+		jz		retnFalse
+		movzx	edx, al
+		mov		ecx, g_dataHandler
+		mov		eax, [ecx+edx*4+0x21C]
+		test	eax, eax
+		jz		retnFalse
+		lea		edx, [eax+0x20]
+		mov		ecx, esi
+		call	StrCopy
+		jmp		buildPath
+	retnFalse:
+		xor		al, al
+		pop		esi
+		retn
+	hasPath:
+		push	'\\'
+		mov		dl, '/'
+		call	ReplaceChr
+	buildPath:
+		mov		dl, '.'
+		mov		ecx, esi
+		call	FindChrR
+		test	eax, eax
+		jz		noDot
+		mov		dword ptr [eax+1], 'ini'
+		mov		al, 1
+		pop		esi
+		retn
+	noDot:
+		mov		ecx, esi
+		call	StrLen
+		mov		dword ptr [edx], 'ini.'
+		mov		[edx+4], 0
+		mov		al, 1
+		pop		esi
+		retn
 	}
-	else ReplaceChr(iniPath, '/', '\\');
-	char *dotPos = FindChrR(iniPath, '.');
-	if (dotPos) *(UInt32*)(dotPos + 1) = 'ini';
-	else
-	{
-		UInt32 length = StrLen(iniPath);
-		*(UInt32*)(iniPath + length) = 'ini.';
-		iniPath[length + 4] = 0;
-	}
-	*(UInt32*)(iniPath - 12) = 'atad';
-	*(UInt32*)(iniPath - 8) = 'noc\\';
-	*(UInt32*)(iniPath - 4) = '\\gif';
-	return true;
 }
 
 __declspec(naked) char* __fastcall GetValueDelim(char *valueName)
@@ -134,9 +164,9 @@ __declspec(naked) char* __fastcall GetValueDelim(char *valueName)
 bool Cmd_GetINIFloat_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char configPath[0x80], valueName[0x80], *iniPath = configPath + 12;
-	*iniPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) || !GetINIPath(iniPath, scriptObj))
+	char configPath[0x80], valueName[0x80];
+	configPath[12] = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, configPath + 12) || !GetINIPath(configPath, scriptObj))
 		return true;
 	char *delim = GetValueDelim(valueName);
 	if (!*delim) return true;
@@ -150,10 +180,10 @@ bool Cmd_GetINIFloat_Execute(COMMAND_ARGS)
 bool Cmd_SetINIFloat_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char configPath[0x80], valueName[0x80], *iniPath = configPath + 12;
+	char configPath[0x80], valueName[0x80];
 	double value;
-	*iniPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, &value, iniPath) || !GetINIPath(iniPath, scriptObj))
+	configPath[12] = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, &value, configPath + 12) || !GetINIPath(configPath, scriptObj))
 		return true;
 	char *delim = GetValueDelim(valueName);
 	if (!*delim) return true;
@@ -167,10 +197,10 @@ bool Cmd_SetINIFloat_Execute(COMMAND_ARGS)
 
 bool Cmd_GetINIString_Execute(COMMAND_ARGS)
 {
-	char configPath[0x80], valueName[0x80], *iniPath = configPath + 12, *buffer = GetStrArgBuffer();
+	char configPath[0x80], valueName[0x80], *buffer = GetStrArgBuffer();
 	buffer[0] = 0;
-	*iniPath = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) && GetINIPath(iniPath, scriptObj))
+	configPath[12] = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, configPath + 12) && GetINIPath(configPath, scriptObj))
 	{
 		char *delim = GetValueDelim(valueName);
 		if (*delim) GetPrivateProfileString(valueName, delim, nullptr, buffer, kMaxMessageLength, configPath);
@@ -182,9 +212,9 @@ bool Cmd_GetINIString_Execute(COMMAND_ARGS)
 bool Cmd_SetINIString_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char configPath[0x80], valueName[0x80], *iniPath = configPath + 12, *buffer = GetStrArgBuffer();
-	*iniPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, buffer, iniPath) || !GetINIPath(iniPath, scriptObj))
+	char configPath[0x80], valueName[0x80], *buffer = GetStrArgBuffer();
+	configPath[12] = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, buffer, configPath + 12) || !GetINIPath(configPath, scriptObj))
 		return true;
 	char *delim = GetValueDelim(valueName);
 	if (!*delim) return true;
@@ -197,10 +227,10 @@ bool Cmd_SetINIString_Execute(COMMAND_ARGS)
 bool Cmd_GetINISection_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char configPath[0x80], secName[0x40], *iniPath = configPath + 12;
-	*iniPath = 0;
+	char configPath[0x80], secName[0x40];
+	configPath[12] = 0;
 	UInt32 getNumeric = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &secName, iniPath, &getNumeric) || !GetINIPath(iniPath, scriptObj))
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &secName, configPath + 12, &getNumeric) || !GetINIPath(configPath, scriptObj))
 		return true;
 	NVSEArrayVar *outArray = CreateStringMap(nullptr, nullptr, 0, scriptObj);
 	char *buffer = GetStrArgBuffer(), *delim;
@@ -220,10 +250,10 @@ bool Cmd_GetINISection_Execute(COMMAND_ARGS)
 bool Cmd_SetINISection_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char configPath[0x80], secName[0x40], *iniPath = configPath + 12;
+	char configPath[0x80], secName[0x40];
 	UInt32 arrID;
-	*iniPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &secName, &arrID, iniPath) || !GetINIPath(iniPath, scriptObj))
+	configPath[12] = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &secName, &arrID, configPath + 12) || !GetINIPath(configPath, scriptObj))
 		return true;
 	NVSEArrayVar *srcArray = LookupArrayByID(arrID);
 	if (!srcArray || (GetContainerType(srcArray) != NVSEArrayVarInterface::kArrType_StringMap))
@@ -251,9 +281,9 @@ bool Cmd_SetINISection_Execute(COMMAND_ARGS)
 bool Cmd_GetINISectionNames_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char configPath[0x80], *iniPath = configPath + 12;
-	*iniPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, iniPath) || !GetINIPath(iniPath, scriptObj))
+	char configPath[0x80];
+	configPath[12] = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, configPath + 12) || !GetINIPath(configPath, scriptObj))
 		return true;
 	TempElements *tmpElements = GetTempElements();
 	char *buffer = GetStrArgBuffer();
@@ -271,9 +301,9 @@ bool Cmd_GetINISectionNames_Execute(COMMAND_ARGS)
 bool Cmd_RemoveINIKey_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char configPath[0x80], valueName[0x80], *iniPath = configPath + 12;
-	*iniPath = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, iniPath) || !GetINIPath(iniPath, scriptObj) || !FileExists(configPath))
+	char configPath[0x80], valueName[0x80];
+	configPath[12] = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, configPath + 12) || !GetINIPath(configPath, scriptObj) || !FileExists(configPath))
 		return true;
 	char *key = GetValueDelim(valueName);
 	if (*key && WritePrivateProfileString(valueName, key, nullptr, configPath))
@@ -283,9 +313,9 @@ bool Cmd_RemoveINIKey_Execute(COMMAND_ARGS)
 
 bool Cmd_RemoveINISection_Execute(COMMAND_ARGS)
 {
-	char configPath[0x80], secName[0x40], *iniPath = configPath + 12;
-	*iniPath = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &secName, iniPath) && GetINIPath(iniPath, scriptObj) && FileExists(configPath) && 
+	char configPath[0x80], secName[0x40];
+	configPath[12] = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &secName, configPath + 12) && GetINIPath(configPath, scriptObj) && FileExists(configPath) &&
 		WritePrivateProfileStruct(secName, nullptr, nullptr, 0, configPath)) *result = 1;
 	else *result = 0;
 	return true;

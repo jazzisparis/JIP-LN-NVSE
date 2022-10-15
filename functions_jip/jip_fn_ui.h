@@ -884,12 +884,12 @@ void SetOnMenuStateEvent(Script *script, bool doAdd, char idx)
 		if (s_menuStateEventType == 2)
 		{
 			if (scripts->Empty())
-				HOOK_MOD(MenuHandleMouseover, true);
+				HOOK_INC(MenuHandleMouseover);
 		}
 		else if (callbacks->onOpen.Empty() && callbacks->onClose.Empty())
 		{
-			HOOK_MOD(MenuStateOpen, true);
-			HOOK_MOD(MenuStateClose, true);
+			HOOK_INC(MenuStateOpen);
+			HOOK_INC(MenuStateClose);
 		}
 		scripts->Insert(script);
 	}
@@ -899,12 +899,12 @@ void SetOnMenuStateEvent(Script *script, bool doAdd, char idx)
 		if (s_menuStateEventType == 2)
 		{
 			if (scripts->Empty())
-				HOOK_MOD(MenuHandleMouseover, false);
+				HOOK_DEC(MenuHandleMouseover);
 		}
 		else if (callbacks->onOpen.Empty() && callbacks->onClose.Empty())
 		{
-			HOOK_MOD(MenuStateOpen, false);
-			HOOK_MOD(MenuStateClose, false);
+			HOOK_DEC(MenuStateOpen);
+			HOOK_DEC(MenuStateClose);
 		}
 	}
 }
@@ -1219,8 +1219,9 @@ bool Cmd_SetCursorPos_Execute(COMMAND_ARGS)
 	{
 		g_interfaceManager->cursorX = posX;
 		g_interfaceManager->cursorY = posY;
-		g_cursorNode->LocalTranslate().x = (posX * SCREEN_RES_CONVERT) - g_screenWidth;
-		g_cursorNode->LocalTranslate().z = g_screenHeight - (posY * SCREEN_RES_CONVERT);
+		float converter = *(float*)0x11D8A48;
+		g_cursorNode->LocalTranslate().x = (posX * converter) - g_screenWidth;
+		g_cursorNode->LocalTranslate().z = g_screenHeight - (posY * converter);
 	}
 	return true;
 }
@@ -1878,7 +1879,7 @@ __declspec(naked) void __stdcall GenerateRenderedUITexture(NiNode *tileNode, con
 		push	0x64
 		mov		ecx, eax
 		CALL_EAX(0xB660D0)
-		lock inc dword ptr [eax+4]
+		inc		dword ptr [eax+4]
 		mov		dword ptr [eax+0x19C], 0xA
 		push	eax
 		push	0xC8

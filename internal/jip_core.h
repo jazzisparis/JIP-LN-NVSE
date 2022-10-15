@@ -77,27 +77,27 @@ extern _UIOInjectComponent UIOInjectComponent;
 
 #define MSGBOX_ARGS 0, 0, ShowMessageBox_Callback, 0, 0x17, 0, 0, "OK", nullptr
 
-struct GameGlobals
+namespace GameGlobals
 {
-	__forceinline static const char **TerminalModelPtr() {return (const char**)0x11A0BB0;}
-	__forceinline static SpellItem *PipBoyLight() {return *(SpellItem**)0x11C358C;}
-	__forceinline static TESDescription **CurrentDescription() {return (TESDescription**)0x11C5490;}
-	__forceinline static String *CurrentDescriptionText() {return (String*)0x11C5498;}
-	__forceinline static NiTPointerMap<TESForm> *AllFormsMap() {return *(NiTPointerMap<TESForm>**)0x11C54C0;}
-	__forceinline static NiTStringPointerMap<TESForm> *EditorIDsMap() {return *(NiTStringPointerMap<TESForm>**)0x11C54C8;}
-	__forceinline static BSTCaseInsensitiveStringMap<void*> *IdleAnimsDirectoryMap() {return *(BSTCaseInsensitiveStringMap<void*>**)0x11CB6A0;}
-	__forceinline static BSSimpleArray<TESRecipeCategory*> *RecipeMenuCategories() {return (BSSimpleArray<TESRecipeCategory*>*)0x11D8F08;}
-	__forceinline static TESObjectWEAP *PlayerWeapon() {return *(TESObjectWEAP**)0x11D98D4;}
-	__forceinline static tList<VATSTarget> *VATSTargetList() {return (tList<VATSTarget>*)0x11DB150;}
-	__forceinline static NiNode *ObjectLODRoot() {return *(NiNode**)0x11DEA18;}
-	__forceinline static bool *GamePadRumble() {return (bool*)0x11E0854;}
-	__forceinline static UInt32 TickCount() {return *(UInt32*)0x11F63A8;}
-	__forceinline static tList<Archive> *ArchivesList() {return *(tList<Archive>**)0x11F8160;}
-	__forceinline static LightCS *SceneLightsLock() {return (LightCS*)0x11F9EA0;}
-	__forceinline static UInt32 *LightingPasses() {return (UInt32*)0x11F91D8;}
-	__forceinline static tList<ListBox<int>> *ActiveListBoxes() {return (tList<ListBox<int>>*)0x11D8B54;}
-	__forceinline static tList<GradualSetFloat> *QueuedGradualSetFloat() {return (tList<GradualSetFloat>*)0x11F3348;}
-	__forceinline static RadioEntry *PipboyRadio() {return *(RadioEntry**)0x11DD42C;}
+	__forceinline const char **TerminalModelPtr() {return (const char**)0x11A0BB0;}
+	__forceinline SpellItem *PipBoyLight() {return *(SpellItem**)0x11C358C;}
+	__forceinline TESDescription **CurrentDescription() {return (TESDescription**)0x11C5490;}
+	__forceinline String *CurrentDescriptionText() {return (String*)0x11C5498;}
+	__forceinline NiTPointerMap<TESForm> *AllFormsMap() {return *(NiTPointerMap<TESForm>**)0x11C54C0;}
+	__forceinline NiTStringPointerMap<TESForm> *EditorIDsMap() {return *(NiTStringPointerMap<TESForm>**)0x11C54C8;}
+	__forceinline BSTCaseInsensitiveStringMap<void*> *IdleAnimsDirectoryMap() {return *(BSTCaseInsensitiveStringMap<void*>**)0x11CB6A0;}
+	__forceinline BSSimpleArray<TESRecipeCategory*> *RecipeMenuCategories() {return (BSSimpleArray<TESRecipeCategory*>*)0x11D8F08;}
+	__forceinline TESObjectWEAP *PlayerWeapon() {return *(TESObjectWEAP**)0x11D98D4;}
+	__forceinline tList<VATSTarget> *VATSTargetList() {return (tList<VATSTarget>*)0x11DB150;}
+	__forceinline NiNode *ObjectLODRoot() {return *(NiNode**)0x11DEA18;}
+	__forceinline bool *GamePadRumble() {return (bool*)0x11E0854;}
+	__forceinline UInt32 TickCount() {return *(UInt32*)0x11F63A8;}
+	__forceinline tList<Archive> *ArchivesList() {return *(tList<Archive>**)0x11F8160;}
+	__forceinline LightCS *SceneLightsLock() {return (LightCS*)0x11F9EA0;}
+	__forceinline UInt32 *LightingPasses() {return (UInt32*)0x11F91D8;}
+	__forceinline tList<ListBox<int>> *ActiveListBoxes() {return (tList<ListBox<int>>*)0x11D8B54;}
+	__forceinline tList<GradualSetFloat> *QueuedGradualSetFloat() {return (tList<GradualSetFloat>*)0x11F3348;}
+	__forceinline RadioEntry *PipboyRadio() {return *(RadioEntry**)0x11DD42C;}
 };
 
 extern void *g_scrapHeapQueue;
@@ -110,8 +110,6 @@ extern TESGlobal *g_gameYear, *g_gameMonth, *g_gameDay, *g_gameHour, *g_timeScal
 extern TESObjectMISC *g_capsItem;
 extern TESImageSpaceModifier *g_getHitIMOD, *g_explosionInFaceIMOD;
 extern UInt32 s_mainThreadID, s_initialTickCount;
-
-#define SCREEN_RES_CONVERT (1 / 1.05F)
 
 __forceinline TESObjectREFR *PlaceAtMe(TESObjectREFR *refr, TESForm *form, UInt32 count, UInt32 distance, UInt32 direction, float health)
 {
@@ -438,7 +436,7 @@ public:
 			if (alloc < size)
 			{
 				if (alloc) Pool_CFree(str, alloc);
-				alloc = AlignNumAlloc(size);
+				alloc = (size + 0x10) & 0xFFF0;
 				str = Pool_CAlloc(alloc);
 			}
 			COPY_BYTES(str, value, size);
@@ -479,7 +477,7 @@ public:
 		length = *(UInt16*)bufPos;
 		if (length)
 		{
-			alloc = AlignNumAlloc(length + 1);
+			alloc = (length + 0x11) & 0xFFF0;
 			str = Pool_CAlloc(alloc);
 			COPY_BYTES(str, bufPos + 2, length);
 			str[length] = 0;
@@ -504,13 +502,13 @@ public:
 static_assert(sizeof(AuxVariableValue) == 0x10);
 
 typedef Vector<AuxVariableValue, 2> AuxVarValsArr;
-typedef UnorderedMap<char*, AuxVarValsArr> AuxVarVarsMap;
+typedef UnorderedMap<char*, AuxVarValsArr, 4> AuxVarVarsMap;
 typedef UnorderedMap<UInt32, AuxVarVarsMap> AuxVarOwnersMap;
 typedef UnorderedMap<UInt32, AuxVarOwnersMap> AuxVarModsMap;
 extern TempObject<AuxVarModsMap> s_auxVariablesPerm, s_auxVariablesTemp;
 
-typedef UnorderedMap<UInt32, AuxVariableValue> RefMapIDsMap;
-typedef UnorderedMap<char*, RefMapIDsMap> RefMapVarsMap;
+typedef UnorderedMap<UInt32, AuxVariableValue, 4> RefMapIDsMap;
+typedef UnorderedMap<char*, RefMapIDsMap, 4> RefMapVarsMap;
 typedef UnorderedMap<UInt32, RefMapVarsMap> RefMapModsMap;
 extern TempObject<RefMapModsMap> s_refMapArraysPerm, s_refMapArraysTemp;
 
@@ -607,13 +605,13 @@ class QuestStageEventFinder
 public:
 	QuestStageEventFinder(QuestStageEventCallback &_callback) : m_callback(&_callback) {}
 
-	bool operator()(const QuestStageEventCallback &rhs)
+	bool operator==(const QuestStageEventCallback &rhs)
 	{
 		return (m_callback->stageID == rhs.stageID) && (m_callback->callback == rhs.callback);
 	}
 };
 
-struct AnimEventCallbacks : UnorderedMap<UInt32, EventCallbackScripts> {};
+typedef UnorderedMap<UInt32, EventCallbackScripts> AnimEventCallbacks;
 
 struct CriticalHitEventData
 {
@@ -637,7 +635,7 @@ class CriticalHitEventFind
 public:
 	CriticalHitEventFind(CriticalHitEventData &_data) : data(&_data) {}
 
-	bool operator()(const CriticalHitEventData &rhs)
+	bool operator==(const CriticalHitEventData &rhs)
 	{
 		return (data->callback == rhs.callback) && (!rhs.target || (data->target == rhs.target)) && 
 			(!rhs.source || (data->source == rhs.source)) && (!rhs.weapon || (data->weapon == rhs.weapon));
@@ -651,7 +649,7 @@ class CriticalHitEventRemove
 public:
 	CriticalHitEventRemove(CriticalHitEventData &_data) : data(&_data) {}
 
-	bool operator()(const CriticalHitEventData &rhs)
+	bool operator==(const CriticalHitEventData &rhs)
 	{
 		return (data->callback == rhs.callback) && (!data->target || (data->target == rhs.target)) && 
 			(!data->source || (data->source == rhs.source)) && (!data->weapon || (data->weapon == rhs.weapon));
@@ -678,7 +676,7 @@ class DisabledBlockFinder
 public:
 	DisabledBlockFinder(UInt8 _blockType) : blockType(_blockType) {}
 
-	bool operator()(const DisabledBlockInfo &rhs) {return rhs.blockType == blockType;}
+	bool operator==(const DisabledBlockInfo &rhs) {return rhs.blockType == blockType;}
 };
 
 class ScriptBlockIterator
@@ -920,7 +918,7 @@ static_assert(sizeof(TLSData) == 0x2C0);
 
 TLSData *GetTLSData();
 
-extern TempObject<UnorderedMap<const char*, UInt32>> s_fileExtToType;
+extern TempObject<UnorderedMap<const char*, UInt32, 0x20, false>> s_fileExtToType;
 
 bool __fastcall GetFileArchived(const char *filePath);
 

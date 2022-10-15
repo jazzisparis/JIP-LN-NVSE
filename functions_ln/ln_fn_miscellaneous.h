@@ -95,7 +95,7 @@ bool Cmd_SetGlobalValue_Execute(COMMAND_ARGS)
 	TESGlobal *global;
 	do
 	{
-		if ((global = iter->data) && !StrCompareCI(varName, global->name.m_data))
+		if ((global = iter->data) && !StrCompareCI(global->name.m_data, varName))
 		{
 			global->data = value;
 			break;

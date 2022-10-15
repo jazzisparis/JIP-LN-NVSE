@@ -727,7 +727,7 @@ bool Cmd_AddRefMapMarker_Execute(COMMAND_ARGS)
 	else if (s_refMapMarkersList.IsInList(thisObj)) return true;
 	s_refMapMarkersList.Prepend(thisObj);
 	s_refMapMarkersCount++;
-	HOOK_MOD(CreateMapMarkers, true);
+	HOOK_INC(CreateMapMarkers);
 	return true;
 }
 
@@ -737,7 +737,7 @@ bool Cmd_RemoveRefMapMarker_Execute(COMMAND_ARGS)
 	if ((idx == -1) || (idx >= s_refMapMarkersCount)) return true;
 	if (--s_refMapMarkersCount) s_refMapMarkersList.RemoveNth(idx);
 	else s_refMapMarkersList.Init();
-	HOOK_MOD(CreateMapMarkers, false);
+	HOOK_DEC(CreateMapMarkers);
 	return true;
 }
 
@@ -809,15 +809,18 @@ bool Cmd_SetRefName_Execute(COMMAND_ARGS)
 		{
 			char **namePtr;
 			if (s_refNamesMap->InsertKey(thisObj, &namePtr))
-				HOOK_MOD(GetRefName, true);
-			else free(*namePtr);
-			*namePtr = CopyString(name);
+				HOOK_INC(GetRefName);
+			else FreeStringKey(*namePtr);
+			*namePtr = CopyStringKey(name);
 			thisObj->JIPRefFlags() |= kHookRefFlag5F_AltRefName;
 		}
 		else
 		{
-			if (s_refNamesMap->EraseFree(thisObj))
-				HOOK_MOD(GetRefName, false);
+			if (char *pName = s_refNamesMap->GetErase(thisObj))
+			{
+				FreeStringKey(pName);
+				HOOK_DEC(GetRefName);
+			}
 			thisObj->JIPRefFlags() &= ~kHookRefFlag5F_AltRefName;
 		}
 	}
@@ -2128,7 +2131,7 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 				if (s_extraCamerasMap->InsertKey(camName, &pCamera))
 				{
 					*pCamera = xCamera = NiCamera::Create();
-					InterlockedIncrement(&xCamera->m_uiRefCount);
+					xCamera->m_uiRefCount++;
 					xCamera->SetName(camName);
 					xCamera->m_transformLocal.scale = 0;
 					xCamera->frustum.n = 5.0F;
@@ -2498,15 +2501,18 @@ bool Cmd_SetRefrModelPath_Execute(COMMAND_ARGS)
 		{
 			char **pPath;
 			if (s_refrModelPathMap->InsertKey(thisObj, &pPath))
-				HOOK_MOD(GetModelPath, true);
-			else free(*pPath);
-			*pPath = CopyString(modelPath);
+				HOOK_INC(GetModelPath);
+			else FreeStringKey(*pPath);
+			*pPath = CopyStringKey(modelPath);
 			thisObj->JIPRefFlags() |= kHookRefFlag5F_RefrModelPath;
 		}
 		else
 		{
-			if (s_refrModelPathMap->EraseFree(thisObj))
-				HOOK_MOD(GetModelPath, false);
+			if (char *pPath = s_refrModelPathMap->GetErase(thisObj))
+			{
+				FreeStringKey(pPath);
+				HOOK_DEC(GetModelPath);
+			}
 			thisObj->JIPRefFlags() &= ~kHookRefFlag5F_RefrModelPath;
 		}
 	}

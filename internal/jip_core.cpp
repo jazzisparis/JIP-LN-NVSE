@@ -1104,7 +1104,7 @@ namespace JIPScriptRunner
 			fileName = const_cast<char*>(*iter);
 			if (fileName[2] != '_') continue;
 			StrCopy(scriptsPath + 26, fileName);
-			if (!FileToBuffer(scriptsPath, buffer))
+			if (!FileToBuffer(scriptsPath, buffer, STR_BUFFER_SIZE - 1))
 				continue;
 			switch (*(UInt16*)fileName |= 0x2020)
 			{
@@ -1341,7 +1341,7 @@ __declspec(naked) TLSData *GetTLSData()
 	}
 }
 
-TempObject<UnorderedMap<const char*, UInt32>> s_fileExtToType(0x20);
+TempObject<UnorderedMap<const char*, UInt32, 0x20, false>> s_fileExtToType;
 
 __declspec(naked) bool __fastcall GetFileArchived(const char *filePath)
 {

@@ -13,7 +13,7 @@ void String::Init(UInt32 bufSize)
 	m_dataLen = 0;
 }
 
-bool String::Set(const char *src)
+void String::Set(const char *src)
 {
 	m_dataLen = StrLen(src);
 	if (!m_dataLen)
@@ -28,7 +28,7 @@ bool String::Set(const char *src)
 			m_bufLen = 0;
 		}
 		else if (m_data) *m_data = 0;
-		return true;
+		return;
 	}
 	if (m_bufLen < m_dataLen)
 	{
@@ -37,13 +37,12 @@ bool String::Set(const char *src)
 		m_data = (char*)GameHeapAlloc(m_dataLen + 1);
 	}
 	COPY_BYTES(m_data, src, m_dataLen + 1);
-	return true;
 }
 
-bool String::Append(const char *toAppend)
+void String::Append(const char *toAppend)
 {
 	UInt16 length = StrLen(toAppend);
-	if (!length) return true;
+	if (!length) return;
 	UInt16 newLen = m_dataLen + length;
 	if (m_bufLen < newLen)
 	{
@@ -58,7 +57,6 @@ bool String::Append(const char *toAppend)
 	}
 	COPY_BYTES(m_data + m_dataLen, toAppend, length + 1);
 	m_dataLen = newLen;
-	return true;
 }
 
 void String::AppendChar(char toAppend)

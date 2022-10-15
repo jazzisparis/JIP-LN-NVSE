@@ -1221,7 +1221,7 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, c
 		push	0x63
 		mov		ecx, eax
 		CALL_EAX(0xB660D0)
-		lock inc dword ptr [eax+4]
+		inc		dword ptr [eax+4]
 		mov		ecx, g_shadowSceneNode
 		mov		[eax+0x194], ecx
 		push	eax
@@ -1576,8 +1576,8 @@ MapMarkerTile::MapMarkerTile(Tile *markerTile)
 }
 
 typedef Vector<MapMarkerTile*, 4> DynamicTiles;
-typedef UnorderedMap<UInt32, DynamicTiles> RenderedMapMarkers;
-TempObject<RenderedMapMarkers> s_renderedMapMarkers(0x40);
+typedef UnorderedMap<UInt32, DynamicTiles, 0x40, false> RenderedMapMarkers;
+TempObject<RenderedMapMarkers> s_renderedMapMarkers;
 
 void __fastcall FreeCellMapMarkers(RenderedMapMarkers::Iterator &cmkIter)
 {
@@ -1922,12 +1922,13 @@ const Coordinate kGridAdjustCoord[] =
 };
 alignas(16) const int kNWCoordAdjust[] = {-1, 2, 0, 0};
 
-struct ExteriorEntry
+struct RenderedEntry
 {
 	NiRenderedTexture	*texture;
 	UInt8				regenFlags;
 
-	ExteriorEntry() : texture(nullptr), regenFlags(0) {}
+	RenderedEntry() : texture(nullptr), regenFlags(0) {}
+	~RenderedEntry() {if (texture) ThisCall(0xA7FD30, texture, true);}
 };
 
 struct DoorMarkerTile
@@ -1965,10 +1966,10 @@ TESWorldSpace *s_pcCurrWorld, *s_pcRootWorld;
 Coordinate s_currWorldCoords(0x7FFF, 0x7FFF), s_currLocalCoords(0x7FFF, 0x7FFF);
 WorldMapMarkers *s_currWorldMarkers;
 TempObject<Set<UInt32>> s_currCellsSet(0xC), s_currMarkerCells(0x40);
-TempObject<UnorderedMap<UInt32, ExteriorEntry>> s_renderedExteriors(0x80);
+typedef UnorderedMap<UInt32, RenderedEntry, 0x40, false> LocalTexturesMap;
+TempObject<LocalTexturesMap> s_renderedExteriors, s_renderedInterior;
 TempObject<Vector<UInt32>> s_exteriorKeys(0x60);
-TempObject<UnorderedMap<UInt32, NiRenderedTexture*>> s_renderedInterior(0x20);
-TempObject<UnorderedMap<UInt32, DoorRefsList>> s_exteriorDoorRefs(0x20);
+TempObject<UnorderedMap<UInt32, DoorRefsList, 0x20, false>> s_exteriorDoorRefs;
 TempObject<DoorRefsList> s_doorRefsList(0x40);
 TempObject<Vector<NiNode*>> s_hiddenNodes(0x40);
 TESQuest *s_activeQuest = nullptr;
@@ -2219,8 +2220,6 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			s_mmTextureParams.d3dFormat = d3dFormat;
 			if (!s_exteriorKeys->Empty())
 			{
-				for (auto prgIter = s_renderedExteriors->Begin(); prgIter; ++prgIter)
-					if (prgIter().texture) ThisCall(0xA7FD30, prgIter().texture, true);
 				s_renderedExteriors->Clear();
 				s_exteriorKeys->Clear();
 			}
@@ -2351,7 +2350,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				}
 
 				const UInt8 *updateList = kSelectImgUpdate[quadrant];
-				ExteriorEntry *exteriorEntry;
+				RenderedEntry *exteriorEntry;
 				gridIdx = 0;
 				do
 				{
@@ -2383,17 +2382,9 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				{
 					UInt32 size = s_exteriorKeys->Size() - CACHED_TEXTURES_MIN;
 					gridIdx = size;
-					UnorderedMap<UInt32, ExteriorEntry>::Iterator findTex(*s_renderedExteriors);
-					do
-					{
-						gridIdx--;
-						findTex.Find(s_exteriorKeys()[gridIdx]);
-						if (!findTex) continue;
-						if (findTex().texture)
-							ThisCall(0xA7FD30, findTex().texture, true);
-						findTex.Remove();
-					}
-					while (gridIdx);
+					do {
+						s_renderedExteriors->Erase(s_exteriorKeys()[--gridIdx]);
+					} while (gridIdx);
 					s_exteriorKeys->RemoveRange(0, size);
 				}
 			}
@@ -2428,11 +2419,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			{
 				s_lastInterior = parentCell;
 				if (!s_renderedInterior->Empty())
-				{
-					for (auto clrIter = s_renderedInterior->Begin(); clrIter; ++clrIter)
-						if (*clrIter) ThisCall(0xA7FD30, *clrIter, true);
 					s_renderedInterior->Clear();
-				}
 				updateTiles = true;
 			}
 
@@ -2456,19 +2443,18 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				lightingPasses = *GameGlobals::LightingPasses();
 				*GameGlobals::LightingPasses() = 0x34;
 
-				NiRenderedTexture **renderedTexture;
+				RenderedEntry *interiorEntry;
 				gridIdx = 0;
 				do
 				{
 					coord = s_currLocalCoords + kGridAdjustCoord[gridIdx];
-					if (s_renderedInterior->InsertKey(coord, &renderedTexture))
+					if (s_renderedInterior->Insert(coord, &interiorEntry))
 					{
-						*renderedTexture = nullptr;
-						GenerateLocalMapInterior(parentCell, coord, renderedTexture);
+						GenerateLocalMapInterior(parentCell, coord, &interiorEntry->texture);
 						/*if (saveToFile)
 							SaveLocalMapTexture(parentCell, *renderedTexture, coord);*/
 					}
-					s_tileShaderProps[gridIdx]->srcTexture = *renderedTexture;
+					s_tileShaderProps[gridIdx]->srcTexture = interiorEntry->texture;
 					if (useFogOfWar)
 					{
 						s_packedCellCoords[gridIdx] = coord;

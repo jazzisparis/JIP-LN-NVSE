@@ -59,7 +59,7 @@ struct LNEventData
 	LNEventData(UInt8 _eventID, Script *_script, bool _remove, UInt8 _filterType = 0, UInt32 _typeID = 0) :
 		eventID(_eventID), filterType(_filterType), remove(_remove), callback(_script), typeID(_typeID) {}
 
-	bool EvalFilter();
+	bool EvalFilter(TESObjectREFR *evalRefr, TESForm *evalBase) const;
 };
 
 class LNEventFinder
@@ -69,7 +69,7 @@ class LNEventFinder
 public:
 	LNEventFinder(LNEventData &evntData) : data(&evntData) {}
 
-	bool operator()(const LNEventData &rhs)
+	bool operator==(const LNEventData &rhs) const
 	{
 		if (data->callback != rhs.callback)
 			return false;
@@ -83,28 +83,25 @@ public:
 	}
 };
 
-TESObjectREFR *s_evalRefr;
-TESForm *s_evalBase;
-
-bool LNEventData::EvalFilter()
+bool LNEventData::EvalFilter(TESObjectREFR *evalRefr, TESForm *evalBase) const
 {
 	switch (filterType)
 	{
 		case 0: return true;
-		case 1: return form == s_evalRefr;
-		case 2: return form == s_evalBase;
+		case 1: return form == evalRefr;
+		case 2: return form == evalBase;
 		case 3:
 		{
 			auto iter = list->Head();
 			do
 			{
-				if ((iter->data == s_evalRefr) || (iter->data == s_evalBase))
+				if ((iter->data == evalRefr) || (iter->data == evalBase))
 					return true;
 			}
 			while (iter = iter->next);
 			return false;
 		}
-		case 4: return typeID == s_evalBase->typeID;
+		case 4: return typeID == evalBase->typeID;
 		default: return false;
 	}
 }
@@ -114,7 +111,7 @@ struct LNDInpuCallbacks
 	EventCallbackScripts	onDown;
 	EventCallbackScripts	onUp;
 
-	bool Empty() {return onDown.Empty() && onUp.Empty();}
+	bool Empty() const {return onDown.Empty() && onUp.Empty();}
 };
 
 typedef Vector<LNEventData> LNEventCallbacks;
@@ -125,7 +122,7 @@ TempObject<LNDInputEventsMap> s_LNOnKeyEvents, s_LNOnControlEvents;
 
 TempObject<EventCallbackScripts> s_LNOnTriggerEvents[4];
 
-TempObject<UnorderedMap<const char*, UInt32>> s_LNEventNames(0x10);
+TempObject<UnorderedMap<const char*, UInt32, 0x20, false>> s_LNEventNames;
 
 const bool kValidKeyCode[] =
 {
@@ -362,23 +359,22 @@ void LN_ProcessEvents()
 	bool gameLoaded = s_gameLoadFlagLN;
 	s_gameLoadFlagLN = false;
 
+	TESObjectREFR *evalRefr;
+	TESForm *evalBase;
+
 	if (lastCell != currCell)
 	{
 		if (!gameLoaded)
 		{
 			if (s_LNEventFlags & kLNEventMask_OnCellExit)
 			{
-				s_evalRefr = nullptr;
-				s_evalBase = lastCell;
 				for (auto data = s_LNEvents[kLNEventID_OnCellExit]->BeginCp(); data; ++data)
-					if (data().EvalFilter()) CallFunction(data().callback, nullptr, 1, lastCell);
+					if (data().EvalFilter(nullptr, lastCell)) CallFunction(data().callback, nullptr, 1, lastCell);
 			}
 			if (s_LNEventFlags & kLNEventMask_OnCellEnter)
 			{
-				s_evalRefr = nullptr;
-				s_evalBase = currCell;
 				for (auto data = s_LNEvents[kLNEventID_OnCellEnter]->BeginCp(); data; ++data)
-					if (data().EvalFilter()) CallFunction(data().callback, nullptr, 1, currCell);
+					if (data().EvalFilter(nullptr, currCell)) CallFunction(data().callback, nullptr, 1, currCell);
 			}
 		}
 		lastCell = currCell;
@@ -396,18 +392,17 @@ void LN_ProcessEvents()
 			{
 				if (lastGrabbed == LookupFormByRefID(lastGrabID))
 				{
-					s_evalRefr = lastGrabbed;
-					s_evalBase = lastGrabbed->baseForm;
+					evalRefr = lastGrabbed;
+					evalBase = lastGrabbed->baseForm;
 					for (auto data = s_LNEvents[kLNEventID_OnPlayerRelease]->BeginCp(); data; ++data)
-						if (data().EvalFilter()) CallFunction(data().callback, nullptr, 1, lastGrabbed);
+						if (data().EvalFilter(evalRefr, evalBase)) CallFunction(data().callback, nullptr, 1, lastGrabbed);
 				}
 			}
 			if (currGrabbed && (s_LNEventFlags & kLNEventMask_OnPlayerGrab))
 			{
-				s_evalRefr = currGrabbed;
-				s_evalBase = currGrabbed->baseForm;
+				evalBase = currGrabbed->baseForm;
 				for (auto data = s_LNEvents[kLNEventID_OnPlayerGrab]->BeginCp(); data; ++data)
-					if (data().EvalFilter()) CallFunction(data().callback, nullptr, 1, currGrabbed);
+					if (data().EvalFilter(currGrabbed, evalBase)) CallFunction(data().callback, nullptr, 1, currGrabbed);
 			}
 		}
 		lastGrabbed = currGrabbed;
@@ -426,18 +421,17 @@ void LN_ProcessEvents()
 			{
 				if (lastCrosshair == LookupFormByRefID(lastCrshrID))
 				{
-					s_evalRefr = lastCrosshair;
-					s_evalBase = lastCrosshair->GetBaseForm();
+					evalRefr = lastCrosshair;
+					evalBase = lastCrosshair->GetBaseForm();
 					for (auto data = s_LNEvents[kLNEventID_OnCrosshairOff]->BeginCp(); data; ++data)
-						if (data().EvalFilter()) CallFunction(data().callback, nullptr, 1, lastCrosshair);
+						if (data().EvalFilter(evalRefr, evalBase)) CallFunction(data().callback, nullptr, 1, lastCrosshair);
 				}
 			}
 			if (currCrosshair && (s_LNEventFlags & kLNEventMask_OnCrosshairOn))
 			{
-				s_evalRefr = currCrosshair;
-				s_evalBase = currCrosshair->GetBaseForm();
+				evalBase = currCrosshair->GetBaseForm();
 				for (auto data = s_LNEvents[kLNEventID_OnCrosshairOn]->BeginCp(); data; ++data)
-					if (data().EvalFilter()) CallFunction(data().callback, nullptr, 1, currCrosshair);
+					if (data().EvalFilter(currCrosshair, evalBase)) CallFunction(data().callback, nullptr, 1, currCrosshair);
 			}
 		}
 		lastCrosshair = currCrosshair;

@@ -13,12 +13,10 @@ namespace MemoryPool
 
 template <typename T> constexpr size_t AlignAlloc()
 {
-	if (sizeof(T) & 0xF)
-		return (sizeof(T) & 0xFFFFFFF0) + 0x10;
-	return sizeof(T);
+	return (sizeof(T) & 0xF) ? ((sizeof(T) & 0xFFFFFFF0) + 0x10) : sizeof(T);
 }
 
-template <typename T = char> __forceinline size_t AlignNumAlloc(size_t numAlloc)
+template <typename T> __forceinline size_t AlignNumAlloc(size_t numAlloc)
 {
 	switch (sizeof(T) & 0xF)
 	{
@@ -28,31 +26,14 @@ template <typename T = char> __forceinline size_t AlignNumAlloc(size_t numAlloc)
 		case 6:
 		case 0xA:
 		case 0xE:
-			if (numAlloc & 7)
-			{
-				numAlloc &= 0xFFFFFFF8;
-				numAlloc += 8;
-			}
-			return numAlloc;
+			return (numAlloc & 7) ? ((numAlloc & 0xFFFFFFF8) + 8) : numAlloc;
 		case 4:
 		case 0xC:
-			if (numAlloc & 3)
-			{
-				numAlloc &= 0xFFFFFFFC;
-				numAlloc += 4;
-			}
-			return numAlloc;
+			return (numAlloc & 3) ? ((numAlloc & 0xFFFFFFFC) + 4) : numAlloc;
 		case 8:
-			if (numAlloc & 1)
-				numAlloc++;
-			return numAlloc;
+			return (numAlloc & 1) ? (numAlloc + 1) : numAlloc;
 		default:
-			if (numAlloc & 0xF)
-			{
-				numAlloc &= 0xFFFFFFF0;
-				numAlloc += 0x10;
-			}
-			return numAlloc;
+			return (numAlloc & 0xF) ? ((numAlloc & 0xFFFFFFF0) + 0x10) : numAlloc;
 	}
 }
 

@@ -173,7 +173,7 @@ bool Cmd_Search_Execute(COMMAND_ARGS)
 		{
 			for (UInt32 idx = 3; idx <= 120; idx++)
 			{
-				if (StrCompareCI(typeStr, TypeSignature::Array()[idx].signature) != 0)
+				if (StrCompareCI(TypeSignature::Array()[idx].signature, typeStr))
 					continue;
 				filter = 120 - idx;
 				break;
@@ -320,7 +320,7 @@ bool Cmd_GetFormFromMod_Execute(COMMAND_ARGS)
 	char modName[0x80], refIDStr[0x10];
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &modName, &refIDStr)) return true;
 	UInt8 modIndex;
-	if (StrCompareCI(modName, "NONE") != 0)
+	if (StrCompareCI(modName, "NONE"))
 	{
 		modIndex = g_dataHandler->GetModIndex(modName);
 		if (modIndex == 0xFF) return true;

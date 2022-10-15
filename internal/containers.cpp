@@ -9,12 +9,8 @@ __declspec(naked) char* __fastcall CopyStringKey(const char *key)
 		mov		esi, ecx
 		call	StrLen
 		lea		edi, [eax+1]
-		lea		ecx, [edi+4]
-		test	cl, 0xF
-		jz		isAligned
+		lea		ecx, [edi+0x14]
 		and		cl, 0xF0
-		add		ecx, 0x10
-	isAligned:
 		push	ecx
 		call	MemoryPool::Alloc
 		pop		dword ptr [eax]
@@ -80,8 +76,23 @@ __declspec(naked) UInt32 __fastcall StrHashCS(const char *inKey)
 		add		eax, ecx
 		shl		edx, 5
 		add		eax, edx
-		add		esi, 2
+		mov		cl, [esi+2]
+		test	cl, cl
+		jz		done
+		mov		edx, eax
+		add		eax, ecx
+		shl		edx, 5
+		add		eax, edx
+		mov		cl, [esi+3]
+		test	cl, cl
+		jz		done
+		mov		edx, eax
+		add		eax, ecx
+		shl		edx, 5
+		add		eax, edx
+		add		esi, 4
 		jmp		iterHead
+		ALIGN 16
 	done:
 		pop		esi
 		retn
@@ -116,8 +127,25 @@ __declspec(naked) UInt32 __fastcall StrHashCI(const char *inKey)
 		add		eax, edx
 		movzx	edx, kLwrCaseConverter[ecx]
 		add		eax, edx
-		add		esi, 2
+		mov		cl, [esi+2]
+		test	cl, cl
+		jz		done
+		mov		edx, eax
+		shl		edx, 5
+		add		eax, edx
+		movzx	edx, kLwrCaseConverter[ecx]
+		add		eax, edx
+		mov		cl, [esi+3]
+		test	cl, cl
+		jz		done
+		mov		edx, eax
+		shl		edx, 5
+		add		eax, edx
+		movzx	edx, kLwrCaseConverter[ecx]
+		add		eax, edx
+		add		esi, 4
 		jmp		iterHead
+		ALIGN 16
 	done:
 		pop		esi
 		retn

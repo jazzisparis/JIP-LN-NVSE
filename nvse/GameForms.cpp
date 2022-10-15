@@ -216,7 +216,7 @@ const char *TESForm::RefToString()
 		return *findID;
 	const char *modName = g_dataHandler->GetNthModName(modIndex);
 	UInt32 length = StrLen(modName);
-	char *refStr = Pool_CAlloc(AlignNumAlloc(length + 8));
+	char *refStr = Pool_CAlloc((length + 0x18) & 0xFFFFFFF0);
 	if (length) COPY_BYTES(refStr, modName, length);
 	refStr[length++] = ':';
 	UIntToHex(refStr + length, refID & 0xFFFFFF);
@@ -532,7 +532,7 @@ bool TESModelList::ModelListAction(char *path, char action)
 	do
 	{
 		nifPath = iter->data;
-		if (!StrCompareCI(path, nifPath))
+		if (nifPath && !StrCompareCI(nifPath, path))
 		{
 			if (action < 0)
 			{

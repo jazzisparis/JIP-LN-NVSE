@@ -290,9 +290,8 @@ bool Cmd_ReadStringFromFile_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filePath, &startAt, &lineCount))
 	{
 		ReplaceChr(filePath, '/', '\\');
-		if (FileToBuffer(filePath, buffer) && (startAt || lineCount))
+		if (FileToBuffer(filePath, buffer, kMaxMessageLength - 1) && (startAt || lineCount))
 		{
-			buffer[kMaxMessageLength - 1] = 0;
 			if (startAt) startAt--;
 			char data;
 			while (data = *buffer)

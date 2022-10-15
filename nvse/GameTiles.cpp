@@ -87,7 +87,7 @@ void Tile::GetComponentFullName(char *resStr)
 		while (node->data != pTile)
 			node = node->prev;
 		index = 0;
-		while ((node = node->prev) && !StrCompareCS(pName, node->data->name.m_data))
+		while ((node = node->prev) && !StrCompareCS(node->data->name.m_data, pName))
 			index++;
 		if (index)
 		{
@@ -196,7 +196,7 @@ Tile *Tile::GetChild(const char *childName)
 	bool wildcard = *childName == '*';
 	for (DListNode<Tile> *node = children.Head(); node; node = node->next)
 	{
-		if (node->data && (wildcard || !StrCompareCI(childName, node->data->name.m_data)) && !childIndex--)
+		if (node->data && (wildcard || !StrCompareCI(node->data->name.m_data, childName)) && !childIndex--)
 		{
 			result = node->data;
 			break;

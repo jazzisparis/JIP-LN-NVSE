@@ -1483,8 +1483,6 @@ __declspec(noinline) void InitContainers()
 		{"ItemModMenu", kMenuType_ItemMod}, {"LoveTesterMenu", kMenuType_LoveTester}, {"CompanionWheelMenu", kMenuType_CompanionWheel},
 		{"TraitSelectMenu", kMenuType_TraitSelect}, {"RecipeMenu", kMenuType_Recipe}, {"SlotMachineMenu", kMenuType_SlotMachine},
 		{"BlackjackMenu", kMenuType_Blackjack}, {"RouletteMenu", kMenuType_Roulette}, {"CaravanMenu", kMenuType_Caravan}, {"TraitMenu", kMenuType_Trait}});
-	
-	*s_lightFormEDIDMap;
 }
 
 void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
@@ -1528,7 +1526,7 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 		case NVSEMessagingInterface::kMessage_Precompile:
 			break;
 		case NVSEMessagingInterface::kMessage_PreLoadGame:
-			if (StrCompareCS(s_lastLoadedPath, nvseMsg->fosPath))
+			if (StrCompareCS(nvseMsg->fosPath, s_lastLoadedPath))
 			{
 				COPY_BYTES(s_lastLoadedPath, nvseMsg->fosPath, nvseMsg->dataLen + 1);
 				s_dataChangedFlags = kChangedFlag_All;

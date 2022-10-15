@@ -233,9 +233,9 @@ public:
 	UInt32							unk638;					// 638
 
 	__forceinline static DataHandler *GetSingleton() {return *(DataHandler**)0x11C3F2C;}
-	const ModInfo* LookupModByName(const char* modName);
-	UInt8 GetModIndex(const char* modName);
-	UInt8 GetActiveModCount() const {return modList.modInfoList.Count();}
+	const ModInfo *LookupModByName(const char *modName);
+	UInt8 __fastcall GetModIndex(const char *modName);
+	UInt8 GetActiveModCount() const {return modList.loadedModCount;}
 	const char* GetNthModName(UInt32 modIndex);
 
 	__forceinline UInt32 DoAddForm(TESForm *pForm)

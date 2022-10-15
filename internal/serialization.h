@@ -65,7 +65,7 @@ void DoPreLoadGameHousekeeping()
 		s_eventInformedObjects->Clear();
 
 		if (s_pcFastTravelInformed->Clear())
-			HOOK_MOD(PCFastTravel, false);
+			HOOK_DEC(PCFastTravel);
 		if (s_pcCellChangeInformed->Clear())
 			HOOK_SET(PCCellChange, false);
 	}
@@ -107,7 +107,7 @@ void DoPreLoadGameHousekeeping()
 	if (!s_refNamesMap->Empty())
 	{
 		for (auto nameIter = s_refNamesMap->Begin(); nameIter; ++nameIter)
-			free(*nameIter);
+			FreeStringKey(*nameIter);
 		s_refNamesMap->Clear();
 		HOOK_SET(GetRefName, false);
 	}
@@ -115,7 +115,7 @@ void DoPreLoadGameHousekeeping()
 	if (!s_refrModelPathMap->Empty())
 	{
 		for (auto pathIter = s_refrModelPathMap->Begin(); pathIter; ++pathIter)
-			free(*pathIter);
+			FreeStringKey(*pathIter);
 		s_refrModelPathMap->Clear();
 		HOOK_SET(GetModelPath, false);
 	}
@@ -352,8 +352,8 @@ void LoadGameCallback(void*)
 							bufPos += 2;
 							if (ResolveRefID(refID, &refID) && LookupFormByRefID(refID))
 							{
-								if (!ownersMap) ownersMap = s_auxVariablesPerm->Emplace(modIdx, nRefs);
-								aVarsMap = ownersMap->Emplace(refID, nVars);
+								if (!ownersMap) ownersMap = s_auxVariablesPerm->Emplace(modIdx, AlignBucketCount(nRefs));
+								aVarsMap = ownersMap->Emplace(refID, AlignBucketCount(nVars));
 								while (nVars)
 								{
 									buffer1 = *bufPos++;
@@ -476,8 +476,8 @@ void LoadGameCallback(void*)
 								{
 									if (!idsMap)
 									{
-										if (!rVarsMap) rVarsMap = s_refMapArraysPerm->Emplace(modIdx, nVars);
-										idsMap = rVarsMap->Emplace((char*)namePos, nRefs);
+										if (!rVarsMap) rVarsMap = s_refMapArraysPerm->Emplace(modIdx, AlignBucketCount(nVars));
+										idsMap = rVarsMap->Emplace((char*)namePos, AlignBucketCount(nRefs));
 									}
 									bufPos += idsMap->Emplace(refID, buffer1)->ReadValData(bufPos);
 								}

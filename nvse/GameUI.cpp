@@ -1,6 +1,6 @@
 #include "nvse/GameUI.h"
 
-TempObject<UnorderedMap<const char*, UInt32>> s_menuNameToID(0x40);
+TempObject<UnorderedMap<const char*, UInt32, 0x20, false>> s_menuNameToID;
 
 TileMenu* __fastcall GetMenuTile(const char *componentPath)
 {

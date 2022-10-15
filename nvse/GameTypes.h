@@ -12,8 +12,8 @@ public:
 	UInt16		m_bufLen;
 
 	void Init(UInt32 bufSize);
-	bool Set(const char *src);
-	bool Append(const char *toAppend);
+	void Set(const char *src);
+	void Append(const char *toAppend);
 	void AppendChar(char toAppend);
 	void InsertChar(char toInsert, UInt32 index);
 	void EraseAt(UInt32 index);
