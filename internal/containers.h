@@ -610,10 +610,11 @@ public:
 	Map(Init_List &&inList) : entries(nullptr), numEntries(0), numAlloc(inList.size()) {InsertList(std::move(inList));}
 	~Map()
 	{
-		if (!entries) return;
-		Clear();
-		Pool_CFree<Entry>(entries, numAlloc);
-		entries = nullptr;
+		if (entries)
+		{
+			Clear();
+			Pool_CFree<Entry>(entries, numAlloc);
+		}
 	}
 
 	UInt32 Size() const {return numEntries;}
@@ -888,10 +889,11 @@ public:
 	Set(Init_List &&inList) : keys(nullptr), numKeys(0), numAlloc(inList.size()) {InsertList(std::move(inList));}
 	~Set()
 	{
-		if (!keys) return;
-		Clear();
-		Pool_CFree<M_Key>(keys, numAlloc);
-		keys = nullptr;
+		if (keys)
+		{
+			Clear();
+			Pool_CFree<M_Key>(keys, numAlloc);
+		}
 	}
 
 	UInt32 Size() const {return numKeys;}
@@ -1208,7 +1210,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = 
 
 	Bucket *End() const {return buckets + NUM_BUCKETS;}
 
-	__declspec(noinline) void __fastcall ResizeTable(UInt32 newCount)
+	_NOINLINE void __fastcall ResizeTable(UInt32 newCount)
 	{
 		Bucket *pBucket = buckets, *pEnd = End(), *newBuckets = (Bucket*)AllocBuckets(newCount);
 		Entry *pEntry, *pTemp;
@@ -1249,10 +1251,11 @@ public:
 	}
 	~UnorderedMap()
 	{
-		if (!buckets) return;
-		Clear();
-		Pool_CFree<Bucket>(buckets, NUM_BUCKETS);
-		buckets = nullptr;
+		if (buckets)
+		{
+			Clear();
+			Pool_CFree<Bucket>(buckets, NUM_BUCKETS);
+		}
 	}
 
 	UInt32 Size() const {return numEntries;}
@@ -1357,17 +1360,13 @@ public:
 		{
 			UInt32 hashVal = HashKey<T_Key>(key);
 			Bucket *pBucket = &buckets[hashVal & (NUM_BUCKETS - 1)];
-			Entry *pEntry = pBucket->entries, *prev = nullptr;
-			while (pEntry)
+			for (Entry *pEntry = pBucket->entries, *prev = nullptr; pEntry; prev = pEntry, pEntry = pEntry->next)
 			{
-				if (pEntry->key.Match(key, hashVal))
-				{
-					numEntries--;
-					pBucket->Remove(pEntry, prev);
-					return true;
-				}
-				prev = pEntry;
-				pEntry = pEntry->next;
+				if (!pEntry->key.Match(key, hashVal))
+					continue;
+				numEntries--;
+				pBucket->Remove(pEntry, prev);
+				return true;
 			}
 		}
 		return false;
@@ -1380,18 +1379,14 @@ public:
 		{
 			UInt32 hashVal = HashKey<T_Key>(key);
 			Bucket *pBucket = &buckets[hashVal & (NUM_BUCKETS - 1)];
-			Entry *pEntry = pBucket->entries, *prev = nullptr;
-			while (pEntry)
+			for (Entry *pEntry = pBucket->entries, *prev = nullptr; pEntry; prev = pEntry, pEntry = pEntry->next)
 			{
-				if (pEntry->key.Match(key, hashVal))
-				{
-					T_Data outVal = pEntry->value;
-					numEntries--;
-					pBucket->Remove(pEntry, prev);
-					return outVal;
-				}
-				prev = pEntry;
-				pEntry = pEntry->next;
+				if (!pEntry->key.Match(key, hashVal))
+					continue;
+				T_Data outVal = pEntry->value;
+				numEntries--;
+				pBucket->Remove(pEntry, prev);
+				return outVal;
 			}
 		}
 		return NULL;
@@ -1440,7 +1435,7 @@ public:
 		void FindNonEmpty()
 		{
 			for (Bucket *pEnd = table->End(); bucket != pEnd; bucket++)
-				if (entry = bucket->entries) break;
+				if (entry = bucket->entries) return;
 		}
 
 	public:
@@ -1464,13 +1459,8 @@ public:
 			}
 			UInt32 hashVal = HashKey<T_Key>(key);
 			bucket = &table->buckets[hashVal & (table->numBuckets - 1)];
-			entry = bucket->entries;
-			while (entry)
-			{
-				if (entry->key.Match(key, hashVal))
-					break;
-				entry = entry->next;
-			}
+			for (entry = bucket->entries; entry; entry = entry->next)
+				if (entry->key.Match(key, hashVal)) return;
 		}
 
 		UnorderedMap* Table() const {return table;}
@@ -1506,13 +1496,9 @@ public:
 
 		void Remove()
 		{
-			Entry *curr = bucket->entries, *prev = nullptr;
-			do
-			{
-				if (curr == entry) break;
+			Entry *prev = nullptr;
+			for (Entry *curr = bucket->entries; curr != entry; curr = curr->next)
 				prev = curr;
-			}
-			while (curr = curr->next);
 			table->numEntries--;
 			bucket->Remove(entry, prev);
 			entry = prev;
@@ -1588,7 +1574,7 @@ template <typename T_Key, const UInt32 _default_bucket_count = MAP_DEFAULT_BUCKE
 
 	Bucket *End() const {return buckets + NUM_BUCKETS;}
 
-	__declspec(noinline) void __fastcall ResizeTable(UInt32 newCount)
+	_NOINLINE void __fastcall ResizeTable(UInt32 newCount)
 	{
 		Bucket *pBucket = buckets, *pEnd = End(), *newBuckets = (Bucket*)AllocBuckets(newCount);
 		Entry *pEntry, *pTemp;
@@ -1618,10 +1604,11 @@ public:
 	}
 	~UnorderedSet()
 	{
-		if (!buckets) return;
-		Clear();
-		Pool_CFree<Bucket>(buckets, NUM_BUCKETS);
-		buckets = nullptr;
+		if (buckets)
+		{
+			Clear();
+			Pool_CFree<Bucket>(buckets, NUM_BUCKETS);
+		}
 	}
 
 	UInt32 Size() const {return numEntries;}
@@ -1686,17 +1673,13 @@ public:
 		{
 			UInt32 hashVal = HashKey<T_Key>(key);
 			Bucket *pBucket = &buckets[hashVal & (NUM_BUCKETS - 1)];
-			Entry *pEntry = pBucket->entries, *prev = nullptr;
-			while (pEntry)
+			for (Entry *pEntry = pBucket->entries, *prev = nullptr; pEntry; prev = pEntry, pEntry = pEntry->next)
 			{
-				if (pEntry->key.Match(key, hashVal))
-				{
-					numEntries--;
-					pBucket->Remove(pEntry, prev);
-					return true;
-				}
-				prev = pEntry;
-				pEntry = pEntry->next;
+				if (!pEntry->key.Match(key, hashVal))
+					continue;
+				numEntries--;
+				pBucket->Remove(pEntry, prev);
+				return true;
 			}
 		}
 		return false;
@@ -1745,7 +1728,7 @@ public:
 		void FindNonEmpty()
 		{
 			for (Bucket *pEnd = table->End(); bucket != pEnd; bucket++)
-				if (entry = bucket->entries) break;
+				if (entry = bucket->entries) return;
 		}
 
 	public:
@@ -1788,7 +1771,7 @@ template <typename T_Data, const UInt32 _default_alloc = VECTOR_DEFAULT_ALLOC> c
 	UInt32		numItems;	// 04
 	UInt32		numAlloc;	// 08
 
-	__declspec(noinline) T_Data *AllocateData()
+	_NOINLINE T_Data *AllocateData()
 	{
 		if (!data)
 		{
@@ -1811,10 +1794,11 @@ public:
 	Vector(Init_List &&inList) : data(nullptr), numItems(0), numAlloc(inList.size()) {AppendList(std::move(inList));}
 	~Vector()
 	{
-		if (!data) return;
-		Clear();
-		Pool_CFree<T_Data>(data, numAlloc);
-		data = nullptr;
+		if (data)
+		{
+			Clear();
+			Pool_CFree<T_Data>(data, numAlloc);
+		}
 	}
 
 	UInt32 Size() const {return numItems;}

@@ -164,6 +164,9 @@ __forceinline void *NiDeallocator(void *blockPtr, UInt32 size)
 	return CdeclCall<void*>(0xAA1460, blockPtr, size);
 }
 
+void InitResolvedModIndices();
+UInt32 __stdcall GetResolvedRefID(UInt32 refID);
+
 enum
 {
 	kChangedFlag_AuxVars =		1 << 0,
@@ -235,10 +238,10 @@ struct ResultVars
 	}
 };
 
-typedef Set<TESForm*> TempFormList;
+typedef Set<TESForm*, 0x40> TempFormList;
 TempFormList *GetTempFormList();
 
-typedef Vector<ArrayElementL> TempElements;
+typedef Vector<ArrayElementL, 0x100> TempElements;
 TempElements *GetTempElements();
 
 UInt32 __fastcall StringToRef(char *refStr);
@@ -251,7 +254,7 @@ struct InventoryItemData
 	InventoryItemData(SInt32 _count, ContChangesEntry *_entry) : count(_count), entry(_entry) {}
 };
 
-typedef UnorderedMap<TESForm*, InventoryItemData> InventoryItemsMap;
+typedef UnorderedMap<TESForm*, InventoryItemData, 0x40> InventoryItemsMap;
 InventoryItemsMap *GetInventoryItemsMap();
 
 bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *invItemsMap);
@@ -426,7 +429,7 @@ public:
 		refID = value ? value->refID : 0;
 	}
 
-	__declspec(noinline) void operator=(const char *value)
+	_NOINLINE void operator=(const char *value)
 	{
 		type = 4;
 		length = StrLen(value);
@@ -461,7 +464,7 @@ public:
 		return ArrayElementL(num);
 	}
 
-	__declspec(noinline) UInt32 ReadValData(UInt8 *bufPos)
+	_NOINLINE UInt32 ReadValData(UInt8 *bufPos)
 	{
 		if (type == 1)
 		{
@@ -470,8 +473,7 @@ public:
 		}
 		if (type == 2)
 		{
-			refID = *(UInt32*)bufPos;
-			ResolveRefID(refID, &refID);
+			refID = GetResolvedRefID(*(UInt32*)bufPos);
 			return 4;
 		}
 		length = *(UInt16*)bufPos;

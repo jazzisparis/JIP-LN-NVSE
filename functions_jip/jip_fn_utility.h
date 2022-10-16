@@ -342,14 +342,15 @@ bool Cmd_GetLoadOrderChanged_Execute(COMMAND_ARGS)
 	if (changed == -1)
 	{
 		UInt8 preloadMods = *g_numPreloadMods;
-		if (preloadMods == g_dataHandler->modList.modInfoList.Count())
+		if (preloadMods == g_dataHandler->modList.loadedModCount)
 		{
 			changed = 0;
 			UInt32 modIdx, resolved;
 			for (UInt8 idx = 1; idx < preloadMods; idx++)
 			{
 				modIdx = idx << 24;
-				if (!ResolveRefID(modIdx, &resolved) || (modIdx != resolved))
+				resolved = GetResolvedRefID(modIdx);
+				if (!resolved || (modIdx != resolved))
 				{
 					changed = 1;
 					break;
@@ -365,7 +366,7 @@ bool Cmd_GetLoadOrderChanged_Execute(COMMAND_ARGS)
 bool Cmd_ValidateModIndex_Execute(COMMAND_ARGS)
 {
 	UInt32 modIdx;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &modIdx) && (modIdx <= 0xFF) && ResolveRefID(modIdx << 24, &modIdx))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &modIdx) && (modIdx <= 0xFF) && (modIdx = GetResolvedRefID(modIdx << 24)))
 	{
 		modIdx >>= 24;
 		*result = (int)modIdx;

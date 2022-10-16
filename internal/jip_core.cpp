@@ -125,7 +125,7 @@ const char kMenuIDJumpTable[] =
 
 UInt32 s_serializedFlags = 0;
 
-__declspec(naked) void __vectorcall ResultVars::Set(__m128 values)
+_NAKED void __vectorcall ResultVars::Set(__m128 values)
 {
 	__asm
 	{
@@ -143,7 +143,7 @@ __declspec(naked) void __vectorcall ResultVars::Set(__m128 values)
 	}
 }
 
-__declspec(naked) void __vectorcall ResultVars::Set(__m128 values, const __m128 modifier)
+_NAKED void __vectorcall ResultVars::Set(__m128 values, const __m128 modifier)
 {
 	__asm
 	{
@@ -161,18 +161,81 @@ __declspec(naked) void __vectorcall ResultVars::Set(__m128 values, const __m128 
 	}
 }
 
-__declspec(noinline) TempFormList *GetTempFormList()
+_NOINLINE TempFormList *GetTempFormList()
 {
-	thread_local static TempObject<TempFormList> s_tempFormList(0x40);
+	thread_local static TempObject<TempFormList> s_tempFormList;
 	s_tempFormList->Clear();
 	return *s_tempFormList;
 }
 
-__declspec(noinline) TempElements *GetTempElements()
+_NOINLINE TempElements *GetTempElements()
 {
-	thread_local static TempObject<TempElements> s_tempElements(0x100);
+	thread_local static TempObject<TempElements> s_tempElements;
 	s_tempElements->Clear();
 	return *s_tempElements;
+}
+
+UInt8 s_resolvedModIndices[0x100];
+
+_NAKED void InitResolvedModIndices()
+{
+	__asm
+	{
+		push	ebx
+		push	esi
+		push	edi
+		mov		esi, offset s_resolvedModIndices
+		mov		ecx, 0x40
+		mov		eax, 0xFFFFFFFF
+		mov		edi, esi
+		rep stosd
+		mov		eax, g_numPreloadMods
+		movzx	edi, byte ptr [eax]
+		xor		ebx, ebx
+		push	ecx
+		push	esp
+		push	ecx
+		ALIGN 16
+	iterHead:
+		cmp		ebx, edi
+		jnb		done
+		mov		[esp+3], bl
+		call	ResolveRefID
+		mov		ecx, ebx
+		inc		ebx
+		test	al, al
+		jz		iterHead
+		mov		al, [esp+0xB]
+		mov		byte ptr [ecx+esi], al
+		jmp		iterHead
+		ALIGN 16
+	done:
+		add		esp, 0xC
+		pop		edi
+		pop		esi
+		pop		ebx
+		retn
+	}
+}
+
+_NAKED UInt32 __stdcall GetResolvedRefID(UInt32 refID)
+{
+	__asm
+	{
+		movzx	eax, byte ptr [esp+7]
+		cmp		al, 0xFF
+		jz		retnArg
+		mov		cl, s_resolvedModIndices[eax]
+		cmp		cl, 0xFF
+		jz		retn0
+		mov		[esp+7], cl
+	retnArg:
+		mov		eax, [esp+4]
+		retn	4
+	retn0:
+		xor		eax, eax
+		retn	4
+	}
 }
 
 TempObject<UnorderedMap<const char*, UInt32>> s_strRefs;
@@ -197,12 +260,12 @@ UInt32 __fastcall StringToRef(char *refStr)
 		*findStr = (modIdx << 24) | HexToUInt(colon + 1);
 		return *findStr;
 	}
-	return ResolveRefID(HexToUInt(refStr), findStr) ? *findStr : 0;
+	return *findStr = GetResolvedRefID(HexToUInt(refStr));
 }
 
-__declspec(noinline) InventoryItemsMap *GetInventoryItemsMap()
+_NOINLINE InventoryItemsMap *GetInventoryItemsMap()
 {
-	thread_local static TempObject<InventoryItemsMap> s_inventoryItemsMap(0x40);
+	thread_local static TempObject<InventoryItemsMap> s_inventoryItemsMap;
 	s_inventoryItemsMap->Clear();
 	return *s_inventoryItemsMap;
 }
@@ -255,7 +318,7 @@ bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *inv
 	return !invItemsMap->Empty();
 }
 
-__declspec(naked) void __fastcall ShowItemMessage(TESForm *item, const char *msgStr)
+_NAKED void __fastcall ShowItemMessage(TESForm *item, const char *msgStr)
 {
 	__asm
 	{
@@ -309,7 +372,7 @@ struct alignas(16) RayCastData
 };
 static_assert(sizeof(RayCastData) == 0xB0);
 
-__declspec(naked) NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
+_NAKED NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
 {
 	__asm
 	{
@@ -368,7 +431,7 @@ __declspec(naked) NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
 	}
 }
 
-__declspec(naked) NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType)
+_NAKED NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType)
 {
 	__asm
 	{
@@ -383,7 +446,7 @@ __declspec(naked) NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVec
 	}
 }
 
-__declspec(naked) bool NiVector4::RayCastCoords(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType)
+_NAKED bool NiVector4::RayCastCoords(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType)
 {
 	__asm
 	{
@@ -428,7 +491,7 @@ __declspec(naked) bool NiVector4::RayCastCoords(const NiVector3 &posVector, floa
 	}
 }
 
-__declspec(naked) int __stdcall GetRayCastMaterial(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType)
+_NAKED int __stdcall GetRayCastMaterial(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType)
 {
 	__asm
 	{
@@ -512,24 +575,23 @@ TempObject<UnorderedMap<TESNPC*, AppearanceUndo*>> s_appearanceUndoMap;
 
 TempObject<UnorderedSet<TESGlobal*>> s_resolvedGlobals;
 
-__declspec(naked) UInt32 TESGlobal::ResolveRefValue()
+_NAKED UInt32 TESGlobal::ResolveRefValue()
 {
 	__asm
 	{
 		mov		word ptr [ecx+6], 1
 		push	esi
 		lea		esi, [ecx+0x24]
-		cmp		byte ptr [esi], 0xFF
+		mov		eax, [esi]
+		cmp		al, 0xFF
 		jz		doLookup
-		push	esi
-		push	dword ptr [esi]
-		call	ResolveRefID
-		add		esp, 8
-		movzx	eax, al
+		push	eax
+		call	GetResolvedRefID
 		test	eax, eax
 		jz		invalid
+		mov		[esi], eax
 	doLookup:
-		push	dword ptr [esi]
+		push	eax
 		call	LookupFormByRefID
 		test	eax, eax
 		jz		invalid
@@ -655,7 +717,7 @@ ScriptVar *Script::AddVariable(char *varName, ScriptEventList *eventList, UInt32
 	return var;
 }
 
-__declspec(naked) TESIdleForm *AnimData::GetPlayedIdle()
+_NAKED TESIdleForm *AnimData::GetPlayedIdle()
 {
 	__asm
 	{
@@ -942,7 +1004,7 @@ float __fastcall GetModBonuses(TESObjectREFR *wpnRef, UInt32 effectID)
 	return result;
 }
 
-__declspec(naked) float __vectorcall GetLightAmount(LightingData *lightingData, __m128 pos)
+_NAKED float __vectorcall GetLightAmount(LightingData *lightingData, __m128 pos)
 {
 	__asm
 	{
@@ -980,7 +1042,7 @@ __declspec(naked) float __vectorcall GetLightAmount(LightingData *lightingData, 
 	}
 }
 
-__declspec(naked) float __vectorcall GetLightAmountAtPoint(const NiVector3 &pos)
+_NAKED float __vectorcall GetLightAmountAtPoint(const NiVector3 &pos)
 {
 	__asm
 	{
@@ -1185,7 +1247,7 @@ bool GetMenuMode()
 
 void __fastcall RefreshRecipeMenu(RecipeMenu *menu);
 
-__declspec(noinline) void RefreshItemListBox()
+_NOINLINE void RefreshItemListBox()
 {
 	if (MENU_VISIBILITY[kMenuType_Inventory])
 		CdeclCall(0x782A90);
@@ -1208,7 +1270,7 @@ __declspec(noinline) void RefreshItemListBox()
 		RefreshRecipeMenu(RecipeMenu::Get());
 }
 
-__declspec(naked) bool IsConsoleOpen()
+_NAKED bool IsConsoleOpen()
 {
 	__asm
 	{
@@ -1224,7 +1286,7 @@ __declspec(naked) bool IsConsoleOpen()
 	}
 }
 
-__declspec(naked) void SuppressConsoleOutput()
+_NAKED void SuppressConsoleOutput()
 {
 	__asm
 	{
@@ -1236,7 +1298,7 @@ __declspec(naked) void SuppressConsoleOutput()
 	}
 }
 
-__declspec(naked) void __fastcall DoConsolePrint(double *result)
+_NAKED void __fastcall DoConsolePrint(double *result)
 {
 	__asm
 	{
@@ -1269,7 +1331,7 @@ __declspec(naked) void __fastcall DoConsolePrint(double *result)
 	}
 }
 
-__declspec(naked) void __fastcall DoConsolePrint(TESForm *result)
+_NAKED void __fastcall DoConsolePrint(TESForm *result)
 {
 	__asm
 	{
@@ -1330,7 +1392,7 @@ bool IsInMainThread()
 	return GetCurrentThreadId() == s_mainThreadID;
 }
 
-__declspec(naked) TLSData *GetTLSData()
+_NAKED TLSData *GetTLSData()
 {
 	__asm
 	{
@@ -1343,7 +1405,7 @@ __declspec(naked) TLSData *GetTLSData()
 
 TempObject<UnorderedMap<const char*, UInt32, 0x20, false>> s_fileExtToType;
 
-__declspec(naked) bool __fastcall GetFileArchived(const char *filePath)
+_NAKED bool __fastcall GetFileArchived(const char *filePath)
 {
 	__asm
 	{
@@ -1413,7 +1475,7 @@ __declspec(naked) bool __fastcall GetFileArchived(const char *filePath)
 	}
 }
 
-__declspec(naked) int __stdcall FileExistsEx(char *filePath, bool isFolder)
+_NAKED int __stdcall FileExistsEx(char *filePath, bool isFolder)
 {
 	__asm
 	{

@@ -1,6 +1,6 @@
 #include "internal/containers.h"
 
-__declspec(naked) char* __fastcall CopyStringKey(const char *key)
+_NAKED char* __fastcall CopyStringKey(const char *key)
 {
 	__asm
 	{
@@ -24,33 +24,27 @@ __declspec(naked) char* __fastcall CopyStringKey(const char *key)
 	}
 }
 
-__declspec(naked) UInt32 __fastcall AlignBucketCount(UInt32 count)
+_NAKED UInt32 __fastcall AlignBucketCount(UInt32 count)
 {
 	__asm
 	{
-		cmp		ecx, MAP_MIN_BUCKET_COUNT
-		ja		gtMin
 		mov		eax, MAP_MIN_BUCKET_COUNT
-		retn
-	gtMin:
-		cmp		ecx, MAP_MAX_BUCKET_COUNT
-		jb		ltMax
+		cmp		ecx, eax
+		cmovb	ecx, eax
 		mov		eax, MAP_MAX_BUCKET_COUNT
-		retn
-	ltMax:
-		mov		eax, ecx
-		bsr		ecx, eax
-		bsf		edx, eax
-		cmp		cl, dl
-		jz		done
-		mov		eax, 2
+		cmp		ecx, eax
+		cmova	ecx, eax
+		bsf		eax, ecx
+		bsr		ecx, ecx
+		cmp		al, cl
+		setnz	al
+		inc		al
 		shl		eax, cl
-	done:
 		retn
 	}
 }
 
-__declspec(naked) UInt32 __fastcall StrHashCS(const char *inKey)
+_NAKED UInt32 __fastcall StrHashCS(const char *inKey)
 {
 	__asm
 	{
@@ -65,30 +59,26 @@ __declspec(naked) UInt32 __fastcall StrHashCS(const char *inKey)
 		mov		cl, [esi]
 		test	cl, cl
 		jz		done
-		mov		edx, eax
-		add		eax, ecx
-		shl		edx, 5
+		lea		edx, [eax+ecx]
+		shl		eax, 5
 		add		eax, edx
 		mov		cl, [esi+1]
 		test	cl, cl
 		jz		done
-		mov		edx, eax
-		add		eax, ecx
-		shl		edx, 5
+		lea		edx, [eax+ecx]
+		shl		eax, 5
 		add		eax, edx
 		mov		cl, [esi+2]
 		test	cl, cl
 		jz		done
-		mov		edx, eax
-		add		eax, ecx
-		shl		edx, 5
+		lea		edx, [eax+ecx]
+		shl		eax, 5
 		add		eax, edx
 		mov		cl, [esi+3]
 		test	cl, cl
 		jz		done
-		mov		edx, eax
-		add		eax, ecx
-		shl		edx, 5
+		lea		edx, [eax+ecx]
+		shl		eax, 5
 		add		eax, edx
 		add		esi, 4
 		jmp		iterHead
@@ -99,7 +89,7 @@ __declspec(naked) UInt32 __fastcall StrHashCS(const char *inKey)
 	}
 }
 
-__declspec(naked) UInt32 __fastcall StrHashCI(const char *inKey)
+_NAKED UInt32 __fastcall StrHashCI(const char *inKey)
 {
 	__asm
 	{
@@ -114,34 +104,30 @@ __declspec(naked) UInt32 __fastcall StrHashCI(const char *inKey)
 		mov		cl, [esi]
 		test	cl, cl
 		jz		done
-		mov		edx, eax
-		shl		edx, 5
-		add		eax, edx
 		movzx	edx, kLwrCaseConverter[ecx]
+		add		edx, eax
+		shl		eax, 5
 		add		eax, edx
 		mov		cl, [esi+1]
 		test	cl, cl
 		jz		done
-		mov		edx, eax
-		shl		edx, 5
-		add		eax, edx
 		movzx	edx, kLwrCaseConverter[ecx]
+		add		edx, eax
+		shl		eax, 5
 		add		eax, edx
 		mov		cl, [esi+2]
 		test	cl, cl
 		jz		done
-		mov		edx, eax
-		shl		edx, 5
-		add		eax, edx
 		movzx	edx, kLwrCaseConverter[ecx]
+		add		edx, eax
+		shl		eax, 5
 		add		eax, edx
 		mov		cl, [esi+3]
 		test	cl, cl
 		jz		done
-		mov		edx, eax
-		shl		edx, 5
-		add		eax, edx
 		movzx	edx, kLwrCaseConverter[ecx]
+		add		edx, eax
+		shl		eax, 5
 		add		eax, edx
 		add		esi, 4
 		jmp		iterHead

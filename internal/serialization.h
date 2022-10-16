@@ -16,7 +16,7 @@ void __fastcall RestoreLinkedRefs(UnorderedMap<UInt32, UInt32> *tempMap = nullpt
 	}
 }
 
-__declspec(noinline) void CleanMLCallbacks()
+_NOINLINE void CleanMLCallbacks()
 {
 	for (auto iter = s_mainLoopCallbacks->Begin(); iter; ++iter)
 	{
@@ -238,7 +238,7 @@ void ProcessDataChangedFlags(UInt8 changedFlags)
 UInt8 *s_loadGameBuffer = nullptr;
 UInt32 s_loadGameBufferSize = 0x10000;
 
-__declspec(noinline) UInt8* __fastcall GetLoadGameBuffer(UInt32 length)
+_NOINLINE UInt8* __fastcall GetLoadGameBuffer(UInt32 length)
 {
 	if (s_loadGameBufferSize < length)
 	{
@@ -257,6 +257,9 @@ void LoadGameCallback(void*)
 {
 	UInt8 changedFlags = s_dataChangedFlags;
 	ProcessDataChangedFlags(changedFlags);
+
+	if (changedFlags == kChangedFlag_All)
+		InitResolvedModIndices();
 
 	UInt32 type, version, length, nRecs, nRefs, nVars, buffer4, refID;
 	UInt8 buffer1, modIdx;
@@ -283,7 +286,7 @@ void LoadGameCallback(void*)
 					bufPos += 4;
 					nVars = *(UInt16*)bufPos;
 					bufPos += 2;
-					if (ResolveRefID(refID, &refID) && (form = LookupFormByRefID(refID)) && form->GetScriptAndEventList(&script, &eventList))
+					if ((refID = GetResolvedRefID(refID)) && (form = LookupFormByRefID(refID)) && form->GetScriptAndEventList(&script, &eventList))
 					{
 						while (nVars)
 						{
@@ -296,11 +299,11 @@ void LoadGameCallback(void*)
 							*bufPos = 0;
 							varData = (VarData*)bufPos;
 							bufPos += 8;
-							if (!ResolveRefID(modIdx << 24, &buffer4)) continue;
+							if (!(buffer4 = GetResolvedRefID(modIdx << 24))) continue;
 							if (var = script->AddVariable((char*)namePos, eventList, refID, buffer4 >> 24))
 							{
 								*(UInt8*)varData = buffer1;
-								if (varData->refID && !varData->pad && !ResolveRefID(varData->refID, &varData->refID))
+								if (varData->refID && !varData->pad && !(varData->refID = GetResolvedRefID(varData->refID)))
 									varData->refID = 0;
 								var->data = varData->num;
 							}
@@ -338,7 +341,7 @@ void LoadGameCallback(void*)
 				{
 					buffer1 = *bufPos++;
 					nRecs--;
-					if ((buffer1 > 5) && (ResolveRefID(buffer1 << 24, &buffer4)))
+					if ((buffer1 > 5) && (buffer4 = GetResolvedRefID(buffer1 << 24)))
 					{
 						ownersMap = nullptr;
 						modIdx = buffer4 >> 24;
@@ -350,7 +353,7 @@ void LoadGameCallback(void*)
 							bufPos += 4;
 							nVars = *(UInt16*)bufPos;
 							bufPos += 2;
-							if (ResolveRefID(refID, &refID) && LookupFormByRefID(refID))
+							if ((refID = GetResolvedRefID(refID)) && LookupFormByRefID(refID))
 							{
 								if (!ownersMap) ownersMap = s_auxVariablesPerm->Emplace(modIdx, AlignBucketCount(nRefs));
 								aVarsMap = ownersMap->Emplace(refID, AlignBucketCount(nVars));
@@ -452,7 +455,7 @@ void LoadGameCallback(void*)
 					nRecs--;
 					nVars = *(UInt16*)bufPos;
 					bufPos += 2;
-					if ((buffer1 > 5) && (ResolveRefID(buffer1 << 24, &buffer4)))
+					if ((buffer1 > 5) && (buffer4 = GetResolvedRefID(buffer1 << 24)))
 					{
 						rVarsMap = nullptr;
 						modIdx = buffer4 >> 24;
@@ -472,7 +475,7 @@ void LoadGameCallback(void*)
 								refID = *(UInt32*)bufPos;
 								bufPos += 4;
 								buffer1 = *bufPos++;
-								if (ResolveRefID(refID, &refID) && LookupFormByRefID(refID))
+								if ((refID = GetResolvedRefID(refID)) && LookupFormByRefID(refID))
 								{
 									if (!idsMap)
 									{
@@ -532,8 +535,8 @@ void LoadGameCallback(void*)
 					lnkID = *(UInt32*)bufPos;
 					bufPos += 4;
 					buffer1 = *bufPos++;
-					if (ResolveRefID(refID, &refID) && ResolveRefID(lnkID, &lnkID) &&
-						ResolveRefID(buffer1 << 24, &buffer4) && SetLinkedRefID(refID, lnkID, buffer4 >> 24))
+					if ((refID = GetResolvedRefID(refID)) && (lnkID = GetResolvedRefID(lnkID)) &&
+						(buffer4 = GetResolvedRefID(buffer1 << 24)) && SetLinkedRefID(refID, lnkID, buffer4 >> 24))
 						s_linkedRefsTemp()[refID] = lnkID;
 				}
 				break;
@@ -548,16 +551,16 @@ void LoadGameCallback(void*)
 				AppearanceUndo *aprUndo = (AppearanceUndo*)malloc(sizeof(AppearanceUndo));
 				ReadRecordData(aprUndo->values0, 0x214);
 				refID = ReadRecord32();
-				if (!ResolveRefID(refID, &refID) || !(aprUndo->race = (TESRace*)LookupFormByRefID(refID)))
+				if (!(refID = GetResolvedRefID(refID)) || !(aprUndo->race = (TESRace*)LookupFormByRefID(refID)))
 					aprUndo->race = (TESRace*)LookupFormByRefID(0x19);
 				refID = ReadRecord32();
-				if (!ResolveRefID(refID, &refID) || !(aprUndo->hair = (TESHair*)LookupFormByRefID(refID)))
+				if (!(refID = GetResolvedRefID(refID)) || !(aprUndo->hair = (TESHair*)LookupFormByRefID(refID)))
 				{
 					refID = (aprUndo->flags & 1) ? 0x22E4E : 0x14B90;
 					aprUndo->hair = (TESHair*)LookupFormByRefID(refID);
 				}
 				refID = ReadRecord32();
-				if (!ResolveRefID(refID, &refID) || !(aprUndo->eyes = (TESEyes*)LookupFormByRefID(refID)))
+				if (!(refID = GetResolvedRefID(refID)) || !(aprUndo->eyes = (TESEyes*)LookupFormByRefID(refID)))
 					aprUndo->eyes = (TESEyes*)LookupFormByRefID(0x4255);
 				buffer1 = ReadRecord8();
 				aprUndo->numParts = buffer1;
@@ -567,7 +570,7 @@ void LoadGameCallback(void*)
 					do
 					{
 						refID = ReadRecord32();
-						if (ResolveRefID(refID, &refID) && (*ptr = (BGSHeadPart*)LookupFormByRefID(refID)))
+						if ((refID = GetResolvedRefID(refID)) && (*ptr = (BGSHeadPart*)LookupFormByRefID(refID)))
 							ptr++;
 						else aprUndo->numParts--;
 					}
@@ -593,7 +596,7 @@ void LoadGameCallback(void*)
 					refID = *(UInt32*)bufPos;
 					bufPos += 4;
 					buffer1 = *bufPos++;
-					if (!ResolveRefID(refID, &refID) || !(actor = (Actor*)LookupFormByRefID(refID)) || NOT_ACTOR(actor))
+					if (!(refID = GetResolvedRefID(refID)) || !(actor = (Actor*)LookupFormByRefID(refID)) || NOT_ACTOR(actor))
 					{
 						bufPos += buffer1 * 5;
 						continue;
@@ -605,7 +608,7 @@ void LoadGameCallback(void*)
 						buffer4 = *(UInt32*)bufPos;
 						bufPos += 4;
 						rank = *bufPos++;
-						if (!ResolveRefID(buffer4, &buffer4) || !(perk = (BGSPerk*)LookupFormByRefID(buffer4)) || NOT_ID(perk, BGSPerk))
+						if (!(buffer4 = GetResolvedRefID(buffer4)) || !(perk = (BGSPerk*)LookupFormByRefID(buffer4)) || NOT_ID(perk, BGSPerk))
 							continue;
 						if (rank > perk->data.numRanks)
 							rank = perk->data.numRanks;
