@@ -1967,6 +1967,25 @@ __declspec(naked) void SetAcousticSpaceFixHook()
 	}
 }
 
+__declspec(naked) void ModPositiveChemDurationHook()
+{
+	__asm
+	{
+		mov		al, [eax+0xA0]
+		sub		al, 0xA
+		cmp		al, 1
+		seta	al
+		ja		done
+		mov		ecx, [ebp+0x10]
+		mov		eax, [ecx+0xC]
+		mov		ecx, [eax+0x14]
+		mov		al, [ecx+0x58]
+		and		al, 1
+	done:
+		retn
+	}
+}
+
 __declspec(naked) bool __cdecl PickSoundFileFromFolderHook(char *outFilePath)
 {
 	__asm
@@ -4830,6 +4849,7 @@ void InitGamePatches()
 	SafeWrite16(0x54E421, 0x1EEB);
 	WritePushRetRelJump(0x54E4E1, 0x54E5E6, (UInt32)ClearAshPilesHook);
 	WritePushRetRelJump(0x82D8CA, 0x82D8F4, (UInt32)SetAcousticSpaceFixHook);
+	WritePushRetRelJump(0x8236FD, 0x82370C, (UInt32)ModPositiveChemDurationHook);
 	SAFE_WRITE_BUF(0xAEACAA, "\x31\xD2\x89\x90\x34\x01\x00\x00\x89\x90\x9C\x01\x00\x00\x89\x90\xA0\x01\x00\x00\x89\x90\xDC\x01\x00\x00\xC7\x80\x38\x01\x00\x00\x00\x00\x80\x3F\x0F\x1F\x00");
 	SafeWrite32(0xAE5648, (UInt32)SetSourceSoundRequestHook);
 	WritePushRetRelJump(0x82D416, 0x82D426, (UInt32)FillGameSoundPropsHook);
