@@ -279,9 +279,10 @@ Collision	4
 Properties	8
 Transform	0x10
 */
-void NiAVObject::DumpObject(UInt8 dumpFlags)
+void NiAVObject::Dump(UInt8 dumpFlags)
 {
-	PrintDebug("(B) %08X\t%s\t%s\t%08X\t#%d", this, GetType()->name, GetName(), m_flags, m_uiRefCount);
+	char blkType = IS_NODE(this) ? 'N' : 'B';
+	PrintDebug("(%c) %08X\t%s\t%s\t%08X\t#%d", blkType, this, GetType()->name, GetName(), m_flags, m_uiRefCount);
 	s_debug().Indent();
 	if (m_controller && (dumpFlags & 1))
 		PrintDebug("(C) %08X\t%s\t#%d", m_controller, m_controller->GetType()->name, m_controller->m_uiRefCount);
@@ -296,11 +297,18 @@ void NiAVObject::DumpObject(UInt8 dumpFlags)
 	}
 	if (dumpFlags & 8)
 	{
-		if (GetTriBasedGeom())
+		if (NiGeometry *geom = GetNiGeometry())
 		{
-			NiGeometryData *geomData = ((NiTriBasedGeom*)this)->geometryData;
+			NiGeometryData *geomData = geom->geometryData;
 			if (geomData)
-				PrintDebug("(G) %08X\t%s\t#%d", geomData, geomData->GetType()->name, geomData->m_uiRefCount);
+				PrintDebug("(G) %08X\t%s\t#%d\tSkin: %08X", geomData, geomData->GetType()->name, geomData->m_uiRefCount, geom->skinInstance);
+			if IS_TYPE(this, NiParticleSystem)
+			{
+				s_debug().Indent();
+				for (auto modIter = ((NiParticleSystem*)this)->modifiers.Head(); modIter; modIter = modIter->next)
+					if (modIter->data) PrintDebug("(PM) %08X\t%s\t#%d", modIter->data, modIter->data->GetType()->name, modIter->data->m_uiRefCount);
+				s_debug().Outdent();
+			}
 		}
 		NiProperty *niProp;
 		for (DListNode<NiProperty> *traverse = m_propertyList.Head(); traverse; traverse = traverse->next)
@@ -323,6 +331,9 @@ void NiAVObject::DumpObject(UInt8 dumpFlags)
 		m_transformLocal.Dump();
 		m_transformWorld.Dump();
 	}
+	if (blkType == 'N')
+		for (auto iter = ((NiNode*)this)->m_children.Begin(); iter; ++iter)
+			if (*iter) iter->Dump(dumpFlags);
 	s_debug().Outdent();
 }
 
@@ -470,6 +481,55 @@ __declspec(naked) NiNode* __fastcall NiNode::GetNode(const char *nodeName) const
 		mov		ecx, [eax]
 		cmp		dword ptr [ecx+0xC], ADDR_ReturnThis
 		cmovnz	eax, edx
+	done:
+		retn
+	}
+}
+
+__declspec(naked) NiAVObject* __fastcall NiNode::FindBlockOfType(UInt32 typeVtbl) const
+{
+	__asm
+	{
+		mov		eax, ecx
+		cmp		[eax], edx
+		jz		done
+		movzx	eax, word ptr [ecx+0xA6]
+		test	eax, eax
+		jz		done
+		push	esi
+		push	edi
+		mov		esi, [ecx+0xA0]
+		mov		edi, eax
+		ALIGN 16
+	iterHead:
+		dec		edi
+		js		iterEnd
+		mov		ecx, [esi]
+		add		esi, 4
+		test	ecx, ecx
+		jz		iterHead
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
+		jnz		notNode
+		call	NiNode::FindBlockOfType
+		test	eax, eax
+		jz		iterHead
+		pop		edi
+		pop		esi
+		retn
+		ALIGN 16
+	notNode:
+		cmp		eax, edx
+		jnz		iterHead
+		mov		eax, ecx
+		pop		edi
+		pop		esi
+		retn
+		ALIGN 16
+	iterEnd:
+		xor		eax, eax
+		pop		edi
+		pop		esi
 	done:
 		retn
 	}
@@ -755,7 +815,7 @@ __declspec(naked) void NiNode::ApplyForce(const NiVector4 &forceVector)
 		test	byte ptr [edx+0xE8], 2
 		jz		doChildren
 		push	ecx
-		push	dword ptr [esp+8]
+		mov		edx, [esp+8]
 		mov		ecx, eax
 		call	bhkWorldObject::ApplyForce
 		pop		ecx
@@ -816,8 +876,7 @@ __declspec(naked) bool __fastcall NiCamera::WorldToScreen(const NiVector3 &world
 		comiss	xmm2, xmm4
 		setnz	al
 		jz		done
-		mov		edx, 0x3727C5AC
-		movd	xmm1, edx
+		movss	xmm1, SS_1d1K
 		cmpnltss	xmm1, xmm2
 		movmskps	eax, xmm1
 		movss	xmm3, PS_FlipSignMask0
@@ -857,7 +916,7 @@ __declspec(naked) bool __fastcall NiCamera::WorldToScreen(const NiVector3 &world
 		xor		al, al
 	done:
 		mov		edx, [esp+4]
-		movq	qword ptr [edx], xmm0
+		movlps	[edx], xmm0
 		retn	4
 	}
 }
@@ -958,7 +1017,7 @@ __declspec(naked) NiLines* __stdcall NiLines::Create(float length, const NiColor
 		GAME_HEAP_ALLOC
 		xorps	xmm0, xmm0
 		movups	[eax], xmm0
-		movq	qword ptr [eax+0x10], xmm0
+		movlps	[eax+0x10], xmm0
 		mov		dword ptr [eax+0xC], 0x3F800000
 		push	eax
 		push	2
@@ -997,16 +1056,23 @@ __declspec(naked) NiLines* __stdcall NiLines::Create(float length, const NiColor
 	}
 }
 
-void NiNode::Dump(UInt8 dumpFlags)
+__declspec(naked) NiPSysModifier* __fastcall NiParticleSystem::FindModifier(UInt32 typeVtbl) const
 {
-	DumpObject(dumpFlags);
-	s_debug().Indent();
-	for (auto iter = m_children.Begin(); iter; ++iter)
+	__asm
 	{
-		if (!*iter) continue;
-		if IS_NODE(*iter) ((NiNode*)*iter)->Dump(dumpFlags);
-		else iter->DumpObject(dumpFlags);
+		mov		ecx, [ecx+0xC8]
+	iterHead:
+		test	ecx, ecx
+		jz		done
+		mov		eax, [ecx+8]
+		mov		ecx, [ecx]
+		test	eax, eax
+		jz		iterHead
+		cmp		[eax], edx
+		jnz		iterHead
+		retn
+	done:
+		xor		eax, eax
+		retn
 	}
-	s_debug().Outdent();
 }
-

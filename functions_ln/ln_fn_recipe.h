@@ -48,7 +48,7 @@ bool Cmd_GetFormRecipes_Execute(COMMAND_ARGS)
 		while (entryIter = entryIter->next);
 	}
 	while (rcpeIter = rcpeIter->next);
-	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+	*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -84,7 +84,7 @@ bool Cmd_GetFormRecipeOutputs_Execute(COMMAND_ARGS)
 	}
 	while (rcpeIter = rcpeIter->next);
 	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -128,7 +128,7 @@ bool Cmd_GetRecipeInputForms_Execute(COMMAND_ARGS)
 {
 	TESRecipe *recipe;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &recipe) && IS_ID(recipe, TESRecipe))
-		AssignCommandResult((NVSEArrayVar*)recipe->inputs.GetComponents(scriptObj), result);
+		*result = (int)recipe->inputs.GetComponents(scriptObj);
 	else *result = 0;
 	return true;
 }
@@ -137,7 +137,7 @@ bool Cmd_GetRecipeOutputForms_Execute(COMMAND_ARGS)
 {
 	TESRecipe *recipe;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &recipe) && IS_ID(recipe, TESRecipe))
-		AssignCommandResult((NVSEArrayVar*)recipe->outputs.GetComponents(scriptObj), result);
+		*result = (int)recipe->outputs.GetComponents(scriptObj);
 	else *result = 0;
 	return true;
 }
@@ -243,7 +243,7 @@ bool Cmd_SetRecipeOutputCount_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRecipeCategory_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESRecipe *recipe;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &recipe) && IS_ID(recipe, TESRecipe) && recipe->category)
 		REFR_RES = recipe->category->refID;
@@ -264,7 +264,7 @@ bool Cmd_SetRecipeCategory_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRecipeSubcategory_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESRecipe *recipe;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &recipe) && IS_ID(recipe, TESRecipe) && recipe->subCategory)
 		REFR_RES = recipe->subCategory->refID;

@@ -153,7 +153,7 @@ bool Cmd_GetClimateNumWeatherTypes_Execute(COMMAND_ARGS)
 
 bool Cmd_GetClimateNthWeatherType_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESClimate *climate;
 	UInt32 idx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &idx) && IS_ID(climate, TESClimate))
@@ -177,7 +177,7 @@ bool Cmd_GetClimateNthWeatherChance_Execute(COMMAND_ARGS)
 
 bool Cmd_GetClimateNthWeatherGlobal_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESClimate *climate;
 	UInt32 idx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &idx) && IS_ID(climate, TESClimate))
@@ -221,7 +221,7 @@ bool Cmd_ClimateRemoveWeatherType_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCurrentClimate_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESClimate *climate = g_TES->sky ? g_TES->sky->currClimate : NULL;
 	if (climate) REFR_RES = climate->refID;
 	DoConsolePrint(climate);

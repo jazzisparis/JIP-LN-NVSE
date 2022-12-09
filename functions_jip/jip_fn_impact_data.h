@@ -65,13 +65,13 @@ bool Cmd_GetImpactDataTrait_Execute(COMMAND_ARGS)
 		*result = ((float*)impactData)[13 + traitID];
 		break;
 	case 15:
-		*result = impactData->parallaxPasses;
+		*result = impactData->decalInfo.parallaxPasses;
 		break;
 	case 16:
-		*result = (impactData->decalFlags << 1) | impactData->noDecalData;
+		*result = (impactData->decalInfo.flags << 1) | impactData->noDecalData;
 		break;
 	case 17:
-		cvtul2d(RGBHexToDec(impactData->decalColor), result);
+		cvtul2d(RGBHexToDec(impactData->decalInfo.color), result);
 	}
 	return true;
 }
@@ -106,14 +106,14 @@ bool Cmd_SetImpactDataTraitNumeric_Execute(COMMAND_ARGS)
 		((float*)impactData)[16 + traitID] = value;
 		break;
 	case 12:
-		impactData->parallaxPasses = intVal;
+		impactData->decalInfo.parallaxPasses = intVal;
 		break;
 	case 13:
 		impactData->noDecalData = intVal & 1;
-		impactData->decalFlags = intVal >> 1;
+		impactData->decalInfo.flags = intVal >> 1;
 		break;
 	case 14:
-		if (intVal <= 255255255) impactData->decalColor = RGBDecToHex(intVal);
+		if (intVal <= 255255255) impactData->decalInfo.color = RGBDecToHex(intVal);
 	}
 	return true;
 }
@@ -140,7 +140,7 @@ bool Cmd_SetImpactDataTraitForm_Execute(COMMAND_ARGS)
 
 bool Cmd_GetImpactDataSetForm_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	BGSImpactDataSet *impactDataSet;
 	UInt32 materialID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &impactDataSet, &materialID) && IS_ID(impactDataSet, BGSImpactDataSet) && (materialID <= 11) && impactDataSet->impactDatas[materialID])

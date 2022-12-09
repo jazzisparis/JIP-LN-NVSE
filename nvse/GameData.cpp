@@ -1,6 +1,6 @@
 #include "nvse/GameData.h"
 
-const ModInfo *DataHandler::LookupModByName(const char *modName)
+ModInfo* __fastcall DataHandler::LookupModByName(const char *modName)
 {
 	ModList *pModList = &modList;
 	for (UInt32 idx = 0; idx < pModList->loadedModCount; idx++)
@@ -12,7 +12,7 @@ const ModInfo *DataHandler::LookupModByName(const char *modName)
 	return nullptr;
 }
 
-__declspec(naked) UInt8 __fastcall DataHandler::GetModIndex(const char *modName)
+__declspec(naked) UInt8 __fastcall DataHandler::GetModIndex(const char *modName) const
 {
 	__asm
 	{
@@ -48,12 +48,6 @@ __declspec(naked) UInt8 __fastcall DataHandler::GetModIndex(const char *modName)
 	}
 }
 
-const char *DataHandler::GetNthModName(UInt32 modIndex)
-{
-	auto modInfo = modList.loadedMods[modIndex];
-	return modInfo ? modInfo->name : "";
-}
-
 void Sky::RefreshMoon()
 {
 	if (masserMoon) masserMoon->Destroy(true);
@@ -87,20 +81,57 @@ __declspec(naked) bool Sky::GetIsRaining()
 	}
 }
 
-__declspec(naked) TESObjectCELL *GridCellArray::GetCell(Coordinate cellXY) const
+GridCellArray *g_gridCellArray;
+
+__declspec(naked) TESObjectCELL* __vectorcall GridCellArray::GetCellAtPos(__m128 pos) const
+{
+	__asm
+	{
+		pxor	xmm3, xmm3
+		unpcklpd	xmm0, xmm3
+		cvttps2dq	xmm0, xmm0
+		psrad	xmm0, 0xC
+		movq	xmm1, qword ptr [ecx+4]
+		psubd	xmm0, xmm1
+		movd	xmm1, [ecx+0xC]
+		unpcklps	xmm1, xmm1
+		movaps	xmm2, xmm1
+		psrld	xmm2, 1
+		paddd	xmm0, xmm2
+		pcmpgtd	xmm1, xmm0
+		movmskps	eax, xmm1
+		cmp		al, 3
+		jnz		retnNull
+		movaps	xmm1, xmm0
+		phaddd	xmm1, xmm3
+		psrldq	xmm2, 4
+		pslld	xmm0, xmm2
+		paddd	xmm0, xmm1
+		pextrw	edx, xmm0, 0
+		mov		ecx, [ecx+0x10]
+		mov		eax, [ecx+edx*4]
+		retn
+	retnNull:
+		xor		eax, eax
+		retn
+	}
+}
+
+__declspec(naked) TESObjectCELL* __vectorcall GridCellArray::GetCellAtCoord(__m128i cellXY) const
 {
 	__asm
 	{
 		push	ebx
 		mov		ebx, ecx
+		movd	eax, xmm0
+		movsx	edx, ax
+		sar		eax, 0x10
 		mov		ecx, [ebx+0xC]
 		shr		ecx, 1
-		movsx	eax, word ptr [esp+0xA]
 		sub		eax, [ebx+4]
 		add		eax, ecx
 		cmp		eax, [ebx+0xC]
 		jnb		retnNull
-		movsx	edx, word ptr [esp+8]
 		sub		edx, [ebx+8]
 		add		edx, ecx
 		cmp		edx, [ebx+0xC]
@@ -111,10 +142,10 @@ __declspec(naked) TESObjectCELL *GridCellArray::GetCell(Coordinate cellXY) const
 		mov		ecx, [ebx+0x10]
 		mov		eax, [ecx+edx*4]
 		pop		ebx
-		retn	4
+		retn
 	retnNull:
 		xor		eax, eax
 		pop		ebx
-		retn	4
+		retn
 	}
 }

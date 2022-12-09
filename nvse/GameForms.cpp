@@ -115,7 +115,7 @@ bool TESForm::HasScript() const
 	return scriptable && scriptable->script;
 }
 
-bool TESForm::GetScriptAndEventList(Script **script, ScriptEventList **eventList) const
+bool TESForm::GetScriptAndEventList(Script **script, ScriptLocals **eventList) const
 {
 	if IS_REFERENCE(this)
 	{
@@ -390,15 +390,11 @@ __declspec(naked) TESObjectCELL* __vectorcall TESWorldSpace::GetCellAtPos(__m128
 {
 	__asm
 	{
-		xorps	xmm1, xmm1
-		unpcklpd	xmm0, xmm1
 		cvttps2dq	xmm0, xmm0
 		psrad	xmm0, 0xC
-		movd	eax, xmm0
-		shl		eax, 0x10
-		pextrw	edx, xmm0, 2
-		or		eax, edx
-		push	eax
+		pshuflw	xmm0, xmm0, 2
+		push	ecx
+		movss	[esp], xmm0
 		mov		ecx, [ecx+0x30]
 		call	CellPointerMap::Lookup
 		retn

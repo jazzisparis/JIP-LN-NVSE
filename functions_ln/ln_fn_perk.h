@@ -155,7 +155,7 @@ bool Cmd_SetNthPerkEntryFunction_Execute(COMMAND_ARGS)
 
 bool Cmd_GetNthPerkEntryForm_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	BGSPerk *perk;
 	UInt32 index;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &perk, &index)) return true;

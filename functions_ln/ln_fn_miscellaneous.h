@@ -107,7 +107,7 @@ bool Cmd_SetGlobalValue_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWorldspaceParentWorldspace_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESWorldSpace *wspc;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc) && wspc->parent)
 		REFR_RES = wspc->parent->refID;
@@ -122,16 +122,16 @@ bool Cmd_GetCellCoords_Execute(COMMAND_ARGS)
 		return true;
 	NVSEArrayVar *outArray = CreateStringMap(NULL, NULL, 0, scriptObj);
 	if (!cell) cell = thisObj ? thisObj->parentCell : g_thePlayer->parentCell;
-	SetElement(outArray, ArrayElementL("x"), (cell && !cell->IsInterior()) ? ArrayElementL(cell->coords.exterior->x) : ArrayElementL(0.0));
-	SetElement(outArray, ArrayElementL("y"), (cell && !cell->IsInterior()) ? ArrayElementL(cell->coords.exterior->y) : ArrayElementL(0.0));
-	AssignCommandResult(outArray, result);
-	if (IsConsoleOpen() && cell && !cell->IsInterior()) Console_Print("GetCellCoords >> %d, %d", cell->coords.exterior->x, cell->coords.exterior->y);
+	SetElement(outArray, ArrayElementL("x"), (cell && !cell->IsInterior()) ? ArrayElementL(cell->exteriorCoords->x) : ArrayElementL(0.0));
+	SetElement(outArray, ArrayElementL("y"), (cell && !cell->IsInterior()) ? ArrayElementL(cell->exteriorCoords->y) : ArrayElementL(0.0));
+	*result = (int)outArray;
+	if (IsConsoleOpen() && cell && !cell->IsInterior()) Console_Print("GetCellCoords >> %d, %d", cell->exteriorCoords->x, cell->exteriorCoords->y);
 	return true;
 }
 
 bool Cmd_GetBipedModelList_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESForm *form = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form)) return true;
 	if (!form)
@@ -220,7 +220,7 @@ bool Cmd_GetGlobalTimeMultiplier_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWaterFormEffect_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESWaterForm *water;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &water) && IS_ID(water, TESWaterForm) && water->drinkEffect)
 		REFR_RES = water->drinkEffect->refID;
@@ -362,7 +362,7 @@ bool Cmd_PlayerHasKey_Eval(COMMAND_ARGS_EVAL)
 
 bool Cmd_GetAnimObjectIdle_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESObjectANIO *anio;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &anio) && IS_ID(anio, TESObjectANIO) && anio->idleForm)
 		REFR_RES = anio->idleForm->refID;
@@ -380,7 +380,7 @@ bool Cmd_SetAnimObjectIdle_Execute(COMMAND_ARGS)
 
 bool Cmd_GetPickupSound_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESForm *form;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
@@ -404,7 +404,7 @@ bool Cmd_SetPickupSound_Execute(COMMAND_ARGS)
 
 bool Cmd_GetPutdownSound_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESForm *form;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
@@ -428,7 +428,7 @@ bool Cmd_SetPutdownSound_Execute(COMMAND_ARGS)
 
 bool Cmd_GetContainerOpenSound_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESObjectCONT *container = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &container)) return true;
 	if (!container)
@@ -458,7 +458,7 @@ bool Cmd_SetContainerOpenSound_Execute(COMMAND_ARGS)
 
 bool Cmd_GetContainerCloseSound_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESObjectCONT *container = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &container)) return true;
 	if (!container)
@@ -495,7 +495,7 @@ bool Cmd_GetPlayerRegions_Execute(COMMAND_ARGS)
 		if (iter->data) tmpElements->Append(iter->data);
 	}
 	while (iter = iter->next);
-	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+	*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -523,7 +523,7 @@ bool Cmd_SetZoneFlag_Execute(COMMAND_ARGS)
 
 bool Cmd_GetImpactDataSet_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESObjectWEAP *weapon;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon) && IS_ID(weapon, TESObjectWEAP) && weapon->impactDataSet)
 		REFR_RES = weapon->impactDataSet->refID;
@@ -619,7 +619,7 @@ bool Cmd_LNSetIsPlayable_Execute(COMMAND_ARGS)
 
 bool Cmd_GetZone_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	if (thisObj->parentCell)
 	{
 		ExtraEncounterZone *xEncZone = GetExtraType(&thisObj->parentCell->extraDataList, EncounterZone);
@@ -732,7 +732,6 @@ bool Cmd_SetWaterTrait_Execute(COMMAND_ARGS)
 
 bool Cmd_GetActiveQuest_Execute(COMMAND_ARGS)
 {
-	*result = 0;
-	if (g_thePlayer->activeQuest) REFR_RES = g_thePlayer->activeQuest->refID;
+	REFR_RES = g_thePlayer->activeQuest ? g_thePlayer->activeQuest->refID : 0;
 	return true;
 }

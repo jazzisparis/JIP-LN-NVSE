@@ -5,7 +5,7 @@ DEFINE_COMMAND_PLUGIN(SetFactionReputationType, 0, 2, kParams_OneFaction_OneOpti
 
 bool Cmd_GetFactionReputationType_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESFaction *faction;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &faction) && faction->reputation) REFR_RES = faction->reputation->refID;
 	return true;

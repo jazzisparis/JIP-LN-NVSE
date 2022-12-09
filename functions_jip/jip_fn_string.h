@@ -34,7 +34,7 @@ bool Cmd_sv_RegexSearch_Execute(COMMAND_ARGS)
 		srcStr = matches.suffix().str().c_str();
 	}
 	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 

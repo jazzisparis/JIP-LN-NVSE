@@ -70,7 +70,7 @@ class ScriptEffect : public ActiveEffect
 {
 public:
 	Script			*script;	// 48
-	ScriptEventList	*eventList;	// 4C
+	ScriptLocals	*eventList;	// 4C
 };
 
 // 48

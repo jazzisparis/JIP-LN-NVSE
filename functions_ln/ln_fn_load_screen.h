@@ -29,7 +29,7 @@ bool Cmd_SetLoadScreenTexture_Execute(COMMAND_ARGS)
 
 bool Cmd_GetLoadScreenType_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESLoadScreen *loadScreen;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &loadScreen) && IS_ID(loadScreen, TESLoadScreen) && loadScreen->type)
 		REFR_RES = loadScreen->type->refID;
@@ -54,7 +54,7 @@ bool Cmd_GetLoadScreenTypeTextRGB_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &loadScrType) && IS_ID(loadScrType, TESLoadScreenType))
 	{
 		ArrayElementL values[3] = {loadScrType->fontColor1.r, loadScrType->fontColor1.g, loadScrType->fontColor1.b};
-		AssignCommandResult(CreateStringMap(kRGBPrefixes, values, 3, scriptObj), result);
+		*result = (int)CreateStringMap(kRGBPrefixes, values, 3, scriptObj);
 	}
 	return true;
 }

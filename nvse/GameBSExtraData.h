@@ -2,9 +2,6 @@
 
 // Added to remove a cyclic dependency between GameForms.h and GameExtraData.h
 
-class ExtraHealth;
-class ExtraWeaponModFlags;
-
 // 0C
 class BSExtraData
 {

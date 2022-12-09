@@ -469,8 +469,6 @@ public:
 
 	class Iterator
 	{
-		friend LockFreeMap;
-
 		LockFreeMap		*table;
 		Bucket			*bucket;
 		Entry			*entry;

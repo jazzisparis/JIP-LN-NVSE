@@ -58,7 +58,7 @@ bool Cmd_GetObjectiveTargets_Execute(COMMAND_ARGS)
 	}
 	while (iter = iter->next);
 	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -189,7 +189,7 @@ bool Cmd_GetQuests_Execute(COMMAND_ARGS)
 	}
 	while (iter = iter->next);
 	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -212,7 +212,7 @@ bool Cmd_GetQuestObjectives_Execute(COMMAND_ARGS)
 	}
 	while (iter = iter->next);
 	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -231,7 +231,7 @@ bool Cmd_GetActiveObjectives_Execute(COMMAND_ARGS)
 	}
 	while (iter = iter->next);
 	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -262,7 +262,7 @@ bool Cmd_GetObjectiveTeleportLinks_Execute(COMMAND_ARGS)
 		tmpElements->Clear();
 	}
 	while (trgIter = trgIter->next);
-	if (GetArraySize(linksArr)) AssignCommandResult(linksArr, result);
+	*result = (int)linksArr;
 	return true;
 }
 

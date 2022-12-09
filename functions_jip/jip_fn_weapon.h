@@ -69,7 +69,7 @@ bool Cmd_IsEquippedWeaponScoped_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWeaponSound_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESObjectWEAP *weapon;
 	UInt32 type;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &type) && IS_ID(weapon, TESObjectWEAP) && (type <= 13))

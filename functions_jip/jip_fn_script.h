@@ -53,7 +53,7 @@ bool ScriptVariableAction_Execute(COMMAND_ARGS)
 		return true;
 	}
 	Script *pScript;
-	ScriptEventList *pEventList;
+	ScriptLocals *pEventList;
 	if (!form->GetScriptAndEventList(&pScript, &pEventList)) return true;
 	if (s_scriptVarActionType)
 	{
@@ -572,7 +572,7 @@ bool Cmd_ExecuteScript_Execute(COMMAND_ARGS)
 	if (xScript)
 	{
 		Script *pScript = xScript->script;
-		ScriptEventList *pEventList = xScript->eventList;
+		ScriptLocals *pEventList = xScript->eventList;
 		if (pScript && pEventList)
 			pScript->Execute(thisObj, pEventList, NULL, false);
 	}

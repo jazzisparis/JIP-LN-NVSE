@@ -22,11 +22,11 @@ namespace MemoryPool
 		{
 			cmp		ecx, MAX_BLOCK_SIZE
 			ja		doMalloc
-			push	ebx
-			mov		ebx, ecx
+			push	esi
+			mov		esi, ecx
 			mov		ecx, offset s_memoryPool.m_cs
 			call	PrimitiveCS::Enter
-			mov		edx, ebx
+			mov		edx, esi
 			shr		edx, 2
 			lea		edx, [eax+edx+4]
 			mov		eax, [edx]
@@ -35,7 +35,7 @@ namespace MemoryPool
 			mov		ecx, [eax]
 			mov		[edx], ecx
 			mov		s_memoryPool.m_cs.selfPtr, 0
-			pop		ebx
+			pop		esi
 			retn
 			ALIGN 16
 		doMalloc:
@@ -46,54 +46,74 @@ namespace MemoryPool
 			retn
 			ALIGN 16
 		newSection:
-			push	esi
+			push	edi
 			push	edx
-			mov		esi, s_memoryPool.m_freeSections
-			test	esi, esi
+			mov		edi, s_memoryPool.m_freeSections
+			test	edi, edi
 			jz		newPool
-			mov		eax, [esi]
+			mov		eax, [edi]
 			mov		s_memoryPool.m_freeSections, eax
 			jmp		gotSection
-			NOP_0x3
+			NOP_0x8
 		newPool:
-			push	PAGE_READWRITE
-			push	MEM_RESERVE | MEM_COMMIT
-			push	MEMORY_POOL_SIZE
-			push	0
-			call	VirtualAlloc
-			mov		esi, eax
+			push	MEMORY_POOL_SIZE+0x40
+			call	malloc
+			add		eax, 0x20
+			and		eax, 0xFFFFFFF0
+			mov		edi, eax
 			lea		edx, [eax+MEMORY_POOL_SIZE-POOL_SECTION_SIZE]
 			add		eax, POOL_SECTION_SIZE
 			mov		s_memoryPool.m_freeSections, eax
-			mov		ecx, eax
 		sectLinker:
+			mov		ecx, eax
 			add		eax, POOL_SECTION_SIZE
-			cmp		eax, edx
-			ja		gotSection
 			mov		[ecx], eax
-			mov		ecx, eax
-			jmp		sectLinker
-			ALIGN 16
+			cmp		eax, edx
+			jb		sectLinker
+			pop		ecx
+			xor		ecx, ecx
+			mov		[eax], ecx
 		gotSection:
-			pop		edx
-			lea		eax, [esi+ebx]
-			mov		[edx], eax
-			lea		edx, [esi+POOL_SECTION_SIZE]
-			sub		edx, ebx
-			mov		ecx, eax
-		blockLinker:
-			add		eax, ebx
-			cmp		eax, edx
-			ja		done
+			pop		ecx
+			lea		eax, [esi+edi]
 			mov		[ecx], eax
+			lea		edx, [edi+POOL_SECTION_SIZE]
+			sub		edx, esi
+		blockLinker:
 			mov		ecx, eax
-			jmp		blockLinker
+			add		eax, esi
+			mov		[ecx], eax
+			cmp		eax, edx
+			jbe		blockLinker
+			mov		dword ptr [ecx], 0
+			add		edx, esi
+			sub		edx, eax
+			jbe		done
+			mov		esi, edx
+			shr		esi, 8
+			setnz	cl
+			add		cl, 4
+			shr		edx, cl
+			mov		esi, 1
+			shl		esi, cl
+			push	eax
 			ALIGN 16
+		surplIter:
+			mov		ecx, eax
+			add		eax, esi
+			mov		[ecx], eax
+			dec		edx
+			ja		surplIter
+			shr		esi, 2
+			lea		eax, s_memoryPool.m_freeSections[esi]
+			mov		edx, [eax]
+			mov		[ecx], edx
+			pop		dword ptr [eax]
 		done:
-			mov		eax, esi
 			mov		s_memoryPool.m_cs.selfPtr, 0
+			mov		eax, edi
+			pop		edi
 			pop		esi
-			pop		ebx
 			retn
 		}
 	}

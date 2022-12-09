@@ -10,8 +10,6 @@ typedef bool (*_GetNextRecordInfo)(UInt32 *type, UInt32 *version, UInt32 *length
 extern _GetNextRecordInfo GetNextRecordInfo;
 typedef UInt32 (*_ReadRecordData)(void *buffer, UInt32 length);
 extern _ReadRecordData ReadRecordData;
-typedef bool (*_ResolveRefID)(UInt32 refID, UInt32 *outRefID);
-extern _ResolveRefID ResolveRefID;
 typedef void (*_WriteRecord8)(UInt8 inData);
 extern _WriteRecord8 WriteRecord8;
 typedef void (*_WriteRecord16)(UInt16 inData);
@@ -40,8 +38,6 @@ typedef NVSEArrayVar* (*_CreateArray)(const NVSEArrayElement *data, UInt32 size,
 extern _CreateArray CreateArray;
 typedef NVSEArrayVar* (*_CreateStringMap)(const char **keys, const NVSEArrayElement *values, UInt32 size, Script *callingScript);
 extern _CreateStringMap CreateStringMap;
-typedef bool (*_AssignCommandResult)(NVSEArrayVar *arr, double *dest);
-extern _AssignCommandResult AssignCommandResult;
 typedef void (*_SetElement)(NVSEArrayVar *arr, const NVSEArrayElement &key, const NVSEArrayElement &value);
 extern _SetElement SetElement;
 typedef void (*_AppendElement)(NVSEArrayVar *arr, const NVSEArrayElement &value);
@@ -70,7 +66,6 @@ typedef void (*_CaptureLambdaVars)(Script* scriptLambda);
 extern _CaptureLambdaVars CaptureLambdaVars;
 typedef void (*_UncaptureLambdaVars)(Script* scriptLambda);
 extern _UncaptureLambdaVars UncaptureLambdaVars;
-extern UInt8 *g_numPreloadMods;
 
 typedef Tile* (__stdcall *_UIOInjectComponent)(Tile *parentTile, const char *dataStr);
 extern _UIOInjectComponent UIOInjectComponent;
@@ -164,8 +159,10 @@ __forceinline void *NiDeallocator(void *blockPtr, UInt32 size)
 	return CdeclCall<void*>(0xAA1460, blockPtr, size);
 }
 
-void InitResolvedModIndices();
-UInt32 __stdcall GetResolvedRefID(UInt32 refID);
+TESForm* __stdcall LookupFormByRefID(UInt32 refID);
+bool __stdcall HasChangeData(UInt32 refID);
+bool __fastcall GetResolvedModIndex(UInt8 *pModIdx);
+UInt32 __fastcall GetResolvedRefID(UInt32 refID);
 
 enum
 {
@@ -429,7 +426,7 @@ public:
 		refID = value ? value->refID : 0;
 	}
 
-	_NOINLINE void operator=(const char *value)
+	__declspec(noinline) void operator=(const char *value)
 	{
 		type = 4;
 		length = StrLen(value);
@@ -464,7 +461,7 @@ public:
 		return ArrayElementL(num);
 	}
 
-	_NOINLINE UInt32 ReadValData(UInt8 *bufPos)
+	__declspec(noinline) UInt32 ReadValData(UInt8 *bufPos)
 	{
 		if (type == 1)
 		{
@@ -607,7 +604,7 @@ class QuestStageEventFinder
 public:
 	QuestStageEventFinder(QuestStageEventCallback &_callback) : m_callback(&_callback) {}
 
-	bool operator==(const QuestStageEventCallback &rhs)
+	bool operator==(const QuestStageEventCallback &rhs) const
 	{
 		return (m_callback->stageID == rhs.stageID) && (m_callback->callback == rhs.callback);
 	}
@@ -637,7 +634,7 @@ class CriticalHitEventFind
 public:
 	CriticalHitEventFind(CriticalHitEventData &_data) : data(&_data) {}
 
-	bool operator==(const CriticalHitEventData &rhs)
+	bool operator==(const CriticalHitEventData &rhs) const
 	{
 		return (data->callback == rhs.callback) && (!rhs.target || (data->target == rhs.target)) && 
 			(!rhs.source || (data->source == rhs.source)) && (!rhs.weapon || (data->weapon == rhs.weapon));
@@ -651,7 +648,7 @@ class CriticalHitEventRemove
 public:
 	CriticalHitEventRemove(CriticalHitEventData &_data) : data(&_data) {}
 
-	bool operator==(const CriticalHitEventData &rhs)
+	bool operator==(const CriticalHitEventData &rhs) const
 	{
 		return (data->callback == rhs.callback) && (!data->target || (data->target == rhs.target)) && 
 			(!data->source || (data->source == rhs.source)) && (!data->weapon || (data->weapon == rhs.weapon));
@@ -678,7 +675,7 @@ class DisabledBlockFinder
 public:
 	DisabledBlockFinder(UInt8 _blockType) : blockType(_blockType) {}
 
-	bool operator==(const DisabledBlockInfo &rhs) {return rhs.blockType == blockType;}
+	bool operator==(const DisabledBlockInfo &rhs) const {return rhs.blockType == blockType;}
 };
 
 class ScriptBlockIterator
@@ -782,7 +779,7 @@ struct ArrayData
 			if (!isPacked) alloc *= 2;
 			vals = (ArrayElementR*)AuxBuffer::Get(2, alloc);
 			keys = isPacked ? nullptr : (vals + size);
-			MEM_ZERO(vals, alloc);
+			ZERO_BYTES(vals, alloc);
 			if (!GetElements(srcArr, vals, keys))
 				size = 0;
 		}
@@ -897,7 +894,8 @@ struct TLSData
 	ExtraDataList	*lastXtraList;		// 008
 	UInt32			unk00C;				// 00C
 	BSExtraData		*xDatas[kExtraData_Max];	// 010
-	UInt32			unk25C;				// 25C
+	UInt8			byte25C;			// 25C
+	UInt8			pad25D[3];			// 25D
 	NiNode			*lastNiNode;		// 260
 	TESObjectREFR	*lastNiNodeREFR;	// 264
 	UInt8			consoleMode;		// 268
@@ -905,7 +903,7 @@ struct TLSData
 	UInt32			unk26C[4];			// 26C
 	TESForm			*lastRefVar;		// 27C
 	UInt32			lastVarIndex;		// 280
-	ScriptEventList	*lastEventList;		// 284
+	ScriptLocals	*lastEventList;		// 284
 	Script			*lastScript;		// 288
 	UInt32			activateRecursionDepth;	// 28C
 	UInt32			unk290;				// 290
@@ -942,6 +940,6 @@ void InitMemUsageDisplay(UInt32 callDelay);
 #define NUM_ARGS scriptData[*opcodeOffsetPtr]
 #define NUM_ARGS_EX (scriptData[*opcodeOffsetPtr - 2] ? scriptData[*opcodeOffsetPtr] : 0)
 
-DEFINE_COMMAND_PLUGIN(EmptyCommand, 0, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(EmptyCommand, 0, 3, kParams_ThreeOptionalInts);
 
 void __stdcall StoreOriginalData(UInt32 addr, UInt8 size);

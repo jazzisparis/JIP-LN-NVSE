@@ -37,7 +37,7 @@ bool Cmd_SetWaterFormEffect_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWaterSound_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESWaterForm *water;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &water) && IS_ID(water, TESWaterForm) && water->sound)
 		REFR_RES = water->sound->refID;

@@ -84,7 +84,7 @@ bool Cmd_SetChanceNone_Execute(COMMAND_ARGS)
 
 bool Cmd_GetChanceNoneGlobal_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESForm *form;
 	TESLeveledList *lvlList;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (lvlList = form->GetLvlList()) && lvlList->global)
@@ -114,7 +114,7 @@ bool Cmd_GetNumLevItems_Execute(COMMAND_ARGS)
 
 bool Cmd_GetNthLevItem_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESForm *form;
 	UInt32 index;
 	TESLeveledList *lvlList;

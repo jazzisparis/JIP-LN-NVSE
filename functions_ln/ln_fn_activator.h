@@ -13,7 +13,7 @@ DEFINE_COMMAND_PLUGIN(SetActivatorSoundActivate, 0, 2, kParams_OneForm_OneOption
 
 bool Cmd_GetActivatorRadioStation_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESObjectACTI *activator = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &activator)) return true;
 	if (!activator)
@@ -69,7 +69,7 @@ bool Cmd_SetActivatorPrompt_Execute(COMMAND_ARGS)
 
 bool Cmd_GetActivatorWaterType_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESForm *form = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form)) return true;
 	if (!form)
@@ -105,7 +105,7 @@ bool Cmd_SetActivatorWaterType_Execute(COMMAND_ARGS)
 
 bool Cmd_GetActivatorSoundLooping_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESObjectACTI *activator = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &activator)) return true;
 	if (!activator)
@@ -135,7 +135,7 @@ bool Cmd_SetActivatorSoundLooping_Execute(COMMAND_ARGS)
 
 bool Cmd_GetActivatorSoundActivate_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESObjectACTI *activator = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &activator)) return true;
 	if (!activator)

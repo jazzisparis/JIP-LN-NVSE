@@ -1,6 +1,6 @@
 #pragma once
 
-__declspec(align(16)) typedef NiVector4 hkVector4;
+typedef AlignedVector4 hkVector4;
 
 struct alignas(16) hkQuaternion
 {
@@ -180,8 +180,6 @@ public:
 
 	class Iterator
 	{
-		friend hkArray;
-
 		T_Data		*pData;
 		UInt32		count;
 
@@ -425,10 +423,13 @@ public:
 	bhkWorldObject			*object;		// 0C
 	hkCdBody				cdBody;			// 10
 	SInt8					byte20;			// 20	Offset modifier from cdBody offset to object begin offset
-	UInt8					pad21[3];		// 21
+	UInt8					byte21;			// 21
+	UInt16					word22;			// 22
 	UInt32					unk24;			// 24
 	UInt8					collisionType;	// 28	Known: 1 - hkpRigidBody, 2 - hkpPhantom
-	UInt8					unk29[3];		// 29
+	UInt8					byte29;			// 29
+	UInt8					byte2A;			// 2A
+	UInt8					pad2B;			// 2B
 	UInt8					layerType;		// 2C
 	UInt8					filterFlags;	// 2D
 	UInt16					group;			// 2E
@@ -514,7 +515,7 @@ public:
 
 	UInt32				bodyFlags;		// 10
 
-	void ApplyForce(const NiVector4 &forceVector);
+	void __fastcall ApplyForce(const NiVector4 &forceVector);
 };
 
 // 18
@@ -1693,6 +1694,8 @@ public:
 	hkpMotion						motion;			// E0
 
 	bool IsMobile() const {return (motion.type & 2) != 0;}
+
+	void __vectorcall SetVelocity(__m128 vel, UInt32 flags);	// bit0 - set global; bit1 - add value; bit4 - angular
 
 	__forceinline void ResetCollision() {CdeclCall(0xCA8700, this);}
 

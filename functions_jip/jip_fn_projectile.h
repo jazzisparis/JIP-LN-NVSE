@@ -124,7 +124,7 @@ bool Cmd_SetProjectileFlag_Execute(COMMAND_ARGS)
 
 bool Cmd_GetProjectileExplosion_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	BGSProjectile *projectile;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile) && IS_ID(projectile, BGSProjectile) && projectile->explosion)
 		REFR_RES = projectile->explosion->refID;
@@ -279,7 +279,7 @@ bool Cmd_SetOnProjectileImpactEventHandler_Execute(COMMAND_ARGS)
 		if (addEvnt)
 		{
 			if (s_projectileImpactEventMap->Insert(projectile, &callbacks))
-				HOOK_MOD(ProjectileImpact, true);
+				HOOK_INC(ProjectileImpact);
 			callbacks->Insert(script);
 			projectile->SetJIPFlag(kHookFormFlag6_ProjectileImpact, true);
 		}
@@ -288,7 +288,7 @@ bool Cmd_SetOnProjectileImpactEventHandler_Execute(COMMAND_ARGS)
 			auto findProj = s_projectileImpactEventMap->Find(projectile);
 			if (!findProj || !findProj().Erase(script) || !findProj().Empty()) continue;
 			findProj.Remove();
-			HOOK_MOD(ProjectileImpact, false);
+			HOOK_DEC(ProjectileImpact);
 			projectile->SetJIPFlag(kHookFormFlag6_ProjectileImpact, false);
 		}
 	}

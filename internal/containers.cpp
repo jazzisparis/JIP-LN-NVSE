@@ -1,6 +1,6 @@
 #include "internal/containers.h"
 
-_NAKED char* __fastcall CopyStringKey(const char *key)
+__declspec(naked) char* __fastcall CopyStringKey(const char *key)
 {
 	__asm
 	{
@@ -24,7 +24,7 @@ _NAKED char* __fastcall CopyStringKey(const char *key)
 	}
 }
 
-_NAKED UInt32 __fastcall AlignBucketCount(UInt32 count)
+__declspec(naked) UInt32 __fastcall AlignBucketCount(UInt32 count)
 {
 	__asm
 	{
@@ -38,13 +38,13 @@ _NAKED UInt32 __fastcall AlignBucketCount(UInt32 count)
 		bsr		ecx, ecx
 		cmp		al, cl
 		setnz	al
-		inc		al
+		inc		eax
 		shl		eax, cl
 		retn
 	}
 }
 
-_NAKED UInt32 __fastcall StrHashCS(const char *inKey)
+__declspec(naked) UInt32 __fastcall StrHashCS(const char *inKey)
 {
 	__asm
 	{
@@ -89,7 +89,7 @@ _NAKED UInt32 __fastcall StrHashCS(const char *inKey)
 	}
 }
 
-_NAKED UInt32 __fastcall StrHashCI(const char *inKey)
+__declspec(naked) UInt32 __fastcall StrHashCI(const char *inKey)
 {
 	__asm
 	{

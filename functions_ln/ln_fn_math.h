@@ -22,7 +22,7 @@ bool Cmd_fsqrt_Execute(COMMAND_ARGS)
 			maxsd	xmm1, value
 			sqrtsd	xmm0, xmm1
 			mov		eax, result
-			movq	qword ptr [eax], xmm0
+			movlpd	[eax], xmm0
 		}
 	}
 	else *result = 0;

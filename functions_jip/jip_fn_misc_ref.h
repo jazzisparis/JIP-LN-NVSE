@@ -65,7 +65,7 @@ DEFINE_COMMAND_PLUGIN(IsMobile, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(IsGrabbable, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(AttachLight, 1, 5, kParams_OneString_OneForm_ThreeOptionalFloats);
 DEFINE_COMMAND_PLUGIN(RemoveLight, 1, 1, kParams_OneString);
-DEFINE_COMMAND_PLUGIN(GetExtraFloat, 1, 0, nullptr);
+DEFINE_CMD_COND_PLUGIN(GetExtraFloat, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetExtraFloat, 1, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(SetLinearVelocity, 1, 5, kParams_OneString_ThreeFloats_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(InsertNode, 0, 23, kParams_OneForm_OneInt_OneFormatString);
@@ -99,6 +99,7 @@ DEFINE_COMMAND_PLUGIN(SetRefrModelPath, 1, 1, kParams_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(AttachLine, 1, 7, kParams_TwoStrings_FiveFloats);
 DEFINE_COMMAND_PLUGIN(ToggleNoZPosReset, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(RotateAroundPoint, 1, 7, kParams_SixFloats_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(ToggleNodeCollision, 1, 2, kParams_OneString_OneInt);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -171,7 +172,7 @@ bool Cmd_GetEnableChildren_Execute(COMMAND_ARGS)
 	}
 	while (iter = iter->next);
 	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -188,7 +189,7 @@ bool Cmd_GetLinkedChildren_Execute(COMMAND_ARGS)
 	}
 	while (iter = iter->next);
 	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -245,7 +246,7 @@ bool Cmd_AddPrimitive_Execute(COMMAND_ARGS)
 		thisObj->extraDataList.AddExtra(xPrimitive);
 		UInt32 size = (type == 1) ? 0x4C : 0x34;
 		BGSPrimitive *primitive = (BGSPrimitive*)GameHeapAlloc(size);
-		MEM_ZERO(primitive, size);
+		ZERO_BYTES(primitive, size);
 		*(UInt32*)primitive = (type == 1) ? kVtbl_BGSPrimitiveBox : ((type == 2) ? kVtbl_BGSPrimitiveSphere : kVtbl_BGSPrimitivePlane);
 		primitive->type = type;
 		bounds *= 0.5F;
@@ -278,7 +279,7 @@ bool Cmd_GetTeammates_Execute(COMMAND_ARGS)
 	}
 	while (iter = iter->next);
 	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -379,14 +380,26 @@ bool Cmd_GetRefType_Execute(COMMAND_ARGS)
 	return true;
 }
 
+__declspec(naked) void __fastcall ToggleObjectCollision(TESObjectREFR *thisObj, bool enable)
+{
+	__asm
+	{
+		test	byte ptr [ecx+0x5F], kHookRefFlag5F_DisableCollision
+		setz	al
+		cmp		al, dl
+		jz		done
+		xor		byte ptr [ecx+0x5F], kHookRefFlag5F_DisableCollision
+		jmp		TESObjectREFR::ToggleCollision
+	done:
+		retn
+	}
+}
+
 bool Cmd_ToggleObjectCollision_Execute(COMMAND_ARGS)
 {
 	UInt32 enable;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &enable) && (!enable == !(thisObj->JIPRefFlags() & kHookRefFlag5F_DisableCollision)))
-	{
-		thisObj->JIPRefFlags() ^= kHookRefFlag5F_DisableCollision;
-		thisObj->ToggleCollision(enable != 0);
-	}
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &enable))
+		ToggleObjectCollision(thisObj, enable != 0);
 	return true;
 }
 
@@ -651,7 +664,7 @@ bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 		if (refr) tmpElements->InsertUnique(refr);
 	}
 	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -781,17 +794,15 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 	float maxRange = 50000.0F;
 	NiVector4 posMods(_mm_setzero_ps());
 	UInt32 translate = 0;
-	UInt8 numArgs = NUM_ARGS;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &posMods.x, &posMods.y, &posMods.z, &translate))
 	{
 		TESObjectCELL *cell = g_thePlayer->parentCell;
 		NiVector4 coords;
 		if (cell && (coords.RayCastCoords(g_mainCamera->WorldTranslate(), g_mainCamera->WorldRotate(), maxRange, 6) || translate))
 		{
-			if (numArgs > 1)
-				coords += posMods;
-			if (cell->worldSpace && !(cell = cell->worldSpace->GetCellAtPos(coords.PS())))
-				return true;
+			if (cell->worldSpace)
+				cell = cell->worldSpace->cell;
+			coords += posMods;
 			thisObj->MoveToCell(cell, coords);
 			*result = 1;
 		}
@@ -835,14 +846,14 @@ bool Cmd_SetAngleEx_Execute(COMMAND_ARGS)
 	{
 		if (transform <= 1)
 			thisObj->SetAngle(rotVector * GET_PS(8), transform);
-		else thisObj->Rotate(_mm_xor_ps(rotVector * GET_PS(8), GET_PS(2)));
+		else thisObj->Rotate(rotVector * GET_PS(8));
 	}
 	return true;
 }
 
 bool Cmd_GetTeleportDoor_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	if (thisObj->baseForm && IS_ID(thisObj->baseForm, TESObjectDOOR))
 	{
 		ExtraTeleport *xTeleport = GetExtraType(&thisObj->extraDataList, Teleport);
@@ -910,7 +921,7 @@ bool Cmd_MoveToFadeDelay_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCrosshairWater_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESWaterForm *water = nullptr;
 	TESObjectREFR *refr = g_interfaceManager->crosshairRef;
 	if (refr && IS_ID(refr->baseForm, BGSPlaceableWater))
@@ -1044,7 +1055,7 @@ bool Cmd_GetNifBlockTranslation_Execute(COMMAND_ARGS)
 		{
 			NiVector3 &transltn = getWorld ? niBlock->WorldTranslate() : niBlock->LocalTranslate();
 			ArrayElementL elements[3] = {transltn.x, transltn.y, transltn.z};
-			AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
+			*result = (int)CreateArray(elements, 3, scriptObj);
 		}
 	}
 	return true;
@@ -1108,7 +1119,7 @@ bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 				test	getMode, 1
 				cmovnz	ecx, eax
 				mov		eax, NiMatrix33::ToEulerPRY
-				mov		edx, NiMatrix33::ToEulerYPR
+				mov		edx, NiMatrix33::ToEulerPRYInv
 				test	getMode, 2
 				cmovnz	eax, edx
 				call	eax
@@ -1116,7 +1127,7 @@ bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 				movups	rot, xmm0
 			}
 			ArrayElementL elements[3] = {rot.x, rot.y, rot.z};
-			AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
+			*result = (int)CreateArray(elements, 3, scriptObj);
 		}
 	}
 	return true;
@@ -1137,9 +1148,9 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 				if (!transform)
 					niBlock->LocalRotate().FromEulerPRY(rot * GET_PS(8));
 				else if (transform == 1)
-					niBlock->LocalRotate().Rotate(_mm_xor_ps(rot * GET_PS(8), GET_PS(2)));
+					niBlock->LocalRotate().Rotate(rot * GET_PS(8));
 				else
-					niBlock->LocalRotate().FromEulerYPR(rot * GET_PS(8));
+					niBlock->LocalRotate().FromEulerPRYInv(rot * GET_PS(8));
 				if (IS_NODE(niBlock) && NOT_ACTOR(thisObj))
 					((NiNode*)niBlock)->ResetCollision();
 				niBlock->UpdateDownwardPass(kUpdateParams, 0);
@@ -1147,7 +1158,7 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 		}
 		else if (transform != 1)
 			thisObj->SetAngle(rot * GET_PS(8), transform);
-		else thisObj->Rotate(_mm_xor_ps(rot * GET_PS(8), GET_PS(2)));
+		else thisObj->Rotate(rot * GET_PS(8));
 	}
 	return true;
 }
@@ -1227,7 +1238,7 @@ bool Cmd_GetObjectVelocity_Execute(COMMAND_ARGS)
 		if (rigidBody && rigidBody->IsMobile())
 		{
 			if (axis) *result = rigidBody->motion.linVelocity[axis - 'X'];
-			else *result = rigidBody->motion.linVelocity.Length();
+			else *result = Length_V4(rigidBody->motion.linVelocity.PS());
 		}
 	}
 	return true;
@@ -1266,7 +1277,7 @@ bool Cmd_GetAngularVelocity_Execute(COMMAND_ARGS)
 			done:
 				cvtps2pd	xmm0, xmm0
 				mov		eax, result
-				movq	qword ptr [eax], xmm0
+				movlpd	[eax], xmm0
 			}
 		}
 	}
@@ -1303,7 +1314,7 @@ bool Cmd_SetAngularVelocity_Execute(COMMAND_ARGS)
 
 bool Cmd_PlaceAtCell_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESForm *form;
 	UInt32 count;
 	TESObjectCELL *worldOrCell;
@@ -1421,21 +1432,7 @@ bool Cmd_MoveToNode_Execute(COMMAND_ARGS)
 
 bool Cmd_GetPlayerPerks_Execute(COMMAND_ARGS)
 {
-	*result = 0;
-	TempElements *tmpElements = GetTempElements();
-	auto iter = g_thePlayer->perkRanksPC.Head();
-	BGSPerk *perk;
-	do
-	{
-		if (iter->data)
-		{
-			perk = iter->data->perk;
-			if (perk && !perk->data.isHidden)
-				tmpElements->Append(perk);
-		}
-	}
-	while (iter = iter->next);
-	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+	*result = (int)GetAllPerks(g_thePlayer, 0, scriptObj);
 	return true;
 }
 
@@ -1462,7 +1459,7 @@ bool Cmd_GetNifBlockParentNodes_Execute(COMMAND_ARGS)
 				TempElements *tmpElements = GetTempElements();
 				while ((niBlock != rootNode) && (niBlock = niBlock->m_parent))
 					tmpElements->Append(niBlock->GetName());
-				AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+				*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 			}
 		}
 	}
@@ -1507,7 +1504,7 @@ __declspec(naked) TESObjectREFR *GetCrosshairRef()
 
 bool Cmd_GetCrosshairRefEx_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESObjectREFR *resRefr = g_interfaceManager->crosshairRef;
 	if (!resRefr)
 	{
@@ -1591,6 +1588,13 @@ bool Cmd_GetExtraFloat_Execute(COMMAND_ARGS)
 	return true;
 }
 
+bool Cmd_GetExtraFloat_Eval(COMMAND_ARGS_EVAL)
+{
+	ExtraTimeLeft *xTimeLeft = GetExtraType(&thisObj->extraDataList, TimeLeft);
+	*result = xTimeLeft ? xTimeLeft->timeLeft : 0;
+	return true;
+}
+
 bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
 {
 	float fltVal;
@@ -1618,6 +1622,9 @@ bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
 		if (xTimeLeft)
 			xTimeLeft->timeLeft = fltVal;
 		else xData->AddExtra(ExtraTimeLeft::Create(fltVal));
+		if (!invRef)
+			thisObj->MarkModified(0x400);
+		else invRef->containerRef->MarkModified(0x400);
 	}
 	return true;
 }
@@ -1627,40 +1634,41 @@ bool Cmd_SetLinearVelocity_Execute(COMMAND_ARGS)
 	*result = 0;
 	char blockName[0x40];
 	hkVector4 velocity(_mm_setzero_ps());
-	UInt32 setLocal = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &velocity.x, &velocity.y, &velocity.z, &setLocal))
+	UInt32 flags = 0;	//	1 - set local; 2 - add value
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &velocity.x, &velocity.y, &velocity.z, &flags))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
 		if (rigidBody && rigidBody->IsMobile())
 		{
-			rigidBody->motion.linVelocity = setLocal ? rigidBody->motion.motionState.transform.rotation.MultiplyVectorInv(_mm_load_ps(velocity)) : velocity;
-			rigidBody->UpdateMotion();
+			rigidBody->SetVelocity(velocity.PS(), flags ^ 1);
 			*result = 1;
 		}
 	}
 	return true;
 }
 
-bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
+bool __fastcall RegisterInsertObject(char *inData)
 {
-	static char meshesPath[0x80] = "data\\meshes\\";
+	static char meshesPath[0x100] = "data\\meshes\\";
+	ScopedString<0x100> scopedStr(inData);
+	TESForm *form = *(TESForm**)inData;
 	TESObjectREFR *refr = IS_REFERENCE(form) ? (TESObjectREFR*)form : nullptr;
 	NiNode *rootNode = refr ? refr->GetRefNiNode() : nullptr;
-	bool result = false, modifyMap = true;
-	char doInsert = *inData;
+	bool modifyMap = true;
+	char doInsert = inData[4];
 	if (refr)
 	{
 		if (refr->IsCreated() || kInventoryType[refr->baseForm->typeID])
 		{
 			if ((doInsert != 3) || !rootNode)
-				goto freeDataStr;
+				return false;
 			modifyMap = false;
 		}
 	}
 	else if (!form->IsBoundObject())
-		goto freeDataStr;
+		return false;
 
-	char *pInData = inData + 2, *nodeName = nullptr, *objectName = FindChr(pInData, '|'), *suffix;
+	char *pInData = inData + 8, *nodeName = nullptr, *objectName = FindChr(pInData, '|'), *suffix;
 	if (objectName)
 	{
 		*objectName++ = 0;
@@ -1668,9 +1676,9 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 	}
 	else objectName = pInData;
 
-	if (!*objectName) goto freeDataStr;
+	if (!*objectName) return false;
 
-	UInt8 flag = ((UInt8*)inData)[1];
+	UInt8 flag = ((UInt8*)inData)[5];
 	bool insertNode = flag == kHookFormFlag6_InsertNode;
 	auto formsMap = insertNode ? *s_insertNodeMap : *s_attachModelMap;
 
@@ -1682,12 +1690,12 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 			if (*objectName == '*')
 			{
 				if (!(suffix = FindChr(objectName + 2, '*')))
-					goto freeDataStr;
+					return false;
 				suffix++;
 			}
 			StrCopy(meshesPath + 12, suffix);
 			if (!FileExistsEx(meshesPath, false))
-				goto freeDataStr;
+				return false;
 		}
 
 		NiFixedString blockName(nodeName), dataStr, *pDataStr;
@@ -1697,7 +1705,7 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 			if (formsMap->Insert(form, &namesMap))
 				form->SetJIPFlag(flag, true);
 			if (!(*namesMap)[blockName].Insert(objectName, &pDataStr))
-				goto freeDataStr;
+				return false;
 		}
 		else pDataStr = &dataStr;
 
@@ -1730,11 +1738,11 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 	else
 	{
 		auto findForm = formsMap->Find(form);
-		if (!findForm) goto freeDataStr;
+		if (!findForm) return false;
 		auto findNode = findForm().FindOp(NiFixedString(nodeName));
-		if (!findNode) goto freeDataStr;
+		if (!findNode) return false;
 		auto findData = findNode().FindOp(objectName);
-		if (!findData) goto freeDataStr;
+		if (!findData) return false;
 		if (rootNode && (doInsert & 2) && findData() && (!insertNode || (*objectName != '^')))
 		{
 			NiAVObject *object = rootNode->GetBlockByName(findData());
@@ -1759,41 +1767,36 @@ bool __fastcall RegisterInsertObject(TESForm *form, int EDX, char *inData)
 		}
 	}
 	s_insertObjects = !s_insertNodeMap->Empty() || !s_attachModelMap->Empty();
-	result = true;
-freeDataStr:
-	Pool_CFree(inData, 0x80);
-	return result;
+	return true;
 }
 
 bool Cmd_InsertNode_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESForm *form;
-	char *dataStr = Pool_CAlloc(0x80);
-	if (ExtractFormatStringArgs(2, dataStr + 2, EXTRACT_ARGS_EX, kCommandInfo_InsertNode.numParams, &form, dataStr))
+	char *dataStr = Pool_CAlloc(0x100);
+	if (ExtractFormatStringArgs(2, dataStr + 8, EXTRACT_ARGS_EX, kCommandInfo_InsertNode.numParams, dataStr, dataStr + 4))
 	{
-		((UInt8*)dataStr)[1] = kHookFormFlag6_InsertNode;
-		if (!(*dataStr & 2) || IsInMainThread())
-			*result = RegisterInsertObject(form, 0, dataStr);
-		else MainLoopAddCallbackArgs(RegisterInsertObject, form, 1, dataStr);
+		((UInt8*)dataStr)[5] = kHookFormFlag6_InsertNode;
+		if (!(dataStr[4] & 2) || IsInMainThread())
+			*result = RegisterInsertObject(dataStr);
+		else MainLoopAddCallback(RegisterInsertObject, dataStr);
 	}
-	else Pool_CFree(dataStr, 0x80);
+	else Pool_CFree(dataStr, 0x100);
 	return true;
 }
 
 bool Cmd_AttachModel_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	TESForm *form;
-	char *dataStr = Pool_CAlloc(0x80);
-	if (ExtractFormatStringArgs(2, dataStr + 2, EXTRACT_ARGS_EX, kCommandInfo_AttachModel.numParams, &form, dataStr))
+	char *dataStr = Pool_CAlloc(0x100);
+	if (ExtractFormatStringArgs(2, dataStr + 8, EXTRACT_ARGS_EX, kCommandInfo_AttachModel.numParams, dataStr, dataStr + 4))
 	{
-		((UInt8*)dataStr)[1] = kHookFormFlag6_AttachModel;
-		if (!(*dataStr & 2) || IsInMainThread())
-			*result = RegisterInsertObject(form, 0, dataStr);
-		else MainLoopAddCallbackArgs(RegisterInsertObject, form, 1, dataStr);
+		((UInt8*)dataStr)[5] = kHookFormFlag6_AttachModel;
+		if (!(dataStr[4] & 2) || IsInMainThread())
+			*result = RegisterInsertObject(dataStr);
+		else MainLoopAddCallback(RegisterInsertObject, dataStr);
 	}
-	else Pool_CFree(dataStr, 0x80);
+	else Pool_CFree(dataStr, 0x100);
 	return true;
 }
 
@@ -1815,7 +1818,7 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 				if (cell) g_thePlayer->MoveToCell(cell, targetRef->position);
 			}
 			s_syncPositionFlags = (syncRot != 0);
-			s_syncPositionPos = targetRef->position;
+			s_syncPositionPos = targetRef->position.PS3();
 			s_syncPositionNode() = nodeName;
 			s_syncPositionRef = targetRef;
 		}
@@ -1880,7 +1883,7 @@ Retn1:
 
 bool Cmd_GetRayCastRef_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	SInt32 layerType = 6;
 	char nodeName[0x40];
 	nodeName[0] = 0;
@@ -1918,17 +1921,8 @@ bool Cmd_GetRayCastMaterial_Execute(COMMAND_ARGS)
 
 void GetCollisionNodes(NiNode *node, TempElements *tmpElements)
 {
-	if (node->m_collisionObject)
-	{
-		bhkWorldObject *hWorldObj = node->m_collisionObject->worldObj;
-		if (hWorldObj)
-		{
-			hkpRigidBody *rigidBody = (hkpRigidBody*)hWorldObj->refObject;
-			UInt8 motionType = rigidBody->motion.type;
-			if ((motionType == 2) || (motionType == 3) || (motionType == 6))
-				tmpElements->Append(node->GetName());
-		}
-	}
+	if (node->m_collisionObject && node->m_collisionObject->worldObj)
+		tmpElements->Append(node->GetName());
 	for (auto iter = node->m_children.Begin(); iter; ++iter)
 		if (*iter && IS_NODE(*iter))
 			GetCollisionNodes((NiNode*)*iter, tmpElements);
@@ -1943,7 +1937,7 @@ bool Cmd_GetCollisionNodes_Execute(COMMAND_ARGS)
 		TempElements *tmpElements = GetTempElements();
 		GetCollisionNodes(rootNode, tmpElements);
 		if (!tmpElements->Empty())
-			AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+			*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	}
 	return true;
 }
@@ -1976,7 +1970,7 @@ bool Cmd_GetChildBlocks_Execute(COMMAND_ARGS)
 			GetChildBlocks(objNode, tmpElements);
 			UInt32 size = tmpElements->Size();
 			if (size > 1)
-				AssignCommandResult(CreateArray(tmpElements->Data() + 1, size - 1, scriptObj), result);
+				*result = (int)CreateArray(tmpElements->Data() + 1, size - 1, scriptObj);
 		}
 	}
 	return true;
@@ -2037,7 +2031,7 @@ bool Cmd_GetBlockTextureSet_Execute(COMMAND_ARGS)
 					}
 				}
 				if (createArr)
-					AssignCommandResult(CreateArray(elements, 6, scriptObj), result);
+					*result = (int)CreateArray(elements, 6, scriptObj);
 			}
 		}
 	}
@@ -2065,11 +2059,11 @@ bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 		{
 			NiNode *rootNode = thisObj->GetRefNiNode();
 			if (rootNode && (thisObj->refID != 0x14))
-				angles = rootNode->WorldRotate().ToEulerYPR();
+				angles = rootNode->WorldRotate().ToEulerPRYInv();
 			else
 			{
 				NiMatrix33 rotMat = thisObj->rotation;
-				angles = rotMat.ToEulerYPR();
+				angles = rotMat.ToEulerPRYInv();
 			}
 		}
 		outRot.Set(angles, GET_PS(9));
@@ -2131,7 +2125,7 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 				if (s_extraCamerasMap->InsertKey(camName, &pCamera))
 				{
 					*pCamera = xCamera = NiCamera::Create();
-					xCamera->m_uiRefCount++;
+					xCamera->m_uiRefCount = 2;
 					xCamera->SetName(camName);
 					xCamera->m_transformLocal.scale = 0;
 					xCamera->frustum.n = 5.0F;
@@ -2252,7 +2246,7 @@ bool Cmd_PlayAnimSequence_Execute(COMMAND_ARGS)
 					if (sequence->Play())
 					{
 						//thisObj->Unk_32(1);
-						thisObj->MarkAsModified(0x10000000);
+						thisObj->MarkModified(0x10000000);
 						*result = 1;
 					}
 				}
@@ -2305,7 +2299,7 @@ bool Cmd_GetNifBlockRotationAlt_Execute(COMMAND_ARGS)
 		if (niBlock)
 		{
 			NiMatrix33 &rotMat = (getMode & 1) ? niBlock->WorldRotate() : niBlock->LocalRotate();
-			__m128 angles = (getMode & 2) ? rotMat.ToEulerYPR() : rotMat.ToEulerPRY();
+			__m128 angles = (getMode & 2) ? rotMat.ToEulerPRYInv() : rotMat.ToEulerPRY();
 			outRot.Set(angles, GET_PS(9));
 			*result = 1;
 		}
@@ -2348,10 +2342,10 @@ bool Cmd_GetAngularVelocityAlt_Execute(COMMAND_ARGS)
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
 		if (rigidBody && rigidBody->IsMobile())
 		{
-			if (getGlobal)
-				outVel.Set(rigidBody->motion.angVelocity.PS());
-			else
-				outVel.Set(rigidBody->motion.motionState.transform.rotation.MultiplyVector(_mm_load_ps(rigidBody->motion.angVelocity)));
+			__m128 velocity = rigidBody->motion.angVelocity.PS();
+			if (!getGlobal)
+				velocity = rigidBody->motion.motionState.transform.rotation.MultiplyVector(velocity);
+			outVel.Set(velocity);
 			*result = 1;
 		}
 	}
@@ -2363,14 +2357,13 @@ bool Cmd_SetAngularVelocityEx_Execute(COMMAND_ARGS)
 	*result = 0;
 	char blockName[0x40];
 	hkVector4 velocity(_mm_setzero_ps());
-	UInt32 setGlobal = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &velocity.x, &velocity.y, &velocity.z, &setGlobal))
+	UInt32 flags = 0;	//	1 - set global; 2 - add value
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &velocity.x, &velocity.y, &velocity.z, &flags))
 	{
 		hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName);
 		if (rigidBody && rigidBody->IsMobile())
 		{
-			rigidBody->motion.angVelocity = setGlobal ? velocity : rigidBody->motion.motionState.transform.rotation.MultiplyVectorInv(_mm_load_ps(velocity));
-			rigidBody->UpdateMotion();
+			rigidBody->SetVelocity(velocity.PS(), flags | 0x10);
 			*result = 1;
 		}
 	}
@@ -2569,5 +2562,26 @@ bool Cmd_RotateAroundPoint_Execute(COMMAND_ARGS)
 	UInt32 skipAngles = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &origin.x, &origin.y, &origin.z, &rotation.x, &rotation.y, &rotation.z, &skipAngles))
 		thisObj->RotateAroundPoint(rotation * GET_PS(8), origin, skipAngles);
+	return true;
+}
+
+bool Cmd_ToggleNodeCollision_Execute(COMMAND_ARGS)
+{
+	char nodeName[0x40];
+	UInt32 enable;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &nodeName, &enable))
+	{
+		NiNode *targetNode = thisObj->GetNode(nodeName);
+		if (targetNode && targetNode->m_collisionObject)
+		{
+			bhkWorldObject *worldObj = targetNode->m_collisionObject->worldObj;
+			if (worldObj)
+			{
+				hkpWorldObject *refObj = (hkpWorldObject*)worldObj->refObject;
+				refObj->filterFlags &= 0xBF;
+				refObj->filterFlags |= (!enable) << 6;
+			}
+		}
+	}
 	return true;
 }

@@ -59,7 +59,7 @@ __declspec(naked) TESForm *TESObjectREFR::GetBaseForm2() const
 	}
 }
 
-ScriptEventList *TESObjectREFR::GetEventList() const
+ScriptLocals *TESObjectREFR::GetEventList() const
 {
 	ExtraScript *xScript = GetExtraType(&extraDataList, Script);
 	return xScript ? xScript->eventList : nullptr;
@@ -625,7 +625,7 @@ __declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 		jz		done
 		mov		edi, ecx
 		movups	xmm0, [esi+0x30]
-		movq	qword ptr [ecx+0x58], xmm0
+		movlps	[ecx+0x58], xmm0
 		pshufd	xmm1, xmm0, 2
 		movss	[ecx+0x60], xmm1
 		mov		eax, [esi]
@@ -664,11 +664,11 @@ __declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 		xorps	xmm2, xmm2
 		haddps	xmm1, xmm2
 		movaps	[ecx+0x20], xmm2
-		movd	edx, xmm1
 		mov		ecx, [ecx+0x30]
 		lea		eax, [ecx+0xE0]
 		movaps	[eax], xmm0
-		push	edx
+		push	ecx
+		movss	[esp], xmm1
 		push	eax
 		CALL_EAX(0xC9E990)
 		jmp		doUpdate
@@ -699,16 +699,16 @@ __declspec(naked) void __vectorcall TESObjectREFR::SetAngle(__m128 rotVector, UI
 		mov		ecx, esp
 		test	dl, dl
 		jnz		localRot
-		movq	qword ptr [esi+0x24], xmm0
+		movlps	[esi+0x24], xmm0
 		pshufd	xmm1, xmm0, 2
 		movss	[esi+0x2C], xmm1
 		call	NiMatrix33::FromEulerPRY
 		jmp		doneRot
 	localRot:
-		call	NiMatrix33::FromEulerYPR
+		call	NiMatrix33::FromEulerPRYInv
 		mov		ecx, eax
 		call	NiMatrix33::ToEulerPRY
-		movq	qword ptr [esi+0x24], xmm0
+		movlps	[esi+0x24], xmm0
 		movss	[esi+0x2C], xmm6
 	doneRot:
 		mov		eax, [esi]
@@ -829,7 +829,7 @@ __declspec(naked) void __vectorcall TESObjectREFR::Rotate(__m128 pry)
 		mov		esi, ecx
 		sub		esp, 0x24
 		mov		ecx, esp
-		call	NiMatrix33::FromEulerYPR
+		call	NiMatrix33::FromEulerPRYInv
 		MARK_MODIFIED(esi, 2)
 		cmp		dword ptr [esi+0xC], 0x14
 		jz		noNode
@@ -845,7 +845,7 @@ __declspec(naked) void __vectorcall TESObjectREFR::Rotate(__m128 pry)
 		call	NiMatrix33::MultiplyMatrices
 		mov		ecx, eax
 		call	NiMatrix33::ToEulerPRY
-		movq	qword ptr [esi+0x24], xmm0
+		movlps	[esi+0x24], xmm0
 		movss	[esi+0x2C], xmm6
 		mov		eax, [esi]
 		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
@@ -871,7 +871,7 @@ __declspec(naked) void __vectorcall TESObjectREFR::Rotate(__m128 pry)
 		call	NiMatrix33::MultiplyMatrices
 		mov		ecx, eax
 		call	NiMatrix33::ToEulerPRY
-		movq	qword ptr [esi+0x24], xmm0
+		movlps	[esi+0x24], xmm0
 		movss	[esi+0x2C], xmm6
 		add		esp, 0x48
 		pop		esi
@@ -919,7 +919,7 @@ __declspec(naked) void __vectorcall TESObjectREFR::RotateAroundPoint(__m128 pry,
 		add		ecx, 0x30
 		call	NiVector3::GetRotatedPos
 		pop		ecx
-		movq	qword ptr [eax], xmm0
+		movlps	[eax], xmm0
 		unpckhpd	xmm0, xmm0
 		movss	[eax+8], xmm0
 		mov		[esp+4], eax
@@ -2140,7 +2140,7 @@ __declspec(naked) int Actor::GetGroundMaterial() const
 		movzx	eax, kMaterialConvert[edx]
 		jmp		done
 	invalid:
-		mov		eax, 0xFFFFFFFF
+		or		eax, 0xFFFFFFFF
 	done:
 		pop		esi
 		leave

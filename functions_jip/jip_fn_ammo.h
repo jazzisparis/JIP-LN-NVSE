@@ -53,7 +53,7 @@ bool Cmd_SetAmmoTraitNumeric_Execute(COMMAND_ARGS)
 
 bool Cmd_GetAmmoProjectile_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESAmmo *ammo;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ammo) && IS_TYPE(ammo, TESAmmo) && ammo->projectile)
 		REFR_RES = ammo->projectile->refID;

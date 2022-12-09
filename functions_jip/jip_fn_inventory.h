@@ -372,7 +372,7 @@ bool Cmd_GetAllItems_Execute(COMMAND_ARGS)
 	if (count)
 	{
 		if (listForm) *result = count;
-		else AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		else *result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	}
 	return true;
 }
@@ -439,7 +439,7 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 	if (count)
 	{
 		if (listForm) *result = count;
-		else AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		else *result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	}
 	return true;
 }
@@ -464,7 +464,7 @@ bool Cmd_RemoveMeIRAlt_Execute(COMMAND_ARGS)
 
 bool Cmd_GetEquippedItemRef_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	UInt32 slotIdx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &slotIdx) && (slotIdx <= 19) && IS_ACTOR(thisObj))
 	{
@@ -501,7 +501,7 @@ bool Cmd_SetNoUnequip_Execute(COMMAND_ARGS)
 
 bool Cmd_GetEquippedWeaponPoison_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	if (IS_ACTOR(thisObj))
 	{
 		ContChangesEntry *wpnInfo = ((Actor*)thisObj)->GetWeaponInfo();
@@ -569,7 +569,7 @@ bool Cmd_GetBaseItems_Execute(COMMAND_ARGS)
 	}
 	while (traverse = traverse->next);
 	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -594,7 +594,7 @@ bool Cmd_SetOnUseAidItemEventHandler_Execute(COMMAND_ARGS)
 		if (addEvnt)
 		{
 			if (s_useAidItemEventMap->Insert(alchItem, &callbacks))
-				HOOK_MOD(EquipAidItem, true);
+				HOOK_INC(EquipAidItem);
 			callbacks->Insert(script);
 			alchItem->SetJIPFlag(kHookFormFlag6_OnEquipHandlers, true);
 		}
@@ -604,7 +604,7 @@ bool Cmd_SetOnUseAidItemEventHandler_Execute(COMMAND_ARGS)
 			if (!findItem || !findItem().Erase(script) || !findItem().Empty())
 				continue;
 			findItem.Remove();
-			HOOK_MOD(EquipAidItem, false);
+			HOOK_DEC(EquipAidItem);
 			alchItem->SetJIPFlag(kHookFormFlag6_OnEquipHandlers, false);
 		}
 	}
@@ -637,7 +637,7 @@ bool Cmd_GetEquippedArmorRefs_Execute(COMMAND_ARGS)
 					invRef = InventoryRefCreate(thisObj, item, entry->countDelta, xData);
 					if (invRef) tmpElements->Append(invRef);
 				}
-				AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+				*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 			}
 		}
 	}
@@ -673,7 +673,7 @@ bool Cmd_GetArmorEffectiveDR_Execute(COMMAND_ARGS)
 
 bool Cmd_GetHotkeyItemRef_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	UInt32 keyNum;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &keyNum) && keyNum && (keyNum <= 8))
 	{

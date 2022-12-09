@@ -413,23 +413,24 @@ __declspec(naked) TESObjectREFR *hkpWorldObject::GetParentRef()
 	}
 }
 
-__declspec(naked) void bhkWorldObject::ApplyForce(const NiVector4 &forceVector)
+__declspec(naked) void __fastcall bhkWorldObject::ApplyForce(const NiVector4 &forceVector)
 {
 	__asm
 	{
 		push	ebp
 		mov		ebp, esp
 		and		esp, 0xFFFFFFF0
-		sub		esp, 0x20
+		sub		esp, 0x10
 		mov		eax, esp
 		push	ecx
+		push	edx
 		push	eax
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xF0]
 		movss	xmm0, kUnitConv
 		shufps	xmm0, xmm0, 0x40
 		mulps	xmm0, [eax]
-		mov		edx, [ebp+8]
+		pop		edx
 		movups	xmm1, [edx]
 		andps	xmm1, PS_XYZ0Mask
 		subps	xmm0, xmm1
@@ -440,13 +441,35 @@ __declspec(naked) void bhkWorldObject::ApplyForce(const NiVector4 &forceVector)
 		mulps	xmm0, xmm1
 		pop		eax
 		mov		ecx, [eax+8]
-		addps	xmm0, [ecx+0x1B0]
-		movaps	[ecx+0x1B0], xmm0
-		CALL_EAX(0xC9C1D0)
+		lea		eax, [ecx+0x1B0]
+		addps	xmm0, [eax]
+		movaps	[eax], xmm0
 		leave
-		retn	4
+		JMP_EAX(0xC9C1D0)
 		ALIGN 16
 	kUnitConv:
 		EMIT_DW(40, DF, F8, D6) EMIT_DW(3E, 12, 4D, D2)
+	}
+}
+
+__declspec(naked) void __vectorcall hkpRigidBody::SetVelocity(__m128 vel, UInt32 flags)
+{
+	__asm
+	{
+		test	dl, 1
+		jnz		doneCalc
+		add		ecx, 0xF0
+		call	hkMatrix3x4::MultiplyVectorInv
+		sub		ecx, 0xF0
+	doneCalc:
+		mov		eax, edx
+		and		al, 0x10
+		lea		eax, [eax+ecx+0x1B0]
+		test	dl, 2
+		jz		doSet
+		addps	xmm0, [eax]
+	doSet:
+		movaps	[eax], xmm0
+		JMP_EAX(0xC9C1D0)
 	}
 }

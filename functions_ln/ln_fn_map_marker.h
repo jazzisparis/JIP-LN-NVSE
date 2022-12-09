@@ -122,10 +122,9 @@ bool Cmd_SetMapMarkerType_Execute(COMMAND_ARGS)
 
 bool Cmd_GetMapMarkerRep_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	MapMarkerData *markerData = thisObj->GetMapMarkerData();
 	TESForm *reputation = markerData ? markerData->reputation : nullptr;
-	if (reputation) REFR_RES = reputation->refID;
+	REFR_RES = reputation ? reputation->refID : 0;
 	DoConsolePrint(reputation);
 	return true;
 }

@@ -125,7 +125,7 @@ bool Cmd_SetNthDestructionStageTrait_Execute(COMMAND_ARGS)
 
 bool Cmd_GetNthDestructionStageExplosion_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESForm *object;
 	UInt32 idx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &object, &idx))
@@ -153,7 +153,7 @@ bool Cmd_SetNthDestructionStageExplosion_Execute(COMMAND_ARGS)
 
 bool Cmd_GetNthDestructionStageDebris_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESForm *object;
 	UInt32 idx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &object, &idx))

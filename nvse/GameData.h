@@ -77,7 +77,8 @@ struct ModInfo		// referred to by game as TESFile
 	UInt32								unk014;				// 014 
 	void								* unk018;			// 018 seen all zeroes. size unknown, seen not valid pointer in FalloutNV.esm
 	void								* unk01C;			// 01C as above
-	char								name[0x104];		// 020
+	char								name[0x100];		// 020
+	UInt32								nameHash;			// 120
 	char								filepath[0x104];	// 124
 	UInt32								unk228;				// 228
 	UInt32								unk22C;				// Masters are init'd to dword_1186740 (0x2800) same val as BSFile+10? Buffer size ?
@@ -98,7 +99,7 @@ struct ModInfo		// referred to by game as TESFile
 	UInt8								unk298;				// 298
 	UInt8								bIsBigEndian;		// 299
 	UInt8								unk29A;				// 29A
-	UInt8								pad29B;
+	bool								hasModLog;			// 29B	JIP Only!
 	WIN32_FIND_DATA						fileData;			// 29C
 	FileHeader							header;				// 3DC
 	UInt8								flags;				// 3E8	Bit 0 is ESM . Runtime: Bit 2 is Valid, Bit 3 is Unselected Editor: 2 is selected, 3 is active, 4 may be invalid, 6 is endian, 14 controls VCI.
@@ -233,10 +234,18 @@ public:
 	UInt32							unk638;					// 638
 
 	__forceinline static DataHandler *GetSingleton() {return *(DataHandler**)0x11C3F2C;}
-	const ModInfo *LookupModByName(const char *modName);
-	UInt8 __fastcall GetModIndex(const char *modName);
+	ModInfo* __fastcall LookupModByName(const char *modName);
+	UInt8 __fastcall GetModIndex(const char *modName) const;
 	UInt8 GetActiveModCount() const {return modList.loadedModCount;}
-	const char* GetNthModName(UInt32 modIndex);
+	inline ModInfo *GetNthModInfo(UInt32 modIndex) const
+	{
+		return modList.loadedMods[modIndex];
+	}
+	inline const char *GetNthModName(UInt32 modIndex) const
+	{
+		auto modInfo = modList.loadedMods[modIndex];
+		return modInfo ? modInfo->name : "";
+	}
 
 	__forceinline UInt32 DoAddForm(TESForm *pForm)
 	{
@@ -506,22 +515,22 @@ static_assert(sizeof(Sky) == 0x138);
 class GridArray
 {
 public:
-	virtual void	*Destroy(bool doFree);
-	virtual void	Fn_01(void);
-	virtual void	Fn_02(void);
-	virtual void	Fn_03(void);
-	virtual bool	SetPosXY(float posX, float posY);
-	virtual void	Fn_05(UInt32 arg1, UInt32 arg2);
+	/*00*/virtual void	*Destroy(bool doFree);
+	/*04*/virtual void	Fn_01(void);
+	/*08*/virtual void	Fn_02(void);
+	/*0C*/virtual void	Fn_03(void);
+	/*10*/virtual bool	SetPosXY(float posX, float posY);
+	/*14*/virtual void	Fn_05(UInt32 arg1, UInt32 arg2);
 };
 
 // 28
 class GridCellArray : public GridArray
 {
 public:
-	virtual void	UnloadCellAtGridXY(UInt32 gridX, UInt32 gridY);
-	virtual void	SetGridAtXYToNull(UInt32 gridX, UInt32 gridY);
-	virtual void	CopyCellAtGridXYTo(UInt32 gridX1, UInt32 gridY1, UInt32 gridX2, UInt32 gridY2);
-	virtual void	SwapCellsAtGridXYs(UInt32 gridX1, UInt32 gridY1, UInt32 gridX2, UInt32 gridY2);
+	/*18*/virtual void	UnloadCellAtGridXY(UInt32 gridX, UInt32 gridY);
+	/*1C*/virtual void	SetGridAtXYToNull(UInt32 gridX, UInt32 gridY);
+	/*20*/virtual void	CopyCellAtGridXYTo(UInt32 gridX1, UInt32 gridY1, UInt32 gridX2, UInt32 gridY2);
+	/*24*/virtual void	SwapCellsAtGridXYs(UInt32 gridX1, UInt32 gridY1, UInt32 gridX2, UInt32 gridY2);
 
 	SInt32			worldX;			// 04	X coord of current cell within worldspace
 	SInt32			worldY;			// 08	Y coord "
@@ -534,8 +543,6 @@ public:
 
 	class Iterator
 	{
-		friend GridCellArray;
-
 		TESObjectCELL	**pCells;
 		UInt32			count;
 
@@ -555,8 +562,10 @@ public:
 
 	Iterator Begin() {return Iterator(*this);}
 
-	TESObjectCELL *GetCell(Coordinate cellXY) const;
+	TESObjectCELL* __vectorcall GetCellAtPos(__m128 pos) const;
+	TESObjectCELL* __vectorcall GetCellAtCoord(__m128i cellXY) const;
 };
+extern GridCellArray *g_gridCellArray;;
 
 // 44
 class LoadedAreaBound : public NiRefObject
@@ -651,14 +660,21 @@ class TES
 public:
 	virtual void Fn_00(UInt32 arg1, UInt32 arg2, UInt32 arg3, UInt32 arg4, UInt32 arg5);
 
+	struct ParticleNode
+	{
+		NiNode			*particleParent;
+		void			*ptr;
+		ParticleNode	*next;
+	};
+
 	UInt32								unk04;				// 04
 	GridCellArray						*gridCellArray;		// 08
-	NiNode								*niNode0C;			// 0C
-	NiNode								*niNode10;			// 10
+	NiNode								*objRoot;			// 0C
+	NiNode								*LODroot;			// 10
 	NiNode								*niNode14;			// 14
 	BSTempNodeManager					*tempNodeMgr;		// 18
 	NiDirectionalLight					*directionalLight;	// 1C
-	void								*ptr20;				// 20
+	void								*objFog;			// 20
 	SInt32								extGridX;			// 24
 	SInt32								extGridY;			// 28
 	SInt32								extCoordX;			// 2C
@@ -666,7 +682,16 @@ public:
 	TESObjectCELL						*currentInterior;	// 34
 	TESObjectCELL						**interiorsBuffer;	// 38
 	TESObjectCELL						**exteriorsBuffer;	// 3C
-	UInt32								unk40[9];			// 40
+	UInt32								unk40[4];			// 40
+	UInt8								byte50;				// 50
+	UInt8								isTestAllCells;		// 51
+	UInt8								byte52;				// 52
+	UInt8								pad53;				// 53
+	void								*renderTestCellsCallback;	// 54
+	UInt32								unk58;				// 58
+	UInt32								unk5C;				// 5C
+	UInt8								showCellBorders;	// 60
+	UInt8								pad61[3];			// 61
 	WaterSurfaceManager					*waterManager;		// 64
 	Sky									*sky;				// 68
 	tList<ImageSpaceModifierInstance>	activeIMODs;		// 6C
@@ -678,10 +703,14 @@ public:
 	tList<UInt32>						list94;				// 94
 	tList<UInt32>						list9C;				// 9C
 	QueuedFile							*unkA4;				// A4
-	NiSourceTexture						*unkA8;				// A8
+	NiSourceTexture						*bloodTexture;		// A8
 	QueuedFile							*unkAC;				// AC
-	void								*ptrB0;				// B0
-	UInt32								unkB4[2];			// B4
+	ParticleNode						*particleCacheHead;	// B0
+	UInt8								byteB4;				// B4
+	UInt8								allowUnusedPurge;	// B5
+	UInt8								byteB6;				// B6
+	UInt8								byteB7;				// B7
+	UInt32								unkB4;				// B4
 	NavMeshInfoMap						*navMeshInfoMap;	// BC
 	LoadedAreaBound						*areaBound;			// C0
 

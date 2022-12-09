@@ -202,7 +202,7 @@ bool Cmd_GetActiveUIComponentID_Execute(COMMAND_ARGS)
 
 bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	UInt32 menuID;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &menuID) || (menuID > kMenuType_Max)) return true;
 	TileMenu *tileMenu = g_tileMenuArray[menuID - kMenuType_Min];
@@ -353,7 +353,7 @@ bool Cmd_ClickMenuButton_Execute(COMMAND_ARGS)
 
 bool Cmd_GetSelectedItemRef_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESForm *itemRef = nullptr;
 	switch (g_interfaceManager->GetTopVisibleMenuID())
 	{
@@ -437,7 +437,7 @@ bool Cmd_GetBarterItems_Execute(COMMAND_ARGS)
 	}
 	while (iter = iter->next);
 	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -449,14 +449,14 @@ bool Cmd_GetBarterGoldAlt_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRecipeMenuSelection_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	if (RecipeMenu::Get() && RecipeMenu::Selection()) REFR_RES = RecipeMenu::Selection()->refID;
 	return true;
 }
 
 bool Cmd_GetRecipeMenuCategory_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	if (RecipeMenu::Get()) REFR_RES = RecipeMenu::Get()->category->refID;
 	return true;
 }
@@ -873,8 +873,7 @@ void SetOnMenuStateEvent(Script *script, bool doAdd, char idx)
 	if (!callbacks)
 	{
 		if (!doAdd) return;
-		callbacks = Pool_Alloc<MenuStateCallbacks>();
-		new (callbacks) MenuStateCallbacks();
+		callbacks = new (Pool_Alloc<MenuStateCallbacks>()) MenuStateCallbacks();
 		s_menuStateEventMap[idx] = callbacks;
 	}
 	EventCallbackScripts *scripts = (s_menuStateEventType == 2) ? &callbacks->onMouseover : (s_menuStateEventType ? &callbacks->onClose : &callbacks->onOpen);
@@ -1144,7 +1143,7 @@ bool Cmd_MessageBoxExAlt_Execute(COMMAND_ARGS)
 			if (!*delim) break;
 			*++buttonPtr = delim;
 		}
-		if (!*buttonPtr) *++buttonPtr = "OK";
+		if (!*buttonPtr) *++buttonPtr = const_cast<char*>("OK");
 		if ((buffer[0] == '^') && (delim = FindChr(buffer + 1, '^')))
 		{
 			*delim = 0;
@@ -1176,7 +1175,7 @@ bool Cmd_GetVATSTargets_Execute(COMMAND_ARGS)
 	}
 	while (iter = iter->next);
 	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -1671,7 +1670,6 @@ bool Cmd_AddTileFromTemplate_Execute(COMMAND_ARGS)
 
 bool Cmd_SetUIFloatGradual_Execute(COMMAND_ARGS)
 {
-	static const UInt8 kChangeModeMatch[] = {0, 4, 1, 5, 6};
 	char tilePath[0x100];
 	float startVal, endVal, timer;
 	UInt32 changeMode = 0;
@@ -1685,7 +1683,11 @@ bool Cmd_SetUIFloatGradual_Execute(COMMAND_ARGS)
 			if (numArgs >= 4)
 			{
 				if (changeMode > 4) changeMode = 0;
-				else changeMode = kChangeModeMatch[changeMode];
+				else
+				{
+					UInt8 changeModeMatch[] = {0, 4, 1, 5, 6};
+					changeMode = changeModeMatch[changeMode];
+				}
 				component->GradualSetFloat(tileVal->id, startVal, endVal, timer, changeMode);
 			}
 			else
@@ -1831,8 +1833,7 @@ bool Cmd_GetWorldMapPosMults_Execute(COMMAND_ARGS)
 					worldDimensions.GetDimensions(rootWorld);
 				}
 			}
-			NiPoint2 outPos;
-			GetWorldMapPosMults(thisObj->position, worldDimensions, outPos);
+			NiPoint2 outPos = GetWorldMapPosMults(thisObj->position, worldDimensions);
 			outX->data = outPos.x;
 			outY->data = outPos.y;
 		}
@@ -1861,7 +1862,7 @@ __declspec(naked) void __stdcall GenerateRenderedUITexture(NiNode *tileNode, con
 		movq	xmm0, qword ptr [eax+8]
 		cvtps2dq	xmm0, xmm0
 		sub		esp, 8
-		movq	qword ptr [esp], xmm0
+		movlps	[esp], xmm0
 		push	ecx
 		mov		ecx, ds:0x11F91A8
 		CALL_EAX(0xB6D5E0)
@@ -1871,7 +1872,7 @@ __declspec(naked) void __stdcall GenerateRenderedUITexture(NiNode *tileNode, con
 		mov		eax, s_cullingProcess
 		test	eax, eax
 		jnz		hasCulling
-		push	0x280
+		push	0x350
 		CALL_EAX(0xAA13E0)
 		pop		ecx
 		push	0x2F7
@@ -1879,13 +1880,11 @@ __declspec(naked) void __stdcall GenerateRenderedUITexture(NiNode *tileNode, con
 		push	0x64
 		mov		ecx, eax
 		CALL_EAX(0xB660D0)
-		inc		dword ptr [eax+4]
+		mov		dword ptr [eax+4], 2
 		mov		dword ptr [eax+0x19C], 0xA
 		push	eax
-		push	0xC8
-		GAME_HEAP_ALLOC
 		push	0
-		mov		ecx, eax
+		lea		ecx, [eax+0x280]
 		CALL_EAX(0x4A0EB0)
 		pop		dword ptr [eax+0xC4]
 		mov		dword ptr [eax+0x90], 1

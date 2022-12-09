@@ -87,7 +87,7 @@ bool Cmd_RefMapArrayGetFloat_Execute(COMMAND_ARGS)
 
 bool Cmd_RefMapArrayGetRef_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	char varName[0x50];
 	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
@@ -139,7 +139,7 @@ bool Cmd_RefMapArrayGetValue_Execute(COMMAND_ARGS)
 			if (value)
 			{
 				ArrayElementL element(value->GetAsElement());
-				AssignCommandResult(CreateArray(&element, 1, scriptObj), result);
+				*result = (int)CreateArray(&element, 1, scriptObj);
 			}
 		}
 	}
@@ -173,7 +173,7 @@ bool Cmd_RefMapArrayGetFirst_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName))
 	{
 		NVSEArrayVar *pairArr = RefMapArrayIterator(scriptObj, varName, true);
-		if (pairArr) AssignCommandResult(pairArr, result);
+		*result = (int)pairArr;
 	}
 	return true;
 }
@@ -185,7 +185,7 @@ bool Cmd_RefMapArrayGetNext_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName))
 	{
 		NVSEArrayVar *pairArr = RefMapArrayIterator(scriptObj, varName, false);
-		if (pairArr) AssignCommandResult(pairArr, result);
+		*result = (int)pairArr;
 	}
 	return true;
 }
@@ -203,7 +203,7 @@ bool Cmd_RefMapArrayGetKeys_Execute(COMMAND_ARGS)
 	for (auto idIter = idsMap->Begin(); idIter; ++idIter)
 		tmpElements->Append(LookupFormByRefID(idIter.Key()));
 	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -226,7 +226,7 @@ bool Cmd_RefMapArrayGetAll_Execute(COMMAND_ARGS)
 		SetElement(varsMap, ArrayElementL(varIter.Key()), ArrayElementL(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj)));
 		tmpElements->Clear();
 	}
-	AssignCommandResult(varsMap, result);
+	*result = (int)varsMap;
 	return true;
 }
 
@@ -239,7 +239,11 @@ AuxVariableValue* __fastcall RefMapAddValue(TESForm *form, TESObjectREFR *thisOb
 		{
 			RefMapInfo varInfo(scriptObj, varName);
 			if (varInfo.isPerm)
+			{
 				s_dataChangedFlags |= kChangedFlag_RefMaps;
+				if (thisObj)
+					thisObj->MarkModified(0);
+			}
 			return &varInfo.ModsMap()[varInfo.modIndex][varName][keyID];
 		}
 	}

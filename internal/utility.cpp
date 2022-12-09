@@ -1,26 +1,26 @@
 #include "internal/utility.h"
 #include "nvse/GameAPI.h"
 
-alignas(16) const HexFloat kPackedValues[] =
+alignas(16) const UInt32 kPackedValues[] =
 {
-	PS_DUP_4(0x7FFFFFFFUL),
-	PS_DUP_1(0x7FFFFFFFUL),
-	PS_DUP_4(0x80000000UL),
-	PS_DUP_1(0x80000000UL),
-	PS_DUP_3(0xFFFFFFFFUL),
-	0xFFFFFFFFUL, 0x7FFFFFFFUL, 0xFFFFFFFFUL, 0x7FFFFFFFUL,
-	0UL, 0x80000000UL, 0UL, 0x80000000UL,
-	PS_DUP_4(FLT_EPSILON),
-	PS_DUP_3(FltPId180),
-	PS_DUP_3(Flt180dPI),
-	PS_DUP_3(FltPId2),
-	PS_DUP_3(FltPI),
-	PS_DUP_3(FltPIx2),
-	PS_DUP_3(0.5F),
-	PS_DUP_3(1.0F),
-	PS_DUP_3(0x40DFF8D6UL),
-	0.001F, 0.01F, 0.1F, 0.25F,
-	3.0F, 10.0F, 100.0F, 0UL
+	PS_DUP_4(0x7FFFFFFF),
+	PS_DUP_1(0x7FFFFFFF),
+	PS_DUP_4(0x80000000),
+	PS_DUP_1(0x80000000),
+	PS_DUP_3(0xFFFFFFFF),
+	0xFFFFFFFF, 0x7FFFFFFF, 0xFFFFFFFF, 0x7FFFFFFF,
+	0, 0x80000000, 0, 0x80000000,
+	PS_DUP_4(HEX(FLT_EPSILON)),
+	PS_DUP_3(HEX(FltPId180)),
+	PS_DUP_3(HEX(Flt180dPI)),
+	PS_DUP_3(HEX(FltPId2)),
+	PS_DUP_3(HEX(FltPI)),
+	PS_DUP_3(HEX(FltPIx2)),
+	PS_DUP_3(HEX(0.5F)),
+	PS_DUP_3(HEX(1.0F)),
+	PS_DUP_3(0x40DFF8D6),
+	HEX(0.001F), HEX(0.01F), HEX(0.1F), HEX(0.25F),
+	HEX(3.0F), HEX(10.0F), HEX(100.0F), 0
 };
 
 alignas(16) const char
@@ -55,7 +55,7 @@ alignas(16) const UInt32 kStringMasks[] =
 	PS_DUP_4(0x20202020)
 };
 
-memcpy_t MemCopy = memcpy, MemMove = memmove;
+memcpy_t MemCopy = memcpy;
 
 __declspec(naked) PrimitiveCS *PrimitiveCS::Enter()
 {
@@ -68,10 +68,11 @@ __declspec(naked) PrimitiveCS *PrimitiveCS::Enter()
 		ALIGN 16
 	spinHead:
 		xor		eax, eax
-		lock cmpxchg [esi], esi
+		lock cmpxchg [ecx], esi
 		jz		done
 		push	0
 		call	edi
+		mov		ecx, esi
 		jmp		spinHead
 		ALIGN 16
 	done:
@@ -118,31 +119,61 @@ __declspec(naked) void LightCS::Enter()
 	}
 }
 
-__declspec(naked) TESForm* __stdcall LookupFormByRefID(UInt32 refID)
+UInt32 s_CPUFeatures = 0;
+
+__declspec(naked) UInt32 GetCPUFeatures()
 {
 	__asm
 	{
-		mov		ecx, ds:0x11C54C0
-		mov		eax, [esp+4]
+		push	ebx
+		xor		ecx, ecx
+		mov		eax, 1
+		cpuid
+		xor		eax, eax
+		bt		edx, 0x19
+		setc	al
+		bt		edx, 0x1A
+		setc	dl
+		shl		dl, 1
+		or		al, dl
 		xor		edx, edx
-		div		dword ptr [ecx+4]
-		mov		eax, [ecx+8]
-		mov		eax, [eax+edx*4]
-		test	eax, eax
-		jz		done
-		mov		edx, [esp+4]
-		ALIGN 16
-	iterHead:
-		cmp		[eax+4], edx
-		jz		found
-		mov		eax, [eax]
-		test	eax, eax
-		jnz		iterHead
-		retn	4
-	found:
-		mov		eax, [eax+8]
-	done:
-		retn	4
+		test	ecx, 1
+		setnz	dl
+		shl		dl, 2
+		or		eax, edx
+		bt		ecx, 9
+		setc	dl
+		shl		dl, 3
+		or		eax, edx
+		bt		ecx, 0x13
+		setc	dl
+		shl		dl, 4
+		or		eax, edx
+		bt		ecx, 0x14
+		setc	dl
+		shl		dl, 5
+		or		eax, edx
+		bt		ecx, 0x1C
+		setc	dl
+		shl		dl, 6
+		or		eax, edx
+		push	eax
+		xor		ecx, ecx
+		mov		eax, 7
+		cpuid
+		xor		edx, edx
+		bt		ebx, 5
+		setc	dl
+		shl		edx, 7
+		mov		ecx, edx
+		bt		ebx, 0x10
+		setc	dl
+		shl		edx, 8
+		or		ecx, edx
+		pop		eax
+		or		eax, ecx
+		pop		ebx
+		retn
 	}
 }
 
@@ -151,7 +182,7 @@ __declspec(naked) UInt32 __vectorcall cvtd2ul(double value)
 	__asm
 	{
 		lea		eax, [esp-8]
-		movq	qword ptr [eax], xmm0
+		movlpd	[eax], xmm0
 		fld		qword ptr [eax]
 		fisttp	qword ptr [eax]
 		mov		eax, [eax]
@@ -159,13 +190,15 @@ __declspec(naked) UInt32 __vectorcall cvtd2ul(double value)
 	}
 }
 
-__declspec(naked) double __fastcall cvtul2d(UInt32 value)
+__declspec(naked) double __vectorcall cvtul2d(UInt32 value)
 {
 	__asm
 	{
 		push	0
 		push	ecx
 		fild	qword ptr [esp]
+		fstp	qword ptr [esp]
+		movq	xmm0, qword ptr [esp]
 		add		esp, 8
 		retn
 	}
@@ -176,7 +209,7 @@ __declspec(naked) void __fastcall cvtul2d(UInt32 value, double *result)
 	__asm
 	{
 		movd	xmm0, ecx
-		movq	qword ptr [edx], xmm0
+		movlpd	[edx], xmm0
 		fild	qword ptr [edx]
 		fstp	qword ptr [edx]
 		retn
@@ -187,12 +220,12 @@ __declspec(naked) int __vectorcall ifloor(float value)
 {
 	__asm
 	{
-		movmskps	eax, xmm0
-		test	al, 1
-		jnz		isNeg
+		test	s_CPUFeatures, 0x10
+		jz		noSSE4
+		roundss	xmm0, xmm0, 1
 		cvttss2si	eax, xmm0
 		retn
-	isNeg:
+	noSSE4:
 		push	0x3FA0
 		ldmxcsr	[esp]
 		cvtss2si	eax, xmm0
@@ -207,18 +240,18 @@ __declspec(naked) int __vectorcall iceil(float value)
 {
 	__asm
 	{
-		movmskps	eax, xmm0
-		test	al, 1
-		jnz		isNeg
+		test	s_CPUFeatures, 0x10
+		jz		noSSE4
+		roundss	xmm0, xmm0, 2
+		cvttss2si	eax, xmm0
+		retn
+	noSSE4:
 		push	0x5FA0
 		ldmxcsr	[esp]
 		cvtss2si	eax, xmm0
 		mov		byte ptr [esp+1], 0x1F
 		ldmxcsr	[esp]
 		pop		ecx
-		retn
-	isNeg:
-		cvttss2si	eax, xmm0
 		retn
 	}
 }
@@ -227,7 +260,7 @@ __declspec(naked) float __vectorcall fMod(float numer, float denom)
 {
 	__asm
 	{
-		movaps	xmm2, xmm0
+		movq	xmm2, xmm0
 		divss	xmm2, xmm1
 		cvttps2dq	xmm2, xmm2
 		cvtdq2ps	xmm2, xmm2
@@ -267,7 +300,7 @@ __declspec(naked) float __vectorcall Cos(float angle)
 		subss	xmm0, xmm2
 	doCalc:
 		mulss	xmm0, xmm0
-		movaps	xmm1, xmm0
+		movq	xmm1, xmm0
 		mulss	xmm1, kCosConsts
 		subss	xmm1, kCosConsts+4
 		mulss	xmm1, xmm0
@@ -356,7 +389,7 @@ __declspec(naked) __m128 __vectorcall GetSinCos(float angle)
 {
 	__asm
 	{
-		movaps	xmm1, xmm0
+		movq	xmm1, xmm0
 		movss	xmm0, PS_V3_PId2
 		subss	xmm0, xmm1
 		unpcklps	xmm0, xmm1
@@ -386,7 +419,7 @@ __declspec(naked) float __vectorcall Tan(float angle)
 	_asm
 	{
 		call	GetSinCos
-		movaps	xmm2, xmm1
+		movq	xmm2, xmm1
 		andps	xmm2, PS_AbsMask0
 		comiss	xmm2, PS_Epsilon
 		jb		ooRange
@@ -426,7 +459,7 @@ __declspec(naked) float __vectorcall ASin(float x)
 		xorps	xmm4, xmm4
 		comiss	xmm0, xmm4
 		jz		done
-		movaps	xmm4, xmm0
+		movq	xmm4, xmm0
 		andps	xmm4, PS_FlipSignMask0
 		xorps	xmm0, xmm4
 		movss	xmm3, kASinConsts+0x14
@@ -436,7 +469,7 @@ __declspec(naked) float __vectorcall ASin(float x)
 		paddd	xmm1, xmm0
 		movaps	xmm2, kASinConsts
 		cvttss2si	eax, xmm1
-		movaps	xmm1, xmm2
+		movq	xmm1, xmm2
 		mulss	xmm1, xmm0
 		psrldq	xmm2, 4
 		addss	xmm1, xmm2
@@ -468,7 +501,7 @@ __declspec(naked) float __vectorcall ACos(float x)
 		xorps	xmm4, xmm4
 		comiss	xmm0, xmm4
 		jz		isZero
-		movaps	xmm4, xmm0
+		movq	xmm4, xmm0
 		andps	xmm4, PS_FlipSignMask0
 		xorps	xmm0, xmm4
 		movss	xmm3, kASinConsts+0x14
@@ -478,7 +511,7 @@ __declspec(naked) float __vectorcall ACos(float x)
 		paddd	xmm1, xmm0
 		movaps	xmm2, kASinConsts
 		cvttss2si	eax, xmm1
-		movaps	xmm1, xmm2
+		movq	xmm1, xmm2
 		mulss	xmm1, xmm0
 		psrldq	xmm2, 4
 		addss	xmm1, xmm2
@@ -519,7 +552,7 @@ __declspec(naked) float __vectorcall ATan2(float y, float x)
 		jz		zeroY
 		comiss	xmm1, xmm2
 		jz		zeroX
-		movaps	xmm2, xmm0
+		movq	xmm2, xmm0
 		unpcklpd	xmm2, xmm1
 		andps	xmm2, PS_AbsMask
 		movaps	xmm3, xmm2
@@ -527,9 +560,9 @@ __declspec(naked) float __vectorcall ATan2(float y, float x)
 		maxss	xmm3, xmm4
 		minss	xmm4, xmm2
 		divss	xmm4, xmm3
-		movaps	xmm3, xmm4
+		movq	xmm3, xmm4
 		mulss	xmm3, xmm4
-		movaps	xmm5, xmm3
+		movq	xmm5, xmm3
 		mulss	xmm5, kATanConsts
 		addss	xmm5, kATanConsts+4
 		mulss	xmm5, xmm3
@@ -576,6 +609,30 @@ __declspec(naked) float __vectorcall ATan2(float y, float x)
 		EMIT_DW(3E, 48, 54, C9)
 		EMIT_DW(3E, AA, 7E, 45)
 		EMIT_DW(3F, 7F, FF, B7)
+	}
+}
+
+__declspec(naked) float __vectorcall Length_V4(__m128 inPS)
+{
+	__asm
+	{
+		xorps	xmm1, xmm1
+		mulps	xmm0, xmm0
+		haddps	xmm0, xmm1
+		haddps	xmm0, xmm1
+		comiss	xmm0, xmm1
+		jz		done
+		movaps	xmm1, xmm0
+		rsqrtss	xmm2, xmm0
+		mulss	xmm1, xmm2
+		mulss	xmm1, xmm2
+		movss	xmm3, SS_3
+		subss	xmm3, xmm1
+		mulss	xmm3, xmm2
+		mulss	xmm3, PS_V3_Half
+		mulss	xmm0, xmm3
+	done:
+		retn
 	}
 }
 
@@ -638,7 +695,7 @@ __declspec(noinline) char *GetStrArgBuffer()
 {
 	thread_local static char *s_strBuffer = nullptr;
 	if (!s_strBuffer)
-		s_strBuffer = (char*)VirtualAlloc(nullptr, STR_BUFFER_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+		s_strBuffer = (char*)(((UInt32)malloc(STR_BUFFER_SIZE + 0x40) + 0x20) & 0xFFFFFFF0);
 	return s_strBuffer;
 }
 
@@ -723,23 +780,35 @@ __declspec(naked) UInt32 __fastcall StrLen(const char *str)
 {
 	__asm
 	{
-		xor		edx, edx
-		mov		eax, ecx
-		test	eax, eax
+		test	ecx, ecx
 		jz		nullPtr
+		push	ecx
 		xorps	xmm7, xmm7
+		mov		edx, ecx
+		and		ecx, 0xF
+		sub		edx, ecx
+		or		eax, 0xFFFFFFFF
+		shl		eax, cl
 		ALIGN 16
 	iterHead:
-		movups	xmm6, [eax]
-		add		eax, 0x10
+		movaps	xmm6, [edx]
 		pcmpeqb	xmm6, xmm7
-		pmovmskb	edx, xmm6
-		bsf		edx, edx
-		jz		iterHead
-		lea		eax, [eax+edx-0x10]
+		pmovmskb	ecx, xmm6
+		and		ecx, eax
+		jnz		foundEnd
+		or		eax, 0xFFFFFFFF
+		add		edx, 0x10
+		jmp		iterHead
+	foundEnd:
+		bsf		eax, ecx
+		add		eax, edx
 		mov		edx, eax
+		pop		ecx
 		sub		eax, ecx
+		retn
 	nullPtr:
+		xor		edx, edx
+		xor		eax, eax
 		retn
 	}
 }
@@ -845,13 +914,21 @@ __declspec(naked) char __fastcall StrCompareCS(const char *lstr, const char *rst
 	{
 		test	ecx, ecx
 		jz		retnLT
+		push	ebx
 		push	esi
 		push	edi
-		mov		esi, ecx
-		mov		edi, edx
+		lea		esi, [ecx-0x10]
+		lea		edi, [edx-0x10]
+		and		ecx, 0xF
+		sub		esi, ecx
+		sub		edi, ecx
+		or		ebx, 0xFFFFFFFF
+		shl		ebx, cl
 		ALIGN 16
 	iterHead:
-		movups	xmm0, [esi]
+		add		esi, 0x10
+		add		edi, 0x10
+		movaps	xmm0, [esi]
 		movups	xmm1, [edi]
 		xorps	xmm2, xmm2
 		pcmpeqb	xmm2, xmm0
@@ -863,23 +940,26 @@ __declspec(naked) char __fastcall StrCompareCS(const char *lstr, const char *rst
 		pcmpeqb	xmm2, xmm1
 		pmovmskb	eax, xmm2
 		not		ax
+		and		eax, ebx
 		or		edx, ecx
+		and		edx, ebx
 		jnz		foundEnd
-		add		esi, 0x10
-		add		edi, 0x10
+		mov		edx, ebx
+		or		ebx, 0xFFFFFFFF
 		test	eax, eax
 		jz		iterHead
 		bsf		ecx, eax
 		pcmpgtb	xmm0, xmm1
-		pmovmskb	edx, xmm0
-		bsf		edx, edx
-		cmp		cl, dl
+		pmovmskb	eax, xmm0
+		and		eax, edx
+		bsf		eax, eax
+		cmp		al, cl
 		setz	al
-		setnz	dl
-		sub		al, dl
-		lea		ecx, [edi+ecx-0x10]
+		cmovnz	eax, ebx
+		add		ecx, edi
 		pop		edi
 		pop		esi
+		pop		ebx
 		retn
 	retnLT:
 		mov		al, 0xFF
@@ -895,6 +975,7 @@ __declspec(naked) char __fastcall StrCompareCS(const char *lstr, const char *rst
 		ja		done
 		pcmpgtb	xmm0, xmm1
 		pmovmskb	edx, xmm0
+		and		edx, ebx
 		bsf		edx, edx
 		cmp		cl, dl
 		setz	al
@@ -904,6 +985,7 @@ __declspec(naked) char __fastcall StrCompareCS(const char *lstr, const char *rst
 	done:
 		pop		edi
 		pop		esi
+		pop		ebx
 		retn
 	}
 }
@@ -914,17 +996,25 @@ __declspec(naked) char __fastcall StrCompareCI(const char *lstr, const char *rst
 	{
 		test	ecx, ecx
 		jz		retnLT
+		push	ebx
 		push	esi
 		push	edi
-		mov		esi, ecx
-		mov		edi, edx
+		lea		esi, [ecx-0x10]
+		lea		edi, [edx-0x10]
+		and		ecx, 0xF
+		sub		esi, ecx
+		sub		edi, ecx
+		or		ebx, 0xFFFFFFFF
+		shl		ebx, cl
 		movaps	xmm3, kStringMasks+0x20
 		movaps	xmm4, kStringMasks+0x40
 		movaps	xmm5, kStringMasks+0x50
 		movaps	xmm6, kStringMasks+0x60
 		ALIGN 16
 	iterHead:
-		movups	xmm0, [esi]
+		add		esi, 0x10
+		add		edi, 0x10
+		movaps	xmm0, [esi]
 		movups	xmm1, [edi]
 		xorps	xmm2, xmm2
 		pcmpeqb	xmm2, xmm0
@@ -948,23 +1038,26 @@ __declspec(naked) char __fastcall StrCompareCI(const char *lstr, const char *rst
 		pcmpeqb	xmm2, xmm1
 		pmovmskb	eax, xmm2
 		not		ax
+		and		eax, ebx
 		or		edx, ecx
+		and		edx, ebx
 		jnz		foundEnd
-		add		esi, 0x10
-		add		edi, 0x10
+		mov		edx, ebx
+		or		ebx, 0xFFFFFFFF
 		test	eax, eax
 		jz		iterHead
 		bsf		ecx, eax
 		pcmpgtb	xmm0, xmm1
-		pmovmskb	edx, xmm0
-		bsf		edx, edx
-		cmp		cl, dl
+		pmovmskb	eax, xmm0
+		and		eax, edx
+		bsf		eax, eax
+		cmp		al, cl
 		setz	al
-		setnz	dl
-		sub		al, dl
-		lea		ecx, [edi+ecx-0x10]
+		cmovnz	eax, ebx
+		add		ecx, edi
 		pop		edi
 		pop		esi
+		pop		ebx
 		retn
 	retnLT:
 		mov		al, 0xFF
@@ -980,6 +1073,7 @@ __declspec(naked) char __fastcall StrCompareCI(const char *lstr, const char *rst
 		ja		done
 		pcmpgtb	xmm0, xmm1
 		pmovmskb	edx, xmm0
+		and		edx, ebx
 		bsf		edx, edx
 		cmp		cl, dl
 		setz	al
@@ -989,6 +1083,7 @@ __declspec(naked) char __fastcall StrCompareCI(const char *lstr, const char *rst
 	done:
 		pop		edi
 		pop		esi
+		pop		ebx
 		retn
 	}
 }
@@ -1132,21 +1227,30 @@ __declspec(naked) char* __fastcall FindChr(const char *str, char chr)
 		movd	xmm7, edx
 		pshuflw	xmm7, xmm7, 0
 		unpcklps	xmm7, xmm7
-		xor		eax, eax
+		mov		edx, ecx
+		and		ecx, 0xF
+		sub		edx, ecx
+		or		eax, 0xFFFFFFFF
+		shl		eax, cl
 		ALIGN 16
 	iterHead:
-		movups	xmm6, [ecx]
-		add		ecx, 0x10
+		movaps	xmm6, [edx]
 		xorps	xmm5, xmm5
 		pcmpeqb	xmm5, xmm6
 		pcmpeqb	xmm6, xmm7
 		por		xmm5, xmm6
-		pmovmskb	edx, xmm5
-		bsf		edx, edx
-		jz		iterHead
-		lea		ecx, [ecx+edx-0x10]
-		cmp		[ecx], 0
-		cmovnz	eax, ecx
+		pmovmskb	ecx, xmm5
+		and		ecx, eax
+		jnz		foundEnd
+		or		eax, 0xFFFFFFFF
+		add		edx, 0x10
+		jmp		iterHead
+	foundEnd:
+		bsf		eax, ecx
+		add		eax, edx
+		xor		ecx, ecx
+		cmp		[eax], 0
+		cmovz	eax, ecx
 		retn
 	}
 }
@@ -1155,68 +1259,102 @@ __declspec(naked) char* __fastcall FindChrR(const char *str, char chr)
 {
 	__asm
 	{
-		push	ebx
-		mov		ebx, ecx
+		push	esi
+		push	edi
+		mov		esi, ecx
 		mov		dh, dl
 		movd	xmm7, edx
 		pshuflw	xmm7, xmm7, 0
 		unpcklpd	xmm7, xmm7
+		and		ecx, 0xF
+		sub		esi, ecx
+		or		edi, 0xFFFFFFFF
+		shl		edi, cl
 		xor		eax, eax
 		ALIGN 16
 	iterHead:
-		movups	xmm6, [ebx]
+		movaps	xmm6, [esi]
 		xorps	xmm5, xmm5
 		pcmpeqb	xmm5, xmm6
 		pmovmskb	ecx, xmm5
 		pcmpeqb	xmm6, xmm7
 		pmovmskb	edx, xmm6
-		test	ecx, ecx
+		and		edx, edi
+		and		ecx, edi
+		mov		edi, 0xFFFFFFFF
 		jnz		foundEnd
-		add		ebx, 0x10
+		add		esi, 0x10
 		bsr		ecx, edx
 		jz		iterHead
-		lea		eax, [ebx+ecx-0x10]
+		lea		eax, [esi+ecx-0x10]
 		jmp		iterHead
 	foundEnd:
-		push	esi
-		mov		esi, 0xFFFFFFFF
 		bsf		ecx, ecx
-		shl		esi, cl
-		not		esi
-		and		edx, esi
+		shl		edi, cl
+		not		edi
+		and		edx, edi
 		jz		done
 		bsr		eax, edx
-		add		eax, ebx
+		add		eax, esi
 	done:
+		pop		edi
 		pop		esi
-		pop		ebx
 		retn
 	}
 }
 
-__declspec(noinline) char* __fastcall SubStrCI(const char *srcStr, const char *subStr)
+__declspec(naked) const char* __fastcall SubStrCI(const char *srcStr, const char *subStr)
 {
-	int srcLen = StrLen(srcStr);
-	if (!srcLen) return nullptr;
-	int subLen = StrLen(subStr);
-	if (!subLen) return nullptr;
-	srcLen -= subLen;
-	if (srcLen < 0) return nullptr;
-	int index;
-	do
+	__asm
 	{
-		index = 0;
-		while (true)
-		{
-			if (kLwrCaseConverter[*(UInt8*)(srcStr + index)] != kLwrCaseConverter[*(UInt8*)(subStr + index)])
-				break;
-			if (++index == subLen)
-				return const_cast<char*>(srcStr);
-		}
-		srcStr++;
+		push	ebp
+		push	ebx
+		push	esi
+		push	edi
+		mov		esi, ecx
+		mov		edi, edx
+		mov		ecx, edx
+		call	StrLen
+		test	eax, eax
+		jz		retnNull
+		mov		ebp, eax
+		mov		ecx, esi
+		call	StrLen
+		sub		eax, ebp
+		js		retnNull
+		mov		ebx, eax
+		xor		edx, edx
+		dec		esi
+		ALIGN 16
+	mainHead:
+		dec		ebx
+		js		retnNull
+		inc		esi
+		xor		eax, eax
+		ALIGN 16
+	subHead:
+		mov		dl, [eax+esi]
+		mov		cl, kLwrCaseConverter[edx]
+		mov		dl, [eax+edi]
+		cmp		cl, kLwrCaseConverter[edx]
+		jnz		mainHead
+		inc		eax
+		cmp		eax, ebp
+		jb		subHead
+		mov		eax, esi
+		pop		edi
+		pop		esi
+		pop		ebx
+		pop		ebp
+		retn
+	retnNull:
+		xor		eax, eax
+		pop		edi
+		pop		esi
+		pop		ebx
+		pop		ebp
+		retn
 	}
-	while (--srcLen >= 0);
-	return nullptr;
 }
 
 __declspec(naked) char* __fastcall SlashPos(const char *str)
@@ -1226,11 +1364,14 @@ __declspec(naked) char* __fastcall SlashPos(const char *str)
 		movaps	xmm7, kBFSlash
 		pshufd	xmm6, xmm7, 0xAA
 		unpcklpd	xmm7, xmm7
-		xor		eax, eax
+		mov		edx, ecx
+		and		ecx, 0xF
+		sub		edx, ecx
+		or		eax, 0xFFFFFFFF
+		shl		eax, cl
 		ALIGN 16
 	iterHead:
-		movups	xmm5, [ecx]
-		add		ecx, 0x10
+		movaps	xmm5, [edx]
 		xorps	xmm4, xmm4
 		movaps	xmm3, xmm5
 		pcmpeqb	xmm4, xmm5
@@ -1238,12 +1379,18 @@ __declspec(naked) char* __fastcall SlashPos(const char *str)
 		pcmpeqb	xmm5, xmm6
 		por		xmm4, xmm3
 		por		xmm4, xmm5
-		pmovmskb	edx, xmm4
-		bsf		edx, edx
-		jz		iterHead
-		lea		ecx, [ecx+edx-0x10]
-		cmp		[ecx], 0
-		cmovnz	eax, ecx
+		pmovmskb	ecx, xmm4
+		and		ecx, eax
+		jnz		foundEnd
+		or		eax, 0xFFFFFFFF
+		add		edx, 0x10
+		jmp		iterHead
+	foundEnd:
+		bsf		eax, ecx
+		add		eax, edx
+		xor		ecx, ecx
+		cmp		[eax], 0
+		cmovz	eax, ecx
 		retn
 		ALIGN 16
 	kBFSlash:
@@ -1285,8 +1432,8 @@ __declspec(naked) char* __fastcall GetNextToken(char *str, char delim)
 
 __declspec(noinline) char* __fastcall GetNextToken(char *str, const char *delims)
 {
-	bool table[0x100];
-	MEM_ZERO(table, 0x100);
+	bool table[0x80];
+	ZERO_BYTES(table, sizeof(table));
 	UInt8 curr;
 	while (curr = *delims)
 	{
@@ -1411,7 +1558,7 @@ __declspec(naked) char* __vectorcall FltToStr(char *str, double value)
 		push	esi
 		push	edi
 		lea		eax, [esp-8]
-		movq	qword ptr [eax], xmm0
+		movlpd	[eax], xmm0
 		fld		qword ptr [eax]
 		fld		st
 		fisttp	qword ptr [eax]
@@ -1422,7 +1569,7 @@ __declspec(naked) char* __vectorcall FltToStr(char *str, double value)
 		movq	xmm0, qword ptr [eax]
 		/*roundsd	xmm2, xmm0, 3
 		lea		eax, [esp-8]
-		movq	qword ptr [eax], xmm2
+		movlpd	[eax], xmm2
 		fld		qword ptr [eax]
 		fisttp	qword ptr [eax]
 		mov		esi, [eax]
@@ -1736,7 +1883,7 @@ __declspec(naked) UInt32 __fastcall HexToUInt(const char *str)
 
 __declspec(noinline) UInt8 *AuxBuffer::Get(UInt32 bufIdx, UInt32 reqSize)
 {
-	thread_local static AuxBuffer s_auxBuffers[3];
+	thread_local static AuxBuffer s_auxBuffers[3] = {{}, {}, {}};
 	AuxBuffer *auxBuf = &s_auxBuffers[bufIdx];
 	if (auxBuf->size < reqSize)
 	{
@@ -2436,7 +2583,7 @@ __declspec(naked) void __stdcall SafeWrite32(UInt32 addr, UInt32 data)
 	}
 }
 
-__declspec(naked) void __stdcall SafeWriteBuf(UInt32 addr, void *data, UInt32 len)
+__declspec(naked) void __stdcall SafeWriteBuf(UInt32 addr, const void *data, UInt32 len)
 {
 	__asm
 	{

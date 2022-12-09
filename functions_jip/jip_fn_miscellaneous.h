@@ -150,15 +150,12 @@ bool Cmd_SetContainerRespawns_Execute(COMMAND_ARGS)
 
 bool Cmd_GetExteriorCell_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESWorldSpace *wspc;
 	SInt32 coordX, coordY;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc, &coordX, &coordY) && wspc->cellMap)
 	{
-		Coordinate coord;
-		coord.x = coordX;
-		coord.y = coordY;
-		TESObjectCELL *cell = wspc->cellMap->Lookup(coord.xy);
+		TESObjectCELL *cell = wspc->cellMap->Lookup(Coordinate(coordX, coordY));
 		if (cell) REFR_RES = cell->refID;
 	}
 	return true;
@@ -246,7 +243,7 @@ bool Cmd_GetPCFastTravelled_Execute(COMMAND_ARGS)
 		caller = thisObj;
 	}
 	if (s_pcFastTravelInformed->Empty())
-		HOOK_MOD(PCFastTravel, true);
+		HOOK_INC(PCFastTravel);
 	if (s_pcFastTravelInformed->Insert(caller))
 	{
 		if (caller->jipFormFlags5 & kHookFormFlag5_FastTravelInformed) *result = 1;
@@ -297,8 +294,7 @@ bool Cmd_GetPCDetectionState_Execute(COMMAND_ARGS)
 bool Cmd_GetPipboyRadio_Execute(COMMAND_ARGS)
 {
 	RadioEntry *pipboyRadio = GameGlobals::PipboyRadio();
-	if (pipboyRadio && pipboyRadio->radioRef) REFR_RES = pipboyRadio->radioRef->refID;
-	else *result = 0;
+	REFR_RES = (pipboyRadio && pipboyRadio->radioRef) ? pipboyRadio->radioRef->refID : 0;
 	return true;
 }
 
@@ -357,8 +353,7 @@ bool Cmd_GetPCUsingIronSights_Execute(COMMAND_ARGS)
 
 bool Cmd_GetPCLastExteriorDoor_Execute(COMMAND_ARGS)
 {
-	if (g_thePlayer->lastExteriorDoor) REFR_RES = g_thePlayer->lastExteriorDoor->refID;
-	else *result = 0;
+	REFR_RES = (g_thePlayer->lastExteriorDoor) ? g_thePlayer->lastExteriorDoor->refID : 0;
 	return true;
 }
 
@@ -384,10 +379,10 @@ bool Cmd_SetOnFastTravelEventHandler_Execute(COMMAND_ARGS)
 	if (addEvnt)
 	{
 		if (s_fastTravelEventScripts->Insert(script))
-			HOOK_MOD(PCFastTravel, true);
+			HOOK_INC(PCFastTravel);
 	}
 	else if (s_fastTravelEventScripts->Erase(script))
-		HOOK_MOD(PCFastTravel, false);
+		HOOK_DEC(PCFastTravel);
 	return true;
 }
 
@@ -411,7 +406,7 @@ bool Cmd_SetMoonTexture_Execute(COMMAND_ARGS)
 	Sky *currSky = Sky::Get();
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &textureID, &path) || (textureID > 7) || !currSky) return true;
 	const char *newTexture = CopyString(path);
-	for (UInt8 idx = 0; idx < 8; idx++)
+	for (UInt32 idx = 0; idx < 8; idx++)
 	{
 		if (idx != textureID)
 			s_moonTexturesSet[idx] = s_moonTexturesOverride[idx] ? s_moonTexturesOverride[idx] : kMoonTexturesDefault[idx];
@@ -461,10 +456,10 @@ bool Cmd_SetOnPCTargetChangeEventHandler_Execute(COMMAND_ARGS)
 	if (addEvnt)
 	{
 		if (s_targetChangeEventScripts->Insert(script))
-			HOOK_MOD(SetPCTarget, true);
+			HOOK_INC(SetPCTarget);
 	}
 	else if (s_targetChangeEventScripts->Erase(script))
-		HOOK_MOD(SetPCTarget, false);
+		HOOK_DEC(SetPCTarget);
 	return true;
 }
 
@@ -508,7 +503,7 @@ bool Cmd_GetReticlePos_Execute(COMMAND_ARGS)
 	if (coords.RayCastCoords(g_mainCamera->WorldTranslate(), g_mainCamera->WorldRotate(), maxRange, layerType) || (numArgs >= 2))
 	{
 		ArrayElementL elements[3] = {coords.x, coords.y, coords.z};
-		AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
+		*result = (int)CreateArray(elements, 3, scriptObj);
 	}
 	return true;
 }
@@ -540,7 +535,7 @@ bool Cmd_SetOnDialogTopicEventHandler_Execute(COMMAND_ARGS)
 		{
 			EventCallbackScripts *callbacks;
 			if (s_dialogTopicEventMap->Insert(form, &callbacks))
-				HOOK_MOD(RunResultScript, true);
+				HOOK_INC(RunResultScript);
 			callbacks->Insert(script);
 		}
 		else
@@ -549,7 +544,7 @@ bool Cmd_SetOnDialogTopicEventHandler_Execute(COMMAND_ARGS)
 			if (findTopic && findTopic().Erase(script) && findTopic().Empty())
 			{
 				findTopic.Remove();
-				HOOK_MOD(RunResultScript, false);
+				HOOK_DEC(RunResultScript);
 			}
 		}
 	}
@@ -599,9 +594,7 @@ bool Cmd_SetGameDifficulty_Execute(COMMAND_ARGS)
 
 bool Cmd_GetEnemyHealthTarget_Execute(COMMAND_ARGS)
 {
-	*result = 0;
-	if (g_HUDMainMenu->healthTarget)
-		REFR_RES = g_HUDMainMenu->healthTarget->refID;
+	REFR_RES = g_HUDMainMenu->healthTarget ? g_HUDMainMenu->healthTarget->refID : 0;
 	return true;
 }
 
@@ -652,7 +645,7 @@ bool Cmd_GetBufferedCells_Execute(COMMAND_ARGS)
 				maxVal--;
 			}
 		}
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	}
 	return true;
 }
@@ -665,10 +658,10 @@ bool Cmd_SetOnLocationDiscoverEventHandler_Execute(COMMAND_ARGS)
 	if (addEvnt)
 	{
 		if (s_locationDiscoverEventScripts->Insert(script))
-			HOOK_MOD(LocationDiscover, true);
+			HOOK_INC(LocationDiscover);
 	}
 	else if (s_locationDiscoverEventScripts->Erase(script))
-		HOOK_MOD(LocationDiscover, false);
+		HOOK_DEC(LocationDiscover);
 	return true;
 }
 
@@ -680,22 +673,22 @@ bool Cmd_SetOnCraftingEventHandler_Execute(COMMAND_ARGS)
 	if (addEvnt)
 	{
 		if (s_itemCraftedEventScripts->Insert(script))
-			HOOK_MOD(ItemCrafted, true);
+			HOOK_INC(ItemCrafted);
 	}
 	else if (s_itemCraftedEventScripts->Erase(script))
-		HOOK_MOD(ItemCrafted, false);
+		HOOK_DEC(ItemCrafted);
 	return true;
 }
 
 bool Cmd_IsInKillCam_Execute(COMMAND_ARGS)
 {
-	*result = (VATSCameraData::Get()->mode == 4) && (g_thePlayer->killCamCooldown > 0);
+	*result = (VATSCameraData::Get()->mode == 4) && (g_thePlayer->killCamTimer > 0);
 	return true;
 }
 
 bool Cmd_IsInKillCam_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (VATSCameraData::Get()->mode == 4) && (g_thePlayer->killCamCooldown > 0);
+	*result = (VATSCameraData::Get()->mode == 4) && (g_thePlayer->killCamTimer > 0);
 	return true;
 }
 
@@ -829,10 +822,10 @@ bool Cmd_SetOnNoteAddedEventHandler_Execute(COMMAND_ARGS)
 	if (addEvnt)
 	{
 		if (s_noteAddedEventScripts->Insert(script))
-			HOOK_MOD(AddNote, true);
+			HOOK_INC(AddNote);
 	}
 	else if (s_noteAddedEventScripts->Erase(script))
-		HOOK_MOD(AddNote, false);
+		HOOK_DEC(AddNote);
 	return true;
 }
 
@@ -861,7 +854,7 @@ bool Cmd_SetHardcoreStageThreshold_Execute(COMMAND_ARGS)
 
 bool Cmd_GetHardcoreStageEffect_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	BGSRadiationStage *hcStage;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &hcStage) && IsHardcoreStage(hcStage) && hcStage->effect)
 		REFR_RES = hcStage->effect->refID;
@@ -1212,7 +1205,7 @@ bool Cmd_GetPointRayCastPos_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pos.x, &pos.y, &pos.z, &rot.x, &rot.z, &outPos.x, &outPos.y, &outPos.z, &layerType, &maxRange))
 	{
 		NiMatrix33 rotMat;
-		rotMat.FromEulerYPR(rot * GET_PS(8));
+		rotMat.FromEulerPRYInv(rot * GET_PS(8));
 		if (rot.RayCastCoords(pos, rotMat + 1, maxRange, layerType) || (numArgs >= 10))
 		{
 			outPos.Set(rot.PS());
@@ -1241,7 +1234,7 @@ bool Cmd_PlaceModel_Execute(COMMAND_ARGS)
 	{
 		PlayerCharacter *thePlayer = g_thePlayer;
 		TESObjectCELL *parentCell = thePlayer->parentCell;
-		if (parentCell && (!parentCell->worldSpace || (parentCell = parentCell->worldSpace->GetCellAtPos(thePlayer->position.PS()))))
+		if (parentCell && (!parentCell->worldSpace || (parentCell = g_gridCellArray->GetCellAtPos(thePlayer->position.PS()))))
 		{
 			NiNode *objParent = parentCell->Get3DNode(3);
 			if (objParent)

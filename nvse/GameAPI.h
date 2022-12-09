@@ -5,7 +5,7 @@
 
 void Console_Print(const char * fmt, ...);
 
-typedef bool (* _ExtractArgs)(ParamInfo * paramInfo, void * scriptData, UInt32 * arg2, TESObjectREFR * arg3, TESObjectREFR * arg4, Script * script, ScriptEventList * eventList, ...);
+typedef bool (* _ExtractArgs)(ParamInfo * paramInfo, void * scriptData, UInt32 * arg2, TESObjectREFR * arg3, TESObjectREFR * arg4, Script * script, ScriptLocals * eventList, ...);
 extern const _ExtractArgs ExtractArgs;
 
 typedef TESForm * (* _CreateFormInstance)(UInt8 type);
@@ -63,12 +63,14 @@ union VarData
 
 struct ScriptVar
 {
-	UInt32				id;
-	ListNode<ScriptVar>	*next;
-	VarData				data;
+	UInt32		id;
+	UInt32		unk04;
+	VarData		data;
+	UInt8		type;
+	UInt8		pad11[7];
 };
 
-struct ScriptEventList
+struct ScriptLocals
 {
 	enum
 	{
@@ -128,14 +130,14 @@ struct ScriptEventList
 
 	Script				*m_script;		// 00
 	UInt8				m_flags;		// 04
-	UInt8				pad05[5];		// 05
+	UInt8				pad05[3];		// 05
 	EventList			*m_eventList;	// 08
 	VarList				*m_vars;		// 0C
 	EffectScriptFlags	*m_effScrFlags;	// 10
 
 	ScriptVar *GetVariable(UInt32 id);
 	UInt32 ResetAllVariables();
-	ScriptEventList *CreateCopy();
+	ScriptLocals *CreateCopy();
 };
 
 // 914
@@ -248,6 +250,50 @@ public:
 	char*	chunk;			// 004
 	UInt32	chunkSize;		// 008
 	UInt32	chunkConsumed;	// 00C
+
+	__forceinline void Read(void *buffer, size_t size)
+	{
+		ThisCall(0x864820, this, buffer, size);
+	}
+
+	inline UInt32 ReadFormID()
+	{
+		UInt32 outID = 0;
+		Read(&outID, 3);
+		return ThisCall<UInt32>(0x853500, &outID);
+	}
+
+	inline void SkipBytes(UInt32 size)
+	{
+		chunkConsumed += size + 1;
+	}
+
+	inline UInt8 Read8()
+	{
+		UInt8 res = (UInt8)chunk[chunkConsumed];
+		chunkConsumed += 2;
+		return res;
+	}
+
+	inline UInt16 Read16()
+	{
+		UInt16 res = *(UInt16*)(chunk + chunkConsumed);
+		chunkConsumed += 3;
+		return res;
+	}
+
+	inline UInt32 Read32()
+	{
+		UInt32 res = *(UInt32*)(chunk + chunkConsumed);
+		chunkConsumed += 5;
+		return res;
+	}
+
+	inline void ReadBuff(void *buff, UInt32 size)
+	{
+		memcpy(buff, chunk + chunkConsumed, size);
+		chunkConsumed += size + 1;
+	}
 };
 
 struct BGSFormChange
@@ -256,32 +302,32 @@ struct BGSFormChange
 	UInt32	unk004;			// Pointer to the changed record or the save record ?
 };
 
-struct	BGSSaveLoadChangesMap
+struct FormBufferHeader
 {
-	NiTPointerMap<BGSFormChange> BGSFormChangeMap;
-	// most likely more
+	UInt32		encodeID;			// 00
+	UInt32		changeFlags;		// 03
+	UInt8		codedTypeAndLength;	// 07
+	UInt8		formVersion;		// 08
+	UInt8		pad009[3];			// 09
+
+	inline UInt32 GenerateKey(UInt32 consumed)
+	{
+		UInt32 key = (encodeID & 0xFFFFFF) + (consumed ^ 0x7ED55D16);
+		return (key * 0xD) ^ (key >> 0xF);
+	}
 };
+static_assert(sizeof(FormBufferHeader) == 0x10);
 
 // 030
 class BGSLoadFormBuffer: public BGSLoadGameBuffer
 {
 public:
-	typedef UInt8 EncodedID[3];
-	struct Header	// 00C
-	{
-		EncodedID	encodeID;			// 00
-		UInt32		changeFlags;		// 03
-		UInt8		codedTypeAndLength;	// 07
-		UInt8		formVersion;		// 08
-		UInt8		pad009[3];			// 09
-	};
-
-	UInt32			refID;				// 010
-	Header			header;				// 014
-	UInt32			bufferSize;			// 020
-	TESForm*		form;				// 024
-	UInt32			flg028;				// 028	bit1 form invalid
-	BGSFormChange*	currentFormChange;	// 02C
+	UInt32				refID;				// 10
+	FormBufferHeader	header;				// 14
+	UInt32				bufferSize;			// 24
+	TESForm				*form;				// 28
+	UInt32				flg2C;				// 2C	bit1 form invalid
+	BGSFormChange		*currentFormChange;	// 30
 };
 
 // 14
@@ -292,20 +338,34 @@ public:
 	virtual TESObjectREFR	*GetRefr(void);
 	virtual Actor	*GetActor(void);
 
-	UInt32		unk04;		// 04
-	UInt32		unk08;		// 08
-	UInt32		unk0C;		// 0C
-	UInt32		unk10;		// 10
+	UInt32		unk04;			// 04
+	UInt32		unk08;			// 08
+	UInt32		chunkConsumed;	// 0C
+	UInt32		unk10;			// 10
+
+	__forceinline void Write(void *source, size_t size)
+	{
+		ThisCall(0x865CE0, this, source, size, chunkConsumed, 0);
+	}
+
+	__forceinline void __fastcall EncodeRefID(UInt32 *pRefID)
+	{
+		ThisCall(0x853570, pRefID, *pRefID);
+	}
+
+	inline void __fastcall WriteRefID(UInt32 refID)
+	{
+		UInt32 encoded = 0;
+		ThisCall(0x853570, &encoded, refID);
+		ThisCall(0x865CE0, this, &encoded, 4, chunkConsumed, 0);
+	}
 };
 
 // 24
 class BGSSaveFormBuffer : public BGSSaveGameBuffer
 {
 public:
-	UInt32		unk14;		// 14
-	UInt32		unk18;		// 18
-	UInt32		unk1C;		// 1C
-	TESForm		*form;		// 20
+	FormBufferHeader	header;
 };
 
 // 1C8 - only explicitly marked things are verified
@@ -369,6 +429,8 @@ class BGSCellNumericIDArrayMap;
 class BGSLoadGameSubBuffer;
 class BGSReconstructFormsInFileMap;
 class BGSReconstructFormsInAllFilesMap;
+
+typedef NiTPointerMap<BGSFormChange> BGSSaveLoadChangesMap;
 
 class BGSSaveLoadGame	// 0x011DDF38
 {

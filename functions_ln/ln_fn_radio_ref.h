@@ -76,9 +76,8 @@ bool Cmd_SetRadioStatic_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRadioPosRef_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	ExtraRadioData *xRadio = GetExtraType(&thisObj->extraDataList, RadioData);
-	if (xRadio && !xRadio->rangeType && xRadio->positionRef) REFR_RES = xRadio->positionRef->refID;
+	REFR_RES = (xRadio && !xRadio->rangeType && xRadio->positionRef) ? xRadio->positionRef->refID : 0;
 	return true;
 }
 

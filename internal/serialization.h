@@ -1,5 +1,7 @@
 #pragma once
 
+#define JIP_VARS_VERSION 10
+
 char s_lastLoadedPath[0x80] = {0};
 
 void __fastcall RestoreLinkedRefs(UnorderedMap<UInt32, UInt32> *tempMap = nullptr)
@@ -16,7 +18,7 @@ void __fastcall RestoreLinkedRefs(UnorderedMap<UInt32, UInt32> *tempMap = nullpt
 	}
 }
 
-_NOINLINE void CleanMLCallbacks()
+__declspec(noinline) void CleanMLCallbacks()
 {
 	for (auto iter = s_mainLoopCallbacks->Begin(); iter; ++iter)
 	{
@@ -104,13 +106,16 @@ void DoPreLoadGameHousekeeping()
 		s_extraCamerasMap->Clear();
 	}
 
-	if (!s_refNamesMap->Empty())
+	/*if (!s_refNamesMap->Empty())
 	{
 		for (auto nameIter = s_refNamesMap->Begin(); nameIter; ++nameIter)
 			FreeStringKey(*nameIter);
 		s_refNamesMap->Clear();
 		HOOK_SET(GetRefName, false);
-	}
+	}*/
+
+	for (auto nameIter = s_refNamesMap->Begin(); nameIter; ++nameIter)
+		nameIter.Key()->JIPRefFlags() |= kHookRefFlag5F_AltRefName;
 
 	if (!s_refrModelPathMap->Empty())
 	{
@@ -238,7 +243,7 @@ void ProcessDataChangedFlags(UInt8 changedFlags)
 UInt8 *s_loadGameBuffer = nullptr;
 UInt32 s_loadGameBufferSize = 0x10000;
 
-_NOINLINE UInt8* __fastcall GetLoadGameBuffer(UInt32 length)
+__declspec(noinline) UInt8* __fastcall GetLoadGameBuffer(UInt32 length)
 {
 	if (s_loadGameBufferSize < length)
 	{
@@ -258,9 +263,6 @@ void LoadGameCallback(void*)
 	UInt8 changedFlags = s_dataChangedFlags;
 	ProcessDataChangedFlags(changedFlags);
 
-	if (changedFlags == kChangedFlag_All)
-		InitResolvedModIndices();
-
 	UInt32 type, version, length, nRecs, nRefs, nVars, buffer4, refID;
 	UInt8 buffer1, modIdx;
 	UInt8 *bufPos, *namePos;
@@ -274,7 +276,7 @@ void LoadGameCallback(void*)
 				bufPos = GetLoadGameBuffer(length);
 				TESForm *form;
 				Script *script;
-				ScriptEventList *eventList;
+				ScriptLocals *eventList;
 				ScriptVar *var;
 				VarData *varData;
 				nRecs = *(UInt16*)bufPos;
@@ -299,8 +301,8 @@ void LoadGameCallback(void*)
 							*bufPos = 0;
 							varData = (VarData*)bufPos;
 							bufPos += 8;
-							if (!(buffer4 = GetResolvedRefID(modIdx << 24))) continue;
-							if (var = script->AddVariable((char*)namePos, eventList, refID, buffer4 >> 24))
+							if (!GetResolvedModIndex(&modIdx)) continue;
+							if (var = script->AddVariable((char*)namePos, eventList, refID, modIdx))
 							{
 								*(UInt8*)varData = buffer1;
 								if (varData->refID && !varData->pad && !(varData->refID = GetResolvedRefID(varData->refID)))
@@ -323,13 +325,8 @@ void LoadGameCallback(void*)
 			}
 			case 'VAPJ':
 			{
-				if (!(changedFlags & kChangedFlag_AuxVars))
+				if (!(changedFlags & kChangedFlag_AuxVars) || (version < JIP_VARS_VERSION))
 					break;
-				if (version < 10)
-				{
-					PrintLog("LOAD GAME: AuxVars version obsolete > Skipping records.");
-					break;
-				}
 				bufPos = GetLoadGameBuffer(length);
 				AuxVarOwnersMap *ownersMap;
 				AuxVarVarsMap *aVarsMap;
@@ -339,12 +336,11 @@ void LoadGameCallback(void*)
 				bufPos += 2;
 				while (nRecs)
 				{
-					buffer1 = *bufPos++;
+					modIdx = *bufPos++;
 					nRecs--;
-					if ((buffer1 > 5) && (buffer4 = GetResolvedRefID(buffer1 << 24)))
+					if ((modIdx > 5) && GetResolvedModIndex(&modIdx))
 					{
 						ownersMap = nullptr;
-						modIdx = buffer4 >> 24;
 						nRefs = *(UInt16*)bufPos;
 						bufPos += 2;
 						while (nRefs)
@@ -353,7 +349,7 @@ void LoadGameCallback(void*)
 							bufPos += 4;
 							nVars = *(UInt16*)bufPos;
 							bufPos += 2;
-							if ((refID = GetResolvedRefID(refID)) && LookupFormByRefID(refID))
+							if ((refID = GetResolvedRefID(refID)) && (LookupFormByRefID(refID) || HasChangeData(refID)))
 							{
 								if (!ownersMap) ownersMap = s_auxVariablesPerm->Emplace(modIdx, AlignBucketCount(nRefs));
 								aVarsMap = ownersMap->Emplace(refID, AlignBucketCount(nVars));
@@ -437,13 +433,8 @@ void LoadGameCallback(void*)
 			}
 			case 'MRPJ':
 			{
-				if (!(changedFlags & kChangedFlag_RefMaps))
+				if (!(changedFlags & kChangedFlag_RefMaps) || (version < JIP_VARS_VERSION))
 					break;
-				if (version < 10)
-				{
-					PrintLog("LOAD GAME: RefMaps version obsolete > Skipping records.");
-					break;
-				}
 				bufPos = GetLoadGameBuffer(length);
 				RefMapVarsMap *rVarsMap;
 				RefMapIDsMap *idsMap;
@@ -451,14 +442,13 @@ void LoadGameCallback(void*)
 				bufPos += 2;
 				while (nRecs)
 				{
-					buffer1 = *bufPos++;
+					modIdx = *bufPos++;
 					nRecs--;
 					nVars = *(UInt16*)bufPos;
 					bufPos += 2;
-					if ((buffer1 > 5) && (buffer4 = GetResolvedRefID(buffer1 << 24)))
+					if ((modIdx > 5) && GetResolvedModIndex(&modIdx))
 					{
 						rVarsMap = nullptr;
-						modIdx = buffer4 >> 24;
 						while (nVars)
 						{
 							buffer1 = *bufPos++;
@@ -475,7 +465,7 @@ void LoadGameCallback(void*)
 								refID = *(UInt32*)bufPos;
 								bufPos += 4;
 								buffer1 = *bufPos++;
-								if ((refID = GetResolvedRefID(refID)) && LookupFormByRefID(refID))
+								if ((refID = GetResolvedRefID(refID)) && (LookupFormByRefID(refID) || HasChangeData(refID)))
 								{
 									if (!idsMap)
 									{
@@ -649,7 +639,7 @@ void SaveGameCallback(void*)
 	}
 	if (buffer2 = s_auxVariablesPerm->Size())
 	{
-		WriteRecord('VAPJ', 10, &buffer2, 2);
+		WriteRecord('VAPJ', JIP_VARS_VERSION, &buffer2, 2);
 		for (auto avModIt = s_auxVariablesPerm->Begin(); avModIt; ++avModIt)
 		{
 			WriteRecord8(avModIt.Key());
@@ -672,7 +662,7 @@ void SaveGameCallback(void*)
 	}
 	if (buffer2 = s_refMapArraysPerm->Size())
 	{
-		WriteRecord('MRPJ', 10, &buffer2, 2);
+		WriteRecord('MRPJ', JIP_VARS_VERSION, &buffer2, 2);
 		for (auto rmModIt = s_refMapArraysPerm->Begin(); rmModIt; ++rmModIt)
 		{
 			WriteRecord8(rmModIt.Key());

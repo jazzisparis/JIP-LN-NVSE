@@ -25,7 +25,7 @@ ExtraContainerChanges::Data *ExtraContainerChanges::Data::Create(TESObjectREFR *
 BSExtraData *BSExtraData::Create(UInt8 xType, UInt32 size, UInt32 vtbl)
 {
 	BSExtraData *xData = (BSExtraData*)GameHeapAlloc(size);
-	MEM_ZERO(xData, size);
+	ZERO_BYTES(xData, size);
 	*(UInt32*)xData = vtbl;
 	xData->type = xType;
 	return xData;
@@ -329,13 +329,15 @@ ExtraOriginalReference *ExtraOriginalReference::Create(TESObjectREFR *_originalR
 	return xOriginalRef;
 }
 
-ExtraUses *ExtraUses::Create()
+ExtraUses *ExtraUses::Create(UInt8 _uses)
 {
 	UInt32 *dataPtr = (UInt32*)GameHeapAlloc(sizeof(ExtraUses));
 	dataPtr[0] = kVtbl_ExtraUses;
 	dataPtr[1] = kExtraData_Uses;
 	dataPtr[2] = 0;
-	return (ExtraUses*)dataPtr;
+	ExtraUses *xUses = (ExtraUses*)dataPtr;
+	xUses->uses = _uses;
+	return xUses;
 }
 
 ExtraTimeLeft *ExtraTimeLeft::Create(float _timeLeft)

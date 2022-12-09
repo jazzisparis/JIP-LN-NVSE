@@ -62,8 +62,7 @@ public:
 	T_Data *Push(Args && ...args)
 	{
 		Node *newNode = Pool_CAlloc<Node>();
-		T_Data *data = &newNode->data;
-		new (data) T_Data(std::forward<Args>(args)...);
+		T_Data *data = new (&newNode->data) T_Data(std::forward<Args>(args)...);
 		newNode->next = head;
 		head = newNode;
 		return data;
@@ -174,7 +173,7 @@ template <typename T_Data> class LinkedList
 	}
 
 	template <class Matcher>
-	Node *FindNode(Matcher &matcher) const
+	Node *FindNode(const Matcher &matcher) const
 	{
 		if (head)
 		{
@@ -220,35 +219,27 @@ public:
 	T_Data *Prepend(Data_Arg item)
 	{
 		Node *newNode = PrependNew();
-		T_Data *data = &newNode->data;
-		memcpy(data, &item, sizeof(T_Data));
-		return data;
+		return (T_Data*)memcpy(&newNode->data, &item, sizeof(T_Data));
 	}
 
 	template <typename ...Args>
 	T_Data *Prepend(Args && ...args)
 	{
 		Node *newNode = PrependNew();
-		T_Data *data = &newNode->data;
-		new (data) T_Data(std::forward<Args>(args)...);
-		return data;
+		return new (&newNode->data) T_Data(std::forward<Args>(args)...);
 	}
 
 	T_Data *Append(Data_Arg item)
 	{
 		Node *newNode = AppendNew();
-		T_Data *data = &newNode->data;
-		memcpy(data, &item, sizeof(T_Data));
-		return data;
+		return (T_Data*)memcpy(&newNode->data, &item, sizeof(T_Data));
 	}
 
 	template <typename ...Args>
 	T_Data *Append(Args && ...args)
 	{
 		Node *newNode = AppendNew();
-		T_Data *data = &newNode->data;
-		new (data) T_Data(std::forward<Args>(args)...);
-		return data;
+		return new (&newNode->data) T_Data(std::forward<Args>(args)...);
 	}
 
 	void AppendList(std::initializer_list<T_Data> &&inList)
@@ -260,18 +251,14 @@ public:
 	T_Data *Insert(UInt32 index, Data_Arg item)
 	{
 		Node *newNode = InsertNew(index);
-		T_Data *data = &newNode->data;
-		memcpy(data, &item, sizeof(T_Data));
-		return data;
+		return (T_Data*)memcpy(&newNode->data, &item, sizeof(T_Data));
 	}
 
 	template <typename ...Args>
 	T_Data *Insert(UInt32 index, Args && ...args)
 	{
 		Node *newNode = InsertNew(index);
-		T_Data *data = &newNode->data;
-		new (data) T_Data(std::forward<Args>(args)...);
-		return data;
+		return new (&newNode->data) T_Data(std::forward<Args>(args)...);
 	}
 
 	T_Data *GetNth(UInt32 index) const
@@ -308,7 +295,7 @@ public:
 	}
 
 	template <class Matcher>
-	SInt32 GetIndexOf(Matcher &matcher) const
+	SInt32 GetIndexOf(const Matcher &matcher) const
 	{
 		if (head)
 		{
@@ -341,7 +328,7 @@ public:
 	}
 
 	template <class Matcher>
-	bool IsInList(Matcher &matcher) const
+	bool IsInList(const Matcher &matcher) const
 	{
 		if (head)
 		{
@@ -368,7 +355,7 @@ public:
 	}
 
 	template <class Matcher>
-	T_Data *Remove(Matcher &matcher)
+	T_Data *Remove(const Matcher &matcher)
 	{
 		Node *pNode = FindNode(matcher);
 		if (pNode)
@@ -423,8 +410,7 @@ public:
 
 	class Iterator
 	{
-		friend LinkedList;
-
+	protected:
 		Node		*pNode;
 
 	public:
@@ -475,7 +461,7 @@ public:
 	}
 
 	template <class Matcher>
-	Iterator Find(Matcher &matcher)
+	Iterator Find(const Matcher &matcher)
 	{
 		return Iterator(FindNode(matcher));
 	}
@@ -499,7 +485,7 @@ public:
 	__forceinline char Compare(Key_Arg inKey) const
 	{
 		if (inKey < key) return -1;
-		return (key < inKey) ? 1 : 0;
+		return key < inKey;
 	}
 	__forceinline void Clear() {key.~T_Key();}
 };
@@ -561,7 +547,8 @@ template <typename T_Key, typename T_Data, const UInt32 _default_alloc = MAP_DEF
 	using M_Key = MapKey<T_Key>;
 	using M_Value = std::conditional_t<(sizeof(T_Data) <= 8) || (sizeof(T_Data) <= alignof(T_Key)), MapValue<T_Data>, MapValue_p<T_Data>>;
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
-	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
+	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, const T_Data&>;
+	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 	using M_Pair = MappedPair<T_Key, T_Data>;
 	using Init_List = std::initializer_list<M_Pair>;
 
@@ -614,6 +601,7 @@ public:
 		{
 			Clear();
 			Pool_CFree<Entry>(entries, numAlloc);
+			entries = nullptr;
 		}
 	}
 
@@ -744,8 +732,7 @@ public:
 
 	class Iterator
 	{
-		friend Map;
-
+	protected:
 		Entry		*pEntry;
 		UInt32		count;
 
@@ -753,9 +740,9 @@ public:
 
 	public:
 		Key_Arg Key() const {return pEntry->key.Get();}
-		Data_Arg operator()() const {return pEntry->value.Get();}
-		Data_Arg operator*() const {return pEntry->value.Get();}
-		Data_Arg operator->() const {return pEntry->value.Get();}
+		Data_Res operator()() const {return pEntry->value.Get();}
+		Data_Res operator*() const {return pEntry->value.Get();}
+		Data_Res operator->() const {return pEntry->value.Get();}
 		T_Data& Ref() {return pEntry->value.Get();}
 
 		explicit operator bool() const {return count != 0;}
@@ -782,6 +769,7 @@ public:
 
 	class OpIterator : public Iterator
 	{
+		using Iterator::pEntry, Iterator::count, Iterator::Find;
 	public:
 		void operator--()
 		{
@@ -827,6 +815,7 @@ public:
 
 	class CpIterator : public Iterator
 	{
+		using Iterator::pEntry, Iterator::count;
 	public:
 		CpIterator(Map &source)
 		{
@@ -993,8 +982,7 @@ public:
 
 	class Iterator
 	{
-		friend Set;
-
+	protected:
 		M_Key		*pKey;
 		UInt32		count;
 
@@ -1027,6 +1015,7 @@ public:
 
 	class CpIterator : public Iterator
 	{
+		using Iterator::pKey, Iterator::count;
 	public:
 		CpIterator(Set &source)
 		{
@@ -1146,7 +1135,8 @@ template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = 
 {
 	using H_Key = HashedKey<T_Key>;
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
-	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
+	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, const T_Data&>;
+	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 	using M_Pair = MappedPair<T_Key, T_Data>;
 	using Init_List = std::initializer_list<M_Pair>;
 
@@ -1210,7 +1200,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = 
 
 	Bucket *End() const {return buckets + NUM_BUCKETS;}
 
-	_NOINLINE void __fastcall ResizeTable(UInt32 newCount)
+	__declspec(noinline) void __fastcall ResizeTable(UInt32 newCount)
 	{
 		Bucket *pBucket = buckets, *pEnd = End(), *newBuckets = (Bucket*)AllocBuckets(newCount);
 		Entry *pEntry, *pTemp;
@@ -1409,7 +1399,7 @@ public:
 	void DumpLoads()
 	{
 		UInt32 loadsArray[0x40];
-		MEM_ZERO(loadsArray, sizeof(loadsArray));
+		ZERO_BYTES(loadsArray, sizeof(loadsArray));
 		Bucket *pBucket = buckets;
 		UInt32 maxLoad = 0, entryCount;
 		for (Bucket *pEnd = End(); pBucket != pEnd; pBucket++)
@@ -1426,8 +1416,7 @@ public:
 
 	class Iterator
 	{
-		friend UnorderedMap;
-
+	protected:
 		UnorderedMap	*table;
 		Bucket			*bucket;
 		Entry			*entry;
@@ -1465,10 +1454,10 @@ public:
 
 		UnorderedMap* Table() const {return table;}
 		Key_Arg Key() const {return entry->key.Get();}
-		Data_Arg operator()() const {return entry->value;}
+		Data_Res operator()() const {return entry->value;}
 		T_Data& Ref() {return entry->value;}
-		Data_Arg operator*() const {return entry->value;}
-		Data_Arg operator->() const {return entry->value;}
+		Data_Res operator*() const {return entry->value;}
+		Data_Res operator->() const {return entry->value;}
 
 		explicit operator bool() const {return entry != nullptr;}
 		void operator++()
@@ -1574,7 +1563,7 @@ template <typename T_Key, const UInt32 _default_bucket_count = MAP_DEFAULT_BUCKE
 
 	Bucket *End() const {return buckets + NUM_BUCKETS;}
 
-	_NOINLINE void __fastcall ResizeTable(UInt32 newCount)
+	__declspec(noinline) void __fastcall ResizeTable(UInt32 newCount)
 	{
 		Bucket *pBucket = buckets, *pEnd = End(), *newBuckets = (Bucket*)AllocBuckets(newCount);
 		Entry *pEntry, *pTemp;
@@ -1702,7 +1691,7 @@ public:
 	void DumpLoads()
 	{
 		UInt32 loadsArray[0x40];
-		MEM_ZERO(loadsArray, sizeof(loadsArray));
+		ZERO_BYTES(loadsArray, sizeof(loadsArray));
 		Bucket *pBucket = buckets;
 		UInt32 maxLoad = 0, entryCount;
 		for (Bucket *pEnd = End(); pBucket != pEnd; pBucket++)
@@ -1719,8 +1708,7 @@ public:
 
 	class Iterator
 	{
-		friend UnorderedSet;
-
+	protected:
 		UnorderedSet	*table;
 		Bucket			*bucket;
 		Entry			*entry;
@@ -1764,14 +1752,15 @@ public:
 
 template <typename T_Data, const UInt32 _default_alloc = VECTOR_DEFAULT_ALLOC> class Vector
 {
-	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
+	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, const T_Data&>;
+	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 	using Init_List = std::initializer_list<T_Data>;
 
 	T_Data		*data;		// 00
 	UInt32		numItems;	// 04
 	UInt32		numAlloc;	// 08
 
-	_NOINLINE T_Data *AllocateData()
+	__declspec(noinline) T_Data *AllocateData()
 	{
 		if (!data)
 		{
@@ -1810,21 +1799,17 @@ public:
 
 	T_Data *GetPtr(UInt32 index) const {return (index < numItems) ? (data + index) : nullptr;}
 
-	Data_Arg Top() const {return data[numItems - 1];}
+	Data_Res Top() const {return data[numItems - 1];}
 
 	T_Data* Append(Data_Arg item)
 	{
-		T_Data *pData = AllocateData();
-		memcpy(pData, &item, sizeof(T_Data));
-		return pData;
+		return (T_Data*)memcpy(AllocateData(), &item, sizeof(T_Data));
 	}
 
 	template <typename ...Args>
 	T_Data* Append(Args&& ...args)
 	{
-		T_Data *pData = AllocateData();
-		new (pData) T_Data(std::forward<Args>(args)...);
-		return pData;
+		return new (AllocateData()) T_Data(std::forward<Args>(args)...);
 	}
 
 	void AppendList(Init_List &&inList)
@@ -1860,8 +1845,7 @@ public:
 			pData = data + index;
 			memmove(pData + 1, pData, sizeof(T_Data) * size);
 		}
-		new (pData) T_Data(std::forward<Args>(args)...);
-		return pData;
+		return new (pData) T_Data(std::forward<Args>(args)...);
 	}
 
 	void Concatenate(const Vector &source)
@@ -1954,6 +1938,7 @@ public:
 
 	void MoveToEnd(Data_Arg item)
 	{
+		static_assert(std::is_scalar_v<T_Data>);
 		if (numItems > 1)
 		{
 			T_Data *pData = data, *pEnd = End() - 1;
@@ -1988,7 +1973,7 @@ public:
 	}
 
 	template <class Matcher>
-	SInt32 GetIndexOf(Matcher &matcher) const
+	SInt32 GetIndexOf(const Matcher &matcher) const
 	{
 		if (numItems)
 		{
@@ -2005,7 +1990,7 @@ public:
 	}
 
 	template <class Matcher>
-	T_Data* Find(Matcher &matcher) const
+	T_Data* Find(const Matcher &matcher) const
 	{
 		if (numItems)
 		{
@@ -2053,7 +2038,7 @@ public:
 	}
 
 	template <class Matcher>
-	UInt32 Remove(Matcher &matcher)
+	UInt32 Remove(const Matcher &matcher)
 	{
 		if (numItems)
 		{
@@ -2257,8 +2242,7 @@ public:
 
 	class Iterator
 	{
-		friend Vector;
-
+	protected:
 		T_Data		*pData;
 		UInt32		count;
 
@@ -2282,9 +2266,9 @@ public:
 			}
 		}
 
-		Data_Arg operator*() const {return *pData;}
-		Data_Arg operator->() const {return *pData;}
-		Data_Arg operator()() const {return *pData;}
+		Data_Res operator*() const {return *pData;}
+		Data_Res operator->() const {return *pData;}
+		Data_Res operator()() const {return *pData;}
 		T_Data& Ref() {return *pData;}
 
 		Iterator(Vector &source) : pData(source.data), count(source.numItems) {}
@@ -2302,6 +2286,7 @@ public:
 
 	class RvIterator : public Iterator
 	{
+		using Iterator::pData, Iterator::count;
 	public:
 		void operator--()
 		{
@@ -2336,6 +2321,7 @@ public:
 
 	class CpIterator : public Iterator
 	{
+		using Iterator::pData, Iterator::count;
 	public:
 		CpIterator(Vector &source)
 		{
@@ -2391,8 +2377,7 @@ public:
 
 	class Iterator
 	{
-		friend FixedTypeArray;
-
+	protected:
 		T_Data		*pData;
 		UInt32		count;
 

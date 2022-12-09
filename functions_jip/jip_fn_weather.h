@@ -21,7 +21,7 @@ DEFINE_COMMAND_PLUGIN(ReloadCloudTextures, 0, 0, NULL);
 
 bool Cmd_GetWeatherImageSpaceMod_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESWeather *weather;
 	UInt32 time;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &time) && (time <= 5) && weather->imageSpaceMods[time])
@@ -198,9 +198,8 @@ bool Cmd_SetWeatherRGBColor_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCurrentWeather_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESWeather *weather = g_TES->sky ? g_TES->sky->currWeather : NULL;
-	if (weather) REFR_RES = weather->refID;
+	REFR_RES = weather ? weather->refID : 0;
 	DoConsolePrint(weather);
 	return true;
 }

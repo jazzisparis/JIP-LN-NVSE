@@ -54,7 +54,7 @@ SaveGameManager* SaveGameManager::GetSingleton()
 	return *(SaveGameManager**)0x11DE134;
 }
 
-UInt32 ScriptEventList::ResetAllVariables()
+UInt32 ScriptLocals::ResetAllVariables()
 {
 	if (!m_vars) return 0;
 	ListNode<ScriptVar> *varIter = m_vars->Head();
@@ -73,7 +73,7 @@ UInt32 ScriptEventList::ResetAllVariables()
 	return numVars;
 }
 
-ScriptVar *ScriptEventList::GetVariable(UInt32 id)
+ScriptVar *ScriptLocals::GetVariable(UInt32 id)
 {
 	if (m_vars)
 	{
@@ -90,9 +90,9 @@ ScriptVar *ScriptEventList::GetVariable(UInt32 id)
 	return NULL;
 }
 
-ScriptEventList *ScriptEventList::CreateCopy()
+ScriptLocals *ScriptLocals::CreateCopy()
 {
-	ScriptEventList *pEventList = (ScriptEventList*)GameHeapAlloc(sizeof(ScriptEventList));
+	ScriptLocals *pEventList = (ScriptLocals*)GameHeapAlloc(sizeof(ScriptLocals));
 	pEventList->m_script = m_script;
 	pEventList->m_flags = m_flags;
 	pEventList->m_eventList = nullptr;
@@ -143,3 +143,5 @@ ScriptEventList *ScriptEventList::CreateCopy()
 	}
 	return pEventList;
 }
+
+BGSSaveLoadGame *g_BGSSaveLoadGame;

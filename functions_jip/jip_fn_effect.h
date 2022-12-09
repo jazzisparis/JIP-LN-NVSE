@@ -41,7 +41,7 @@ bool Cmd_GetNumEffects_Execute(COMMAND_ARGS)
 
 bool Cmd_GetNthEffectBase_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	MagicItem *magicItem;
 	UInt32 idx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &idx))
@@ -215,7 +215,7 @@ bool Cmd_GetNumActorEffects_Execute(COMMAND_ARGS)
 
 bool Cmd_GetNthActorEffect_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	UInt32 idx;
 	TESActorBase *actorBase = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &idx, &actorBase)) return true;
@@ -231,7 +231,7 @@ bool Cmd_GetNthActorEffect_Execute(COMMAND_ARGS)
 
 bool Cmd_GetActorUnarmedEffect_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESActorBase *actorBase = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	if (!actorBase)
@@ -270,7 +270,7 @@ bool Cmd_SetActorUnarmedEffect_Execute(COMMAND_ARGS)
 
 bool Cmd_GetAddictionEffect_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	AlchemyItem *alch;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &alch) && IS_ID(alch, AlchemyItem) && alch->withdrawalEffect)
 		REFR_RES = alch->withdrawalEffect->refID;
@@ -336,7 +336,7 @@ bool Cmd_GetActiveEffects_Execute(COMMAND_ARGS)
 	}
 	while (iter = iter->next);
 	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -391,7 +391,7 @@ bool Cmd_GetTempEffects_Execute(COMMAND_ARGS)
 		TempElements *tmpElements = GetTempElements();
 		for (auto entry = sortEffects.Begin(); entry; ++entry)
 			tmpElements->Append(entry().valuesArr);
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	}
 	return true;
 }
@@ -489,7 +489,7 @@ bool Cmd_SetBaseEffectFlag_Execute(COMMAND_ARGS)
 
 bool Cmd_GetBaseEffectScript_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	EffectSetting *effect;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &effect) && IS_ID(effect, EffectSetting) && (effect->archtype == 1) && effect->associatedItem)
 		REFR_RES = effect->associatedItem->refID;

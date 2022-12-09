@@ -42,7 +42,7 @@ bool Cmd_SetBipedModelPathAlt_Execute(COMMAND_ARGS)
 
 bool Cmd_GetArmorAudioTemplate_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESObjectARMO *armor;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &armor) && IS_TYPE(armor, TESObjectARMO) && !armor->overrideSounds && armor->audioTemplate)
 		REFR_RES = armor->audioTemplate->refID;

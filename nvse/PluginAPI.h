@@ -526,9 +526,9 @@ struct NVSEScriptInterface
 
 	bool	(*CallFunction)(Script *funcScript, TESObjectREFR *callingObj, TESObjectREFR *container, NVSEArrayVarInterface::Element *result, UInt8 numArgs, ...);
 	int		(*GetFunctionParams)(Script *funcScript, UInt8 *paramTypesOut);
-	bool	(*ExtractArgsEx)(ParamInfo *paramInfo, UInt8 *scriptDataIn, UInt32 *scriptDataOffset, Script *scriptObj, ScriptEventList *eventList, ...);
+	bool	(*ExtractArgsEx)(ParamInfo *paramInfo, UInt8 *scriptDataIn, UInt32 *scriptDataOffset, Script *scriptObj, ScriptLocals *eventList, ...);
 	bool	(*ExtractFormatStringArgs)(UInt32 fmtStringPos, char *buffer, ParamInfo *paramInfo, UInt8 *scriptDataIn, UInt32 *scriptDataOffset, 
-										Script *scriptObj, ScriptEventList *eventList, UInt32 maxParams, ...);
+										Script *scriptObj, ScriptLocals *eventList, UInt32 maxParams, ...);
 	bool	(*CallFunctionAlt)(Script *funcScript, TESObjectREFR *callingObj, UInt8 numArgs, ...);
 };
 

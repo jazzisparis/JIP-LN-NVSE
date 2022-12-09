@@ -6,7 +6,6 @@ _WriteRecord WriteRecord;
 _WriteRecordData WriteRecordData;
 _GetNextRecordInfo GetNextRecordInfo;
 _ReadRecordData ReadRecordData;
-_ResolveRefID ResolveRefID;
 _WriteRecord8 WriteRecord8;
 _WriteRecord16 WriteRecord16;
 _WriteRecord32 WriteRecord32;
@@ -21,7 +20,6 @@ _GetStringVar GetStringVar;
 _AssignString AssignString;
 _CreateArray CreateArray;
 _CreateStringMap CreateStringMap;
-_AssignCommandResult AssignCommandResult;
 _SetElement SetElement;
 _AppendElement AppendElement;
 _GetArraySize GetArraySize;
@@ -40,7 +38,6 @@ _InventoryRefCreate InventoryRefCreate;
 _InventoryRefGetForID InventoryRefGetForID;
 
 DIHookControl *g_DIHookCtrl;
-UInt8 *g_numPreloadMods;
 
 _UIOInjectComponent UIOInjectComponent = nullptr;
 
@@ -125,7 +122,7 @@ const char kMenuIDJumpTable[] =
 
 UInt32 s_serializedFlags = 0;
 
-_NAKED void __vectorcall ResultVars::Set(__m128 values)
+__declspec(naked) void __vectorcall ResultVars::Set(__m128 values)
 {
 	__asm
 	{
@@ -134,16 +131,16 @@ _NAKED void __vectorcall ResultVars::Set(__m128 values)
 		shufps	xmm0, xmm0, 0xFE
 		cvtps2pd	xmm0, xmm0
 		mov		eax, [ecx]
-		movq	qword ptr [eax+8], xmm1
+		movlpd	[eax+8], xmm1
 		mov		eax, [ecx+4]
-		movhpd	qword ptr [eax+8], xmm1
+		movhpd	[eax+8], xmm1
 		mov		eax, [ecx+8]
-		movq	qword ptr [eax+8], xmm0
+		movlpd	[eax+8], xmm0
 		retn
 	}
 }
 
-_NAKED void __vectorcall ResultVars::Set(__m128 values, const __m128 modifier)
+__declspec(naked) void __vectorcall ResultVars::Set(__m128 values, const __m128 modifier)
 {
 	__asm
 	{
@@ -152,89 +149,127 @@ _NAKED void __vectorcall ResultVars::Set(__m128 values, const __m128 modifier)
 		shufps	xmm0, xmm0, 0xFE
 		cvtps2pd	xmm0, xmm0
 		mov		eax, [ecx]
-		movq	qword ptr [eax+8], xmm1
+		movlpd	[eax+8], xmm1
 		mov		eax, [ecx+4]
-		movhpd	qword ptr [eax+8], xmm1
+		movhpd	[eax+8], xmm1
 		mov		eax, [ecx+8]
-		movq	qword ptr [eax+8], xmm0
+		movlpd	[eax+8], xmm0
 		retn
 	}
 }
 
-_NOINLINE TempFormList *GetTempFormList()
+__declspec(noinline) TempFormList *GetTempFormList()
 {
 	thread_local static TempObject<TempFormList> s_tempFormList;
 	s_tempFormList->Clear();
 	return *s_tempFormList;
 }
 
-_NOINLINE TempElements *GetTempElements()
+__declspec(noinline) TempElements *GetTempElements()
 {
 	thread_local static TempObject<TempElements> s_tempElements;
 	s_tempElements->Clear();
 	return *s_tempElements;
 }
 
-UInt8 s_resolvedModIndices[0x100];
-
-_NAKED void InitResolvedModIndices()
+__declspec(naked) TESForm* __stdcall LookupFormByRefID(UInt32 refID)
 {
 	__asm
 	{
-		push	ebx
-		push	esi
-		push	edi
-		mov		esi, offset s_resolvedModIndices
-		mov		ecx, 0x40
-		mov		eax, 0xFFFFFFFF
-		mov		edi, esi
-		rep stosd
-		mov		eax, g_numPreloadMods
-		movzx	edi, byte ptr [eax]
-		xor		ebx, ebx
-		push	ecx
-		push	esp
-		push	ecx
+		mov		ecx, ds:0x11C54C0
+		mov		eax, [esp+4]
+		xor		edx, edx
+		div		dword ptr [ecx+4]
+		mov		eax, [ecx+8]
+		mov		eax, [eax+edx*4]
+		test	eax, eax
+		jz		done
+		mov		edx, [esp+4]
 		ALIGN 16
 	iterHead:
-		cmp		ebx, edi
-		jnb		done
-		mov		[esp+3], bl
-		call	ResolveRefID
-		mov		ecx, ebx
-		inc		ebx
-		test	al, al
-		jz		iterHead
-		mov		al, [esp+0xB]
-		mov		byte ptr [ecx+esi], al
-		jmp		iterHead
-		ALIGN 16
+		cmp		[eax+4], edx
+		jz		found
+		mov		eax, [eax]
+		test	eax, eax
+		jnz		iterHead
+		retn	4
+	found:
+		mov		eax, [eax+8]
 	done:
-		add		esp, 0xC
-		pop		edi
-		pop		esi
-		pop		ebx
+		retn	4
+	}
+}
+
+__declspec(naked) bool __stdcall HasChangeData(UInt32 refID)
+{
+	__asm
+	{
+		mov		eax, g_BGSSaveLoadGame
+		mov		ecx, [eax]
+		mov		eax, [esp+4]
+		xor		edx, edx
+		div		dword ptr [ecx+4]
+		mov		eax, [ecx+8]
+		mov		eax, [eax+edx*4]
+		test	eax, eax
+		jz		done
+		mov		edx, [esp+4]
+		ALIGN 16
+	iterHead:
+		cmp		[eax+4], edx
+		jz		found
+		mov		eax, [eax]
+		test	eax, eax
+		jnz		iterHead
+		retn	4
+	found:
+		mov		al, 1
+	done:
+		retn	4
+	}
+}
+
+__declspec(naked) bool __fastcall GetResolvedModIndex(UInt8 *pModIdx)
+{
+	__asm
+	{
+		movzx	edx, byte ptr [ecx]
+		cmp		dl, 0xFF
+		jz		retn1
+		mov		eax, g_BGSSaveLoadGame
+		mov		al, [eax+edx+0x44]
+		cmp		al, 0xFF
+		jz		retn0
+		mov		[ecx], al
+	retn1:
+		mov		al, 1
+		retn
+	retn0:
+		xor		al, al
 		retn
 	}
 }
 
-_NAKED UInt32 __stdcall GetResolvedRefID(UInt32 refID)
+__declspec(naked) UInt32 __fastcall GetResolvedRefID(UInt32 refID)
 {
 	__asm
 	{
-		movzx	eax, byte ptr [esp+7]
-		cmp		al, 0xFF
+		push	ecx
+		movzx	edx, byte ptr [esp+3]
+		cmp		dl, 0xFF
 		jz		retnArg
-		mov		cl, s_resolvedModIndices[eax]
-		cmp		cl, 0xFF
+		mov		ecx, g_BGSSaveLoadGame
+		mov		al, [ecx+edx+0x44]
+		cmp		al, 0xFF
 		jz		retn0
-		mov		[esp+7], cl
+		mov		[esp+3], al
 	retnArg:
-		mov		eax, [esp+4]
-		retn	4
+		pop		eax
+		retn
 	retn0:
 		xor		eax, eax
-		retn	4
+		pop		ecx
+		retn
 	}
 }
 
@@ -263,7 +298,7 @@ UInt32 __fastcall StringToRef(char *refStr)
 	return *findStr = GetResolvedRefID(HexToUInt(refStr));
 }
 
-_NOINLINE InventoryItemsMap *GetInventoryItemsMap()
+__declspec(noinline) InventoryItemsMap *GetInventoryItemsMap()
 {
 	thread_local static TempObject<InventoryItemsMap> s_inventoryItemsMap;
 	s_inventoryItemsMap->Clear();
@@ -318,7 +353,7 @@ bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *inv
 	return !invItemsMap->Empty();
 }
 
-_NAKED void __fastcall ShowItemMessage(TESForm *item, const char *msgStr)
+__declspec(naked) void __fastcall ShowItemMessage(TESForm *item, const char *msgStr)
 {
 	__asm
 	{
@@ -351,28 +386,28 @@ _NAKED void __fastcall ShowItemMessage(TESForm *item, const char *msgStr)
 	}
 }
 
-struct alignas(16) RayCastData
+struct RayCastData
 {
-	AlignedVector4	pos0;		// 00	
-	AlignedVector4	pos1;		// 10
-	UInt8			byte20;		// 20
-	UInt8			pad21[3];	// 21
-	UInt8			layerType;	// 24
-	UInt8			filterFlags;// 25
-	UInt16			group;		// 26
-	UInt32			unk28[6];	// 28
-	float			flt40;		// 40
-	UInt32			unk44[15];	// 44
-	hkCdBody		*cdBody;	// 80
-	UInt32			unk84[3];	// 84
-	AlignedVector4	vector90;	// 90
-	UInt32			unkA0[3];	// A0
-	UInt8			byteAC;		// AC
-	UInt8			padAD[3];	// AD
+	hkVector4	pos0;		// 00	
+	hkVector4	pos1;		// 10
+	UInt8		byte20;		// 20
+	UInt8		pad21[3];	// 21
+	UInt8		layerType;	// 24
+	UInt8		filterFlags;// 25
+	UInt16		group;		// 26
+	UInt32		unk28[6];	// 28
+	float		flt40;		// 40
+	UInt32		unk44[15];	// 44
+	hkCdBody	*cdBody;	// 80
+	UInt32		unk84[3];	// 84
+	hkVector4	vector90;	// 90
+	UInt32		unkA0[3];	// A0
+	UInt8		byteAC;		// AC
+	UInt8		padAD[3];	// AD
 };
 static_assert(sizeof(RayCastData) == 0xB0);
 
-_NAKED NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
+__declspec(naked) NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
 {
 	__asm
 	{
@@ -395,7 +430,7 @@ _NAKED NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
 		addps	xmm0, xmm1
 		movaps	[ebx+0x10], xmm0
 		mov		dword ptr [ebx+0x40], 0x3F800000
-		mov		eax, 0xFFFFFFFF
+		or		eax, 0xFFFFFFFF
 		mov		[ebx+0x44], eax
 		mov		[ebx+0x50], eax
 		xor		eax, eax
@@ -431,14 +466,14 @@ _NAKED NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
 	}
 }
 
-_NAKED NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType)
+__declspec(naked) NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType)
 {
 	__asm
 	{
 		push	ebp
 		mov		ebp, esp
 		and		esp, 0xFFFFFFF0
-		sub		esp, 0xC0
+		sub		esp, 0xB0
 		mov		ecx, esp
 		call	_GetRayCastObject
 		leave
@@ -446,24 +481,23 @@ _NAKED NiAVObject* __stdcall GetRayCastObject(const NiVector3 &posVector, float 
 	}
 }
 
-_NAKED bool NiVector4::RayCastCoords(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType)
+__declspec(naked) bool NiVector4::RayCastCoords(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType)
 {
 	__asm
 	{
 		push	ebp
 		mov		ebp, esp
 		and		esp, 0xFFFFFFF0
-		sub		esp, 0xC0
+		sub		esp, 0xB0
 		push	ecx
 		lea		ecx, [esp+4]
 		call	_GetRayCastObject
 		pop		ecx
-		movss	xmm0, [esp+0x40]
-		shufps	xmm0, xmm0, 0x40
-		movaps	xmm1, PS_V3_One
+		movaps	xmm0, [esp]
+		movaps	xmm1, [esp+0x10]
 		subps	xmm1, xmm0
-		mulps	xmm0, [esp+0x10]
-		mulps	xmm1, [esp]
+		pshufd	xmm2, [esp+0x40], 0
+		mulps	xmm1, xmm2
 		addps	xmm0, xmm1
 		mulps	xmm0, PS_HKUnitCnvrt
 		movups	[ecx], xmm0
@@ -472,17 +506,11 @@ _NAKED bool NiVector4::RayCastCoords(const NiVector3 &posVector, float *rotMatRo
 		mov		eax, g_TES
 		cmp		dword ptr [eax+0x34], 0
 		jnz		done
-		mov		ecx, [eax+8]
-		xorps	xmm1, xmm1
-		unpcklpd	xmm0, xmm1
 		cvttps2dq	xmm0, xmm0
 		psrad	xmm0, 0xC
-		movd	eax, xmm0
-		shl		eax, 0x10
-		pextrw	edx, xmm0, 2
-		or		eax, edx
-		push	eax
-		call	GridCellArray::GetCell
+		pshuflw	xmm0, xmm0, 2
+		mov		ecx, [eax+8]
+		call	GridCellArray::GetCellAtCoord
 		test	eax, eax
 	done:
 		setnz	al
@@ -491,14 +519,14 @@ _NAKED bool NiVector4::RayCastCoords(const NiVector3 &posVector, float *rotMatRo
 	}
 }
 
-_NAKED int __stdcall GetRayCastMaterial(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType)
+__declspec(naked) int __stdcall GetRayCastMaterial(const NiVector3 &posVector, float *rotMatRow, float maxRange, SInt32 layerType)
 {
 	__asm
 	{
 		push	ebp
 		mov		ebp, esp
 		and		esp, 0xFFFFFFF0
-		sub		esp, 0xD0
+		sub		esp, 0xC0
 		lea		ecx, [esp+0x10]
 		call	_GetRayCastObject
 		test	eax, eax
@@ -542,12 +570,11 @@ _NAKED int __stdcall GetRayCastMaterial(const NiVector3 &posVector, float *rotMa
 		mov		eax, [ecx+0x10]
 		jmp		convert
 	isTerrain:
-		movss	xmm0, [esp+0x50]
-		shufps	xmm0, xmm0, 0x40
-		movaps	xmm1, PS_V3_One
+		movaps	xmm0, [esp+0x10]
+		movaps	xmm1, [esp+0x20]
 		subps	xmm1, xmm0
-		mulps	xmm0, [esp+0x20]
-		mulps	xmm1, [esp+0x10]
+		pshufd	xmm2, [esp+0x50], 0
+		mulps	xmm1, xmm2
 		addps	xmm0, xmm1
 		mulps	xmm0, PS_HKUnitCnvrt
 		movaps	[esp], xmm0
@@ -565,7 +592,7 @@ _NAKED int __stdcall GetRayCastMaterial(const NiVector3 &posVector, float *rotMa
 		leave
 		retn	0x14
 	invalid:
-		mov		eax, 0xFFFFFFFF
+		or		eax, 0xFFFFFFFF
 		leave
 		retn	0x10
 	}
@@ -575,17 +602,16 @@ TempObject<UnorderedMap<TESNPC*, AppearanceUndo*>> s_appearanceUndoMap;
 
 TempObject<UnorderedSet<TESGlobal*>> s_resolvedGlobals;
 
-_NAKED UInt32 TESGlobal::ResolveRefValue()
+__declspec(naked) UInt32 TESGlobal::ResolveRefValue()
 {
 	__asm
 	{
-		mov		word ptr [ecx+6], 1
 		push	esi
 		lea		esi, [ecx+0x24]
-		mov		eax, [esi]
-		cmp		al, 0xFF
-		jz		doLookup
-		push	eax
+		mov		word ptr [ecx+6], 1
+		mov		ecx, [esi]
+		cmp		ecx, 0xFF000000
+		jnb		doLookup
 		call	GetResolvedRefID
 		test	eax, eax
 		jz		invalid
@@ -688,7 +714,7 @@ bool __fastcall GetVariableAdded(UInt32 ownerID, char *varName)
 	return findOwner->HasKey(varName);
 }
 
-ScriptVar *Script::AddVariable(char *varName, ScriptEventList *eventList, UInt32 ownerID, UInt8 modIdx)
+ScriptVar *Script::AddVariable(char *varName, ScriptLocals *eventList, UInt32 ownerID, UInt8 modIdx)
 {
 	VariableInfo *varInfo = GetVariableByName(varName);
 	if (!varInfo)
@@ -697,7 +723,7 @@ ScriptVar *Script::AddVariable(char *varName, ScriptEventList *eventList, UInt32
 		ZeroMemory(varInfo, sizeof(VariableInfo));
 		varInfo->idx = ++info.varCount;
 		varInfo->name.Set(varName);
-		varList.Append(varInfo);
+		varList.Prepend(varInfo);
 		s_addedVariables()[refID].Insert(varName);
 	}
 	else if (!GetVariableAdded(refID, varName)) return nullptr;
@@ -707,9 +733,8 @@ ScriptVar *Script::AddVariable(char *varName, ScriptEventList *eventList, UInt32
 	{
 		var = (ScriptVar*)GameHeapAlloc(sizeof(ScriptVar));
 		var->id = varInfo->idx;
-		var->next = nullptr;
 		var->data = 0.0;
-		eventList->m_vars->Append(var);
+		eventList->m_vars->Prepend(var);
 	}
 
 	if (varName[0] != '*')
@@ -717,7 +742,7 @@ ScriptVar *Script::AddVariable(char *varName, ScriptEventList *eventList, UInt32
 	return var;
 }
 
-_NAKED TESIdleForm *AnimData::GetPlayedIdle()
+__declspec(naked) TESIdleForm *AnimData::GetPlayedIdle()
 {
 	__asm
 	{
@@ -853,7 +878,7 @@ ExtraDataList *InventoryRef::CreateExtraData()
 		pEntry->extendData = (ExtraContainerChanges::ExtendDataList*)GameHeapAlloc(8);
 		pEntry->extendData->Init(xData);
 	}
-	containerRef->MarkAsModified(0x20);
+	containerRef->MarkModified(0x20);
 	return xData;
 }
 
@@ -1004,7 +1029,7 @@ float __fastcall GetModBonuses(TESObjectREFR *wpnRef, UInt32 effectID)
 	return result;
 }
 
-_NAKED float __vectorcall GetLightAmount(LightingData *lightingData, __m128 pos)
+__declspec(naked) float __vectorcall GetLightAmount(LightingData *lightingData, __m128 pos)
 {
 	__asm
 	{
@@ -1037,12 +1062,12 @@ _NAKED float __vectorcall GetLightAmount(LightingData *lightingData, __m128 pos)
 		mulss	xmm3, [eax+0x38]
 		mulss	xmm3, xmm1
 	done:
-		movaps	xmm0, xmm3
+		movq	xmm0, xmm3
 		retn
 	}
 }
 
-_NAKED float __vectorcall GetLightAmountAtPoint(const NiVector3 &pos)
+__declspec(naked) float __vectorcall GetLightAmountAtPoint(const NiVector3 &pos)
 {
 	__asm
 	{
@@ -1058,23 +1083,17 @@ _NAKED float __vectorcall GetLightAmountAtPoint(const NiVector3 &pos)
 		cmp		dword ptr [edx+0x34], 0
 		jnz		isInterior
 		push	eax
-		mov		ecx, [edx+8]
-		movaps	xmm0, xmm6
-		unpcklpd	xmm0, xmm5
-		cvttps2dq	xmm0, xmm0
+		cvttps2dq	xmm0, xmm6
 		psrad	xmm0, 0xC
-		movd	eax, xmm0
-		shl		eax, 0x10
-		pextrw	edx, xmm0, 2
-		or		eax, edx
-		push	eax
-		call	GridCellArray::GetCell
+		pshuflw	xmm0, xmm0, 2
+		mov		ecx, [edx+8]
+		call	GridCellArray::GetCellAtCoord
 		pop		ecx
 		test	eax, eax
 		jz		done
 		movaps	xmm0, xmm6
 		call	GetLightAmount
-		movaps	xmm5, xmm0
+		movq	xmm5, xmm0
 		jmp		doneCell
 	isInterior:
 		mov		eax, [eax+0xF8]
@@ -1116,7 +1135,7 @@ _NAKED float __vectorcall GetLightAmountAtPoint(const NiVector3 &pos)
 		jnz		done
 		mov		dword ptr [ecx], 0
 	done:
-		movaps	xmm0, xmm5
+		movq	xmm0, xmm5
 		pop		esi
 		retn
 	}
@@ -1159,7 +1178,8 @@ namespace JIPScriptRunner
 {
 	void Init()
 	{
-		char *fileName, scriptsPath[0x50] = "Data\\NVSE\\plugins\\scripts\\*.txt", *buffer = GetStrArgBuffer();
+		static char scriptsPath[0x80] = "Data\\NVSE\\plugins\\scripts\\*.txt";
+		char *fileName, *buffer = GetStrArgBuffer();
 		for (DirectoryIterator iter(scriptsPath); iter; ++iter)
 		{
 			if (!iter.IsFile()) continue;
@@ -1206,7 +1226,7 @@ namespace JIPScriptRunner
 		if (result)
 		{
 			ExtraScript *xScript = GetExtraType(&callingRef->extraDataList, Script);
-			ScriptEventList *eventList = xScript ? xScript->eventList : nullptr;
+			ScriptLocals *eventList = xScript ? xScript->eventList : nullptr;
 			if (eventList) xScript->eventList = nullptr;
 			SuppressConsoleOutput();
 			script->Execute(callingRef, nullptr, nullptr, true);
@@ -1247,7 +1267,7 @@ bool GetMenuMode()
 
 void __fastcall RefreshRecipeMenu(RecipeMenu *menu);
 
-_NOINLINE void RefreshItemListBox()
+__declspec(noinline) void RefreshItemListBox()
 {
 	if (MENU_VISIBILITY[kMenuType_Inventory])
 		CdeclCall(0x782A90);
@@ -1270,7 +1290,7 @@ _NOINLINE void RefreshItemListBox()
 		RefreshRecipeMenu(RecipeMenu::Get());
 }
 
-_NAKED bool IsConsoleOpen()
+__declspec(naked) bool IsConsoleOpen()
 {
 	__asm
 	{
@@ -1286,7 +1306,7 @@ _NAKED bool IsConsoleOpen()
 	}
 }
 
-_NAKED void SuppressConsoleOutput()
+__declspec(naked) void SuppressConsoleOutput()
 {
 	__asm
 	{
@@ -1298,7 +1318,7 @@ _NAKED void SuppressConsoleOutput()
 	}
 }
 
-_NAKED void __fastcall DoConsolePrint(double *result)
+__declspec(naked) void __fastcall DoConsolePrint(double *result)
 {
 	__asm
 	{
@@ -1331,7 +1351,7 @@ _NAKED void __fastcall DoConsolePrint(double *result)
 	}
 }
 
-_NAKED void __fastcall DoConsolePrint(TESForm *result)
+__declspec(naked) void __fastcall DoConsolePrint(TESForm *result)
 {
 	__asm
 	{
@@ -1392,7 +1412,7 @@ bool IsInMainThread()
 	return GetCurrentThreadId() == s_mainThreadID;
 }
 
-_NAKED TLSData *GetTLSData()
+__declspec(naked) TLSData *GetTLSData()
 {
 	__asm
 	{
@@ -1405,7 +1425,7 @@ _NAKED TLSData *GetTLSData()
 
 TempObject<UnorderedMap<const char*, UInt32, 0x20, false>> s_fileExtToType;
 
-_NAKED bool __fastcall GetFileArchived(const char *filePath)
+__declspec(naked) bool __fastcall GetFileArchived(const char *filePath)
 {
 	__asm
 	{
@@ -1475,7 +1495,7 @@ _NAKED bool __fastcall GetFileArchived(const char *filePath)
 	}
 }
 
-_NAKED int __stdcall FileExistsEx(char *filePath, bool isFolder)
+__declspec(naked) int __stdcall FileExistsEx(char *filePath, bool isFolder)
 {
 	__asm
 	{
@@ -1518,7 +1538,7 @@ int GetIsLAA()
 		if (isLAA)
 		{
 			void *blockPtrs[20], *block;
-			MEM_ZERO(blockPtrs, 0x50);
+			ZERO_BYTES(blockPtrs, sizeof(blockPtrs));
 			int idx = 0;
 			do
 			{

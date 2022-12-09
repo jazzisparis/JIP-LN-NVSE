@@ -259,7 +259,7 @@ bool Cmd_GetSoundPlayers_Execute(COMMAND_ARGS)
 			if ((gameSound = sndIter.Get()) && (gameSound->sourceSound == soundForm) && (object = playingObjMap->Lookup(gameSound->mapKey)) && (refr = object->GetParentRef()))
 				tmpElements->Append(refr);
 		if (!tmpElements->Empty())
-			AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+			*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	}
 	return true;
 }

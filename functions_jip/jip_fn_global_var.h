@@ -24,7 +24,7 @@ bool Cmd_SetGlobalVariable_Execute(COMMAND_ARGS)
 
 bool Cmd_GetGlobalRef_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESGlobal *global;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &global) && global->uRefID)
 	{

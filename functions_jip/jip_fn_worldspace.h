@@ -36,7 +36,7 @@ bool Cmd_SetWorldspaceFlag_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWorldspaceClimate_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESWorldSpace *wldSpc;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wldSpc))
 	{
@@ -93,7 +93,7 @@ bool Cmd_SetWorldspaceNoiseTexture_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWorldspaceWaterType_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESWorldSpace *wldSpc;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wldSpc) && wldSpc->waterFormFirst)
 		REFR_RES = wldSpc->waterFormFirst->refID;
@@ -111,7 +111,7 @@ bool Cmd_SetWorldspaceWaterType_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWorldspaceImagespace_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESWorldSpace *wldSpc;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wldSpc) && wldSpc->imageSpace)
 		REFR_RES = wldSpc->imageSpace->refID;

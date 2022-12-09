@@ -141,7 +141,7 @@ bool Cmd_GetLoadedTypeArray_Execute(COMMAND_ARGS)
 	{
 		TempElements *tmpElements = GetTempElements();
 		GetLoadedType(formType, index, NULL, tmpElements);
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	}
 	return true;
 }
@@ -187,7 +187,7 @@ bool Cmd_Search_Execute(COMMAND_ARGS)
 		pValidTypes = (bool*)kValidSearchTypes;
 	else
 	{
-		MEM_ZERO(validTypes, sizeof(validTypes));
+		ZERO_BYTES(validTypes, sizeof(validTypes));
 		validTypes[filter] = true;
 		pValidTypes = validTypes;
 	}
@@ -237,7 +237,7 @@ bool Cmd_GetFormMods_Execute(COMMAND_ARGS)
 		if (iter->data) tmpElements->Append(iter->data->name);
 	}
 	while (iter = iter->next);
-	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+	*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -292,7 +292,7 @@ bool Cmd_GetFormRefs_Execute(COMMAND_ARGS)
 		while (refrIter = refrIter->next);
 	}
 	while (wspcIter = wspcIter->next);
-	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+	*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -316,7 +316,7 @@ bool Cmd_IsFormOverridden_Execute(COMMAND_ARGS)
 
 bool Cmd_GetFormFromMod_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	char modName[0x80], refIDStr[0x10];
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &modName, &refIDStr)) return true;
 	UInt8 modIndex;
@@ -382,7 +382,7 @@ bool Cmd_GetGameSettings_Execute(COMMAND_ARGS)
 					SetElement(outArray, ArrayElementL(gmstIter->name), ArrayElementL(gmstIter->data.i));
 			}
 		}
-		AssignCommandResult(outArray, result);
+		*result = (int)outArray;
 	}
 	return true;
 }

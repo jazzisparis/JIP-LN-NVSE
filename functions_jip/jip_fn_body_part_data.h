@@ -38,7 +38,7 @@ bool Cmd_SetBodyPartDataSkeleton_Execute(COMMAND_ARGS)
 
 bool Cmd_GetBodyPartDataRagdoll_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	BGSBodyPartData *bpData;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bpData) && IS_ID(bpData, BGSBodyPartData) && bpData->ragDoll)
 		REFR_RES = bpData->ragDoll->refID;
@@ -187,7 +187,7 @@ bool Cmd_SetBodyPartTraitNumeric_Execute(COMMAND_ARGS)
 
 bool Cmd_GetBodyPartTraitForm_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	BGSBodyPartData *bpData;
 	UInt32 partID, traitID;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &traitID) || NOT_ID(bpData, BGSBodyPartData) || (partID > 14) || (traitID > 5)) return true;

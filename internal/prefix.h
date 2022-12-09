@@ -14,8 +14,6 @@
 #include <initializer_list>
 #include <intrin.h>
 
-#include "internal/version.h"
-
 typedef unsigned char UInt8;
 typedef unsigned short UInt16;
 typedef unsigned long UInt32;
@@ -239,7 +237,7 @@ struct BaseExtraList;
 struct ExtraDataList;
 class ExtraCount;
 class Script;
-struct ScriptEventList;
+struct ScriptLocals;
 struct ScriptVar;
 class BGSPrimitive;
 class BGSPrimitivePlane;
@@ -369,6 +367,7 @@ class NiLight;
 class BSCubeMapCamera;
 class NiFrustumPlanes;
 class NiCullingProcess;
+class NiParticleSystem;
 class NiSkinPartition;
 class NiSkinInstance;
 class NiSourceCubeMap;
@@ -437,7 +436,10 @@ struct hkCdBody;
 class BSWin32Audio;
 struct Sound;
 class DIHookControl;
-
+class BGSLoadGameBuffer;
+class BGSLoadFormBuffer;
+class BGSSaveGameBuffer;
+class BGSSaveFormBuffer;
 struct NiPoint2;
 struct NiVector3;
 struct NiVector4;
@@ -447,19 +449,23 @@ struct NiTransform;
 struct hkQuaternion;
 struct hkMatrix3x4;
 
+#include "internal/version.h"
 #include "internal/class_vtbls.h"
 #include "internal/memory_pool.h"
 #include "internal/misc_consts.h"
 #include "internal/utility.h"
 #include "internal/containers.h"
 #include "internal/Ni_types.h"
+#include "internal/dinput.h"
+#include "internal/xinput.h"
 
 #include "nvse/GameTypes.h"
 #include "nvse/GameRTTI.h"
-#include "nvse/CommandTable.h"
-#include "nvse/GameBSExtraData.h"
 #include "internal/netimmerse.h"
 #include "internal/havok.h"
+#include "nvse/CommandTable.h"
+#include "nvse/ParamInfos.h"
+#include "nvse/GameBSExtraData.h"
 #include "nvse/PluginAPI.h"
 #include "nvse/GameSound.h"
 #include "nvse/GameData.h"

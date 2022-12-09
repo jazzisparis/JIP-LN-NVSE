@@ -56,7 +56,7 @@ bool Cmd_ListToArray_Execute(COMMAND_ARGS)
 		if (iter->data) tmpElements->Append(iter->data);
 	}
 	while (iter = iter->next);
-	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+	*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -243,7 +243,7 @@ bool Cmd_GetINISection_Execute(COMMAND_ARGS)
 			SetElement(outArray, ArrayElementL(buffer), getNumeric ? ArrayElementL(StrToDbl(delim)) : ArrayElementL(delim));
 		buffer += size;
 	}
-	AssignCommandResult(outArray, result);
+	*result = (int)outArray;
 	return true;
 }
 
@@ -294,7 +294,7 @@ bool Cmd_GetINISectionNames_Execute(COMMAND_ARGS)
 		length -= size = StrLen(buffer) + 1;
 		buffer += size;
 	}
-	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+	*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -336,7 +336,7 @@ bool Cmd_GetFilesInFolder_Execute(COMMAND_ARGS)
 	NVSEArrayVar *outArray = CreateArray(nullptr, 0, scriptObj);
 	for (DirectoryIterator iter(dataPathFull); iter; ++iter)
 		if (iter.IsFile()) AppendElement(outArray, ArrayElementL(*iter));
-	AssignCommandResult(outArray, result);
+	*result = (int)outArray;
 	return true;
 }
 
@@ -355,7 +355,7 @@ bool Cmd_GetFoldersInFolder_Execute(COMMAND_ARGS)
 	NVSEArrayVar *outArray = CreateArray(nullptr, 0, scriptObj);
 	for (DirectoryIterator iter(dataPathFull); iter; ++iter)
 		if (iter.IsFolder()) AppendElement(outArray, ArrayElementL(*iter));
-	AssignCommandResult(outArray, result);
+	*result = (int)outArray;
 	return true;
 }
 
@@ -373,7 +373,7 @@ bool Cmd_SortFormsByType_Execute(COMMAND_ARGS)
 	Vector<TESForm*> tempForms(nForms);
 	UInt32 size = GetMax(nForms, nTypes) * sizeof(ArrayElementL);
 	ArrayElementL *elements = (ArrayElementL*)AuxBuffer::Get(2, size);
-	MEM_ZERO(elements, size);
+	ZERO_BYTES(elements, size);
 	GetElements(formArray, elements, nullptr);
 	TESForm *form;
 	for (int idx = 0; idx < nForms; idx++)
@@ -399,7 +399,7 @@ bool Cmd_SortFormsByType_Execute(COMMAND_ARGS)
 	if (!tempForms.Empty())
 		for (auto iter = tempForms.Begin(); iter; ++iter)
 			tmpElements->Append(*iter);
-	AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+	*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -414,7 +414,7 @@ bool Cmd_GetFormCountType_Execute(COMMAND_ARGS)
 	UInt32 size = GetArraySize(formArray);
 	if (!size) return true;
 	ArrayElementR *elements = (ArrayElementR*)AuxBuffer::Get(2, size * sizeof(ArrayElementR));
-	MEM_ZERO(elements, size * sizeof(ArrayElementR));
+	ZERO_BYTES(elements, size * sizeof(ArrayElementR));
 	if (!GetElements(formArray, elements, nullptr))
 		return true;
 	int count = 0;

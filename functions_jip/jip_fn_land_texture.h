@@ -11,7 +11,7 @@ DEFINE_COMMAND_PLUGIN(LandTextureRemoveGrass, 0, 2, kParams_TwoForms);
 
 bool Cmd_GetLandTextureTextureSet_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESLandTexture *landTex;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &landTex) && (landTex->typeID == kFormType_TESLandTexture) && landTex->textureSet)
 		REFR_RES = landTex->textureSet->refID;
@@ -83,7 +83,7 @@ bool Cmd_GetLandTextureNumGrasses_Execute(COMMAND_ARGS)
 
 bool Cmd_GetLandTextureNthGrass_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESLandTexture *landTex;
 	UInt32 idx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &landTex, &idx) && (landTex->typeID == kFormType_TESLandTexture))

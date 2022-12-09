@@ -309,7 +309,7 @@ class ExtraScript : public BSExtraData
 {
 public:
 	Script			*script;	// 0C
-	ScriptEventList	*eventList;	// 10
+	ScriptLocals	*eventList;	// 10
 
 	static ExtraScript* __stdcall Create(Script *pScript);
 };
@@ -741,7 +741,7 @@ class ExtraUses : public BSExtraData
 public:
 	UInt8		uses;		// 0C
 
-	static ExtraUses *Create();
+	static ExtraUses *Create(UInt8 _uses);
 };
 
 // 10

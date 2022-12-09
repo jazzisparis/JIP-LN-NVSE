@@ -1,6 +1,7 @@
 #include "nvse/GameScript.h"
 
-void Script::RefVariable::Resolve(ScriptEventList *eventList)
+TESForm* __stdcall LookupFormByRefID(UInt32 refID);
+void Script::RefVariable::Resolve(ScriptLocals *eventList)
 {
 	if (varIdx && eventList)
 	{

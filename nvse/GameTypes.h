@@ -104,7 +104,7 @@ public:
 	tList(const tList &rhs) {m_listHead = rhs.m_listHead;}
 
 	template <class Op>
-	UInt32 FreeNodes(Node *node, Op &compareOp) const
+	UInt32 FreeNodes(Node *node, const Op &compareOp) const
 	{
 		static UInt32 nodeCount = 0, numFreed = 0, lastNumFreed = 0;
 		if (node->next)
@@ -299,7 +299,7 @@ public:
 	}
 
 	template <class Op>
-	void Visit(Op &op, Node *prev = NULL) const
+	void Visit(const Op &op, Node *prev = NULL) const
 	{
 		Node *curr = prev ? prev->next : Head();
 		while (curr)
@@ -310,7 +310,7 @@ public:
 	}
 
 	template <class Op>
-	Item *Find(Op &op) const
+	Item *Find(const Op &op) const
 	{
 		Node *curr = Head();
 		Item *pItem;
@@ -325,7 +325,7 @@ public:
 	}
 
 	template <class Op>
-	Iterator Find(Op &op, Iterator &prev) const
+	Iterator Find(const Op &op, Iterator &prev) const
 	{
 		Iterator curIt = prev.End() ? Begin() : ++prev;
 		while (!curIt.End())
@@ -337,7 +337,7 @@ public:
 	}
 
 	template <class Op>
-	UInt32 CountIf(Op &op) const
+	UInt32 CountIf(const Op &op) const
 	{
 		UInt32 count = 0;
 		Node *curr = Head();
@@ -421,7 +421,7 @@ public:
 	}
 
 	template <class Op>
-	Item *RemoveIf(Op &op)
+	Item *RemoveIf(const Op &op)
 	{
 		Node *curr = Head(), *prev = NULL;
 		Item *item;
@@ -492,7 +492,7 @@ public:
 	}
 
 	template <class Op>
-	SInt32 GetIndexOf(Op &op)
+	SInt32 GetIndexOf(const Op &op)
 	{
 		SInt32 idx = 0;
 		Node *curr = Head();
@@ -587,8 +587,6 @@ struct BSSimpleArray
 
 	class Iterator
 	{
-		friend BSSimpleArray;
-
 		T_Data		*pData;
 		UInt32		count;
 

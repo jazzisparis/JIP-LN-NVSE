@@ -1,9 +1,6 @@
 #define JIP_DEBUG 0
 
-#include "internal/dinput.h"
-#include "internal/xinput.h"
 #include "internal/jip_core.h"
-#include "nvse/ParamInfos.h"
 #include "internal/hooks.h"
 #include "internal/patches_cmd.h"
 #include "internal/patches_game.h"
@@ -76,6 +73,14 @@
 #if JIP_DEBUG
 #include "internal/debug.h"
 #endif
+
+extern "C"
+{
+	BOOL WINAPI DllMain(HANDLE hDllHandle, DWORD dwReason, LPVOID lpreserved)
+	{
+		return TRUE;
+	}
+};
 
 bool NVSEPlugin_Query(const NVSEInterface *nvse, PluginInfo *info)
 {
@@ -824,7 +829,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*275A*/REG_CMD(GetTeammateUsingAmmo);
 	/*275B*/REG_CMD(SetTeammateUsingAmmo);
 	/*275C*/REG_CMD(ToggleDetectionFix);
-	/*275D*/REG_CMD(ClearModNVSEVars);
+	/*275D*/REG_CMD(/*ClearModNVSEVars*/EmptyCommand);
 	/*275E*/REG_CMD(EmptyCommand);
 	/*275F*/REG_CMD(ToggleIgnoreLockedDoors);
 	/*2760*/REG_CMD(CCCSetFollowState);
@@ -1202,7 +1207,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*289C*/REG_CMD(SetWeaponSemiAutoFireDelay);
 	/*289D*/REG_CMD(IsStickDisabled);
 	/*289E*/REG_CMD(SetStickDisabled);
-	/*289F*/REG_CMD(Sleep);
+	/*289F*/REG_CMD(/*Sleep*/EmptyCommand);
 	//	v54.80
 	/*28A0*/REG_CMD_ARR(GetActiveIMODs);
 	/*28A1*/REG_CMD(ToggleItemUnique);
@@ -1380,6 +1385,9 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2925*/REG_CMD(ProjectUITile);
 	/*2926*/REG_CMD(RotateAroundPoint);
 	/*2927*/REG_CMD(GetStringUIDimensions);
+	//	v56.78
+	/*2928*/REG_CMD(ToggleNodeCollision);
+	/*2929*/REG_CMD_ARR(GetAllPerks);
 
 	//===========================================================
 
@@ -1397,7 +1405,6 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	WriteRecordData = serialization->WriteRecordData;
 	GetNextRecordInfo = serialization->GetNextRecordInfo;
 	ReadRecordData = serialization->ReadRecordData;
-	ResolveRefID = serialization->ResolveRefID;
 	WriteRecord8 = serialization->WriteRecord8;
 	WriteRecord16 = serialization->WriteRecord16;
 	WriteRecord32 = serialization->WriteRecord32;
@@ -1418,7 +1425,6 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	NVSEArrayVarInterface *arrInterface = (NVSEArrayVarInterface*)nvse->QueryInterface(kInterface_ArrayVar);
 	CreateArray = arrInterface->CreateArray;
 	CreateStringMap = arrInterface->CreateStringMap;
-	AssignCommandResult = arrInterface->AssignCommandResult;
 	SetElement = arrInterface->SetElement;
 	AppendElement = arrInterface->AppendElement;
 	GetArraySize = arrInterface->GetArraySize;
@@ -1437,12 +1443,10 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	g_DIHookCtrl = (DIHookControl*)nvseData->GetSingleton(NVSEDataInterface::kNVSEData_DIHookControl);
 	InventoryRefCreate = (_InventoryRefCreate)nvseData->GetFunc(NVSEDataInterface::kNVSEData_InventoryReferenceCreateEntry);
 	InventoryRefGetForID = (_InventoryRefGetForID)nvseData->GetFunc(NVSEDataInterface::kNVSEData_InventoryReferenceGetForRefID);
-	g_numPreloadMods = (UInt8*)nvseData->GetData(NVSEDataInterface::kNVSEData_NumPreloadMods);
 	CaptureLambdaVars = (_CaptureLambdaVars)nvseData->GetFunc(NVSEDataInterface::kNVSEData_LambdaSaveVariableList);
 	UncaptureLambdaVars = (_UncaptureLambdaVars)nvseData->GetFunc(NVSEDataInterface::kNVSEData_LambdaUnsaveVariableList);
 
 	MemCopy = memcpy;
-	MemMove = memmove;
 
 	return true;
 }
@@ -1493,6 +1497,8 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 		{
 			WriteRelCall(0x86B0F4, (UInt32)GetSingletonsHook);
 			SAFE_WRITE_BUF(0x86B1EE, "\x0F\x1F\x44\x00\x00");
+
+			s_CPUFeatures = GetCPUFeatures();
 
 			InitContainers();
 			InitJIPHooks();

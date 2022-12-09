@@ -117,7 +117,7 @@ public:
 	TESForm *GetBaseForm() const;
 	TESForm *GetBaseForm2() const;
 
-	ScriptEventList *GetEventList() const;
+	ScriptLocals *GetEventList() const;
 
 	UInt8& JIPRefFlags() {return extraDataList.jipRefFlags5F;}
 
@@ -830,7 +830,7 @@ class PerkRankFinder
 public:
 	PerkRankFinder(BGSPerk *_perk) : m_perk(_perk) {}
 
-	bool Accept(PerkRank *perkRank) {return perkRank->perk == m_perk;}
+	bool Accept(PerkRank *perkRank) const {return perkRank->perk == m_perk;}
 };
 
 struct CasinoStats

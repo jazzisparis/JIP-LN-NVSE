@@ -1,24 +1,24 @@
 #pragma once
 
-typedef FixedTypeArray<hkpWorldObject*, 0x40> ContactObjects;
-
 const char* __cdecl GetNiFixedString(const char *inStr);
 
 class NiFixedString
 {
 	const char		*str;
 
+	UInt32 *Meta() const {return (UInt32*)(str - 8);}
+
 	void Set(const char *inStr)
 	{
 		str = inStr;
-		if (str) InterlockedIncrement((UInt32*)(str - 8));
+		if (str) InterlockedIncrement(Meta());
 	}
 
 	void Unset()
 	{
 		if (str)
 		{
-			InterlockedDecrement((UInt32*)(str - 8));
+			InterlockedDecrement(Meta());
 			str = nullptr;
 		}
 	}
@@ -31,7 +31,7 @@ public:
 
 	const char *Get() const {return str ? str : "";}
 
-	UInt32 Length() const {return str ? *(UInt32*)(str - 4) : 0;}
+	UInt32 Length() const {return str ? Meta()[1] : 0;}
 
 	explicit operator bool() const {return str != nullptr;}
 
@@ -51,7 +51,7 @@ public:
 	inline bool operator==(const NiFixedString &rhs) const {return str == rhs.str;}
 	inline bool operator<(const NiFixedString &rhs) const {return str < rhs.str;}
 
-	UInt32 RefCount() const {return str ? *(UInt32*)(str - 8) : 0;}
+	UInt32 RefCount() const {return str ? Meta()[0] : 0;}
 };
 
 class NiMemObject {};
@@ -106,6 +106,8 @@ struct UpdateParams
 };
 
 extern const UpdateParams kUpdateParams;
+
+typedef FixedTypeArray<hkpWorldObject*, 0x40> ContactObjects;
 
 // 08
 class NiObject : public NiRefObject
@@ -765,7 +767,7 @@ public:
 	UInt16				m_extraDataListLen;			// 14
 	UInt16				m_extraDataListCapacity;	// 16
 
-	const char *GetName() const {return m_blockName ? m_blockName : "NULL";}
+	const char *GetName() const {return m_blockName.Get();}
 	void __fastcall SetName(const char *newName);
 	NiExtraData* __fastcall GetExtraData(UInt32 vtbl) const;
 	__forceinline bool AddExtraData(NiExtraData *xData)
@@ -1327,7 +1329,7 @@ public:
 	TESObjectREFR *GetParentRef() const;
 	__forceinline void RenderGeometryAndShader() {CdeclCall(0xB57E30, this, 0, 0);}
 
-	void DumpObject(UInt8 dumpFlags = 0xF);
+	void Dump(UInt8 dumpFlags = 0xF);
 	void DumpParents();
 };
 
@@ -1351,6 +1353,7 @@ public:
 	NiAVObject* __fastcall GetBlockByName(const char *nameStr) const;	//	str of NiFixedString
 	NiAVObject* __fastcall GetBlock(const char *blockName) const;
 	NiNode* __fastcall GetNode(const char *nodeName) const;
+	NiAVObject* __fastcall FindBlockOfType(UInt32 typeVtbl) const;
 	bool IsMovable();
 	void __fastcall ToggleCollision(UInt8 flag);
 	void ResetCollision();
@@ -1361,7 +1364,6 @@ public:
 	bool HasPhantom();
 	float __vectorcall GetBodyMass(float totalMass) const;
 	void ApplyForce(const NiVector4 &forceVector);
-	void Dump(UInt8 dumpFlags = 0xF);
 };
 static_assert(sizeof(NiNode) == 0xAC);
 
@@ -2714,6 +2716,33 @@ public:
 	UInt8			*unkArray;		// 44
 };
 
+class NiSkinData : public NiObject
+{
+public:
+};
+
+class NiSkinPartition : public NiObject
+{
+public:
+};
+
+// 34
+class NiSkinInstance : public NiObject
+{
+public:
+	NiSkinData		*skinDate;		// 08
+	NiSkinPartition	*skinPartition;	// 0C
+	NiNode			*actorRoot;		// 10
+	void			*ptr14;			// 14
+	UInt32			unk18;			// 18
+	UInt32			unk1C;			// 1C
+	UInt32			unk20;			// 20
+	UInt32			unk24;			// 24
+	void			*ptr28;			// 28
+	UInt32			unk2C;			// 2C
+	UInt32			unk30;			// 30
+};
+
 // C4
 class NiGeometry : public NiAVObject
 {
@@ -2732,7 +2761,7 @@ public:
 	NiTexturingProperty		*texturingProp;	// B0
 	UInt32					unkB4;			// B4
 	NiGeometryData			*geometryData;	// B8
-	BSDismemberSkinInstance	*skinInstance;	// BC
+	NiSkinInstance			*skinInstance;	// BC
 	NiShader				*shader;		// C0
 };
 static_assert(sizeof(NiGeometry) == 0xC4);
@@ -2821,11 +2850,84 @@ public:
 	/*9C*/virtual void		Unk_27(void);
 	/*A0*/virtual void		Unk_28(void);
 
-	NiFixedString	name;		// 08
-	UInt32			unk0C;		// 0C
-	UInt32			unk10;		// 10
-	UInt8			byte14;		// 14
-	UInt8			pad15[3];	// 15
+	NiFixedString		name;			// 08
+	UInt32				unk0C;			// 0C
+	NiParticleSystem	*particleSys;	// 10
+	UInt8				byte14;			// 14
+	UInt8				pad15[3];		// 15
+};
+static_assert(sizeof(NiPSysModifier) == 0x18);
+
+// 54
+class NiPSysEmitter : public NiPSysModifier
+{
+public:
+	/*A4*/virtual void		Unk_29(void);
+	/*A8*/virtual void		Unk_2A(void);
+
+	float			speed;					// 18
+	float			speedVariation;			// 1C
+	float			declination;			// 20
+	float			declinationVariation;	// 24
+	float			planarAngle;			// 28
+	float			planarAngleVariation;	// 2C
+	NiColorAlpha	initialColor;			// 30
+	float			initialRadius;			// 40
+	float			radiusVariation;		// 44
+	float			lifespan;				// 48
+	float			lifespanVariation;		// 4C
+	float			flt50;					// 50
+};
+static_assert(sizeof(NiPSysEmitter) == 0x54);
+
+// 58
+class NiPSysVolumeEmitter : public NiPSysEmitter
+{
+public:
+	/*AC*/virtual void		Unk_2B(void);
+	/*B0*/virtual void		Unk_2C(void);
+
+	NiNode			*emitterObj;	// 54
+};
+
+// 64
+class NiPSysBoxEmitter : public NiPSysVolumeEmitter
+{
+public:
+	NiVector3		dimensions;	// 58	width, height, depth
+};
+
+// 5C
+class NiPSysSphereEmitter : public NiPSysVolumeEmitter
+{
+public:
+	float			radius;		// 58
+};
+
+// 60
+class NiPSysCylinderEmitter : public NiPSysVolumeEmitter
+{
+public:
+	float		flt58;		// 58
+	float		flt5C;		// 5C
+};
+
+// 88
+class NiPSysMeshEmitter : public NiPSysEmitter
+{
+public:
+	// 0C
+	class NiSkinnedEmitterData : public NiRefObject
+	{
+	public:
+		UInt32			unk08;
+	};
+
+	NiTArray<NiGeometry*>			geometryArr;	// 54
+	NiTArray<NiSkinnedEmitterData*>	skinnedDataArr;	// 64
+	UInt32							unk74;			// 74
+	UInt32							unk78;			// 78
+	NiVector3						vec7C;			// 7C
 };
 
 // C4
@@ -2851,6 +2953,8 @@ public:
 	UInt32					unk0DC[13];	// 0DC
 
 	__forceinline static NiParticleSystem *Create() {return CdeclCall<NiParticleSystem*>(0xC1B7F0);}
+
+	NiPSysModifier* __fastcall FindModifier(UInt32 typeVtbl) const;
 };
 static_assert(sizeof(NiParticleSystem) == 0x110);
 

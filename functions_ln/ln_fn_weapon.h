@@ -47,7 +47,7 @@ bool Cmd_SetWeaponImpulseDistance_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWeaponVATSEffect_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESObjectWEAP *weapon;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon) && IS_ID(weapon, TESObjectWEAP) && weapon->VATSEffect)
 		REFR_RES = weapon->VATSEffect->refID;

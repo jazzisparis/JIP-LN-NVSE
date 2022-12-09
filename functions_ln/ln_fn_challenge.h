@@ -137,7 +137,7 @@ bool Cmd_SetChallengeValue3_Execute(COMMAND_ARGS)
 
 bool Cmd_GetChallengeForm1_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESChallenge *challenge;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &challenge) && challenge->SNAM)
 		REFR_RES = challenge->SNAM->refID;
@@ -155,7 +155,7 @@ bool Cmd_SetChallengeForm1_Execute(COMMAND_ARGS)
 
 bool Cmd_GetChallengeForm2_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESChallenge *challenge;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &challenge) && challenge->XNAM)
 		REFR_RES = challenge->XNAM->refID;

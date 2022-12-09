@@ -15,7 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dllmain.c" />
     <ClCompile Include="jip_nvse.cpp" />
     <ClCompile Include="internal\utility.cpp">
       <Filter>internal</Filter>
@@ -394,6 +393,7 @@
     <None Include="nvse\GameRTTI_1_4_0_525.inc">
       <Filter>nvse</Filter>
     </None>
+    <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="jip_nvse.rc" />

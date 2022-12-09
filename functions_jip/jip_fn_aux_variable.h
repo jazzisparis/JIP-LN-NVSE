@@ -13,7 +13,7 @@ DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetString, AuxVarSetStr, 0, 4, kParam
 DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetFromArray, AuxVarSetFromArr, 0, 3, kParams_OneString_OneInt_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableErase, AuxVarErase, 0, 3, kParams_OneString_OneOptionalInt_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableEraseAll, AuxVarEraseAll, 0, 2, kParams_OneInt_OneOptionalForm);
-DEFINE_CMD_COND_PLUGIN(AuxVarGetFltCond, 1, 2, kParams_OneQuest_OneInt);
+DEFINE_CMD_COND_ONLY(AuxVarGetFltCond, 1, 2, kParams_OneQuest_OneInt);
 
 #if JIP_VARS_CS
 PrimitiveCS s_auxVarCS;
@@ -60,8 +60,8 @@ bool Cmd_AuxiliaryVariableGetSize_Execute(COMMAND_ARGS)
 		{
 			AUX_VAR_CS
 			AuxVarValsArr *valsArr = AVGetArray(varInfo);
-			if (valsArr) *result = (int)valsArr->Size();
-
+			if (valsArr)
+				*result = (int)valsArr->Size();
 		}
 	}
 	return true;
@@ -109,7 +109,7 @@ bool Cmd_AuxiliaryVariableGetFloat_Execute(COMMAND_ARGS)
 
 bool Cmd_AuxiliaryVariableGetRef_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	char varName[0x50];
 	SInt32 idx = 0;
 	TESForm *form = nullptr;
@@ -166,7 +166,7 @@ bool Cmd_AuxiliaryVariableGetAsArray_Execute(COMMAND_ARGS)
 				for (auto value = valsArr->Begin(); value; ++value)
 					tmpElements->Append(value().GetAsElement());
 				if (!tmpElements->Empty())
-					AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+					*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 			}
 		}
 	}
@@ -199,7 +199,7 @@ bool Cmd_AuxiliaryVariableGetAll_Execute(COMMAND_ARGS)
 						SetElement(varsMap, ArrayElementL(varIter.Key()), ArrayElementL(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj)));
 						tmpElements->Clear();
 					}
-					if (GetArraySize(varsMap)) AssignCommandResult(varsMap, result);
+					*result = (int)varsMap;
 				}
 			}
 		}
@@ -225,7 +225,11 @@ bool Cmd_AuxiliaryVariableSetFloat_Execute(COMMAND_ARGS)
 			{
 				*value = fltVal;
 				if (varInfo.isPerm)
+				{
 					s_dataChangedFlags |= kChangedFlag_AuxVars;
+					if (thisObj)
+						thisObj->MarkModified(0);
+				}
 				*result = 1;
 			}
 		}
@@ -250,7 +254,11 @@ bool Cmd_AuxiliaryVariableSetRef_Execute(COMMAND_ARGS)
 			{
 				*value = refVal;
 				if (varInfo.isPerm)
+				{
 					s_dataChangedFlags |= kChangedFlag_AuxVars;
+					if (thisObj)
+						thisObj->MarkModified(0);
+				}
 				*result = 1;
 			}
 		}
@@ -275,7 +283,11 @@ bool Cmd_AuxiliaryVariableSetString_Execute(COMMAND_ARGS)
 			{
 				*value = buffer;
 				if (varInfo.isPerm)
+				{
 					s_dataChangedFlags |= kChangedFlag_AuxVars;
+					if (thisObj)
+						thisObj->MarkModified(0);
+				}
 				*result = 1;
 			}
 		}
@@ -304,7 +316,11 @@ bool Cmd_AuxiliaryVariableSetFromArray_Execute(COMMAND_ARGS)
 	for (UInt32 idx = 0; idx < arrData.size; idx++)
 		valsArr->Append(arrData.vals[idx]);
 	if (varInfo.isPerm)
+	{
 		s_dataChangedFlags |= kChangedFlag_AuxVars;
+		if (thisObj)
+			thisObj->MarkModified(0);
+	}
 	*result = (int)arrData.size;
 	return true;
 }
@@ -367,11 +383,13 @@ bool Cmd_AuxiliaryVariableEraseAll_Execute(COMMAND_ARGS)
 	return true;
 }
 
-double __fastcall AuxVarGetFltCond(TESObjectREFR *thisObj, TESQuest *quest, UInt32 varIndex)
+bool Cmd_AuxVarGetFltCond_Eval(COMMAND_ARGS_EVAL)
 {
+	*result = 0;
+	TESQuest *quest = (TESQuest*)arg1;
 	if (quest->scriptEventList)
 	{
-		ScriptVar *scriptVar = quest->scriptEventList->GetVariable(varIndex);
+		ScriptVar *scriptVar = quest->scriptEventList->GetVariable((UInt32)arg2);
 		if (scriptVar)
 		{
 			const char *varName = GetStringVar((int)scriptVar->data.num);
@@ -380,25 +398,9 @@ double __fastcall AuxVarGetFltCond(TESObjectREFR *thisObj, TESQuest *quest, UInt
 				AuxVarInfo varInfo(nullptr, thisObj, quest->scriptable.script, (char*)varName);
 				AUX_VAR_CS
 				AuxVariableValue *value = AVGetValue(varInfo, 0);
-				if (value) return value->GetFlt();
+				if (value) *result = value->GetFlt();
 			}
 		}
 	}
-	return 0;
-}
-
-bool Cmd_AuxVarGetFltCond_Eval(COMMAND_ARGS_EVAL)
-{
-	*result = AuxVarGetFltCond(thisObj, (TESQuest*)arg1, (UInt32)arg2);
-	return true;
-}
-
-bool Cmd_AuxVarGetFltCond_Execute(COMMAND_ARGS)
-{
-	TESQuest *quest;
-	UInt32 varIndex;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &varIndex))
-		*result = AuxVarGetFltCond(thisObj, quest, varIndex);
-	else *result = 0;
 	return true;
 }

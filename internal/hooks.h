@@ -343,7 +343,7 @@ struct MainLoopCallback
 	UInt32				cycleCount;		// 14
 	FunctionArg			args[6];		// 18
 	
-	static MainLoopCallback *Create(void *_cmdPtr, void *_thisObj, UInt32 _callCount = 1, UInt32 _callDelay = 1, UInt8 _numArgs = 0);
+	static MainLoopCallback* __stdcall Create(void *_cmdPtr, void *_thisObj, UInt32 _callCount = 1, UInt32 _callDelay = 1, UInt8 _numArgs = 0);
 
 	void Execute();
 
@@ -357,7 +357,7 @@ struct MainLoopCallback
 
 TempObject<Vector<MainLoopCallback*>> s_mainLoopCallbacks(0x50);
 
-MainLoopCallback *MainLoopCallback::Create(void *_cmdPtr, void *_thisObj, UInt32 _callCount, UInt32 _callDelay, UInt8 _numArgs)
+__declspec(noinline) MainLoopCallback* __stdcall MainLoopCallback::Create(void *_cmdPtr, void *_thisObj, UInt32 _callCount, UInt32 _callDelay, UInt8 _numArgs)
 {
 	MainLoopCallback *callback = Pool_Alloc<MainLoopCallback>();
 	callback->cmdPtr = _cmdPtr;
@@ -2614,7 +2614,7 @@ __declspec(naked) void ProjectileImpactHook()
 		test	edx, edx
 		jz		keepPos
 		movq	xmm0, qword ptr [edx+4]
-		movq	qword ptr [eax+0x30], xmm0
+		movlps	[eax+0x30], xmm0
 		mov		edx, [edx+0xC]
 		mov		[eax+0x38], edx
 	keepPos:
@@ -2748,7 +2748,7 @@ __declspec(naked) void PlayerMinHealthHook()
 		cmp		dword ptr [ebp+0xC], 0
 		jge		done
 		movss	xmm0, [ebp-0x40]
-		movaps	xmm1, xmm0
+		movq	xmm1, xmm0
 		addss	xmm1, [ebp+0xC]
 		movss	xmm2, PS_V3_One
 		comiss	xmm1, xmm2
@@ -3002,7 +3002,6 @@ __declspec(naked) NiPointLight* __fastcall CreatePointLight(TESObjectLIGH *light
 
 __declspec(naked) void __fastcall SetLightProperties(NiPointLight *ptLight, TESObjectLIGH *lightForm)
 {
-	static const __m128 kColourMults = {1.0 / 255, 1.0 / 255, 1.0 / 255, 1};
 	__asm
 	{
 		movss	xmm0, [edx+0xB4]
@@ -3021,6 +3020,9 @@ __declspec(naked) void __fastcall SetLightProperties(NiPointLight *ptLight, TESO
 		mulps	xmm0, kColourMults
 		movups	[eax+0x10], xmm0
 		retn
+		ALIGN 16
+	kColourMults:
+		DUP_3(EMIT_DW(3B, 80, 80, 81)) EMIT_DW(3F, 80, 00, 00)
 	}
 }
 
@@ -3667,7 +3669,7 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		cmp		dword ptr [eax+0x10], ADDR_ReturnThis
 		jnz		doneFade
 		movaps	xmm0, PS_V3_One
-		movq	qword ptr [ecx+0xB4], xmm0
+		movlps	[ecx+0xB4], xmm0
 		or		byte ptr [ecx+0x31], 0x40
 	doneFade:
 		test	byte ptr [edi+0x5F], kHookRefFlag5F_DisableCollision
@@ -3800,14 +3802,14 @@ __declspec(naked) void LoadWeaponSlotHook()
 
 __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm, NiPointLight *ptLight)
 {
-	alignas(16) static constexpr HexFloat kAnimatedLightMods[] =
+	alignas(16) static constexpr UInt32 kAnimatedLightMods[] =
 	{
-		7.5F, 30 / 7.0F, 0.125F, 0.0625F,
-		4.0F, 2.0F, 1 / 210.0F, 0.675F,
-		PS_DUP_3(0.1F),
-		PS_DUP_3(1 / 127.0F),
-		PS_DUP_3(0x7FUL),
-		PS_DUP_3(0x3FUL)
+		HEX(7.5F), HEX(30 / 7.0F), HEX(0.125F), HEX(0.0625F),
+		HEX(4.0F), HEX(2.0F), HEX(1 / 210.0F), HEX(0.675F),
+		PS_DUP_3(HEX(0.1F)),
+		PS_DUP_3(HEX(1 / 127.0F)),
+		PS_DUP_3(0x7F),
+		PS_DUP_3(0x3F)
 	};
 	__asm
 	{
@@ -3972,7 +3974,7 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		shufps	xmm0, xmm0, 0x40
 		mulps	xmm2, xmm0
 		addps	xmm1, xmm2
-		movq	qword ptr [ebx+0x10], xmm1
+		movlps	[ebx+0x10], xmm1
 		unpckhpd	xmm1, xmm1
 		movss	[ebx+0x18], xmm1
 		pop		ebx
@@ -4167,7 +4169,7 @@ __declspec(naked) void SetRefrPositionHook()
 		mov		ecx, [ebp-0x44]
 		mov		eax, [ebp+8]
 		movups	xmm0, [eax]
-		movq	qword ptr [ecx+0x30], xmm0
+		movlps	[ecx+0x30], xmm0
 		unpckhpd	xmm0, xmm0
 		movss	[ecx+0x38], xmm0
 		retn
@@ -4274,6 +4276,14 @@ __declspec(naked) bool __fastcall DestroyRefrHook(TESObjectREFR *refr)
 {
 	__asm
 	{
+		mov		eax, [ecx+0x20]
+		test	eax, eax
+		jz		retnFalse
+		mov		al, [eax+4]
+		cmp		al, kFormType_BGSProjectile
+		jz		retnFalse
+		cmp		al, kFormType_BGSExplosion
+		jz		retnFalse
 		push	esi
 		mov		esi, ecx
 		mov		al, [esi+0x5F]
@@ -4310,8 +4320,12 @@ __declspec(naked) bool __fastcall DestroyRefrHook(TESObjectREFR *refr)
 		cmp		byte ptr [esi+0xF], 0xFF
 		jnz		doneVars
 		mov		eax, s_auxVariablesPerm+8
-		add		eax, s_auxVariablesTemp+8
+		or		eax, s_auxVariablesTemp+8
 		jz		doneVars
+		push	dword ptr [esi+0xC]
+		call	HasChangeData
+		test	al, al
+		jnz		doneVars
 		mov		ecx, offset s_auxVarCS
 		call	PrimitiveCS::Enter
 		mov		eax, [esi+0xC]
@@ -4325,12 +4339,12 @@ __declspec(naked) bool __fastcall DestroyRefrHook(TESObjectREFR *refr)
 		mov		s_auxVarCS.selfPtr, 0
 	doneVars:
 		mov		eax, [esi+0x20]
-		test	eax, eax
-		jz		done
 		cmp		byte ptr [eax+4], kFormType_TESFurniture
 		setz	al
-	done:
 		pop		esi
+		retn
+	retnFalse:
+		xor		al, al
 		retn
 	}
 }
@@ -4505,7 +4519,7 @@ __declspec(naked) void ProcessHUDMainUI()
 		mov		edx, kTileValue_id
 		mov		ecx, esi
 		call	Tile::GetValue
-		mov		edx, 0xFFFFFFFF
+		or		edx, 0xFFFFFFFF
 		test	eax, eax
 		jz		gotTileID
 		cvttss2si	edx, dword ptr [eax+8]

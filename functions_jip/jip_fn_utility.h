@@ -11,13 +11,11 @@ DEFINE_COMMAND_PLUGIN(WriteStringToFile, 0, 23, kParams_OneString_OneInt_OneForm
 DEFINE_COMMAND_PLUGIN(GetLoadOrderChanged, 0, 0, NULL);
 DEFINE_COMMAND_PLUGIN(ValidateModIndex, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(ClearJIPSavedData, 0, 4, kParams_FourInts);
-DEFINE_COMMAND_PLUGIN(ClearModNVSEVars, 0, 2, kParams_TwoOptionalInts);
 DEFINE_COMMAND_PLUGIN(ModLogPrint, 0, 22, kParams_OneInt_OneFormatString);
 DEFINE_COMMAND_PLUGIN(GetOptionalPatch, 0, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(SetOptionalPatch, 0, 2, kParams_OneString_OneInt);
 DEFINE_COMMAND_PLUGIN(GetPluginHeaderVersion, 0, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(GetIsLAA, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(Sleep, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(GetArrayValue, 0, 2, kParams_TwoInts);
 DEFINE_COMMAND_PLUGIN(GetRandomInRange, 0, 2, kParams_TwoInts);
 DEFINE_COMMAND_PLUGIN(GetSessionTime, 0, 0, NULL);
@@ -35,7 +33,7 @@ bool Cmd_RefToString_Execute(COMMAND_ARGS)
 
 bool Cmd_StringToRef_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	char refStr[0x80];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &refStr))
 		REFR_RES = StringToRef(refStr);
@@ -64,7 +62,7 @@ bool Cmd_GetMinOf_Execute(COMMAND_ARGS)
 			minsd	xmm0, val5
 		done:
 			mov		eax, result
-			movq	qword ptr [eax], xmm0
+			movlpd	[eax], xmm0
 		}
 	}
 	else *result = 0;
@@ -93,7 +91,7 @@ bool Cmd_GetMaxOf_Execute(COMMAND_ARGS)
 			maxsd	xmm0, val5
 		done:
 			mov		eax, result
-			movq	qword ptr [eax], xmm0
+			movlpd	[eax], xmm0
 		}
 	}
 	else *result = 0;
@@ -154,7 +152,7 @@ bool Cmd_ReadArrayFromFile_Execute(COMMAND_ARGS)
 	ArrayElementL *elemPtr = tempElems->Data();
 	if ((numLines == 1) && !transpose)
 	{
-		AssignCommandResult(CreateArray(elemPtr, numColumns, scriptObj), result);
+		*result = (int)CreateArray(elemPtr, numColumns, scriptObj);
 		return true;
 	}
 	NVSEArrayVar *mainArr = CreateArray(NULL, 0, scriptObj);
@@ -182,7 +180,7 @@ bool Cmd_ReadArrayFromFile_Execute(COMMAND_ARGS)
 		}
 		while (--count);
 	}
-	AssignCommandResult(mainArr, result);
+	*result = (int)mainArr;
 	return true;
 }
 
@@ -338,39 +336,24 @@ bool Cmd_WriteStringToFile_Execute(COMMAND_ARGS)
 
 bool Cmd_GetLoadOrderChanged_Execute(COMMAND_ARGS)
 {
-	static char changed = -1;
-	if (changed == -1)
+	*result = 0;
+	UInt8 *idxArray = g_BGSSaveLoadGame->saveMods;
+	for (UInt32 idx = 254; idx > 0; idx--)
 	{
-		UInt8 preloadMods = *g_numPreloadMods;
-		if (preloadMods == g_dataHandler->modList.loadedModCount)
-		{
-			changed = 0;
-			UInt32 modIdx, resolved;
-			for (UInt8 idx = 1; idx < preloadMods; idx++)
-			{
-				modIdx = idx << 24;
-				resolved = GetResolvedRefID(modIdx);
-				if (!resolved || (modIdx != resolved))
-				{
-					changed = 1;
-					break;
-				}
-			}
-		}
-		else changed = 1;
+		UInt8 modIdx = idxArray[idx];
+		if ((modIdx == 0xFF) || (modIdx == idxArray[idx + 0xFF]))
+			continue;
+		*result = 1;
+		break;
 	}
-	*result = changed;
 	return true;
 }
 
 bool Cmd_ValidateModIndex_Execute(COMMAND_ARGS)
 {
 	UInt32 modIdx;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &modIdx) && (modIdx <= 0xFF) && (modIdx = GetResolvedRefID(modIdx << 24)))
-	{
-		modIdx >>= 24;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &modIdx) && (modIdx <= 0xFF) && GetResolvedModIndex((UInt8*)&modIdx))
 		*result = (int)modIdx;
-	}
 	else *result = -1;
 	return true;
 }
@@ -403,26 +386,6 @@ bool Cmd_ClearJIPSavedData_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool Cmd_ClearModNVSEVars_Execute(COMMAND_ARGS)
-{
-	/*UInt32 keepArrs = 0, keepStrs = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &keepArrs, &keepStrs) || s_releaseFast)
-		return true;
-	UInt8 modIdx = scriptObj->GetOverridingModIdx();
-	NVSEVarsCollector vars(false, modIdx);
-	if (!vars.GetVars()->Empty())
-		vars.ClearVars();
-	vars.Init(true, modIdx);
-	if (!vars.GetVars()->Empty())
-	{
-		vars.RemoveToKeep(keepArrs);
-		vars.ClearVars();
-	}*/
-	return true;
-}
-
-TempObject<UnorderedSet<UInt32>> s_openLogs;
-
 bool Cmd_ModLogPrint_Execute(COMMAND_ARGS)
 {
 	UInt32 modIdx = scriptObj ? scriptObj->modIndex : 0xFF;
@@ -431,16 +394,18 @@ bool Cmd_ModLogPrint_Execute(COMMAND_ARGS)
 	UInt32 indentLevel;
 	if (!ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_ModLogPrint.numParams, &indentLevel))
 		return true;
+	ModInfo *modInfo = g_dataHandler->GetNthModInfo(modIdx);
 	char modLogPath[0x80];
 	*(UInt32*)modLogPath = ' doM';
 	*(UInt32*)(modLogPath + 4) = 'sgoL';
 	modLogPath[8] = '\\';
-	char *endPtr = StrCopy(modLogPath + 9, g_dataHandler->GetNthModName(modIdx));
+	char *endPtr = StrCopy(modLogPath + 9, modInfo->name);
 	*(UInt32*)endPtr = 'gol.';
 	endPtr[4] = 0;
 	FileStream outputFile;
-	if (outputFile.OpenWrite(modLogPath, !s_openLogs->Insert(modIdx)))
+	if (outputFile.OpenWrite(modLogPath, modInfo->hasModLog))
 	{
+		modInfo->hasModLog = true;
 		if (indentLevel)
 		{
 			if (indentLevel >= 40)
@@ -554,14 +519,6 @@ bool Cmd_GetIsLAA_Execute(COMMAND_ARGS)
 {
 	*result = GetIsLAA();
 	DoConsolePrint(result);
-	return true;
-}
-
-bool Cmd_Sleep_Execute(COMMAND_ARGS)
-{
-	UInt32 milliseconds;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &milliseconds))
-		Sleep(milliseconds);
 	return true;
 }
 

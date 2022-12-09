@@ -148,6 +148,8 @@ struct PermanentClonedForm
 	UInt32 cloneRefID;
 };
 
+extern BGSSaveLoadGame *g_BGSSaveLoadGame;
+
 // 018
 class TESForm : public BaseFormComponent
 {
@@ -287,7 +289,7 @@ public:
 	TESForm *CloneForm(bool bPersist = true) const;
 
 	bool HasScript() const;
-	bool GetScriptAndEventList(Script **script, ScriptEventList **eventList) const;
+	bool GetScriptAndEventList(Script **script, ScriptLocals **eventList) const;
 	bool IsItemPlayable() const;
 	UInt32 GetItemValue() const;
 	UInt8 GetOverridingModIdx() const;
@@ -299,12 +301,30 @@ public:
 	MagicItem *GetMagicItem() const;
 	void SetJIPFlag(UInt16 jipFlag, bool bSet);
 
+	__forceinline void MarkModified(UInt32 modFlag)
+	{
+		ThisCall(0x84A690, g_BGSSaveLoadGame, this, modFlag, 0);
+	}
+
 	__forceinline void MarkAsTemporary()
 	{
 		ThisCall(0x484490, this);
 	}
 };
 static_assert(sizeof(TESForm) == 0x18);
+
+union ColorRGBA
+{
+	struct
+	{
+		UInt8	r, g, b, a;
+	};
+	UInt32		rgba;
+	
+	inline void operator=(UInt32 _rgba) {rgba = _rgba;}
+	inline operator UInt32() const {return rgba;}
+	inline UInt8 operator[](UInt32 index) const {return (&r)[index];}
+};
 
 struct Condition
 {
@@ -618,6 +638,24 @@ public:
 class BGSEquipType : public BaseFormComponent
 {
 public:
+	enum EquipTypes
+	{
+		kEqpType_BigGuns,
+		kEqpType_EnergyWeapons,
+		kEqpType_SmallGuns,
+		kEqpType_MeleeWeapons,
+		kEqpType_UnarmedWeapons,
+		kEqpType_ThrowWeapons,
+		kEqpType_Mine,
+		kEqpType_BodyWear,
+		kEqpType_HeadWear,
+		kEqpType_HandWear,
+		kEqpType_Chems,
+		kEqpType_Stimpack,
+		kEqpType_Food,
+		kEqpType_Alcohol
+	};
+
 	UInt32	equipType;	// 08
 };
 
@@ -1226,7 +1264,7 @@ class ObjTargetFinder
 public:
 	ObjTargetFinder(TESObjectREFR *_target) : m_target(_target) {}
 
-	bool Accept(ObjectiveTarget *objTarget) {return objTarget->target == m_target;}
+	bool Accept(ObjectiveTarget *objTarget) const {return objTarget->target == m_target;}
 };
 
 class BGSOpenCloseForm
@@ -1383,6 +1421,29 @@ public:
 	String			editorIDstr;	// 40
 };
 
+// 24
+struct DecalInfo
+{
+	enum
+	{
+		kFlag_Parallax =	1,
+		kFlag_AlphaBlend =	2,
+		kFlag_AlphaTest =	4
+	};
+
+	float		minWidth;		// 00
+	float		maxWidth;		// 04
+	float		minHeight;		// 08
+	float		maxHeight;		// 0C
+	float		depth;			// 10
+	float		shininess;		// 14
+	float		parallaxScale;	// 18
+	UInt8		parallaxPasses;	// 1C
+	UInt8		flags;			// 1D
+	UInt8		pad1E[2];		// 1E
+	ColorRGBA	color;			// 20
+};
+
 // A0
 class BGSTextureSet : public TESBoundObject
 {
@@ -1402,33 +1463,10 @@ public:
 		kTexFlag_NoSpecMap = 0x0001,
 	};
 
-	// 24
-	struct DecalInfo
-	{
-		enum
-		{
-			kFlag_Parallax =	0x01,
-			kFlag_AlphaBlend =	0x02,
-			kFlag_AlphaTest =	0x04,
-		};
-
-		float	minWidth;		// 00
-		float	maxWidth;		// 04
-		float	minHeight;		// 08
-		float	maxHeight;		// 0C
-		float	depth;			// 10
-		float	shininess;		// 14
-		float	parallaxScale;	// 18
-		UInt8	parallaxPasses;	// 1C
-		UInt8	flags;			// 1D
-		UInt8	pad1E[2];		// 1E
-		UInt32	color;			// 20
-	};
-
 	BSTextureSet	bsTexSet;		// 30
 
 	TESTexture		textures[6];	// 38
-	DecalInfo		* decalInfo;	// 80
+	DecalInfo		*decalInfo;		// 80
 	UInt16			texFlags;		// 84
 	UInt8			pad86[2];		// 86
 	UInt32			unk88;			// 88
@@ -1573,7 +1611,7 @@ public:
 	{
 		if (bEnable) factionFlags |= pFlag;
 		else factionFlags &= ~pFlag;
-		MarkAsModified(kModified_FactionFlags);
+		MarkModified(kModified_FactionFlags);
 	}
 	bool IsHidden()
 	{	return IsFlagSet(kFlag_HiddenFromPC);	}
@@ -2986,7 +3024,8 @@ struct ValidBip01Names
 		};
 		TESModelTextureSwap		*modelTexture;	// 04 texture or model for said form
 		NiAVObject				*object;		// 08 NiNode for the modelled form
-		UInt32					unk00C;			// 0C Number, bool or flag
+		UInt8					hasSkinnedGeom;	// 0C
+		UInt8					pad0D[3];		// 0D
 	};
 
 	NiNode				*bip01;			// 000 receive Bip01 node, then optionally Bip01Head, Weapon, Bip01LForeTwist, Bip01Spine2, Bip01Neck1
@@ -3031,7 +3070,7 @@ public:
 	UInt16					unk1D0;				// 1D0
 	UInt16					unk1D2;				// 1D2
 	TESCombatStyle			*combatStyle;		// 1D4
-	UInt32					hairColor;			// 1D8
+	ColorRGBA				hairColor;			// 1D8
 	tList<BGSHeadPart>		headPart;			// 1DC
 	UInt32					impactMaterialType;	// 1E4
 	UInt32					unk01E8;			// 1E8
@@ -3258,7 +3297,7 @@ public:
 	TESImageSpaceModifier	*imageSpaceMods[6];			// 01C
 	TESTexture1024			layerTextures[4];			// 034
 	UInt8					cloudSpeed[4];				// 064
-	UInt32					cloudColor[4][6];			// 068
+	ColorRGBA				cloudColor[4][6];			// 068
 	TESModel				model;						// 0C8
 	UInt8					windSpeed;					// 0E0
 	UInt8					cloudSpeedLower;			// 0E1
@@ -3272,9 +3311,9 @@ public:
 	UInt8					lightningEndFadeOut;		// 0E9
 	UInt8					lightningFrequency;			// 0EA
 	UInt8					weatherClassification;		// 0EB
-	UInt32					lightningColor;				// 0EC
+	ColorRGBA				lightningColor;				// 0EC
 	float					fogDistance[6];				// 0F0
-	UInt32					colors[10][6];				// 108
+	ColorRGBA				colors[10][6];				// 108
 	tList<WeatherSound>		sounds;						// 1F8
 	UInt32					unk200[91];					// 200
 };
@@ -3457,25 +3496,19 @@ public:
 		UInt8		pad09[3];	// 09
 	};
 
-	struct InteriorCoords
+	struct LightingData
 	{
-		int			unk00;		// 00
-		int			unk04;		// 04
-		int			unk08;		// 08
-		float		flt0C;		// 0C
-		float		flt10;		// 10
-		int			unk14;		// 14
-		int			unk18;		// 18
-		float		flt1C;		// 1C
-		float		flt20;		// 20
-		float		flt24;		// 24
-		int			unk28;		// 28
-	};
-
-	union CellCoordinates
-	{
-		ExteriorCoords	*exterior;
-		InteriorCoords	*interior;
+		ColorRGBA	ambient;			// 00
+		ColorRGBA	directional;		// 04
+		ColorRGBA	fog;				// 08
+		float		fogNear;			// 0C
+		float		fogFar;				// 10
+		int			directionalRotXY;	// 14
+		int			directionalRotZ;	// 18
+		float		directionalFade;	// 1C
+		float		fogClipDist;		// 20
+		float		fogPower;			// 24
+		void		*getValuesFrom;		// 28
 	};
 
 	// 64
@@ -3509,7 +3542,11 @@ public:
 	UInt8					byte26;					// 26	5 or 6 would mean cell is loaded
 	UInt8					byte27;					// 27
 	ExtraDataList			extraDataList;			// 28
-	CellCoordinates			coords;					// 48
+	union											// 48
+	{
+		ExteriorCoords		*exteriorCoords;
+		LightingData		*interiorLighting;
+	};
 	TESObjectLAND			*land;					// 4C
 	float					waterHeight;			// 50
 	UInt32					unk54;					// 54
@@ -3981,7 +4018,7 @@ public:
 		// So: this list would contain both Objectives and LocalVariables !
 		// That seems very strange but still, looking at Get/SetObjective... and ShowQuestVars there's no doubt.
 	ConditionList			conditions;			// 54
-	ScriptEventList			*scriptEventList;	// 5C
+	ScriptLocals			*scriptEventList;	// 5C
 	UInt8					currentStage;		// 60
 	UInt8					pad61[3];			// 61
 	String					editorName;			// 64
@@ -4814,7 +4851,7 @@ struct EffectShaderData
 	float		fillTextureAnimSpeedU;	// 02C
 	float		fillTextureAnimSpeedV;	// 030
 	float		edgeFallOff;		// 034
-	UInt32		edgeColor;			// 038
+	ColorRGBA	edgeColor1;			// 038
 	float		edgeAlphaFadeInTime;// 03C
 	float		edgeFullAlphaTime;	// 040
 	float		edgeAlphaFadeOutTime;	// 044
@@ -4843,9 +4880,9 @@ struct EffectShaderData
 	float		scaleKey2;			// 0B0
 	float		scaleKey1Time;		// 0B4
 	float		scaleKey2Time;		// 0B8
-	UInt32		colorKey1RGB;		// 0BC
-	UInt32		colorKey2RGB;		// 0C0
-	UInt32		colorKey3RGB;		// 0C4
+	ColorRGBA	colorKey1;			// 0BC
+	ColorRGBA	colorKey2;			// 0C0
+	ColorRGBA	colorKey3;			// 0C4
 	float		colorKey1Alpha;		// 0C8
 	float		colorKey2Alpha;		// 0CC
 	float		colorKey3Alpha;		// 0D0
@@ -4863,7 +4900,7 @@ struct EffectShaderData
 	float		holesStartVal;		// 100
 	float		holesEndVal;		// 104
 	float		edgeWidthAlphaUnits;// 108
-	UInt32		edgeColorRGB;		// 10C
+	ColorRGBA	edgeColor2;			// 10C
 	float		explosionWindSpeed;	// 110
 	UInt32		textureCountU;		// 114
 	UInt32		textureCountV;		// 118
@@ -5617,37 +5654,11 @@ public:
 	String		editorID;	// 1C
 };
 
-struct ColorRGB
-{
-	UInt8	red;	// 000
-	UInt8	green;	// 001
-	UInt8	blue;	// 002
-	UInt8	alpha;	// 003 or unused if no alpha
-};	// 004 looks to be endian swapped !
-
-struct DecalData
-{
-	float		minWidth;		// 000
-	float		maxWidth;		// 004
-	float		minHeight;		// 008
-	float		maxHeight;		// 00C
-	float		depth;			// 010
-	float		shininess;		// 014
-	float		parallaxScale;	// 018
-	UInt8		parallaxPasses;	// 01C
-	UInt8		flags;			// 01D	Parallax, Alpha - Blending, Alpha - Testing
-	UInt8		unk01E[2];		// 01E
-	ColorRGB	color;			// 020
-};	// 024
-
-static_assert(sizeof(DecalData) == 0x024);
-
 // 78
 class BGSImpactData : public TESForm
 {
 public:
 	TESModel		model;				// 18
-
 	float			effectDuration;		// 30
 	UInt8			effectOrientation;	// 34	0 - Surface Normal, 1 - Projectile Vector, 2 - Projectile Reflection
 	UInt8			pad35[3];			// 35
@@ -5657,24 +5668,11 @@ public:
 	UInt8			pad41[3];			// 41
 	UInt8			noDecalData;		// 44
 	UInt8			pad45[3];			// 45
-
 	BGSTextureSet	*textureSet;		// 48
 	TESSound		*sound1;			// 4C
 	TESSound		*sound2;			// 50
-
-	float			decalMinWidth;		// 54
-	float			decalMaxWidth;		// 58
-	float			decalMinHeight;		// 5C
-	float			decalMaxHeight;		// 60
-	float			decalDepth;			// 64
-	float			decalShininess;		// 68
-	float			parallaxScale;		// 6C
-	UInt8			parallaxPasses;		// 70
-	UInt8			decalFlags;			// 71	1 - Parallax, 2 - Alpha-Blending, 4 - Alpha-Testing
-	UInt8			unk72[2];			// 72
-	UInt32			decalColor;			// 74
+	DecalInfo		decalInfo;			// 54
 };
-
 static_assert(sizeof(BGSImpactData) == 0x78);
 
 // 4C

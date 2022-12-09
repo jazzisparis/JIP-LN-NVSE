@@ -418,7 +418,7 @@ bool Cmd_CCCLoadNCCS_Execute(COMMAND_ARGS)
 
 bool Cmd_CCCSavedForm_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	UInt32 idx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idx)) REFR_RES = s_savedForms[idx];
 	return true;
@@ -528,7 +528,7 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 
 bool Cmd_CCCGetReputation_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	if (NOT_ACTOR(thisObj)) return true;
 	auto baseFacIt = ((TESActorBase*)thisObj->baseForm)->baseData.factionList.Head();
 	FactionListData *facData;
@@ -641,7 +641,8 @@ bool Cmd_MoveToPosStr_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &posStr)) return true;
 	char *pos = posStr, *delim = GetNextToken(pos, ' ');
 	UInt32 refID = HexToUInt(pos);
-	if (!refID || !*delim || !ResolveRefID(refID, &refID)) return true;
+	if (!refID || !*delim || !(refID = GetResolvedRefID(refID)))
+		return true;
 	TESObjectCELL *cell = (TESObjectCELL*)LookupFormByRefID(refID);
 	if (!cell) return true;
 	if NOT_ID(cell, TESObjectCELL)

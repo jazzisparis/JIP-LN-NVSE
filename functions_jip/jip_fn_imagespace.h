@@ -118,6 +118,6 @@ bool Cmd_GetActiveIMODs_Execute(COMMAND_ARGS)
 	}
 	while (traverse = traverse->next);
 	if (!tmpElements->Empty())
-		AssignCommandResult(CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj), result);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }

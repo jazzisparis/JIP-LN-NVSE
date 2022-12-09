@@ -38,7 +38,7 @@ bool Cmd_SetCellWaterHeight_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCellWaterForm_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESObjectCELL *cell = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell))
 	{
@@ -57,7 +57,7 @@ bool Cmd_GetCellWaterForm_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCellImageSpace_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESObjectCELL *cell;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && IS_ID(cell, TESObjectCELL))
 	{
@@ -69,7 +69,7 @@ bool Cmd_GetCellImageSpace_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCellLightingTemplate_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESObjectCELL *cell;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && IS_ID(cell, TESObjectCELL) && cell->lightingTemplate)
 		REFR_RES = cell->lightingTemplate->refID;

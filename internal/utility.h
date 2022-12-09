@@ -41,7 +41,7 @@
 #define GAME_HEAP_ALLOC __asm mov ecx, 0x11F6238 CALL_EAX(0xAA3E40)
 #define GAME_HEAP_FREE  __asm mov ecx, 0x11F6238 CALL_EAX(0xAA4060)
 
-#define MARK_MODIFIED(form, flag) __asm push 0 __asm push flag __asm push form __asm mov ecx, ds:0x11DDF38 __asm mov eax, 0x84A690 __asm call eax
+#define MARK_MODIFIED(form, flag) __asm push 0 __asm push flag __asm push form __asm mov ecx, g_BGSSaveLoadGame __asm mov eax, 0x84A690 __asm call eax
 
 template <typename T_Ret = void, typename ...Args>
 __forceinline T_Ret ThisCall(UInt32 _addr, void *_this, Args ...args)
@@ -74,16 +74,9 @@ __forceinline T_Ret CdeclCall(UInt32 _addr, Args ...args)
 #define PS_DUP_3(a)	a, a, a, 0UL
 #define PS_DUP_4(a)	a, a, a, a
 
-union HexFloat
-{
-	float	f;
-	UInt32	h;
+#define HEX(a) std::bit_cast<UInt32>(a)
 
-	constexpr HexFloat(const float _f) : f(_f) {}
-	constexpr HexFloat(const UInt32 _h) : h(_h) {}
-};
-
-extern const HexFloat kPackedValues[];
+extern const UInt32 kPackedValues[];
 extern const char kLwrCaseConverter[];
 
 #define GET_PS(i)	((const __m128*)kPackedValues)[i]
@@ -130,13 +123,13 @@ extern const char kLwrCaseConverter[];
 #define EMIT_PS_2(b0, b1, b2, b3) DUP_2(EMIT_DW(b0, b1, b2, b3)) DUP_2(EMIT_DW_1(00))
 #define EMIT_PS_3(b0, b1, b2, b3) DUP_3(EMIT_DW(b0, b1, b2, b3)) EMIT_DW_1(00)
 #define EMIT_PS_4(b0, b1, b2, b3) DUP_4(EMIT_DW(b0, b1, b2, b3))
+#define EMIT_8(b0, b1, b2, b3, b4, b5, b6, b7) EMIT(b0) EMIT(b1) EMIT(b2) EMIT(b3) EMIT(b4) EMIT(b5) EMIT(b6) EMIT(b7)
 
 typedef void* (__cdecl *memcpy_t)(void*, const void*, size_t);
-extern memcpy_t MemCopy, MemMove;
+extern memcpy_t MemCopy;
 
 #define COPY_BYTES(dest, src, count) __movsb((UInt8*)(dest), (const UInt8*)(src), count)
-#define COPY_DWORDS(dest, src, count) __movsd((UInt32*)(dest), (const UInt32*)(src), count)
-#define MEM_ZERO(addr, size) __stosd((UInt32*)(addr), 0, (size) >> 2)
+#define ZERO_BYTES(addr, size) __stosb((UInt8*)(addr), 0, size)
 #define CPY_RET_END(dest, src, length) ((char*)memcpy(dest, src, length + 1) + length)
 
 //	Workaround used for:
@@ -252,8 +245,6 @@ union FunctionArg
 	inline void operator=(SInt32 other) {iVal = other;}
 };
 
-TESForm* __stdcall LookupFormByRefID(UInt32 refID);
-
 template <const size_t numBits> struct BitField
 {
 	static_assert((numBits == 8) || (numBits == 16) || (numBits == 32));
@@ -296,6 +287,7 @@ union Coordinate
 	}
 
 	inline operator UInt32() const {return xy;}
+	inline operator __m128i() const {return _mm_loadu_si32(this);}
 };
 
 template <typename T1, typename T2> __forceinline T1 GetMin(T1 value1, T2 value2)
@@ -318,9 +310,12 @@ __forceinline bool FloatsEqual(float fVal1, float fVal2)
 	return *(UInt32*)&fVal1 == *(UInt32*)&fVal2;
 }
 
+extern UInt32 s_CPUFeatures;
+UInt32 GetCPUFeatures();
+
 UInt32 __vectorcall cvtd2ul(double value);
 
-double __fastcall cvtul2d(UInt32 value);
+double __vectorcall cvtul2d(UInt32 value);
 void __fastcall cvtul2d(UInt32 value, double *result);
 
 int __vectorcall ifloor(float value);
@@ -359,6 +354,7 @@ __forceinline float ATan(float x)
 	return ATan2(x, 1.0F);
 }
 
+float __vectorcall Length_V4(__m128 inPS);
 __m128 __vectorcall Normalize_V4(__m128 inPS);
 bool __vectorcall Equal_V3(__m128 v1, __m128 v2);
 bool __vectorcall Equal_V4(__m128 v1, __m128 v2);
@@ -409,7 +405,7 @@ char* __fastcall FindChr(const char *str, char chr);
 
 char* __fastcall FindChrR(const char *str, char chr);
 
-char* __fastcall SubStrCI(const char *srcStr, const char *subStr);
+const char* __fastcall SubStrCI(const char *srcStr, const char *subStr);
 
 char* __fastcall SlashPos(const char *str);
 
@@ -435,64 +431,16 @@ char* __fastcall UIntToHex(char *str, UInt32 num);
 
 UInt32 __fastcall HexToUInt(const char *str);
 
-class TempCString
+template <size_t size> class ScopedString
 {
-	char		*str;
-
-	void Clear()
-	{
-		if (!str) return;
-		free(str);
-		str = nullptr;
-	}
+	char		*theStr;
 
 public:
-	TempCString() : str(nullptr) {}
-	TempCString(UInt32 initSize)
-	{
-		str = (char*)malloc(initSize + 1);
-		*str = 0;
-	}
-	TempCString(const char *src)
-	{
-		str = src ? CopyString(src) : nullptr;
-	}
-	TempCString(const TempCString &src)
-	{
-		str = src.str ? CopyString(src.str) : nullptr;
-	}
+	ScopedString(char *inStr) : theStr(inStr) {}
+	~ScopedString() {Pool_CFree(theStr, size);}
 
-	~TempCString() {Clear();}
-
-	const char *CString() const {return str ? str : "";}
-	char *Data() {return str;}
-
-	bool operator==(const TempCString &rhs) {return !StrCompareCI(str, rhs.str);}
-	bool operator<(const TempCString &rhs) {return StrCompareCI(str, rhs.str) < 0;}
-	bool operator>(const TempCString &rhs) {return StrCompareCI(str, rhs.str) > 0;}
-
-	char& operator[](UInt32 index) {return str[index];}
-
-	TempCString& operator=(const TempCString &rhs)
-	{
-		if (this != &rhs)
-		{
-			Clear();
-			if (rhs.str)
-				str = CopyString(rhs.str);
-		}
-		return *this;
-	}
-	TempCString& operator=(const char *srcStr)
-	{
-		if (str != srcStr)
-		{
-			Clear();
-			if (srcStr)
-				str = CopyString(srcStr);
-		}
-		return *this;
-	}
+	inline char *Get() const {return theStr;}
+	inline operator char*() const {return theStr;}
 };
 
 class DString
@@ -701,7 +649,7 @@ void __stdcall StoreOriginalData(UInt32 addr, UInt8 size);
 void __stdcall SafeWrite8(UInt32 addr, UInt32 data);
 void __stdcall SafeWrite16(UInt32 addr, UInt32 data);
 void __stdcall SafeWrite32(UInt32 addr, UInt32 data);
-void __stdcall SafeWriteBuf(UInt32 addr, void * data, UInt32 len);
+void __stdcall SafeWriteBuf(UInt32 addr, const void *data, UInt32 len);
 
 #define SAFE_WRITE_BUF(addr, data) SafeWriteBuf(addr, data, sizeof(data) - 1)
 

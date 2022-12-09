@@ -8,7 +8,7 @@ DEFINE_COMMAND_PLUGIN(SetRace, 0, 2, kParams_TwoForms);
 
 bool Cmd_GetRaceVoice_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESRace *race;
 	UInt32 gender;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &race, &gender) && IS_ID(race, TESRace))
@@ -31,7 +31,7 @@ bool Cmd_SetRaceVoice_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRaceAgeRace_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESRace *race;
 	UInt32 age;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &race, &age) && IS_ID(race, TESRace))

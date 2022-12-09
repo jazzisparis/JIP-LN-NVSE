@@ -10,7 +10,7 @@ public:
 		TESForm		*form;		// 08
 		UInt32		varIdx;		// 0C always zero in editor
 
-		void Resolve(ScriptEventList *eventList);
+		void Resolve(ScriptLocals *eventList);
 	};
 
 	struct RefVarList : tList<RefVariable>
@@ -76,7 +76,7 @@ public:
 	bool IsUnkScript() const {return info.type == eType_Unk;}
 
 	VariableInfo *GetVariableByName(const char *varName);
-	ScriptVar *AddVariable(char *varName, ScriptEventList *eventList, UInt32 ownerID, UInt8 modIdx);
+	ScriptVar *AddVariable(char *varName, ScriptLocals *eventList, UInt32 ownerID, UInt8 modIdx);
 	UInt32 GetDataLength();
 
 	__forceinline Script *Constructor()
@@ -87,7 +87,7 @@ public:
 	{
 		ThisCall(0x5AA1A0, this);
 	}
-	__forceinline bool Execute(TESObjectREFR *thisObj, ScriptEventList *eventList, TESObjectREFR *containingObj, bool arg3)
+	__forceinline bool Execute(TESObjectREFR *thisObj, ScriptLocals *eventList, TESObjectREFR *containingObj, bool arg3)
 	{
 		return ThisCall<bool>(0x5AC1E0, this, thisObj, eventList, containingObj, arg3);
 	}
@@ -100,9 +100,9 @@ public:
 	static Script *Create(char *scrText);
 	bool Compile();
 
-	__forceinline ScriptEventList *CreateEventList()
+	__forceinline ScriptLocals *CreateEventList()
 	{
-		return ThisCall<ScriptEventList*>(0x5ABF60, this);
+		return ThisCall<ScriptLocals*>(0x5ABF60, this);
 	}
 };
 static_assert(sizeof(Script) == 0x54);
@@ -117,7 +117,7 @@ struct ScriptRunner
 
 	UInt32				unk00;				// 00
 	TESForm				*baseForm;			// 04
-	ScriptEventList		*eventList;			// 08
+	ScriptLocals		*eventList;			// 08
 	UInt32				unk0C;				// 0C
 	UInt32				unk10;				// 10
 	Script				*script;			// 14

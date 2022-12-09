@@ -115,12 +115,12 @@ struct LNDInpuCallbacks
 };
 
 typedef Vector<LNEventData> LNEventCallbacks;
-TempObject<LNEventCallbacks> s_LNEvents[kLNEventID_Max]= {8, 8, 8, 8, 8, 8, 8, 8};
+TempObject<LNEventCallbacks> s_LNEvents[kLNEventID_Max] = {{}, {}, {}, {}, {}, {}, {}, {}};
 
 typedef Map<UInt32, LNDInpuCallbacks> LNDInputEventsMap;
 TempObject<LNDInputEventsMap> s_LNOnKeyEvents, s_LNOnControlEvents;
 
-TempObject<EventCallbackScripts> s_LNOnTriggerEvents[4];
+TempObject<EventCallbackScripts> s_LNOnTriggerEvents[4] = {{}, {}, {}, {}};
 
 TempObject<UnorderedMap<const char*, UInt32, 0x20, false>> s_LNEventNames;
 

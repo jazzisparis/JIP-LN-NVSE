@@ -23,7 +23,7 @@ bool Cmd_GetTerminalLock_Execute(COMMAND_ARGS)
 
 bool Cmd_GetPasswordNote_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	BGSTerminal *terminal = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &terminal)) return true;
 	if (!terminal)

@@ -79,7 +79,7 @@ bool Cmd_SetExplosionTraitNumeric_Execute(COMMAND_ARGS)
 
 bool Cmd_GetExplosionTraitForm_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	BGSExplosion *explosion;
 	UInt32 traitID;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &explosion, &traitID) || NOT_ID(explosion, BGSExplosion)) return true;

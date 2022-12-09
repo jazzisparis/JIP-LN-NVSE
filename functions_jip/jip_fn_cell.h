@@ -26,7 +26,7 @@ bool Cmd_SetCellWaterForm_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCellClimate_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESObjectCELL *cell;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && IS_ID(cell, TESObjectCELL))
 	{
@@ -75,7 +75,7 @@ bool Cmd_SetCellNoiseTexture_Execute(COMMAND_ARGS)
 
 bool Cmd_GetOwnerOfCell_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESObjectCELL *cell;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && IS_ID(cell, TESObjectCELL))
 	{

@@ -25,9 +25,8 @@ DEFINE_COMMAND_PLUGIN(SetBodyPartData, 0, 2, kParams_OneActorBase_OneForm);
 
 bool Cmd_GetMerchantContainer_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESObjectREFR *containerRef = thisObj->GetMerchantContainer();
-	if (containerRef) REFR_RES = containerRef->refID;
+	REFR_RES = containerRef ? containerRef->refID : 0;
 	return true;
 }
 
@@ -112,7 +111,7 @@ bool Cmd_GetCreatureType_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCombatStyle_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESActorBase *actorBase = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase)) return true;
 	TESCombatStyle *combatStyle = NULL;
@@ -134,10 +133,7 @@ bool Cmd_CopyFaceGenFrom_Execute(COMMAND_ARGS)
 		{
 			AppearanceUndo **pAprUndo;
 			if (s_appearanceUndoMap().InsertKey(destNPC, &pAprUndo))
-			{
-				*pAprUndo = (AppearanceUndo*)malloc(sizeof(AppearanceUndo));
-				new (*pAprUndo) AppearanceUndo(destNPC);
-			}
+				*pAprUndo = new (malloc(sizeof(AppearanceUndo))) AppearanceUndo(destNPC);
 			destNPC->SetSex(srcNPC->baseData.flags);
 			destNPC->SetRace(srcNPC->race.race);
 			destNPC->CopyAppearance(srcNPC);
@@ -286,7 +282,7 @@ bool Cmd_GetEquippedData_Execute(COMMAND_ARGS)
 			ExtraHealth *xHealth = GetExtraType(xDataList, Health);
 			ExtraWeaponModFlags *xModFlags = GetExtraType(xDataList, WeaponModFlags);
 			ArrayElementL elements[3] = {item, xHealth ? xHealth->health : -1, xModFlags ? xModFlags->flags : 0};
-			AssignCommandResult(CreateArray(elements, 3, scriptObj), result);
+			*result = (int)CreateArray(elements, 3, scriptObj);
 			break;
 		}
 	}
@@ -413,7 +409,7 @@ bool Cmd_ActorHasEffect_Eval(COMMAND_ARGS_EVAL)
 
 bool Cmd_GetBodyPartData_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESActorBase *actorBase;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase))
 	{

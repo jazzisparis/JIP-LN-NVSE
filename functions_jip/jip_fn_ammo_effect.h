@@ -18,7 +18,7 @@ bool Cmd_GetNumAmmoEffects_Execute(COMMAND_ARGS)
 
 bool Cmd_GetNthAmmoEffect_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	REFR_RES = 0;
 	TESAmmo *ammo;
 	UInt32 idx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ammo, &idx) && IS_TYPE(ammo, TESAmmo))
