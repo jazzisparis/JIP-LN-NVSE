@@ -1432,7 +1432,7 @@ bool Cmd_MoveToNode_Execute(COMMAND_ARGS)
 
 bool Cmd_GetPlayerPerks_Execute(COMMAND_ARGS)
 {
-	*result = (int)GetAllPerks(g_thePlayer, 0, scriptObj);
+	*result = (int)GetAllPerks(g_thePlayer, 0, scriptObj, false);
 	return true;
 }
 

@@ -140,7 +140,7 @@ DEFINE_COMMAND_PLUGIN(RefreshAnimData, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetActorVelocityAlt, 1, 4, kParams_ThreeScriptVars_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetExcludedCombatActions, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetExcludedCombatActions, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetAllPerks, 1, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetAllPerks, 1, 2, kParams_TwoOptionalInts);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -2522,7 +2522,7 @@ bool Cmd_SetExcludedCombatActions_Execute(COMMAND_ARGS)
 	return true;
 }
 
-__declspec(noinline) NVSEArrayVar* __fastcall GetAllPerks(Actor *actor, UInt32 forTeammates, Script *scriptObj)
+__declspec(noinline) NVSEArrayVar* __fastcall GetAllPerks(Actor *actor, UInt32 forTeammates, Script *scriptObj, UInt32 includeHidden)
 {
 	TempElements *tmpElements = GetTempElements();
 	bool isPlayer = actor == g_thePlayer;
@@ -2533,7 +2533,7 @@ __declspec(noinline) NVSEArrayVar* __fastcall GetAllPerks(Actor *actor, UInt32 f
 		BGSPerk *perk;
 		do
 		{
-			if ((perkRank = perkIter->data) && (perk = perkRank->perk) && !perk->data.isHidden)
+			if ((perkRank = perkIter->data) && (perk = perkRank->perk) && (includeHidden || !perk->data.isHidden))
 				tmpElements->Append(perk);
 		}
 		while (perkIter = perkIter->next);
@@ -2541,7 +2541,7 @@ __declspec(noinline) NVSEArrayVar* __fastcall GetAllPerks(Actor *actor, UInt32 f
 	if (!isPlayer && s_NPCPerks && actor->extraDataList.perksInfo)
 	{
 		for (auto perkIter = actor->extraDataList.perksInfo->perkRanks.Begin(); perkIter; ++perkIter)
-			if (!perkIter.Key()->data.isHidden)
+			if (includeHidden || !perkIter.Key()->data.isHidden)
 				tmpElements->Append(perkIter.Key());
 	}
 	return !tmpElements->Empty() ? CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj) : nullptr;
@@ -2550,8 +2550,9 @@ __declspec(noinline) NVSEArrayVar* __fastcall GetAllPerks(Actor *actor, UInt32 f
 bool Cmd_GetAllPerks_Execute(COMMAND_ARGS)
 {
 	UInt32 forTeammates = 0;
-	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &forTeammates))
-		*result = (int)GetAllPerks((Actor*)thisObj, forTeammates, scriptObj);
+	UInt32 includeHidden = 0;
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &forTeammates, &includeHidden))
+		*result = (int)GetAllPerks((Actor*)thisObj, forTeammates, scriptObj, includeHidden);
 	else *result = 0;
 	return true;
 }
