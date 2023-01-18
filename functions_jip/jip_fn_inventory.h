@@ -27,6 +27,7 @@ DEFINE_COMMAND_PLUGIN(GetEquippedArmorRefs, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDT, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDR, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetHotkeyItemRef, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetItemRefBaseHealth, 1, 0, nullptr);
 
 bool Cmd_AddItemAlt_Execute(COMMAND_ARGS)
 {
@@ -158,6 +159,16 @@ bool Cmd_GetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 			entry.extendData = &extendData;
 		*result = entry.GetBaseHealth();
 	}
+	return true;
+}
+
+bool Cmd_GetItemRefBaseHealth_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	InventoryRef* invRef = InventoryRefGetForID(thisObj->refID);
+	if (!invRef)
+		return true;
+	*result = invRef->entry->GetBaseHealth();
 	return true;
 }
 

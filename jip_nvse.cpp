@@ -1389,6 +1389,9 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2928*/REG_CMD(ToggleNodeCollision);
 	/*2929*/REG_CMD_ARR(GetAllPerks);
 
+	// ??
+	/*292A*/REG_CMD(GetItemRefBaseHealth);
+
 	//===========================================================
 
 	if (nvse->isEditor)
