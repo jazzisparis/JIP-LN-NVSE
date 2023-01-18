@@ -6,8 +6,9 @@ DEFINE_COMMAND_PLUGIN(SetValueAlt, 0, 2, kParams_OneObjectID_OneInt);
 DEFINE_COMMAND_PLUGIN(RemoveItemTarget, 1, 4, kParams_OneItemOrList_OneContainer_TwoOptionalInts);
 DEFINE_COMMAND_PLUGIN(GetWeaponRefModFlags, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetWeaponRefModFlags, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetItemRefCurrentHealth, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(SetItemRefCurrentHealth, 1, 1, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetItemRefCurrentHealth_OLD, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetItemRefCurrentHealth, 1, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetItemRefCurrentHealth, 1, 2, kParams_OneFloat_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetHotkeyItemRef, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(EquipItemAlt, 1, 3, kParams_OneObjectID_TwoOptionalInts);
 DEFINE_COMMAND_PLUGIN(UnequipItemAlt, 1, 3, kParams_OneObjectID_TwoOptionalInts);
@@ -135,40 +136,57 @@ bool Cmd_SetWeaponRefModFlags_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool Cmd_GetItemRefCurrentHealth_Execute(COMMAND_ARGS)
+float GetItemRefBaseHealth(const TESObjectREFR* thisObj, InventoryRef* invRef, ExtraDataList* xData)
+{
+	if (invRef)
+		return invRef->entry->GetBaseHealth();
+	ContChangesEntry entry(nullptr, 1, thisObj->baseForm);
+	ExtraContainerChanges::ExtendDataList extendData(xData);
+	if (xData)
+		entry.extendData = &extendData;
+	return entry.GetBaseHealth();
+}
+
+bool GetItemRefCurrentHealth_Call(TESObjectREFR* thisObj, double* result, bool getPercent)
 {
 	*result = 0;
-	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
-	ExtraDataList *xData = invRef ? invRef->xData : &thisObj->extraDataList;
+	InventoryRef* invRef = InventoryRefGetForID(thisObj->refID);
+	ExtraDataList* xData = invRef ? invRef->xData : &thisObj->extraDataList;
 	if (xData)
 	{
-		ExtraHealth *xHealth = GetExtraType(xData, Health);
-		if (xHealth)
+		if (const ExtraHealth* xHealth = GetExtraType(xData, Health))
 		{
 			*result = xHealth->health;
+			if (getPercent)
+				*result /= GetItemRefBaseHealth(thisObj, invRef, xData);
 			return true;
 		}
 	}
-	if (invRef)
-		*result = invRef->entry->GetBaseHealth();
+	// else, no health xData, so item is at max base health.
+	if (getPercent)
+		*result = 1.0;
 	else
-	{
-		ContChangesEntry entry(nullptr, 1, thisObj->baseForm);
-		ExtraContainerChanges::ExtendDataList extendData(xData);
-		if (xData)
-			entry.extendData = &extendData;
-		*result = entry.GetBaseHealth();
-	}
+		*result = GetItemRefBaseHealth(thisObj, invRef, xData);
 	return true;
+}
+
+bool Cmd_GetItemRefCurrentHealth_OLD_Execute(COMMAND_ARGS)
+{
+	return GetItemRefCurrentHealth_Call(thisObj, result, false);
+}
+
+bool Cmd_GetItemRefCurrentHealth_Execute(COMMAND_ARGS)
+{
+	UInt32 getPercent = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &getPercent)) return true;
+	return GetItemRefCurrentHealth_Call(thisObj, result, getPercent != 0);
 }
 
 bool Cmd_GetItemRefBaseHealth_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	InventoryRef* invRef = InventoryRefGetForID(thisObj->refID);
-	if (!invRef)
-		return true;
-	*result = invRef->entry->GetBaseHealth();
+	ExtraDataList* xData = invRef ? invRef->xData : &thisObj->extraDataList;
+	*result = GetItemRefBaseHealth(thisObj, invRef, xData);
 	return true;
 }
 
@@ -176,7 +194,8 @@ bool Cmd_SetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	float health;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &health)) return true;
+	UInt32 setPercent = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &health, &setPercent)) return true;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 	if (!invRef) return true;
 	float baseHealth = invRef->entry->GetBaseHealth();

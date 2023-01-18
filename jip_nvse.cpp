@@ -743,7 +743,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*270C*/REG_CMD(GetWeaponRefModFlags);
 	/*270D*/REG_CMD(SetWeaponRefModFlags);
 	/*270E*/REG_CMD_ARR(GetBarterItems);
-	/*270F*/REG_CMD(GetItemRefCurrentHealth);
+	/*270F*/REG_CMD(GetItemRefCurrentHealth_OLD);
 	/*2710*/REG_CMD(SetItemRefCurrentHealth);
 	/*2711*/REG_CMD(GetBarterGoldAlt);
 	//	v17.00
@@ -1391,6 +1391,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 
 	// ??
 	/*292A*/REG_CMD(GetItemRefBaseHealth);
+	/*292B*/REG_CMD(GetItemRefCurrentHealth);
 
 	//===========================================================
 

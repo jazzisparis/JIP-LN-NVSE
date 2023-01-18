@@ -1406,6 +1406,12 @@ constexpr ParamInfo kParams_OneFloat_ThreeOptionalFloats_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
+constexpr ParamInfo kParams_OneFloat_OneOptionalInt[] =
+{
+	{"Float", kParamType_Float, 0},
+	{"Integer", kParamType_Integer, 1}
+};
+
 constexpr ParamInfo kParams_OneString_OneOptionalString_OneOptionalInt[] =
 {
 	{"String", kParamType_String, 0},
