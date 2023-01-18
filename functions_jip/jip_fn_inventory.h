@@ -198,9 +198,11 @@ bool Cmd_SetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &health, &setPercent)) return true;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 	if (!invRef) return true;
-	float baseHealth = invRef->entry->GetBaseHealth();
+	float const baseHealth = invRef->entry->GetBaseHealth();
 	if (baseHealth == 0) return true;
 	if (health > baseHealth) health = baseHealth;
+	if (setPercent)
+		health *= baseHealth;
 	ExtraDataList *xData = invRef->xData;
 	if (xData)
 	{
