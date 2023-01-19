@@ -1389,6 +1389,10 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2928*/REG_CMD(ToggleNodeCollision);
 	/*2929*/REG_CMD_ARR(GetAllPerks);
 
+	// ???
+	REG_CMD(GetEditorPosition);
+	REG_CMD(GetEditorAngle);
+
 	//===========================================================
 
 	if (nvse->isEditor)

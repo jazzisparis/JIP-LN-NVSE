@@ -13,6 +13,8 @@ DEFINE_COMMAND_PLUGIN(AddPrimitive, 1, 4, kParams_OneInt_ThreeFloats);
 DEFINE_COMMAND_PLUGIN(GetTeammates, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(MoveToCell, 1, 4, kParams_OneForm_ThreeFloats);
 DEFINE_COMMAND_PLUGIN(MoveToEditorPosition, 1, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_ALT_PLUGIN(GetEditorPosition, GetEditorPos, 1, 3, kParams_ThreeScriptVars);
+DEFINE_COMMAND_PLUGIN(GetEditorAngle, 1, 3, kParams_ThreeScriptVars);
 DEFINE_COMMAND_PLUGIN(GetCenterPos, 1, 1, kParams_OneAxis);
 DEFINE_COMMAND_PLUGIN(GetRefType, 0, 1, kParams_OneOptionalObjectRef);
 DEFINE_COMMAND_PLUGIN(ToggleObjectCollision, 1, 1, kParams_OneInt);
@@ -342,6 +344,44 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 	thisObj->MoveToCell(cell, *posVector);
 	if (resetRot)
 		thisObj->SetAngle(rotVector * GET_PS(8), false);
+	*result = 1;
+	return true;
+}
+
+bool Cmd_GetEditorPosition_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	ResultVars outPos;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &outPos.x, &outPos.y, &outPos.z))
+		return true;
+	if (IS_ACTOR(thisObj)) {
+		outPos.Set(static_cast<Actor*>(thisObj)->startingPos.PS());
+	}
+	else {
+		ExtraStartingPosition* xStartingPos = GetExtraType(&thisObj->extraDataList, StartingPosition);
+		if (!xStartingPos) return true;
+		outPos.Set(xStartingPos->posVector.PS());
+	}
+	*result = 1;
+	return true;
+}
+
+bool Cmd_GetEditorAngle_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	ResultVars outRot;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &outRot.x, &outRot.y, &outRot.z))
+		return true;
+	if (IS_ACTOR(thisObj)) {
+		NiVector4 rotVector(_mm_setzero_ps());
+		rotVector.z = static_cast<Actor*>(thisObj)->startingZRot;
+		outRot.Set(rotVector.PS(), GET_PS(9));
+	}
+	else {
+		ExtraStartingPosition* xStartingPos = GetExtraType(&thisObj->extraDataList, StartingPosition);
+		if (!xStartingPos) return true;
+		outRot.Set(xStartingPos->rotVector.PS(), GET_PS(9));
+	}
 	*result = 1;
 	return true;
 }
