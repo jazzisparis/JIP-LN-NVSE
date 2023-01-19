@@ -200,9 +200,8 @@ bool Cmd_SetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 	if (!invRef) return true;
 	float const baseHealth = invRef->entry->GetBaseHealth();
 	if (baseHealth == 0) return true;
+	if (setPercent) health *= baseHealth;
 	if (health > baseHealth) health = baseHealth;
-	if (setPercent)
-		health *= baseHealth;
 	ExtraDataList *xData = invRef->xData;
 	if (xData)
 	{
