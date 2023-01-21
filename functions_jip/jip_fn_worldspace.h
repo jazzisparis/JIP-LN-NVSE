@@ -10,6 +10,7 @@ DEFINE_COMMAND_PLUGIN(GetWorldspaceWaterType, 0, 1, kParams_OneWorldspace);
 DEFINE_COMMAND_PLUGIN(SetWorldspaceWaterType, 0, 2, kParams_OneWorldspace_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(GetWorldspaceImagespace, 0, 1, kParams_OneWorldspace);
 DEFINE_COMMAND_PLUGIN(SetWorldspaceImagespace, 0, 2, kParams_OneWorldspace_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetWorldspacePersistentCell, 0, 1, kParams_OneWorldspace);
 
 bool Cmd_GetWorldspaceFlag_Execute(COMMAND_ARGS)
 {
@@ -124,5 +125,14 @@ bool Cmd_SetWorldspaceImagespace_Execute(COMMAND_ARGS)
 	TESImageSpace *imgSpc = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wldSpc, &imgSpc) && (!imgSpc || IS_ID(imgSpc, TESImageSpace)))
 		wldSpc->imageSpace = imgSpc;
+	return true;
+}
+
+bool Cmd_GetWorldspacePersistentCell_Execute(COMMAND_ARGS)
+{
+	REFR_RES = 0;
+	TESWorldSpace *wldSpc;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wldSpc) && wldSpc->cell)
+		REFR_RES = wldSpc->cell->refID;
 	return true;
 }

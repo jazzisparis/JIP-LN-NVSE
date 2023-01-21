@@ -44,7 +44,6 @@ namespace MemoryPool
 			call	_aligned_malloc
 			add		esp, 8
 			retn
-			ALIGN 16
 		newSection:
 			push	edi
 			push	edx
@@ -54,49 +53,46 @@ namespace MemoryPool
 			mov		eax, [edi]
 			mov		s_memoryPool.m_freeSections, eax
 			jmp		gotSection
-			NOP_0x8
 		newPool:
 			push	MEMORY_POOL_SIZE+0x40
 			call	malloc
+			pop		ecx
 			add		eax, 0x20
 			and		eax, 0xFFFFFFF0
 			mov		edi, eax
-			lea		edx, [eax+MEMORY_POOL_SIZE-POOL_SECTION_SIZE]
-			add		eax, POOL_SECTION_SIZE
-			mov		s_memoryPool.m_freeSections, eax
+			mov		ecx, offset s_memoryPool.m_freeSections
+			mov		edx, MEMORY_POOL_SIZE/POOL_SECTION_SIZE-1
 		sectLinker:
-			mov		ecx, eax
 			add		eax, POOL_SECTION_SIZE
 			mov		[ecx], eax
-			cmp		eax, edx
-			jb		sectLinker
-			pop		ecx
-			xor		ecx, ecx
-			mov		[eax], ecx
+			mov		ecx, eax
+			dec		edx
+			jnz		sectLinker
+			mov		[eax], edx
 		gotSection:
 			pop		ecx
 			lea		eax, [esi+edi]
-			mov		[ecx], eax
 			lea		edx, [edi+POOL_SECTION_SIZE]
 			sub		edx, esi
+			ALIGN 16
 		blockLinker:
+			mov		[ecx], eax
 			mov		ecx, eax
 			add		eax, esi
-			mov		[ecx], eax
 			cmp		eax, edx
 			jbe		blockLinker
-			mov		dword ptr [ecx], 0
 			add		edx, esi
+			xor		esi, esi
+			mov		[ecx], esi
 			sub		edx, eax
 			jbe		done
-			mov		esi, edx
-			shr		esi, 8
-			setnz	cl
-			add		cl, 4
-			shr		edx, cl
-			mov		esi, 1
-			shl		esi, cl
 			push	eax
+			test	edx, 0xFFFFFF00
+			setnz	cl
+			or		cl, 4
+			shr		edx, cl
+			or		esi, 1
+			shl		esi, cl
 			ALIGN 16
 		surplIter:
 			mov		ecx, eax

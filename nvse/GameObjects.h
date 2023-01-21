@@ -48,9 +48,9 @@ public:
 	/*1DC*/virtual NiVector3	*GetMaxBounds(NiVector3 *outBounds);
 	/*1E0*/virtual void		UpdateAnimation();
 	/*1E4*/virtual AnimData	*GetAnimData();			// 0079
-	/*1E8*/virtual ValidBip01Names * GetValidBip01Names(void);	// 007A	Character only
-	/*1EC*/virtual ValidBip01Names * CallGetValidBip01Names(void);
-	/*1F0*/virtual void		SetValidBip01Names(ValidBip01Names *validBip01Names);
+	/*1E8*/virtual BipedAnim	*GetBipedAnim();	// 007A	Character only
+	/*1EC*/virtual BipedAnim	*CallGetBipedAnim();
+	/*1F0*/virtual void		SetBipedAnim(BipedAnim *bipedAnims);
 	/*1F4*/virtual NiVector3	*GetPos();
 	/*1F8*/virtual void		Unk_7E(UInt32 arg0);
 	/*1FC*/virtual void		Unk_7F(void);
@@ -63,7 +63,7 @@ public:
 	/*218*/virtual bool		IsCharacter();			// return false for Actor and Creature, true for character and PlayerCharacter
 	/*21C*/virtual bool		IsCreature();
 	/*220*/virtual bool		IsExplosion();
-	/*224*/virtual bool		IsProjectile();
+	/*224*/virtual bool		IsProjectile() const;
 	/*228*/virtual void		SetParentCell(TESObjectCELL *cell);			// SetParentCell (Interior only ?)
 	/*22C*/virtual bool		HasHealth(bool arg0);	// HasHealth (baseForm health > 0 or Flags bit23 set)
 	/*230*/virtual bool		GetHasKnockedState();
@@ -146,12 +146,12 @@ public:
 	bhkCharacterController *GetCharacterController() const;
 	TESObjectREFR *GetMerchantContainer() const;
 	double GetWaterImmersionPerc() const;
-	bool IsMobile();
-	bool IsGrabbable();
+	bool IsMobile() const;
+	bool IsGrabbable() const;
 	NiTexture** __fastcall GetTexturePtr(const char *blockName) const;
 	void SwapTexture(const char *blockName, const char *filePath, UInt32 texIdx);
 	bool SetLinkedRef(TESObjectREFR *linkObj, UInt8 modIdx = 0xFF);
-	bool ValidForHooks();
+	bool ValidForHooks() const;
 	NiNode *GetNiNode() const;
 	NiAVObject* __fastcall GetNiBlock(const char *blockName) const;
 	NiAVObject* __fastcall GetNiBlock2(const char *blockName) const;
@@ -712,21 +712,14 @@ public:
 	UInt8								byte1B2;					// 1B2
 	UInt8								byte1B3;					// 1B3
 
-	// OBSE: unk1 looks like quantity, usu. 1; ignored for ammo (equips entire stack). In NVSE, pretty much always forced internally to 1 
-	// OBSE: itemExtraList is NULL as the container changes entry is not resolved before the call
-	// NVSE: Default values are those used by the vanilla script functions.
 	__forceinline void EquipItem(TESForm *objType, UInt32 equipCount = 1, ExtraDataList *itemExtraList = NULL, bool applyEnchantment = 1, bool lockEquip = 0, bool noMessage = 1)
 	{
 		ThisCall(0x88C650, this, objType, equipCount, itemExtraList, applyEnchantment, lockEquip, noMessage);
 	}
-	__forceinline void UnequipItem(TESForm *objType, UInt32 unequipCount = 1, ExtraDataList *itemExtraList = NULL, bool arg4 = 1, bool lockUnequip = 0, bool noMessage = 1)
+	__forceinline void UnequipItem(TESForm *objType, UInt32 unequipCount = 1, ExtraDataList *itemExtraList = NULL, bool removeEnchantment = 1, bool lockUnequip = 0, bool noMessage = 1)
 	{
-		ThisCall(0x88C790, this, objType, unequipCount, itemExtraList, arg4, lockUnequip, noMessage);
+		ThisCall(0x88C790, this, objType, unequipCount, itemExtraList, removeEnchantment, lockUnequip, noMessage);
 	}
-
-	//EquippedItemsList GetEquippedItems();
-	//ExtraContainerDataArray GetEquippedEntryDataList();
-	//ExtraContainerExtendDataArray GetEquippedExtendDataList();
 
 	bool GetDead() const {return (lifeState == 1) || (lifeState == 2);}
 	bool GetRestrained() const {return lifeState == 5;}
@@ -753,7 +746,7 @@ public:
 	bool IsWeaponOut() const;
 	void UpdateActiveEffects(MagicItem *magicItem, EffectItem *effItem, bool addNew);
 	bool GetIsGhost() const;
-	float GetRadiationLevel();
+	float GetRadiationLevel() const;
 	BackUpPackage *AddBackUpPackage(TESObjectREFR *targetRef, TESObjectCELL *targetCell, UInt32 flags);
 	void __fastcall TurnToFaceObject(TESObjectREFR *target);
 	void __vectorcall TurnAngle(float angle);
@@ -794,7 +787,7 @@ public:
 	/*4DC*/virtual void	Unk_137(void);
 	/*4E0*/virtual void	Unk_138(void);
 
-	ValidBip01Names	*validBip01Names;	// 1B4
+	BipedAnim		*bipedAnims;		// 1B4
 	float			totalArmorDR;		// 1B8
 	float			totalArmorDT;		// 1BC
 	UInt8			isTrespassing;		// 1C0
@@ -889,7 +882,12 @@ public:
 		bhkSimpleShapePhantom	*phantom04;
 	};
 
-	UInt32								unk1C8[15];				// 1C8	208 could be a DialogPackage
+	UInt32								unk1C8[10];				// 1C8	208 could be a DialogPackage
+	TESForm								*queuedWeapon;			// 1F0
+	UInt32								unk1F4;					// 1F4
+	UInt8								byte1F8;				// 1F8
+	UInt8								pad1F9[3];				// 1F9
+	UInt32								unk1FC[2];				// 1FC
 	UInt8								byte204;				// 204
 	UInt8								byte205;				// 205
 	UInt8								recalcQuestTargets;		// 206
@@ -963,7 +961,7 @@ public:
 	UInt8								byte682;				// 682
 	UInt8								byte683;				// 683
 	UInt32								unk684[2];				// 684
-	ValidBip01Names						*VB01N1stPerson;		// 68C
+	BipedAnim							*bipedAnims1stPerson;	// 68C
 	AnimData							*animData1stPerson;		// 690
 	NiNode								*node1stPerson;			// 694
 	float								flt698;					// 698
@@ -1107,7 +1105,7 @@ public:
 	};
 
 	/*304*/virtual UInt32	GetProjectileType();
-	/*308*/virtual void	Unk_C2(void);
+	/*308*/virtual void	Do3DLoaded();
 	/*30C*/virtual void	Unk_C3(void);
 	/*310*/virtual void	Unk_C4(void);
 	/*314*/virtual bool	ProcessImpact();
@@ -1121,7 +1119,7 @@ public:
 	enum
 	{
 		kProjFlag_IsHitScan =					0x1,
-		kProjFlag_Bit01Unk =					0x2,
+		kProjFlag_HitScanNonTracer =			0x2,
 		kProjFlag_IsStuck =						0x4,
 		kProjFlag_Bit03Unk =					0x8,
 		kProjFlag_IsTracer =					0x10,
@@ -1193,7 +1191,7 @@ public:
 	UInt8				pad149[3];			// 149
 	float				range;				// 14C
 
-	void GetData(UInt32 dataType, double *result);
+	void GetData(UInt32 dataType, double *result) const;
 };
 static_assert(sizeof(Projectile) == 0x150);
 
@@ -1256,7 +1254,7 @@ public:
 class Explosion : public MobileObject
 {
 public:
-	virtual void	Unk_C1(void);
+	virtual void	CheckInit3D();
 
 	float				unk088;			// 088	init'd to 0
 	float				unk08C;			// 08C	init'd to 3.0

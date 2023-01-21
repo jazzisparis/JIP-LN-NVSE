@@ -315,7 +315,7 @@ __declspec(naked) void __fastcall SetContainerItemsHealthHook(TESContainer *cont
 		pop		edi
 		pop		esi
 		retn	4
-		ALIGN 16
+		ALIGN 4
 	kMaxHealth:
 		EMIT_DW(3F, 7F, BE, 77)
 	}
@@ -387,8 +387,7 @@ __declspec(naked) UInt16 DetectionGetLevelHook()
 		mov		ecx, g_thePlayer
 		add		ecx, 0xA4
 	getLevel:
-		call	dword ptr [eax+0x28]
-		retn
+		jmp		dword ptr [eax+0x28]
 	}
 }
 
@@ -410,15 +409,17 @@ FixedTypeArray<Script*, 0xF> s_messageBoxScripts;
 
 __declspec(naked) float MaxMessageWidthHook()
 {
-	static const float maxWidth = 1200.0F;
 	__asm
 	{
 		cmp		s_messageBoxScripts, 0
 		jnz		overrideWidth
 		JMP_EAX(ADDR_TileGetFloat)
 	overrideWidth:
-		fld		maxWidth
+		fld		kMaxWidth
 		retn	4
+		ALIGN 4
+	kMaxWidth:
+		EMIT_DW(44, 96, 00, 00)
 	}
 }
 
@@ -484,7 +485,7 @@ __declspec(naked) void CmdActivateHook()
 	__asm
 	{
 		push	ecx
-		push	kExtraData_Count
+		push	kXData_ExtraCount
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
 		pop		ecx
@@ -552,14 +553,14 @@ __declspec(naked) void PackageSetRunHook()
 	}
 }
 
-__declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *changesData)
+__declspec(naked) void __fastcall FixVendorCaps(DataHandler *dataHandler, ExtraContainerChanges::Data *changesData)
 {
 	__asm
 	{
 		push	ebp
 		mov		ebp, esp
 		push	ecx
-		mov		ecx, g_dataHandler
+		push	edx
 		mov		ecx, [ecx+0x628]
 		mov		ecx, [ecx]
 		mov		edx, g_capsItem
@@ -570,7 +571,7 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		test	eax, eax
 		jz		done
 		push	eax
-		mov		ecx, [ebp-4]
+		mov		ecx, [ebp-8]
 		push	dword ptr [ecx+4]
 		mov		ecx, [ecx]
 		mov		edx, g_capsItem
@@ -582,7 +583,7 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		jle		done
 		push	esi
 		push	edi
-		mov		esi, [ebp-8]
+		mov		esi, [ebp-0xC]
 		mov		edi, edx
 		ALIGN 16
 	countHead:
@@ -592,14 +593,14 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		mov		esi, [esi+4]
 		test	ecx, ecx
 		jz		countHead
-		push	kExtraData_OriginalReference
+		push	kXData_ExtraOriginalReference
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		countHead
 		mov		edx, [eax+0xC]
-		cmp		[ebp-0xC], edx
+		cmp		[ebp-0x10], edx
 		jnz		countHead
-		push	kExtraData_Count
+		push	kXData_ExtraCount
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		addHead
@@ -614,7 +615,7 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		jle		doPop
 		call	ExtraDataList::Create
 		mov		esi, eax
-		push	dword ptr [ebp-0xC]
+		push	dword ptr [ebp-0x10]
 		call	ExtraOriginalReference::Create
 		push	eax
 		mov		ecx, esi
@@ -629,13 +630,14 @@ __declspec(naked) void __fastcall FixVendorCaps(ExtraContainerChanges::Data *cha
 		mov		ecx, esi
 		CALL_EAX(ADDR_AddExtraData)
 		push	esi
-		mov		ecx, [ebp-8]
+		mov		ecx, [ebp-0xC]
 		call	ExtraContainerChanges::ExtendDataList::Append
 		jmp		addHead
 	doPop:
 		pop		edi
 		pop		esi
 	done:
+		mov		ecx, [ebp-4]
 		leave
 		retn
 	}
@@ -645,11 +647,9 @@ __declspec(naked) void BarterSellFixHook()
 {
 	__asm
 	{
-		mov		ecx, [esp-4]
-		mov		ecx, [ecx-0x1C]
-		call	FixVendorCaps
-		mov		ecx, g_dataHandler
-		JMP_EAX(0x46F640)
+		mov		edx, [ebp-0x1C]
+		push	0x46F640
+		jmp		FixVendorCaps
 	}
 }
 
@@ -818,7 +818,7 @@ __declspec(naked) bool __stdcall TerminalGetLockedHook(TESObjectREFR *terminalRe
 		mov		ecx, [esp+8]
 		test	ecx, ecx
 		jz		setRes
-		push	kExtraData_TerminalState
+		push	kXData_ExtraTerminalState
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
 		test	eax, eax
@@ -858,7 +858,7 @@ void __fastcall BuildMusicMarkerList(TESWorldSpace *worldspace, tList<TESObjectR
 			markerRef = traverse->data;
 			traverse = traverse->next;
 			if (!markerRef) continue;
-			xAudioMarker = GetExtraType(&markerRef->extraDataList, AudioMarker);
+			xAudioMarker = GetExtraType(&markerRef->extraDataList, ExtraAudioMarker);
 			if (!xAudioMarker || !xAudioMarker->data)
 				continue;
 			s_musicMarkerList->InsertSorted(MusicMarker(markerRef, xAudioMarker->data));
@@ -880,8 +880,7 @@ __declspec(naked) void BuildMusicMarkerListHook()
 	{
 		mov		edx, eax
 		mov		ecx, [ebp-0x10]
-		call	BuildMusicMarkerList
-		retn
+		jmp		BuildMusicMarkerList
 	}
 }
 
@@ -923,7 +922,7 @@ __declspec(naked) void __fastcall ClearExtraHotkeyIfUsed(ExtraDataList *inXDataL
 {
 	__asm
 	{
-		push	kExtraData_Hotkey
+		push	kXData_ExtraHotkey
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jnz		isBound
@@ -967,7 +966,7 @@ __declspec(naked) void __fastcall ClearExtraHotkeyIfUsed(ExtraDataList *inXDataL
 		mov		edi, [edi+4]
 		test	ecx, ecx
 		jz		xdlIter
-		push	kExtraData_Hotkey
+		push	kXData_ExtraHotkey
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		xdlIter
@@ -1024,7 +1023,6 @@ __declspec(naked) void HotkeyFixPlayerActivateHook()
 
 __declspec(naked) void SetScaleHook()
 {
-	static const UInt32 kMinScale = 0x38D1B717;
 	__asm
 	{
 		movss	xmm0, [ebp+8]
@@ -1032,6 +1030,9 @@ __declspec(naked) void SetScaleHook()
 		minss	xmm0, SS_100
 		movss	[ebp+8], xmm0
 		retn
+		ALIGN 4
+	kMinScale:
+		EMIT_DW(38, D1, B7, 17)
 	}
 }
 
@@ -1048,7 +1049,7 @@ __declspec(naked) UInt8 __fastcall GetEntryDataModFlagsHook(ContChangesEntry *en
 		mov		eax, [eax]
 		test	eax, eax
 		jz		done
-		push	kExtraData_ItemDropper
+		push	kXData_ExtraItemDropper
 		mov		ecx, eax
 		call	BaseExtraList::GetByType
 		test	eax, eax
@@ -1058,7 +1059,7 @@ __declspec(naked) UInt8 __fastcall GetEntryDataModFlagsHook(ContChangesEntry *en
 		jz		noDropper
 		lea		ecx, [eax+0x44]
 	noDropper:
-		push	kExtraData_WeaponModFlags
+		push	kXData_ExtraWeaponModFlags
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		done
@@ -1119,7 +1120,7 @@ __declspec(naked) void RolloverWeaponHook()
 		test	byte ptr [eax+0x100], 0x80
 		setz	al
 		jnz		done
-		push	kExtraData_WeaponModFlags
+		push	kXData_ExtraWeaponModFlags
 		mov		ecx, [ebp+8]
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
@@ -1251,7 +1252,6 @@ float s_condDmgPenalty = 0.67F;
 
 __declspec(naked) float __cdecl GetConditionDamagePenaltyHook(float healthPercent)
 {
-	static const float kPenaltyThreshold = 0.75F;
 	__asm
 	{
 		movss	xmm0, PS_V3_One
@@ -1270,6 +1270,9 @@ __declspec(naked) float __cdecl GetConditionDamagePenaltyHook(float healthPercen
 		movss	[esp+4], xmm0
 		fld		dword ptr [esp+4]
 		retn
+		ALIGN 4
+	kPenaltyThreshold:
+		EMIT_DW(3F, 40, 00, 00)
 	}
 }
 
@@ -1430,7 +1433,7 @@ __declspec(naked) void IsValidAITargetHook()
 		test	dword ptr [ecx+8], 0x4820
 		setnz	al
 		jnz		done
-		call	TESObjectREFR::GetDisabled
+		jmp		TESObjectREFR::GetDisabled
 	done:
 		retn
 	}
@@ -1474,7 +1477,7 @@ __declspec(naked) TESModelTextureSwap *TESObjectWEAP::GetWeaponModel(UInt32 modF
 	}
 }
 
-__declspec(naked) void __fastcall SetWeaponSlotHook(ValidBip01Names *vbp01Names, int EDX, TESObjectWEAP *weapon, UInt8 modFlags)
+__declspec(naked) void __fastcall SetWeaponSlotHook(BipedAnim *vbp01Names, int EDX, TESObjectWEAP *weapon, UInt8 modFlags)
 {
 	__asm
 	{
@@ -1590,7 +1593,7 @@ __declspec(naked) void PlayAttackSoundHook()
 		jz		done
 		mov		edx, [eax+8]
 		push	edx
-		push	kExtraData_WeaponModFlags
+		push	kXData_ExtraWeaponModFlags
 		mov		ecx, [eax]
 		mov		ecx, [ecx]
 		call	BaseExtraList::GetByType
@@ -1803,7 +1806,6 @@ __declspec(naked) bool __fastcall IsDisposableWeaponHook(TESObjectWEAP *weapon)
 
 __declspec(naked) Actor* __fastcall GetNearestLivingAlly(Actor *actor)
 {
-	static const float kMaxDist = 1024.0F;
 	__asm
 	{
 		push	ebp
@@ -1859,6 +1861,9 @@ __declspec(naked) Actor* __fastcall GetNearestLivingAlly(Actor *actor)
 		pop		ebx
 		pop		ebp
 		retn
+		ALIGN 4
+	kMaxDist:
+		EMIT_DW(44, 80, 00, 00)
 	}
 }
 
@@ -1905,7 +1910,7 @@ __declspec(naked) void ClearAshPilesHook()
 	{
 		test	byte ptr [ecx+6], kHookFormFlag6_IsAshPile
 		jz		done
-		push	kExtraData_AshPileRef
+		push	kXData_ExtraAshPileRef
 		mov		ecx, [ebp-0x2C]
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
@@ -1918,7 +1923,7 @@ __declspec(naked) void ClearAshPilesHook()
 		mov		edx, [ecx+0x20]
 		test	byte ptr [edx+9], 4
 		jnz		done
-		push	kExtraData_AshPileRef
+		push	kXData_ExtraAshPileRef
 		add		ecx, 0x44
 		CALL_EAX(0x410140)	//	BaseExtraList::RemoveByType
 	noRefr:
@@ -2077,7 +2082,6 @@ __declspec(naked) bool __cdecl PickSoundFileFromFolderHook(char *outFilePath)
 
 __declspec(naked) float __vectorcall GetFrequencyModifier(TESSound *soundForm)
 {
-	static const float kFreqMult[] = {0.01F, 0.005F};
 	__asm
 	{
 		movss	xmm0, PS_V3_One
@@ -2092,6 +2096,9 @@ __declspec(naked) float __vectorcall GetFrequencyModifier(TESSound *soundForm)
 		addss	xmm0, xmm1
 	done:
 		retn
+		ALIGN 4
+	kFreqMult:
+		EMIT_DW(3C, 23, D7, 0A) EMIT_DW(3B, A3, D7, 0A)
 	}
 }
 
@@ -2158,7 +2165,6 @@ __declspec(naked) void FillGameSoundPropsHook()
 
 __declspec(naked) UInt32 __fastcall AdjustSoundFrequencyHook(BSGameSound *gameSound, int EDX, float freq)
 {
-	static const float kFlt200K = 200000.0F;
 	__asm
 	{
 		cmp		dword ptr [ecx+0x19C], 0
@@ -2180,6 +2186,9 @@ __declspec(naked) UInt32 __fastcall AdjustSoundFrequencyHook(BSGameSound *gameSo
 	done:
 		xor		eax, eax
 		retn	4
+		ALIGN 4
+	kFlt200K:
+		EMIT_DW(48, 43, 50, 00)
 	}
 }
 
@@ -3165,10 +3174,10 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 			SInt32 hitLocation = hitData->hitLocation;
 			if ((hitLocation >= 0) && (hitLocation <= 12) && NOT_ID(target, Creature))
 			{
-				ValidBip01Names *validBip = ((Character*)target)->validBip01Names;
+				BipedAnim *validBip = ((Character*)target)->bipedAnims;
 				if (validBip)
 				{
-					ValidBip01Names::Data *slotData = validBip->slotData;
+					BipedAnim::Data *slotData = validBip->slotData;
 					TESObjectARMO *hitLocArmor;
 					if (hitLocation == 1)
 					{
@@ -3467,6 +3476,21 @@ __declspec(naked) bool PlayerCannotBeHitHook()
 		mov		al, ds:0x11E07BA
 	done:
 		retn
+	}
+}
+
+float s_msgDisplayTime = 2.0F;
+
+__declspec(naked) void QueueUIMessageHook()
+{
+	__asm
+	{
+		mov		eax, [ebp+0x18]
+		mov		edx, s_msgDisplayTime
+		cmp		dword ptr [ebp+4], 0x96A262
+		cmovbe	eax, edx
+		push	eax
+		JMP_EDX(0x705363)
 	}
 }
 
@@ -3810,7 +3834,6 @@ bhkCharControllerShape *s_pcControllerShape = nullptr;
 
 __declspec(naked) void InitControllerShapeHook()
 {
-	static const float kFltSix = 6.0F;
 	__asm
 	{
 		mov		eax, 0x1267BE0
@@ -3868,6 +3891,9 @@ __declspec(naked) void InitControllerShapeHook()
 		lea		ecx, [ebx+0x5A8]
 		CALL_EAX(0xC663D0)
 		retn
+		ALIGN 4
+	kFltSix:
+		EMIT_DW(40, C0, 00, 00)
 	}
 }
 
@@ -4614,32 +4640,6 @@ __declspec(naked) BSArchive* __cdecl LoadBSAFileHook(const char *filename, short
 	}
 }
 
-float s_msgDisplayTime = 2;				// Replacement float for 0x010162C0
-const UInt32 kDisplayTimePatches[] =	// Instances of "D905 C0620101" (FLD DWORD PTR DS:010162C0) related to default UI messages.
-{
-	0x4825C7, 0x48261B, 0x4C5625, 0x4CB8FE, 0x4CEBE0, 0x4CEC36, 0x4CF150, 0x4CF1A9, 0x4CF57D, 0x4CF5D6, 0x4CF7FD, 0x4CF856, 0x4CFB17, 0x4CFB70,
-	0x4FEEEA, 0x5013FF, 0x501494, 0x5016EA, 0x508C81, 0x508D21, 0x509695, 0x5096ED, 0x50973E, 0x50978B, 0x5097C9, 0x50980B, 0x5150C8, 0x5151CF,
-	0x516F94, 0x517065, 0x518150, 0x518369, 0x51853D, 0x518601, 0x5732E4, 0x57344B, 0x5B5238, 0x5B5287, 0x5C1E88, 0x5C86FF, 0x5CDD77, 0x5D0268,
-	0x5D0475, 0x5F5D36, 0x5F5EE4, 0x5F62E0, 0x5F648E, 0x5FA5D3, 0x5FA689, 0x5FA913, 0x607BAF, 0x607C65, 0x60822F, 0x608D3C, 0x615847, 0x61593E,
-	0x615B0B, 0x615BF6, 0x615DF8, 0x615EFD, 0x6160FC, 0x6161F5, 0x678444, 0x70E55A, 0x70E59E, 0x7289BA, 0x733811, 0x7338CD, 0x73398F, 0x733A4A,
-	0x7351AF, 0x7352C9, 0x737D34, 0x7410FF, 0x75739E, 0x758297, 0x75DE49, 0x75E1A8, 0x780508, 0x780569, 0x78084B, 0x7809B5, 0x780A03, 0x780A3F,
-	0x780A8F, 0x780AD7, 0x780E85, 0x780ED6, 0x781C81, 0x781CEE, 0x78DBED, 0x78EEB5, 0x790162, 0x790489, 0x7981F6, 0x7BBFF1, 0x7BC0AD, 0x7BC16C,
-	0x7BC227, 0x7BD716, 0x7BD830, 0x7BEC29, 0x7C0AFE, 0x7C0C7D, 0x7C0D39, 0x7C0DFB, 0x7C0EB6, 0x7C18C4, 0x7C2EE0, 0x7C2FFA, 0x7C3FC7, 0x7EE72F,
-	0x7EE85F, 0x7EEA4E, 0x8159F8, 0x823F5A, 0x825167, 0x82BFC9, 0x8332E4, 0x833E7D, 0x834153, 0x85045E, 0x85057F, 0x8505E4, 0x8509AC, 0x8509FC,
-	0x856D23, 0x878E48, 0x88C916, 0x88C96B, 0x88CB02, 0x88CBE8, 0x88CDBA, 0x88CF9A, 0x88D1EE, 0x88D842, 0x8929F4, 0x89AD85, 0x89E0AB, 0x8B957B,
-	0x8BA3B1, 0x8C1E1B, 0x8C35D0, 0x8C54E5, 0x8C5525, 0x8C5581, 0x8C55C1, 0x8C5773, 0x8C57B3, 0x8C580F, 0x8C584F, 0x8C59F3, 0x8C5A33, 0x8C5A8F,
-	0x8C5ACF, 0x8C5C73, 0x8C5CB3, 0x8C5D0F, 0x8C5D4F, 0x93D6C5, 0x93D744, 0x93D864, 0x93D8CE, 0x93D968, 0x93D9F6, 0x93DA52, 0x93DB06, 0x9423C8,
-	0x942404, 0x942464, 0x9424B1, 0x94250C, 0x942564, 0x9425A2, 0x94260C, 0x94264E, 0x94DC0A, 0x94DD36, 0x94FDED, 0x94FE1D, 0x94FEEE, 0x94FF1E,
-	0x9627C4, 0x966B3A, 0x969FC5, 0x96A001, 0x96A061, 0x96A0AE, 0x96A109, 0x96A161, 0x96A19F, 0x96A200, 0x96A242
-};
-
-void PatchDisplayTime(bool enable = true)
-{
-	UInt32 valueAddr = enable ? (UInt32)&s_msgDisplayTime : 0x10162C0;
-	for (UInt32 patchAddr : kDisplayTimePatches)
-		SafeWrite32(patchAddr, valueAddr);
-}
-
 const char s_varTypeNameTokens[] = "array_var\0string_var";
 
 UInt32 s_deferrSetOptional = 0;
@@ -4673,6 +4673,9 @@ void InitGamePatches()
 		SafeWrite16(0x57D3B9, 0x1AEB);	//	Increase grass fade distance
 		SafeWrite8(0xC44405, 4);		//	Increase buffer size for GetPrivateProfileString
 	}
+
+	//	Override display time of default UI messages.
+	WriteRelJump(0x70535C, (UInt32)QueueUIMessageHook);
 
 	//	Increase corner message max text length to 0x203 characters
 	SafeWrite8(0x7753B8, 4);
@@ -5007,8 +5010,6 @@ void InitGamePatches()
 			else SetOptionalPatch(index, true);
 		}
 	}
-
-	PatchDisplayTime();
 }
 
 NiCamera* __fastcall GetSingletonsHook(SceneGraph *sceneGraph)
@@ -5020,11 +5021,12 @@ NiCamera* __fastcall GetSingletonsHook(SceneGraph *sceneGraph)
 	g_interfaceManager = InterfaceManager::GetSingleton();
 	g_OSGlobals = OSGlobals::GetSingleton();
 	g_TES = TES::GetSingleton();
+	g_currentSky = Sky::Get();
 	g_BGSSaveLoadGame = BGSSaveLoadGame::GetSingleton();
 	g_gridCellArray = g_TES->gridCellArray;
 	g_thePlayer = PlayerCharacter::GetSingleton();
 	g_inputGlobals = OSInputGlobals::GetSingleton();
-	g_scrapHeapQueue = *(void**)0x11DF1A8;
+	g_scrapHeapQueue = TaskQueueInterface::GetSingleton();
 	g_tileMenuArray = *(TileMenu***)0x11F350C;
 	return sceneGraph->camera;
 }
@@ -5033,8 +5035,8 @@ typedef int (*_ReloadENB)(UInt32 type, void *data);
 _ReloadENB ReloadENB = nullptr;
 
 extern UInt8 s_miniMapIndex;
-extern TempObject<NiFixedString> s_AutoWaterFadeNode;
-void __fastcall InitAutoWaterHook(BSFadeNode *node, int EDX, bool doSet);
+void AddRefToCellHook();
+void RemoveRefFromCellHook();
 
 void DeferredInit()
 {
@@ -5067,6 +5069,8 @@ void DeferredInit()
 	s_initialTickCount = CdeclCall<UInt32>(0x457FE0);
 
 	SafeWrite32(0x102F5A4, (UInt32)MarkRefAsModifiedHook);
+
+	s_overrideBSAFiles->Destroy();
 
 	s_tempPosMarker = ThisCall<TESObjectREFR*>(0x55A2F0, GameHeapAlloc(sizeof(TESObjectREFR)));
 	ThisCall(0x484490, s_tempPosMarker);
@@ -5134,10 +5138,9 @@ void DeferredInit()
 	if (modIdx != 0xFF)
 	{
 		s_miniMapIndex = modIdx;
-		s_AutoWaterFadeNode() = "AutoWaterFadeNode";
-		WriteRelCall(0x49E776, (UInt32)InitAutoWaterHook);
-		if (TESModel *baseModel = DYNAMIC_CAST(LookupFormByRefID(0x15A1F2), TESForm, TESModel))
-			baseModel->SetPath("Clutter\\BlackRefBlock256.NIF");
+		WriteRelJump(0x527071, (UInt32)AddRefToCellHook);
+		WriteRelJump(0x5271A0, (UInt32)RemoveRefFromCellHook);
+		((NiGeometry*)g_modelLoader->LoadModel("Clutter\\BlackPlane01.nif", 0, 1, 0, 0)->m_children[0])->shaderProp->flags1 |= BSShaderProperty::kFlag1_LocalMapHideSecret;
 	}
 
 	if (s_NVACAddress)

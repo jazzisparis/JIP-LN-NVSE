@@ -47,9 +47,10 @@ LoadedReferenceCollection *g_loadedReferences;
 InterfaceManager *g_interfaceManager;
 OSGlobals *g_OSGlobals;
 TES *g_TES;
+Sky *g_currentSky;
 PlayerCharacter *g_thePlayer;
 NiCamera *g_mainCamera;
-void *g_scrapHeapQueue;
+TaskQueueInterface *g_scrapHeapQueue;
 FontManager *g_fontManager;
 OSInputGlobals *g_inputGlobals;
 TileMenu **g_tileMenuArray;
@@ -637,7 +638,7 @@ hkpWorld *GethkpWorld()
 	TESObjectCELL *cell = g_TES->currentInterior;
 	if (cell)
 	{
-		ExtraHavok *xHavok = GetExtraType(&cell->extraDataList, Havok);
+		ExtraHavok *xHavok = GetExtraType(&cell->extraDataList, ExtraHavok);
 		if (xHavok) hkWorld = xHavok->world;
 	}
 	else hkWorld = bhkWorldM::GetSingleton();
@@ -775,7 +776,7 @@ TempObject<UnorderedMap<UInt32, UInt32>> s_linkedRefDefault, s_linkedRefsTemp;
 
 bool TESObjectREFR::SetLinkedRef(TESObjectREFR *linkObj = nullptr, UInt8 modIdx)
 {
-	ExtraLinkedRef *xLinkedRef = GetExtraType(&extraDataList, LinkedRef);
+	ExtraLinkedRef *xLinkedRef = GetExtraType(&extraDataList, ExtraLinkedRef);
 	if (!linkObj)
 	{
 		auto findDefID = s_linkedRefDefault->Find(refID);
@@ -889,12 +890,12 @@ TESObjectREFR* __fastcall CreateRefForStack(TESObjectREFR *container, ContChange
 
 ExtraDataList* __fastcall SplitFromStack(ContChangesEntry *entry, ExtraDataList *xDataIn)
 {
-	ExtraCount *xCount = GetExtraType(xDataIn, Count);
+	ExtraCount *xCount = GetExtraType(xDataIn, ExtraCount);
 	if (!xCount) return xDataIn;
 	ExtraDataList *xDataOut = xDataIn->CreateCopy();
-	xDataOut->RemoveByType(kExtraData_Worn);
-	xDataOut->RemoveByType(kExtraData_Count);
-	xDataOut->RemoveByType(kExtraData_Hotkey);
+	xDataOut->RemoveByType(kXData_ExtraWorn);
+	xDataOut->RemoveByType(kXData_ExtraCount);
+	xDataOut->RemoveByType(kXData_ExtraHotkey);
 	if (--xCount->count < 2)
 	{
 		xDataIn->RemoveExtra(xCount, true);
@@ -926,10 +927,10 @@ TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 		}
 		else
 		{
-			ValidBip01Names *equipment = actor->GetValidBip01Names();
+			BipedAnim *equipment = actor->GetBipedAnim();
 			if (equipment)
 			{
-				ValidBip01Names::Data *slotData = equipment->slotData;
+				BipedAnim::Data *slotData = equipment->slotData;
 				for (UInt8 count = 20; count; count--, slotData++)
 				{
 					item = slotData->item;
@@ -987,7 +988,7 @@ ContChangesEntry* __fastcall GetHotkeyItemEntry(UInt8 index, ExtraDataList **out
 		do
 		{
 			if (!(xData = xdlIter->data)) continue;
-			xHotkey = GetExtraType(xData, Hotkey);
+			xHotkey = GetExtraType(xData, ExtraHotkey);
 			if (!xHotkey || (xHotkey->index != index))
 				continue;
 			*outXData = xData;
@@ -1005,7 +1006,7 @@ bool __fastcall ClearHotkey(UInt8 index)
 	ContChangesEntry *entry = GetHotkeyItemEntry(index, &xData);
 	if (entry)
 	{
-		xData->RemoveByType(kExtraData_Hotkey);
+		xData->RemoveByType(kXData_ExtraHotkey);
 		if (!xData->m_data)
 		{
 			entry->extendData->Remove(xData);
@@ -1020,7 +1021,7 @@ float __fastcall GetModBonuses(TESObjectREFR *wpnRef, UInt32 effectID)
 {
 	TESObjectWEAP *weapon = (TESObjectWEAP*)wpnRef->baseForm;
 	if NOT_ID(weapon, TESObjectWEAP) return 0;
-	ExtraWeaponModFlags *xModFlags = GetExtraType(&wpnRef->extraDataList, WeaponModFlags);
+	ExtraWeaponModFlags *xModFlags = GetExtraType(&wpnRef->extraDataList, ExtraWeaponModFlags);
 	if (!xModFlags) return 0;
 	float result = 0;
 	for (UInt32 idx = 0; idx < 3; idx++)
@@ -1225,7 +1226,7 @@ namespace JIPScriptRunner
 		bool result = script->info.dataLength != 0;
 		if (result)
 		{
-			ExtraScript *xScript = GetExtraType(&callingRef->extraDataList, Script);
+			ExtraScript *xScript = GetExtraType(&callingRef->extraDataList, ExtraScript);
 			ScriptLocals *eventList = xScript ? xScript->eventList : nullptr;
 			if (eventList) xScript->eventList = nullptr;
 			SuppressConsoleOutput();

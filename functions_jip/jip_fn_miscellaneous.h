@@ -1108,7 +1108,7 @@ bool Cmd_ClearDeadActors_Execute(COMMAND_ARGS)
 			continue;
 		hiProcess = (HighProcess*)actor->baseProcess;
 		if (hiProcess && !hiProcess->processLevel && !hiProcess->fadeType && (hiProcess->dyingTimer < 0) &&
-			!actor->extraDataList.HasType(kExtraData_EnableStateChildren) && !ThisCall<bool>(0x577DE0, actor))
+			!actor->extraDataList.HasType(kXData_ExtraEnableStateChildren) && !ThisCall<bool>(0x577DE0, actor))
 			ThisCall(0x8FEB60, hiProcess, actor);
 	}
 	return true;

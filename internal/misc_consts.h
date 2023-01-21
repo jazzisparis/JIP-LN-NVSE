@@ -256,12 +256,14 @@ enum MaterialType
 #define ADDR_TileSetString		0xA01350
 #define ADDR_TileValSetFloat	0xA0A270
 #define ADDR_InitFontInfo		0xA12020
+#define ADDR_ReturnThis2		0xE68810
 
 #define IS_REFERENCE(form) ((*(UInt32**)form)[0x3C] == ADDR_ReturnTrue)
 #define NOT_REFERENCE(form) ((*(UInt32**)form)[0x3C] != ADDR_ReturnTrue)
 #define IS_ACTOR(form) ((*(UInt32**)form)[0x40] == ADDR_ReturnTrue)
 #define NOT_ACTOR(form) ((*(UInt32**)form)[0x40] != ADDR_ReturnTrue)
 #define IS_NODE(object) ((*(UInt32**)object)[3] == ADDR_ReturnThis)
+#define IS_GEOMETRY(object) ((*(UInt32**)object)[7] == ADDR_ReturnThis2)
 
 extern const bool kInventoryType[];
 extern const UInt8 kMaterialConvert[];

@@ -219,7 +219,7 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 			menuRef = ((DialogMenu*)menu)->partnerRef;
 			if (menuRef && IS_ID(((TESObjectREFR*)menuRef)->baseForm, BGSTalkingActivator))
 			{
-				ExtraTalkingActor *xTalker = GetExtraType(&((TESObjectREFR*)menuRef)->extraDataList, TalkingActor);
+				ExtraTalkingActor *xTalker = GetExtraType(&((TESObjectREFR*)menuRef)->extraDataList, ExtraTalkingActor);
 				if (xTalker) menuRef = xTalker->actor;
 			}
 			break;
@@ -1616,7 +1616,7 @@ bool Cmd_ToggleHUDCursor_Execute(COMMAND_ARGS)
 		else
 		{
 			g_interfaceManager->cursor->SetFloat(kTileValue_visible, 0);
-			g_interfaceManager->cursor->node->m_flags |= 1;
+			g_interfaceManager->cursor->node->Hide();
 			if (g_interfaceManager->activeTile)
 				g_interfaceManager->activeTile->SetFloat(kTileValue_mouseover, 0);
 		}
@@ -1815,7 +1815,7 @@ bool Cmd_AttachUIComponent_Execute(COMMAND_ARGS)
 bool Cmd_GetWorldMapPosMults_Execute(COMMAND_ARGS)
 {
 	static TESWorldSpace *currWorldSpace = nullptr, *mapWorldSpace = nullptr;
-	static alignas(16) WorldDimensions worldDimensions;
+	static WorldDimensions worldDimensions;
 	ScriptVar *outX, *outY;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outX, &outY))
 	{
@@ -1833,7 +1833,7 @@ bool Cmd_GetWorldMapPosMults_Execute(COMMAND_ARGS)
 					worldDimensions.GetDimensions(rootWorld);
 				}
 			}
-			NiPoint2 outPos = GetWorldMapPosMults(thisObj->position, worldDimensions);
+			NiPoint2 outPos = GetWorldMapPosMults(thisObj->position.PS2(), worldDimensions);
 			outX->data = outPos.x;
 			outY->data = outPos.y;
 		}

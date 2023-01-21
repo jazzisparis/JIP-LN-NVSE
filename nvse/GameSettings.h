@@ -111,20 +111,19 @@ class IniSettingCollection
 {
 public:
 	virtual void	Destroy(bool doFree);
-	virtual void	Unk_01(UInt32 arg);
-	virtual void	Unk_02(UInt32 arg);
-	virtual void	Unk_03(UInt32 arg);
-	virtual void	Unk_04(UInt32 arg);
-	virtual void	Unk_05(Setting *setting);
-	virtual void	Unk_06(UInt32 arg);
-	virtual void	Unk_07(void);
-	virtual void	Unk_08(void);
-	virtual void	Unk_09(void);
+	virtual void	AddSetting(Setting *setting);
+	virtual void	RemoveSetting(Setting *setting);
+	virtual void	GetViewerStrings(void *arg);
+	virtual bool    WriteSetting(Setting *setting);
+    virtual bool    ReadSetting(Setting *setting);
+    virtual bool    Open(UInt32 unused);
+    virtual bool    Close();
+    virtual bool    WriteAllSettings();
+    virtual bool    ReadAllSettings();
 
-	char				iniPath[0x100];		// 004
-	UInt32				unk104;				// 104
-	UInt32				unk108;				// 108
-	tList<Setting>		settings;			// 10C;
+	char				iniPath[0x104];		// 004
+	UInt32				handle;				// 108
+	tList<Setting>		settings;			// 10C
 
 	static IniSettingCollection * GetIniSettings();
 	static IniSettingCollection * GetIniPrefs();

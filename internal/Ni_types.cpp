@@ -1276,7 +1276,7 @@ __declspec(naked) void __vectorcall NiViewport::SetFOV(float fov)
 		shufps	xmm0, xmm0, 0x14
 		movups	[ecx], xmm0
 		retn
-		ALIGN 16
+		ALIGN 4
 	kFlt2d3:
 		EMIT_DW(3F,2A,AA,AB)
 	}

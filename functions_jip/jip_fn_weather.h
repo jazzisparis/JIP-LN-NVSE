@@ -198,7 +198,7 @@ bool Cmd_SetWeatherRGBColor_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCurrentWeather_Execute(COMMAND_ARGS)
 {
-	TESWeather *weather = g_TES->sky ? g_TES->sky->currWeather : NULL;
+	TESWeather *weather = g_currentSky->currWeather;
 	REFR_RES = weather ? weather->refID : 0;
 	DoConsolePrint(weather);
 	return true;
@@ -217,20 +217,16 @@ bool Cmd_SetWeatherTransitionTimeOverride_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWindDirection_Execute(COMMAND_ARGS)
 {
-	if (g_TES->sky)
-	{
-		*result = g_TES->sky->windDirection * -Dbl180dPI;
-		DoConsolePrint(result);
-	}
-	else *result = 0;
+	*result = g_currentSky->windDirection * -Dbl180dPI;
+	DoConsolePrint(result);
 	return true;
 }
 
 bool Cmd_SetWindDirection_Execute(COMMAND_ARGS)
 {
 	float windDirection;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &windDirection) && g_TES->sky)
-		g_TES->sky->windDirection = windDirection * -FltPId180;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &windDirection))
+		g_currentSky->windDirection = windDirection * -FltPId180;
 	return true;
 }
 
@@ -244,9 +240,8 @@ bool Cmd_SetWindSpeedMult_Execute(COMMAND_ARGS)
 
 bool Cmd_TriggerLightningFX_Execute(COMMAND_ARGS)
 {
-	Sky *sky = g_TES->sky;
-	if (sky && sky->GetIsRaining())
-		sky->lightningFxPerc = 1;
+	if (g_currentSky->GetIsRaining())
+		g_currentSky->lightningFxPerc = 1;
 	return true;
 }
 
@@ -262,15 +257,10 @@ bool Cmd_ResetClouds_Execute(COMMAND_ARGS)
 
 bool Cmd_ReloadCloudTextures_Execute(COMMAND_ARGS)
 {
-	Sky *sky = g_TES->sky;
-	if (sky)
+	if (Clouds *clouds = g_currentSky->clouds)
 	{
-		Clouds *clouds = sky->clouds;
-		if (clouds)
-		{
-			clouds->byte5A = 1;
-			clouds->Update(sky, 0);
-		}
+		clouds->byte5A = 1;
+		clouds->Update(g_currentSky, 0);
 	}
 	return true;
 }

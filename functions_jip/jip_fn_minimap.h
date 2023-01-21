@@ -59,7 +59,7 @@ __declspec(naked) __m128* __fastcall GetNorthRotation(TESObjectCELL *cell)
 		xor		eax, eax
 		test	byte ptr [ecx+0x24], 1
 		jz		noRotation
-		push	kExtraData_NorthRotation
+		push	kXData_ExtraNorthRotation
 		add		ecx, 0x28
 		call	BaseExtraList::GetByType
 		test	eax, eax
@@ -105,49 +105,47 @@ __declspec(naked) __m128 __vectorcall AdjustInteriorPos(__m128 inPos)
 
 struct WorldDimensions
 {
-	NiPoint2	min;		// 00
-	NiPoint2	size;		// 08
-	float		scale;		// 10
-	NiPoint2	offset;		// 14
-	NiPoint2	posMod;		// 1C
-	int			mkRange;	// 24
+	NiPoint2		min;		// 00
+	NiPoint2		size;		// 08
+	float			scale;		// 10
+	NiPoint2		offset;		// 14
+	NiPoint2		posMod;		// 1C
+	union						// 24
+	{
+		int			mkRange;
+		UInt32		coord;
+	};
 	
 	void __fastcall GetDimensions(TESWorldSpace *worldSpc);
 	void __fastcall GetPosMods(TESWorldSpace *worldSpc);
-};
-alignas(16) WorldDimensions s_rootWorldDimensions;
+}
+s_rootWorldDimensions;
 
 __declspec(naked) void __fastcall WorldDimensions::GetDimensions(TESWorldSpace *worldSpc)
 {
 	__asm
 	{
-		push	esi
-		mov		esi, ecx
-		add		edx, 0x80
-		movsx	eax, word ptr [edx+8]
-		movsx	ecx, word ptr [edx+0xC]
-		inc		ecx
-		sub		ecx, eax
-		mov		[esi], eax
-		mov		[esi+8], ecx
-		movsx	eax, word ptr [edx+0xA]
-		movsx	ecx, word ptr [edx+0xE]
-		inc		eax
-		sub		ecx, eax
-		mov		[esi+4], eax
-		mov		[esi+0xC], ecx
-		movaps	xmm0, [esi]
+		movq	xmm0, qword ptr [edx+0x88]
+		paddw	xmm0, kSizeMults
+		unpcklpd	xmm0, xmm0
+		pshuflw	xmm0, xmm0, 0xFA
+		pshufhw	xmm0, xmm0, 0x50
+		psrad	xmm0, 0x10
+		movaps	xmm1, xmm0
+		psrldq	xmm1, 8
+		psubd	xmm0, xmm1
 		pslld	xmm0, 0xC
 		cvtdq2ps	xmm0, xmm0
-		movlps	[esi], xmm0
-		movaps	xmm1, kSizeMults
-		divps	xmm1, xmm0
-		movhps	qword ptr [esi+8], xmm1
-		pop		esi
+		pshufd	xmm1, xmm0, 0xE
+		rcpps	xmm0, xmm0
+		movq	xmm2, qword ptr kSizeMults+8
+		mulps	xmm0, xmm2
+		unpcklpd	xmm1, xmm0
+		movups	[ecx], xmm1
 		retn
 		ALIGN 16
 	kSizeMults:
-		DUP_2(EMIT_DW_1(00)) DUP_2(EMIT_DW(3F, 4C, 00, 00))
+		EMIT_DW(00, 01, 00, 00) EMIT_DW_1(01) DUP_2(EMIT_DW(3F, 4C, 00, 00))
 	}
 }
 
@@ -157,16 +155,16 @@ __declspec(naked) void __fastcall WorldDimensions::GetPosMods(TESWorldSpace *wor
 	{
 		add		edx, 0x90
 		movups	xmm0, [edx]
-		movaps	[ecx+0x10], xmm0
+		movups	[ecx+0x10], xmm0
 		cmp		dword ptr [edx], 0x3F800000
 		jz		done
 		movss	xmm1, PS_V3_Half
 		mulss	xmm0, xmm1
 		subss	xmm1, xmm0
 		unpcklps	xmm1, xmm1
-		movq	xmm0, qword ptr [edx+0x10]
-		movq	xmm2, qword ptr [edx+0x18]
-		addps	xmm0, xmm2
+		movups	xmm0, [edx+0x10]
+		shufps	xmm0, xmm0, 0xD8
+		haddps	xmm0, xmm0
 		mulps	xmm0, xmm1
 		movq	xmm1, qword ptr [edx+4]
 		addps	xmm0, xmm1
@@ -176,16 +174,14 @@ __declspec(naked) void __fastcall WorldDimensions::GetPosMods(TESWorldSpace *wor
 	}
 }
 
-__declspec(naked) __m128 __vectorcall GetWorldMapPosMults(const NiVector3 &inPos, const WorldDimensions &worldDimensions, Coordinate *outCoord = nullptr)
+__declspec(naked) __m128 __vectorcall GetWorldMapPosMults(__m128 inPos, const WorldDimensions &worldDimensions, Coordinate *outCoord = nullptr)
 {
 	__asm
 	{
-		movq	xmm0, qword ptr [ecx]
-		lea		eax, [edx+0x14]
-		mov		ecx, [edx+0x10]
-		cmp		ecx, 0x3F800000
+		lea		eax, [ecx+0x14]
+		cmp		dword ptr [ecx+0x10], 0x3F800000
 		jz		noScale
-		movd	xmm1, ecx
+		movss	xmm1, [ecx+0x10]
 		unpcklps	xmm1, xmm1
 		mulps	xmm0, xmm1
 		add		eax, 8
@@ -193,20 +189,19 @@ __declspec(naked) __m128 __vectorcall GetWorldMapPosMults(const NiVector3 &inPos
 		movq	xmm1, qword ptr [eax]
 		addps	xmm0, xmm1
 		movq	xmm1, xmm0
-		movq	xmm2, qword ptr [edx]
+		movq	xmm2, qword ptr [ecx]
 		subps	xmm0, xmm2
-		movq	xmm2, qword ptr [edx+8]
+		movq	xmm2, qword ptr [ecx+8]
 		mulps	xmm0, xmm2
 		addps	xmm0, kPosMultMods
-		mov		eax, [esp+4]
-		test	eax, eax
+		test	edx, edx
 		jz		done
 		cvtps2dq	xmm1, xmm1
 		psrad	xmm1, 0xC
 		pshuflw	xmm1, xmm1, 2
-		movd	[eax], xmm1
+		movd	[edx], xmm1
 	done:
-		retn	4
+		retn
 		ALIGN 16
 	kPosMultMods:
 		EMIT_PS_2(3D, D0, 00, 00)
@@ -258,7 +253,7 @@ __declspec(naked) UInt32 __vectorcall GetGridCellSeenData(GridCellArray *gridArr
 		mov		eax, 1
 		test	byte ptr [ecx+0x25], 1
 		jnz		done
-		push	kExtraData_SeenData
+		push	kXData_ExtraSeenData
 		add		ecx, 0x28
 		call	BaseExtraList::GetByType
 		test	eax, eax
@@ -603,8 +598,28 @@ __declspec(naked) UInt32 __vectorcall GetSectionSeenLevel(SectionSeenInfo seenIn
 
 NiTriShapeData *s_localMapShapeDatas[9];
 TESObjectCELL *s_pcCurrCell0, *s_pcCurrCell, *s_lastInterior;
-Coordinate s_packedCellCoords[9] = {0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL};
+Coordinate s_packedCellCoords[9];
 float s_vertexAlphaLevel[] = {0, 0.25F, 0.5F, 0.75F, 1.0F};
+
+__declspec(naked) void __vectorcall PackCurrGridCoords(__m128i currCoords)
+{
+	__asm
+	{
+		mov		eax, offset s_packedCellCoords
+		movd	[eax+0x10], xmm0
+		shufps	xmm0, xmm0, 0
+		movaps	xmm1, xmm0
+		paddw	xmm0, kGridAdjustCoord
+		paddw	xmm1, kGridAdjustCoord+0x10
+		movups	[eax], xmm0
+		movups	[eax+0x14], xmm1
+		retn
+		ALIGN 16
+	kGridAdjustCoord:
+		EMIT_DW(FF, FF, FF, FF) EMIT_DW(FF, FF, 00, 00) EMIT_DW(FF, FF, 00, 01) EMIT_DW(00, 00, FF, FF)
+		EMIT_DW(00, 00, 00, 01) EMIT_DW(00, 01, FF, FF) EMIT_DW(00, 01, 00, 00) EMIT_DW(00, 01, 00, 01)
+	}
+}
 
 __declspec(naked) void __fastcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
 {
@@ -614,23 +629,20 @@ __declspec(naked) void __fastcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
 		push	ebx
 		push	esi
 		push	edi
+		mov		ebp, g_gridCellArray
 		mov		ebx, ecx
 		mov		ecx, s_pcCurrCell
 		test	byte ptr [ecx+0x24], 1
 		jz		isExterior
-		push	kExtraData_SeenData
+		push	kXData_ExtraSeenData
 		add		ecx, 0x28
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		done
-		mov		eax, [eax+0xC]
-		test	eax, eax
+		mov		ebp, [eax+0xC]
+		test	ebp, ebp
 		jz		done
-		jmp		proceed
 	isExterior:
-		mov		eax, g_gridCellArray
-	proceed:
-		mov		ebp, eax
 		mov		ecx, s_localMapShapeDatas[ebx*4]
 		push	ecx
 		mov		esi, [ecx+0x28]
@@ -655,7 +667,7 @@ __declspec(naked) void __fastcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
 		mov		bl, 0x10
 		inc		di
 		inc		bh
-		cmp		bh, 0x10
+		cmp		bh, bl
 		jb		iterHead
 		ja		iterEnd
 		add		edi, 0x10000
@@ -699,11 +711,10 @@ __declspec(naked) UInt32 __vectorcall GetFOWUpdateMask(__m128i inPos)
 	}
 }
 
-__declspec(naked) void __fastcall DoSelectiveFOWUpdate(const NiPoint2 &adjustedPos)
+__declspec(naked) void __fastcall DoSelectiveFOWUpdate(__m128 adjustedPos)
 {
 	__asm
 	{
-		movq	xmm0, qword ptr [ecx]
 		cvttps2dq	xmm0, xmm0
 		call	GetFOWUpdateMask
 		push	esi
@@ -811,7 +822,7 @@ __declspec(naked) SeenData* __fastcall AddExtraSeenData(TESObjectCELL *cell)
 	{
 		push	esi
 		mov		esi, ecx
-		push	kExtraData_SeenData
+		push	kXData_ExtraSeenData
 		add		ecx, 0x28
 		call	BaseExtraList::GetByType
 		test	eax, eax
@@ -960,7 +971,7 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		call	UpdateSeenBits
 		test	al, al
 		jz		iterNextExt
-		push	kExtraData_SeenData
+		push	kXData_ExtraSeenData
 		lea		ecx, [esi+0x28]
 		CALL_EAX(ADDR_RemoveExtraType)
 		or		byte ptr [esi+0x25], 1
@@ -1065,24 +1076,20 @@ struct DoorRef
 	TESObjectREFR	*doorRef;
 	TESObjectCELL	*linkedCell;
 
-	DoorRef(TESObjectREFR *_doorRef, TESObjectCELL *_linkedCell) : doorRef(_doorRef)
-	{
-		linkedCell = (_linkedCell && !_linkedCell->worldSpace) ? _linkedCell : nullptr;
-	}
+	DoorRef(TESObjectREFR *_doorRef, TESObjectCELL *_linkedCell) : doorRef(_doorRef), linkedCell((_linkedCell && !_linkedCell->worldSpace) ? _linkedCell : nullptr) {}
 };
 
 typedef Vector<DoorRef> DoorRefsList;
 
 void __fastcall GetTeleportDoors(TESObjectCELL *cell, DoorRefsList *doorRefsList)
 {
-	if (!cell) return;
+	TESObjectREFR *refr;
 	for (auto iter = g_loadedReferences->teleportDoors.Begin(); iter; ++iter)
 	{
-		TESObjectREFR *refr = iter.Get();
-		if (!refr || (refr->flags & 0x860) || (refr->parentCell != cell))
+		if (!(refr = iter.Get()) || (refr->flags & 0x860) || (refr->parentCell != cell))
 			continue;
-		ExtraTeleport *xTeleport = GetExtraType(&refr->extraDataList, Teleport);
-		if (xTeleport && xTeleport->data && xTeleport->data->linkedDoor)
+		ExtraTeleport *xTeleport = GetExtraType(&refr->extraDataList, ExtraTeleport);
+		if (xTeleport->data->linkedDoor)
 			doorRefsList->Append(refr, xTeleport->data->linkedDoor->parentCell);
 	}
 }
@@ -1264,7 +1271,7 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, c
 	}
 }
 
-NiCamera *s_localMapCamera = nullptr;
+NiCamera *s_localMapCamera;
 
 __declspec(naked) void __stdcall GenerateLocalMapExterior(TESObjectCELL *cell, NiRenderedTexture **renderedTexture)
 {
@@ -1431,20 +1438,6 @@ __declspec(naked) void __stdcall GenerateLocalMapInterior(TESObjectCELL *cell, C
 	}
 }
 
-TempObject<NiFixedString> s_AutoWaterFadeNode;
-
-__declspec(naked) void __fastcall InitAutoWaterHook(BSFadeNode *node, int EDX, bool doSet)
-{
-	__asm
-	{
-		or		byte ptr [ecx+0x31], 0x80
-		mov		eax, s_AutoWaterFadeNode
-		lock inc dword ptr [eax-8]
-		mov		[ecx+8], eax
-		retn	4
-	}
-}
-
 __declspec(naked) void __fastcall SaveLocalMapTexture(TESForm *worldOrCell, NiRenderedTexture *texture, Coordinate coord)
 {
 	static const char kFileFmt[] = "local_maps\\%s.(%d,%d).dds";
@@ -1485,6 +1478,46 @@ __declspec(naked) void __fastcall SaveLocalMapTexture(TESForm *worldOrCell, NiRe
 	}
 }
 
+TempObject<Vector<TESObjectREFR*>> s_visibleDistantRefs(0x100);
+
+__declspec(naked) void AddRefToCellHook()
+{
+	__asm
+	{
+		mov		ecx, [esp+4]
+		mov		eax, [ecx+0x20]
+		test	byte ptr [eax+9], 0x80
+		jnz		doAdd
+		retn	4
+		ALIGN 16
+	doAdd:
+		mov		ecx, offset s_visibleDistantRefs
+		call	Vector<TESObjectREFR*>::AllocateData
+		mov		ecx, [esp+4]
+		mov		[eax], ecx
+		retn	4
+	}
+}
+
+__declspec(naked) void RemoveRefFromCellHook()
+{
+	__asm
+	{
+		mov		ecx, [esp+4]
+		mov		eax, [ecx+0x20]
+		test	byte ptr [eax+9], 0x80
+		jnz		doRemove
+		retn	4
+		ALIGN 16
+	doRemove:
+		mov		ecx, offset s_visibleDistantRefs
+		jmp		Vector<TESObjectREFR*>::RemoveUnordered
+	}
+}
+
+struct MapMarkerTile;
+TempObject<Vector<MapMarkerTile>> s_mapMarkerTiles(0x40);
+
 struct MapMarkerTile
 {
 	Tile::Value		*visible;
@@ -1493,7 +1526,15 @@ struct MapMarkerTile
 	Tile::Value		*filename;
 	bool			inUse;
 
-	MapMarkerTile(Tile *markerTile);
+	MapMarkerTile(Tile *markerTile)
+	{
+		visible = markerTile->GetValue(kTileValue_visible);
+		x = markerTile->GetValue(kTileValue_user0);
+		y = markerTile->GetValue(kTileValue_user1);
+		filename = ThisCall<Tile::Value*>(0xA01000, markerTile, kTileValue_filename);
+		markerTile->SetFloat(kTileValue_depth, int((s_mapMarkerTiles->Size() & 0xF) + 18));
+		inUse = true;
+	}
 
 	void SetInUse(bool bInUse)
 	{
@@ -1501,18 +1542,6 @@ struct MapMarkerTile
 		visible->SetFloat(inUse);
 	}
 };
-
-TempObject<Vector<MapMarkerTile>> s_mapMarkerTiles(0x40);
-
-MapMarkerTile::MapMarkerTile(Tile *markerTile)
-{
-	visible = markerTile->GetValue(kTileValue_visible);
-	x = markerTile->GetValue(kTileValue_user0);
-	y = markerTile->GetValue(kTileValue_user1);
-	filename = ThisCall<Tile::Value*>(0xA01000, markerTile, kTileValue_filename);
-	markerTile->SetFloat(kTileValue_depth, int((s_mapMarkerTiles->Size() % 10) + 18));
-	inUse = true;
-}
 
 typedef Vector<MapMarkerTile*, 4> DynamicTiles;
 typedef UnorderedMap<UInt32, DynamicTiles, 0x40, false> RenderedMapMarkers;
@@ -1529,8 +1558,7 @@ bool s_discoveredLocation = false;
 
 void __fastcall HandleDiscoverLocation(TESObjectCELL *markerCell)
 {
-	auto findRendered = s_renderedMapMarkers->Find(Coordinate(&markerCell->exteriorCoords->x));
-	if (findRendered)
+	if (auto findRendered = s_renderedMapMarkers->Find(Coordinate(*markerCell->exteriorCoords)))
 	{
 		FreeCellMapMarkers(findRendered);
 		s_discoveredLocation = true;
@@ -1547,11 +1575,7 @@ __declspec(naked) void DiscoverLocationHook()
 		mov		ecx, [ebp-0x8C]
 		mov		eax, [ecx+4]
 		mov		ecx, [eax+0x40]
-		test	ecx, ecx
-		jz		done
-		call	HandleDiscoverLocation
-	done:
-		retn
+		jmp		HandleDiscoverLocation
 	}
 }
 
@@ -1578,14 +1602,14 @@ __declspec(naked) void __fastcall UpdatePlacedMarkerHook(PlayerCharacter *thePla
 }
 
 UInt8 s_miniMapIndex = 0;
-bool s_initMiniMap = false;
 TileRect *s_localMapRect, *s_worldMapRect, *s_mapMarkersRect, *s_doorMarkersRect, *s_lQuestMarkersRect, *s_wQuestMarkersRect;
 TileImage *s_worldMapTile;
-Tile::Value *s_miniMapMode, *s_pcMarkerRotate, *s_miniMapPosX, *s_miniMapPosY, *s_worldMapZoom;
+Tile::Value *s_miniMapMode = nullptr, *s_pcMarkerRotate, *s_miniMapPosX, *s_miniMapPosY, *s_worldMapZoom;
 TileShaderProperty *s_tileShaderProps[9];
 float s_fLocalMapZoomCurr;
 BSFadeNode *s_fakeWaterPlanes;
-bool s_isInInterior = false, s_defaultGridSize;
+bool s_isInInterior = false;
+NiNode *g_objectLODRoot;
 NiColor *g_directionalLightColor, *g_shadowFogColor;
 BSParticleSystemManager *g_particleSysMngr;
 
@@ -1611,7 +1635,7 @@ const NiPoint2 kWaterPlanePos[] =
 
 bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 {
-	if (s_initMiniMap || (scriptObj->modIndex != s_miniMapIndex))
+	if (s_miniMapMode || (scriptObj->modIndex != s_miniMapIndex))
 		return true;
 
 	Tile *tile = g_HUDMainMenu->tile->GetComponentTile("JIPMiniMap");
@@ -1624,11 +1648,11 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 		scriptObj->quest->questDelayTime = 1 / 60.0F;
 	}
 
-	s_initMiniMap = true;
 	//s_miniMapVisible = tile->GetValue(kTileValue_visible);
 	s_miniMapScale = tile->GetValue(kTileValue_user1);
 	auto node = tile->children.Tail()->prev;
 	s_pcMarkerRotate = node->data->GetValue(kTileValue_rotateangle);
+	node->data->SetFloat(kTileValue_depth, 34.0F);
 	tile = node->prev->data;
 	s_miniMapMode = tile->GetValue(kTileValue_user0);
 	s_miniMapPosX = tile->GetValue(kTileValue_user1);
@@ -1749,7 +1773,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	lmCamera->LocalRotate() = {0, 0, 1.0F, 0, 1.0F, 0, -1.0F, 0, 0};
 	lmCamera->LocalTranslate().z = 65536.0F;
 	lmCamera->frustum.viewPort = {-2048.0F, 2048.0F, 2048.0F, -2048.0F};
-	lmCamera->frustum.n = 100.0F;
+	lmCamera->frustum.n = 1.0F;
 	lmCamera->frustum.f = 131072.0F;
 	lmCamera->frustum.o = 1;
 	lmCamera->LODAdjust = 0.001F;
@@ -1797,40 +1821,46 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	auto worldIter = g_dataHandler->worldSpaceList.Head();
 	TESWorldSpace *worldSpc, *rootWorld = nullptr;
 	TESObjectCELL *rootCell;
+	WorldDimensions worldDimensions;
 	WorldMapMarkers *worldMarkers;
 	TESObjectREFR *markerRef;
 	MapMarkerData *markerData;
 	NiPoint2 posXY;
-	Coordinate coord;
 	do
 	{
-		if (!(worldSpc = worldIter->data) || !(rootCell = worldSpc->cell))
+		if (!(worldSpc = worldIter->data) || (!worldSpc->parent && !worldSpc->mapData.usableDimensions.X) || !(rootCell = worldSpc->cell) || rootCell->objectList.Empty())
 			continue;
-		s_rootWorldDimensions.GetPosMods(worldSpc);
+		worldDimensions.GetPosMods(worldSpc);
 		worldSpc = worldSpc->GetRootMapWorld();
 		if (rootWorld != worldSpc)
 		{
 			rootWorld = worldSpc;
-			s_rootWorldDimensions.GetDimensions(rootWorld);
-			worldMarkers = nullptr;
+			worldDimensions.GetDimensions(rootWorld);
+			worldMarkers = &s_worldMapMarkers()[rootWorld];
 		}
 		auto refrIter = rootCell->objectList.Head();
 		do
 		{
 			if (!(markerRef = refrIter->data) || !(markerData = markerRef->GetMapMarkerData()))
 				continue;
-			posXY = GetWorldMapPosMults(markerRef->position, s_rootWorldDimensions, &coord);
-			if (!worldMarkers)
-				worldMarkers = &s_worldMapMarkers()[rootWorld];
-			(*worldMarkers)[coord].Append(markerRef, markerData, posXY);
+			__asm
+			{
+				lea		ecx, worldDimensions
+				lea		edx, [ecx+0x24]
+				mov		eax, markerRef
+				movq	xmm0, qword ptr [eax+0x30]
+				call	GetWorldMapPosMults
+				movlps	posXY, xmm0
+			}
+			(*worldMarkers)[worldDimensions.coord].Append(markerRef, markerData, posXY);
 		}
 		while (refrIter = refrIter->next);
 	}
 	while (worldIter = worldIter->next);
 
-	s_defaultGridSize = *(UInt8*)0x11C63D0 <= 5;
+	g_objectLODRoot = *(NiNode**)0x11D8690;
 	g_directionalLightColor = &g_TES->directionalLight->ambientColor;
-	g_shadowFogColor = &(*(BSFogProperty**)0x11DEB00)->color;
+	g_shadowFogColor = &g_shadowSceneNode->fogProperty->color;
 	g_particleSysMngr = BSParticleSystemManager::GetSingleton();
 	SafeWrite16(0x452736, 0x7705);
 	SafeWrite8(0x555C20, 0xC3);
@@ -1846,19 +1876,6 @@ const __m128 kLocalMapPosMults = {1 / 12288.0F, 1 / -12288.0F, 0, 0};
 const __m128 kVertexAlphaMults = {0.25F, 0.5F, 0.75F, 1.0F};
 alignas(16) const NiColor kDirectionalLightValues[] = {{1.0F, 1.0F, 239 / 255.0F}, {0, 0, 0}};
 alignas(16) const float kFogPropertyValues[] = {23 / 255.0F, 51 / 255.0F, 47 / 255.0F, FLT_MAX, FLT_MAX};
-const UInt8 kSelectImgUpdate[][9] =
-{
-	{8, 2, 0, 4, 1, 0, 0, 0, 0},
-	{0, 0, 0, 8, 2, 0, 4, 1, 0},
-	{0, 8, 2, 0, 4, 1, 0, 0, 0},
-	{0, 0, 0, 0, 8, 2, 0, 4, 1}
-};
-const Coordinate kGridAdjustCoord[] =
-{
-	{-1, -1}, {-1, 0}, {-1, 1},
-	{0, -1}, {0, 0}, {0, 1},
-	{1, -1}, {1, 0}, {1, 1}
-};
 alignas(16) const int kNWCoordAdjust[] = {-1, 2, 0, 0};
 
 struct RenderedEntry
@@ -1870,6 +1887,9 @@ struct RenderedEntry
 	~RenderedEntry() {if (texture) ThisCall(0xA7FD30, texture, true);}
 };
 
+struct DoorMarkerTile;
+TempObject<Vector<DoorMarkerTile>> s_doorMarkerTiles(0x40);
+
 struct DoorMarkerTile
 {
 	Tile::Value		*visible;
@@ -1879,19 +1899,15 @@ struct DoorMarkerTile
 	float			*vtxAlpha;
 	bool			inUse;
 
-	DoorMarkerTile(Tile *markerTile);
+	DoorMarkerTile(Tile *markerTile)
+	{
+		visible = markerTile->GetValue(kTileValue_visible);
+		x = markerTile->GetValue(kTileValue_user0);
+		y = markerTile->GetValue(kTileValue_user1);
+		visited = ThisCall<Tile::Value*>(0xA01000, markerTile, kTileValue_user2);
+		markerTile->SetFloat(kTileValue_depth, int((s_doorMarkerTiles->Size() & 0xF) + 18));
+	}
 };
-
-TempObject<Vector<DoorMarkerTile>> s_doorMarkerTiles(0x40);
-
-DoorMarkerTile::DoorMarkerTile(Tile *markerTile)
-{
-	visible = markerTile->GetValue(kTileValue_visible);
-	x = markerTile->GetValue(kTileValue_user0);
-	y = markerTile->GetValue(kTileValue_user1);
-	visited = ThisCall<Tile::Value*>(0xA01000, markerTile, kTileValue_user2);
-	markerTile->SetFloat(kTileValue_depth, int((s_doorMarkerTiles->Size() % 10) + 18));
-}
 
 struct QuestMarkerTile
 {
@@ -1902,7 +1918,7 @@ struct QuestMarkerTile
 
 UInt32 s_currentMapMode = 0;
 TESWorldSpace *s_pcCurrWorld, *s_pcRootWorld;
-Coordinate s_currWorldCoords(0x7FFF, 0x7FFF), s_currLocalCoords(0x7FFF, 0x7FFF);
+Coordinate s_currWorldCoords(0x7FFF, 0x7FFF), s_currLocalCoords(0x7FFF, 0x7FFF), s_cellGridCenter;
 WorldMapMarkers *s_currWorldMarkers;
 TempObject<Set<UInt32>> s_currCellsSet(0xC), s_currMarkerCells(0x40);
 typedef UnorderedMap<UInt32, RenderedEntry, 0x40, false> LocalTexturesMap;
@@ -1914,8 +1930,7 @@ TempObject<Vector<NiNode*>> s_hiddenNodes(0x40);
 TESQuest *s_activeQuest = nullptr;
 TESObjectREFR *s_placedMarker = nullptr;
 TempObject<Map<TESObjectREFR*, QuestMarkerTile>> s_questMarkers(0x10);
-TESObjectCELL *s_currCellGrid[9] = {};
-UInt8 s_currCellQuad = 0;
+TESObjectCELL *s_currCellGrid[9];
 bool s_useFogOfWar = false;
 
 void MiniMapLoadGame()
@@ -1929,9 +1944,11 @@ void MiniMapLoadGame()
 
 bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 {
-	UInt32 updateType, showFlags = 0x100;
-	if (!s_initMiniMap || (scriptObj->modIndex != s_miniMapIndex) || !ExtractArgsEx(EXTRACT_ARGS_EX, &updateType, &showFlags))
+	if (!s_miniMapMode || (scriptObj->modIndex != s_miniMapIndex))
 		return true;
+
+	UInt32 updateType, showFlags = 0x100;
+	ExtractArgsEx(EXTRACT_ARGS_EX, &updateType, &showFlags);
 
 	if (updateType == 3)
 	{
@@ -2034,13 +2051,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 	{
 		if (parentWorld)
 			objectRef = thePlayer;
-		else
-		{
-			parentWorld = g_TES->currentWrldspc;
-			if (!parentWorld) return true;
-			objectRef = thePlayer->lastExteriorDoor;
-			if (!objectRef) return true;
-		}
+		else if (!(parentWorld = g_TES->currentWrldspc) || !(objectRef = thePlayer->lastExteriorDoor))
+			return true;
 
 		if (s_pcCurrWorld != parentWorld)
 		{
@@ -2061,20 +2073,16 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				if (showFlags & 1)
 				{
 					for (auto tileIter = s_mapMarkerTiles->Begin(); tileIter; ++tileIter)
-						if (tileIter().inUse) tileIter.Ref().SetInUse(false);
+						if (tileIter().inUse) tileIter().SetInUse(false);
 					s_renderedMapMarkers->Clear();
 				}
 			}
 			updateTiles = true;
 		}
 
-		posMult = GetWorldMapPosMults(objectRef->position, s_rootWorldDimensions, &coord);
-
-		if (s_currWorldCoords != coord)
-		{
-			s_currWorldCoords = coord;
-			updateTiles = true;
-		}
+		posMult = GetWorldMapPosMults(objectRef->position.PS2(), s_rootWorldDimensions, &coord);
+		updateTiles |= s_currWorldCoords != coord;
+		s_currWorldCoords = coord;
 
 		if (showFlags & 1)
 		{
@@ -2082,7 +2090,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			{
 				s_discoveredLocation = false;
 				s_currMarkerCells->Clear();
-				if (s_currWorldMarkers)
+				if (s_currWorldMarkers && !s_currWorldMarkers->Empty())
 				{
 					int range = iceil(s_rootWorldDimensions.mkRange / s_worldMapZoom->num);
 					coord.x -= range;
@@ -2114,7 +2122,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 										tileData = s_mapMarkerTiles->Append(hudMain->AddTileFromTemplate(s_mapMarkersRect, "MiniMapWorldMarkerTemplate"));
 										break;
 									}
-									tileData = &tileIter.Ref();
+									tileData = &tileIter();
 									++tileIter;
 									if (tileData->inUse) continue;
 									tileData->SetInUse(true);
@@ -2147,7 +2155,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 	}
 	else
 	{
-		bool restore = false, showDoors = (showFlags & 2) != 0, updateFogOfWar = useFogOfWar && s_updateFogOfWar/*, saveToFile = (showFlags & 0x20) != 0*/;
+		bool updateFogOfWar = useFogOfWar && s_updateFogOfWar/*, saveToFile = (showFlags & 0x20) != 0*/;
 		s_updateFogOfWar = false;
 
 		D3DFORMAT d3dFormat = (showFlags & 8) ? TEXTURE_FMT_RGB : TEXTURE_FMT_BW;
@@ -2161,13 +2169,13 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		}
 
 		TESObjectCELL *cell;
-		UInt32 gridIdx, lightingPasses;
-		NiPointLight *pntLight;
+		UInt32 gridIdx;
+		NiNode *hideNode;
 		RenderedEntry *textureEntry;
 
 		if (parentWorld)
 		{
-			UInt8 quadrant;
+			Coordinate gridCenter;
 			__asm
 			{
 				mov		eax, g_TES
@@ -2178,47 +2186,40 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				pslld	xmm0, 0xC
 				cvtdq2ps	xmm1, xmm0
 				movlps	nwXY, xmm1
-				mov		ecx, thePlayer
-				movq	xmm0, qword ptr [ecx+0x30]
+				mov		edx, thePlayer
+				movq	xmm0, qword ptr [edx+0x30]
 				subps	xmm0, xmm1
 				mulps	xmm0, kLocalMapPosMults
 				movlps	posMult, xmm0
-				cmpnltps	xmm0, PS_V3_Half
-				movmskps	eax, xmm0
-				xor		al, 0xA
-				mov		quadrant, al
+				movq	xmm0, qword ptr [eax+0x24]
+				pshuflw	xmm1, xmm0, 2
+				movd	gridCenter, xmm1
 			}
 
-			if (s_currLocalCoords != coord)
+			bool doRegen = false;
+			if (updateTiles |= (s_currLocalCoords != coord))
 			{
 				s_currLocalCoords = coord;
-				updateTiles = true;
-			}
-
-			if (updateTiles)
-			{
+				PackCurrGridCoords(coord);
+				s_cellGridCenter = gridCenter;
 				s_currCellsSet->Clear();
 				gridIdx = 0;
 				do
 				{
-					coord = s_currLocalCoords + kGridAdjustCoord[gridIdx];
-					cell = g_gridCellArray->GetCellAtCoord(coord);
+					cell = g_gridCellArray->GetCellAtCoord(s_packedCellCoords[gridIdx]);
 					s_currCellGrid[gridIdx] = cell;
 					if (!cell) continue;
 					s_currCellsSet->Insert(cell->refID);
 					if (useFogOfWar)
-					{
-						s_packedCellCoords[gridIdx] = coord;
 						CalcVtxAlphaBySeenData(gridIdx);
-					}
 				}
 				while (++gridIdx < 9);
-				if (showDoors)
+				if (showFlags & 2)
 				{
 					DoorRefsList *listPtr;
 					for (auto clsIter = s_currCellsSet->Begin(); clsIter; ++clsIter)
-						if (s_exteriorDoorRefs->Insert(*clsIter, &listPtr))
-							GetTeleportDoors((TESObjectCELL*)LookupFormByRefID(*clsIter), listPtr);
+						if ((cell = (TESObjectCELL*)LookupFormByRefID(*clsIter)) && s_exteriorDoorRefs->Insert(*clsIter, &listPtr))
+							GetTeleportDoors(cell, listPtr);
 					s_doorRefsList->Clear();
 					for (auto drlIter = s_exteriorDoorRefs->Begin(); drlIter; ++drlIter)
 						if (s_currCellsSet->HasKey(drlIter.Key()))
@@ -2226,33 +2227,36 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 						else drlIter.Remove();
 				}
 			}
-			else if (updateFogOfWar)
-				DoSelectiveFOWUpdate(thePlayer->position);
-
-			if (updateTiles || (s_defaultGridSize && (s_currCellQuad != quadrant)))
+			else
 			{
-				s_currCellQuad = quadrant;
-				restore = true;
-				GameGlobals::SceneLightsLock()->Enter();
-				for (auto lgtNode = g_shadowSceneNode->lgtList0B4.Head(); lgtNode; lgtNode = lgtNode->next)
+				if (s_cellGridCenter != gridCenter)
 				{
-					auto lgtData = lgtNode->data;
-					if ((lgtData->state != 0xFF) && lgtData->isPointLight && (pntLight = (NiPointLight*)lgtData->light))
+					s_cellGridCenter = gridCenter;
+					for (auto vdrIter = s_visibleDistantRefs->Begin(); vdrIter; ++vdrIter)
 					{
-						pntLight->radius0E4 = pntLight->radius;
-						pntLight->radius = 0;
+						if (!(hideNode = vdrIter->GetRefNiNode()) || (((UInt8*)hideNode)[0x31] & 0xC0))
+							continue;
+						hideNode->SetAlphaRecurse(GET_PS(14));
+						doRegen = true;;
 					}
 				}
-				GameGlobals::SceneLightsLock()->Leave();
+				if (updateFogOfWar)
+					DoSelectiveFOWUpdate(thePlayer->position.PS2());
+			}
+
+			if (updateTiles || doRegen)
+			{
+				NiPointLight *pntLight;
+				GameGlobals::SceneLightsLock()->Enter();
+				for (auto lgtNode = g_shadowSceneNode->lgtList0B4.Head(); lgtNode; lgtNode = lgtNode->next)
+					if (lgtNode->data->isPointLight && (pntLight = (NiPointLight*)lgtNode->data->light))
+						ULNG(pntLight->radius) -= 0x6800000;
 				memcpy(g_directionalLightColor, kDirectionalLightValues, sizeof(kDirectionalLightValues));
 				memcpy(g_shadowFogColor, kFogPropertyValues, sizeof(kFogPropertyValues));
 				*(UInt8*)0x11FF104 = 1;
 				g_particleSysMngr->Hide();
 
-				s_hiddenNodes->Clear();
-				NiNode *hideNode;
-				BSXFlags *bsxFlags;
-				NiAVObject **pWaterPlanes = s_fakeWaterPlanes->m_children.data;
+				bool updateWater = false;
 				gridIdx = 0;
 				do
 				{
@@ -2261,55 +2265,82 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					hideNode = cell->Get3DNode(4);
 					hideNode->Hide();
 					s_hiddenNodes->Append(hideNode);
-					for (auto chlIter = cell->Get3DNode(3)->m_children.Begin(); chlIter; ++chlIter)
+					auto renderData = cell->renderData;
+					for (auto anmIter = renderData->animatedRefs.Begin(); anmIter; ++anmIter)
 					{
-						if ((hideNode = (NiNode*)*chlIter) && ((hideNode->m_blockName == s_AutoWaterFadeNode) ||
-							((bsxFlags = hideNode->GetBSXFlags()) && ((bsxFlags->flags & 0x23) == 0x21))))
-						{
-							hideNode->Hide();
-							s_hiddenNodes->Append(hideNode);
-						}
+						if (!(hideNode = anmIter.Get()) || ((hideNode->GetBSXFlags() & 0x23) != 0x21))
+							continue;
+						hideNode->Hide();
+						s_hiddenNodes->Append(hideNode);
 					}
 					if (!(cell->cellFlags & 2))
 						continue;
-					pWaterPlanes[gridIdx]->Show();
-					if (updateTiles)
-						pWaterPlanes[gridIdx]->LocalTranslate().z = (cell->waterHeight == FLT_MAX) ? parentWorld->defaultWaterHeight : cell->waterHeight;
+					objectRef = nullptr;
+					auto awtIter = renderData->placeableWaterList.Head();
+					do
+					{
+						if (!awtIter->data || !(hideNode = awtIter->data->GetRefNiNode()))
+							continue;
+						hideNode->Hide();
+						s_hiddenNodes->Append(hideNode);
+						objectRef = awtIter->data;
+					}
+					while (awtIter = awtIter->next);
+					if (!objectRef) continue;
+					NiAVObject *pWaterPlane = s_fakeWaterPlanes->m_children[gridIdx];
+					pWaterPlane->Show();
+					if (updateWater = updateTiles)
+						pWaterPlane->LocalTranslate().z = objectRef->position.z;
 				}
 				while (++gridIdx < 9);
-				if (updateTiles)
+				if (doRegen)
+					g_objectLODRoot->Hide();
+				else if (updateWater)
 				{
 					s_fakeWaterPlanes->LocalTranslate() = nwXY;
 					ThisCall(0xA5DD70, s_fakeWaterPlanes, &kUpdateParams, 0);
 				}
 
-				const UInt8 *updateList = kSelectImgUpdate[quadrant];
 				gridIdx = 0;
 				do
 				{
-					if (!(cell = s_currCellGrid[gridIdx]) || !(updateTiles || (quadrant = updateList[gridIdx])))
+					if (!(cell = s_currCellGrid[gridIdx]))
 						continue;
 
+					const UInt8 kSelectUpdate[] = {0x8, 0xA, 0x2, 0xC, 0xF, 0x3, 0x4, 0x5, 0x1}, updateMask = kSelectUpdate[gridIdx];
 					if (s_renderedExteriors->Insert(cell->refID, &textureEntry))
 					{
-						GenerateLocalMapExterior(cell, &textureEntry->texture);
 						s_exteriorKeys->Append(cell->refID);
+						GenerateLocalMapExterior(cell, &textureEntry->texture);
+						if (s_currLocalCoords == gridCenter)
+							textureEntry->regenFlags = updateMask;
 						/*if (saveToFile)
-							SaveLocalMapTexture(parentWorld, textureEntry->texture, s_currLocalCoords + kGridAdjustCoord[gridIdx]);*/
+							SaveLocalMapTexture(parentWorld, textureEntry->texture, s_packedCellCoords[gridIdx]);*/
 					}
 					else if (updateTiles)
 						s_exteriorKeys->MoveToEnd(cell->refID);
-					else if (!(textureEntry->regenFlags & quadrant))
+					else if ((textureEntry->regenFlags & updateMask) != updateMask)
 					{
-						if (gridIdx == 4) quadrant = 0xF;
-						textureEntry->regenFlags |= quadrant;
+						textureEntry->regenFlags |= updateMask;
 						GenerateLocalMapExterior(cell, &textureEntry->texture);
 						/*if (saveToFile)
-							SaveLocalMapTexture(parentWorld, textureEntry->texture, s_currLocalCoords + kGridAdjustCoord[gridIdx]);*/
+							SaveLocalMapTexture(parentWorld, textureEntry->texture, s_packedCellCoords[gridIdx]);*/
 					}
 					s_tileShaderProps[gridIdx]->srcTexture = textureEntry->texture;
 				}
 				while (++gridIdx < 9);
+
+				g_objectLODRoot->Show();
+				for (auto hdnIter = s_hiddenNodes->Begin(); hdnIter; ++hdnIter)
+					hdnIter->Show();
+				s_hiddenNodes->Clear();
+				for (auto lgtNode = g_shadowSceneNode->lgtList0B4.Head(); lgtNode; lgtNode = lgtNode->next)
+					if (lgtNode->data->isPointLight && (pntLight = (NiPointLight*)lgtNode->data->light))
+						ULNG(pntLight->radius) += 0x6800000;
+				GameGlobals::SceneLightsLock()->Leave();
+				for (auto plnIter = s_fakeWaterPlanes->m_children.Begin(); plnIter; ++plnIter)
+					plnIter->Hide();
+				g_particleSysMngr->Show();
 
 				if (s_exteriorKeys->Size() > CACHED_TEXTURES_MAX)
 				{
@@ -2350,30 +2381,26 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				updateTiles = true;
 			}
 
-			if (showDoors && updateTiles)
+			if ((showFlags & 2) && updateTiles)
 			{
 				s_doorRefsList->Clear();
 				GetTeleportDoors(parentCell, *s_doorRefsList);
 			}
 
-			if (s_currLocalCoords != coord)
+			if (updateTiles |= (s_currLocalCoords != coord))
 			{
 				s_currLocalCoords = coord;
-				updateTiles = true;
-			}
-
-			if (updateTiles)
-			{
-				restore = true;
-				parentCell->Get3DNode(4)->Hide();
+				PackCurrGridCoords(coord);
+				hideNode = parentCell->Get3DNode(4);
+				hideNode->Hide();
 				g_particleSysMngr->Hide();
-				lightingPasses = *GameGlobals::LightingPasses();
+				UInt32 lightingPasses = *GameGlobals::LightingPasses();
 				*GameGlobals::LightingPasses() = 0x34;
 
 				gridIdx = 0;
 				do
 				{
-					coord = s_currLocalCoords + kGridAdjustCoord[gridIdx];
+					coord = s_packedCellCoords[gridIdx];
 					if (s_renderedInterior->Insert(coord, &textureEntry))
 					{
 						GenerateLocalMapInterior(parentCell, coord, &textureEntry->texture);
@@ -2382,45 +2409,19 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					}
 					s_tileShaderProps[gridIdx]->srcTexture = textureEntry->texture;
 					if (useFogOfWar)
-					{
-						s_packedCellCoords[gridIdx] = coord;
 						CalcVtxAlphaBySeenData(gridIdx);
-					}
 				}
 				while (++gridIdx < 9);
+
+				hideNode->Show();
+				*GameGlobals::LightingPasses() = lightingPasses;
+				g_particleSysMngr->Show();
 			}
 			else if (updateFogOfWar)
-				DoSelectiveFOWUpdate(adjustedPos);
+				DoSelectiveFOWUpdate(adjustedPos.PS());
 		}
 
-		if (restore)
-		{
-			if (parentWorld)
-			{
-				for (auto hdnIter = s_hiddenNodes->Begin(); hdnIter; ++hdnIter)
-					hdnIter->Show();
-
-				GameGlobals::SceneLightsLock()->Enter();
-				for (auto lgtNode = g_shadowSceneNode->lgtList0B4.Head(); lgtNode; lgtNode = lgtNode->next)
-				{
-					auto lgtData = lgtNode->data;
-					if ((lgtData->state != 0xFF) && lgtData->isPointLight && (pntLight = (NiPointLight*)lgtData->light))
-						pntLight->radius = pntLight->radius0E4;
-				}
-				GameGlobals::SceneLightsLock()->Leave();
-
-				for (auto plnIter = s_fakeWaterPlanes->m_children.Begin(); plnIter; ++plnIter)
-					plnIter->Hide();
-			}
-			else
-			{
-				parentCell->Get3DNode(4)->Show();
-				*GameGlobals::LightingPasses() = lightingPasses;
-			}
-			g_particleSysMngr->Show();
-		}
-
-		if (showDoors)
+		if (showFlags & 2)
 		{
 			if (updateTiles)
 			{
@@ -2452,14 +2453,14 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					if (offBounds) continue;
 					if (markerIter)
 					{
-						tileData = &markerIter.Ref();
+						tileData = &markerIter();
 						++markerIter;
 					}
 					else tileData = s_doorMarkerTiles->Append(hudMain->AddTileFromTemplate(s_doorMarkersRect, "MiniMapDoorMarkerTemplate"));
 					tileData->x->SetFloat(adjustedPos.x);
 					tileData->y->SetFloat(adjustedPos.y);
 					cell = doorIter().linkedCell;
-					tileData->visited->SetFloat(!cell || (cell == parentCell) || cell->extraDataList.HasType(kExtraData_DetachTime));
+					tileData->visited->SetFloat(!cell || (cell == parentCell) || cell->extraDataList.HasType(kXData_ExtraDetachTime));
 					if (useFogOfWar)
 						tileData->vtxAlpha = GetVtxAlphaPtr(adjustedPos.PS());
 					else
@@ -2473,17 +2474,15 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				for (; markerIter; ++markerIter)
 				{
 					if (!markerIter().inUse) continue;
-					markerIter.Ref().inUse = false;
+					markerIter().inUse = false;
 					markerIter().visible->SetFloat(0);
 				}
 			}
 
 			if (updateTiles || updateFogOfWar)
-			{
 				for (auto markerIter = s_doorMarkerTiles->Begin(); markerIter; ++markerIter)
 					if (markerIter().inUse && markerIter().vtxAlpha)
 						markerIter().visible->SetFloat(*markerIter().vtxAlpha > 0);
-			}
 		}
 		else if (!s_doorMarkerTiles->Empty())
 		{
@@ -2494,19 +2493,11 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 
 	if (showFlags & 4)
 	{
-		if (s_activeQuest != thePlayer->activeQuest)
+		QuestMarkerTile *markerData;
+		if (updQuestTargets || (s_activeQuest != thePlayer->activeQuest) || (s_placedMarker != thePlayer->placedMarkerRef))
 		{
 			s_activeQuest = thePlayer->activeQuest;
-			updQuestTargets = true;
-		}
-		if (s_placedMarker != thePlayer->placedMarkerRef)
-		{
 			s_placedMarker = thePlayer->placedMarkerRef;
-			updQuestTargets = true;
-		}
-		QuestMarkerTile *markerData;
-		if (updQuestTargets)
-		{
 			if (!s_questMarkers->Empty())
 			{
 				s_questMarkers->Clear();
@@ -2518,7 +2509,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				auto trgIter = thePlayer->questTargetList.Head();
 				ObjectiveTarget *targetData;
 				TileRect *targetsRect = worldMap ? s_wQuestMarkersRect : s_lQuestMarkersRect;
-				int depth = 29;
+				int depth = 35;
 				bool donePlaced = false;
 				while (true)
 				{
@@ -2553,35 +2544,32 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					}
 					if (donePlaced)
 					{
-						Tile *mkTile = markerData->x->parent;
-						mkTile->SetFloat(kTileValue_red, 191.0F);
-						mkTile->SetFloat(kTileValue_green, 127.0F);
-						mkTile->SetFloat(kTileValue_blue, 255.0F);
+						markerTile = markerData->x->parent;
+						markerTile->SetFloat(kTileValue_red, 191.0F);
+						markerTile->SetFloat(kTileValue_green, 127.0F);
+						markerTile->SetFloat(kTileValue_blue, 255.0F);
 						break;
 					}
 				}
 			}
 		}
 
-		if (!s_questMarkers->Empty())
+		for (auto mkrIter = s_questMarkers->Begin(); mkrIter; ++mkrIter)
 		{
-			for (auto mkrIter = s_questMarkers->Begin(); mkrIter; ++mkrIter)
-			{
-				objectRef = mkrIter.Key();
-				markerData = &mkrIter();
-				UInt32 currX = *(UInt32*)&objectRef->position;
-				if (markerData->pos != currX)
-					markerData->pos = currX;
-				else if (!updateTiles) continue;
-				if (worldMap)
-					adjustedPos = GetWorldMapPosMults(objectRef->position, s_rootWorldDimensions);
-				else if (parentWorld)
-					adjustedPos = _mm_mul_ps(_mm_sub_ps(objectRef->position.PS2(), nwXY.PS()), kLocalMapPosMults);
-				else
-					adjustedPos = _mm_mul_ps(_mm_sub_ps(AdjustInteriorPos(objectRef->position.PS2()), nwXY.PS()), kLocalMapPosMults);
-				markerData->x->SetFloat(adjustedPos.x);
-				markerData->y->SetFloat(adjustedPos.y);
-			}
+			objectRef = mkrIter.Key();
+			markerData = &mkrIter();
+			UInt32 currX = ULNG(objectRef->position);
+			if (markerData->pos != currX)
+				markerData->pos = currX;
+			else if (!updateTiles) continue;
+			if (worldMap)
+				adjustedPos = GetWorldMapPosMults(objectRef->position.PS2(), s_rootWorldDimensions);
+			else if (parentWorld)
+				adjustedPos = _mm_mul_ps(_mm_sub_ps(objectRef->position.PS2(), nwXY.PS()), kLocalMapPosMults);
+			else
+				adjustedPos = _mm_mul_ps(_mm_sub_ps(AdjustInteriorPos(objectRef->position.PS2()), nwXY.PS()), kLocalMapPosMults);
+			markerData->x->SetFloat(adjustedPos.x);
+			markerData->y->SetFloat(adjustedPos.y);
 		}
 	}
 	else if (!s_questMarkers->Empty())

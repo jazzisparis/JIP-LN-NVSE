@@ -12,8 +12,6 @@ public:
 	virtual void	Destroy(bool doFree);
 	virtual bool	IsDifferentType(BSExtraData *compareTo);
 
-	static BSExtraData* Create(UInt8 xType, UInt32 size, UInt32 vtbl);
-
 	UInt8			type;		// 04
 	UInt8			pad05[3];	// 05
 	BSExtraData		*next;		// 08

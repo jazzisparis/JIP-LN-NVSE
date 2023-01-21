@@ -172,7 +172,7 @@ class BSTCommonScrapHeapMessageQueue
 {
 public:
 	virtual void	Destroy(bool doFree);
-	virtual void	Unk_01(void);
+	virtual bool	QueueTask(BSPackedTask *pTask);
 	virtual void	Unk_02(void);
 	virtual void	Unk_03(void);
 	virtual void	Unk_04(void);
@@ -192,6 +192,18 @@ public:
 	UInt8				byte24;			// 24
 	UInt8				pad25[3];		// 25
 };
+
+// 10
+struct TaskQueueInterface
+{
+	BSTCommonScrapHeapMessageQueue	*taskQueueMain;	// 00
+	BSTCommonScrapHeapMessageQueue	*taskQueueScnd;	// 04
+	BSTCommonScrapHeapMessageQueue	*taskQueue;		// 08	Same as main
+	UInt32							threadID;		// 0C
+
+	__forceinline static TaskQueueInterface *GetSingleton() {return *(TaskQueueInterface**)0x11DF1A8;}
+};
+extern TaskQueueInterface *g_scrapHeapQueue;
 
 // A4
 class OSGlobals

@@ -27,7 +27,7 @@ void SetHotkey(UInt8 index, const HotkeyInfo &hotkey)
 		ClearHotkey(index);
 		return;
 	}
-	ExtraContainerChanges *xChanges = GetExtraType(&g_thePlayer->extraDataList, ContainerChanges);
+	ExtraContainerChanges *xChanges = GetExtraType(&g_thePlayer->extraDataList, ExtraContainerChanges);
 	if (!xChanges || !xChanges->data) return;
 	ListNode<ContChangesEntry> *entryIter = xChanges->data->objList->Head();
 	ContChangesEntry *entry;
@@ -67,18 +67,18 @@ void SetHotkey(UInt8 index, const HotkeyInfo &hotkey)
 			do
 			{
 				if (!(xData = xdlIter->data)) continue;
-				xHotkey = GetExtraType(xData, Hotkey);
+				xHotkey = GetExtraType(xData, ExtraHotkey);
 				if (type != kFormType_AlchemyItem)
 				{
 					if (hotkey.health != -2.0F)
 					{
-						xHealth = GetExtraType(xData, Health);
-						matching = xHealth ? FloatsEqual(xHealth->health, hotkey.health) : (hotkey.health < 0);
+						xHealth = GetExtraType(xData, ExtraHealth);
+						matching = xHealth ? (ULNG(xHealth->health) == ULNG(hotkey.health)) : (hotkey.health < 0);
 					}
 					else matching = true;
 					if (matching && (hotkey.modFlags >= 0))
 					{
-						xModFlags = GetExtraType(xData, WeaponModFlags);
+						xModFlags = GetExtraType(xData, ExtraWeaponModFlags);
 						matching = xModFlags ? (xModFlags->flags == hotkey.modFlags) : !hotkey.modFlags;
 					}
 				}
@@ -108,7 +108,7 @@ void SetHotkey(UInt8 index, const HotkeyInfo &hotkey)
 			do
 			{
 				if (!(xData = xdlIter->data)) continue;
-				xHotkey = GetExtraType(xData, Hotkey);
+				xHotkey = GetExtraType(xData, ExtraHotkey);
 				if (!xHotkey || (xHotkey->index != index)) continue;
 				xData->RemoveExtra(xHotkey, true);
 				if (!xData->m_data)
@@ -154,7 +154,7 @@ bool Cmd_ClearAllHotkeys_Execute(COMMAND_ARGS)
 		do
 		{
 			if (!(xData = xdlIter->data)) continue;
-			xHotkey = GetExtraType(xData, Hotkey);
+			xHotkey = GetExtraType(xData, ExtraHotkey);
 			if (!xHotkey) continue;
 			xData->RemoveExtra(xHotkey, true);
 			if (!xData->m_data)
@@ -194,14 +194,14 @@ bool Cmd_SaveHotkeys_Execute(COMMAND_ARGS)
 			do
 			{
 				if (!(xData = xdlIter->data)) continue;
-				xHotkey = GetExtraType(xData, Hotkey);
+				xHotkey = GetExtraType(xData, ExtraHotkey);
 				if (!xHotkey) continue;
 				index = xHotkey->index;
 				s_savedHotkeys[index].form = entry->type;
 				if (type == kFormType_AlchemyItem) continue;
-				xHealth = GetExtraType(xData, Health);
+				xHealth = GetExtraType(xData, ExtraHealth);
 				if (xHealth) s_savedHotkeys[index].health = xHealth->health;
-				xModFlags = GetExtraType(xData, WeaponModFlags);
+				xModFlags = GetExtraType(xData, ExtraWeaponModFlags);
 				if (xModFlags) s_savedHotkeys[index].modFlags = xModFlags->flags;
 			}
 			while (xdlIter = xdlIter->next);

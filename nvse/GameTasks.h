@@ -44,26 +44,40 @@ class RefNiRefObject;
 class RefNiObject;
 struct BSAData;
 
+// 24
 class BSArchiveHeader
 {
 public:
+	UInt32		uiTag;					// 00
+	UInt32		uiVersion;				// 04
+	UInt32		uiHeaderSize;			// 08
+	UInt32		uiFlag;					// 0C
+	UInt32		uiDirectories;			// 10
+	UInt32		uiFiles;				// 14
+	UInt32		uiDirectoryNamesLength;	// 18
+	UInt32		uiFileNamesLength;		// 1C
+	UInt16		usArchiveType;			// 20
+	UInt16		gap22;					// 22
 };
 
 // 70
 class BSArchive : public BSArchiveHeader
 {
 public:
-	UInt32		unk00;			// 00	160
-	UInt32		unk04;			// 04	164
-	UInt32		unk08;			// 08	168
-	UInt32		unk0C;			// 0C	16C
-	UInt32		unk10;			// 10	170
-	UInt32		unk14;			// 14	174
-	UInt32		unk18;			// 18	178
-	UInt32		unk1C;			// 1C	17C
-	UInt16		fileTypesMask;	// 20	180
-	UInt16		word22;			// 22	182
-	UInt32		unk24[19];		// 24	184
+	UInt32				*pDirectories;				// 24
+	FILETIME			archiveFileTime;			// 28
+	UInt32				uiFileNameArrayOffset;		// 30
+	UInt32				uiLastDirectoryIndex;		// 34
+	UInt32				uiLastFileIndex;			// 38
+	CRITICAL_SECTION	archiveCriticalSection;		// 3C
+	UInt8				cArchiveFlags;				// 54
+	UInt8				pad55[3];					// 55
+	UInt32				pDirectoryStringArray;		// 58
+	UInt32				*pDirectoryStringOffsets;	// 5C
+	UInt32				pFileNameStringArray;		// 60
+	UInt32				pFileNameStringOffsets;		// 64
+	UInt32				uiID;						// 68
+	UInt32				unk6C;						// 6C
 };
 static_assert(sizeof(BSArchive) == 0x70);
 
@@ -223,7 +237,7 @@ public:
 class QueuedReference : public QueuedFile
 {
 public:
-	virtual void Unk_0B(void);			// Initialize validBip01Names (and cretae the 3D model?)
+	virtual void Unk_0B(void);			// Initialize bipedAnims (and cretae the 3D model?)
 	virtual void Unk_0C(void);
 	virtual void AttachDistant3D(NiNode *arg0);
 	virtual bool Unk_0E(void);
@@ -577,7 +591,13 @@ struct ModelLoader
 extern ModelLoader *g_modelLoader;
 
 class ExteriorCellLoaderTask;
-typedef LockFreeMap<UInt32, ExteriorCellLoaderTask*> ExteriorCellLoader;
+
+// 40
+class ExteriorCellLoader : public LockFreeMap<UInt32, ExteriorCellLoaderTask*>
+{
+public:
+	__forceinline static ExteriorCellLoader *GetSingleton() {return *(ExteriorCellLoader**)0x11C9618;}
+};
 
 // 20
 class ExteriorCellLoaderTask : public IOTask
@@ -598,43 +618,22 @@ public:
 };
 
 // A0
-class IOManager
+class IOManager : public LockFreeMap<__int64, IOTask*>
 {
 public:
-	virtual void Destroy(bool doFree);
-	virtual void Unk_01(void);
-	virtual void Unk_02(void);
-	virtual void Unk_03(void);
-	virtual void Unk_04(void);
-	virtual void Unk_05(void);
-	virtual void Unk_06(void);
-	virtual void Unk_07(void);
-	virtual void Unk_08(void);
-	virtual void Unk_09(void);
-	virtual void Unk_0A(void);
-	virtual void Unk_0B(void);
-	virtual void Unk_0C(void);
-	virtual void Unk_0D(void);
-	virtual void Unk_0E(void);
-	virtual void Unk_0F(void);
-	virtual void Unk_10(void);
-	virtual void Unk_11(void);
-	virtual void Unk_12(void);
-	virtual void Unk_13(void);
-	virtual void Unk_14(void);
-	virtual void Unk_15(void);
-	virtual void Unk_16(void);
+	/*48*/virtual void Unk_12(void);
+	/*4C*/virtual void Unk_13(void);
+	/*50*/virtual void Unk_14(void);
+	/*54*/virtual void Unk_15(void);
+	/*58*/virtual void Unk_16(void);
 
-	void							*ptr04;		// 04
-	UInt32							unk08;		// 08
-	void							*ptr0C;		// 0C
-	UInt32							unk10;		// 10
-	void							*ptr14;		// 14
-	UInt32							unk18[14];	// 18
+	UInt32							unk40[4];	// 40
 	void							*ptr50;		// 50
 	void							*ptr54;		// 54
 	UInt32							unk58[3];	// 58
 	LockFreePriorityQueue<IOTask*>	*taskQueue;	// 64
 	UInt32							unk68[14];	// 68
+
+	__forceinline static IOManager *GetSingleton() {return *(IOManager**)0x1202D98;}
 };
 static_assert(sizeof(IOManager) == 0xA0);

@@ -284,7 +284,7 @@ public:
 	/*184*/virtual NiNode	*GetProjectileNode();
 	/*188*/virtual void		SetProjectileNode(NiNode *node);
 	/*18C*/virtual void		SetWeaponNode(NiControllerManager *ctrlMgr, NiNode *node);
-	/*190*/virtual NiNode	*GetWeaponNode(ValidBip01Names *vbp01Names);
+	/*190*/virtual NiNode	*GetWeaponNode(BipedAnim *vbp01Names);
 	/*194*/virtual void		Unk_65(void);
 	/*198*/virtual void		Unk_66(void);
 	/*19C*/virtual void		Unk_67(void);
@@ -299,7 +299,7 @@ public:
 	/*1C0*/virtual void		Unk_70(void);
 	/*1C4*/virtual void		Unk_71(void);
 	/*1C8*/virtual void		Unk_72(void);
-	/*1CC*/virtual void		Unk_73(bool weaponOut, ValidBip01Names *validBip01Names, AnimData *pAnimData, Actor *actor);
+	/*1CC*/virtual void		Unk_73(bool weaponOut, BipedAnim *bipedAnims, AnimData *pAnimData, Actor *actor);
 	/*1D0*/virtual void		Unk_74(void);
 	/*1D4*/virtual void		Unk_75(void);
 	/*1D8*/virtual void		Unk_76(Actor *actor);
@@ -436,8 +436,8 @@ public:
 	/*3E4*/virtual SInt16	GetCurrentAction();
 	/*3E8*/virtual BSAnimGroupSequence	*GetCurrentSequence();
 	/*3EC*/virtual void		SetCurrentActionAndSequence(SInt16 action, BSAnimGroupSequence *sequence);
-	/*3F0*/virtual void		Unk_FC();
-	/*3F4*/virtual void		Unk_FD();
+	/*3F0*/virtual bool		GetForceFireWeapon();
+	/*3F4*/virtual void		SetForceFireWeapon(bool doSet);
 	/*3F8*/virtual bool		IsReadyForAnim();
 	/*3FC*/virtual void		Unk_FF();
 	/*400*/virtual void		SetIsAiming(bool aiming);
@@ -459,7 +459,7 @@ public:
 	/*440*/virtual void		Unk_110();
 	/*444*/virtual void		Unk_111();
 	/*448*/virtual void		Unk_112();
-	/*44C*/virtual void		Unk_113();
+	/*44C*/virtual bool		GetWantsWeaponOut();
 	/*450*/virtual void		Unk_114();
 	/*454*/virtual bool		IsWeaponOut();
 	/*458*/virtual void		SetWeaponOut(Actor *actor, bool weaponOut);
@@ -635,7 +635,7 @@ public:
 	/*700*/virtual void		Unk_1C0();
 	/*704*/virtual void		Unk_1C1();
 	/*708*/virtual void		SetWord22A(UInt16 setTo);
-	/*70C*/virtual void		PlayQueuedIdle(Actor *actor);
+	/*70C*/virtual void		PlayCrippledLimbAnim(Actor *actor);
 	/*710*/virtual void		Unk_1C4();
 	/*714*/virtual void		Unk_1C5();
 	/*718*/virtual TESIdleForm	*GetQueuedIdleForm();
@@ -879,7 +879,7 @@ struct AnimData
 	UInt8							byte0CF;			// 0CF
 	float							timePassed;			// 0D0
 	UInt32							unk0D4;				// 0D4
-	NiControllerManager				*unk0D8;			// 0D8
+	NiControllerManager				*controllerMngr;	// 0D8
 	NiTPointerMap<AnimSequenceBase>	*sequenceBaseMap;	// 0DC
 	BSAnimGroupSequence				*animSequence[8];	// 0E0
 	BSAnimGroupSequence				*animSeq100;		// 100
@@ -909,6 +909,17 @@ struct AnimData
 	{
 		ThisCall(0x498910, this, true, false);
 	}
+
+	__forceinline void Refresh()
+	{
+		ThisCall(0x499240, this, 0);
+	}
+
+	void BlendSequence(UInt32 sequenceIdx)
+	{
+		if (animSequence[sequenceIdx])
+			ThisCall(0x4994F0, this, sequenceIdx, 0);
+	}
 };
 static_assert(sizeof(AnimData) == 0x13C);
 
@@ -918,7 +929,7 @@ class QueuedFile;
 class MiddleHighProcess : public MiddleLowProcess
 {
 public:
-	/*820*/virtual void		SetAnimation(UInt32 newAnimation);
+	/*820*/virtual void		ReplaceAnimData(AnimData *newData);
 	/*824*/virtual void		Unk_209();
 	/*828*/virtual void		SetByte375(UInt8 setTo);
 	/*82C*/virtual void		Unk_20B();
@@ -960,7 +971,7 @@ public:
 	};
 
 	// 18
-	struct QueueEquipItem
+	struct QueuedEquipItem
 	{
 		TESForm			*itemForm;			// 00
 		ExtraDataList	*xDataList;			// 04
@@ -1075,7 +1086,7 @@ public:
 	UInt8						byte229;			// 229
 	UInt16						word22A;			// 22A
 	UInt32						unk22C;				// 22C
-	tList<QueueEquipItem>		*queuedEquipList;	// 230
+	tList<QueuedEquipItem>		*queuedEquipList;	// 230
 	float						radsSec234;			// 234
 	float						rads238;			// 238
 	float						waterRadsSec;		// 23C

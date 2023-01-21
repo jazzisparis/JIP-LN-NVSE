@@ -254,7 +254,7 @@ bool Cmd_GetEquippedData_Execute(COMMAND_ARGS)
 	UInt32 slot;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &slot) || NOT_ACTOR(thisObj))
 		return true;
-	ExtraContainerChanges *xChanges = GetExtraType(&thisObj->extraDataList, ContainerChanges);
+	ExtraContainerChanges *xChanges = GetExtraType(&thisObj->extraDataList, ExtraContainerChanges);
 	if (!xChanges || !xChanges->data || !xChanges->data->objList)
 		return true;
 	slot = TESBipedModelForm::MaskForSlot(slot);
@@ -279,8 +279,8 @@ bool Cmd_GetEquippedData_Execute(COMMAND_ARGS)
 		else continue;
 		if (xDataList = entry->GetEquippedExtra())
 		{
-			ExtraHealth *xHealth = GetExtraType(xDataList, Health);
-			ExtraWeaponModFlags *xModFlags = GetExtraType(xDataList, WeaponModFlags);
+			ExtraHealth *xHealth = GetExtraType(xDataList, ExtraHealth);
+			ExtraWeaponModFlags *xModFlags = GetExtraType(xDataList, ExtraWeaponModFlags);
 			ArrayElementL elements[3] = {item, xHealth ? xHealth->health : -1, xModFlags ? xModFlags->flags : 0};
 			*result = (int)CreateArray(elements, 3, scriptObj);
 			break;
@@ -303,10 +303,10 @@ void SetEquippedData(Actor *actor, TESForm *form, float health, UInt8 flags, boo
 		if (!(xData = xdlIter->data)) continue;
 		if (health > 0)
 		{
-			xHealth = GetExtraType(xData, Health);
-			if (!xHealth || !FloatsEqual(health, xHealth->health)) continue;
+			xHealth = GetExtraType(xData, ExtraHealth);
+			if (!xHealth || (ULNG(health) != ULNG(xHealth->health))) continue;
 		}
-		xModFlags = GetExtraType(xData, WeaponModFlags);
+		xModFlags = GetExtraType(xData, ExtraWeaponModFlags);
 		if (flags)
 		{
 			if (!xModFlags || (xModFlags->flags != flags)) continue;

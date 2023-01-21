@@ -1784,3 +1784,19 @@ constexpr ParamInfo kParams_OneString_OneInt_OneOptionalString_OneOptionalInt[] 
 	{"String", kParamType_String, 1},
 	{"Integer", kParamType_Integer, 1}
 };
+
+constexpr ParamInfo kParams_OneFloat_OneOptionalInt[] =
+{
+	{"Float", kParamType_Float, 0},
+	{"Integer", kParamType_Integer, 1}
+};
+
+constexpr ParamInfo kParams_ThreeScriptVars_ThreeOptionalScriptVars[] =
+{
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 0},
+	{"Variable", kParamType_ScriptVariable, 1},
+	{"Variable", kParamType_ScriptVariable, 1},
+	{"Variable", kParamType_ScriptVariable, 1}
+};

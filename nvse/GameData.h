@@ -510,6 +510,7 @@ public:
 	bool GetIsRaining();
 };
 static_assert(sizeof(Sky) == 0x138);
+extern Sky *g_currentSky;
 
 // 04
 class GridArray
@@ -519,7 +520,7 @@ public:
 	/*04*/virtual void	Fn_01(void);
 	/*08*/virtual void	Fn_02(void);
 	/*0C*/virtual void	Fn_03(void);
-	/*10*/virtual bool	SetPosXY(float posX, float posY);
+	/*10*/virtual bool	SetPosXY(SInt32 posX, SInt32 posY);
 	/*14*/virtual void	Fn_05(UInt32 arg1, UInt32 arg2);
 };
 
@@ -532,8 +533,7 @@ public:
 	/*20*/virtual void	CopyCellAtGridXYTo(UInt32 gridX1, UInt32 gridY1, UInt32 gridX2, UInt32 gridY2);
 	/*24*/virtual void	SwapCellsAtGridXYs(UInt32 gridX1, UInt32 gridY1, UInt32 gridX2, UInt32 gridY2);
 
-	SInt32			worldX;			// 04	X coord of current cell within worldspace
-	SInt32			worldY;			// 08	Y coord "
+	CellCoord		worldXY;		// 04	Coord of current cell within worldspace
 	UInt32			gridSize;		// 0C	Init'd to uGridsToLoad
 	TESObjectCELL	**gridCells;	// 10	Size is gridSize^2
 	NiVector3		posXY;			// 14	worldXY * 4096
@@ -675,10 +675,8 @@ public:
 	BSTempNodeManager					*tempNodeMgr;		// 18
 	NiDirectionalLight					*directionalLight;	// 1C
 	void								*objFog;			// 20
-	SInt32								extGridX;			// 24
-	SInt32								extGridY;			// 28
-	SInt32								extCoordX;			// 2C
-	SInt32								extCoordY;			// 30
+	CellCoord							exteriorGrid;		// 24
+	CellCoord							exteriorCoord;		// 2C
 	TESObjectCELL						*currentInterior;	// 34
 	TESObjectCELL						**interiorsBuffer;	// 38
 	TESObjectCELL						**exteriorsBuffer;	// 3C

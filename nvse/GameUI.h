@@ -618,7 +618,14 @@ public:
 		float	displayTime;			// 40C
 	};
 
-	struct SubtitleData;
+	struct SubtitleData
+	{
+		char		text[0x104];
+		UInt32		startTime;
+		float		displayTime;
+		NiPoint3	pos;
+		SInt32		priority;
+	};
 
 	struct QueuedQuestText
 	{

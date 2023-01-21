@@ -222,7 +222,7 @@ bool Cmd_ClimateRemoveWeatherType_Execute(COMMAND_ARGS)
 bool Cmd_GetCurrentClimate_Execute(COMMAND_ARGS)
 {
 	REFR_RES = 0;
-	TESClimate *climate = g_TES->sky ? g_TES->sky->currClimate : NULL;
+	TESClimate *climate = g_currentSky->currClimate;
 	if (climate) REFR_RES = climate->refID;
 	DoConsolePrint(climate);
 	return true;
@@ -235,17 +235,14 @@ bool Cmd_SetCurrentClimate_Execute(COMMAND_ARGS)
 	{
 		if (s_forcedClimate && (s_forcedClimate != climate))
 			s_forcedClimate = NULL;
-		Sky *currSky = g_TES->sky;
-		if (currSky)
-			currSky->currClimate = climate;
+		g_currentSky->currClimate = climate;
 	}
 	return true;
 }
 
 bool Cmd_RefreshCurrentClimate_Execute(COMMAND_ARGS)
 {
-	Sky *currSky = g_TES->sky;
-	if (currSky) currSky->RefreshClimate(currSky->currClimate);
+	g_currentSky->RefreshClimate(g_currentSky->currClimate);
 	return true;
 }
 

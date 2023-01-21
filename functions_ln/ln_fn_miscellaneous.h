@@ -48,9 +48,9 @@ DEFINE_COMMAND_PLUGIN(GetActiveQuest, 0, 0, NULL);
 UInt8 __fastcall GetArmorClass(Character *character)
 {
 	if (!character->IsCharacter()) return 0;
-	ValidBip01Names *equipment = character->GetValidBip01Names();
+	BipedAnim *equipment = character->GetBipedAnim();
 	if (!equipment) return true;
-	ValidBip01Names::Data *slotData = equipment->slotData;
+	BipedAnim::Data *slotData = equipment->slotData;
 	TESObjectARMO *armor;
 	TESBipedModelForm *biped;
 	for (UInt8 count = 20; count; count--, slotData++)
@@ -340,7 +340,7 @@ bool __fastcall PlayerHasKey(TESObjectREFR *thisObj)
 	}
 	else
 	{
-		ExtraLock *xLock = GetExtraType(&thisObj->extraDataList, Lock);
+		ExtraLock *xLock = GetExtraType(&thisObj->extraDataList, ExtraLock);
 		TESKey *key = (xLock && xLock->data) ? xLock->data->key : NULL;
 		if (key && g_thePlayer->GetItemCount(key))
 			return true;
@@ -622,7 +622,7 @@ bool Cmd_GetZone_Execute(COMMAND_ARGS)
 	REFR_RES = 0;
 	if (thisObj->parentCell)
 	{
-		ExtraEncounterZone *xEncZone = GetExtraType(&thisObj->parentCell->extraDataList, EncounterZone);
+		ExtraEncounterZone *xEncZone = GetExtraType(&thisObj->parentCell->extraDataList, ExtraEncounterZone);
 		if (xEncZone && xEncZone->zone) REFR_RES = xEncZone->zone->refID;
 	}
 	return true;
@@ -696,7 +696,7 @@ bool Cmd_GetWaterTrait_Execute(COMMAND_ARGS)
 		case 12:
 		case 13:
 		case 14:
-			cvtul2d(RGBHexToDec(*(UInt32*)&water->visData[traitID - 2]), result);
+			cvtul2d(RGBHexToDec(ULNG(water->visData[traitID - 2])), result);
 			break;
 		default:
 			*result = water->visData[traitID - 2];
@@ -722,7 +722,7 @@ bool Cmd_SetWaterTrait_Execute(COMMAND_ARGS)
 		case 12:
 		case 13:
 		case 14:
-			if (intVal <= 255255255) *(UInt32*)&water->visData[traitID - 2] = RGBDecToHex(intVal);
+			if (intVal <= 255255255) ULNG(water->visData[traitID - 2]) = RGBDecToHex(intVal);
 			break;
 		default:
 			water->visData[traitID - 2] = value;

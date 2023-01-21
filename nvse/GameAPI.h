@@ -172,7 +172,6 @@ static_assert(sizeof(ConsoleManager) == 0x914);
 
 extern ConsoleManager *g_consoleManager;
 
-class ChangesMap;
 class InteriorCellNewReferencesMap;
 class ExteriorCellNewReferencesMap;
 class NumericIDBufferMap;
@@ -368,6 +367,10 @@ public:
 	FormBufferHeader	header;
 };
 
+typedef NiTPointerMap<BGSFormChange> BGSSaveLoadChangesMap;
+
+typedef BGSSaveLoadChangesMap ChangesMap;
+
 // 1C8 - only explicitly marked things are verified
 class TESSaveLoadGame
 {
@@ -414,7 +417,7 @@ public:
 	UInt8						unk0AF;				// 0AF
 	UInt32				unk0B0[(0x1C8-0x0B0) >> 2];	// 0B0
 
-	static TESSaveLoadGame* Get();
+	__forceinline static TESSaveLoadGame *GetSingleton() {return *(TESSaveLoadGame**)0x11DE45C;}
 
 	__forceinline UInt32 AddCreatedForm(TESForm *pForm)
 	{
@@ -429,8 +432,6 @@ class BGSCellNumericIDArrayMap;
 class BGSLoadGameSubBuffer;
 class BGSReconstructFormsInFileMap;
 class BGSReconstructFormsInAllFilesMap;
-
-typedef NiTPointerMap<BGSFormChange> BGSSaveLoadChangesMap;
 
 class BGSSaveLoadGame	// 0x011DDF38
 {
@@ -483,6 +484,8 @@ public:
 	UInt8										pad249[3];				// 249
 
 	__forceinline static BGSSaveLoadGame *GetSingleton() {return *(BGSSaveLoadGame**)0x11DDF38;}
+
+	inline bool IsLoading() const {return (flags & 2) != 0;}
 };
 static_assert(sizeof(BGSSaveLoadGame) == 0x24C);
 

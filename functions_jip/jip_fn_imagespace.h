@@ -38,14 +38,41 @@ bool Cmd_GetImageSpaceModTrait_Execute(COMMAND_ARGS)
 {
 	TESImageSpaceModifier *imod;
 	UInt32 traitID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &imod, &traitID) && (traitID <= 63))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &imod, &traitID) && (traitID <= 67))
 	{
-		if (!traitID)
-			*result = imod->duration;
-		else if (traitID == 1)
-			*result = imod->radialBlurCentreX;
-		else if (traitID == 2)
-			*result = imod->radialBlurCentreY;
+		if (traitID <= 2)
+		{
+			switch (traitID)
+			{
+			case 0:
+				*result = imod->duration;
+				break;
+			case 1:
+				*result = imod->radialBlurCentreX;
+				break;
+			case 2:
+				*result = imod->radialBlurCentreY;
+				break;
+			}
+		}
+		else if (traitID > 63)
+		{
+			switch (traitID - 64)
+			{
+			case 0:
+				*result = imod->animable;
+				break;
+			case 1:
+				*result = imod->radBlurUseTarget;
+				break;
+			case 2:
+				*result = imod->DoFUseTarget;
+				break;
+			case 3:
+				*result = imod->DoFMode;
+				break;
+			}
+		}
 		else if (traitID <= 46)
 			*result = imod->data654[traitID - 3]->value;
 		else if (traitID <= 50)
@@ -64,14 +91,42 @@ bool Cmd_SetImageSpaceModTrait_Execute(COMMAND_ARGS)
 	TESImageSpaceModifier *imod;
 	UInt32 traitID;
 	float value;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &imod, &traitID, &value) && (traitID <= 63))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &imod, &traitID, &value) && (traitID <= 67))
 	{
-		if (!traitID)
-			imod->duration = value;
-		else if (traitID == 1)
-			imod->radialBlurCentreX = value;
-		else if (traitID == 2)
-			imod->radialBlurCentreY = value;
+		if (traitID <= 2)
+		{
+			switch (traitID)
+			{
+			case 0:
+				imod->duration = value;
+				break;
+			case 1:
+				imod->radialBlurCentreX = value;
+				break;
+			case 2:
+				imod->radialBlurCentreY = value;
+				break;
+			}
+		}
+		else if (traitID > 63)
+		{
+			UInt8 iVal = UInt8(value) & 3;
+			switch (traitID - 64)
+			{
+			case 0:
+				imod->animable = iVal;
+				break;
+			case 1:
+				imod->radBlurUseTarget = iVal;
+				break;
+			case 2:
+				imod->DoFUseTarget = iVal;
+				break;
+			case 3:
+				imod->DoFMode = iVal;
+				break;
+			}
+		}
 		else if (traitID <= 46)
 		{
 			traitID -= 3;

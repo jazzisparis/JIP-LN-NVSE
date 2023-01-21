@@ -1388,6 +1388,9 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v56.78
 	/*2928*/REG_CMD(ToggleNodeCollision);
 	/*2929*/REG_CMD_ARR(GetAllPerks);
+	//	v56.80
+	/*292A*/REG_CMD_FRM(GetEditorPosition);
+	/*292B*/REG_CMD_FRM(GetWorldspacePersistentCell);
 
 	//===========================================================
 

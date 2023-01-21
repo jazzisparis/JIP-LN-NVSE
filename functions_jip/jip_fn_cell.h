@@ -13,7 +13,7 @@ bool Cmd_SetCellWaterForm_Execute(COMMAND_ARGS)
 	TESWaterForm *water = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &water) && IS_ID(cell, TESObjectCELL) && (!water || IS_ID(water, TESWaterForm)))
 	{
-		ExtraCellWaterType *xCellWater = GetExtraType(&cell->extraDataList, CellWaterType);
+		ExtraCellWaterType *xCellWater = GetExtraType(&cell->extraDataList, ExtraCellWaterType);
 		if (xCellWater)
 		{
 			if (water) xCellWater->waterForm = water;
@@ -30,7 +30,7 @@ bool Cmd_GetCellClimate_Execute(COMMAND_ARGS)
 	TESObjectCELL *cell;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && IS_ID(cell, TESObjectCELL))
 	{
-		ExtraCellClimate *xCellClimate = GetExtraType(&cell->extraDataList, CellClimate);
+		ExtraCellClimate *xCellClimate = GetExtraType(&cell->extraDataList, ExtraCellClimate);
 		if (xCellClimate && xCellClimate->climate) REFR_RES = xCellClimate->climate->refID;
 	}
 	return true;
@@ -42,7 +42,7 @@ bool Cmd_SetCellClimate_Execute(COMMAND_ARGS)
 	TESClimate *climate = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &climate) && IS_ID(cell, TESObjectCELL) && (!climate || IS_ID(climate, TESClimate)))
 	{
-		ExtraCellClimate *xCellClimate = GetExtraType(&cell->extraDataList, CellClimate);
+		ExtraCellClimate *xCellClimate = GetExtraType(&cell->extraDataList, ExtraCellClimate);
 		if (xCellClimate)
 		{
 			if (climate) xCellClimate->climate = climate;

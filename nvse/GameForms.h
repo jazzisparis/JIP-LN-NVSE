@@ -524,7 +524,7 @@ public:
 		kFacegenFlag_LeftHand =		0x08,
 	};
 
-	virtual void	*Destroy(bool noDealloc);	// 04
+	virtual void	*Destroy(bool doFree);	// 04
 	virtual const char	*GetModelPath();
 	virtual void	SetModelPath(const char *path);	// 06
 
@@ -554,10 +554,7 @@ public:
 		char	textureName[0x80];	// 08
 	};	// there seem to be an array (length 6) post 0x88
 
-	virtual void *	Destroy(bool noDealloc);
-	virtual char *	GetPath(void);
-	virtual void	SetPath(char * path);
-	virtual void *	Unk_07(void);
+	virtual void	*Unk_07(void);
 
 	tList<Texture> textureList;	// 018
 };
@@ -1076,17 +1073,17 @@ public:
 class ActorValueOwner
 {
 public:
-	virtual int		GetBaseActorValueInt(UInt32 avCode);
-	virtual float	GetBaseActorValue(UInt32 avCode);
-	virtual int		GetActorValueInt(UInt32 avCode);
-	virtual float	GetActorValue(UInt32 avCode);
-	virtual float	GetBaseSubAV(UInt32 avCode);
-	virtual float	GetSubAVDamage(UInt32 avCode);
-	virtual float	GetSubAVMod(UInt32 avCode);
-	virtual int		GetPermanentActorValueInt(UInt32 avCode);
-	virtual float	GetPermanentActorValue(UInt32 avCode);
-	virtual Actor	*GetActor();
-	virtual UInt16	GetLevel();
+	virtual int		GetBaseActorValueInt(UInt32 avCode) const;
+	virtual float	GetBaseActorValue(UInt32 avCode) const;
+	virtual int		GetActorValueInt(UInt32 avCode) const;
+	virtual float	GetActorValue(UInt32 avCode) const;
+	virtual float	GetBaseSubAV(UInt32 avCode) const;
+	virtual float	GetSubAVDamage(UInt32 avCode) const;
+	virtual float	GetSubAVMod(UInt32 avCode) const;
+	virtual int		GetPermanentActorValueInt(UInt32 avCode) const;
+	virtual float	GetPermanentActorValue(UInt32 avCode) const;
+	virtual Actor	*GetActor() const;
+	virtual UInt16	GetLevel() const;
 };
 
 class CachedValuesOwner
@@ -2970,7 +2967,7 @@ public:
 };
 
 // 2B4
-struct ValidBip01Names
+struct BipedAnim
 {
 	enum eOptionalBoneType
 	{
@@ -3035,7 +3032,7 @@ struct ValidBip01Names
 	UInt32				unk2AC;			// 2AC
 	Character			*character;		// 2B0
 };
-static_assert(sizeof(ValidBip01Names) == 0x2B4);
+static_assert(sizeof(BipedAnim) == 0x2B4);
 
 // 20
 struct FaceGenData
@@ -3488,14 +3485,6 @@ class TESObjectCELL : public TESForm
 public:
 	typedef tList<TESObjectREFR> RefList;
 	
-	struct ExteriorCoords
-	{
-		SInt32		x;			// 00
-		SInt32		y;			// 04
-		UInt8		byte08;		// 08
-		UInt8		pad09[3];	// 09
-	};
-
 	struct LightingData
 	{
 		ColorRGBA	ambient;			// 00
@@ -3516,13 +3505,13 @@ public:
 	{
 		NiNode											*masterNode;// 00
 		tList<TESObjectREFR>							largeRefs;	// 04	refs with bound size > 3000
-		NiTMapBase<TESObjectREFR*, NiNode*>				map0C;		// 0C
+		NiTMapBase<TESObjectREFR*, NiNode*>				animatedRefs;	// 0C
 		NiTMapBase<TESForm*, TESObjectREFR*>			map1C;		// 1C
-		NiTMapBase<TESObjectREFR*, NiNode*>				map2C;		// 2C
+		NiTMapBase<TESObjectREFR*, NiNode*>				staticLightsMap;	// 2C
 		NiTMapBase<TESObjectREFR*, BSMultiBoundNode*>	map3C;		// 3C
 		tList<TESObjectREFR>							list4C;		// 4C	Scripted non-actors
-		tList<void>										list54;		// 54	Has ExtraActivateRefChildren
-		tList<TESObjectREFR>							list5C;		// 5C
+		tList<TESObjectREFR>							list54;		// 54	Has ExtraActivateRefChildren
+		tList<TESObjectREFR>							placeableWaterList;		// 5C
 	};
 
 	enum
@@ -3538,13 +3527,13 @@ public:
 
 	TESFullName				fullName;				// 18
 	UInt8					cellFlags;				// 24
-	UInt8					byte25;					// 25
-	UInt8					byte26;					// 26	5 or 6 would mean cell is loaded
+	UInt8					fullySeen;				// 25	Fully visible on local-map
+	UInt8					loadingStage;			// 26	5 or 6 would mean cell is loaded
 	UInt8					byte27;					// 27
 	ExtraDataList			extraDataList;			// 28
 	union											// 48
 	{
-		ExteriorCoords		*exteriorCoords;
+		CellCoord			*exteriorCoords;
 		LightingData		*interiorLighting;
 	};
 	TESObjectLAND			*land;					// 4C
@@ -3560,7 +3549,7 @@ public:
 	UInt16					unkAA;					// AA
 	RefList					objectList;				// AC
 	NiNode					*niNodeB4;				// B4
-	NiNode					*niNodeB8;				// B8
+	NiNode					*soundPlayingNodes;		// B8
 	UInt32					unkBC;					// BC
 	TESWorldSpace			*worldSpace;			// C0
 	CellRenderData			*renderData;			// C4
@@ -3593,16 +3582,16 @@ public:
 static_assert(sizeof(TESObjectCELL) == 0xE0);
 
 // 3C	C'tor @ 0x6FC490
-struct LODdata
+struct BGSTerrainManager
 {
-	struct LODNode;
+	struct BGSTerrainNode;
 
 	// 30
 	struct TerrainChunk
 	{
-		LODNode						*node;			// 00
-		NiAVObject					*object04;		// 04
-		NiAVObject					*object08;		// 08
+		BGSTerrainNode				*parent;		// 00
+		NiAVObject					*landMesh;		// 04
+		NiAVObject					*waterMesh;		// 08
 		NiAVObject					*object0C;		// 0C
 		NiObject					*object10;		// 10
 		NiObject					*object14;		// 14
@@ -3611,16 +3600,16 @@ struct LODdata
 		UInt32						unk20;			// 20
 		BGSTerrainChunkLoadTask		*loadTask;		// 24
 		UInt8						byte28;			// 28
-		UInt8						byte29;			// 29
+		UInt8						isInitialized;	// 29
 		UInt8						byte2A;			// 2A
 		UInt8						pad2B;			// 2B
 		NiObject					*object2C;		// 2C
 	};
 
 	// 2C	C'tor @ 0x6F5160
-	struct DistantObject
+	struct BGSDistantObjectBlock
 	{
-		LODNode						*node;			// 00
+		BGSTerrainNode				*node;			// 00
 		NiAVObject					*object04;		// 04
 		NiAVObject					*object08;		// 08
 		NiAVObject					*object0C;		// 0C
@@ -3648,47 +3637,47 @@ struct LODdata
 		NiTPointerMap<InstanceData>	instanceMap;	// 14
 		NiTPointerMap<TreeGroup>	groupMap;		// 24
 		BSSimpleArray<UInt32>		array34;		// 34
-		LODNode						*node;			// 44
+		BGSTerrainNode				*node;			// 44
 		UInt8						byte48;			// 48
 		UInt8						byte49;			// 49
 		UInt8						pad4A[2];		// 4A
 	};
 
 	// 60	C'tor @ 0x6FD210
-	struct LODNode
+	struct BGSTerrainNode
 	{
-		LODdata				*parent;		// 00
-		UInt32				lodLevel;		// 04
-		Coordinate			cellXY;			// 08
-		UInt8				byte0C;			// 0C
-		UInt8				byte0D;			// 0D
-		UInt8				byte0E;			// 0E
-		UInt8				byte0F;			// 0F
-		TerrainChunk		*trrChunk;		// 10
-		DistantObject		*object;		// 14
-		DistantTreeBlock	*distTree;		// 18
-		UInt32				ukn1C;			// 1C
-		LODNode				*linked[4];		// 20
-		void				*ptr30;			// 30
-		NiVector3			pos34;			// 34
-		float				flt40;			// 40
-		float				splitDist;		// 44
-		float				morphStartDist;	// 48
-		float				morphEndDist;	// 4C
-		UInt32				unk50;			// 50
-		UInt32				ukn54;			// 54
-		UInt32				linkID;			// 58
-		UInt8				shouldShow;		// 5C
-		UInt8				byte5D;			// 5D
-		UInt8				byte5E;			// 5E
-		UInt8				byte5F;			// 5F
+		BGSTerrainManager		*parent;		// 00
+		UInt32					lodLevel;		// 04
+		Coordinate				cellXY;			// 08
+		UInt8					byte0C;			// 0C
+		UInt8					byte0D;			// 0D
+		UInt8					byte0E;			// 0E
+		UInt8					byte0F;			// 0F
+		TerrainChunk			*trrChunk;		// 10
+		BGSDistantObjectBlock	*object;		// 14
+		DistantTreeBlock		*distTree;		// 18
+		UInt32					ukn1C;			// 1C
+		BGSTerrainNode			*linked[4];		// 20
+		void					*ptr30;			// 30
+		NiVector3				pos34;			// 34
+		float					flt40;			// 40
+		float					splitDist;		// 44
+		float					morphStartDist;	// 48
+		float					morphEndDist;	// 4C
+		UInt32					unk50;			// 50
+		UInt32					ukn54;			// 54
+		UInt32					linkID;			// 58
+		UInt8					shouldShow;		// 5C
+		UInt8					byte5D;			// 5D
+		UInt8					byte5E;			// 5E
+		UInt8					byte5F;			// 5F
 
-		LODNode *GetNodeByCoord(Coordinate coord) const;
+		BGSTerrainNode *GetNodeByCoord(Coordinate coord) const;
 	};
-	static_assert(sizeof(LODNode) == 0x60);
+	static_assert(sizeof(BGSTerrainNode) == 0x60);
 
 	TESWorldSpace					*world;			// 00
-	LODNode							*lodNode;		// 04
+	BGSTerrainNode					*lodNode;		// 04
 	NiNode							*node08;		// 08
 	NiNode							*waterLODNode;	// 0C
 	Coordinate						coordNW;		// 10
@@ -3703,7 +3692,7 @@ struct LODdata
 	UInt8							byte2B;			// 2B
 	BSSimpleArray<TESObjectREFR*>	array2C;		// 2C
 };
-static_assert(sizeof(LODdata) == 0x3C);
+static_assert(sizeof(BGSTerrainManager) == 0x3C);
 
 typedef NiTPointerMap<TESObjectCELL> CellPointerMap;
 
@@ -3773,7 +3762,7 @@ public:
 	CellPointerMap			*cellMap;			// 30
 	TESObjectCELL			*cell;				// 34
 	UInt32					unk38;				// 38
-	LODdata					*lodData;			// 3C
+	BGSTerrainManager		*lodData;			// 3C
 	TESClimate				*climate;			// 40
 	TESImageSpace			*imageSpace;		// 44
 	ImpactDataSwap			*impactSwap;		// 48
@@ -5023,17 +5012,27 @@ static_assert(sizeof(TESImageSpace) == 0xB0);
 class TESImageSpaceModifier : public TESForm
 {
 public:
+	enum DoFModes
+	{
+		kMode_Either,
+		kMode_Front,
+		kMode_Back
+	};
+
 	TESSound				*outroSound;		// 018
 	TESSound				*introSound;		// 01C
 	UInt8					animable;			// 020
 	UInt8					pad021[3];			// 021
 	float					duration;			// 024
-	UInt32					unk028[49];			// 028
+	UInt32					unk028[48];			// 028
+	UInt8					radBlurUseTarget;	// 0E8
+	UInt8					pad0E9[3];			// 0E9
 	float					radialBlurCentreX;	// 0EC
 	float					radialBlurCentreY;	// 0F0
 	UInt32					unk0F4[3];			// 0F4
-	UInt8					useTarget;			// 100
-	UInt8					pad101[3];			// 101
+	UInt8					DoFUseTarget;		// 100
+	UInt8					DoFMode;			// 101
+	UInt8					pad102[2];			// 102
 	UInt32					unk104[4];			// 104
 	NiFloatInterpolator		fltIntrpl1[44];		// 114
 	NiColorInterpolator		clrIntrpl[2];		// 534

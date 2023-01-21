@@ -446,7 +446,7 @@ __declspec(naked) void __fastcall bhkWorldObject::ApplyForce(const NiVector4 &fo
 		movaps	[eax], xmm0
 		leave
 		JMP_EAX(0xC9C1D0)
-		ALIGN 16
+		ALIGN 8
 	kUnitConv:
 		EMIT_DW(40, DF, F8, D6) EMIT_DW(3E, 12, 4D, D2)
 	}

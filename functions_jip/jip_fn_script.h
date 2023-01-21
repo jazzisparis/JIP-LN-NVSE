@@ -306,7 +306,7 @@ bool Cmd_FakeScriptEvent_Execute(COMMAND_ARGS)
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 	ExtraDataList *xData = invRef ? invRef->xData : &thisObj->extraDataList;
 	if (!xData) return true;
-	ExtraScript *xScript = GetExtraType(xData, Script);
+	ExtraScript *xScript = GetExtraType(xData, ExtraScript);
 	if (xScript && xScript->eventList)
 		*result = ThisCall<bool>(0x5A8E20, xScript->eventList, filterForm, inMask);
 	return true;
@@ -511,7 +511,7 @@ bool Cmd_DisableScriptedActivate_Execute(COMMAND_ARGS)
 {
 	UInt32 disable;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &disable)) return true;
-	ExtraScript *xScript = GetExtraType(&thisObj->extraDataList, Script);
+	ExtraScript *xScript = GetExtraType(&thisObj->extraDataList, ExtraScript);
 	if (!xScript || !xScript->script || !xScript->eventList) return true;
 	Script *script = xScript->script;
 	UInt8 *dataPtr = script->data, *endPtr = dataPtr + script->info.dataLength;
@@ -568,7 +568,7 @@ bool Cmd_RunBatchScript_Execute(COMMAND_ARGS)
 
 bool Cmd_ExecuteScript_Execute(COMMAND_ARGS)
 {
-	ExtraScript *xScript = GetExtraType(&thisObj->extraDataList, Script);
+	ExtraScript *xScript = GetExtraType(&thisObj->extraDataList, ExtraScript);
 	if (xScript)
 	{
 		Script *pScript = xScript->script;

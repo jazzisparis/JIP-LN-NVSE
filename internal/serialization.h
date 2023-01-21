@@ -38,8 +38,11 @@ void MiniMapLoadGame();
 void DoPreLoadGameHousekeeping()
 {
 	HOOK_SET(StartCombat, false);
-	if (s_forceCombatTargetMap->Clear())
+	if (!s_forceCombatTargetMap->Empty())
+	{
+		s_forceCombatTargetMap->Clear();
 		HOOK_SET(SetCombatTarget, false);
+	}
 	HOOK_SET(TeleportWithPC, false);
 	if (HOOK_SET(EquipItem, false))
 	{
@@ -48,8 +51,11 @@ void DoPreLoadGameHousekeeping()
 		HOOK_SET(WeaponSwitchUnequip, false);
 		HOOK_SET(GetPreferedWeapon, false);
 	}
-	if (s_forceDetectionValueMap->Clear())
+	if (!s_forceDetectionValueMap->Empty())
+	{
+		s_forceDetectionValueMap->Clear();
 		HOOK_SET(GetDetectionValue, false);
+	}
 	HOOK_SET(AddVATSTarget, false);
 
 	UInt32 size = s_fireWeaponEventMap->Size() + s_fireWeaponEventScripts->Size();
@@ -66,10 +72,16 @@ void DoPreLoadGameHousekeeping()
 		}
 		s_eventInformedObjects->Clear();
 
-		if (s_pcFastTravelInformed->Clear())
+		if (!s_pcFastTravelInformed->Empty())
+		{
+			s_pcFastTravelInformed->Clear();
 			HOOK_DEC(PCFastTravel);
-		if (s_pcCellChangeInformed->Clear())
+		}
+		if (!s_pcCellChangeInformed->Empty())
+		{
+			s_pcCellChangeInformed->Clear();
 			HOOK_SET(PCCellChange, false);
+		}
 	}
 
 	if (!s_scriptWaitInfoMap->Empty())

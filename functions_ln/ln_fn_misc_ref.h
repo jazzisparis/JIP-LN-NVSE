@@ -19,7 +19,7 @@ bool Cmd_IsParentActivateOnly_Execute(COMMAND_ARGS)
 		if (!thisObj) return true;
 		refr = thisObj;
 	}
-	ExtraActivateRef *xActivate = GetExtraType(&refr->extraDataList, ActivateRef);
+	ExtraActivateRef *xActivate = GetExtraType(&refr->extraDataList, ExtraActivateRef);
 	if (xActivate) *result = (int)xActivate->flags;
 	return true;
 }
@@ -37,7 +37,7 @@ bool Cmd_SetBaseForm_Execute(COMMAND_ARGS)
 
 bool Cmd_GetInventoryWeight_Execute(COMMAND_ARGS)
 {
-	ExtraContainerChanges *xChanges = GetExtraType(&thisObj->extraDataList, ContainerChanges);
+	ExtraContainerChanges *xChanges = GetExtraType(&thisObj->extraDataList, ExtraContainerChanges);
 	*result = (xChanges && xChanges->data) ? xChanges->data->GetInventoryWeight() : 0;
 	DoConsolePrint(result);
 	return true;
@@ -73,7 +73,7 @@ bool Cmd_SetReferenceFlag_Execute(COMMAND_ARGS)
 
 bool Cmd_HasActionRef_Execute(COMMAND_ARGS)
 {
-	*result = thisObj->extraDataList.HasType(kExtraData_Action);
+	*result = thisObj->extraDataList.HasType(kXData_ExtraAction);
 	return true;
 }
 
@@ -86,7 +86,7 @@ bool Cmd_GetRadius_Execute(COMMAND_ARGS)
 	{
 		if (thisObj)
 		{
-			ExtraRadius *xRadius = GetExtraType(&thisObj->extraDataList, Radius);
+			ExtraRadius *xRadius = GetExtraType(&thisObj->extraDataList, ExtraRadius);
 			if (xRadius) *result = xRadius->radius;
 		}
 		return true;
@@ -105,7 +105,7 @@ bool Cmd_SetRadius_Execute(COMMAND_ARGS)
 	{
 		if (thisObj)
 		{
-			ExtraRadius *xRadius = GetExtraType(&thisObj->extraDataList, Radius);
+			ExtraRadius *xRadius = GetExtraType(&thisObj->extraDataList, ExtraRadius);
 			if (xRadius) xRadius->radius = value;
 			else thisObj->extraDataList.AddExtra(ExtraRadius::Create(value));
 		}

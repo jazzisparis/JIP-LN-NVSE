@@ -283,7 +283,11 @@ public:
 	void DestroyAllChildren();
 	void __fastcall PokeValue(UInt32 valueID);
 	void FakeClick();
+	__forceinline void SetChangeFlag(UInt32 flagMask) {ThisCall(0xA07530, this, flagMask);}
+	__forceinline float GetLocusAdjustedPosX() {return ThisCall<float>(0xA013D0, this);}
+	__forceinline float GetLocusAdjustedPosY() {return ThisCall<float>(0xA01440, this);}
 	__forceinline void ApplyRotationOnChildren() {ThisCall(0xA0B520, this);}
+	__forceinline void PlaySound(UInt32 id) {ThisCall(0xA0B110, this, id);}
 
 	void Dump();
 };
@@ -326,12 +330,13 @@ public:
 class TileImage : public Tile
 {
 public:
-	float				flt038;			// 38
-	UInt32				unk03C;			// 3C
+	float				flt38;			// 38
+	NiTexture			*texture;		// 3C
 	TileShaderProperty	*shaderProp;	// 40
-	UInt8				byt044;			// 44
-	UInt8				fill[3];		// 45-47
+	UInt8				byte44;			// 44
+	UInt8				pad45[3];		// 45
 
+	__forceinline void SetTexture(NiTexture *tex) {ThisCall(0xA20610, this, tex);}
 	void __fastcall SetAlphaTexture(const char *ddsPath);
 };
 

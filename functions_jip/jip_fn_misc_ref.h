@@ -100,6 +100,7 @@ DEFINE_COMMAND_PLUGIN(AttachLine, 1, 7, kParams_TwoStrings_FiveFloats);
 DEFINE_COMMAND_PLUGIN(ToggleNoZPosReset, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(RotateAroundPoint, 1, 7, kParams_SixFloats_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ToggleNodeCollision, 1, 2, kParams_OneString_OneInt);
+DEFINE_COMMAND_PLUGIN(GetEditorPosition, 1, 6, kParams_ThreeScriptVars_ThreeOptionalScriptVars);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -162,7 +163,7 @@ bool Cmd_SetLinkedReference_Execute(COMMAND_ARGS)
 bool Cmd_GetEnableChildren_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	ExtraEnableStateChildren *xEnableChildren = GetExtraType(&thisObj->extraDataList, EnableStateChildren);
+	ExtraEnableStateChildren *xEnableChildren = GetExtraType(&thisObj->extraDataList, ExtraEnableStateChildren);
 	if (!xEnableChildren) return true;
 	TempElements *tmpElements = GetTempElements();
 	auto iter = xEnableChildren->children.Head();
@@ -179,7 +180,7 @@ bool Cmd_GetEnableChildren_Execute(COMMAND_ARGS)
 bool Cmd_GetLinkedChildren_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	ExtraLinkedRefChildren *xLinkedChildren = GetExtraType(&thisObj->extraDataList, LinkedRefChildren);
+	ExtraLinkedRefChildren *xLinkedChildren = GetExtraType(&thisObj->extraDataList, ExtraLinkedRefChildren);
 	if (!xLinkedChildren) return true;
 	TempElements *tmpElements = GetTempElements();
 	auto iter = xLinkedChildren->children.Head();
@@ -195,7 +196,7 @@ bool Cmd_GetLinkedChildren_Execute(COMMAND_ARGS)
 
 bool Cmd_HasPrimitive_Execute(COMMAND_ARGS)
 {
-	ExtraPrimitive *xPrimitive = GetExtraType(&thisObj->extraDataList, Primitive);
+	ExtraPrimitive *xPrimitive = GetExtraType(&thisObj->extraDataList, ExtraPrimitive);
 	*result = (xPrimitive && xPrimitive->primitive) ? 1 : 0;
 	return true;
 }
@@ -206,7 +207,7 @@ bool Cmd_GetPrimitiveBound_Execute(COMMAND_ARGS)
 	char axis;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &axis))
 	{
-		ExtraPrimitive *xPrimitive = GetExtraType(&thisObj->extraDataList, Primitive);
+		ExtraPrimitive *xPrimitive = GetExtraType(&thisObj->extraDataList, ExtraPrimitive);
 		if (xPrimitive && xPrimitive->primitive)
 			*result = xPrimitive->primitive->bounds[axis - 'X'] * 2.0;
 	}
@@ -220,7 +221,7 @@ bool Cmd_SetPrimitiveBound_Execute(COMMAND_ARGS)
 	float val;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &axis, &val))
 		return true;
-	ExtraPrimitive *xPrimitive = GetExtraType(&thisObj->extraDataList, Primitive);
+	ExtraPrimitive *xPrimitive = GetExtraType(&thisObj->extraDataList, ExtraPrimitive);
 	if (!xPrimitive || !xPrimitive->primitive) return true;
 	BGSPrimitive *primitive = xPrimitive->primitive;
 	axis -= 'X';
@@ -240,7 +241,7 @@ bool Cmd_AddPrimitive_Execute(COMMAND_ARGS)
 	NiVector3 bounds;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type, &bounds.x, &bounds.y, &bounds.z) && (type >= 1) && (type <= 3) &&
 		((thisObj->baseForm->refID == 0x21) || (IS_ID(thisObj->baseForm, TESObjectACTI) && (type != 3))) &&
-		!thisObj->extraDataList.HasType(kExtraData_Primitive))
+		!thisObj->extraDataList.HasType(kXData_ExtraPrimitive))
 	{
 		ExtraPrimitive *xPrimitive = ExtraPrimitive::Create();
 		thisObj->extraDataList.AddExtra(xPrimitive);
@@ -321,9 +322,9 @@ bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 	}
 	else
 	{
-		ExtraStartingPosition *xStartingPos = GetExtraType(&thisObj->extraDataList, StartingPosition);
+		ExtraStartingPosition *xStartingPos = GetExtraType(&thisObj->extraDataList, ExtraStartingPosition);
 		if (!xStartingPos) return true;
-		ExtraStartingWorldOrCell *xStartingCell = GetExtraType(&thisObj->extraDataList, StartingWorldOrCell);
+		ExtraStartingWorldOrCell *xStartingCell = GetExtraType(&thisObj->extraDataList, ExtraStartingWorldOrCell);
 		cell = xStartingCell ? (TESObjectCELL*)xStartingCell->worldOrCell : thisObj->GetParentCell();
 		posVector = &xStartingPos->posVector;
 		if (resetRot)
@@ -410,8 +411,8 @@ bool Cmd_GetMaterialPropertyValue_Execute(COMMAND_ARGS)
 	UInt32 traitID;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &traitID) || (traitID > 8)) return true;
 	NiAVObject *block = thisObj->GetNiBlock(blockName);
-	if (!block) return true;
-	NiMaterialProperty *matProp = (NiMaterialProperty*)block->GetProperty(2);
+	if (!block || !IS_GEOMETRY(block)) return true;
+	NiMaterialProperty *matProp = ((NiGeometry*)block)->materialProp;
 	if (!matProp) return true;
 	switch (traitID)
 	{
@@ -452,9 +453,9 @@ bool Cmd_SetMaterialPropertyValue_Execute(COMMAND_ARGS)
 			else
 			{
 				NiAVObject *block = niNode->GetBlock(blockName);
-				if (block)
+				if (block && IS_GEOMETRY(block))
 				{
-					NiMaterialProperty *matProp = (NiMaterialProperty*)block->GetProperty(2);
+					NiMaterialProperty *matProp = ((NiGeometry*)block)->materialProp;
 					if (matProp) matProp->SetTraitValue(traitID, value);
 				}
 			}
@@ -856,7 +857,7 @@ bool Cmd_GetTeleportDoor_Execute(COMMAND_ARGS)
 	REFR_RES = 0;
 	if (thisObj->baseForm && IS_ID(thisObj->baseForm, TESObjectDOOR))
 	{
-		ExtraTeleport *xTeleport = GetExtraType(&thisObj->extraDataList, Teleport);
+		ExtraTeleport *xTeleport = GetExtraType(&thisObj->extraDataList, ExtraTeleport);
 		if (xTeleport && xTeleport->data && xTeleport->data->linkedDoor)
 			REFR_RES = xTeleport->data->linkedDoor->refID;
 	}
@@ -994,9 +995,9 @@ bool Cmd_MoveToContainer_Execute(COMMAND_ARGS)
 	{
 		if (thisObj == g_HUDMainMenu->crosshairRef)
 			CdeclCall(0x775A00, 0, 0, 0);
-		ExtraCount *xCount = GetExtraType(&thisObj->extraDataList, Count);
+		ExtraCount *xCount = GetExtraType(&thisObj->extraDataList, ExtraCount);
 		SInt32 quantity = xCount ? xCount->count : 1;
-		if (clrOwner) thisObj->extraDataList.RemoveByType(kExtraData_Ownership);
+		if (clrOwner) thisObj->extraDataList.RemoveByType(kXData_ExtraOwnership);
 		if (target->refID == 0x14)
 			ThisCall(0x953FF0, target, thisObj, quantity, 0);
 		else
@@ -1432,7 +1433,7 @@ bool Cmd_MoveToNode_Execute(COMMAND_ARGS)
 
 bool Cmd_GetPlayerPerks_Execute(COMMAND_ARGS)
 {
-	*result = (int)GetAllPerks(g_thePlayer, 0, scriptObj);
+	*result = (int)GetAllPerks(g_thePlayer, 0, scriptObj, 0);
 	return true;
 }
 
@@ -1581,7 +1582,7 @@ bool Cmd_GetExtraFloat_Execute(COMMAND_ARGS)
 	else xData = &thisObj->extraDataList;
 	if (xData)
 	{
-		ExtraTimeLeft *xTimeLeft = GetExtraType(xData, TimeLeft);
+		ExtraTimeLeft *xTimeLeft = GetExtraType(xData, ExtraTimeLeft);
 		if (xTimeLeft)
 			*result = xTimeLeft->timeLeft;
 	}
@@ -1590,7 +1591,7 @@ bool Cmd_GetExtraFloat_Execute(COMMAND_ARGS)
 
 bool Cmd_GetExtraFloat_Eval(COMMAND_ARGS_EVAL)
 {
-	ExtraTimeLeft *xTimeLeft = GetExtraType(&thisObj->extraDataList, TimeLeft);
+	ExtraTimeLeft *xTimeLeft = GetExtraType(&thisObj->extraDataList, ExtraTimeLeft);
 	*result = xTimeLeft ? xTimeLeft->timeLeft : 0;
 	return true;
 }
@@ -1618,7 +1619,7 @@ bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
 			}
 		}
 		else xData = &thisObj->extraDataList;
-		ExtraTimeLeft *xTimeLeft = GetExtraType(xData, TimeLeft);
+		ExtraTimeLeft *xTimeLeft = GetExtraType(xData, ExtraTimeLeft);
 		if (xTimeLeft)
 			xTimeLeft->timeLeft = fltVal;
 		else xData->AddExtra(ExtraTimeLeft::Create(fltVal));
@@ -1633,7 +1634,7 @@ bool Cmd_SetLinearVelocity_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char blockName[0x40];
-	hkVector4 velocity(_mm_setzero_ps());
+	NiVector4 velocity(_mm_setzero_ps());
 	UInt32 flags = 0;	//	1 - set local; 2 - add value
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &velocity.x, &velocity.y, &velocity.z, &flags))
 	{
@@ -1983,9 +1984,9 @@ bool Cmd_GetBlockTextureSet_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName))
 	{
 		NiAVObject *block = thisObj->GetNiBlock(blockName);
-		if (block && block->GetTriBasedGeom())
+		if (block && IS_GEOMETRY(block))
 		{
-			BSShaderProperty *shaderProp = (BSShaderProperty*)block->GetProperty(3);
+			BSShaderProperty *shaderProp = ((NiGeometry*)block)->shaderProp;
 			if (shaderProp)
 			{
 				ArrayElementL elements[6];
@@ -2079,9 +2080,9 @@ bool Cmd_SetTextureTransformKey_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &ctrlIndex, &keyIndex, &value))
 	{
 		NiAVObject *block = thisObj->GetNiBlock(blockName);
-		if (block && block->GetTriBasedGeom())
+		if (block && IS_GEOMETRY(block))
 		{
-			NiTexturingProperty *texProp = (NiTexturingProperty*)block->GetProperty(5);
+			NiTexturingProperty *texProp = ((NiGeometry*)block)->texturingProp;
 			if (texProp)
 			{
 				NiTextureTransformController *ctrlr = (NiTextureTransformController*)texProp->m_controller;
@@ -2176,7 +2177,7 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 				pTexture = thisObj->GetTexturePtr(blockName);
 			if (pTexture)
 			{
-				if (!FloatsEqual(xCamera->m_transformLocal.scale, fov))
+				if (ULNG(xCamera->m_transformLocal.scale) != ULNG(fov))
 				{
 					xCamera->m_transformLocal.scale = fov;
 					xCamera->frustum.viewPort.SetFOV(fov * FltPId180);
@@ -2242,7 +2243,7 @@ bool Cmd_PlayAnimSequence_Execute(COMMAND_ARGS)
 				{
 					for (auto iter = ctrlMgr->sequences.Begin(); iter; ++iter)
 						if (*iter && iter->sequenceName && (*(UInt32*)iter->sequenceName != 'eldI'))
-							iter->Unk_23(0, 0);
+							iter->Deactivate(0, 0);
 					if (sequence->Play())
 					{
 						//thisObj->Unk_32(1);
@@ -2321,10 +2322,7 @@ bool Cmd_GetLinearVelocityAlt_Execute(COMMAND_ARGS)
 			if (!getLocal)
 				outVel.Set(rigidBody->motion.linVelocity.PS());
 			else
-			{
-				hkVector4 velocity = rigidBody->motion.linVelocity;
 				outVel.Set(rigidBody->motion.motionState.transform.rotation.MultiplyVector(_mm_load_ps(rigidBody->motion.linVelocity)));
-			}
 			*result = 1;
 		}
 	}
@@ -2356,7 +2354,7 @@ bool Cmd_SetAngularVelocityEx_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	char blockName[0x40];
-	hkVector4 velocity(_mm_setzero_ps());
+	NiVector4 velocity(_mm_setzero_ps());
 	UInt32 flags = 0;	//	1 - set global; 2 - add value
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &velocity.x, &velocity.y, &velocity.z, &flags))
 	{
@@ -2582,6 +2580,43 @@ bool Cmd_ToggleNodeCollision_Execute(COMMAND_ARGS)
 				refObj->filterFlags |= (!enable) << 6;
 			}
 		}
+	}
+	return true;
+}
+
+bool Cmd_GetEditorPosition_Execute(COMMAND_ARGS)
+{
+	REFR_RES = 0;
+	ResultVars outPos, outRot;
+	UInt8 numArgs = NUM_ARGS;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outPos.x, &outPos.y, &outPos.z, &outRot.x, &outRot.y, &outRot.z))
+	{
+		TESForm *worldOrCell = nullptr;
+		NiVector3 *pPosVec = nullptr, *pRotVec = nullptr;
+		if (IS_ACTOR(thisObj))
+		{
+			Actor *actor = (Actor*)thisObj;
+			worldOrCell = actor->startingWorldOrCell;
+			pPosVec = &actor->startingPos;
+			NiVector3 rotVec(0, 0, actor->startingZRot);
+			pRotVec = &rotVec;
+		}
+		else if (ExtraStartingWorldOrCell *xStartingCell = GetExtraType(&thisObj->extraDataList, ExtraStartingWorldOrCell))
+		{
+			worldOrCell = xStartingCell->worldOrCell;
+			if (ExtraStartingPosition *xStartingPos = GetExtraType(&thisObj->extraDataList, ExtraStartingPosition))
+			{
+				pPosVec = &xStartingPos->posVector;
+				pRotVec = &xStartingPos->rotVector;
+			}
+		}
+		if (worldOrCell && (IS_ID(worldOrCell, TESObjectCELL) || IS_ID(worldOrCell, TESWorldSpace)) && pPosVec && pRotVec)
+		{
+			outPos.Set(pPosVec->PS());
+			if (numArgs == 6)
+				outRot.Set(pRotVec->PS(), GET_PS(9));
+			REFR_RES = worldOrCell->refID;
+		}		
 	}
 	return true;
 }

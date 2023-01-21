@@ -17,7 +17,7 @@ __declspec(naked) TESForm *TESObjectREFR::GetBaseForm() const
 		cmp		dword ptr [edx+0xF8], ADDR_ReturnTrue
 		jnz		done
 		push	eax
-		push	kExtraData_LeveledCreature
+		push	kXData_ExtraLeveledCreature
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
 		pop		ecx
@@ -45,7 +45,7 @@ __declspec(naked) TESForm *TESObjectREFR::GetBaseForm2() const
 		mov		edx, [eax]
 		cmp		dword ptr [edx+0xF8], ADDR_ReturnTrue
 		jnz		retnNULL
-		push	kExtraData_LeveledCreature
+		push	kXData_ExtraLeveledCreature
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
 		test	eax, eax
@@ -61,7 +61,7 @@ __declspec(naked) TESForm *TESObjectREFR::GetBaseForm2() const
 
 ScriptLocals *TESObjectREFR::GetEventList() const
 {
-	ExtraScript *xScript = GetExtraType(&extraDataList, Script);
+	ExtraScript *xScript = GetExtraType(&extraDataList, ExtraScript);
 	return xScript ? xScript->eventList : nullptr;
 }
 
@@ -137,7 +137,7 @@ __declspec(naked) ExtraContainerChanges::EntryDataList *TESObjectREFR::GetContai
 {
 	__asm
 	{
-		push	kExtraData_ContainerChanges
+		push	kXData_ExtraContainerChanges
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
 		test	eax, eax
@@ -155,7 +155,7 @@ __declspec(naked) ContChangesEntry *TESObjectREFR::GetContainerChangesEntry(TESF
 {
 	__asm
 	{
-		push	kExtraData_ContainerChanges
+		push	kXData_ExtraContainerChanges
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
 		test	eax, eax
@@ -499,7 +499,7 @@ __declspec(naked) void Actor::EquipItemAlt(ContChangesEntry *entry, UInt32 noUne
 	}
 }
 
-bool TESObjectREFR::ValidForHooks()
+bool TESObjectREFR::ValidForHooks() const
 {
 	if IS_ACTOR(this) return IsPersistent();
 	return !kInventoryType[baseForm->typeID] && !IsProjectile();
@@ -512,7 +512,7 @@ __declspec(naked) TESObjectCELL *TESObjectREFR::GetParentCell() const
 		mov		eax, [ecx+0x40]
 		test	eax, eax
 		jnz		done
-		push	kExtraData_PersistentCell
+		push	kXData_ExtraPersistentCell
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
 		test	eax, eax
@@ -530,7 +530,7 @@ __declspec(naked) TESWorldSpace *TESObjectREFR::GetParentWorld() const
 		mov		eax, [ecx+0x40]
 		test	eax, eax
 		jnz		getWorld
-		push	kExtraData_PersistentCell
+		push	kXData_ExtraPersistentCell
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
 		test	eax, eax
@@ -553,7 +553,7 @@ __declspec(naked) bool __fastcall TESObjectREFR::GetInSameCellOrWorld(TESObjectR
 		test	eax, eax
 		jnz		hasCell1
 		push	edx
-		push	kExtraData_PersistentCell
+		push	kXData_ExtraPersistentCell
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
 		pop		edx
@@ -565,7 +565,7 @@ __declspec(naked) bool __fastcall TESObjectREFR::GetInSameCellOrWorld(TESObjectR
 		test	ecx, ecx
 		jnz		hasCell2
 		push	eax
-		push	kExtraData_PersistentCell
+		push	kXData_ExtraPersistentCell
 		lea		ecx, [edx+0x44]
 		call	BaseExtraList::GetByType
 		pop		edx
@@ -1045,7 +1045,7 @@ __declspec(naked) double TESObjectREFR::GetWaterImmersionPerc() const	// result 
 	}
 }
 
-bool TESObjectREFR::IsMobile()
+bool TESObjectREFR::IsMobile() const
 {
 	if (IS_ACTOR(this) || IsProjectile())
 		return true;
@@ -1067,11 +1067,9 @@ __declspec(naked) NiTexture** __fastcall TESObjectREFR::GetTexturePtr(const char
 		test	eax, eax
 		jz		done
 		mov		ecx, [eax]
-		cmp		dword ptr [ecx+0x1C], 0xE68810
+		cmp		dword ptr [ecx+0x1C], ADDR_ReturnThis2
 		jnz		retnNull
-		mov		edx, 3
-		mov		ecx, eax
-		call	NiAVObject::GetProperty
+		mov		eax, [eax+0xA8]
 		test	eax, eax
 		jz		done
 		mov		dl, [eax+0x1C]
@@ -1106,9 +1104,10 @@ __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const c
 		call	NiNode::GetBlock
 		test	eax, eax
 		jz		done
-		mov		edx, 3
-		mov		ecx, eax
-		call	NiAVObject::GetProperty
+		mov		ecx, [eax]
+		cmp		dword ptr [ecx+0x1C], ADDR_ReturnThis2
+		jnz		done
+		mov		eax, [eax+0xA8]
 		test	eax, eax
 		jz		done
 		mov		ecx, 0x200100
@@ -1345,7 +1344,7 @@ __declspec(naked) MapMarkerData *TESObjectREFR::GetMapMarkerData() const
 		jz		done
 		cmp		dword ptr [edx+0xC], 0x10
 		jnz		done
-		push	kExtraData_MapMarker
+		push	kXData_ExtraMapMarker
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
 		test	eax, eax
@@ -1356,7 +1355,7 @@ __declspec(naked) MapMarkerData *TESObjectREFR::GetMapMarkerData() const
 	}
 }
 
-bool TESObjectREFR::IsGrabbable()
+bool TESObjectREFR::IsGrabbable() const
 {
 	if IS_ACTOR(this)
 		return *(bool*)0x11E0B20 || ((Actor*)this)->GetDead();
@@ -1536,7 +1535,7 @@ bool Actor::IsItemEquipped(TESForm *item) const
 	do
 	{
 		xData = node->data;
-		if (xData && xData->HasType(kExtraData_Worn))
+		if (xData && xData->HasType(kXData_ExtraWorn))
 			return true;
 	}
 	while (node = node->next);
@@ -1552,9 +1551,7 @@ UInt8 Actor::EquippedWeaponHasMod(UInt32 modType) const
 	TESObjectWEAP *weapon = (TESObjectWEAP*)weaponInfo->type;
 	if (modType == 14)
 	{
-		if (!(weapon->weaponFlags1 & 4))
-			return 0;
-		if (!(weapon->weaponFlags2 & 0x2000))
+		if ((weapon->weaponFlags1 & 4) && !(weapon->weaponFlags2 & 0x2000))
 			return 1;
 	}
 	else if ((modType == 11) && (weapon->soundLevel == 2))
@@ -1660,7 +1657,7 @@ TESObjectREFR *Actor::GetPackageTarget() const
 
 TESCombatStyle *Actor::GetCombatStyle() const
 {
-	ExtraCombatStyle *xCmbStyle = GetExtraType(&extraDataList, CombatStyle);
+	ExtraCombatStyle *xCmbStyle = GetExtraType(&extraDataList, ExtraCombatStyle);
 	if (xCmbStyle && xCmbStyle->combatStyle) return xCmbStyle->combatStyle;
 	return ((TESActorBase*)baseForm)->GetCombatStyle();
 }
@@ -1679,10 +1676,10 @@ bool Actor::GetIsGhost() const
 {
 	if (baseProcess && baseProcess->cachedValues)
 		return (baseProcess->cachedValues->flags & 0x10000000) != 0;
-	return extraDataList.HasType(kExtraData_Ghost);
+	return extraDataList.HasType(kXData_ExtraGhost);
 }
 
-float Actor::GetRadiationLevel()
+float Actor::GetRadiationLevel() const
 {
 	float result = 0;
 	if (inWater)
@@ -1703,11 +1700,11 @@ float Actor::GetRadiationLevel()
 	for (auto iter = g_loadedReferences->radiationEmitters.Begin(); iter; ++iter)
 	{
 		if (!(refr = iter.Get())) continue;
-		xRadius = GetExtraType(&refr->extraDataList, Radius);
+		xRadius = GetExtraType(&refr->extraDataList, ExtraRadius);
 		if (!xRadius) continue;
 		distance = xRadius->radius - GetDistance(refr);
 		if (distance <= 0) continue;
-		xRadiation = GetExtraType(&refr->extraDataList, Radiation);
+		xRadiation = GetExtraType(&refr->extraDataList, ExtraRadiation);
 		if (xRadiation) result += xRadiation->radiation * distance / xRadius->radius;
 	}
 	return result ? ((1.0 - (avOwner.GetActorValue(kAVCode_RadResist) * 0.01)) * result) : 0;
@@ -2078,7 +2075,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 	done:
 		pop		esi
 		retn	0xC
-		ALIGN 16
+		ALIGN 8
 	kPushActor:
 		EMIT_DW(3F, 36, E1, 47) EMIT_DW(3C, 2A, AA, AB)
 	}
@@ -2174,7 +2171,7 @@ void MagicTarget::RemoveEffect(EffectItem *effItem)
 
 TESObjectREFR *TESObjectREFR::GetMerchantContainer() const
 {
-	ExtraMerchantContainer *xMerchCont = GetExtraType(&extraDataList, MerchantContainer);
+	ExtraMerchantContainer *xMerchCont = GetExtraType(&extraDataList, ExtraMerchantContainer);
 	return xMerchCont ? xMerchCont->containerRef : nullptr;
 }
 
@@ -2188,7 +2185,7 @@ __declspec(naked) TESActorBase *Actor::GetActorBase() const
 		cmp		byte ptr [eax+0xF], 0xFF
 		jnz		done
 		push	eax
-		push	kExtraData_LeveledCreature
+		push	kXData_ExtraLeveledCreature
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
 		mov		ecx, eax
@@ -2209,7 +2206,7 @@ TESPackage *Actor::GetStablePackage() const
 	TESPackage *package = baseProcess->currentPackage.package;
 	if (!package) return nullptr;
 	if ((package->type < 18) || (package->type == 26) || (package->type == 30)) return package;
-	ExtraPackage *xPackage = GetExtraType(&extraDataList, Package);
+	ExtraPackage *xPackage = GetExtraType(&extraDataList, ExtraPackage);
 	return xPackage ? xPackage->package : nullptr;
 }
 
@@ -2341,7 +2338,7 @@ void PlayerCharacter::ToggleSneak(bool toggle)
 		hiProcess->cachedValues->flags &= ~0x3000;
 }
 
-void Projectile::GetData(UInt32 dataType, double *result)
+void Projectile::GetData(UInt32 dataType, double *result) const
 {
 	*result = 0;
 	if (!IsProjectile()) return;

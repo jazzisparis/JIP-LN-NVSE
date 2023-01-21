@@ -54,6 +54,104 @@ public:
 	UInt32 RefCount() const {return str ? Meta()[0] : 0;}
 };
 
+template <typename T_Data>
+class NiTFixedStringMap
+{
+public:
+	struct Entry
+	{
+		Entry		*next;
+		const char	*key;
+		T_Data		*data;
+	};
+
+	virtual void	Destroy(bool doFree);
+	virtual Entry	*AllocNewEntry();
+	virtual void	FreeEntry(Entry *entry);
+	
+	UInt32		m_numBuckets;	// 04
+	Entry		**m_buckets;	// 08
+	UInt32		m_numItems;		// 0C
+	
+	bool HasKey(NiFixedString *key) const
+	{
+		const char *_key = *key;
+		for (Entry *entry = m_buckets[(UInt32)_key % m_numBuckets]; entry; entry = entry->next)
+			if (_key == entry->key) return true;
+		return false;
+	}
+	
+	T_Data *Lookup(NiFixedString *key) const
+	{
+		const char *_key = *key;
+		for (Entry *entry = m_buckets[(UInt32)_key % m_numBuckets]; entry; entry = entry->next)
+			if (_key == entry->key) return entry->data;
+		return nullptr;
+	}
+	
+	class Iterator
+	{
+		NiTFixedStringMap	*table;
+		Entry				**bucket;
+		Entry				*entry;
+
+		void FindNonEmpty()
+		{
+			for (Entry **end = &table->m_buckets[table->m_numBuckets]; bucket != end; bucket++)
+				if (entry = *bucket) break;
+		}
+
+	public:
+		Iterator(NiTFixedStringMap &_table) : table(&_table), bucket(table->m_buckets), entry(nullptr) {FindNonEmpty();}
+
+		explicit operator bool() const {return entry != nullptr;}
+		void operator++()
+		{
+			entry = entry->next;
+			if (!entry)
+			{
+				bucket++;
+				FindNonEmpty();
+			}
+		}
+		T_Data *Get() const {return entry->data;}
+		const char *Key() const {return entry->key;}
+	};
+
+	Iterator Begin() {return Iterator(*this);}
+};
+
+template <typename T_Data>
+class NiSimpleArray
+{
+public:
+	T_Data		*data;
+	UInt32		capacity;
+	UInt32		numItems;
+
+	class Iterator
+	{
+		T_Data		*pData;
+		UInt32		count;
+
+	public:
+		explicit operator bool() const {return count != 0;}
+		void operator++()
+		{
+			pData++;
+			count--;
+		}
+
+		T_Data& operator*() const {return *pData;}
+		T_Data& operator->() const {return *pData;}
+		T_Data& Get() const {return *pData;}
+
+		Iterator(NiSimpleArray &source) : pData(source.data), count(source.numItems) {}
+	};
+
+	Iterator Begin() {return Iterator(*this);}
+};
+
 class NiMemObject {};
 
 // 08
@@ -229,6 +327,17 @@ public:
 	UInt32					unk14;		// 14
 };
 
+// 18
+class NiMorphData : public NiObject
+{
+public:
+	UInt32			unk08;		// 08
+	UInt32			unk0C;		// 0C
+	void			*ptr10;		// 10
+	UInt8			byte14;		// 14
+	UInt8			pad15[3];	// 15
+};
+
 // 0C
 class NiInterpolator : public NiObject
 {
@@ -359,7 +468,7 @@ static_assert(sizeof(NiBlendInterpolator) == 0x30);
 class NiControllerSequence : public NiObject
 {
 public:
-	/*8C*/virtual bool		Unk_23(float arg1, UInt8 arg2);
+	/*8C*/virtual bool		Deactivate(float fEaseOutTime, UInt8 bTransition);
 
 	enum State
 	{
@@ -420,7 +529,7 @@ public:
 	float					destFrame;				// 54
 	NiControllerSequence	*partnerSequence;		// 58
 	const char				*accumRootName;			// 5C
-	UInt32					unk60;					// 60
+	NiObject				*object60;				// 60
 	UInt32					unk64;					// 64
 	UInt16					word68;					// 68
 	UInt16					word6A;					// 6A	Pad?
@@ -433,17 +542,30 @@ public:
 };
 static_assert(sizeof(NiControllerSequence) == 0x74);
 
+// 1C
+class NiDefaultAVObjectPalette : public NiObject
+{
+public:
+	/*8C*/virtual NiAVObject	*GetObjectByName(NiFixedString *objName);
+	/*90*/virtual void		Unk_24(void);
+	/*94*/virtual void		SetTarget(NiNode *_target);
+	/*98*/virtual NiNode	*GetTarget();
+
+	NiTFixedStringMap<NiAVObject*>	objectsMap;		// 08
+	NiNode							*pTarget;		// 18
+};
+
 // 34
 class NiTimeController : public NiObject
 {
 public:
-	/*8C*/virtual void		Unk_23(void);
-	/*90*/virtual void		Unk_24(void);
+	/*8C*/virtual void		Start(float fTime);
+	/*90*/virtual void		Stop();
 	/*94*/virtual void		Update(const UpdateParams &updParams);
-	/*98*/virtual void		SetTarget(NiNode *pTarget);
-	/*9C*/virtual void		Unk_27(void);
+	/*98*/virtual void		SetTarget(NiObjectNET *pTarget);
+	/*9C*/virtual bool		Unk_27(void);
 	/*A0*/virtual void		Unk_28(void);
-	/*A4*/virtual void		Unk_29(void);
+	/*A4*/virtual float		ComputeScaledTime(float fTime);
 	/*A8*/virtual void		Unk_2A(void);
 	/*AC*/virtual void		Unk_2B(void);
 	/*B0*/virtual void		Unk_2C(void);
@@ -469,11 +591,9 @@ public:
 	/*B4*/virtual void		Unk_2D(void);
 
 	NiTArray<NiControllerSequence*>				sequences;		// 34
-	void										*ptr44;			// 44
-	UInt32										unk48;			// 48
-	UInt32										unk4C;			// 4C
+	NiSimpleArray<NiControllerSequence*>		seqArray44;		// 44
 	NiTStringPointerMap<NiControllerSequence*>	seqStrMap;		// 50	Case-sensitive!
-	NiTArray<void*>								*arr64;			// 64
+	NiTArray<void*>								*arr64;			// 64	NiTPrimitiveArray<BSAnimNoteListener::BSAnimReceiverType*>
 	UInt32										unk68;			// 68
 	UInt32										unk6C;			// 6C
 	UInt32										unk70;			// 70
@@ -529,7 +649,7 @@ public:
 class NiTransformController : public NiSingleInterpController
 {
 public:
-	static NiTransformController* __stdcall Create(NiNode *pTarget, NiTransformInterpolator *pInterpolator);
+	static NiTransformController* __stdcall Create(NiObjectNET *pTarget, NiTransformInterpolator *pInterpolator);
 };
 static_assert(sizeof(NiTransformController) == 0x38);
 
@@ -602,6 +722,23 @@ public:
 	UInt32			textureSlot;	// 44
 	UInt32			operationType;	// 48
 	UInt32			unk4C;			// 4C
+};
+
+// 44
+class NiGeomMorpherController : public NiInterpController
+{
+public:
+	/*EC*/virtual void		Unk_3B(void);
+	/*E8*/virtual void		Unk_3A(void);
+
+	UInt16			unk38;			// 34
+	UInt8			pad36[2];		// 36
+	NiMorphData		*morphData;		// 38
+	void			*ptr3C;			// 3C
+	UInt8			byte40;			// 40
+	UInt8			byte41;			// 41
+	UInt8			byte42;			// 42
+	UInt8			byte43;			// 43
 };
 
 // 5C
@@ -755,6 +892,15 @@ class BSMultiBoundSphere : public BSMultiBoundShape
 public:
 	UInt32			unk08;		// 08
 	NiSphere		sphere;		// 0C
+};
+
+// 24
+class BSMultiBoundAABB : public BSMultiBoundShape
+{
+public:
+	UInt32			unk08;		// 08
+	NiVector3		diagonalPt0;// 0C
+	NiVector3		diagonalPt1;// 18
 };
 
 // 18
@@ -1265,7 +1411,7 @@ public:
 	/*C8*/virtual void		Unk_32(NiNode *parent);
 	/*CC*/virtual void		Unk_33(UInt32 arg1);
 	/*D0*/virtual void		PostAttachUpdate();
-	/*D4*/virtual void		UpdateFadeAmount(void *arg1);
+	/*D4*/virtual void		OnVisible(NiCullingProcess *culling);
 	/*D8*/virtual void		Unk_36(UInt32 arg1);
 
 	enum NiFlags
@@ -1317,8 +1463,8 @@ public:
 	inline NiVector3& LocalTranslate() {return m_transformLocal.translate;}
 	inline NiVector3& WorldTranslate() {return m_transformWorld.translate;}
 
-	inline void Hide() {m_flags |= 1;}
-	inline void Show() {m_flags &= ~1;}
+	inline void Hide() {UBYT(m_flags) |= 1;}
+	inline void Show() {UBYT(m_flags) &= ~1;}
 
 	NiAVObject *CreateCopy();
 	void Update();
@@ -1354,11 +1500,12 @@ public:
 	NiAVObject* __fastcall GetBlock(const char *blockName) const;
 	NiNode* __fastcall GetNode(const char *nodeName) const;
 	NiAVObject* __fastcall FindBlockOfType(UInt32 typeVtbl) const;
-	bool IsMovable();
+	bool IsMovable() const;
 	void __fastcall ToggleCollision(UInt8 flag);
 	void ResetCollision();
 	void RemoveCollision();
-	BSXFlags *GetBSXFlags();
+	void __vectorcall SetAlphaRecurse(__m128 alpha);
+	UInt32 GetBSXFlags() const;
 	void BulkSetMaterialPropertyTraitValue(UInt32 traitID, float value);
 	void GetContactObjects(ContactObjects &contactObjs);
 	bool HasPhantom();
@@ -1394,8 +1541,21 @@ public:
 	UInt32			unkD0[5];		// D0
 
 	__forceinline static BSFadeNode *Create() {return ThisCall<BSFadeNode*>(0xB4E150, CdeclCall<void*>(0xAA13E0, sizeof(BSFadeNode)));}
+
+	void __fastcall SetVisible(bool visible);
 };
 static_assert(sizeof(BSFadeNode) == 0xE4);
+
+// 10
+class BSMultiBound : public NiObject
+{
+public:
+	/*8C*/virtual void	Unk_23(void);
+	/*90*/virtual void	Unk_24(void);
+
+	UInt32				unk08;		// 08
+	BSMultiBoundShape	*mbShape;	// 0C
+};
 
 // B4
 class BSMultiBoundNode : public NiNode
@@ -1407,7 +1567,8 @@ public:
 	/*10C*/virtual void		Unk_43(UInt32 arg1);
 	/*110*/virtual void		Unk_44(UInt32 arg1);
 
-	UInt32			unkAC[2];		// AC
+	BSMultiBound	*multiBound;	// AC
+	UInt32			cullingMode;	// B0
 };
 
 // B8
@@ -1677,52 +1838,54 @@ public:
 };
 static_assert(sizeof(LightingData) == 0x250);
 
+struct BSCompoundFrustum;
+
 // 200
 class ShadowSceneNode : public NiNode
 {
 public:
-	UInt32							unk0AC[2];		// 0AC
-	DList<LightingData>				lgtList0B4;		// 0B4
-	DList<LightingData>				lgtList0C0;		// 0C0
-	DListNode<LightingData>			*node0CC;		// 0CC
-	DListNode<LightingData>			*node0D0;		// 0D0
-	DListNode<LightingData>			*node0D4;		// 0D4
-	LightingData					*data0D8;		// 0D8
-	LightingData					*data0DC;		// 0DC
-	LightingData					*data0E0;		// 0E0
-	DList<LightingData>				lgtList0E4;		// 0E4
-	DList<LightingData>				list0F0;		// 0F0
-	DList<LightingData>				list0FC;		// 0FC
-	DList<void>						list108;		// 108
-	DList<void>						list114;		// 114
-	UInt32							unk120;			// 120
-	UInt32							unk124;			// 124
-	BSCubeMapCamera					*cubeMapCam;	// 128
-	UInt32							unk12C;			// 12C
-	UInt8							byte130;		// 130
-	UInt8							isWireFrameMode;// 131
-	UInt8							pad132[2];		// 132
-	BSFogProperty					*fogProperty;	// 134
-	UInt32							unk138;			// 138
-	BSSimpleArray<NiFrustumPlanes*>	array13C;		// 13C
-	BSSimpleArray<void*>			array14C;		// 14C	010C1E9C
-	UInt32							unk15C[3];		// 15C
-	NiVector4						unk168;			// 168
-	NiVector4						unk178;			// 178
-	NiVector4						unk188;			// 188
-	NiVector4						unk198;			// 198
-	NiVector4						unk1A8;			// 1A8
-	NiVector4						unk1B8;			// 1B8
-	UInt32							lightingPasses;	// 1C8
-	float							flt1CC[3];		// 1CC
-	UInt32							unk1D8;			// 1D8
-	UInt8							byte1DC;		// 1DC
-	UInt8							pad1DD[3];		// 1DD
-	BSPortalGraph					*portalGraph;	// 1E0
-	UInt32							unk1E4[3];		// 1E4
-	NiVector3						cameraPos;		// 1F0
-	UInt8							byte1FC;		// 1FC
-	UInt8							pad1FD[3];		// 1FD
+	UInt32								unk0AC[2];		// 0AC
+	DList<LightingData>					lgtList0B4;		// 0B4
+	DList<LightingData>					lgtList0C0;		// 0C0
+	DListNode<LightingData>				*node0CC;		// 0CC
+	DListNode<LightingData>				*node0D0;		// 0D0
+	DListNode<LightingData>				*node0D4;		// 0D4
+	LightingData						*data0D8;		// 0D8
+	LightingData						*data0DC;		// 0DC
+	LightingData						*data0E0;		// 0E0
+	DList<LightingData>					lgtList0E4;		// 0E4
+	DList<LightingData>					list0F0;		// 0F0
+	DList<LightingData>					list0FC;		// 0FC
+	DList<void>							list108;		// 108
+	DList<void>							list114;		// 114
+	UInt32								unk120;			// 120
+	UInt32								unk124;			// 124
+	BSCubeMapCamera						*cubeMapCam;	// 128
+	UInt32								unk12C;			// 12C
+	UInt8								byte130;		// 130
+	UInt8								isWireFrameMode;// 131
+	UInt8								pad132[2];		// 132
+	BSFogProperty						*fogProperty;	// 134
+	UInt32								unk138;			// 138
+	BSSimpleArray<NiFrustumPlanes*>		array13C;		// 13C
+	BSSimpleArray<BSCompoundFrustum*>	array14C;		// 14C	010C1E9C
+	UInt32								unk15C[3];		// 15C
+	NiVector4							unk168;			// 168
+	NiVector4							unk178;			// 178
+	NiVector4							unk188;			// 188
+	NiVector4							unk198;			// 198
+	NiVector4							unk1A8;			// 1A8
+	NiVector4							unk1B8;			// 1B8
+	UInt32								lightingPasses;	// 1C8
+	float								flt1CC[3];		// 1CC
+	UInt32								unk1D8;			// 1D8
+	UInt8								byte1DC;		// 1DC
+	UInt8								pad1DD[3];		// 1DD
+	BSPortalGraph						*portalGraph;	// 1E0
+	UInt32								unk1E4[3];		// 1E4
+	NiVector3							cameraPos;		// 1F0
+	UInt8								byte1FC;		// 1FC
+	UInt8								pad1FD[3];		// 1FD
 };
 static_assert(sizeof(ShadowSceneNode) == 0x200);
 
@@ -1873,8 +2036,8 @@ public:
 	};
 
 	UInt32			unk08[2];		// 08
-	UInt8			groupIndex;		// 10
-	UInt8			pad11[3];		// 11
+	UInt16			groupIndex;		// 10
+	UInt8			pad12[2];		// 12
 	UInt32			numKeys;		// 14
 	float			*keyTimes;		// 18
 	NiVector3		moveVector;		// 1C
@@ -2612,7 +2775,40 @@ public:
 };
 static_assert(sizeof(BSShaderAccumulator) == 0x280);
 
-// 54
+// 2C
+class NiAdditionalGeometryData : public NiObject
+{
+public:
+	// 10
+	class NiAGDDataBlock
+	{
+	public:
+		virtual void	Destructor(bool doFree);
+		virtual void	*AllocBlock(UInt32 size);
+		virtual void	Unk_02(UInt32, UInt32);
+		virtual void	Unk_03(UInt32, UInt32);
+		virtual void	FreeBlock(void *pBlock);
+
+		UInt32			unk04;		// 04
+		void			*block08;	// 08
+		UInt8			byte0C;		// 0C
+		UInt8			pad0D[3];	// 0D
+	};
+
+	/*8C*/virtual bool		Unk_23(void);
+	/*90*/virtual NiAGDDataBlock	*AllocDataBlock();
+
+	UInt32						unk08;		// 08
+	UInt16						word0C;		// 0C
+	UInt8						pad0E[2];	// 0E
+	UInt32						unk10;		// 10
+	void						*ptr14;		// 14
+	UInt32						unk18;		// 18
+	NiTArray<NiAGDDataBlock*>	dataBlocks;	// 1C
+};
+static_assert(sizeof(NiAdditionalGeometryData) == 0x2C);
+
+// 54	vtbl @ 0x010F017C
 class NiGeometryBufferData
 {
 public:
@@ -2654,23 +2850,23 @@ public:
 	/*9C*/virtual bool		Unk_27(UInt32 arg);
 	/*A0*/virtual void		Unk_28(void);
 
-	UInt16					numVertices;	// 08
-	UInt16					word0A;			// 0A
-	UInt16					word0C;			// 0C	NormalBinormalTangent
-	UInt16					dirtyFlags;		// 0E
-	NiSphere				bounds;			// 10
-	NiVector3				*vertices;		// 20
-	NiVector3				*normals;		// 24
-	NiColorAlpha			*vertexColors;	// 28
-	NiPoint2				*uvCoords;		// 2C
-	UInt32					unk30;			// 30
-	NiGeometryBufferData	*bufferData;	// 34
-	UInt8					keepFlags;		// 38
-	UInt8					compressFlags;	// 39
-	UInt8					byte3A;			// 3A
-	UInt8					byte3B;			// 3B
-	UInt8					byte3C;			// 3C
-	UInt8					pad3D[3];		// 3D
+	UInt16						numVertices;	// 08
+	UInt16						word0A;			// 0A
+	UInt16						word0C;			// 0C	NormalBinormalTangent
+	UInt16						dirtyFlags;		// 0E
+	NiSphere					bounds;			// 10
+	NiVector3					*vertices;		// 20
+	NiVector3					*normals;		// 24
+	NiColorAlpha				*vertexColors;	// 28
+	NiPoint2					*uvCoords;		// 2C
+	NiAdditionalGeometryData	*additionalData;// 30
+	NiGeometryBufferData		*bufferData;	// 34
+	UInt8						keepFlags;		// 38
+	UInt8						compressFlags;	// 39
+	UInt8						byte3A;			// 3A
+	UInt8						byte3B;			// 3B
+	UInt8						byte3C;			// 3C
+	UInt8						pad3D[3];		// 3D
 };
 static_assert(sizeof(NiGeometryData) == 0x40);
 
@@ -2995,7 +3191,7 @@ public:
 	/*38*/virtual void		Unk_0E(void);
 	/*3C*/virtual void		Unk_0F(void);
 	/*40*/virtual void		Destructor(bool freeMemory);
-	/*44*/virtual void		Unk_11(void *arg);
+	/*44*/virtual void		Unk_11(NiGeometry *arg);
 	/*48*/virtual void		Cull(NiCamera *camera, ShadowSceneNode *scene, NiCulledGeoList *culledGeo);
 	/*4C*/virtual void		AddGeo(NiGeometry *arg);
 
@@ -3013,10 +3209,19 @@ static_assert(sizeof(NiCullingProcess) == 0x90);
 class BSCullingProcess : public NiCullingProcess
 {
 public:
+	enum CullingModes
+	{
+		kCull_Normal =						0,
+		kCull_AllPass =						1,
+		kCull_AllFail =						2,
+		kCull_IgnoreMultiBounds =			3,
+		kCull_ForceMultiBoundsNoUpdate =	4
+	};
+
 	UInt32					topCullMode;		// 90
 	UInt32					cullModeStack[10];	// 94
 	UInt32					stackSize;			// BC
-	UInt32					unkC0;				// C0
+	BSCompoundFrustum		*ptrC0;				// C0
 	BSShaderAccumulator		*shaderAccum;		// C4
 };
 static_assert(sizeof(BSCullingProcess) == 0xC8);

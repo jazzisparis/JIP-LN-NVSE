@@ -44,11 +44,6 @@ void Console_Print(const char *fmt, ...)
 	}
 }
 
-TESSaveLoadGame * TESSaveLoadGame::Get()
-{
-	return (TESSaveLoadGame *)0x011DE45C;
-}
-
 SaveGameManager* SaveGameManager::GetSingleton()
 {
 	return *(SaveGameManager**)0x11DE134;

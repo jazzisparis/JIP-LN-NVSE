@@ -17,9 +17,9 @@ struct NiPoint2
 	NiPoint2(const NiPoint2 &rhs) {*this = rhs;}
 	NiPoint2(__m128 rhs) {*this = rhs;}
 
-	inline void operator=(const NiPoint2 &rhs) {_mm_storel_pi((__m64*)this, rhs.PS());}
-	inline void operator=(NiPoint2 &&rhs) {_mm_storel_pi((__m64*)this, rhs.PS());}
-	inline void operator=(__m128 rhs) {_mm_storel_pi((__m64*)this, rhs);}
+	inline void operator=(const NiPoint2 &rhs) {_mm_storeu_si64(this, _mm_castps_si128(rhs.PS()));}
+	inline void operator=(NiPoint2 &&rhs) {_mm_storeu_si64(this, _mm_castps_si128(rhs.PS()));}
+	inline void operator=(__m128 rhs) {_mm_storeu_si64(this, _mm_castps_si128(rhs));}
 
 	inline operator float*() {return &x;}
 
@@ -28,7 +28,7 @@ struct NiPoint2
 	void Dump() const;
 };
 
-#define SET_V3	_mm_storel_pi((__m64*)this, m);	\
+#define SET_V3	_mm_storeu_si64(this, _mm_castps_si128(m));	\
 	_mm_store_ss(&z, _mm_unpackhi_ps(m, m));
 
 // 0C
@@ -44,7 +44,7 @@ struct NiVector3
 	NiVector3(const NiQuaternion &rhs) {*this = rhs;}
 	NiVector3(const __m128 rhs)
 	{
-		_mm_storel_pi((__m64*)this, rhs);
+		_mm_storeu_si64(this, _mm_castps_si128(rhs));
 		_mm_store_ss(&z, _mm_unpackhi_ps(rhs, rhs));
 	}
 
@@ -63,7 +63,7 @@ struct NiVector3
 		__m128 m = _mm_loadu_ps((const float*)&rhs);
 		SET_V3
 	}
-	inline void operator=(const NiPoint2 &rhs) {_mm_storel_pi((__m64*)this, rhs.PS());}
+	inline void operator=(const NiPoint2 &rhs) {_mm_storeu_si64(this, _mm_castps_si128(rhs.PS()));}
 
 	void operator=(const NiMatrix33 &from);
 	void operator=(const NiQuaternion &from);
@@ -135,6 +135,7 @@ struct NiVector3
 
 	void Dump() const;
 };
+typedef NiVector3 NiPoint3;
 
 float __vectorcall Point2Distance(const NiVector3 &pt1, const NiVector3 &pt2);
 float __vectorcall Point3Distance(const NiVector3 &pt1, const NiVector3 &pt2);
@@ -492,19 +493,19 @@ struct NiColor
 	inline void operator=(NiColor &&rhs)
 	{
 		__m128 m = _mm_loadu_ps((const float*)&rhs);
-		_mm_storel_pi((__m64*)this, m);
+		_mm_storeu_si64(this, _mm_castps_si128(m));
 		_mm_store_ss(&b, _mm_unpackhi_ps(m, m));
 	}
 	inline void operator=(const NiColor &rhs)
 	{
 		__m128 m = _mm_loadu_ps((const float*)&rhs);
-		_mm_storel_pi((__m64*)this, m);
+		_mm_storeu_si64(this, _mm_castps_si128(m));
 		_mm_store_ss(&b, _mm_unpackhi_ps(m, m));
 	}
 	inline void operator=(const NiVector3 &rhs)
 	{
 		__m128 m = _mm_loadu_ps((const float*)&rhs);
-		_mm_storel_pi((__m64*)this, m);
+		_mm_storeu_si64(this, _mm_castps_si128(m));
 		_mm_store_ss(&b, _mm_unpackhi_ps(m, m));
 	}
 
@@ -680,6 +681,13 @@ public:
 	UInt32		m_numBuckets;	// 04
 	Entry		**m_buckets;	// 08
 	UInt32		m_numItems;		// 0C
+
+	bool HasKey(UInt32 key) const
+	{
+		for (Entry *entry = m_buckets[key % m_numBuckets]; entry; entry = entry->next)
+			if (key == entry->key) return true;
+		return false;
+	}
 
 	T_Data *Lookup(UInt32 key) const;
 

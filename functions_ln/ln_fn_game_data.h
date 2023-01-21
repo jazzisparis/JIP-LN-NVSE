@@ -55,7 +55,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList, TempElem
 			do
 			{
 				refr = refrIter->data;
-				if (!refr || !refr->extraDataList.HasType(kExtraData_MapMarker) || ((index != -1) && (index != refr->modIndex))) continue;
+				if (!refr || !refr->extraDataList.HasType(kXData_ExtraMapMarker) || ((index != -1) && (index != refr->modIndex))) continue;
 				if (outList) outList->Prepend(refr);
 				else tmpElements->Append(refr);
 			}
@@ -74,7 +74,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList, TempElem
 			do
 			{
 				refr = refrIter->data;
-				if (!refr || !refr->extraDataList.HasType(kExtraData_RadioData) || ((index != -1) && (index != refr->modIndex))) continue;
+				if (!refr || !refr->extraDataList.HasType(kXData_ExtraRadioData) || ((index != -1) && (index != refr->modIndex))) continue;
 				if (outList) outList->Prepend(refr);
 				else tmpElements->Append(refr);
 			}

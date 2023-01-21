@@ -46,7 +46,7 @@ bool Cmd_GetCellWaterForm_Execute(COMMAND_ARGS)
 			cell = g_thePlayer->parentCell;
 		if (!cell || NOT_ID(cell, TESObjectCELL))
 			return true;
-		ExtraCellWaterType *xCellWater = GetExtraType(&cell->extraDataList, CellWaterType);
+		ExtraCellWaterType *xCellWater = GetExtraType(&cell->extraDataList, ExtraCellWaterType);
 		if (xCellWater && xCellWater->waterForm)
 			REFR_RES = xCellWater->waterForm->refID;
 		else if (cell->worldSpace && cell->worldSpace->waterFormFirst)
@@ -61,7 +61,7 @@ bool Cmd_GetCellImageSpace_Execute(COMMAND_ARGS)
 	TESObjectCELL *cell;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && IS_ID(cell, TESObjectCELL))
 	{
-		ExtraCellImageSpace *xCellIS = GetExtraType(&cell->extraDataList, CellImageSpace);
+		ExtraCellImageSpace *xCellIS = GetExtraType(&cell->extraDataList, ExtraCellImageSpace);
 		if (xCellIS && xCellIS->imageSpace) REFR_RES = xCellIS->imageSpace->refID;
 	}
 	return true;

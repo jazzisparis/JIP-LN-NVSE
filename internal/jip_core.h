@@ -95,7 +95,6 @@ namespace GameGlobals
 	__forceinline RadioEntry *PipboyRadio() {return *(RadioEntry**)0x11DD42C;}
 };
 
-extern void *g_scrapHeapQueue;
 extern NiNode *s_pc1stPersonNode, *g_cursorNode;
 extern float g_screenWidth, g_screenHeight;
 extern const char *g_terminalModelDefault;
@@ -186,10 +185,18 @@ struct QueuedCmdCall
 	UInt32			numArgs;	// 0C
 	FunctionArg		args[4];	// 10
 
-	QueuedCmdCall(void *_cmdAddr, UInt32 _thisObj, UInt8 _numArgs) : opcode(0x2B), cmdAddr(_cmdAddr), thisObj(_thisObj), numArgs(_numArgs) {}
-};
+	QueuedCmdCall(void *_cmdAddr, UInt32 _thisObj, UInt32 _numArgs, ...) : opcode(0x2B), cmdAddr(_cmdAddr), thisObj(_thisObj), numArgs(_numArgs)
+	{
+		if (!numArgs) return;
+		va_list args;
+		va_start(args, numArgs);
+		for (UInt32 argIdx = 0; argIdx < numArgs; argIdx++)
+			args[argIdx] = va_arg(args, UInt32);
+		va_end(args);
+	}
 
-#define AddQueuedCmdCall(qCall) ThisCall(0x87D160, g_scrapHeapQueue, &qCall)
+	bool QueueCall() {return ThisCall<bool>(0x9054A0, g_scrapHeapQueue->taskQueue, this);}
+};
 
 class LambdaVarContext
 {
@@ -893,7 +900,7 @@ struct TLSData
 	UInt32			unk004;				// 004
 	ExtraDataList	*lastXtraList;		// 008
 	UInt32			unk00C;				// 00C
-	BSExtraData		*xDatas[kExtraData_Max];	// 010
+	BSExtraData		*xDatas[kXData_ExtraMax];	// 010
 	UInt8			byte25C;			// 25C
 	UInt8			pad25D[3];			// 25D
 	NiNode			*lastNiNode;		// 260

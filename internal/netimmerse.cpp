@@ -24,13 +24,12 @@ __declspec(naked) bool NiControllerSequence::Play()
 	__asm
 	{
 		push	ecx
-		xor		eax, eax
-		push	eax
-		push	eax
-		push	eax
+		push	0
+		push	0
+		push	0
 		push	0x3F800000
-		push	eax
-		push	eax
+		push	1
+		push	0x64
 		CALL_EAX(0xA34F20)
 		pop		ecx
 		test	al, al
@@ -53,7 +52,7 @@ NiControllerSequence *NiControllerManager::FindSequence(const char *seqName)
 	return nullptr;
 }
 
-NiTransformController *NiTransformController::Create(NiNode *pTarget, NiTransformInterpolator *pInterpolator)
+NiTransformController *NiTransformController::Create(NiObjectNET *pTarget, NiTransformInterpolator *pInterpolator)
 {
 	NiTransformController *controller = CdeclCall<NiTransformController*>(0xA36810);
 	controller->SetTarget(pTarget);
@@ -328,8 +327,10 @@ void NiAVObject::Dump(UInt8 dumpFlags)
 	{
 		if (m_kWorldBound)
 			PrintDebug("(WB) (%.4f, %.4f, %.4f) R = %.4f", m_kWorldBound->x, m_kWorldBound->y, m_kWorldBound->z, m_kWorldBound->radius);
-		m_transformLocal.Dump();
-		m_transformWorld.Dump();
+		PrintDebug("(WT) (%.4f, %.4f, %.4f)", m_transformWorld.translate.x, m_transformWorld.translate.y, m_transformWorld.translate.z);
+
+		/*m_transformLocal.Dump();
+		m_transformWorld.Dump();*/
 	}
 	if (blkType == 'N')
 		for (auto iter = ((NiNode*)this)->m_children.Begin(); iter; ++iter)
@@ -535,18 +536,46 @@ __declspec(naked) NiAVObject* __fastcall NiNode::FindBlockOfType(UInt32 typeVtbl
 	}
 }
 
-bool NiNode::IsMovable()
+__declspec(naked) bool NiNode::IsMovable() const
 {
-	if (m_collisionObject)
+	__asm
 	{
-		bhkWorldObject *hWorldObj = m_collisionObject->worldObj;
-		if (hWorldObj && ((hkpRigidBody*)hWorldObj->refObject)->IsMobile())
-			return true;
+		mov		eax, [ecx+0x1C]
+		test	eax, eax
+		jz		immovable
+		mov		eax, [eax+0x10]
+		test	eax, eax
+		jz		immovable
+		mov		eax, [eax+8]
+		test	byte ptr [eax+0xE8], 2
+		setnz	al
+		jz		immovable
+		retn
+		ALIGN 16
+	immovable:
+		push	esi
+		push	edi
+		mov		esi, [ecx+0xA0]
+		movzx	edi, word ptr [ecx+0xA6]
+		ALIGN 16
+	iterHead:
+		dec		edi
+		js		done
+		mov		ecx, [esi]
+		add		esi, 4
+		test	ecx, ecx
+		jz		iterHead
+		mov		edx, [ecx]
+		cmp		dword ptr [edx+0xC], ADDR_ReturnThis
+		jnz		iterHead
+		call	NiNode::IsMovable
+		test	al, al
+		jz		iterHead
+	done:
+		pop		edi
+		pop		esi
+		retn
 	}
-	for (auto iter = m_children.Begin(); iter; ++iter)
-		if (*iter && IS_NODE(*iter) && ((NiNode*)*iter)->IsMovable())
-			return true;
-	return false;
 }
 
 __declspec(naked) void __fastcall NiNode::ToggleCollision(UInt8 flag)
@@ -676,29 +705,92 @@ __declspec(naked) void NiNode::RemoveCollision()
 	}
 }
 
-__declspec(naked) BSXFlags *NiNode::GetBSXFlags()
+__declspec(naked) void __vectorcall NiNode::SetAlphaRecurse(__m128 alpha)
+{
+	__asm
+	{
+		movzx	eax, word ptr [ecx+0xA6]
+		test	eax, eax
+		jz		done
+		mov		edx, [ecx+0x20]
+		test	edx, edx
+		jz		done
+		cmp		dword ptr [edx+0xC], 0
+		jz		done
+		push	esi
+		push	edi
+		mov		esi, [ecx+0xA0]
+		mov		edi, eax
+		ALIGN 16
+	iterHead:
+		dec		edi
+		js		iterEnd
+		mov		ecx, [esi]
+		add		esi, 4
+		test	ecx, ecx
+		jz		iterHead
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
+		jnz		notNode
+		call	NiNode::SetAlphaRecurse
+		jmp		iterHead
+		ALIGN 16
+	notNode:
+		cmp		dword ptr [eax+0x1C], ADDR_ReturnThis2
+		jnz		iterHead
+		mov		eax, [ecx+0xA8]
+		test	eax, eax
+		jz		iterHead
+		movss	[eax+0x2C], xmm0
+		jmp		iterHead
+		ALIGN 16
+	iterEnd:
+		pop		edi
+		pop		esi
+	done:
+		retn
+	}
+}
+
+__declspec(naked) UInt32 NiNode::GetBSXFlags() const
 {
 	__asm
 	{
 		push	esi
-		mov		esi, [ecx+0x10]
-		movzx	ecx, word ptr [ecx+0x14]
-		mov		edx, kVtbl_BSXFlags
+		movzx	edx, word ptr [ecx+0x14]
+		mov		ecx, [ecx+0x10]
+		mov		esi, kVtbl_BSXFlags
 		ALIGN 16
 	iterHead:
-		dec		ecx
+		dec		edx
 		js		done
-		mov		eax, [esi+ecx*4]
-		test	eax, eax
-		jz		iterHead
-		cmp		[eax], edx
+		mov		eax, [ecx+edx*4]
+		cmp		[eax], esi
 		jnz		iterHead
+		mov		eax, [eax+0xC]
 		pop		esi
 		retn
 	done:
 		xor		eax, eax
 		pop		esi
 		retn
+	}
+}
+
+__declspec(naked) void __fastcall BSFadeNode::SetVisible(bool visible)
+{
+	__asm
+	{
+		movzx	eax, dl
+		neg		eax
+		and		eax, 0x3F800000
+		movd	xmm0, eax
+		unpcklps	xmm0, xmm0
+		shl		dl, 6
+		and		byte ptr [ecx+0x31], 0xBF
+		or		[ecx+0x31], dl
+		movlps	[ecx+0xB4], xmm0
+		jmp		NiNode::SetAlphaRecurse
 	}
 }
 
@@ -711,7 +803,7 @@ void NiNode::BulkSetMaterialPropertyTraitValue(UInt32 traitID, float value)
 		if (!(block = *iter)) continue;
 		if IS_NODE(block)
 			((NiNode*)block)->BulkSetMaterialPropertyTraitValue(traitID, value);
-		else if (matProp = (NiMaterialProperty*)block->GetProperty(2))
+		else if (IS_GEOMETRY(block) && (matProp = ((NiGeometry*)block)->materialProp))
 			matProp->SetTraitValue(traitID, value);
 	}
 }

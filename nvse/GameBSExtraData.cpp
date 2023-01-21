@@ -60,7 +60,7 @@ __declspec(naked) ExtraDataList *ExtraDataList::Create()
 
 char BaseExtraList::GetExtraFactionRank(TESFaction *faction) const
 {
-	ExtraFactionChanges *xFactionChanges = GetExtraType(this, FactionChanges);
+	ExtraFactionChanges *xFactionChanges = GetExtraType(this, ExtraFactionChanges);
 	if (xFactionChanges && xFactionChanges->data)
 	{
 		ListNode<FactionListData> *traverse = xFactionChanges->data->Head();
@@ -78,7 +78,7 @@ char BaseExtraList::GetExtraFactionRank(TESFaction *faction) const
 
 SInt32 BaseExtraList::GetCount() const
 {
-	ExtraCount *xCount = GetExtraType(this, Count);
+	ExtraCount *xCount = GetExtraType(this, ExtraCount);
 	return xCount ? xCount->count : 1;
 }
 
@@ -86,13 +86,13 @@ void __fastcall ExtraValueStr(BSExtraData *xData, char *buffer)
 {
 	switch (xData->type)
 	{
-		case kExtraData_Ownership:
+		case kXData_ExtraOwnership:
 		{
 			ExtraOwnership *xOwnership = (ExtraOwnership*)xData;
 			sprintf_s(buffer, 0x20, "%08X", xOwnership->owner ? xOwnership->owner->refID : 0);
 			break;
 		}
-		case kExtraData_Count:
+		case kXData_ExtraCount:
 		{
 			ExtraCount *xCount = (ExtraCount*)xData;
 			sprintf_s(buffer, 0x20, "%d", xCount->count);

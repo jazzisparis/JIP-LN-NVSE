@@ -119,7 +119,7 @@ bool TESForm::GetScriptAndEventList(Script **script, ScriptLocals **eventList) c
 {
 	if IS_REFERENCE(this)
 	{
-		ExtraScript *xScript = GetExtraType(&((TESObjectREFR*)this)->extraDataList, Script);
+		ExtraScript *xScript = GetExtraType(&((TESObjectREFR*)this)->extraDataList, ExtraScript);
 		if (!xScript) return false;
 		*script = xScript->script;
 		*eventList = xScript->eventList;
@@ -461,7 +461,7 @@ void TESActorBaseData::SetFactionRank(TESFaction *faction, char rank)
 	}
 }
 
-__declspec(naked) LODdata::LODNode *LODdata::LODNode::GetNodeByCoord(Coordinate coord) const
+__declspec(naked) BGSTerrainManager::BGSTerrainNode *BGSTerrainManager::BGSTerrainNode::GetNodeByCoord(Coordinate coord) const
 {
 	__asm
 	{
@@ -488,7 +488,7 @@ __declspec(naked) LODdata::LODNode *LODdata::LODNode::GetNodeByCoord(Coordinate 
 		test	ecx, ecx
 		jz		iterNext
 		push	dword ptr [ebp+8]
-		call	LODdata::LODNode::GetNodeByCoord
+		call	BGSTerrainManager::BGSTerrainNode::GetNodeByCoord
 		mov		[ebp-8], eax
 		test	eax, eax
 		jnz		done
@@ -875,7 +875,7 @@ void TESForm::DoAddForm(TESForm *newForm, bool persist, bool record) const
 		// ... more ?
 
 		if (canSave)
-			TESSaveLoadGame::Get()->AddCreatedForm(newForm);
+			TESSaveLoadGame::GetSingleton()->AddCreatedForm(newForm);
 	}
 }
 

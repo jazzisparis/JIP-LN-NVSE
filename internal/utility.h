@@ -75,6 +75,9 @@ __forceinline T_Ret CdeclCall(UInt32 _addr, Args ...args)
 #define PS_DUP_4(a)	a, a, a, a
 
 #define HEX(a) std::bit_cast<UInt32>(a)
+#define UBYT(a) *((UInt8*)&a)
+#define USHT(a) *((UInt16*)&a)
+#define ULNG(a) *((UInt32*)&a)
 
 extern const UInt32 kPackedValues[];
 extern const char kLwrCaseConverter[];
@@ -261,6 +264,12 @@ template <const size_t numBits> struct BitField
 	inline void operator-=(UInt8 bitIndex) {bits &= ~(1 << bitIndex);}
 };
 
+struct CellCoord
+{
+	SInt32		x;
+	SInt32		y;
+};
+
 union Coordinate
 {
 	UInt32		xy;
@@ -273,17 +282,19 @@ union Coordinate
 	Coordinate() {}
 	Coordinate(SInt16 _x, SInt16 _y) : x(_x), y(_y) {}
 	Coordinate(UInt32 _xy) : xy(_xy) {}
-	Coordinate(SInt32 *_x) : x(_x[0]), y(_x[1]) {}
+	Coordinate(const CellCoord &coord) {*this = coord;}
 
 	inline void operator=(const Coordinate &rhs) {xy = rhs.xy;}
 	inline void operator=(UInt32 rhs) {xy = rhs;}
+	inline void operator=(__m128i rhs) {_mm_storeu_si32(this, rhs);}
+	inline void operator=(const CellCoord &rhs) {_mm_storeu_si32(this, _mm_shufflelo_epi16(_mm_loadu_si64(&rhs), 2));}
 
 	inline bool operator==(const Coordinate &rhs) {return xy == rhs.xy;}
 	inline bool operator!=(const Coordinate &rhs) {return xy != rhs.xy;}
 
-	inline Coordinate operator+(const Coordinate &rhs)
+	inline __m128i operator+(const Coordinate &rhs)
 	{
-		return Coordinate(x + rhs.x, y + rhs.y);
+		return _mm_add_epi16(*this, rhs);
 	}
 
 	inline operator UInt32() const {return xy;}
@@ -303,11 +314,6 @@ template <typename T1, typename T2> __forceinline T1 GetMax(T1 value1, T2 value2
 template <typename T> __forceinline T sqr(T value)
 {
 	return value * value;
-}
-
-__forceinline bool FloatsEqual(float fVal1, float fVal2)
-{
-	return *(UInt32*)&fVal1 == *(UInt32*)&fVal2;
 }
 
 extern UInt32 s_CPUFeatures;
@@ -452,7 +458,7 @@ class DString
 	DString(char *_str, UInt16 _length, UInt16 _alloc) : str(_str), alloc(_alloc), length(_length) {}
 
 public:
-	DString() : str(nullptr) {*(UInt32*)&alloc = 0;}
+	DString() : str(nullptr) {ULNG(alloc) = 0;}
 	DString(const char *from);
 	DString(const DString &from);
 	DString(UInt16 _alloc);
@@ -463,7 +469,7 @@ public:
 		{
 			Pool_CFree(str, alloc);
 			str = nullptr;
-			*(UInt32*)&alloc = 0;
+			ULNG(alloc) = 0;
 		}
 	}
 

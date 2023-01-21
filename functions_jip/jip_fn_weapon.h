@@ -302,20 +302,27 @@ bool Cmd_SetWeaponModel_Execute(COMMAND_ARGS)
 	char path[0x80];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &modFlags, &path) && IS_ID(weapon, TESObjectWEAP) && (modFlags <= 7))
 	{
+		TESObjectSTAT *firstPerson;
 		switch (modFlags)
 		{
 		case 0:
 			weapon->textureSwap.SetModelPath(path);
+			firstPerson = weapon->worldStatic;
 			break;
 		case 3:
 			weapon->modModels[3].SetModelPath(path);
+			firstPerson = weapon->modStatics[3];
 			break;
 		case 4:
 			weapon->modModels[2].SetModelPath(path);
+			firstPerson = weapon->modStatics[2];
 			break;
 		default:
 			weapon->modModels[modFlags - 1].SetModelPath(path);
+			firstPerson = weapon->modStatics[modFlags - 1];
 		}
+		if (firstPerson)
+			firstPerson->model.SetModelPath(path);
 	}
 	return true;
 }

@@ -64,11 +64,11 @@ bool Cmd_GetLockedOut_Execute(COMMAND_ARGS)
 	if (refr->flags & 0x100) *result = 3;
 	else
 	{
-		ExtraLock *xLock = GetExtraType(&refr->extraDataList, Lock);
+		ExtraLock *xLock = GetExtraType(&refr->extraDataList, ExtraLock);
 		if (xLock && xLock->data) *result = (int)(xLock->data->unk0C & 0xF);
 		else
 		{
-			ExtraTerminalState *xTerm = GetExtraType(&refr->extraDataList, TerminalState);
+			ExtraTerminalState *xTerm = GetExtraType(&refr->extraDataList, ExtraTerminalState);
 			if (xTerm) *result = xTerm->lockedOut & 0xF;
 		}
 	}
@@ -87,7 +87,7 @@ bool Cmd_SetLockedOut_Execute(COMMAND_ARGS)
 	}
 	if IS_ID(refr->baseForm, BGSTerminal)
 	{
-		ExtraTerminalState *xTerm = GetExtraType(&refr->extraDataList, TerminalState);
+		ExtraTerminalState *xTerm = GetExtraType(&refr->extraDataList, ExtraTerminalState);
 		if (!xTerm)
 		{
 			xTerm = ExtraTerminalState::Create();
@@ -97,7 +97,7 @@ bool Cmd_SetLockedOut_Execute(COMMAND_ARGS)
 	}
 	else
 	{
-		ExtraLock *xLock = GetExtraType(&refr->extraDataList, Lock);
+		ExtraLock *xLock = GetExtraType(&refr->extraDataList, ExtraLock);
 		if (!xLock)
 		{
 			xLock = ExtraLock::Create();

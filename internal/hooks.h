@@ -121,7 +121,6 @@ enum
 	kHookActorFlag2_TeammateKillable =		1 << 2,
 	kHookActorFlag2_NoGunWobble =			1 << 3,
 	kHookActorFlag2_CastImmediate =			1 << 4,
-	kHookActorFlag2_SkipDrawWeapAnim =		1 << 5,
 
 	kHookActorFlag3_OnAnimAction =			1 << 0,
 	kHookActorFlag3_OnPlayGroup =			1 << 1,
@@ -362,7 +361,7 @@ __declspec(noinline) MainLoopCallback* __stdcall MainLoopCallback::Create(void *
 	MainLoopCallback *callback = Pool_Alloc<MainLoopCallback>();
 	callback->cmdPtr = _cmdPtr;
 	callback->thisObj = _thisObj;
-	*(UInt32*)&callback->numArgs = _numArgs;
+	ULNG(callback->numArgs) = _numArgs;
 	if IS_TYPE(_cmdPtr, Script)
 	{
 		callback->isScript = true;
@@ -889,8 +888,7 @@ __declspec(naked) void __fastcall UnsetTextInputHooks(TextEditMenu *menu)
 		call	SafeWrite32
 		xor		dl, dl
 		mov		ecx, offset s_hookInfos+kHook_TextInputClose*kHookInfoSize
-		call	HookInfo::Set
-		retn
+		jmp		HookInfo::Set
 	}
 }
 
@@ -1042,7 +1040,7 @@ __declspec(naked) void ResetHPCommandHook()
 		jz		contRetn
 		cmp		byte ptr ds:0x11DEA2E, 0
 		jnz		contRetn
-		push	kExtraData_Script
+		push	kXData_ExtraScript
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
 		test	eax, eax
@@ -1177,7 +1175,7 @@ __declspec(naked) void ActivateDoorHook()
 		jz		contRetn
 		cmp		byte ptr [ecx+0x18D], 0
 		jz		contRetn
-		push	kExtraData_Lock
+		push	kXData_ExtraLock
 		mov		ecx, [ebp-0x12C]
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
@@ -1318,7 +1316,7 @@ __declspec(naked) void ReEquipAllHook()
 		test	eax, eax
 		jz		getPrefWpn
 		mov		[ebp-0x28], eax
-		push	kExtraData_CombatStyle
+		push	kXData_ExtraCombatStyle
 		mov		ecx, [ebp+8]
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
@@ -1978,7 +1976,7 @@ __declspec(naked) void MarkScriptEventHook()
 {
 	__asm
 	{
-		push	kExtraData_Script
+		push	kXData_ExtraScript
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		done
@@ -2056,7 +2054,7 @@ __declspec(naked) void DoActivateHook()
 		mov		edx, [ecx+0x20]
 		test	byte ptr [edx+6], kHookFormFlag6_ActivateDisabled
 		jnz		retnTrue
-		push	kExtraData_Action
+		push	kXData_ExtraAction
 		add		ecx, 0x44
 		call	BaseExtraList::GetByType
 		test	eax, eax
@@ -3668,9 +3666,8 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		mov		eax, [ecx]
 		cmp		dword ptr [eax+0x10], ADDR_ReturnThis
 		jnz		doneFade
-		movaps	xmm0, PS_V3_One
+		movq	xmm0, qword ptr PS_V3_One
 		movlps	[ecx+0xB4], xmm0
-		or		byte ptr [ecx+0x31], 0x40
 	doneFade:
 		test	byte ptr [edi+0x5F], kHookRefFlag5F_DisableCollision
 		jz		doneCollision
@@ -3765,8 +3762,7 @@ __declspec(naked) void LoadBip01SlotHook()
 	done:
 		lea		edx, [ebp-0x190]
 		mov		ecx, [ebp-0x40]
-		call	NiObjectNET::SetName
-		retn
+		jmp		NiObjectNET::SetName
 	}
 }
 
@@ -4205,17 +4201,17 @@ bool __fastcall EraseRefID(AuxVarOwnersMap *pMap, int EDX, UInt32 refID)
 	return pMap->Erase(refID);
 }
 
-__declspec(naked) bool __stdcall ClearRefAuxVars(AuxVarModsMap *varMap, UInt32 refID)
+__declspec(naked) bool __fastcall ClearRefAuxVars(AuxVarModsMap *varMap, int EDX, UInt32 refID)
 {
 	__asm
 	{
-		mov		ecx, [esp+4]
 		cmp		dword ptr [ecx+8], 0
 		jz		retn0
 		push	ebp
 		push	ebx
 		push	esi
 		push	edi
+		push	ecx
 		push	0
 		mov		ebp, [ecx]
 		mov		eax, [ecx+4]
@@ -4231,8 +4227,8 @@ __declspec(naked) bool __stdcall ClearRefAuxVars(AuxVarModsMap *varMap, UInt32 r
 	entryIter:
 		test	edi, edi
 		jz		bucketIter
-		lea		ecx, [edi+8]
 		push	dword ptr [esp+0x1C]
+		lea		ecx, [edi+8]
 		call	EraseRefID
 		mov		ecx, edi
 		mov		edi, [edi]
@@ -4243,7 +4239,7 @@ __declspec(naked) bool __stdcall ClearRefAuxVars(AuxVarModsMap *varMap, UInt32 r
 		cmp		dword ptr [ecx+0x10], 0
 		cmovnz	esi, ecx
 		jnz		entryIter
-		mov		eax, [esp+0x18]
+		mov		eax, [esp+4]
 		dec		dword ptr [eax+8]
 		mov		[esi], edi
 		push	ecx
@@ -4258,15 +4254,16 @@ __declspec(naked) bool __stdcall ClearRefAuxVars(AuxVarModsMap *varMap, UInt32 r
 		ALIGN 16
 	retn0:
 		xor		al, al
-		retn	8
+		retn	4
 		ALIGN 16
 	done:
 		pop		eax
+		pop		ecx
 		pop		edi
 		pop		esi
 		pop		ebx
 		pop		ebp
-		retn	8
+		retn	4
 	}
 }
 
@@ -4319,22 +4316,22 @@ __declspec(naked) bool __fastcall DestroyRefrHook(TESObjectREFR *refr)
 	doneModel:
 		cmp		byte ptr [esi+0xF], 0xFF
 		jnz		doneVars
+		mov		eax, g_dataHandler
+		mov		eax, [eax+0x208]
+		cmp		[esi+0xC], eax
+		jnz		doneVars
 		mov		eax, s_auxVariablesPerm+8
 		or		eax, s_auxVariablesTemp+8
 		jz		doneVars
-		push	dword ptr [esi+0xC]
-		call	HasChangeData
-		test	al, al
-		jnz		doneVars
 		mov		ecx, offset s_auxVarCS
 		call	PrimitiveCS::Enter
 		mov		eax, [esi+0xC]
 		push	eax
 		push	eax
-		push	offset s_auxVariablesPerm
+		mov		ecx, offset s_auxVariablesPerm
 		call	ClearRefAuxVars
 		or		s_dataChangedFlags, al
-		push	offset s_auxVariablesTemp
+		mov		ecx, offset s_auxVariablesTemp
 		call	ClearRefAuxVars
 		mov		s_auxVarCS.selfPtr, 0
 	doneVars:
@@ -4994,19 +4991,6 @@ __declspec(naked) void CastSpellHook()
 	}
 }
 
-__declspec(naked) void SkipDrawWeapAnimHook()
-{
-	__asm
-	{
-		mov		eax, [esp+0x10]
-		test	byte ptr [eax+0x106], kHookActorFlag2_SkipDrawWeapAnim
-		jnz		done
-		JMP_EAX(0x923960)
-	done:
-		retn	0x10
-	}
-}
-
 TempObject<UnorderedMap<const char*, UInt32, 0x20, false>> s_eventMasks;
 
 __declspec(noinline) void InitJIPHooks()
@@ -5109,6 +5093,5 @@ __declspec(noinline) void InitJIPHooks()
 	WriteRelCall(0x7704AE, (UInt32)ClearHUDOrphanedTiles);
 	WriteRelJump(0x50F9E0, (UInt32)GetIsInternalMarkerHook);
 	WriteRelJump(0x815EE6, (UInt32)CastSpellHook);
-	WriteRelCall(0x923299, (UInt32)SkipDrawWeapAnimHook);
 	WriteRelCall(0x55A488, (UInt32)DestroyRefrHook);
 }

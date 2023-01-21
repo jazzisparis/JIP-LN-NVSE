@@ -6,8 +6,8 @@ DEFINE_COMMAND_PLUGIN(SetValueAlt, 0, 2, kParams_OneObjectID_OneInt);
 DEFINE_COMMAND_PLUGIN(RemoveItemTarget, 1, 4, kParams_OneItemOrList_OneContainer_TwoOptionalInts);
 DEFINE_COMMAND_PLUGIN(GetWeaponRefModFlags, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetWeaponRefModFlags, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetItemRefCurrentHealth, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(SetItemRefCurrentHealth, 1, 1, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetItemRefCurrentHealth, 1, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetItemRefCurrentHealth, 1, 2, kParams_OneFloat_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetHotkeyItemRef, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(EquipItemAlt, 1, 3, kParams_OneObjectID_TwoOptionalInts);
 DEFINE_COMMAND_PLUGIN(UnequipItemAlt, 1, 3, kParams_OneObjectID_TwoOptionalInts);
@@ -77,7 +77,7 @@ bool Cmd_GetWeaponRefModFlags_Execute(COMMAND_ARGS)
 	ExtraDataList *xData = invRef ? invRef->xData : &thisObj->extraDataList;
 	if (xData)
 	{
-		ExtraWeaponModFlags *xModFlags = GetExtraType(xData, WeaponModFlags);
+		ExtraWeaponModFlags *xModFlags = GetExtraType(xData, ExtraWeaponModFlags);
 		if (xModFlags) *result = xModFlags->flags;
 	}
 	return true;
@@ -102,7 +102,7 @@ bool Cmd_SetWeaponRefModFlags_Execute(COMMAND_ARGS)
 		ContChangesEntry *entry = invRef->containerRef->GetContainerChangesEntry(invRef->type);
 		if (!entry || !entry->extendData) return true;
 
-		ExtraWeaponModFlags *xModFlags = GetExtraType(xData, WeaponModFlags);
+		ExtraWeaponModFlags *xModFlags = GetExtraType(xData, ExtraWeaponModFlags);
 		if (xModFlags)
 		{
 			if (xModFlags->flags == flags)
@@ -136,28 +136,33 @@ bool Cmd_SetWeaponRefModFlags_Execute(COMMAND_ARGS)
 
 bool Cmd_GetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 {
-	*result = 0;
-	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
-	ExtraDataList *xData = invRef ? invRef->xData : &thisObj->extraDataList;
-	if (xData)
+	UInt32 percOrBase = 0;
+	if (NUM_ARGS_EX)
+		ExtractArgsEx(EXTRACT_ARGS_EX, &percOrBase);
+	ExtraDataList *xData;
+	ContChangesEntry *pEntry;
+	if (InventoryRef *invRef = InventoryRefGetForID(thisObj->refID))
 	{
-		ExtraHealth *xHealth = GetExtraType(xData, Health);
-		if (xHealth)
-		{
-			*result = xHealth->health;
-			return true;
-		}
+		xData = invRef->xData;
+		pEntry = invRef->entry;
 	}
-	if (invRef)
-		*result = invRef->entry->GetBaseHealth();
 	else
 	{
-		ContChangesEntry entry(nullptr, 1, thisObj->baseForm);
+		xData = &thisObj->extraDataList;
 		ExtraContainerChanges::ExtendDataList extendData(xData);
-		if (xData)
-			entry.extendData = &extendData;
-		*result = entry.GetBaseHealth();
+		ContChangesEntry entry(&extendData, 1, thisObj->baseForm);
+		pEntry = &entry;
 	}
+	float baseHealth = pEntry->GetBaseHealth();
+	if (percOrBase != 2)
+	{
+		ExtraHealth *xHealth;
+		if (xData && (xHealth = GetExtraType(xData, ExtraHealth)))
+			*result = !percOrBase ? xHealth->health : (xHealth->health / baseHealth);
+		else
+			*result = !percOrBase ? baseHealth : 1.0;
+	}
+	else *result = baseHealth;
 	return true;
 }
 
@@ -165,25 +170,28 @@ bool Cmd_SetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	float health;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &health)) return true;
+	UInt32 setPercent = 0;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &health, &setPercent))
+		return true;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 	if (!invRef) return true;
 	float baseHealth = invRef->entry->GetBaseHealth();
 	if (baseHealth == 0) return true;
-	if (health > baseHealth) health = baseHealth;
+	if (setPercent)
+		health *= baseHealth;
+	if (health > baseHealth)
+		health = baseHealth;
 	ExtraDataList *xData = invRef->xData;
 	if (xData)
 	{
-		ExtraHealth *xHealth = GetExtraType(xData, Health);
-		if (xHealth) xHealth->health = health;
-		else xData->AddExtra(ExtraHealth::Create(health));
+		if (ExtraHealth *xHealth = GetExtraType(xData, ExtraHealth))
+			xHealth->health = health;
+		else
+			xData->AddExtra(ExtraHealth::Create(health));
 	}
-	else
-	{
-		xData = invRef->CreateExtraData();
-		if (!xData) return true;
+	else if (xData = invRef->CreateExtraData())
 		xData->AddExtra(ExtraHealth::Create(health));
-	}
+	else return true;
 	*result = 1;
 	return true;
 }
@@ -202,14 +210,14 @@ bool Cmd_SetHotkeyItemRef_Execute(COMMAND_ARGS)
 		return true;
 	if (!keyNum)
 	{
-		if (invRef->xData) invRef->xData->RemoveByType(kExtraData_Hotkey);
+		if (invRef->xData) invRef->xData->RemoveByType(kXData_ExtraHotkey);
 		return true;
 	}
 	keyNum--;
 	ExtraDataList *xData = invRef->xData;
 	if (xData)
 	{
-		ExtraHotkey *xHotkey = GetExtraType(xData, Hotkey);
+		ExtraHotkey *xHotkey = GetExtraType(xData, ExtraHotkey);
 		if (!xHotkey)
 		{
 			if (!ClearHotkey(keyNum))
@@ -295,9 +303,9 @@ bool Cmd_DropAlt_Execute(COMMAND_ARGS)
 					subCount = 1;
 				else if (subCount > 1)
 				{
-					if (hasScript && xData->HasType(kExtraData_Script))
+					if (hasScript && xData->HasType(kXData_ExtraScript))
 					{
-						xData->RemoveByType(kExtraData_Count);
+						xData->RemoveByType(kXData_ExtraCount);
 						subCount = 1;
 					}
 					else if (subCount > total)
@@ -419,7 +427,7 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 				if (xCount > baseCount)
 					xCount = baseCount;
 				baseCount -= xCount;
-				if (noEquipped && xData->HasType(kExtraData_Worn))
+				if (noEquipped && xData->HasType(kXData_ExtraWorn))
 					continue;
 				invRef = InventoryRefCreate(thisObj, item, xCount, xData);
 				if (listForm) listForm->list.Prepend(invRef);
@@ -477,7 +485,7 @@ bool Cmd_GetEquippedItemRef_Execute(COMMAND_ARGS)
 bool Cmd_GetNoUnequip_Execute(COMMAND_ARGS)
 {
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
-	*result = (invRef && invRef->xData && invRef->xData->HasType(kExtraData_CannotWear)) ? 1 : 0;
+	*result = (invRef && invRef->xData && invRef->xData->HasType(kXData_ExtraCannotWear)) ? 1 : 0;
 	return true;
 }
 
@@ -491,8 +499,8 @@ bool Cmd_SetNoUnequip_Execute(COMMAND_ARGS)
 		if (xData)
 		{
 			if (!noUnequip)
-				xData->RemoveByType(kExtraData_CannotWear);
-			else if (xData->HasType(kExtraData_Worn) && !xData->HasType(kExtraData_CannotWear))
+				xData->RemoveByType(kXData_ExtraCannotWear);
+			else if (xData->HasType(kXData_ExtraWorn) && !xData->HasType(kXData_ExtraCannotWear))
 				xData->AddExtra(ExtraCannotWear::Create());
 		}
 	}
@@ -510,7 +518,7 @@ bool Cmd_GetEquippedWeaponPoison_Execute(COMMAND_ARGS)
 			ExtraDataList *xDataList = wpnInfo->extendData->GetFirstItem();
 			if (xDataList)
 			{
-				ExtraPoison *xPoison = GetExtraType(xDataList, Poison);
+				ExtraPoison *xPoison = GetExtraType(xDataList, ExtraPoison);
 				if (xPoison && xPoison->poisonEffect)
 					REFR_RES = xPoison->poisonEffect->refID;
 			}
@@ -617,14 +625,14 @@ bool Cmd_GetEquippedArmorRefs_Execute(COMMAND_ARGS)
 	*result = 0;
 	if (IS_ACTOR(thisObj))
 	{
-		ValidBip01Names *equipment = ((Actor*)thisObj)->GetValidBip01Names();
+		BipedAnim *equipment = ((Actor*)thisObj)->GetBipedAnim();
 		if (equipment)
 		{
 			ExtraContainerChanges::EntryDataList *entryList = thisObj->GetContainerChangesList();
 			if (entryList)
 			{
 				TempElements *tmpElements = GetTempElements();
-				ValidBip01Names::Data *slotData = equipment->slotData;
+				BipedAnim::Data *slotData = equipment->slotData;
 				TESForm *item;
 				ContChangesEntry *entry;
 				ExtraDataList *xData;

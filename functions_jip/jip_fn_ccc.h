@@ -382,7 +382,7 @@ double __fastcall GetEncumbranceRate(TESObjectREFR *thisObj)
 {
 	if (IS_ACTOR(thisObj))
 	{
-		ExtraContainerChanges *xChanges = GetExtraType(&thisObj->extraDataList, ContainerChanges);
+		ExtraContainerChanges *xChanges = GetExtraType(&thisObj->extraDataList, ExtraContainerChanges);
 		if (xChanges && xChanges->data)
 		{
 			double maxWeight = ThisCall<double>(0x8A0C20, thisObj);
@@ -542,7 +542,7 @@ bool Cmd_CCCGetReputation_Execute(COMMAND_ARGS)
 		}
 	}
 	while (baseFacIt = baseFacIt->next);
-	ExtraFactionChanges *xChanges = GetExtraType(&thisObj->extraDataList, FactionChanges);
+	ExtraFactionChanges *xChanges = GetExtraType(&thisObj->extraDataList, ExtraFactionChanges);
 	if (!xChanges || !xChanges->data) return true;
 	auto refFacIt = xChanges->data->Head();
 	FactionListData *fclData;
@@ -563,7 +563,7 @@ bool Cmd_CCCSayTo_Execute(COMMAND_ARGS)
 {
 	if NOT_ACTOR(thisObj) return true;
 	CdeclCall(0x5C9100, PASS_COMMAND_ARGS);
-	ExtraSayToTopicInfo *xSayTo = GetExtraType(&thisObj->extraDataList, SayToTopicInfo);
+	ExtraSayToTopicInfo *xSayTo = GetExtraType(&thisObj->extraDataList, ExtraSayToTopicInfo);
 	if (xSayTo)
 	{
 		if (xSayTo->info) xSayTo->info->RunResultScript(1, (Actor*)thisObj);
@@ -713,10 +713,10 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 				break;
 			}
 		}
-		if (!character->validBip01Names || !GetInventoryItems(character, kFormType_TESObjectARMO, invItemsMap))
+		if (!character->bipedAnims || !GetInventoryItems(character, kFormType_TESObjectARMO, invItemsMap))
 			return true;
 		UInt32 usedSlots = 0;
-		for (ValidBip01Names::Data &slotData : character->validBip01Names->slotData)
+		for (BipedAnim::Data &slotData : character->bipedAnims->slotData)
 		{
 			item = slotData.item;
 			if (!item || NOT_TYPE(item, TESObjectARMO))
@@ -754,7 +754,7 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 	{
 		if (menuEntry->extendData)
 			xData = menuEntry->extendData->GetFirstItem();
-		if (xData && xData->HasType(kExtraData_Worn))
+		if (xData && xData->HasType(kXData_ExtraWorn))
 			doEquip = false;
 		if IS_ID(item, TESObjectWEAP)
 		{

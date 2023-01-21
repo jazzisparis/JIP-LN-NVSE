@@ -25,7 +25,7 @@ UInt32 __fastcall StrHashCI(const char *inKey);
 
 template <typename T_Data> class Stack
 {
-	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
+	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
 
 	struct alignas(16) Node
 	{
@@ -96,7 +96,8 @@ public:
 
 template <typename T_Data> class LinkedList
 {
-	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
+	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
+	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 
 	struct alignas(16) Node
 	{
@@ -418,9 +419,9 @@ public:
 		void operator++() {pNode = pNode->next;}
 		void operator--() {pNode = pNode->prev;}
 
-		Data_Arg operator*() const {return pNode->data;}
-		Data_Arg operator->() const {return pNode->data;}
-		Data_Arg operator()() const {return pNode->data;}
+		Data_Res operator*() const {return pNode->data;}
+		Data_Res operator->() const {return pNode->data;}
+		Data_Res operator()() const {return pNode->data;}
 		T_Data& Ref() {return pNode->data;}
 
 		Iterator() : pNode(nullptr) {}
@@ -476,11 +477,12 @@ template <typename T_Key, typename T_Data> struct MappedPair
 template <typename T_Key> class MapKey
 {
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
+	using Key_Res = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
 
 	T_Key		key;
 
 public:
-	__forceinline Key_Arg Get() const {return key;}
+	__forceinline Key_Res Get() const {return key;}
 	__forceinline void Set(Key_Arg inKey) {key = inKey;}
 	__forceinline char Compare(Key_Arg inKey) const
 	{
@@ -547,7 +549,8 @@ template <typename T_Key, typename T_Data, const UInt32 _default_alloc = MAP_DEF
 	using M_Key = MapKey<T_Key>;
 	using M_Value = std::conditional_t<(sizeof(T_Data) <= 8) || (sizeof(T_Data) <= alignof(T_Key)), MapValue<T_Data>, MapValue_p<T_Data>>;
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
-	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, const T_Data&>;
+	using Key_Res = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
+	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
 	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 	using M_Pair = MappedPair<T_Key, T_Data>;
 	using Init_List = std::initializer_list<M_Pair>;
@@ -601,12 +604,28 @@ public:
 		{
 			Clear();
 			Pool_CFree<Entry>(entries, numAlloc);
-			entries = nullptr;
 		}
+	}
+
+	void Destroy()
+	{
+		this->~Map();
+		entries = nullptr;
 	}
 
 	UInt32 Size() const {return numEntries;}
 	bool Empty() const {return !numEntries;}
+
+	void operator=(Map &&rhs)
+	{
+		this->~Map();
+		entries = rhs.entries;
+		numEntries = rhs.numEntries;
+		numAlloc = rhs.numAlloc;
+		rhs.entries = nullptr;
+		rhs.numEntries = 0;
+		rhs.numAlloc = MAP_DEFAULT_ALLOC;
+	}
 
 	bool InsertKey(Key_Arg key, T_Data **outData)
 	{
@@ -723,9 +742,8 @@ public:
 			do
 			{
 				pEntry->Clear();
-				pEntry++;
 			}
-			while (pEntry != pEnd);
+			while (++pEntry != pEnd);
 		}
 		numEntries = 0;
 	}
@@ -739,7 +757,7 @@ public:
 		Iterator() {}
 
 	public:
-		Key_Arg Key() const {return pEntry->key.Get();}
+		Key_Res Key() const {return pEntry->key.Get();}
 		Data_Res operator()() const {return pEntry->value.Get();}
 		Data_Res operator*() const {return pEntry->value.Get();}
 		Data_Res operator->() const {return pEntry->value.Get();}
@@ -843,6 +861,7 @@ template <typename T_Key, const UInt32 _default_alloc = MAP_DEFAULT_ALLOC> class
 {
 	using M_Key = MapKey<T_Key>;
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
+	using Key_Res = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
 	using Init_List = std::initializer_list<T_Key>;
 
 	M_Key		*keys;		// 00
@@ -885,9 +904,26 @@ public:
 		}
 	}
 
+	void Destroy()
+	{
+		this->~Set();
+		keys = nullptr;
+	}
+
 	UInt32 Size() const {return numKeys;}
 	bool Empty() const {return !numKeys;}
 	T_Key *Keys() {return reinterpret_cast<T_Key*>(keys);}
+
+	void operator=(Set &&rhs)
+	{
+		this->~Set();
+		keys = rhs.keys;
+		numKeys = rhs.numKeys;
+		numAlloc = rhs.numAlloc;
+		rhs.keys = nullptr;
+		rhs.numKeys = 0;
+		rhs.numAlloc = MAP_DEFAULT_ALLOC;
+	}
 
 	const T_Key& operator[](UInt32 index) const {return keys[index];}
 
@@ -946,9 +982,8 @@ public:
 			do
 			{
 				pKey->Clear();
-				pKey++;
 			}
-			while (pKey != pEnd);
+			while (++pKey != pEnd);
 		}
 		numKeys = 0;
 	}
@@ -989,9 +1024,9 @@ public:
 		Iterator() {}
 
 	public:
-		Key_Arg operator()() const {return pKey->Get();}
-		Key_Arg operator*() const {return pKey->Get();}
-		Key_Arg operator->() const {return pKey->Get();}
+		Key_Res operator()() const {return pKey->Get();}
+		Key_Res operator*() const {return pKey->Get();}
+		Key_Res operator->() const {return pKey->Get();}
 
 		explicit operator bool() const {return count != 0;}
 		void operator++()
@@ -1054,20 +1089,20 @@ template <typename T_Key> __forceinline UInt32 HashKey(T_Key inKey)
 		return StrHashCS(*(const char**)&inKey);
 	UInt32 uKey;
 	if (sizeof(T_Key) == 1)
-		uKey = *(UInt8*)&inKey;
+		uKey = UBYT(inKey);
 	else if (sizeof(T_Key) == 2)
-		uKey = *(UInt16*)&inKey;
+		uKey = USHT(inKey);
 	else
 	{
-		uKey = *(UInt32*)&inKey;
+		uKey = ULNG(inKey);
 		if (sizeof(T_Key) > 4)
 		{
-			uKey += ((UInt32*)&inKey)[1] ^ 0x7ED55D16;
+			uKey += ULNG(inKey + 1) ^ 0x7ED55D16;
 			if (sizeof(T_Key) > 8)
 			{
-				uKey += ((UInt32*)&inKey)[2] ^ 0x165667B1;
+				uKey += ULNG(inKey + 2) ^ 0x165667B1;
 				if (sizeof(T_Key) > 0xC)
-					uKey += ((UInt32*)&inKey)[3] ^ 0xFD7046C5;
+					uKey += ULNG(inKey + 3) ^ 0xFD7046C5;
 			}
 		}
 	}
@@ -1077,12 +1112,13 @@ template <typename T_Key> __forceinline UInt32 HashKey(T_Key inKey)
 template <typename T_Key> class HashedKey
 {
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
+	using Key_Res = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
 
 	T_Key		key;
 
 public:
 	__forceinline bool Match(Key_Arg inKey, UInt32) const {return key == inKey;}
-	__forceinline Key_Arg Get() const {return key;}
+	__forceinline Key_Res Get() const {return key;}
 	__forceinline void Set(Key_Arg inKey, UInt32) {key = inKey;}
 	__forceinline UInt32 GetHash() const {return HashKey<T_Key>(key);}
 	__forceinline void Clear() {key.~T_Key();}
@@ -1135,7 +1171,8 @@ template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = 
 {
 	using H_Key = HashedKey<T_Key>;
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
-	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, const T_Data&>;
+	using Key_Res = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
+	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
 	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 	using M_Pair = MappedPair<T_Key, T_Data>;
 	using Init_List = std::initializer_list<M_Pair>;
@@ -1188,8 +1225,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = 
 		UInt32 Size() const
 		{
 			UInt32 size = 0;
-			for (Entry *pEntry = entries; pEntry; pEntry = pEntry->next)
-				size++;
+			for (Entry *pEntry = entries; pEntry; pEntry = pEntry->next, size++);
 			return size;
 		}
 	};
@@ -1214,9 +1250,8 @@ template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = 
 				pEntry = pEntry->next;
 				newBuckets[pTemp->key.GetHash() & newCount].Insert(pTemp);
 			}
-			pBucket++;
 		}
-		while (pBucket != pEnd);
+		while (++pBucket != pEnd);
 		Pool_CFree<Bucket>(buckets, numBuckets);
 		buckets = newBuckets;
 		numBuckets = newCount + 1;
@@ -1248,10 +1283,27 @@ public:
 		}
 	}
 
+	void Destroy()
+	{
+		this->~UnorderedMap();
+		buckets = nullptr;
+	}
+
 	UInt32 Size() const {return numEntries;}
 	bool Empty() const {return !numEntries;}
 
 	UInt32 BucketCount() const {return numBuckets;}
+
+	void operator=(UnorderedMap &&rhs)
+	{
+		this->~UnorderedMap();
+		buckets = rhs.buckets;
+		numBuckets = rhs.numBuckets;
+		numEntries = rhs.numEntries;
+		rhs.buckets = nullptr;
+		rhs.numBuckets = MAP_DEFAULT_BUCKET_COUNT;
+		rhs.numEntries = 0;
+	}
 
 	void SetBucketCount(UInt32 newCount)
 	{
@@ -1382,18 +1434,18 @@ public:
 		return NULL;
 	}
 
-	bool Clear()
+	void Clear()
 	{
-		if (!numEntries) return false;
-		Bucket *pBucket = buckets, *pEnd = End();
-		do
+		if (numEntries)
 		{
-			pBucket->Clear();
-			pBucket++;
+			Bucket *pBucket = buckets, *pEnd = End();
+			do
+			{
+				pBucket->Clear();
+			}
+			while (++pBucket != pEnd);
 		}
-		while (pBucket != pEnd);
 		numEntries = 0;
-		return true;
 	}
 
 	void DumpLoads()
@@ -1453,7 +1505,7 @@ public:
 		}
 
 		UnorderedMap* Table() const {return table;}
-		Key_Arg Key() const {return entry->key.Get();}
+		Key_Res Key() const {return entry->key.Get();}
 		Data_Res operator()() const {return entry->value;}
 		T_Data& Ref() {return entry->value;}
 		Data_Res operator*() const {return entry->value;}
@@ -1506,14 +1558,13 @@ template <typename T_Key, const UInt32 _default_bucket_count = MAP_DEFAULT_BUCKE
 {
 	using H_Key = HashedKey<T_Key>;
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
+	using Key_Res = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
 	using Init_List = std::initializer_list<T_Key>;
 
 	struct alignas(16) Entry
 	{
 		Entry		*next;
 		H_Key		key;
-
-		void Clear() {key.Clear();}
 	};
 
 	struct Bucket
@@ -1530,7 +1581,7 @@ template <typename T_Key, const UInt32 _default_bucket_count = MAP_DEFAULT_BUCKE
 		{
 			if (prev) prev->next = entry->next;
 			else entries = entry->next;
-			entry->Clear();
+			entry->key.Clear();
 			Pool_CFree<Entry>(entry);
 		}
 
@@ -1542,7 +1593,7 @@ template <typename T_Key, const UInt32 _default_bucket_count = MAP_DEFAULT_BUCKE
 			{
 				pEntry = entries;
 				entries = entries->next;
-				pEntry->Clear();
+				pEntry->key.Clear();
 				Pool_CFree<Entry>(pEntry);
 			}
 			while (entries);
@@ -1551,8 +1602,7 @@ template <typename T_Key, const UInt32 _default_bucket_count = MAP_DEFAULT_BUCKE
 		UInt32 Size() const
 		{
 			UInt32 size = 0;
-			for (Entry *pEntry = entries; pEntry; pEntry = pEntry->next)
-				size++;
+			for (Entry *pEntry = entries; pEntry; pEntry = pEntry->next, size++);
 			return size;
 		}
 	};
@@ -1577,9 +1627,8 @@ template <typename T_Key, const UInt32 _default_bucket_count = MAP_DEFAULT_BUCKE
 				pEntry = pEntry->next;
 				newBuckets[pTemp->key.GetHash() & newCount].Insert(pTemp);
 			}
-			pBucket++;
 		}
-		while (pBucket != pEnd);
+		while (++pBucket != pEnd);
 		Pool_CFree<Bucket>(buckets, numBuckets);
 		buckets = newBuckets;
 		numBuckets = newCount + 1;
@@ -1600,10 +1649,27 @@ public:
 		}
 	}
 
+	void Destroy()
+	{
+		this->~UnorderedSet();
+		buckets = nullptr;
+	}
+
 	UInt32 Size() const {return numEntries;}
 	bool Empty() const {return !numEntries;}
 
 	UInt32 BucketCount() const {return numBuckets;}
+
+	void operator=(UnorderedSet &&rhs)
+	{
+		this->~UnorderedSet();
+		buckets = rhs.buckets;
+		numBuckets = rhs.numBuckets;
+		numEntries = rhs.numEntries;
+		rhs.buckets = nullptr;
+		rhs.numBuckets = MAP_DEFAULT_BUCKET_COUNT;
+		rhs.numEntries = 0;
+	}
 
 	void SetBucketCount(UInt32 newCount)
 	{
@@ -1674,18 +1740,18 @@ public:
 		return false;
 	}
 
-	bool Clear()
+	void Clear()
 	{
-		if (!numEntries) return false;
-		Bucket *pBucket = buckets, *pEnd = End();
-		do
+		if (numEntries)
 		{
-			pBucket->Clear();
-			pBucket++;
+			Bucket *pBucket = buckets, *pEnd = End();
+			do
+			{
+				pBucket->Clear();
+			}
+			while (++pBucket != pEnd);
 		}
-		while (pBucket != pEnd);
 		numEntries = 0;
-		return true;
 	}
 
 	void DumpLoads()
@@ -1731,8 +1797,8 @@ public:
 			}
 		}
 
-		Key_Arg operator*() const {return entry->key.Get();}
-		Key_Arg operator->() const {return entry->key.Get();}
+		Key_Res operator*() const {return entry->key.Get();}
+		Key_Res operator->() const {return entry->key.Get();}
 
 		explicit operator bool() const {return entry != nullptr;}
 		void operator++()
@@ -1752,7 +1818,7 @@ public:
 
 template <typename T_Data, const UInt32 _default_alloc = VECTOR_DEFAULT_ALLOC> class Vector
 {
-	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, const T_Data&>;
+	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
 	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 	using Init_List = std::initializer_list<T_Data>;
 
@@ -1790,10 +1856,27 @@ public:
 		}
 	}
 
+	void Destroy()
+	{
+		this->~Vector();
+		data = nullptr;
+	}
+
 	UInt32 Size() const {return numItems;}
 	bool Empty() const {return !numItems;}
 
 	T_Data* Data() const {return data;}
+
+	void operator=(Vector &&rhs)
+	{
+		this->~Vector();
+		data = rhs.data;
+		numItems = rhs.numItems;
+		numAlloc = rhs.numAlloc;
+		rhs.data = nullptr;
+		rhs.numItems = 0;
+		rhs.numAlloc = VECTOR_DEFAULT_ALLOC;
+	}
 
 	T_Data& operator[](UInt32 index) const {return data[index];}
 
@@ -1944,15 +2027,12 @@ public:
 			T_Data *pData = data, *pEnd = End() - 1;
 			do
 			{
-				if (*pData == item)
-				{
-					memcpy(pData, pData + 1, (UInt32)pEnd - (UInt32)pData);
-					memcpy(pEnd, &item, sizeof(T_Data));
-					return;
-				}
-				pData++;
+				if (*pData != item) continue;
+				memcpy(pData, pData + 1, (UInt32)pEnd - (UInt32)pData);
+				memcpy(pEnd, &item, sizeof(T_Data));
+				return;
 			}
-			while (pData != pEnd);
+			while (++pData != pEnd);
 		}
 	}
 
@@ -1965,9 +2045,8 @@ public:
 			{
 				if (*pData == item)
 					return pData - data;
-				pData++;
 			}
-			while (pData != pEnd);
+			while (++pData != pEnd);
 		}
 		return -1;
 	}
@@ -1982,9 +2061,8 @@ public:
 			{
 				if (matcher == *pData)
 					return pData - data;
-				pData++;
 			}
-			while (pData != pEnd);
+			while (++pData != pEnd);
 		}
 		return -1;
 	}
@@ -1999,9 +2077,8 @@ public:
 			{
 				if (matcher == *pData)
 					return pData;
-				pData++;
 			}
-			while (pData != pEnd);
+			while (++pData != pEnd);
 		}
 		return nullptr;
 	}
@@ -2060,6 +2137,18 @@ public:
 		return 0;
 	}
 
+	void RemoveUnordered(Data_Arg item)
+	{
+		for (UInt32 index = 0; index < numItems; index++)
+		{
+			if (data[index] != item) continue;
+			numItems--;
+			if (index < numItems)
+				data[index] = data[numItems];
+			break;
+		}
+	}
+
 	void RemoveRange(UInt32 beginIdx, UInt32 count)
 	{
 		if (!count || (beginIdx >= numItems)) return;
@@ -2069,11 +2158,10 @@ public:
 		do
 		{
 			pData->~T_Data();
-			pData++;
 		}
-		while (pData != pEnd);
-		UInt32 size = (UInt32)End() - (UInt32)pData;
-		if (size) memcpy(pBgn, pData, size);
+		while (++pData != pEnd);
+		UInt32 size = (UInt32)End() - (UInt32)pEnd;
+		if (size) memcpy(pBgn, pEnd, size);
 		numItems -= count;
 	}
 
@@ -2120,9 +2208,8 @@ public:
 			do
 			{
 				new (pData) T_Data();
-				pData++;
 			}
-			while (pData != pEnd);
+			while (++pData != pEnd);
 		}
 		else
 		{
@@ -2131,9 +2218,8 @@ public:
 			do
 			{
 				pData->~T_Data();
-				pData++;
 			}
-			while (pData != pEnd);
+			while (++pData != pEnd);
 		}
 		numItems = newSize;
 	}
@@ -2159,9 +2245,8 @@ public:
 			do
 			{
 				pData->~T_Data();
-				pData++;
 			}
-			while (pData != pEnd);
+			while (++pData != pEnd);
 		}
 		numItems = 0;
 	}

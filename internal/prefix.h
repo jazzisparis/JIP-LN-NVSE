@@ -8,11 +8,13 @@
 #define _HAS_EXCEPTIONS 0
 
 #include <Windows.h>
+#include <direct.h>
 #include <string>
 #include <regex>
 #include <type_traits>
 #include <initializer_list>
 #include <intrin.h>
+#include <immintrin.h>
 
 typedef unsigned char UInt8;
 typedef unsigned short UInt16;
@@ -213,7 +215,7 @@ class BoundObjectListHead;
 class FaceGenUndo;
 class BGSSaveLoadGame;
 
-struct ValidBip01Names;
+struct BipedAnim;
 class TESObjectREFR;
 class MobileObject;
 class MagicCaster;

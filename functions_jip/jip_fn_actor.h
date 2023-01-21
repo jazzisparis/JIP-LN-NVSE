@@ -140,7 +140,7 @@ DEFINE_COMMAND_PLUGIN(RefreshAnimData, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetActorVelocityAlt, 1, 4, kParams_ThreeScriptVars_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetExcludedCombatActions, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetExcludedCombatActions, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetAllPerks, 1, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetAllPerks, 1, 2, kParams_TwoOptionalInts);
 
 bool Cmd_GetActorTemplate_Execute(COMMAND_ARGS)
 {
@@ -228,7 +228,7 @@ bool Cmd_GetFollowers_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	if (NOT_ACTOR(thisObj)) return true;
-	ExtraFollower *xFollower = GetExtraType(&thisObj->extraDataList, Follower);
+	ExtraFollower *xFollower = GetExtraType(&thisObj->extraDataList, ExtraFollower);
 	if (!xFollower || !xFollower->followers) return true;
 	TempElements *tmpElements = GetTempElements();
 	auto iter = xFollower->followers->Head();
@@ -873,7 +873,7 @@ bool Cmd_GetDroppedRefs_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	if (NOT_ACTOR(thisObj)) return true;
-	ExtraDroppedItemList *xDropped = GetExtraType(&thisObj->extraDataList, DroppedItemList);
+	ExtraDroppedItemList *xDropped = GetExtraType(&thisObj->extraDataList, ExtraDroppedItemList);
 	if (!xDropped) return true;
 	TempElements *tmpElements = GetTempElements();
 	auto iter = xDropped->itemRefs.Head();
@@ -915,7 +915,7 @@ bool Cmd_GetAshPileSource_Execute(COMMAND_ARGS)
 	REFR_RES = 0;
 	if IS_ID(thisObj->baseForm, TESObjectACTI)
 	{
-		ExtraAshPileRef *xAshPileRef = GetExtraType(&thisObj->extraDataList, AshPileRef);
+		ExtraAshPileRef *xAshPileRef = GetExtraType(&thisObj->extraDataList, ExtraAshPileRef);
 		if (xAshPileRef && xAshPileRef->sourceRef)
 			REFR_RES = xAshPileRef->sourceRef->refID;
 	}
@@ -1411,69 +1411,97 @@ __declspec(naked) bool Cmd_KillActorAlt_Execute(COMMAND_ARGS)
 	JMP_EAX(0x5BE2A0)
 }
 
+__declspec(naked) void __fastcall ReloadBipedAnim(BipedAnim *bipAnim, UInt32 reloadMask)
+{
+	__asm
+	{
+		push	ebx
+		push	esi
+		push	edi
+		mov		ebx, ecx
+		lea		esi, [ecx+0x24]
+		mov		edi, edx
+		ALIGN 16
+	iterHead:
+		test	edi, edi
+		jz		doneClear
+		add		esi, 0x10
+		shr		edi, 1
+		jnc		iterHead
+		mov		eax, [esi]
+		test	eax, eax
+		jz		iterHead
+		mov		dword ptr [esi], 0
+		mov		ecx, [eax+0x18]
+		test	ecx, ecx
+		jz		iterHead
+		push	eax
+		mov		eax, [ecx]
+		call	dword ptr [eax+0xE8]
+		jmp		iterHead
+		ALIGN 16
+	doneClear:
+		push	1
+		mov		ecx, ebx
+		CALL_EAX(0x4AC1E0)
+		mov		ebx, [ebx]
+		mov		esi, [ebx]
+		mov		ecx, ebx
+		CALL_EAX(0xA5A040)
+		push	0
+		push	offset kUpdateParams
+		mov		ecx, ebx
+		call	dword ptr [esi+0xA4]
+		pop		edi
+		pop		esi
+		pop		ebx
+		retn
+	}
+}
+
 bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 {
 	SInt32 targetSlot = -1;
 	Character *character = (Character*)thisObj;
-	if (!character->IsCharacter() || !character->GetRefNiNode() || !character->validBip01Names ||
+	if (!character->IsCharacter() || !character->GetRefNiNode() || !character->bipedAnims || !character->baseProcess || character->baseProcess->processLevel ||
 		(NUM_ARGS_EX && (!ExtractArgsEx(EXTRACT_ARGS_EX, &targetSlot) || (targetSlot > 19) || (targetSlot == 6))))
 		return true;
-	PlayerCharacter *thePlayer = (character->refID == 0x14) ? (PlayerCharacter*)character : nullptr;
-	ValidBip01Names::Data *slotData = character->validBip01Names->slotData;
-	TESObjectWEAP *weapon = ((targetSlot < 0) || (targetSlot == 5)) ? slotData[5].weapon : nullptr;
+	HighProcess *hiProcess = (HighProcess*)character->baseProcess;
+	TESObjectWEAP *weapon = ((targetSlot < 0) || (targetSlot == 5)) ? character->bipedAnims->slotData[5].weapon : nullptr;
 	bool doReEquip = weapon && (weapon->weaponFlags1 & 0x10);
 	if (doReEquip)
 	{
-		NiNode *backPack = character->validBip01Names->bip01->GetNode("Backpack");
+		NiNode *backPack = character->bipedAnims->bip01->GetNode("Backpack");
 		if (backPack)
 			backPack->m_parent->RemoveObject(backPack);
 	}
-	SInt32 slotIdx;
-	NiAVObject *object;
-Do1stPerson:
-	if (targetSlot < 0)
+	UInt32 reloadMask = 0xFFFBF;
+	if (targetSlot >= 0)
+		reloadMask &= (1 << targetSlot);
+	AnimData *animData = hiProcess->animData;
+	ReloadBipedAnim(character->bipedAnims, reloadMask);
+	animData->BlendSequence(4);
+	animData->Refresh();
+	if (character->refID == 0x14)
 	{
-		slotIdx = 0;
-		do
-		{
-			if ((slotIdx != 6) && (object = slotData->object))
-			{
-				if (object->m_parent)
-					object->m_parent->RemoveObject(object);
-				slotData->object = nullptr;
-			}
-			slotData++;
-		}
-		while (++slotIdx < 20);
-	}
-	else if (object = slotData[targetSlot].object)
-	{
-		if (object->m_parent)
-			object->m_parent->RemoveObject(object);
-		slotData[targetSlot].object = nullptr;
-	}
-	if (thePlayer)
-	{
-		slotData = thePlayer->VB01N1stPerson->slotData;
-		thePlayer = nullptr;
+		PlayerCharacter *thePlayer = (PlayerCharacter*)character;
+		animData = thePlayer->animData1stPerson;
+		ReloadBipedAnim(thePlayer->bipedAnims1stPerson, reloadMask);
+		animData->BlendSequence(4);
+		animData->Refresh();
 		if (weapon)
 		{
 			CdeclCall(0x77F270);
-			if (character->EquippedWeaponHasMod(14))
+			if (thePlayer->EquippedWeaponHasMod(14))
 				CdeclCall(0x77F2F0, &weapon->targetNIF);
 		}
-		goto Do1stPerson;
 	}
-	character->jipActorFlags2 |= kHookActorFlag2_SkipDrawWeapAnim;
-	ThisCall(0x605D70, character->baseForm, character);
-	character->jipActorFlags2 &= ~kHookActorFlag2_SkipDrawWeapAnim;
 	if (doReEquip)
 	{
-		ContChangesEntry *weapInfo = character->GetWeaponInfo();
+		ContChangesEntry *weapInfo = hiProcess->weaponInfo;
 		if (weapInfo && (weapInfo->type == weapon))
-			character->EquipItem(weapon, 1, weapInfo->extendData ? weapInfo->extendData->GetFirstItem() : nullptr, 1, 0, 1);
+			hiProcess->QueueEquipItem(character, 1, weapon, 1, weapInfo->extendData ? weapInfo->extendData->GetFirstItem() : nullptr, 1, 0, 1, 0, 0);
 	}
-	character->RefreshAnimData();
 	return true;
 }
 
@@ -1789,7 +1817,7 @@ bool Cmd_GetActorLeveledList_Execute(COMMAND_ARGS)
 	REFR_RES = 0;
 	if (IS_ACTOR(thisObj))
 	{
-		ExtraLeveledCreature *xLvlCre = GetExtraType(&thisObj->extraDataList, LeveledCreature);
+		ExtraLeveledCreature *xLvlCre = GetExtraType(&thisObj->extraDataList, ExtraLeveledCreature);
 		if (xLvlCre && xLvlCre->baseForm)
 		{
 			TESForm *templateActor = xLvlCre->baseForm->baseData.templateActor;
@@ -1906,7 +1934,7 @@ bool Cmd_DonnerReedKuruParty_Execute(COMMAND_ARGS)
 	UInt32 doSet;
 	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &doSet))
 	{
-		ExtraDismemberedLimbs *xDismembered = GetExtraType(&thisObj->extraDataList, DismemberedLimbs);
+		ExtraDismemberedLimbs *xDismembered = GetExtraType(&thisObj->extraDataList, ExtraDismemberedLimbs);
 		if (xDismembered)
 		{
 			bool wasEaten = (doSet != 0);
@@ -1960,11 +1988,11 @@ bool Cmd_TestEquippedSlots_Execute(COMMAND_ARGS)
 	TESObjectARMO *armor;
 	if (thisObj->IsCharacter() && ExtractArgsEx(EXTRACT_ARGS_EX, &armor) && IS_TYPE(armor, TESObjectARMO))
 	{
-		ValidBip01Names *validBip = ((Character*)thisObj)->GetValidBip01Names();
+		BipedAnim *validBip = ((Character*)thisObj)->GetBipedAnim();
 		if (validBip)
 		{
 			UInt32 partMask = armor->bipedModel.partMask;
-			for (ValidBip01Names::Data &slotData : validBip->slotData)
+			for (BipedAnim::Data &slotData : validBip->slotData)
 			{
 				armor = slotData.armor;
 				if (!armor || NOT_TYPE(armor, TESObjectARMO) || !(armor->bipedModel.partMask & partMask))
@@ -1997,7 +2025,7 @@ bool GetFactionList(Actor *actor, TESActorBase *actorBase, TempFormList *tmpForm
 	while (traverse = traverse->next);
 	if (actor)
 	{
-		ExtraFactionChanges *xFactionChanges = GetExtraType(&actor->extraDataList, FactionChanges);
+		ExtraFactionChanges *xFactionChanges = GetExtraType(&actor->extraDataList, ExtraFactionChanges);
 		if (xFactionChanges && xFactionChanges->data)
 		{
 			traverse = xFactionChanges->data->Head();
@@ -2303,11 +2331,10 @@ bool Cmd_FireWeaponEx_Execute(COMMAND_ARGS)
 		if (altProjNode)
 			hiProc->projectileNode = altProjNode;
 
-		if (CdeclCall<bool>(0x8C7AA0))
+		if (IsInMainThread())
 		{
-			QueuedCmdCall qCall(DoFireWeaponEx, thisObj->refID, 1);
-			qCall.args[0] = weapon;
-			AddQueuedCmdCall(qCall);
+			QueuedCmdCall qCall(DoFireWeaponEx, thisObj->refID, 1, weapon);
+			qCall.QueueCall();
 		}
 		else DoFireWeaponEx(thisObj, 0, weapon);
 	}
@@ -2522,7 +2549,7 @@ bool Cmd_SetExcludedCombatActions_Execute(COMMAND_ARGS)
 	return true;
 }
 
-__declspec(noinline) NVSEArrayVar* __fastcall GetAllPerks(Actor *actor, UInt32 forTeammates, Script *scriptObj)
+__declspec(noinline) NVSEArrayVar* __fastcall GetAllPerks(Actor *actor, UInt32 forTeammates, Script *scriptObj, UInt32 inclHidden)
 {
 	TempElements *tmpElements = GetTempElements();
 	bool isPlayer = actor == g_thePlayer;
@@ -2533,7 +2560,7 @@ __declspec(noinline) NVSEArrayVar* __fastcall GetAllPerks(Actor *actor, UInt32 f
 		BGSPerk *perk;
 		do
 		{
-			if ((perkRank = perkIter->data) && (perk = perkRank->perk) && !perk->data.isHidden)
+			if ((perkRank = perkIter->data) && (perk = perkRank->perk) && (inclHidden || !perk->data.isHidden))
 				tmpElements->Append(perk);
 		}
 		while (perkIter = perkIter->next);
@@ -2541,7 +2568,7 @@ __declspec(noinline) NVSEArrayVar* __fastcall GetAllPerks(Actor *actor, UInt32 f
 	if (!isPlayer && s_NPCPerks && actor->extraDataList.perksInfo)
 	{
 		for (auto perkIter = actor->extraDataList.perksInfo->perkRanks.Begin(); perkIter; ++perkIter)
-			if (!perkIter.Key()->data.isHidden)
+			if (inclHidden || !perkIter.Key()->data.isHidden)
 				tmpElements->Append(perkIter.Key());
 	}
 	return !tmpElements->Empty() ? CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj) : nullptr;
@@ -2549,9 +2576,9 @@ __declspec(noinline) NVSEArrayVar* __fastcall GetAllPerks(Actor *actor, UInt32 f
 
 bool Cmd_GetAllPerks_Execute(COMMAND_ARGS)
 {
-	UInt32 forTeammates = 0;
-	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &forTeammates))
-		*result = (int)GetAllPerks((Actor*)thisObj, forTeammates, scriptObj);
+	UInt32 forTeammates = 0, inclHidden = 0;
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &forTeammates, &inclHidden))
+		*result = (int)GetAllPerks((Actor*)thisObj, forTeammates, scriptObj, inclHidden);
 	else *result = 0;
 	return true;
 }
