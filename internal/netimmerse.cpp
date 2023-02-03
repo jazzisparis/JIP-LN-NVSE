@@ -705,7 +705,7 @@ __declspec(naked) void NiNode::RemoveCollision()
 	}
 }
 
-__declspec(naked) void __vectorcall NiNode::SetAlphaRecurse(__m128 alpha)
+__declspec(naked) void __vectorcall NiNode::SetAlphaRecurse(float alpha)
 {
 	__asm
 	{
@@ -742,6 +742,53 @@ __declspec(naked) void __vectorcall NiNode::SetAlphaRecurse(__m128 alpha)
 		test	eax, eax
 		jz		iterHead
 		movss	[eax+0x2C], xmm0
+		jmp		iterHead
+		ALIGN 16
+	iterEnd:
+		pop		edi
+		pop		esi
+	done:
+		retn
+	}
+}
+
+__declspec(naked) void NiNode::ResetShaderRenderPass()
+{
+	__asm
+	{
+		movzx	eax, word ptr [ecx+0xA6]
+		test	eax, eax
+		jz		done
+		mov		edx, [ecx+0x20]
+		test	edx, edx
+		jz		done
+		cmp		dword ptr [edx+0xC], 0
+		jz		done
+		push	esi
+		push	edi
+		mov		esi, [ecx+0xA0]
+		mov		edi, eax
+		ALIGN 16
+	iterHead:
+		dec		edi
+		js		iterEnd
+		mov		ecx, [esi]
+		add		esi, 4
+		test	ecx, ecx
+		jz		iterHead
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
+		jnz		notNode
+		call	NiNode::ResetShaderRenderPass
+		jmp		iterHead
+		ALIGN 16
+	notNode:
+		cmp		dword ptr [eax+0x1C], ADDR_ReturnThis2
+		jnz		iterHead
+		mov		eax, [ecx+0xA8]
+		test	eax, eax
+		jz		iterHead
+		mov		dword ptr [eax+0x38], 0
 		jmp		iterHead
 		ALIGN 16
 	iterEnd:

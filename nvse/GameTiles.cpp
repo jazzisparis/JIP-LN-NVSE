@@ -159,25 +159,22 @@ __declspec(naked) void Tile::DestroyAllChildren()
 {
 	__asm
 	{
-		mov		eax, [ecx+4]
-		test	eax, eax
-		jz		done
 		push	esi
-		mov		esi, eax
+		mov		esi, [ecx+4]
 		ALIGN 16
 	iterHead:
+		test	esi, esi
+		jz		done
 		mov		ecx, [esi+8]
 		mov		esi, [esi]
 		test	ecx, ecx
-		jz		iterNext
+		jz		iterHead
 		push	1
 		mov		eax, [ecx]
 		call	dword ptr [eax]
-	iterNext:
-		test	esi, esi
-		jnz		iterHead
-		pop		esi
+		jmp		iterHead
 	done:
+		pop		esi
 		retn
 	}
 }

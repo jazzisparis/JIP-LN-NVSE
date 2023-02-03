@@ -2610,7 +2610,7 @@ bool Cmd_GetEditorPosition_Execute(COMMAND_ARGS)
 				pRotVec = &xStartingPos->rotVector;
 			}
 		}
-		if (worldOrCell && (IS_ID(worldOrCell, TESObjectCELL) || IS_ID(worldOrCell, TESWorldSpace)) && pPosVec && pRotVec)
+		if (worldOrCell && (IS_ID(worldOrCell, TESObjectCELL) || (IS_ID(worldOrCell, TESWorldSpace) && (worldOrCell = ((TESWorldSpace*)worldOrCell)->cell))) && pPosVec && pRotVec)
 		{
 			outPos.Set(pPosVec->PS());
 			if (numArgs == 6)

@@ -1299,7 +1299,7 @@ __declspec(naked) void __fastcall TESObjectREFR::ToggleCollision(bool toggle)
 		mov		ecx, [eax+0x14]
 		test	ecx, ecx
 		jz		done
-		call	NiNode::ToggleCollision
+		jmp		NiNode::ToggleCollision
 	done:
 		retn
 	}
@@ -2141,6 +2141,55 @@ __declspec(naked) int Actor::GetGroundMaterial() const
 	done:
 		pop		esi
 		leave
+		retn
+	}
+}
+
+__declspec(naked) void Actor::RefreshAnimData()
+{
+	__asm
+	{
+		push	esi
+		mov		esi, [ecx+0x68]
+		test	esi, esi
+		jz		done
+		cmp		dword ptr [esi+0x28], 0
+		jnz		done
+		mov		eax, [esi+0x1C0]
+		test	eax, eax
+		jz		done
+		push	ecx
+		cmp		byte ptr [esi+0x135], 0
+		jz		skipBlend1
+		cmp		dword ptr [eax+0xF0], 0
+		jz		skipBlend1
+		push	0
+		push	4
+		mov		ecx, eax
+		CALL_EAX(0x4994F0)
+		mov		eax, [esi+0x1C0]
+	skipBlend1:
+		push	0
+		mov		ecx, eax
+		CALL_EAX(0x499240)
+		pop		ecx
+		cmp		dword ptr [ecx+0xC], 0x14
+		jnz		done
+		cmp		byte ptr [esi+0x135], 0
+		mov		esi, [ecx+0x690]
+		jz		skipBlend2
+		cmp		dword ptr [esi+0xF0], 0
+		jz		skipBlend2
+		push	0
+		push	4
+		mov		ecx, esi
+		CALL_EAX(0x4994F0)
+	skipBlend2:
+		push	0
+		mov		ecx, esi
+		CALL_EAX(0x499240)
+	done:
+		pop		esi
 		retn
 	}
 }

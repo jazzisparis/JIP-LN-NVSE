@@ -1441,7 +1441,13 @@ __declspec(naked) void __fastcall ReloadBipedAnim(BipedAnim *bipAnim, UInt32 rel
 		jmp		iterHead
 		ALIGN 16
 	doneClear:
-		push	1
+		push	0
+		push	ebx
+		mov		eax, [ebx+0x2B0]
+		push	eax
+		mov		ecx, [eax+0x20]
+		CALL_EAX(0x606540)
+		push	0
 		mov		ecx, ebx
 		CALL_EAX(0x4AC1E0)
 		mov		ebx, [ebx]
@@ -1466,7 +1472,6 @@ bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 	if (!character->IsCharacter() || !character->GetRefNiNode() || !character->bipedAnims || !character->baseProcess || character->baseProcess->processLevel ||
 		(NUM_ARGS_EX && (!ExtractArgsEx(EXTRACT_ARGS_EX, &targetSlot) || (targetSlot > 19) || (targetSlot == 6))))
 		return true;
-	HighProcess *hiProcess = (HighProcess*)character->baseProcess;
 	TESObjectWEAP *weapon = ((targetSlot < 0) || (targetSlot == 5)) ? character->bipedAnims->slotData[5].weapon : nullptr;
 	bool doReEquip = weapon && (weapon->weaponFlags1 & 0x10);
 	if (doReEquip)
@@ -1478,30 +1483,25 @@ bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 	UInt32 reloadMask = 0xFFFBF;
 	if (targetSlot >= 0)
 		reloadMask &= (1 << targetSlot);
-	AnimData *animData = hiProcess->animData;
 	ReloadBipedAnim(character->bipedAnims, reloadMask);
-	animData->BlendSequence(4);
-	animData->Refresh();
 	if (character->refID == 0x14)
 	{
-		PlayerCharacter *thePlayer = (PlayerCharacter*)character;
-		animData = thePlayer->animData1stPerson;
-		ReloadBipedAnim(thePlayer->bipedAnims1stPerson, reloadMask);
-		animData->BlendSequence(4);
-		animData->Refresh();
+		ReloadBipedAnim(((PlayerCharacter*)character)->bipedAnims1stPerson, reloadMask);
 		if (weapon)
 		{
 			CdeclCall(0x77F270);
-			if (thePlayer->EquippedWeaponHasMod(14))
+			if (character->EquippedWeaponHasMod(14))
 				CdeclCall(0x77F2F0, &weapon->targetNIF);
 		}
 	}
 	if (doReEquip)
 	{
+		HighProcess *hiProcess = (HighProcess*)character->baseProcess;
 		ContChangesEntry *weapInfo = hiProcess->weaponInfo;
 		if (weapInfo && (weapInfo->type == weapon))
 			hiProcess->QueueEquipItem(character, 1, weapon, 1, weapInfo->extendData ? weapInfo->extendData->GetFirstItem() : nullptr, 1, 0, 1, 0, 0);
 	}
+	character->RefreshAnimData();
 	return true;
 }
 

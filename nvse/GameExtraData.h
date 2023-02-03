@@ -1150,10 +1150,10 @@ class ExtraSpecialRenderFlags : public BSExtraData
 public:
 	enum RenderFlags
 	{
-		kRenderFlag_Bit0 =	1,
-		kRenderFlag_Bit1 =	2,
-		kRenderFlag_Bit2 =	4,
-		kRenderFlag_Bit3 =	8
+		kRenderFlag_Bit0 =			1,
+		kRenderFlag_Imposter =		2,
+		kRenderFlag_StingerProp =	4,
+		kRenderFlag_Disabled =		8
 	};
 
 	UInt32		flags;		// 0C

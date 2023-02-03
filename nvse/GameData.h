@@ -345,12 +345,12 @@ class Atmosphere : public SkyObject
 public:
 	virtual void		Init(NiNode *niNode, BSFogProperty *_fogProp);
 
-	NiNode				*node08;	// 08
-	BSFogProperty		*fogProp;	// 0C	Same as *0x11DEB00
-	NiRefObject			*object10;	// 10
-	NiRefObject			*object14;	// 14
-	UInt8				byte18;		// 18
-	UInt8				pad19[3];	// 19
+	NiNode				*node08;		// 08
+	BSFogProperty		*fogProp;		// 0C	Same as *0x11DEB00
+	NiRefObject			*skyQuadNode;	// 10
+	NiRefObject			*skyQuad;		// 14
+	UInt8				updateFogDist;	// 18
+	UInt8				pad19[3];		// 19
 };
 
 // 10
@@ -387,7 +387,7 @@ public:
 	NiSourceTexture		*textures[4];	// 18
 	NiVector3			layerPos[4];	// 28
 	UInt16				numLayers;		// 58
-	UInt8				byte5A;			// 5A
+	UInt8				bForceUpdate;	// 5A
 	UInt8				byte5B;			// 5B
 };
 
@@ -439,6 +439,23 @@ class Sky
 {
 public:
 	virtual Sky *Destructor(bool doFree);
+
+	enum SkyFlags
+	{
+		kSkyFlag_IsInitWeather =				1,
+		kSkyFlag_IsUpdateWeather =				3,
+		kSkyFlag_IsUnderwater =					4,
+		kSkyFlag_SetAcceleration =				8,
+		kSkyFlag_FastTravel =					0x10,
+		kSkyFlag_UpdateMoonPhase =				0x20,
+		kSkyFlag_IsClimateChange =				0x40,
+		kSkyFlag_NoCachedSunriseBegin =			0x100,
+		kSkyFlag_NoCachedSunriseEnd =			0x200,
+		kSkyFlag_NoCachedSunsetBegin =			0x400,
+		kSkyFlag_NoCachedSunsetEnd =			0x800,
+		kSkyFlag_NoCachedBeginSunriseColors =	0x1000,
+		kSkyFlag_NoCachedEndSunsetColors =		0x2000
+	};
 
 	struct SkySound
 	{
@@ -708,7 +725,7 @@ public:
 	UInt8								allowUnusedPurge;	// B5
 	UInt8								byteB6;				// B6
 	UInt8								byteB7;				// B7
-	UInt32								unkB4;				// B4
+	UInt32								unkB8;				// B8
 	NavMeshInfoMap						*navMeshInfoMap;	// BC
 	LoadedAreaBound						*areaBound;			// C0
 

@@ -171,9 +171,10 @@ bool Cmd_Search_Execute(COMMAND_ARGS)
 		}
 		else
 		{
+			UInt32 uType = *(UInt32*)typeStr & 0xDFDFDFDF;
 			for (UInt32 idx = 3; idx <= 120; idx++)
 			{
-				if (StrCompareCI(TypeSignature::Array()[idx].signature, typeStr))
+				if (uType != *(UInt32*)TypeSignature::Array()[idx].signature)
 					continue;
 				filter = 120 - idx;
 				break;

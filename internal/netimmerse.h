@@ -29,7 +29,7 @@ public:
 	NiFixedString(const NiFixedString &inStr) {Set(inStr.str);}
 	~NiFixedString() {Unset();}
 
-	const char *Get() const {return str ? str : "";}
+	const char *Get() const {return str ? str : "NULL";}
 
 	UInt32 Length() const {return str ? Meta()[1] : 0;}
 
@@ -570,6 +570,19 @@ public:
 	/*AC*/virtual void		Unk_2B(void);
 	/*B0*/virtual void		Unk_2C(void);
 
+	enum TimeCtrlFlags
+	{
+		kCtrlFlag_AnimType_Pos =			0,
+		kCtrlFlag_AnimType_Mask =			1,
+		kCtrlFlag_CycleType_Pos =			1,
+		kCtrlFlag_CycleType_Mask =			6,
+		kCtrlFlag_Active_Mask =				8,
+		kCtrlFlag_Direction_Mask =			0x10,
+		kCtrlFlag_ManagerControlled_Mask =	0x20,
+		kCtrlFlag_ComputeScaledTime_Mask =	0x40,
+		kCtrlFlag_ForceUdpate_Mask =		0x80
+	};
+
 	UInt16				flags;				// 08
 	UInt16				unk0A;				// 0A
 	float				frequency;			// 0C
@@ -1064,6 +1077,34 @@ public:
 	UInt32				unk18;		// 18
 };
 
+// 14	vtbl 0x10B8480
+class BSRenderPassList
+{
+public:
+	virtual void	Destroy(bool doFree);
+	
+	// 10
+	struct RenderPass
+	{
+		void		*geometry;	// 00
+		UInt16		passEnum;	// 04
+		UInt8		accumHint;	// 06
+		UInt8		bEnabled;	// 07
+		UInt8		byte08;		// 08
+		UInt8		byte09;		// 09
+		UInt8		byte0A;		// 0A
+		UInt8		byte0B;		// 0B
+		void		*ptr0C;		// 0C
+	};
+	
+	RenderPass		**passes;	// 04
+	UInt16			maxSize;	// 08
+	UInt16			word0A;		// 0A
+	UInt16			arraySize;	// 0C
+	UInt16			growBy;		// 0E
+	UInt32			passCount;	// 10
+};
+
 // 60
 class BSShaderProperty : public NiProperty
 {
@@ -1166,25 +1207,25 @@ public:
 		kFlag2_StingerProp =				0x800000
 	};
 
-	UInt16			unk18;				// 18
-	UInt16			unk1A;				// 1A
-	UInt32			shaderType;			// 1C
-	UInt32			flags1;				// 20
-	UInt32			flags2;				// 24
-	float			alpha;				// 28
-	float			fadeAlpha;			// 2C
-	float			envMapScale;		// 30
-	float			flt34;				// 34
-	UInt32			lastRenderPassState;// 38
-	void			*renderPassList;	// 3C	Seen 010B8480
-	UInt32			unk40;				// 40
-	UInt32			unk44;				// 44
-	UInt32			unk48;				// 48
-	UInt32			unk4C;				// 4C
-	UInt32			unk50;				// 50
-	UInt32			unk54;				// 54
-	UInt32			unk58;				// 58
-	float			flt5C;				// 5C
+	UInt16				unk18;				// 18
+	UInt16				unk1A;				// 1A
+	UInt32				shaderType;			// 1C
+	UInt32				flags1;				// 20
+	UInt32				flags2;				// 24
+	float				alpha;				// 28
+	float				fadeAlpha;			// 2C
+	float				envMapScale;		// 30
+	float				flt34;				// 34
+	UInt32				lastRenderPassState;// 38
+	BSRenderPassList	*renderPassList;	// 3C
+	UInt32				unk40;				// 40
+	UInt32				unk44;				// 44
+	UInt32				unk48;				// 48
+	UInt32				unk4C;				// 4C
+	UInt32				unk50;				// 50
+	UInt32				unk54;				// 54
+	UInt32				unk58;				// 58
+	float				flt5C;				// 5C
 };
 static_assert(sizeof(BSShaderProperty) == 0x60);
 
@@ -1504,7 +1545,8 @@ public:
 	void __fastcall ToggleCollision(UInt8 flag);
 	void ResetCollision();
 	void RemoveCollision();
-	void __vectorcall SetAlphaRecurse(__m128 alpha);
+	void __vectorcall SetAlphaRecurse(float alpha);
+	void ResetShaderRenderPass();
 	UInt32 GetBSXFlags() const;
 	void BulkSetMaterialPropertyTraitValue(UInt32 traitID, float value);
 	void GetContactObjects(ContactObjects &contactObjs);
@@ -1545,6 +1587,33 @@ public:
 	void __fastcall SetVisible(bool visible);
 };
 static_assert(sizeof(BSFadeNode) == 0xE4);
+
+// F8
+class BSTreeNode : public BSFadeNode
+{
+public:
+	virtual void	Unk_40(void);
+	virtual void	Unk_41(void);
+	virtual void	Unk_42(void);
+	virtual void	Unk_43(void);
+	virtual void	Unk_44(void);
+	virtual void	Unk_45(void);
+	virtual void	Unk_46(void);
+	virtual void	Unk_47(void);
+	virtual void	Unk_48(void);
+	virtual void	Unk_49(void);
+	virtual void	Unk_4A(void);
+	virtual void	Unk_4B(void);
+	virtual void	Unk_4C(void);
+	virtual void	Unk_4D(void);
+	virtual void	Unk_4E(void);
+	virtual void	Unk_4F(void);
+	virtual void	Unk_50(void);
+	virtual void	Unk_51(void);
+
+	UInt32			unkE8[5];		// E8
+};
+static_assert(sizeof(BSTreeNode) == 0xF8);
 
 // 10
 class BSMultiBound : public NiObject
@@ -1646,7 +1715,7 @@ public:
 	float			fltB0;		// B0
 	float			fltB4;		// B4
 
-	__forceinline static BSClearZNode *GetSingleton() {return *(BSClearZNode**)0x11DEA18;}
+	__forceinline static BSClearZNode *GetSingleton() {return *(BSClearZNode**)0x11DEA14;}
 };
 extern BSClearZNode *g_LODRootNode;
 
@@ -2572,8 +2641,8 @@ public:
 	/*90*/virtual void		Unk_24(void);
 	/*94*/virtual UInt32	GetRenderedWidth();
 	/*98*/virtual UInt32	GetRenderedHeight();
-	/*9C*/virtual void		Unk_27(void);
-	/*A0*/virtual void		Unk_28(void);
+	/*9C*/virtual NiFixedString		*GetPath();
+	/*A0*/virtual UInt32	GetPixelCount();
 
 	TextureFormatPrefs	formatPrefs;	// 18
 	NiDX9TextureData	*textureData;	// 24
@@ -2614,7 +2683,7 @@ public:
 class NiRenderedTexture : public NiTexture
 {
 public:
-	/*A4*/virtual void		Unk_29(void);
+	/*A4*/virtual Ni2DBuffer	*Get2DBuffer();
 
 	Ni2DBuffer			*buffer;	// 30
 	UInt32				unk34;		// 34
@@ -3271,32 +3340,53 @@ public:
 	// 44
 	struct Result
 	{
-		NiAVObject	*result;	// 00
-		NiObject	*object04;	// 04
-		NiVector3	pos;		// 08
-		float		flt14;		// 14
-		UInt32		unk18[7];	// 18
-		float		flt34;		// 34
-		float		flt38;		// 38
-		float		flt3C;		// 3C
-		float		flt40;		// 40
+		NiAVObject		*result;	// 00
+		NiObject		*proxyParent;	// 04
+		NiVector3		intersect;	// 08
+		float			distance;	// 14
+		UInt16			triangleIdx;// 18
+		UInt16			vertexIdx;	// 1E
+		NiPoint2		uvCoords;	// 20
+		NiVector3		normal;		// 28
+		NiColorAlpha	colour;		// 34
 	};
 
-	UInt32				unk00;		// 00	If non-zero, returns only one result
-	UInt32				unk04;		// 04
-	UInt32				unk08;		// 08
-	UInt32				unk0C;		// 0C
-	UInt8				byte10;		// 10
-	UInt8				byte11;		// 11
-	UInt8				pad12[2];	// 12
-	NiAVObject			*originObj;	// 14
-	NiTArray<Result*>	results;	// 18
-	UInt32				numResults;	// 28
-	UInt32				unk2C;		// 2C
-	UInt8				byte30;		// 30
-	UInt8				byte31;		// 31
-	UInt8				byte32;		// 32
-	UInt8				byte33;		// 33
+	enum PickType : UInt32
+	{
+		PICK_ALL,
+		PICK_FIRST
+	};
+	enum SortType : UInt32
+	{
+		SORT_YES,
+		SORT_NO
+	};
+	enum IntersectType : UInt32
+	{
+		INTERSECT_BOUND,
+		INTERSECT_TRIANGLE
+	};
+	enum CoordinateType : UInt32
+	{
+		COORDS_MODEL,
+		COORDS_WORLD
+	};
+
+	PickType			pickType;		// 00
+	SortType			sortType;		// 04
+	IntersectType		intersectType;	// 08
+	CoordinateType		coordType;		// 0C
+	UInt8				bFrontOnly;		// 10
+	UInt8				observeCull;	// 11
+	UInt8				pad12[2];		// 12
+	NiAVObject			*originObj;		// 14
+	NiTArray<Result*>	results;		// 18
+	UInt32				numResults;		// 28
+	UInt32				lastAddedRecord;// 2C
+	UInt8				retnTexture;	// 30
+	UInt8				retnNormal;		// 31
+	UInt8				retnSmoothNormal;	// 32
+	UInt8				retnColour;		// 33
 
 	bool __fastcall GetResults(NiCamera *camera);
 };

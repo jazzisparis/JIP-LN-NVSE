@@ -247,11 +247,7 @@ bool Cmd_TriggerLightningFX_Execute(COMMAND_ARGS)
 
 bool Cmd_ResetClouds_Execute(COMMAND_ARGS)
 {
-	__asm
-	{
-		xorps	xmm0, xmm0
-		movups	ds:0x11FF8B4, xmm0
-	}
+	_mm_storeu_ps((float*)0x11FF8B4, _mm_setzero_ps());
 	return true;
 }
 
@@ -259,7 +255,7 @@ bool Cmd_ReloadCloudTextures_Execute(COMMAND_ARGS)
 {
 	if (Clouds *clouds = g_currentSky->clouds)
 	{
-		clouds->byte5A = 1;
+		clouds->bForceUpdate = 1;
 		clouds->Update(g_currentSky, 0);
 	}
 	return true;

@@ -83,6 +83,7 @@ extern const UInt32 kPackedValues[];
 extern const char kLwrCaseConverter[];
 
 #define GET_PS(i)	((const __m128*)kPackedValues)[i]
+#define GET_SS(i)	((const float*)kPackedValues)[i << 2]
 
 #define PS_AbsMask			kPackedValues
 #define PS_AbsMask0			kPackedValues+0x10

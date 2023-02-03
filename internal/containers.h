@@ -1818,6 +1818,7 @@ public:
 
 template <typename T_Data, const UInt32 _default_alloc = VECTOR_DEFAULT_ALLOC> class Vector
 {
+protected:
 	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
 	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 	using Init_List = std::initializer_list<T_Data>;
@@ -1897,8 +1898,14 @@ public:
 
 	void AppendList(Init_List &&inList)
 	{
+		UInt32 count = inList.size();
+		T_Data *pData = Reserve(count);
+		numItems += count;
 		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
-			Append(*iter);
+		{
+			new (pData) T_Data(*iter);
+			pData++;
+		}
 	}
 
 	T_Data* Insert(UInt32 index, Data_Arg item)
@@ -2019,23 +2026,6 @@ public:
 		return true;
 	}
 
-	void MoveToEnd(Data_Arg item)
-	{
-		static_assert(std::is_scalar_v<T_Data>);
-		if (numItems > 1)
-		{
-			T_Data *pData = data, *pEnd = End() - 1;
-			do
-			{
-				if (*pData != item) continue;
-				memcpy(pData, pData + 1, (UInt32)pEnd - (UInt32)pData);
-				memcpy(pEnd, &item, sizeof(T_Data));
-				return;
-			}
-			while (++pData != pEnd);
-		}
-	}
-
 	SInt32 GetIndexOf(Data_Arg item) const
 	{
 		if (numItems)
@@ -2144,7 +2134,7 @@ public:
 			if (data[index] != item) continue;
 			numItems--;
 			if (index < numItems)
-				data[index] = data[numItems];
+				memcpy(data + index, data + numItems, sizeof(T_Data));
 			break;
 		}
 	}
@@ -2183,6 +2173,23 @@ public:
 			numAlloc = newAlloc;
 		}
 		memcpy(data, source.data, sizeof(T_Data) * numItems);
+	}
+
+	T_Data* Reserve(UInt32 howMany)
+	{
+		UInt32 newSize = numItems + howMany;
+		if (!data)
+		{
+			numAlloc = AlignNumAlloc<T_Data>(newSize);
+			data = Pool_CAlloc<T_Data>(numAlloc);
+		}
+		else if (numAlloc < newSize)
+		{
+			UInt32 newAlloc = AlignNumAlloc<T_Data>(newSize);
+			data = Pool_CRealloc<T_Data>(data, numAlloc, newAlloc);
+			numAlloc = newAlloc;
+		}
+		return data + numItems;
 	}
 
 	void Resize(UInt32 newSize)

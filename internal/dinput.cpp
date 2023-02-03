@@ -2,7 +2,6 @@
 
 __declspec(naked) bool __fastcall DIHookControl::IsKeyPressed(UInt32 keycode, UInt32 flags)
 {
-	static const UInt32 kFlagMask[] = {0x100, 0x100, 1, 0x101, 0x10000, 0x10100, 0x10001, 0x10101};
 	__asm
 	{
 		cmp		edx, kMaxMacros
@@ -18,6 +17,10 @@ __declspec(naked) bool __fastcall DIHookControl::IsKeyPressed(UInt32 keycode, UI
 	retnFalse:
 		xor		al, al
 		retn	4
+		ALIGN 4
+	kFlagMask:
+		EMIT_DW(00, 00, 01, 00) EMIT_DW(00, 00, 01, 00) EMIT_DW(00, 00, 00, 01) EMIT_DW(00, 00, 01, 01)
+		EMIT_DW(00, 01, 00, 00) EMIT_DW(00, 01, 01, 00) EMIT_DW(00, 01, 00, 01) EMIT_DW(00, 01, 01, 01)
 	}
 }
 

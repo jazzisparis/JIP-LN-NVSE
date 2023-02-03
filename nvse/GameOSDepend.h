@@ -212,7 +212,7 @@ public:
 	UInt8							oneMore;		// 00
 	UInt8							quitGame;		// 01
 	UInt8							exitToMainMenu;	// 02
-	UInt8							byte03;			// 03
+	UInt8							isWindowActive;	// 03
 	UInt8							byte04;			// 04
 	UInt8							byte05;			// 05
 	UInt8							tfcState;		// 06
@@ -220,7 +220,7 @@ public:
 	HWND							window;			// 08
 	HINSTANCE						procInstance;	// 0C
 	UInt32							mainThreadID;	// 10
-	UInt32							unk14;			// 14
+	HANDLE							mainThreadHandle;	// 14
 	ScrapHeapBuffer					shBuffer18;		// 18
 	BSTCommonScrapHeapMessageQueue	shQueue28;		// 28
 	ScrapHeapBuffer					shBuffer50;		// 50

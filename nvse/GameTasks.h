@@ -637,3 +637,36 @@ public:
 	__forceinline static IOManager *GetSingleton() {return *(IOManager**)0x1202D98;}
 };
 static_assert(sizeof(IOManager) == 0xA0);
+
+// 50
+class BSTreeModel : public NiRefObject
+{
+public:
+	/*08*/virtual void	Unk_02(void);
+	/*0C*/virtual void	Unk_03(void);
+	/*10*/virtual void	Unk_04(void);
+	/*14*/virtual void	Unk_05(void);
+	/*18*/virtual void	Unk_06(void);
+	
+	UInt32			unk08[18];
+};
+static_assert(sizeof(BSTreeModel) == 0x50);
+
+// 20
+struct BSTreeManager
+{
+	NiTMapBase<TESObjectTREE*, BSTreeModel*>	*treeModelsMap;	// 00
+	NiSourceTexture								*canopyShadow;	// 04
+	NiMaterialProperty							*materialProp;	// 08
+	NiAlphaProperty								*alphaProp;		// 0C
+	BSXFlags									*bsxFlags;		// 10
+	float										flt14;			// 14
+	bool										treesEnabled;	// 18
+	bool										leavesEnabled;	// 19
+	bool										byte1A;			// 1A
+	bool										forceFullLOD;	// 1B
+	LockFreeMap<TESObjectREFR*, BSTreeNode*>	*treeNodesMap;	// 1C
+	
+	__forceinline static BSTreeManager *GetSingleton() {return *(BSTreeManager**)0x11D5C48;}
+};
+static_assert(sizeof(BSTreeManager) == 0x20);

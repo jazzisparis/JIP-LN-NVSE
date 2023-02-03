@@ -477,7 +477,6 @@ __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetBaseHe
 
 __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetHealthPercent() const
 {
-	static const float kFltMin1 = -1.0F;
 	__asm
 	{
 		mov		eax, [ecx+8]
@@ -513,6 +512,9 @@ __declspec(naked) float __vectorcall ExtraContainerChanges::EntryData::GetHealth
 	invalid:
 		movss	xmm0, kFltMin1
 		retn
+		ALIGN 4
+	kFltMin1:
+		EMIT_DW(BF, 80, 00, 00)
 	}
 }
 
@@ -520,7 +522,6 @@ bool __fastcall GetEntryDataHasModHook(ContChangesEntry *entry, int EDX, UInt8 m
 
 __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(Actor *owner, float condition, TESForm *ammo) const
 {
-	static const double kSplitBeamMult = 1.3;
 	__asm
 	{
 		push	esi
@@ -558,7 +559,7 @@ __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(
 		call	GetEntryDataHasModHook
 		test	al, al
 		jz		noMod
-		fmul	kSplitBeamMult
+		fmul	dword ptr kSplitBeamMult
 	noMod:
 		mov		ecx, [esp+8]
 		cmp		s_NPCPerks, 0
@@ -582,6 +583,9 @@ __declspec(naked) float ExtraContainerChanges::EntryData::CalculateWeaponDamage(
 	done:
 		pop		esi
 		retn	0xC
+		ALIGN 4
+	kSplitBeamMult:
+		EMIT_DW(3F, A6, 66, 66)
 	}
 }
 

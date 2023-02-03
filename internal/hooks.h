@@ -2986,9 +2986,9 @@ __declspec(naked) NiPointLight* __fastcall CreatePointLight(TESObjectLIGH *light
 		test	byte ptr [edi+0x33], 0x40
 		jnz		done
 		or		byte ptr [edi+0x33], 0x60
-		push	edi
 		mov		ecx, offset s_activePtLights
-		call	Vector<NiPointLight*>::Append
+		call	Vector<NiPointLight*>::AllocateData
+		mov		[eax], edi
 	done:
 		mov		eax, edi
 		pop		edi
@@ -3064,7 +3064,8 @@ __declspec(naked) void __fastcall AddPointLights(NiNode *objNode)
 		call	SetLightProperties
 		push	ecx
 		mov		ecx, offset s_activePtLights
-		call	Vector<NiPointLight*>::Append
+		call	Vector<NiPointLight*>::AllocateData
+		pop		dword ptr [eax]
 		jmp		iterHead
 		ALIGN 16
 	iterEnd:
@@ -4057,18 +4058,14 @@ __declspec(naked) void __fastcall UpdateAnimatedLightsHook(TES *pTES)
 		push	ecx
 		CALL_EAX(0xAA1460)
 		add		esp, 8
-		mov		eax, [ebx+4]
-		dec		eax
-		mov		[ebx+4], eax
-		sub		eax, edi
+		mov		edx, [ebx+4]
+		dec		edx
+		mov		[ebx+4], edx
+		cmp		edx, edi
 		jz		iterHead
-		shl		eax, 2
-		push	eax
-		lea		edx, [esi+4]
-		push	edx
-		push	esi
-		call	MemCopy
-		add		esp, 0xC
+		mov		ecx, [ebx]
+		mov		eax, [ecx+edx*4]
+		mov		[esi], eax
 		jmp		iterHead
 		ALIGN 16
 	doAdd:
@@ -4810,9 +4807,13 @@ __declspec(naked) void FireWeaponWobbleHook()
 {
 	__asm
 	{
+		fld		dword ptr [ebp-0x1C]
 		mov		ecx, [ebp-0x2C]
 		mov		eax, [ecx+0x68]
-		fld		dword ptr [ebp-0x1C]
+		test	eax, eax
+		jz		done
+		cmp		dword ptr [eax+0x28], 0
+		jnz		done
 		fadd	dword ptr [eax+0x1D0]
 		test	byte ptr [ecx+0x106], kHookActorFlag2_NoGunWobble
 		jnz		done

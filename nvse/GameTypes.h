@@ -540,7 +540,7 @@ template <typename T_Data> struct DListNode
 template <class Item> class DList
 {
 public:
-	typedef DListNode<Item> Node;
+	using Node = DListNode<Item>;
 
 private:
 	Node		*first;

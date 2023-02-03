@@ -1483,16 +1483,15 @@ public:
 	UInt8					byte608;			// 608
 	UInt8					pad609[3];			// 609
 	hkpRigidBody			*bodyUnderFeet;		// 60C
-	UInt8					byte610;			// 610
+	UInt8					bFakeSupport;		// 610
 	UInt8					pad611[3];			// 611
 	UInt32					unk614[3];			// 614
 	hkVector4				vector620;			// 620
-	void					*ptr630;			// 630
-	float					flt634;				// 634
-	void					*ptr638;			// 638
+	void					*bumpedBody;		// 630
+	float					bumpForce;			// 634
+	void					*bumpedCollObj;		// 638
 	hkArray<hkCdPoint>		arr63C;				// 63C
-	void					*ptr648;			// 648
-	void					*ptr64C;			// 64C
+	tList<void>				damageImpacts;		// 648
 };
 static_assert(sizeof(bhkCharacterController) == 0x650);
 

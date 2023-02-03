@@ -3525,10 +3525,21 @@ public:
 		kCellFlag_BehaveLikeExterior =			1 << 7,
 	};
 
+	enum LoadingState
+	{
+		kState_NotLoaded =	0,
+		kState_Unloading =	1,
+		kState_Loading =	2,
+		kState_Loaded =		3,
+		kState_Detaching =	4,
+		kState_Attaching =	5,
+		kState_Attached =	6
+	};
+
 	TESFullName				fullName;				// 18
 	UInt8					cellFlags;				// 24
 	UInt8					fullySeen;				// 25	Fully visible on local-map
-	UInt8					loadingStage;			// 26	5 or 6 would mean cell is loaded
+	UInt8					loadingStage;			// 26
 	UInt8					byte27;					// 27
 	ExtraDataList			extraDataList;			// 28
 	union											// 48
@@ -3594,14 +3605,14 @@ struct BGSTerrainManager
 		NiAVObject					*waterMesh;		// 08
 		NiAVObject					*object0C;		// 0C
 		NiObject					*object10;		// 10
-		NiObject					*object14;		// 14
-		NiObject					*object18;		// 18
+		BSMultiBoundNode			*multiBound14;	// 14
+		BSMultiBoundNode			*multiBound18;	// 18
 		UInt32						unk1C;			// 1C
 		UInt32						unk20;			// 20
 		BGSTerrainChunkLoadTask		*loadTask;		// 24
 		UInt8						byte28;			// 28
 		UInt8						isInitialized;	// 29
-		UInt8						byte2A;			// 2A
+		UInt8						shaderInitDone;	// 2A
 		UInt8						pad2B;			// 2B
 		NiObject					*object2C;		// 2C
 	};
@@ -3610,8 +3621,8 @@ struct BGSTerrainManager
 	struct BGSDistantObjectBlock
 	{
 		BGSTerrainNode				*node;			// 00
-		NiAVObject					*object04;		// 04
-		NiAVObject					*object08;		// 08
+		BSSegmentedTriShape			*shape;			// 04
+		BSMultiBoundNode			*multiBound;	// 08
 		NiAVObject					*object0C;		// 0C
 		NiObject					*object10;		// 10
 		NiObject					*object14;		// 14
@@ -3664,7 +3675,7 @@ struct BGSTerrainManager
 		float					splitDist;		// 44
 		float					morphStartDist;	// 48
 		float					morphEndDist;	// 4C
-		UInt32					unk50;			// 50
+		UInt32					terrainFadeTimer;	// 50
 		UInt32					ukn54;			// 54
 		UInt32					linkID;			// 58
 		UInt8					shouldShow;		// 5C

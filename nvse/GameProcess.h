@@ -846,6 +846,11 @@ struct AnimData
 		kSequence_Death =		0x14
 	};
 
+	enum AnimStates
+	{
+
+	};
+
 	struct PlayingIdle
 	{
 		TESIdleForm		*idleForm;
