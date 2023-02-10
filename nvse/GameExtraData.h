@@ -383,6 +383,9 @@ public:
 	EntryDataList *GetEntryDataList() const {return data ? data->objList : NULL;}
 };
 typedef ExtraContainerChanges::EntryData ContChangesEntry;
+typedef ExtraContainerChanges::EntryDataList ContChangesEntryList;
+typedef ExtraContainerChanges::ExtendDataList ContChangesExtraList;
+
 
 // 10
 class ExtraHealth : public BSExtraData

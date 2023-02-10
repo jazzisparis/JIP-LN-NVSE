@@ -679,7 +679,7 @@ __declspec(naked) void __fastcall CalcVtxAlphaBySeenData(UInt32 gridIdx)
 		mov		ecx, [ecx+0x34]
 		test	ecx, ecx
 		jz		done
-		mov		dword ptr [ecx+0x20], 0
+		and		dword ptr [ecx+0x20], 0
 	done:
 		pop		edi
 		pop		esi
@@ -703,12 +703,10 @@ __declspec(naked) UInt32 __vectorcall GetFOWUpdateMask(__m128i inPos)
 	kTruncMask:
 		EMIT_PS_4(00, 00, 0F, FF)
 	kGridSlice:
-		DUP_2(EMIT_DW_2(03, FF) EMIT_DW_2(0B, FF))
+		DUP_2(EMIT_DW_2(04, FF) EMIT_DW_2(0A, FF))
 	kUpdateMask:
-		EMIT_DW(00, 12, 00, 1B) EMIT_DW(00, 36, 00, 12)
-		EMIT_DW(00, 10, 00, 18) EMIT_DW(00, 30, 00, 10)
-		EMIT_DW(00, 30, 00, 30) EMIT_DW(00, 30, 00, 30)
-		EMIT_DW(00, 90, 00, D8) EMIT_DW(01, B0, 00, 90)
+		EMIT_4W(00, 1B, 00, 12, 00, 12, 00, 36) EMIT_4W(00, 18, 00, 10, 00, 10, 00, 30)
+		EMIT_4W(00, 30, 00, 30, 00, 30, 00, 30) EMIT_4W(00, D8, 00, 90, 00, 90, 01, B0)
 	}
 }
 
@@ -839,7 +837,7 @@ __declspec(naked) SeenData* __fastcall AddExtraSeenData(TESObjectCELL *cell)
 		GAME_HEAP_ALLOC
 		mov		dword ptr [eax], kVtbl_ExtraSeenData
 		mov		[eax+4], 5
-		mov		dword ptr [eax+8], 0
+		and		dword ptr [eax+8], 0
 	createData:
 		push	eax
 		xorps	xmm0, xmm0
@@ -1112,8 +1110,8 @@ __declspec(naked) float* __vectorcall GetVtxAlphaPtr(__m128 posMult)
 		neg		ebx
 		lea		edx, [edx+ebx+2]
 		and		eax, 0xF
-		lea		ebx, [eax*4]
-		lea		eax, [eax+ebx*4]
+		lea		ebx, [eax+eax]
+		lea		eax, [eax+ebx*8]
 		and		ecx, 0xF
 		add		ecx, eax
 		shl		ecx, 4
@@ -1197,6 +1195,7 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, c
 		mov		edx, [ecx]
 		mov		[ebp-0xC], edx
 		mov		[ecx], eax
+		mov		byte ptr ds:0x11AD7B4, 0
 		mov		edx, [ebp-8]
 		mov		edx, [edx+8]
 		mov		ecx, ds:0x11F4748
@@ -1243,6 +1242,7 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, c
 		add		esp, 8
 		movzx	eax, byte ptr [ebp-0x1C]
 		call	kScnCallbacks[eax*4+8]
+		mov		byte ptr ds:0x11AD7B4, 1
 		mov		al, [ebp-0x1B]
 		mov		ecx, [ebp-0x10]
 		mov		[ecx+0x130], al
@@ -1311,7 +1311,7 @@ __declspec(naked) void __fastcall GenerateLocalMapExterior(TESObjectCELL *cell, 
 		jz		iterHead
 		mov		[ebp+edx*4-0x1C], ecx
 		or		byte ptr [ecx+0x25], 0x40
-		mov		dword ptr [ecx+0x38], 0
+		and		dword ptr [ecx+0x38], 0
 		jmp		iterHead
 	iterEnd:
 		mov		eax, ds:0x11D5C48
@@ -1520,12 +1520,6 @@ struct MapMarkerTile
 		markerTile->SetFloat(kTileValue_depth, int((s_mapMarkerTiles->Size() & 0xF) + 18));
 		inUse = true;
 	}
-
-	void SetInUse(bool bInUse)
-	{
-		inUse = bInUse;
-		visible->SetFloat(inUse);
-	}
 };
 
 typedef Vector<MapMarkerTile*, 4> DynamicTiles;
@@ -1535,7 +1529,10 @@ TempObject<RenderedMapMarkers> s_renderedMapMarkers;
 void __fastcall FreeCellMapMarkers(RenderedMapMarkers::Iterator &cmkIter)
 {
 	for (auto dtlIter = cmkIter().Begin(); dtlIter; ++dtlIter)
-		dtlIter->SetInUse(false);
+	{
+		dtlIter->inUse = 0;
+		dtlIter->visible->SetFloat(0);
+	}
 	cmkIter.Remove();
 }
 
@@ -1543,6 +1540,7 @@ bool s_discoveredLocation = false;
 
 void __fastcall HandleDiscoverLocation(TESObjectCELL *markerCell)
 {
+	if (!markerCell) return;
 	if (auto findRendered = s_renderedMapMarkers->Find(Coordinate(*markerCell->exteriorCoords)))
 	{
 		FreeCellMapMarkers(findRendered);
@@ -1760,7 +1758,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	lmCamera->frustum.n = 1.0F;
 	lmCamera->frustum.f = 131072.0F;
 	lmCamera->frustum.o = 1;
-	ULNG(lmCamera->LODAdjust) = 0x3A000000;
+	lmCamera->LODAdjust = 0.001F;
 	g_shadowSceneNode->AddObject(lmCamera, 1);
 
 	BSFadeNode *waterParent = BSFadeNode::Create();
@@ -1973,7 +1971,7 @@ void __fastcall MoveTextureToTop(NiRenderedTexture *texture)
 {
 	if (texture == *g_textureListLast)
 		return;
-	ScopedLock<CriticalSection> cs(g_textureListCS);
+	ScopedCS cs(g_textureListCS);
 	if (texture == s_mmFirstTexture)
 		s_mmFirstTexture = FindNextMMTexture(texture);
 	NiTexture *prev = texture->prev, *next = texture->next;
@@ -1991,7 +1989,7 @@ void __fastcall PurgeTextureCache(LocalTexturesMap &textureMap)
 {
 	UInt32 purgeCount = textureMap.Size() - CACHED_TEXTURES_MIN;
 	NiRenderedTexture *curr = s_mmFirstTexture, *next;
-	ScopedLock<CriticalSection> cs(g_textureListCS);
+	ScopedCS cs(g_textureListCS);
 	do
 	{
 		next = FindNextMMTexture(curr);
@@ -2142,7 +2140,11 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				if (showFlags & 1)
 				{
 					for (auto tileIter = s_mapMarkerTiles->Begin(); tileIter; ++tileIter)
-						if (tileIter().inUse) tileIter().SetInUse(false);
+						if (tileIter().inUse)
+						{
+							tileIter().inUse = 0;
+							tileIter().visible->SetFloat(0);
+						}
 					s_renderedMapMarkers->Clear();
 				}
 			}
@@ -2194,7 +2196,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 									tileData = &tileIter();
 									++tileIter;
 									if (tileData->inUse) continue;
-									tileData->SetInUse(true);
+									tileData->inUse = 1;
+									tileData->visible->SetFloat(1.0F);
 									break;
 								}
 								dynamicTiles->Append(tileData);
@@ -2357,8 +2360,6 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					if (lgtNode->data->isPointLight && (pntLight = (NiPointLight*)lgtNode->data->light))
 						ULNG(pntLight->radius) -= 0x6800000;
 
-				*(bool*)0x11AD7B4 = 0;
-
 				gridIdx = 0;
 				do
 				{
@@ -2388,7 +2389,6 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				}
 				while (++gridIdx < 9);
 
-				*(bool*)0x11AD7B4 = 1;
 				s_hiddenNodes->ClearShow();
 
 				for (auto lgtNode = g_shadowSceneNode->lgtList0B4.Head(); lgtNode; lgtNode = lgtNode->next)

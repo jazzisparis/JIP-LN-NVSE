@@ -208,8 +208,8 @@ __declspec(naked) void __fastcall cvtul2d(UInt32 value, double *result)
 {
 	__asm
 	{
-		movd	xmm0, ecx
-		movlpd	[edx], xmm0
+		mov		[edx], ecx
+		and		dword ptr [edx+4], 0
 		fild	qword ptr [edx]
 		fstp	qword ptr [edx]
 		retn
@@ -970,7 +970,7 @@ __declspec(naked) char __fastcall StrCompareCS(const char *lstr, const char *rst
 		jz		done
 		bsf		ecx, eax
 		bsf		edx, edx
-		xor		al, al
+		xor		eax, eax
 		cmp		cl, dl
 		ja		done
 		pcmpgtb	xmm0, xmm1
@@ -979,8 +979,7 @@ __declspec(naked) char __fastcall StrCompareCS(const char *lstr, const char *rst
 		bsf		edx, edx
 		cmp		cl, dl
 		setz	al
-		setnz	dl
-		sub		al, dl
+		lea		eax, [eax+eax-1]
 		add		ecx, edi
 	done:
 		pop		edi
@@ -1068,7 +1067,7 @@ __declspec(naked) char __fastcall StrCompareCI(const char *lstr, const char *rst
 		jz		done
 		bsf		ecx, eax
 		bsf		edx, edx
-		xor		al, al
+		xor		eax, eax
 		cmp		cl, dl
 		ja		done
 		pcmpgtb	xmm0, xmm1
@@ -1077,8 +1076,7 @@ __declspec(naked) char __fastcall StrCompareCI(const char *lstr, const char *rst
 		bsf		edx, edx
 		cmp		cl, dl
 		setz	al
-		setnz	dl
-		sub		al, dl
+		lea		eax, [eax+eax-1]
 		add		ecx, edi
 	done:
 		pop		edi

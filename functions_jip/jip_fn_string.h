@@ -18,23 +18,21 @@ bool Cmd_sv_RegexMatch_Execute(COMMAND_ARGS)
 
 bool Cmd_sv_RegexSearch_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	NVSEArrayVar *resArr = CreateArray(NULL, 0, scriptObj);
+	*result = (int)resArr;
 	UInt32 strID;
 	char rgxStr[0x80];
 	if (!ExtractFormatStringArgs(1, rgxStr, EXTRACT_ARGS_EX, kCommandInfo_sv_RegexSearch.numParams, &strID))
 		return true;
-	char *srcStr = GetStrArgBuffer();
-	StrCopy(srcStr, GetStringVar(strID));
-	if (!*srcStr) return true;
-	NVSEArrayVar *resArr = CreateArray(NULL, 0, scriptObj);
+	const char *srcStr = GetStringVar(strID), *pEnd = srcStr + StrLen(srcStr);
+	if (srcStr == pEnd) return true;
 	std::regex rgx(rgxStr);
 	std::cmatch matches;
 	while (std::regex_search(srcStr, matches, rgx))
 	{
 		AppendElement(resArr, ArrayElementL(matches.str().c_str()));
-		StrCopy(srcStr, matches.suffix().str().c_str());
+		srcStr = pEnd - matches.suffix().str().size();
 	}
-	*result = (int)resArr;
 	return true;
 }
 

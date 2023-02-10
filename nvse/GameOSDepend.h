@@ -117,7 +117,9 @@ public:
 	int					lastMouseWheelScroll;	// 1B40
 	UInt8				lastButtonStates[8];	// 1B44
 	UInt32				ltrtButtonState;		// 1B4C
-	UInt32				unk1B50[2];				// 1B50
+	UInt8				mouseSensitivity;		// 1B50
+	UInt8				pad1B51[3];				// 1B51
+	UInt32				unk1B54;				// 1B54
 	UInt8				buttonStates1B58[8];	// 1B58
 	UInt32				unk1B60[8];				// 1B60
 	UInt32				*controllerVibration;	// 1B80

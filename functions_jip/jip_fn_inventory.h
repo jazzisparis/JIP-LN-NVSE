@@ -140,20 +140,19 @@ bool Cmd_GetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 	if (NUM_ARGS_EX)
 		ExtractArgsEx(EXTRACT_ARGS_EX, &percOrBase);
 	ExtraDataList *xData;
-	ContChangesEntry *pEntry;
+	float baseHealth;
 	if (InventoryRef *invRef = InventoryRefGetForID(thisObj->refID))
 	{
 		xData = invRef->xData;
-		pEntry = invRef->entry;
+		baseHealth = invRef->entry->GetBaseHealth();
 	}
 	else
 	{
 		xData = &thisObj->extraDataList;
-		ExtraContainerChanges::ExtendDataList extendData(xData);
+		ContChangesExtraList extendData(xData);
 		ContChangesEntry entry(&extendData, 1, thisObj->baseForm);
-		pEntry = &entry;
+		baseHealth = entry.GetBaseHealth();
 	}
-	float baseHealth = pEntry->GetBaseHealth();
 	if (percOrBase != 2)
 	{
 		ExtraHealth *xHealth;
@@ -272,7 +271,7 @@ bool Cmd_DropAlt_Execute(COMMAND_ARGS)
 	SInt32 dropCount = 0, clrOwner = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &dropCount, &clrOwner) || !thisObj->baseForm->GetContainer())
 		return true;
-	ExtraContainerChanges::EntryDataList *entryList = thisObj->GetContainerChangesList();
+	ContChangesEntryList *entryList = thisObj->GetContainerChangesList();
 	if (!entryList) return true;
 	tList<TESForm> tempList(form);
 	if IS_ID(form, BGSListForm)
@@ -628,7 +627,7 @@ bool Cmd_GetEquippedArmorRefs_Execute(COMMAND_ARGS)
 		BipedAnim *equipment = ((Actor*)thisObj)->GetBipedAnim();
 		if (equipment)
 		{
-			ExtraContainerChanges::EntryDataList *entryList = thisObj->GetContainerChangesList();
+			ContChangesEntryList *entryList = thisObj->GetContainerChangesList();
 			if (entryList)
 			{
 				TempElements *tmpElements = GetTempElements();
@@ -659,8 +658,7 @@ float __fastcall GetArmorEffectiveDX(TESObjectREFR *thisObj, UInt32 funcAddr)
 		InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 		if (invRef)
 			return ThisCall<float>(funcAddr, invRef->entry, 0);
-		ExtraContainerChanges::ExtendDataList extendData;
-		extendData.Init(&thisObj->extraDataList);
+		ContChangesExtraList extendData(&thisObj->extraDataList);
 		ContChangesEntry tempEntry(&extendData, 1, thisObj->baseForm);
 		return ThisCall<float>(funcAddr, &tempEntry, 0);
 	}

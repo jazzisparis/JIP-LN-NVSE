@@ -8,6 +8,7 @@ DEFINE_COMMAND_PLUGIN(HoldControl, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(ReleaseControl, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(ToggleVanityWheel, 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ToggleMouseMovement, 0, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(ScrollMouseWheel, 0, 1, kParams_OneOptionalInt);
 
 UInt32 s_onKeyEventMask = 0;
 
@@ -105,5 +106,13 @@ bool Cmd_ToggleMouseMovement_Execute(COMMAND_ARGS)
 	UInt32 toggle;
 	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle))
 		s_mouseMovementState = toggle | 4;
+	return true;
+}
+
+bool Cmd_ScrollMouseWheel_Execute(COMMAND_ARGS)
+{
+	SInt32 value;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
+		g_inputGlobals->currMouseWheelScroll += value;
 	return true;
 }

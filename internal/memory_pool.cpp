@@ -34,7 +34,7 @@ namespace MemoryPool
 			jz		newSection
 			mov		ecx, [eax]
 			mov		[edx], ecx
-			mov		s_memoryPool.m_cs.selfPtr, 0
+			and		s_memoryPool.m_cs.selfPtr, 0
 			pop		esi
 			retn
 			ALIGN 16
@@ -106,7 +106,7 @@ namespace MemoryPool
 			mov		[ecx], edx
 			pop		dword ptr [eax]
 		done:
-			mov		s_memoryPool.m_cs.selfPtr, 0
+			and		s_memoryPool.m_cs.selfPtr, 0
 			mov		eax, edi
 			pop		edi
 			pop		esi
@@ -133,7 +133,7 @@ namespace MemoryPool
 			mov		eax, [edx]
 			mov		[ecx], eax
 			mov		[edx], ecx
-			mov		s_memoryPool.m_cs.selfPtr, 0
+			and		s_memoryPool.m_cs.selfPtr, 0
 		nullPtr:
 			retn
 			ALIGN 16

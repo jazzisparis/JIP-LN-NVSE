@@ -128,6 +128,7 @@ extern const char kLwrCaseConverter[];
 #define EMIT_PS_3(b0, b1, b2, b3) DUP_3(EMIT_DW(b0, b1, b2, b3)) EMIT_DW_1(00)
 #define EMIT_PS_4(b0, b1, b2, b3) DUP_4(EMIT_DW(b0, b1, b2, b3))
 #define EMIT_8(b0, b1, b2, b3, b4, b5, b6, b7) EMIT(b0) EMIT(b1) EMIT(b2) EMIT(b3) EMIT(b4) EMIT(b5) EMIT(b6) EMIT(b7)
+#define EMIT_4W(b0, b1, b2, b3, b4, b5, b6, b7) EMIT(b1) EMIT(b0) EMIT(b3) EMIT(b2) EMIT(b5) EMIT(b4) EMIT(b7) EMIT(b6)
 
 typedef void* (__cdecl *memcpy_t)(void*, const void*, size_t);
 extern memcpy_t MemCopy;
@@ -184,28 +185,26 @@ template <typename T> __forceinline void RawSwap(const T &lhs, const T &rhs)
 	memcpy((void*)&rhs, (const void*)buffer, sizeof(T));
 }
 
-class CriticalSection
+class CriticalSection : public CRITICAL_SECTION
 {
-	CRITICAL_SECTION	critSection;
-
 public:
-	CriticalSection() {InitializeCriticalSection(&critSection);}
-	~CriticalSection() {DeleteCriticalSection(&critSection);}
+	CriticalSection() {InitializeCriticalSection(this);}
+	~CriticalSection() {DeleteCriticalSection(this);}
 
-	void Enter() {EnterCriticalSection(&critSection);}
-	void Leave() {LeaveCriticalSection(&critSection);}
-	bool TryEnter() {return TryEnterCriticalSection(&critSection) != 0;}
+	void Enter() {EnterCriticalSection(this);}
+	void Leave() {LeaveCriticalSection(this);}
+	bool TryEnter() {return TryEnterCriticalSection(this) != 0;}
 };
 
 class PrimitiveCS
 {
-	void		*selfPtr;
+	UInt32		selfPtr;
 
 public:
-	PrimitiveCS() : selfPtr(nullptr) {}
+	PrimitiveCS() : selfPtr(0) {}
 
 	PrimitiveCS *Enter();
-	__forceinline void Leave() {selfPtr = nullptr;}
+	__forceinline void Leave() {selfPtr &= 0;}
 };
 
 class LightCS
@@ -220,7 +219,7 @@ public:
 	__forceinline void Leave()
 	{
 		if (!--enterCount)
-			owningThread = 0;
+			owningThread &= 0;
 	}
 };
 
@@ -233,6 +232,7 @@ public:
 	~ScopedLock() {cs->Leave();}
 };
 
+typedef ScopedLock<CriticalSection> ScopedCS;
 typedef ScopedLock<PrimitiveCS> ScopedPrimitiveCS;
 typedef ScopedLock<LightCS> ScopedLightCS;
 

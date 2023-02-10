@@ -1391,6 +1391,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v56.80
 	/*292A*/REG_CMD_FRM(GetEditorPosition);
 	/*292B*/REG_CMD_FRM(GetWorldspacePersistentCell);
+	//	v56.81
+	/*292C*/REG_CMD(ScrollMouseWheel);
 
 	//===========================================================
 
