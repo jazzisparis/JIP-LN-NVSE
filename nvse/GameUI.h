@@ -366,6 +366,8 @@ public:
 
 struct BGSSaveLoadFileEntry;
 
+extern UInt32 g_valueID_enabled;
+
 // 30
 template <typename Item> class ListBox
 {
@@ -401,7 +403,7 @@ public:
 	UInt16			word2C;			// 2C
 	UInt16			pad2E;			// 2E
 
-	Item GetSelected()
+	Item GetSelected() const
 	{
 		if (selected)
 		{
@@ -416,6 +418,13 @@ public:
 			while (iter = iter->next);
 		}
 		return NULL;
+	}
+
+	bool IsEnabled() const
+	{
+		if (!g_valueID_enabled)
+			g_valueID_enabled = TraitNameToID("_enabled");
+		return parentTile && parentTile->GetValueFloat(g_valueID_enabled);
 	}
 };
 

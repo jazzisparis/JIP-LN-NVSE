@@ -26,7 +26,7 @@ UInt8 s_CCCModIdx = 0;
 TempObject<UnorderedMap<const char*, const char*, 0x80, false>> s_avatarPaths;
 TempObject<Map<char*, const char*>> s_avatarCommon(0x30);
 bool s_UILoaded = false;
-Tile::Value **s_UIelements = NULL;
+TileValue **s_UIelements = NULL;
 UInt32 s_savedForms[10] = {};
 TESFaction *s_taskFaction;
 const char kLoadError[] = "ERROR: Failed to load JIP CC&C UI components.";
@@ -106,7 +106,7 @@ bool Cmd_CCCOnLoad_Execute(COMMAND_ARGS)
 		Console_Print(kLoadError);
 		return true;
 	}
-	if (!s_UIelements) s_UIelements = (Tile::Value**)calloc(0x77, 4);
+	if (!s_UIelements) s_UIelements = (TileValue**)calloc(0x77, 4);
 	UInt32 traitID06 = TraitNameToID("_Size"), traitID07 = TraitNameToID("_Anchor"), traitID08 = TraitNameToID("_Selected"),
 		traitID09 = TraitNameToID("_HealthFill"), traitID10 = TraitNameToID("_Distance"), traitID11 = TraitNameToID("_Action"),
 		traitID17 = TraitNameToID("_CmdType"), traitID20 = TraitNameToID("_Value");
@@ -567,7 +567,7 @@ bool Cmd_CCCSayTo_Execute(COMMAND_ARGS)
 	if (xSayTo)
 	{
 		if (xSayTo->info) xSayTo->info->RunResultScript(1, (Actor*)thisObj);
-		thisObj->extraDataList.RemoveExtra(xSayTo, true);
+		thisObj->extraDataList.RemoveByType(kXData_ExtraSayToTopicInfo);
 	}
 	return true;
 }

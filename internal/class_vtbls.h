@@ -837,6 +837,8 @@ enum ClassVtblAddress
 	kVtbl_CAsyncReader =								0x1093EAC,
 	kVtbl_TileText =									0x1094878,
 	kVtbl_Tile3D =										0x10948AC,
+	kVtbl_TileFloatAction =								0x1094C2C,
+	kVtbl_TileRefValueAction =							0x1094C44,
 	kVtbl_TileExtra =									0x1094CFC,
 	kVtbl_DebugText =									0x1094EFC,
 	kVtbl_IDebugText =									0x1094F30,

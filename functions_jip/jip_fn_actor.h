@@ -1431,7 +1431,7 @@ __declspec(naked) void __fastcall ReloadBipedAnim(BipedAnim *bipAnim, UInt32 rel
 		mov		eax, [esi]
 		test	eax, eax
 		jz		iterHead
-		mov		dword ptr [esi], 0
+		and		dword ptr [esi], 0
 		mov		ecx, [eax+0x18]
 		test	ecx, ecx
 		jz		iterHead
@@ -1941,7 +1941,7 @@ bool Cmd_DonnerReedKuruParty_Execute(COMMAND_ARGS)
 			if (xDismembered->wasEaten != wasEaten)
 			{
 				if (!wasEaten && !xDismembered->dismemberedMask)
-					thisObj->extraDataList.RemoveExtra(xDismembered, true);
+					thisObj->extraDataList.RemoveByType(kXData_ExtraDismemberedLimbs);
 				else xDismembered->wasEaten = wasEaten;
 				thisObj->MarkModified(0x20000);
 			}
@@ -1963,7 +1963,7 @@ bool Cmd_GetEquippedEx_Execute(COMMAND_ARGS)
 	BGSListForm *listForm;
 	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &listForm))
 	{
-		ExtraContainerChanges::EntryDataList *entryList = thisObj->GetContainerChangesList();
+		ContChangesEntryList *entryList = thisObj->GetContainerChangesList();
 		if (entryList)
 		{
 			auto listIter = listForm->list.Head();
@@ -2208,7 +2208,9 @@ bool Cmd_GetInFactionList_Execute(COMMAND_ARGS)
 
 bool Cmd_GetInFactionList_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = GetInFactionList((Actor*)thisObj, (BGSListForm*)arg1);
+	if (arg1)
+		*result = GetInFactionList((Actor*)thisObj, (BGSListForm*)arg1);
+	else *result = 0;
 	return true;
 }
 
@@ -2277,7 +2279,7 @@ __declspec(naked) MuzzleFlash* __fastcall GetMuzzleFlashHook(HighProcess *hiProc
 		cmp		word ptr [eax], 0
 		jnz		done
 		mov		byte ptr [eax+3], 0
-		mov		dword ptr [ecx+0x130], 0
+		and		dword ptr [ecx+0x130], 0
 	done:
 		retn
 	}
@@ -2289,9 +2291,9 @@ __declspec(naked) void __fastcall DoFireWeaponEx(TESObjectREFR *refr, int EDX, T
 	{
 		mov		edx, [ecx+0x68]
 		push	dword ptr [edx+0x118]
-		mov		dword ptr [edx+0x118], 0
+		and		dword ptr [edx+0x118], 0
 		push	dword ptr [edx+0x114]
-		mov		dword ptr [edx+0x114], 0
+		and		dword ptr [edx+0x114], 0
 		push	edx
 		push	ecx
 		mov		ecx, [esp+0x14]

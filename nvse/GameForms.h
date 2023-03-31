@@ -3503,6 +3503,19 @@ public:
 	// 64
 	struct CellRenderData
 	{
+		enum CellSubNodes
+		{
+			kNodeIdx_Actors,
+			kNodeIdx_Markers,
+			kNodeIdx_Land,
+			kNodeIdx_StaticObj,
+			kNodeIdx_DynamicObj,
+			kNodeIdx_OcclusionPlanes,
+			kNodeIdx_Portals,
+			kNodeIdx_Multibounds,
+			kNodeIdx_Collision
+		};
+
 		NiNode											*masterNode;// 00
 		tList<TESObjectREFR>							largeRefs;	// 04	refs with bound size > 3000
 		NiTMapBase<TESObjectREFR*, NiNode*>				animatedRefs;	// 0C
@@ -3578,8 +3591,9 @@ public:
 	UInt32					inheritFlags;			// DC
 
 	bool IsInterior() const {return (cellFlags & kCellFlag_IsInterior) != 0;}
-	NiNode* __fastcall Get3DNode(UInt32 index) const;
-	void ToggleNodes(UInt32 nodeBits, UInt8 doHide);
+	NiNode **Get3DNodes() const {return (NiNode**)renderData->masterNode->m_children.data;}
+	NiNode *Get3DNode(UInt32 index) const {return Get3DNodes()[index];}
+	void __fastcall ToggleNodes(UInt32 nodeBits);
 
 	void RefLockEnter()
 	{
@@ -4719,13 +4733,15 @@ struct RecipeComponent
 	TESForm		*item;
 };
 
+struct NVSEArrayVarInterface::Array;
+
 // 5C
 class TESRecipe : public TESForm
 {
 public:
 	struct ComponentList : tList<RecipeComponent>
 	{
-		void *GetComponents(Script *scriptObj);
+		NVSEArrayVarInterface::Array *GetComponents(Script *scriptObj);
 		void AddComponent(TESForm *form, UInt32 quantity);
 		UInt32 RemoveComponent(TESForm *form);
 		void ReplaceComponent(TESForm *form, TESForm *replace);

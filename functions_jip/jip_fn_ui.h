@@ -144,7 +144,7 @@ bool Cmd_GetUIString_Execute(COMMAND_ARGS)
 	char tilePath[0x100];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &tilePath))
 	{
-		Tile::Value *value = nullptr;
+		TileValue *value = nullptr;
 		if (GetTargetComponent(tilePath, &value) && value)
 			resStr = value->str;
 	}
@@ -188,7 +188,7 @@ SInt32 GetActiveTileID()
 	Tile *activeTile = g_interfaceManager->GetActiveTile();
 	if (activeTile)
 	{
-		Tile::Value *val = activeTile->GetValue(kTileValue_id);
+		TileValue *val = activeTile->GetValue(kTileValue_id);
 		if (val) return val->num;
 	}
 	return -1;
@@ -249,7 +249,7 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 			{
 				static UInt32 valueID = 0;
 				if (!valueID) valueID = TraitNameToID("_MarkerIndex");
-				Tile::Value *markerIdx = mapMenu->mapMarker->GetValue(valueID);
+				TileValue *markerIdx = mapMenu->mapMarker->GetValue(valueID);
 				if (markerIdx) menuRef = mapMenu->mapMarkerList.GetNthItem(markerIdx->num);
 			}
 			break;
@@ -339,7 +339,7 @@ bool Cmd_ClickMenuButton_Execute(COMMAND_ARGS)
 		component = GetTargetComponent(tilePath);
 		if (!component) return true;
 		parentMenu = component->GetParentMenu();
-		Tile::Value *tileVal = component->GetValue(kTileValue_id);
+		TileValue *tileVal = component->GetValue(kTileValue_id);
 		if (tileVal) tileID = tileVal->num;
 	}
 	if (parentMenu)
@@ -381,11 +381,11 @@ bool Cmd_GetSelectedItemRef_Execute(COMMAND_ARGS)
 		case kMenuType_Map:
 		{
 			MapMenu *mapMenu = MapMenu::Get();
-			if (mapMenu->questList.selected)
+			if (mapMenu->questList.selected && mapMenu->questList.IsEnabled())
 				itemRef = mapMenu->questList.GetSelected();
-			else if (mapMenu->noteList.selected)
+			else if (mapMenu->noteList.selected && mapMenu->noteList.IsEnabled())
 				itemRef = mapMenu->noteList.GetSelected();
-			else if (mapMenu->challengeList.selected)
+			else if (mapMenu->challengeList.selected && mapMenu->challengeList.IsEnabled())
 				itemRef = mapMenu->challengeList.GetSelected();
 			break;
 		}
@@ -567,30 +567,30 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		mov		ecx, [esi+0xCC]
 		test	ecx, ecx
 		jz		resetActive
-		push	1
+		push	0
 		push	0
 		push	kTileValue_mouseover
 		CALL_EAX(ADDR_TileSetFloat)
 	resetActive:
-		mov		dword ptr [esi+0xCC], 0
-		mov		dword ptr [esi+0xD0], 0
+		and		dword ptr [esi+0xCC], 0
+		and		dword ptr [esi+0xD0], 0
 	isActive:
 		mov		ds:0x11DAEC4, edi
 		CALL_EAX(0xA1DFB0)
-		push	1
+		push	0
 		push	ecx
 		fstp	dword ptr [esp]
 		push	kTileValue_depth
 		mov		ecx, [edi+4]
 		CALL_EAX(ADDR_TileSetFloat)
 		mov		eax, [esp+0xC]
-		push	1
+		push	0
 		push	eax
 		push	kTileValue_user0
 		mov		ecx, [edi+4]
 		CALL_EAX(ADDR_TileSetFloat)
 		mov		eax, [esp+0x10]
-		push	1
+		push	0
 		push	eax
 		push	kTileValue_user1
 		mov		ecx, [edi+4]
@@ -599,13 +599,13 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		mov		[esi+0x50], 0
 		cmp		[esi], 0
 		jnz		hasTitle
-		push	1
+		push	0
 		push	0
 		push	kTileValue_visible
 		mov		ecx, [edi+0x30]
 		CALL_EAX(ADDR_TileSetFloat)
 	hasTitle:
-		push	1
+		push	0
 		push	esi
 		push	kTileValue_string
 		mov		ecx, [edi+0x30]
@@ -617,12 +617,12 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		mov		ecx, [edi+0x4C]
 		mov		esi, offset s_fontHeightDatas
 		lea		esi, [esi+ecx*8]
-		push	1
+		push	0
 		push	dword ptr [esi]
 		push	kTileValue_user0
 		mov		ecx, [edi+0x28]
 		CALL_EAX(ADDR_TileSetFloat)
-		push	1
+		push	0
 		push	dword ptr [esi+4]
 		push	kTileValue_user1
 		mov		ecx, [edi+0x28]
@@ -636,12 +636,12 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		mov		ecx, [edi+0x3C]
 		mov		word ptr [ecx], '|'
 		inc		word ptr [edi+0x40]
-		push	1
+		push	0
 		push	dword ptr ds:0x11D38BC
 		push	kTileValue_string
 		mov		ecx, [edi+0x2C]
 		CALL_EAX(ADDR_TileSetString)
-		mov		dword ptr [edi+0x44], 0
+		and		dword ptr [edi+0x44], 0
 		mov		dword ptr [edi+0x48], 0x7FFF0001
 		mov		eax, [edi+0x28]
 		mov		eax, [eax+0x28]
@@ -1037,8 +1037,8 @@ __declspec(naked) void QuantityMenuCallback(int count)
 		mov		ecx, s_quantityMenuScript
 		test	ecx, ecx
 		jz		done
-		mov		s_quantityMenuScript, 0
 		xor		eax, eax
+		mov		s_quantityMenuScript, eax
 		cmp		dword ptr [ebp+8], 5
 		setz	al
 		neg		eax
@@ -1676,7 +1676,7 @@ bool Cmd_SetUIFloatGradual_Execute(COMMAND_ARGS)
 	UInt8 numArgs = NUM_ARGS;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &tilePath, &startVal, &endVal, &timer, &changeMode))
 	{
-		Tile::Value *tileVal = nullptr;
+		TileValue *tileVal = nullptr;
 		Tile *component = GetTargetComponent(tilePath, &tileVal);
 		if (component)
 		{
@@ -1843,7 +1843,7 @@ bool Cmd_GetWorldMapPosMults_Execute(COMMAND_ARGS)
 
 __declspec(naked) void __stdcall GenerateRenderedUITexture(NiNode *tileNode, const NiVector4 &scrArea, NiTexture **pTexture)
 {
-	static BSCullingProcess *s_cullingProcess = nullptr;
+	static BSCullingProcess *s_cullingProcessUI = nullptr;
 	__asm
 	{
 		push	ebp
@@ -1869,7 +1869,7 @@ __declspec(naked) void __stdcall GenerateRenderedUITexture(NiNode *tileNode, con
 		test	eax, eax
 		jz		done
 		push	eax
-		mov		eax, s_cullingProcess
+		mov		eax, s_cullingProcessUI
 		test	eax, eax
 		jnz		hasCulling
 		push	0x350
@@ -1888,7 +1888,7 @@ __declspec(naked) void __stdcall GenerateRenderedUITexture(NiNode *tileNode, con
 		CALL_EAX(0x4A0EB0)
 		pop		dword ptr [eax+0xC4]
 		mov		dword ptr [eax+0x90], 1
-		mov		s_cullingProcess, eax
+		mov		s_cullingProcessUI, eax
 	hasCulling:
 		push	eax
 		push	dword ptr [eax+0xC4]
@@ -1897,7 +1897,7 @@ __declspec(naked) void __stdcall GenerateRenderedUITexture(NiNode *tileNode, con
 		push	dword ptr [ecx+0xAC]
 		mov		ecx, [ebp-4]
 		push	dword ptr [ecx+0x5E0]
-		mov		dword ptr [ecx+0x5E0], 0
+		and		dword ptr [ecx+0x5E0], 0
 		cmp		dword ptr [ecx+0x200], 0
 		jnz		scnActive
 		mov		ecx, [ebp-8]
@@ -1947,14 +1947,10 @@ __declspec(naked) void __stdcall GenerateRenderedUITexture(NiNode *tileNode, con
 		movups	xmm0, [ebp-0x28]
 		movups	[ecx+0xDC], xmm0
 		mov		ecx, [ebp-8]
-		mov		eax, [ecx+0x30]
-		test	eax, eax
-		jz		doRelease
-		push	eax
+		push	dword ptr [ecx+0x30]
 		push	dword ptr [ebp+0x10]
 		call	NiReleaseAddRef
 		mov		ecx, [ebp-8]
-	doRelease:
 		call	NiReleaseObject
 	done:
 		leave

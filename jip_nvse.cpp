@@ -1173,7 +1173,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2880*/REG_CMD(SetOnHitEventHandler);
 	//	v54.45
 	/*2881*/REG_CMD(SetSystemColor);
-	/*2882*/REG_CMD(SetWobblesRotation);
+	/*2882*/REG_CMD(/*SetWobblesRotation*/EmptyCommand);
 	/*2883*/REG_CMD(GetArmourPenetrated);
 	/*2884*/REG_CMD(GetImpactMaterialType);
 	/*2885*/REG_CMD(SetImpactMaterialType);
@@ -1250,8 +1250,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*28C0*/REG_CMD(GetConditionDamagePenalty);
 	/*28C1*/REG_CMD(SetConditionDamagePenalty);
 	//	v55.15
-	/*28C2*/REG_CMD(GetExtraFloat);
-	/*28C3*/REG_CMD(SetExtraFloat);
+	/*28C2*/REG_CMD(/*GetExtraFloat*/EmptyCommand);
+	/*28C3*/REG_CMD(/*SetExtraFloat*/EmptyCommand);
 	/*28C4*/REG_CMD(ToggleBipedSlotVisibility);
 	/*28C5*/REG_CMD(SetOnReloadWeaponEventHandler);
 	//	v55.20
@@ -1365,7 +1365,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v56.48
 	/*2917*/REG_CMD(SetRefrModelPath);
 	//	v56.52
-	/*2918*/REG_CMD(PlaceModel);
+	/*2918*/REG_CMD(/*PlaceModel*/EmptyCommand);
 	/*2919*/REG_CMD(AttachLine);
 	//	v56.60
 	/*291A*/REG_CMD(IsSpellTargetList);
@@ -1393,6 +1393,12 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*292B*/REG_CMD_FRM(GetWorldspacePersistentCell);
 	//	v56.81
 	/*292C*/REG_CMD(ScrollMouseWheel);
+	//	v56.85
+	/*292D*/REG_CMD(GetCellNorthRotation);
+	/*292E*/REG_CMD(RefHasExtraData);
+	/*292F*/REG_CMD_AMB(GetRefExtraData);
+	/*2930*/REG_CMD(SetRefExtraData);
+	/*2931*/REG_CMD(TogglePurgeOnUnload);
 
 	//===========================================================
 
@@ -1402,7 +1408,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 		return true;
 	}
 
-	//nvse->InitExpressionEvaluatorUtils(&s_expEvalUtils);
+	nvse->InitExpressionEvaluatorUtils(&s_expEvalUtils);
 
 	PluginHandle pluginHandle = nvse->GetPluginHandle();
 	NVSESerializationInterface *serialization = (NVSESerializationInterface*)nvse->QueryInterface(kInterface_Serialization);
@@ -1518,21 +1524,21 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 		}
 		case NVSEMessagingInterface::kMessage_ExitGame_Console:
 		case NVSEMessagingInterface::kMessage_ExitGame:
-			JIPScriptRunner::RunScripts(kRunOn_ExitGame);
+			JIPScriptRunner::RunScripts(JIPScriptRunner::kRunOn_ExitGame);
 			break;
 		case NVSEMessagingInterface::kMessage_ExitToMainMenu:
 			ProcessDataChangedFlags(kChangedFlag_All);
 			DoPreLoadGameHousekeeping();
 			RestoreLinkedRefs();
 			s_lastLoadedPath[0] = 0;
-			JIPScriptRunner::RunScripts(kRunOn_ExitToMainMenu);
+			JIPScriptRunner::RunScripts(JIPScriptRunner::kRunOn_ExitToMainMenu);
 			break;
 		case NVSEMessagingInterface::kMessage_LoadGame:
 			break;
 		case NVSEMessagingInterface::kMessage_SaveGame:
 			COPY_BYTES(s_lastLoadedPath, nvseMsg->fosPath, nvseMsg->dataLen + 1);
 			s_dataChangedFlags = 0;
-			JIPScriptRunner::RunScripts(kRunOn_SaveGame);
+			JIPScriptRunner::RunScripts(JIPScriptRunner::kRunOn_SaveGame);
 			break;
 		case NVSEMessagingInterface::kMessage_Precompile:
 			break;
@@ -1548,7 +1554,7 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			if (nvseMsg->fosLoaded)
 			{
 				DoLoadGameHousekeeping();
-				JIPScriptRunner::RunScripts(kRunOn_LoadGame);
+				JIPScriptRunner::RunScripts(JIPScriptRunner::kRunOn_LoadGame);
 			}
 			break;
 		case NVSEMessagingInterface::kMessage_PostPostLoad:
@@ -1563,7 +1569,7 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			break;
 		case NVSEMessagingInterface::kMessage_NewGame:
 			RestoreJIPFormFlags();
-			JIPScriptRunner::RunScripts(kRunOn_NewGame);
+			JIPScriptRunner::RunScripts(JIPScriptRunner::kRunOn_NewGame);
 			break;
 		case NVSEMessagingInterface::kMessage_DeleteGameName:
 			break;

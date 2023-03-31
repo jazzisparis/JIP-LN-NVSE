@@ -67,14 +67,14 @@ __declspec(naked) void __fastcall DoQueuedPlayerHook(QueuedPlayer *queuedPlayer)
 		jz		done68C
 		push	1
 		CALL_EAX(0x418E00)
-		mov		dword ptr [ebx+0x68C], 0
+		and		dword ptr [ebx+0x68C], 0
 	done68C:
 		mov		ecx, [ebx+0x690]
 		test	ecx, ecx
 		jz		done690
 		push	1
 		CALL_EAX(0x418D20)
-		mov		dword ptr [ebx+0x690], 0
+		and		dword ptr [ebx+0x690], 0
 	done690:
 		mov		edx, [ebx+0x694]
 		test	edx, edx
@@ -172,7 +172,7 @@ __declspec(naked) const char* __cdecl GetNiFixedString(const char *inStr)
 		pop		ecx
 		mov		eax, [ecx]
 		lock inc dword ptr [eax-8]
-		mov		s_NiFixedStringsCS.selfPtr, 0
+		and		s_NiFixedStringsCS.selfPtr, 0
 		pop		esi
 	done:
 		retn
@@ -194,7 +194,7 @@ __declspec(naked) const char* __cdecl GetNiFixedString(const char *inStr)
 		pop		edi
 		pop		ecx
 		mov		[ecx], eax
-		mov		s_NiFixedStringsCS.selfPtr, 0
+		and		s_NiFixedStringsCS.selfPtr, 0
 		pop		esi
 		retn
 	}
@@ -243,12 +243,100 @@ __declspec(naked) void FreeUnusedNiFixedStrings()
 		jmp		entryIter
 		ALIGN 16
 	done:
-		mov		s_NiFixedStringsCS.selfPtr, 0
+		and		s_NiFixedStringsCS.selfPtr, 0
 		pop		edi
 		pop		esi
 		pop		ebx
 		pop		ebp
 		retn
+	}
+}
+
+void __fastcall ExtraJIPDestroyHook(ExtraJIP *xJIP, int EDX, bool doFree)
+{
+	if (auto findEntry = s_extraDataKeysMap->Find(xJIP->key))
+		if (!findEntry().refID || LookupFormByRefID(findEntry().refID)/* || (findEntry().refID == g_dataHandler->nextCreatedRefID)*/ || !HasChangeData(findEntry().refID))
+		{
+			findEntry.Remove();
+			s_dataChangedFlags |= kChangedFlag_ExtraData;
+		}
+	if (doFree)
+		GameHeapFree(xJIP);
+}
+
+bool __fastcall ExtraJIPDiffersHook(ExtraJIP *xJIP, int EDX, BSExtraData *compareTo)
+{
+	if (xJIP->type != compareTo->type)
+		return true;
+	ExtraJIPEntry *entry1 = s_extraDataKeysMap->GetPtr(xJIP->key);
+	if (!entry1) return true;
+	ExtraJIPEntry *entry2 = s_extraDataKeysMap->GetPtr(((ExtraJIP*)compareTo)->key);
+	return !entry2 || !(*entry1 == *entry2);
+}
+
+__declspec(naked) void ExtraDataLoadGameHook()
+{
+	__asm
+	{
+		mov		edx, [ebp+8]
+		mov		ecx, [ebp-0x5D4]
+		push	0x42C1C3
+		jmp		ExtraDataList::ExtraJIPLoadGame
+	}
+}
+
+__declspec(naked) void ExtraDataSaveGameHook()
+{
+	__asm
+	{
+		mov		edx, [ebp+8]
+		mov		ecx, [ebp-0x20]
+		push	0x427EB6
+		jmp		ExtraJIP::SaveGame
+	}
+}
+
+__declspec(naked) void AddExtraDataCopyHook()
+{
+	__asm
+	{
+		mov		edx, [ebp+8]
+		mov		ecx, [ebp-0x170]
+		call	ExtraDataList::ExtraJIPCopy
+		mov		ecx, [ebp-0xC]
+		mov		fs:0, ecx
+		pop		ecx
+		pop		esi
+		leave
+		retn	4
+	}
+}
+
+__declspec(naked) bool __fastcall GetShouldSaveUnloadedFormHook(BGSSaveLoadGame *slGame, int EDX, TESForm *form)
+{
+	__asm
+	{
+		mov		ecx, [esp+4]
+		test	byte ptr [ecx+9], 0x40
+		jnz		retn0
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xF0], ADDR_ReturnTrue
+		jnz		retn1
+		cmp		dword ptr [eax+0x224], ADDR_ReturnTrue
+		jz		isProjectile
+		cmp		byte ptr [ecx+0xF], 0xFF
+		jnz		retn1
+		test	byte ptr [ecx+0xA], 0x40
+		jnz		retn0
+	retn1:
+		mov		al, 1
+		retn	4
+	retn0:
+		xor		al, al
+		retn	4
+	isProjectile:
+		call	dword ptr [eax+0x324]
+		retn	4
 	}
 }
 
@@ -564,7 +652,7 @@ __declspec(naked) void __fastcall FixVendorCaps(DataHandler *dataHandler, ExtraC
 		mov		ecx, [ecx+0x628]
 		mov		ecx, [ecx]
 		mov		edx, g_capsItem
-		call	ExtraContainerChanges::EntryDataList::FindForItem
+		call	ContChangesEntryList::FindForItem
 		test	eax, eax
 		jz		done
 		mov		eax, [eax]
@@ -575,7 +663,7 @@ __declspec(naked) void __fastcall FixVendorCaps(DataHandler *dataHandler, ExtraC
 		push	dword ptr [ecx+4]
 		mov		ecx, [ecx]
 		mov		edx, g_capsItem
-		call	ExtraContainerChanges::EntryDataList::FindForItem
+		call	ContChangesEntryList::FindForItem
 		test	eax, eax
 		jz		done
 		mov		edx, [eax+4]
@@ -631,7 +719,7 @@ __declspec(naked) void __fastcall FixVendorCaps(DataHandler *dataHandler, ExtraC
 		CALL_EAX(ADDR_AddExtraData)
 		push	esi
 		mov		ecx, [ebp-0xC]
-		call	ExtraContainerChanges::ExtendDataList::Append
+		call	ContChangesExtraList::Append
 		jmp		addHead
 	doPop:
 		pop		edi
@@ -893,7 +981,7 @@ __declspec(naked) void AttachAshPileHook()
 		mov		eax, s_altAshPile
 		test	eax, eax
 		jz		useDefault
-		mov		s_altAshPile, 0
+		and		s_altAshPile, 0
 		retn
 	useDefault:
 		mov		eax, g_gooPileACTI
@@ -932,8 +1020,6 @@ __declspec(naked) void __fastcall ClearExtraHotkeyIfUsed(ExtraDataList *inXDataL
 		push	ebx
 		push	esi
 		push	edi
-		push	1
-		push	eax
 		push	ecx
 		mov		bl, [eax+0xC]
 		mov		ecx, g_thePlayer
@@ -973,14 +1059,15 @@ __declspec(naked) void __fastcall ClearExtraHotkeyIfUsed(ExtraDataList *inXDataL
 		cmp		[eax+0xC], bl
 		jnz		xdlIter
 		pop		ecx
-		CALL_EAX(0x410020)
+		push	kXData_ExtraHotkey
+		CALL_EAX(ADDR_RemoveExtraType)
 		pop		edi
 		pop		esi
 		pop		ebx
 		retn
 		ALIGN 16
 	done:
-		add		esp, 0xC
+		pop		ecx
 		pop		edi
 		pop		esi
 		pop		ebx
@@ -1211,7 +1298,7 @@ __declspec(naked) void ConstructItemEntryNameHook()
 		call	IntToStr
 		mov		word ptr [eax], ')'
 	setUIStr:
-		push	1
+		push	0
 		lea		edx, [ebp-0x88]
 		push	edx
 		push	kTileValue_string
@@ -1388,7 +1475,7 @@ __declspec(naked) void __fastcall EndWeatherTransition(Sky *sky)
 {
 	__asm
 	{
-		mov		dword ptr [ecx+0x14], 0
+		and		dword ptr [ecx+0x14], 0
 		retn
 	}
 }
@@ -1398,7 +1485,7 @@ __declspec(naked) void CloudsFixHook()
 	__asm
 	{
 		mov		ecx, [ebp-0x44]
-		mov		dword ptr [ecx+0x34], 0
+		and		dword ptr [ecx+0x34], 0
 		push	dword ptr [ecx+0x68]
 		push	EndWeatherTransition
 		call	MainLoopAddCallback
@@ -1538,7 +1625,7 @@ __declspec(naked) void PickWeaponModelHook()
 {
 	__asm
 	{
-		mov		dword ptr [ebp-0x1C], 0
+		and		dword ptr [ebp-0x1C], 0
 		mov		al, [ebp-9]
 		test	al, al
 		jnz		doCall
@@ -1680,7 +1767,7 @@ __declspec(naked) void __fastcall RemoveProjectileLightHook(Projectile *projRef)
 		mov		eax, [ecx+0x114]
 		test	eax, eax
 		jz		done
-		mov		dword ptr [ecx+0x114], 0
+		and		dword ptr [ecx+0x114], 0
 		mov		ecx, [eax+0x18]
 		test	ecx, ecx
 		jz		done
@@ -1723,7 +1810,7 @@ __declspec(naked) void __fastcall RemoveExplosionLightHook(Explosion *explosion)
 		mov		eax, [ecx+0xC4]
 		test	eax, eax
 		jz		done
-		mov		dword ptr [ecx+0xC4], 0
+		and		dword ptr [ecx+0xC4], 0
 		mov		ecx, [eax+0x18]
 		test	ecx, ecx
 		jz		done
@@ -1925,13 +2012,12 @@ __declspec(naked) void ClearAshPilesHook()
 		jnz		done
 		push	kXData_ExtraAshPileRef
 		add		ecx, 0x44
-		CALL_EAX(0x410140)	//	BaseExtraList::RemoveByType
+		CALL_EAX(ADDR_RemoveExtraType)
 	noRefr:
-		push	1
-		push	dword ptr [ebp-0x20]
+		push	kXData_ExtraAshPileRef
 		mov		ecx, [ebp-0x2C]
 		add		ecx, 0x44
-		CALL_EAX(0x410020)	//	BaseExtraList::RemoveExtra
+		CALL_EAX(ADDR_RemoveExtraType)
 	doUnload:
 		mov		ecx, [ebp-0x2C]
 		CALL_EAX(0x572270)
@@ -1947,7 +2033,7 @@ __declspec(naked) void SetAcousticSpaceFixHook()
 		mov		byte ptr ds:0x11DCFB1, 0
 		test	eax, eax
 		jz		done
-		mov		dword ptr ds:0x11DCFB8, 0
+		and		dword ptr ds:0x11DCFB8, 0
 		cmp		eax, ds:0x11DCFB4
 		jz		done
 		push	eax
@@ -2140,7 +2226,7 @@ __declspec(naked) void FillGameSoundPropsHook()
 {
 	__asm
 	{
-		mov		dword ptr [ebp-0x10], 0
+		and		dword ptr [ebp-0x10], 0
 		mov		ecx, [ebp+0xC]
 		mov		[ebp-0xC], ecx
 		mov		eax, [ebp+8]
@@ -2403,7 +2489,7 @@ __declspec(naked) void __fastcall GetSuitableLoadScreensHook(LoadingMenu *loadin
 		mov		eax, g_OSGlobals
 		or		bh, byte ptr [eax+2]
 		mov		eax, [esp+0x10]
-		mov		dword ptr [eax+8], 0
+		and		dword ptr [eax+8], 0
 		mov		eax, [ecx+0x1E8]
 		push	eax
 		test	bl, bl
@@ -2669,7 +2755,7 @@ __declspec(naked) bool __fastcall DestroyActorHook(Actor *actor)
 	{
 		cmp		dword ptr [ecx+0x60], 0
 		jz		done
-		mov		dword ptr [ecx+0x60], 0
+		and		dword ptr [ecx+0x60], 0
 		or		s_dataChangedFlags, kChangedFlag_NPCPerks
 		push	ecx
 		push	dword ptr [ecx+0xC]
@@ -3384,9 +3470,9 @@ __declspec(naked) void SetHitLocationHook()
 		mov		eax, [ebp-0x18]
 		cmp		dword ptr [eax+0x10], 0xE
 		jnz		done
-		mov		dword ptr [ebp-0x24], 0
+		and		dword ptr [ebp-0x24], 0
 		movss	xmm0, [eax+0x14]
-		mov		dword ptr [eax+0x14], 0
+		and		dword ptr [eax+0x14], 0
 		cmp		dword ptr [eax+0x54], 0
 		jz		skipMod
 		mulss	xmm0, ds:0x11CE5D4
@@ -3423,7 +3509,7 @@ __declspec(naked) float __cdecl GetVATSTargetDTHook(PlayerCharacter *thePlayer, 
 		CALL_EAX(ADDR_ApplyPerkModifiers)
 		add		esp, 0x10
 		fsub	dword ptr [ebp-4]
-		mov		dword ptr [ebp-4], 0
+		and		dword ptr [ebp-4], 0
 		push	esi
 		push	dword ptr [ebp+8]
 		push	dword ptr [ebp+0xC]
@@ -4487,7 +4573,7 @@ __declspec(naked) void InitFontManagerHook()
 		mov		[esi], eax
 		mov		g_fontManager, eax
 		mov		ebp, eax
-		mov		dword ptr [eax+0x20], 0
+		and		dword ptr [eax+0x20], 0
 		mov		esi, eax
 		mov		edi, 0x11F3418
 		mov		ebx, 1
@@ -4812,6 +4898,19 @@ void InitGamePatches()
 	WriteRelJump(0xA5B690, (UInt32)GetNiFixedString);
 	WriteRelCall(0x878203, (UInt32)FreeUnusedNiFixedStrings);
 
+	//	For ExtraJIP framework
+	SafeWrite8(0x40F9D7, 0);
+	SafeWrite32(0x10158FC, (UInt32)ExtraJIPDestroyHook);
+	SafeWrite32(0x1015900, (UInt32)ExtraJIPDiffersHook);
+	SafeWrite32(0x411978, (UInt32)AddExtraDataCopyHook);
+	SafeWrite32(0x42C328, (UInt32)ExtraDataLoadGameHook);
+	SafeWrite32(0x427F30, (UInt32)ExtraDataSaveGameHook);
+
+	SafeWrite8(0x484E03, 0xD1);
+	WriteRelCall(0x8497CD, (UInt32)GetShouldSaveUnloadedFormHook);
+	SafeWrite16(0x845558, 0x7D63);
+	SafeWrite16(0x846FFB, 0x7D63);
+
 	SAFE_WRITE_BUF(0x47079D, "\x66\xC7\x80\x9A\x02\x00\x00\x00\x00\x90");
 	SAFE_WRITE_BUF(0x4F15A0, "\x0F\xB6\x44\x24\x04\x89\x41\x04\x3C\x3B\x74\x07\x3C\x3C\x74\x03\xC2\x04\x00\x31\xD2\x89\x91\x04\x01\x00\x00\xC2\x04\x00");
 	WriteRelJump(0x482090, (UInt32)SetContainerItemsHealthHook);
@@ -5035,8 +5134,8 @@ typedef int (*_ReloadENB)(UInt32 type, void *data);
 _ReloadENB ReloadENB = nullptr;
 
 extern UInt8 s_miniMapIndex;
-void AddRefToCellHook();
-void RemoveRefFromCellHook();
+TempObject<NiFixedString> s_BlackPlane01;
+void AttachToCellNodeHook();
 
 void DeferredInit()
 {
@@ -5047,7 +5146,6 @@ void DeferredInit()
 	g_screenWidth = *(int*)0x11C73E0 * converter;
 	g_screenHeight = *(int*)0x11C7190 * converter;
 	g_shadowSceneNode = *(ShadowSceneNode**)0x11F91C8;
-	//g_LODRootNode = BSClearZNode::GetSingleton();
 	g_terminalModelDefault = *GameGlobals::TerminalModelPtr();
 	g_attachLightString = **(const char***)0x11C620C;
 	GameTimeGlobals *timeGlobals = GameTimeGlobals::Get();
@@ -5138,9 +5236,8 @@ void DeferredInit()
 	if (modIdx != 0xFF)
 	{
 		s_miniMapIndex = modIdx;
-		WriteRelJump(0x527071, (UInt32)AddRefToCellHook);
-		WriteRelJump(0x5271A0, (UInt32)RemoveRefFromCellHook);
-		((NiGeometry*)g_modelLoader->LoadModel("Clutter\\BlackPlane01.nif", 0, 1, 0, 0)->m_children[0])->shaderProp->flags1 |= BSShaderProperty::kFlag1_LocalMapHideSecret;
+		s_BlackPlane01() = "BlackPlane01";
+		WriteRelJump(0x5496E9, (UInt32)AttachToCellNodeHook);
 	}
 
 	if (s_NVACAddress)

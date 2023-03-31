@@ -17,7 +17,7 @@ UInt32 Tile::TraitNameToIDAdd(const char *traitName)
 	return ::TraitNameToIDAdd(traitName, 0xFFFFFFFF);
 }
 
-__declspec(naked) Tile::Value* __fastcall Tile::GetValue(UInt32 typeID)
+__declspec(naked) TileValue* __fastcall Tile::GetValue(UInt32 typeID)
 {
 	__asm
 	{
@@ -53,7 +53,7 @@ __declspec(naked) Tile::Value* __fastcall Tile::GetValue(UInt32 typeID)
 	}
 }
 
-Tile::Value *Tile::GetValueName(const char *valueName)
+TileValue *Tile::GetValueName(const char *valueName)
 {
 	return GetValue(::TraitNameToID(valueName));
 }
@@ -120,14 +120,12 @@ __declspec(naked) void __fastcall Tile::PokeValue(UInt32 valueID)
 		test	eax, eax
 		jz		done
 		push	eax
-		push	1
-		push	0x3F800000
+		movss	xmm0, PS_V3_One
 		mov		ecx, eax
-		CALL_EAX(ADDR_TileValSetFloat)
+		call	TileValue::SetFloat
+		xorps	xmm0, xmm0
 		pop		ecx
-		push	1
-		push	0
-		CALL_EAX(ADDR_TileValSetFloat)
+		jmp		TileValue::SetFloat
 	done:
 		retn
 	}
@@ -142,14 +140,12 @@ __declspec(naked) void Tile::FakeClick()
 		test	eax, eax
 		jz		done
 		push	eax
-		push	1
-		push	0x3F800000
+		movss	xmm0, PS_V3_One
 		mov		ecx, eax
-		CALL_EAX(ADDR_TileValSetFloat)
+		call	TileValue::SetFloat
+		xorps	xmm0, xmm0
 		pop		ecx
-		push	1
-		push	0
-		CALL_EAX(ADDR_TileValSetFloat)
+		jmp		TileValue::SetFloat
 	done:
 		retn
 	}
@@ -223,7 +219,7 @@ Tile *Tile::GetComponent(const char *componentPath, const char **trait)
 	return parentTile;
 }
 
-Tile::Value *Tile::GetComponentValue(const char *componentPath)
+TileValue *Tile::GetComponentValue(const char *componentPath)
 {
 	const char *trait = NULL;
 	Tile *tile = GetComponent(componentPath, &trait);
@@ -237,7 +233,62 @@ Tile *Tile::GetComponentTile(const char *componentPath)
 	return (tile && !trait) ? tile : NULL;
 }
 
-Tile* __fastcall GetTargetComponent(const char *componentPath, Tile::Value **value)
+__declspec(naked) void __vectorcall Tile::Value::SetFloat(float value)
+{
+	__asm
+	{
+		comiss	xmm0, [ecx+8]
+		jz		done
+		movss	[ecx+8], xmm0
+		push	1
+		CALL_EAX(0xA09410)
+	done:
+		retn
+	}
+}
+
+__declspec(naked) void Tile::Value::SetString(const char *strVal)
+{
+	__asm
+	{
+		push	esi
+		mov		esi, ecx
+		mov		ecx, [ecx+0xC]
+		mov		edx, [esp+8]
+		test	edx, edx
+		jz		noSource
+		test	ecx, ecx
+		jz		doCopy
+		call	StrCompareCS
+		test	al, al
+		jnz		doFree
+		pop		esi
+		retn	4
+	noSource:
+		test	ecx, ecx
+		jz		done
+	doFree:
+		push	dword ptr [esi+0xC]
+		GAME_HEAP_FREE
+		and		dword ptr [esi+0xC], 0
+		mov		edx, [esp+8]
+		test	edx, edx
+		jz		doRefresh
+	doCopy:
+		mov		ecx, edx
+		call	CopyCString
+		mov		[esi+0xC], eax
+	doRefresh:
+		push	1
+		mov		ecx, esi
+		CALL_EAX(0xA09410)
+	done:
+		pop		esi
+		retn	4
+	}
+}
+
+Tile* __fastcall GetTargetComponent(const char *componentPath, TileValue **value)
 {
 	char *slashPos = SlashPos(componentPath);
 	if (!slashPos)

@@ -54,7 +54,11 @@ bool Cmd_SetValueAlt_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &newVal))
 		return true;
 	TESValueForm *valForm = DYNAMIC_CAST(form, TESForm, TESValueForm);
-	if (valForm) valForm->value = newVal;
+	if (valForm)
+	{
+		valForm->value = newVal;
+		form->MarkModified(2);
+	}
 	else if IS_ID(form, AlchemyItem)
 		((AlchemyItem*)form)->value = newVal;
 	return true;
@@ -99,9 +103,6 @@ bool Cmd_SetWeaponRefModFlags_Execute(COMMAND_ARGS)
 	ExtraDataList *xData = invRef->xData;
 	if (xData)
 	{
-		ContChangesEntry *entry = invRef->containerRef->GetContainerChangesEntry(invRef->type);
-		if (!entry || !entry->extendData) return true;
-
 		ExtraWeaponModFlags *xModFlags = GetExtraType(xData, ExtraWeaponModFlags);
 		if (xModFlags)
 		{
@@ -110,9 +111,11 @@ bool Cmd_SetWeaponRefModFlags_Execute(COMMAND_ARGS)
 			if (flags) xModFlags->flags = flags;
 			else
 			{
-				xData->RemoveExtra(xModFlags, true);
+				xData->RemoveByType(kXData_ExtraWeaponModFlags);
 				if (!xData->m_data)
 				{
+					ContChangesEntry *entry = invRef->containerRef->GetContainerChangesEntry(invRef->type);
+					if (!entry || !entry->extendData) return true;
 					entry->extendData->Remove(xData);
 					GameHeapFree(xData);
 				}
@@ -120,7 +123,8 @@ bool Cmd_SetWeaponRefModFlags_Execute(COMMAND_ARGS)
 		}
 		else if (flags)
 		{
-			xData = SplitFromStack(entry, xData);
+			if (invRef->GetCount() > 1)
+				xData = invRef->SplitFromStack();
 			xData->AddExtra(ExtraWeaponModFlags::Create(flags));
 		}
 	}

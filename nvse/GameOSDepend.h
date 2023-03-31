@@ -31,6 +31,25 @@ enum XboxControlCode
 	kXboxCtrl_LS_LEFT,
 };
 
+enum XboxButtonBit
+{
+	kXboxBit_DPAD_UP,
+	kXboxBit_DPAD_DOWN,
+	kXboxBit_DPAD_LEFT,
+	kXboxBit_DPAD_RIGHT,
+	kXboxBit_START,
+	kXboxBit_BACK,
+	kXboxBit_LS_BUTTON,
+	kXboxBit_RS_BUTTON,
+	kXboxBit_LB,
+	kXboxBit_RB,
+	kXboxBit_GUIDE,
+	kXboxBit_BUTTON_A = 0xC,
+	kXboxBit_BUTTON_B,
+	kXboxBit_BUTTON_X,
+	kXboxBit_BUTTON_Y
+};
+
 enum XboxButtonMask
 {
 	kXboxMask_DPAD_UP = 1,

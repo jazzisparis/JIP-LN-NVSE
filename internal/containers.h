@@ -523,6 +523,7 @@ public:
 	__forceinline T_Data& Get() {return value;}
 	__forceinline T_Data *Ptr() {return &value;}
 	__forceinline void Clear() {value.~T_Data();}
+	__forceinline bool operator==(T_Data other) const {return value == other;}
 };
 
 template <typename T_Data> class MapValue_p
@@ -542,6 +543,7 @@ public:
 		value->~T_Data();
 		Pool_Free<T_Data>(value);
 	}
+	__forceinline bool operator==(T_Data *other) const {return *value == *other;}
 };
 
 template <typename T_Key, typename T_Data, const UInt32 _default_alloc = MAP_DEFAULT_ALLOC> class Map
@@ -618,13 +620,11 @@ public:
 
 	void operator=(Map &&rhs)
 	{
-		this->~Map();
 		entries = rhs.entries;
 		numEntries = rhs.numEntries;
 		numAlloc = rhs.numAlloc;
 		rhs.entries = nullptr;
 		rhs.numEntries = 0;
-		rhs.numAlloc = MAP_DEFAULT_ALLOC;
 	}
 
 	bool InsertKey(Key_Arg key, T_Data **outData)
@@ -745,7 +745,7 @@ public:
 			}
 			while (++pEntry != pEnd);
 		}
-		numEntries = 0;
+		numEntries &= 0;
 	}
 
 	class Iterator
@@ -916,13 +916,11 @@ public:
 
 	void operator=(Set &&rhs)
 	{
-		this->~Set();
 		keys = rhs.keys;
 		numKeys = rhs.numKeys;
 		numAlloc = rhs.numAlloc;
 		rhs.keys = nullptr;
 		rhs.numKeys = 0;
-		rhs.numAlloc = MAP_DEFAULT_ALLOC;
 	}
 
 	const T_Key& operator[](UInt32 index) const {return keys[index];}
@@ -985,7 +983,7 @@ public:
 			}
 			while (++pKey != pEnd);
 		}
-		numKeys = 0;
+		numKeys &= 0;
 	}
 
 	void CopyFrom(const Set &source)
@@ -1296,7 +1294,6 @@ public:
 
 	void operator=(UnorderedMap &&rhs)
 	{
-		this->~UnorderedMap();
 		buckets = rhs.buckets;
 		numBuckets = rhs.numBuckets;
 		numEntries = rhs.numEntries;
@@ -1445,7 +1442,7 @@ public:
 			}
 			while (++pBucket != pEnd);
 		}
-		numEntries = 0;
+		numEntries &= 0;
 	}
 
 	void DumpLoads()
@@ -1662,7 +1659,6 @@ public:
 
 	void operator=(UnorderedSet &&rhs)
 	{
-		this->~UnorderedSet();
 		buckets = rhs.buckets;
 		numBuckets = rhs.numBuckets;
 		numEntries = rhs.numEntries;
@@ -1751,7 +1747,7 @@ public:
 			}
 			while (++pBucket != pEnd);
 		}
-		numEntries = 0;
+		numEntries &= 0;
 	}
 
 	void DumpLoads()
@@ -1870,13 +1866,11 @@ public:
 
 	void operator=(Vector &&rhs)
 	{
-		this->~Vector();
 		data = rhs.data;
 		numItems = rhs.numItems;
 		numAlloc = rhs.numAlloc;
 		rhs.data = nullptr;
 		rhs.numItems = 0;
-		rhs.numAlloc = VECTOR_DEFAULT_ALLOC;
 	}
 
 	T_Data& operator[](UInt32 index) const {return data[index];}
@@ -2255,7 +2249,7 @@ public:
 			}
 			while (++pData != pEnd);
 		}
-		numItems = 0;
+		numItems &= 0;
 	}
 
 private:

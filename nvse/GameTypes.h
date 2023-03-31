@@ -552,6 +552,18 @@ public:
 	Node *Head() {return first;}
 	Node *Tail() {return last;}
 	UInt32 Size() const {return count;}
+
+	SInt32 GetIndexOf(Item *pItem)
+	{
+		SInt32 resIdx = 0;
+		for (auto iter = first; iter; iter = iter->next)
+		{
+			if (iter->data == pItem)
+				return resIdx;
+			resIdx++;
+		}
+		return -1;
+	}
 };
 
 // 010

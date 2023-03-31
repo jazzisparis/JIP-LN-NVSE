@@ -2,6 +2,8 @@
 
 TempObject<UnorderedMap<const char*, UInt32, 0x20, false>> s_menuNameToID;
 
+UInt32 g_valueID_enabled = 0;
+
 TileMenu* __fastcall GetMenuTile(const char *componentPath)
 {
 	UInt32 menuID = s_menuNameToID().Get(componentPath);

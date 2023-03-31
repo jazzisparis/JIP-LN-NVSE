@@ -109,8 +109,7 @@ __declspec(naked) void TESObjectREFR::Update3D()
 
 TESObjectREFR *TESObjectREFR::Create(bool bTemp)
 {
-	TESObjectREFR *refr = (TESObjectREFR*)GameHeapAlloc(sizeof(TESObjectREFR));
-	ThisCall(0x55A2F0, refr);
+	TESObjectREFR *refr = ThisCall<TESObjectREFR*>(0x55A2F0, GameHeapAlloc(sizeof(TESObjectREFR)));
 	if (bTemp) ThisCall(0x484490, refr);
 	return refr;
 }
@@ -133,7 +132,7 @@ __declspec(naked) bool TESObjectREFR::GetDisabled() const
 	}
 }
 
-__declspec(naked) ExtraContainerChanges::EntryDataList *TESObjectREFR::GetContainerChangesList() const
+__declspec(naked) ContChangesEntryList *TESObjectREFR::GetContainerChangesList() const
 {
 	__asm
 	{
@@ -183,7 +182,7 @@ __declspec(naked) ContChangesEntry *TESObjectREFR::GetContainerChangesEntry(TESF
 	}
 }
 
-__declspec(naked) SInt32 __fastcall GetFormCount(TESContainer::FormCountList *formCountList, ExtraContainerChanges::EntryDataList *objList, TESForm *form)
+__declspec(naked) SInt32 __fastcall GetFormCount(TESContainer::FormCountList *formCountList, ContChangesEntryList *objList, TESForm *form)
 {
 	__asm
 	{
@@ -384,7 +383,7 @@ __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, fl
 		jz		eqpIter
 		mov		edx, [eax+4]
 		mov		ecx, [ebp-0x14]
-		call	ExtraContainerChanges::EntryDataList::FindForItem
+		call	ContChangesEntryList::FindForItem
 		test	eax, eax
 		jz		eqpIter
 		push	dword ptr [ebp+0x18]
@@ -1132,7 +1131,7 @@ __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const c
 		mov		eax, [ecx+edx*4+0xAC]
 		jmp		doSet
 	noLighting:
-		mov		dword ptr [ecx+0x38], 0
+		and		dword ptr [ecx+0x38], 0
 		lea		eax, [ecx+0x60]
 	doSet:
 		push	eax
@@ -2035,7 +2034,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		mov		esi, [esi+0x138]
 		xorps	xmm0, xmm0
 		movaps	[esi+0x500], xmm0
-		mov		dword ptr [esi+0x524], 0
+		and		dword ptr [esi+0x524], 0
 		jmp		done
 	hasForce:
 		mov		eax, [esp+0x10]

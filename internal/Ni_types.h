@@ -270,18 +270,7 @@ struct NiMatrix33
 	float	cr[3][3];
 
 	NiMatrix33() {}
-	NiMatrix33(float m00, float m10, float m20, float m01, float m11, float m21, float m02, float m12, float m22)
-	{
-		cr[0][0] = m00;
-		cr[0][1] = m10;
-		cr[0][2] = m20;
-		cr[1][0] = m01;
-		cr[1][1] = m11;
-		cr[1][2] = m21;
-		cr[2][0] = m02;
-		cr[2][1] = m12;
-		cr[2][2] = m22;
-	}
+	NiMatrix33(float (&values)[9]) {*this = values;}
 	NiMatrix33(const NiMatrix33 &from) {*this = from;}
 	NiMatrix33(const NiVector3 &pry) {*this = pry;}
 	NiMatrix33(__m128 pry) {*this = pry;}
@@ -289,13 +278,19 @@ struct NiMatrix33
 	NiMatrix33(const AxisAngle &axisAngle) {*this = axisAngle;}
 	NiMatrix33(const hkMatrix3x4 &inMat) {*this = inMat;}
 
-	inline void operator=(const NiMatrix33 &rhs)
+	__forceinline void operator=(float (&&values)[])
+	{
+		(*this)[0] = values[0]; (*this)[1] = values[1]; (*this)[2] = values[2];
+		(*this)[3] = values[3]; (*this)[4] = values[4]; (*this)[5] = values[5];
+		(*this)[6] = values[6]; (*this)[7] = values[7]; (*this)[8] = values[8];
+	}
+	__forceinline void operator=(const NiMatrix33 &rhs)
 	{
 		_mm_storeu_ps(&cr[0][0], _mm_loadu_ps(&rhs.cr[0][0]));
 		_mm_storeu_ps(&cr[1][1], _mm_loadu_ps(&rhs.cr[1][1]));
 		cr[2][2] = rhs.cr[2][2];
 	}
-	inline void operator=(NiMatrix33 &&rhs)
+	__forceinline void operator=(NiMatrix33 &&rhs)
 	{
 		_mm_storeu_ps(&cr[0][0], _mm_loadu_ps(&rhs.cr[0][0]));
 		_mm_storeu_ps(&cr[1][1], _mm_loadu_ps(&rhs.cr[1][1]));
@@ -430,13 +425,7 @@ struct NiTransform
 	float		scale;		// 30
 
 	NiTransform() : scale(0) {}
-	NiTransform(const NiTransform &from) : scale(0)
-	{
-		float *d = rotate, *s = from.rotate;
-		_mm_storeu_ps(d, _mm_loadu_ps(s));
-		_mm_storeu_ps(d + 4, _mm_loadu_ps(s + 4));
-		_mm_storeu_ps(d + 8, _mm_loadu_ps(s + 8));
-	}
+	NiTransform(const NiTransform &from) {*this = from;}
 	NiTransform(const NiMatrix33 &rot, const NiVector3 &trnsl)
 	{
 		rotate = rot;
@@ -450,11 +439,25 @@ struct NiTransform
 		scale = 0;
 	}
 
-	inline void operator=(const NiTransform &rhs) {memcpy(this, &rhs, sizeof(NiTransform));}
+	inline void operator=(const NiTransform &rhs)
+	{
+		float *d = rotate, *s = rhs.rotate;
+		_mm_storeu_ps(d, _mm_loadu_ps(s));
+		_mm_storeu_ps(d + 4, _mm_loadu_ps(s + 4));
+		_mm_storeu_ps(d + 8, _mm_loadu_ps(s + 8));
+	}
 
 	NiTransform& __fastcall RotateOrigin(const NiTransform &origin);
 	NiTransform& __fastcall GetInverse(NiTransform &out);
 	void Dump() const;
+};
+
+// 20
+struct NiQuatTransform
+{
+	NiQuaternion	rotate;		// 00
+	NiVector3		translate;	// 10
+	float			scale;		// 1C
 };
 
 // 10
@@ -502,12 +505,7 @@ struct NiColor
 		_mm_storeu_si64(this, _mm_castps_si128(m));
 		_mm_store_ss(&b, _mm_unpackhi_ps(m, m));
 	}
-	inline void operator=(const NiVector3 &rhs)
-	{
-		__m128 m = _mm_loadu_ps((const float*)&rhs);
-		_mm_storeu_si64(this, _mm_castps_si128(m));
-		_mm_store_ss(&b, _mm_unpackhi_ps(m, m));
-	}
+	inline void operator=(const NiVector3 &rhs) {*this = *(NiColor*)&rhs;}
 
 	inline operator float*() {return &r;}
 	inline operator NiVector3() const {return *(NiVector3*)this;}
@@ -530,8 +528,7 @@ struct NiColorAlpha
 
 	inline NiColorAlpha& operator*=(float value)
 	{
-		__m128 m = _mm_load_ss(&value);
-		_mm_storeu_ps(&r, _mm_mul_ps(_mm_loadu_ps(&r), _mm_shuffle_ps(m, m, 0)));
+		_mm_storeu_ps(&r, _mm_mul_ps(_mm_loadu_ps(&r), _mm_set_ps1(value)));
 		return *this;
 	}
 
@@ -545,6 +542,33 @@ struct NiPlane
 {
 	NiVector3	nrm;
 	float		offset;
+};
+
+// 64
+struct NiFrustumPlanes
+{
+	enum PlaneIndex
+	{
+		kPlaneIdx_Near,
+		kPlaneIdx_Far,
+		kPlaneIdx_Left,
+		kPlaneIdx_Right,
+		kPlaneIdx_Top,
+		kPlaneIdx_Bottom
+	};
+	
+	enum PlaneBit
+	{
+		kPlaneBit_Near =	1,
+		kPlaneBit_Far =		2,
+		kPlaneBit_Left =	4,
+		kPlaneBit_Right =	8,
+		kPlaneBit_Top =		0x10,
+		kPlaneBit_Bottom =	0x20
+	};
+
+	NiPlane		cullingPlanes[6];
+	UInt32		activePlanes;	//	Bitmask
 };
 
 // 06
@@ -690,6 +714,7 @@ public:
 	}
 
 	T_Data *Lookup(UInt32 key) const;
+	void Insert(UInt32 key, T_Data value);
 
 	void DumpLoads()
 	{
@@ -772,6 +797,31 @@ __declspec(naked) T_Data *NiTPointerMap<T_Data>::Lookup(UInt32 key) const
 		mov		eax, [eax+8]
 	done:
 		retn	4
+	}
+}
+
+template <typename T_Data>
+__declspec(naked) void NiTPointerMap<T_Data>::Insert(UInt32 key, T_Data value)
+{
+	__asm
+	{
+		mov		eax, [esp+4]
+		xor		edx, edx
+		div		dword ptr [ecx+4]
+		mov		eax, [ecx+8]
+		lea		eax, [eax+edx*4]
+		push	eax
+		inc		dword ptr [ecx+0xC]
+		CALL_EAX(0x43A010)
+		pop		ecx
+		mov		edx, [ecx]
+		mov		[eax], edx
+		mov		edx, [esp+4]
+		mov		[eax+4], edx
+		mov		edx, [esp+8]
+		mov		[eax+8], edx
+		mov		[ecx], eax
+		retn	8
 	}
 }
 
@@ -858,7 +908,7 @@ __declspec(naked) void NiTMapBase<T_Key, T_Data>::FreeBuckets()
 		push	edi
 		mov		esi, [ebx+8]
 		mov		edi, [ebx+4]
-		mov		dword ptr [ebx+0xC], 0
+		and		dword ptr [ebx+0xC], 0
 		mov		ebx, 0x11C5F58
 		xorps	xmm0, xmm0
 		ALIGN 16
@@ -886,7 +936,7 @@ __declspec(naked) void NiTMapBase<T_Key, T_Data>::FreeBuckets()
 		mov		ecx, 0x11C5F80
 		dec		dword ptr [ecx+4]
 		jnz		inUse
-		mov		dword ptr [ecx], 0
+		and		dword ptr [ecx], 0
 	inUse:
 		pop		edi
 		pop		esi

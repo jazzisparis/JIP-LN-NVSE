@@ -214,14 +214,17 @@ public:
 		char		*str;		// 0C
 		Action		*action;	// 10
 
-		__forceinline void SetFloat(float fltVal, bool bPropagate = true)
+		/*__forceinline void SetFloat(float fltVal, bool bPropagate = 0)
 		{
 			ThisCall(ADDR_TileValSetFloat, this, fltVal, bPropagate);
 		}
-		__forceinline void SetString(const char *strVal, bool bPropagate = true)
+		__forceinline void SetString(const char *strVal, bool bPropagate = 0)
 		{
 			ThisCall(0xA0A300, this, strVal, bPropagate);
-		}
+		}*/
+
+		void __vectorcall SetFloat(float value);
+		void SetString(const char *strVal);
 	};
 
 	enum TileFlags
@@ -252,6 +255,10 @@ public:
 	static UInt32 TraitNameToID(const char *traitName);
 	static UInt32 TraitNameToIDAdd(const char *traitName);
 	Value* __fastcall GetValue(UInt32 typeID);
+	__forceinline Value *AddValue(UInt32 typeID)
+	{
+		return ThisCall<Value*>(0xA01000, this, typeID);
+	}
 	Value *GetValueName(const char *valueName);
 	__forceinline float GetValueFloat(UInt32 id)
 	{
@@ -267,11 +274,11 @@ public:
 		return ThisCall<Tile*>(0xA01B00, this, xmlPath);
 	}
 	void GetComponentFullName(char *resStr);
-	__forceinline void SetFloat(UInt32 id, float fltVal, bool bPropagate = true)
+	__forceinline void SetFloat(UInt32 id, float fltVal, bool bPropagate = 0)
 	{
 		ThisCall(ADDR_TileSetFloat, this, id, fltVal, bPropagate);
 	}
-	__forceinline void SetString(UInt32 id, const char *strVal, bool bPropagate = true)
+	__forceinline void SetString(UInt32 id, const char *strVal, bool bPropagate = 0)
 	{
 		ThisCall(ADDR_TileSetString, this, id, strVal, bPropagate);
 	}
@@ -291,8 +298,9 @@ public:
 
 	void Dump();
 };
+typedef Tile::Value TileValue;
 
-Tile* __fastcall GetTargetComponent(const char *componentPath, Tile::Value **value = NULL);
+Tile* __fastcall GetTargetComponent(const char *componentPath, TileValue **value = NULL);
 
 // 1C
 struct GradualSetFloat

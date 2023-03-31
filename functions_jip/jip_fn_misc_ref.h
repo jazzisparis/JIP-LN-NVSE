@@ -101,6 +101,10 @@ DEFINE_COMMAND_PLUGIN(ToggleNoZPosReset, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(RotateAroundPoint, 1, 7, kParams_SixFloats_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ToggleNodeCollision, 1, 2, kParams_OneString_OneInt);
 DEFINE_COMMAND_PLUGIN(GetEditorPosition, 1, 6, kParams_ThreeScriptVars_ThreeOptionalScriptVars);
+DEFINE_COMMAND_PLUGIN(RefHasExtraData, 1, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN_EXP(GetRefExtraData, 1, 2, kParams_NVSE_OneNum_OneOptionalNum);
+DEFINE_COMMAND_PLUGIN_EXP(SetRefExtraData, 1, 2, kParams_NVSE_OneOptionalNum_OneOptionalBasicType);
+DEFINE_COMMAND_PLUGIN(TogglePurgeOnUnload, 1, 1, kParams_OneOptionalInt);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -1601,18 +1605,18 @@ bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
 	float fltVal;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &fltVal))
 	{
-		ExtraDataList *xData = nullptr;
-		InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
-		if (invRef)
+		TESObjectREFR *refr = thisObj;
+		ExtraDataList *xData;
+		if (InventoryRef *invRef = InventoryRefGetForID(thisObj->refID))
 		{
+			refr = invRef->containerRef;
 			xData = invRef->xData;
 			if (!xData)
 			{
 				if (xData = invRef->CreateExtraData())
 				{
-					SInt32 count = invRef->GetCount();
-					if (count > 1)
-						xData->AddExtra(ExtraCount::Create(count));
+					if (invRef->GetCount() > 1)
+						xData->AddExtra(ExtraCount::Create(invRef->GetCount()));
 					xData->AddExtra(ExtraTimeLeft::Create(fltVal));
 				}
 				return true;
@@ -1623,9 +1627,7 @@ bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
 		if (xTimeLeft)
 			xTimeLeft->timeLeft = fltVal;
 		else xData->AddExtra(ExtraTimeLeft::Create(fltVal));
-		if (!invRef)
-			thisObj->MarkModified(0x400);
-		else invRef->containerRef->MarkModified(0x400);
+		refr->MarkModified(0x400);
 	}
 	return true;
 }
@@ -2522,13 +2524,9 @@ bool Cmd_AttachLine_Execute(COMMAND_ARGS)
 		if (targetNode)
 		{
 			color *= 1 / 255.0F;
-			NiLines *lines = NiLines::Create(length, color, lineName);
-			targetNode->AddObject(lines, 1);
+			targetNode->AddObject(NiLines::Create(length, color, lineName), 1);
 			if ((thisObj->refID == 0x14) && (targetNode = s_pc1stPersonNode->GetNode(nodeName)))
-			{
-				lines = NiLines::Create(length, color, lineName);
-				targetNode->AddObject(lines, 1);
-			}
+				targetNode->AddObject(NiLines::Create(length, color, lineName), 1);
 			*result = 1;
 		}
 	}
@@ -2617,6 +2615,179 @@ bool Cmd_GetEditorPosition_Execute(COMMAND_ARGS)
 				outRot.Set(pRotVec->PS(), GET_PS(9));
 			REFR_RES = worldOrCell->refID;
 		}		
+	}
+	return true;
+}
+
+ExtraJIPData* __fastcall GetExtraJIPData(TESObjectREFR *thisObj, UInt32 modIdx)
+{
+	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
+	if (ExtraDataList *xData = invRef ? invRef->xData : &thisObj->extraDataList)
+		if (ExtraJIP *xJIP = GetExtraType(xData, ExtraJIP))
+			if (ExtraJIPEntry *entry = s_extraDataKeysMap->GetPtr(xJIP->key))
+				return entry->dataMap.GetPtr(modIdx);
+	return nullptr;
+}
+
+bool Cmd_RefHasExtraData_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	UInt32 modIdx = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &modIdx))
+	{
+		if (!modIdx)
+			modIdx = scriptObj->quest ? scriptObj->quest->modIndex : scriptObj->modIndex;
+		if ((modIdx < 0xFF) && GetExtraJIPData(thisObj, modIdx))
+			*result = 1;
+	}
+	return true;
+}
+
+bool Cmd_GetRefExtraData_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	double fVarIdx, fModIdx = 0;
+	if (PluginExpressionEvaluator eval(PASS_COMMAND_ARGS); eval.ExtractArgsV(nullptr, &fVarIdx, &fModIdx))
+	{
+		UInt32 varIdx = (int)fVarIdx;
+		if (varIdx > 19) return true;
+		UInt32 modIdx = (int)fModIdx;
+		if (!modIdx)
+			modIdx = scriptObj->quest ? scriptObj->quest->modIndex : scriptObj->modIndex;
+		if (modIdx >= 0xFF) return true;
+		if (ExtraJIPData *pData = GetExtraJIPData(thisObj, modIdx))
+		{
+			if (varIdx >= 18)
+			{
+				AssignString(PASS_COMMAND_ARGS, pData->strings[varIdx - 18].Data());
+				eval.SetExpectedReturnType(kRetnType_String);
+			}
+			else if (pData->IsRef(varIdx))
+			{
+				REFR_RES = pData->values[varIdx].refID;
+				eval.SetExpectedReturnType(kRetnType_Form);
+			}
+			else *result = pData->values[varIdx].flt;
+		}
+	}
+	return true;
+}
+
+bool Cmd_SetRefExtraData_Execute(COMMAND_ARGS)
+{
+	UInt32 modIdx = scriptObj->quest ? scriptObj->quest->modIndex : scriptObj->modIndex;
+	if (modIdx == 0xFF) return true;
+	if (PluginExpressionEvaluator eval(PASS_COMMAND_ARGS); eval.ExtractArgs())
+	{
+		UInt32 varIdx;
+		PluginScriptToken *tIndex = eval.GetNthArg(0), *tValue;
+		if (tIndex)
+		{
+			varIdx = tIndex->GetInt();
+			if ((varIdx > 19) || !(tValue = eval.GetNthArg(1)))
+				return true;
+		}
+		
+		TESObjectREFR *refr = thisObj;
+		ExtraJIP *xJIP;
+		if (InventoryRef *invRef = InventoryRefGetForID(thisObj->refID))
+		{
+			refr = invRef->containerRef;
+			ExtraDataList *xData = invRef->xData;
+			if (tIndex)
+			{
+				if (!xData)
+				{
+					if (!(xData = invRef->CreateExtraData()))
+						return true;
+					if (invRef->GetCount() > 1)
+						xData->AddExtra(ExtraCount::Create(invRef->GetCount()));
+					xJIP = xData->AddExtraJIP();
+				}
+				else if (!(xJIP = GetExtraType(xData, ExtraJIP)))
+					xJIP = xData->AddExtraJIP();
+			}
+			else
+			{
+				if (xData && (xJIP = GetExtraType(xData, ExtraJIP)))
+				{
+					ExtraJIPEntry *dataEntry = s_extraDataKeysMap->GetPtr(xJIP->key);
+					if (dataEntry && dataEntry->dataMap.Erase(modIdx))
+					{
+						s_dataChangedFlags |= kChangedFlag_ExtraData;
+						if (dataEntry->dataMap.Empty())
+						{
+							dataEntry->refID = 0;
+							xData->RemoveByType(kXData_ExtraJIP);
+							if (!xData->m_data)
+							{
+								if (ContChangesEntry* entry = refr->GetContainerChangesEntry(invRef->type))
+								{
+									entry->extendData->Remove(xData);
+									GameHeapFree(xData);
+								}
+							}
+						}
+					}
+				}
+				return true;
+			}
+		}
+		else
+		{
+			xJIP = GetExtraType(&thisObj->extraDataList, ExtraJIP);
+			if (tIndex)
+			{
+				if (!xJIP)
+					xJIP = thisObj->extraDataList.AddExtraJIP();
+			}
+			else
+			{
+				if (xJIP)
+				{
+					ExtraJIPEntry *dataEntry = s_extraDataKeysMap->GetPtr(xJIP->key);
+					if (dataEntry && dataEntry->dataMap.Erase(modIdx))
+					{
+						s_dataChangedFlags |= kChangedFlag_ExtraData;
+						if (dataEntry->dataMap.Empty())
+						{
+							dataEntry->refID = 0;
+							thisObj->extraDataList.RemoveByType(kXData_ExtraJIP);
+						}
+					}
+				}
+				return true;
+			}
+		}
+		if (!xJIP->key)
+		{
+			xJIP->SetKey();
+			refr->MarkModified(0x400);
+		}
+		ExtraJIPData *pData = &s_extraDataKeysMap()[xJIP->key].dataMap[modIdx];
+		if (varIdx < 18)
+		{
+			if (tValue->CanConvertTo(kTokenType_Form))
+				pData->Set(varIdx, tValue->GetFormID());
+			else
+				pData->Set(varIdx, tValue->GetFloat());
+		}
+		else if (tValue->CanConvertTo(kTokenType_String))
+			pData->Set(varIdx - 18, tValue->GetString());
+		s_dataChangedFlags |= kChangedFlag_ExtraData;
+	}
+	return true;
+}
+
+bool Cmd_TogglePurgeOnUnload_Execute(COMMAND_ARGS)
+{
+	BOOL currState = _bittest((SInt32*)&thisObj->flags, 0x16);
+	*result = currState;
+	UInt32 toggle;
+	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle) && (currState != toggle) && thisObj->IsCreated() && !thisObj->IsPersistent())
+	{
+		thisObj->flags ^= 0x400000;
+		thisObj->MarkModified(1);
 	}
 	return true;
 }

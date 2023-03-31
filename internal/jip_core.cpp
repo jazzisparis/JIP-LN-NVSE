@@ -58,7 +58,6 @@ HUDMainMenu *g_HUDMainMenu;
 ConsoleManager *g_consoleManager;
 NiNode *s_pc1stPersonNode = nullptr, *g_cursorNode;
 ShadowSceneNode *g_shadowSceneNode;
-BSClearZNode *g_LODRootNode;
 TESObjectREFR *s_tempPosMarker;
 float g_screenWidth, g_screenHeight;
 const char *g_terminalModelDefault;
@@ -201,7 +200,7 @@ __declspec(naked) TESForm* __stdcall LookupFormByRefID(UInt32 refID)
 	}
 }
 
-__declspec(naked) bool __stdcall HasChangeData(UInt32 refID)
+__declspec(naked) UInt32 __stdcall HasChangeData(UInt32 refID)
 {
 	__asm
 	{
@@ -218,13 +217,10 @@ __declspec(naked) bool __stdcall HasChangeData(UInt32 refID)
 		ALIGN 16
 	iterHead:
 		cmp		[eax+4], edx
-		jz		found
+		jz		done
 		mov		eax, [eax]
 		test	eax, eax
 		jnz		iterHead
-		retn	4
-	found:
-		mov		al, 1
 	done:
 		retn	4
 	}
@@ -256,6 +252,8 @@ __declspec(naked) UInt32 __fastcall GetResolvedRefID(UInt32 refID)
 	__asm
 	{
 		push	ecx
+		test	ecx, ecx
+		jz		retn0
 		movzx	edx, byte ptr [esp+3]
 		cmp		dl, 0xFF
 		jz		retnArg
@@ -310,7 +308,7 @@ bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *inv
 {
 	TESContainer *container = refr->baseForm->GetContainer();
 	if (!container) return false;
-	ExtraContainerChanges::EntryDataList *entryList = refr->GetContainerChangesList();
+	ContChangesEntryList *entryList = refr->GetContainerChangesList();
 	if (!entryList) return false;
 
 	TESContainer::FormCount *formCount;
@@ -645,7 +643,7 @@ hkpWorld *GethkpWorld()
 	return hkWorld ? (hkpWorld*)hkWorld->refObject : nullptr;
 }
 
-void *TESRecipe::ComponentList::GetComponents(Script *scriptObj)
+NVSEArrayVar *TESRecipe::ComponentList::GetComponents(Script *scriptObj)
 {
 	TempElements *tmpElements = GetTempElements();
 	Node *iter = Head();
@@ -656,8 +654,7 @@ void *TESRecipe::ComponentList::GetComponents(Script *scriptObj)
 			tmpElements->Append(component->item);
 	}
 	while (iter = iter->next);
-	NVSEArrayVar *outArray = CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
-	return outArray;
+	return CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 }
 
 bool LeveledListHasFormDeep(TESLeveledList *pLvlList, TESForm *form, TempFormList *tmpFormLst)
@@ -789,7 +786,7 @@ bool TESObjectREFR::SetLinkedRef(TESObjectREFR *linkObj = nullptr, UInt8 modIdx)
 					TESForm *form = LookupFormByRefID(*findDefID);
 					if (form && IS_REFERENCE(form)) xLinkedRef->linkedRef = (TESObjectREFR*)form;
 				}
-				else extraDataList.RemoveExtra(xLinkedRef, true);
+				else extraDataList.RemoveByType(kXData_ExtraLinkedRef);
 			}
 			findDefID.Remove();
 		}
@@ -876,10 +873,46 @@ ExtraDataList *InventoryRef::CreateExtraData()
 		pEntry->extendData->Prepend(xData);
 	else
 	{
-		pEntry->extendData = (ExtraContainerChanges::ExtendDataList*)GameHeapAlloc(8);
+		pEntry->extendData = (ContChangesExtraList*)GameHeapAlloc(8);
 		pEntry->extendData->Init(xData);
 	}
 	containerRef->MarkModified(0x20);
+	return xData;
+}
+
+ExtraDataList* __fastcall InventoryRef::SplitFromStack(SInt32 maxStack)
+{
+	if (ExtraCount *xCount = GetExtraType(xData, ExtraCount))
+	{
+		SInt32 delta = xCount->count - maxStack;
+		if (delta <= 0)
+			return xData;
+		ContChangesEntry *pEntry = containerRef->GetContainerChangesEntry(type);
+		if (!pEntry) return xData;
+		ExtraDataList *xDataOut = xData->CreateCopy();
+		pEntry->extendData->Prepend(xDataOut);
+		xDataOut->RemoveByType(kXData_ExtraWorn);
+		xDataOut->RemoveByType(kXData_ExtraHotkey);
+		if (delta < 2)
+		{
+			xData->RemoveByType(kXData_ExtraCount);
+			if (!xData->m_data)
+			{
+				pEntry->extendData->Remove(xData);
+				GameHeapFree(xData);
+			}
+		}
+		else xCount->count = delta;
+		xData = xDataOut;
+		if (maxStack > 1)
+		{
+			xCount = GetExtraType(xData, ExtraCount);
+			xCount->count = maxStack;
+		}
+		else xData->RemoveByType(kXData_ExtraCount);
+	}
+	else if (maxStack > 1)
+		xData->AddExtra(ExtraCount::Create(maxStack));
 	return xData;
 }
 
@@ -888,30 +921,9 @@ TESObjectREFR* __fastcall CreateRefForStack(TESObjectREFR *container, ContChange
 	return (container && menuEntry) ? InventoryRefCreate(container, menuEntry->type, menuEntry->countDelta, menuEntry->extendData ? menuEntry->extendData->GetFirstItem() : nullptr) : nullptr;
 }
 
-ExtraDataList* __fastcall SplitFromStack(ContChangesEntry *entry, ExtraDataList *xDataIn)
-{
-	ExtraCount *xCount = GetExtraType(xDataIn, ExtraCount);
-	if (!xCount) return xDataIn;
-	ExtraDataList *xDataOut = xDataIn->CreateCopy();
-	xDataOut->RemoveByType(kXData_ExtraWorn);
-	xDataOut->RemoveByType(kXData_ExtraCount);
-	xDataOut->RemoveByType(kXData_ExtraHotkey);
-	if (--xCount->count < 2)
-	{
-		xDataIn->RemoveExtra(xCount, true);
-		if (!xDataIn->m_data)
-		{
-			entry->extendData->Remove(xDataIn);
-			GameHeapFree(xDataIn);
-		}
-	}
-	entry->extendData->Prepend(xDataOut);
-	return xDataOut;
-}
-
 TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 {
-	ExtraContainerChanges::EntryDataList *entryList = actor->GetContainerChangesList();
+	ContChangesEntryList *entryList = actor->GetContainerChangesList();
 	if (!entryList) return nullptr;
 	UInt32 partMask = 1 << slotIndex;
 	TESForm *item;
@@ -969,7 +981,7 @@ TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 
 ContChangesEntry* __fastcall GetHotkeyItemEntry(UInt8 index, ExtraDataList **outXData)
 {
-	ExtraContainerChanges::EntryDataList *entryList = g_thePlayer->GetContainerChangesList();
+	ContChangesEntryList *entryList = g_thePlayer->GetContainerChangesList();
 	if (!entryList) return nullptr;
 	auto entryIter = entryList->Head();
 	ContChangesEntry *entry;
@@ -1134,7 +1146,7 @@ __declspec(naked) float __vectorcall GetLightAmountAtPoint(const NiVector3 &pos)
 		mov		ecx, 0x11F9EA0
 		dec		dword ptr [ecx+4]
 		jnz		done
-		mov		dword ptr [ecx], 0
+		and		dword ptr [ecx], 0
 	done:
 		movq	xmm0, xmm5
 		pop		esi
@@ -1192,68 +1204,68 @@ namespace JIPScriptRunner
 			switch (*(UInt16*)fileName |= 0x2020)
 			{
 				case kRunOn_RestartGame:
-					PrintLog("Run Script : %s >> %s", fileName, RunScriptSource(buffer) ? "SUCCESS" : "FAILED");
+				{
+					if (Script *pScript = Script::Create(buffer))
+					{
+						SuppressConsoleOutput();
+						CaptureLambdaVars(pScript);
+						pScript->Execute(nullptr, nullptr, nullptr, true);
+						UncaptureLambdaVars(pScript);
+						pScript->Destroy(1);
+					}
+					else Console_Print("Script Runner : \"%s\" > FAILED TO COMPILE", fileName);
 					break;
+				}
 				case kRunOn_LoadGame:
 				case kRunOn_ExitToMainMenu:
 				case kRunOn_NewGame:
 				case kRunOn_SaveGame:
 				case kRunOn_ExitGame:
-					s_cachedScripts()[fileName] = Script::Create(buffer);
+				{
+					if (Script *pScript = Script::Create(buffer))
+					{
+						CaptureLambdaVars(pScript);
+						s_cachedScripts()[fileName] = pScript;
+					}
+					else Console_Print("Script Runner : \"%s\" > FAILED TO COMPILE", fileName);
 					break;
+				}
 				default:
 					break;
 			}
 		}
 	}
 
-	void RunScripts(UInt16 type)
+	void RunScripts(ScriptRunOn runOn)
 	{
 		for (auto iter = s_cachedScripts->Begin(); iter; ++iter)
-		{
-			if (*(UInt16*)iter.Key() != type) continue;
-			if (iter->info.dataLength)
+			if (*(UInt16*)iter.Key() == runOn)
 			{
 				SuppressConsoleOutput();
 				iter->Execute(nullptr, nullptr, nullptr, true);
 			}
-			PrintLog("Run Script : %s >> %s", iter.Key(), iter->info.dataLength ? "SUCCESS" : "FAILED");
-		}
 	}
 
-	bool __fastcall RunScript(Script *script, int EDX, TESObjectREFR *callingRef)
+	void __fastcall RunScript(Script *script, int EDX, TESObjectREFR *callingRef)
 	{
-		bool result = script->info.dataLength != 0;
-		if (result)
-		{
-			ExtraScript *xScript = GetExtraType(&callingRef->extraDataList, ExtraScript);
-			ScriptLocals *eventList = xScript ? xScript->eventList : nullptr;
-			if (eventList) xScript->eventList = nullptr;
-			SuppressConsoleOutput();
-			script->Execute(callingRef, nullptr, nullptr, true);
-			if (eventList) xScript->eventList = eventList;
-		}
-		if (EDX != 1)
-		{
-			script->Destructor();
-			GameHeapFree(script);
-		}
-		return result;
+		ExtraScript *xScript = GetExtraType(&callingRef->extraDataList, ExtraScript);
+		ScriptLocals *eventList = xScript ? xScript->eventList : nullptr;
+		if (eventList) xScript->eventList = nullptr;
+		SuppressConsoleOutput();
+		script->Execute(callingRef, nullptr, nullptr, true);
+		if (eventList) xScript->eventList = eventList;
 	}
 
 	bool __fastcall RunScriptSource(char *scrSource)
 	{
-		UInt8 tempScrBuf[sizeof(Script)];
-		Script *tempScript = (Script*)tempScrBuf;
-		tempScript->Init(scrSource);
-		bool result = tempScript->info.dataLength != 0;
-		if (result)
+		StackObject<Script> tempScript;
+		if (tempScript->Init(scrSource))
 		{
 			SuppressConsoleOutput();
 			tempScript->Execute(nullptr, nullptr, nullptr, true);
+			return true;
 		}
-		tempScript->Destructor();
-		return result;
+		return false;
 	}
 };
 
@@ -1579,7 +1591,7 @@ TileText *s_memUsageTile = nullptr;
 
 void UpdateMemUsageDisplay()
 {
-	Tile::Value *tileStr = s_memUsageTile->GetValue(kTileValue_string);
+	TileValue *tileStr = s_memUsageTile->GetValue(kTileValue_string);
 	if (tileStr)
 	{
 		PROCESS_MEMORY_COUNTERS_EX pmc;

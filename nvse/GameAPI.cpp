@@ -34,14 +34,10 @@ ConsoleManager * ConsoleManager::GetSingleton(void)
 
 void Console_Print(const char *fmt, ...)
 {
-	ConsoleManager *mgr = ConsoleManager::GetSingleton();
-	if (mgr)
-	{
-		va_list	args;
-		va_start(args, fmt);
-		ThisCall(0x71D0A0, mgr, fmt, args);
-		va_end(args);
-	}
+	va_list	args;
+	va_start(args, fmt);
+	ThisCall(0x71D0A0, g_consoleManager, fmt, args);
+	va_end(args);
 }
 
 SaveGameManager* SaveGameManager::GetSingleton()
@@ -68,21 +64,25 @@ UInt32 ScriptLocals::ResetAllVariables()
 	return numVars;
 }
 
-ScriptVar *ScriptLocals::GetVariable(UInt32 id)
+__declspec(naked) ScriptVar* __fastcall ScriptLocals::GetVariable(UInt32 id) const
 {
-	if (m_vars)
+	__asm
 	{
-		ListNode<ScriptVar> *varIter = m_vars->Head();
-		ScriptVar *scriptVar;
-		do
-		{
-			scriptVar = varIter->data;
-			if (scriptVar && (scriptVar->id == id))
-				return scriptVar;
-		}
-		while (varIter = varIter->next);
+		mov		eax, [ecx+0xC]
+		ALIGN 16
+	iterHead:
+		test	eax, eax
+		jz		notFound
+		mov		ecx, [eax]
+		mov		eax, [eax+4]
+		test	ecx, ecx
+		jz		iterHead
+		cmp		[ecx], edx
+		jnz		iterHead
+		mov		eax, ecx
+	notFound:
+		retn
 	}
-	return NULL;
 }
 
 ScriptLocals *ScriptLocals::CreateCopy()
@@ -140,3 +140,63 @@ ScriptLocals *ScriptLocals::CreateCopy()
 }
 
 BGSSaveLoadGame *g_BGSSaveLoadGame;
+
+UInt32 *NiTPointerMap<UInt32>::Lookup(UInt32 key) const;
+void NiTPointerMap<UInt32>::Insert(UInt32 key, UInt32 value);
+
+__declspec(naked) UInt32 __fastcall BGSSaveLoadGame::EncodeRefID(UInt32 *pRefID)
+{
+	__asm
+	{
+		mov		eax, [edx]
+		cmp		eax, 0xFF000000
+		jnb		isCreated
+		mov		ecx, [ecx+8]
+		push	esi
+		push	edi
+		mov		esi, ecx
+		mov		edi, edx
+		push	eax
+		call	NiTPointerMap<UInt32>::Lookup
+		test	eax, eax
+		jnz		found
+		mov		eax, [esi+0x20]
+		inc		dword ptr [esi+0x20]
+		mov		edx, [edi]
+		push	eax
+		push	edx
+		push	eax
+		push	eax
+		push	edx
+		mov		ecx, esi
+		call	NiTPointerMap<UInt32>::Insert
+		lea		ecx, [esi+0x10]
+		call	NiTPointerMap<UInt32>::Insert
+		pop		eax
+	found:
+		mov		[edi], eax
+		pop		edi
+		pop		esi
+	isCreated:
+		retn
+	}
+}
+
+__declspec(naked) UInt32 __fastcall BGSSaveLoadGame::DecodeRefID(UInt32 *pRefID)
+{
+	__asm
+	{
+		mov		eax, [edx]
+		test	eax, eax
+		js		isCreated
+		push	edx
+		push	eax
+		mov		ecx, [ecx+8]
+		add		ecx, 0x10
+		call	NiTPointerMap<UInt32>::Lookup
+		pop		ecx
+		mov		[ecx], eax
+	isCreated:
+		retn
+	}
+}

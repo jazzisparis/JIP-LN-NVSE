@@ -21,20 +21,25 @@ bool Script::Compile()
 	return StdCall<bool>(0x5AEB90, this, &scrBuffer);
 }
 
-void Script::Init(char *scrText)
+bool Script::Init(char *scrText)
 {
 	Constructor();
 	MarkAsTemporary();
 	text = scrText;
-	Compile();
+	bool success = Compile() && (info.dataLength > 4);
 	text = nullptr;
+	if (success) return true;
+	Destructor();
+	return false;
 }
 
 Script *Script::Create(char *scrText)
 {
 	Script *pScript = (Script*)GameHeapAlloc(sizeof(Script));
-	pScript->Init(scrText);
-	return pScript;
+	if (pScript->Init(scrText))
+		return pScript;
+	GameHeapFree(pScript);
+	return nullptr;
 }
 
 class ScriptVarFinder

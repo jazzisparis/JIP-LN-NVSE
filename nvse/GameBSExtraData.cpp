@@ -6,6 +6,26 @@ bool BaseExtraList::HasType(UInt32 type) const
 	return (m_presenceBitfield[type >> 3] & (1 << (type & 7))) != 0;
 }
 
+__declspec(naked) void __fastcall BaseExtraList::SetTypePresent(UInt32 type, bool present)
+{
+	__asm
+	{
+		mov		eax, edx
+		shr		eax, 5
+		lea		ecx, [ecx+eax*4+8]
+		mov		eax, [ecx]
+		cmp		[esp+4], 0
+		jz		unset
+		bts		eax, edx
+		mov		[ecx], eax
+		retn	4
+	unset:
+		btr		eax, edx
+		mov		[ecx], eax
+		retn	4
+	}
+}
+
 __declspec(naked) BSExtraData *BaseExtraList::GetByType(UInt32 xType) const
 {
 	__asm
@@ -35,7 +55,7 @@ __declspec(naked) BSExtraData *BaseExtraList::GetByType(UInt32 xType) const
 		mov		edx, 0x11C3920
 		dec		dword ptr [edx+4]
 		jnz		done
-		mov		dword ptr [edx], 0
+		and		dword ptr [edx], 0
 	done:
 		retn	4
 	retnNULL:
@@ -58,22 +78,33 @@ __declspec(naked) ExtraDataList *ExtraDataList::Create()
 	}
 }
 
-char BaseExtraList::GetExtraFactionRank(TESFaction *faction) const
+__declspec(naked) char __fastcall BaseExtraList::GetExtraFactionRank(TESFaction *faction) const
 {
-	ExtraFactionChanges *xFactionChanges = GetExtraType(this, ExtraFactionChanges);
-	if (xFactionChanges && xFactionChanges->data)
+	__asm
 	{
-		ListNode<FactionListData> *traverse = xFactionChanges->data->Head();
-		FactionListData *pData;
-		do
-		{
-			pData = traverse->data;
-			if (pData && (pData->faction == faction))
-				return pData->rank;
-		}
-		while (traverse = traverse->next);
+		push	edx
+		push	kXData_ExtraFactionChanges
+		call	BaseExtraList::GetByType
+		pop		edx
+		test	eax, eax
+		jz		noRank
+		mov		eax, [eax+0xC]
+		ALIGN 16
+	iterHead:
+		test	eax, eax
+		jz		noRank
+		mov		ecx, [eax]
+		mov		eax, [eax+4]
+		test	ecx, ecx
+		jz		iterHead
+		cmp		[ecx], edx
+		jnz		iterHead
+		mov		al, [ecx+4]
+		retn
+	noRank:
+		dec		al
+		retn
 	}
-	return -1;
 }
 
 SInt32 BaseExtraList::GetCount() const

@@ -125,7 +125,7 @@ public:
 	bool IsMapMarker() const {return baseForm->refID == 0x10;}
 
 	bool GetDisabled() const;
-	ExtraContainerChanges::EntryDataList *GetContainerChangesList() const;
+	ContChangesEntryList *GetContainerChangesList() const;
 	ContChangesEntry *GetContainerChangesEntry(TESForm *itemForm) const;
 	SInt32 GetItemCount(TESForm *form) const;
 	void AddItemAlt(TESForm *item, UInt32 count, float condition, UInt32 doEquip = 0, UInt32 noMessage = 1);

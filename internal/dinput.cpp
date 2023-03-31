@@ -36,7 +36,7 @@ bool DIHookControl::IsLMBPressed()
 
 bool DIHookControl::IsKeyDisabled(UInt32 keycode)
 {
-	return (keycode < kMaxMacros) && (m_keys[keycode].userDisable || m_keys[keycode].scriptDisable);
+	return (keycode < kMaxMacros) && (*(UInt16*)&m_keys[keycode].userDisable & 0x101);
 }
 
 bool DIHookControl::IsKeyHeld(UInt32 keycode)
@@ -52,11 +52,7 @@ bool DIHookControl::IsKeyTapped(UInt32 keycode)
 void DIHookControl::SetKeyDisableState(UInt32 keycode, bool bDisable)
 {
 	if (keycode < kMaxMacros)
-	{
-		KeyInfo *info = &m_keys[keycode];
-		info->userDisable = bDisable;
-		info->scriptDisable = bDisable;
-	}
+		*(UInt16*)&m_keys[keycode].userDisable = bDisable ? 0x101 : 0;
 }
 
 void DIHookControl::SetLMBDisabled(bool bDisable)

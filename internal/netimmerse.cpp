@@ -210,7 +210,7 @@ __declspec(naked) bool NiAVObject::ReplaceObject(NiAVObject *object)
 		push	edx
 		push	eax
 		mov		eax, [ecx+0x18]
-		mov		dword ptr [ecx+0x18], 0
+		and		dword ptr [ecx+0x18], 0
 		mov		[edx+0x18], eax
 		call	NiReleaseAddRef
 		mov		al, 1
@@ -788,7 +788,7 @@ __declspec(naked) void NiNode::ResetShaderRenderPass()
 		mov		eax, [ecx+0xA8]
 		test	eax, eax
 		jz		iterHead
-		mov		dword ptr [eax+0x38], 0
+		and		dword ptr [eax+0x38], 0
 		jmp		iterHead
 		ALIGN 16
 	iterEnd:

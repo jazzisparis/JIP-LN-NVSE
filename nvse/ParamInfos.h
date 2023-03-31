@@ -1800,3 +1800,15 @@ constexpr ParamInfo kParams_ThreeScriptVars_ThreeOptionalScriptVars[] =
 	{"Variable", kParamType_ScriptVariable, 1},
 	{"Variable", kParamType_ScriptVariable, 1}
 };
+
+constexpr ParamInfo kParams_NVSE_OneNum_OneOptionalNum[] =
+{
+	{"Integer", kNVSEParamType_Number, 0},
+	{"Integer", kNVSEParamType_Number, 1}
+};
+
+constexpr ParamInfo kParams_NVSE_OneOptionalNum_OneOptionalBasicType[] =
+{
+	{"Integer", kNVSEParamType_Number, 1},
+	{"Basic Type", kNVSEParamType_BasicType, 1}
+};

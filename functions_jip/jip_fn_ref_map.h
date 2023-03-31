@@ -168,25 +168,19 @@ NVSEArrayVar* __fastcall RefMapArrayIterator(Script *scriptObj, char *varName, b
 
 bool Cmd_RefMapArrayGetFirst_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName))
-	{
-		NVSEArrayVar *pairArr = RefMapArrayIterator(scriptObj, varName, true);
-		*result = (int)pairArr;
-	}
+		*result = (int)RefMapArrayIterator(scriptObj, varName, true);
+	else *result = 0;
 	return true;
 }
 
 bool Cmd_RefMapArrayGetNext_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName))
-	{
-		NVSEArrayVar *pairArr = RefMapArrayIterator(scriptObj, varName, false);
-		*result = (int)pairArr;
-	}
+		*result = (int)RefMapArrayIterator(scriptObj, varName, false);
+	else *result = 0;
 	return true;
 }
 

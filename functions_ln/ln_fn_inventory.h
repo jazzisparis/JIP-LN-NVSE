@@ -50,7 +50,7 @@ void SetHotkey(UInt8 index, const HotkeyInfo &hotkey)
 				if ((hotkey.health >= 0) || (hotkey.modFlags > 0)) continue;
 				xData = ExtraDataList::Create();
 				xData->AddExtra(ExtraHotkey::Create(index));
-				entry->extendData = (ExtraContainerChanges::ExtendDataList*)GameHeapAlloc(8);
+				entry->extendData = (ContChangesExtraList*)GameHeapAlloc(8);
 				entry->extendData->Init(xData);
 				continue;
 			}
@@ -91,7 +91,7 @@ void SetHotkey(UInt8 index, const HotkeyInfo &hotkey)
 						xHotkey->index = index;
 					}
 					else if (xHotkey->index == index)
-						xData->RemoveExtra(xHotkey, true);
+						xData->RemoveByType(kXData_ExtraHotkey);
 				}
 				else if (matching && !found)
 				{
@@ -110,7 +110,7 @@ void SetHotkey(UInt8 index, const HotkeyInfo &hotkey)
 				if (!(xData = xdlIter->data)) continue;
 				xHotkey = GetExtraType(xData, ExtraHotkey);
 				if (!xHotkey || (xHotkey->index != index)) continue;
-				xData->RemoveExtra(xHotkey, true);
+				xData->RemoveByType(kXData_ExtraHotkey);
 				if (!xData->m_data)
 				{
 					entry->extendData->Remove(xData);
@@ -137,7 +137,7 @@ bool Cmd_SetHotkey_Execute(COMMAND_ARGS)
 
 bool Cmd_ClearAllHotkeys_Execute(COMMAND_ARGS)
 {
-	ExtraContainerChanges::EntryDataList *entryList = g_thePlayer->GetContainerChangesList();
+	ContChangesEntryList *entryList = g_thePlayer->GetContainerChangesList();
 	if (!entryList) return true;
 	ListNode<ContChangesEntry> *entryIter = entryList->Head();
 	ContChangesEntry *entry;
@@ -156,7 +156,7 @@ bool Cmd_ClearAllHotkeys_Execute(COMMAND_ARGS)
 			if (!(xData = xdlIter->data)) continue;
 			xHotkey = GetExtraType(xData, ExtraHotkey);
 			if (!xHotkey) continue;
-			xData->RemoveExtra(xHotkey, true);
+			xData->RemoveByType(kXData_ExtraHotkey);
 			if (!xData->m_data)
 			{
 				entry->extendData->Remove(xData);
@@ -174,7 +174,7 @@ bool Cmd_SaveHotkeys_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	for (HotkeyInfo &hotkey : s_savedHotkeys) hotkey = HotkeyInfo();
-	ExtraContainerChanges::EntryDataList *entryList = g_thePlayer->GetContainerChangesList();
+	ContChangesEntryList *entryList = g_thePlayer->GetContainerChangesList();
 	if (entryList)
 	{
 		ListNode<ContChangesEntry> *entryIter = entryList->Head();

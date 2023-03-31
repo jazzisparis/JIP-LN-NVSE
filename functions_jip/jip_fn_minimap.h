@@ -21,7 +21,7 @@ struct TextureParams
 }
 s_mmTextureParams(0x180, 0x180, TEXTURE_FMT_RGB);
 
-Tile::Value /**s_miniMapVisible, */*s_miniMapScale, *s_localMapZoom;
+TileValue /**s_miniMapVisible, */*s_miniMapScale, *s_localMapZoom;
 BSScissorTriShape *s_localMapShapes[9];
 
 __declspec(naked) void __vectorcall UpdateTileScales(float fZoom)
@@ -40,19 +40,15 @@ __declspec(naked) void __vectorcall UpdateTileScales(float fZoom)
 		mov		[ecx+0x64], edx
 		dec		eax
 		jns		iterHead
-		push	1
-		push	ecx
-		movss	[esp], xmm0
 		mov		ecx, s_localMapZoom
-		CALL_EAX(ADDR_TileValSetFloat)
-		retn
+		jmp		TileValue::SetFloat
 	}
 }
 
 float s_cellNorthRotation = 0;
 __m128 s_northRotationMods;
 
-__declspec(naked) __m128* __fastcall GetNorthRotation(TESObjectCELL *cell)
+__declspec(naked) __m128 __vectorcall GetNorthRotation(TESObjectCELL *cell)
 {
 	__asm
 	{
@@ -68,19 +64,16 @@ __declspec(naked) __m128* __fastcall GetNorthRotation(TESObjectCELL *cell)
 		xorps	xmm0, PS_FlipSignMask0
 		movss	s_cellNorthRotation, xmm0
 		call	GetSinCos
-		shufps	xmm0, xmm0, 0x14
-		mov		eax, offset s_northRotationMods
-		movaps	[eax], xmm0
-		xor		byte ptr [eax+0xF], 0x80
+		unpcklpd	xmm0, xmm0
+		xorps	xmm0, PS_FlipSignMask0
+		shufps	xmm0, xmm0, 0x16
+		movaps	s_northRotationMods, xmm0
 		retn
 		ALIGN 16
 	noRotation:
 		mov		s_cellNorthRotation, eax
-		mov		eax, offset kNoRotation
+		pshufd	xmm0, PS_V3_One, 0xC3
 		retn
-		ALIGN 16
-	kNoRotation:
-		EMIT_DW_1(00) DUP_2(EMIT_DW(3F, 80, 00, 00)) EMIT_DW_1(00)
 	}
 }
 
@@ -284,21 +277,20 @@ __declspec(naked) UInt32 __vectorcall GetSectionSeenLevel(SectionSeenInfo seenIn
 		push	esi
 		push	edi
 		mov		ebp, ecx
-		xor		ebx, ebx
 		and		edx, 0xF0F
 		movzx	eax, dl
 		shl		al, 4
 		or		al, dh
 		mov		esi, eax
 		cmp		dh, 0xF
-		setz	cl
-		shl		cl, 1
+		setz	bl
+		shl		bl, 1
 		cmp		dl, 0xF
 		setz	bh
-		or		bh, cl
+		or		bh, bl
+		xor		bl, bl
 		pshufd	xmm1, xmm0, 0
 		paddw	xmm1, kSeenLvlConsts
-		mov		ecx, ebp
 		cmp		byte ptr [ecx], 0xE4
 		jnz		isExterior
 		pshufb	xmm1, kSeenLvlConsts+0x10
@@ -597,7 +589,7 @@ __declspec(naked) UInt32 __vectorcall GetSectionSeenLevel(SectionSeenInfo seenIn
 }
 
 NiTriShapeData *s_localMapShapeDatas[9];
-TESObjectCELL *s_pcCurrCell0, *s_pcCurrCell, *s_lastInterior;
+TESObjectCELL *s_pcCurrCell, *s_lastInterior;
 Coordinate s_packedCellCoords[9];
 float s_vertexAlphaLevel[] = {0, 0.25F, 0.5F, 0.75F, 1.0F};
 
@@ -750,9 +742,9 @@ __declspec(naked) bool __vectorcall UpdateSeenBits(SeenData *seenData, __m128i r
 		xor		eax, eax
 		push	eax
 		push	0x02030304
-		movd	ebp, xmm0
-		movsx	edx, bp
-		sar		ebp, 0x10
+		movd	edx, xmm0
+		movsx	ebp, dx
+		sar		edx, 0x10
 		push	edx
 		push	eax
 		lea		esi, [ecx+4]
@@ -902,171 +894,141 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 {
 	__asm
 	{
-		push	ebp
 		push	ebx
 		push	esi
 		push	edi
 		mov		ebx, g_thePlayer
 		mov		esi, [ebx+0x40]
 		test	esi, esi
-		jz		doneExt
-		movq	xmm7, qword ptr [ebx+0x30]
+		jz		done
+		movq	xmm4, qword ptr [ebx+0x30]
 		mov		edi, 0x11CA208
-		cmp		s_pcCurrCell0, esi
+		cmp		ds:0x11E0BB0, esi
 		jz		sameCell
-		mov		s_pcCurrCell0, esi
 		mov		ecx, esi
 		call	GetNorthRotation
 		jmp		skipPosDiff
 	sameCell:
 		movq	xmm0, qword ptr [edi]
-		subps	xmm0, xmm7
+		subps	xmm0, xmm4
 		mulps	xmm0, xmm0
 		haddps	xmm0, xmm0
-		comiss	xmm0, kUpdSeenConsts+0x24
-		jb		doneExt
+		comiss	xmm0, kUpdSeenConsts+8
+		jb		done
 	skipPosDiff:
-		movq	xmm0, xmm7
-		movlps	[edi], xmm0
-		movq	xmm4, qword ptr kUpdSeenConsts
-		movaps	xmm5, kUpdSeenConsts+0x10
-		pshufd	xmm6, xmm5, 0xE
+		movlps	[edi], xmm4
+		mov		ebx, 0xFFFFFFFF
 		test	byte ptr [esi+0x24], 1
 		jnz		isInterior
-		mov		ebp, g_gridCellArray
-		cvtps2dq	xmm0, xmm0
+		cvtps2dq	xmm0, xmm4
 		call	GetFOWUpdateMask
 		mov		edi, eax
-		mov		eax, [esi+0x48]
-		movq	xmm3, qword ptr [eax]
-		psubd	xmm3, xmm4
-		pshuflw	xmm2, xmm3, 2
-		pslld	xmm3, 0xC
-		psubd	xmm3, xmm0
-		psrad	xmm3, 8
-		pshuflw	xmm3, xmm3, 8
-		unpcklps	xmm2, xmm3
-		movq	xmm3, xmm2
-		xor		ebx, ebx
+		mov		eax, g_TES
+		movq	xmm4, qword ptr [eax+0x2C]
+		pshuflw	xmm2, xmm4, 2
+		pslld	xmm4, 0xC
+		psubd	xmm4, xmm0
+		psrad	xmm4, 8
+		pshuflw	xmm3, xmm4, 2
 		ALIGN 16
 	iterHeadExt:
-		movzx	ecx, bl
-		lea		eax, [ecx+ecx*2]
-		add		al, bh
-		bt		edi, eax
-		jnc		iterNextExt
-		movq	xmm0, xmm3
-		mov		ecx, ebp
+		inc		ebx
+		shr		edi, 1
+		ja		iterHeadExt
+		jnb		done
+		movd	xmm4, kUpdSeenConsts[ebx*4+0x10]
+		movq	xmm0, xmm4
+		paddw	xmm0, xmm2
+		mov		ecx, g_gridCellArray
 		call	GridCellArray::GetCellAtCoord
 		test	eax, eax
-		jz		iterNextExt
+		jz		iterHeadExt
 		test	byte ptr [eax+0x25], 1
-		jnz		iterNextExt
+		jnz		iterHeadExt
 		mov		esi, eax
 		mov		ecx, eax
 		call	AddExtraSeenData
-		pshufd	xmm0, xmm3, 1
+		movq	xmm0, xmm4
+		psllw	xmm0, 4
+		paddw	xmm0, xmm3
 		mov		ecx, eax
 		call	UpdateSeenBits
 		test	al, al
-		jz		iterNextExt
+		jz		iterHeadExt
 		push	kXData_ExtraSeenData
 		lea		ecx, [esi+0x28]
 		CALL_EAX(ADDR_RemoveExtraType)
 		or		byte ptr [esi+0x25], 1
+		mov		eax, [esi+0xC]
 		push	0x80000000
-		push	esi
-		mov		ecx, g_BGSSaveLoadGame
-		CALL_EAX(0x84A780)
-		MARK_MODIFIED(esi, 2)
-	iterNextExt:
-		paddw	xmm3, xmm5
-		inc		bh
-		cmp		bh, 2
-		jbe		iterHeadExt
-		xor		bh, bh
-		paddw	xmm2, xmm6
-		movq	xmm3, xmm2
-		inc		bl
-		cmp		bl, 2
-		jbe		iterHeadExt
-	doneExt:
+		push	eax
+		push	2
+		push	eax
+		mov		eax, g_BGSSaveLoadGame
+		mov		ecx, [eax]
+		mov		esi, ecx
+		CALL_EAX(0x8457B0)
+		mov		ecx, esi
+		CALL_EAX(0x845A80)
+		jmp		iterHeadExt
+		ALIGN 16
+	done:
 		pop		edi
 		pop		esi
 		pop		ebx
-		pop		ebp
 		retn
 		ALIGN 16
 	isInterior:
 		cmp		s_cellNorthRotation, 0
 		jz		noRotation
-		unpcklps	xmm0, xmm0
-		mulps	xmm0, s_northRotationMods
-		pshufd	xmm1, xmm0, 0x27
-		xorps	xmm0, xmm0
-		haddps	xmm1, xmm0
-		movq	xmm0, xmm1
+		unpcklps	xmm4, xmm4
+		mulps	xmm4, s_northRotationMods
+		shufps	xmm4, xmm4, 0x27
+		haddps	xmm4, xmm4
 	noRotation:
-		cvtps2dq	xmm0, xmm0
-		movq	xmm1, qword ptr kUpdSeenConsts+8
-		psubd	xmm0, xmm1
+		cvtps2dq	xmm0, xmm4
+		psubd	xmm0, kUpdSeenConsts
 		call	GetFOWUpdateMask
 		mov		edi, eax
-		movq	xmm3, xmm0
-		psrad	xmm3, 0xC
-		psubd	xmm3, xmm4
-		movq	xmm2, xmm3
-		pshufb	xmm2, kUpdSeenConsts+0x20
-		movd	ebp, xmm2
-		pslld	xmm3, 0xC
-		psubd	xmm3, xmm0
-		psrad	xmm3, 8
-		pshuflw	xmm3, xmm3, 8
-		unpcklps	xmm2, xmm3
-		movq	xmm3, xmm2
+		movq	xmm4, xmm0
+		psrad	xmm4, 0xC
+		pshuflw	xmm2, xmm4, 2
+		pslld	xmm4, 0xC
+		psubd	xmm4, xmm0
+		psrad	xmm4, 8
+		pshuflw	xmm3, xmm4, 2
+		movd	xmm4, kUpdSeenConsts+0xC
 		mov		ecx, esi
 		call	AddExtraSeenData
 		mov		esi, eax
-		xor		ebx, ebx
 		ALIGN 16
 	iterHeadInt:
-		movzx	ecx, bl
-		lea		eax, [ecx+ecx*2]
-		add		al, bh
-		bt		edi, eax
-		jnc		iterNextInt
-		mov		edx, ebp
-		add		dh, bh
-		add		dl, bl
+		inc		ebx
+		shr		edi, 1
+		ja		iterHeadInt
+		jnb		done
+		movd	xmm5, kUpdSeenConsts[ebx*4+0x10]
+		movq	xmm0, xmm5
+		paddw	xmm0, xmm2
+		pshufb	xmm0, xmm4
+		movd	edx, xmm0
 		mov		ecx, esi
 		call	AddIntSeenData
-		cmp		byte ptr [eax+0x26], 0
-		jnz		iterNextInt
-		pshufd	xmm0, xmm3, 1
+		cmp		[eax+0x26], 0
+		jnz		iterHeadInt
+		movq	xmm0, xmm5
+		psllw	xmm0, 4
+		paddw	xmm0, xmm3
 		mov		ecx, eax
 		call	UpdateSeenBits
-		mov		[ecx+0x26], al
-	iterNextInt:
-		paddw	xmm3, xmm5
-		inc		bh
-		cmp		bh, 2
-		jbe		iterHeadInt
-		xor		bh, bh
-		paddw	xmm2, xmm6
-		movq	xmm3, xmm2
-		inc		bl
-		cmp		bl, 2
-		jbe		iterHeadInt
-		pop		edi
-		pop		esi
-		pop		ebx
-		pop		ebp
-		retn
+		or		[ecx+0x26], al
+		jmp		iterHeadInt
 		ALIGN 16
 	kUpdSeenConsts:
-		DUP_2(EMIT_DW(00, 00, 00, 01)) DUP_2(EMIT_DW(00, 00, 08, 00))
-		EMIT_DW(00, 00, 00, 01) EMIT_DW(00, 10, 00, 00) EMIT_DW(00, 01, 00, 00) EMIT_DW(00, 00, 00, 10)
-		EMIT_DW(80, 80, 04, 00) EMIT_DW(45, C8, 00, 00)
+		DUP_2(EMIT_DW(00, 00, 08, 00)) EMIT_DW(45, C8, 00, 00) EMIT_DW(80, 80, 00, 02)
+		EMIT_DW(FF, FF, FF, FF) EMIT_DW(FF, FF, 00, 00) EMIT_DW(FF, FF, 00, 01)
+		EMIT_DW(00, 00, FF, FF) EMIT_DW(00, 00, 00, 00) EMIT_DW(00, 00, 00, 01)
+		EMIT_DW(00, 01, FF, FF) EMIT_DW(00, 01, 00, 00) EMIT_DW(00, 01, 00, 01)
 	}
 }
 
@@ -1093,7 +1055,7 @@ void __fastcall GetTeleportDoors(TESObjectCELL *cell, DoorRefsList *doorRefsList
 	}
 }
 
-__declspec(naked) float* __vectorcall GetVtxAlphaPtr(__m128 posMult)
+__declspec(naked) UInt32* __vectorcall GetVtxAlphaPtr(__m128 posMult)
 {
 	__asm
 	{
@@ -1133,13 +1095,16 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, c
 	{
 		push	ebp
 		mov		ebp, esp
-		sub		esp, 0x1C
+		push	ecx
 		test	ecx, ecx
-		setz	[ebp-0x19]
+		setz	[ebp-1]
 		jz		noCell
 		test	byte ptr [ecx+0x24], 1
 	noCell:
-		setnz	[ebp-0x1A]
+		setnz	[ebp-2]
+		mov		ecx, ds:0x11F9508
+		lea		eax, [ecx+0x5E0]
+		push	eax
 		xor		eax, eax
 		push	eax
 		push	eax
@@ -1150,15 +1115,13 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, c
 		push	eax
 		push	dword ptr [edx+4]
 		push	dword ptr [edx]
-		mov		eax, ds:0x11F9508
-		push	eax
-		add		eax, 0x5E0
-		mov		[ebp-4], eax
+		push	ecx
 		mov		ecx, ds:0x11F91A8
 		CALL_EAX(0xB6D5E0)
 		test	eax, eax
 		jz		done
-		mov		[ebp-8], eax
+		push	eax
+		push	g_shadowSceneNode
 		mov		eax, s_cullingProcess
 		test	eax, eax
 		jnz		hasCulling
@@ -1171,93 +1134,66 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, c
 		mov		ecx, eax
 		CALL_EAX(0xB660D0)
 		mov		dword ptr [eax+4], 2
-		mov		ecx, g_shadowSceneNode
+		mov		ecx, [ebp-0x10]
 		mov		[eax+0x194], ecx
 		push	eax
 		push	0
 		lea		ecx, [eax+0x280]
 		CALL_EAX(0x4A0EB0)
+		mov		dword ptr [eax+0x90], 3
 		pop		dword ptr [eax+0xC4]
 		mov		s_cullingProcess, eax
 	hasCulling:
-		mov		[ebp-0x14], eax
+		push	eax
 		mov		ecx, [eax+0xC4]
-		mov		[ebp-0x18], ecx
-		mov		dl, [ebp-0x19]
+		push	ecx
+		mov		dl, [ebp-1]
 		mov		[ecx+0x16C], dl
-		mov		eax, [ecx+0x194]
-		mov		[ebp-0x10], eax
-		mov		dl, [eax+0x130]
-		mov		[ebp-0x1B], dl
-		mov		[eax+0x130], 1
+		mov		ecx, [ebp-8]
+		push	dword ptr [ecx]
 		xor		eax, eax
-		mov		ecx, [ebp-4]
-		mov		edx, [ecx]
-		mov		[ebp-0xC], edx
 		mov		[ecx], eax
+		mov		ecx, [ebp-0x10]
+		mov		[ecx+0x130], 1
 		mov		byte ptr ds:0x11AD7B4, 0
-		mov		edx, [ebp-8]
+		mov		edx, [ebp-0xC]
 		mov		edx, [edx+8]
 		mov		ecx, ds:0x11F4748
 		cmp		dword ptr [ecx+0x200], 0
 		setnz	al
-		mov		[ebp-0x1C], al
+		mov		[ebp-3], al
 		mov		ecx, 7
 		cmovnz	edx, ecx
-		cmovnz	ecx, [ebp-8]
+		cmovnz	ecx, [ebp-0xC]
 		push	edx
 		push	ecx
 		call	kScnCallbacks[eax*4]
 		add		esp, 8
-		mov		dl, [ebp-0x1A]
+		mov		dl, [ebp-2]
 		neg		dl
 		and		edx, 0xC
 		mov		eax, [ebp-0x18]
 		mov		[eax+0x19C], edx
-		mov		eax, [ebp-0x14]
-		mov		dword ptr [eax+0x90], 3
-		push	eax
+		push	dword ptr [ebp-0x14]
 		push	dword ptr [ebp-0x10]
 		push	dword ptr [ebp+8]
 		CALL_EAX(0xB6BEE0)
-		mov		ecx, g_TES
-		mov		eax, [ecx+0x34]
-		test	eax, eax
-		jz		skipPortals
-		mov		ecx, [eax+0xC4]
-		mov		eax, [ecx]
-		mov		ecx, [eax+0xA0]
-		mov		eax, [ecx+0x18]
-		cmp		word ptr [eax+0xA6], 0
-		jz		skipPortals
+		mov		eax, [ebp-0x18]
 		mov		[esp+4], eax
-		mov		ecx, [ebp-0x14]
-		mov		dword ptr [ecx+0x90], 1
-		CALL_EAX(0xB6BEE0)
-	skipPortals:
-		add		esp, 0xC
-		push	dword ptr [ebp-0x18]
-		push	dword ptr [ebp+8]
 		CALL_EAX(0xB6C0D0)
-		add		esp, 8
-		movzx	eax, byte ptr [ebp-0x1C]
+		add		esp, 0xC
+		movzx	eax, byte ptr [ebp-3]
 		call	kScnCallbacks[eax*4+8]
 		mov		byte ptr ds:0x11AD7B4, 1
-		mov		al, [ebp-0x1B]
 		mov		ecx, [ebp-0x10]
-		mov		[ecx+0x130], al
-		mov		ecx, [ebp-4]
-		mov		eax, [ebp-0xC]
-		mov		[ecx], eax
+		mov		[ecx+0x130], 0
 		mov		ecx, [ebp-8]
-		mov		eax, [ecx+0x30]
-		test	eax, eax
-		jz		doRelease
-		push	eax
+		pop		dword ptr [ecx]
+		mov		ecx, [ebp-0xC]
+		push	dword ptr [ecx+0x30]
 		push	dword ptr [ebp+0xC]
 		call	NiReleaseAddRef
-		mov		ecx, [ebp-8]
-	doRelease:
+		mov		ecx, [ebp-0xC]
 		call	NiReleaseObject
 	done:
 		leave
@@ -1277,26 +1213,21 @@ __declspec(naked) void __fastcall GenerateLocalMapExterior(TESObjectCELL *cell, 
 	{
 		push	ebp
 		mov		ebp, esp
+		sub		esp, 0x10
 		push	ecx
 		push	edx
-		sub		esp, 0x18
-		mov		eax, [ecx+0x48]
-		movq	xmm0, qword ptr [eax]
-		pslld	xmm0, 0xC
-		paddd	xmm0, kExtPosMod
+		xorps	xmm0, xmm0
+		movups	[ebp-0x10], xmm0
+		mov		edx, 0xA0
 		mov		eax, [ecx+0xC4]
 		mov		ecx, [eax]
-		mov		eax, [ecx+0xA0]
-		mov		[ebp-0xC], eax
+		mov		eax, [ecx+edx]
 		mov		ecx, [eax]
+		push	ecx
 		or		byte ptr [ecx+0x30], 1
-		mov		ecx, [eax+4]
-		or		byte ptr [ecx+0x30], 1
-		xorps	xmm1, xmm1
-		movups	[ebp-0x1C], xmm1
 		mov		ecx, [eax+8]
-		mov		eax, [ecx+0xA0]
-		mov		edx, 4
+		mov		eax, [ecx+edx]
+		mov		dl, 4
 		ALIGN 16
 	iterHead:
 		dec		edx
@@ -1309,49 +1240,48 @@ __declspec(naked) void __fastcall GenerateLocalMapExterior(TESObjectCELL *cell, 
 		jnz		iterHead
 		cmp		dword ptr [ecx+0x38], 0
 		jz		iterHead
-		mov		[ebp+edx*4-0x1C], ecx
+		mov		[ebp+edx*4-0x10], ecx
 		or		byte ptr [ecx+0x25], 0x40
 		and		dword ptr [ecx+0x38], 0
 		jmp		iterHead
+		ALIGN 16
 	iterEnd:
 		mov		eax, ds:0x11D5C48
-		mov		[ebp-0x20], eax
-		mov		byte ptr [eax+0x1B], 1
-		mov		ecx, s_localMapCamera
+		push	eax
+		mov		[eax+0x1B], 1
+		mov		ecx, [ebp-0x14]
+		mov		eax, [ecx+0x48]
+		movq	xmm0, qword ptr [eax]
+		pslld	xmm0, 0xC
+		paddd	xmm0, kExtPosMod
 		cvtdq2ps	xmm0, xmm0
-		movlps	[ecx+0x58], xmm0
-		push	dword ptr [ebp-8]
-		push	ecx
-		push	offset kUpdateParams
-		CALL_EAX(0xA711B0)
+		mov		eax, s_localMapCamera
+		movlps	[eax+0x8C], xmm0
+		push	dword ptr [ebp-0x18]
+		push	eax
 		mov		edx, offset s_mmTextureParams
-		mov		ecx, [ebp-4]
 		call	GenerateRenderedTexture
-		mov		eax, [ebp-0xC]
-		mov		ecx, [eax]
-		and		byte ptr [ecx+0x30], 0xFE
-		mov		ecx, [eax+4]
-		and		byte ptr [ecx+0x30], 0xFE
-		xor		eax, eax
-		mov		ecx, [ebp-0x20]
-		mov		[ecx+0x1B], al
+		pop		eax
+		mov		[eax+0x1B], 0
+		pop		eax
+		and		byte ptr [eax+0x30], 0xFE
 		mov		edx, 4
 		ALIGN 16
 	undoIter:
 		dec		edx
 		js		done
-		mov		ecx, [ebp+edx*4-0x1C]
+		mov		ecx, [ebp+edx*4-0x10]
 		test	ecx, ecx
 		jz		undoIter
 		and		byte ptr [ecx+0x25], 0xBF
-		mov		[ecx+0x38], eax
+		and		dword ptr [ecx+0x38], 0
 		jmp		undoIter
 	done:
-		mov		eax, [ebp-4]
-		mov		eax, [eax+0xC]
-		mov		ecx, [ebp-8]
-		mov		ecx, [ecx]
-		mov		[ecx+0x34], eax
+		pop		ecx
+		mov		eax, [ecx]
+		pop		ecx
+		mov		ecx, [ecx+0xC]
+		mov		[eax+0x34], ecx
 		leave
 		retn
 		ALIGN 16
@@ -1364,6 +1294,9 @@ __declspec(naked) void __vectorcall GenerateLocalMapInterior(TESObjectCELL *cell
 {
 	__asm
 	{
+		push	edx
+		mov		eax, s_localMapCamera
+		push	eax
 		pshuflw	xmm0, xmm0, 0x26
 		psrad	xmm0, 0x10
 		paddd	xmm0, kIntPosMod
@@ -1375,34 +1308,34 @@ __declspec(naked) void __vectorcall GenerateLocalMapInterior(TESObjectCELL *cell
 		mulps	xmm0, s_northRotationMods
 		haddps	xmm0, xmm0
 	noRot:
-		mov		eax, [ecx+0xC4]
-		mov		eax, [eax]
-		mov		eax, [eax+0xA0]
-		push	eax
-		push	edx
-		mov		edx, [eax]
-		or		byte ptr [edx+0x30], 1
-		mov		edx, [eax+4]
-		or		byte ptr [edx+0x30], 1
-		mov		eax, s_localMapCamera
-		movlps	[eax+0x58], xmm0
-		push	eax
-		push	ecx
-		push	offset kUpdateParams
-		mov		ecx, eax
-		CALL_EAX(0xA711B0)
+		movlps	[eax+0x8C], xmm0
 		mov		edx, offset s_mmTextureParams
-		pop		ecx
 		call	GenerateRenderedTexture
-		pop		eax
-		mov		ecx, [eax]
-		and		byte ptr [ecx+0x30], 0xFE
-		mov		ecx, [eax+4]
-		and		byte ptr [ecx+0x30], 0xFE
 		retn
 		ALIGN 16
 	kIntPosMod:
 		EMIT_PS_2(00, 00, 00, 01)
+	}
+}
+
+__declspec(naked) void AttachToCellNodeHook()
+{
+	__asm
+	{
+		push	1
+		push	eax
+		push	0x54972C
+		mov		ecx, [ebp+0xC]
+		mov		eax, [eax+8]
+		cmp		eax, s_BlackPlane01
+		jnz		notBkPln
+		mov		eax, [ecx+0x18]
+		mov		ecx, [eax+0xA0]
+		mov		eax, [ecx+0x10]
+		mov		[ebp+0xC], eax
+		mov		ecx, [ecx+0x20]
+	notBkPln:
+		JMP_EAX(0xA5ED10)
 	}
 }
 
@@ -1446,69 +1379,15 @@ __declspec(naked) void __fastcall SaveLocalMapTexture(TESForm *worldOrCell, NiRe
 	}
 }
 
-TempObject<Vector<TESObjectREFR*>> s_visibleDistantRefs(0x100);
-
-__declspec(naked) void AddRefToCellHook()
-{
-	__asm
-	{
-		mov		ecx, [esp+4]
-		test	byte ptr [ecx+9], 0x80
-		jnz		doAdd
-		mov		eax, [ecx+0x20]
-		test	byte ptr [eax+9], 0x80
-		jnz		doAdd
-		retn	4
-		ALIGN 16
-	doAdd:
-		mov		ecx, offset s_visibleDistantRefs
-		call	Vector<TESObjectREFR*>::AllocateData
-		mov		ecx, [esp+4]
-		mov		[eax], ecx
-		retn	4
-	}
-}
-
-__declspec(naked) void RemoveRefFromCellHook()
-{
-	__asm
-	{
-		mov		ecx, [esp+4]
-		test	byte ptr [ecx+9], 0x80
-		jnz		doRemove
-		mov		eax, [ecx+0x20]
-		test	byte ptr [eax+9], 0x80
-		jnz		doRemove
-		retn	4
-		ALIGN 16
-	doRemove:
-		mov		eax, s_visibleDistantRefs
-		mov		edx, s_visibleDistantRefs+4
-		lea		edx, [eax+edx*4]
-		ALIGN 16
-	iterHead:
-		cmp		eax, edx
-		jz		done
-		cmp		[eax], ecx
-		lea		eax, [eax+4]
-		jnz		iterHead
-		dec		dword ptr s_visibleDistantRefs+4
-		mov		ecx, [edx-4]
-		mov		[eax-4], ecx
-	done:
-		retn	4
-	}
-}
-
 struct MapMarkerTile;
 TempObject<Vector<MapMarkerTile>> s_mapMarkerTiles(0x40);
 
 struct MapMarkerTile
 {
-	Tile::Value		*visible;
-	Tile::Value		*x;
-	Tile::Value		*y;
-	Tile::Value		*filename;
+	TileValue		*visible;
+	TileValue		*x;
+	TileValue		*y;
+	TileValue		*filename;
 	bool			inUse;
 
 	MapMarkerTile(Tile *markerTile)
@@ -1516,7 +1395,7 @@ struct MapMarkerTile
 		visible = markerTile->GetValue(kTileValue_visible);
 		x = markerTile->GetValue(kTileValue_user0);
 		y = markerTile->GetValue(kTileValue_user1);
-		filename = ThisCall<Tile::Value*>(0xA01000, markerTile, kTileValue_filename);
+		filename = markerTile->AddValue(kTileValue_filename);
 		markerTile->SetFloat(kTileValue_depth, int((s_mapMarkerTiles->Size() & 0xF) + 18));
 		inUse = true;
 	}
@@ -1587,12 +1466,12 @@ __declspec(naked) void __fastcall UpdatePlacedMarkerHook(PlayerCharacter *thePla
 UInt8 s_miniMapIndex = 0;
 TileRect *s_localMapRect, *s_worldMapRect, *s_mapMarkersRect, *s_doorMarkersRect, *s_lQuestMarkersRect, *s_wQuestMarkersRect;
 TileImage *s_worldMapTile;
-Tile::Value *s_miniMapMode = nullptr, *s_pcMarkerRotate, *s_miniMapPosX, *s_miniMapPosY, *s_worldMapZoom;
+TileValue *s_miniMapMode = nullptr, *s_pcMarkerRotate, *s_miniMapPosX, *s_miniMapPosY, *s_worldMapZoom;
 TileShaderProperty *s_tileShaderProps[9];
 float s_fLocalMapZoomCurr;
 BSFadeNode *s_fakeWaterPlanes;
 bool s_isInInterior = false;
-NiNode *s_shadowSceneNodes[6];
+NiNode *s_shadowSceneNodes[5];
 NiColor *g_directionalLightColor, *g_shadowFogColor;
 
 struct MapMarkerInfo
@@ -1694,6 +1573,9 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	while (vtx2 < 0x120);
 	shapeTriangles -= 0x200;
 
+	NiColorAlpha *vertexColors = (NiColorAlpha*)GameHeapAlloc(sizeof(NiColorAlpha) * 0xA29);
+	ZERO_BYTES(vertexColors, sizeof(NiColorAlpha) * 0xA29);
+
 	NiAlphaProperty *alphaProp = NiAlphaProperty::Create();
 	alphaProp->flags = 0x8D;
 
@@ -1720,8 +1602,8 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 		shapeData->normals = nullptr;
 
 		GameHeapFree(shapeData->vertexColors);
-		shapeData->vertexColors = (NiColorAlpha*)GameHeapAlloc(sizeof(NiColorAlpha) * 0x121);
-		ZERO_BYTES(shapeData->vertexColors, sizeof(NiColorAlpha) * 0x121);
+		shapeData->vertexColors = vertexColors;
+		vertexColors += 0x121;
 
 		GameHeapFree(shapeData->uvCoords);
 		shapeData->uvCoords = shapeUVCoords;
@@ -1751,15 +1633,19 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 
 	NiCamera *lmCamera = NiCamera::Create();
 	lmCamera->m_uiRefCount = 2;
-	s_localMapCamera = lmCamera;
-	lmCamera->LocalRotate() = {0, 0, 1.0F, 0, 1.0F, 0, -1.0F, 0, 0};
+	lmCamera->LocalRotate()[0] = 0;
+	lmCamera->LocalRotate()[2] = 1.0F;
+	lmCamera->LocalRotate()[6] = -1.0F;;
+	lmCamera->LocalRotate()[8] = 0;
 	lmCamera->LocalTranslate().z = 65536.0F;
+	lmCamera->m_transformWorld = lmCamera->m_transformLocal;
 	lmCamera->frustum.viewPort = {-2048.0F, 2048.0F, 2048.0F, -2048.0F};
 	lmCamera->frustum.n = 1.0F;
 	lmCamera->frustum.f = 131072.0F;
 	lmCamera->frustum.o = 1;
 	lmCamera->LODAdjust = 0.001F;
 	g_shadowSceneNode->AddObject(lmCamera, 1);
+	s_localMapCamera = lmCamera;
 
 	BSFadeNode *waterParent = BSFadeNode::Create();
 	waterParent->m_uiRefCount = 2;
@@ -1769,7 +1655,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	waterVertices[1] = __m128{-2048.0F, 0, 2048.0F, 2048.0F};
 	waterVertices[2] = __m128{0, 2048.0F, -2048.0F, 0};
 
-	NiColorAlpha *vertexColors = (NiColorAlpha*)GameHeapAlloc(sizeof(NiColorAlpha) << 2);
+	vertexColors = (NiColorAlpha*)GameHeapAlloc(sizeof(NiColorAlpha) << 2);
 	__m128 kWaterPlaneColor = {23 / 255.0F, 51/ 255.0F, 47 / 255.0F, 0.75F};
 	vertexColors[0] = kWaterPlaneColor;
 	vertexColors[1] = kWaterPlaneColor;
@@ -1798,7 +1684,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	while (++index < 9);
 
 	waterParent->RenderGeometryAndShader();
-	(*(NiNode**)0x11DEA18)->AddObject(waterParent, 1);
+	GameGlobals::ObjectLODRoot()->AddObject(waterParent, 1);
 	s_fakeWaterPlanes = waterParent;
 
 	auto worldIter = g_dataHandler->worldSpaceList.Head();
@@ -1844,9 +1730,8 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	s_shadowSceneNodes[0] = *(NiNode**)0x11DEB34;	// Sky
 	s_shadowSceneNodes[1] = *(NiNode**)0x11DEDA4;	// Weather
 	s_shadowSceneNodes[2] = *(NiNode**)0x11D86A8;	// TerrainLOD
-	s_shadowSceneNodes[3] = *(NiNode**)0x11DEA1C;	// WaterLOD
-	s_shadowSceneNodes[4] = *(NiNode**)0x11DED58;	// ParticleSysMngr
-	s_shadowSceneNodes[5] = *(NiNode**)0x11CA438;	// Grass
+	s_shadowSceneNodes[3] = *(NiNode**)0x11DED58;	// ParticleSysMngr
+	s_shadowSceneNodes[4] = *(NiNode**)0x11CA438;	// Grass
 	g_directionalLightColor = &g_TES->directionalLight->ambientColor;
 	g_shadowFogColor = &g_shadowSceneNode->fogProperty->color;
 	SafeWrite16(0x452736, 0x7705);
@@ -1865,42 +1750,6 @@ alignas(16) const NiColor kDirectionalLightValues[] = {{1.0F, 1.0F, 239 / 255.0F
 alignas(16) const float kFogPropertyValues[] = {23 / 255.0F, 51 / 255.0F, 47 / 255.0F, FLT_MAX, FLT_MAX};
 alignas(16) const int kNWCoordAdjust[] = {-1, 2, 0, 0};
 
-struct CulledNodesArray : Vector<NiNode*, 0x40>
-{
-	void AppendHide(NiNode *node)
-	{
-		node->Hide();
-		*AllocateData() = node;
-	}
-
-	template <size_t N>
-	void AppendHideList(NiNode* (&nodeList)[N])
-	{
-		NiNode **pDataArr = Reserve(N);
-		for (auto pNode : nodeList)
-		{
-			pNode->Hide();
-			*pDataArr = pNode;
-			pDataArr++;
-		}
-		numItems += N;
-	}
-
-	void ClearShow()
-	{
-		if (numItems)
-		{
-			NiNode **pData = data, **pEnd = End();
-			do
-			{
-				(*pData)->Show();
-			}
-			while (++pData != pEnd);
-		}
-		numItems = 0;
-	}
-};
-
 struct RenderedEntry
 {
 	NiRenderedTexture	*texture;
@@ -1915,11 +1764,11 @@ TempObject<Vector<DoorMarkerTile>> s_doorMarkerTiles(0x40);
 
 struct DoorMarkerTile
 {
-	Tile::Value		*visible;
-	Tile::Value		*x;
-	Tile::Value		*y;
-	Tile::Value		*visited;
-	float			*vtxAlpha;
+	TileValue		*visible;
+	TileValue		*x;
+	TileValue		*y;
+	TileValue		*visited;
+	UInt32			*vtxAlpha;
 	bool			inUse;
 
 	DoorMarkerTile(Tile *markerTile)
@@ -1927,16 +1776,24 @@ struct DoorMarkerTile
 		visible = markerTile->GetValue(kTileValue_visible);
 		x = markerTile->GetValue(kTileValue_user0);
 		y = markerTile->GetValue(kTileValue_user1);
-		visited = ThisCall<Tile::Value*>(0xA01000, markerTile, kTileValue_user2);
+		visited = markerTile->AddValue(kTileValue_user2);
 		markerTile->SetFloat(kTileValue_depth, int((s_doorMarkerTiles->Size() & 0xF) + 18));
 	}
+};
+
+struct CulledObject
+{
+	NiAVObject		*object;
+
+	CulledObject(NiAVObject *_obj) : object(_obj) {object->Hide();}
+	~CulledObject() {object->Show();}
 };
 
 struct QuestMarkerTile
 {
 	UInt32			pos;
-	Tile::Value		*x;
-	Tile::Value		*y;
+	TileValue		*x;
+	TileValue		*y;
 };
 
 UInt32 s_currentMapMode = 0;
@@ -1948,65 +1805,52 @@ typedef UnorderedMap<UInt32, RenderedEntry, 0x40, false> LocalTexturesMap;
 TempObject<LocalTexturesMap> s_renderedExteriors, s_renderedInterior;
 TempObject<UnorderedMap<UInt32, DoorRefsList, 0x20, false>> s_exteriorDoorRefs;
 TempObject<DoorRefsList> s_doorRefsList(0x40);
-TempObject<CulledNodesArray> s_hiddenNodes;
+TempObject<Vector<CulledObject>> s_hiddenObjects(0x40);
 TESQuest *s_activeQuest = nullptr;
 TESObjectREFR *s_placedMarker = nullptr;
 TempObject<Map<TESObjectREFR*, QuestMarkerTile>> s_questMarkers(0x10);
 TESObjectCELL *s_currCellGrid[9];
 bool s_useFogOfWar = false;
 
-NiTexture **g_textureListFirst = (NiTexture**)0x11F4500, **g_textureListLast = (NiTexture**)0x11F4504;
+#define LIGHTING_PASSES *(UInt8*)0x11F91D8
+#define TEXTURE_LIST_BGN *(NiTexture**)0x11F4500
+#define TEXTURE_LIST_END *(NiTexture**)0x11F4504
+#define TEXTURE_LIST_CS (CriticalSection*)0x11F4580
+
 NiRenderedTexture *s_mmFirstTexture = nullptr;
-CriticalSection *g_textureListCS = (CriticalSection*)0x11F4580;
 
-NiRenderedTexture* __fastcall FindNextMMTexture(NiRenderedTexture *texture)
+__declspec(naked) NiRenderedTexture* __fastcall FindNextMMTexture(NiTexture *texture)
 {
-	while (texture = (NiRenderedTexture*)texture->next)
-		if (IS_TYPE(texture, NiRenderedTexture) && texture->unk34)
-			return texture;
-	return nullptr;
-}
-
-void __fastcall MoveTextureToTop(NiRenderedTexture *texture)
-{
-	if (texture == *g_textureListLast)
-		return;
-	ScopedCS cs(g_textureListCS);
-	if (texture == s_mmFirstTexture)
-		s_mmFirstTexture = FindNextMMTexture(texture);
-	NiTexture *prev = texture->prev, *next = texture->next;
-	if (prev) prev->next = next;
-	else *g_textureListFirst = next;
-	if (next) next->prev = prev;
-	prev = *g_textureListLast;
-	prev->next = texture;
-	texture->prev = prev;
-	texture->next = nullptr;
-	*g_textureListLast = texture;
-}
-
-void __fastcall PurgeTextureCache(LocalTexturesMap &textureMap)
-{
-	UInt32 purgeCount = textureMap.Size() - CACHED_TEXTURES_MIN;
-	NiRenderedTexture *curr = s_mmFirstTexture, *next;
-	ScopedCS cs(g_textureListCS);
-	do
+	__asm
 	{
-		next = FindNextMMTexture(curr);
-		textureMap.Erase(curr->unk34);
-		curr = next;
+		xor		eax, eax
+		mov		edx, kVtbl_NiRenderedTexture
+		ALIGN 16
+	iterHead:
+		mov		ecx, [ecx+0x2C]
+		test	ecx, ecx
+		jz		done
+		cmp		[ecx], edx
+		jnz		iterHead
+		cmp		[ecx+0x34], eax
+		jz		iterHead
+		mov		eax, ecx
+	done:
+		retn
 	}
-	while (--purgeCount && curr);
-	s_mmFirstTexture = curr;
 }
 
 void MiniMapLoadGame()
 {
-	s_pcCurrCell0 = nullptr;
 	s_pcCurrCell = nullptr;
 	s_pcCurrWorld = nullptr;
 	s_pcRootWorld = nullptr;
 	s_lastInterior = nullptr;
+}
+
+template <typename T> __forceinline T PickFrom(T (&&values)[], size_t index)
+{
+	return values[index];
 }
 
 bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
@@ -2055,9 +1899,10 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		mov		s_pcCurrCell, ecx
 		call	GetNorthRotation
 		mov		ecx, s_localMapCamera
-		movaps	xmm0, [eax]
 		movlps	[ecx+0x38], xmm0
 		movhps	[ecx+0x44], xmm0
+		movlps	[ecx+0x6C], xmm0
+		movhps	[ecx+0x78], xmm0
 		cmp		parentWorld, 0
 		setz	al
 		cmp		s_isInInterior, al
@@ -2215,7 +2060,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					while (--iterX);
 				}
 				for (auto cmkIter = s_renderedMapMarkers->Begin(); cmkIter; ++cmkIter)
-					if (!s_currMarkerCells->HasKey(cmkIter.Key())) FreeCellMapMarkers(cmkIter);
+					if (!s_currMarkerCells->HasKey(cmkIter.Key()))
+						FreeCellMapMarkers(cmkIter);
 			}
 		}
 		else if (!s_renderedMapMarkers->Empty())
@@ -2244,6 +2090,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		UInt32 gridIdx;
 		NiNode *hideNode;
 		RenderedEntry *textureEntry;
+		UInt8 lightingPasses = LIGHTING_PASSES;
 
 		if (parentWorld)
 		{
@@ -2307,31 +2154,33 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			if (updateTiles || (s_cellGridCenter != gridCenter))
 			{
 				s_cellGridCenter = gridCenter;
-				s_hiddenNodes->AppendHideList(s_shadowSceneNodes);
 				memcpy(g_directionalLightColor, kDirectionalLightValues, sizeof(kDirectionalLightValues));
 				memcpy(g_shadowFogColor, kFogPropertyValues, sizeof(kFogPropertyValues));
 				*(bool*)0x11FF104 = 1;
-
+				s_shadowSceneNodes[0]->Hide();
+				s_shadowSceneNodes[1]->Hide();
+				s_shadowSceneNodes[2]->Hide();
+				s_shadowSceneNodes[3]->Hide();
+				s_shadowSceneNodes[4]->Hide();
 				bool updateWater = false;
 				gridIdx = 0;
 				do
 				{
 					if (!(cell = s_currCellGrid[gridIdx]))
 						continue;
-					s_hiddenNodes->AppendHide(cell->Get3DNode(4));
-					auto renderData = cell->renderData;
-					for (auto anmIter = renderData->animatedRefs.Begin(); anmIter; ++anmIter)
+					s_hiddenObjects->Append(cell->Get3DNode(4));
+					for (auto anmIter = cell->renderData->animatedRefs.Begin(); anmIter; ++anmIter)
 						if ((hideNode = anmIter.Get()) && ((hideNode->GetBSXFlags() & 0x23) == 0x21))
-							s_hiddenNodes->AppendHide(hideNode);
+							s_hiddenObjects->Append(hideNode);
 					if (!(cell->cellFlags & 2))
 						continue;
 					objectRef = nullptr;
-					auto awtIter = renderData->placeableWaterList.Head();
+					auto awtIter = cell->renderData->placeableWaterList.Head();
 					do
 					{
 						if (!awtIter->data || !awtIter->data->IsCreated() || !(hideNode = awtIter->data->GetRefNiNode()))
 							continue;
-						s_hiddenNodes->AppendHide(hideNode);
+						s_hiddenObjects->Append(hideNode);
 						objectRef = awtIter->data;
 					}
 					while (awtIter = awtIter->next);
@@ -2343,29 +2192,26 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				}
 				while (++gridIdx < 9);
 				if (!updateTiles)
-				{
-					s_hiddenNodes->AppendHide(*(NiNode**)0x11D8690);
-					for (auto vdrIter = s_visibleDistantRefs->Begin(); vdrIter; ++vdrIter)
-						if ((hideNode = vdrIter->GetRefNiNode()) && !(hideNode->m_flags & 0xC001))
-							hideNode->SetAlphaRecurse(GET_SS(14));
-				}
+					s_hiddenObjects->Append(*(NiNode**)0x11D8690);
 				else if (updateWater)
 				{
 					s_fakeWaterPlanes->LocalTranslate() = nwXY;
 					ThisCall(0xA5DD70, s_fakeWaterPlanes, &kUpdateParams, 0);
 				}
-				NiPointLight *pntLight;
+				NiLight *light;
 				GameGlobals::SceneLightsLock()->Enter();
 				for (auto lgtNode = g_shadowSceneNode->lgtList0B4.Head(); lgtNode; lgtNode = lgtNode->next)
-					if (lgtNode->data->isPointLight && (pntLight = (NiPointLight*)lgtNode->data->light))
-						ULNG(pntLight->radius) -= 0x6800000;
-
+					if (lgtNode->data->isPointLight && (light = lgtNode->data->light) && !(light->m_flags & 1))
+						s_hiddenObjects->Append(light);
+				
+				LIGHTING_PASSES = 0x3C;
+				const UInt8 kSelectUpdate[] = {0x8, 0xA, 0x2, 0xC, 0xF, 0x3, 0x4, 0x5, 0x1};
 				gridIdx = 0;
 				do
 				{
 					if (!(cell = s_currCellGrid[gridIdx]))
 						continue;
-					const UInt8 kSelectUpdate[] = {0x8, 0xA, 0x2, 0xC, 0xF, 0x3, 0x4, 0x5, 0x1}, updateMask = kSelectUpdate[gridIdx];
+					const UInt8 updateMask = kSelectUpdate[gridIdx];
 					if (s_renderedExteriors->Insert(cell->refID, &textureEntry))
 					{
 						GenerateLocalMapExterior(cell, &textureEntry->texture);
@@ -2377,7 +2223,24 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 							SaveLocalMapTexture(parentWorld, textureEntry->texture, s_packedCellCoords[gridIdx]);*/
 					}
 					else if (updateTiles)
-						MoveTextureToTop(textureEntry->texture);
+					{
+						NiRenderedTexture *texture = textureEntry->texture;
+						if (texture != TEXTURE_LIST_END)
+						{
+							ScopedCS cs(TEXTURE_LIST_CS);
+							if (texture == s_mmFirstTexture)
+								s_mmFirstTexture = FindNextMMTexture(texture);
+							NiTexture *prev = texture->prev, *next = texture->next;
+							if (prev) prev->next = next;
+							else TEXTURE_LIST_BGN = next;
+							if (next) next->prev = prev;
+							prev = TEXTURE_LIST_END;
+							prev->next = texture;
+							texture->prev = prev;
+							texture->next = nullptr;
+							TEXTURE_LIST_END = texture;
+						}
+					}
 					else if ((textureEntry->regenFlags & updateMask) != updateMask)
 					{
 						textureEntry->regenFlags |= updateMask;
@@ -2389,18 +2252,32 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				}
 				while (++gridIdx < 9);
 
-				s_hiddenNodes->ClearShow();
-
-				for (auto lgtNode = g_shadowSceneNode->lgtList0B4.Head(); lgtNode; lgtNode = lgtNode->next)
-					if (lgtNode->data->isPointLight && (pntLight = (NiPointLight*)lgtNode->data->light))
-						ULNG(pntLight->radius) += 0x6800000;
+				s_hiddenObjects->Clear();
 				GameGlobals::SceneLightsLock()->Leave();
+				*(bool*)0x11FF104 = 0;
+				s_shadowSceneNodes[0]->Show();
+				s_shadowSceneNodes[1]->Show();
+				s_shadowSceneNodes[2]->Show();
+				s_shadowSceneNodes[3]->Show();
+				s_shadowSceneNodes[4]->Show();
 
 				for (auto plnIter = s_fakeWaterPlanes->m_children.Begin(); plnIter; ++plnIter)
 					plnIter->Hide();
 
 				if (s_renderedExteriors->Size() > CACHED_TEXTURES_MAX)
-					PurgeTextureCache(s_renderedExteriors());
+				{
+					UInt32 purgeCount = s_renderedExteriors->Size() - CACHED_TEXTURES_MIN;
+					NiRenderedTexture *curr = s_mmFirstTexture;
+					ScopedCS cs(TEXTURE_LIST_CS);
+					do
+					{
+						NiRenderedTexture *next = FindNextMMTexture(curr);
+						purgeCount -= s_renderedExteriors->Erase(curr->unk34);
+						curr = next;
+					}
+					while (purgeCount && curr);
+					s_mmFirstTexture = curr;
+				}
 			}
 		}
 		else
@@ -2441,11 +2318,12 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			{
 				s_currLocalCoords = coord;
 				PackCurrGridCoords(coord);
-				hideNode = parentCell->Get3DNode(4);
-				hideNode->Hide();
-				s_shadowSceneNodes[4]->Hide();
-				UInt32 lightingPasses = *GameGlobals::LightingPasses();
-				*GameGlobals::LightingPasses() = 0x34;
+				NiNode **cellNodes = parentCell->Get3DNodes();
+				cellNodes[0]->Hide();
+				cellNodes[4]->Hide();
+				cellNodes[8]->Hide();
+				s_shadowSceneNodes[3]->Hide();
+				LIGHTING_PASSES = 0x34;
 
 				gridIdx = 0;
 				do
@@ -2463,13 +2341,15 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				}
 				while (++gridIdx < 9);
 
-				hideNode->Show();
-				*GameGlobals::LightingPasses() = lightingPasses;
-				s_shadowSceneNodes[4]->Show();
+				cellNodes[0]->Show();
+				cellNodes[4]->Show();
+				cellNodes[8]->Show();
+				s_shadowSceneNodes[3]->Show();
 			}
 			else if (updateFogOfWar)
 				DoSelectiveFOWUpdate(adjustedPos.PS());
 		}
+		LIGHTING_PASSES = lightingPasses;
 
 		if (showFlags & 2)
 		{
@@ -2511,14 +2391,10 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					tileData->y->SetFloat(adjustedPos.y);
 					cell = doorIter().linkedCell;
 					tileData->visited->SetFloat(!cell || (cell == parentCell) || cell->extraDataList.HasType(kXData_ExtraDetachTime));
+					tileData->inUse = true;
 					if (useFogOfWar)
 						tileData->vtxAlpha = GetVtxAlphaPtr(adjustedPos.PS());
-					else
-					{
-						tileData->vtxAlpha = nullptr;
-						tileData->visible->SetFloat(1.0F);
-					}
-					tileData->inUse = true;
+					tileData->visible->SetFloat(!useFogOfWar || *tileData->vtxAlpha);
 				}
 
 				for (; markerIter; ++markerIter)
@@ -2528,11 +2404,10 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					markerIter().visible->SetFloat(0);
 				}
 			}
-
-			if (updateTiles || updateFogOfWar)
+			else if (updateFogOfWar)
 				for (auto markerIter = s_doorMarkerTiles->Begin(); markerIter; ++markerIter)
-					if (markerIter().inUse && markerIter().vtxAlpha)
-						markerIter().visible->SetFloat(*markerIter().vtxAlpha > 0);
+					if (markerIter().inUse)
+						markerIter().visible->SetFloat(*markerIter().vtxAlpha != 0);
 		}
 		else if (!s_doorMarkerTiles->Empty())
 		{

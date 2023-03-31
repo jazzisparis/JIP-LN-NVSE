@@ -180,6 +180,7 @@ enum
 	/*25*/kXData_ExtraHealth,
 	/*26*/kXData_ExtraUses,
 	/*27*/kXData_ExtraTimeLeft,
+	/*27*/kXData_ExtraJIP = kXData_ExtraTimeLeft,
 	/*28*/kXData_ExtraCharge,
 	/*29*/kXData_ExtraLight,
 	/*2A*/kXData_ExtraLock,
@@ -347,6 +348,7 @@ public:
 		{
 			ThisCall(0x4459E0, this, 1);
 		}
+		ExtraDataList *CreateExtraData();
 		bool __fastcall HasExtraType(UInt32 xType) const;
 		bool HasExtraLeveledItem() const;
 		ExtraDataList *GetEquippedExtra() const;
@@ -407,6 +409,7 @@ public:
 class ExtraWornLeft : public BSExtraData	// haven't seen used yet
 {
 public:
+	static ExtraWornLeft* Create();
 };
 
 // 0C
@@ -463,13 +466,9 @@ public:
 	struct Data
 	{
 		TESObjectREFR	*linkedDoor;	// 00
-		float			x;				// 04 x, y, z, zRot refer to teleport marker's position and rotation
-		float			y;				// 08
-		float			z;				// 0C
-		float			xRot;			// 10 angles in radians. x generally 0
-		float			yRot;			// 14 y generally -0.0, no reason to modify
-		float			zRot;			// 18
-		UInt8			unk1C;			// 1C
+		NiVector3		position;		// 04
+		NiVector3		rotation;		// 10
+		UInt8			byte1C;			// 1C
 		UInt8			pad1D[3];		// 1D
 	};
 
@@ -1164,3 +1163,117 @@ public:
 
 	static ExtraSpecialRenderFlags* __stdcall Create(UInt32 _flags = 0);
 };
+
+// 10
+class ExtraJIP : public BSExtraData
+{
+public:
+	enum
+	{
+		kExtraJIP_Verion =	1
+	};
+
+	UInt32		key;	// 0C
+
+	static ExtraJIP *Create();
+
+	UInt32 SetKey();
+
+	void __fastcall SaveGame(BGSSaveFormBuffer *sgBuffer);
+
+	void Dump() const;
+};
+
+// 80
+struct ExtraJIPData
+{
+	union XValue
+	{
+		float	flt;
+		UInt32	refID;
+		
+		inline void operator=(double val) {flt = val;}
+		inline void operator=(UInt32 val) {refID = val;}
+	};
+	
+	SInt32		initBtf;
+	SInt32		typeBtf;
+	XValue		values[18];
+	XString		strings[2];
+
+	inline bool IsRef(UInt32 idx) const {return _bittest(&typeBtf, idx) != 0;}
+
+	inline void Set(UInt32 idx, double val)
+	{
+		_bittestandset(&initBtf, idx);
+		_bittestandreset(&typeBtf, idx);
+		values[idx] = val;
+	}
+	inline void Set(UInt32 idx, UInt32 val)
+	{
+		_bittestandset(&initBtf, idx);
+		_bittestandset(&typeBtf, idx);
+		values[idx] = val;
+	}
+	inline void Set(UInt32 idx, const char *inStr) {strings[idx] = inStr;}
+
+	void ResolvedRefID(UInt32 idx);
+
+	inline UInt32 ValuesUsed() const
+	{
+		UInt32 bitIdx;
+		if (_BitScanReverse(&bitIdx, initBtf))
+			return bitIdx + 1;
+		return 0;
+	}
+
+	UInt32 GetSaveSize() const
+	{
+		if (UInt32 vUsed = ValuesUsed())
+			return (vUsed + 2) << 2;
+		return 8;
+	}
+
+	void operator=(const ExtraJIPData &other);
+
+	bool operator==(const ExtraJIPData &other) const;
+	
+	ExtraJIPData() {ZERO_BYTES(this, sizeof(ExtraJIPData));}
+	ExtraJIPData(const ExtraJIPData &other) {*this = other;}
+
+	~ExtraJIPData()
+	{
+		strings[0].Free();
+		strings[1].Free();
+	}
+
+	void Dump() const;
+};
+static_assert(sizeof(ExtraJIPData) == 0x60);
+
+typedef Map<UInt32, ExtraJIPData, 2> ExtraJIPDataMap;
+
+struct ExtraJIPEntry
+{
+	UInt32			refID;
+	ExtraJIPDataMap	dataMap;
+
+	ExtraJIPEntry() : refID(0) {}
+	ExtraJIPEntry(UInt32 _refID) : refID(_refID) {}
+
+	UInt32 GetSaveSize()
+	{
+		UInt32 size = dataMap.Size() * 5;
+		for (auto iter = dataMap.Begin(); iter; ++iter)
+			size += iter().GetSaveSize() + iter().strings[0].Size() + iter().strings[1].Size();
+		return size;
+	}
+
+	void operator=(ExtraJIPEntry &other);
+
+	bool operator==(ExtraJIPEntry &other);
+};
+static_assert(sizeof(ExtraJIPEntry) == 0x10);
+
+typedef UnorderedMap<UInt32, ExtraJIPEntry, 0x40> ExtraJIPEntryMap;
+extern TempObject<ExtraJIPEntryMap> s_extraDataKeysMap;

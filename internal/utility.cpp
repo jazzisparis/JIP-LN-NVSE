@@ -1895,34 +1895,12 @@ __declspec(noinline) UInt8 *AuxBuffer::Get(UInt32 bufIdx, UInt32 reqSize)
 
 DString::DString(const char *from)
 {
-	length = StrLen(from);
-	if (length)
-	{
-		alloc = (length + 0x11) & 0xFFF0;
-		str = Pool_CAlloc(alloc);
-		COPY_BYTES(str, from, length + 1);
-	}
-	else
-	{
-		str = nullptr;
-		alloc = 0;
-	}
+	*this = from;
 }
 
 DString::DString(const DString &from)
 {
-	length = from.length;
-	if (length)
-	{
-		alloc = (length + 0x11) & 0xFFF0;
-		str = Pool_CAlloc(alloc);
-		COPY_BYTES(str, from.str, length + 1);
-	}
-	else
-	{
-		str = nullptr;
-		alloc = 0;
-	}
+	*this = from;
 }
 
 DString::DString(UInt16 _alloc) : length(0)
@@ -1957,43 +1935,35 @@ void DString::Reserve(UInt16 size)
 
 DString& DString::operator=(const char *other)
 {
-	if (str != other)
+	if (length = StrLen(other))
 	{
-		length = StrLen(other);
-		if (length)
+		if (alloc <= length)
 		{
-			if (alloc <= length)
-			{
-				if (str) Pool_CFree(str, alloc);
-				alloc = (length + 0x11) & 0xFFF0;
-				str = Pool_CAlloc(alloc);
-			}
-			COPY_BYTES(str, other, length + 1);
+			if (str) Pool_CFree(str, alloc);
+			alloc = (length + 0x11) & 0xFFF0;
+			str = Pool_CAlloc(alloc);
 		}
-		else if (str)
-			*str = 0;
+		COPY_BYTES(str, other, length + 1);
 	}
+	else if (str)
+		*str = 0;
 	return *this;
 }
 
 DString& DString::operator=(const DString &other)
 {
-	if (this != &other)
+	if (length = other.length)
 	{
-		length = other.length;
-		if (length)
+		if (alloc <= length)
 		{
-			if (alloc <= length)
-			{
-				if (str) Pool_CFree(str, alloc);
-				alloc = (length + 0x11) & 0xFFF0;
-				str = Pool_CAlloc(alloc);
-			}
-			COPY_BYTES(str, other.str, length + 1);
+			if (str) Pool_CFree(str, alloc);
+			alloc = (length + 0x11) & 0xFFF0;
+			str = Pool_CAlloc(alloc);
 		}
-		else if (str)
-			*str = 0;
+		COPY_BYTES(str, other.str, length + 1);
 	}
+	else if (str)
+		*str = 0;
 	return *this;
 }
 
@@ -2030,14 +2000,14 @@ DString& DString::operator+=(const DString &other)
 	return *this;
 }
 
-bool DString::operator==(const char *other)
+bool DString::operator==(const char *other) const
 {
 	return !StrCompareCS(str, other);
 }
 
-bool DString::operator==(const DString &other)
+bool DString::operator==(const DString &other) const
 {
-	return !StrCompareCS(str, other.str);
+	return (length == other.length) && (!length || !StrCompareCS(str, other.str));
 }
 
 DString& DString::Insert(UInt16 index, char chr)
@@ -2217,6 +2187,36 @@ DString operator+(const char *lStr, const DString &rStr)
 		resStr[resLen] = 0;
 	}
 	return DString(resStr, resLen, resAlloc);
+}
+
+__declspec(noinline) void XString::InitFromBuffer(const char *inStr, UInt32 len)
+{
+	length = len;
+	alloc = (length + 0x11) & 0xFFF0;
+	str = Pool_CAlloc(alloc);
+	COPY_BYTES(str, inStr, length);
+	str[length] = 0;
+}
+
+void XString::operator=(const char *other)
+{
+	if (length = StrLen(other))
+	{
+		if (alloc <= length)
+		{
+			if (str) Pool_CFree(str, alloc);
+			alloc = (length + 0x11) & 0xFFF0;
+			str = Pool_CAlloc(alloc);
+		}
+		COPY_BYTES(str, other, length + 1);
+	}
+	else if (str)
+		*str = 0;
+}
+
+bool XString::operator==(const XString &other) const
+{
+	return (length == other.length) && (!length || !StrCompareCS(str, other.str));
 }
 
 bool __fastcall FileExists(const char *filePath)
@@ -2462,7 +2462,7 @@ __declspec(naked) LineIterator::LineIterator(const char *filePath, char *buffer)
 	}
 }
 
-UInt32 __fastcall FileToBuffer(const char *filePath, char *buffer, UInt32 maxLen)
+__declspec(noinline) UInt32 __fastcall FileToBuffer(const char *filePath, char *buffer, UInt32 maxLen)
 {
 	FileStream srcFile(filePath);
 	if (!srcFile) return 0;

@@ -242,84 +242,84 @@ void __fastcall SetXIControlDisabled(UInt32 ctrlID, bool bDisable)
 	switch (CONTROLLER_BIND(ctrlID))
 	{
 		case kXboxCtrl_DPAD_UP:
-			if (!bDisable) s_XIStateMods.buttonSkip |= kXboxMask_DPAD_UP;
-			else s_XIStateMods.buttonSkip &= ~kXboxMask_DPAD_UP;
+			s_XIStateMods.buttonSkip |= kXboxMask_DPAD_UP;
+			s_XIStateMods.buttonSkip ^= (bDisable << kXboxBit_DPAD_UP);
 			break;
 		case kXboxCtrl_DPAD_DOWN:
-			if (!bDisable) s_XIStateMods.buttonSkip |= kXboxMask_DPAD_DOWN;
-			else s_XIStateMods.buttonSkip &= ~kXboxMask_DPAD_DOWN;
+			s_XIStateMods.buttonSkip |= kXboxMask_DPAD_DOWN;
+			s_XIStateMods.buttonSkip ^= (bDisable << kXboxBit_DPAD_DOWN);
 			break;
 		case kXboxCtrl_DPAD_RIGHT:
-			if (!bDisable) s_XIStateMods.buttonSkip |= kXboxMask_DPAD_RIGHT;
-			else s_XIStateMods.buttonSkip &= ~kXboxMask_DPAD_RIGHT;
+			s_XIStateMods.buttonSkip |= kXboxMask_DPAD_RIGHT;
+			s_XIStateMods.buttonSkip ^= (bDisable << kXboxBit_DPAD_RIGHT);
 			break;
 		case kXboxCtrl_DPAD_LEFT:
-			if (!bDisable) s_XIStateMods.buttonSkip |= kXboxMask_DPAD_LEFT;
-			else s_XIStateMods.buttonSkip &= ~kXboxMask_DPAD_LEFT;
+			s_XIStateMods.buttonSkip |= kXboxMask_DPAD_LEFT;
+			s_XIStateMods.buttonSkip ^= (bDisable << kXboxBit_DPAD_LEFT);
 			break;
 		case kXboxCtrl_START:
-			if (!bDisable) s_XIStateMods.buttonSkip |= kXboxMask_START;
-			else s_XIStateMods.buttonSkip &= ~kXboxMask_START;
+			s_XIStateMods.buttonSkip |= kXboxMask_START;
+			s_XIStateMods.buttonSkip ^= (bDisable << kXboxBit_START);
 			break;
 		case kXboxCtrl_BACK:
-			if (!bDisable) s_XIStateMods.buttonSkip |= kXboxMask_BACK;
-			else s_XIStateMods.buttonSkip &= ~kXboxMask_BACK;
+			s_XIStateMods.buttonSkip |= kXboxMask_BACK;
+			s_XIStateMods.buttonSkip ^= (bDisable << kXboxBit_BACK);
 			break;
 		case kXboxCtrl_LS_BUTTON:
-			if (!bDisable) s_XIStateMods.buttonSkip |= kXboxMask_LS_BUTTON;
-			else s_XIStateMods.buttonSkip &= ~kXboxMask_LS_BUTTON;
+			s_XIStateMods.buttonSkip |= kXboxMask_LS_BUTTON;
+			s_XIStateMods.buttonSkip ^= (bDisable << kXboxBit_LS_BUTTON);
 			break;
 		case kXboxCtrl_RS_BUTTON:
-			if (!bDisable) s_XIStateMods.buttonSkip |= kXboxMask_RS_BUTTON;
-			else s_XIStateMods.buttonSkip &= ~kXboxMask_RS_BUTTON;
+			s_XIStateMods.buttonSkip |= kXboxMask_RS_BUTTON;
+			s_XIStateMods.buttonSkip ^= (bDisable << kXboxBit_RS_BUTTON);
 			break;
 		case kXboxCtrl_BUTTON_A:
-			if (!bDisable) s_XIStateMods.buttonSkip |= kXboxMask_BUTTON_A;
-			else s_XIStateMods.buttonSkip &= ~kXboxMask_BUTTON_A;
+			s_XIStateMods.buttonSkip |= kXboxMask_BUTTON_A;
+			s_XIStateMods.buttonSkip ^= (bDisable << kXboxBit_BUTTON_A);
 			break;
 		case kXboxCtrl_BUTTON_B:
-			if (!bDisable) s_XIStateMods.buttonSkip |= kXboxMask_BUTTON_B;
-			else s_XIStateMods.buttonSkip &= ~kXboxMask_BUTTON_B;
+			s_XIStateMods.buttonSkip |= kXboxMask_BUTTON_B;
+			s_XIStateMods.buttonSkip ^= (bDisable << kXboxBit_BUTTON_B);
 			break;
 		case kXboxCtrl_BUTTON_X:
-			if (!bDisable) s_XIStateMods.buttonSkip |= kXboxMask_BUTTON_X;
-			else s_XIStateMods.buttonSkip &= ~kXboxMask_BUTTON_X;
+			s_XIStateMods.buttonSkip |= kXboxMask_BUTTON_X;
+			s_XIStateMods.buttonSkip ^= (bDisable << kXboxBit_BUTTON_X);
 			break;
 		case kXboxCtrl_BUTTON_Y:
-			if (!bDisable) s_XIStateMods.buttonSkip |= kXboxMask_BUTTON_Y;
-			else s_XIStateMods.buttonSkip &= ~kXboxMask_BUTTON_Y;
+			s_XIStateMods.buttonSkip |= kXboxMask_BUTTON_Y;
+			s_XIStateMods.buttonSkip ^= (bDisable << kXboxBit_BUTTON_Y);
 			break;
 		case kXboxCtrl_RB:
-			if (!bDisable) s_XIStateMods.buttonSkip |= kXboxMask_RB;
-			else s_XIStateMods.buttonSkip &= ~kXboxMask_RB;
+			s_XIStateMods.buttonSkip |= kXboxMask_RB;
+			s_XIStateMods.buttonSkip ^= (bDisable << kXboxBit_RB);
 			break;
 		case kXboxCtrl_LB:
-			if (!bDisable) s_XIStateMods.buttonSkip |= kXboxMask_LB;
-			else s_XIStateMods.buttonSkip &= ~kXboxMask_LB;
+			s_XIStateMods.buttonSkip |= kXboxMask_LB;
+			s_XIStateMods.buttonSkip ^= (bDisable << kXboxBit_LB);
 			break;
 		case kXboxCtrl_LT:
-			if (bDisable) s_XIStateMods.triggerMods |= 1;
-			else s_XIStateMods.triggerMods &= ~1;
+			s_XIStateMods.triggerMods &= ~1;
+			s_XIStateMods.triggerMods |= (UInt8)bDisable;
 			break;
 		case kXboxCtrl_RT:
-			if (bDisable) s_XIStateMods.triggerMods |= 2;
-			else s_XIStateMods.triggerMods &= ~2;
+			s_XIStateMods.triggerMods &= ~2;
+			s_XIStateMods.triggerMods |= (bDisable << 1);
 			break;
 		case kXboxCtrl_LS_UP:
-			if (bDisable) s_XIStateMods.stickSkip |= 1;
-			else s_XIStateMods.stickSkip &= ~1;
+			s_XIStateMods.stickSkip &= ~1;
+			s_XIStateMods.stickSkip |= (UInt8)bDisable;
 			break;
 		case kXboxCtrl_LS_DOWN:
-			if (bDisable) s_XIStateMods.stickSkip |= 2;
-			else s_XIStateMods.stickSkip &= ~2;
+			s_XIStateMods.stickSkip &= ~2;
+			s_XIStateMods.stickSkip |= (bDisable << 1);
 			break;
 		case kXboxCtrl_LS_RIGHT:
-			if (bDisable) s_XIStateMods.stickSkip |= 4;
-			else s_XIStateMods.stickSkip &= ~4;
+			s_XIStateMods.stickSkip &= ~4;
+			s_XIStateMods.stickSkip |= (bDisable << 2);
 			break;
 		case kXboxCtrl_LS_LEFT:
-			if (bDisable) s_XIStateMods.stickSkip |= 8;
-			else s_XIStateMods.stickSkip &= ~8;
+			s_XIStateMods.stickSkip &= ~8;
+			s_XIStateMods.stickSkip |= (bDisable << 3);
 			break;
 		default:
 			break;
@@ -331,68 +331,68 @@ void __fastcall SetXIControlHeld(UInt32 ctrlID, bool bHold)
 	switch (CONTROLLER_BIND(ctrlID))
 	{
 		case kXboxCtrl_DPAD_UP:
-			if (bHold) s_XIStateMods.buttonHold |= kXboxMask_DPAD_UP;
-			else s_XIStateMods.buttonHold &= ~kXboxMask_DPAD_UP;
+			s_XIStateMods.buttonHold &= ~kXboxMask_DPAD_UP;
+			s_XIStateMods.buttonHold |= (bHold << kXboxBit_DPAD_UP);
 			break;
 		case kXboxCtrl_DPAD_DOWN:
-			if (bHold) s_XIStateMods.buttonHold |= kXboxMask_DPAD_DOWN;
-			else s_XIStateMods.buttonHold &= ~kXboxMask_DPAD_DOWN;
+			s_XIStateMods.buttonHold &= ~kXboxMask_DPAD_DOWN;
+			s_XIStateMods.buttonHold |= (bHold << kXboxBit_DPAD_DOWN);
 			break;
 		case kXboxCtrl_DPAD_RIGHT:
-			if (bHold) s_XIStateMods.buttonHold |= kXboxMask_DPAD_RIGHT;
-			else s_XIStateMods.buttonHold &= ~kXboxMask_DPAD_RIGHT;
+			s_XIStateMods.buttonHold &= ~kXboxMask_DPAD_RIGHT;
+			s_XIStateMods.buttonHold |= (bHold << kXboxBit_DPAD_RIGHT);
 			break;
 		case kXboxCtrl_DPAD_LEFT:
-			if (bHold) s_XIStateMods.buttonHold |= kXboxMask_DPAD_LEFT;
-			else s_XIStateMods.buttonHold &= ~kXboxMask_DPAD_LEFT;
+			s_XIStateMods.buttonHold &= ~kXboxMask_DPAD_LEFT;
+			s_XIStateMods.buttonHold |= (bHold << kXboxBit_DPAD_LEFT);
 			break;
 		case kXboxCtrl_START:
-			if (bHold) s_XIStateMods.buttonHold |= kXboxMask_START;
-			else s_XIStateMods.buttonHold &= ~kXboxMask_START;
+			s_XIStateMods.buttonHold &= ~kXboxMask_START;
+			s_XIStateMods.buttonHold |= (bHold << kXboxBit_START);
 			break;
 		case kXboxCtrl_BACK:
-			if (bHold) s_XIStateMods.buttonHold |= kXboxMask_BACK;
-			else s_XIStateMods.buttonHold &= ~kXboxMask_BACK;
+			s_XIStateMods.buttonHold &= ~kXboxMask_BACK;
+			s_XIStateMods.buttonHold |= (bHold << kXboxBit_BACK);
 			break;
 		case kXboxCtrl_LS_BUTTON:
-			if (bHold) s_XIStateMods.buttonHold |= kXboxMask_LS_BUTTON;
-			else s_XIStateMods.buttonHold &= ~kXboxMask_LS_BUTTON;
+			s_XIStateMods.buttonHold &= ~kXboxMask_LS_BUTTON;
+			s_XIStateMods.buttonHold |= (bHold << kXboxBit_LS_BUTTON);
 			break;
 		case kXboxCtrl_RS_BUTTON:
-			if (bHold) s_XIStateMods.buttonHold |= kXboxMask_RS_BUTTON;
-			else s_XIStateMods.buttonHold &= ~kXboxMask_RS_BUTTON;
+			s_XIStateMods.buttonHold &= ~kXboxMask_RS_BUTTON;
+			s_XIStateMods.buttonHold |= (bHold << kXboxBit_RS_BUTTON);
 			break;
 		case kXboxCtrl_BUTTON_A:
-			if (bHold) s_XIStateMods.buttonHold |= kXboxMask_BUTTON_A;
-			else s_XIStateMods.buttonHold &= ~kXboxMask_BUTTON_A;
+			s_XIStateMods.buttonHold &= ~kXboxMask_BUTTON_A;
+			s_XIStateMods.buttonHold |= (bHold << kXboxBit_BUTTON_A);
 			break;
 		case kXboxCtrl_BUTTON_B:
-			if (bHold) s_XIStateMods.buttonHold |= kXboxMask_BUTTON_B;
-			else s_XIStateMods.buttonHold &= ~kXboxMask_BUTTON_B;
+			s_XIStateMods.buttonHold &= ~kXboxMask_BUTTON_B;
+			s_XIStateMods.buttonHold |= (bHold << kXboxBit_BUTTON_B);
 			break;
 		case kXboxCtrl_BUTTON_X:
-			if (bHold) s_XIStateMods.buttonHold |= kXboxMask_BUTTON_X;
-			else s_XIStateMods.buttonHold &= ~kXboxMask_BUTTON_X;
+			s_XIStateMods.buttonHold &= ~kXboxMask_BUTTON_X;
+			s_XIStateMods.buttonHold |= (bHold << kXboxBit_BUTTON_X);
 			break;
 		case kXboxCtrl_BUTTON_Y:
-			if (bHold) s_XIStateMods.buttonHold |= kXboxMask_BUTTON_Y;
-			else s_XIStateMods.buttonHold &= ~kXboxMask_BUTTON_Y;
+			s_XIStateMods.buttonHold &= ~kXboxMask_BUTTON_Y;
+			s_XIStateMods.buttonHold |= (bHold << kXboxBit_BUTTON_Y);
 			break;
 		case kXboxCtrl_RB:
-			if (bHold) s_XIStateMods.buttonHold |= kXboxMask_RB;
-			else s_XIStateMods.buttonHold &= ~kXboxMask_RB;
+			s_XIStateMods.buttonHold &= ~kXboxMask_RB;
+			s_XIStateMods.buttonHold |= (bHold << kXboxBit_RB);
 			break;
 		case kXboxCtrl_LB:
-			if (bHold) s_XIStateMods.buttonHold |= kXboxMask_LB;
-			else s_XIStateMods.buttonHold &= ~kXboxMask_LB;
+			s_XIStateMods.buttonHold &= ~kXboxMask_LB;
+			s_XIStateMods.buttonHold |= (bHold << kXboxBit_LB);
 			break;
 		case kXboxCtrl_LT:
-			if (bHold) s_XIStateMods.triggerMods |= 4;
-			else s_XIStateMods.triggerMods &= ~4;
+			s_XIStateMods.triggerMods &= ~4;
+			s_XIStateMods.triggerMods |= (bHold << 2);
 			break;
 		case kXboxCtrl_RT:
-			if (bHold) s_XIStateMods.triggerMods |= 8;
-			else s_XIStateMods.triggerMods &= ~8;
+			s_XIStateMods.triggerMods &= ~8;
+			s_XIStateMods.triggerMods |= (bHold << 3);
 			break;
 		case kXboxCtrl_LS_UP:
 		case kXboxCtrl_LS_DOWN:

@@ -89,7 +89,6 @@ namespace GameGlobals
 	__forceinline UInt32 TickCount() {return *(UInt32*)0x11F63A8;}
 	__forceinline tList<Archive> *ArchivesList() {return *(tList<Archive>**)0x11F8160;}
 	__forceinline LightCS *SceneLightsLock() {return (LightCS*)0x11F9EA0;}
-	__forceinline UInt32 *LightingPasses() {return (UInt32*)0x11F91D8;}
 	__forceinline tList<ListBox<int>> *ActiveListBoxes() {return (tList<ListBox<int>>*)0x11D8B54;}
 	__forceinline tList<GradualSetFloat> *QueuedGradualSetFloat() {return (tList<GradualSetFloat>*)0x11F3348;}
 	__forceinline RadioEntry *PipboyRadio() {return *(RadioEntry**)0x11DD42C;}
@@ -159,18 +158,19 @@ __forceinline void *NiDeallocator(void *blockPtr, UInt32 size)
 }
 
 TESForm* __stdcall LookupFormByRefID(UInt32 refID);
-bool __stdcall HasChangeData(UInt32 refID);
+UInt32 __stdcall HasChangeData(UInt32 refID);
 bool __fastcall GetResolvedModIndex(UInt8 *pModIdx);
 UInt32 __fastcall GetResolvedRefID(UInt32 refID);
 
 enum
 {
-	kChangedFlag_AuxVars =		1 << 0,
-	kChangedFlag_RefMaps =		1 << 1,
-	kChangedFlag_LinkedRefs =	1 << 2,
-	kChangedFlag_NPCPerks =		1 << 3,
+	kChangedFlag_AuxVars =		1,
+	kChangedFlag_RefMaps =		2,
+	kChangedFlag_ExtraData =	4,
+	kChangedFlag_LinkedRefs =	8,
+	kChangedFlag_NPCPerks =		0x10,
 
-	kChangedFlag_All =			kChangedFlag_AuxVars | kChangedFlag_RefMaps | kChangedFlag_LinkedRefs | kChangedFlag_NPCPerks,
+	kChangedFlag_All =			kChangedFlag_AuxVars | kChangedFlag_RefMaps | kChangedFlag_ExtraData | kChangedFlag_LinkedRefs | kChangedFlag_NPCPerks,
 
 	kSerializedFlag_NoHardcoreTracking =	1 << 0,
 };
@@ -436,17 +436,18 @@ public:
 	__declspec(noinline) void operator=(const char *value)
 	{
 		type = 4;
-		length = StrLen(value);
-		if (length)
+		if (length = StrLen(value))
 		{
-			UInt16 size = length + 1;
-			if (alloc < size)
+			if (length > 0x1FFF)
+				length = 0x1FFF;
+			if (alloc <= length)
 			{
 				if (alloc) Pool_CFree(str, alloc);
-				alloc = (size + 0x10) & 0xFFF0;
+				alloc = (length + 0x11) & 0xFFF0;
 				str = Pool_CAlloc(alloc);
 			}
-			COPY_BYTES(str, value, size);
+			COPY_BYTES(str, value, length);
+			str[length] = 0;
 		}
 		else if (alloc)
 			*str = 0;
@@ -823,6 +824,7 @@ struct InventoryRef
 
 	SInt32 GetCount() {return entry->countDelta;}
 	ExtraDataList *CreateExtraData();
+	ExtraDataList* __fastcall SplitFromStack(SInt32 maxStack = 1);
 };
 
 typedef TESObjectREFR* (__stdcall *_InventoryRefCreate)(TESObjectREFR *container, TESForm *itemForm, SInt32 countDelta, ExtraDataList *xData);
@@ -831,8 +833,6 @@ typedef InventoryRef* (*_InventoryRefGetForID)(UInt32 refID);
 extern _InventoryRefGetForID InventoryRefGetForID;
 
 TESObjectREFR* __fastcall CreateRefForStack(TESObjectREFR *container, ContChangesEntry *menuEntry);
-
-ExtraDataList* __fastcall SplitFromStack(ContChangesEntry *entry, ExtraDataList *xDataIn);
 
 TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex);
 
@@ -853,24 +853,24 @@ struct AnimGroupClassify
 };
 extern const AnimGroupClassify kAnimGroupClassify[];
 
-enum ScriptRunOn
-{
-	kRunOn_LoadGame =		'lg',
-	kRunOn_ExitToMainMenu =	'mx',
-	kRunOn_NewGame =		'ng',
-	kRunOn_RestartGame =	'rg',
-	kRunOn_SaveGame =		'sg',
-	kRunOn_ExitGame =		'xg'
-};
-
 extern TempObject<UnorderedMap<char*, Script*>> s_cachedScripts;
 
 namespace JIPScriptRunner
 {
-	void Init();
-	void RunScripts(UInt16 type);
+	enum ScriptRunOn : UInt16
+	{
+		kRunOn_LoadGame =		'lg',
+		kRunOn_ExitToMainMenu =	'mx',
+		kRunOn_NewGame =		'ng',
+		kRunOn_RestartGame =	'rg',
+		kRunOn_SaveGame =		'sg',
+		kRunOn_ExitGame =		'xg'
+	};
 
-	bool __fastcall RunScript(Script *script, int EDX, TESObjectREFR *callingRef);
+	void Init();
+	void RunScripts(ScriptRunOn runOn);
+
+	void __fastcall RunScript(Script *script, int EDX, TESObjectREFR *callingRef);
 	bool __fastcall RunScriptSource(char *scrSource);
 };
 

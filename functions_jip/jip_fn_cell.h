@@ -6,6 +6,7 @@ DEFINE_COMMAND_PLUGIN(SetCellClimate, 0, 2, kParams_OneForm_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(GetCellNoiseTexture, 0, 1, kParams_OneForm);
 DEFINE_COMMAND_PLUGIN(SetCellNoiseTexture, 0, 2, kParams_OneForm_OneString);
 DEFINE_COMMAND_PLUGIN(GetOwnerOfCell, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(GetCellNorthRotation, 0, 1, kParams_OneForm);
 
 bool Cmd_SetCellWaterForm_Execute(COMMAND_ARGS)
 {
@@ -17,7 +18,7 @@ bool Cmd_SetCellWaterForm_Execute(COMMAND_ARGS)
 		if (xCellWater)
 		{
 			if (water) xCellWater->waterForm = water;
-			else cell->extraDataList.RemoveExtra(xCellWater, true);
+			else cell->extraDataList.RemoveByType(kXData_ExtraCellWaterType);
 		}
 		else if (water) cell->extraDataList.AddExtra(ExtraCellWaterType::Create(water));
 	}
@@ -46,7 +47,7 @@ bool Cmd_SetCellClimate_Execute(COMMAND_ARGS)
 		if (xCellClimate)
 		{
 			if (climate) xCellClimate->climate = climate;
-			else cell->extraDataList.RemoveExtra(xCellClimate, true);
+			else cell->extraDataList.RemoveByType(kXData_ExtraCellClimate);
 		}
 		else if (climate) cell->extraDataList.AddExtra(ExtraCellClimate::Create(climate));
 	}
@@ -78,9 +79,17 @@ bool Cmd_GetOwnerOfCell_Execute(COMMAND_ARGS)
 	REFR_RES = 0;
 	TESObjectCELL *cell;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && IS_ID(cell, TESObjectCELL))
-	{
-		TESForm *owner = ThisCall<TESForm*>(0x546A40, cell);
-		if (owner) REFR_RES = owner->refID;
-	}
+		if (TESForm *owner = ThisCall<TESForm*>(0x546A40, cell))
+			REFR_RES = owner->refID;
+	return true;
+}
+
+bool Cmd_GetCellNorthRotation_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	TESObjectCELL *cell;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && IS_ID(cell, TESObjectCELL) && cell->IsInterior())
+		if (ExtraNorthRotation *xNorthRot = GetExtraType(&cell->extraDataList, ExtraNorthRotation))
+			*result = xNorthRot->rotation * Dbl180dPI;
 	return true;
 }

@@ -79,6 +79,9 @@ public:
 	ScriptVar *AddVariable(char *varName, ScriptLocals *eventList, UInt32 ownerID, UInt8 modIdx);
 	UInt32 GetDataLength();
 
+	/*Script() {Constructor();}
+	~Script() {Destructor();}*/
+
 	__forceinline Script *Constructor()
 	{
 		return ThisCall<Script*>(0x5AA0F0, this);
@@ -96,7 +99,7 @@ public:
 		return ThisCall<bool>(0x5AC400, this, scriptContext, true, object);
 	}
 
-	void Init(char *scrText);
+	bool Init(char *scrText);
 	static Script *Create(char *scrText);
 	bool Compile();
 

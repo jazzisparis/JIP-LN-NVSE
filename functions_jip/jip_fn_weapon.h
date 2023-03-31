@@ -189,7 +189,7 @@ bool Cmd_GetCalculatedWeaponDamage_Execute(COMMAND_ARGS)
 	InventoryRef *invRef = nullptr;
 	Actor *owner = g_thePlayer;
 	ContChangesEntry tempEntry(nullptr, 1, weapon);
-	ExtraContainerChanges::ExtendDataList extendData;
+	ContChangesExtraList extendData;
 	if (!weapon)
 	{
 		if (!thisObj) return true;

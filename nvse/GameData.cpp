@@ -149,3 +149,22 @@ __declspec(naked) TESObjectCELL* __vectorcall GridCellArray::GetCellAtCoord(__m1
 		retn
 	}
 }
+
+void TES::UnloadBufferedExterior(TESObjectCELL *cell)
+{
+	UInt32 bufferSize = *(UInt32*)0x11C3C94;
+	for (UInt32 i = 0; i < bufferSize; i++)
+		if (!exteriorsBuffer[i])
+		{
+			bufferSize = i;
+			break;
+		}			
+	for (UInt32 i = 0; i < bufferSize; i++)
+	{
+		if (exteriorsBuffer[i] != cell)
+			continue;
+		memmove(exteriorsBuffer + i, exteriorsBuffer + i + 1, (bufferSize - i - 1) << 2);
+		ThisCall(0x462290, g_dataHandler, cell);
+		break;
+	}
+}

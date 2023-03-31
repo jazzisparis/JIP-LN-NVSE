@@ -367,7 +367,6 @@ class NiTextKeyExtraData;
 class NiDefaultAVObjectPalette;
 class NiLight;
 class BSCubeMapCamera;
-class NiFrustumPlanes;
 class NiCullingProcess;
 class NiParticleSystem;
 class NiSkinPartition;

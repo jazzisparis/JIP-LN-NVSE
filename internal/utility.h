@@ -176,6 +176,18 @@ public:
 	}
 };
 
+template <typename T> class StackObject
+{
+	alignas(T) UInt8	objData[sizeof(T)];
+
+public:
+	StackObject() {}
+
+	T& operator()() {return *(reinterpret_cast<T*>(this));}
+	T* operator*() {return reinterpret_cast<T*>(this);}
+	T* operator->() {return reinterpret_cast<T*>(this);}
+};
+
 //	Swap lhs and rhs, bypassing operator=
 template <typename T> __forceinline void RawSwap(const T &lhs, const T &rhs)
 {
@@ -255,6 +267,10 @@ template <const size_t numBits> struct BitField
 	using BITS = std::conditional_t<(numBits == 8), UInt8, std::conditional_t<(numBits == 16), UInt16, UInt32>>;
 	
 	BITS		bits;
+
+	BitField(BITS _init = 0) : bits(_init) {}
+
+	inline void operator=(BITS rhs) {bits = rhs;}
 
 	inline bool operator()(BITS bitMask) const {return (bits & bitMask) != 0;}
 	inline void operator|=(BITS bitMask) {bits |= bitMask;}
@@ -467,15 +483,11 @@ public:
 	~DString()
 	{
 		if (str)
-		{
 			Pool_CFree(str, alloc);
-			str = nullptr;
-			ULNG(alloc) = 0;
-		}
 	}
 
 	const char *CString() const {return str ? str : "";}
-	char *Data() {return str;}
+	char *Data() const {return str;}
 
 	UInt32 Size() const {return length;}
 	bool Empty() const {return !length;}
@@ -503,8 +515,8 @@ public:
 	DString& operator+=(const char *other);
 	DString& operator+=(const DString &other);
 
-	bool operator==(const char *other);
-	bool operator==(const DString &other);
+	bool operator==(const char *other) const;
+	bool operator==(const DString &other) const;
 
 	DString& Insert(UInt16 index, char chr);
 	DString& Insert(UInt16 index, const char *other);
@@ -523,6 +535,41 @@ public:
 	friend DString operator+(const DString &lStr, char rChr);
 	friend DString operator+(const DString &lStr, const char *rStr);
 	friend DString operator+(const char *lStr, const DString &rStr);
+};
+
+class XString
+{
+	UInt16		alloc;
+	UInt16		length;
+	char		*str;
+	
+public:
+	inline void Reset()
+	{
+		ULNG(alloc) = 0;
+		str = nullptr;
+	}
+
+	inline void Free() {if (str) Pool_CFree(str, alloc);}
+	
+	inline const char *CString() const {return str ? str : "";}
+	inline char *Data() const {return str;}
+
+	inline UInt32 Size() const {return length;}
+	inline bool Empty() const {return !length;}
+	
+	void InitFromBuffer(const char *inStr, UInt32 len);
+
+	inline void InitCopy(const XString &from)
+	{
+		if (from.length)
+			InitFromBuffer(from.str, from.length);
+		else Reset();
+	}
+	
+	void operator=(const char *other);
+	
+	bool operator==(const XString &other) const;
 };
 
 #define AUX_BUFFER_INIT_SIZE 0x8000

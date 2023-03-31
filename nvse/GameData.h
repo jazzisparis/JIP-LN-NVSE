@@ -357,8 +357,8 @@ public:
 class Stars : public SkyObject
 {
 public:
-	NiNode			*node08;	// 08
-	float			flt0C;		// 0C
+	NiNode			*starsNode;	// 08
+	float			alpha;		// 0C
 };
 
 // 2C
@@ -366,13 +366,13 @@ class Sun : public SkyObject
 {
 public:
 	NiBillboardNode		*node08;		// 08
-	NiBillboardNode		*node0C;		// 0C
-	NiTriShape			*shape10;		// 10
+	NiBillboardNode		*sunGlare;		// 0C
+	NiTriShape			*sunBase;		// 10
 	NiTriShape			*shape14;		// 14
 	UInt32				unk18;			// 18
 	NiDirectionalLight	*sunLight;		// 1C	Same as g_TES->directionalLight
-	float				flt20;			// 20
-	UInt8				byte24;			// 24
+	float				glareScale;		// 20
+	UInt8				bDoOcclusionTests;	// 24
 	UInt8				byte25;			// 25
 	UInt8				byte26;			// 26
 	UInt8				byte27;			// 27
@@ -397,10 +397,10 @@ class Moon : public SkyObject
 public:
 	virtual void	Refresh(NiNode *niNode, const char *moonStr);
 
-	NiNode			*node08;			// 08
-	NiNode			*node0C;			// 0C
-	NiTriShape		*shape10;			// 10
-	NiTriShape		*shape14;			// 14
+	NiNode			*moonNode;			// 08
+	NiNode			*shadowNode;		// 0C
+	NiTriShape		*moonGeom;			// 10
+	NiTriShape		*shadowGeom;		// 14
 	String			moonTexture[8];		// 18
 					//	0	Full Moon
 					//	1	Three Wan
@@ -410,15 +410,15 @@ public:
 					//	5	One Wax
 					//	6	Half Wax
 					//	7	Three Wax
-	float			flt58;				// 58
-	float			flt5C;				// 5C
-	float			flt60;				// 60
-	float			flt64;				// 64
-	float			flt68;				// 68
-	UInt32			unk6C;				// 6C
+	float			angleFadeStart;		// 58
+	float			angleFadeEnd;		// 5C
+	float			shadowEarlyFade;	// 60
+	float			speed;				// 64
+	float			offsetZ;			// 68
+	UInt32			size;				// 6C
 	UInt32			unk70;				// 70
 	float			flt74;				// 74
-	float			flt78;				// 78
+	float			lastUpdateHour;		// 78
 };
 
 // 18
@@ -439,6 +439,14 @@ class Sky
 {
 public:
 	virtual Sky *Destructor(bool doFree);
+
+	enum SkyMode
+	{
+		kSkyMode_None,
+		kSkyMode_Interior,
+		kSkyMode_SkyDomeOnly,
+		kSkyMode_Full
+	};
 
 	enum SkyFlags
 	{
@@ -481,16 +489,16 @@ public:
 	Moon							*masserMoon;		// 030
 	Moon							*secundaMoon;		// 034
 	Precipitation					*precipitation;		// 038
-	NiVector3						vector03C;			// 03C
+	NiColor							skyUpper;			// 03C
 	NiColor							waterReflection;	// 048
-	NiVector3						vector054;			// 054
+	NiColor							color054;			// 054
 	NiColor							sunAmbient;			// 060
 	NiColor							sunDirectional;		// 06C
-	NiVector3						vector078;			// 078
-	NiVector3						vector084;			// 084
-	NiVector3						vector090;			// 090
-	NiVector3						vector09C;			// 09C
-	NiVector3						vector0A8;			// 0A8
+	NiColor							color078;			// 078
+	NiColor							color084;			// 084
+	NiColor							skyLower;			// 090
+	NiColor							horizon;			// 09C
+	NiColor							color0A8;			// 0A8
 	NiVector3						vector0B4;			// 0B4
 	NiColor							sunFog;				// 0C0
 	float							windSpeed;			// 0CC
@@ -500,7 +508,7 @@ public:
 	float							gameHour;			// 0EC
 	float							lastUpdateHour;		// 0F0
 	float							weatherPercent;		// 0F4
-	UInt32							unk0F8;				// 0F8
+	UInt32							skyMode;			// 0F8
 	tList<SkySound>					*skySounds;			// 0FC
 	float							lightningFxPerc;	// 100
 	UInt32							unk104;				// 104
@@ -740,6 +748,8 @@ public:
 	{
 		ThisCall(0x458E20, this, object, lifetime);
 	}
+
+	void UnloadBufferedExterior(TESObjectCELL *cell);
 };
 static_assert(sizeof(TES) == 0xC4);
 

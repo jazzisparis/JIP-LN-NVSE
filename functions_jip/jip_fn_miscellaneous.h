@@ -703,7 +703,7 @@ bool Cmd_SwapObjectLOD_Execute(COMMAND_ARGS)
 
 bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 {
-	/*static BSFadeNode **wobbleAnimations = nullptr;
+	static BSFadeNode **wobbleAnimations = nullptr;
 	static QuaternionKey *wobbleAnimRotations[9] = {};
 	NiVector3 rotPRY;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &rotPRY.x, &rotPRY.y, &rotPRY.z))
@@ -746,7 +746,7 @@ bool Cmd_SetWobblesRotation_Execute(COMMAND_ARGS)
 				if (wobbleAnimRotations[startIdx])
 					memmove(wobbleAnimRotations[startIdx], rotationKeys, sizeof(QuaternionKey) * 3);
 		}
-	}*/
+	}
 	return true;
 }
 
@@ -1232,27 +1232,19 @@ bool Cmd_PlaceModel_Execute(COMMAND_ARGS)
 	float scale = 1.0F;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &modelPath, &pos.x, &pos.y, &pos.z, &rot.x, &rot.y, &rot.z, &scale))
 	{
-		PlayerCharacter *thePlayer = g_thePlayer;
-		TESObjectCELL *parentCell = thePlayer->parentCell;
-		if (parentCell && (!parentCell->worldSpace || (parentCell = g_gridCellArray->GetCellAtPos(thePlayer->position.PS()))))
+		TESObjectCELL *parentCell = g_thePlayer->parentCell;
+		NiNode *objNode;
+		if (parentCell && (!parentCell->worldSpace || (parentCell = g_gridCellArray->GetCellAtPos(g_thePlayer->position.PS()))) && (objNode = LoadModelCopy(modelPath)))
 		{
-			NiNode *objParent = parentCell->Get3DNode(3);
-			if (objParent)
-			{
-				NiNode *objNode = LoadModelCopy(modelPath);
-				if (objNode)
-				{
-					objNode->RemoveCollision();
-					objParent->AddObject(objNode, 1);
-					objNode->LocalRotate().FromEulerYPR(rot * GET_PS(8));
-					objNode->LocalTranslate() = pos;
-					objNode->m_transformLocal.scale = scale;
-					objNode->UpdateDownwardPass(kUpdateParams, 0);
-					if (objNode->m_flags & 0x20000000)
-						AddPointLights(objNode);
-					*result = 1;
-				}
-			}
+			objNode->RemoveCollision();
+			parentCell->Get3DNode(3)->AddObject(objNode, 1);
+			objNode->LocalRotate().FromEulerYPR(rot * GET_PS(8));
+			objNode->LocalTranslate() = pos;
+			objNode->m_transformLocal.scale = scale;
+			objNode->UpdateDownwardPass(kUpdateParams, 0);
+			if (objNode->m_flags & 0x20000000)
+				AddPointLights(objNode);
+			*result = 1;
 		}
 	}
 	return true;

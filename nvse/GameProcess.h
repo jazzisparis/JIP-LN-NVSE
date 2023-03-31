@@ -68,20 +68,19 @@ struct ActorHitData
 
 struct DetectionData
 {
-	Actor		*actor;			// 00
-	UInt8		detectionLevel;	// 04
-	UInt8		byte05;			// 05
-	UInt8		byte06;			// 06
-	UInt8		byte07;			// 07
-	SInt32		detectionValue;	// 08
-	UInt32		unk0C;			// 0C
-	UInt32		unk10;			// 10
-	UInt32		unk14;			// 14
-	UInt32		unk18;			// 18
-	UInt8		byte1C;			// 1C
-	UInt8		byte1D;			// 1D
-	bool		inLOS;			// 1E
-	UInt8		byte1F;			// 1F
+	Actor		*actor;				// 00
+	UInt8		detectionLevel;		// 04
+	UInt8		byte05;				// 05
+	UInt8		byte06;				// 06
+	UInt8		byte07;				// 07
+	SInt32		detectionValue;		// 08
+	NiPoint3	detectedLocation;	// 0C
+	float		fTimeStamp;			// 18
+	UInt8		forceResetCombatLOSBuffer;	// 1C
+	UInt8		byte1D;				// 1D
+	bool		inLOS;				// 1E
+	UInt8		byte1F;				// 1F
+	UInt32		unk20;				// 20
 };
 
 // 68

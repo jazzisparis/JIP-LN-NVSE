@@ -135,7 +135,7 @@ struct ScriptLocals
 	VarList				*m_vars;		// 0C
 	EffectScriptFlags	*m_effScrFlags;	// 10
 
-	ScriptVar *GetVariable(UInt32 id);
+	ScriptVar* __fastcall GetVariable(UInt32 id) const;
 	UInt32 ResetAllVariables();
 	ScriptLocals *CreateCopy();
 };
@@ -246,9 +246,9 @@ public:
 	virtual TESObjectREFR*	getREFR(void);				// only implemented in descendants
 	virtual Actor*			getActor(void);				// only implemented in descendants
 
-	char*	chunk;			// 004
-	UInt32	chunkSize;		// 008
-	UInt32	chunkConsumed;	// 00C
+	UInt8		*chunk;			// 04
+	UInt32		chunkSize;		// 08
+	UInt32		chunkConsumed;	// 0C
 
 	__forceinline void Read(void *buffer, size_t size)
 	{
@@ -269,7 +269,7 @@ public:
 
 	inline UInt8 Read8()
 	{
-		UInt8 res = (UInt8)chunk[chunkConsumed];
+		UInt8 res = chunk[chunkConsumed];
 		chunkConsumed += 2;
 		return res;
 	}
@@ -293,6 +293,11 @@ public:
 		memcpy(buff, chunk + chunkConsumed, size);
 		chunkConsumed += size + 1;
 	}
+
+	__forceinline static void DecodeRefID(UInt32 *pRefID)
+	{
+		*pRefID = ThisCall<UInt32>(0x853500, pRefID);
+	}
 };
 
 struct BGSFormChange
@@ -307,7 +312,7 @@ struct FormBufferHeader
 	UInt32		changeFlags;		// 03
 	UInt8		codedTypeAndLength;	// 07
 	UInt8		formVersion;		// 08
-	UInt8		pad009[3];			// 09
+	UInt8		pad009[2];			// 09
 
 	inline UInt32 GenerateKey(UInt32 consumed)
 	{
@@ -315,19 +320,20 @@ struct FormBufferHeader
 		return (key * 0xD) ^ (key >> 0xF);
 	}
 };
-static_assert(sizeof(FormBufferHeader) == 0x10);
+static_assert(sizeof(FormBufferHeader) == 0xC);
 
 // 030
-class BGSLoadFormBuffer: public BGSLoadGameBuffer
+class BGSLoadFormBuffer : public BGSLoadGameBuffer
 {
 public:
 	UInt32				refID;				// 10
 	FormBufferHeader	header;				// 14
-	UInt32				bufferSize;			// 24
-	TESForm				*form;				// 28
-	UInt32				flg2C;				// 2C	bit1 form invalid
-	BGSFormChange		*currentFormChange;	// 30
+	UInt32				bufferSize;			// 20
+	TESForm				*form;				// 24
+	UInt32				flg28;				// 28	bit1 form invalid
+	BGSFormChange		*currentFormChange;	// 2C
 };
+static_assert(sizeof(BGSLoadFormBuffer) == 0x30);
 
 // 14
 class BGSSaveGameBuffer
@@ -337,17 +343,17 @@ public:
 	virtual TESObjectREFR	*GetRefr(void);
 	virtual Actor	*GetActor(void);
 
-	UInt32		unk04;			// 04
-	UInt32		unk08;			// 08
+	UInt8		*chunk;			// 04
+	UInt32		chunkSize;		// 08
 	UInt32		chunkConsumed;	// 0C
-	UInt32		unk10;			// 10
+	UInt32		count10;		// 10
 
 	__forceinline void Write(void *source, size_t size)
 	{
 		ThisCall(0x865CE0, this, source, size, chunkConsumed, 0);
 	}
 
-	__forceinline void __fastcall EncodeRefID(UInt32 *pRefID)
+	__forceinline static void EncodeRefID(UInt32 *pRefID)
 	{
 		ThisCall(0x853570, pRefID, *pRefID);
 	}
@@ -358,16 +364,35 @@ public:
 		ThisCall(0x853570, &encoded, refID);
 		ThisCall(0x865CE0, this, &encoded, 4, chunkConsumed, 0);
 	}
+
+	UInt8* Reserve(size_t size)
+	{
+		UInt32 required = chunkConsumed + size;
+		if (required > chunkSize)
+			ThisCall(0x8660B0, this);
+		count10++;
+		UInt8 *pos = chunk + chunkConsumed;
+		chunkConsumed = required;
+		return pos;
+	}
 };
 
 // 24
 class BGSSaveFormBuffer : public BGSSaveGameBuffer
 {
 public:
-	FormBufferHeader	header;
+	FormBufferHeader	header;		// 14
+	TESForm				*form;		// 20
+
+	UInt32 GetRefID()
+	{
+		return form ? form->refID : ThisCall<UInt32>(0x853500, &header);
+	}
 };
+static_assert(sizeof(BGSSaveFormBuffer) == 0x24);
 
 typedef NiTPointerMap<BGSFormChange> BGSSaveLoadChangesMap;
+BGSFormChange *BGSSaveLoadChangesMap::Lookup(UInt32 key) const;
 
 typedef BGSSaveLoadChangesMap ChangesMap;
 
@@ -440,8 +465,8 @@ public:
 	typedef UInt32	IndexRefID;
 	struct RefIDIndexMapping	// reversible map between refID and loaded form index
 	{
-		NiTMapBase<RefID, IndexRefID>	* map000;	// 000
-		NiTMapBase<IndexRefID, RefID>	* map010;	// 010
+		NiTMapBase<RefID, IndexRefID>	map000;	// 000
+		NiTMapBase<IndexRefID, RefID>	map010;	// 010
 		UInt32			            countRefID;	// 020
 	};
 
@@ -458,7 +483,7 @@ public:
 
 	};
 
-	struct Struct010
+	struct BGSSaveLoadReferencesMap
 	{
 		NiTPointerMap<UInt32>						* map000;	// 000
 		BGSCellNumericIDArrayMap					* map010;	// 010
@@ -469,7 +494,7 @@ public:
 	BGSSaveLoadChangesMap						*previousChangeMap;		// 004
 	RefIDIndexMapping							*refIDmapping;			// 008
 	RefIDIndexMapping							*visitedWorldspaces;	// 00C
-	Struct010									*sct010;				// 010
+	BGSSaveLoadReferencesMap					*referencesMap;			// 010
 	NiTMapBase<TESForm*, BGSLoadGameSubBuffer>	*maps014;				// 014
 	NiTMapBase<UInt32, UInt32>					*map018;				// 018
 	BSSimpleArray<char*>						*strings;				// 01C
@@ -486,6 +511,9 @@ public:
 	__forceinline static BGSSaveLoadGame *GetSingleton() {return *(BGSSaveLoadGame**)0x11DDF38;}
 
 	inline bool IsLoading() const {return (flags & 2) != 0;}
+
+	UInt32 __fastcall EncodeRefID(UInt32 *pRefID);
+	UInt32 __fastcall DecodeRefID(UInt32 *pRefID);
 };
 static_assert(sizeof(BGSSaveLoadGame) == 0x24C);
 
