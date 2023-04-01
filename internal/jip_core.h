@@ -522,6 +522,13 @@ extern TempObject<RefMapModsMap> s_refMapArraysPerm, s_refMapArraysTemp;
 UInt32 __fastcall GetSubjectID(TESForm *form, TESObjectREFR *thisObj);
 
 #define JIP_VARS_CS 1
+#define JIP_XDATA_CS 1
+
+#if JIP_XDATA_CS
+#define XDATA_CS ScopedPrimitiveCS cs(&s_JIPExtraDataCS);
+#else
+#define XDATA_CS
+#endif
 
 struct AuxVarInfo
 {

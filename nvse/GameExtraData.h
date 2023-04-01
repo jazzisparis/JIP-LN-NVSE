@@ -1175,9 +1175,9 @@ public:
 
 	UInt32		key;	// 0C
 
-	static ExtraJIP *Create();
+	static ExtraJIP *Create(UInt32 _key = 0);
 
-	UInt32 SetKey();
+	static UInt32 MakeKey();
 
 	void __fastcall SaveGame(BGSSaveFormBuffer *sgBuffer);
 
@@ -1277,3 +1277,4 @@ static_assert(sizeof(ExtraJIPEntry) == 0x10);
 
 typedef UnorderedMap<UInt32, ExtraJIPEntry, 0x40> ExtraJIPEntryMap;
 extern TempObject<ExtraJIPEntryMap> s_extraDataKeysMap;
+extern PrimitiveCS s_JIPExtraDataCS;;

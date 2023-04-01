@@ -2637,8 +2637,12 @@ bool Cmd_RefHasExtraData_Execute(COMMAND_ARGS)
 	{
 		if (!modIdx)
 			modIdx = scriptObj->quest ? scriptObj->quest->modIndex : scriptObj->modIndex;
-		if ((modIdx < 0xFF) && GetExtraJIPData(thisObj, modIdx))
-			*result = 1;
+		if (modIdx < 0xFF)
+		{
+			XDATA_CS
+			if (GetExtraJIPData(thisObj, modIdx))
+				*result = 1;
+		}
 	}
 	return true;
 }
@@ -2655,6 +2659,7 @@ bool Cmd_GetRefExtraData_Execute(COMMAND_ARGS)
 		if (!modIdx)
 			modIdx = scriptObj->quest ? scriptObj->quest->modIndex : scriptObj->modIndex;
 		if (modIdx >= 0xFF) return true;
+		XDATA_CS
 		if (ExtraJIPData *pData = GetExtraJIPData(thisObj, modIdx))
 		{
 			if (varIdx >= 18)
@@ -2688,6 +2693,8 @@ bool Cmd_SetRefExtraData_Execute(COMMAND_ARGS)
 				return true;
 		}
 		
+		XDATA_CS
+
 		TESObjectREFR *refr = thisObj;
 		ExtraJIP *xJIP;
 		if (InventoryRef *invRef = InventoryRefGetForID(thisObj->refID))
@@ -2721,7 +2728,7 @@ bool Cmd_SetRefExtraData_Execute(COMMAND_ARGS)
 							xData->RemoveByType(kXData_ExtraJIP);
 							if (!xData->m_data)
 							{
-								if (ContChangesEntry* entry = refr->GetContainerChangesEntry(invRef->type))
+								if (ContChangesEntry *entry = refr->GetContainerChangesEntry(invRef->type))
 								{
 									entry->extendData->Remove(xData);
 									GameHeapFree(xData);
@@ -2761,7 +2768,7 @@ bool Cmd_SetRefExtraData_Execute(COMMAND_ARGS)
 		}
 		if (!xJIP->key)
 		{
-			xJIP->SetKey();
+			xJIP->key = ExtraJIP::MakeKey();
 			refr->MarkModified(0x400);
 		}
 		ExtraJIPData *pData = &s_extraDataKeysMap()[xJIP->key].dataMap[modIdx];

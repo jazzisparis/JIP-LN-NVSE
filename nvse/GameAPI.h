@@ -314,10 +314,9 @@ struct FormBufferHeader
 	UInt8		formVersion;		// 08
 	UInt8		pad009[2];			// 09
 
-	inline UInt32 GenerateKey(UInt32 consumed)
+	__forceinline UInt32 GetRefID()
 	{
-		UInt32 key = (encodeID & 0xFFFFFF) + (consumed ^ 0x7ED55D16);
-		return (key * 0xD) ^ (key >> 0xF);
+		return ThisCall<UInt32>(0x853500, this);
 	}
 };
 static_assert(sizeof(FormBufferHeader) == 0xC);
@@ -332,6 +331,11 @@ public:
 	TESForm				*form;				// 24
 	UInt32				flg28;				// 28	bit1 form invalid
 	BGSFormChange		*currentFormChange;	// 2C
+
+	UInt32 GetRefID()
+	{
+		return form ? form->refID : header.GetRefID();
+	}
 };
 static_assert(sizeof(BGSLoadFormBuffer) == 0x30);
 
@@ -386,7 +390,7 @@ public:
 
 	UInt32 GetRefID()
 	{
-		return form ? form->refID : ThisCall<UInt32>(0x853500, &header);
+		return form ? form->refID : header.GetRefID();
 	}
 };
 static_assert(sizeof(BGSSaveFormBuffer) == 0x24);

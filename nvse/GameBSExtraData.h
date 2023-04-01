@@ -61,7 +61,7 @@ struct ExtraDataList : public BaseExtraList
 	ExtraDataList *CreateCopy(bool bCopyAndRemove = false);
 	static ExtraDataList *Create();
 
-	ExtraJIP *AddExtraJIP();
+	ExtraJIP *AddExtraJIP(UInt32 _key = 0);
 	void __fastcall ExtraJIPLoadGame(BGSLoadFormBuffer *lgBuffer);
 	void __fastcall ExtraJIPCopy(ExtraJIP *source);
 };

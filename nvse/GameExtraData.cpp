@@ -662,36 +662,39 @@ void ContChangesExtraList::CleanEmpty()
 }
 
 TempObject<ExtraJIPEntryMap> s_extraDataKeysMap;
+PrimitiveCS s_JIPExtraDataCS;
 
-ExtraJIP *ExtraJIP::Create()
+ExtraJIP *ExtraJIP::Create(UInt32 _key)
 {
 	UInt32 *dataPtr = (UInt32*)GameHeapAlloc(sizeof(ExtraJIP));
 	dataPtr[0] = kVtbl_ExtraTimeLeft;
 	dataPtr[1] = kXData_ExtraJIP;
 	dataPtr[2] = 0;
-	dataPtr[3] = 0;
-	return (ExtraJIP*)dataPtr;
+	ExtraJIP *xJIP = (ExtraJIP*)dataPtr;
+	xJIP->key = _key;
+	return xJIP;
 }
 
-__declspec(noinline) UInt32 ExtraJIP::SetKey()
+__declspec(noinline) UInt32 ExtraJIP::MakeKey()
 {
 	while (true)
 	{
-		key = ThisCall<UInt32, UInt32>(0xAA5230, (void*)0x11C4180, 0xFFFFFFFE) + 1;
+		UInt32 key = ThisCall<UInt32, UInt32>(0xAA5230, (void*)0x11C4180, 0xFFFFFFFE) + 1;
 		if (!s_extraDataKeysMap->HasKey(key))
 			return key;
 	}
 }
 
-__declspec(noinline) ExtraJIP *ExtraDataList::AddExtraJIP()
+__declspec(noinline) ExtraJIP *ExtraDataList::AddExtraJIP(UInt32 _key)
 {
-	return (ExtraJIP*)AddExtra(ExtraJIP::Create());
+	return (ExtraJIP*)AddExtra(ExtraJIP::Create(_key));
 }
 
 void __fastcall ExtraJIP::SaveGame(BGSSaveFormBuffer *sgBuffer)
 {
 	UInt8 *buffer = sgBuffer->Reserve(5);
 	buffer[4] = '|';
+	XDATA_CS
 	if (ExtraJIPEntry *entry = s_extraDataKeysMap->GetPtr(key))
 	{
 		entry->refID = sgBuffer->GetRefID();
@@ -706,26 +709,27 @@ void __fastcall ExtraDataList::ExtraJIPLoadGame(BGSLoadFormBuffer *lgBuffer)
 	lgBuffer->chunkConsumed += 5;
 	UInt32 key = *(UInt32*)buffer;
 	if (!key) return;
-	ExtraJIP *xJIP = GetExtraType(this, ExtraJIP);
-	if (!xJIP)
-		xJIP = AddExtraJIP();
-	else if (ExtraJIPEntry *entry = s_extraDataKeysMap->GetPtr(xJIP->key))
-		entry->dataMap.Clear();
-	xJIP->key = key;
+	if (ExtraJIP *xJIP = GetExtraType(this, ExtraJIP))
+	{
+		if (xJIP->key != key)	//	Should never happen!
+		{
+			s_extraDataKeysMap->Erase(xJIP->key);
+			xJIP->key = key;
+		}
+	}
+	else AddExtraJIP(key);
 }
 
 void __fastcall ExtraDataList::ExtraJIPCopy(ExtraJIP *source)
 {
+	XDATA_CS
 	ExtraJIPEntry *inEntry = s_extraDataKeysMap->GetPtr(source->key);
 	if (!inEntry) return;
-	ExtraJIPEntry *newEntry;
-	if (ExtraJIP *xJIP = GetExtraType(this, ExtraJIP))
-	{
-		if (!(newEntry = s_extraDataKeysMap->GetPtr(xJIP->key)))
-			return;
-		newEntry->dataMap.Clear();
-	}
-	else newEntry = &s_extraDataKeysMap()[AddExtraJIP()->SetKey()];
+	ExtraJIP *xJIP = GetExtraType(this, ExtraJIP);
+	if (!xJIP)
+		xJIP = AddExtraJIP(ExtraJIP::MakeKey());
+	ExtraJIPEntry *newEntry = &s_extraDataKeysMap()[xJIP->key];
+	newEntry->dataMap.Clear();
 	*newEntry = *inEntry;
 	s_dataChangedFlags |= kChangedFlag_ExtraData;
 }

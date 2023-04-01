@@ -254,6 +254,7 @@ __declspec(naked) void FreeUnusedNiFixedStrings()
 
 void __fastcall ExtraJIPDestroyHook(ExtraJIP *xJIP, int EDX, bool doFree)
 {
+	XDATA_CS
 	if (auto findEntry = s_extraDataKeysMap->Find(xJIP->key))
 		if (!findEntry().refID || LookupFormByRefID(findEntry().refID)/* || (findEntry().refID == g_dataHandler->nextCreatedRefID)*/ || !HasChangeData(findEntry().refID))
 		{
@@ -268,6 +269,7 @@ bool __fastcall ExtraJIPDiffersHook(ExtraJIP *xJIP, int EDX, BSExtraData *compar
 {
 	if (xJIP->type != compareTo->type)
 		return true;
+	XDATA_CS
 	ExtraJIPEntry *entry1 = s_extraDataKeysMap->GetPtr(xJIP->key);
 	if (!entry1) return true;
 	ExtraJIPEntry *entry2 = s_extraDataKeysMap->GetPtr(((ExtraJIP*)compareTo)->key);
