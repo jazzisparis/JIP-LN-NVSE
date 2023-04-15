@@ -63,6 +63,7 @@ DEFINE_COMMAND_PLUGIN(AttachUIComponent, 1, 22, kParams_OneString_OneFormatStrin
 DEFINE_COMMAND_PLUGIN(GetWorldMapPosMults, 1, 2, kParams_TwoScriptVars);
 DEFINE_COMMAND_PLUGIN(ProjectUITile, 1, 6, kParams_TwoStrings_FourFloats);
 DEFINE_COMMAND_PLUGIN(GetStringUIDimensions, 0, 6, kParams_OneString_OneInt_OneFloat_ThreeScriptVars);
+DEFINE_COMMAND_PLUGIN(GetMenuItemListRefs, 0, 2, kParams_TwoOptionalInts);
 
 bool Cmd_IsComponentLoaded_Execute(COMMAND_ARGS)
 {
@@ -209,6 +210,8 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 	Menu *menu = tileMenu ? tileMenu->menu : nullptr;
 	if (!menu) return true;
 	TESForm *menuRef = nullptr;
+	TESObjectREFR *container = g_thePlayer;
+	ContChangesEntry *entry = nullptr;
 	switch (menuID)
 	{
 		case kMenuType_Container:
@@ -229,16 +232,21 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 			break;
 		case kMenuType_Quantity:
 		{
-			if (MENU_VISIBILITY[kMenuType_Inventory]) menuRef = CreateRefForStack(g_thePlayer, InventoryMenu::Selection());
+			if (MENU_VISIBILITY[kMenuType_Inventory])
+				entry = InventoryMenu::Selection();
 			else if (ContainerMenu::Get())
 			{
+				entry = ContainerMenu::Selection();
 				ContainerMenu *cntMenu = ContainerMenu::Get();
-				menuRef = CreateRefForStack((cntMenu->currentItems == &cntMenu->leftItems) ? g_thePlayer : cntMenu->containerRef, ContainerMenu::Selection());
+				if (cntMenu->currentItems == &cntMenu->rightItems)
+					container = cntMenu->containerRef;
 			}
 			else if (BarterMenu::Get())
 			{
+				entry = BarterMenu::Selection();
 				BarterMenu *brtMenu = BarterMenu::Get();
-				menuRef = CreateRefForStack((brtMenu->currentItems == &brtMenu->leftItems) ? g_thePlayer : brtMenu->merchantRef->GetMerchantContainer(), BarterMenu::Selection());
+				if (brtMenu->currentItems == &brtMenu->rightItems)
+					container = brtMenu->merchantRef->GetMerchantContainer();
 			}
 			break;
 		}
@@ -255,7 +263,7 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 			break;
 		}
 		case kMenuType_Repair:
-			menuRef = CreateRefForStack(g_thePlayer, RepairMenu::Target());
+			entry = RepairMenu::Target();
 			break;
 		case kMenuType_Barter:
 			menuRef = ((BarterMenu*)menu)->merchantRef;
@@ -273,7 +281,7 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 			menuRef = RepairServicesMenu::Target();
 			break;
 		case kMenuType_ItemMod:
-			menuRef = CreateRefForStack(g_thePlayer, ItemModMenu::Target());
+			entry = ItemModMenu::Target();
 			break;
 		case kMenuType_CompanionWheel:
 			menuRef = ((CompanionWheelMenu*)menu)->companionRef;
@@ -290,8 +298,11 @@ bool Cmd_GetMenuTargetRef_Execute(COMMAND_ARGS)
 			if (traitMenu->perkListBox.selected)
 				menuRef = traitMenu->perkListBox.GetSelected();
 		}
-	}		
-	if (menuRef) REFR_RES = menuRef->refID;
+	}
+	if (container && entry)
+		menuRef = CreateRefForStack(container, entry);
+	if (menuRef)
+		REFR_RES = menuRef->refID;
 	return true;
 }
 
@@ -355,13 +366,15 @@ bool Cmd_GetSelectedItemRef_Execute(COMMAND_ARGS)
 {
 	REFR_RES = 0;
 	TESForm *itemRef = nullptr;
+	TESObjectREFR *container = g_thePlayer;
+	ContChangesEntry *entry = nullptr;
 	switch (g_interfaceManager->GetTopVisibleMenuID())
 	{
 		case kMenuType_Inventory:
 		{
 			InventoryMenu *invMenu = InventoryMenu::Get();
 			if (invMenu->itemList.selected)
-				itemRef = CreateRefForStack(g_thePlayer, InventoryMenu::Selection());
+				entry = InventoryMenu::Selection();
 			break;
 		}
 		case kMenuType_Stats:
@@ -375,7 +388,11 @@ bool Cmd_GetSelectedItemRef_Execute(COMMAND_ARGS)
 		{
 			ContainerMenu *cntMenu = ContainerMenu::Get();
 			if (cntMenu->leftItems.selected || cntMenu->rightItems.selected)
-				itemRef = CreateRefForStack(cntMenu->leftItems.selected ? g_thePlayer : cntMenu->containerRef, ContainerMenu::Selection());
+			{
+				entry = ContainerMenu::Selection();
+				if (cntMenu->rightItems.selected)
+					container = cntMenu->containerRef;
+			}
 			break;
 		}
 		case kMenuType_Map:
@@ -393,31 +410,38 @@ bool Cmd_GetSelectedItemRef_Execute(COMMAND_ARGS)
 		{
 			RepairMenu *rprMenu = RepairMenu::Get();
 			if (rprMenu->repairItems.selected)
-				itemRef = CreateRefForStack(g_thePlayer, rprMenu->repairItems.GetSelected());
+				entry = rprMenu->repairItems.GetSelected();
 			break;
 		}
 		case kMenuType_Barter:
 		{
 			BarterMenu *brtMenu = BarterMenu::Get();
 			if (brtMenu->leftItems.selected || brtMenu->rightItems.selected)
-				itemRef = CreateRefForStack(brtMenu->leftItems.selected ? g_thePlayer : brtMenu->merchantRef->GetMerchantContainer(), BarterMenu::Selection());
+			{
+				entry = BarterMenu::Selection();
+				if (brtMenu->rightItems.selected)
+					container = brtMenu->merchantRef->GetMerchantContainer();
+			}
 			break;
 		}
 		case kMenuType_RepairServices:
 		{
 			RepairServicesMenu *rpsMenu = RepairServicesMenu::Get();
 			if (rpsMenu->itemList.selected)
-				itemRef = CreateRefForStack(g_thePlayer, rpsMenu->itemList.GetSelected());
+				entry = rpsMenu->itemList.GetSelected();
 			break;
 		}
 		case kMenuType_ItemMod:
 		{
 			ItemModMenu *modMenu = ItemModMenu::Get();
 			if (modMenu->itemModList.selected)
-				itemRef = CreateRefForStack(g_thePlayer, modMenu->itemModList.GetSelected());
+				entry = modMenu->itemModList.GetSelected();
 		}
 	}
-	if (itemRef) REFR_RES = itemRef->refID;
+	if (container && entry)
+		itemRef = CreateRefForStack(container, entry);
+	if (itemRef)
+		REFR_RES = itemRef->refID;
 	return true;
 }
 
@@ -427,13 +451,13 @@ bool Cmd_GetBarterItems_Execute(COMMAND_ARGS)
 	UInt32 sold;
 	BarterMenu *brtMenu = BarterMenu::Get();
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &sold) || !brtMenu || !brtMenu->merchantRef) return true;
-	TESObjectREFR *target = sold ? brtMenu->merchantRef->GetMerchantContainer() : g_thePlayer, *itemRef;
+	TESObjectREFR *target = sold ? brtMenu->merchantRef->GetMerchantContainer() : g_thePlayer;
 	TempElements *tmpElements = GetTempElements();
 	auto iter = sold ? brtMenu->rightBarter.Head() : brtMenu->leftBarter.Head();
 	do
 	{
-		if (itemRef = CreateRefForStack(target, iter->data))
-			tmpElements->Append(itemRef);
+		if (iter->data)
+			tmpElements->Append(CreateRefForStack(target, iter->data));
 	}
 	while (iter = iter->next);
 	if (!tmpElements->Empty())
@@ -1688,11 +1712,11 @@ bool Cmd_SetUIFloatGradual_Execute(COMMAND_ARGS)
 					UInt8 changeModeMatch[] = {0, 4, 1, 5, 6};
 					changeMode = changeModeMatch[changeMode];
 				}
-				component->GradualSetFloat(tileVal->id, startVal, endVal, timer, changeMode);
+				component->StartGradualSetFloat(tileVal->id, startVal, endVal, timer, changeMode);
 			}
 			else
 			{
-				ThisCall(0xA07DC0, component, tileVal->id);
+				component->EndGradualSetFloat(tileVal->id);
 				if (numArgs >= 2)
 					tileVal->SetFloat(startVal);
 			}
@@ -1997,6 +2021,70 @@ bool Cmd_GetStringUIDimensions_Execute(COMMAND_ARGS)
 		NiVector3 resDims;
 		g_fontManager->GetStringDimensions(&resDims, buffer, fontID, wrapWidth);
 		outDims.Set(resDims.PS());
+	}
+	return true;
+}
+
+bool Cmd_GetMenuItemListRefs_Execute(COMMAND_ARGS)
+{
+	*result = 0;
+	UInt32 inclFiltered = 0, rightSide = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &inclFiltered, &rightSide))
+	{
+		MenuItemEntryList *entryList;
+		TESObjectREFR *container = g_thePlayer;
+		switch (g_interfaceManager->GetTopVisibleMenuID())
+		{
+			case kMenuType_Inventory:
+				entryList = &InventoryMenu::Get()->itemList;
+				break;
+			case kMenuType_Container:
+			{
+				ContainerMenu *cntMenu = ContainerMenu::Get();
+				if (rightSide)
+				{
+					entryList = &cntMenu->rightItems;
+					container = cntMenu->containerRef;
+				}
+				else entryList = &cntMenu->leftItems;
+				break;
+			}
+			case kMenuType_Repair:
+				entryList = &RepairMenu::Get()->repairItems;
+				break;
+			case kMenuType_Barter:
+			{
+				BarterMenu *brtMenu = BarterMenu::Get();
+				if (rightSide)
+				{
+					entryList = &brtMenu->rightItems;
+					container = brtMenu->merchantRef->GetMerchantContainer();
+				}
+				else entryList = &brtMenu->leftItems;
+				break;
+			}
+			case kMenuType_RepairServices:
+				entryList = &RepairServicesMenu::Get()->itemList;
+				break;
+			default:
+				return true;
+		}
+		if (!container)
+			return true;
+		NVSEArrayVar *resArray = CreateMap(nullptr, nullptr, 0, scriptObj);
+		int tileIndex = 0;
+		auto listIter = entryList->list.Head();
+		do
+		{
+			auto listItem = listIter->data;
+			if (!listItem || !listItem->item)
+				continue;
+			if (inclFiltered || !listItem->isFiltered)
+				SetElement(resArray, ArrayElementL(tileIndex), ArrayElementL(CreateRefForStack(container, listItem->item)));
+			tileIndex++;
+		}
+		while (listIter = listIter->next);
+		*result = (int)resArray;
 	}
 	return true;
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+void SuppressConsoleOutput();
+
 // 54
 class Script : public TESForm
 {
@@ -90,10 +92,9 @@ public:
 	{
 		ThisCall(0x5AA1A0, this);
 	}
-	__forceinline bool Execute(TESObjectREFR *thisObj, ScriptLocals *eventList, TESObjectREFR *containingObj, bool arg3)
-	{
-		return ThisCall<bool>(0x5AC1E0, this, thisObj, eventList, containingObj, arg3);
-	}
+
+	bool Execute(TESObjectREFR *thisObj = nullptr, ScriptLocals *eventList = nullptr, TESObjectREFR *containingObj = nullptr, bool arg3 = true);
+
 	__forceinline bool Run(void *scriptContext, TESObjectREFR *object)
 	{
 		return ThisCall<bool>(0x5AC400, this, scriptContext, true, object);

@@ -252,11 +252,46 @@ __declspec(naked) void FreeUnusedNiFixedStrings()
 	}
 }
 
+__declspec(naked) void __fastcall SetPickedCountHook(ExtraDataList *xDataList)
+{
+	__asm
+	{
+		push	ecx
+		push	kXData_ExtraCount
+		call	BaseExtraList::GetByType
+		pop		ecx
+		test	eax, eax
+		jz		done
+		movsx	edx, word ptr [eax+0xC]
+		mov		[ebp+0xC], edx
+		push	kXData_ExtraCount
+		CALL_EAX(ADDR_RemoveExtraType)
+	done:
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall CopyExtraListHook(ExtraDataList *xNewList, int EDX, ExtraDataList *xSrcList, bool arg2)
+{
+	__asm
+	{
+		mov		eax, [ebp+0xC]
+		cmp		eax, 1
+		jle		done
+		push	ecx
+		push	eax
+		call	ExtraDataList::AddExtraCount
+		pop		ecx
+	done:
+		JMP_EAX(0x4121E0)
+	}
+}
+
 void __fastcall ExtraJIPDestroyHook(ExtraJIP *xJIP, int EDX, bool doFree)
 {
 	XDATA_CS
 	if (auto findEntry = s_extraDataKeysMap->Find(xJIP->key))
-		if (!findEntry().refID || LookupFormByRefID(findEntry().refID)/* || (findEntry().refID == g_dataHandler->nextCreatedRefID)*/ || !HasChangeData(findEntry().refID))
+		if (!findEntry().refID || LookupFormByRefID(findEntry().refID) || !HasChangeData(findEntry().refID))
 		{
 			findEntry.Remove();
 			s_dataChangedFlags |= kChangedFlag_ExtraData;
@@ -267,38 +302,17 @@ void __fastcall ExtraJIPDestroyHook(ExtraJIP *xJIP, int EDX, bool doFree)
 
 bool __fastcall ExtraJIPDiffersHook(ExtraJIP *xJIP, int EDX, BSExtraData *compareTo)
 {
-	if (xJIP->type != compareTo->type)
-		return true;
-	XDATA_CS
-	ExtraJIPEntry *entry1 = s_extraDataKeysMap->GetPtr(xJIP->key);
-	if (!entry1) return true;
-	ExtraJIPEntry *entry2 = s_extraDataKeysMap->GetPtr(((ExtraJIP*)compareTo)->key);
-	return !entry2 || !(*entry1 == *entry2);
-}
-
-__declspec(naked) void ExtraDataLoadGameHook()
-{
-	__asm
+	if (xJIP->type == compareTo->type)
 	{
-		mov		edx, [ebp+8]
-		mov		ecx, [ebp-0x5D4]
-		push	0x42C1C3
-		jmp		ExtraDataList::ExtraJIPLoadGame
+		XDATA_CS
+		if (ExtraJIPEntry *entry1 = s_extraDataKeysMap->GetPtr(xJIP->key))
+			if (ExtraJIPEntry *entry2 = s_extraDataKeysMap->GetPtr(((ExtraJIP*)compareTo)->key))
+				if (*entry1 == *entry2) return false;
 	}
+	return true;
 }
 
-__declspec(naked) void ExtraDataSaveGameHook()
-{
-	__asm
-	{
-		mov		edx, [ebp+8]
-		mov		ecx, [ebp-0x20]
-		push	0x427EB6
-		jmp		ExtraJIP::SaveGame
-	}
-}
-
-__declspec(naked) void AddExtraDataCopyHook()
+__declspec(naked) void ExtraJIPCreateCopyHook()
 {
 	__asm
 	{
@@ -311,6 +325,28 @@ __declspec(naked) void AddExtraDataCopyHook()
 		pop		esi
 		leave
 		retn	4
+	}
+}
+
+__declspec(naked) void ExtraJIPLoadGameHook()
+{
+	__asm
+	{
+		mov		edx, [ebp+8]
+		mov		ecx, [ebp-0x5D4]
+		push	0x42C1C3
+		jmp		ExtraDataList::ExtraJIPLoadGame
+	}
+}
+
+__declspec(naked) void ExtraJIPSaveGameHook()
+{
+	__asm
+	{
+		mov		edx, [ebp+8]
+		mov		ecx, [ebp-0x20]
+		push	0x427EB6
+		jmp		ExtraJIP::SaveGame
 	}
 }
 
@@ -338,6 +374,113 @@ __declspec(naked) bool __fastcall GetShouldSaveUnloadedFormHook(BGSSaveLoadGame 
 		retn	4
 	isProjectile:
 		call	dword ptr [eax+0x324]
+		retn	4
+	}
+}
+
+typedef Map<TESForm*, SInt32, 0x80> InventoryIterMap;
+
+struct InventoryIterator
+{
+	TESContainer::FormCountList	*frmCountList;	// 00
+	TESContainer::FormCountList	*frmCountIter;	// 04
+	TESContainer::FormCountList	*baseFormList;	// 08
+	ContChangesEntry			*outEntry;		// 0C
+	TESContainer				*container;		// 10
+	ContChangesEntryList		*entryListIter;	// 14
+	UInt32						stage;			// 18
+	UInt32						unk1C;			// 1C
+	ContChangesExtraList		*extraList;		// 20
+	UInt32						unk24;			// 24
+	ContChangesEntryList		*baseEntryList;	// 28
+	InventoryIterMap			deltasMap;		// 2C
+
+	InventoryIterator() {}
+};
+static_assert(sizeof(InventoryIterator) == 0x38);
+
+InventoryIterator* __fastcall CreateInventoryIteratorHook(ExtraContainerChanges::Data *xChangesData)
+{
+	thread_local static TempObject<InventoryIterator> s_inventoryIterator;
+	InventoryIterator *invIter = *s_inventoryIterator;
+	if (invIter->frmCountList)
+	{
+		invIter->frmCountList->RemoveAll();
+		GameHeapFree(invIter->frmCountList);
+	}
+	ZERO_BYTES(invIter, 0x28);
+	invIter->baseEntryList = xChangesData->objList;
+	invIter->deltasMap.Clear();
+	if (xChangesData->owner)
+	{
+		invIter->container = xChangesData->owner->baseForm->GetContainer();
+		invIter->frmCountList = ThisCall<TESContainer::FormCountList*>(0x482B00, invIter->container);
+		invIter->frmCountIter = invIter->frmCountList;
+		invIter->baseFormList = &invIter->container->formCountList;
+	}
+	return invIter;
+}
+
+__declspec(naked) void InventoryIterGetNextHook()
+{
+	__asm
+	{
+		mov		esi, [ebp+8]
+		mov		eax, [esi+0xC]
+		test	eax, eax
+		jz		noEntry
+		push	ecx
+		push	esp
+		push	dword ptr [eax+8]
+		lea		ecx, [esi+0x2C]
+		call	InventoryIterMap::InsertKey
+		pop		ecx
+		test	al, al
+		jz		hasKey
+		and		dword ptr [ecx], 0
+	hasKey:
+		mov		eax, [esi+0xC]
+		mov		edx, [eax+4]
+		add		[ecx], edx
+		jmp		done
+	noEntry:
+		mov		byte ptr [esi+0x18], 2
+		ALIGN 16
+	iterHead:
+		dec		dword ptr [esi+0x30]
+		js		retnNull
+		mov		eax, [esi+0x2C]
+		mov		edx, [esi+0x30]
+		lea		ecx, [eax+edx*8]
+		mov		[ebp-0x18], ecx
+		push	dword ptr [ecx]
+		mov		edx, [esi+0x28]
+		mov		ecx, [esi+8]
+		call	GetFormCount
+		mov		ecx, [ebp-0x18]
+		sub		eax, [ecx+4]
+		jle		iterHead
+		push	dword ptr [ecx]
+		push	eax
+		push	0xC
+		GAME_HEAP_ALLOC
+		and		dword ptr [eax], 0
+		pop		dword ptr [eax+4]
+		pop		dword ptr [eax+8]
+		jmp		done
+	retnNull:
+		xor		eax, eax
+	done:
+		mov		ecx, fs:[0x2C]
+		mov		edx, ds:0x126FD98
+		mov		ecx, [ecx+edx*4]
+		mov		edx, [ebp-0x10]
+		mov		[ecx+0x2B4], edx
+		mov		ecx, [ebp-0xC]
+		mov		fs:0, ecx
+		pop		ecx
+		pop		esi
+		leave
 		retn	4
 	}
 }
@@ -415,13 +558,15 @@ __declspec(naked) void TESGlobalLoadFormHook()
 {
 	__asm
 	{
+		mov		ecx, [ebp-0x10]
 		test	byte ptr [ecx+8], 0x40
-		jz		contRetn
-		JMP_EAX(0x5A65BD)
-	contRetn:
-		mov		[ebp-0x10], ecx
-		mov		ecx, [ebp+8]
-		JMP_EAX(0x5A64C6)
+		jnz		skipLoad
+		push	dword ptr [ebp+8]
+		JMP_EAX(0x5A64DE)
+	skipLoad:
+		mov		al, 1
+		leave
+		retn	4
 	}
 }
 
@@ -570,24 +715,6 @@ __declspec(naked) UInt32 GamePadRumbleHook()
 	}
 }
 
-__declspec(naked) void CmdActivateHook()
-{
-	__asm
-	{
-		push	ecx
-		push	kXData_ExtraCount
-		add		ecx, 0x44
-		call	BaseExtraList::GetByType
-		pop		ecx
-		test	eax, eax
-		jz		done
-		movsx	edx, word ptr [eax+0xC]
-		mov		[esp+0x10], edx
-	done:
-		JMP_EAX(0x573170)
-	}
-}
-
 bool s_doRefreshItemListBox = false;
 
 __declspec(naked) void RemoveMeHook()
@@ -697,7 +824,7 @@ __declspec(naked) void __fastcall FixVendorCaps(DataHandler *dataHandler, ExtraC
 		mov		ecx, 0x7FFF
 		cmp		edi, ecx
 		cmovl	ecx, edi
-		mov		[eax+0xC], cx
+		mov		[eax+0xC], ecx
 		sub		edi, ecx
 		ALIGN 16
 	addHead:
@@ -715,13 +842,11 @@ __declspec(naked) void __fastcall FixVendorCaps(DataHandler *dataHandler, ExtraC
 		cmovl	eax, edi
 		sub		edi, eax
 		push	eax
-		call	ExtraCount::Create
-		push	eax
 		mov		ecx, esi
-		CALL_EAX(ADDR_AddExtraData)
+		call	ExtraDataList::AddExtraCount
 		push	esi
 		mov		ecx, [ebp-0xC]
-		call	ContChangesExtraList::Append
+		call	ContChangesExtraList::Prepend
 		jmp		addHead
 	doPop:
 		pop		edi
@@ -1129,6 +1254,8 @@ __declspec(naked) UInt8 __fastcall GetEntryDataModFlagsHook(ContChangesEntry *en
 {
 	__asm
 	{
+		test	ecx, ecx
+		jz		retn0
 		mov		eax, [ecx+8]
 		cmp		byte ptr [eax+4], kFormType_TESObjectWEAP
 		jnz		retn0
@@ -2046,6 +2173,40 @@ __declspec(naked) void SetAcousticSpaceFixHook()
 	}
 }
 
+__declspec(naked) UInt32 __fastcall EffectItemGetModifiedDuration(EffectItem *effItem)
+{
+	__asm
+	{
+		xor		eax, eax
+		mov		edx, [ecx+0x14]
+		test	byte ptr [edx+0x58], 0x80
+		jnz		done
+		mov		eax, [ecx+8]
+		test	byte ptr [edx+0x58], 1
+		jnz		done
+		mov		ecx, [ebp]
+		mov		ecx, [ecx-0xD4]
+		cmp		dword ptr [ecx], 0x1011900
+		jnz		done
+		mov		dl, [ecx+0x64]
+		sub		dl, 0xA
+		cmp		dl, 1
+		ja		done
+		cvtsi2ss	xmm0, eax
+		push	ecx
+		movss	[esp], xmm0
+		push	esp
+		push	g_thePlayer
+		push	kPerkEntry_ModifyPositiveChemDuration
+		CALL_EAX(0x5E58F0)
+		add		esp, 0xC
+		cvttss2si	eax, [esp]
+		pop		ecx
+	done:
+		retn
+	}
+}
+
 __declspec(naked) void ModPositiveChemDurationHook()
 {
 	__asm
@@ -2580,15 +2741,19 @@ __declspec(naked) void PickLoadScreenHook()
 }
 
 UInt32 s_uWMChancePerLevel = 0, s_uWMChanceMin = 0, s_uWMChanceMax = 0;
-const UInt8 kWeaponModShuffle[][4] = {{1, 2, 4, 0}, {1, 4, 2, 0}, {2, 1, 4, 0}, {2, 4, 1, 0}, {4, 1, 2, 0}, {4, 2, 1, 0}};
 
-void __fastcall DistributeWeaponMods(Actor *actor)
+void __fastcall DistributeWeaponMods(Actor *actor, ContChangesEntry *weaponInfo)
 {
-	ContChangesEntry *weaponInfo = ((MiddleHighProcess*)actor->baseProcess)->weaponInfo;
-	if (!weaponInfo || !weaponInfo->extendData)
-		return;
+	static const UInt8 kWeaponModShuffle[][4] =
+	{
+		{1, 2, 4, 0}, {1, 4, 2, 0}, {2, 1, 4, 0},
+		{2, 4, 1, 0}, {4, 1, 2, 0}, {4, 2, 1, 0}
+	};
 	TESObjectWEAP *weapon = (TESObjectWEAP*)weaponInfo->type;
 	if ((weapon->eWeaponType > 9) || (weapon->weaponFlags1 & 0xA0))
+		return;
+	ExtraDataList *xDataList = weaponInfo->extendData->GetFirstItem();
+	if (xDataList->HasType(kXData_ExtraWeaponModFlags))
 		return;
 	UInt8 modFlags;
 	__asm
@@ -2627,9 +2792,8 @@ void __fastcall DistributeWeaponMods(Actor *actor)
 	if ((modFlags & shuffle[2]) && (chance <= rand))
 		modFlags ^= shuffle[2];
 doneFlags:
-	ExtraDataList *xData = weaponInfo->extendData->GetFirstItem();
-	xData->AddExtra(ExtraWeaponModFlags::Create(modFlags));
-	ThisCall(0x88DB20, actor, weapon, 1, xData, false);
+	xDataList->AddExtra(ExtraWeaponModFlags::Create(modFlags));
+	ThisCall(0x88DB20, actor, weapon, 1, xDataList, false);
 }
 
 const UInt8 kValidEntryPoints[] =
@@ -3141,19 +3305,26 @@ void __fastcall InitNPCPerks(Actor *actor)
 	}
 }
 
-__declspec(naked) ExtraDataList* __fastcall DoOnLoadActorHook(TESObjectREFR *refr)
+__declspec(naked) void DoOnLoadActorHook()
 {
 	__asm
 	{
-		mov		eax, [ecx]
-		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
+		push	dword ptr [ecx+0xC]
+		push	0
+		mov		eax, [ecx+0x64]
+		test	eax, eax
+		jz		done
+		mov		eax, [eax+0x14]
+		test	eax, eax
+		jz		done
+		mov		[esp], eax
+		mov		eax, g_BGSSaveLoadGame
+		test	byte ptr [eax+0x244], 2
 		jnz		done
 		cmp		dword ptr [ecx+0x108], 0
 		jnz		done
 		cmp		s_NPCPerks, 0
 		jz		donePerks
-		cmp		dword ptr [ecx+0xC], 0x14
-		jz		done
 		call	InitNPCPerks
 		mov		ecx, [ebp+8]
 	donePerks:
@@ -3161,14 +3332,24 @@ __declspec(naked) ExtraDataList* __fastcall DoOnLoadActorHook(TESObjectREFR *ref
 		jz		done
 		test	byte ptr [ecx+0x143], 0x10
 		jnz		done
+		mov		eax, [ecx+0x68]
+		test	eax, eax
+		jz		done
+		cmp		byte ptr [eax+0x28], 1
+		ja		done
 		or		byte ptr [ecx+0x143], 0x10
 		cmp		byte ptr [ecx+0x18D], 0
 		jnz		done
+		mov		edx, [eax+0x114]
+		test	edx, edx
+		jz		done
+		cmp		dword ptr [edx], 0
+		jz		done
 		call	DistributeWeaponMods
-		mov		ecx, [ebp+8]
 	done:
-		lea		eax, [ecx+0x44]
-		retn
+		CALL_EAX(0x4B6DC0)
+		leave
+		retn	0x10
 	}
 }
 
@@ -3235,14 +3416,14 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	UInt8 flagPCTM = 0;
 	if (source)
 	{
-		if (source->refID == 0x14)
+		if (source->IsPlayer())
 			flagPCTM = 1;
 		else if (source->isTeammate)
 			flagPCTM = 2;
 		else if (s_NPCPerks)
 			flagPCTM = 4;
 	}
-	if (target->refID == 0x14)
+	if (target->IsPlayer())
 		flagPCTM |= 8;
 	else if (target->isTeammate)
 		flagPCTM |= 0x10;
@@ -4522,7 +4703,7 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			if (!bEnable || s_NPCWeaponMods || !s_uWMChancePerLevel || !s_uWMChanceMin || !s_uWMChanceMax)
 				return false;
 			s_NPCWeaponMods = true;
-			WriteRelCall(0x452220, (UInt32)DoOnLoadActorHook);
+			WriteRelJump(0x45234E, (UInt32)DoOnLoadActorHook);
 			WriteRelCall(0x54E2A4, (UInt32)ResetActorFlagsRespawnHook);
 			return true;
 		}
@@ -4532,7 +4713,7 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 				return false;
 			s_NPCPerks = true;
 			BuildValidNPCPerks();
-			WriteRelCall(0x452220, (UInt32)DoOnLoadActorHook);
+			WriteRelJump(0x45234E, (UInt32)DoOnLoadActorHook);
 			WriteRelCall(0x87DE3F, (UInt32)DestroyActorHook);
 			WriteRelJump(0x8BCA90, (UInt32)SetPlayerTeammateHook);
 			SafeWrite32(0x1086F04, (UInt32)SetPerkRankNPCHook);
@@ -4902,22 +5083,33 @@ void InitGamePatches()
 
 	//	For ExtraJIP framework
 	SafeWrite8(0x40F9D7, 0);
+	SafeWrite8(0x41D0F6, 3);
+	SafeWrite8(0x41D212, 1);
+	SafeWrite8(0x41D25A, 1);
+	WriteRelCall(0x4C21EB, (UInt32)SetPickedCountHook);
+	WriteRelCall(0x4C2291, (UInt32)CopyExtraListHook);
 	SafeWrite32(0x10158FC, (UInt32)ExtraJIPDestroyHook);
 	SafeWrite32(0x1015900, (UInt32)ExtraJIPDiffersHook);
-	SafeWrite32(0x411978, (UInt32)AddExtraDataCopyHook);
-	SafeWrite32(0x42C328, (UInt32)ExtraDataLoadGameHook);
-	SafeWrite32(0x427F30, (UInt32)ExtraDataSaveGameHook);
+	SafeWrite32(0x411978, (UInt32)ExtraJIPCreateCopyHook);
+	SafeWrite32(0x42C328, (UInt32)ExtraJIPLoadGameHook);
+	SafeWrite32(0x427F30, (UInt32)ExtraJIPSaveGameHook);
 
 	SafeWrite8(0x484E03, 0xD1);
 	WriteRelCall(0x8497CD, (UInt32)GetShouldSaveUnloadedFormHook);
 	SafeWrite16(0x845558, 0x7D63);
 	SafeWrite16(0x846FFB, 0x7D63);
 
+	//	Inventory invisible stack fix
+	SafeWrite8(0x41271E, 0xEB);
+	SafeWrite32(0x4BF630, 0x4C2);
+	WriteRelJump(0x4CA200, (UInt32)CreateInventoryIteratorHook);
+	WriteRelJump(0x4CAFA3, (UInt32)InventoryIterGetNextHook);
+
 	SAFE_WRITE_BUF(0x47079D, "\x66\xC7\x80\x9A\x02\x00\x00\x00\x00\x90");
 	SAFE_WRITE_BUF(0x4F15A0, "\x0F\xB6\x44\x24\x04\x89\x41\x04\x3C\x3B\x74\x07\x3C\x3C\x74\x03\xC2\x04\x00\x31\xD2\x89\x91\x04\x01\x00\x00\xC2\x04\x00");
 	WriteRelJump(0x482090, (UInt32)SetContainerItemsHealthHook);
 	SafeWrite16(0x5B4DBC, 0x19EB);
-	WriteRelJump(0x5A64C0, (UInt32)TESGlobalLoadFormHook);
+	WriteRelJump(0x5A64D7, (UInt32)TESGlobalLoadFormHook);
 	WriteRelCall(0x8A0DAB, (UInt32)DetectionTeammateHook);
 	WriteRelCall(0x8A1291, (UInt32)DetectionTeammateHook);
 	WriteRelCall(0x8A131D, (UInt32)DetectionTeammateHook);
@@ -4932,8 +5124,6 @@ void InitGamePatches()
 	WriteRelCall(0x512FAF, (UInt32)InitArmorFormHook);
 	WriteRelCall(0x70E5FE, (UInt32)ToggleConsoleHook);
 	WriteRelJump(0xEE820A, (UInt32)GamePadRumbleHook);
-	WriteRelCall(0x5B5B18, (UInt32)CmdActivateHook);
-	WriteRelCall(0x5B5B48, (UInt32)CmdActivateHook);
 	WriteRelJump(0x5B54E7, (UInt32)RemoveMeHook);
 	WriteRelCall(0x41C833, (UInt32)IsPersistentHook);
 	WriteRelCall(0x4C232C, (UInt32)IsPersistentHook);
@@ -4998,6 +5188,7 @@ void InitGamePatches()
 	SafeWrite16(0x54E421, 0x1EEB);
 	WritePushRetRelJump(0x54E4E1, 0x54E5E6, (UInt32)ClearAshPilesHook);
 	WritePushRetRelJump(0x82D8CA, 0x82D8F4, (UInt32)SetAcousticSpaceFixHook);
+	WriteRelCall(0x7E0C1F, (UInt32)EffectItemGetModifiedDuration);
 	WritePushRetRelJump(0x8236FD, 0x82370C, (UInt32)ModPositiveChemDurationHook);
 	SAFE_WRITE_BUF(0xAEACAA, "\x31\xD2\x89\x90\x34\x01\x00\x00\x89\x90\x9C\x01\x00\x00\x89\x90\xA0\x01\x00\x00\x89\x90\xDC\x01\x00\x00\xC7\x80\x38\x01\x00\x00\x00\x00\x80\x3F\x0F\x1F\x00");
 	SafeWrite32(0xAE5648, (UInt32)SetSourceSoundRequestHook);
@@ -5193,6 +5384,10 @@ void DeferredInit()
 		SafeWrite32(0x94A95F, (UInt32)&s_deadZoneRSg);
 	}
 
+	ModList *modList = &g_dataHandler->modList;
+	for (UInt32 idx = 0, maxIdx = modList->loadedModCount; idx < maxIdx; idx++)
+		modList->loadedMods[idx]->nameHash = StrHashCI(modList->loadedMods[idx]->name);
+
 	FontInfo **fontInfos = g_fontManager->fontInfos;
 	for (UInt32 length = 1; length < 90; length++, fontInfos++)
 	{
@@ -5252,9 +5447,9 @@ void DeferredInit()
 		}
 	}
 
-	JIPScriptRunner::Init();
-
 	Console_Print("JIP LN version: %.2f", JIP_LN_VERSION);
+
+	JIPScriptRunner::Init();
 }
 
 void InitEditorPatches()

@@ -1848,11 +1848,6 @@ void MiniMapLoadGame()
 	s_lastInterior = nullptr;
 }
 
-template <typename T> __forceinline T PickFrom(T (&&values)[], size_t index)
-{
-	return values[index];
-}
-
 bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 {
 	if (!s_miniMapMode || (scriptObj->modIndex != s_miniMapIndex))
@@ -2156,6 +2151,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				s_cellGridCenter = gridCenter;
 				memcpy(g_directionalLightColor, kDirectionalLightValues, sizeof(kDirectionalLightValues));
 				memcpy(g_shadowFogColor, kFogPropertyValues, sizeof(kFogPropertyValues));
+				bool underwaterFog = *(bool*)0x11FF104;
 				*(bool*)0x11FF104 = 1;
 				s_shadowSceneNodes[0]->Hide();
 				s_shadowSceneNodes[1]->Hide();
@@ -2254,7 +2250,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 
 				s_hiddenObjects->Clear();
 				GameGlobals::SceneLightsLock()->Leave();
-				*(bool*)0x11FF104 = 0;
+				*(bool*)0x11FF104 = underwaterFog;
 				s_shadowSceneNodes[0]->Show();
 				s_shadowSceneNodes[1]->Show();
 				s_shadowSceneNodes[2]->Show();

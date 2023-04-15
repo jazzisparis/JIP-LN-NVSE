@@ -35,8 +35,8 @@ __declspec(naked) TileValue* __fastcall Tile::GetValue(UInt32 typeID)
 		shr		ecx, 1
 		mov		eax, [ebx+ecx*4]
 		cmp		[eax], edx
-		jz		done
 		jb		isLT
+		jz		done
 		mov		edi, ecx
 		jmp		iterHead
 		ALIGN 16

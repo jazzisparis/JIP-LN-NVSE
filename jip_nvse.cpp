@@ -1399,6 +1399,11 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*292F*/REG_CMD_AMB(GetRefExtraData);
 	/*2930*/REG_CMD(SetRefExtraData);
 	/*2931*/REG_CMD(TogglePurgeOnUnload);
+	//	v56.90
+	/*2932*/REG_CMD_FRM(GetProjectileLight);
+	/*2933*/REG_CMD(SetProjectileLight);
+	/*2934*/REG_CMD(IsItemUnique);
+	/*2935*/REG_CMD_ARR(GetMenuItemListRefs);
 
 	//===========================================================
 
@@ -1435,6 +1440,7 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	AssignString = strInterface->Assign;
 	NVSEArrayVarInterface *arrInterface = (NVSEArrayVarInterface*)nvse->QueryInterface(kInterface_ArrayVar);
 	CreateArray = arrInterface->CreateArray;
+	CreateMap = arrInterface->CreateMap;
 	CreateStringMap = arrInterface->CreateStringMap;
 	SetElement = arrInterface->SetElement;
 	AppendElement = arrInterface->AppendElement;

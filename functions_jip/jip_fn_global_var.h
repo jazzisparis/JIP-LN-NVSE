@@ -24,18 +24,17 @@ bool Cmd_SetGlobalVariable_Execute(COMMAND_ARGS)
 
 bool Cmd_GetGlobalRef_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESGlobal *global;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &global) && global->uRefID)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &global))
 	{
-		if (global->jipFormFlags6)
-			REFR_RES = global->uRefID;
-		else
+		if (!(global->flags & 0x200))
 		{
-			s_resolvedGlobals().Insert(global);
-			REFR_RES = global->ResolveRefValue();
+			global->flags |= 0x200;
+			GetResolvedRefID(&global->uRefID);
 		}
+		REFR_RES = global->uRefID;
 	}
+	else REFR_RES = 0;
 	return true;
 }
 
@@ -44,6 +43,9 @@ bool Cmd_SetGlobalRef_Execute(COMMAND_ARGS)
 	TESGlobal *global;
 	TESForm *form = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &global, &form))
-		global->uRefID = form ? form->refID : (thisObj ? thisObj->refID : 0);
+	{
+		global->uRefID = form ? form->refID : 0;
+		global->flags |= 0x200;
+	}
 	return true;
 }

@@ -490,6 +490,7 @@ public:
 		return key < inKey;
 	}
 	__forceinline void Clear() {key.~T_Key();}
+	__forceinline bool operator==(const MapKey &other) const {return key == other.key;}
 };
 
 template <> class MapKey<const char*>
@@ -501,6 +502,7 @@ public:
 	__forceinline void Set(const char *inKey) {key = inKey;}
 	__forceinline char Compare(const char *inKey) const {return StrCompareCI(inKey, key);}
 	__forceinline void Clear() {}
+	__forceinline bool operator==(const MapKey &other) const {return !StrCompareCI(key, other.key);}
 };
 
 template <> class MapKey<char*>
@@ -512,6 +514,7 @@ public:
 	__forceinline void Set(const char *inKey) {key = CopyStringKey(inKey);}
 	__forceinline char Compare(const char *inKey) const {return StrCompareCI(inKey, key);}
 	__forceinline void Clear() {FreeStringKey(key);}
+	__forceinline bool operator==(const MapKey &other) const {return !StrCompareCI(key, other.key);}
 };
 
 template <typename T_Data> class MapValue
@@ -523,7 +526,7 @@ public:
 	__forceinline T_Data& Get() {return value;}
 	__forceinline T_Data *Ptr() {return &value;}
 	__forceinline void Clear() {value.~T_Data();}
-	__forceinline bool operator==(T_Data other) const {return value == other;}
+	__forceinline bool operator==(const MapValue &other) const {return value == other.value;}
 };
 
 template <typename T_Data> class MapValue_p
@@ -543,7 +546,7 @@ public:
 		value->~T_Data();
 		Pool_Free<T_Data>(value);
 	}
-	__forceinline bool operator==(T_Data *other) const {return *value == *other;}
+	__forceinline bool operator==(const MapValue_p &other) const {return *value == *other.value;}
 };
 
 template <typename T_Key, typename T_Data, const UInt32 _default_alloc = MAP_DEFAULT_ALLOC> class Map
@@ -567,6 +570,8 @@ template <typename T_Key, typename T_Data, const UInt32 _default_alloc = MAP_DEF
 			key.Clear();
 			value.Clear();
 		}
+
+		bool operator==(const Entry &other) const {return (key == other.key) && (value == other.value);}
 	};
 
 	Entry		*entries;		// 00
@@ -625,6 +630,22 @@ public:
 		numAlloc = rhs.numAlloc;
 		rhs.entries = nullptr;
 		rhs.numEntries = 0;
+	}
+
+	void operator=(const Map &rhs)
+	{
+		Destroy();
+		if (!(numEntries = rhs.numEntries)) return;
+		numAlloc = AlignNumAlloc<Entry>(numEntries);
+		entries = Pool_CAlloc<Entry>(numAlloc);
+		Entry *pEntry = entries, *pSource = rhs.entries, *pEnd = rhs.End();
+		do
+		{
+			pEntry->key.Set(pSource->key.Get());
+			*(pEntry->value.Init()) = pSource->value.Get();
+			pEntry++;
+		}
+		while (++pSource != pEnd);
 	}
 
 	bool InsertKey(Key_Arg key, T_Data **outData)
@@ -746,6 +767,16 @@ public:
 			while (++pEntry != pEnd);
 		}
 		numEntries &= 0;
+	}
+
+	bool operator==(const Map &other) const
+	{
+		if (numEntries != other.numEntries)
+			return false;
+		for (UInt32 i = 0; i < numEntries; i++)
+			if (!(entries[i] == other.entries[i]))
+				return false;
+		return true;
 	}
 
 	class Iterator
@@ -923,6 +954,24 @@ public:
 		rhs.numKeys = 0;
 	}
 
+	void operator=(const Set &rhs)
+	{
+		Clear();
+		if (!(numKeys = rhs.numKeys)) return;
+		if (numAlloc < numKeys)
+		{
+			if (keys)
+			{
+				Pool_CFree<M_Key>(keys, numAlloc);
+				keys = nullptr;
+			}
+			numAlloc = AlignNumAlloc<M_Key>(numKeys);
+		}
+		if (!keys)
+			keys = Pool_CAlloc<M_Key>(numAlloc);
+		memcpy(keys, rhs.keys, sizeof(M_Key) * numKeys);
+	}
+
 	const T_Key& operator[](UInt32 index) const {return keys[index];}
 
 	bool Insert(Key_Arg key)
@@ -984,26 +1033,6 @@ public:
 			while (++pKey != pEnd);
 		}
 		numKeys &= 0;
-	}
-
-	void CopyFrom(const Set &source)
-	{
-		Clear();
-		numKeys = source.numKeys;
-		if (!numKeys) return;
-		if (!keys)
-		{
-			if (numAlloc < numKeys) numAlloc = numKeys;
-			numAlloc = AlignNumAlloc<M_Key>(numAlloc);
-			keys = Pool_CAlloc<M_Key>(numAlloc);
-		}
-		else if (numAlloc < numKeys)
-		{
-			UInt32 newAlloc = AlignNumAlloc<M_Key>(numKeys);
-			keys = Pool_CRealloc<M_Key>(keys, numAlloc, newAlloc);
-			numAlloc = newAlloc;
-		}
-		memcpy(keys, source.keys, sizeof(M_Key) * numKeys);
 	}
 
 	inline bool operator==(const Set &rhs) const
@@ -1081,6 +1110,8 @@ public:
 
 template <typename T_Key> __forceinline UInt32 HashKey(T_Key inKey)
 {
+	if (std::is_same_v<T_Key, UINT>)
+		return ULNG(inKey);
 	if (std::is_same_v<T_Key, char*> || std::is_same_v<T_Key, const char*>)
 		return StrHashCI(*(const char**)&inKey);
 	if (std::is_same_v<T_Key, const UInt8*>)
@@ -1302,16 +1333,23 @@ public:
 		rhs.numEntries = 0;
 	}
 
-	void SetBucketCount(UInt32 newCount)
+	__declspec(noinline) void SetBucketCount(UInt32 newCount)
 	{
 		if (!_allow_resize) return;
-		if (buckets)
+		newCount = AlignBucketCount(newCount);
+		if (numBuckets == newCount)
+			return;
+		if (!numEntries)
 		{
-			newCount = AlignBucketCount(newCount);
-			if ((numBuckets != newCount) && (numEntries <= newCount))
-				ResizeTable(newCount);
+			if (buckets)
+			{
+				Pool_CFree<Bucket>(buckets, numBuckets);
+				buckets = nullptr;
+			}
+			numBuckets = newCount;
 		}
-		else numBuckets = newCount;
+		else if (numEntries <= newCount)
+			ResizeTable(newCount);
 	}
 
 	float LoadFactor() const {return (float)numEntries / (float)numBuckets;}
@@ -1667,16 +1705,23 @@ public:
 		rhs.numEntries = 0;
 	}
 
-	void SetBucketCount(UInt32 newCount)
+	__declspec(noinline) void SetBucketCount(UInt32 newCount)
 	{
 		if (!_allow_resize) return;
-		if (buckets)
+		newCount = AlignBucketCount(newCount);
+		if (numBuckets == newCount)
+			return;
+		if (!numEntries)
 		{
-			newCount = AlignBucketCount(newCount);
-			if ((numBuckets != newCount) && (numEntries <= newCount))
-				ResizeTable(newCount);
+			if (buckets)
+			{
+				Pool_CFree<Bucket>(buckets, numBuckets);
+				buckets = nullptr;
+			}
+			numBuckets = newCount;
 		}
-		else numBuckets = newCount;
+		else if (numEntries <= newCount)
+			ResizeTable(newCount);
 	}
 
 	float LoadFactor() const {return (float)numEntries / (float)numBuckets;}
@@ -1871,6 +1916,24 @@ public:
 		numAlloc = rhs.numAlloc;
 		rhs.data = nullptr;
 		rhs.numItems = 0;
+	}
+
+	void operator=(const Vector &rhs)
+	{
+		Clear();
+		if (!(numItems = rhs.numItems)) return;
+		if (numAlloc < numItems)
+		{
+			if (data)
+			{
+				Pool_CFree<T_Data>(data, numAlloc);
+				data = nullptr;
+			}
+			numAlloc = AlignNumAlloc<T_Data>(numItems);
+		}
+		if (!data)
+			data = Pool_CAlloc<T_Data>(numAlloc);
+		memcpy(data, rhs.data, sizeof(T_Data) * numItems);
 	}
 
 	T_Data& operator[](UInt32 index) const {return data[index];}
@@ -2149,26 +2212,6 @@ public:
 		numItems -= count;
 	}
 
-	void CopyFrom(const Vector &source)
-	{
-		Clear();
-		numItems = source.numItems;
-		if (!numItems) return;
-		if (!data)
-		{
-			if (numAlloc < numItems) numAlloc = numItems;
-			numAlloc = AlignNumAlloc<T_Data>(numAlloc);
-			data = Pool_CAlloc<T_Data>(numAlloc);
-		}
-		else if (numAlloc < numItems)
-		{
-			UInt32 newAlloc = AlignNumAlloc<T_Data>(numItems);
-			data = Pool_CRealloc<T_Data>(data, numAlloc, newAlloc);
-			numAlloc = newAlloc;
-		}
-		memcpy(data, source.data, sizeof(T_Data) * numItems);
-	}
-
 	T_Data* Reserve(UInt32 howMany)
 	{
 		UInt32 newSize = numItems + howMany;
@@ -2332,7 +2375,7 @@ public:
 		T_Data		*pData;
 		UInt32		count;
 
-		Iterator() {}
+		//Iterator() {}
 
 	public:
 		explicit operator bool() const {return count != 0;}
@@ -2352,11 +2395,14 @@ public:
 			}
 		}
 
+		void Init(Vector *source) {pData = source->data; count = source->numItems;}
+
 		Data_Res operator*() const {return *pData;}
 		Data_Res operator->() const {return *pData;}
 		Data_Res operator()() const {return *pData;}
 		T_Data& Ref() {return *pData;}
 
+		Iterator() : pData(nullptr), count(0) {}
 		Iterator(Vector &source) : pData(source.data), count(source.numItems) {}
 		Iterator(Vector &source, UInt32 index) : count(source.numItems)
 		{

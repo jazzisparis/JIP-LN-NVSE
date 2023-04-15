@@ -298,6 +298,29 @@ __declspec(naked) MagicItem *TESForm::GetMagicItem() const
 	}
 }
 
+__declspec(naked) bool __fastcall TESContainer::ContainsForm(TESForm *form) const
+{
+	__asm
+	{
+		add		ecx, 4
+		ALIGN 16
+	iterHead:
+		test	ecx, ecx
+		jz		retn0
+		mov		eax, [ecx]
+		mov		ecx, [ecx+4]
+		test	eax, eax
+		jz		iterHead
+		cmp		[eax+4], edx
+		jnz		iterHead
+		mov		al, 1
+		retn
+	retn0:
+		xor		al, al
+		retn
+	}
+}
+
 __declspec(naked) SInt32 __fastcall TESContainer::GetCountForForm(TESForm *form) const
 {
 	__asm

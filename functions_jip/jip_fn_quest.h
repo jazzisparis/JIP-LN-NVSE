@@ -322,7 +322,7 @@ bool Cmd_GetQuestTargetsChanged_Execute(COMMAND_ARGS)
 		*result = 0;
 	else
 	{
-		s_lastQuestTargets->CopyFrom(*tmpFormLst);
+		s_lastQuestTargets() = *tmpFormLst;
 		*result = 1;
 	}
 	return true;

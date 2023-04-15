@@ -372,23 +372,34 @@ extern UInt32 g_valueID_enabled;
 template <typename Item> class ListBox
 {
 public:
+	enum
+	{
+		kFlag_RecalculateHeightsOnInsert = 1,
+		kFlag_FreeContChangeOnListItemDestruction = 2, // assumes the object is a ContChangesEntry - do not set this if the object isn't one...
+	};
+
 	struct ListItem
 	{
 		Tile	*tile;
 		Item	item;
+		bool	isFiltered;
+		UInt8	pad09[3];
+
+		ListItem(Tile *_tile, Item _item, bool _isFiltered) : tile(_tile), item(_item), isFiltered(_isFiltered) {}
 	};
 
 	typedef int (*CompareItems)(ListItem *item1, ListItem *item2);
+	typedef bool (*ShouldFilter)(Item item);
 
-	virtual bool	SetSelectedTile(Tile *tile);
-	virtual Tile	*GetSelectedTile();
-	virtual Tile	*HandleKeyboardInput(int inputCode);
-	virtual bool	IsParentMenu(Menu *menu);
-	virtual void	ScrollToHighlight();
-	virtual Tile	*GetItemTile(int index, bool countFromTop);	//	If countFromTop is 0, looks for a tile with kTileValue_listindex == index
-	virtual void	Destroy(bool doFree);
-	virtual void	ClearList();
-	virtual void	Sort(CompareItems cmpFunc);
+	/*00*/virtual bool	SetSelectedTile(Tile *tile);
+	/*04*/virtual Tile	*GetSelectedTile();
+	/*08*/virtual Tile	*HandleKeyboardInput(int inputCode);
+	/*0C*/virtual bool	IsParentMenu(Menu *menu);
+	/*10*/virtual void	ScrollToHighlight();
+	/*14*/virtual Tile	*GetItemTile(int index, bool countFromTop);	//	If countFromTop is 0, looks for a tile with kTileValue_listindex == index
+	/*18*/virtual void	Destroy(bool doFree);
+	/*1C*/virtual void	ClearList();
+	/*20*/virtual void	Sort(CompareItems cmpFunc);
 
 	tList<ListItem>	list;			// 04
 	Tile			*parentTile;	// 0C
@@ -397,10 +408,10 @@ public:
 	const char		*templateName;	// 18
 	UInt16			itemCount;		// 1C
 	UInt16			pad1E;			// 1E
-	float			flt20;			// 20
+	float			totalHeight;	// 20
 	float			listIndex;		// 24
-	float			currValue;		// 28
-	UInt16			word2C;			// 2C
+	float			scrollPos;		// 28
+	UInt16			flags;			// 2C
 	UInt16			pad2E;			// 2E
 
 	Item GetSelected() const
@@ -425,6 +436,64 @@ public:
 		if (!g_valueID_enabled)
 			g_valueID_enabled = TraitNameToID("_enabled");
 		return parentTile && parentTile->GetValueFloat(g_valueID_enabled);
+	}
+
+	int GetNumVisibleItems()
+	{
+		return ThisCall<int>(0x71AE60, this);
+	}
+
+	void Filter(ShouldFilter callback)
+	{
+		ThisCall(0x729FE0, this, callback);
+	}
+
+	Tile *Insert(Item item, const char *text, CompareItems sortingFunction = nullptr, const char *_templateName = nullptr)
+	{
+		if (!parentTile) return nullptr;
+		auto _template = _templateName ? _templateName : templateName;
+		if (!_template) return nullptr;
+
+		Tile *newTile = parentTile->GetParentMenu()->AddTileFromTemplate(parentTile, _template);
+		if (!newTile->GetValue(kTileValue_id))
+			newTile->SetFloat(kTileValue_id, -1);
+		if (text)
+			newTile->SetString(kTileValue_string, text);
+
+		ListItem *listItem = new (GameHeapAlloc(sizeof(ListItem))) ListItem(newTile, item, false);
+		if (sortingFunction)
+		{
+			ThisCall(0x7A7EB0, &list, listItem, sortingFunction); // InsertSorted
+			if (flags & kFlag_RecalculateHeightsOnInsert)
+				ThisCall(0x71A670, this);
+		}
+		else
+		{
+			list.Append(listItem);
+			if (flags & kFlag_RecalculateHeightsOnInsert)
+			{
+				ThisCall(0x7269D0, this, newTile);
+				ThisCall(0x71AD30, this);
+			}
+			newTile->SetFloat(kTileValue_listindex, itemCount++);
+		}
+
+		if (itemCount == 1)
+		{
+			UInt32 numVisibleItemsTrait = TraitNameToID("_number_of_visible_items");
+			if (parentTile->GetValueFloat(numVisibleItemsTrait) > 0)
+			{
+				TileValue *valPtr = parentTile->GetValue(kTileValue_height);
+				valPtr->RemoveFromReactionMap();
+				valPtr->AddRefValueAction(Tile::kAction_copy, newTile, kTileValue_height);
+
+				float numVisible = parentTile->GetValueFloat(numVisibleItemsTrait);
+				valPtr->AddFloatAction(Tile::kAction_mul, numVisible);
+				valPtr->Refresh();
+			}
+		}
+
+		return newTile;
 	}
 };
 

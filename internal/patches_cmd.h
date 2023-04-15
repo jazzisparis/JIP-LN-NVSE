@@ -94,7 +94,7 @@ UInt8 __fastcall DoGetPerkRank(Actor *actor, BGSPerk *perk, bool forTeammates)
 	{
 		if (s_NPCPerks)
 			return actor->GetPerkRank(perk, forTeammates);
-		else if ((actor->refID == 0x14) || actor->isTeammate)
+		else if (actor->IsPlayer() || actor->isTeammate)
 			return g_thePlayer->GetPerkRank(perk, forTeammates | actor->isTeammate);
 	}
 	return 0;
@@ -423,7 +423,7 @@ bool Hook_IsRefInList_Eval(TESObjectREFR *thisObj, BGSListForm *listForm, TESFor
 
 bool Hook_Update3D_Execute(COMMAND_ARGS)
 {
-	if (thisObj->refID == 0x14)
+	if (thisObj->IsPlayer())
 		ThisCall(0x8D3FA0, thisObj);
 	else
 		thisObj->Update3D();

@@ -27,6 +27,7 @@ DEFINE_COMMAND_PLUGIN(GetEquippedArmorRefs, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDT, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDR, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetHotkeyItemRef, 0, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(IsItemUnique, 0, 1, kParams_OneObjectID);
 
 bool Cmd_AddItemAlt_Execute(COMMAND_ARGS)
 {
@@ -273,8 +274,10 @@ bool Cmd_DropAlt_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	SInt32 dropCount = 0, clrOwner = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &dropCount, &clrOwner) || !thisObj->baseForm->GetContainer())
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &dropCount, &clrOwner))
 		return true;
+	TESContainer *container = thisObj->baseForm->GetContainer();
+	if (!container) return true;
 	ContChangesEntryList *entryList = thisObj->GetContainerChangesList();
 	if (!entryList) return true;
 	tList<TESForm> tempList(form);
@@ -291,7 +294,7 @@ bool Cmd_DropAlt_Execute(COMMAND_ARGS)
 		item = iter->data;
 		if (!item || !kInventoryType[item->typeID])
 			continue;
-		total = thisObj->GetItemCount(item);
+		total = GetFormCount(&container->formCountList, entryList, item);
 		if (total < 1) continue;
 		if ((dropCount > 0) && (dropCount < total))
 			total = dropCount;
@@ -695,5 +698,14 @@ bool Cmd_GetHotkeyItemRef_Execute(COMMAND_ARGS)
 			REFR_RES = invRef->refID;
 		}
 	}
+	return true;
+}
+
+bool Cmd_IsItemUnique_Execute(COMMAND_ARGS)
+{
+	TESForm *item;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &item) && (item->jipFormFlags6 & kHookFormFlag6_UniqueItem))
+		*result = 1;
+	else *result = 0;
 	return true;
 }

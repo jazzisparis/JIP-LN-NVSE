@@ -1,5 +1,17 @@
 #include "nvse/GameScript.h"
 
+__declspec(naked) void SuppressConsoleOutput()
+{
+	__asm
+	{
+		mov		eax, fs:[0x2C]
+		mov		edx, ds:0x126FD98
+		mov		eax, [eax+edx*4]
+		mov		[eax+0x268], 0
+		retn
+	}
+}
+
 TESForm* __stdcall LookupFormByRefID(UInt32 refID);
 void Script::RefVariable::Resolve(ScriptLocals *eventList)
 {
@@ -26,11 +38,9 @@ bool Script::Init(char *scrText)
 	Constructor();
 	MarkAsTemporary();
 	text = scrText;
-	bool success = Compile() && (info.dataLength > 4);
+	bool success = Compile() && info.dataLength;
 	text = nullptr;
-	if (success) return true;
-	Destructor();
-	return false;
+	return success;
 }
 
 Script *Script::Create(char *scrText)
@@ -38,8 +48,14 @@ Script *Script::Create(char *scrText)
 	Script *pScript = (Script*)GameHeapAlloc(sizeof(Script));
 	if (pScript->Init(scrText))
 		return pScript;
-	GameHeapFree(pScript);
+	pScript->Destroy(1);
 	return nullptr;
+}
+
+bool Script::Execute(TESObjectREFR *thisObj, ScriptLocals *eventList, TESObjectREFR *containingObj, bool arg3)
+{
+	SuppressConsoleOutput();
+	return ThisCall<bool>(0x5AC1E0, this, thisObj, eventList, containingObj, arg3);
 }
 
 class ScriptVarFinder

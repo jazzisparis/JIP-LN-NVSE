@@ -365,14 +365,21 @@ bool Cmd_PickFromList_Execute(COMMAND_ARGS)
 	REFR_RES = 0;
 	BGSListForm *listForm;
 	SInt32 start = 0, len = -1;
-	if (!thisObj->baseForm->GetContainer() || !ExtractArgsEx(EXTRACT_ARGS_EX, &listForm, &start, &len) || (start < 0)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &listForm, &start, &len) || (start < 0))
+		return true;
+	TESContainer *container = thisObj->baseForm->GetContainer();
+	if (!container) return true;
+	ContChangesEntryList *entryList = thisObj->GetContainerChangesList();
+	if (!entryList) return true;
 	auto iter = listForm->list.Head();
 	TESForm *item;
 	do
 	{
 		if (start-- > 0) continue;
-		if (!len-- || !(item = iter->data)) break;
-		if (thisObj->GetItemCount(item) < 1) continue;
+		if (!len-- || !(item = iter->data))
+			break;
+		if (GetFormCount(&container->formCountList, entryList, item) < 1)
+			continue;
 		REFR_RES = item->refID;
 		break;
 	}
@@ -529,7 +536,7 @@ void __fastcall GetCombatActors(TESObjectREFR *thisObj, Script *scriptObj, bool 
 	UInt32 count;
 	Actor *actor;
 	TempElements *tmpElements = GetTempElements();
-	if (thisObj->refID == 0x14)
+	if (thisObj->IsPlayer())
 	{
 		CombatActors *cmbActors = g_thePlayer->combatActors;
 		if (!cmbActors) return;
@@ -599,7 +606,7 @@ void __fastcall GetDetectionData(TESObjectREFR *thisObj, Script *scriptObj, bool
 	if (NOT_ACTOR(thisObj)) return;
 	TempElements *tmpElements = GetTempElements();
 	Actor *actor = (Actor*)thisObj;
-	if (actor->refID == 0x14)
+	if (actor->IsPlayer())
 	{
 		ProcessManager *procMngr = ProcessManager::Get();
 		MobileObject **objArray = procMngr->objects.data, **arrEnd = objArray;
@@ -753,7 +760,7 @@ bool Cmd_IsInCombatWith_Execute(COMMAND_ARGS)
 	Actor *target;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &target))
 	{
-		if (thisObj->refID == 0x14)
+		if (thisObj->IsPlayer())
 		{
 			CombatActors *cmbActors = g_thePlayer->combatActors;
 			if (!cmbActors) return true;
@@ -837,7 +844,7 @@ bool Cmd_ResetFallTime_Execute(COMMAND_ARGS)
 float __fastcall GetRadiationLevelAlt(Actor *actor)
 {
 	if (NOT_ACTOR(actor) || !actor->baseProcess || actor->baseProcess->processLevel) return 0;
-	if (actor->refID == 0x14)
+	if (actor->IsPlayer())
 	{
 		HighProcess *hiProc = (HighProcess*)actor->baseProcess;
 		return hiProc->waterRadsSec + hiProc->rads238 + hiProc->GetRadsSec();
@@ -1484,7 +1491,7 @@ bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 	if (targetSlot >= 0)
 		reloadMask &= (1 << targetSlot);
 	ReloadBipedAnim(character->bipedAnims, reloadMask);
-	if (character->refID == 0x14)
+	if (character->IsPlayer())
 	{
 		ReloadBipedAnim(((PlayerCharacter*)character)->bipedAnims1stPerson, reloadMask);
 		if (weapon)
@@ -2446,7 +2453,7 @@ bool Cmd_RemoveAllPerks_Execute(COMMAND_ARGS)
 	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &forTeammates))
 	{
 		Actor *actor = (Actor*)thisObj;
-		if (actor->refID == 0x14)
+		if (actor->IsPlayer())
 		{
 			auto perkIter = forTeammates ? g_thePlayer->perkRanksTM.Head() : g_thePlayer->perkRanksPC.Head();
 			do

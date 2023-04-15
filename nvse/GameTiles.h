@@ -225,6 +225,23 @@ public:
 
 		void __vectorcall SetFloat(float value);
 		void SetString(const char *strVal);
+
+		__forceinline void Refresh(bool forceRefreshReactions = false)
+		{
+			ThisCall(0xA09410, this, forceRefreshReactions);
+		}
+		__forceinline void AddRefValueAction(UInt32 _action, Tile *ref, UInt32 value)
+		{
+			ThisCall(0xA09130, this, _action, ref, value);
+		}
+		__forceinline void AddFloatAction(UInt32 _action, float value)
+		{
+			ThisCall(0xA09080, this, _action, value);
+		}
+		__forceinline void RemoveFromReactionMap()
+		{
+			ThisCall(0xA09200, this);
+		}
 	};
 
 	enum TileFlags
@@ -282,9 +299,17 @@ public:
 	{
 		ThisCall(ADDR_TileSetString, this, id, strVal, bPropagate);
 	}
-	__forceinline void GradualSetFloat(UInt32 id, float startVal, float endVal, float seconds, UInt32 changeMode = 0)
+	__forceinline void StartGradualSetFloat(UInt32 id, float startVal, float endVal, float seconds, UInt32 changeMode = 0)
 	{
 		ThisCall(0xA07C60, this, id, startVal, endVal, seconds, changeMode);
+	}
+	__forceinline void EndGradualSetFloat(UInt32 id)
+	{
+		ThisCall(0xA07DC0, this, id);
+	}
+	__forceinline bool HasGradualSetFloat(UInt32 id)
+	{
+		return !ThisCall<bool>(0xA07FC0, this, id);
 	}
 	Menu *GetParentMenu();
 	void DestroyAllChildren();

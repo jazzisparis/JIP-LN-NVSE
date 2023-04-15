@@ -1885,10 +1885,12 @@ __declspec(noinline) UInt8 *AuxBuffer::Get(UInt32 bufIdx, UInt32 reqSize)
 	{
 		auxBuf->size = reqSize;
 		if (auxBuf->ptr)
+		{
 			_aligned_free(auxBuf->ptr);
-		auxBuf->ptr = (UInt8*)_aligned_malloc(reqSize, 0x10);
+			auxBuf->ptr = nullptr;
+		}
 	}
-	else if (!auxBuf->ptr)
+	if (!auxBuf->ptr)
 		auxBuf->ptr = (UInt8*)_aligned_malloc(auxBuf->size, 0x10);
 	return auxBuf->ptr;
 }

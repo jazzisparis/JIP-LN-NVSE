@@ -1,5 +1,7 @@
 #pragma once
 
+SInt32 __fastcall GetFormCount(TESContainer::FormCountList *formCountList, ContChangesEntryList *objList, TESForm *form);
+
 // 68
 class TESObjectREFR : public TESForm
 {

@@ -55,11 +55,16 @@ ExtraLock *ExtraLock::Create()
 	return (ExtraLock*)dataPtr;
 }
 
-ExtraCount *ExtraCount::Create(UInt32 count)
+ExtraCount *ExtraCount::Create(SInt32 count)
 {
 	CreatetraType(ExtraCount)
-	dataPtr[3] = count;
+	dataPtr[3] = (count > 0x7FFF) ? 0x7FFF : count;
 	return (ExtraCount*)dataPtr;
+}
+
+ExtraCount *ExtraDataList::AddExtraCount(SInt32 count)
+{
+	return (ExtraCount*)AddExtra(ExtraCount::Create(count));
 }
 
 ExtraTeleport *ExtraTeleport::Create()
@@ -104,7 +109,7 @@ const char *kExtraDataNames[] =
 {
 	"Unknown00", "Havok", "Cell3D", "CellWaterType", "RegionList", "SeenData", "EditorID", "CellMusicType", "CellClimate",
 	"ProcessMiddleLow", "CellCanopyShadowMask", "DetachTime", "PersistentCell", "Script", "Action", "StartingPosition",
-	"Anim", "Unknown11", "UsedMarkers", "DistantData", "RagdollData", "ContainerChanges", "Worn", "WornLeft", "PackageStartLocation",
+	"Anim", "NoStack", "UsedMarkers", "DistantData", "RagdollData", "ContainerChanges", "Worn", "WornLeft", "PackageStartLocation",
 	"Package", "TrespassPackage", "RunOncePacks", "ReferencePointer", "Follower", "LevCreaModifier", "Ghost", "OriginalReference",
 	"Ownership", "Global", "Rank", "Count", "Health", "Uses", "JIP", "Charge", "Light", "Lock", "Teleport", "MapMarker",
 	"Unknown2D", "LeveledCreature", "LeveledItem", "Scale", "Seed", "NonActorMagicCaster", "NonActorMagicTarget", "Unknown34",
@@ -400,6 +405,41 @@ __declspec(naked) bool ContChangesEntry::HasExtraLeveledItem() const
 	}
 }
 
+__declspec(naked) SInt32 ContChangesEntry::GetExtendDataCount() const
+{
+	__asm
+	{
+		push	esi
+		push	edi
+		mov		esi, [ecx]
+		xor		edi, edi
+		ALIGN 16
+	iterHead:
+		test	esi, esi
+		jz		done
+		mov		ecx, [esi]
+		mov		esi, [esi+4]
+		test	ecx, ecx
+		jz		iterHead
+		inc		edi
+		push	kXData_ExtraCount
+		call	BaseExtraList::GetByType
+		test	eax, eax
+		jz		iterHead
+		movsx	edx, word ptr [eax+0xC]
+		lea		edi, [edi+edx-1]
+		jmp		iterHead
+		ALIGN 16
+	done:
+		mov		eax, 1
+		cmp		eax, edi
+		cmovl	eax, edi
+		pop		edi
+		pop		esi
+		retn
+	}
+}
+
 __declspec(naked) ExtraDataList *ContChangesEntry::GetEquippedExtra() const
 {
 	__asm
@@ -609,6 +649,20 @@ __declspec(naked) float ContChangesEntry::CalculateWeaponDamage(Actor *owner, fl
 	}
 }
 
+ContChangesEntry *ContChangesEntry::Create(TESForm *item, SInt32 count, ExtraDataList *xData)
+{
+	ContChangesEntry *newEntry = (ContChangesEntry*)GameHeapAlloc(sizeof(ContChangesEntry));
+	newEntry->type = item;
+	newEntry->countDelta = count;
+	if (xData)
+	{
+		newEntry->extendData = (ExtendDataList*)GameHeapAlloc(sizeof(ExtendDataList));
+		newEntry->extendData->Init(xData);
+	}
+	else newEntry->extendData = nullptr;
+	return newEntry;
+}
+
 ContChangesEntry *ContChangesEntry::CreateCopy(ExtraDataList *xData)
 {
 	ContChangesEntry *pCopy = (ContChangesEntry*)GameHeapAlloc(sizeof(ContChangesEntry));
@@ -664,28 +718,24 @@ void ContChangesExtraList::CleanEmpty()
 TempObject<ExtraJIPEntryMap> s_extraDataKeysMap;
 PrimitiveCS s_JIPExtraDataCS;
 
-ExtraJIP *ExtraJIP::Create(UInt32 _key)
+ExtraJIP *ExtraJIP::Create(UINT _key)
 {
-	UInt32 *dataPtr = (UInt32*)GameHeapAlloc(sizeof(ExtraJIP));
-	dataPtr[0] = kVtbl_ExtraTimeLeft;
-	dataPtr[1] = kXData_ExtraJIP;
-	dataPtr[2] = 0;
-	ExtraJIP *xJIP = (ExtraJIP*)dataPtr;
-	xJIP->key = _key;
-	return xJIP;
+	CreatetraType(ExtraTimeLeft)
+	dataPtr[3] = _key;
+	return (ExtraJIP*)dataPtr;
 }
 
-__declspec(noinline) UInt32 ExtraJIP::MakeKey()
+__declspec(noinline) UINT ExtraJIP::MakeKey()
 {
 	while (true)
 	{
-		UInt32 key = ThisCall<UInt32, UInt32>(0xAA5230, (void*)0x11C4180, 0xFFFFFFFE) + 1;
-		if (!s_extraDataKeysMap->HasKey(key))
+		UINT key = ThisCall<UINT, UINT>(0xAA5230, (void*)0x11C4180, 0xFFFFFFFF);
+		if (key && !s_extraDataKeysMap->HasKey(key))
 			return key;
 	}
 }
 
-__declspec(noinline) ExtraJIP *ExtraDataList::AddExtraJIP(UInt32 _key)
+__declspec(noinline) ExtraJIP *ExtraDataList::AddExtraJIP(UINT _key)
 {
 	return (ExtraJIP*)AddExtra(ExtraJIP::Create(_key));
 }
@@ -707,37 +757,38 @@ void __fastcall ExtraDataList::ExtraJIPLoadGame(BGSLoadFormBuffer *lgBuffer)
 {
 	UInt8 *buffer = lgBuffer->chunk + lgBuffer->chunkConsumed;
 	lgBuffer->chunkConsumed += 5;
-	UInt32 key = *(UInt32*)buffer;
-	if (!key) return;
-	if (ExtraJIP *xJIP = GetExtraType(this, ExtraJIP))
-	{
-		if (xJIP->key != key)	//	Should never happen!
+	if (UINT key = *(UInt32*)buffer)
+		if (ExtraJIP *xJIP = GetExtraType(this, ExtraJIP))
 		{
-			s_extraDataKeysMap->Erase(xJIP->key);
-			xJIP->key = key;
+			if (xJIP->key != key)	//	Should never happen!
+			{
+				XDATA_CS
+				s_extraDataKeysMap->Erase(xJIP->key);
+				xJIP->key = key;
+			}
 		}
-	}
-	else AddExtraJIP(key);
-}
+		else AddExtraJIP(key);
+};
 
 void __fastcall ExtraDataList::ExtraJIPCopy(ExtraJIP *source)
 {
 	XDATA_CS
-	ExtraJIPEntry *inEntry = s_extraDataKeysMap->GetPtr(source->key);
-	if (!inEntry) return;
-	ExtraJIP *xJIP = GetExtraType(this, ExtraJIP);
-	if (!xJIP)
-		xJIP = AddExtraJIP(ExtraJIP::MakeKey());
-	ExtraJIPEntry *newEntry = &s_extraDataKeysMap()[xJIP->key];
-	newEntry->dataMap.Clear();
-	*newEntry = *inEntry;
-	s_dataChangedFlags |= kChangedFlag_ExtraData;
+	if (ExtraJIPEntry *inEntry = s_extraDataKeysMap->GetPtr(source->key))
+	{
+		ExtraJIP *xJIP = GetExtraType(this, ExtraJIP);
+		if (!xJIP)
+			xJIP = AddExtraJIP(ExtraJIP::MakeKey());
+		s_extraDataKeysMap()[xJIP->key] = *inEntry;
+		s_dataChangedFlags |= kChangedFlag_ExtraData;
+	}
 }
 
-void ExtraJIPData::ResolvedRefID(UInt32 idx)
+void ExtraJIPData::ResolvedRefIDs()
 {
-	if (IsRef(idx) && !(values[idx].refID = GetResolvedRefID(values[idx].refID)))
-		_bittestandreset(&typeBtf, idx);
+	for (UInt32 idx = 0, maxIdx = GetMaxIndex(), mask = 1; idx < maxIdx; idx++, mask <<= 1)
+		if ((typeBtf & mask) && !GetResolvedRefID(&values[idx].refID))
+			initBtf ^= mask;
+	typeBtf &= initBtf;
 }
 
 void ExtraJIPData::operator=(const ExtraJIPData &other)
@@ -752,26 +803,17 @@ bool ExtraJIPData::operator==(const ExtraJIPData &other) const
 	return MemCmp(this, &other, sizeof(values) + 8) && (strings[0] == other.strings[0]) && (strings[1] == other.strings[1]);
 }
 
-void ExtraJIPEntry::operator=(ExtraJIPEntry &other)
+UInt32 ExtraJIPEntry::GetSaveSize()
 {
-	for (auto iter = other.dataMap.Begin(); iter; ++iter)
-		dataMap.Emplace(iter.Key(), iter());
-}
-
-bool ExtraJIPEntry::operator==(ExtraJIPEntry &other)
-{
-	if (dataMap.Size() != other.dataMap.Size())
-		return false;
-	for (auto iter1 = dataMap.Begin(), iter2 = other.dataMap.Begin(); iter1; ++iter1, ++iter2)
-		if ((iter1.Key() != iter2.Key()) || !(iter1() == iter2()))
-			return false;
-	return true;
+	UInt32 size = dataMap.Size() * 5;
+	for (auto iter = dataMap.Begin(); iter; ++iter)
+		size += iter().GetSaveSize() + iter().strings[0].Size() + iter().strings[1].Size();
+	return size;
 }
 
 void ExtraJIPData::Dump() const
 {
-	UInt32 valuesUsed = ValuesUsed();
-	for (UInt32 i = 0; i < valuesUsed; i++)
+	for (UInt32 i = 0, maxIdx = GetMaxIndex(); i < maxIdx; i++)
 	{
 		if (IsRef(i))
 		{
@@ -801,12 +843,10 @@ void ExtraJIPData::Dump() const
 void ExtraJIP::Dump() const
 {
 	if (ExtraJIPEntry *entry = s_extraDataKeysMap->GetPtr(key))
-	{
 		for (auto iter = entry->dataMap.Begin(); iter; ++iter)
 		{
 			PrintDebug("ModIdx = %02X", iter.Key());
 			Console_Print("ModIdx = %02X", iter.Key());
 			iter().Dump();
 		}
-	}
 }

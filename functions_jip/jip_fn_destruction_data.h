@@ -256,6 +256,7 @@ bool Cmd_AddDestructionStage_Execute(COMMAND_ARGS)
 		destructible->data->stages[0] = destrStage;
 	}
 	destructible->data->stageCount++;
+	object->flags |= TESForm::kFormFlag_Destructible;
 	return true;
 }
 
@@ -282,6 +283,7 @@ bool Cmd_RemoveDestructionStage_Execute(COMMAND_ARGS)
 	{
 		GameHeapFree(stages);
 		data->stages = NULL;
+		object->flags &= ~TESForm::kFormFlag_Destructible;
 	}
 	return true;
 }

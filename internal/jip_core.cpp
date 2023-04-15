@@ -19,6 +19,7 @@ _GetPluginInfoByName GetPluginInfoByName;
 _GetStringVar GetStringVar;
 _AssignString AssignString;
 _CreateArray CreateArray;
+_CreateMap CreateMap;
 _CreateStringMap CreateStringMap;
 _SetElement SetElement;
 _AppendElement AppendElement;
@@ -247,27 +248,26 @@ __declspec(naked) bool __fastcall GetResolvedModIndex(UInt8 *pModIdx)
 	}
 }
 
-__declspec(naked) UInt32 __fastcall GetResolvedRefID(UInt32 refID)
+__declspec(naked) UInt32 __fastcall GetResolvedRefID(UInt32 *refID)
 {
 	__asm
 	{
-		push	ecx
-		test	ecx, ecx
-		jz		retn0
-		movzx	edx, byte ptr [esp+3]
-		cmp		dl, 0xFF
+		cmp		dword ptr [ecx], 0
 		jz		retnArg
-		mov		ecx, g_BGSSaveLoadGame
-		mov		al, [ecx+edx+0x44]
+		movzx	eax, byte ptr [ecx+3]
 		cmp		al, 0xFF
+		jz		retnArg
+		add		eax, g_BGSSaveLoadGame
+		mov		dl, [eax+0x44]
+		cmp		dl, 0xFF
 		jz		retn0
-		mov		[esp+3], al
+		mov		[ecx+3], dl
 	retnArg:
-		pop		eax
+		mov		eax, [ecx]
 		retn
 	retn0:
 		xor		eax, eax
-		pop		ecx
+		mov		[ecx], eax
 		retn
 	}
 }
@@ -294,7 +294,8 @@ UInt32 __fastcall StringToRef(char *refStr)
 		*findStr = (modIdx << 24) | HexToUInt(colon + 1);
 		return *findStr;
 	}
-	return *findStr = GetResolvedRefID(HexToUInt(refStr));
+	*findStr = HexToUInt(refStr);
+	return GetResolvedRefID(findStr);
 }
 
 __declspec(noinline) InventoryItemsMap *GetInventoryItemsMap()
@@ -599,37 +600,6 @@ __declspec(naked) int __stdcall GetRayCastMaterial(const NiVector3 &posVector, f
 
 TempObject<UnorderedMap<TESNPC*, AppearanceUndo*>> s_appearanceUndoMap;
 
-TempObject<UnorderedSet<TESGlobal*>> s_resolvedGlobals;
-
-__declspec(naked) UInt32 TESGlobal::ResolveRefValue()
-{
-	__asm
-	{
-		push	esi
-		lea		esi, [ecx+0x24]
-		mov		word ptr [ecx+6], 1
-		mov		ecx, [esi]
-		cmp		ecx, 0xFF000000
-		jnb		doLookup
-		call	GetResolvedRefID
-		test	eax, eax
-		jz		invalid
-		mov		[esi], eax
-	doLookup:
-		push	eax
-		call	LookupFormByRefID
-		test	eax, eax
-		jz		invalid
-		mov		eax, [esi]
-		pop		esi
-		retn
-	invalid:
-		mov		[esi], eax
-		pop		esi
-		retn
-	}
-}
-
 hkpWorld *GethkpWorld()
 {
 	bhkWorld *hkWorld = nullptr;
@@ -866,14 +836,20 @@ TempObject<UnorderedMap<Script*, DisabledScriptBlocks>> s_disabledScriptBlocksMa
 
 ExtraDataList *InventoryRef::CreateExtraData()
 {
-	ContChangesEntry *pEntry = containerRef->GetContainerChangesEntry(type);
-	if (!pEntry) return nullptr;
+	ContChangesEntryList *entryList = containerRef->GetContainerChangesList();
+	if (!entryList) return nullptr;
+	ContChangesEntry *pEntry = entryList->FindForItem(type);
+	if (!pEntry)
+	{
+		pEntry = ContChangesEntry::Create(type, 0);
+		entryList->Prepend(pEntry);
+	}
 	xData = ExtraDataList::Create();
 	if (pEntry->extendData)
 		pEntry->extendData->Prepend(xData);
 	else
 	{
-		pEntry->extendData = (ContChangesExtraList*)GameHeapAlloc(8);
+		pEntry->extendData = (ContChangesExtraList*)GameHeapAlloc(sizeof(ContChangesExtraList));
 		pEntry->extendData->Init(xData);
 	}
 	containerRef->MarkModified(0x20);
@@ -912,13 +888,13 @@ ExtraDataList* __fastcall InventoryRef::SplitFromStack(SInt32 maxStack)
 		else xData->RemoveByType(kXData_ExtraCount);
 	}
 	else if (maxStack > 1)
-		xData->AddExtra(ExtraCount::Create(maxStack));
+		xData->AddExtraCount(maxStack);
 	return xData;
 }
 
 TESObjectREFR* __fastcall CreateRefForStack(TESObjectREFR *container, ContChangesEntry *menuEntry)
 {
-	return (container && menuEntry) ? InventoryRefCreate(container, menuEntry->type, menuEntry->countDelta, menuEntry->extendData ? menuEntry->extendData->GetFirstItem() : nullptr) : nullptr;
+	return InventoryRefCreate(container, menuEntry->type, menuEntry->countDelta, menuEntry->extendData ? menuEntry->extendData->GetFirstItem() : nullptr);
 }
 
 TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
@@ -985,22 +961,19 @@ ContChangesEntry* __fastcall GetHotkeyItemEntry(UInt8 index, ExtraDataList **out
 	if (!entryList) return nullptr;
 	auto entryIter = entryList->Head();
 	ContChangesEntry *entry;
-	UInt8 type;
-	ListNode<ExtraDataList> *xdlIter;
 	ExtraDataList *xData;
-	ExtraHotkey *xHotkey;
 	do
 	{
 		if (!(entry = entryIter->data) || !entry->extendData)
 			continue;
-		type = entry->type->typeID;
+		UInt8 type = entry->type->typeID;
 		if ((type != kFormType_TESObjectARMO) && (type != kFormType_TESObjectWEAP) && (type != kFormType_AlchemyItem))
 			continue;
-		xdlIter = entry->extendData->Head();
+		auto xdlIter = entry->extendData->Head();
 		do
 		{
 			if (!(xData = xdlIter->data)) continue;
-			xHotkey = GetExtraType(xData, ExtraHotkey);
+			ExtraHotkey *xHotkey = GetExtraType(xData, ExtraHotkey);
 			if (!xHotkey || (xHotkey->index != index))
 				continue;
 			*outXData = xData;
@@ -1201,38 +1174,24 @@ namespace JIPScriptRunner
 			StrCopy(scriptsPath + 26, fileName);
 			if (!FileToBuffer(scriptsPath, buffer, STR_BUFFER_SIZE - 1))
 				continue;
-			switch (*(UInt16*)fileName |= 0x2020)
+			UInt16 runOn = *(UInt16*)fileName |= 0x2020;
+			if (runOn == kRunOn_RestartGame)
 			{
-				case kRunOn_RestartGame:
-				{
-					if (Script *pScript = Script::Create(buffer))
-					{
-						SuppressConsoleOutput();
-						CaptureLambdaVars(pScript);
-						pScript->Execute(nullptr, nullptr, nullptr, true);
-						UncaptureLambdaVars(pScript);
-						pScript->Destroy(1);
-					}
-					else Console_Print("Script Runner : \"%s\" > FAILED TO COMPILE", fileName);
-					break;
-				}
-				case kRunOn_LoadGame:
-				case kRunOn_ExitToMainMenu:
-				case kRunOn_NewGame:
-				case kRunOn_SaveGame:
-				case kRunOn_ExitGame:
-				{
-					if (Script *pScript = Script::Create(buffer))
-					{
-						CaptureLambdaVars(pScript);
-						s_cachedScripts()[fileName] = pScript;
-					}
-					else Console_Print("Script Runner : \"%s\" > FAILED TO COMPILE", fileName);
-					break;
-				}
-				default:
-					break;
+				if (RunScriptSource(buffer, true))
+					continue;
 			}
+			else if ((runOn == kRunOn_LoadGame) || (runOn == kRunOn_ExitToMainMenu) || (runOn == kRunOn_NewGame) || (runOn == kRunOn_SaveGame) || (runOn == kRunOn_ExitGame))
+			{
+				if (Script *pScript = Script::Create(buffer))
+				{
+					CaptureLambdaVars(pScript);
+					s_cachedScripts()[fileName] = pScript;
+					continue;
+				}
+			}
+			else continue;
+			PrintLog("Script Runner : \"%s\" > FAILED TO COMPILE", fileName);
+			Console_Print("Script Runner : \"%s\" > FAILED TO COMPILE", fileName);
 		}
 	}
 
@@ -1240,10 +1199,7 @@ namespace JIPScriptRunner
 	{
 		for (auto iter = s_cachedScripts->Begin(); iter; ++iter)
 			if (*(UInt16*)iter.Key() == runOn)
-			{
-				SuppressConsoleOutput();
-				iter->Execute(nullptr, nullptr, nullptr, true);
-			}
+				iter->Execute();
 	}
 
 	void __fastcall RunScript(Script *script, int EDX, TESObjectREFR *callingRef)
@@ -1251,21 +1207,26 @@ namespace JIPScriptRunner
 		ExtraScript *xScript = GetExtraType(&callingRef->extraDataList, ExtraScript);
 		ScriptLocals *eventList = xScript ? xScript->eventList : nullptr;
 		if (eventList) xScript->eventList = nullptr;
-		SuppressConsoleOutput();
-		script->Execute(callingRef, nullptr, nullptr, true);
+		script->Execute(callingRef);
 		if (eventList) xScript->eventList = eventList;
 	}
 
-	bool __fastcall RunScriptSource(char *scrSource)
+	bool __fastcall RunScriptSource(char *scrSource, bool capture)
 	{
 		StackObject<Script> tempScript;
-		if (tempScript->Init(scrSource))
+		bool success = tempScript->Init(scrSource);
+		if (success)
 		{
-			SuppressConsoleOutput();
-			tempScript->Execute(nullptr, nullptr, nullptr, true);
-			return true;
+			if (capture)
+			{
+				CaptureLambdaVars(*tempScript);
+				tempScript->Execute();
+				UncaptureLambdaVars(*tempScript);
+			}
+			else tempScript->Execute();
 		}
-		return false;
+		tempScript->Destructor();
+		return success;
 	}
 };
 
@@ -1315,18 +1276,6 @@ __declspec(naked) bool IsConsoleOpen()
 		mov		eax, [eax+edx*4]
 		mov		al, [eax+0x268]
 	done:
-		retn
-	}
-}
-
-__declspec(naked) void SuppressConsoleOutput()
-{
-	__asm
-	{
-		mov		eax, fs:[0x2C]
-		mov		edx, ds:0x126FD98
-		mov		eax, [eax+edx*4]
-		mov		[eax+0x268], 0
 		retn
 	}
 }

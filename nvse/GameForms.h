@@ -248,6 +248,7 @@ public:
 		kFormFlag_Compressed =			0x40000,
 		kFormFlag_CenterRefOnCreation =	0x100000,
 		kFormFlag_StillLoading =		0x200000,
+		kFormFlag_Destructible =		0x1000000,
 		kFormFlag_IsVATSTargettable =	0x4000000,
 		kFormFlag_DisableFade =			0x8000000,
 		kFormFlag_TalkingActivator = 	0x40000000
@@ -276,6 +277,8 @@ public:
 	tList<ModInfo>	mods;			// 10
 
 	bool IsCreated() const {return modIndex == 0xFF;}
+
+	bool IsPlayer() const {return refID == 0x14;}
 
 	TESFullName *GetFullName() const;
 	const char *GetTheName() const;
@@ -826,6 +829,7 @@ public:
 
 	FormCountList	formCountList;	// 04
 
+	bool __fastcall ContainsForm(TESForm *form) const;
 	SInt32 __fastcall GetCountForForm(TESForm *form) const;
 };
 
@@ -1493,6 +1497,7 @@ public:
 	{
 		kType_Float =		'f',
 		kType_Long =		'l',
+		kType_RefID =		'r',
 		kType_Short =		's'
 	};
 
@@ -1504,8 +1509,6 @@ public:
 		float		data;
 		UInt32		uRefID;
 	};
-
-	UInt32 ResolveRefValue();
 };
 
 static_assert(sizeof(TESGlobal) == 0x28);

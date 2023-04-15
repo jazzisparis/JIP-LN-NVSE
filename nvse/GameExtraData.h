@@ -344,6 +344,8 @@ public:
 		EntryData(ExtendDataList *extend, SInt32 count, TESForm *item) :
 			extendData(extend), countDelta(count), type(item) {}
 
+		static EntryData *Create(TESForm *item, SInt32 count, ExtraDataList *xData = nullptr);
+
 		__forceinline void Destroy()
 		{
 			ThisCall(0x4459E0, this, 1);
@@ -352,6 +354,7 @@ public:
 		bool __fastcall HasExtraType(UInt32 xType) const;
 		bool HasExtraLeveledItem() const;
 		ExtraDataList *GetEquippedExtra() const;
+		SInt32 GetExtendDataCount() const;
 		float __vectorcall GetWeaponModEffectValue(UInt32 effectType) const;
 		float __vectorcall GetBaseHealth() const;
 		float __vectorcall GetHealthPercent() const;
@@ -436,7 +439,7 @@ public:
 	SInt16		count;		// 0C
 	UInt8		pad0E[2];	// 0E
 
-	static ExtraCount* __stdcall Create(UInt32 count = 0);
+	static ExtraCount* __stdcall Create(SInt32 count = 0);
 };
 
 // 10
@@ -1173,18 +1176,18 @@ public:
 		kExtraJIP_Verion =	1
 	};
 
-	UInt32		key;	// 0C
+	UINT		key;	// 0C
 
-	static ExtraJIP *Create(UInt32 _key = 0);
+	static ExtraJIP *Create(UINT _key = 0);
 
-	static UInt32 MakeKey();
+	static UINT MakeKey();
 
 	void __fastcall SaveGame(BGSSaveFormBuffer *sgBuffer);
 
 	void Dump() const;
 };
 
-// 80
+// 60
 struct ExtraJIPData
 {
 	union XValue
@@ -1194,6 +1197,9 @@ struct ExtraJIPData
 		
 		inline void operator=(double val) {flt = val;}
 		inline void operator=(UInt32 val) {refID = val;}
+
+		inline operator double() const {return flt;}
+		inline operator UInt32() const {return refID;}
 	};
 	
 	SInt32		initBtf;
@@ -1201,25 +1207,37 @@ struct ExtraJIPData
 	XValue		values[18];
 	XString		strings[2];
 
+	inline bool IsUsed(UInt32 idx) const {return _bittest(&initBtf, idx) != 0;}
 	inline bool IsRef(UInt32 idx) const {return _bittest(&typeBtf, idx) != 0;}
 
 	inline void Set(UInt32 idx, double val)
 	{
-		_bittestandset(&initBtf, idx);
-		_bittestandreset(&typeBtf, idx);
 		values[idx] = val;
+		UInt32 mask = 1 << idx;
+		if (val) initBtf |= mask;
+		else initBtf &= ~mask;
+		typeBtf &= ~mask;
 	}
 	inline void Set(UInt32 idx, UInt32 val)
 	{
-		_bittestandset(&initBtf, idx);
-		_bittestandset(&typeBtf, idx);
 		values[idx] = val;
+		UInt32 mask = 1 << idx;
+		if (val)
+		{
+			initBtf |= mask;
+			typeBtf |= mask;
+		}
+		else
+		{
+			initBtf &= ~mask;
+			typeBtf &= initBtf;
+		}
 	}
 	inline void Set(UInt32 idx, const char *inStr) {strings[idx] = inStr;}
 
-	void ResolvedRefID(UInt32 idx);
-
-	inline UInt32 ValuesUsed() const
+	void ResolvedRefIDs();
+	
+	inline UInt32 GetMaxIndex() const
 	{
 		UInt32 bitIdx;
 		if (_BitScanReverse(&bitIdx, initBtf))
@@ -1227,10 +1245,10 @@ struct ExtraJIPData
 		return 0;
 	}
 
-	UInt32 GetSaveSize() const
+	inline UInt32 GetSaveSize() const
 	{
-		if (UInt32 vUsed = ValuesUsed())
-			return (vUsed + 2) << 2;
+		if (UInt32 maxIdx = GetMaxIndex())
+			return (maxIdx + 2) << 2;
 		return 8;
 	}
 
@@ -1258,23 +1276,16 @@ struct ExtraJIPEntry
 	UInt32			refID;
 	ExtraJIPDataMap	dataMap;
 
-	ExtraJIPEntry() : refID(0) {}
-	ExtraJIPEntry(UInt32 _refID) : refID(_refID) {}
+	ExtraJIPEntry(UInt32 _refID = 0) : refID(_refID) {}
 
-	UInt32 GetSaveSize()
-	{
-		UInt32 size = dataMap.Size() * 5;
-		for (auto iter = dataMap.Begin(); iter; ++iter)
-			size += iter().GetSaveSize() + iter().strings[0].Size() + iter().strings[1].Size();
-		return size;
-	}
+	UInt32 GetSaveSize();
 
-	void operator=(ExtraJIPEntry &other);
+	inline void operator=(const ExtraJIPEntry &other) {dataMap = other.dataMap;}
 
-	bool operator==(ExtraJIPEntry &other);
+	inline bool operator==(const ExtraJIPEntry &other) const {return dataMap == other.dataMap;}
 };
 static_assert(sizeof(ExtraJIPEntry) == 0x10);
 
-typedef UnorderedMap<UInt32, ExtraJIPEntry, 0x40> ExtraJIPEntryMap;
+typedef UnorderedMap<UINT, ExtraJIPEntry, 0x20> ExtraJIPEntryMap;
 extern TempObject<ExtraJIPEntryMap> s_extraDataKeysMap;
-extern PrimitiveCS s_JIPExtraDataCS;;
+extern PrimitiveCS s_JIPExtraDataCS;

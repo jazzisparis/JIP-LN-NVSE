@@ -585,12 +585,7 @@ bool Cmd_RunBatchScript_Execute(COMMAND_ARGS)
 bool Cmd_ExecuteScript_Execute(COMMAND_ARGS)
 {
 	ExtraScript *xScript = GetExtraType(&thisObj->extraDataList, ExtraScript);
-	if (xScript)
-	{
-		Script *pScript = xScript->script;
-		ScriptLocals *pEventList = xScript->eventList;
-		if (pScript && pEventList)
-			pScript->Execute(thisObj, pEventList, NULL, false);
-	}
+	if (xScript && xScript->script && xScript->eventList)
+		xScript->script->Execute(thisObj, xScript->eventList, nullptr, false);
 	return true;
 }

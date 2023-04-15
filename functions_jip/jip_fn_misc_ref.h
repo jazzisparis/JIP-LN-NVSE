@@ -498,7 +498,7 @@ void __fastcall GetRefrContactObjects(TESObjectREFR *thisObj, ContactObjects &co
 	}
 }
 
-bool __fastcall GetHasContact(TESObjectREFR *thisObj, TESForm *form)
+bool __stdcall GetHasContact(TESObjectREFR *thisObj, TESForm *form)
 {
 	TempFormList *tmpFormLst = GetTempFormList();
 	PopulateFormSet(form, tmpFormLst);
@@ -543,7 +543,7 @@ bool Cmd_GetHasContact_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool __fastcall GetHasContactBase(TESObjectREFR *thisObj, TESForm *form)
+bool __stdcall GetHasContactBase(TESObjectREFR *thisObj, TESForm *form)
 {
 	TempFormList *tmpFormLst = GetTempFormList();
 	PopulateFormSet(form, tmpFormLst);
@@ -588,7 +588,7 @@ bool Cmd_GetHasContactBase_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool __fastcall GetHasContactType(TESObjectREFR *thisObj, UInt32 typeID)
+bool __stdcall GetHasContactType(TESObjectREFR *thisObj, UInt32 typeID)
 {
 	hkpWorldObject **bodies;
 	UInt32 count;
@@ -999,16 +999,14 @@ bool Cmd_MoveToContainer_Execute(COMMAND_ARGS)
 	{
 		if (thisObj == g_HUDMainMenu->crosshairRef)
 			CdeclCall(0x775A00, 0, 0, 0);
-		ExtraCount *xCount = GetExtraType(&thisObj->extraDataList, ExtraCount);
-		SInt32 quantity = xCount ? xCount->count : 1;
 		if (clrOwner) thisObj->extraDataList.RemoveByType(kXData_ExtraOwnership);
-		if (target->refID == 0x14)
-			ThisCall(0x953FF0, target, thisObj, quantity, 0);
+		if (target->IsPlayer())
+			ThisCall(0x953FF0, target, thisObj, 1, 0);
 		else
 		{
 			ThisCall(0x572230, thisObj);
-			ThisCall(0x574B30, target, thisObj, quantity, 0, 0);
-			if (!(thisObj->flags & 1) && !ThisCall<ModInfo*>(0x484E60, thisObj, 0xFFFFFFFF))
+			ThisCall(0x574B30, target, thisObj, 1, 0, 0);
+			if (!(thisObj->flags & 1) && thisObj->mods.Empty() && !ThisCall<bool>(0x41B3A0, &thisObj->extraDataList, 2))
 				thisObj->Destroy(true);
 		}
 	}
@@ -1449,7 +1447,7 @@ bool Cmd_GetNifBlockParentNodes_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &pcNode))
 	{
 		NiNode *rootNode;
-		if (pcNode && (thisObj->refID == 0x14))
+		if (pcNode && thisObj->IsPlayer())
 		{
 			if (pcNode & 1)
 				rootNode = thisObj->GetRefNiNode();
@@ -1616,7 +1614,7 @@ bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
 				if (xData = invRef->CreateExtraData())
 				{
 					if (invRef->GetCount() > 1)
-						xData->AddExtra(ExtraCount::Create(invRef->GetCount()));
+						xData->AddExtraCount(invRef->GetCount());
 					xData->AddExtra(ExtraTimeLeft::Create(fltVal));
 				}
 				return true;
@@ -1726,7 +1724,7 @@ bool __fastcall RegisterInsertObject(char *inData)
 				else if ((rootNode = DoAttachModel(targetObj, objectName, pDataStr, rootNode)) && (rootNode->m_flags & 0x20000000))
 					AddPointLights(rootNode);
 			}
-			if ((refr->refID == 0x14) && (rootNode = s_pc1stPersonNode))
+			if (refr->IsPlayer() && (rootNode = s_pc1stPersonNode))
 			{
 				targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName);
 				if (targetObj)
@@ -1751,7 +1749,7 @@ bool __fastcall RegisterInsertObject(char *inData)
 			NiAVObject *object = rootNode->GetBlockByName(findData());
 			if (object)
 				object->m_parent->RemoveObject(object);
-			if ((refr->refID == 0x14) && (rootNode = s_pc1stPersonNode))
+			if (refr->IsPlayer() && (rootNode = s_pc1stPersonNode))
 			{
 				object = rootNode->GetBlockByName(findData());
 				if (object)
@@ -2061,7 +2059,7 @@ bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 		else
 		{
 			NiNode *rootNode = thisObj->GetRefNiNode();
-			if (rootNode && (thisObj->refID != 0x14))
+			if (rootNode && !thisObj->IsPlayer())
 				angles = rootNode->WorldRotate().ToEulerPRYInv();
 			else
 			{
@@ -2525,7 +2523,7 @@ bool Cmd_AttachLine_Execute(COMMAND_ARGS)
 		{
 			color *= 1 / 255.0F;
 			targetNode->AddObject(NiLines::Create(length, color, lineName), 1);
-			if ((thisObj->refID == 0x14) && (targetNode = s_pc1stPersonNode->GetNode(nodeName)))
+			if (thisObj->IsPlayer() && (targetNode = s_pc1stPersonNode->GetNode(nodeName)))
 				targetNode->AddObject(NiLines::Create(length, color, lineName), 1);
 			*result = 1;
 		}
@@ -2669,10 +2667,10 @@ bool Cmd_GetRefExtraData_Execute(COMMAND_ARGS)
 			}
 			else if (pData->IsRef(varIdx))
 			{
-				REFR_RES = pData->values[varIdx].refID;
+				REFR_RES = pData->values[varIdx];
 				eval.SetExpectedReturnType(kRetnType_Form);
 			}
-			else *result = pData->values[varIdx].flt;
+			else *result = pData->values[varIdx];
 		}
 	}
 	return true;
@@ -2708,7 +2706,7 @@ bool Cmd_SetRefExtraData_Execute(COMMAND_ARGS)
 					if (!(xData = invRef->CreateExtraData()))
 						return true;
 					if (invRef->GetCount() > 1)
-						xData->AddExtra(ExtraCount::Create(invRef->GetCount()));
+						xData->AddExtraCount(invRef->GetCount());
 					xJIP = xData->AddExtraJIP();
 				}
 				else if (!(xJIP = GetExtraType(xData, ExtraJIP)))
@@ -2726,12 +2724,12 @@ bool Cmd_SetRefExtraData_Execute(COMMAND_ARGS)
 						{
 							dataEntry->refID = 0;
 							xData->RemoveByType(kXData_ExtraJIP);
-							if (!xData->m_data)
+							if (!xData->m_data || ((xData->m_data->type == kXData_ExtraCount) && !xData->m_data->next))
 							{
 								if (ContChangesEntry *entry = refr->GetContainerChangesEntry(invRef->type))
 								{
 									entry->extendData->Remove(xData);
-									GameHeapFree(xData);
+									xData->Destroy(1);
 								}
 							}
 						}

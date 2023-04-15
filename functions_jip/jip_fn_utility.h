@@ -360,10 +360,10 @@ bool Cmd_ValidateModIndex_Execute(COMMAND_ARGS)
 
 bool Cmd_ClearJIPSavedData_Execute(COMMAND_ARGS)
 {
-	UInt32 scrVars, lnkRefs, auxVars, refMaps;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &scrVars, &lnkRefs, &auxVars, &refMaps))
+	UInt32 scrVars, lnkRefs, auxVars, refMaps/*, xData = 0*/;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &scrVars, &lnkRefs, &auxVars, &refMaps/*, &xData*/))
 		return true;
-	UInt8 modIdx = scriptObj->GetOverridingModIdx();
+	UInt32 modIdx = scriptObj->GetOverridingModIdx();
 	if (scrVars)
 	{
 		for (auto ownerIter = s_scriptVariablesBuffer->Begin(); ownerIter; ++ownerIter)
@@ -383,6 +383,13 @@ bool Cmd_ClearJIPSavedData_Execute(COMMAND_ARGS)
 		s_dataChangedFlags |= kChangedFlag_AuxVars;
 	if (refMaps && s_refMapArraysPerm->Erase((refMaps == 2) ? 0xFF : modIdx))
 		s_dataChangedFlags |= kChangedFlag_RefMaps;
+	/*if (xData && !s_extraDataKeysMap->Empty() && (modIdx < 0xFF))
+	{
+		for (auto jedIter = s_extraDataKeysMap->Begin(); jedIter; ++jedIter)
+			if (jedIter().dataMap.Erase(modIdx) && jedIter().dataMap.Empty())
+				jedIter.Remove();
+		s_dataChangedFlags |= kChangedFlag_ExtraData;
+	}*/
 	return true;
 }
 

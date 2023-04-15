@@ -7,6 +7,22 @@
 
 #define MAX_CONTROL_BIND 28
 
+enum KeyState
+{
+	kKeyState_Held,
+	kKeyState_Pressed,
+	kKeyState_Depressed,
+	kKeyState_Changed
+};
+
+enum ControllerState
+{
+	kCtrlState_NotHeld = -1,
+	kCtrlState_Held,
+	kCtrlState_Depressed,
+	kCtrlState_Pressed
+};
+
 enum XboxControlCode
 {
 	kXboxCtrl_DPAD_UP = 1,

@@ -118,6 +118,18 @@ constexpr ParamInfo kParams_OneOptionalBoundObject[] =
 {
 	{"Bound Object", kParamType_BoundObject, 1}
 };
+
+constexpr ParamInfo kParams_OneBoundObject_OneOptionalBoundObject[] =
+{
+	{"Bound Object", kParamType_BoundObject, 0},
+	{"Bound Object", kParamType_BoundObject, 1}
+};
+
+constexpr ParamInfo kParams_OneBoundObject_OneInt[] =
+{
+	{"Bound Object", kParamType_BoundObject, 0},
+	{"Integer", kParamType_Integer, 0}
+};
  
 constexpr ParamInfo kParams_OneInt_OneOptionalBoundObject[] =
 {

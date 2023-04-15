@@ -36,6 +36,8 @@ typedef bool (*_AssignString)(COMMAND_ARGS, const char *newValue);
 extern _AssignString AssignString;
 typedef NVSEArrayVar* (*_CreateArray)(const NVSEArrayElement *data, UInt32 size, Script *callingScript);
 extern _CreateArray CreateArray;
+typedef NVSEArrayVar* (*_CreateMap)(const double *keys, const NVSEArrayElement *values, UInt32 size, Script *callingScript);
+extern _CreateMap CreateMap;
 typedef NVSEArrayVar* (*_CreateStringMap)(const char **keys, const NVSEArrayElement *values, UInt32 size, Script *callingScript);
 extern _CreateStringMap CreateStringMap;
 typedef void (*_SetElement)(NVSEArrayVar *arr, const NVSEArrayElement &key, const NVSEArrayElement &value);
@@ -160,7 +162,7 @@ __forceinline void *NiDeallocator(void *blockPtr, UInt32 size)
 TESForm* __stdcall LookupFormByRefID(UInt32 refID);
 UInt32 __stdcall HasChangeData(UInt32 refID);
 bool __fastcall GetResolvedModIndex(UInt8 *pModIdx);
-UInt32 __fastcall GetResolvedRefID(UInt32 refID);
+UInt32 __fastcall GetResolvedRefID(UInt32 *refID);
 
 enum
 {
@@ -258,7 +260,7 @@ struct InventoryItemData
 	InventoryItemData(SInt32 _count, ContChangesEntry *_entry) : count(_count), entry(_entry) {}
 };
 
-typedef UnorderedMap<TESForm*, InventoryItemData, 0x40> InventoryItemsMap;
+typedef Map<TESForm*, InventoryItemData, 0x40> InventoryItemsMap;
 InventoryItemsMap *GetInventoryItemsMap();
 
 bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *invItemsMap);
@@ -343,8 +345,6 @@ struct AppearanceUndo
 };
 
 extern TempObject<UnorderedMap<TESNPC*, AppearanceUndo*>> s_appearanceUndoMap;
-
-extern TempObject<UnorderedSet<TESGlobal*>> s_resolvedGlobals;
 
 hkpWorld *GethkpWorld();
 
@@ -478,7 +478,7 @@ public:
 		}
 		if (type == 2)
 		{
-			refID = GetResolvedRefID(*(UInt32*)bufPos);
+			refID = GetResolvedRefID((UInt32*)bufPos);
 			return 4;
 		}
 		length = *(UInt16*)bufPos;
@@ -878,7 +878,7 @@ namespace JIPScriptRunner
 	void RunScripts(ScriptRunOn runOn);
 
 	void __fastcall RunScript(Script *script, int EDX, TESObjectREFR *callingRef);
-	bool __fastcall RunScriptSource(char *scrSource);
+	bool __fastcall RunScriptSource(char *scrSource, bool capture = false);
 };
 
 extern TempObject<UnorderedMap<const char*, NiCamera*>> s_extraCamerasMap;
@@ -892,8 +892,6 @@ extern bool s_mapMenuSkipSetXY;
 void RefreshItemListBox();
 
 bool IsConsoleOpen();
-
-void SuppressConsoleOutput();
 
 void __fastcall DoConsolePrint(double *result);
 

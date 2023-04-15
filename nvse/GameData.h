@@ -234,8 +234,14 @@ public:
 	UInt32							unk638;					// 638
 
 	__forceinline static DataHandler *GetSingleton() {return *(DataHandler**)0x11C3F2C;}
-	ModInfo* __fastcall LookupModByName(const char *modName);
-	UInt8 __fastcall GetModIndex(const char *modName) const;
+	ModInfo* __fastcall LookupModByName(const char *modName) const;
+
+	UInt8 __fastcall GetModIndex(const char *modName) const
+	{
+		ModInfo *modInfo = LookupModByName(modName);
+		return modInfo ? modInfo->modIndex : 0xFF;
+	}
+
 	UInt8 GetActiveModCount() const {return modList.loadedModCount;}
 	inline ModInfo *GetNthModInfo(UInt32 modIndex) const
 	{

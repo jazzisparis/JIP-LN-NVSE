@@ -641,7 +641,7 @@ bool Cmd_MoveToPosStr_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &posStr)) return true;
 	char *pos = posStr, *delim = GetNextToken(pos, ' ');
 	UInt32 refID = HexToUInt(pos);
-	if (!refID || !*delim || !(refID = GetResolvedRefID(refID)))
+	if (!refID || !*delim || !GetResolvedRefID(&refID))
 		return true;
 	TESObjectCELL *cell = (TESObjectCELL*)LookupFormByRefID(refID);
 	if (!cell) return true;
