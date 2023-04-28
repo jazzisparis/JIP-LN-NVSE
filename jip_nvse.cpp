@@ -1404,6 +1404,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2933*/REG_CMD(SetProjectileLight);
 	/*2934*/REG_CMD(IsItemUnique);
 	/*2935*/REG_CMD_ARR(GetMenuItemListRefs);
+	//	v56.95
+	/*2936*/REG_CMD_FRM(GetSelfAsInventoryRef);
 
 	//===========================================================
 
@@ -1560,7 +1562,7 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			if (nvseMsg->fosLoaded)
 			{
 				DoLoadGameHousekeeping();
-				JIPScriptRunner::RunScripts(JIPScriptRunner::kRunOn_LoadGame);
+				JIPScriptRunner::RunScripts(JIPScriptRunner::kRunOn_LoadGame, JIPScriptRunner::kRunOn_LoadOrNewGame);
 			}
 			break;
 		case NVSEMessagingInterface::kMessage_PostPostLoad:
@@ -1575,7 +1577,7 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			break;
 		case NVSEMessagingInterface::kMessage_NewGame:
 			RestoreJIPFormFlags();
-			JIPScriptRunner::RunScripts(JIPScriptRunner::kRunOn_NewGame);
+			JIPScriptRunner::RunScripts(JIPScriptRunner::kRunOn_NewGame, JIPScriptRunner::kRunOn_LoadOrNewGame);
 			break;
 		case NVSEMessagingInterface::kMessage_DeleteGameName:
 			break;

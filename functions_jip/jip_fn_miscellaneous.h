@@ -1241,7 +1241,7 @@ bool Cmd_PlaceModel_Execute(COMMAND_ARGS)
 			objNode->LocalRotate().FromEulerYPR(rot * GET_PS(8));
 			objNode->LocalTranslate() = pos;
 			objNode->m_transformLocal.scale = scale;
-			objNode->UpdateDownwardPass(kUpdateParams, 0);
+			objNode->UpdateDownwardPass(kNiUpdateData, 0);
 			if (objNode->m_flags & 0x20000000)
 				AddPointLights(objNode);
 			*result = 1;

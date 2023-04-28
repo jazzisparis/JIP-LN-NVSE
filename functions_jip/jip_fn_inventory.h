@@ -28,6 +28,7 @@ DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDT, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDR, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetHotkeyItemRef, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(IsItemUnique, 0, 1, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(GetSelfAsInventoryRef, 1, 0, nullptr);
 
 bool Cmd_AddItemAlt_Execute(COMMAND_ARGS)
 {
@@ -658,16 +659,16 @@ bool Cmd_GetEquippedArmorRefs_Execute(COMMAND_ARGS)
 	return true;
 }
 
-float __fastcall GetArmorEffectiveDX(TESObjectREFR *thisObj, UInt32 funcAddr)
+double __fastcall GetArmorEffectiveDX(TESObjectREFR *thisObj, UInt32 funcAddr)
 {
 	if IS_TYPE(thisObj->baseForm, TESObjectARMO)
 	{
 		InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 		if (invRef)
-			return ThisCall<float>(funcAddr, invRef->entry, 0);
+			return ThisCall<double>(funcAddr, invRef->entry, 0);
 		ContChangesExtraList extendData(&thisObj->extraDataList);
 		ContChangesEntry tempEntry(&extendData, 1, thisObj->baseForm);
-		return ThisCall<float>(funcAddr, &tempEntry, 0);
+		return ThisCall<double>(funcAddr, &tempEntry, 0);
 	}
 	return 0;
 }
@@ -707,5 +708,14 @@ bool Cmd_IsItemUnique_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &item) && (item->jipFormFlags6 & kHookFormFlag6_UniqueItem))
 		*result = 1;
 	else *result = 0;
+	return true;
+}
+
+bool Cmd_GetSelfAsInventoryRef_Execute(COMMAND_ARGS)
+{
+	REFR_RES = 0;
+	if (containingObj && thisObj->baseForm)
+		if (TESObjectREFR *invRef = containingObj->CreateInventoryRefForScriptedObj(thisObj->baseForm, eventList))
+			REFR_RES = invRef->refID;
 	return true;
 }

@@ -65,8 +65,6 @@ DEFINE_COMMAND_PLUGIN(IsMobile, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(IsGrabbable, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(AttachLight, 1, 5, kParams_OneString_OneForm_ThreeOptionalFloats);
 DEFINE_COMMAND_PLUGIN(RemoveLight, 1, 1, kParams_OneString);
-DEFINE_CMD_COND_PLUGIN(GetExtraFloat, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(SetExtraFloat, 1, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(SetLinearVelocity, 1, 5, kParams_OneString_ThreeFloats_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(InsertNode, 0, 23, kParams_OneForm_OneInt_OneFormatString);
 DEFINE_COMMAND_PLUGIN(AttachModel, 0, 23, kParams_OneForm_OneInt_OneFormatString);
@@ -1090,7 +1088,7 @@ bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 					if (ptLight->extraFlags & 1)
 						ptLight->vector100 = transltn;
 				}
-				niBlock->UpdateDownwardPass(kUpdateParams, 0);
+				niBlock->UpdateDownwardPass(kNiUpdateData, 0);
 			}
 		}
 		else
@@ -1156,7 +1154,7 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 					niBlock->LocalRotate().FromEulerPRYInv(rot * GET_PS(8));
 				if (IS_NODE(niBlock) && NOT_ACTOR(thisObj))
 					((NiNode*)niBlock)->ResetCollision();
-				niBlock->UpdateDownwardPass(kUpdateParams, 0);
+				niBlock->UpdateDownwardPass(kNiUpdateData, 0);
 			}
 		}
 		else if (transform != 1)
@@ -1194,7 +1192,7 @@ bool Cmd_SetNifBlockScale_Execute(COMMAND_ARGS)
 				niBlock->m_transformLocal.scale = newScale;
 				if (IS_NODE(niBlock) && NOT_ACTOR(thisObj))
 					((NiNode*)niBlock)->ResetCollision();
-				niBlock->UpdateDownwardPass(kUpdateParams, 0);
+				niBlock->UpdateDownwardPass(kNiUpdateData, 0);
 			}
 		}
 		else ThisCall(0x567490, thisObj, newScale);
@@ -1570,62 +1568,6 @@ bool Cmd_RemoveLight_Execute(COMMAND_ARGS)
 				break;
 			}
 		}
-	}
-	return true;
-}
-
-bool Cmd_GetExtraFloat_Execute(COMMAND_ARGS)
-{
-	*result = 0;
-	ExtraDataList *xData = nullptr;
-	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
-	if (invRef)
-		xData = invRef->xData;
-	else xData = &thisObj->extraDataList;
-	if (xData)
-	{
-		ExtraTimeLeft *xTimeLeft = GetExtraType(xData, ExtraTimeLeft);
-		if (xTimeLeft)
-			*result = xTimeLeft->timeLeft;
-	}
-	return true;
-}
-
-bool Cmd_GetExtraFloat_Eval(COMMAND_ARGS_EVAL)
-{
-	ExtraTimeLeft *xTimeLeft = GetExtraType(&thisObj->extraDataList, ExtraTimeLeft);
-	*result = xTimeLeft ? xTimeLeft->timeLeft : 0;
-	return true;
-}
-
-bool Cmd_SetExtraFloat_Execute(COMMAND_ARGS)
-{
-	float fltVal;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &fltVal))
-	{
-		TESObjectREFR *refr = thisObj;
-		ExtraDataList *xData;
-		if (InventoryRef *invRef = InventoryRefGetForID(thisObj->refID))
-		{
-			refr = invRef->containerRef;
-			xData = invRef->xData;
-			if (!xData)
-			{
-				if (xData = invRef->CreateExtraData())
-				{
-					if (invRef->GetCount() > 1)
-						xData->AddExtraCount(invRef->GetCount());
-					xData->AddExtra(ExtraTimeLeft::Create(fltVal));
-				}
-				return true;
-			}
-		}
-		else xData = &thisObj->extraDataList;
-		ExtraTimeLeft *xTimeLeft = GetExtraType(xData, ExtraTimeLeft);
-		if (xTimeLeft)
-			xTimeLeft->timeLeft = fltVal;
-		else xData->AddExtra(ExtraTimeLeft::Create(fltVal));
-		refr->MarkModified(0x400);
 	}
 	return true;
 }
@@ -2139,7 +2081,7 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 				if (xCamera->m_parent != targetNode)
 				{
 					targetNode->AddObject(xCamera, 1);
-					xCamera->UpdateDownwardPass(kUpdateParams, 0);
+					xCamera->UpdateDownwardPass(kNiUpdateData, 0);
 				}
 				*result = 1;
 			}

@@ -675,7 +675,7 @@ __declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 		call	NiNode::ResetCollision
 	doUpdate:
 		push	0
-		push	offset kUpdateParams
+		push	offset kNiUpdateData
 		mov		ecx, edi
 		CALL_EAX(0xA5DD70)
 	done:
@@ -729,7 +729,7 @@ __declspec(naked) void __vectorcall TESObjectREFR::SetAngle(__m128 rotVector, UI
 		call	NiNode::ResetCollision
 		pop		ecx
 		push	0
-		push	offset kUpdateParams
+		push	offset kNiUpdateData
 		CALL_EAX(0xA5DD70)
 	done:
 		MARK_MODIFIED(esi, 2)
@@ -853,7 +853,7 @@ __declspec(naked) void __vectorcall TESObjectREFR::Rotate(__m128 pry)
 		call	NiNode::ResetCollision
 		mov		ecx, [esp]
 		push	0
-		push	offset kUpdateParams
+		push	offset kNiUpdateData
 		CALL_EAX(0xA5DD70)
 	done:
 		add		esp, 0x28
@@ -1838,7 +1838,7 @@ __declspec(naked) double __fastcall AdjustDmgByDifficulty(ActorHitData *hitData)
 	}
 }
 
-void Actor::GetHitDataValue(UInt32 valueType, double *result) const
+__declspec(noinline) void __fastcall Actor::GetHitDataValue(UInt32 valueType, double *result) const
 {
 	*result = 0;
 	if (NOT_ACTOR(this) || !baseProcess || (baseProcess->processLevel > 1))

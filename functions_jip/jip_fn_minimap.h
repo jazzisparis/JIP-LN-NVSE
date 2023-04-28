@@ -1417,28 +1417,16 @@ void __fastcall FreeCellMapMarkers(RenderedMapMarkers::Iterator &cmkIter)
 
 bool s_discoveredLocation = false;
 
-void __fastcall HandleDiscoverLocation(TESObjectCELL *markerCell)
+const char* __fastcall DiscoverLocationHook(MapMarkerData *mkData, PlayerCharacter::MapMarkerInfo *mkInfo)
 {
-	if (!markerCell) return;
-	if (auto findRendered = s_renderedMapMarkers->Find(Coordinate(*markerCell->exteriorCoords)))
-	{
-		FreeCellMapMarkers(findRendered);
-		s_discoveredLocation = true;
-	}
-}
-
-__declspec(naked) void DiscoverLocationHook()
-{
-	__asm
-	{
-		push	dword ptr ds:0x11D0368
-		CALL_EAX(0x8D5100)
-		mov		[ebp-0x8F], 1
-		mov		ecx, [ebp-0x8C]
-		mov		eax, [ecx+4]
-		mov		ecx, [eax+0x40]
-		jmp		HandleDiscoverLocation
-	}
+	if (TESObjectCELL *markerCell = mkInfo->markerRef->parentCell)
+		if (auto findRendered = s_renderedMapMarkers->Find(Coordinate(*markerCell->exteriorCoords)))
+		{
+			FreeCellMapMarkers(findRendered);
+			s_discoveredLocation = true;
+		}
+	const char *mkName = mkData->fullName.name.m_data;
+	return mkName ? mkName : (const char*)0x1011584;
 }
 
 bool s_updateQuestTargets = false;
@@ -1463,13 +1451,22 @@ __declspec(naked) void __fastcall UpdatePlacedMarkerHook(PlayerCharacter *thePla
 	}
 }
 
+__declspec(naked) void RendererRecreateHook()
+{
+	__asm
+	{
+		and		s_mmTextureParams.d3dFormat, 0
+		JMP_EAX(0xE736B0)
+	}
+}
+
 UInt8 s_miniMapIndex = 0;
 TileRect *s_localMapRect, *s_worldMapRect, *s_mapMarkersRect, *s_doorMarkersRect, *s_lQuestMarkersRect, *s_wQuestMarkersRect;
 TileImage *s_worldMapTile;
 TileValue *s_miniMapMode = nullptr, *s_pcMarkerRotate, *s_miniMapPosX, *s_miniMapPosY, *s_worldMapZoom;
 TileShaderProperty *s_tileShaderProps[9];
 float s_fLocalMapZoomCurr;
-BSFadeNode *s_fakeWaterPlanes;
+NiNode *s_fakeWaterPlanes;
 bool s_isInInterior = false;
 NiNode *s_shadowSceneNodes[5];
 NiColor *g_directionalLightColor, *g_shadowFogColor;
@@ -1647,7 +1644,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	g_shadowSceneNode->AddObject(lmCamera, 1);
 	s_localMapCamera = lmCamera;
 
-	BSFadeNode *waterParent = BSFadeNode::Create();
+	NiNode *waterParent = CdeclCall<NiNode*>(0xA5F030);
 	waterParent->m_uiRefCount = 2;
 
 	NiVector4 *waterVertices = (NiVector4*)GameHeapAlloc(sizeof(NiVector3) << 2);
@@ -1737,10 +1734,11 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	SafeWrite16(0x452736, 0x7705);
 	SafeWrite8(0x555C20, 0xC3);
 	WriteRelCall(0x9438F6, (UInt32)UpdateCellsSeenBitsHook);
-	WritePushRetRelJump(0x779567, 0x7795E8, (UInt32)DiscoverLocationHook);
+	WriteRelCall(0x77951E, (UInt32)DiscoverLocationHook);
 	WritePushRetRelJump(0x60F13A, 0x60F145, (UInt32)SetQuestTargetsHook);
 	WriteRelCall(0x952C69, (UInt32)UpdatePlacedMarkerHook);
 	WriteRelCall(0x952F6B, (UInt32)UpdatePlacedMarkerHook);
+	WriteRelJump(0xE74C3C, (UInt32)RendererRecreateHook);
 	return true;
 }
 
@@ -1752,10 +1750,9 @@ alignas(16) const int kNWCoordAdjust[] = {-1, 2, 0, 0};
 
 struct RenderedEntry
 {
-	NiRenderedTexture	*texture;
-	UInt8				regenFlags;
+	NiRenderedTexture	*texture = nullptr;
+	UInt8				regenFlags = 0;
 
-	RenderedEntry() : texture(nullptr), regenFlags(0) {}
 	~RenderedEntry() {if (texture) ThisCall(0xA7FD30, texture, true);}
 };
 
@@ -1823,18 +1820,18 @@ __declspec(naked) NiRenderedTexture* __fastcall FindNextMMTexture(NiTexture *tex
 {
 	__asm
 	{
-		xor		eax, eax
-		mov		edx, kVtbl_NiRenderedTexture
+		mov		eax, ecx
+		mov		ecx, kVtbl_NiRenderedTexture
+		xor		edx, edx
 		ALIGN 16
 	iterHead:
-		mov		ecx, [ecx+0x2C]
-		test	ecx, ecx
+		mov		eax, [eax+0x2C]
+		test	eax, eax
 		jz		done
-		cmp		[ecx], edx
+		cmp		[eax], ecx
 		jnz		iterHead
-		cmp		[ecx+0x34], eax
+		cmp		[eax+0x34], edx
 		jz		iterHead
-		mov		eax, ecx
 	done:
 		retn
 	}
@@ -2192,7 +2189,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				else if (updateWater)
 				{
 					s_fakeWaterPlanes->LocalTranslate() = nwXY;
-					ThisCall(0xA5DD70, s_fakeWaterPlanes, &kUpdateParams, 0);
+					ThisCall(0xA5DD70, s_fakeWaterPlanes, &kNiUpdateData, 0);
 				}
 				NiLight *light;
 				GameGlobals::SceneLightsLock()->Enter();

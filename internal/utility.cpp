@@ -1877,7 +1877,7 @@ __declspec(naked) UInt32 __fastcall HexToUInt(const char *str)
 	}
 }
 
-__declspec(noinline) UInt8 *AuxBuffer::Get(UInt32 bufIdx, UInt32 reqSize)
+__declspec(noinline) UInt8 *AuxBuffer::Alloc(UInt32 bufIdx, UInt32 reqSize)
 {
 	thread_local static AuxBuffer s_auxBuffers[3] = {{}, {}, {}};
 	AuxBuffer *auxBuf = &s_auxBuffers[bufIdx];

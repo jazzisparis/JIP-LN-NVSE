@@ -258,6 +258,9 @@ enum MaterialType
 #define ADDR_InitFontInfo		0xA12020
 #define ADDR_ReturnThis2		0xE68810
 
+#define EXTRA_DATA_CS			0x11C3920
+#define SCENE_LIGHTS_CS			0x11F9EA0
+
 #define IS_REFERENCE(form) ((*(UInt32**)form)[0x3C] == ADDR_ReturnTrue)
 #define NOT_REFERENCE(form) ((*(UInt32**)form)[0x3C] != ADDR_ReturnTrue)
 #define IS_ACTOR(form) ((*(UInt32**)form)[0x40] == ADDR_ReturnTrue)

@@ -371,9 +371,7 @@ bool Cmd_SortFormsByType_Execute(COMMAND_ARGS)
 	if (!nForms || !nTypes) return true;
 	TempElements *tmpElements = GetTempElements();
 	Vector<TESForm*> tempForms(nForms);
-	UInt32 size = GetMax(nForms, nTypes) * sizeof(ArrayElementL);
-	ArrayElementL *elements = (ArrayElementL*)AuxBuffer::Get(2, size);
-	ZERO_BYTES(elements, size);
+	ArrayElementL *elements = AuxBuffer::Get<ArrayElementL>(2, GetMax(nForms, nTypes));
 	GetElements(formArray, elements, nullptr);
 	TESForm *form;
 	for (int idx = 0; idx < nForms; idx++)
@@ -413,8 +411,7 @@ bool Cmd_GetFormCountType_Execute(COMMAND_ARGS)
 		return true;
 	UInt32 size = GetArraySize(formArray);
 	if (!size) return true;
-	ArrayElementR *elements = (ArrayElementR*)AuxBuffer::Get(2, size * sizeof(ArrayElementR));
-	ZERO_BYTES(elements, size * sizeof(ArrayElementR));
+	ArrayElementR *elements = AuxBuffer::Get<ArrayElementR>(2, size);
 	if (!GetElements(formArray, elements, nullptr))
 		return true;
 	int count = 0;
@@ -447,7 +444,7 @@ bool Cmd_SetDefaultMessageTime_Execute(COMMAND_ARGS)
 bool Cmd_Console_Execute(COMMAND_ARGS)
 {
 	char *buffer = GetStrArgBuffer();
-	if (ExtractFormatStringArgs(0, buffer, EXTRACT_ARGS_EX, kCommandInfo_Console.numParams) && JIPScriptRunner::RunScriptSource(buffer))
+	if (ExtractFormatStringArgs(0, buffer, EXTRACT_ARGS_EX, kCommandInfo_Console.numParams) && JIPScriptRunner::RunScriptSource(buffer, "Console"))
 		*result = 1;
 	else *result = 0;
 	return true;

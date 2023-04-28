@@ -58,7 +58,7 @@ ExtraLock *ExtraLock::Create()
 ExtraCount *ExtraCount::Create(SInt32 count)
 {
 	CreatetraType(ExtraCount)
-	dataPtr[3] = (count > 0x7FFF) ? 0x7FFF : count;
+	dataPtr[3] = (count > SHRT_MAX) ? SHRT_MAX : count;
 	return (ExtraCount*)dataPtr;
 }
 
@@ -716,7 +716,6 @@ void ContChangesExtraList::CleanEmpty()
 }
 
 TempObject<ExtraJIPEntryMap> s_extraDataKeysMap;
-PrimitiveCS s_JIPExtraDataCS;
 
 ExtraJIP *ExtraJIP::Create(UINT _key)
 {
@@ -744,7 +743,6 @@ void __fastcall ExtraJIP::SaveGame(BGSSaveFormBuffer *sgBuffer)
 {
 	UInt8 *buffer = sgBuffer->Reserve(5);
 	buffer[4] = '|';
-	XDATA_CS
 	if (ExtraJIPEntry *entry = s_extraDataKeysMap->GetPtr(key))
 	{
 		entry->refID = sgBuffer->GetRefID();
@@ -762,26 +760,12 @@ void __fastcall ExtraDataList::ExtraJIPLoadGame(BGSLoadFormBuffer *lgBuffer)
 		{
 			if (xJIP->key != key)	//	Should never happen!
 			{
-				XDATA_CS
 				s_extraDataKeysMap->Erase(xJIP->key);
 				xJIP->key = key;
 			}
 		}
 		else AddExtraJIP(key);
 };
-
-void __fastcall ExtraDataList::ExtraJIPCopy(ExtraJIP *source)
-{
-	XDATA_CS
-	if (ExtraJIPEntry *inEntry = s_extraDataKeysMap->GetPtr(source->key))
-	{
-		ExtraJIP *xJIP = GetExtraType(this, ExtraJIP);
-		if (!xJIP)
-			xJIP = AddExtraJIP(ExtraJIP::MakeKey());
-		s_extraDataKeysMap()[xJIP->key] = *inEntry;
-		s_dataChangedFlags |= kChangedFlag_ExtraData;
-	}
-}
 
 void ExtraJIPData::ResolvedRefIDs()
 {

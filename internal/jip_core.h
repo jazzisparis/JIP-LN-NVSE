@@ -90,7 +90,7 @@ namespace GameGlobals
 	__forceinline bool *GamePadRumble() {return (bool*)0x11E0854;}
 	__forceinline UInt32 TickCount() {return *(UInt32*)0x11F63A8;}
 	__forceinline tList<Archive> *ArchivesList() {return *(tList<Archive>**)0x11F8160;}
-	__forceinline LightCS *SceneLightsLock() {return (LightCS*)0x11F9EA0;}
+	__forceinline LightCS *SceneLightsLock() {return (LightCS*)SCENE_LIGHTS_CS;}
 	__forceinline tList<ListBox<int>> *ActiveListBoxes() {return (tList<ListBox<int>>*)0x11D8B54;}
 	__forceinline tList<GradualSetFloat> *QueuedGradualSetFloat() {return (tList<GradualSetFloat>*)0x11F3348;}
 	__forceinline RadioEntry *PipboyRadio() {return *(RadioEntry**)0x11DD42C;}
@@ -525,7 +525,7 @@ UInt32 __fastcall GetSubjectID(TESForm *form, TESObjectREFR *thisObj);
 #define JIP_XDATA_CS 1
 
 #if JIP_XDATA_CS
-#define XDATA_CS ScopedPrimitiveCS cs(&s_JIPExtraDataCS);
+#define XDATA_CS ScopedLightCS cs((LightCS*)EXTRA_DATA_CS);
 #else
 #define XDATA_CS
 #endif
@@ -790,11 +790,8 @@ struct ArrayData
 		size = GetArraySize(srcArr);
 		if (size)
 		{
-			UInt32 alloc = size * sizeof(ArrayElementR);
-			if (!isPacked) alloc *= 2;
-			vals = (ArrayElementR*)AuxBuffer::Get(2, alloc);
+			vals = AuxBuffer::Get<ArrayElementR>(2, isPacked ? size : (size << 1));
 			keys = isPacked ? nullptr : (vals + size);
-			ZERO_BYTES(vals, alloc);
 			if (!GetElements(srcArr, vals, keys))
 				size = 0;
 		}
@@ -866,19 +863,23 @@ namespace JIPScriptRunner
 {
 	enum ScriptRunOn : UInt16
 	{
+		kRunOn_Invalid =		0,
 		kRunOn_LoadGame =		'lg',
 		kRunOn_ExitToMainMenu =	'mx',
 		kRunOn_NewGame =		'ng',
+		kRunOn_LoadOrNewGame =	'nl',
 		kRunOn_RestartGame =	'rg',
 		kRunOn_SaveGame =		'sg',
 		kRunOn_ExitGame =		'xg'
 	};
 
 	void Init();
-	void RunScripts(ScriptRunOn runOn);
+	void RunScripts(ScriptRunOn runOn1, ScriptRunOn runOn2 = kRunOn_Invalid);
 
 	void __fastcall RunScript(Script *script, int EDX, TESObjectREFR *callingRef);
-	bool __fastcall RunScriptSource(char *scrSource, bool capture = false);
+	bool __fastcall RunScriptSource(char *scrSource, const char *scrName, bool capture = false);
+
+	void __fastcall LogCompileError(String &errorStr);
 };
 
 extern TempObject<UnorderedMap<const char*, NiCamera*>> s_extraCamerasMap;

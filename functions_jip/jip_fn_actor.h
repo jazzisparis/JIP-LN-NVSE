@@ -1462,7 +1462,7 @@ __declspec(naked) void __fastcall ReloadBipedAnim(BipedAnim *bipAnim, UInt32 rel
 		mov		ecx, ebx
 		CALL_EAX(0xA5A040)
 		push	0
-		push	offset kUpdateParams
+		push	offset kNiUpdateData
 		mov		ecx, ebx
 		call	dword ptr [esi+0xA4]
 		pop		edi

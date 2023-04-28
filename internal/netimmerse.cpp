@@ -145,7 +145,7 @@ void __vectorcall NiMaterialProperty::SetTraitValue(UInt32 traitID, float value)
 	}
 }
 
-const UpdateParams kUpdateParams;
+const NiUpdateData kNiUpdateData;
 
 __declspec(naked) void NiAVObject::Update()
 {
@@ -153,7 +153,7 @@ __declspec(naked) void NiAVObject::Update()
 	{
 		push	ecx
 		push	0
-		push	offset kUpdateParams
+		push	offset kNiUpdateData
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xA4]
 		pop		ecx

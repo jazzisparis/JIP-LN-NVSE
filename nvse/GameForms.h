@@ -1556,10 +1556,20 @@ public:
 
 static_assert(sizeof(TESClass) == 0x60);
 
+// 50
 class TESReputation : public TESForm
 {
 public:
+	TESFullName		fullName;			// 18
+	TESIcon			icon;				// 24
+	BGSMessageIcon	msgIcon;			// 30
+
+	float			maxRep;				// 40
+	float			positiveRep;		// 44
+	float			negativeRep;		// 48
+	UInt32			lastChangePositive;	// 4C
 };
+static_assert(sizeof(TESReputation) == 0x50);
 
 // 4C
 class TESFaction : public TESForm
@@ -4952,9 +4962,9 @@ public:
 		kFlags_AlwaysUseWorldOrientation =	2,
 		kFlags_KnockDownAlways =			4,
 		kFlags_KnockDownByFormula =			8,
-		kFlags_IgnoreLOSCheck =				16,
-		kFlags_PushSourceRefOnly =			32,
-		kFlags_IgnoreImageSpaceSwap =		64,
+		kFlags_IgnoreLOSCheck =				0x10,
+		kFlags_PushSourceRefOnly =			0x20,
+		kFlags_IgnoreImageSpaceSwap =		0x40
 	};
 
 	TESFullName					fullName;			// 30

@@ -65,6 +65,5 @@ struct ExtraDataList : public BaseExtraList
 	ExtraCount *AddExtraCount(SInt32 count);
 	ExtraJIP *AddExtraJIP(UINT _key = 0);
 	void __fastcall ExtraJIPLoadGame(BGSLoadFormBuffer *lgBuffer);
-	void __fastcall ExtraJIPCopy(ExtraJIP *source);
 };
 static_assert(sizeof(ExtraDataList) == 0x020);

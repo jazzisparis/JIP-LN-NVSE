@@ -40,6 +40,13 @@ void Console_Print(const char *fmt, ...)
 	va_end(args);
 }
 
+void ConsoleManager::Clear()
+{
+	ThisCall(0x71E070, &printedLines);
+	unk024 = 0;
+	ThisCall(0x71D410, this);
+}
+
 SaveGameManager* SaveGameManager::GetSingleton()
 {
 	return *(SaveGameManager**)0x11DE134;

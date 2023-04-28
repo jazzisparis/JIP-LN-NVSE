@@ -1002,6 +1002,62 @@ bool __fastcall ClearHotkey(UInt8 index)
 	return false;
 }
 
+__declspec(naked) TESObjectREFR *TESObjectREFR::CreateInventoryRefForScriptedObj(TESForm *item, ScriptLocals *eventList)
+{
+	__asm
+	{
+		push	esi
+		push	edi
+		push	ecx
+		push	dword ptr [esp+0x10]
+		call	TESObjectREFR::GetContainerChangesEntry
+		test	eax, eax
+		jz		done
+		mov		esi, [eax]
+		ALIGN 16
+	xdlIter:
+		test	esi, esi
+		jz		done
+		mov		edi, [esi]
+		mov		esi, [esi+4]
+		test	edi, edi
+		jz		xdlIter
+		push	kXData_ExtraScript
+		mov		ecx, edi
+		call	BaseExtraList::GetByType
+		test	eax, eax
+		jz		xdlIter
+		mov		ecx, [eax+0x10]
+		cmp		[esp+0x14], ecx
+		jnz		xdlIter
+		push	kXData_ExtraCount
+		mov		ecx, edi
+		call	BaseExtraList::GetByType
+		test	eax, eax
+		jz		doneCount
+		movsx	eax, word ptr [eax+0xC]
+	doneCount:
+		mov		edx, 1
+		cmp		eax, edx
+		cmovl	eax, edx
+		push	edi
+		push	eax
+		push	dword ptr [esp+0x18]
+		push	dword ptr [esp+0xC]
+		call	InventoryRefCreate
+		pop		ecx
+		pop		edi
+		pop		esi
+		retn	8
+	done:
+		xor		eax, eax
+		pop		ecx
+		pop		edi
+		pop		esi
+		retn	8
+	}
+}
+
 float __fastcall GetModBonuses(TESObjectREFR *wpnRef, UInt32 effectID)
 {
 	TESObjectWEAP *weapon = (TESObjectWEAP*)wpnRef->baseForm;
@@ -1092,7 +1148,7 @@ __declspec(naked) float __vectorcall GetLightAmountAtPoint(const NiVector3 &pos)
 		maxss	xmm5, [eax+0x14]
 		addss	xmm5, xmm0
 	doneCell:
-		mov		ecx, 0x11F9EA0
+		mov		ecx, SCENE_LIGHTS_CS
 		call	LightCS::Enter
 		mov		esi, [esi+0xB4]
 		movss	xmm7, PS_V3_One
@@ -1116,7 +1172,7 @@ __declspec(naked) float __vectorcall GetLightAmountAtPoint(const NiVector3 &pos)
 		movss	xmm0, SS_100
 		mulss	xmm5, xmm0
 		minss	xmm5, xmm0
-		mov		ecx, 0x11F9EA0
+		mov		ecx, SCENE_LIGHTS_CS
 		dec		dword ptr [ecx+4]
 		jnz		done
 		and		dword ptr [ecx], 0
@@ -1162,43 +1218,39 @@ TempObject<UnorderedMap<char*, Script*>> s_cachedScripts;
 
 namespace JIPScriptRunner
 {
+	static UInt8 initInProgress = 0;
+
 	void Init()
 	{
-		static char scriptsPath[0x80] = "Data\\NVSE\\plugins\\scripts\\*.txt";
-		char *fileName, *buffer = GetStrArgBuffer();
+		char scriptsPath[0x80] = "Data\\NVSE\\plugins\\scripts\\*.txt", *buffer = GetStrArgBuffer();
+		initInProgress = 1;
 		for (DirectoryIterator iter(scriptsPath); iter; ++iter)
 		{
 			if (!iter.IsFile()) continue;
-			fileName = const_cast<char*>(*iter);
+			char *fileName = const_cast<char*>(*iter);
 			if (fileName[2] != '_') continue;
+			UInt16 runOn = *(UInt16*)fileName |= 0x2020;
+			if ((runOn != kRunOn_RestartGame) && (runOn != kRunOn_LoadGame) && (runOn != kRunOn_ExitToMainMenu) && (runOn != kRunOn_NewGame) &&
+				(runOn != kRunOn_LoadOrNewGame) && (runOn != kRunOn_SaveGame) && (runOn != kRunOn_ExitGame))
+				continue;
 			StrCopy(scriptsPath + 26, fileName);
 			if (!FileToBuffer(scriptsPath, buffer, STR_BUFFER_SIZE - 1))
 				continue;
-			UInt16 runOn = *(UInt16*)fileName |= 0x2020;
 			if (runOn == kRunOn_RestartGame)
+				RunScriptSource(buffer, fileName, true);
+			else if (Script *pScript = Script::Create(buffer, fileName))
 			{
-				if (RunScriptSource(buffer, true))
-					continue;
+				CaptureLambdaVars(pScript);
+				s_cachedScripts()[fileName] = pScript;
 			}
-			else if ((runOn == kRunOn_LoadGame) || (runOn == kRunOn_ExitToMainMenu) || (runOn == kRunOn_NewGame) || (runOn == kRunOn_SaveGame) || (runOn == kRunOn_ExitGame))
-			{
-				if (Script *pScript = Script::Create(buffer))
-				{
-					CaptureLambdaVars(pScript);
-					s_cachedScripts()[fileName] = pScript;
-					continue;
-				}
-			}
-			else continue;
-			PrintLog("Script Runner : \"%s\" > FAILED TO COMPILE", fileName);
-			Console_Print("Script Runner : \"%s\" > FAILED TO COMPILE", fileName);
 		}
+		initInProgress = 0;
 	}
 
-	void RunScripts(ScriptRunOn runOn)
+	void RunScripts(ScriptRunOn runOn1, ScriptRunOn runOn2)
 	{
 		for (auto iter = s_cachedScripts->Begin(); iter; ++iter)
-			if (*(UInt16*)iter.Key() == runOn)
+			if ((*(UInt16*)iter.Key() == runOn1) || (*(UInt16*)iter.Key() == runOn2))
 				iter->Execute();
 	}
 
@@ -1211,10 +1263,10 @@ namespace JIPScriptRunner
 		if (eventList) xScript->eventList = eventList;
 	}
 
-	bool __fastcall RunScriptSource(char *scrSource, bool capture)
+	bool __fastcall RunScriptSource(char *scrSource, const char *scrName, bool capture)
 	{
 		StackObject<Script> tempScript;
-		bool success = tempScript->Init(scrSource);
+		bool success = tempScript->Init(scrSource, scrName);
 		if (success)
 		{
 			if (capture)
@@ -1227,6 +1279,22 @@ namespace JIPScriptRunner
 		}
 		tempScript->Destructor();
 		return success;
+	}
+
+	void __fastcall LogCompileError(String &errorStr)
+	{
+		if (initInProgress && (errorStr.m_dataLen > 9))
+		{
+			if (initInProgress == 1)
+			{
+				initInProgress = 2;
+				PrintLog("SCRIPT RUNNER Compile errors found!\n");
+				Console_Print("SCRIPT RUNNER Compile errors found!\n");
+			}
+			PrintLog("%s\n", errorStr.m_data + 9);
+			Console_Print("%s\n", errorStr.m_data + 9);
+		}
+		GameHeapFree(errorStr.m_data);
 	}
 };
 

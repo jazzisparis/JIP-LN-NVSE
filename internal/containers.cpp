@@ -48,43 +48,45 @@ __declspec(naked) UInt32 __fastcall StrHashCS(const char *inKey)
 {
 	__asm
 	{
-		push	esi
-		mov		eax, 0x1505
+		mov		eax, 0x6B49D20B
 		test	ecx, ecx
 		jz		done
-		mov		esi, ecx
-		xor		ecx, ecx
 		ALIGN 16
 	iterHead:
-		mov		cl, [esi]
-		test	cl, cl
+		movzx	edx, byte ptr [ecx]
+		test	dl, dl
 		jz		done
-		lea		edx, [eax+ecx]
+		shl		edx, 4
+		sub		eax, edx
+		mov		edx, eax
 		shl		eax, 5
-		add		eax, edx
-		mov		cl, [esi+1]
-		test	cl, cl
+		sub		eax, edx
+		movzx	edx, byte ptr [ecx+1]
+		test	dl, dl
 		jz		done
-		lea		edx, [eax+ecx]
+		shl		edx, 0xC
+		sub		eax, edx
+		mov		edx, eax
 		shl		eax, 5
-		add		eax, edx
-		mov		cl, [esi+2]
-		test	cl, cl
+		sub		eax, edx
+		movzx	edx, byte ptr [ecx+2]
+		test	dl, dl
 		jz		done
-		lea		edx, [eax+ecx]
+		shl		edx, 0x14
+		sub		eax, edx
+		mov		edx, eax
 		shl		eax, 5
-		add		eax, edx
-		mov		cl, [esi+3]
-		test	cl, cl
+		sub		eax, edx
+		movzx	edx, byte ptr [ecx+3]
+		test	dl, dl
 		jz		done
-		lea		edx, [eax+ecx]
+		sub		eax, edx
+		mov		edx, eax
 		shl		eax, 5
-		add		eax, edx
-		add		esi, 4
+		sub		eax, edx
+		add		ecx, 4
 		jmp		iterHead
-		ALIGN 16
 	done:
-		pop		esi
 		retn
 	}
 }
@@ -94,7 +96,7 @@ __declspec(naked) UInt32 __fastcall StrHashCI(const char *inKey)
 	__asm
 	{
 		push	esi
-		mov		eax, 0x1505
+		mov		eax, 0x6B49D20B
 		test	ecx, ecx
 		jz		done
 		mov		esi, ecx
@@ -105,33 +107,39 @@ __declspec(naked) UInt32 __fastcall StrHashCI(const char *inKey)
 		test	cl, cl
 		jz		done
 		movzx	edx, kLwrCaseConverter[ecx]
-		add		edx, eax
+		shl		edx, 4
+		sub		eax, edx
+		mov		edx, eax
 		shl		eax, 5
-		add		eax, edx
+		sub		eax, edx
 		mov		cl, [esi+1]
 		test	cl, cl
 		jz		done
 		movzx	edx, kLwrCaseConverter[ecx]
-		add		edx, eax
+		shl		edx, 0xC
+		sub		eax, edx
+		mov		edx, eax
 		shl		eax, 5
-		add		eax, edx
+		sub		eax, edx
 		mov		cl, [esi+2]
 		test	cl, cl
 		jz		done
 		movzx	edx, kLwrCaseConverter[ecx]
-		add		edx, eax
+		shl		edx, 0x14
+		sub		eax, edx
+		mov		edx, eax
 		shl		eax, 5
-		add		eax, edx
+		sub		eax, edx
 		mov		cl, [esi+3]
 		test	cl, cl
 		jz		done
 		movzx	edx, kLwrCaseConverter[ecx]
-		add		edx, eax
+		sub		eax, edx
+		mov		edx, eax
 		shl		eax, 5
-		add		eax, edx
+		sub		eax, edx
 		add		esi, 4
 		jmp		iterHead
-		ALIGN 16
 	done:
 		pop		esi
 		retn

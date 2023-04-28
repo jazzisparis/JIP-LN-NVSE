@@ -100,9 +100,9 @@ public:
 		return ThisCall<bool>(0x5AC400, this, scriptContext, true, object);
 	}
 
-	bool Init(char *scrText);
-	static Script *Create(char *scrText);
-	bool Compile();
+	bool Init(char *scrText, const char *scrName);
+	static Script *Create(char *scrText, const char *scrName);
+	bool Compile(const char *scrName);
 
 	__forceinline ScriptLocals *CreateEventList()
 	{

@@ -192,20 +192,21 @@ struct NiObjectCopyInfo
 	//~NiObjectCopyInfo() {ThisCall(0x4AD1D0, this);}
 };
 
-struct UpdateParams
+// 0C	c'tor @ 0x43D410
+struct NiUpdateData
 {
-	float		timePassed;
-	bool		updateControllers;
-	UInt8		byte05;
-	UInt8		byte06;
-	UInt8		byte07;
-	UInt8		byte08;
-	UInt8		pad09[3];
+	float		timePassed;			// 00
+	bool		updateControllers;	// 04
+	bool		isMultiThreaded;	// 05
+	UInt8		byte06;				// 06
+	bool		updateGeomorphs;	// 07
+	bool		updateShadowScene;	// 08
+	UInt8		pad09[3];			// 09
 
-	UpdateParams() {ZeroMemory(this, sizeof(UpdateParams));}
+	NiUpdateData() {ZeroMemory(this, sizeof(NiUpdateData));}
 };
 
-extern const UpdateParams kUpdateParams;
+extern const NiUpdateData kNiUpdateData;
 
 typedef FixedTypeArray<hkpWorldObject*, 0x40> ContactObjects;
 
@@ -557,7 +558,7 @@ class NiTimeController : public NiObject
 public:
 	/*8C*/virtual void		Start(float fTime);
 	/*90*/virtual void		Stop();
-	/*94*/virtual void		Update(const UpdateParams &updParams);
+	/*94*/virtual void		Update(const NiUpdateData &updParams);
 	/*98*/virtual void		SetTarget(NiObjectNET *pTarget);
 	/*9C*/virtual bool		Unk_27(void);
 	/*A0*/virtual void		Unk_28(void);
@@ -965,7 +966,7 @@ class NiProperty : public NiObjectNET
 {
 public:
 	/*8C*/virtual UInt32	GetPropertyType();
-	/*90*/virtual void		UpdateController(const UpdateParams &updParams);
+	/*90*/virtual void		UpdateController(const NiUpdateData &updParams);
 
 	enum PropertyType
 	{
@@ -1458,21 +1459,21 @@ static_assert(sizeof(TileShaderProperty) == 0xB0);
 class NiAVObject : public NiObjectNET
 {
 public:
-	/*8C*/virtual void		UpdateControllers(const UpdateParams &updParams);
+	/*8C*/virtual void		UpdateControllers(const NiUpdateData &updParams);
 	/*90*/virtual void		Unk_24(NiMatrix33 *arg1, NiVector3 *arg2, bool arg3);
 	/*94*/virtual void		Unk_25(UInt32 arg1);
 	/*98*/virtual void		Unk_26(UInt32 arg1);
 	/*9C*/virtual NiAVObject	*GetObjectByName(NiFixedString *objName);
 	/*A0*/virtual void		SetSelectiveUpdateFlags(UInt8 *bSelectiveUpdate, UInt32 bSelectiveUpdateTransform, UInt8 *bRigid);
-	/*A4*/virtual void		UpdateDownwardPass(const UpdateParams &updParams, UInt32 flags);
-	/*A8*/virtual void		UpdateSelectedDownwardPass(const UpdateParams &updParams, UInt32 flags);
-	/*AC*/virtual void		UpdateRigidDownwardPass(const UpdateParams &updParams, UInt32 flags);
+	/*A4*/virtual void		UpdateDownwardPass(const NiUpdateData &updParams, UInt32 flags);
+	/*A8*/virtual void		UpdateSelectedDownwardPass(const NiUpdateData &updParams, UInt32 flags);
+	/*AC*/virtual void		UpdateRigidDownwardPass(const NiUpdateData &updParams, UInt32 flags);
 	/*B0*/virtual void		Unk_2C(UInt32 arg1);
 	/*B4*/virtual void		Unk_2D(UInt32 arg1);
-	/*B8*/virtual void		UpdateTransform(const UpdateParams &updParams);
+	/*B8*/virtual void		UpdateTransform(const NiUpdateData &updParams);
 	/*BC*/virtual void		UpdateWorldBound();
-	/*C0*/virtual void		UpdateBounds(const UpdateParams &updParams);
-	/*C4*/virtual void		PreAttachUpdate(NiNode *parent, const UpdateParams &updParams);
+	/*C0*/virtual void		UpdateBounds(const NiUpdateData &updParams);
+	/*C4*/virtual void		PreAttachUpdate(NiNode *parent, const NiUpdateData &updParams);
 	/*C8*/virtual void		Unk_32(NiNode *parent);
 	/*CC*/virtual void		Unk_33(UInt32 arg1);
 	/*D0*/virtual void		PostAttachUpdate();
@@ -2334,6 +2335,7 @@ enum D3DXIMAGE_FILEFORMAT
 
 enum D3DFORMAT : UInt32
 {
+	D3DFMT_INVALID =				0,
 	D3DFMT_R8G8B8 =					0x14,
 	D3DFMT_A8R8G8B8 =				0x15,
 	D3DFMT_X8R8G8B8 =				0x16,

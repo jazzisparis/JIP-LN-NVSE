@@ -3430,7 +3430,7 @@ __declspec(naked) NiNode* __fastcall DoAttachModel(NiAVObject *targetObj, const 
 		call	dword ptr [eax+0xDC]
 		mov		ecx, [ebp-0xC]
 		CALL_EAX(0xA5A040)
-		push	offset kUpdateParams
+		push	offset kNiUpdateData
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xC0]
@@ -3797,6 +3797,26 @@ __declspec(naked) void LoadWeaponSlotHook()
 	}
 }
 
+__declspec(naked) void __fastcall InitRagdollControllerHook(Actor *actor, int EDX, NiNode *rootNode, bool arg2, bool arg3, bool arg4)
+{
+	static NiNode *pc1stNode = nullptr;
+	__asm
+	{
+		cmp		dword ptr [ecx+0xC], 0x14
+		jz		isPlayer
+	doInit:
+		JMP_EAX(0x87E130)
+	isPlayer:
+		mov		eax, [esp+4]
+		cmp		pc1stNode, eax
+		mov		pc1stNode, eax
+		jnz		doInit
+		cmp		dword ptr [ecx+0xAC], 0
+		jz		doInit
+		retn	0x10
+	}
+}
+
 __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm, NiPointLight *ptLight)
 {
 	alignas(16) static constexpr UInt32 kAnimatedLightMods[] =
@@ -4020,7 +4040,7 @@ __declspec(naked) void __fastcall UpdateAnimatedLightsHook(TES *pTES)
 		mov		eax, [eax]
 		lea		esi, [eax+ecx*4]
 		mov		edi, ecx
-		mov		ecx, 0x11F9EA0
+		mov		ecx, SCENE_LIGHTS_CS
 		call	LightCS::Enter
 		ALIGN 16
 	iterHead:
@@ -4087,7 +4107,7 @@ __declspec(naked) void __fastcall UpdateAnimatedLightsHook(TES *pTES)
 		jmp		iterHead
 		ALIGN 16
 	iterEnd:
-		mov		ecx, 0x11F9EA0
+		mov		ecx, SCENE_LIGHTS_CS
 		dec		dword ptr [ecx+4]
 		jnz		inUse
 		and		dword ptr [ecx], 0
@@ -5072,6 +5092,7 @@ __declspec(noinline) void InitJIPHooks()
 	SafeWrite32(0x1016D70, (UInt32)DoQueuedReferenceHook);
 	WritePushRetRelJump(0x4ACCF1, 0x4ACD8C, (UInt32)LoadBip01SlotHook);
 	WritePushRetRelJump(0x4AF0DE, 0x4AF0F8, (UInt32)LoadWeaponSlotHook);
+	WriteRelCall(0x931384, (UInt32)InitRagdollControllerHook);
 	//SAFE_WRITE_BUF(0x50DCE7, "\x8B\x4D\xD4\x83\xC1\x7C\x8B\x82\xB4\x00\x00\x00\x89\x41\x48\x89\x51\x6C");
 	WriteRelJump(0x50DE20, (UInt32)UpdateAnimatedLightHook);
 	WriteRelCall(0x8C7C4E, (UInt32)UpdateAnimatedLightsHook);
@@ -5099,4 +5120,5 @@ __declspec(noinline) void InitJIPHooks()
 	WriteRelJump(0x50F9E0, (UInt32)GetIsInternalMarkerHook);
 	WriteRelJump(0x815EE6, (UInt32)CastSpellHook);
 	WriteRelCall(0x55A488, (UInt32)DestroyRefrHook);
+	WriteRelCall(0x5AEB66, (UInt32)JIPScriptRunner::LogCompileError);
 }

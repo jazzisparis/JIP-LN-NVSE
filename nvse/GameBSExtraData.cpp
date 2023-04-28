@@ -39,7 +39,7 @@ __declspec(naked) BSExtraData *BaseExtraList::GetByType(UInt32 xType) const
 		bt		eax, edx
 		jnc		retnNULL
 		push	ecx
-		mov		ecx, 0x11C3920
+		mov		ecx, EXTRA_DATA_CS
 		call	LightCS::Enter
 		pop		ecx
 		mov		eax, [ecx+4]
@@ -52,7 +52,7 @@ __declspec(naked) BSExtraData *BaseExtraList::GetByType(UInt32 xType) const
 		test	eax, eax
 		jnz		iterHead
 	lockLeave:
-		mov		edx, 0x11C3920
+		mov		edx, EXTRA_DATA_CS
 		dec		dword ptr [edx+4]
 		jnz		done
 		and		dword ptr [edx], 0

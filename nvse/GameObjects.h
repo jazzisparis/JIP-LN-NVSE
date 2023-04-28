@@ -132,6 +132,7 @@ public:
 	SInt32 GetItemCount(TESForm *form) const;
 	void AddItemAlt(TESForm *item, UInt32 count, float condition, UInt32 doEquip = 0, UInt32 noMessage = 1);
 	void RemoveItemTarget(TESForm *itemForm, TESObjectREFR *target, SInt32 quantity, bool keepOwner);
+	TESObjectREFR *CreateInventoryRefForScriptedObj(TESForm *item, ScriptLocals *eventList);
 	TESObjectCELL *GetParentCell() const;
 	TESWorldSpace *GetParentWorld() const;
 	bool __fastcall GetInSameCellOrWorld(TESObjectREFR *target) const;
@@ -755,7 +756,7 @@ public:
 	void PlayAnimGroup(UInt32 animGroupID);
 	UInt32 GetLevel() const;
 	double GetKillXP() const;
-	void GetHitDataValue(UInt32 valueType, double *result) const;
+	void __fastcall GetHitDataValue(UInt32 valueType, double *result) const;
 	void DismemberLimb(UInt32 bodyPartID, bool explode);
 	void EquipItemAlt(ContChangesEntry *entry, UInt32 noUnequip = 0, UInt32 noMessage = 1);
 	bool HasNoPath() const;
@@ -1050,7 +1051,8 @@ public:
 	float								rockItLauncherWeight;	// E04
 	UInt8								nightVisionApplied;		// E08
 	UInt8								padE09[3];				// E09
-	UInt32								unkE0C[3];				// E0C
+	TESReputation						*lastModifiedRep;		// E0C
+	UInt32								unkE10[2];				// E10
 	float								killCamTimer;			// E18
 	float								killCamCooldown;		// E1C
 	UInt8								byteE20;				// E20

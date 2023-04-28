@@ -611,7 +611,7 @@ public:
 		UInt8			pad0D;			// 0D
 		UInt8			type;			// 0E
 		UInt8			pad0F;			// 0F
-		TESForm			*reputation;	// 10
+		TESReputation	*reputation;	// 10
 	};
 	MarkerData		*data;	// 0C
 };
@@ -1288,4 +1288,3 @@ static_assert(sizeof(ExtraJIPEntry) == 0x10);
 
 typedef UnorderedMap<UINT, ExtraJIPEntry, 0x20> ExtraJIPEntryMap;
 extern TempObject<ExtraJIPEntryMap> s_extraDataKeysMap;
-extern PrimitiveCS s_JIPExtraDataCS;

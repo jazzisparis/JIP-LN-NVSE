@@ -210,23 +210,19 @@ public:
 
 class PrimitiveCS
 {
-	UInt32		selfPtr;
+	UInt32		selfPtr = 0;
 
 public:
-	PrimitiveCS() : selfPtr(0) {}
-
 	PrimitiveCS *Enter();
 	__forceinline void Leave() {selfPtr &= 0;}
 };
 
 class LightCS
 {
-	UInt32	owningThread;
-	UInt32	enterCount;
+	UInt32	owningThread = 0;
+	UInt32	enterCount = 0;
 
 public:
-	LightCS() : owningThread(0), enterCount(0) {}
-
 	void Enter();
 	__forceinline void Leave()
 	{
@@ -576,13 +572,26 @@ public:
 
 class AuxBuffer
 {
-	UInt8		*ptr;
-	UInt32		size;
+	UInt8		*ptr = nullptr;
+	UInt32		size = AUX_BUFFER_INIT_SIZE;
+
+	static UInt8 *Alloc(UInt32 bufIdx, UInt32 reqSize);
 
 public:
-	AuxBuffer() : ptr(nullptr), size(AUX_BUFFER_INIT_SIZE) {}
+	template <typename T> static T *Get(UInt32 bufIdx, UInt32 numElements, bool clear = true)
+	{
+		UInt32 required = numElements * sizeof(T);
+		T *resPtr = (T*)Alloc(bufIdx, required);
+		if (clear)
+			ZERO_BYTES(resPtr, required);
+		return resPtr;
+	}
 
-	static UInt8 *Get(UInt32 bufIdx, UInt32 reqSize);
+	template <typename T> static T *Copy(UInt32 bufIdx, UInt32 numElements, T *data)
+	{
+		UInt32 required = numElements * sizeof(T);
+		return (T*)memcpy(Alloc(bufIdx, required), data, required);
+	}
 };
 
 bool __fastcall FileExists(const char *filePath);
@@ -626,11 +635,10 @@ extern const char kIndentLevelStr[];
 
 class DebugLog
 {
-	FILE			*theFile;
-	UInt32			indent;
+	FILE			*theFile = nullptr;
+	UInt32			indent = 0x28;
 
 public:
-	DebugLog() : theFile(nullptr), indent(40) {}
 	~DebugLog() {if (theFile) fclose(theFile);}
 
 	bool Create(const char *filePath);
@@ -676,11 +684,8 @@ public:
 	{
 		if (IsFile())
 			return false;
-		if (fndData.cFileName[0] != '.')
-			return true;
-		if (fndData.cFileName[1] != '.')
-			return fndData.cFileName[1] != 0;
-		return fndData.cFileName[2] != 0;
+		UInt32 prefix = *(UInt32*)fndData.cFileName;
+		return ((prefix & 0xFFFF) != '.') && ((prefix & 0xFFFFFF) != '..');
 	}
 	void Close()
 	{

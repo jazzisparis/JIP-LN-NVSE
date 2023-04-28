@@ -368,7 +368,7 @@ bool Cmd_RunScriptSnippet_Execute(COMMAND_ARGS)
 	if (ExtractFormatStringArgs(1, buffer, EXTRACT_ARGS_EX, kCommandInfo_RunScriptSnippet.numParams, &delayTime))
 	{
 		ReplaceChr(buffer, '\n', '\r');
-		if (Script *pScript = Script::Create(buffer))
+		if (Script *pScript = Script::Create(buffer, "RunScriptSnippet"))
 		{
 			TESObjectREFR *callingRef = thisObj ? thisObj : g_thePlayer;
 			if (delayTime)
@@ -566,7 +566,7 @@ bool Cmd_RunBatchScript_Execute(COMMAND_ARGS)
 			char *buffer = GetStrArgBuffer();
 			if (FileToBuffer(filePath, buffer, STR_BUFFER_SIZE - 1))
 			{
-				if (Script *pScript = Script::Create(buffer))
+				if (Script *pScript = Script::Create(buffer, "RunBatchScript"))
 				{
 					*cachedScript = pScript;
 					CaptureLambdaVars(pScript);

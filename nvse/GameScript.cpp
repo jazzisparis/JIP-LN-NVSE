@@ -22,31 +22,31 @@ void Script::RefVariable::Resolve(ScriptLocals *eventList)
 	}
 }
 
-bool Script::Compile()
+bool Script::Compile(const char *scrName)
 {
 	ScriptBuffer scrBuffer;
 	scrBuffer.scriptText = text;
 	scrBuffer.runtimeMode = 1;
-	scrBuffer.scriptName.Set((const char*)0x1044CB4);
+	scrBuffer.scriptName.Set(scrName);
 	scrBuffer.partialScript = true;
 	scrBuffer.currScript = this;
 	return StdCall<bool>(0x5AEB90, this, &scrBuffer);
 }
 
-bool Script::Init(char *scrText)
+bool Script::Init(char *scrText, const char *scrName)
 {
 	Constructor();
 	MarkAsTemporary();
 	text = scrText;
-	bool success = Compile() && info.dataLength;
+	bool success = Compile(scrName) && info.dataLength;
 	text = nullptr;
 	return success;
 }
 
-Script *Script::Create(char *scrText)
+Script *Script::Create(char *scrText, const char *scrName)
 {
 	Script *pScript = (Script*)GameHeapAlloc(sizeof(Script));
-	if (pScript->Init(scrText))
+	if (pScript->Init(scrText, scrName))
 		return pScript;
 	pScript->Destroy(1);
 	return nullptr;

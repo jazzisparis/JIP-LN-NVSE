@@ -166,7 +166,9 @@ public:
 	UInt32		unk024;				// 024
 	UInt32		unk028[571];		// 028
 
-	static ConsoleManager * GetSingleton(void);
+	static ConsoleManager *GetSingleton();
+
+	void Clear();
 };
 static_assert(sizeof(ConsoleManager) == 0x914);
 

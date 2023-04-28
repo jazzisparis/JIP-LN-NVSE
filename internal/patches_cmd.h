@@ -430,6 +430,31 @@ bool Hook_Update3D_Execute(COMMAND_ARGS)
 	return true;
 }
 
+//	Added support for models set per-refr, via SetRefrModelPath
+bool Hook_GetModelPath_Execute(COMMAND_ARGS)
+{
+	TESForm *pForm = nullptr;
+	const char *pathStr = nullptr;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pForm) && (pForm || thisObj))
+	{
+		TESObjectREFR *pRefr;
+		if (!pForm)
+		{
+			pRefr = thisObj;
+			pForm = pRefr->baseForm;
+		}
+		else
+		{
+			pRefr = IS_REFERENCE(pForm) ? (TESObjectREFR*)pForm : nullptr;
+			if (pRefr) pForm = pRefr->baseForm;
+		}
+		if (!pRefr || !(pRefr->JIPRefFlags() & kHookRefFlag5F_RefrModelPath) || !(pathStr = s_refrModelPathMap->Get(pRefr)))
+			pathStr = pForm->GetModelPath();
+	}
+	AssignString(PASS_COMMAND_ARGS, pathStr);
+	return true;
+}
+
 bool __fastcall IsJIPAlias(const char *pluginName)
 {
 	return !StrCompareCI(pluginName, "JIP NVSE Plugin") || !StrCompareCI(pluginName, "lutana_nvse") || StrBeginsCI(pluginName, "JIP LN NVSE");
@@ -514,6 +539,8 @@ void InitCmdPatches()
 	cmdInfo->eval = (Cmd_Eval)Hook_IsRefInList_Eval;
 	cmdInfo = GetCmdByOpcode(0x152D);
 	cmdInfo->execute = Hook_Update3D_Execute;
+	cmdInfo = GetCmdByOpcode(0x158E);
+	cmdInfo->execute = Hook_GetModelPath_Execute;
 	cmdInfo = GetCmdByOpcode(0x15DF);
 	cmdInfo->execute = Hook_IsPluginInstalled_Execute;
 	cmdInfo = GetCmdByOpcode(0x15E0);

@@ -141,11 +141,11 @@ __declspec(naked) void __fastcall DoQueuedPlayerHook(QueuedPlayer *queuedPlayer)
 	}
 }
 
-typedef UnorderedMap<const UInt8*, const char*, 0x800, false> NiFixedStringsMap;
+typedef UnorderedMap<CaseString*, const char*, 0x800, false> NiFixedStringsMap;
 TempObject<NiFixedStringsMap> s_NiFixedStringsMap;
 PrimitiveCS s_NiFixedStringsCS;
 
-bool __stdcall InsertNiFixedString(const UInt8 *inStr, const char ***outStr)
+bool __stdcall InsertNiFixedString(CaseString *inStr, const char ***outStr)
 {
 	return s_NiFixedStringsMap->InsertKey(inStr, outStr);
 }
@@ -289,13 +289,13 @@ __declspec(naked) void __fastcall CopyExtraListHook(ExtraDataList *xNewList, int
 
 void __fastcall ExtraJIPDestroyHook(ExtraJIP *xJIP, int EDX, bool doFree)
 {
-	XDATA_CS
-	if (auto findEntry = s_extraDataKeysMap->Find(xJIP->key))
-		if (!findEntry().refID || LookupFormByRefID(findEntry().refID) || !HasChangeData(findEntry().refID))
-		{
-			findEntry.Remove();
-			s_dataChangedFlags |= kChangedFlag_ExtraData;
-		}
+	if (xJIP->key)
+		if (auto findEntry = s_extraDataKeysMap->Find(xJIP->key))
+			if (!findEntry().refID || LookupFormByRefID(findEntry().refID) || !HasChangeData(findEntry().refID))
+			{
+				findEntry.Remove();
+				s_dataChangedFlags |= kChangedFlag_ExtraData;
+			}
 	if (doFree)
 		GameHeapFree(xJIP);
 }
@@ -303,13 +303,15 @@ void __fastcall ExtraJIPDestroyHook(ExtraJIP *xJIP, int EDX, bool doFree)
 bool __fastcall ExtraJIPDiffersHook(ExtraJIP *xJIP, int EDX, BSExtraData *compareTo)
 {
 	if (xJIP->type == compareTo->type)
-	{
-		XDATA_CS
 		if (ExtraJIPEntry *entry1 = s_extraDataKeysMap->GetPtr(xJIP->key))
 			if (ExtraJIPEntry *entry2 = s_extraDataKeysMap->GetPtr(((ExtraJIP*)compareTo)->key))
 				if (*entry1 == *entry2) return false;
-	}
 	return true;
+}
+
+void __fastcall CopyExtraJIPEntry(ExtraJIPEntry *inEntry, UINT key)
+{
+	s_extraDataKeysMap()[key] = *inEntry;
 }
 
 __declspec(naked) void ExtraJIPCreateCopyHook()
@@ -317,8 +319,55 @@ __declspec(naked) void ExtraJIPCreateCopyHook()
 	__asm
 	{
 		mov		edx, [ebp+8]
+		push	dword ptr [edx+0xC]
+		mov		ecx, offset s_extraDataKeysMap
+		call	ExtraJIPEntryMap::GetPtr
+		test	eax, eax
+		jz		done
+		mov		esi, eax
+		or		s_dataChangedFlags, kChangedFlag_ExtraData
+		push	kXData_ExtraJIP
 		mov		ecx, [ebp-0x170]
-		call	ExtraDataList::ExtraJIPCopy
+		call	BaseExtraList::GetByType
+		test	eax, eax
+		jnz		hasXJIP
+		push	0
+		mov		ecx, [ebp-0x170]
+		call	ExtraDataList::AddExtraJIP
+	hasXJIP:
+		mov		ecx, [ebp+4]
+		mov		edx, [ebp]
+		mov		dl, [edx+0xC]
+		cmp		ecx, 0x412250
+		jnz		notCont
+		test	dl, dl
+		jz		doSwap
+	doCopy:
+		mov		edx, [eax+0xC]
+		test	edx, edx
+		jnz		hasKey
+		push	eax
+		call	ExtraJIP::MakeKey
+		pop		ecx
+		mov		[ecx+0xC], eax
+		mov		edx, eax
+	hasKey:
+		mov		ecx, esi
+		call	CopyExtraJIPEntry
+		jmp		done
+	notCont:
+		cmp		ecx, 0x412523
+		jnz		doCopy
+		test	dl, dl
+		jz		doCopy
+	doSwap:
+		and		dword ptr [esi], 0
+		mov		esi, [ebp+8]
+		mov		ecx, [esi+0xC]
+		mov		edx, [eax+0xC]
+		mov		[esi+0xC], edx
+		mov		[eax+0xC], ecx
+	done:
 		mov		ecx, [ebp-0xC]
 		mov		fs:0, ecx
 		pop		ecx
@@ -435,10 +484,9 @@ __declspec(naked) void InventoryIterGetNextHook()
 		lea		ecx, [esi+0x2C]
 		call	InventoryIterMap::InsertKey
 		pop		ecx
-		test	al, al
-		jz		hasKey
-		and		dword ptr [ecx], 0
-	hasKey:
+		dec		al
+		movsx	eax, al
+		and		[ecx], eax
 		mov		eax, [esi+0xC]
 		mov		edx, [eax+4]
 		add		[ecx], edx
@@ -452,12 +500,12 @@ __declspec(naked) void InventoryIterGetNextHook()
 		mov		eax, [esi+0x2C]
 		mov		edx, [esi+0x30]
 		lea		ecx, [eax+edx*8]
-		mov		[ebp-0x18], ecx
+		push	ecx
 		push	dword ptr [ecx]
 		mov		edx, [esi+0x28]
 		mov		ecx, [esi+8]
 		call	GetFormCount
-		mov		ecx, [ebp-0x18]
+		pop		ecx
 		sub		eax, [ecx+4]
 		jle		iterHead
 		push	dword ptr [ecx]
@@ -2896,9 +2944,8 @@ public:
 struct NPCPerksInfo
 {
 	PerkRanksMap			perkRanks;
-	NPCPerkEntryPoints		*entryPoints;
+	NPCPerkEntryPoints		*entryPoints = nullptr;
 
-	NPCPerksInfo() : entryPoints(nullptr) {}
 	~NPCPerksInfo() {if (entryPoints) entryPoints->Destroy();}
 
 	void Reset()
@@ -5232,10 +5279,8 @@ void InitGamePatches()
 	HOOK_INIT_JUMP(UpdateTimeGlobals, 0x867A40);
 	HOOK_INIT_JUMP(DoOperator, 0x593FBC);
 
-	char filePath[0x80], dataPath[0x80], *namePtr = filePath + 25, *buffer = GetStrArgBuffer(), *dataPtr, *delim;
-	memcpy(filePath, "Data\\NVSE\\plugins\\xfonts\\*.txt", 31);
-	memcpy(dataPath, "data\\", 5);
-	UInt32 size, index, value;
+	char filePath[0x80] = "Data\\NVSE\\plugins\\xfonts\\*.txt", dataPath[0x80] = "data\\", *namePtr = filePath + 25, *buffer = GetStrArgBuffer(), *dataPtr, *delim;
+	UInt32 index;
 	for (DirectoryIterator dirIter(filePath); dirIter; ++dirIter)
 	{
 		if (!dirIter.IsFile()) continue;
@@ -5272,14 +5317,15 @@ void InitGamePatches()
 	dataPtr = buffer;
 	while (lines > 0)
 	{
-		lines -= size = StrLen(dataPtr) + 1;
+		UInt32 size = StrLen(dataPtr) + 1;
+		lines -= size;
 		delim = GetNextToken(dataPtr, '=');
 		index = s_optionalHacks->Get(dataPtr);
 		dataPtr += size;
 		if (!index) continue;
 		if (index >= 20)
 		{
-			value = StrToInt(delim);
+			UInt32 value = StrToInt(delim);
 			switch (index)
 			{
 			case 20:
@@ -5447,7 +5493,7 @@ void DeferredInit()
 		}
 	}
 
-	Console_Print("JIP LN version: %.2f", JIP_LN_VERSION);
+	Console_Print("JIP LN version: %.2f\n", JIP_LN_VERSION);
 
 	JIPScriptRunner::Init();
 }
