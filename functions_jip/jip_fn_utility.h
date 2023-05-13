@@ -283,14 +283,12 @@ bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 bool Cmd_ReadStringFromFile_Execute(COMMAND_ARGS)
 {
 	char *buffer = GetStrArgBuffer(), *startPtr = buffer;
-	SInt32 startAt = 0, lineCount = -1;
-	bool hasData = false;
+	SInt32 startAt = 0, lineCount = -1, lenRead = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, buffer, &startAt, &lineCount) && lineCount)
 	{
 		ReplaceChr(buffer, '/', '\\');
-		if (FileToBuffer(buffer, buffer, kMaxMessageLength - 1) && ((--startAt > 0) || (lineCount > 0)))
+		if ((lenRead = FileToBuffer(buffer, buffer, kMaxMessageLength - 1)) && ((--startAt > 0) || (lineCount > 0)))
 		{
-			hasData = true;
 			while (buffer = FindChr(buffer, '\n'))
 			{
 				if (startAt > 0)
@@ -311,7 +309,7 @@ bool Cmd_ReadStringFromFile_Execute(COMMAND_ARGS)
 			}
 		}
 	}
-	if (!hasData)
+	if (!lenRead)
 		*startPtr = 0;
 	AssignString(PASS_COMMAND_ARGS, startPtr);
 	return true;
