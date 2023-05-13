@@ -1418,16 +1418,16 @@ __declspec(naked) bool Cmd_KillActorAlt_Execute(COMMAND_ARGS)
 	JMP_EAX(0x5BE2A0)
 }
 
-__declspec(naked) void __fastcall ReloadBipedAnim(BipedAnim *bipAnim, UInt32 reloadMask)
+__declspec(naked) void __fastcall ReloadBipedAnim(BipedAnim *bipAnim, NiNode *rootNode, UInt32 reloadMask)
 {
 	__asm
 	{
-		push	ebx
 		push	esi
 		push	edi
-		mov		ebx, ecx
+		push	edx
+		push	ecx
 		lea		esi, [ecx+0x24]
-		mov		edi, edx
+		mov		edi, [esp+0x14]
 		ALIGN 16
 	iterHead:
 		test	edi, edi
@@ -1448,29 +1448,27 @@ __declspec(naked) void __fastcall ReloadBipedAnim(BipedAnim *bipAnim, UInt32 rel
 		jmp		iterHead
 		ALIGN 16
 	doneClear:
+		pop		esi
 		push	0
-		push	ebx
-		mov		eax, [ebx+0x2B0]
+		push	esi
+		mov		eax, [esi+0x2B0]
 		push	eax
 		mov		ecx, [eax+0x20]
 		CALL_EAX(0x606540)
 		push	0
-		mov		ecx, ebx
+		mov		ecx, esi
 		CALL_EAX(0x4AC1E0)
-		mov		eax, [ebx+0x2B0]
-		mov		eax, [eax+0x64]
-		mov		ebx, [eax+0x14]
-		mov		ecx, ebx
+		pop		esi
+		mov		ecx, esi
 		CALL_EAX(0xA5A040)
 		push	0
 		push	offset kNiUpdateData
-		mov		eax, [ebx]
-		mov		ecx, ebx
+		mov		ecx, esi
+		mov		eax, [ecx]
 		call	dword ptr [eax+0xA4]
 		pop		edi
 		pop		esi
-		pop		ebx
-		retn
+		retn	4
 	}
 }
 
@@ -1494,10 +1492,11 @@ bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 	UInt32 reloadMask = 0xFFFBF;
 	if (targetSlot >= 0)
 		reloadMask &= (1 << targetSlot);
-	ReloadBipedAnim(character->bipedAnims, reloadMask);
+	ReloadBipedAnim(character->bipedAnims, character->GetRefNiNode(), reloadMask);
 	if (character->IsPlayer())
 	{
-		ReloadBipedAnim(((PlayerCharacter*)character)->bipedAnims1stPerson, reloadMask);
+		PlayerCharacter *thePC = (PlayerCharacter*)character;
+		ReloadBipedAnim(thePC->bipedAnims1stPerson, thePC->node1stPerson, reloadMask);
 		if (weapon)
 		{
 			CdeclCall(0x77F270);
