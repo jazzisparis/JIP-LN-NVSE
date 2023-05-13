@@ -282,37 +282,37 @@ bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 
 bool Cmd_ReadStringFromFile_Execute(COMMAND_ARGS)
 {
-	char filePath[0x80], *buffer = GetStrArgBuffer(), *startPtr = buffer;
-	UInt32 startAt = 0, lineCount = 0;
-	*startPtr = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filePath, &startAt, &lineCount))
+	char *buffer = GetStrArgBuffer(), *startPtr = buffer;
+	SInt32 startAt = 0, lineCount = -1;
+	bool hasData = false;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, buffer, &startAt, &lineCount) && lineCount)
 	{
-		ReplaceChr(filePath, '/', '\\');
-		if (FileToBuffer(filePath, buffer, kMaxMessageLength - 1) && (startAt || lineCount))
+		ReplaceChr(buffer, '/', '\\');
+		if (FileToBuffer(buffer, buffer, kMaxMessageLength - 1) && ((--startAt > 0) || (lineCount > 0)))
 		{
-			if (startAt) startAt--;
-			char data;
-			while (data = *buffer)
+			hasData = true;
+			while (buffer = FindChr(buffer, '\n'))
 			{
-				if (data == '\n')
+				if (startAt > 0)
 				{
-					if (startAt)
-					{
-						startAt--;
-						startPtr = buffer + 1;
-					}
-					else if (!--lineCount)
-					{
-						if (buffer[-1] == '\r')
-							buffer[-1] = 0;
-						else *buffer = 0;
-						break;
-					}
+					startAt--;
+					startPtr = buffer + 1;
+				}
+				else if (lineCount <= 0)
+					break;
+				else if (!--lineCount)
+				{
+					if (buffer[-1] == '\r')
+						buffer[-1] = 0;
+					else *buffer = 0;
+					break;
 				}
 				buffer++;
 			}
 		}
 	}
+	if (!hasData)
+		*startPtr = 0;
 	AssignString(PASS_COMMAND_ARGS, startPtr);
 	return true;
 }
@@ -395,7 +395,7 @@ bool Cmd_ClearJIPSavedData_Execute(COMMAND_ARGS)
 
 bool Cmd_ModLogPrint_Execute(COMMAND_ARGS)
 {
-	UInt32 modIdx = scriptObj ? scriptObj->modIndex : 0xFF;
+	UInt32 modIdx = scriptObj->GetOverridingModIdx();
 	if (modIdx == 0xFF) return true;
 	char *buffer = GetStrArgBuffer();
 	UInt32 indentLevel;

@@ -231,16 +231,16 @@ public:
 	/*40*/virtual bhkRigidBody	*GetRigidBody();	// Returns this
 	/*44*/virtual bhkLimitedHingeConstraint	*GetLimitedHingeConstraint();	// Returns this
 	/*48*/virtual NiObject	*Clone(NiObjectCopyInfo *copyInfo);
-	/*4C*/virtual void		Load(UInt32 arg);
+	/*4C*/virtual void		Load(NiStream *stream);
 	/*50*/virtual void		Unk_14(UInt32 arg);
 	/*54*/virtual void		Unk_15(UInt32 arg);
-	/*58*/virtual void		Unk_16(UInt32 arg);
-	/*5C*/virtual void		Unk_17(UInt32 arg);
-	/*60*/virtual void		Unk_18(UInt32 arg);
+	/*58*/virtual void		Save(NiStream *stream);
+	/*5C*/virtual bool		Compare(NiObject *to);
+	/*60*/virtual void		DumpAttributes(void *buffer);
 	/*64*/virtual void		Unk_19(UInt32 arg);
-	/*68*/virtual void		Unk_1A(NiObjectCopyInfo *copyInfo);
+	/*68*/virtual void		ProcessClone(NiObjectCopyInfo *copyInfo);
 	/*6C*/virtual void		Unk_1B(UInt32 arg);
-	/*70*/virtual void		Unk_1C(void);
+	/*70*/virtual bool		StreamCanSkip();
 	/*74*/virtual void		Unk_1D(void);
 	/*78*/virtual void		SetWorldBound(NiSphere *worldBound);
 	/*7C*/virtual UInt32	Unk_1F(void);
@@ -1102,27 +1102,29 @@ public:
 	UInt32				unk18;		// 18
 };
 
+class LightingData;
+
+// 10
+struct BSRenderPass
+{
+	void			*geometry;		// 00
+	UInt16			passEnum;		// 04
+	UInt8			accumHint;		// 06
+	UInt8			bEnabled;		// 07
+	UInt8			noFog;			// 08
+	UInt8			numLights;		// 09
+	UInt8			byte0A;			// 0A
+	UInt8			currLandTexture;// 0B
+	LightingData	**sceneLights;	// 0C
+};
+
 // 14	vtbl 0x10B8480
 class BSRenderPassList
 {
 public:
 	virtual void	Destroy(bool doFree);
 	
-	// 10
-	struct RenderPass
-	{
-		void		*geometry;	// 00
-		UInt16		passEnum;	// 04
-		UInt8		accumHint;	// 06
-		UInt8		bEnabled;	// 07
-		UInt8		byte08;		// 08
-		UInt8		byte09;		// 09
-		UInt8		byte0A;		// 0A
-		UInt8		byte0B;		// 0B
-		void		*ptr0C;		// 0C
-	};
-	
-	RenderPass		**passes;	// 04
+	BSRenderPass	**passes;	// 04
 	UInt16			maxSize;	// 08
 	UInt16			word0A;		// 0A
 	UInt16			arraySize;	// 0C
@@ -1240,17 +1242,11 @@ public:
 	float				alpha;				// 28
 	float				fadeAlpha;			// 2C
 	float				envMapScale;		// 30
-	float				flt34;				// 34
+	float				LODFade;			// 34
 	UInt32				lastRenderPassState;// 38
-	BSRenderPassList	*renderPassList;	// 3C
-	UInt32				unk40;				// 40
-	UInt32				unk44;				// 44
-	UInt32				unk48;				// 48
-	UInt32				unk4C;				// 4C
-	UInt32				unk50;				// 50
-	UInt32				unk54;				// 54
-	UInt32				unk58;				// 58
-	float				flt5C;				// 5C
+	BSRenderPassList	*renderPassLists[7];// 3C
+	UInt32				shaderIndex;		// 58
+	float				depthBias;			// 5C
 };
 static_assert(sizeof(BSShaderProperty) == 0x60);
 
@@ -1264,7 +1260,7 @@ public:
 	/*D0*/virtual void		Unk_34(void);
 
 	NiTexture		*srcTexture;			// 60
-	UInt32			unk64;					// 64
+	const char		*texturePath;			// 64
 	UInt16			word68;					// 68
 	UInt16			word6A;					// 6A
 	UInt32			unk6C;					// 6C
@@ -1277,7 +1273,6 @@ public:
 };
 static_assert(sizeof(BSShaderNoLightingProperty) == 0x80);
 
-class LightingData;
 // 7C
 class BSShaderLightingProperty : public BSShaderProperty
 {
@@ -1332,7 +1327,7 @@ public:
 	void				*ptr0CC;				// 0CC
 	NiObject			*object0D0;				// 0D0
 	UInt32				unk0D4;					// 0D4
-	UInt32				unk0D8;					// 0D8
+	UInt32				clampMode;				// 0D8
 	NiObject			*object0DC;				// 0DC
 	float				refractionStrength;		// 0E0
 	SInt32				refractionFirePeriod;	// 0E4
@@ -1894,45 +1889,50 @@ static_assert(sizeof(BSPortalGraph) == 0x78);
 class LightingData : public NiRefObject
 {
 public:
-	UInt32					unk008;			// 008
-	float					flt00C;			// 00C
-	float					flt010[52];		// 010
-	DList<NiTriStrips>		lgtList0E0;		// 0E0
-	UInt8					byte0EC;		// 0EC
-	UInt8					byte0ED;		// 0ED
-	UInt8					pad0EE[2];		// 0EE
-	NiRefObject				*obj0F0;		// 0F0
-	UInt8					isPointLight;	// 0F4
-	UInt8					isAmbientLight;	// 0F5
-	UInt8					pad0F6[2];		// 0F6
-	NiLight					*light;			// 0F8
-	UInt8					isDynamic;		// 0FC
-	UInt8					pad0FD[3];		// 0FD
-	NiVector3				centrePos;		// 100
-	NiRefObject				*obj10C;		// 10C
-	UInt16					state;			// 110	0xFF = disabled (distance too far), anything else = enabled
-	UInt16					word112;		// 112
-	NiRefObject				*obj114;		// 114
-	UInt8					byte118;		// 118
-	UInt8					pad119[3];		// 119
-	float					flt11C;			// 11C
-	float					flt120;			// 120
-	UInt8					byte124;		// 124
-	UInt8					pad125[3];		// 125
-	NiRefObject				*obj128;		// 128
-	UInt32					unk12C[3];		// 12C
-	NiRefObject				*obj138;		// 138
-	NiRefObject				*obj13C;		// 13C
-	NiRefObject				*obj140;		// 140
-	NiFrustumPlanes			frustumPlanes;	// 144
-	UInt32					unk1A8[24];		// 1A8
-	UInt8					byte208;		// 208
-	UInt8					pad209[3];		// 209
-	NiRefObject				*obj20C;		// 20C
-	UInt32					unk210[8];		// 210
-	BSSimpleArray<NiNode*>	array230;		// 230
-	BSPortalGraph			*portalGraph;	// 240
-	UInt32					unk244[3];		// 244
+	UInt32					unk008;				// 008
+	float					flt00C;				// 00C
+	float					flt010[48];			// 010
+	float					lodDimmer;			// 0D0
+	float					alpha;				// 0D4
+	float					shadowFadeTime0D8;	// 0D8
+	float					shadowFadeTime0DC;	// 0DC
+	DList<NiTriStrips>		lgtList0E0;			// 0E0
+	bool					isShadowCasting;	// 0EC
+	UInt8					byte0ED;			// 0ED
+	UInt8					pad0EE[2];			// 0EE
+	NiRefObject				*obj0F0;			// 0F0
+	bool					isPointLight;		// 0F4
+	bool					isAmbientLight;		// 0F5
+	UInt8					pad0F6[2];			// 0F6
+	NiLight					*light;				// 0F8
+	bool					isDynamic;			// 0FC
+	UInt8					pad0FD[3];			// 0FD
+	NiVector3				centrePos;			// 100
+	NiRefObject				*obj10C;			// 10C
+	UInt16					state;				// 110	0xFF = disabled (distance too far), anything else = enabled
+	UInt16					word112;			// 112
+	NiRefObject				*obj114;			// 114
+	UInt8					byte118;			// 118
+	UInt8					pad119[3];			// 119
+	float					flt11C;				// 11C
+	float					flt120;				// 120
+	UInt8					byte124;			// 124
+	UInt8					pad125[3];			// 125
+	NiNode					*shadowCaster;		// 128
+	UInt32					unk12C[3];			// 12C
+	NiRefObject				*obj138;			// 138
+	NiTriShape				*fenceObject;		// 13C
+	NiCamera				*shadowMapCamera;	// 140
+	NiFrustumPlanes			frustumPlanes;		// 144
+	UInt32					unk1A8[24];			// 1A8
+	UInt8					byte208;			// 208
+	UInt8					pad209[3];			// 209
+	BSShaderAccumulator		*shaderAccum;		// 20C
+	BSSimpleArray<NiNode*>	array210;			// 210
+	BSSimpleArray<NiNode*>	array220;			// 220
+	BSSimpleArray<NiNode*>	array230;			// 230
+	BSPortalGraph			*portalGraph;		// 240
+	UInt32					unk244[3];			// 244
 };
 static_assert(sizeof(LightingData) == 0x250);
 
@@ -2311,12 +2311,32 @@ class NiRenderer : public NiObject
 public:
 	/*8C*/virtual void		Unk_23(void);
 
-	BSShaderAccumulator	*shaderAccum;	// 008
-	UInt32				unk00C[125];	// 00C
-	UInt32				sceneState;		// 200
-	UInt32				unk204;			// 204
-	UInt32				unk208;			// 208
-	UInt32				unk20C;			// 20C
+	enum ClearFlag
+	{
+		kClrFlag_BackBuffer =	1,
+		kClrFlag_Stencil =		2,
+		kClrFlag_ZBuffer =		4,
+		kClrFlag_All =			kClrFlag_BackBuffer | kClrFlag_Stencil | kClrFlag_ZBuffer
+	};
+
+	enum FrameState
+	{
+		kFrmState_OutsideFrame,
+		kFrmState_InsideFrame,
+		kFrmState_InsideOffscreenFrame,
+		kFrmState_waitingForDisplay,
+		kFrmState_InternalFrame
+	};
+
+	BSShaderAccumulator	*shaderAccum;		// 008
+	UInt32				unk00C[124];		// 00C
+	UInt32				savdFrameState;		// 1FC
+	UInt32				frameState;			// 200
+	UInt32				frameID;			// 204
+	bool				renderTargetGroup;	// 208
+	bool				batchRendering;		// 209
+	UInt8				pad20A[2];			// 20A
+	UInt32				unk20C;				// 20C
 };
 static_assert(sizeof(NiRenderer) == 0x210);
 
@@ -2649,11 +2669,11 @@ public:
 	UInt8					byte58;			// 58
 	UInt8					byte59;			// 59
 	UInt8					byte5A;			// 5A
-	UInt8					byte5B;			// 5B
+	UInt8					state;			// 5B
 	UInt32					unk5C;			// 5C
 	NiDX9Renderer			*renderer;		// 60
 	IDirect3DBaseTexture9	*d3dBaseTexture;// 64
-	UInt32					unk68;			// 68
+	UInt32					levels;			// 68
 	NiObject				*object6C;		// 6C
 };
 static_assert(sizeof(NiDX9TextureData) == 0x70);
@@ -2789,6 +2809,26 @@ public:
 	/*AC*/virtual void		Unk_2B(void);
 	/*B0*/virtual void		Unk_2C(UInt32 arg1, UInt32 arg2);
 
+	enum RenderMode
+	{
+		kRndrMode_Normal,
+		kRndrMode_Unk1,
+		kRndrMode_Unk2,
+		kRndrMode_Unk3,
+		kRndrMode_Unk4,
+		kRndrMode_Unk5,
+		kRndrMode_Unk6,
+		kRndrMode_DepthMap,
+		kRndrMode_ConstAlpha,
+		kRndrMode_LocalMap,
+		kRndrMode_Tiles,
+		kRndrMode_UnkB,
+		kRndrMode_NoWaterPass,
+		kRndrMode_UnkD,
+		kRndrMode_WaterDepth,
+		kRndrMode_UnkF
+	};
+
 	// 14
 	struct Struct48
 	{
@@ -2809,60 +2849,64 @@ public:
 		UInt32		unk10;
 	};
 
-	UInt32					unk034;			// 034
-	UInt8					byte038;		// 038
-	UInt8					byte039;		// 039
-	UInt8					byte03A;		// 03A
-	UInt8					byte03B;		// 03B
-	UInt32					unk03C;			// 03C
-	UInt8					byte040;		// 040
-	UInt8					pad041[3];		// 041
-	float					flt044;			// 044
-	Struct48				unk048;			// 048
-	Struct48				unk05C;			// 05C
-	Struct48				unk070;			// 070
-	UInt8					byte084;		// 084
-	UInt8					byte085;		// 085
-	UInt8					byte086;		// 086
-	UInt8					byte087;		// 087
-	UInt16					word088;		// 088
-	UInt16					word08A;		// 08A
-	void					*ptr08C;		// 08C	Array of 200 DWORDS, or pointers
-	UInt32					unk090[3];		// 090
-	AccumStruct				accum09C;		// 09C
-	AccumStruct				accum0B0;		// 0B0
-	AccumStruct				accum0C4;		// 0C4
-	AccumStruct				accum0D8;		// 0D8
-	AccumStruct				accum0EC;		// 0EC
-	AccumStruct				accum100;		// 100
-	AccumStruct				accum114;		// 114
-	AccumStruct				accum128;		// 128
-	UInt32					unk13C[5];		// 13C
-	UInt8					byte150;		// 150
-	UInt8					pad151[3];		// 151
-	NiColorAlpha			color154;		// 154
-	UInt8					byte164;		// 164
-	UInt8					byte165;		// 165
-	UInt8					byte166;		// 166
-	UInt8					byte167;		// 167
-	UInt32					unk168;			// 168
-	UInt8					bRenderDecals;	// 16C
-	UInt8					pad16D[3];		// 16D
-	void					*ptr170;		// 170
-	BSBatchRenderer			*renderer174;	// 174
-	BSBatchRenderer			*renderer178;	// 178
-	void					*ptr17C;		// 17C
-	void					*ptr180;		// 180
-	void					*ptr184;		// 184
-	void					*ptr188;		// 188
-	UInt32					unk18C;			// 18C
-	UInt32					unk190;			// 190
-	ShadowSceneNode			*shadowScene;	// 194
-	UInt32					unk198;			// 198
-	UInt32					callbackIndex;	// 19C	Index of a callback in 2 arrays @ 0x11F9F40 & 0x11F9F80
-	UInt32					unk1A0[5];		// 1A0
-	NiTPointerMap<void*>	map1B4;			// 1B4
-	UInt32					unk1C4[47];		// 1C4
+	UInt32					unk034;				// 034
+	bool					wireFrameRelated;	// 038
+	UInt8					byte039;			// 039
+	bool					renderDOF;			// 03A
+	UInt8					byte03B;			// 03B
+	UInt32					uiSunPixelCount;	// 03C
+	bool					waitingForSunQuery;	// 040
+	UInt8					pad041[3];			// 041
+	float					percentSunOccludedStored;	// 044
+	Struct48				unk048;				// 048
+	Struct48				unk05C;				// 05C
+	Struct48				unk070;				// 070
+	bool					processLights;		// 084
+	UInt8					byte085;			// 085
+	UInt8					byte086;			// 086
+	UInt8					byte087;			// 087
+	UInt16					word088;			// 088
+	UInt16					word08A;			// 08A
+	void					*ptr08C;			// 08C	Array of 200 DWORDS, or pointers
+	UInt32					unk090[3];			// 090
+	AccumStruct				accum09C;			// 09C
+	AccumStruct				accum0B0;			// 0B0
+	AccumStruct				accum0C4;			// 0C4
+	AccumStruct				accum0D8;			// 0D8
+	AccumStruct				accum0EC;			// 0EC
+	AccumStruct				accum100;			// 100
+	AccumStruct				accum114;			// 114
+	AccumStruct				accum128;			// 128
+	UInt32					unk13C[5];			// 13C
+	UInt8					byte150;			// 150
+	UInt8					pad151[3];			// 151
+	NiColorAlpha			ambientColor;		// 154
+	UInt8					byte164;			// 164
+	UInt8					byte165;			// 165
+	UInt8					byte166;			// 166
+	bool					isUnderwater;		// 167
+	UInt32					waterHeight;		// 168
+	bool					renderDecals;		// 16C
+	UInt8					pad16D[3];			// 16D
+	void					*ptr170;			// 170
+	BSBatchRenderer			*renderer174;		// 174
+	BSBatchRenderer			*renderer178;		// 178
+	UInt32					*passes;			// 17C
+	void					*ptr180;			// 180
+	void					*ptr184;			// 184
+	void					*ptr188;			// 188
+	UInt32					batchRendererCount;	// 18C
+	UInt32					maxPassCount;		// 190
+	ShadowSceneNode			*shadowScene;		// 194
+	UInt32					unk198;				// 198
+	UInt32					renderMode;			// 19C	Index of a callback in 2 arrays @ 0x11F9F40 & 0x11F9F80
+	LightingData			*depthLight;		// 1A0
+	BSRenderPass			*tileRenderPass;	// 1A4
+	UInt16					renderPassType;		// 1A8
+	UInt8					pad1AA[2];			// 1AA
+	UInt32					unk1A0[2];			// 1AC
+	NiTPointerMap<void*>	map1B4;				// 1B4
+	UInt32					unk1C4[47];			// 1C4
 };
 static_assert(sizeof(BSShaderAccumulator) == 0x280);
 
@@ -2984,15 +3028,26 @@ class NiGeometryData : public NiObject
 {
 public:
 	/*8C*/virtual void		Unk_23(UInt32 arg);
-	/*90*/virtual void		Unk_24(void);
+	/*90*/virtual UInt32	GetVertexCount();
 	/*94*/virtual void		Unk_25(void);
 	/*98*/virtual void		Unk_26(void);
 	/*9C*/virtual bool		Unk_27(UInt32 arg);
 	/*A0*/virtual void		Unk_28(void);
 
+	enum KeepFlag
+	{
+		kKeep_Vertices =	1,
+        kKeep_Normals =		2,
+        kKeep_VertexColor =	4,
+        kKeep_UVCoords =	8,
+        kKeep_Indices =		0x10,
+        kKeep_BoneData =	0x20,
+		kKeep_All =			kKeep_Vertices | kKeep_Normals | kKeep_VertexColor | kKeep_UVCoords | kKeep_Indices | kKeep_BoneData
+	};
+
 	UInt16						numVertices;	// 08
-	UInt16						word0A;			// 0A
-	UInt16						word0C;			// 0C	NormalBinormalTangent
+	UInt16						id;				// 0A
+	UInt16						dataFlags;		// 0C	NormalBinormalTangent
 	UInt16						dirtyFlags;		// 0E
 	NiSphere					bounds;			// 10
 	NiVector3					*vertices;		// 20
@@ -3005,7 +3060,7 @@ public:
 	UInt8						compressFlags;	// 39
 	UInt8						byte3A;			// 3A
 	UInt8						byte3B;			// 3B
-	UInt8						byte3C;			// 3C
+	UInt8						canSave;		// 3C
 	UInt8						pad3D[3];		// 3D
 };
 static_assert(sizeof(NiGeometryData) == 0x40);
@@ -3020,18 +3075,35 @@ public:
 	/*B0*/virtual void		Unk_2C(UInt32 arg1, UInt32 arg2, UInt32 arg3, UInt32 arg4);
 
 	UInt16			numTriangles;		// 40
-	UInt8			pad42[2];			// 42
+	UInt16			activeTriangles;	// 42
 };
 
 // 58
 class NiTriShapeData : public NiTriBasedGeomData
 {
 public:
-	UInt32			trianglePoints;	// 44
-	NiTriangle		*triangles;		// 48
-	UInt16			*points;		// 4C
-	UInt32			unk50;			// 50
-	UInt32			unk54;			// 54
+	struct SharedNormalArray
+	{
+		UInt16		numSharedNormals;
+		UInt16		pad02;
+		UInt16		*sharedNormalIndexArray;
+	};
+
+	struct SharedNormArrBlock
+	{
+		UInt16				*pBlock;
+		UInt16				*pFreeBlock;
+		UInt32				blockSize;
+		UInt32				freeBlockSize;
+		SharedNormArrBlock	*pNext;
+	};
+
+	UInt32			trianglePoints;		// 44
+	NiTriangle		*triangles;			// 48
+	SharedNormalArray	*sharedNormals;	// 4C
+	UInt16			sharedNormArrSize;	// 50
+	UInt16			pad52;				// 52
+	SharedNormArrBlock	*snArrBlock;	// 54
 };
 static_assert(sizeof(NiTriShapeData) == 0x58);
 
@@ -3039,10 +3111,10 @@ static_assert(sizeof(NiTriShapeData) == 0x58);
 class NiTriStripsData : public NiTriBasedGeomData
 {
 public:
-	UInt16			unk44;			// 44
+	UInt16			numStrips;		// 44
 	UInt16			unk46;			// 46
-	UInt32			unk48;			// 48
-	UInt32			unk4C;			// 4C
+	UInt16			*stripLengths;	// 48
+	UInt16			*strips;		// 4C
 };
 
 // 44

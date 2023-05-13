@@ -1418,45 +1418,15 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	nvse->InitExpressionEvaluatorUtils(&s_expEvalUtils);
 
 	PluginHandle pluginHandle = nvse->GetPluginHandle();
-	NVSESerializationInterface *serialization = (NVSESerializationInterface*)nvse->QueryInterface(kInterface_Serialization);
-	WriteRecord = serialization->WriteRecord;
-	WriteRecordData = serialization->WriteRecordData;
-	GetNextRecordInfo = serialization->GetNextRecordInfo;
-	ReadRecordData = serialization->ReadRecordData;
-	WriteRecord8 = serialization->WriteRecord8;
-	WriteRecord16 = serialization->WriteRecord16;
-	WriteRecord32 = serialization->WriteRecord32;
-	WriteRecord64 = serialization->WriteRecord64;
-	ReadRecord8 = serialization->ReadRecord8;
-	ReadRecord16 = serialization->ReadRecord16;
-	ReadRecord32 = serialization->ReadRecord32;
-	ReadRecord64 = serialization->ReadRecord64;
-	serialization->SetLoadCallback(pluginHandle, LoadGameCallback);
-	serialization->SetSaveCallback(pluginHandle, SaveGameCallback);
+	g_stringVar = *(NVSEStringVarInterface*)nvse->QueryInterface(kInterface_StringVar);
+	g_arrayVar = *(NVSEArrayVarInterface*)nvse->QueryInterface(kInterface_ArrayVar);
+	g_commandTbl = *(NVSECommandTableInterface*)nvse->QueryInterface(kInterface_CommandTable);
+	g_script = *(NVSEScriptInterface*)nvse->QueryInterface(kInterface_Script);
+	g_serialization = *(NVSESerializationInterface*)nvse->QueryInterface(kInterface_Serialization);
+
+	g_serialization.SetLoadCallback(pluginHandle, LoadGameCallback);
+	g_serialization.SetSaveCallback(pluginHandle, SaveGameCallback);
 	((NVSEMessagingInterface*)nvse->QueryInterface(kInterface_Messaging))->RegisterListener(pluginHandle, "NVSE", NVSEMessageHandler);
-	NVSECommandTableInterface *cmdInterface = (NVSECommandTableInterface*)nvse->QueryInterface(kInterface_CommandTable);
-	GetCmdByOpcode = cmdInterface->GetByOpcode;
-	GetPluginInfoByName = cmdInterface->GetPluginInfoByName;
-	NVSEStringVarInterface *strInterface = (NVSEStringVarInterface*)nvse->QueryInterface(kInterface_StringVar);
-	GetStringVar = strInterface->GetString;
-	AssignString = strInterface->Assign;
-	NVSEArrayVarInterface *arrInterface = (NVSEArrayVarInterface*)nvse->QueryInterface(kInterface_ArrayVar);
-	CreateArray = arrInterface->CreateArray;
-	CreateMap = arrInterface->CreateMap;
-	CreateStringMap = arrInterface->CreateStringMap;
-	SetElement = arrInterface->SetElement;
-	AppendElement = arrInterface->AppendElement;
-	GetArraySize = arrInterface->GetArraySize;
-	LookupArrayByID = arrInterface->LookupArrayByID;
-	GetElement = arrInterface->GetElement;
-	GetElements = arrInterface->GetElements;
-	GetContainerType = arrInterface->GetContainerType;
-	ArrayHasKey = arrInterface->ArrayHasKey;
-	NVSEScriptInterface *scrInterface = (NVSEScriptInterface*)nvse->QueryInterface(kInterface_Script);
-	ExtractArgsEx = scrInterface->ExtractArgsEx;
-	ExtractFormatStringArgs = scrInterface->ExtractFormatStringArgs;
-	CallFunction = scrInterface->CallFunctionAlt;
-	//GetFunctionParams = scrInterface->GetFunctionParams;
 
 	NVSEDataInterface *nvseData = (NVSEDataInterface*)nvse->QueryInterface(kInterface_Data);
 	g_DIHookCtrl = (DIHookControl*)nvseData->GetSingleton(NVSEDataInterface::kNVSEData_DIHookControl);
@@ -1533,6 +1503,7 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 		case NVSEMessagingInterface::kMessage_ExitGame_Console:
 		case NVSEMessagingInterface::kMessage_ExitGame:
 			JIPScriptRunner::RunScripts(JIPScriptRunner::kRunOn_ExitGame);
+			PrintLog("> JIP MemoryPool session total allocations: %d KB", MemoryPool::GetTotalAllocSize() >> 0xA);
 			break;
 		case NVSEMessagingInterface::kMessage_ExitToMainMenu:
 			ProcessDataChangedFlags(kChangedFlag_All);

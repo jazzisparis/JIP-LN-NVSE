@@ -1457,14 +1457,16 @@ __declspec(naked) void __fastcall ReloadBipedAnim(BipedAnim *bipAnim, UInt32 rel
 		push	0
 		mov		ecx, ebx
 		CALL_EAX(0x4AC1E0)
-		mov		ebx, [ebx]
-		mov		esi, [ebx]
+		mov		eax, [ebx+0x2B0]
+		mov		eax, [eax+0x64]
+		mov		ebx, [eax+0x14]
 		mov		ecx, ebx
 		CALL_EAX(0xA5A040)
 		push	0
 		push	offset kNiUpdateData
+		mov		eax, [ebx]
 		mov		ecx, ebx
-		call	dword ptr [esi+0xA4]
+		call	dword ptr [eax+0xA4]
 		pop		edi
 		pop		esi
 		pop		ebx
@@ -1474,6 +1476,8 @@ __declspec(naked) void __fastcall ReloadBipedAnim(BipedAnim *bipAnim, UInt32 rel
 
 bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 {
+	if (g_OSGlobals->tfcState && g_OSGlobals->freezeTime)
+		return true;
 	SInt32 targetSlot = -1;
 	Character *character = (Character*)thisObj;
 	if (!character->IsCharacter() || !character->GetRefNiNode() || !character->bipedAnims || !character->baseProcess || character->baseProcess->processLevel ||

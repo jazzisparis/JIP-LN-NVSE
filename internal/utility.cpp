@@ -2397,7 +2397,7 @@ void PrintLog(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	s_log().FmtMessage(fmt, args);
+	s_log->FmtMessage(fmt, args);
 	va_end(args);
 }
 
@@ -2405,7 +2405,7 @@ void PrintDebug(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	s_debug().FmtMessage(fmt, args);
+	s_debug->FmtMessage(fmt, args);
 	va_end(args);
 }
 

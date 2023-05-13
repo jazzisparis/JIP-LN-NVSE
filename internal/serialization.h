@@ -343,9 +343,8 @@ void LoadGameCallback(void*)
 					}
 				}
 			}
-			continue;
 		}
-		if (type == kJIPTag_AuxVars)
+		else if (type == kJIPTag_AuxVars)
 		{
 			if (!(changedFlags & kChangedFlag_AuxVars) || (version < JIP_VARS_VERSION))
 				continue;
@@ -448,9 +447,8 @@ void LoadGameCallback(void*)
 					}
 				}
 			}
-			continue;
 		}
-		if (type == kJIPTag_RefMaps)
+		else if (type == kJIPTag_RefMaps)
 		{
 			if (!(changedFlags & kChangedFlag_RefMaps) || (version < JIP_VARS_VERSION))
 				continue;
@@ -527,9 +525,8 @@ void LoadGameCallback(void*)
 					}
 				}
 			}
-			continue;
 		}
-		if (type == kJIPTag_ExtraData)
+		else if (type == kJIPTag_ExtraData)
 		{
 			if (!(changedFlags & kChangedFlag_ExtraData) || (version > ExtraJIP::kExtraJIP_Verion))
 				continue;
@@ -573,9 +570,8 @@ void LoadGameCallback(void*)
 				}
 				else bufPos += keySize;
 			}
-			continue;
 		}
-		if (type == kJIPTag_LinkedRefs)
+		else if (type == kJIPTag_LinkedRefs)
 		{
 			if (!(changedFlags & kChangedFlag_LinkedRefs))
 				continue;
@@ -592,14 +588,10 @@ void LoadGameCallback(void*)
 				if (GetResolvedRefID(&refID) && GetResolvedRefID(&lnkID) && GetResolvedModIndex(&modIdx) && SetLinkedRefID(refID, lnkID, modIdx))
 					s_linkedRefsTemp()[refID] = lnkID;
 			}
-			continue;
 		}
-		if (type == kJIPTag_GlobalFlags)
-		{
+		else if (type == kJIPTag_GlobalFlags)
 			s_serializedFlags = ReadRecord32();
-			continue;
-		}
-		if (type == kJIPTag_AppearanceUndo)
+		else if (type == kJIPTag_AppearanceUndo)
 		{
 			AppearanceUndo *aprUndo = (AppearanceUndo*)malloc(sizeof(AppearanceUndo));
 			ReadRecordData(aprUndo->values0, 0x214);
@@ -631,9 +623,8 @@ void LoadGameCallback(void*)
 			}
 			else aprUndo->headParts = nullptr;
 			s_appearanceUndoMap()[(TESNPC*)g_thePlayer->baseForm] = aprUndo;
-			continue;
 		}
-		if (type == kJIPTag_NPCPerks)
+		else if (type == kJIPTag_NPCPerks)
 		{
 			if (!s_NPCPerks || !(changedFlags & kChangedFlag_NPCPerks))
 				continue;

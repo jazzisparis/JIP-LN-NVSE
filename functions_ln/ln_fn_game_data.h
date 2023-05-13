@@ -212,7 +212,7 @@ bool Cmd_GetModName_Execute(COMMAND_ARGS)
 	char modName[0x80];
 	modName[0] = 0;
 	UInt32 index, keepExt = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &index, &keepExt))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &index, &keepExt) && (index < 0xFF))
 	{
 		StrCopy(modName, g_dataHandler->GetNthModName(index));
 		if (modName[0] && !keepExt) GetNextToken(modName, '.');
@@ -306,7 +306,7 @@ bool Cmd_GetSelfModIndex_Execute(COMMAND_ARGS)
 bool Cmd_IsFormOverridden_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
-	if (scriptObj && ExtractArgsEx(EXTRACT_ARGS_EX, &form))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
 		UInt8 overriding = form->GetOverridingModIdx();
 		*result = ((overriding > scriptObj->modIndex) && (overriding != 0xFF)) ? 1 : 0;

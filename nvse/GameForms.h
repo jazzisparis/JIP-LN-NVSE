@@ -2231,6 +2231,8 @@ public:
 };
 static_assert(sizeof(BGSTalkingActivator) == 0x98);
 
+struct TerminalEntry;
+
 // BGSTerminal (9C)
 class BGSTerminal : public TESObjectACTI
 {
@@ -2256,23 +2258,10 @@ public:
 		UInt8 type;             // 0-9, corresponds to GECK types 1-10
 	};
 
-	struct MenuEntry
-	{
-		String				entryText;		// 00
-		String				resultText;		// 08
-		//Script				resScript;		// 10
-		UInt8				_script[54];
-		ConditionList		conditions;		// 64
-		BGSNote				*displayNote;	// 6C
-		BGSTerminal			*subMenu;		// 70
-		UInt8				byte74;			// 74
-		UInt8				pad75[3];		// 75
-	};
-
-	String				desc;			// 090	DESC
-	tList<MenuEntry>	menuEntries;	// 098
-	BGSNote				*password;		// 0A0	PNAM
-	TermData			data;			// 0A4	DNAM
+	String					desc;			// 90	DESC
+	tList<TerminalEntry>	menuEntries;	// 98
+	BGSNote					*password;		// A0	PNAM
+	TermData				data;			// A4	DNAM
 };
 
 // 98
@@ -3619,6 +3608,8 @@ public:
 };
 static_assert(sizeof(TESObjectCELL) == 0xE0);
 
+typedef BSSimpleArray<TESObjectREFR*> ObjectRefrArray;
+
 // 3C	C'tor @ 0x6FC490
 struct BGSTerrainManager
 {
@@ -3714,21 +3705,21 @@ struct BGSTerrainManager
 	};
 	static_assert(sizeof(BGSTerrainNode) == 0x60);
 
-	TESWorldSpace					*world;			// 00
-	BGSTerrainNode					*lodNode;		// 04
-	NiNode							*node08;		// 08
-	NiNode							*waterLODNode;	// 0C
-	Coordinate						coordNW;		// 10
-	Coordinate						coordSE;		// 14
-	UInt32							lodLevelMax;	// 18
-	UInt32							lodLevelMin;	// 1C
-	UInt32							stride;			// 20
-	UInt32							lodLevel;		// 24
-	UInt8							byte28;			// 28
-	UInt8							byte29;			// 29
-	UInt8							byte2A;			// 2A
-	UInt8							byte2B;			// 2B
-	BSSimpleArray<TESObjectREFR*>	array2C;		// 2C
+	TESWorldSpace			*world;			// 00
+	BGSTerrainNode			*lodNode;		// 04
+	NiNode					*node08;		// 08
+	NiNode					*waterLODNode;	// 0C
+	Coordinate				coordNW;		// 10
+	Coordinate				coordSE;		// 14
+	UInt32					lodLevelMax;	// 18
+	UInt32					lodLevelMin;	// 1C
+	UInt32					stride;			// 20
+	UInt32					lodLevel;		// 24
+	UInt8					byte28;			// 28
+	UInt8					byte29;			// 29
+	UInt8					byte2A;			// 2A
+	UInt8					byte2B;			// 2B
+	ObjectRefrArray			array2C;		// 2C
 };
 static_assert(sizeof(BGSTerrainManager) == 0x3C);
 
@@ -3841,22 +3832,76 @@ public:
 	virtual TESObjectCELL	*GetPersistentCell();
 };
 
-// NavMeshInfoMap (40)
-class NavMeshInfoMap;
+// 38
+struct NavMeshBounds
+{
+	struct BoundsTriangle;
+
+	NiPoint3						point00;		// 00
+	NiPoint3						point0C;		// 0C
+	BSSimpleArray<BoundsTriangle>	boundsTrigArr;	// 18
+	BSSimpleArray<NiPoint3>			pointArr;		// 28
+};
+static_assert(sizeof(NavMeshBounds) == 0x38);
 
 struct NavMeshInfo;
+typedef BSSimpleArray<NavMeshInfo*> NavMeshInfoArray;
+
+// 5C	c'tor @ 0x6B46A0; d'tor @ 0x6B6390
+struct NavMeshInfo
+{
+	enum
+	{
+		kFlag_Disabled =	0x10,
+		kFlag_HasBounds =	0x20
+	};
+
+	UInt32				navMeshRefID;		// 00
+	UInt32				worldOrCellRefID;	// 04
+	UInt32				flags;				// 08
+	Coordinate			exteriorCoord;		// 0C
+	NiPoint3			approxLocation;		// 10
+	union									// 1C
+	{
+		TESWorldSpace	*parentWorld;
+		TESObjectCELL	*parentCell;
+	};
+	float				preferredPercent;	// 20
+	NavMeshInfoArray	array24;			// 24
+	NavMeshInfoArray	array34;			// 34
+	ObjectRefrArray		connectedDoors;		// 44
+	void				*ptr54;				// 54
+	NavMeshBounds		*bounds;			// 58
+};
+static_assert(sizeof(NavMeshInfo) == 0x5C);
+
+// 40
+class NavMeshInfoMap : public TESForm
+{
+public:
+	typedef NiTPointerMap<NavMeshInfoArray> WorldInfoArraysMap;
+
+	UInt8								byte18;		// 18
+	UInt8								pad19[3];	// 19
+	NiTPointerMap<NavMeshInfo>			infoMap;	// 1C	Keys are RefIDs of NavMesh
+	NiTPointerMap<WorldInfoArraysMap>	intInfoMap;	// 2C	Keys of main map are RefIDs of TESWorldSpace; keys of the sub-map are Coordinates of cells
+													//		One exception is main map key 0 - keys of the sub-map are TESObjectCELL*
+	UInt8								byte3C;		// 3C
+	UInt8								pad3D[3];	// 3D
+};
+static_assert(sizeof(NavMeshInfoMap) == 0x40);
 
 // 8C
 class ObstacleData : public NiRefObject
 {
 public:
-	UInt32						unk08;			// 08
-	NiRefObject					*object0C;		// 0C
-	UInt32						unk10[25];		// 10
-	UInt8						byte74;			// 74
-	UInt8						byte75[3];		// 75
-	BSSimpleArray<NavMeshInfo>	navMeshInfos;	// 78
-	NiRefObject					*object88;		// 88
+	UInt32				unk08;			// 08
+	NiRefObject			*object0C;		// 0C
+	UInt32				unk10[25];		// 10
+	UInt8				byte74;			// 74
+	UInt8				byte75[3];		// 75
+	NavMeshInfoArray	navMeshInfos;	// 78
+	NiRefObject			*object88;		// 88
 };
 
 struct NavMeshVertex;
@@ -3990,6 +4035,8 @@ struct VariableInfo
 	String			name;		// 18
 };
 
+struct QuestLogEntry;
+
 // TESQuest (6C)
 class TESQuest : public TESForm
 {
@@ -4000,28 +4047,12 @@ public:
 	TESIcon					icon;				// 24
 	TESFullName				fullName;			// 30
 
-	// 74
-	struct LogEntry
-	{
-		UInt32				unk00;			// 00
-		ConditionList		conditions;		// 04
-		//Script				resScript;		// 0C
-		UInt8				_script[54];
-		UInt32				unk60;			// 60
-		UInt8				byte64;			// 64
-		UInt8				byte65;			// 65
-		UInt8				pad66[2];		// 66
-		UInt32				*date;			// 68	ptr to 4 byte struct storing day/month/year
-		TESQuest			*quest;			// 6C
-		UInt32				unk70;			// 70
-	};
-
 	struct StageInfo
 	{
-		UInt8				stage;		// 00 stageID
-		UInt8				isDone;		// 01 status ?
-		UInt8				pad02[2];	// 02
-		tList<LogEntry>		logEntries;	// 04
+		UInt8					stage;		// 00 stageID
+		UInt8					isDone;		// 01 status ?
+		UInt8					pad02[2];	// 02
+		tList<QuestLogEntry>	logEntries;	// 04
 	};
 
 	enum QuestFlag
@@ -4189,14 +4220,14 @@ public:
 class PatrolActorPackageData : public ActorPackageData
 {
 public:
-	UInt32							unk04;		// 04
-	UInt32							unk08;		// 08
-	UInt32							unk0C;		// 0C
-	UInt32							unk10;		// 10
-	UInt32							unk14;		// 14
-	UInt32							unk18;		// 18
-	BSSimpleArray<TESObjectREFR*>	pointRefs;	// 1C
-	UInt32							unk2C[3];	// 2C
+	UInt32				unk04;		// 04
+	UInt32				unk08;		// 08
+	UInt32				unk0C;		// 0C
+	UInt32				unk10;		// 10
+	UInt32				unk14;		// 14
+	UInt32				unk18;		// 18
+	ObjectRefrArray		pointRefs;	// 1C
+	UInt32				unk2C[3];	// 2C
 };
 static_assert(sizeof(PatrolActorPackageData) == 0x38);
 

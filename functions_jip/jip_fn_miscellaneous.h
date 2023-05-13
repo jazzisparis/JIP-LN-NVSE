@@ -1087,7 +1087,7 @@ bool Cmd_RewardXPExact_Execute(COMMAND_ARGS)
 	int xpAmount;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &xpAmount))
 	{
-		g_thePlayer->ModActorValue(kAVCode_XP, xpAmount, 0);
+		g_thePlayer->ModActorValueInt(kAVCode_XP, xpAmount, 0);
 		ThisCall(0xAD7FA0, *(BSWin32Audio**)0x11F6D98, (const char*)0x106F354, 0x121);
 	}
 	return true;

@@ -13,8 +13,11 @@ namespace MemoryPool
 		PrimitiveCS		m_cs;
 		BlockNode		*m_freeSections = nullptr;
 		BlockNode		*m_sections[MAX_BLOCK_SIZE >> 4] = {nullptr};
+		size_t			m_allocPoolCount = 0;
 	}
 	s_memoryPool;
+
+	size_t GetTotalAllocSize() {return s_memoryPool.m_allocPoolCount * MEMORY_POOL_SIZE;}
 
 	__declspec(naked) void* __fastcall Alloc(size_t size)
 	{
@@ -69,6 +72,7 @@ namespace MemoryPool
 			dec		edx
 			jnz		sectLinker
 			mov		[eax], edx
+			inc		s_memoryPool.m_allocPoolCount
 		gotSection:
 			pop		ecx
 			lea		eax, [esi+edi]

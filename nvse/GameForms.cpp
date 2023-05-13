@@ -173,21 +173,19 @@ __declspec(naked) UInt8 TESForm::GetOverridingModIdx() const
 {
 	__asm
 	{
-		cmp		byte ptr [ecx+0xF], 0xFF
-		jz		noInfo
 		add		ecx, 0x10
+		mov		al, 0xFF
 		ALIGN 16
 	iterHead:
-		mov		eax, [ecx]
+		mov		edx, ecx
 		mov		ecx, [ecx+4]
 		test	ecx, ecx
 		jnz		iterHead
-		test	eax, eax
-		jz		noInfo
-		mov		al, [eax+0x40C]
-		retn
-	noInfo:
-		mov		al, 0xFF
+		mov		ecx, [edx]
+		test	ecx, ecx
+		jz		done
+		mov		al, [ecx+0x40C]
+	done:
 		retn
 	}
 }

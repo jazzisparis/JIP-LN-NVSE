@@ -1824,3 +1824,11 @@ constexpr ParamInfo kParams_NVSE_OneOptionalNum_OneOptionalBasicType[] =
 	{"Integer", kNVSEParamType_Number, 1},
 	{"Basic Type", kNVSEParamType_BasicType, 1}
 };
+
+constexpr ParamInfo kParams_OneInt_ThreeOptionalInts[] =
+{
+	{"Integer", kParamType_Integer, 0},
+	{"Integer", kParamType_Integer, 1},
+	{"Integer", kParamType_Integer, 1},
+	{"Integer", kParamType_Integer, 1}
+};

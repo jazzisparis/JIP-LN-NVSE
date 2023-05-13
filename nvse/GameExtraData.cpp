@@ -751,22 +751,6 @@ void __fastcall ExtraJIP::SaveGame(BGSSaveFormBuffer *sgBuffer)
 	else *(UInt32*)buffer = 0;
 }
 
-void __fastcall ExtraDataList::ExtraJIPLoadGame(BGSLoadFormBuffer *lgBuffer)
-{
-	UInt8 *buffer = lgBuffer->chunk + lgBuffer->chunkConsumed;
-	lgBuffer->chunkConsumed += 5;
-	if (UINT key = *(UInt32*)buffer)
-		if (ExtraJIP *xJIP = GetExtraType(this, ExtraJIP))
-		{
-			if (xJIP->key != key)	//	Should never happen!
-			{
-				s_extraDataKeysMap->Erase(xJIP->key);
-				xJIP->key = key;
-			}
-		}
-		else AddExtraJIP(key);
-};
-
 void ExtraJIPData::ResolvedRefIDs()
 {
 	for (UInt32 idx = 0, maxIdx = GetMaxIndex(), mask = 1; idx < maxIdx; idx++, mask <<= 1)

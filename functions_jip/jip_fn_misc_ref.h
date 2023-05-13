@@ -38,7 +38,7 @@ DEFINE_COMMAND_PLUGIN(GetTeleportDoor, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetOnCriticalHitEventHandler, 0, 5, kParams_OneForm_OneInt_ThreeOptionalForms);
 DEFINE_COMMAND_PLUGIN(MoveToFadeDelay, 1, 2, kParams_OneObjectRef_OneFloat);
 DEFINE_COMMAND_PLUGIN(GetCrosshairWater, 0, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(IsAnimPlayingEx, 1, 3, kParams_OneInt_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(IsAnimPlayingEx, 1, 4, kParams_OneInt_ThreeOptionalInts);
 DEFINE_COMMAND_PLUGIN(GetRigidBodyMass, 1, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(PushObject, 1, 5, kParams_FourFloats_OneOptionalObjectRef);
 DEFINE_COMMAND_PLUGIN(MoveToContainer, 1, 2, kParams_OneObjectRef_OneOptionalInt);
@@ -937,19 +937,25 @@ bool Cmd_GetCrosshairWater_Execute(COMMAND_ARGS)
 bool Cmd_IsAnimPlayingEx_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	UInt32 category, subType = 0, flags = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &category, &subType, &flags))
+	UInt32 category, subType = 0, flags = 0, pcPOV = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &category, &subType, &flags, &pcPOV))
 	{
-		AnimData *animData = thisObj->GetAnimData();
+		AnimData *animData = nullptr;
+		if (pcPOV && thisObj->IsPlayer())
+		{
+			PlayerCharacter *thePlayer = (PlayerCharacter*)thisObj;
+			if (!thePlayer->baseProcess || thePlayer->baseProcess->processLevel)
+				return true;
+			animData = (pcPOV == 1) ? thePlayer->animData1stPerson : ((HighProcess*)thePlayer->baseProcess)->animData;
+		}
+		else animData = thisObj->GetAnimData();
 		if (animData)
 		{
-			UInt32 animID;
-			const AnimGroupClassify *classify;
 			for (UInt16 groupID : animData->animGroupIDs)
 			{
-				animID = groupID & 0xFF;
+				UInt32 animID = groupID & 0xFF;
 				if (animID >= 245) continue;
-				classify = &kAnimGroupClassify[animID];
+				const AnimGroupClassify *classify = &kAnimGroupClassify[animID];
 				if ((classify->category == category) && ((category >= 4) || ((!subType || (classify->subType == subType)) && (!flags || (classify->flags & flags)))))
 				{
 					*result = 1;
@@ -1608,7 +1614,7 @@ bool __fastcall RegisterInsertObject(char *inData)
 			modifyMap = false;
 		}
 	}
-	else if (!form->IsBoundObject())
+	else if (!form->GetModelPath())
 		return false;
 
 	char *pInData = inData + 8, *nodeName = nullptr, *objectName = FindChr(pInData, '|'), *suffix;
@@ -2023,9 +2029,7 @@ bool Cmd_SetTextureTransformKey_Execute(COMMAND_ARGS)
 	{
 		NiAVObject *block = thisObj->GetNiBlock(blockName);
 		if (block && IS_GEOMETRY(block))
-		{
-			NiTexturingProperty *texProp = ((NiGeometry*)block)->texturingProp;
-			if (texProp)
+			if (NiTexturingProperty *texProp = ((NiGeometry*)block)->texturingProp)
 			{
 				NiTextureTransformController *ctrlr = (NiTextureTransformController*)texProp->m_controller;
 				while (ctrlr && ctrlIndex)
@@ -2040,11 +2044,13 @@ bool Cmd_SetTextureTransformKey_Execute(COMMAND_ARGS)
 					{
 						NiFloatData *fltData = intrpl->data;
 						if (fltData && IS_TYPE(fltData, NiFloatData) && (keyIndex < fltData->numKeys))
+						{
 							fltData->data[keyIndex].value = value;
+							ctrlr->Update(kNiUpdateData);
+						}
 					}
 				}
 			}
-		}
 	}
 	return true;
 }
@@ -2576,7 +2582,7 @@ bool Cmd_RefHasExtraData_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &modIdx))
 	{
 		if (!modIdx)
-			modIdx = scriptObj->quest ? scriptObj->quest->modIndex : scriptObj->modIndex;
+			modIdx = scriptObj->GetOverridingModIdx();
 		if (modIdx < 0xFF)
 		{
 			XDATA_CS
@@ -2591,13 +2597,13 @@ bool Cmd_GetRefExtraData_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	double fVarIdx, fModIdx = 0;
-	if (PluginExpressionEvaluator eval(PASS_COMMAND_ARGS); eval.ExtractArgsV(nullptr, &fVarIdx, &fModIdx))
+	if (PluginExpressionEvaluator eval(PASS_COMMAND_ARGS); eval.ExtractArgsVA(nullptr, &fVarIdx, &fModIdx))
 	{
 		UInt32 varIdx = (int)fVarIdx;
 		if (varIdx > 19) return true;
 		UInt32 modIdx = (int)fModIdx;
 		if (!modIdx)
-			modIdx = scriptObj->quest ? scriptObj->quest->modIndex : scriptObj->modIndex;
+			modIdx = scriptObj->GetOverridingModIdx();
 		if (modIdx >= 0xFF) return true;
 		XDATA_CS
 		if (ExtraJIPData *pData = GetExtraJIPData(thisObj, modIdx))
@@ -2620,7 +2626,7 @@ bool Cmd_GetRefExtraData_Execute(COMMAND_ARGS)
 
 bool Cmd_SetRefExtraData_Execute(COMMAND_ARGS)
 {
-	UInt32 modIdx = scriptObj->quest ? scriptObj->quest->modIndex : scriptObj->modIndex;
+	UInt32 modIdx = scriptObj->GetOverridingModIdx();
 	if (modIdx == 0xFF) return true;
 	if (PluginExpressionEvaluator eval(PASS_COMMAND_ARGS); eval.ExtractArgs())
 	{

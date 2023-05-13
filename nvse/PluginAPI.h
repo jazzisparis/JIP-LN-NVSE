@@ -108,11 +108,13 @@ struct NVSEStringVarInterface
 	};
 
 	UInt32		version;
-	const char* (* GetString)(UInt32 stringID);
-	void		(* SetString)(UInt32 stringID, const char* newValue);
-	UInt32		(* CreateString)(const char* value, void* owningScript);
-	void		(* Register)(NVSEStringVarInterface* intfc);			// is RegisterStringVarInterface() in GameAPI.h
-	bool		(* Assign)(COMMAND_ARGS, const char* newValue);
+	const char* (*GetString)(UInt32 stringID);
+	void		(*SetString)(UInt32 stringID, const char* newValue);
+	UInt32		(*CreateString)(const char* value, void* owningScript);
+	void		(*Register)(NVSEStringVarInterface* intfc);			// is RegisterStringVarInterface() in GameAPI.h
+	bool		(*Assign)(COMMAND_ARGS, const char* newValue);
+
+	void operator=(const NVSEStringVarInterface &rhs) {COPY_BYTES(this, &rhs, sizeof(NVSEStringVarInterface));}
 };
 
 // IsKeyPressed() takes a DirectInput scancode; values above 255 represent mouse buttons
@@ -441,6 +443,8 @@ struct NVSEArrayVarInterface
 
 	int		(*GetContainerType)(Array *arr);
 	bool	(*ArrayHasKey)(Array *arr, const Element &key);
+
+	void operator=(const NVSEArrayVarInterface &rhs) {COPY_BYTES(this, &rhs, sizeof(NVSEArrayVarInterface));}
 };
 typedef NVSEArrayVarInterface::Array NVSEArrayVar;
 typedef NVSEArrayVarInterface::Element NVSEArrayElement;
@@ -476,6 +480,8 @@ struct NVSECommandTableInterface
 	UInt32				(*GetRequiredNVSEVersion)(const CommandInfo* cmd);
 	const PluginInfo*	(*GetParentPlugin)(const CommandInfo* cmd);	// returns a pointer to the PluginInfo of the NVSE plugin that adds the command, if any. returns NULL otherwise
 	const PluginInfo*	(*GetPluginInfoByName)(const char *pluginName);	// Returns a pointer to the PluginInfo of the NVSE plugin of the specified name; returns NULL is the plugin is not loaded.
+
+	void operator=(const NVSECommandTableInterface &rhs) {COPY_BYTES(this, &rhs, sizeof(NVSECommandTableInterface));}
 };
 
 /**** script API docs **********************************************************
@@ -527,9 +533,11 @@ struct NVSEScriptInterface
 	bool	(*CallFunction)(Script *funcScript, TESObjectREFR *callingObj, TESObjectREFR *container, NVSEArrayVarInterface::Element *result, UInt8 numArgs, ...);
 	int		(*GetFunctionParams)(Script *funcScript, UInt8 *paramTypesOut);
 	bool	(*ExtractArgsEx)(ParamInfo *paramInfo, UInt8 *scriptDataIn, UInt32 *scriptDataOffset, Script *scriptObj, ScriptLocals *eventList, ...);
-	bool	(*ExtractFormatStringArgs)(UInt32 fmtStringPos, char *buffer, ParamInfo *paramInfo, UInt8 *scriptDataIn, UInt32 *scriptDataOffset, 
+	bool	(*ExtractFormatStringArgs)(UInt32 fmtStringPos, char *buffer, ParamInfo *paramInfo, UInt8 *scriptDataIn, UInt32 *scriptDataOffset,
 										Script *scriptObj, ScriptLocals *eventList, UInt32 maxParams, ...);
 	bool	(*CallFunctionAlt)(Script *funcScript, TESObjectREFR *callingObj, UInt8 numArgs, ...);
+
+	void operator=(const NVSEScriptInterface &rhs) {COPY_BYTES(this, &rhs, sizeof(NVSEScriptInterface));}
 };
 
 // Gives access to internal data without reverse engineering NVSE
@@ -656,30 +664,30 @@ struct NVSESerializationInterface
 	typedef void (* EventCallback)(void * reserved);
 
 	UInt32	version;
-	void	(* SetSaveCallback)(PluginHandle plugin, EventCallback callback);
-	void	(* SetLoadCallback)(PluginHandle plugin, EventCallback callback);
-	void	(* SetNewGameCallback)(PluginHandle plugin, EventCallback callback);
+	void	(*SetSaveCallback)(PluginHandle plugin, EventCallback callback);
+	void	(*SetLoadCallback)(PluginHandle plugin, EventCallback callback);
+	void	(*SetNewGameCallback)(PluginHandle plugin, EventCallback callback);
 
-	bool	(* WriteRecord)(UInt32 type, UInt32 version, const void * buf, UInt32 length);
-	bool	(* OpenRecord)(UInt32 type, UInt32 version);
-	bool	(* WriteRecordData)(const void * buf, UInt32 length);
+	bool	(*WriteRecord)(UInt32 type, UInt32 version, const void * buf, UInt32 length);
+	bool	(*OpenRecord)(UInt32 type, UInt32 version);
+	bool	(*WriteRecordData)(const void * buf, UInt32 length);
 
-	bool	(* GetNextRecordInfo)(UInt32 * type, UInt32 * version, UInt32 * length);
-	UInt32	(* ReadRecordData)(void * buf, UInt32 length);
+	bool	(*GetNextRecordInfo)(UInt32 * type, UInt32 * version, UInt32 * length);
+	UInt32	(*ReadRecordData)(void * buf, UInt32 length);
 
 	// take a refid as stored in the loaded save file and resolve it using the currently
 	// loaded list of mods. All refids stored in a save file must be run through this
 	// function to account for changing mod lists. This returns true on success, and false
 	// if the mod owning the RefID was unloaded.
-	bool	(* ResolveRefID)(UInt32 refID, UInt32 * outRefID);
+	bool	(*ResolveRefID)(UInt32 refID, UInt32 * outRefID);
 
-	void	(* SetPreLoadCallback)(PluginHandle plugin, EventCallback callback);
+	void	(*SetPreLoadCallback)(PluginHandle plugin, EventCallback callback);
 
 	// returns a full path to the last loaded save game
-	const char* (* GetSavePath)();
+	const char* (*GetSavePath)();
 
 	// Peeks at the data without interfiring with the current position
-	UInt32	(* PeekRecordData)(void * buf, UInt32 length);
+	UInt32	(*PeekRecordData)(void * buf, UInt32 length);
 
 	void	(*WriteRecord8)(UInt8 inData);
 	void	(*WriteRecord16)(UInt16 inData);
@@ -692,6 +700,8 @@ struct NVSESerializationInterface
 	void	(*ReadRecord64)(void *outData);
 
 	void	(*SkipNBytes)(UInt32 byteNum);
+
+	void operator=(const NVSESerializationInterface &rhs) {COPY_BYTES(this, &rhs, sizeof(NVSESerializationInterface));}
 };
 
 struct PluginInfo
@@ -767,6 +777,12 @@ typedef bool (* _NVSEPlugin_Load)(const NVSEInterface * nvse);
  *	
  ******************************************************************************/
 
+extern NVSEStringVarInterface g_stringVar;
+extern NVSEArrayVarInterface g_arrayVar;
+extern NVSECommandTableInterface g_commandTbl;
+extern NVSEScriptInterface g_script;
+extern NVSESerializationInterface g_serialization;
+
 struct PluginScriptToken;
 struct PluginTokenPair;
 struct PluginTokenSlice;
@@ -784,8 +800,8 @@ struct ExpressionEvaluatorUtils
 	bool					(__fastcall *ScriptTokenGetBool)(PluginScriptToken *scrToken);
 	UInt32					(__fastcall *ScriptTokenGetFormID)(PluginScriptToken *scrToken);
 	TESForm*				(__fastcall *ScriptTokenGetTESForm)(PluginScriptToken *scrToken);
-	char*					(__fastcall *ScriptTokenGetString)(PluginScriptToken *scrToken);
-	UInt32					(__fastcall *ScriptTokenGetArrayID)(PluginScriptToken *scrToken);
+	const char*				(__fastcall *ScriptTokenGetString)(PluginScriptToken *scrToken);
+	NVSEArrayVar*			(__fastcall *ScriptTokenGetArray)(PluginScriptToken *scrToken);
 	UInt32					(__fastcall *ScriptTokenGetActorValue)(PluginScriptToken *scrToken);
 	ScriptVar*				(__fastcall *ScriptTokenGetScriptVar)(PluginScriptToken *scrToken);
 	const PluginTokenPair*	(__fastcall *ScriptTokenGetPair)(PluginScriptToken *scrToken);
@@ -797,7 +813,7 @@ struct ExpressionEvaluatorUtils
 	void					(__fastcall *ScriptTokenGetElement)(PluginScriptToken *scrToken, ArrayElementR &outElem);
 	bool					(__fastcall *ScriptTokenCanConvertTo)(PluginScriptToken *scrToken, UInt8 toType);
 
-	bool					(__fastcall *ExtractArgsV)(void *expEval, va_list list);
+	bool					(__fastcall *ExtractArgsVA)(void *expEval, va_list list);
 
 	void					(*Reserved_1)(void) = nullptr;
 	void					(*Reserved_2)(void) = nullptr;
@@ -851,11 +867,11 @@ public:
 		s_expEvalUtils.AssignCommandResultFromElement(expEval, result);
 	}
 
-	bool ExtractArgsV(void *null, ...)
+	bool ExtractArgsVA(void *null, ...)
 	{
 		va_list list;
 		va_start(list, null);
-		const auto result = s_expEvalUtils.ExtractArgsV(expEval, list);
+		const auto result = s_expEvalUtils.ExtractArgsVA(expEval, list);
 		va_end(list);
 		return result;
 	}
@@ -898,14 +914,14 @@ struct PluginScriptToken
 		return s_expEvalUtils.ScriptTokenGetTESForm(this);
 	}
 
-	char *GetString()
+	const char *GetString()
 	{
 		return s_expEvalUtils.ScriptTokenGetString(this);
 	}
 
 	NVSEArrayVar *GetArrayVar()
 	{
-		return (NVSEArrayVar*)s_expEvalUtils.ScriptTokenGetArrayID(this);
+		return s_expEvalUtils.ScriptTokenGetArray(this);
 	}
 
 	UInt32 GetActorValue()

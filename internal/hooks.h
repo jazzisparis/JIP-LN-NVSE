@@ -3799,7 +3799,7 @@ __declspec(naked) void LoadWeaponSlotHook()
 
 __declspec(naked) void __fastcall InitRagdollControllerHook(Actor *actor, int EDX, NiNode *rootNode, bool arg2, bool arg3, bool arg4)
 {
-	static NiNode *pc1stNode = nullptr;
+	static NiNode *pc3rdPNode = nullptr;
 	__asm
 	{
 		cmp		dword ptr [ecx+0xC], 0x14
@@ -3808,11 +3808,14 @@ __declspec(naked) void __fastcall InitRagdollControllerHook(Actor *actor, int ED
 		JMP_EAX(0x87E130)
 	isPlayer:
 		mov		eax, [esp+4]
-		cmp		pc1stNode, eax
-		mov		pc1stNode, eax
+		cmp		pc3rdPNode, eax
+		mov		pc3rdPNode, eax
 		jnz		doInit
 		cmp		dword ptr [ecx+0xAC], 0
 		jz		doInit
+		mov		eax, [ebp]
+		cmp		byte ptr [eax+7], 0		// Lazy workaround for a conflict w/ Tweaks' 'bFixEnhancedCameraGroundSinkBug'.
+		ja		doInit
 		retn	0x10
 	}
 }
@@ -4926,8 +4929,8 @@ __declspec(naked) void __fastcall ClearHUDOrphanedTiles(HUDMainMenu *hudMain)
 {
 	__asm
 	{
-		push	esi
 		push	ecx
+		push	esi
 		mov		eax, [ecx+4]
 		mov		esi, [eax+4]
 		ALIGN 16
@@ -4947,12 +4950,10 @@ __declspec(naked) void __fastcall ClearHUDOrphanedTiles(HUDMainMenu *hudMain)
 		mov		eax, [ecx]
 		call	dword ptr [eax]
 		jmp		iterHead
-		ALIGN 16
 	done:
-		pop		ecx
-		CALL_EAX(0x77DA60)
 		pop		esi
-		retn
+		pop		ecx
+		JMP_EAX(0x77DA60)
 	}
 }
 
@@ -5120,5 +5121,4 @@ __declspec(noinline) void InitJIPHooks()
 	WriteRelJump(0x50F9E0, (UInt32)GetIsInternalMarkerHook);
 	WriteRelJump(0x815EE6, (UInt32)CastSpellHook);
 	WriteRelCall(0x55A488, (UInt32)DestroyRefrHook);
-	WriteRelCall(0x5AEB66, (UInt32)JIPScriptRunner::LogCompileError);
 }

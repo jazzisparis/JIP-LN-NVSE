@@ -249,7 +249,7 @@ public:
 	}
 	inline const char *GetNthModName(UInt32 modIndex) const
 	{
-		auto modInfo = modList.loadedMods[modIndex];
+		auto modInfo = (modIndex < 0xFF) ? modList.loadedMods[modIndex] : nullptr;
 		return modInfo ? modInfo->name : "";
 	}
 

@@ -541,9 +541,9 @@ public:
 	/*58C*/virtual UInt8	GetByte19C();
 	/*590*/virtual void		SetByte19D(UInt8 setTo);
 	/*594*/virtual UInt8	GetByte19D();
-	/*598*/virtual void		Unk_166();
-	/*59C*/virtual void		Unk_167();
-	/*5A0*/virtual void		Unk_168();
+	/*598*/virtual void		HandleOnPackageBegin(Actor *actor, TESPackage *package);
+	/*59C*/virtual void		HandleOnPackageChange(Actor *actor, TESPackage *package);
+	/*5A0*/virtual void		HandleOnPackageEnd(Actor *actor, TESPackage *package);
 	/*5A4*/virtual void		Unk_169();
 	/*5A8*/virtual void		Unk_16A();
 	/*5AC*/virtual float	GetActorAlpha();

@@ -59,7 +59,7 @@ bool Cmd_SetValueAlt_Execute(COMMAND_ARGS)
 	if (valForm)
 	{
 		valForm->value = newVal;
-		form->MarkModified(2);
+		//form->MarkModified(2);
 	}
 	else if IS_ID(form, AlchemyItem)
 		((AlchemyItem*)form)->value = newVal;
@@ -631,12 +631,8 @@ bool Cmd_GetEquippedArmorRefs_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	if (IS_ACTOR(thisObj))
-	{
-		BipedAnim *equipment = ((Actor*)thisObj)->GetBipedAnim();
-		if (equipment)
-		{
-			ContChangesEntryList *entryList = thisObj->GetContainerChangesList();
-			if (entryList)
+		if (BipedAnim *equipment = ((Actor*)thisObj)->GetBipedAnim())
+			if (ContChangesEntryList *entryList = thisObj->GetContainerChangesList())
 			{
 				TempElements *tmpElements = GetTempElements();
 				BipedAnim::Data *slotData = equipment->slotData;
@@ -654,23 +650,18 @@ bool Cmd_GetEquippedArmorRefs_Execute(COMMAND_ARGS)
 				}
 				*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 			}
-		}
-	}
 	return true;
 }
 
 double __fastcall GetArmorEffectiveDX(TESObjectREFR *thisObj, UInt32 funcAddr)
 {
-	if IS_TYPE(thisObj->baseForm, TESObjectARMO)
-	{
-		InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
-		if (invRef)
-			return ThisCall<double>(funcAddr, invRef->entry, 0);
-		ContChangesExtraList extendData(&thisObj->extraDataList);
-		ContChangesEntry tempEntry(&extendData, 1, thisObj->baseForm);
-		return ThisCall<double>(funcAddr, &tempEntry, 0);
-	}
-	return 0;
+	if NOT_TYPE(thisObj->baseForm, TESObjectARMO)
+		return 0;
+	if (InventoryRef *invRef = InventoryRefGetForID(thisObj->refID))
+		return ThisCall<double>(funcAddr, invRef->entry, 0);
+	ContChangesExtraList extendData(&thisObj->extraDataList);
+	ContChangesEntry tempEntry(&extendData, 1, thisObj->baseForm);
+	return ThisCall<double>(funcAddr, &tempEntry, 0);
 }
 
 bool Cmd_GetArmorEffectiveDT_Execute(COMMAND_ARGS)

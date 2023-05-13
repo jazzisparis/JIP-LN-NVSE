@@ -39,26 +39,20 @@ public:
 	// 14
 	struct ScriptInfo
 	{
-		UInt32	unk0;			// 00 (18)
+		UInt32	lastID;			// 00 (18)
 		UInt32	numRefs;		// 04 (1C)
 		UInt32	dataLength;		// 08 (20)
 		UInt32	varCount;		// 0C (24)
-		UInt16	type;			// 10 (28)
-		UInt16	unk12;			// 12 (2A)
-	};
-
-	enum
-	{
-		eType_Object =	0,
-		eType_Quest =	1,
-		eType_Magic =	0x100,
-		eType_Unk =		0x10000,
+		bool	isQuestScr;		// 10 (28)
+		bool	isEffectScr;	// 11 (29)
+		bool	isCompiled;		// 12 (2A)
+		UInt8	byte13;			// 13 (2B)
 	};
 
 	ScriptInfo		info;					// 18
 	char			*text;					// 2C
 	UInt8			*data;					// 30
-	float			unk34;					// 34
+	float			profilerTimer;			// 34
 	float			questDelayTimeCounter;	// 38      - init'd to fQuestDelayTime, decremented by frametime each frame
 	float			secondsPassed;			// 3C      - only if you've modified fQuestDelayTime
 	TESQuest		*quest;					// 40
@@ -71,11 +65,9 @@ public:
 	UInt32 AddVariable(TESForm *form);
 	void CleanupVariables() {refList.RemoveAll();}
 
-	UInt32 Type() const {return info.type;}
-	bool IsObjectScript() const {return info.type == eType_Object;}
-	bool IsQuestScript() const {return info.type == eType_Quest;}
-	bool IsMagicScript() const {return info.type == eType_Magic;}
-	bool IsUnkScript() const {return info.type == eType_Unk;}
+	bool IsObjectScript() const {return !USHT(info.isQuestScr);}
+	bool IsQuestScript() const {return info.isQuestScr;}
+	bool IsMagicScript() const {return info.isEffectScr;}
 
 	VariableInfo *GetVariableByName(const char *varName);
 	ScriptVar *AddVariable(char *varName, ScriptLocals *eventList, UInt32 ownerID, UInt8 modIdx);
@@ -162,20 +154,35 @@ struct ConditionEntry
 	ConditionEntry	* next;
 };
 
-// 70
-struct QuestStageItem
+// 74
+struct QuestLogEntry
 {
 	UInt32			unk00;			// 00
-	ConditionEntry	conditionList;	// 04
+	ConditionList	conditions;		// 04
 	Script			resultScript;	// 0C
-	UInt32			unk60;			// 60 disk offset to log text records? consistent within a single quest
-	UInt8			index;			// 64 sequential
+	UInt32			unk60;			// 60	disk offset to log text records? consistent within a single quest
+	UInt8			index;			// 64
 	bool			hasLogText;		// 65
-	UInt8			pad66[2];		// 66 pad?
-	UInt32			logDate;		// 68
-	TESQuest		*owningQuest;	// 6C;
+	UInt8			pad66[2];		// 66
+	UInt32			*date;			// 68	ptr to 4 byte struct storing day/month/year
+	TESQuest		*owningQuest;	// 6C
+	UInt32			unk70;			// 70
 };
-static_assert(sizeof(QuestStageItem) == 0x70);
+static_assert(sizeof(QuestLogEntry) == 0x74);
+
+// 78
+struct TerminalEntry
+{
+	String			entryText;		// 00
+	String			resultText;		// 08
+	Script			resultScript;	// 10
+	ConditionList	conditions;		// 64
+	BGSNote			*displayNote;	// 6C
+	BGSTerminal		*subMenu;		// 70
+	UInt8			byte74;			// 74
+	UInt8			pad75[3];		// 75
+};
+static_assert(sizeof(TerminalEntry) == 0x78);
 
 // 41C
 struct ScriptLineBuffer

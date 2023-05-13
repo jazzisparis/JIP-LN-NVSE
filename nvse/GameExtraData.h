@@ -339,7 +339,14 @@ public:
 	{
 		ExtendDataList	*extendData;	// 00
 		SInt32			countDelta;		// 04
-		TESForm			*type;			// 08
+		union							// 08
+		{
+			TESForm			*type;
+			TESObjectWEAP	*weapon;
+			TESAmmo			*ammo;
+			TESObjectARMO	*armor;
+			AlchemyItem		*ingestible;
+		};
 
 		EntryData(ExtendDataList *extend, SInt32 count, TESForm *item) :
 			extendData(extend), countDelta(count), type(item) {}

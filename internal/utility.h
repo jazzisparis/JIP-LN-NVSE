@@ -642,10 +642,13 @@ public:
 	~DebugLog() {if (theFile) fclose(theFile);}
 
 	bool Create(const char *filePath);
+	FILE *GetStream() const {return theFile;}
 	void Message(const char *msgStr);
 	void FmtMessage(const char *fmt, va_list args);
 	void Indent() {if (indent) indent--;}
 	void Outdent() {if (indent < 40) indent++;}
+
+	explicit operator bool() const {return theFile != nullptr;}
 };
 
 extern TempObject<DebugLog> s_log, s_debug;

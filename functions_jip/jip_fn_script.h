@@ -178,7 +178,7 @@ void __fastcall SetScriptDisabled(Script *script, bool disable)
 	if (disable != !script->info.dataLength)
 	{
 		script->info.dataLength = disable ? 0 : script->GetDataLength();
-		if (script->info.type != 1) HOOK_MOD(MergeEventMask, disable);
+		if (!script->IsQuestScript()) HOOK_MOD(MergeEventMask, disable);
 	}
 }
 
@@ -387,9 +387,9 @@ bool Cmd_ScriptWait_Execute(COMMAND_ARGS)
 {
 	if (_ReturnAddress() != (void*)0x5E234B) return true;
 	UInt32 iterNum;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &iterNum) || !scriptObj->refID || (scriptObj->info.type > 1) || !iterNum)
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &iterNum) || !scriptObj->refID || scriptObj->IsMagicScript() || !iterNum)
 		return true;
-	TESForm *owner = scriptObj->info.type ? scriptObj->quest : (TESForm*)thisObj;
+	TESForm *owner = scriptObj->IsQuestScript() ? scriptObj->quest : (TESForm*)thisObj;
 	if (!owner) return true;
 	*opcodeOffsetPtr += *(UInt16*)(scriptData + *opcodeOffsetPtr - 2);
 	ScriptBlockIterator blockIter(scriptData, *opcodeOffsetPtr);
@@ -559,19 +559,21 @@ bool Cmd_RunBatchScript_Execute(COMMAND_ARGS)
 	char filePath[0x80];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filePath))
 	{
+		ReplaceChr(filePath, '/', '\\');
 		Script **cachedScript;
 		if (s_cachedScripts->InsertKey(filePath, &cachedScript))
 		{
 			*cachedScript = nullptr;
-			char *buffer = GetStrArgBuffer();
-			if (FileToBuffer(filePath, buffer, STR_BUFFER_SIZE - 1))
-			{
-				if (Script *pScript = Script::Create(buffer, "RunBatchScript"))
+			char *fileName = FindChrR(filePath, '\\');
+			if (!fileName) fileName = filePath;
+			if (char *buffer = GetStrArgBuffer(); FileToBuffer(filePath, buffer, STR_BUFFER_SIZE - 1))
+				if (Script *pScript = Script::Create(buffer, fileName))
 				{
 					*cachedScript = pScript;
 					CaptureLambdaVars(pScript);
+					if (UInt32 modIdx = scriptObj->GetOverridingModIdx(); modIdx < 0xFF)
+						pScript->mods.Init(g_dataHandler->GetNthModInfo(modIdx));
 				}
-			}
 		}
 		if (*cachedScript)
 		{

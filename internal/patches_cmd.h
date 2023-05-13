@@ -448,7 +448,7 @@ bool Hook_GetModelPath_Execute(COMMAND_ARGS)
 			pRefr = IS_REFERENCE(pForm) ? (TESObjectREFR*)pForm : nullptr;
 			if (pRefr) pForm = pRefr->baseForm;
 		}
-		if (!pRefr || !(pRefr->JIPRefFlags() & kHookRefFlag5F_RefrModelPath) || !(pathStr = s_refrModelPathMap->Get(pRefr)))
+		if (pForm && (!pRefr || !(pRefr->JIPRefFlags() & kHookRefFlag5F_RefrModelPath) || !(pathStr = s_refrModelPathMap->Get(pRefr))))
 			pathStr = pForm->GetModelPath();
 	}
 	AssignString(PASS_COMMAND_ARGS, pathStr);

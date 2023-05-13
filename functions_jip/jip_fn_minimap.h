@@ -1162,7 +1162,7 @@ __declspec(naked) void __fastcall GenerateRenderedTexture(TESObjectCELL *cell, c
 		cmp		dword ptr [ecx+0x200], 0
 		setnz	al
 		mov		[ebp-3], al
-		mov		ecx, 7
+		mov		ecx, 7		//	NiRenderer::kClrFlag_All
 		cmovnz	edx, ecx
 		cmovnz	ecx, [ebp-0xC]
 		push	edx

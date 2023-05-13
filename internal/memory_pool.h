@@ -9,6 +9,8 @@ namespace MemoryPool
 	void* __fastcall Alloc(size_t size);
 	void __fastcall Free(void *pBlock, size_t size);
 	void* __fastcall Realloc(void *pBlock, size_t curSize, size_t reqSize);
+
+	size_t GetTotalAllocSize();
 };
 
 template <typename T> constexpr size_t AlignAlloc()

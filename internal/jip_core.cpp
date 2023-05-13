@@ -1,38 +1,12 @@
 #include "internal/jip_core.h"
 
+NVSEStringVarInterface g_stringVar;
+NVSEArrayVarInterface g_arrayVar;
+NVSECommandTableInterface g_commandTbl;
+NVSEScriptInterface g_script;
+NVSESerializationInterface g_serialization;
 ExpressionEvaluatorUtils s_expEvalUtils;
 
-_WriteRecord WriteRecord;
-_WriteRecordData WriteRecordData;
-_GetNextRecordInfo GetNextRecordInfo;
-_ReadRecordData ReadRecordData;
-_WriteRecord8 WriteRecord8;
-_WriteRecord16 WriteRecord16;
-_WriteRecord32 WriteRecord32;
-_WriteRecord64 WriteRecord64;
-_ReadRecord8 ReadRecord8;
-_ReadRecord16 ReadRecord16;
-_ReadRecord32 ReadRecord32;
-_ReadRecord64 ReadRecord64;
-_GetCmdByOpcode GetCmdByOpcode;
-_GetPluginInfoByName GetPluginInfoByName;
-_GetStringVar GetStringVar;
-_AssignString AssignString;
-_CreateArray CreateArray;
-_CreateMap CreateMap;
-_CreateStringMap CreateStringMap;
-_SetElement SetElement;
-_AppendElement AppendElement;
-_GetArraySize GetArraySize;
-_LookupArrayByID LookupArrayByID;
-_GetElement GetElement;
-_GetElements GetElements;
-_GetContainerType GetContainerType;
-_ArrayHasKey ArrayHasKey;
-_ExtractArgsEx ExtractArgsEx;
-_ExtractFormatStringArgs ExtractFormatStringArgs;
-_CallFunction CallFunction;
-//_GetFunctionParams GetFunctionParams;
 _CaptureLambdaVars CaptureLambdaVars;
 _UncaptureLambdaVars UncaptureLambdaVars;
 _InventoryRefCreate InventoryRefCreate;
@@ -1007,9 +981,8 @@ __declspec(naked) TESObjectREFR *TESObjectREFR::CreateInventoryRefForScriptedObj
 	__asm
 	{
 		push	esi
-		push	edi
 		push	ecx
-		push	dword ptr [esp+0x10]
+		push	dword ptr [esp+0xC]
 		call	TESObjectREFR::GetContainerChangesEntry
 		test	eax, eax
 		jz		done
@@ -1018,20 +991,18 @@ __declspec(naked) TESObjectREFR *TESObjectREFR::CreateInventoryRefForScriptedObj
 	xdlIter:
 		test	esi, esi
 		jz		done
-		mov		edi, [esi]
+		mov		ecx, [esi]
 		mov		esi, [esi+4]
-		test	edi, edi
+		test	ecx, ecx
 		jz		xdlIter
 		push	kXData_ExtraScript
-		mov		ecx, edi
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		xdlIter
-		mov		ecx, [eax+0x10]
-		cmp		[esp+0x14], ecx
+		mov		edx, [eax+0x10]
+		cmp		[esp+0x10], edx
 		jnz		xdlIter
 		push	kXData_ExtraCount
-		mov		ecx, edi
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		doneCount
@@ -1040,19 +1011,17 @@ __declspec(naked) TESObjectREFR *TESObjectREFR::CreateInventoryRefForScriptedObj
 		mov		edx, 1
 		cmp		eax, edx
 		cmovl	eax, edx
-		push	edi
+		push	ecx
 		push	eax
-		push	dword ptr [esp+0x18]
+		push	dword ptr [esp+0x14]
 		push	dword ptr [esp+0xC]
 		call	InventoryRefCreate
 		pop		ecx
-		pop		edi
 		pop		esi
 		retn	8
 	done:
 		xor		eax, eax
 		pop		ecx
-		pop		edi
 		pop		esi
 		retn	8
 	}
@@ -1222,6 +1191,7 @@ namespace JIPScriptRunner
 
 	void Init()
 	{
+		if (*s_log) WriteRelCall(0x5AEB66, (UInt32)LogCompileError);
 		char scriptsPath[0x80] = "Data\\NVSE\\plugins\\scripts\\*.txt", *buffer = GetStrArgBuffer();
 		initInProgress = 1;
 		for (DirectoryIterator iter(scriptsPath); iter; ++iter)
@@ -1243,6 +1213,11 @@ namespace JIPScriptRunner
 				CaptureLambdaVars(pScript);
 				s_cachedScripts()[fileName] = pScript;
 			}
+		}
+		if (initInProgress == 2)
+		{
+			fputs("================================================================\n\n", s_log->GetStream());
+			fflush(s_log->GetStream());
 		}
 		initInProgress = 0;
 	}
@@ -1288,11 +1263,11 @@ namespace JIPScriptRunner
 			if (initInProgress == 1)
 			{
 				initInProgress = 2;
-				PrintLog("SCRIPT RUNNER Compile errors found!\n");
-				Console_Print("SCRIPT RUNNER Compile errors found!\n");
+				fputs("[SCRIPT RUNNER] Errors were found while compiling the following script files:\n\n", s_log->GetStream());
+				Console_Print("[SCRIPT RUNNER] One or more script files could not be compiled. For more info please refer to \"jip_ln_nvse.log\".");
 			}
-			PrintLog("%s\n", errorStr.m_data + 9);
-			Console_Print("%s\n", errorStr.m_data + 9);
+			fputs(errorStr.m_data + 9, s_log->GetStream());
+			fputs("\n\n", s_log->GetStream());
 		}
 		GameHeapFree(errorStr.m_data);
 	}

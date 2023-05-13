@@ -325,9 +325,9 @@ void NiAVObject::Dump(UInt8 dumpFlags)
 	}
 	if (dumpFlags & 0x10)
 	{
-		if (m_kWorldBound)
-			PrintDebug("(WB) (%.4f, %.4f, %.4f) R = %.4f", m_kWorldBound->x, m_kWorldBound->y, m_kWorldBound->z, m_kWorldBound->radius);
-		PrintDebug("(WT) (%.4f, %.4f, %.4f)", m_transformWorld.translate.x, m_transformWorld.translate.y, m_transformWorld.translate.z);
+		/*if (m_kWorldBound)
+			PrintDebug("(WB) (%.4f, %.4f, %.4f) R = %.4f", m_kWorldBound->x, m_kWorldBound->y, m_kWorldBound->z, m_kWorldBound->radius);*/
+		PrintDebug("(WT) (%.4f, %.4f, %.4f) S %.4f", m_transformWorld.translate.x, m_transformWorld.translate.y, m_transformWorld.translate.z, m_transformWorld.scale);
 
 		/*m_transformLocal.Dump();
 		m_transformWorld.Dump();*/

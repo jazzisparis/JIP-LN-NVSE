@@ -178,6 +178,24 @@ public:
 		kAction_ref,
 		kAction_begin,
 		kAction_end,
+		//	UIO
+		kAction_neg,
+		kAction_recipr,
+		kAction_land,
+		kAction_lor,
+		kAction_shl,
+		kAction_shr,
+		kAction_bt,
+		kAction_sqrt,
+		kAction_pow,
+		kAction_sin,
+		kAction_cos,
+		kAction_tan,
+		kAction_asin,
+		kAction_acos,
+		kAction_atan,
+		kAction_log,
+		kAction_rand
 	};
 
 	// 0C

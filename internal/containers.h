@@ -25,7 +25,7 @@ UInt32 __fastcall StrHashCI(const char *inKey);
 
 template <typename T_Data> class Stack
 {
-	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
+	using Data_Val = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
 
 	struct alignas(16) Node
 	{
@@ -33,10 +33,9 @@ template <typename T_Data> class Stack
 		T_Data		data;
 	};
 
-	Node	*head;
+	Node	*head = nullptr;
 
 public:
-	Stack() : head(nullptr) {}
 	~Stack() {Clear();}
 
 	bool Empty() const {return !head;}
@@ -46,11 +45,11 @@ public:
 		return head->data;
 	}
 
-	T_Data *Push(Data_Arg item)
+	T_Data *Push(Data_Val item)
 	{
 		Node *newNode = Pool_CAlloc<Node>();
 		T_Data *data = &newNode->data;
-		memcpy(data, &item, sizeof(T_Data));
+		*data = std::move(item);
 		newNode->next = head;
 		head = newNode;
 		return data;
@@ -88,10 +87,12 @@ public:
 	}
 };
 
-template <typename T_Data> class LinkedList
+template <typename T_Data> class BiLinkedList
 {
-	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
+	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, const T_Data&>;
+	using Data_Val = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
 	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
+	using Init_List = std::initializer_list<T_Data>;
 
 	struct alignas(16) Node
 	{
@@ -193,9 +194,9 @@ template <typename T_Data> class LinkedList
 	}
 
 public:
-	LinkedList() : head(nullptr), tail(nullptr) {}
-	LinkedList(std::initializer_list<T_Data> &&inList) : head(nullptr), tail(nullptr) {AppendList(std::move(inList));}
-	~LinkedList() {Clear();}
+	BiLinkedList() : head(nullptr), tail(nullptr) {}
+	BiLinkedList(Init_List &&inList) : head(nullptr), tail(nullptr) {AppendList(std::forward<Init_List>(inList));}
+	~BiLinkedList() {Clear();}
 
 	bool Empty() const {return !head;}
 
@@ -209,10 +210,11 @@ public:
 		return size;
 	}
 
-	T_Data *Prepend(Data_Arg item)
+	T_Data *Prepend(Data_Val item)
 	{
 		Node *newNode = PrependNew();
-		return (T_Data*)memcpy(&newNode->data, &item, sizeof(T_Data));
+		newNode->data = std::move(item);
+		return &newNode->data;
 	}
 
 	template <typename ...Args>
@@ -222,10 +224,11 @@ public:
 		return new (&newNode->data) T_Data(std::forward<Args>(args)...);
 	}
 
-	T_Data *Append(Data_Arg item)
+	T_Data *Append(Data_Val item)
 	{
 		Node *newNode = AppendNew();
-		return (T_Data*)memcpy(&newNode->data, &item, sizeof(T_Data));
+		newNode->data = std::move(item);
+		return &newNode->data;
 	}
 
 	template <typename ...Args>
@@ -235,16 +238,17 @@ public:
 		return new (&newNode->data) T_Data(std::forward<Args>(args)...);
 	}
 
-	void AppendList(std::initializer_list<T_Data> &&inList)
+	void AppendList(Init_List &&inList)
 	{
 		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
-			Append(*iter);
+			Append(std::forward<T_Data>(*iter));
 	}
 
-	T_Data *Insert(UInt32 index, Data_Arg item)
+	T_Data *Insert(UInt32 index, Data_Val item)
 	{
 		Node *newNode = InsertNew(index);
-		return (T_Data*)memcpy(&newNode->data, &item, sizeof(T_Data));
+		newNode->data = std::move(item);
+		return &newNode->data;
 	}
 
 	template <typename ...Args>
@@ -418,7 +422,7 @@ public:
 			return *this;
 		}
 
-		void Remove(LinkedList &theList, bool frwrd = true)
+		void Remove(BiLinkedList &theList, bool frwrd = true)
 		{
 			Node *toRemove = pNode;
 			pNode = frwrd ? pNode->next : pNode->prev;
@@ -452,6 +456,8 @@ public:
 	}
 };
 
+struct CS_String;
+
 template <typename T_Key, typename T_Data> struct MappedPair
 {
 	T_Key		key;
@@ -469,8 +475,7 @@ public:
 	__forceinline Key_Res Get() const {return key;}
 	__forceinline char Compare(Key_Arg inKey) const
 	{
-		if (inKey < key) return -1;
-		return key < inKey;
+		return (inKey < key) ? -1 : ((key < inKey) ? 1 : 0);
 	}
 	__forceinline void operator=(Key_Arg inKey) {key = inKey;}
 	__forceinline bool operator==(const MapKey &other) const {return key == other.key;}
@@ -497,6 +502,29 @@ public:
 	__forceinline void operator=(const char *inKey) {key = CopyStringKey(inKey);}
 	__forceinline bool operator==(const MapKey &other) const {return !StrCompareCI(key, other.key);}
 	~MapKey() {FreeStringKey(key);}
+};
+
+template <> class MapKey<const CS_String*>
+{
+	const CS_String	*key;
+
+public:
+	__forceinline const CS_String *Get() const {return key;}
+	__forceinline char Compare(const CS_String *inKey) const {return StrCompareCS((const char*)inKey, (const char*)key);}
+	__forceinline void operator=(const CS_String *inKey) {key = inKey;}
+	__forceinline bool operator==(const MapKey &other) const {return !StrCompareCS((const char*)key, (const char*)other.key);}
+};
+
+template <> class MapKey<CS_String*>
+{
+	CS_String	*key;
+
+public:
+	__forceinline CS_String *Get() const {return key;}
+	__forceinline char Compare(CS_String *inKey) const {return StrCompareCS((const char*)inKey, (const char*)key);}
+	__forceinline void operator=(CS_String *inKey) {key = (CS_String*)CopyStringKey((const char*)inKey);}
+	__forceinline bool operator==(const MapKey &other) const {return !StrCompareCS((const char*)key, (const char*)other.key);}
+	~MapKey() {FreeStringKey((char*)key);}
 };
 
 template <typename T_Data> class MapValue
@@ -536,7 +564,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_alloc = MAP_DEF
 	using M_Value = std::conditional_t<(sizeof(T_Data) <= 8) || (sizeof(T_Data) <= alignof(T_Key)), MapValue<T_Data>, MapValue_p<T_Data>>;
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
 	using Key_Res = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
-	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
+	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, const T_Data&>;
 	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 	using M_Pair = MappedPair<T_Key, T_Data>;
 	using Init_List = std::initializer_list<M_Pair>;
@@ -578,7 +606,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_alloc = MAP_DEF
 
 public:
 	Map(UInt32 _alloc = _default_alloc) : entries(nullptr), numEntries(0), numAlloc(_alloc) {}
-	Map(Init_List &&inList) : entries(nullptr), numEntries(0), numAlloc(inList.size()) {InsertList(std::move(inList));}
+	Map(Init_List &&inList) : entries(nullptr), numEntries(0), numAlloc(inList.size()) {InsertList(std::forward<Init_List>(inList));}
 	~Map()
 	{
 		if (entries)
@@ -682,7 +710,7 @@ public:
 		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
 		{
 			InsertKey(iter->key, &outData);
-			*outData = iter->value;
+			*outData = std::move(iter->value);
 		}
 	}
 
@@ -888,7 +916,7 @@ template <typename T_Key, const UInt32 _default_alloc = MAP_DEFAULT_ALLOC> class
 
 public:
 	Set(UInt32 _alloc = _default_alloc) : keys(nullptr), numKeys(0), numAlloc(_alloc) {}
-	Set(Init_List &&inList) : keys(nullptr), numKeys(0), numAlloc(inList.size()) {InsertList(std::move(inList));}
+	Set(Init_List &&inList) : keys(nullptr), numKeys(0), numAlloc(inList.size()) {InsertList(std::forward<Init_List>(inList));}
 	~Set()
 	{
 		if (keys)
@@ -1061,33 +1089,31 @@ public:
 	CpIterator BeginCp() {return CpIterator(*this);}
 };
 
-struct CaseString;
-
 template <typename T_Key> __forceinline UInt32 HashKey(T_Key inKey)
 {
 	union
 	{
-		T_Key		_k;
+		T_Key		raw;
 		UInt8		u8;
 		UInt16		u16;
 		UInt32		u32;
 		const char	*str;
 	}
-	_key = {inKey};
+	key = {inKey};
 	if (std::is_same_v<T_Key, UINT>)
-		return _key.u32;
+		return key.u32;
 	if (std::is_same_v<T_Key, char*> || std::is_same_v<T_Key, const char*>)
-		return StrHashCI(_key.str);
-	if (std::is_same_v<T_Key, CaseString*>)
-		return StrHashCS(_key.str);
+		return StrHashCI(key.str);
+	if (std::is_same_v<T_Key, CS_String*> || std::is_same_v<T_Key, const CS_String*>)
+		return StrHashCS(key.str);
 	UInt32 uKey;
 	if (sizeof(T_Key) == 1)
-		uKey = _key.u8;
+		uKey = key.u8;
 	else if (sizeof(T_Key) == 2)
-		uKey = _key.u16;
+		uKey = key.u16;
 	else
 	{
-		uKey = _key.u32;
+		uKey = key.u32;
 		if (sizeof(T_Key) > 4)
 		{
 			uKey += ULNG(inKey + 1) ^ 0x7ED55D16;
@@ -1144,15 +1170,32 @@ public:
 	~HashedKey() {FreeStringKey(key);}
 };
 
-template <> class HashedKey<CaseString*>
+template <> class HashedKey<const CS_String*>
 {
 	UInt32		hashVal;
 
 public:
-	__forceinline bool Match(CaseString*, UInt32 inHash) const {return hashVal == inHash;}
-	__forceinline const char *Get() const {return "";}
-	__forceinline void Set(CaseString*, UInt32 inHash) {hashVal = inHash;}
+	__forceinline bool Match(const CS_String*, UInt32 inHash) const {return hashVal == inHash;}
+	__forceinline const CS_String *Get() const {return (const CS_String*)"";}
+	__forceinline void Set(const CS_String*, UInt32 inHash) {hashVal = inHash;}
 	__forceinline UInt32 GetHash() const {return hashVal;}
+};
+
+template <> class HashedKey<CS_String*>
+{
+	UInt32		hashVal;
+	CS_String	*key;
+
+public:
+	__forceinline bool Match(CS_String*, UInt32 inHash) const {return hashVal == inHash;}
+	__forceinline CS_String *Get() const {return key;}
+	__forceinline void Set(CS_String *inKey, UInt32 inHash)
+	{
+		hashVal = inHash;
+		key = (CS_String*)CopyStringKey((const char*)inKey);
+	}
+	__forceinline UInt32 GetHash() const {return hashVal;}
+	~HashedKey() {FreeStringKey((char*)key);}
 };
 
 #define NUM_BUCKETS (_allow_resize ? numBuckets : _default_bucket_count)
@@ -1162,7 +1205,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = 
 	using H_Key = HashedKey<T_Key>;
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
 	using Key_Res = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
-	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
+	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, const T_Data&>;
 	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 	using M_Pair = MappedPair<T_Key, T_Data>;
 	using Init_List = std::initializer_list<M_Pair>;
@@ -1184,12 +1227,16 @@ template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = 
 			entries = entry;
 		}
 
-		void Remove(Entry *entry, Entry *prev)
+		Entry *Remove(Entry *entry)
 		{
+			Entry *prev = nullptr;
+			for (Entry *curr = entries; curr != entry; curr = curr->next)
+				prev = curr;
 			if (prev) prev->next = entry->next;
 			else entries = entry->next;
 			entry->~Entry();
 			Pool_CFree<Entry>(entry);
+			return prev;
 		}
 
 		~Bucket()
@@ -1250,7 +1297,7 @@ public:
 	UnorderedMap(UInt32 _numBuckets = _default_bucket_count) : buckets(nullptr), numBuckets(_numBuckets), numEntries(0) {}
 	UnorderedMap(Init_List &&inList) : buckets(nullptr), numBuckets(_allow_resize ? AlignBucketCount(inList.size()) : _default_bucket_count), numEntries(0)
 	{
-		InsertList(std::move(inList));
+		InsertList(std::forward<Init_List>(inList));
 	}
 	~UnorderedMap()
 	{
@@ -1362,7 +1409,7 @@ public:
 		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
 		{
 			InsertKey(iter->key, &outData);
-			*outData = iter->value;
+			*outData = std::move(iter->value);
 		}
 	}
 
@@ -1387,12 +1434,12 @@ public:
 		{
 			UInt32 hashVal = HashKey<T_Key>(key);
 			Bucket *pBucket = &buckets[hashVal & (NUM_BUCKETS - 1)];
-			for (Entry *pEntry = pBucket->entries, *prev = nullptr; pEntry; prev = pEntry, pEntry = pEntry->next)
+			for (Entry *pEntry = pBucket->entries; pEntry; pEntry = pEntry->next)
 			{
 				if (!pEntry->key.Match(key, hashVal))
 					continue;
 				numEntries--;
-				pBucket->Remove(pEntry, prev);
+				pBucket->Remove(pEntry);
 				return true;
 			}
 		}
@@ -1406,13 +1453,13 @@ public:
 		{
 			UInt32 hashVal = HashKey<T_Key>(key);
 			Bucket *pBucket = &buckets[hashVal & (NUM_BUCKETS - 1)];
-			for (Entry *pEntry = pBucket->entries, *prev = nullptr; pEntry; prev = pEntry, pEntry = pEntry->next)
+			for (Entry *pEntry = pBucket->entries; pEntry; pEntry = pEntry->next)
 			{
 				if (!pEntry->key.Match(key, hashVal))
 					continue;
 				T_Data outVal = pEntry->value;
 				numEntries--;
-				pBucket->Remove(pEntry, prev);
+				pBucket->Remove(pEntry);
 				return outVal;
 			}
 		}
@@ -1521,12 +1568,8 @@ public:
 
 		void Remove()
 		{
-			Entry *prev = nullptr;
-			for (Entry *curr = bucket->entries; curr != entry; curr = curr->next)
-				prev = curr;
 			table->numEntries--;
-			bucket->Remove(entry, prev);
-			entry = prev;
+			entry = bucket->Remove(entry);
 		}
 
 		Iterator(UnorderedMap *_table = nullptr) : table(_table), entry(nullptr) {}
@@ -1561,12 +1604,16 @@ template <typename T_Key, const UInt32 _default_bucket_count = MAP_DEFAULT_BUCKE
 			entries = entry;
 		}
 
-		void Remove(Entry *entry, Entry *prev)
+		Entry *Remove(Entry *entry)
 		{
+			Entry *prev = nullptr;
+			for (Entry *curr = entries; curr != entry; curr = curr->next)
+				prev = curr;
 			if (prev) prev->next = entry->next;
 			else entries = entry->next;
 			entry->~Entry();
 			Pool_CFree<Entry>(entry);
+			return prev;
 		}
 
 		~Bucket()
@@ -1616,7 +1663,7 @@ public:
 	UnorderedSet(UInt32 _numBuckets = _default_bucket_count) : buckets(nullptr), numBuckets(_numBuckets), numEntries(0) {}
 	UnorderedSet(Init_List &&inList) : buckets(nullptr), numBuckets(_allow_resize ? AlignBucketCount(inList.size()) : _default_bucket_count), numEntries(0)
 	{
-		InsertList(std::move(inList));
+		InsertList(std::forward<Init_List>(inList));
 	}
 	~UnorderedSet()
 	{
@@ -1713,12 +1760,12 @@ public:
 		{
 			UInt32 hashVal = HashKey<T_Key>(key);
 			Bucket *pBucket = &buckets[hashVal & (NUM_BUCKETS - 1)];
-			for (Entry *pEntry = pBucket->entries, *prev = nullptr; pEntry; prev = pEntry, pEntry = pEntry->next)
+			for (Entry *pEntry = pBucket->entries; pEntry; pEntry = pEntry->next)
 			{
 				if (!pEntry->key.Match(key, hashVal))
 					continue;
 				numEntries--;
-				pBucket->Remove(pEntry, prev);
+				pBucket->Remove(pEntry);
 				return true;
 			}
 		}
@@ -1803,7 +1850,8 @@ public:
 template <typename T_Data, const UInt32 _default_alloc = VECTOR_DEFAULT_ALLOC> class Vector
 {
 protected:
-	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
+	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, const T_Data&>;
+	using Data_Val = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
 	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 	using Init_List = std::initializer_list<T_Data>;
 
@@ -1831,7 +1879,7 @@ protected:
 
 public:
 	Vector(UInt32 _alloc = _default_alloc) : data(nullptr), numItems(0), numAlloc(_alloc) {}
-	Vector(Init_List &&inList) : data(nullptr), numItems(0), numAlloc(inList.size()) {AppendList(std::move(inList));}
+	Vector(Init_List &&inList) : data(nullptr), numItems(0), numAlloc(inList.size()) {AppendList(std::forward<Init_List>(inList));}
 	~Vector()
 	{
 		if (data)
@@ -1887,9 +1935,11 @@ public:
 
 	Data_Res Top() const {return data[numItems - 1];}
 
-	T_Data* Append(Data_Arg item)
+	T_Data* Append(Data_Val item)
 	{
-		return (T_Data*)memcpy(AllocateData(), &item, sizeof(T_Data));
+		T_Data *pData = AllocateData();
+		*pData = std::move(item);
+		return pData;
 	}
 
 	template <typename ...Args>
@@ -1905,12 +1955,12 @@ public:
 		numItems += count;
 		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
 		{
-			new (pData) T_Data(*iter);
+			new (pData) T_Data(std::move(*iter));
 			pData++;
 		}
 	}
 
-	T_Data* Insert(UInt32 index, Data_Arg item)
+	T_Data* Insert(UInt32 index, Data_Val item)
 	{
 		if (index > numItems)
 			index = numItems;
@@ -1921,7 +1971,7 @@ public:
 			pData = data + index;
 			memmove(pData + 1, pData, sizeof(T_Data) * size);
 		}
-		memcpy(pData, &item, sizeof(T_Data));
+		*pData = std::move(item);
 		return pData;
 	}
 
@@ -1960,7 +2010,7 @@ public:
 		numItems = newCount;
 	}
 
-	UInt32 InsertSorted(Data_Arg item, bool descending = false)
+	UInt32 InsertSorted(Data_Val item, bool descending = false)
 	{
 		UInt32 lBound = 0, uBound = numItems;
 		while (lBound != uBound)
@@ -1977,12 +2027,12 @@ public:
 			pData = data + lBound;
 			memmove(pData + 1, pData, sizeof(T_Data) * uBound);
 		}
-		memcpy(pData, &item, sizeof(T_Data));
+		*pData = std::move(item);
 		return lBound;
 	}
 
 	typedef bool (*SortComperator)(const T_Data &lhs, const T_Data &rhs);
-	UInt32 InsertSorted(Data_Arg item, SortComperator comperator)
+	UInt32 InsertSorted(Data_Val item, SortComperator comperator)
 	{
 		UInt32 lBound = 0, uBound = numItems;
 		while (lBound != uBound)
@@ -1999,11 +2049,11 @@ public:
 			pData = data + lBound;
 			memmove(pData + 1, pData, sizeof(T_Data) * uBound);
 		}
-		memcpy(pData, &item, sizeof(T_Data));
+		*pData = std::move(item);
 		return lBound;
 	}
 
-	bool InsertUnique(T_Data &&item)
+	bool InsertUnique(Data_Val item)
 	{
 		UInt32 lBound = 0, uBound = numItems;
 		while (lBound != uBound)
@@ -2022,7 +2072,7 @@ public:
 			pData = data + lBound;
 			memmove(pData + 1, pData, sizeof(T_Data) * uBound);
 		}
-		memcpy(pData, &item, sizeof(T_Data));
+		*pData = std::move(item);
 		return true;
 	}
 
@@ -2389,7 +2439,8 @@ public:
 
 template <typename T_Data, const UInt32 size> class FixedTypeArray
 {
-	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
+	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
+	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 
 	UInt32		numItems;
 	T_Data		data[size];
@@ -2406,7 +2457,7 @@ public:
 	{
 		if (numItems < size)
 		{
-			memcpy(&data[numItems++], &item, sizeof(T_Data));
+			data[numItems++] = std::move(item);
 			return true;
 		}
 		return false;
@@ -2433,9 +2484,9 @@ public:
 			count--;
 		}
 
-		Data_Arg operator*() const {return *pData;}
-		Data_Arg operator->() const {return *pData;}
-		Data_Arg operator()() const {return *pData;}
+		Data_Res operator*() const {return *pData;}
+		Data_Res operator->() const {return *pData;}
+		Data_Res operator()() const {return *pData;}
 		T_Data& Ref() {return *pData;}
 
 		Iterator(FixedTypeArray &source) : pData(source.data), count(source.numItems) {}

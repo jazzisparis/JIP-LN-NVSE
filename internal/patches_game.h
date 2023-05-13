@@ -141,11 +141,11 @@ __declspec(naked) void __fastcall DoQueuedPlayerHook(QueuedPlayer *queuedPlayer)
 	}
 }
 
-typedef UnorderedMap<CaseString*, const char*, 0x800, false> NiFixedStringsMap;
+typedef UnorderedMap<const CS_String*, const char*, 0x800, false> NiFixedStringsMap;
 TempObject<NiFixedStringsMap> s_NiFixedStringsMap;
 PrimitiveCS s_NiFixedStringsCS;
 
-bool __stdcall InsertNiFixedString(CaseString *inStr, const char ***outStr)
+bool __stdcall InsertNiFixedString(const CS_String *inStr, const char ***outStr)
 {
 	return s_NiFixedStringsMap->InsertKey(inStr, outStr);
 }
@@ -332,7 +332,6 @@ __declspec(naked) void ExtraJIPCreateCopyHook()
 		test	eax, eax
 		jnz		hasXJIP
 		push	0
-		mov		ecx, [ebp-0x170]
 		call	ExtraDataList::AddExtraJIP
 	hasXJIP:
 		mov		ecx, [ebp+4]
@@ -381,10 +380,32 @@ __declspec(naked) void ExtraJIPLoadGameHook()
 {
 	__asm
 	{
-		mov		edx, [ebp+8]
+		mov		eax, [ebp+8]
+		mov		edx, [eax+4]
+		add		edx, [eax+0xC]
+		add		dword ptr [eax+0xC], 5
+		mov		edx, [edx]
+		test	edx, edx
+		jz		done
+		push	edx
+		push	kXData_ExtraJIP
 		mov		ecx, [ebp-0x5D4]
+		call	BaseExtraList::GetByType
+		test	eax, eax
+		jnz		hasXJIP
 		push	0x42C1C3
-		jmp		ExtraDataList::ExtraJIPLoadGame
+		jmp		ExtraDataList::AddExtraJIP
+	hasXJIP:
+		pop		ecx
+		mov		edx, [eax+0xC]
+		cmp		ecx, edx
+		jz		done
+		mov		[eax+0xC], ecx
+		push	edx
+		mov		ecx, offset s_extraDataKeysMap
+		call	ExtraJIPEntryMap::Erase
+	done:
+		JMP_EAX(0x42C1C3)
 	}
 }
 
@@ -484,16 +505,16 @@ __declspec(naked) void InventoryIterGetNextHook()
 		lea		ecx, [esi+0x2C]
 		call	InventoryIterMap::InsertKey
 		pop		ecx
-		dec		al
-		movsx	eax, al
+		and		eax, 1
+		dec		eax
 		and		[ecx], eax
 		mov		eax, [esi+0xC]
 		mov		edx, [eax+4]
 		add		[ecx], edx
 		jmp		done
+		NOP_0x4
 	noEntry:
 		mov		byte ptr [esi+0x18], 2
-		ALIGN 16
 	iterHead:
 		dec		dword ptr [esi+0x30]
 		js		retnNull
@@ -2797,7 +2818,7 @@ void __fastcall DistributeWeaponMods(Actor *actor, ContChangesEntry *weaponInfo)
 		{1, 2, 4, 0}, {1, 4, 2, 0}, {2, 1, 4, 0},
 		{2, 4, 1, 0}, {4, 1, 2, 0}, {4, 2, 1, 0}
 	};
-	TESObjectWEAP *weapon = (TESObjectWEAP*)weaponInfo->type;
+	TESObjectWEAP *weapon = weaponInfo->weapon;
 	if ((weapon->eWeaponType > 9) || (weapon->weaponFlags1 & 0xA0))
 		return;
 	ExtraDataList *xDataList = weaponInfo->extendData->GetFirstItem();
@@ -3450,7 +3471,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 		if (source)
 		{
 			ContChangesEntry *ammoInfo = source->GetAmmoInfo();
-			if (ammoInfo) ammo = (TESAmmo*)ammoInfo->type;
+			if (ammoInfo) ammo = ammoInfo->ammo;
 		}
 		if (!ammo || NOT_ID(ammo, TESAmmo))
 			ammo = hitWeapon->GetAmmo();
@@ -3548,7 +3569,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 	{
 		weaponInfo = hiProcess->weaponInfo;
 		bool noInfo = !weaponInfo;
-		TESObjectWEAP *pWeapon = weaponInfo ? (TESObjectWEAP*)weaponInfo->type : nullptr;
+		TESObjectWEAP *pWeapon = weaponInfo ? weaponInfo->weapon : nullptr;
 		hitData->flags |= 1;
 		if (flagPCTM & 8)
 			g_thePlayer->counterAttackTimer = *(float*)0x11D0BE8;	// fCounterAttackTimer
@@ -3561,15 +3582,12 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, UInt32 dummyEDX, U
 		if (!noInfo)
 		{
 			UInt32 skillModType = 0;
-			if (!hitWeapon)
+			if (!pWeapon)
 				skillModType = kAVCode_Unarmed;
-			else if (pWeapon)
-			{
-				if (!pWeapon->eWeaponType)
-					skillModType = kAVCode_Unarmed;
-				else if (pWeapon->eWeaponType <= 2)
-					skillModType = kAVCode_MeleeWeapons;
-			}
+			else if (!pWeapon->eWeaponType)
+				skillModType = kAVCode_Unarmed;
+			else if (pWeapon->eWeaponType <= 2)
+				skillModType = kAVCode_MeleeWeapons;
 			hitData->blockDTMod = *(float*)0x11CE844;	// fBlockSkillBase
 			if (skillModType)
 				hitData->blockDTMod += *(float*)0x11CFD90 * target->avOwner.GetActorValue(skillModType);	// fBlockSkillMult
@@ -4967,6 +4985,7 @@ void InitGamePatches()
 	//	Adds NULL pointer checks
 	SAFE_WRITE_BUF(0x559450, "\x8B\xC1\x85\xC0\x74\x02\x8B\x00\xC3");
 	SAFE_WRITE_BUF(0x5A8ECF, "\x8B\x45\xFC\x8B\x40\x04\x89\x45\xFC\x85\xD2\x74\x0D\xC7\x42\x04\x00\x00\x00\x00\xEB\xCD");
+	SAFE_WRITE_BUF(0xB707E0, "\x8B\x4A\x08\x8B\x12\x85\xC9\x74\x26\x66\x81\xB9\x10\x01\x00\x00\xFF\x00\x74\x1B\x8B\xB1\xF8\x00\x00\x00\x85\xF6\x74\x11\x90");
 
 	//	Earn Steam achievements even if the console has been used
 	SafeWrite16(0x5D3B69, 0x9066);
@@ -5493,7 +5512,7 @@ void DeferredInit()
 		}
 	}
 
-	Console_Print("JIP LN version: %.2f\n", JIP_LN_VERSION);
+	Console_Print("JIP LN version: %.2f", JIP_LN_VERSION);
 
 	JIPScriptRunner::Init();
 }

@@ -1926,7 +1926,7 @@ __declspec(naked) void __stdcall GenerateRenderedUITexture(NiNode *tileNode, con
 		jnz		scnActive
 		mov		ecx, [ebp-8]
 		push	dword ptr [ecx+8]
-		push	1
+		push	1			//	NiRenderer::kClrFlag_BackBuffer
 		CALL_EAX(0xB6B8D0)
 		add		esp, 8
 	scnActive:
