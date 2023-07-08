@@ -508,7 +508,7 @@ bool Cmd_SetBaseEffectScript_Execute(COMMAND_ARGS)
 
 bool __fastcall IsSpellTargetAlt(Actor *actor, MagicItem *magicItem)
 {
-	if NOT_ACTOR(actor)
+	if IS_ACTOR(actor)
 		for (auto iter = actor->magicTarget.GetEffectList()->Head(); iter; iter = iter->next)
 			if (ActiveEffect *activeEff = iter->data; activeEff && (activeEff->magicItem == magicItem) && activeEff->bActive && !activeEff->bTerminated)
 				return true;
