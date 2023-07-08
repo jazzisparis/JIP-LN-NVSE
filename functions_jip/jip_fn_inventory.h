@@ -119,7 +119,7 @@ bool Cmd_SetWeaponRefModFlags_Execute(COMMAND_ARGS)
 					ContChangesEntry *entry = invRef->containerRef->GetContainerChangesEntry(invRef->type);
 					if (!entry || !entry->extendData) return true;
 					entry->extendData->Remove(xData);
-					GameHeapFree(xData);
+					Game_HeapFree(xData);
 				}
 			}
 		}
@@ -408,7 +408,7 @@ bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 	TESForm *item;
 	SInt32 baseCount, xCount;
 	ContChangesEntry *entry;
-	ListNode<ExtraDataList> *xdlIter;
+	tList<ExtraDataList>::Node *xdlIter;
 	ExtraDataList *xData;
 	TESObjectREFR *invRef;
 	TempElements *tmpElements;
@@ -482,10 +482,8 @@ bool Cmd_GetEquippedItemRef_Execute(COMMAND_ARGS)
 	REFR_RES = 0;
 	UInt32 slotIdx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &slotIdx) && (slotIdx <= 19) && IS_ACTOR(thisObj))
-	{
-		TESObjectREFR *invRef = GetEquippedItemRef((Actor*)thisObj, slotIdx);
-		if (invRef) REFR_RES = invRef->refID;
-	}
+		if (TESObjectREFR *invRef = GetEquippedItemRef((Actor*)thisObj, slotIdx))
+			REFR_RES = invRef->refID;
 	return true;
 }
 
@@ -518,19 +516,10 @@ bool Cmd_GetEquippedWeaponPoison_Execute(COMMAND_ARGS)
 {
 	REFR_RES = 0;
 	if (IS_ACTOR(thisObj))
-	{
-		ContChangesEntry *wpnInfo = ((Actor*)thisObj)->GetWeaponInfo();
-		if (wpnInfo && wpnInfo->extendData)
-		{
-			ExtraDataList *xDataList = wpnInfo->extendData->GetFirstItem();
-			if (xDataList)
-			{
-				ExtraPoison *xPoison = GetExtraType(xDataList, ExtraPoison);
-				if (xPoison && xPoison->poisonEffect)
+		if (ContChangesEntry *wpnInfo = ((Actor*)thisObj)->GetWeaponInfo(); wpnInfo && wpnInfo->extendData)
+			if (ExtraDataList *xDataList = wpnInfo->extendData->GetFirstItem())
+				if (ExtraPoison *xPoison = GetExtraType(xDataList, ExtraPoison); xPoison && xPoison->poisonEffect)
 					REFR_RES = xPoison->poisonEffect->refID;
-			}
-		}
-	}
 	return true;
 }
 
@@ -571,20 +560,19 @@ bool Cmd_GetBaseItems_Execute(COMMAND_ARGS)
 		if (!thisObj) return true;
 		baseForm = thisObj->baseForm;
 	}
-	TESContainer *container = baseForm->GetContainer();
-	if (!container) return true;
-	TempElements *tmpElements = GetTempElements();
-	auto traverse = container->formCountList.Head();
-	TESContainer::FormCount *formCount;
-	do
+	if (TESContainer *container = baseForm->GetContainer())
 	{
-		formCount = traverse->data;
-		if (formCount)
-			tmpElements->Append(formCount->form);
+		TempElements *tmpElements = GetTempElements();
+		auto traverse = container->formCountList.Head();
+		do
+		{
+			if (TESContainer::FormCount *formCount = traverse->data)
+				tmpElements->Append(formCount->form);
+		}
+		while (traverse = traverse->next);
+		if (!tmpElements->Empty())
+			*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	}
-	while (traverse = traverse->next);
-	if (!tmpElements->Empty())
-		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -599,29 +587,23 @@ bool Cmd_SetOnUseAidItemEventHandler_Execute(COMMAND_ARGS)
 	if IS_ID(itemOrList, BGSListForm)
 		tempList = ((BGSListForm*)itemOrList)->list;
 	auto iter = tempList.Head();
-	AlchemyItem *alchItem;
-	EventCallbackScripts *callbacks;
 	do
 	{
-		alchItem = (AlchemyItem*)iter->data;
-		if (!alchItem || NOT_ID(alchItem, AlchemyItem))
-			continue;
-		if (addEvnt)
-		{
-			if (s_useAidItemEventMap->Insert(alchItem, &callbacks))
-				HOOK_INC(EquipAidItem);
-			callbacks->Insert(script);
-			alchItem->SetJIPFlag(kHookFormFlag6_OnEquipHandlers, true);
-		}
-		else
-		{
-			auto findItem = s_useAidItemEventMap->Find(alchItem);
-			if (!findItem || !findItem().Erase(script) || !findItem().Empty())
-				continue;
-			findItem.Remove();
-			HOOK_DEC(EquipAidItem);
-			alchItem->SetJIPFlag(kHookFormFlag6_OnEquipHandlers, false);
-		}
+		if (AlchemyItem *alchItem = (AlchemyItem*)iter->data; alchItem && IS_ID(alchItem, AlchemyItem))
+			if (addEvnt)
+			{
+				EventCallbackScripts *callbacks;
+				if (s_useAidItemEventMap->Insert(alchItem, &callbacks))
+					HOOK_INC(EquipAidItem);
+				callbacks->Insert(script);
+				alchItem->SetJIPFlag(kHookFormFlag6_OnEquipHandlers, true);
+			}
+			else if (auto findItem = s_useAidItemEventMap->Find(alchItem); findItem && findItem().Erase(script) && findItem().Empty())
+			{
+				findItem.Remove();
+				HOOK_DEC(EquipAidItem);
+				alchItem->SetJIPFlag(kHookFormFlag6_OnEquipHandlers, false);
+			}
 	}
 	while (iter = iter->next);
 	return true;

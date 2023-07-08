@@ -55,7 +55,7 @@ SaveGameManager* SaveGameManager::GetSingleton()
 UInt32 ScriptLocals::ResetAllVariables()
 {
 	if (!m_vars) return 0;
-	ListNode<ScriptVar> *varIter = m_vars->Head();
+	auto varIter = m_vars->Head();
 	ScriptVar *scriptVar;
 	UInt32 numVars = 0;
 	do
@@ -94,7 +94,7 @@ __declspec(naked) ScriptVar* __fastcall ScriptLocals::GetVariable(UInt32 id) con
 
 ScriptLocals *ScriptLocals::CreateCopy()
 {
-	ScriptLocals *pEventList = (ScriptLocals*)GameHeapAlloc(sizeof(ScriptLocals));
+	ScriptLocals *pEventList = Game_HeapAlloc<ScriptLocals>();
 	pEventList->m_script = m_script;
 	pEventList->m_flags = m_flags;
 	pEventList->m_eventList = nullptr;
@@ -102,7 +102,7 @@ ScriptLocals *ScriptLocals::CreateCopy()
 	pEventList->m_effScrFlags = nullptr;
 	if (m_eventList)
 	{
-		ListNode<Event> *eventList = (ListNode<Event>*)GameHeapAlloc(sizeof(EventList));
+		auto eventList = Game_HeapAlloc<tList<Event>::Node>();
 		eventList->data = nullptr;
 		eventList->next = nullptr;
 		pEventList->m_eventList = (EventList*)eventList;
@@ -111,7 +111,7 @@ ScriptLocals *ScriptLocals::CreateCopy()
 		do
 		{
 			if (!evtIter->data) continue;
-			pEvent = (Event*)GameHeapAlloc(sizeof(Event));
+			pEvent = Game_HeapAlloc<Event>();
 			*pEvent = *evtIter->data;
 			if (eventList->data)
 				eventList = eventList->Append(pEvent);
@@ -121,7 +121,7 @@ ScriptLocals *ScriptLocals::CreateCopy()
 	}
 	if (m_vars)
 	{
-		ListNode<ScriptVar> *pVars = (ListNode<ScriptVar>*)GameHeapAlloc(sizeof(VarList));
+		auto pVars = Game_HeapAlloc<tList<ScriptVar>::Node>();
 		pVars->data = nullptr;
 		pVars->next = nullptr;
 		pEventList->m_vars = (VarList*)pVars;
@@ -130,7 +130,7 @@ ScriptLocals *ScriptLocals::CreateCopy()
 		do
 		{
 			if (!varIter->data) continue;
-			pVar = (ScriptVar*)GameHeapAlloc(sizeof(ScriptVar));
+			pVar = Game_HeapAlloc<ScriptVar>();
 			*pVar = *varIter->data;
 			if (pVars->data)
 				pVars = pVars->Append(pVar);
@@ -140,7 +140,7 @@ ScriptLocals *ScriptLocals::CreateCopy()
 	}
 	if (m_effScrFlags)
 	{
-		pEventList->m_effScrFlags = (EffectScriptFlags*)GameHeapAlloc(sizeof(EffectScriptFlags));
+		pEventList->m_effScrFlags = Game_HeapAlloc<EffectScriptFlags>();
 		*pEventList->m_effScrFlags = *m_effScrFlags;
 	}
 	return pEventList;

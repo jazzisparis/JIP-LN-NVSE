@@ -93,12 +93,22 @@ template <typename T_Data> class BiLinkedList
 	using Data_Val = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
 	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 	using Init_List = std::initializer_list<T_Data>;
+	Use_LinkedListUtils(BiLinkedList, T_Data)
 
 	struct alignas(16) Node
 	{
 		Node		*next;
 		Node		*prev;
 		T_Data		data;
+
+		Node *GetNth(UInt32 index)
+		{
+			Node *pNode = this;
+			while (index--)
+				if (!(pNode = pNode->next))
+					break;
+			return pNode;
+		}
 	};
 
 	Node	*head;
@@ -106,14 +116,7 @@ template <typename T_Data> class BiLinkedList
 
 	Node *GetNthNode(UInt32 index) const
 	{
-		Node *pNode = head;
-		while (pNode)
-		{
-			if (!index) break;
-			index--;
-			pNode = pNode->next;
-		}
-		return pNode;
+		return head ? head->GetNth(index) : nullptr;
 	}
 
 	Node *PrependNew()
@@ -199,8 +202,10 @@ public:
 	~BiLinkedList() {Clear();}
 
 	bool Empty() const {return !head;}
+	Node *Head() const {return head;}
+	Node *Tail() const {return tail;}
 
-	UInt32 Size() const
+	UInt32 Count() const
 	{
 		if (!head) return 0;
 		UInt32 size = 1;
@@ -1023,7 +1028,6 @@ public:
 
 	inline bool operator==(const Set &rhs) const
 	{
-		static_assert(!(sizeof(M_Key) & 3));
 		return (numKeys == rhs.numKeys) && (!numKeys || MemCmp(keys, rhs.keys, sizeof(M_Key) * numKeys));
 	}
 	inline bool operator!=(const Set &rhs) const {return !(*this == rhs);}
@@ -1209,6 +1213,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = 
 	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 	using M_Pair = MappedPair<T_Key, T_Data>;
 	using Init_List = std::initializer_list<M_Pair>;
+	Use_HashMapUtils(UnorderedMap)
 
 	struct alignas(16) Entry
 	{
@@ -1261,6 +1266,7 @@ template <typename T_Key, typename T_Data, const UInt32 _default_bucket_count = 
 	UInt32		numBuckets;		// 04
 	UInt32		numEntries;		// 08
 
+	Bucket *GetBuckets() const {return buckets;}
 	Bucket *End() const {return buckets + NUM_BUCKETS;}
 
 	__declspec(noinline) void __fastcall ResizeTable(UInt32 newCount)
@@ -1316,7 +1322,6 @@ public:
 
 	UInt32 Size() const {return numEntries;}
 	bool Empty() const {return !numEntries;}
-
 	UInt32 BucketCount() const {return numBuckets;}
 
 	void operator=(UnorderedMap &&rhs)
@@ -1480,23 +1485,6 @@ public:
 		numEntries &= 0;
 	}
 
-	void DumpLoads()
-	{
-		UInt32 loadsArray[0x40];
-		ZERO_BYTES(loadsArray, sizeof(loadsArray));
-		UInt32 maxLoad = 0;
-		for (Bucket *pBucket = buckets, *pEnd = End(); pBucket != pEnd; pBucket++)
-		{
-			UInt32 entryCount = pBucket->Size();
-			loadsArray[entryCount]++;
-			if (maxLoad < entryCount)
-				maxLoad = entryCount;
-		}
-		PrintDebug("Size = %d\nBuckets = %d\n----------------\n", numEntries, numBuckets);
-		for (UInt32 iter = 0; iter <= maxLoad; iter++)
-			PrintDebug("%d:\t%05d (%.4f%%)", iter, loadsArray[iter], 100.0 * (double)loadsArray[iter] / numEntries);
-	}
-
 	class Iterator
 	{
 	protected:
@@ -1587,6 +1575,7 @@ template <typename T_Key, const UInt32 _default_bucket_count = MAP_DEFAULT_BUCKE
 	using Key_Arg = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
 	using Key_Res = std::conditional_t<std::is_scalar_v<T_Key>, T_Key, const T_Key&>;
 	using Init_List = std::initializer_list<T_Key>;
+	Use_HashMapUtils(UnorderedSet)
 
 	struct alignas(16) Entry
 	{
@@ -1638,6 +1627,7 @@ template <typename T_Key, const UInt32 _default_bucket_count = MAP_DEFAULT_BUCKE
 	UInt32		numBuckets;		// 04
 	UInt32		numEntries;		// 08
 
+	Bucket *GetBuckets() const {return buckets;}
 	Bucket *End() const {return buckets + NUM_BUCKETS;}
 
 	__declspec(noinline) void __fastcall ResizeTable(UInt32 newCount)
@@ -1682,7 +1672,6 @@ public:
 
 	UInt32 Size() const {return numEntries;}
 	bool Empty() const {return !numEntries;}
-
 	UInt32 BucketCount() const {return numBuckets;}
 
 	void operator=(UnorderedSet &&rhs)
@@ -1786,23 +1775,6 @@ public:
 		numEntries &= 0;
 	}
 
-	void DumpLoads()
-	{
-		UInt32 loadsArray[0x40];
-		ZERO_BYTES(loadsArray, sizeof(loadsArray));
-		UInt32 maxLoad = 0;
-		for (Bucket *pBucket = buckets, *pEnd = End(); pBucket != pEnd; pBucket++)
-		{
-			UInt32 entryCount = pBucket->Size();
-			loadsArray[entryCount]++;
-			if (maxLoad < entryCount)
-				maxLoad = entryCount;
-		}
-		PrintDebug("Size = %d\nBuckets = %d\n----------------\n", numEntries, numBuckets);
-		for (UInt32 iter = 0; iter <= maxLoad; iter++)
-			PrintDebug("%d:\t%05d (%.4f%%)", iter, loadsArray[iter], 100.0 * (double)loadsArray[iter] / numEntries);
-	}
-
 	class Iterator
 	{
 	protected:
@@ -1854,6 +1826,7 @@ protected:
 	using Data_Val = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
 	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
 	using Init_List = std::initializer_list<T_Data>;
+	Use_ArrayUtils(Vector, T_Data)
 
 	T_Data		*data;		// 00
 	UInt32		numItems;	// 04
@@ -1898,7 +1871,7 @@ public:
 	UInt32 Size() const {return numItems;}
 	bool Empty() const {return !numItems;}
 
-	T_Data* Data() const {return data;}
+	T_Data* Data() const {return const_cast<T_Data*>(data);}
 
 	void operator=(Vector &&rhs)
 	{
@@ -2008,49 +1981,6 @@ public:
 		}
 		memcpy(data + numItems, source.data, sizeof(T_Data) * source.numItems);
 		numItems = newCount;
-	}
-
-	UInt32 InsertSorted(Data_Val item, bool descending = false)
-	{
-		UInt32 lBound = 0, uBound = numItems;
-		while (lBound != uBound)
-		{
-			UInt32 index = (lBound + uBound) >> 1;
-			if ((item < data[index]) ^ descending)
-				uBound = index;
-			else lBound = index + 1;
-		}
-		uBound = numItems - lBound;
-		T_Data *pData = AllocateData();
-		if (uBound)
-		{
-			pData = data + lBound;
-			memmove(pData + 1, pData, sizeof(T_Data) * uBound);
-		}
-		*pData = std::move(item);
-		return lBound;
-	}
-
-	typedef bool (*SortComperator)(const T_Data &lhs, const T_Data &rhs);
-	UInt32 InsertSorted(Data_Val item, SortComperator comperator)
-	{
-		UInt32 lBound = 0, uBound = numItems;
-		while (lBound != uBound)
-		{
-			UInt32 index = (lBound + uBound) >> 1;
-			if (comperator(item, data[index]))
-				uBound = index;
-			else lBound = index + 1;
-		}
-		uBound = numItems - lBound;
-		T_Data *pData = AllocateData();
-		if (uBound)
-		{
-			pData = data + lBound;
-			memmove(pData + 1, pData, sizeof(T_Data) * uBound);
-		}
-		*pData = std::move(item);
-		return lBound;
 	}
 
 	bool InsertUnique(Data_Val item)
@@ -2269,8 +2199,23 @@ public:
 
 	inline bool operator==(const Vector &rhs) const
 	{
-		static_assert(!(sizeof(T_Data) & 3));
-		return (numItems == rhs.numItems) && (!numItems || MemCmp(data, rhs.data, sizeof(T_Data) * numItems));
+		if (numItems != rhs.numItems)
+			return false;
+		if (!numItems)
+			return true;
+		if (std::is_pod_v<T_Data>)
+			return MemCmp(data, rhs.data, sizeof(T_Data) * numItems);
+		UInt32 count = numItems;
+		T_Data *pData1 = data, *pData2 = rhs.data;
+		while (true)
+		{
+			if (!(*pData1 == *pData2))
+				return false;
+			if (!--count) break;
+			pData1++;
+			pData2++;
+		}
+		return true;
 	}
 	inline bool operator!=(const Vector &rhs) const {return !(*this == rhs);}
 
@@ -2279,62 +2224,6 @@ public:
 		for (T_Data *pData = data, *pEnd = End(); pData != pEnd; pData++)
 			pData->~T_Data();
 		numItems &= 0;
-	}
-
-private:
-	void QuickSort(UInt32 p, UInt32 q, bool descending)
-	{
-		if (p >= q) return;
-		UInt32 i = p;
-		for (UInt32 j = p + 1; j < q; j++)
-		{
-			if ((data[p] < data[j]) ^ descending)
-				continue;
-			i++;
-			RawSwap<T_Data>(data[j], data[i]);
-		}
-		RawSwap<T_Data>(data[p], data[i]);
-		QuickSort(p, i, descending);
-		QuickSort(i + 1, q, descending);
-	}
-
-	void QuickSortCustom(UInt32 p, UInt32 q, SortComperator comperator)
-	{
-		if (p >= q) return;
-		UInt32 i = p;
-		for (UInt32 j = p + 1; j < q; j++)
-		{
-			if (comperator(data[p], data[j]))
-				continue;
-			i++;
-			RawSwap<T_Data>(data[j], data[i]);
-		}
-		RawSwap<T_Data>(data[p], data[i]);
-		QuickSortCustom(p, i, comperator);
-		QuickSortCustom(i + 1, q, comperator);
-	}
-public:
-
-	void Sort(bool descending = false)
-	{
-		QuickSort(0, numItems, descending);
-	}
-
-	void Sort(SortComperator comperator)
-	{
-		QuickSortCustom(0, numItems, comperator);
-	}
-
-	void Shuffle()
-	{
-		UInt32 idx = numItems;
-		while (idx > 1)
-		{
-			UInt32 rand = GetRandomInt(idx);
-			idx--;
-			if (rand != idx)
-				RawSwap<T_Data>(data[rand], data[idx]);
-		}
 	}
 
 	class Iterator
@@ -2441,6 +2330,7 @@ template <typename T_Data, const UInt32 size> class FixedTypeArray
 {
 	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
 	using Data_Res = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&>;
+	Use_ArrayUtils(FixedTypeArray, T_Data)
 
 	UInt32		numItems;
 	T_Data		data[size];
@@ -2451,7 +2341,7 @@ public:
 	UInt32 Size() const {return numItems;}
 	bool Empty() const {return !numItems;}
 	bool Full() const {return numItems == size;}
-	T_Data *Data() {return data;}
+	T_Data *Data() const {return const_cast<T_Data*>(&data[0]);}
 
 	bool Append(Data_Arg item)
 	{

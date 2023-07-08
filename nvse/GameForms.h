@@ -331,27 +331,47 @@ union ColorRGBA
 
 struct Condition
 {
+	enum ComparisonType
+	{
+		kComp_OR =			1,
+		kComp_UseGlobal =	4,
+		kComp_NEQ =			0x20,
+		kComp_GT =			0x40,
+		kComp_GE =			0x60,
+		kComp_LT =			0x80,
+		kComp_LE =			0xA0
+	};
+
+	enum RunOnType
+	{
+		kRunOn_Subject,
+		kRunOn_Target,
+		kRunOn_Reference,
+		kRunOn_CombatTarget,
+		kRunOn_LinkedReference
+	};
+
 	UInt8			type;				// 00
 	UInt8			pad01[3];			// 01
 	union
 	{
 		float		value;
-		UInt32		global;
+		TESGlobal	*global;
 	}				comparisonValue;	// 04
 	UInt32			opcode;				// 08
 	union
 	{
 		float		value;
-		UInt32		number;
+		SInt32		number;
 		TESForm		*form;
 	}				parameter1;			// 0C
 	union
 	{
 		float		value;
-		UInt32		number;
+		SInt32		number;
 		TESForm		*form;
 	}				parameter2;			// 10
-	UInt32			runOnType;			// 14	Subject, Target, Reference, CombatTarget, LinkedReference
+	UInt32			runOnType;			// 14
 	TESObjectREFR	*reference;			// 18
 
 	__forceinline bool Evaluate(TESObjectREFR *runOnRef, TESForm *arg2, bool *result)
@@ -1022,18 +1042,18 @@ public:
 	// replace the nth package
 	TESPackage* SetNthPackage(TESPackage* pPackage, SInt32 anIndex)
 	{
-		return packageList.ReplaceNth(anIndex == -1 ? eListEnd : anIndex, pPackage);
+		return packageList.ReplaceNth(anIndex, pPackage);
 	}
 
 	// return the nth package
 	SInt32 AddPackageAt(TESPackage* pPackage, SInt32 anIndex)
 	{
-		return packageList.Insert(pPackage, anIndex == -1 ? eListEnd : anIndex);
+		return packageList.Insert(pPackage, anIndex);
 	}
 
 	TESPackage* RemovePackageAt(SInt32 anIndex)
 	{
-		return packageList.RemoveNth(anIndex == -1 ? eListEnd : anIndex);
+		return packageList.RemoveNth(anIndex);
 	}
 
 	// removes all packages and returns how many were removed
@@ -1088,6 +1108,11 @@ public:
 	virtual float	GetPermanentActorValue(UInt32 avCode) const;
 	virtual Actor	*GetActor() const;
 	virtual UInt16	GetLevel() const;
+
+	__forceinline float GetThresholdedAV(UInt32 avCode)
+	{
+		return ThisCall<float>(0x66EF50, this, avCode);
+	}
 };
 
 class CachedValuesOwner
@@ -1265,7 +1290,7 @@ class ObjTargetFinder
 public:
 	ObjTargetFinder(TESObjectREFR *_target) : m_target(_target) {}
 
-	bool Accept(ObjectiveTarget *objTarget) const {return objTarget->target == m_target;}
+	bool operator==(ObjectiveTarget *objTarget) const {return objTarget->target == m_target;}
 };
 
 class BGSOpenCloseForm
@@ -2846,7 +2871,7 @@ public:
 	TESModel			shellCasingModel;	// 1DO
 	TESModel			targetNIF;			// 1E8 - target NIF
 	TESModel			model200;			// 200 - could be a texture swap
-	UInt32				unk218;				// 218
+	TESEffectShader		*scopeEffect;		// 218
 	TESSound			*sounds[12];		// 21C
 	BGSImpactDataSet	*impactDataSet;		// 24C
 	TESObjectSTAT		*worldStatic;		// 250
@@ -2855,8 +2880,7 @@ public:
 	TESObjectIMOD		*itemMod[3];		// 350
 	String				embeddedNodeName;	// 35C
 	UInt32				soundLevel;			// 364
-	UInt32				unk368;				// 368
-	UInt32				unk36C;				// 36C
+	String				VATSAttackName;		// 368
 	SpellItem			*VATSEffect;		// 370
 	float				vatsSkill;			// 374
 	float				vatsDmgMult;		// 378
@@ -3361,16 +3385,16 @@ public:
 		kRegionData_Imposter
 	};
 
-	virtual TESRegionData	*Destroy(bool doFree);
-	virtual void	Unk_01(void);
-	virtual void	Unk_02(void);
-	virtual void	Unk_03(void);
-	virtual UInt32	GetType();
-	virtual void	Unk_05(void);
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
-	virtual void	Unk_08(void);
-	virtual void	Unk_09(void);
+	/*00*/virtual void	Destroy(bool doFree);
+	/*04*/virtual void	Save();
+	/*08*/virtual void	Unk_02(void);
+	/*0C*/virtual void	Unk_03(void);
+	/*10*/virtual UInt32	GetType();
+	/*14*/virtual TESRegionData	*CreateCopy();
+	/*18*/virtual void	Unk_06(void);
+	/*1C*/virtual void	Unk_07(void);
+	/*20*/virtual void	Unk_08(void);
+	/*24*/virtual void	Load(ModInfo *modInfo);
 
 	bool				bOverride;	// 04
 	UInt8				byte05;		// 05
@@ -3382,7 +3406,7 @@ typedef tList<TESRegionData> RegionDataEntryList;
 class TESRegionDataGrass : public TESRegionData
 {
 public:
-	virtual void	Unk_0A(void);
+	/*28*/virtual void	Unk_0A(void);
 };
 
 // 10
@@ -3395,18 +3419,18 @@ public:
 class TESRegionDataLandscape : public TESRegionData
 {
 public:
-	virtual void	Unk_0A(void);
-	virtual void	Unk_0B(void);
+	/*28*/virtual void	Unk_0A(void);
+	/*2C*/virtual void	Unk_0B(void);
 };
 
 // 10
 class TESRegionDataMap : public TESRegionData
 {
 public:
-	virtual void	Unk_0A(void);
-	virtual void	Unk_0B(void);
-	virtual void	Unk_0C(void);
-	virtual void	Unk_0D(void);
+	/*28*/virtual void	Unk_0A(void);
+	/*2C*/virtual void	Unk_0B(void);
+	/*30*/virtual void	Unk_0C(void);
+	/*34*/virtual void	Unk_0D(void);
 
 	String		mapName;	// 08
 };
@@ -3422,16 +3446,16 @@ typedef tList<SoundType> SoundTypeList;
 class TESRegionDataSound : public TESRegionData
 {
 public:
-	virtual void	Unk_0A(void);
-	virtual void	Unk_0B(void);
-	virtual void	Unk_0C(void);
-	virtual void	Unk_0D(void);
-	virtual void	Unk_0E(void);
+	/*28*/virtual BGSMusicType	*GetMusicType();
+	/*2C*/virtual void	SetMusicType(BGSMusicType *_musicType);
+	/*30*/virtual MediaSet	*GetIncidentalSet();
+	/*34*/virtual MediaSet	*GetBattleSet();
+	/*38*/virtual void	SetIncidentalSet(MediaSet *incidentalSet);
 
-	UInt32			unk08;
-	SoundTypeList	soundTypes;
-	UInt32			incidentalMediaSet;
-	tList<UInt32>	mediaSetEntries;
+	BGSMusicType	*musicType;			// 08
+	SoundTypeList	soundTypes;			// 0C
+	UInt32			incidentalMediaSet;	// 14	RefID
+	tList<UInt32>	battleMediaSets;	// 18	RefIDs
 };
 
 // 10

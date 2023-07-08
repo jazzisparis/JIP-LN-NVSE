@@ -95,7 +95,7 @@ const char kMenuIDJumpTable[] =
 	23, 24, 25, 26, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 27, 28, 29, 30, -1, -1, 31, 32, 33, 34, 35
 };
 
-UInt32 s_serializedFlags = 0;
+JIPSerializedVars s_serializedVars;
 
 __declspec(naked) void __vectorcall ResultVars::Set(__m128 values)
 {
@@ -286,41 +286,32 @@ bool GetInventoryItems(TESObjectREFR *refr, UInt8 typeID, InventoryItemsMap *inv
 	ContChangesEntryList *entryList = refr->GetContainerChangesList();
 	if (!entryList) return false;
 
-	TESContainer::FormCount *formCount;
-	TESForm *item;
-	SInt32 contCount, countDelta;
-	ContChangesEntry *entry;
-
 	auto contIter = container->formCountList.Head();
 	do
 	{
-		if (!(formCount = contIter->data)) continue;
-		item = formCount->form;
-		if ((typeID && (item->typeID != typeID)) || (item->typeID == kFormType_TESLevItem) || invItemsMap->HasKey(item))
-			continue;
-		contCount = container->GetCountForForm(item);
-		if (entry = entryList->FindForItem(item))
-		{
-			countDelta = entry->countDelta;
-			if (entry->HasExtraLeveledItem())
-				contCount = countDelta;
-			else contCount += countDelta;
-		}
-		if (contCount > 0)
-			invItemsMap->Emplace(item, contCount, entry);
+		if (TESContainer::FormCount *formCount = contIter->data)
+			if (TESForm *item = formCount->form; NOT_ID(item, TESLevItem) && (!typeID || (item->typeID == typeID)) && !invItemsMap->HasKey(item))
+			{
+				SInt32 contCount = container->GetCountForForm(item);
+				ContChangesEntry *entry = entryList->FindForItem(item);
+				if (entry)
+				{
+					if (entry->HasExtraLeveledItem())
+						contCount = entry->countDelta;
+					else contCount += entry->countDelta;
+				}
+				if (contCount > 0)
+					invItemsMap->Emplace(item, contCount, entry);
+			}
 	}
 	while (contIter = contIter->next);
 
 	auto xtraIter = entryList->Head();
 	do
 	{
-		if (!(entry = xtraIter->data)) continue;
-		item = entry->type;
-		if ((typeID && (item->typeID != typeID)) || invItemsMap->HasKey(item))
-			continue;
-		countDelta = entry->countDelta;
-		if (countDelta > 0)
-			invItemsMap->Emplace(item, countDelta, entry);
+		if (ContChangesEntry *entry = xtraIter->data)
+			if (TESForm *item = entry->type; (entry->countDelta > 0) && (!typeID || (item->typeID == typeID)) && !invItemsMap->HasKey(item))
+				invItemsMap->Emplace(item, entry->countDelta, entry);
 	}
 	while (xtraIter = xtraIter->next);
 
@@ -580,8 +571,8 @@ hkpWorld *GethkpWorld()
 	TESObjectCELL *cell = g_TES->currentInterior;
 	if (cell)
 	{
-		ExtraHavok *xHavok = GetExtraType(&cell->extraDataList, ExtraHavok);
-		if (xHavok) hkWorld = xHavok->world;
+		if (ExtraHavok *xHavok = GetExtraType(&cell->extraDataList, ExtraHavok))
+			hkWorld = xHavok->world;
 	}
 	else hkWorld = bhkWorldM::GetSingleton();
 	return hkWorld ? (hkpWorld*)hkWorld->refObject : nullptr;
@@ -591,10 +582,9 @@ NVSEArrayVar *TESRecipe::ComponentList::GetComponents(Script *scriptObj)
 {
 	TempElements *tmpElements = GetTempElements();
 	Node *iter = Head();
-	RecipeComponent *component;
 	do
 	{
-		if (component = iter->data)
+		if (RecipeComponent *component = iter->data)
 			tmpElements->Append(component->item);
 	}
 	while (iter = iter->next);
@@ -605,14 +595,12 @@ bool LeveledListHasFormDeep(TESLeveledList *pLvlList, TESForm *form, TempFormLis
 {
 	auto iter = pLvlList->list.Head();
 	TESLeveledList::ListData *data;
-	TESLeveledList *lvlList;
 	do
 	{
 		if (!(data = iter->data)) continue;
 		if (data->form == form)
 			return true;
-		lvlList = data->form->GetLvlList();
-		if (lvlList && tmpFormLst->Insert(data->form) && LeveledListHasFormDeep(lvlList, form, tmpFormLst))
+		if (TESLeveledList *lvlList = data->form->GetLvlList(); lvlList && tmpFormLst->Insert(data->form) && LeveledListHasFormDeep(lvlList, form, tmpFormLst))
 			return true;
 	}
 	while (iter = iter->next);
@@ -651,9 +639,9 @@ TempObject<UnorderedMap<UInt32, VariableNames>> s_addedVariables;
 
 bool __fastcall GetVariableAdded(UInt32 ownerID, char *varName)
 {
-	VariableNames *findOwner = s_addedVariables->GetPtr(ownerID);
-	if (!findOwner) return false;
-	return findOwner->HasKey(varName);
+	if (VariableNames *findOwner = s_addedVariables->GetPtr(ownerID); findOwner && findOwner->HasKey(varName))
+		return true;
+	return false;
 }
 
 ScriptVar *Script::AddVariable(char *varName, ScriptLocals *eventList, UInt32 ownerID, UInt8 modIdx)
@@ -661,7 +649,7 @@ ScriptVar *Script::AddVariable(char *varName, ScriptLocals *eventList, UInt32 ow
 	VariableInfo *varInfo = GetVariableByName(varName);
 	if (!varInfo)
 	{
-		varInfo = (VariableInfo*)GameHeapAlloc(sizeof(VariableInfo));
+		varInfo = Game_HeapAlloc<VariableInfo>();
 		ZeroMemory(varInfo, sizeof(VariableInfo));
 		varInfo->idx = ++info.varCount;
 		varInfo->name.Set(varName);
@@ -673,7 +661,7 @@ ScriptVar *Script::AddVariable(char *varName, ScriptLocals *eventList, UInt32 ow
 	ScriptVar *var = eventList->GetVariable(varInfo->idx);
 	if (!var)
 	{
-		var = (ScriptVar*)GameHeapAlloc(sizeof(ScriptVar));
+		var = Game_HeapAlloc<ScriptVar>();
 		var->id = varInfo->idx;
 		var->data = 0.0;
 		eventList->m_vars->Prepend(var);
@@ -720,18 +708,13 @@ bool TESObjectREFR::SetLinkedRef(TESObjectREFR *linkObj = nullptr, UInt8 modIdx)
 	ExtraLinkedRef *xLinkedRef = GetExtraType(&extraDataList, ExtraLinkedRef);
 	if (!linkObj)
 	{
-		auto findDefID = s_linkedRefDefault->Find(refID);
-		if (findDefID)
+		if (auto findDefID = s_linkedRefDefault->Find(refID))
 		{
 			if (xLinkedRef)
-			{
-				if (*findDefID)
-				{
-					TESForm *form = LookupFormByRefID(*findDefID);
-					if (form && IS_REFERENCE(form)) xLinkedRef->linkedRef = (TESObjectREFR*)form;
-				}
-				else extraDataList.RemoveByType(kXData_ExtraLinkedRef);
-			}
+				if (!*findDefID)
+					extraDataList.RemoveByType(kXData_ExtraLinkedRef);
+				else if (TESForm* form = LookupFormByRefID(*findDefID); form && IS_REFERENCE(form))
+					xLinkedRef->linkedRef = (TESObjectREFR*)form;
 			findDefID.Remove();
 		}
 		s_linkedRefModified->Erase(refID);
@@ -754,11 +737,12 @@ bool TESObjectREFR::SetLinkedRef(TESObjectREFR *linkObj = nullptr, UInt8 modIdx)
 
 bool SetLinkedRefID(UInt32 thisID, UInt32 linkID, UInt8 modIdx)
 {
-	TESObjectREFR *thisObj = (TESObjectREFR*)LookupFormByRefID(thisID);
-	if (!thisObj || NOT_REFERENCE(thisObj)) return false;
-	if (!linkID) return thisObj->SetLinkedRef();
-	TESObjectREFR *linkObj = (TESObjectREFR*)LookupFormByRefID(linkID);
-	return linkObj && IS_REFERENCE(linkObj) && thisObj->SetLinkedRef(linkObj, modIdx);
+	if (TESObjectREFR *thisObj = (TESObjectREFR*)LookupFormByRefID(thisID); thisObj && IS_REFERENCE(thisObj))
+		if (!linkID)
+			return thisObj->SetLinkedRef();
+		else if (TESObjectREFR *linkObj = (TESObjectREFR*)LookupFormByRefID(linkID); linkObj && IS_REFERENCE(linkObj) && thisObj->SetLinkedRef(linkObj, modIdx))
+			return true;
+	return false;
 }
 
 TempObject<AuxVarModsMap> s_auxVariablesPerm, s_auxVariablesTemp;
@@ -823,7 +807,7 @@ ExtraDataList *InventoryRef::CreateExtraData()
 		pEntry->extendData->Prepend(xData);
 	else
 	{
-		pEntry->extendData = (ContChangesExtraList*)GameHeapAlloc(sizeof(ContChangesExtraList));
+		pEntry->extendData = Game_HeapAlloc<ContChangesExtraList>();
 		pEntry->extendData->Init(xData);
 	}
 	containerRef->MarkModified(0x20);
@@ -849,7 +833,7 @@ ExtraDataList* __fastcall InventoryRef::SplitFromStack(SInt32 maxStack)
 			if (!xData->m_data)
 			{
 				pEntry->extendData->Remove(xData);
-				GameHeapFree(xData);
+				Game_HeapFree(xData);
 			}
 		}
 		else xCount->count = delta;
@@ -887,21 +871,17 @@ TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 			if (entry && entry->extendData)
 				return InventoryRefCreate(actor, entry->type, entry->countDelta, entry->extendData->GetFirstItem());
 		}
-		else
+		else if (BipedAnim *equipment = actor->GetBipedAnim())
 		{
-			BipedAnim *equipment = actor->GetBipedAnim();
-			if (equipment)
+			BipedAnim::Data *slotData = equipment->slotData;
+			for (UInt8 count = 20; count; count--, slotData++)
 			{
-				BipedAnim::Data *slotData = equipment->slotData;
-				for (UInt8 count = 20; count; count--, slotData++)
-				{
-					item = slotData->item;
-					if (!item || NOT_TYPE(item, TESObjectARMO) || !(((TESObjectARMO*)item)->bipedModel.partMask & partMask))
-						continue;
-					if (!(entry = entryList->FindForItem(item)) || !(xData = entry->GetEquippedExtra()))
-						break;
-					return InventoryRefCreate(actor, item, entry->countDelta, xData);
-				}
+				item = slotData->item;
+				if (!item || NOT_TYPE(item, TESObjectARMO) || !(((TESObjectARMO*)item)->bipedModel.partMask & partMask))
+					continue;
+				if (!(entry = entryList->FindForItem(item)) || !(xData = entry->GetEquippedExtra()))
+					break;
+				return InventoryRefCreate(actor, item, entry->countDelta, xData);
 			}
 		}
 	}
@@ -931,45 +911,42 @@ TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex)
 
 ContChangesEntry* __fastcall GetHotkeyItemEntry(UInt8 index, ExtraDataList **outXData)
 {
-	ContChangesEntryList *entryList = g_thePlayer->GetContainerChangesList();
-	if (!entryList) return nullptr;
-	auto entryIter = entryList->Head();
-	ContChangesEntry *entry;
-	ExtraDataList *xData;
-	do
+	if (ContChangesEntryList *entryList = g_thePlayer->GetContainerChangesList())
 	{
-		if (!(entry = entryIter->data) || !entry->extendData)
-			continue;
-		UInt8 type = entry->type->typeID;
-		if ((type != kFormType_TESObjectARMO) && (type != kFormType_TESObjectWEAP) && (type != kFormType_AlchemyItem))
-			continue;
-		auto xdlIter = entry->extendData->Head();
+		auto entryIter = entryList->Head();
 		do
 		{
-			if (!(xData = xdlIter->data)) continue;
-			ExtraHotkey *xHotkey = GetExtraType(xData, ExtraHotkey);
-			if (!xHotkey || (xHotkey->index != index))
-				continue;
-			*outXData = xData;
-			return entry;
+			if (ContChangesEntry *entry = entryIter->data; entry && entry->extendData && ((entry->type->typeID == kFormType_TESObjectARMO) ||
+				(entry->type->typeID == kFormType_TESObjectWEAP) || (entry->type->typeID == kFormType_AlchemyItem)))
+			{
+				auto xdlIter = entry->extendData->Head();
+				do
+				{
+					if (xdlIter->data)
+						if (ExtraHotkey *xHotkey = GetExtraType(xdlIter->data, ExtraHotkey); xHotkey && (xHotkey->index == index))
+						{
+							*outXData = xdlIter->data;
+							return entry;
+						}
+				}
+				while (xdlIter = xdlIter->next);
+			}
 		}
-		while (xdlIter = xdlIter->next);
+		while (entryIter = entryIter->next);
 	}
-	while (entryIter = entryIter->next);
 	return nullptr;
 }
 
 bool __fastcall ClearHotkey(UInt8 index)
 {
 	ExtraDataList *xData;
-	ContChangesEntry *entry = GetHotkeyItemEntry(index, &xData);
-	if (entry)
+	if (ContChangesEntry *entry = GetHotkeyItemEntry(index, &xData))
 	{
 		xData->RemoveByType(kXData_ExtraHotkey);
 		if (!xData->m_data)
 		{
 			entry->extendData->Remove(xData);
-			GameHeapFree(xData);
+			Game_HeapFree(xData);
 		}
 		return true;
 	}
@@ -1229,7 +1206,7 @@ namespace JIPScriptRunner
 				iter->Execute();
 	}
 
-	void __fastcall RunScript(Script *script, int EDX, TESObjectREFR *callingRef)
+	void __fastcall RunScript(Script *script, int, TESObjectREFR *callingRef)
 	{
 		ExtraScript *xScript = GetExtraType(&callingRef->extraDataList, ExtraScript);
 		ScriptLocals *eventList = xScript ? xScript->eventList : nullptr;
@@ -1269,7 +1246,7 @@ namespace JIPScriptRunner
 			fputs(errorStr.m_data + 9, s_log->GetStream());
 			fputs("\n\n", s_log->GetStream());
 		}
-		GameHeapFree(errorStr.m_data);
+		Game_HeapFree(errorStr.m_data);
 	}
 };
 
@@ -1314,8 +1291,8 @@ __declspec(naked) bool IsConsoleOpen()
 		mov		al, byte ptr ds:0x11DEA2E
 		test	al, al
 		jz		done
-		mov		eax, fs:[0x2C]
-		mov		edx, ds:0x126FD98
+		mov		eax, fs:0x2C
+		mov		edx, g_TLSIndex
 		mov		eax, [eax+edx*4]
 		mov		al, [eax+0x268]
 	done:
@@ -1421,8 +1398,8 @@ __declspec(naked) TLSData *GetTLSData()
 {
 	__asm
 	{
-		mov		eax, fs:[0x2C]
-		mov		edx, ds:0x126FD98
+		mov		eax, fs:0x2C
+		mov		edx, g_TLSIndex
 		mov		eax, [eax+edx*4]
 		retn
 	}
@@ -1443,13 +1420,13 @@ __declspec(naked) bool __fastcall GetFileArchived(const char *filePath)
 		mov		dl, '.'
 		call	FindChrR
 		test	eax, eax
-		jz		retnFalse
+		jz		done
 		inc		eax
 		push	eax
 		mov		ecx, offset s_fileExtToType
 		call	UnorderedMap<const char*, UInt32>::Get
 		test	eax, eax
-		jz		retnFalse
+		jz		done
 		mov		[ebp-4], ax
 		mov		edx, 0x10A4828
 		mov		ecx, esi
@@ -1538,29 +1515,25 @@ int GetIsLAA()
 	if (isLAA == -1)
 	{
 		HMODULE gameHandle = GetModuleHandle(nullptr);
-		UInt8 *dataPtr = (UInt8*)gameHandle + *(UInt32*)((UInt8*)gameHandle + 0x3C) + 0x16;
+		BYTE *dataPtr = (BYTE*)gameHandle + *(size_t*)((BYTE*)gameHandle + 0x3C) + 0x16;
 		isLAA = (*dataPtr & 0x20) ? 1 : 0;
 		if (isLAA)
 		{
-			void *blockPtrs[20], *block;
-			ZERO_BYTES(blockPtrs, sizeof(blockPtrs));
-			int idx = 0;
+			size_t blockSize = 0x10000000;
 			do
 			{
-				blockPtrs[idx++] = block = malloc(0x6400000);
+				void *block = VirtualAlloc(NULL, blockSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 				if (!block) break;
-				if ((UInt32)block >= 0x80000000)
+				size_t edge = (size_t)block + blockSize;
+				VirtualFree(block, 0, MEM_RELEASE);
+				if (edge > 0x80000000)
 				{
 					isLAA = 2;
 					break;
 				}
+				blockSize += 0x10000000;
 			}
-			while (idx < 20);
-			do
-			{
-				free(blockPtrs[--idx]);
-			}
-			while (idx);
+			while (blockSize < 0x80000000);
 		}
 	}
 	return isLAA;

@@ -48,12 +48,8 @@ bool Hook_GetContainer_Execute(COMMAND_ARGS)
 	*result = 0;
 	if (containingObj)
 		REFR_RES = containingObj->refID;
-	else
-	{
-		InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
-		if (invRef && invRef->containerRef)
-			REFR_RES = invRef->containerRef->refID;
-	}
+	else if (InventoryRef *invRef = InventoryRefGetForID(thisObj->refID); invRef && invRef->containerRef)
+		REFR_RES = invRef->containerRef->refID;
 	return true;
 }
 
@@ -80,10 +76,8 @@ bool Hook_GetHitLocation_Execute(COMMAND_ARGS)
 {
 	SInt32 hitLoc = -1;
 	if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->baseProcess)
-	{
-		ActorHitData *hitData = ((Actor*)thisObj)->baseProcess->GetHitData();
-		if (hitData) hitLoc = hitData->unk60;
-	}
+		if (ActorHitData *hitData = ((Actor*)thisObj)->baseProcess->GetHitData())
+			hitLoc = hitData->unk60;
 	*result = hitLoc;
 	return true;
 }
@@ -279,47 +273,20 @@ TempObject<UnorderedMap<const char*, Setting*, 0x1000, false>> s_gameSettingsMap
 
 void InitSettingMaps()
 {
-	GameSettingCollection *gameSettings = *(GameSettingCollection**)0x11C8048;
-	Setting *setting;
-	for (auto gstIter = gameSettings->settingMap.Begin(); gstIter; ++gstIter)
-	{
-		setting = gstIter.Get();
-		if (setting && setting->name)
+	for (auto gstIter = (*(GameSettingCollection**)0x11C8048)->settingMap.Begin(); gstIter; ++gstIter)
+		if (Setting *setting = gstIter.Get(); setting && setting->name)
 			s_gameSettingsMap()[setting->name] = setting;
-	}
 
-	ListNode<Setting> *istIter = (*(IniSettingCollection**)0x11F96A0)->settings.Head();
-	do
+	for (UInt32 addr : {0x11F96A0, 0x11F35A0, 0x11CC694, 0x11F35A4})
 	{
-		setting = istIter->data;
-		if (setting && setting->ValidType())
-			s_gameSettingsMap()[setting->name] = setting;
+		auto istIter = (*(IniSettingCollection**)addr)->settings.Head();
+		do
+		{
+			if (Setting *setting = istIter->data; setting && setting->ValidType())
+				s_gameSettingsMap()[setting->name] = setting;
+		}
+		while (istIter = istIter->next);
 	}
-	while (istIter = istIter->next);
-	istIter = (*(IniSettingCollection**)0x11F35A0)->settings.Head();
-	do
-	{
-		setting = istIter->data;
-		if (setting && setting->ValidType())
-			s_gameSettingsMap()[setting->name] = setting;
-	}
-	while (istIter = istIter->next);
-	istIter = (*(IniSettingCollection**)0x11CC694)->settings.Head();
-	do
-	{
-		setting = istIter->data;
-		if (setting && setting->ValidType())
-			s_gameSettingsMap()[setting->name] = setting;
-	}
-	while (istIter = istIter->next);
-	istIter = (*(IniSettingCollection**)0x11F35A4)->settings.Head();
-	do
-	{
-		setting = istIter->data;
-		if (setting && setting->ValidType())
-			s_gameSettingsMap()[setting->name] = setting;
-	}
-	while (istIter = istIter->next);
 }
 
 bool Hook_GetNumericGameSetting_Execute(COMMAND_ARGS)
@@ -327,16 +294,13 @@ bool Hook_GetNumericGameSetting_Execute(COMMAND_ARGS)
 	*result = -1;
 	char settingName[0x80];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName) && ((settingName[0] | 0x20) != 's'))
-	{
-		Setting *setting = s_gameSettingsMap->Get(settingName);
-		if (setting)
+		if (Setting *setting = s_gameSettingsMap->Get(settingName))
 		{
 			setting->Get(result);
 			DoConsolePrint(result);
 		}
 		else if (IsConsoleOpen())
 			Console_Print("SETTING NOT FOUND");
-	}
 	return true;
 }
 
@@ -346,16 +310,13 @@ bool Hook_SetNumericGameSetting_Execute(COMMAND_ARGS)
 	char settingName[0x80];
 	double newVal;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName, &newVal) && ((settingName[0] | 0x20) != 's'))
-	{
-		Setting *setting = s_gameSettingsMap->Get(settingName);
-		if (setting)
+		if (Setting *setting = s_gameSettingsMap->Get(settingName))
 		{
 			setting->Set(newVal);
 			*result = 1;
 		}
 		else if (IsConsoleOpen())
 			Console_Print("SETTING NOT FOUND");
-	}
 	return true;
 }
 
@@ -364,16 +325,13 @@ bool Hook_GetNumericINISetting_Execute(COMMAND_ARGS)
 	*result = -1;
 	char settingName[0x80];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName) && ((settingName[0] | 0x20) != 's'))
-	{
-		Setting *setting = s_gameSettingsMap->Get(settingName);
-		if (setting)
+		if (Setting *setting = s_gameSettingsMap->Get(settingName))
 		{
 			setting->Get(result);
 			DoConsolePrint(result);
 		}
 		else if (IsConsoleOpen())
 			Console_Print("SETTING NOT FOUND");
-	}
 	return true;
 }
 
@@ -383,16 +341,13 @@ bool Hook_SetNumericINISetting_Execute(COMMAND_ARGS)
 	char settingName[0x80];
 	double newVal;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName, &newVal) && ((settingName[0] | 0x20) != 's'))
-	{
-		Setting *setting = s_gameSettingsMap->Get(settingName);
-		if (setting)
+		if (Setting *setting = s_gameSettingsMap->Get(settingName))
 		{
 			setting->Set(newVal);
 			*result = 1;
 		}
 		else if (IsConsoleOpen())
 			Console_Print("SETTING NOT FOUND");
-	}
 	return true;
 }
 
@@ -478,11 +433,8 @@ bool Hook_GetPluginVersion_Execute(COMMAND_ARGS)
 	{
 		if (IsJIPAlias(pluginName))
 			*result = JIP_LN_VERSION;
-		else
-		{
-			const PluginInfo *pluginInfo = GetPluginInfoByName(pluginName);
-			if (pluginInfo) *result = (int)pluginInfo->version;
-		}
+		else if (const PluginInfo *pluginInfo = GetPluginInfoByName(pluginName))
+			*result = (int)pluginInfo->version;
 	}
 	DoConsolePrint(result);
 	return true;

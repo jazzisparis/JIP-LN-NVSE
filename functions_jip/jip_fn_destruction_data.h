@@ -206,7 +206,7 @@ bool Cmd_SetNthDestructionStageReplacement_Execute(COMMAND_ARGS)
 	TESModelTextureSwap *rplc = destructible->data->stages[idx]->replacement;
 	if (!rplc)
 	{
-		destructible->data->stages[idx]->replacement = rplc = (TESModelTextureSwap*)GameHeapAlloc(sizeof(TESModelTextureSwap));
+		destructible->data->stages[idx]->replacement = rplc = Game_HeapAlloc<TESModelTextureSwap>();
 		ZeroMemory(rplc, sizeof(TESModelTextureSwap));
 		*(UInt32*)rplc = kVtbl_TESModelTextureSwap;
 	}
@@ -228,13 +228,13 @@ bool Cmd_AddDestructionStage_Execute(COMMAND_ARGS)
 	if (idx > count) return true;
 	if (idx < 0) idx = count;
 	*result = idx;
-	DestructionStage *destrStage = (DestructionStage*)GameHeapAlloc(sizeof(DestructionStage));
+	DestructionStage *destrStage = Game_HeapAlloc<DestructionStage>();
 	ZeroMemory(destrStage, sizeof(DestructionStage));
 	destrStage->healthPrc = health;
 	destrStage->dmgStage = dmgStg;
 	if (!destructible->data)
 	{
-		destructible->data = (DestructibleData*)GameHeapAlloc(sizeof(DestructibleData));
+		destructible->data = Game_HeapAlloc<DestructibleData>();
 		destructible->data->health = 0;
 		ULNG(destructible->data->stageCount) = 0x160D0000;
 		destructible->data->stages = NULL;
@@ -243,16 +243,16 @@ bool Cmd_AddDestructionStage_Execute(COMMAND_ARGS)
 	}
 	if (destructible->data->stages)
 	{
-		DestructionStage **newStages = (DestructionStage**)GameHeapAlloc((destructible->data->stageCount + 1) * 4);
+		DestructionStage **newStages = Game_HeapAlloc<DestructionStage*>(destructible->data->stageCount + 1);
 		memcpy(newStages, destructible->data->stages, idx * 4);
 		memcpy(newStages + idx + 1, destructible->data->stages + idx, (destructible->data->stageCount - idx) * 4);
-		GameHeapFree(destructible->data->stages);
+		Game_HeapFree(destructible->data->stages);
 		destructible->data->stages = newStages;
 		newStages[idx] = destrStage;
 	}
 	else
 	{
-		destructible->data->stages = (DestructionStage**)GameHeapAlloc(4);
+		destructible->data->stages = Game_HeapAlloc<DestructionStage*>();
 		destructible->data->stages[0] = destrStage;
 	}
 	destructible->data->stageCount++;
@@ -273,7 +273,7 @@ bool Cmd_RemoveDestructionStage_Execute(COMMAND_ARGS)
 	DestructionStage **stages = data->stages;
 	if (!stages) return true;
 	*result = (int)idx;
-	GameHeapFree(stages[idx]);
+	Game_HeapFree(stages[idx]);
 	if (--data->stageCount)
 	{
 		memmove(stages + idx, stages + idx + 1, (data->stageCount - idx) * 4);
@@ -281,7 +281,7 @@ bool Cmd_RemoveDestructionStage_Execute(COMMAND_ARGS)
 	}
 	else
 	{
-		GameHeapFree(stages);
+		Game_HeapFree(stages);
 		data->stages = NULL;
 		object->flags &= ~TESForm::kFormFlag_Destructible;
 	}

@@ -117,7 +117,7 @@ void NiObjectNET::DumpExtraData()
 	NiExtraData *xData;
 	for (UInt32 iter = 0; iter < m_extraDataListLen; iter++)
 		if (xData = m_extraDataList[iter])
-			PrintDebug("(X) %08X\t%s\t%08X\t#%d", xData, xData->GetType()->name, ((UInt32*)xData)[3], xData->m_uiRefCount);
+			PrintDebug("(X) %08X\t%08X\t%s\t#%d", xData, *(UInt32*)xData, xData->GetType()->name, xData->m_uiRefCount);
 }
 
 void __vectorcall NiMaterialProperty::SetTraitValue(UInt32 traitID, float value)
@@ -212,7 +212,7 @@ __declspec(naked) bool NiAVObject::ReplaceObject(NiAVObject *object)
 		mov		eax, [ecx+0x18]
 		and		dword ptr [ecx+0x18], 0
 		mov		[edx+0x18], eax
-		call	NiReleaseAddRef
+		call	NiReplaceObject
 		mov		al, 1
 		retn	4
 		ALIGN 16
@@ -271,6 +271,21 @@ __declspec(naked) TESObjectREFR *NiAVObject::GetParentRef() const
 	}
 }
 
+__declspec(naked) void NiAVObject::RenderGeometryAndShader()
+{
+	__asm
+	{
+		push	0
+		push	0
+		push	0
+		push	ecx
+		CALL_EAX(0xA5A040)
+		CALL_EAX(0xB57BD0)
+		add		esp, 0x10
+		retn
+	}
+}
+
 /*
 Controller	1
 ExtraData	2
@@ -300,19 +315,19 @@ void NiAVObject::Dump(UInt8 dumpFlags)
 		{
 			NiGeometryData *geomData = geom->geometryData;
 			if (geomData)
-				PrintDebug("(G) %08X\t%s\t#%d\tSkin: %08X", geomData, geomData->GetType()->name, geomData->m_uiRefCount, geom->skinInstance);
+				PrintDebug("(G) %08X\t%s\t#%d", geomData, geomData->GetType()->name, geomData->m_uiRefCount);
 			if IS_TYPE(this, NiParticleSystem)
 			{
 				s_debug().Indent();
-				for (auto modIter = ((NiParticleSystem*)this)->modifiers.Head(); modIter; modIter = modIter->next)
-					if (modIter->data) PrintDebug("(PM) %08X\t%s\t#%d", modIter->data, modIter->data->GetType()->name, modIter->data->m_uiRefCount);
+				for (auto modIter = ((NiParticleSystem*)this)->modifiers.Begin(); modIter; ++modIter)
+					if (*modIter) PrintDebug("(PM) %08X\t%s\t#%d", *modIter, modIter->GetType()->name, modIter->m_uiRefCount);
 				s_debug().Outdent();
 			}
 		}
 		NiProperty *niProp;
-		for (DListNode<NiProperty> *traverse = m_propertyList.Head(); traverse; traverse = traverse->next)
+		for (auto propIter = m_propertyList.Begin(); propIter; ++propIter)
 		{
-			if (!(niProp = traverse->data))
+			if (!(niProp = *propIter))
 				continue;
 			PrintDebug("(P) %08X\t%s\t#%d", niProp, niProp->GetType()->name, niProp->m_uiRefCount);
 			s_debug().Indent();
@@ -327,7 +342,11 @@ void NiAVObject::Dump(UInt8 dumpFlags)
 	{
 		/*if (m_kWorldBound)
 			PrintDebug("(WB) (%.4f, %.4f, %.4f) R = %.4f", m_kWorldBound->x, m_kWorldBound->y, m_kWorldBound->z, m_kWorldBound->radius);*/
+		PrintDebug("(LT) (%.4f, %.4f, %.4f) S %.4f", m_transformLocal.translate.x, m_transformLocal.translate.y, m_transformLocal.translate.z, m_transformLocal.scale);
 		PrintDebug("(WT) (%.4f, %.4f, %.4f) S %.4f", m_transformWorld.translate.x, m_transformWorld.translate.y, m_transformWorld.translate.z, m_transformWorld.scale);
+
+		/*PrintDebug("(LS) %.6f", m_transformLocal.scale);
+		PrintDebug("(WS) %.6f", m_transformWorld.scale);*/
 
 		/*m_transformLocal.Dump();
 		m_transformWorld.Dump();*/
@@ -588,9 +607,16 @@ __declspec(naked) void __fastcall NiNode::ToggleCollision(UInt8 flag)
 		mov		eax, [eax+0x10]
 		test	eax, eax
 		jz		noColObj
-		mov		eax, [eax+8]
-		and     byte ptr [eax+0x2D], 0xBF
-		or      [eax+0x2D], dl
+		push	ecx
+		mov		ecx, [eax+8]
+		and     byte ptr [ecx+0x2D], 0xBF
+		or      [ecx+0x2D], dl
+		push	edx
+		mov		ecx, eax
+		mov		eax, [ecx]
+		call	dword ptr [eax+0xC4]
+		pop		edx
+		pop		ecx
 	noColObj:
 		movzx	eax, word ptr [ecx+0xA6]
 		test	eax, eax
@@ -736,7 +762,7 @@ __declspec(naked) void __vectorcall NiNode::SetAlphaRecurse(float alpha)
 		jmp		iterHead
 		ALIGN 16
 	notNode:
-		cmp		dword ptr [eax+0x1C], ADDR_ReturnThis2
+		cmp		dword ptr [eax+0x18], ADDR_ReturnThis2
 		jnz		iterHead
 		mov		eax, [ecx+0xA8]
 		test	eax, eax
@@ -783,7 +809,7 @@ __declspec(naked) void NiNode::ResetShaderRenderPass()
 		jmp		iterHead
 		ALIGN 16
 	notNode:
-		cmp		dword ptr [eax+0x1C], ADDR_ReturnThis2
+		cmp		dword ptr [eax+0x18], ADDR_ReturnThis2
 		jnz		iterHead
 		mov		eax, [ecx+0xA8]
 		test	eax, eax
@@ -1157,7 +1183,7 @@ __declspec(naked) NiLines* __stdcall NiLines::Create(float length, const NiColor
 		xorps	xmm0, xmm0
 		movups	[eax], xmm0
 		movlps	[eax+0x10], xmm0
-		mov		dword ptr [eax+0xC], 0x3F800000
+		mov		dword ptr [eax+0x10], 0x3F800000
 		push	eax
 		push	2
 		push	0xC4

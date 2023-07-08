@@ -307,7 +307,7 @@ bool Cmd_IsSkillMagazine_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &ingestible) || NOT_ID(ingestible, AlchemyItem)) return true;
 	auto effIter = ingestible->magicItem.list.list.Head();
 	EffectItem *effItem;
-	ListNode<Condition> *condIter;
+	tList<Condition>::Node *condIter;
 	Condition *condition;
 	TESForm *param1;
 	do

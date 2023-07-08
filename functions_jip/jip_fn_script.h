@@ -195,8 +195,7 @@ bool Cmd_SetScriptDisabled_Execute(COMMAND_ARGS)
 		auto iter = tempList.Head();
 		do
 		{
-			form = iter->data;
-			if (form && IS_ID(form, Script))
+			if (form = iter->data; form && IS_ID(form, Script))
 				SetScriptDisabled((Script*)form, bDisable);
 		}
 		while (iter = iter->next);
@@ -273,23 +272,25 @@ bool Cmd_SetScriptEventDisabled_Execute(COMMAND_ARGS)
 		if (!*evntMask) onActivate = true;
 	}
 	while (*posPtr);
-	if (!inMask && !onActivate) return true;
+	if (!inMask && !onActivate)
+		return true;
 	tList<TESForm> tempList(form);
 	if IS_ID(form, BGSListForm)
 		tempList = ((BGSListForm*)form)->list;
 	auto iter = tempList.Head();
-	TESForm *refBase;
 	do
 	{
-		form = iter->data;
-		if (!form || IS_ID(form, TESQuest)) continue;
-		if IS_REFERENCE(form)
+		if (form = iter->data; form && NOT_ID(form, TESQuest))
 		{
-			refBase = ((TESObjectREFR*)form)->baseForm;
-			if (kInventoryType[refBase->typeID] || !refBase->HasScript()) continue;
+			if IS_REFERENCE(form)
+			{
+				TESForm *refBase = ((TESObjectREFR*)form)->baseForm;
+				if (kInventoryType[refBase->typeID] || !refBase->HasScript())
+					continue;
+			}
+			else if (!form->HasScript()) continue;
+			SetScriptEventDisabled(form, inMask, onActivate, bDisable);
 		}
-		else if (!form->HasScript()) continue;
-		SetScriptEventDisabled(form, inMask, onActivate, bDisable);
 	}
 	while (iter = iter->next);
 	return true;
@@ -345,18 +346,15 @@ bool Cmd_SetOnQuestStageEventHandler_Execute(COMMAND_ARGS)
 		*callbacks->Append() = pCallback;
 		*result = 1;
 	}
-	else
+	else if (auto findQuest = s_questStageEventMap->Find(quest); findQuest && findQuest().Remove(QuestStageEventFinder(pCallback)))
 	{
-		auto findQuest = s_questStageEventMap->Find(quest);
-		if (!findQuest || !findQuest().Remove(QuestStageEventFinder(pCallback)))
-			return true;
-		*result = 1;
 		if (findQuest().Empty())
 		{
 			findQuest.Remove();
 			quest->SetJIPFlag(kHookFormFlag6_SetStageHandlers, false);
 			HOOK_DEC(SetQuestStage);
 		}
+		*result = 1;
 	}
 	return true;
 }
@@ -434,10 +432,8 @@ bool Cmd_StopScriptWaiting_Execute(COMMAND_ARGS)
 			owner = thisObj;
 		}
 		if (owner->jipFormFlags5 & kHookFormFlag5_ScriptOnWait)
-		{
-			ScriptWaitInfo *waitInfo = s_scriptWaitInfoMap->GetPtr(owner);
-			if (waitInfo) waitInfo->iterNum = 1;
-		}
+			if (ScriptWaitInfo *waitInfo = s_scriptWaitInfoMap->GetPtr(owner))
+				waitInfo->iterNum = 1;
 	}
 	return true;
 }
@@ -448,11 +444,8 @@ bool Cmd_GetScriptBlockDisabled_Execute(COMMAND_ARGS)
 	Script *script;
 	UInt32 blockType;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script, &blockType) && IS_ID(script, Script) && (blockType <= 0x25))
-	{
-		auto findScript = s_disabledScriptBlocksMap->Find(script);
-		if (findScript && findScript().Find(DisabledBlockFinder(blockType)))
+		if (auto findScript = s_disabledScriptBlocksMap->Find(script); findScript && findScript().Find(DisabledBlockFinder(blockType)))
 			*result = 1;
-	}
 	return true;
 }
 
@@ -586,8 +579,7 @@ bool Cmd_RunBatchScript_Execute(COMMAND_ARGS)
 
 bool Cmd_ExecuteScript_Execute(COMMAND_ARGS)
 {
-	ExtraScript *xScript = GetExtraType(&thisObj->extraDataList, ExtraScript);
-	if (xScript && xScript->script && xScript->eventList)
+	if (ExtraScript *xScript = GetExtraType(&thisObj->extraDataList, ExtraScript); xScript && xScript->script && xScript->eventList)
 		xScript->script->Execute(thisObj, xScript->eventList, nullptr, false);
 	return true;
 }

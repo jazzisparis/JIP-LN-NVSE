@@ -89,6 +89,25 @@ __declspec(naked) BGSDestructibleObjectForm *TESForm::GetDestructibleForm() cons
 	}
 }
 
+__declspec(naked) const char *TESForm::GetModelPath() const
+{
+	__asm
+	{
+		movzx	edx, byte ptr [ecx+4]
+		movsx	eax, byte ptr kBaseComponentOffsets[edx*4+3]
+		test	eax, eax
+		jz		done
+		mov		eax, [ecx+eax*4+4]
+		test	eax, eax
+		jz		done
+		cmp		[eax], 0
+		jnz		done
+		xor		eax, eax
+	done:
+		retn
+	}
+}
+
 __declspec(naked) TESContainer *TESForm::GetContainer() const
 {
 	__asm
@@ -222,25 +241,6 @@ const char *TESForm::RefToString()
 	UIntToHex(refStr + length, refID & 0xFFFFFF);
 	*findID = refStr;
 	return refStr;
-}
-
-__declspec(naked) const char *TESForm::GetModelPath() const
-{
-	__asm
-	{
-		movzx	edx, byte ptr [ecx+4]
-		movsx	eax, byte ptr kBaseComponentOffsets[edx*4+3]
-		test	eax, eax
-		jz		done
-		mov		eax, [ecx+eax*4+4]
-		test	eax, eax
-		jz		done
-		cmp		[eax], 0
-		jnz		done
-		xor		eax, eax
-	done:
-		retn
-	}
 }
 
 extern ModelLoader *g_modelLoader;
@@ -445,12 +445,10 @@ __declspec(naked) TESWorldSpace *TESWorldSpace::GetRootMapWorld() const
 
 BGSQuestObjective *TESQuest::GetObjective(UInt32 objectiveID) const
 {
-	ListNode<void> *iter = lVarOrObjectives.Head();
-	BGSQuestObjective *objective;
+	auto iter = lVarOrObjectives.Head();
 	do
 	{
-		objective = (BGSQuestObjective*)iter->data;
-		if (objective && IS_TYPE(objective, BGSQuestObjective) && (objective->objectiveId == objectiveID))
+		if (BGSQuestObjective *objective = (BGSQuestObjective*)iter->data; objective && IS_TYPE(objective, BGSQuestObjective) && (objective->objectiveId == objectiveID))
 			return objective;
 	}
 	while (iter = iter->next);
@@ -459,17 +457,15 @@ BGSQuestObjective *TESQuest::GetObjective(UInt32 objectiveID) const
 
 void TESActorBaseData::SetFactionRank(TESFaction *faction, char rank)
 {
-	ListNode<FactionListData> *iter = factionList.Head(), *prev = nullptr;
-	FactionListData *data;
+	tList<FactionListData>::Node *iter = factionList.Head(), *prev = nullptr;
 	do
 	{
-		data = iter->data;
-		if (data && (data->faction == faction))
+		if (FactionListData *data = iter->data; data && (data->faction == faction))
 		{
 			if (rank >= 0) data->rank = rank;
 			else
 			{
-				GameHeapFree(data);
+				Game_HeapFree(data);
 				if (prev) prev->RemoveNext();
 				else iter->RemoveMe();
 			}
@@ -480,7 +476,7 @@ void TESActorBaseData::SetFactionRank(TESFaction *faction, char rank)
 	while (iter = iter->next);
 	if (rank >= 0)
 	{
-		data = (FactionListData*)GameHeapAlloc(sizeof(FactionListData));
+		FactionListData *data = Game_HeapAlloc<FactionListData>();
 		data->faction = faction;
 		data->rank = rank;
 		factionList.Prepend(data);
@@ -536,12 +532,13 @@ bool AlchemyItem::IsPoison() const
 {
 	EffectItem *effItem;
 	EffectSetting *effSetting = nullptr;
-	ListNode<EffectItem> *iter = magicItem.list.list.Head();
+	auto iter = magicItem.list.list.Head();
 	do
 	{
 		if (!(effItem = iter->data)) continue;
 		effSetting = effItem->setting;
-		if (effSetting && !(effSetting->effectFlags & 4)) return false;
+		if (effSetting && !(effSetting->effectFlags & 4))
+			return false;
 	}
 	while (iter = iter->next);
 	return effSetting != nullptr;
@@ -549,16 +546,14 @@ bool AlchemyItem::IsPoison() const
 
 bool TESModelList::ModelListAction(char *path, char action)
 {
-	ListNode<char> *iter = modelList.Head(), *prev = nullptr;
-	char *nifPath;
+	tList<char>::Node *iter = modelList.Head(), *prev = nullptr;
 	do
 	{
-		nifPath = iter->data;
-		if (nifPath && !StrCompareCI(nifPath, path))
+		if (char *nifPath = iter->data; nifPath && !StrCompareCI(nifPath, path))
 		{
 			if (action < 0)
 			{
-				GameHeapFree(nifPath);
+				Game_HeapFree(nifPath);
 				if (prev) prev->RemoveNext();
 				else iter->RemoveMe();
 			}
@@ -576,15 +571,15 @@ void TESModelList::CopyFrom(TESModelList *source)
 {
 	count = source->count;
 	unk10 = source->unk10;
-	ListNode<char> *nextNode = modelList.Head(), *currNode = nextNode->next;
-	GameHeapFree(nextNode->data);
+	tList<char>::Node *nextNode = modelList.Head(), *currNode = nextNode->next;
+	Game_HeapFree(nextNode->data);
 	nextNode->data = nullptr;
 	nextNode->next = nullptr;
 	while (currNode)
 	{
 		nextNode = currNode->next;
-		GameHeapFree(currNode->data);
-		GameHeapFree(currNode);
+		Game_HeapFree(currNode->data);
+		Game_HeapFree(currNode);
 		currNode = nextNode;
 	}
 	currNode = source->modelList.Head();
@@ -600,7 +595,7 @@ void TESModelList::CopyFrom(TESModelList *source)
 
 WeatherEntry *TESClimate::GetWeatherEntry(TESWeather *weather, bool remove)
 {
-	ListNode<WeatherEntry> *iter = weatherTypes.Head(), *prev = nullptr;
+	tList<WeatherEntry>::Node *iter = weatherTypes.Head(), *prev = nullptr;
 	WeatherEntry *entry;
 	do
 	{
@@ -618,14 +613,14 @@ WeatherEntry *TESClimate::GetWeatherEntry(TESWeather *weather, bool remove)
 	}
 	while (iter = iter->next);
 	if (remove) return nullptr;
-	entry = (WeatherEntry*)GameHeapAlloc(sizeof(WeatherEntry));
+	entry = Game_HeapAlloc<WeatherEntry>();
 	weatherTypes.Prepend(entry);
 	return entry;
 }
 
 void TESRecipe::ComponentList::AddComponent(TESForm *form, UInt32 quantity)
 {
-	RecipeComponent *newEntry = (RecipeComponent*)GameHeapAlloc(sizeof(RecipeComponent));
+	RecipeComponent *newEntry = Game_HeapAlloc<RecipeComponent>();
 	newEntry->quantity = quantity;
 	newEntry->item = form;
 	Prepend(newEntry);
@@ -634,14 +629,12 @@ void TESRecipe::ComponentList::AddComponent(TESForm *form, UInt32 quantity)
 UInt32 TESRecipe::ComponentList::RemoveComponent(TESForm *form)
 {
 	Node *iter = Head(), *prev = nullptr;
-	RecipeComponent *component;
 	do
 	{
-		component = iter->data;
-		if (component->item == form)
+		if (RecipeComponent *component = iter->data; component->item == form)
 		{
 			UInt32 result = component->quantity;
-			GameHeapFree(component);
+			Game_HeapFree(component);
 			if (prev) prev->RemoveNext();
 			else iter->RemoveMe();
 			return result;
@@ -655,10 +648,9 @@ UInt32 TESRecipe::ComponentList::RemoveComponent(TESForm *form)
 void TESRecipe::ComponentList::ReplaceComponent(TESForm *form, TESForm *replace)
 {
 	Node *iter = Head();
-	RecipeComponent *component;
 	do
 	{
-		if ((component = iter->data) && (component->item == form))
+		if (RecipeComponent *component = iter->data; component && (component->item == form))
 		{
 			component->item = replace;
 			break;
@@ -670,10 +662,9 @@ void TESRecipe::ComponentList::ReplaceComponent(TESForm *form, TESForm *replace)
 UInt32 TESRecipe::ComponentList::GetQuantity(TESForm *form)
 {
 	Node *iter = Head();
-	RecipeComponent *component;
 	do
 	{
-		if ((component = iter->data) && (component->item == form))
+		if (RecipeComponent *component = iter->data; component && (component->item == form))
 			return component->quantity;
 	}
 	while (iter = iter->next);
@@ -683,10 +674,9 @@ UInt32 TESRecipe::ComponentList::GetQuantity(TESForm *form)
 void TESRecipe::ComponentList::SetQuantity(TESForm *form, UInt32 quantity)
 {
 	Node *iter = Head();
-	RecipeComponent *component;
 	do
 	{
-		if ((component = iter->data) && (component->item == form))
+		if (RecipeComponent *component = iter->data; component && (component->item == form))
 		{
 			component->quantity = quantity;
 			break;
@@ -698,15 +688,15 @@ void TESRecipe::ComponentList::SetQuantity(TESForm *form, UInt32 quantity)
 void TESLeveledList::AddItem(TESForm *form, UInt16 level, UInt16 count, float health)
 {
 	SInt32 index = 0;
-	ListNode<ListData> *iter = list.Head();
+	auto iter = list.Head();
 	do
 	{
 		if (!iter->data || (iter->data->level >= level)) break;
 		index++;
 	}
 	while (iter = iter->next);
-	ListData *newData = (ListData*)GameHeapAlloc(sizeof(ListData));
-	ContainerExtra *newExtra = (ContainerExtra*)GameHeapAlloc(sizeof(ContainerExtra));
+	ListData *newData = Game_HeapAlloc<ListData>();
+	ContainerExtra *newExtra = Game_HeapAlloc<ContainerExtra>();
 	newExtra->ownerFaction = nullptr;
 	newExtra->globalVar = nullptr;
 	newExtra->health = health;
@@ -720,14 +710,12 @@ void TESLeveledList::AddItem(TESForm *form, UInt16 level, UInt16 count, float he
 UInt32 TESLeveledList::RemoveItem(TESForm *form)
 {
 	UInt32 numRemoved = 0;
-	ListNode<ListData> *iter = list.Head(), *prev = nullptr;
-	ListData *data;
+	tList<ListData>::Node *iter = list.Head(), *prev = nullptr;
 	do
 	{
-		data = iter->data;
-		if (data && (data->form == form))
+		if (ListData *data = iter->data; data && (data->form == form))
 		{
-			GameHeapFree(data);
+			Game_HeapFree(data);
 			if (prev) iter = prev->RemoveNext();
 			else iter->RemoveMe();
 			numRemoved++;
@@ -745,7 +733,7 @@ UInt32 TESLeveledList::RemoveItem(TESForm *form)
 SInt32 TESLeveledList::GetItemIndexByLevel(UInt32 level)
 {
 	SInt32 index = 0;
-	ListNode<ListData> *iter = list.Head();
+	auto iter = list.Head();
 	do
 	{
 		if (iter->data && (iter->data->level == level))
@@ -759,7 +747,7 @@ SInt32 TESLeveledList::GetItemIndexByLevel(UInt32 level)
 SInt32 TESLeveledList::GetItemIndexByForm(TESForm *form)
 {
 	SInt32 index = 0;
-	ListNode<ListData> *iter = list.Head();
+	auto iter = list.Head();
 	do
 	{
 		if (iter->data && (iter->data->form == form))
@@ -776,14 +764,12 @@ void TESLeveledList::Dump()
 {
 	static const char kDumpLvlListIndentStr[] = "                                                  ";
 	ListData *data;
-	TESForm *form;
-	TESLeveledList *lvlList;
-	ListNode<ListData> *iter = list.Head();
+	auto iter = list.Head();
 	do
 	{
 		if (!(data = iter->data)) continue;
-		form = data->form;
-		lvlList = form->GetLvlList();
+		TESForm *form = data->form;
+		TESLeveledList *lvlList = form->GetLvlList();
 		Console_Print("%s%s [%08X] Level: %d Count: %d Health: %.2f", kDumpLvlListIndentStr + s_dumpLvlListIndent,
 			lvlList ? "(LeveledList)" : form->GetTheName(), form->refID, data->level, data->count, data->extra ? data->extra->health : 0);
 		if (lvlList)
@@ -810,7 +796,7 @@ TESIdleForm *TESIdleForm::FindIdle(Actor *animActor)
 bool EffectItemList::RemoveNthEffect(UInt32 index)
 {
 	if (!list.GetNthItem(1)) return false;
-	ListNode<EffectItem> *iter = list.Head(), *prev = nullptr;
+	tList<EffectItem>::Node *iter = list.Head(), *prev = nullptr;
 	do
 	{
 		if (index)
@@ -846,7 +832,7 @@ bool EffectItemList::RemoveNthEffect(UInt32 index)
 		}
 		if (prev) prev->RemoveNext();
 		else iter->RemoveMe();
-		GameHeapFree(effItem);
+		Game_HeapFree(effItem);
 		return true;
 	}
 	while (iter = iter->next);
@@ -1020,12 +1006,10 @@ const char* TESBipedModelForm::GetPath(UInt32 whichPath, bool bFemalePath)
 
 char TESActorBaseData::GetFactionRank(TESFaction *faction) const
 {
-	ListNode<FactionListData> *facIter = factionList.Head();
-	FactionListData	*data;
+	auto facIter = factionList.Head();
 	do
 	{
-		data = facIter->data;
-		if (data && (data->faction == faction))
+		if (FactionListData	*data = facIter->data; data && (data->faction == faction))
 			return data->rank;
 	}
 	while (facIter = facIter->next);

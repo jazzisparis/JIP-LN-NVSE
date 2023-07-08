@@ -109,7 +109,7 @@ bool Cmd_AddObjectiveTarget_Execute(COMMAND_ARGS)
 		BGSQuestObjective *objective = quest->GetObjective(objectiveID);
 		if (objective && !objective->targets.Find(ObjTargetFinder(refr)))
 		{
-			ObjectiveTarget *target = ThisCall<ObjectiveTarget*>(0x60FF70, GameHeapAlloc(sizeof(ObjectiveTarget)));
+			ObjectiveTarget *target = ThisCall<ObjectiveTarget*>(0x60FF70, Game_HeapAlloc<ObjectiveTarget>());
 			target->target = refr;
 			objective->targets.Prepend(target);
 			if (quest == g_thePlayer->activeQuest)
@@ -318,11 +318,11 @@ bool Cmd_GetQuestTargetsChanged_Execute(COMMAND_ARGS)
 		while (trgIter = trgIter->next);
 	}
 	while (objIter = objIter->next);
-	if (s_lastQuestTargets() == *tmpFormLst)
+	if (s_lastQuestTargets == *tmpFormLst)
 		*result = 0;
 	else
 	{
-		s_lastQuestTargets() = *tmpFormLst;
+		s_lastQuestTargets = *tmpFormLst;
 		*result = 1;
 	}
 	return true;

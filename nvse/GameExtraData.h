@@ -293,7 +293,7 @@ enum
 
 #define GetExtraType(xDataList, Type) (Type*)(xDataList)->GetByType(kXData_ ## Type)
 #define CreatetraType(Type) \
-	UInt32 *dataPtr = (UInt32*)GameHeapAlloc(sizeof(Type)); \
+	UInt32 *dataPtr = (UInt32*)Game_HeapAlloc<Type>(); \
 	dataPtr[0] = kVtbl_ ## Type; \
 	dataPtr[1] = kXData_ ## Type; \
 	dataPtr[2] = 0;
@@ -619,6 +619,8 @@ public:
 		UInt8			type;			// 0E
 		UInt8			pad0F;			// 0F
 		TESReputation	*reputation;	// 10
+
+		const char *GetTexturePath() const {return (flags & 2) ? ((const char**)0x11A0404)[type] : (const char*)0x1075030;}
 	};
 	MarkerData		*data;	// 0C
 };
@@ -985,11 +987,11 @@ class ExtraDismemberedLimbs : public BSExtraData
 public:
 	struct DismemberedLimb
 	{
-		UInt8				bodyPartID;
-		UInt8				explodeChance;
-		bool				explodeOnly;
-		UInt8				byte03;
-		BSSimpleArray<void*>	*array04;
+		UInt8							bodyPartID;
+		UInt8							explodeChance;
+		bool							explodeOnly;
+		UInt8							byte03;
+		BSSimpleArray<TESBoundObject*>	array04;
 	};
 
 	UInt16							dismemberedMask;	// 0C

@@ -29,11 +29,11 @@ void SetHotkey(UInt8 index, const HotkeyInfo &hotkey)
 	}
 	ExtraContainerChanges *xChanges = GetExtraType(&g_thePlayer->extraDataList, ExtraContainerChanges);
 	if (!xChanges || !xChanges->data) return;
-	ListNode<ContChangesEntry> *entryIter = xChanges->data->objList->Head();
+	auto entryIter = xChanges->data->objList->Head();
 	ContChangesEntry *entry;
 	UInt8 type;
 	ExtraDataList *xData;
-	ListNode<ExtraDataList> *xdlIter;
+	tList<ExtraDataList>::Node *xdlIter;
 	ExtraHotkey *xHotkey;
 	ExtraHealth *xHealth;
 	ExtraWeaponModFlags *xModFlags;
@@ -50,7 +50,7 @@ void SetHotkey(UInt8 index, const HotkeyInfo &hotkey)
 				if ((hotkey.health >= 0) || (hotkey.modFlags > 0)) continue;
 				xData = ExtraDataList::Create();
 				xData->AddExtra(ExtraHotkey::Create(index));
-				entry->extendData = (ContChangesExtraList*)GameHeapAlloc(8);
+				entry->extendData = Game_HeapAlloc<ContChangesExtraList>();
 				entry->extendData->Init(xData);
 				continue;
 			}
@@ -114,7 +114,7 @@ void SetHotkey(UInt8 index, const HotkeyInfo &hotkey)
 				if (!xData->m_data)
 				{
 					entry->extendData->Remove(xData);
-					GameHeapFree(xData);
+					Game_HeapFree(xData);
 				}
 				break;
 			}
@@ -139,10 +139,10 @@ bool Cmd_ClearAllHotkeys_Execute(COMMAND_ARGS)
 {
 	ContChangesEntryList *entryList = g_thePlayer->GetContainerChangesList();
 	if (!entryList) return true;
-	ListNode<ContChangesEntry> *entryIter = entryList->Head();
+	auto entryIter = entryList->Head();
 	ContChangesEntry *entry;
 	UInt8 type;
-	ListNode<ExtraDataList> *xdlIter;
+	tList<ExtraDataList>::Node *xdlIter;
 	ExtraDataList *xData;
 	ExtraHotkey *xHotkey;
 	do
@@ -160,7 +160,7 @@ bool Cmd_ClearAllHotkeys_Execute(COMMAND_ARGS)
 			if (!xData->m_data)
 			{
 				entry->extendData->Remove(xData);
-				GameHeapFree(xData);
+				Game_HeapFree(xData);
 			}
 			break;
 		}
@@ -177,10 +177,10 @@ bool Cmd_SaveHotkeys_Execute(COMMAND_ARGS)
 	ContChangesEntryList *entryList = g_thePlayer->GetContainerChangesList();
 	if (entryList)
 	{
-		ListNode<ContChangesEntry> *entryIter = entryList->Head();
+		auto entryIter = entryList->Head();
 		ContChangesEntry *entry;
 		UInt8 type, index;
-		ListNode<ExtraDataList> *xdlIter;
+		tList<ExtraDataList>::Node *xdlIter;
 		ExtraDataList *xData;
 		ExtraHotkey *xHotkey;
 		ExtraHealth *xHealth;
@@ -254,7 +254,7 @@ bool Cmd_BaseGetItemCount_Execute(COMMAND_ARGS)
 	if (container)
 	{
 		SInt32 count = 0;
-		ListNode<TESContainer::FormCount> *iter = container->formCountList.Head();
+		auto iter = container->formCountList.Head();
 		TESContainer::FormCount *formCount;
 		do
 		{
@@ -280,7 +280,7 @@ bool Cmd_BaseAddItem_Execute(COMMAND_ARGS)
 	}
 	TESContainer *container = base->GetContainer();
 	if (!container) return true;
-	ListNode<TESContainer::FormCount> *iter = container->formCountList.Head();
+	auto iter = container->formCountList.Head();
 	TESContainer::FormCount *formCount;
 	do
 	{
@@ -292,8 +292,8 @@ bool Cmd_BaseAddItem_Execute(COMMAND_ARGS)
 		}
 	}
 	while (iter = iter->next);
-	formCount = (TESContainer::FormCount*)GameHeapAlloc(sizeof(TESContainer::FormCount));
-	formCount->contExtraData = (ContainerExtra*)GameHeapAlloc(sizeof(ContainerExtra));
+	formCount = Game_HeapAlloc<TESContainer::FormCount>();
+	formCount->contExtraData = Game_HeapAlloc<ContainerExtra>();
 	formCount->contExtraData->ownerFaction = NULL;
 	formCount->contExtraData->globalVar = NULL;
 	formCount->contExtraData->health = 1;
@@ -316,7 +316,7 @@ bool Cmd_BaseAddItemHealth_Execute(COMMAND_ARGS)
 	}
 	TESContainer *container = base->GetContainer();
 	if (!container) return true;
-	ListNode<TESContainer::FormCount> *iter = container->formCountList.Head();
+	auto iter = container->formCountList.Head();
 	TESContainer::FormCount *formCount;
 	do
 	{
@@ -328,8 +328,8 @@ bool Cmd_BaseAddItemHealth_Execute(COMMAND_ARGS)
 		}
 	}
 	while (iter = iter->next);
-	formCount = (TESContainer::FormCount*)GameHeapAlloc(sizeof(TESContainer::FormCount));
-	formCount->contExtraData = (ContainerExtra*)GameHeapAlloc(sizeof(ContainerExtra));
+	formCount = Game_HeapAlloc<TESContainer::FormCount>();
+	formCount->contExtraData = Game_HeapAlloc<ContainerExtra>();
 	formCount->contExtraData->ownerFaction = NULL;
 	formCount->contExtraData->globalVar = NULL;
 	formCount->contExtraData->health = health;
@@ -351,7 +351,7 @@ bool Cmd_BaseRemoveItem_Execute(COMMAND_ARGS)
 	}
 	TESContainer *container = base->GetContainer();
 	if (!container) return true;
-	ListNode<TESContainer::FormCount> *iter = container->formCountList.Head(), *prev = NULL;
+	tList<TESContainer::FormCount>::Node *iter = container->formCountList.Head(), *prev = NULL;
 	TESContainer::FormCount *formCount;
 	do
 	{

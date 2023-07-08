@@ -1406,6 +1406,8 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2935*/REG_CMD_ARR(GetMenuItemListRefs);
 	//	v56.95
 	/*2936*/REG_CMD_FRM(GetSelfAsInventoryRef);
+	//	v57.05
+	/*2937*/REG_CMD(SetDamageToArmorMaxPercent);
 
 	//===========================================================
 
@@ -1497,6 +1499,8 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			HMODULE hUIO = GetModuleHandle("ui_organizer");
 			if (hUIO)
 				UIOInjectComponent = (_UIOInjectComponent)GetProcAddress(hUIO, (LPCSTR)0xA);
+
+			*s_inventoryIterator;
 
 			break;
 		}

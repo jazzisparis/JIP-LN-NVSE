@@ -9,7 +9,7 @@ enum JIPSerializationTags : UInt32
 	kJIPTag_RefMaps =			'MRPJ',
 	kJIPTag_ExtraData =			'DEPJ',
 	kJIPTag_LinkedRefs =		'RLPJ',
-	kJIPTag_GlobalFlags =		'FGPJ',
+	kJIPTag_SerializedVars =	'FGPJ',
 	kJIPTag_AppearanceUndo =	'UAPJ',
 	kJIPTag_NPCPerks =			'PNPJ'
 };
@@ -18,12 +18,9 @@ char s_lastLoadedPath[0x80] = {0};
 
 void __fastcall RestoreLinkedRefs(UnorderedMap<UInt32, UInt32> *tempMap = nullptr)
 {
-	if (s_linkedRefDefault->Empty()) return;
-	UInt32 key;
-	auto linkIter = s_linkedRefDefault->Begin();
-	while (linkIter)
+	for (auto linkIter = s_linkedRefDefault->Begin(); linkIter;)
 	{
-		key = linkIter.Key();
+		UInt32 key = linkIter.Key();
 		++linkIter;
 		if (!tempMap || !tempMap->HasKey(key))
 			SetLinkedRefID(key);
@@ -73,11 +70,10 @@ void DoPreLoadGameHousekeeping()
 	if (!size) HOOK_SET(RemoveAmmo, false);
 	else s_hookInfos[kHook_RemoveAmmo].SetCount(size);
 
-	TESForm *form;
 	if (!s_eventInformedObjects->Empty())
 	{
 		for (auto userIter = s_eventInformedObjects->Begin(); userIter; ++userIter)
-			if (form = LookupFormByRefID(*userIter))
+			if (TESForm *form = LookupFormByRefID(*userIter))
 				form->jipFormFlags5 &= ~kHookFormFlag5_ScriptInformed;
 		s_eventInformedObjects->Clear();
 
@@ -96,7 +92,7 @@ void DoPreLoadGameHousekeeping()
 	if (!s_scriptWaitInfoMap->Empty())
 	{
 		for (auto waitIter = s_scriptWaitInfoMap->Begin(); waitIter; ++waitIter)
-			if (form = LookupFormByRefID(waitIter().refID))
+			if (TESForm *form = LookupFormByRefID(waitIter().refID))
 				form->jipFormFlags5 &= ~kHookFormFlag5_ScriptOnWait;
 		s_scriptWaitInfoMap->Clear();
 		HOOK_SET(ScriptRunner, false);
@@ -171,11 +167,9 @@ void DoPreLoadGameHousekeeping()
 void RestoreJIPFormFlags()
 {
 	for (auto flagsIter = s_jipFormFlagsMap->Begin(); flagsIter; ++flagsIter)
-	{
-		TESForm *form = LookupFormByRefID(flagsIter.Key());
-		if (form && *flagsIter) form->jipFormFlags6 = *flagsIter;
+		if (TESForm *form = LookupFormByRefID(flagsIter.Key()); form && *flagsIter)
+			form->jipFormFlags6 = *flagsIter;
 		else flagsIter.Remove();
-	}
 }
 
 void DoLoadGameHousekeeping()
@@ -185,29 +179,26 @@ void DoLoadGameHousekeeping()
 	if (g_thePlayer->teammateCount)
 	{
 		auto perkIter = g_thePlayer->perkRanksTM.Head();
-		PerkRank *perkRank;
 		do
 		{
-			perkRank = perkIter->data;
-			if (perkRank && perkRank->perk)
+			if (PerkRank *perkRank = perkIter->data; perkRank && perkRank->perk)
 				ThisCall(0x5EB6A0, perkRank->perk, g_thePlayer, 0, perkRank->rank, 1);
 		}
 		while (perkIter = perkIter->next);
 	}
 
-	Actor *actor;
 	if (s_NPCWeaponMods)
 	{
 		g_thePlayer->actorFlags |= 0x10000000;
 		auto actorIter = ProcessManager::Get()->highActors.Head();
 		do
 		{
-			if (!(actor = actorIter->data) || (actor->actorFlags & 0x10000000))
-				continue;
-			actor->actorFlags |= 0x10000000;
-			ContChangesEntry *weaponInfo = ((HighProcess*)actor->baseProcess)->weaponInfo;
-			if (weaponInfo && weaponInfo->extendData && !actor->isTeammate)
-				DistributeWeaponMods(actor, weaponInfo);
+			if (Actor *actor = actorIter->data; actor && !(actor->actorFlags & 0x10000000))
+			{
+				actor->actorFlags |= 0x10000000;
+				if (ContChangesEntry *weaponInfo = ((HighProcess*)actor->baseProcess)->weaponInfo; weaponInfo && weaponInfo->extendData && !actor->isTeammate)
+					DistributeWeaponMods(actor, weaponInfo);
+			}
 		}
 		while (actorIter = actorIter->next);
 	}
@@ -217,7 +208,7 @@ void DoLoadGameHousekeeping()
 		auto actorIter = ProcessManager::Get()->highActors.Head();
 		do
 		{
-			if (actor = actorIter->data)
+			if (Actor *actor = actorIter->data)
 				InitNPCPerks(actor);
 		}
 		while (actorIter = actorIter->next);
@@ -241,7 +232,7 @@ void ProcessDataChangedFlags(UInt8 changedFlags)
 		s_linkedRefModified->Clear();
 	s_scriptVariablesBuffer->Clear();
 	s_linkedRefsTemp->Clear();
-	s_serializedFlags = 0;
+	s_serializedVars.serializedFlags = 0;
 
 	if (!s_NPCPerksInfoMap->Empty() && (changedFlags & kChangedFlag_NPCPerks))
 	{
@@ -299,8 +290,6 @@ void LoadGameCallback(void*)
 			TESForm *form;
 			Script *script;
 			ScriptLocals *eventList;
-			ScriptVar *var;
-			VarData *varData;
 			nRecs = *(UInt16*)bufPos;
 			bufPos += 2;
 			while (nRecs)
@@ -321,10 +310,10 @@ void LoadGameCallback(void*)
 						bufPos += buffer1;
 						buffer1 = *bufPos;
 						*bufPos = 0;
-						varData = (VarData*)bufPos;
+						VarData *varData = (VarData*)bufPos;
 						bufPos += 8;
 						if (!GetResolvedModIndex(&modIdx)) continue;
-						if (var = script->AddVariable((char*)namePos, eventList, refID, modIdx))
+						if (ScriptVar *var = script->AddVariable((char*)namePos, eventList, refID, modIdx))
 						{
 							*(UInt8*)varData = buffer1;
 							if (varData->refID && !varData->pad)
@@ -349,9 +338,6 @@ void LoadGameCallback(void*)
 			if (!(changedFlags & kChangedFlag_AuxVars) || (version < JIP_VARS_VERSION))
 				continue;
 			bufPos = s_loadGameBuffer.Get(length);
-			AuxVarOwnersMap *ownersMap;
-			AuxVarVarsMap *aVarsMap;
-			AuxVarValsArr *valsArr;
 			UInt16 nElems;
 			nRecs = *(UInt16*)bufPos;
 			bufPos += 2;
@@ -363,7 +349,7 @@ void LoadGameCallback(void*)
 				bufPos += 3;
 				if ((modIdx > 5) && GetResolvedModIndex(&modIdx))
 				{
-					ownersMap = nullptr;
+					AuxVarOwnersMap *ownersMap = nullptr;
 					while (nRefs)
 					{
 						refID = *(UInt32*)bufPos;
@@ -372,7 +358,7 @@ void LoadGameCallback(void*)
 						if (GetResolvedRefID(&refID) && (LookupFormByRefID(refID) || HasChangeData(refID)))
 						{
 							if (!ownersMap) ownersMap = s_auxVariablesPerm->Emplace(modIdx, AlignBucketCount(nRefs));
-							aVarsMap = ownersMap->Emplace(refID, AlignBucketCount(nVars));
+							AuxVarVarsMap *aVarsMap = ownersMap->Emplace(refID, AlignBucketCount(nVars));
 							while (nVars)
 							{
 								buffer1 = *bufPos++;
@@ -383,11 +369,11 @@ void LoadGameCallback(void*)
 								nElems = *(UInt16*)bufPos;
 								*bufPos = 0;
 								bufPos += 2;
-								valsArr = aVarsMap->Emplace((char*)namePos, nElems);
+								AuxVarValsArr *valsArr = aVarsMap->Emplace((char*)namePos, nElems);
 								while (nElems)
 								{
 									buffer1 = *bufPos++;
-									bufPos += valsArr->Append(buffer1)->ReadValData(bufPos);
+									bufPos = valsArr->Append(buffer1)->ReadValData(bufPos);
 									nElems--;
 								}
 								nVars--;
@@ -453,8 +439,6 @@ void LoadGameCallback(void*)
 			if (!(changedFlags & kChangedFlag_RefMaps) || (version < JIP_VARS_VERSION))
 				continue;
 			bufPos = s_loadGameBuffer.Get(length);
-			RefMapVarsMap *rVarsMap;
-			RefMapIDsMap *idsMap;
 			nRecs = *(UInt16*)bufPos;
 			bufPos += 2;
 			while (nRecs)
@@ -465,7 +449,7 @@ void LoadGameCallback(void*)
 				bufPos += 3;
 				if ((modIdx > 5) && GetResolvedModIndex(&modIdx))
 				{
-					rVarsMap = nullptr;
+					RefMapVarsMap *rVarsMap = nullptr;
 					while (nVars)
 					{
 						buffer1 = *bufPos++;
@@ -476,7 +460,7 @@ void LoadGameCallback(void*)
 						nRefs = *(UInt16*)bufPos;
 						*bufPos = 0;
 						bufPos += 2;
-						idsMap = nullptr;
+						RefMapIDsMap *idsMap = nullptr;
 						while (nRefs)
 						{
 							refID = *(UInt32*)bufPos;
@@ -489,7 +473,7 @@ void LoadGameCallback(void*)
 									if (!rVarsMap) rVarsMap = s_refMapArraysPerm->Emplace(modIdx, AlignBucketCount(nVars));
 									idsMap = rVarsMap->Emplace((char*)namePos, AlignBucketCount(nRefs));
 								}
-								bufPos += idsMap->Emplace(refID, buffer1)->ReadValData(bufPos);
+								bufPos = idsMap->Emplace(refID, buffer1)->ReadValData(bufPos);
 							}
 							else if (buffer1 == 1)
 								bufPos += 8;
@@ -589,8 +573,13 @@ void LoadGameCallback(void*)
 					s_linkedRefsTemp()[refID] = lnkID;
 			}
 		}
-		else if (type == kJIPTag_GlobalFlags)
-			s_serializedFlags = ReadRecord32();
+		else if (type == kJIPTag_SerializedVars)
+		{
+			if (version != 9)
+				ReadRecordData(&s_serializedVars, length);
+			else
+				s_serializedVars.serializedFlags = ReadRecord32();
+		}
 		else if (type == kJIPTag_AppearanceUndo)
 		{
 			AppearanceUndo *aprUndo = (AppearanceUndo*)malloc(sizeof(AppearanceUndo));
@@ -633,8 +622,6 @@ void LoadGameCallback(void*)
 			bufPos += 2;
 			s_NPCPerksInfoMap->SetBucketCount(nRecs);
 			Actor *actor;
-			NPCPerksInfo *perksInfo;
-			UInt8 rank;
 			BGSPerk *perk;
 			while (nRecs)
 			{
@@ -647,13 +634,13 @@ void LoadGameCallback(void*)
 					bufPos += buffer1 * 5;
 					continue;
 				}
-				perksInfo = nullptr;
+				NPCPerksInfo *perksInfo = nullptr;
 				while (buffer1)
 				{
 					buffer1--;
 					buffer4 = *(UInt32*)bufPos;
 					bufPos += 4;
-					rank = *bufPos++;
+					UInt8 rank = *bufPos++;
 					if (!GetResolvedRefID(&buffer4) || !(perk = (BGSPerk*)LookupFormByRefID(buffer4)) || NOT_ID(perk, BGSPerk))
 						continue;
 					if (rank > perk->data.numRanks)
@@ -768,10 +755,8 @@ void SaveGameCallback(void*)
 			WriteRecord8(lrRefIt().modIdx);
 		}
 	}
-	if (s_serializedFlags)
-		WriteRecord(kJIPTag_GlobalFlags, 9, &s_serializedFlags, 4);
-	AppearanceUndo *aprUndo = s_appearanceUndoMap->Get((TESNPC*)g_thePlayer->baseForm);
-	if (aprUndo)
+	WriteRecord(kJIPTag_SerializedVars, JIPSerializedVars::kSzVars_Version, &s_serializedVars, sizeof(JIPSerializedVars));
+	if (AppearanceUndo *aprUndo = s_appearanceUndoMap->Get((TESNPC*)g_thePlayer->baseForm))
 	{
 		WriteRecord(kJIPTag_AppearanceUndo, 9, aprUndo->values0, 0x214);
 		WriteRecord32(aprUndo->race->refID);

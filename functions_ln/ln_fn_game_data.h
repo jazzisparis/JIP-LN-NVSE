@@ -35,7 +35,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList, TempElem
 	if (formType == kFormType_TESObjectCELL)
 	{
 		TESObjectCELL **cells = g_dataHandler->cellArray.data;
-		for (UInt32 count = g_dataHandler->cellArray.Length(); count; count--, cells++)
+		for (UInt32 count = g_dataHandler->cellArray.Size(); count; count--, cells++)
 		{
 			if ((index != -1) && (index != (*cells)->modIndex)) continue;
 			if (outList) outList->Prepend(*cells);
@@ -44,9 +44,9 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList, TempElem
 	}
 	else if (formType == 301)
 	{
-		ListNode<TESWorldSpace> *wspcIter = g_dataHandler->worldSpaceList.Head();
+		auto wspcIter = g_dataHandler->worldSpaceList.Head();
 		TESWorldSpace *wspc;
-		ListNode<TESObjectREFR> *refrIter;
+		tList<TESObjectREFR>::Node *refrIter;
 		TESObjectREFR *refr;
 		do
 		{
@@ -66,14 +66,12 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList, TempElem
 	else if (formType == 302)
 	{
 		TESObjectCELL **cells = g_dataHandler->cellArray.data;
-		ListNode<TESObjectREFR> *refrIter;
-		TESObjectREFR *refr;
-		for (UInt32 count = g_dataHandler->cellArray.Length(); count; count--, cells++)
+		for (UInt32 count = g_dataHandler->cellArray.Size(); count; count--, cells++)
 		{
-			refrIter = (*cells)->objectList.Head();
+			auto refrIter = (*cells)->objectList.Head();
 			do
 			{
-				refr = refrIter->data;
+				TESObjectREFR *refr = refrIter->data;
 				if (!refr || !refr->extraDataList.HasType(kXData_ExtraRadioData) || ((index != -1) && (index != refr->modIndex))) continue;
 				if (outList) outList->Prepend(refr);
 				else tmpElements->Append(refr);
@@ -87,7 +85,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList, TempElem
 		TESForm *form;
 		if (sourceList)
 		{
-			ListNode<TESForm> *iter = sourceList->Head();
+			auto iter = sourceList->Head();
 			do
 			{
 				form = iter->data;
@@ -232,7 +230,7 @@ bool Cmd_GetFormMods_Execute(COMMAND_ARGS)
 		form = thisObj->baseForm;
 	}
 	TempElements *tmpElements = GetTempElements();
-	ListNode<ModInfo> *iter = form->mods.Head();
+	auto iter = form->mods.Head();
 	do
 	{
 		if (iter->data) tmpElements->Append(iter->data->name);
@@ -249,7 +247,7 @@ bool Cmd_GetFormRefs_Execute(COMMAND_ARGS)
 	UInt32 scanGrid = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &scanGrid)) return true;
 	TempElements *tmpElements = GetTempElements();
-	ListNode<TESObjectREFR> *refrIter;
+	tList<TESObjectREFR>::Node *refrIter;
 	TESObjectREFR *refr;
 	for (auto intrIter = g_dataHandler->cellArray.Begin(); intrIter; ++intrIter)
 	{
@@ -278,7 +276,7 @@ bool Cmd_GetFormRefs_Execute(COMMAND_ARGS)
 			while (refrIter = refrIter->next);
 		}
 	}
-	ListNode<TESWorldSpace> *wspcIter = g_dataHandler->worldSpaceList.Head();
+	auto wspcIter = g_dataHandler->worldSpaceList.Head();
 	TESWorldSpace *wspc;
 	do
 	{

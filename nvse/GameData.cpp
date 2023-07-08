@@ -28,7 +28,8 @@ __declspec(naked) ModInfo* __fastcall DataHandler::LookupModByName(const char *m
 void Sky::RefreshMoon()
 {
 	if (masserMoon) masserMoon->Destroy(true);
-	masserMoon = ThisCall<Moon*>(0x634A70, GameHeapAlloc(sizeof(Moon)), (const char*)0x104EEB0, *(UInt32*)0x11CCCBC, *(UInt32*)0x11CCC98, *(UInt32*)0x11CCBA8, *(UInt32*)0x11CCC00, *(UInt32*)0x11CCC58, *(UInt32*)0x11CCC1C);
+	masserMoon = ThisCall<Moon*>(0x634A70, Game_HeapAlloc<Moon>(), (const char*)0x104EEB0, GMST_FLT(fMasserAngleFadeStart), GMST_FLT(fMasserAngleFadeEnd),
+		GMST_FLT(fMasserAngleShadowEarlyFade), GMST_FLT(fMasserSpeed), GMST_FLT(fMasserZOffset), GMST_INT(iMasserSize));
 	masserMoon->Refresh(niNode008, (const char*)0x104EEB0);
 }
 
@@ -54,6 +55,34 @@ __declspec(naked) bool Sky::GetIsRaining()
 		retn
 	retnFalse:
 		xor		al, al
+		retn
+	}
+}
+
+void __fastcall WaterSurfaceManager::Update(NiCamera *camera)
+{
+	if (!waterGroups.Empty())
+		ThisCall(0x4E21B0, this, camera, 0);
+}
+__declspec(naked) void __fastcall WaterSurfaceManager::UpdateEx(NiCamera *camera)
+{
+	__asm
+	{
+		cmp		dword ptr [ecx+0x3C], 0
+		jz		done
+		mov		eax, 0x11C7B70
+		push	dword ptr [eax]
+		and		dword ptr [eax], 0
+		push	dword ptr [eax+0x50]
+		and		dword ptr [eax+0x50], 0
+		push	eax
+		push	0
+		push	edx
+		CALL_EAX(0x4E21B0)
+		pop		eax
+		pop		dword ptr [eax+0x50]
+		pop		dword ptr [eax]
+	done:
 		retn
 	}
 }
@@ -129,7 +158,7 @@ __declspec(naked) TESObjectCELL* __vectorcall GridCellArray::GetCellAtCoord(__m1
 
 void TES::UnloadBufferedExterior(TESObjectCELL *cell)
 {
-	UInt32 bufferSize = *(UInt32*)0x11C3C94;
+	UInt32 bufferSize = INIS_UINT(uExterior_Cell_Buffer_General);
 	for (UInt32 i = 0; i < bufferSize; i++)
 		if (!exteriorsBuffer[i])
 		{

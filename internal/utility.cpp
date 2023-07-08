@@ -55,7 +55,17 @@ alignas(16) const UInt32 kStringMasks[] =
 	PS_DUP_4(0x20202020)
 };
 
+UInt32 g_TLSIndex;
 memcpy_t MemCopy = memcpy;
+
+__declspec(naked) void* __stdcall Game_DoHeapAlloc(UInt32 size)
+{
+	__asm
+	{
+		mov		ecx, GAME_HEAP
+		JMP_EAX(0xAA3E40)
+	}
+}
 
 __declspec(naked) PrimitiveCS *PrimitiveCS::Enter()
 {
@@ -712,7 +722,7 @@ __declspec(naked) void __fastcall NiReleaseObject(NiRefObject *toRelease)
 	}
 }
 
-__declspec(naked) NiRefObject** __stdcall NiReleaseAddRef(void *toRelease, NiRefObject *toAdd)
+__declspec(naked) NiRefObject** __stdcall NiReplaceObject(void *toRelease, NiRefObject *toAdd)
 {
 	__asm
 	{
@@ -823,7 +833,21 @@ __declspec(naked) bool __fastcall MemCmp(const void *ptr1, const void *ptr2, UIn
 		mov		edi, edx
 		mov		ecx, [esp+0xC]
 		shr		ecx, 2
+		jz		cmpEnd
 		repe cmpsd
+		jnz		done
+	cmpEnd:
+		and		dword ptr [esp+0xC], 3
+		jz		done
+		or		eax, 0xFFFFFFFF
+		mov		ecx, [esp+0xC]
+		shl		ecx, 3
+		shl		eax, cl
+		mov		ecx, [esi]
+		or		ecx, eax
+		or		eax, [edi]
+		xor		eax, ecx
+	done:
 		setz	al
 		pop		edi
 		pop		esi
@@ -2200,6 +2224,22 @@ __declspec(noinline) void XString::InitFromBuffer(const char *inStr, UInt32 len)
 	str[length] = 0;
 }
 
+void XString::operator=(const XString &other)
+{
+	if (length = other.length)
+	{
+		if (alloc <= length)
+		{
+			if (str) Pool_CFree(str, alloc);
+			alloc = (length + 0x11) & 0xFFF0;
+			str = Pool_CAlloc(alloc);
+		}
+		COPY_BYTES(str, other.str, length + 1);
+	}
+	else if (str)
+		*str = 0;
+}
+
 void XString::operator=(const char *other)
 {
 	if (length = StrLen(other))
@@ -2405,7 +2445,8 @@ void PrintDebug(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	s_debug->FmtMessage(fmt, args);
+	auto theLog = *s_debug ? *s_debug : *s_log;
+	theLog->FmtMessage(fmt, args);
 	va_end(args);
 }
 

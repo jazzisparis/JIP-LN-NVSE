@@ -4,8 +4,8 @@ __declspec(naked) void SuppressConsoleOutput()
 {
 	__asm
 	{
-		mov		eax, fs:[0x2C]
-		mov		edx, ds:0x126FD98
+		mov		eax, fs:0x2C
+		mov		edx, g_TLSIndex
 		mov		eax, [eax+edx*4]
 		mov		[eax+0x268], 0
 		retn
@@ -16,10 +16,8 @@ TESForm* __stdcall LookupFormByRefID(UInt32 refID);
 void Script::RefVariable::Resolve(ScriptLocals *eventList)
 {
 	if (varIdx && eventList)
-	{
-		ScriptVar *var = eventList->GetVariable(varIdx);
-		if (var) form = LookupFormByRefID(var->data.refID);
-	}
+		if (ScriptVar *var = eventList->GetVariable(varIdx))
+			form = LookupFormByRefID(var->data.refID);
 }
 
 bool Script::Compile(const char *scrName)
@@ -45,7 +43,7 @@ bool Script::Init(char *scrText, const char *scrName)
 
 Script *Script::Create(char *scrText, const char *scrName)
 {
-	Script *pScript = (Script*)GameHeapAlloc(sizeof(Script));
+	Script *pScript = Game_HeapAlloc<Script>();
 	if (pScript->Init(scrText, scrName))
 		return pScript;
 	pScript->Destroy(1);
@@ -54,7 +52,7 @@ Script *Script::Create(char *scrText, const char *scrName)
 
 bool Script::Execute(TESObjectREFR *thisObj, ScriptLocals *eventList, TESObjectREFR *containingObj, bool arg3)
 {
-	SuppressConsoleOutput();
+	//SuppressConsoleOutput();
 	return ThisCall<bool>(0x5AC1E0, this, thisObj, eventList, containingObj, arg3);
 }
 
@@ -73,12 +71,10 @@ public:
 
 VariableInfo *Script::GetVariableByName(const char *varName)
 {
-	ListNode<VariableInfo> *varIter = varList.Head();
-	VariableInfo *varInfo;
+	auto varIter = varList.Head();
 	do
 	{
-		varInfo = varIter->data;
-		if (varInfo && !StrCompareCI(varInfo->name.m_data, varName))
+		if (VariableInfo *varInfo = varIter->data; varInfo && !StrCompareCI(varInfo->name.m_data, varName))
 			return varInfo;
 	}
 	while (varIter = varIter->next);
@@ -90,7 +86,7 @@ Script::RefVariable	*Script::GetVariable(UInt32 reqIdx)
 	UInt32 idx = 1;	// yes, really starts at 1
 	if (reqIdx)
 	{
-		ListNode<RefVariable> *varIter = refList.Head();
+		auto varIter = refList.Head();
 		do
 		{
 			if (idx == reqIdx)
@@ -104,12 +100,10 @@ Script::RefVariable	*Script::GetVariable(UInt32 reqIdx)
 
 VariableInfo *Script::GetVariableInfo(UInt32 idx)
 {
-	ListNode<VariableInfo> *varIter = varList.Head();
-	VariableInfo *varInfo;
+	auto varIter = varList.Head();
 	do
 	{
-		varInfo = varIter->data;
-		if (varInfo && (varInfo->idx == idx))
+		if (VariableInfo *varInfo = varIter->data; varInfo && (varInfo->idx == idx))
 			return varInfo;
 	}
 	while (varIter = varIter->next);
@@ -118,7 +112,7 @@ VariableInfo *Script::GetVariableInfo(UInt32 idx)
 
 UInt32 Script::AddVariable(TESForm *form)
 {
-	RefVariable	*refVar = (RefVariable*)GameHeapAlloc(sizeof(RefVariable));
+	RefVariable	*refVar = Game_HeapAlloc<RefVariable>();
 	refVar->name.Set("");
 	refVar->form = form;
 	refVar->varIdx = 0;
@@ -131,7 +125,7 @@ UInt32 Script::AddVariable(TESForm *form)
 UInt32 Script::RefVarList::GetIndex(RefVariable *refVar)
 {
 	UInt32 idx = 0;
-	ListNode<RefVariable> *varIter = Head();
+	auto varIter = Head();
 	do
 	{
 		idx++;

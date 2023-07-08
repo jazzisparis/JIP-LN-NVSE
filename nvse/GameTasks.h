@@ -204,9 +204,9 @@ struct Model
 
 	void Destroy()
 	{
-		GameHeapFree((void*)path);
+		Game_HeapFree((void*)path);
 		if (niNode) NiReleaseObject(niNode);
-		GameHeapFree(this);
+		Game_HeapFree(this);
 	}
 };
 
@@ -214,9 +214,9 @@ struct Model
 class QueuedFile : public IOTask
 {
 public:
-	virtual void Unk_08(void);
-	virtual void Unk_09(UInt32 arg0);
-	virtual void Unk_0A(void);				
+	virtual void DoRequestHandles();
+	virtual void DoOnChildrenFinished(UInt32 arg0);
+	virtual void DoOnTaskFinished();
 
 	// size?
 	struct FileEntry
@@ -237,12 +237,12 @@ public:
 class QueuedReference : public QueuedFile
 {
 public:
-	virtual void Unk_0B(void);			// Initialize bipedAnims (and cretae the 3D model?)
-	virtual void Unk_0C(void);
+	virtual void QueueModels();			// Initialize bipedAnims (and cretae the 3D model?)
+	virtual void UseDistant3D();
 	virtual void AttachDistant3D(NiNode *arg0);
-	virtual bool Unk_0E(void);
-	virtual void Unk_0F(void);
-	virtual void Unk_10(void);
+	virtual bool BackgroundClone();
+	virtual void DoAttach();
+	virtual void FinishAttach();
 
 	TESObjectREFR	*refr;		// 28
 	BSTask			*task2C;	// 2C
@@ -441,7 +441,8 @@ public:
 // 40
 template <typename T_Key, typename T_Data> class LockFreeMap : public InterfacedClass
 {
-public:
+	Use_HashMapUtils(LockFreeMap)
+
 	struct Entry
 	{
 		T_Key		key;
@@ -454,6 +455,20 @@ public:
 		Entry		*entries;
 	};
 
+	void			*ptr04;			// 04
+	UInt32			numBuckets;		// 08
+	Bucket			*buckets;		// 0C
+	UInt32			unk10;			// 10
+	void			*ptr14;			// 14
+	UInt32			numItems;		// 18
+	UInt32			unk1C;			// 1C
+	LightCS			semaphore;		// 20
+	UInt32			unk28[6];		// 28
+
+	Bucket *GetBuckets() const {return buckets;}
+	Bucket *End() const {return buckets + numBuckets;}
+
+public:
 	/*08*/virtual bool		Lookup(T_Key key, T_Data *result);
 	/*0C*/virtual bool		Unk_03(UInt32 arg1, UInt32 arg2, UInt32 arg3, UInt8 arg4);
 	/*10*/virtual bool		Insert(T_Key key, T_Data *dataPtr, UInt8 arg3);
@@ -471,15 +486,9 @@ public:
 	/*40*/virtual UInt32	DecNumItems();
 	/*44*/virtual UInt32	GetNumItems();
 
-	void			*ptr04;			// 04
-	UInt32			numBuckets;		// 08
-	Bucket			*buckets;		// 0C
-	UInt32			unk10;			// 10
-	void			*ptr14;			// 14
-	UInt32			numItems;		// 18
-	UInt32			unk1C;			// 1C
-	LightCS			semaphore;		// 20
-	UInt32			unk28[6];		// 28
+	UInt32 Size() const {return numItems;}
+	bool Empty() const {return !numItems;}
+	UInt32 BucketCount() const {return numBuckets;}
 
 	class Iterator
 	{
@@ -489,14 +498,14 @@ public:
 
 		void FindNonEmpty()
 		{
-			for (Bucket *end = &table->buckets[table->numBuckets]; bucket != end; bucket++)
+			for (Bucket *end = table->End(); bucket != end; bucket++)
 				if (entry = bucket->entries) return;
 		}
 
 	public:
-		Iterator(LockFreeMap &_table) : table(&_table), bucket(table->buckets), entry(NULL) {FindNonEmpty();}
+		Iterator(LockFreeMap &_table) : table(&_table), bucket(table->buckets), entry(nullptr) {FindNonEmpty();}
 
-		explicit operator bool() const {return entry != NULL;}
+		explicit operator bool() const {return entry != nullptr;}
 		void operator++()
 		{
 			entry = entry->next;

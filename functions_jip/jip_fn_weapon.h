@@ -45,25 +45,25 @@ bool Cmd_SetWeaponDetectionSoundLevel_Execute(COMMAND_ARGS)
 
 bool Cmd_IsEquippedWeaponSilenced_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->EquippedWeaponHasMod(11) : 0;
+	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->EquippedWeaponSilenced() : 0;
 	return true;
 }
 
 bool Cmd_IsEquippedWeaponSilenced_Execute(COMMAND_ARGS)
 {
-	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->EquippedWeaponHasMod(11) : 0;
+	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->EquippedWeaponSilenced() : 0;
 	return true;
 }
 
 bool Cmd_IsEquippedWeaponScoped_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->EquippedWeaponHasMod(14) : 0;
+	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->EquippedWeaponHasScope() : 0;
 	return true;
 }
 
 bool Cmd_IsEquippedWeaponScoped_Execute(COMMAND_ARGS)
 {
-	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->EquippedWeaponHasMod(14) : 0;
+	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->EquippedWeaponHasScope() : 0;
 	return true;
 }
 
@@ -331,7 +331,7 @@ bool Cmd_EquippedWeaponHasModType_Execute(COMMAND_ARGS)
 
 bool Cmd_EquippedWeaponHasModType_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (IS_ACTOR(thisObj) && ((Actor*)thisObj)->EquippedWeaponHasMod((UInt32)arg1)) ? 1 : 0;
+	*result = IS_ACTOR(thisObj) && ((Actor*)thisObj)->EquippedWeaponHasMod((UInt32)arg1);
 	return true;
 }
 

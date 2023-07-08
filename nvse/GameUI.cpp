@@ -2,7 +2,7 @@
 
 TempObject<UnorderedMap<const char*, UInt32, 0x20, false>> s_menuNameToID;
 
-UInt32 g_valueID_enabled = 0;
+UInt32 g_valueID_enabled = 0, g_valueID_numVisible = 0;
 
 TileMenu* __fastcall GetMenuTile(const char *componentPath)
 {
@@ -249,7 +249,7 @@ DebugText::DebugLine *DebugText::GetDebugInput()
 	do
 	{
 		linesPtr++;
-		if (!linesPtr->isVisible) break;
+		if (!linesPtr->text.m_data) break;
 		if (result->offsetY < linesPtr->offsetY)
 			result = linesPtr;
 	}

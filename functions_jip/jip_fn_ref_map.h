@@ -27,11 +27,13 @@ PrimitiveCS s_refMapCS;
 
 RefMapIDsMap *RMFind(Script *scriptObj, char *varName)
 {
-	if (!varName[0]) return nullptr;
-	RefMapInfo varInfo(scriptObj, varName);
-	RefMapVarsMap *findMod = varInfo.ModsMap().GetPtr(varInfo.modIndex);
-	if (!findMod) return nullptr;
-	return findMod->GetPtr(varName);
+	if (*varName)
+	{
+		RefMapInfo varInfo(scriptObj, varName);
+		if (RefMapVarsMap *findMod = varInfo.ModsMap().GetPtr(varInfo.modIndex))
+			return findMod->GetPtr(varName);
+	}
+	return nullptr;
 }
 
 bool Cmd_RefMapArrayGetSize_Execute(COMMAND_ARGS)
@@ -41,8 +43,8 @@ bool Cmd_RefMapArrayGetSize_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName))
 	{
 		REF_MAP_CS
-		RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
-		if (idsMap) *result = (int)idsMap->Size();
+		if (RefMapIDsMap *idsMap = RMFind(scriptObj, varName))
+			*result = (int)idsMap->Size();
 	}
 	return true;
 }
@@ -55,13 +57,9 @@ bool Cmd_RefMapArrayGetType_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
 	{
 		REF_MAP_CS
-		RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
-		if (idsMap)
-		{
-			AuxVariableValue *value = idsMap->GetPtr(GetSubjectID(form, thisObj));
-			if (value)
+		if (RefMapIDsMap *idsMap = RMFind(scriptObj, varName))
+			if (AuxVariableValue *value = idsMap->GetPtr(GetSubjectID(form, thisObj)))
 				*result = value->GetType();
-		}
 	}
 	return true;
 }
@@ -74,13 +72,9 @@ bool Cmd_RefMapArrayGetFloat_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
 	{
 		REF_MAP_CS
-		RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
-		if (idsMap)
-		{
-			AuxVariableValue *value = idsMap->GetPtr(GetSubjectID(form, thisObj));
-			if (value)
+		if (RefMapIDsMap *idsMap = RMFind(scriptObj, varName))
+			if (AuxVariableValue *value = idsMap->GetPtr(GetSubjectID(form, thisObj)))
 				*result = value->GetFlt();
-		}
 	}
 	return true;
 }
@@ -93,13 +87,9 @@ bool Cmd_RefMapArrayGetRef_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
 	{
 		REF_MAP_CS
-		RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
-		if (idsMap)
-		{
-			AuxVariableValue *value = idsMap->GetPtr(GetSubjectID(form, thisObj));
-			if (value)
+		if (RefMapIDsMap *idsMap = RMFind(scriptObj, varName))
+			if (AuxVariableValue *value = idsMap->GetPtr(GetSubjectID(form, thisObj)))
 				REFR_RES = value->GetRef();
-		}
 	}
 	return true;
 }
@@ -112,13 +102,9 @@ bool Cmd_RefMapArrayGetString_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
 	{
 		REF_MAP_CS
-		RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
-		if (idsMap)
-		{
-			AuxVariableValue *value = idsMap->GetPtr(GetSubjectID(form, thisObj));
-			if (value)
+		if (RefMapIDsMap *idsMap = RMFind(scriptObj, varName))
+			if (AuxVariableValue *value = idsMap->GetPtr(GetSubjectID(form, thisObj)))
 				resStr = value->GetStr();
-		}
 	}
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
@@ -132,16 +118,12 @@ bool Cmd_RefMapArrayGetValue_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
 	{
 		REF_MAP_CS
-		RefMapIDsMap *idsMap = RMFind(scriptObj, varName);
-		if (idsMap)
-		{
-			AuxVariableValue *value = idsMap->GetPtr(GetSubjectID(form, thisObj));
-			if (value)
+		if (RefMapIDsMap *idsMap = RMFind(scriptObj, varName))
+			if (AuxVariableValue *value = idsMap->GetPtr(GetSubjectID(form, thisObj)))
 			{
 				ArrayElementL element(value->GetAsElement());
 				*result = (int)CreateArray(&element, 1, scriptObj);
 			}
-		}
 	}
 	return true;
 }
@@ -252,8 +234,8 @@ bool Cmd_RefMapArraySetFloat_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &fltVal, &form))
 	{
 		REF_MAP_CS
-		AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName);
-		if (value) *value = fltVal;
+		if (AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName))
+			*value = fltVal;
 	}
 	return true;
 }
@@ -265,8 +247,8 @@ bool Cmd_RefMapArraySetRef_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &refVal, &form))
 	{
 		REF_MAP_CS
-		AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName);
-		if (value) *value = refVal;
+		if (AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName))
+			*value = refVal;
 	}
 	return true;
 }
@@ -278,8 +260,8 @@ bool Cmd_RefMapArraySetString_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, buffer, &form))
 	{
 		REF_MAP_CS
-		AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName);
-		if (value) *value = buffer;
+		if (AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName))
+			*value = buffer;
 	}
 	return true;
 }
@@ -290,20 +272,16 @@ bool Cmd_RefMapArraySetValue_Execute(COMMAND_ARGS)
 	UInt32 arrID;
 	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &arrID, &form))
-	{
-		NVSEArrayVar *srcArr = LookupArrayByID(arrID);
-		if (srcArr && (GetArraySize(srcArr) == 1))
+		if (NVSEArrayVar *srcArr = LookupArrayByID(arrID); srcArr && (GetArraySize(srcArr) == 1))
 		{
 			REF_MAP_CS
-			AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName);
-			if (value)
+			if (AuxVariableValue *value = RefMapAddValue(form, thisObj, scriptObj, varName))
 			{
 				ArrayElementR element;
 				GetElements(srcArr, &element, nullptr);
 				*value = element;
 			}
 		}
-	}
 	return true;
 }
 

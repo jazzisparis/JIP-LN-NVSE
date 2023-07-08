@@ -65,6 +65,7 @@ namespace GameGlobals
 	__forceinline tList<ListBox<int>> *ActiveListBoxes() {return (tList<ListBox<int>>*)0x11D8B54;}
 	__forceinline tList<GradualSetFloat> *QueuedGradualSetFloat() {return (tList<GradualSetFloat>*)0x11F3348;}
 	__forceinline RadioEntry *PipboyRadio() {return *(RadioEntry**)0x11DD42C;}
+	__forceinline const char *GetConfigDirectory() {return (const char*)0x1202FA0;}
 };
 
 extern NiNode *s_pc1stPersonNode, *g_cursorNode;
@@ -117,18 +118,6 @@ __forceinline void *PurgeTerminalModel()
 {
 	return CdeclCall<void*>(ADDR_PurgeTerminalModel);
 }
-__forceinline TileMenu *ShowQuantityMenu(int maxCount, void (*callback)(int), int defaultCount)
-{
-	return CdeclCall<TileMenu*>(0x7ABA00, maxCount, callback, defaultCount);
-}
-__forceinline void *NiAllocator(UInt32 size)
-{
-	return CdeclCall<void*>(0xAA13E0, size);
-}
-__forceinline void *NiDeallocator(void *blockPtr, UInt32 size)
-{
-	return CdeclCall<void*>(0xAA1460, blockPtr, size);
-}
 
 TESForm* __stdcall LookupFormByRefID(UInt32 refID);
 UInt32 __stdcall HasChangeData(UInt32 refID);
@@ -148,7 +137,17 @@ enum
 	kSerializedFlag_NoHardcoreTracking =	1 << 0,
 };
 
-extern UInt32 s_serializedFlags;
+struct JIPSerializedVars
+{
+	enum
+	{
+		kSzVars_Version =	1
+	};
+
+	UInt32		serializedFlags = 0;
+	float		dmgArmorMaxPercent = 1.0F;
+};
+extern JIPSerializedVars s_serializedVars;
 
 struct QueuedCmdCall
 {
@@ -433,6 +432,19 @@ public:
 		else *this = value.num;
 	}
 
+	inline bool operator==(const AuxVariableValue &rhs) const
+	{
+		if (type != rhs.type)
+			return false;
+		if (type == 1)
+			return num == rhs.num;
+		if (type == 2)
+			return refID == rhs.refID;
+		if (!alloc || !length)
+			return !rhs.alloc || !rhs.length;
+		return rhs.alloc && (length == rhs.length) && !StrCompareCS(str, rhs.str);
+	}
+
 	ArrayElementL GetAsElement() const
 	{
 		if (type == 2) return ArrayElementL(LookupFormByRefID(refID));
@@ -440,27 +452,29 @@ public:
 		return ArrayElementL(num);
 	}
 
-	__declspec(noinline) UInt32 ReadValData(UInt8 *bufPos)
+	__declspec(noinline) UInt8 *ReadValData(UInt8 *bufPos)
 	{
 		if (type == 1)
 		{
 			num = *(double*)bufPos;
-			return 8;
+			return bufPos + 8;
 		}
 		if (type == 2)
 		{
 			refID = GetResolvedRefID((UInt32*)bufPos);
-			return 4;
+			return bufPos + 4;
 		}
 		length = *(UInt16*)bufPos;
+		bufPos += 2;
 		if (length)
 		{
 			alloc = (length + 0x11) & 0xFFF0;
 			str = Pool_CAlloc(alloc);
-			COPY_BYTES(str, bufPos + 2, length);
+			COPY_BYTES(str, bufPos, length);
 			str[length] = 0;
+			bufPos += length;
 		}
-		return length + 2;
+		return bufPos;
 	}
 
 	void WriteValData() const
@@ -847,7 +861,7 @@ namespace JIPScriptRunner
 	void Init();
 	void RunScripts(ScriptRunOn runOn1, ScriptRunOn runOn2 = kRunOn_Invalid);
 
-	void __fastcall RunScript(Script *script, int EDX, TESObjectREFR *callingRef);
+	void __fastcall RunScript(Script *script, int, TESObjectREFR *callingRef);
 	bool __fastcall RunScriptSource(char *scrSource, const char *scrName, bool capture = false);
 
 	void __fastcall LogCompileError(String &errorStr);

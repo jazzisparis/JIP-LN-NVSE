@@ -197,18 +197,17 @@ bool Cmd_SetCreatureDamage_Execute(COMMAND_ARGS)
 
 bool __fastcall GetIsPoisoned(Actor *actor)
 {
-	if (NOT_ACTOR(actor)) return false;
-	ActiveEffectList *effList = actor->magicTarget.GetEffectList();
-	if (!effList) return false;
-	auto iter = effList->Head();
-	ActiveEffect *activeEff;
-	do
-	{
-		activeEff = iter->data;
-		if (activeEff && (activeEff->spellType == 5))
-			return true;
-	}
-	while (iter = iter->next);
+	if IS_ACTOR(actor)
+		if (ActiveEffectList *effList = actor->magicTarget.GetEffectList())
+		{
+			auto iter = effList->Head();
+			do
+			{
+				if (ActiveEffect *activeEff = iter->data; activeEff && (activeEff->spellType == 5))
+					return true;
+			}
+			while (iter = iter->next);
+		}
 	return false;
 }
 
@@ -227,18 +226,20 @@ bool Cmd_GetIsPoisoned_Eval(COMMAND_ARGS_EVAL)
 bool Cmd_GetFollowers_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if (NOT_ACTOR(thisObj)) return true;
-	ExtraFollower *xFollower = GetExtraType(&thisObj->extraDataList, ExtraFollower);
-	if (!xFollower || !xFollower->followers) return true;
-	TempElements *tmpElements = GetTempElements();
-	auto iter = xFollower->followers->Head();
-	do
-	{
-		if (iter->data) tmpElements->Append(iter->data);
-	}
-	while (iter = iter->next);
-	if (!tmpElements->Empty())
-		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
+	if IS_ACTOR(thisObj)
+		if (ExtraFollower *xFollower = GetExtraType(&thisObj->extraDataList, ExtraFollower); xFollower && xFollower->followers)
+		{
+			TempElements *tmpElements = GetTempElements();
+			auto iter = xFollower->followers->Head();
+			do
+			{
+				if (iter->data)
+					tmpElements->Append(iter->data);
+			}
+			while (iter = iter->next);
+			if (!tmpElements->Empty())
+				*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
+		}
 	return true;
 }
 
@@ -393,7 +394,8 @@ bool Cmd_ToggleCreatureModel_Execute(COMMAND_ARGS)
 	char path[0x100];
 	UInt32 enable;
 	TESCreature *creature = nullptr;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &path, &enable, &creature)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &path, &enable, &creature))
+		return true;
 	if (!creature)
 	{
 		if (!thisObj || NOT_ACTOR(thisObj)) return true;
@@ -1458,12 +1460,9 @@ __declspec(naked) void __fastcall ReloadBipedAnim(BipedAnim *bipAnim, NiNode *ro
 		push	0
 		mov		ecx, esi
 		CALL_EAX(0x4AC1E0)
-		pop		esi
-		mov		ecx, esi
-		CALL_EAX(0xA5A040)
+		pop		ecx
 		push	0
 		push	offset kNiUpdateData
-		mov		ecx, esi
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xA4]
 		pop		edi
@@ -1500,7 +1499,7 @@ bool Cmd_ReloadEquippedModels_Execute(COMMAND_ARGS)
 		if (weapon)
 		{
 			CdeclCall(0x77F270);
-			if (character->EquippedWeaponHasMod(14))
+			if (character->EquippedWeaponHasScope())
 				CdeclCall(0x77F2F0, &weapon->targetNIF);
 		}
 	}
@@ -1958,7 +1957,7 @@ bool Cmd_DonnerReedKuruParty_Execute(COMMAND_ARGS)
 		}
 		else if (doSet)
 		{
-			xDismembered = ThisCall<ExtraDismemberedLimbs*>(0x430200, GameHeapAlloc(sizeof(ExtraDismemberedLimbs)));
+			xDismembered = ThisCall<ExtraDismemberedLimbs*>(0x430200, Game_HeapAlloc<ExtraDismemberedLimbs>());
 			xDismembered->wasEaten = true;
 			thisObj->extraDataList.AddExtra(xDismembered);
 			thisObj->MarkModified(0x20000);
@@ -2295,7 +2294,7 @@ __declspec(naked) MuzzleFlash* __fastcall GetMuzzleFlashHook(HighProcess *hiProc
 	}
 }
 
-__declspec(naked) void __fastcall DoFireWeaponEx(TESObjectREFR *refr, int EDX, TESObjectWEAP *weapon)
+__declspec(naked) void __fastcall DoFireWeaponEx(TESObjectREFR *refr, int, TESObjectWEAP *weapon)
 {
 	__asm
 	{

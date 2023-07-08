@@ -288,12 +288,10 @@ void LN_ProcessEvents()
 			if (s_LNOnKeyEvents->Empty())
 				s_LNEventFlags &= ~kLNEventMask_OnKey;
 		}
-		UInt32 key;
-		bool currKeyState;
 		for (auto onKey = s_LNOnKeyEvents->BeginCp(); onKey; ++onKey)
 		{
-			key = onKey.Key();
-			currKeyState = g_DIHookCtrl->IsKeyPressedRaw(key);
+			UInt32 key = onKey.Key();
+			bool currKeyState = g_DIHookCtrl->IsKeyPressedRaw(key);
 			if (lastKeyState[key] == currKeyState) continue;
 			if (currKeyState) onKey().onDown.InvokeEvents(key);
 			else onKey().onUp.InvokeEvents(key);
@@ -310,24 +308,14 @@ void LN_ProcessEvents()
 			if (changes)
 			{
 				UInt16 cmprMask = changes & currButtonState;
-				UInt32 outMask;
 				if (cmprMask)
-				{
 					for (auto data = s_LNEvents[kLNEventID_OnButtonDown]->BeginCp(); data; ++data)
-					{
-						outMask = cmprMask & data().typeID;
-						if (outMask) CallFunction(data().callback, nullptr, 1, outMask);
-					}
-				}
-				cmprMask = changes & lastButtonState;
-				if (cmprMask)
-				{
+						if (UInt32 outMask = cmprMask & data().typeID)
+							CallFunction(data().callback, nullptr, 1, outMask);
+				if (cmprMask = changes & lastButtonState)
 					for (auto data = s_LNEvents[kLNEventID_OnButtonUp]->BeginCp(); data; ++data)
-					{
-						outMask = cmprMask & data().typeID;
-						if (outMask) CallFunction(data().callback, nullptr, 1, outMask);
-					}
-				}
+						if (UInt32 outMask = cmprMask & data().typeID)
+							CallFunction(data().callback, nullptr, 1, outMask);
 				lastButtonState = currButtonState;
 			}
 		}
@@ -367,15 +355,13 @@ void LN_ProcessEvents()
 		if (!gameLoaded)
 		{
 			if (s_LNEventFlags & kLNEventMask_OnCellExit)
-			{
 				for (auto data = s_LNEvents[kLNEventID_OnCellExit]->BeginCp(); data; ++data)
-					if (data().EvalFilter(nullptr, lastCell)) CallFunction(data().callback, nullptr, 1, lastCell);
-			}
+					if (data().EvalFilter(nullptr, lastCell))
+						CallFunction(data().callback, nullptr, 1, lastCell);
 			if (s_LNEventFlags & kLNEventMask_OnCellEnter)
-			{
 				for (auto data = s_LNEvents[kLNEventID_OnCellEnter]->BeginCp(); data; ++data)
-					if (data().EvalFilter(nullptr, currCell)) CallFunction(data().callback, nullptr, 1, currCell);
-			}
+					if (data().EvalFilter(nullptr, currCell))
+						CallFunction(data().callback, nullptr, 1, currCell);
 		}
 		lastCell = currCell;
 	}
@@ -450,12 +436,10 @@ void LN_ProcessEvents()
 			if (s_LNOnControlEvents->Empty())
 				s_LNEventFlags &= ~kLNEventMask_OnControl;
 		}
-		UInt32 ctrl;
-		bool currCtrlState;
 		for (auto onCtrl = s_LNOnControlEvents->BeginCp(); onCtrl; ++onCtrl)
 		{
-			ctrl = onCtrl.Key();
-			currCtrlState = IsControlPressedRaw(ctrl);
+			UInt32 ctrl = onCtrl.Key();
+			bool currCtrlState = IsControlPressedRaw(ctrl);
 			if (lastCtrlState[ctrl] == currCtrlState) continue;
 			if (currCtrlState) onCtrl().onDown.InvokeEvents(ctrl);
 			else onCtrl().onUp.InvokeEvents(ctrl);

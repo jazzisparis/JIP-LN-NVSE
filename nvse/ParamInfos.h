@@ -1572,7 +1572,7 @@ constexpr ParamInfo kParams_OneString_TwoInts_OneFloat[] =
 	{"Float", kParamType_Float, 0}
 };
 
-constexpr ParamInfo kParams_TwoStrings_OneFloat_TwoOptionalInt[] =
+constexpr ParamInfo kParams_TwoStrings_OneFloat_TwoOptionalInts[] =
 {
 	{"String", kParamType_String, 0},
 	{"String", kParamType_String, 0},

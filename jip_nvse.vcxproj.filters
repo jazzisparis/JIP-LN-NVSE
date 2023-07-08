@@ -387,6 +387,9 @@
     <ClInclude Include="internal\dinput.h">
       <Filter>internal</Filter>
     </ClInclude>
+    <ClInclude Include="internal\settings_enum.h">
+      <Filter>internal</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="exports.def" />

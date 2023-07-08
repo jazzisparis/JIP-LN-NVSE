@@ -159,6 +159,7 @@ static_assert(sizeof(hkMotionState) == 0xB0);
 // 0C
 template <typename T_Data> class hkArray
 {
+	Use_ArrayUtils(hkArray, T_Data)
 public:
 	enum
 	{
@@ -169,6 +170,10 @@ public:
 	T_Data		*data;				// 00
 	UInt32		size;				// 04
 	UInt32		capacityAndFlags;	// 08
+
+	UInt32 Size() const {return size;}
+	bool Empty() const {return !size;}
+	T_Data *Data() const {return const_cast<T_Data*>(data);}
 
 	T_Data& operator[](UInt32 index) {return data[index];}
 
@@ -927,6 +932,13 @@ static_assert(sizeof(ahkpWorld) == 0x360);
 class bhkWorld : public bhkSerializable
 {
 public:
+	/*C4*/virtual void Update();
+	/*C8*/virtual void PickObject(void *arPickData);
+	/*CC*/virtual void Unk_33();
+	/*D0*/virtual void AddObject(NiAVObject *object, bool bRecurse, bool bNotify, int group, bool bForce);
+	/*D4*/virtual void Unk_35(void*, NiObjectNET*);
+	/*D8*/virtual void SetDebugDisplay(void*, bool abTF);
+
 	NiRefObject					*visDebug;				// 10
 	UInt8						byte14;					// 14
 	UInt8						bCollisionEnabled;		// 15

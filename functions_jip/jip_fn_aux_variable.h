@@ -59,8 +59,7 @@ bool Cmd_AuxiliaryVariableGetSize_Execute(COMMAND_ARGS)
 		if (varInfo.ownerID)
 		{
 			AUX_VAR_CS
-			AuxVarValsArr *valsArr = AVGetArray(varInfo);
-			if (valsArr)
+			if (AuxVarValsArr *valsArr = AVGetArray(varInfo))
 				*result = (int)valsArr->Size();
 		}
 	}
@@ -79,8 +78,7 @@ bool Cmd_AuxiliaryVariableGetType_Execute(COMMAND_ARGS)
 		if (varInfo.ownerID)
 		{
 			AUX_VAR_CS
-			AuxVariableValue *value = AVGetValue(varInfo, idx);
-			if (value)
+			if (AuxVariableValue *value = AVGetValue(varInfo, idx))
 				*result = value->GetType();
 		}
 	}
@@ -99,8 +97,7 @@ bool Cmd_AuxiliaryVariableGetFloat_Execute(COMMAND_ARGS)
 		if (varInfo.ownerID)
 		{
 			AUX_VAR_CS
-			AuxVariableValue *value = AVGetValue(varInfo, idx);
-			if (value)
+			if (AuxVariableValue *value = AVGetValue(varInfo, idx))
 				*result = value->GetFlt();
 		}
 	}
@@ -119,8 +116,7 @@ bool Cmd_AuxiliaryVariableGetRef_Execute(COMMAND_ARGS)
 		if (varInfo.ownerID)
 		{
 			AUX_VAR_CS
-			AuxVariableValue *value = AVGetValue(varInfo, idx);
-			if (value)
+			if (AuxVariableValue *value = AVGetValue(varInfo, idx))
 				REFR_RES = value->GetRef();
 		}
 	}
@@ -139,8 +135,7 @@ bool Cmd_AuxiliaryVariableGetString_Execute(COMMAND_ARGS)
 		if (varInfo.ownerID)
 		{
 			AUX_VAR_CS
-			AuxVariableValue *value = AVGetValue(varInfo, idx);
-			if (value)
+			if (AuxVariableValue *value = AVGetValue(varInfo, idx))
 				resStr = value->GetStr();
 		}
 	}
@@ -159,8 +154,7 @@ bool Cmd_AuxiliaryVariableGetAsArray_Execute(COMMAND_ARGS)
 		if (varInfo.ownerID)
 		{
 			AUX_VAR_CS
-			AuxVarValsArr *valsArr = AVGetArray(varInfo);
-			if (valsArr)
+			if (AuxVarValsArr *valsArr = AVGetArray(varInfo))
 			{
 				TempElements *tmpElements = GetTempElements();
 				for (auto value = valsArr->Begin(); value; ++value)
@@ -184,11 +178,8 @@ bool Cmd_AuxiliaryVariableGetAll_Execute(COMMAND_ARGS)
 		if (varInfo.ownerID)
 		{
 			AUX_VAR_CS
-			AuxVarOwnersMap *findMod = varInfo.ModsMap().GetPtr(varInfo.modIndex);
-			if (findMod)
-			{
-				AuxVarVarsMap *findOwner = findMod->GetPtr(varInfo.ownerID);
-				if (findOwner)
+			if (AuxVarOwnersMap *findMod = varInfo.ModsMap().GetPtr(varInfo.modIndex))
+				if (AuxVarVarsMap *findOwner = findMod->GetPtr(varInfo.ownerID))
 				{
 					NVSEArrayVar *varsMap = CreateStringMap(nullptr, nullptr, 0, scriptObj);
 					TempElements *tmpElements = GetTempElements();
@@ -201,7 +192,6 @@ bool Cmd_AuxiliaryVariableGetAll_Execute(COMMAND_ARGS)
 					}
 					*result = (int)varsMap;
 				}
-			}
 		}
 	}
 	return true;
@@ -220,8 +210,7 @@ bool Cmd_AuxiliaryVariableSetFloat_Execute(COMMAND_ARGS)
 		if (varInfo.ownerID)
 		{
 			AUX_VAR_CS
-			AuxVariableValue *value = AVGetValue(varInfo, idx, true);
-			if (value)
+			if (AuxVariableValue *value = AVGetValue(varInfo, idx, true))
 			{
 				*value = fltVal;
 				if (varInfo.isPerm)
@@ -249,8 +238,7 @@ bool Cmd_AuxiliaryVariableSetRef_Execute(COMMAND_ARGS)
 		if (varInfo.ownerID)
 		{
 			AUX_VAR_CS
-			AuxVariableValue *value = AVGetValue(varInfo, idx, true);
-			if (value)
+			if (AuxVariableValue *value = AVGetValue(varInfo, idx, true))
 			{
 				*value = refVal;
 				if (varInfo.isPerm)
@@ -278,8 +266,7 @@ bool Cmd_AuxiliaryVariableSetString_Execute(COMMAND_ARGS)
 		if (varInfo.ownerID)
 		{
 			AUX_VAR_CS
-			AuxVariableValue *value = AVGetValue(varInfo, idx, true);
-			if (value)
+			if (AuxVariableValue *value = AVGetValue(varInfo, idx, true))
 			{
 				*value = buffer;
 				if (varInfo.isPerm)
@@ -386,21 +373,14 @@ bool Cmd_AuxiliaryVariableEraseAll_Execute(COMMAND_ARGS)
 bool Cmd_AuxVarGetFltCond_Eval(COMMAND_ARGS_EVAL)
 {
 	*result = 0;
-	TESQuest *quest = (TESQuest*)arg1;
-	if (quest->scriptEventList)
-	{
-		ScriptVar *scriptVar = quest->scriptEventList->GetVariable((UInt32)arg2);
-		if (scriptVar)
-		{
-			const char *varName = GetStringVar((int)scriptVar->data.num);
-			if (varName && *varName)
+	if (TESQuest *quest = (TESQuest*)arg1; quest->scriptEventList)
+		if (ScriptVar *scriptVar = quest->scriptEventList->GetVariable((UInt32)arg2))
+			if (const char *varName = GetStringVar((int)scriptVar->data.num); varName && *varName)
 			{
 				AuxVarInfo varInfo(nullptr, thisObj, quest->scriptable.script, (char*)varName);
 				AUX_VAR_CS
-				AuxVariableValue *value = AVGetValue(varInfo, 0);
-				if (value) *result = value->GetFlt();
+				if (AuxVariableValue *value = AVGetValue(varInfo, 0))
+					*result = value->GetFlt();
 			}
-		}
-	}
 	return true;
 }

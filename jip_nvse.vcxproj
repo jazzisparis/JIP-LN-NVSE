@@ -186,6 +186,7 @@
     <ClInclude Include="internal\prefix.h" />
     <ClInclude Include="internal\serialization.h" />
     <ClInclude Include="internal\containers.h" />
+    <ClInclude Include="internal\settings_enum.h" />
     <ClInclude Include="internal\utility.h" />
     <ClInclude Include="internal\version.h" />
     <ClInclude Include="internal\xinput.h" />

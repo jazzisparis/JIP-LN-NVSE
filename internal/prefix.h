@@ -318,6 +318,7 @@ struct ModInfo;
 struct ParamInfo;
 struct CommandInfo;
 struct PluginInfo;
+class NiFile;
 class BSFile;
 class QueuedFile;
 struct KFModel;
@@ -375,7 +376,7 @@ class NiSourceCubeMap;
 class NiRenderedCubeMap;
 class NiDepthStencilBuffer;
 class NiRenderTargetGroup;
-class RenderTarget;
+class BSRenderedTexture;
 class NiGeometryData;
 class NiParticles;
 class NiLines;
@@ -389,6 +390,7 @@ class BSResizableTriShape;
 class BSFaceGenNiNode;
 class BSShaderAccumulator;
 class BSFaceGenAnimationData;
+class NiDX9Renderer;
 class Ni2DBuffer;
 class NiDX92DBufferData;
 class IDirect3DBaseTexture9;
@@ -452,6 +454,7 @@ struct hkMatrix3x4;
 
 #include "internal/version.h"
 #include "internal/class_vtbls.h"
+#include "internal/settings_enum.h"
 #include "internal/memory_pool.h"
 #include "internal/misc_consts.h"
 #include "internal/utility.h"

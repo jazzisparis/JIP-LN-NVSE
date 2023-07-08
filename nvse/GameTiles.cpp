@@ -2,22 +2,15 @@
 
 #include "nvse/GameTiles.h"
 
-typedef NiTMapBase<const char*, int> TraitNameMap;
+typedef NiTMapBase<const char*, UInt32> TraitNameMap;
 TraitNameMap *g_traitNameMap = (TraitNameMap*)0x11F32F4;
-const _TraitNameToID TraitNameToID = (_TraitNameToID)0xA01860;
-UInt32 (*TraitNameToIDAdd)(const char*, UInt32) = (UInt32 (*)(const char*, UInt32))0xA00940;
 
-UInt32 Tile::TraitNameToID(const char *traitName)
+UInt32 __fastcall Tile::TraitNameToID(const char *traitName)
 {
-	return ::TraitNameToID(traitName);
+	return ((TraitNameMap*)0x11F32F4)->Lookup(traitName);
 }
 
-UInt32 Tile::TraitNameToIDAdd(const char *traitName)
-{
-	return ::TraitNameToIDAdd(traitName, 0xFFFFFFFF);
-}
-
-__declspec(naked) TileValue* __fastcall Tile::GetValue(UInt32 typeID)
+__declspec(naked) TileValue* __fastcall Tile::GetValue(UInt32 typeID) const
 {
 	__asm
 	{
@@ -53,40 +46,43 @@ __declspec(naked) TileValue* __fastcall Tile::GetValue(UInt32 typeID)
 	}
 }
 
-TileValue *Tile::GetValueName(const char *valueName)
+TileValue* __fastcall Tile::GetValueName(const char *valueName) const
 {
-	return GetValue(::TraitNameToID(valueName));
+	return GetValue(TraitNameToID(valueName));
 }
 
-DListNode<Tile> *Tile::GetNthChild(UInt32 index)
+DList<Tile>::Node* __fastcall Tile::GetNthChild(UInt32 index) const
 {
-	return children.Tail()->Regress(index);
+	auto result = children.Tail();
+	while (result && index)
+	{
+		index--;
+		result = result->prev;
+	}
+	return result;
 }
 
 void Tile::GetComponentFullName(char *resStr)
 {
 	Tile *parents[24], *pTile = this;
-	UInt32 count = 0, length;
+	UInt32 count = 0;
 	while (true)
 	{
 		parents[count++] = pTile;
 		if IS_TYPE(pTile, TileMenu) break;
 		pTile = pTile->parent;
 	}
-	char *pName;
-	DListNode<Tile> *node;
-	int index;
 	while (true)
 	{
 		pTile = parents[--count];
-		pName = pTile->name.m_data;
-		length = pTile->name.m_dataLen;
+		char *pName = pTile->name.m_data;
+		UInt32 length = pTile->name.m_dataLen;
 		COPY_BYTES(resStr, pName, length);
 		resStr += length;
-		node = pTile->parent->children.Tail();
+		DList<Tile>::Node *node = pTile->parent->children.Tail();
 		while (node->data != pTile)
 			node = node->prev;
-		index = 0;
+		int index = 0;
 		while ((node = node->prev) && !StrCompareCS(node->data->name.m_data, pName))
 			index++;
 		if (index)
@@ -100,9 +96,9 @@ void Tile::GetComponentFullName(char *resStr)
 	*resStr = 0;
 }
 
-Menu *Tile::GetParentMenu()
+Menu *Tile::GetParentMenu() const
 {
-	Tile *tile = this;
+	auto tile = this;
 	do
 	{
 		if IS_TYPE(tile, TileMenu)
@@ -120,32 +116,12 @@ __declspec(naked) void __fastcall Tile::PokeValue(UInt32 valueID)
 		test	eax, eax
 		jz		done
 		push	eax
-		movss	xmm0, PS_V3_One
+		mov		dl, 1
 		mov		ecx, eax
-		call	TileValue::SetFloat
-		xorps	xmm0, xmm0
+		call	TileValue::SetBool
+		xor		dl, dl
 		pop		ecx
-		jmp		TileValue::SetFloat
-	done:
-		retn
-	}
-}
-
-__declspec(naked) void Tile::FakeClick()
-{
-	__asm
-	{
-		mov		edx, kTileValue_clicked
-		call	Tile::GetValue
-		test	eax, eax
-		jz		done
-		push	eax
-		movss	xmm0, PS_V3_One
-		mov		ecx, eax
-		call	TileValue::SetFloat
-		xorps	xmm0, xmm0
-		pop		ecx
-		jmp		TileValue::SetFloat
+		jmp		TileValue::SetBool
 	done:
 		retn
 	}
@@ -187,11 +163,11 @@ Tile *Tile::GetChild(const char *childName)
 	}
 	Tile *result = NULL;
 	bool wildcard = *childName == '*';
-	for (DListNode<Tile> *node = children.Head(); node; node = node->next)
+	for (auto node = children.Begin(); node; ++node)
 	{
-		if (node->data && (wildcard || !StrCompareCI(node->data->name.m_data, childName)) && !childIndex--)
+		if (*node && (wildcard || !StrCompareCI(node->name.m_data, childName)) && !childIndex--)
 		{
-			result = node->data;
+			result = *node;
 			break;
 		}
 	}
@@ -202,8 +178,7 @@ Tile *Tile::GetChild(const char *childName)
 Tile *Tile::GetComponent(const char *componentPath, const char **trait)
 {
 	Tile *parentTile = this;
-	char *slashPos;
-	while (slashPos = SlashPos(componentPath))
+	while (char *slashPos = SlashPos(componentPath))
 	{
 		*slashPos = 0;
 		parentTile = parentTile->GetChild(componentPath);
@@ -240,6 +215,23 @@ __declspec(naked) void __vectorcall Tile::Value::SetFloat(float value)
 		comiss	xmm0, [ecx+8]
 		jz		done
 		movss	[ecx+8], xmm0
+		push	1
+		CALL_EAX(0xA09410)
+	done:
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall Tile::Value::SetBool(bool value)
+{
+	__asm
+	{
+		and		edx, 1
+		neg		edx
+		and		edx, 0x3F800000
+		cmp		[ecx+8], edx
+		jz		done
+		mov		[ecx+8], edx
 		push	1
 		CALL_EAX(0xA09410)
 	done:
@@ -288,6 +280,74 @@ __declspec(naked) void Tile::Value::SetString(const char *strVal)
 	}
 }
 
+__declspec(naked) float __vectorcall Tile::GetValueFloat(UInt32 id) const
+{
+	__asm
+	{
+		call	Tile::GetValue
+		test	eax, eax
+		jz		done
+		movss	xmm0, [eax+8]
+		retn
+	done:
+		xorps	xmm0, xmm0
+		retn
+	}
+}
+
+__declspec(naked) void __vectorcall Tile::SetFloat(UInt32 id, float fltVal)
+{
+	__asm
+	{
+		call	Tile::GetValue
+		test	eax, eax
+		jz		done
+		comiss	xmm0, [eax+8]
+		jz		done
+		movss	[eax+8], xmm0
+		push	1
+		mov		ecx, eax
+		CALL_EAX(0xA09410)
+	done:
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall Tile::SetBool(UInt32 id, bool value)
+{
+	__asm
+	{
+		call	Tile::GetValue
+		test	eax, eax
+		jz		done
+		mov		edx, [esp+4]
+		neg		edx
+		and		edx, 0x3F800000
+		cmp		[eax+8], edx
+		jz		done
+		mov		[eax+8], edx
+		mov		[esp+4], 1
+		mov		ecx, eax
+		JMP_EAX(0xA09410)
+	done:
+		retn	4
+	}
+}
+
+__declspec(naked) void __fastcall Tile::SetString(UInt32 id, const char *strVal)
+{
+	__asm
+	{
+		call	Tile::GetValue
+		test	eax, eax
+		jz		done
+		mov		ecx, eax
+		jmp		Tile::Value::SetString
+	done:
+		retn	4
+	}
+}
+
 Tile* __fastcall GetTargetComponent(const char *componentPath, TileValue **value)
 {
 	char *slashPos = SlashPos(componentPath);
@@ -325,7 +385,7 @@ __declspec(naked) void __fastcall TileImage::SetAlphaTexture(const char *ddsPath
 		push	eax
 		add		ecx, 0x64
 		push	ecx
-		call	NiReleaseAddRef
+		call	NiReplaceObject
 	done:
 		retn
 	}
@@ -333,7 +393,7 @@ __declspec(naked) void __fastcall TileImage::SetAlphaTexture(const char *ddsPath
 
 void Tile::Dump()
 {
-	PrintDebug("%08X\t%s", this, name.m_data);
+	PrintDebug("%08X\t%08X\t%08X\t%s", this, GetType(), node, name.m_data);
 	s_debug().Indent();
 
 	PrintDebug("Values:");
@@ -363,15 +423,15 @@ void Tile::Dump()
 
 	s_debug().Outdent();
 
-	for (DListNode<Tile> *traverse = children.Tail(); traverse; traverse = traverse->prev)
-		if (traverse->data) traverse->data->Dump();
+	for (auto traverse = children.RBegin(); traverse; --traverse)
+		if (*traverse) traverse->Dump();
 
 	s_debug().Outdent();
 }
 
 // not a one-way mapping, so we just return the first
 // also this is slow and sucks
-const char *TraitIDToName(int id)
+const char *TraitIDToName(UInt32 id)
 {
 	for (auto iter = g_traitNameMap->Begin(); iter; ++iter)
 		if (iter.Get() == id) return iter.Key();

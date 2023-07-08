@@ -16,13 +16,13 @@ public:
 		void Set(TESObjectREFR *_refr, NiNode *_node)
 		{
 			refr = _refr;
-			NiReleaseAddRef(&node, _node);
+			NiReplaceObject(&node, _node);
 		}
 
 		void Set(HighlightedRef *hRef)
 		{
 			refr = hRef->refr;
-			NiReleaseAddRef(&node, hRef->node);
+			NiReplaceObject(&node, hRef->node);
 		}
 
 		void Clear()
@@ -366,7 +366,7 @@ public:
 
 struct BGSSaveLoadFileEntry;
 
-extern UInt32 g_valueID_enabled;
+extern UInt32 g_valueID_enabled, g_valueID_numVisible;
 
 // 30
 template <typename Item> class ListBox
@@ -434,7 +434,7 @@ public:
 	bool IsEnabled() const
 	{
 		if (!g_valueID_enabled)
-			g_valueID_enabled = TraitNameToID("_enabled");
+			g_valueID_enabled = Tile::TraitNameToID("_enabled");
 		return parentTile && parentTile->GetValueFloat(g_valueID_enabled);
 	}
 
@@ -456,11 +456,11 @@ public:
 
 		Tile *newTile = parentTile->GetParentMenu()->AddTileFromTemplate(parentTile, _template);
 		if (!newTile->GetValue(kTileValue_id))
-			newTile->SetFloat(kTileValue_id, -1);
+			newTile->SetFloat(kTileValue_id, -1.0F);
 		if (text)
 			newTile->SetString(kTileValue_string, text);
 
-		ListItem *listItem = new (GameHeapAlloc(sizeof(ListItem))) ListItem(newTile, item, false);
+		ListItem *listItem = new (Game_HeapAlloc<ListItem>()) ListItem(newTile, item, false);
 		if (sortingFunction)
 		{
 			ThisCall(0x7A7EB0, &list, listItem, sortingFunction); // InsertSorted
@@ -480,14 +480,15 @@ public:
 
 		if (itemCount == 1)
 		{
-			UInt32 numVisibleItemsTrait = TraitNameToID("_number_of_visible_items");
-			if (parentTile->GetValueFloat(numVisibleItemsTrait) > 0)
+			if (!g_valueID_numVisible)
+				g_valueID_numVisible = Tile::TraitNameToID("_number_of_visible_items");
+			if (parentTile->GetValueFloat(g_valueID_numVisible) > 0)
 			{
 				TileValue *valPtr = parentTile->GetValue(kTileValue_height);
 				valPtr->RemoveFromReactionMap();
 				valPtr->AddRefValueAction(Tile::kAction_copy, newTile, kTileValue_height);
 
-				float numVisible = parentTile->GetValueFloat(numVisibleItemsTrait);
+				float numVisible = parentTile->GetValueFloat(g_valueID_numVisible);
 				valPtr->AddFloatAction(Tile::kAction_mul, numVisible);
 				valPtr->Refresh();
 			}
@@ -892,6 +893,18 @@ public:
 	float							hudShake;			// 274
 
 	__forceinline static HUDMainMenu *Get() {return *(HUDMainMenu**)0x11D96C0;}
+
+	void ClearMessageQueue()
+	{
+		if (!queuedMessages.Empty())
+		{
+			queuedMessages.DeleteAll();
+			currMsgStartTime = 0;
+			tile08C->SetFloat(kTileValue_alpha, 0);
+			tile090->SetFloat(kTileValue_alpha, 0);
+			tile094->SetFloat(kTileValue_alpha, 0);
+		}
+	}
 };
 static_assert(sizeof(HUDMainMenu) == 0x278);
 
@@ -1227,6 +1240,11 @@ public:
 	float				currentQtt;		// 40
 
 	__forceinline static QuantityMenu *Get() {return *(QuantityMenu**)0x11DA618;}
+
+	static TileMenu *ShowMenu(int maxCount, void (*callback)(int), int defaultCount)
+	{
+		return CdeclCall<TileMenu*>(0x7ABA00, maxCount, callback, defaultCount);
+	}
 };
 
 // 230
@@ -1578,7 +1596,7 @@ struct VATSTargetInfo
 
 	static VATSTargetInfo *Create()
 	{
-		return ThisCall<VATSTargetInfo*>(0x9CA500, GameHeapAlloc(sizeof(VATSTargetInfo)));
+		return ThisCall<VATSTargetInfo*>(0x9CA500, Game_HeapAlloc<VATSTargetInfo>());
 	}
 };
 static_assert(sizeof(VATSTargetInfo) == 0x28);
@@ -2144,20 +2162,43 @@ public:
 	{
 		float			offsetX;	// 00
 		float			offsetY;	// 04
-		UInt32			isVisible;	// 08
+		UInt32			alignment;	// 08
 		NiNode			*node;		// 0C
 		String			text;		// 10
 		float			flt18;		// 18	Always -1.0
 		NiColorAlpha	color;		// 1C
 	};
 
+	struct PrintData
+	{
+		DebugLine	*debugLine;
+		UInt32		unk04;
+		UInt32		unk08;
+		UInt32		unk0C;
+		float		duration;
+		UInt32		fontNumber;
+	};
+
+	enum TextAlign
+	{
+		kAlign_Left =	1,
+		kAlign_Center =	2,
+		kAlign_Right =	4
+	};
+
 	DebugLine					lines[200];		// 0004
 	DList<String>				textList;		// 2264
-	BSSimpleArray<DebugLine>	lines2;			// 2270
-	UInt32						unk2280[7];		// 2280
+	BSSimpleArray<PrintData*>	lines2;			// 2270
+	SInt32						unk2280;		// 2280
+	SInt32						yMods[3];		// 2284
+	SInt32						xMods[3];		// 2290
 
 	static DebugText *GetSingleton();
 	DebugLine *GetDebugInput();
+	void CreateLine(const char *text, float xPos, float yPos, TextAlign alignment, int arg5 = -1, float duration = -1.0F, int fontNumber = 0, NiColorAlpha *color = nullptr)
+	{
+		ThisCall(0xA0F8B0, this, text, xPos, yPos, alignment, arg5, duration, fontNumber, color);
+	}
 };
 static_assert(sizeof(DebugText) == 0x229C);
 

@@ -1753,16 +1753,54 @@ public:
 };
 static_assert(sizeof(CombatController) == 0x18C);
 
+struct Decal
+{
+	enum Type
+	{
+		kDecalType_Simple =		1,
+		kDecalType_Skinned =	2,
+		kDecalType_Other =		4
+	};
+
+	NiPoint3		worldPos;			// 00
+	NiPoint3		rotation;			// 0C
+	NiPoint3		point18;			// 18
+	Actor			*actor;				// 24
+	BSFadeNode		*node;				// 28
+	UInt32			unk2C;				// 2C
+	BGSTextureSet	*textureSet;		// 30
+	SInt32			index;				// 34
+	float			width;				// 38
+	float			height;				// 3C
+	float			depth;				// 40
+	float			rng44;				// 44
+	TESObjectCELL	*parentCell;		// 48
+	float			parallaxScale;		// 4C
+	NiNode			*skinnedDecal;		// 50
+	float			specular;			// 54
+	float			epsilon;			// 58
+	float			placementRadius;	// 5C
+	NiColor			vertexColor;		// 60
+	UInt32			hitLocationFlags;	// 6C
+	UInt8			whichUVQuadrant;	// 70
+	UInt8			byte71;				// 71
+	UInt8			byte72;				// 72
+	UInt8			isParallax;			// 73
+	UInt8			isAlphaTest;		// 74
+	UInt8			alphaBlend;			// 75
+	UInt8			parallaxPasses;		// 76
+	UInt8			modelSpace;			// 77
+	UInt8			forceFade;			// 78
+	UInt8			twoSided;			// 79
+	UInt8			pad7A[2];			// 7A
+};
+static_assert(sizeof(Decal) == 0x7C);
+
 class BSTempEffectSimpleDecal;
 class BSTempEffectParticle;
 
 struct DecalManager
 {
-	struct List08Item
-	{
-		BSTempEffectSimpleDecal	*decal;
-	};
-	
 	struct List14Item
 	{
 		UInt32					sevrDecalCount;
@@ -1771,13 +1809,15 @@ struct DecalManager
 		BSTempEffectParticle	*effectParticle;
 	};
 
-	NiObject			*object00;		// 00
-	UInt8				byte04;			// 04
-	UInt8				pad05[3];		// 05
-	DList<List08Item>	list08;			// 08
-	DList<List14Item>	list14;			// 14
-	BSShaderAccumulator	*shaderAccum;	// 20
-	NiCamera			*camera;		// 24
+	NiObject						*object00;		// 00
+	UInt8							byte04;			// 04
+	UInt8							pad05[3];		// 05
+	DList<BSTempEffectSimpleDecal>	list08;			// 08
+	DList<List14Item>				list14;			// 14
+	BSShaderAccumulator				*shaderAccum;	// 20
+	NiCamera						*camera;		// 24
 
 	__forceinline static DecalManager *GetSingleton() {return *(DecalManager**)0x11C57F8;}
+
+	__forceinline void AddGeometryDecal(Decal *decal, Decal::Type decalType, bool ignoreDistToPlayer) {ThisCall(0x4A10D0, this, decal, decalType, ignoreDistToPlayer);}
 };

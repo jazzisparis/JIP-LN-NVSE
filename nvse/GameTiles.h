@@ -1,10 +1,5 @@
 #pragma once
 
-typedef UInt32 (*_TraitNameToID)(const char *traitName);
-extern const _TraitNameToID TraitNameToID;
-
-const char * TraitIDToName(int id);	// slow
-
 //	Tile			
 //		TileRect		3C
 //			TileMenu	40
@@ -242,6 +237,7 @@ public:
 		}*/
 
 		void __vectorcall SetFloat(float value);
+		void __fastcall SetBool(bool value);
 		void SetString(const char *strVal);
 
 		__forceinline void Refresh(bool forceRefreshReactions = false)
@@ -287,19 +283,19 @@ public:
 	UInt8						unk35;			// 35
 	UInt8						pad35[2];		// 36
 
-	static UInt32 TraitNameToID(const char *traitName);
-	static UInt32 TraitNameToIDAdd(const char *traitName);
-	Value* __fastcall GetValue(UInt32 typeID);
+	static UInt32 __fastcall TraitNameToID(const char *traitName);
+	__forceinline static UInt32 TraitNameToIDAdd(const char *traitName)
+	{
+		return CdeclCall<UInt32>(0xA00940, traitName, 0xFFFFFFFF);
+	}
+	Value* __fastcall GetValue(UInt32 typeID) const;
 	__forceinline Value *AddValue(UInt32 typeID)
 	{
 		return ThisCall<Value*>(0xA01000, this, typeID);
 	}
-	Value *GetValueName(const char *valueName);
-	__forceinline float GetValueFloat(UInt32 id)
-	{
-		return ThisCall<float>(ADDR_TileGetFloat, this, id);
-	}
-	DListNode<Tile> *GetNthChild(UInt32 index);
+	Value* __fastcall GetValueName(const char *valueName) const;
+	float __vectorcall GetValueFloat(UInt32 id) const;
+	DList<Tile>::Node* __fastcall GetNthChild(UInt32 index) const;
 	Tile *GetChild(const char *childName);
 	Tile *GetComponent(const char *componentTile, const char **trait);
 	Tile *GetComponentTile(const char *componentTile);
@@ -309,14 +305,9 @@ public:
 		return ThisCall<Tile*>(0xA01B00, this, xmlPath);
 	}
 	void GetComponentFullName(char *resStr);
-	__forceinline void SetFloat(UInt32 id, float fltVal, bool bPropagate = 0)
-	{
-		ThisCall(ADDR_TileSetFloat, this, id, fltVal, bPropagate);
-	}
-	__forceinline void SetString(UInt32 id, const char *strVal, bool bPropagate = 0)
-	{
-		ThisCall(ADDR_TileSetString, this, id, strVal, bPropagate);
-	}
+	void __vectorcall SetFloat(UInt32 id, float fltVal);
+	void __fastcall SetBool(UInt32 id, bool value);
+	void __fastcall SetString(UInt32 id, const char *strVal);
 	__forceinline void StartGradualSetFloat(UInt32 id, float startVal, float endVal, float seconds, UInt32 changeMode = 0)
 	{
 		ThisCall(0xA07C60, this, id, startVal, endVal, seconds, changeMode);
@@ -329,10 +320,9 @@ public:
 	{
 		return !ThisCall<bool>(0xA07FC0, this, id);
 	}
-	Menu *GetParentMenu();
+	Menu *GetParentMenu() const;
 	void DestroyAllChildren();
 	void __fastcall PokeValue(UInt32 valueID);
-	void FakeClick();
 	__forceinline void SetChangeFlag(UInt32 flagMask) {ThisCall(0xA07530, this, flagMask);}
 	__forceinline float GetLocusAdjustedPosX() {return ThisCall<float>(0xA013D0, this);}
 	__forceinline float GetLocusAdjustedPosY() {return ThisCall<float>(0xA01440, this);}
@@ -344,6 +334,8 @@ public:
 typedef Tile::Value TileValue;
 
 Tile* __fastcall GetTargetComponent(const char *componentPath, TileValue **value = NULL);
+
+const char *TraitIDToName(UInt32 id);
 
 // 1C
 struct GradualSetFloat

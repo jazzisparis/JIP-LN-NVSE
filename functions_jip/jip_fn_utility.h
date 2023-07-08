@@ -222,35 +222,31 @@ bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 	UInt32 apnd, arrID, transpose = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &filePath, &apnd, &arrID, &transpose))
 		return true;
-	NVSEArrayVar *mainArray = LookupArrayByID(arrID), *column;
+	NVSEArrayVar *mainArray = LookupArrayByID(arrID);
 	if (!mainArray) return true;
-	UInt32 numLines = 1, idx, cnt;
+	UInt32 numLines = 1;
 	TempArrayElements topLine(mainArray);
 	if (!topLine.size) return true;
 	Vector<TempArrayElements> columnBuffer(topLine.size);
-	ArrayElementR *elem;
-	TempArrayElements *colElements;
-	for (idx = 0; idx < topLine.size; idx++)
+	for (UInt32 idx = 0; idx < topLine.size; idx++)
 	{
-		elem = &topLine[idx];
-		if (column = elem->Array())
+		if (NVSEArrayVar *column = topLine[idx].Array())
 		{
-			colElements = columnBuffer.Append(column);
+			TempArrayElements *colElements = columnBuffer.Append(column);
 			if (numLines < colElements->size)
 				numLines = colElements->size;
 		}
-		else columnBuffer.Append(elem);
+		else columnBuffer.Append(&topLine[idx]);
 	}
 	ReplaceChr(filePath, '/', '\\');
-	FileStream outputFile;
-	if (outputFile.OpenWrite(filePath, apnd != 0))
+	if (FileStream outputFile; outputFile.OpenWrite(filePath, apnd != 0))
 	{
 		FILE *theFile = outputFile.GetStream();
 		if (!transpose)
 		{
-			for (idx = 0; idx < numLines; idx++)
+			for (UInt32 idx = 0; idx < numLines; idx++)
 			{
-				for (cnt = 0; cnt < topLine.size; cnt++)
+				for (UInt32 cnt = 0; cnt < topLine.size; cnt++)
 				{
 					WriteElemToFile(&columnBuffer[cnt], idx, theFile);
 					if ((topLine.size - cnt) > 1)
@@ -262,10 +258,10 @@ bool Cmd_WriteArrayToFile_Execute(COMMAND_ARGS)
 		}
 		else
 		{
-			for (cnt = 0; cnt < topLine.size; cnt++)
+			for (UInt32 cnt = 0; cnt < topLine.size; cnt++)
 			{
-				colElements = &columnBuffer[cnt];
-				for (idx = 0; idx < numLines; idx++)
+				TempArrayElements *colElements = &columnBuffer[cnt];
+				for (UInt32 idx = 0; idx < numLines; idx++)
 				{
 					WriteElemToFile(colElements, idx, theFile);
 					if ((numLines - idx) > 1)
@@ -323,8 +319,7 @@ bool Cmd_WriteStringToFile_Execute(COMMAND_ARGS)
 	if (!ExtractFormatStringArgs(2, buffer, EXTRACT_ARGS_EX, kCommandInfo_WriteStringToFile.numParams, &filePath, &apnd))
 		return true;
 	ReplaceChr(filePath, '/', '\\');
-	FileStream outputFile;
-	if (outputFile.OpenWrite(filePath, apnd != 0))
+	if (FileStream outputFile; outputFile.OpenWrite(filePath, apnd != 0))
 	{
 		outputFile.WriteStr(buffer);
 		*result = 1;
@@ -407,8 +402,7 @@ bool Cmd_ModLogPrint_Execute(COMMAND_ARGS)
 	char *endPtr = StrCopy(modLogPath + 9, modInfo->name);
 	*(UInt32*)endPtr = 'gol.';
 	endPtr[4] = 0;
-	FileStream outputFile;
-	if (outputFile.OpenWrite(modLogPath, modInfo->hasModLog))
+	if (FileStream outputFile; outputFile.OpenWrite(modLogPath, modInfo->hasModLog))
 	{
 		modInfo->hasModLog = true;
 		if (indentLevel)
@@ -559,7 +553,7 @@ bool Cmd_GetArrayValue_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRandomInRange_Execute(COMMAND_ARGS)
 {
-	int minVal, maxVal;
+	SInt32 minVal, maxVal;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &minVal, &maxVal))
 		*result = GetRandomIntInRange(minVal, maxVal);
 	else *result = 0;

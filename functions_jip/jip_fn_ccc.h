@@ -107,10 +107,10 @@ bool Cmd_CCCOnLoad_Execute(COMMAND_ARGS)
 		return true;
 	}
 	if (!s_UIelements) s_UIelements = (TileValue**)calloc(0x77, 4);
-	UInt32 traitID06 = TraitNameToID("_Size"), traitID07 = TraitNameToID("_Anchor"), traitID08 = TraitNameToID("_Selected"),
-		traitID09 = TraitNameToID("_HealthFill"), traitID10 = TraitNameToID("_Distance"), traitID11 = TraitNameToID("_Action"),
-		traitID17 = TraitNameToID("_CmdType"), traitID20 = TraitNameToID("_Value");
-	DListNode<Tile> *node0 = tile->children.Tail(), *node1, *node2;
+	UInt32 traitID06 = Tile::TraitNameToID("_Size"), traitID07 = Tile::TraitNameToID("_Anchor"), traitID08 = Tile::TraitNameToID("_Selected"),
+		traitID09 = Tile::TraitNameToID("_HealthFill"), traitID10 = Tile::TraitNameToID("_Distance"), traitID11 = Tile::TraitNameToID("_Action"),
+		traitID17 = Tile::TraitNameToID("_CmdType"), traitID20 = Tile::TraitNameToID("_Value");
+	DList<Tile>::Node *node0 = tile->children.Tail(), *node1, *node2;
 	s_UIelements[0] = tile->GetValueName("_AltStyle");
 	s_UIelements[1] = tile->GetValueName("_SelectMode");
 	s_UIelements[2] = tile->GetValueName("_Adjust");
@@ -164,9 +164,9 @@ bool Cmd_CCCOnLoad_Execute(COMMAND_ARGS)
 		node2 = node2->prev;
 		s_UIelements[index] = tile->GetValue(traitID20);
 	}
-	node2 = node2->Regress(3);
+	node2 = node2->prev->prev->prev;
 	s_UIelements[81] = node2->data->GetValue(kTileValue_string);
-	node1 = node1->Regress(2);
+	node1 = node1->prev->prev;
 	node2 = node1->data->children.Tail();
 	s_UIelements[82] = node2->data->GetValue(kTileValue_string);
 	node2 = node2->prev;
@@ -281,8 +281,8 @@ bool Cmd_CCCSetTrait_Execute(COMMAND_ARGS)
 		Actor *actor = (Actor*)thisObj;
 		if (actor->GetKnockedState() != 3)
 		{
-			s_UIelements[10 + child]->SetFloat(64 * actor->avOwner.GetActorValue(kAVCode_Health) / actor->avOwner.GetBaseActorValue(kAVCode_Health));
-			s_UIelements[20 + child]->SetFloat(g_thePlayer->GetDistance(actor) > 8192.0F);
+			s_UIelements[10 + child]->SetFloat(64.0F * actor->avOwner.GetActorValue(kAVCode_Health) / actor->avOwner.GetBaseActorValue(kAVCode_Health));
+			s_UIelements[20 + child]->SetBool(g_thePlayer->GetDistance(actor) > 8192.0F);
 		}
 		else s_UIelements[10 + child]->SetFloat(-1.0F);
 		value = actor->extraDataList.GetExtraFactionRank(s_taskFaction);

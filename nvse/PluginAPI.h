@@ -399,7 +399,7 @@ struct NVSEArrayVarInterface
 			else num = rhs.num;
 		}
 
-		~ElementR() {if (dataType == kType_String) GameHeapFree(str);}
+		~ElementR() {if (dataType == kType_String) Game_HeapFree(str);}
 
 		ElementR& operator=(double _num) {dataType = kType_Numeric; num = _num; return *this;}
 		ElementR& operator=(TESForm *_form) {dataType = kType_Form; form = _form; return *this;}
@@ -408,7 +408,7 @@ struct NVSEArrayVarInterface
 		ElementR& operator=(const Element &rhs)
 		{
 			if (dataType == kType_String)
-				GameHeapFree(str);
+				Game_HeapFree(str);
 			dataType = rhs.dataType;
 			if (dataType == kType_String)
 				str = CopyCString(rhs.str);

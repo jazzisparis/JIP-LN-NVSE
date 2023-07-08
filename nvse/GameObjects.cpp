@@ -109,7 +109,7 @@ __declspec(naked) void TESObjectREFR::Update3D()
 
 TESObjectREFR *TESObjectREFR::Create(bool bTemp)
 {
-	TESObjectREFR *refr = ThisCall<TESObjectREFR*>(0x55A2F0, GameHeapAlloc(sizeof(TESObjectREFR)));
+	TESObjectREFR *refr = ThisCall<TESObjectREFR*>(0x55A2F0, Game_HeapAlloc<TESObjectREFR>());
 	if (bTemp) ThisCall(0x484490, refr);
 	return refr;
 }
@@ -293,7 +293,7 @@ __declspec(naked) SInt32 TESObjectREFR::GetItemCount(TESForm *form) const
 	}
 }
 
-void __fastcall SetContainerItemsHealthHook(TESContainer *container, int EDX, float healthPerc);
+void __fastcall SetContainerItemsHealthHook(TESContainer *container, int, float healthPerc);
 
 __declspec(naked) void TESObjectREFR::AddItemAlt(TESForm *form, UInt32 count, float condition, UInt32 doEquip, UInt32 noMessage)
 {
@@ -406,7 +406,7 @@ void TESObjectREFR::RemoveItemTarget(TESForm *itemForm, TESObjectREFR *target, S
 {
 	if IS_ID(itemForm, BGSListForm)
 	{
-		ListNode<TESForm> *lstIter = ((BGSListForm*)itemForm)->list.Head();
+		auto lstIter = ((BGSListForm*)itemForm)->list.Head();
 		do
 		{
 			if (lstIter->data)
@@ -420,14 +420,12 @@ void TESObjectREFR::RemoveItemTarget(TESForm *itemForm, TESObjectREFR *target, S
 		if (total < 1) return;
 		if ((quantity > 0) && (quantity < total))
 			total = quantity;
-		ContChangesEntry *entry = GetContainerChangesEntry(itemForm);
-		if (entry && entry->extendData)
+		if (ContChangesEntry *entry = GetContainerChangesEntry(itemForm); entry && entry->extendData)
 		{
 			ExtraDataList *xData;
-			SInt32 subCount;
 			while ((total > 0) && (xData = entry->extendData->GetFirstItem()))
 			{
-				subCount = xData->GetCount();
+				SInt32 subCount = xData->GetCount();
 				if (subCount < 1)
 					subCount = 1;
 				else if (subCount > total)
@@ -688,7 +686,7 @@ __declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 	}
 }
 
-__declspec(naked) void __vectorcall TESObjectREFR::SetAngle(__m128 rotVector, UInt8 setLocal)
+__declspec(naked) void __vectorcall TESObjectREFR::SetAngle(__m128 rotVector, UInt8 setMode)
 {
 	__asm
 	{
@@ -696,16 +694,22 @@ __declspec(naked) void __vectorcall TESObjectREFR::SetAngle(__m128 rotVector, UI
 		mov		esi, ecx
 		sub		esp, 0x24
 		mov		ecx, esp
-		test	dl, dl
-		jnz		localRot
+		cmp		dl, 1
+		jnb		transMode
 		movlps	[esi+0x24], xmm0
 		pshufd	xmm1, xmm0, 2
 		movss	[esi+0x2C], xmm1
 		call	NiMatrix33::FromEulerPRY
 		jmp		doneRot
-	localRot:
+	transMode:
+		jnz		toPoint
 		call	NiMatrix33::FromEulerPRYInv
-		mov		ecx, eax
+		jmp		getEuler
+	toPoint:
+		movaps	xmm1, xmm0
+		movups	xmm0, [esi+0x30]
+		call	NiMatrix33::From2Points
+	getEuler:
 		call	NiMatrix33::ToEulerPRY
 		movlps	[esi+0x24], xmm0
 		movss	[esi+0x2C], xmm6
@@ -1135,7 +1139,7 @@ __declspec(naked) void TESObjectREFR::SwapTexture(const char *blockName, const c
 		lea		eax, [ecx+0x60]
 	doSet:
 		push	eax
-		call	NiReleaseAddRef
+		call	NiReplaceObject
 		pop		ecx
 		call	NiReleaseObject
 	done:
@@ -1357,7 +1361,7 @@ __declspec(naked) MapMarkerData *TESObjectREFR::GetMapMarkerData() const
 bool TESObjectREFR::IsGrabbable() const
 {
 	if IS_ACTOR(this)
-		return *(bool*)0x11E0B20 || ((Actor*)this)->GetDead();
+		return INIS_BOOL(bAllowHavokGrabTheLiving_GamePlay) || ((Actor*)this)->GetDead();
 	if (IsProjectile())
 	{
 		Projectile *projRefr = (Projectile*)this;
@@ -1517,7 +1521,7 @@ __declspec(naked) ContChangesEntry *Actor::GetAmmoInfo() const
 TESObjectWEAP *Actor::GetEquippedWeapon() const
 {
 	ContChangesEntry *weaponInfo = GetWeaponInfo();
-	return weaponInfo ? (TESObjectWEAP*)weaponInfo->type : nullptr;
+	return weaponInfo ? weaponInfo->weapon : nullptr;
 }
 
 bool Actor::IsItemEquipped(TESForm *item) const
@@ -1526,36 +1530,46 @@ bool Actor::IsItemEquipped(TESForm *item) const
 		return item == GetEquippedWeapon();
 	if (NOT_TYPE(item, TESObjectARMO) || (typeID == kFormType_Creature))
 		return false;
-	ContChangesEntry *entry = GetContainerChangesEntry(item);
-	if (!entry || !entry->extendData)
-		return false;
-	ListNode<ExtraDataList> *node = entry->extendData->Head();
-	ExtraDataList *xData;
-	do
+	if (ContChangesEntry *entry = GetContainerChangesEntry(item); entry && entry->extendData)
 	{
-		xData = node->data;
-		if (xData && xData->HasType(kXData_ExtraWorn))
-			return true;
+		auto node = entry->extendData->Head();
+		do
+		{
+			if (ExtraDataList *xData = node->data; xData && xData->HasType(kXData_ExtraWorn))
+				return true;
+		}
+		while (node = node->next);
 	}
-	while (node = node->next);
 	return false;
 }
 
-bool __fastcall GetEntryDataHasModHook(ContChangesEntry *entry, int EDX, UInt8 modType);
+bool __fastcall GetEntryDataHasModHook(ContChangesEntry *entry, int, UInt8 modType);
 
-UInt8 Actor::EquippedWeaponHasMod(UInt32 modType) const
+__declspec(noinline) bool Actor::EquippedWeaponHasMod(UInt32 modType) const
 {
-	ContChangesEntry *weaponInfo = GetWeaponInfo();
-	if (!weaponInfo) return 0;
-	TESObjectWEAP *weapon = (TESObjectWEAP*)weaponInfo->type;
-	if (modType == 14)
-	{
-		if ((weapon->weaponFlags1 & 4) && !(weapon->weaponFlags2 & 0x2000))
+	if (ContChangesEntry *weaponInfo = GetWeaponInfo(); weaponInfo && GetEntryDataHasModHook(weaponInfo, 0, modType))
+		return true;
+	return false;
+}
+
+__declspec(noinline) UInt8 Actor::EquippedWeaponHasScope() const
+{
+	if (ContChangesEntry *weaponInfo = GetWeaponInfo(); weaponInfo && (weaponInfo->weapon->weaponFlags1 & 4))
+		if (!(weaponInfo->weapon->weaponFlags2 & 0x2000))
 			return 1;
-	}
-	else if ((modType == 11) && (weapon->soundLevel == 2))
-		return 1;
-	return GetEntryDataHasModHook(weaponInfo, 0, modType) ? 2 : 0;
+		else if (GetEntryDataHasModHook(weaponInfo, 0, 14))
+			return 2;
+	return 0;
+}
+
+__declspec(noinline) UInt8 Actor::EquippedWeaponSilenced() const
+{
+	if (ContChangesEntry *weaponInfo = GetWeaponInfo())
+		if (weaponInfo->weapon->soundLevel == 2)
+			return 1;
+		else if (GetEntryDataHasModHook(weaponInfo, 0, 11))
+			return 2;
+	return 0;
 }
 
 bool Actor::IsSneaking() const
@@ -1592,8 +1606,8 @@ __declspec(naked) bool __fastcall Actor::IsInCombatWith(Actor *target) const
 void Actor::StopCombat()
 {
 	if (!isInCombat) return;
-	CombatController *combatCtrl = GetCombatController();
-	if (combatCtrl) combatCtrl->stopCombat = true;
+	if (CombatController *combatCtrl = GetCombatController())
+		combatCtrl->stopCombat = true;
 }
 
 void Actor::UpdateActiveEffects(MagicItem *magicItem, EffectItem *effItem, bool addNew)
@@ -1601,7 +1615,7 @@ void Actor::UpdateActiveEffects(MagicItem *magicItem, EffectItem *effItem, bool 
 	ActiveEffectList *effList = magicTarget.GetEffectList();
 	if (!effList) return;
 	ActiveEffect *activeEff;
-	ListNode<ActiveEffect> *iter = effList->Head();
+	auto iter = effList->Head();
 	do
 	{
 		if (!(activeEff = iter->data) || (activeEff->magicItem != magicItem))
@@ -1656,8 +1670,8 @@ TESObjectREFR *Actor::GetPackageTarget() const
 
 TESCombatStyle *Actor::GetCombatStyle() const
 {
-	ExtraCombatStyle *xCmbStyle = GetExtraType(&extraDataList, ExtraCombatStyle);
-	if (xCmbStyle && xCmbStyle->combatStyle) return xCmbStyle->combatStyle;
+	if (ExtraCombatStyle *xCmbStyle = GetExtraType(&extraDataList, ExtraCombatStyle); xCmbStyle && xCmbStyle->combatStyle)
+		return xCmbStyle->combatStyle;
 	return ((TESActorBase*)baseForm)->GetCombatStyle();
 }
 
@@ -1690,21 +1704,18 @@ float Actor::GetRadiationLevel() const
 			if (waterForm && waterForm->waterForm) waterForm = waterForm->waterForm;
 		}
 		else waterForm = ThisCall<TESWaterForm*>(0x547770, parentCell);
-		if (waterForm && waterForm->radiation) result = waterForm->radiation * (isSwimming ? *(float*)0x11D0464 : *(float*)0x11D1468);
+		if (waterForm && waterForm->radiation) result = waterForm->radiation * (isSwimming ? GMST_FLT(fSwimRadiationDamageMult) : GMST_FLT(fWadeRadiationDamageMult));
 	}
 	TESObjectREFR *refr;
-	ExtraRadius *xRadius;
-	ExtraRadiation *xRadiation;
-	float distance;
 	for (auto iter = g_loadedReferences->radiationEmitters.Begin(); iter; ++iter)
 	{
 		if (!(refr = iter.Get())) continue;
-		xRadius = GetExtraType(&refr->extraDataList, ExtraRadius);
+		ExtraRadius *xRadius = GetExtraType(&refr->extraDataList, ExtraRadius);
 		if (!xRadius) continue;
-		distance = xRadius->radius - GetDistance(refr);
+		float distance = xRadius->radius - GetDistance(refr);
 		if (distance <= 0) continue;
-		xRadiation = GetExtraType(&refr->extraDataList, ExtraRadiation);
-		if (xRadiation) result += xRadiation->radiation * distance / xRadius->radius;
+		if (ExtraRadiation *xRadiation = GetExtraType(&refr->extraDataList, ExtraRadiation))
+			result += xRadiation->radiation * distance / xRadius->radius;
 	}
 	return result ? ((1.0 - (avOwner.GetActorValue(kAVCode_RadResist) * 0.01)) * result) : 0;
 }
@@ -2195,26 +2206,25 @@ __declspec(naked) void Actor::RefreshAnimData()
 
 void MagicTarget::RemoveEffect(EffectItem *effItem)
 {
-	ActiveEffectList *effList = GetEffectList();
-	if (!effList) return;
-	ListNode<ActiveEffect> *iter = effList->Head(), *prev = nullptr;
-	ActiveEffect *activeEff;
-	do
+	if (ActiveEffectList *effList = GetEffectList())
 	{
-		activeEff = iter->data;
-		if (activeEff && (activeEff->effectItem == effItem))
+		tList<ActiveEffect>::Node *iter = effList->Head(), *prev = nullptr;
+		do
 		{
-			activeEff->Remove(true);
-			if (prev) iter = prev->RemoveNext();
-			else iter->RemoveMe();
+			if (ActiveEffect *activeEff = iter->data; activeEff && (activeEff->effectItem == effItem))
+			{
+				activeEff->Remove(true);
+				if (prev) iter = prev->RemoveNext();
+				else iter->RemoveMe();
+			}
+			else
+			{
+				prev = iter;
+				iter = iter->next;
+			}
 		}
-		else
-		{
-			prev = iter;
-			iter = iter->next;
-		}
+		while (iter);
 	}
-	while (iter);
 }
 
 TESObjectREFR *TESObjectREFR::GetMerchantContainer() const
@@ -2261,20 +2271,16 @@ TESPackage *Actor::GetStablePackage() const
 bool Actor::GetLOS(Actor *target) const
 {
 	if (baseProcess && !baseProcess->processLevel)
-	{
-		DetectionData *data = baseProcess->GetDetectionData(target, 0);
-		if (data && data->inLOS) return true;
-	}
+		if (DetectionData *data = baseProcess->GetDetectionData(target, 0); data && data->inLOS)
+			return true;
 	return false;
 }
 
 int __fastcall Actor::GetDetectionValue(Actor *detected) const
 {
 	if (baseProcess && !baseProcess->processLevel)
-	{
-		DetectionData *data = baseProcess->GetDetectionData(detected, 0);
-		if (data) return data->detectionValue;
-	}
+		if (DetectionData *data = baseProcess->GetDetectionData(detected, 0))
+			return data->detectionValue;
 	return -100;
 }
 
@@ -2416,12 +2422,10 @@ void Projectile::GetData(UInt32 dataType, double *result) const
 		{
 			if (hasImpacted)
 			{
-				ListNode<ImpactData> *traverse = impactDataList.Head();
-				ImpactData *impactData;
+				auto traverse = impactDataList.Head();
 				do
 				{
-					impactData = traverse->data;
-					if (impactData && impactData->refr)
+					if (ImpactData *impactData = traverse->data; impactData && impactData->refr)
 					{
 						*(UInt32*)result = impactData->refr->refID;
 						break;
@@ -2434,11 +2438,8 @@ void Projectile::GetData(UInt32 dataType, double *result) const
 		case 7:
 		{
 			if (hasImpacted)
-			{
-				ImpactData *impactData = impactDataList.GetFirstItem();
-				if (impactData && (impactData->materialType <= 31))
+				if (ImpactData *impactData = impactDataList.GetFirstItem(); impactData && (impactData->materialType <= 31))
 					*result = (impactData && (impactData->materialType <= 31)) ? kMaterialConvert[impactData->materialType] : -1;
-			}
 			break;
 		}
 		default: break;

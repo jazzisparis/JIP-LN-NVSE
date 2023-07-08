@@ -213,7 +213,7 @@ bool Cmd_ClimateRemoveWeatherType_Execute(COMMAND_ARGS)
 	WeatherEntry *entry = climate->GetWeatherEntry(weather, true);
 	if (entry)
 	{
-		GameHeapFree(entry);
+		Game_HeapFree(entry);
 		*result = 1;
 	}
 	return true;

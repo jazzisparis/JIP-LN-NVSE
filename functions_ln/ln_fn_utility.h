@@ -50,7 +50,7 @@ bool Cmd_ListToArray_Execute(COMMAND_ARGS)
 	BGSListForm *listForm;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &listForm)) return true;
 	TempElements *tmpElements = GetTempElements();
-	ListNode<TESForm> *iter = listForm->list.Head();
+	auto iter = listForm->list.Head();
 	do
 	{
 		if (iter->data) tmpElements->Append(iter->data);

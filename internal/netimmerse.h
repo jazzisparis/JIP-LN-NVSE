@@ -231,19 +231,19 @@ public:
 	/*40*/virtual bhkRigidBody	*GetRigidBody();	// Returns this
 	/*44*/virtual bhkLimitedHingeConstraint	*GetLimitedHingeConstraint();	// Returns this
 	/*48*/virtual NiObject	*Clone(NiObjectCopyInfo *copyInfo);
-	/*4C*/virtual void		Load(NiStream *stream);
-	/*50*/virtual void		Unk_14(UInt32 arg);
-	/*54*/virtual void		Unk_15(UInt32 arg);
-	/*58*/virtual void		Save(NiStream *stream);
+	/*4C*/virtual void		LoadBinary(NiStream *stream);
+	/*50*/virtual void		LinkObject(NiStream *stream);
+	/*54*/virtual void		RegisterStreamables(NiStream *stream);
+	/*58*/virtual void		SaveBinary(NiStream *stream);
 	/*5C*/virtual bool		Compare(NiObject *to);
-	/*60*/virtual void		DumpAttributes(void *buffer);
-	/*64*/virtual void		Unk_19(UInt32 arg);
+	/*60*/virtual void		GetViewerStrings(NiTArray<char*> *strings);
+	/*64*/virtual void		AddViewerStrings(NiTArray<char*> *strings);
 	/*68*/virtual void		ProcessClone(NiObjectCopyInfo *copyInfo);
-	/*6C*/virtual void		Unk_1B(UInt32 arg);
+	/*6C*/virtual void		PostLinkObject(NiStream *stream);
 	/*70*/virtual bool		StreamCanSkip();
-	/*74*/virtual void		Unk_1D(void);
-	/*78*/virtual void		SetWorldBound(NiSphere *worldBound);
-	/*7C*/virtual UInt32	Unk_1F(void);
+	/*74*/virtual NiRTTI	*GetStreamableRTTI();
+	/*78*/virtual void		SetWorldBound(NiBound *worldBound);
+	/*7C*/virtual UInt32	GetBlockAllocationSize();
 	/*80*/virtual void		Unk_20(void);
 	/*84*/virtual void		Unk_21(UInt32 arg);
 	/*88*/virtual NiControllerManager	*GetControllerManager();	// Returns this
@@ -334,11 +334,20 @@ public:
 class NiMorphData : public NiObject
 {
 public:
-	UInt32			unk08;		// 08
-	UInt32			unk0C;		// 0C
-	void			*ptr10;		// 10
-	UInt8			byte14;		// 14
-	UInt8			pad15[3];	// 15
+	class MorphTarget : public NiMemObject
+	{
+    public:
+        NiPoint3		*targetVerts;
+        NiFixedString	name;
+        float			legacyWeight;
+        NiInterpolator	*legacyInterp;
+    };
+
+    UInt32			numTargets;			// 08
+    UInt32			numVertsPerTarget;	// 0C
+    MorphTarget		*morphTargets;		// 10
+    bool			relativeTargets;	// 14
+	UInt8			pad15[3];			// 15
 };
 
 // 0C
@@ -751,14 +760,21 @@ public:
 	/*EC*/virtual void		Unk_3B(void);
 	/*E8*/virtual void		Unk_3A(void);
 
-	UInt16			unk38;			// 34
-	UInt8			pad36[2];		// 36
-	NiMorphData		*morphData;		// 38
-	void			*ptr3C;			// 3C
-	UInt8			byte40;			// 40
-	UInt8			byte41;			// 41
-	UInt8			byte42;			// 42
-	UInt8			byte43;			// 43
+	class InterpItem : public NiMemObject
+	{
+	public:
+		NiInterpolator	*interp;
+		float			weight;
+	};
+
+	UInt16			gmcFlags;			// 34
+	UInt8			pad36[2];			// 36
+	NiMorphData		*morphData;			// 38
+	InterpItem		*interpItems;		// 3C
+	bool			needPreDisplay;		// 40
+	bool			ignoreBaseTarget;	// 41
+	bool			alwaysUpdate;		// 42
+	bool			boundCalculated;	// 43
 };
 
 // 5C
@@ -895,6 +911,16 @@ public:
 	/*90*/virtual void		Unk_24(void);
 	/*94*/virtual void		Unk_25(void);
 	/*98*/virtual void		Unk_26(void);
+
+	enum TextureSlots
+	{
+		kSlot_Diffuse,
+		kSlot_Normal,
+		kSlot_Glow,
+		kSlot_Parallax,
+		kSlot_CubeMap,
+		kSlot_EnvMask
+	};
 };
 
 // 38
@@ -903,8 +929,6 @@ class BSShaderTextureSet : public BSTextureSet
 public:
 	String		textures[6];	// 08
 };
-
-class NiBound;
 
 // 0C
 class BSMultiBoundShape : public NiObject
@@ -930,7 +954,7 @@ public:
 class BSMultiBoundSphere : public BSMultiBoundShape
 {
 public:
-	NiSphere		sphere;		// 0C
+	NiBound		sphere;		// 0C
 };
 
 // 24
@@ -1113,9 +1137,20 @@ struct BSRenderPass
 	UInt8			bEnabled;		// 07
 	UInt8			noFog;			// 08
 	UInt8			numLights;		// 09
-	UInt8			byte0A;			// 0A
+	UInt8			maxNumLights;	// 0A
 	UInt8			currLandTexture;// 0B
 	LightingData	**sceneLights;	// 0C
+};
+
+enum LightingPassFlags
+{
+	kPass_Ambient =			1,
+	kPass_Diffuse =			2,
+	kPass_Texture =			4,
+	kPass_Specular =		8,
+	kPass_Shadow =			0x10,
+	kPass_CanopyShadow =	0x20,
+	kPass_Opt =				0x100
 };
 
 // 14	vtbl 0x10B8480
@@ -1293,13 +1328,13 @@ static_assert(sizeof(BSShaderLightingProperty) == 0x7C);
 class BSShaderPPLightingProperty : public BSShaderLightingProperty
 {
 public:
-	/*0CC*/virtual void		Unk_33(void);
-	/*0D0*/virtual void		Unk_34(void);
+	/*0CC*/virtual void		SetupGeometry(void*);
+	/*0D0*/virtual void		CopyProperties(BSShaderPPLightingProperty *from);
 	/*0D4*/virtual void		Unk_35(void);
 	/*0D8*/virtual void		Unk_36(void);
-	/*0DC*/virtual void		Unk_37(void);
-	/*0E0*/virtual void		Unk_38(void);
-	/*0E4*/virtual void		Unk_39(void);
+	/*0DC*/virtual void		PickClampMode(UInt32 mode);
+	/*0E0*/virtual UInt32	GetClampMode();
+	/*0E4*/virtual void		SetClampMode(UInt32 mode);
 	/*0E8*/virtual void		Unk_3A(void);
 	/*0EC*/virtual void		Unk_3B(void);
 	/*0F0*/virtual void		Unk_3C(void);
@@ -1317,7 +1352,8 @@ public:
 
 	UInt32				unk07C;					// 07C
 	UInt32				unk080;					// 080
-	float				flt084[8];				// 084
+	NiColorAlpha		hairTint;				// 084
+	NiColorAlpha		color094;				// 094
 	BSShaderTextureSet	*textureSet;			// 0A4
 	UInt16				word0A8;				// 0A8
 	UInt16				word0AA;				// 0AA
@@ -1333,8 +1369,8 @@ public:
 	SInt32				refractionFirePeriod;	// 0E4
 	float				parallaxMaxPasses;		// 0E8
 	float				parallaxScale;			// 0EC
-	UInt32				unk0F0[4];				// 0F0
-	void				*ptr100;				// 100
+	NiColorAlpha		emmisiveColor;			// 0F0
+	BSRenderPass		*depthPass;				// 100
 };
 static_assert(sizeof(BSShaderPPLightingProperty) == 0x104);
 
@@ -1342,25 +1378,24 @@ static_assert(sizeof(BSShaderPPLightingProperty) == 0x104);
 class WaterShaderProperty : public BSShaderProperty
 {
 public:
-	UInt8				byte060;			// 060
+	bool				isWading;			// 060
 	UInt8				byte061;			// 061
-	UInt8				byte062;			// 062
-	UInt8				bDepth;				// 063
+	bool				renderAtWaterLevel;	// 062
+	bool				bDepth;				// 063
 	UInt32				unk064;				// 064
 	UInt32				unk068;				// 068
-	float				flt06C;				// 06C
-	float				flt070;				// 070
+	NiPoint2			blendRadius;		// 06C
 	float				fogDistanceFar;		// 074
 	float				fogDistanceNear;	// 078
 	UInt8				byte07C;			// 07C
 	UInt8				byte07D;			// 07D
-	UInt8				byte07E;			// 07E
+	bool				isUnderwater;		// 07E
 	UInt8				useDefaultWater;	// 07F
 	UInt8				bReflections;		// 080
 	UInt8				bRefractions;		// 081
 	UInt8				bTextureCoords;		// 082
 	UInt8				byte083;			// 083
-	UInt32				unk084;				// 084
+	UInt32				stencilMask;		// 084
 	NiColorAlpha		shallowColor;		// 088
 	NiColorAlpha		deepColor;			// 098
 	NiColorAlpha		reflectionColor;	// 0A8
@@ -1388,18 +1423,18 @@ public:
 	float				flt10C;				// 10C
 	float				flt110;				// 110
 	float				flt114;				// 114
-	float				fresnel;			// 118
+	float				waterFresnelTerm;	// 118
 	float				noiseScale;			// 11C
 	float				fog;				// 120
-	float				flt124;				// 124
+	float				texScale;			// 124
 	UInt32				unk128[3];			// 128
-	NiSourceTexture		*srcTexture;		// 134
-	RenderTarget		*noDepth;			// 138
-	RenderTarget		*reflections;		// 13C
-	RenderTarget		*refractions;		// 140
-	RenderTarget		*depth;				// 144
-	UInt32				unk148;				// 148
-	UInt32				unk14C;				// 14C
+	NiSourceTexture		*noiseTexture;		// 134
+	BSRenderedTexture	*noDepth;			// 138
+	BSRenderedTexture	*reflections;		// 13C
+	BSRenderedTexture	*refractions;		// 140
+	BSRenderedTexture	*depth;				// 144
+	BSRenderedTexture	*wading;			// 148
+	BSRenderPass		*stencilPass;		// 14C
 };
 static_assert(sizeof(WaterShaderProperty) == 0x150);
 
@@ -1450,30 +1485,42 @@ public:
 };
 static_assert(sizeof(TileShaderProperty) == 0xB0);
 
+// 1C
+struct GeometryProperties
+{
+	NiAlphaProperty			*alphaProp;		// 00
+	NiCullingProperty		*cullingProp;	// 04
+	NiMaterialProperty		*materialProp;	// 08
+	BSShaderProperty		*shaderProp;	// 0C
+	NiStencilProperty		*stencilProp;	// 10
+	NiTexturingProperty		*texturingProp;	// 14
+	UInt32					unk18;			// 18
+};
+
 // 9C
 class NiAVObject : public NiObjectNET
 {
 public:
 	/*8C*/virtual void		UpdateControllers(const NiUpdateData &updParams);
-	/*90*/virtual void		Unk_24(NiMatrix33 *arg1, NiVector3 *arg2, bool arg3);
-	/*94*/virtual void		Unk_25(UInt32 arg1);
-	/*98*/virtual void		Unk_26(UInt32 arg1);
+	/*90*/virtual void		ApplyTransform(NiMatrix33 *arg1, NiVector3 *arg2, bool arg3);
+	/*94*/virtual void		Unk_25(UInt32 arg);
+	/*98*/virtual void		Unk_26(UInt32 arg);
 	/*9C*/virtual NiAVObject	*GetObjectByName(NiFixedString *objName);
 	/*A0*/virtual void		SetSelectiveUpdateFlags(UInt8 *bSelectiveUpdate, UInt32 bSelectiveUpdateTransform, UInt8 *bRigid);
 	/*A4*/virtual void		UpdateDownwardPass(const NiUpdateData &updParams, UInt32 flags);
 	/*A8*/virtual void		UpdateSelectedDownwardPass(const NiUpdateData &updParams, UInt32 flags);
 	/*AC*/virtual void		UpdateRigidDownwardPass(const NiUpdateData &updParams, UInt32 flags);
-	/*B0*/virtual void		Unk_2C(UInt32 arg1);
-	/*B4*/virtual void		Unk_2D(UInt32 arg1);
-	/*B8*/virtual void		UpdateTransform(const NiUpdateData &updParams);
+	/*B0*/virtual void		Unk_2C(const GeometryProperties &properties);
+	/*B4*/virtual void		Unk_2D(UInt32 arg);
+	/*B8*/virtual void		UpdateWorldData(const NiUpdateData &updParams);
 	/*BC*/virtual void		UpdateWorldBound();
-	/*C0*/virtual void		UpdateBounds(const NiUpdateData &updParams);
-	/*C4*/virtual void		PreAttachUpdate(NiNode *parent, const NiUpdateData &updParams);
-	/*C8*/virtual void		Unk_32(NiNode *parent);
-	/*CC*/virtual void		Unk_33(UInt32 arg1);
-	/*D0*/virtual void		PostAttachUpdate();
+	/*C0*/virtual void		UpdateTransformAndBounds(const NiUpdateData &updParams);
+	/*C4*/virtual void		PreAttachUpdate(NiNode *newParent, const NiUpdateData &updParams);
+	/*C8*/virtual void		PreAttachUpdateProperties(NiNode *newParent);
+	/*CC*/virtual void		DetachParent(UInt32 arg);
+	/*D0*/virtual void		UpdateUpwardPassParent();
 	/*D4*/virtual void		OnVisible(NiCullingProcess *culling);
-	/*D8*/virtual void		Unk_36(UInt32 arg1);
+	/*D8*/virtual void		PurgeRendererData(NiDX9Renderer *renderer);
 
 	enum NiFlags
 	{
@@ -1513,7 +1560,7 @@ public:
 
 	NiNode					*m_parent;				// 18
 	bhkNiCollisionObject	*m_collisionObject;		// 1C
-	NiSphere				*m_kWorldBound;			// 20
+	NiBound					*m_kWorldBound;			// 20
 	DList<NiProperty>		m_propertyList;			// 24
 	UInt32					m_flags;				// 30
 	NiTransform				m_transformLocal;		// 34
@@ -1539,7 +1586,7 @@ public:
 	NiProperty* __fastcall GetProperty(UInt32 propID) const;
 	__forceinline void AddProperty(NiProperty *niProperty) {ThisCall(0x439410, this, niProperty);}
 	TESObjectREFR *GetParentRef() const;
-	__forceinline void RenderGeometryAndShader() {CdeclCall(0xB57E30, this, 0, 0);}
+	void RenderGeometryAndShader();
 
 	void Dump(UInt8 dumpFlags = 0xF);
 	void DumpParents();
@@ -1549,7 +1596,7 @@ public:
 class NiNode : public NiAVObject
 {
 public:
-	/*DC*/virtual void		AddObject(NiAVObject *object, bool arg2);
+	/*DC*/virtual void		AddObject(NiAVObject *object, bool firstFree);
 	/*E0*/virtual void		AddObjectAt(UInt32 index, NiAVObject *object);
 	/*E4*/virtual void		RemoveObject2(NiAVObject *toRemove, NiAVObject **arg2);
 	/*E8*/virtual void		RemoveObject(NiAVObject *toRemove);		//	Calls RemoveObject2 with arg2 as ptr to NULL
@@ -1684,7 +1731,21 @@ class NiBillboardNode : public NiNode
 public:
 	/*100*/virtual void		Unk_40(void);
 
-	UInt32			unkAC[2];		// AC
+	enum BillboardMode
+	{
+		ALWAYS_FACE_CAMERA,
+		ROTATE_ABOUT_UP,
+		RIGID_FACE_CAMERA,
+		ALWAYS_FACE_CENTER,
+		RIGID_FACE_CENTER,
+		BSROTATE_ABOUT_UP
+	};
+
+	UInt16			billboardMode;	// AC
+	UInt16			wordAE;			// AE
+	float			savedTime;		// B0
+	
+	__forceinline void RotateToCamera(NiCamera *camera) {ThisCall(0xA7DE40, this, camera);}
 };
 
 // F0
@@ -1936,48 +1997,57 @@ public:
 };
 static_assert(sizeof(LightingData) == 0x250);
 
-struct BSCompoundFrustum;
+// A4
+struct BSCompoundFrustum
+{
+	bool							preThreaded;		// 00
+	UInt8							pad01[3];			// 01
+	BSSimpleArray<NiFrustumPlanes*>	planesArr;			// 04
+	BSSimpleArray<int>				functionOperators;	// 14
+	int								iFreePlane;			// 24
+	int								iFreeOp;			// 28
+	int								iFirstOp;			// 2C
+	NiFrustumPlanes					viewFrustum;		// 30
+	NiPoint3						viewPosition;		// 94
+	bool							skipViewFrustum;	// A0
+	UInt8							padA1[3];			// A1
+};
+static_assert(sizeof(BSCompoundFrustum) == 0xA4);
 
 // 200
 class ShadowSceneNode : public NiNode
 {
 public:
-	UInt32								unk0AC[2];		// 0AC
-	DList<LightingData>					lgtList0B4;		// 0B4
-	DList<LightingData>					lgtList0C0;		// 0C0
-	DListNode<LightingData>				*node0CC;		// 0CC
-	DListNode<LightingData>				*node0D0;		// 0D0
-	DListNode<LightingData>				*node0D4;		// 0D4
-	LightingData						*data0D8;		// 0D8
-	LightingData						*data0DC;		// 0DC
-	LightingData						*data0E0;		// 0E0
-	DList<LightingData>					lgtList0E4;		// 0E4
-	DList<LightingData>					list0F0;		// 0F0
-	DList<LightingData>					list0FC;		// 0FC
-	DList<void>							list108;		// 108
-	DList<void>							list114;		// 114
-	UInt32								unk120;			// 120
-	UInt32								unk124;			// 124
-	BSCubeMapCamera						*cubeMapCam;	// 128
-	UInt32								unk12C;			// 12C
-	UInt8								byte130;		// 130
-	UInt8								isWireFrameMode;// 131
-	UInt8								pad132[2];		// 132
-	BSFogProperty						*fogProperty;	// 134
-	UInt32								unk138;			// 138
-	BSSimpleArray<NiFrustumPlanes*>		array13C;		// 13C
-	BSSimpleArray<BSCompoundFrustum*>	array14C;		// 14C	010C1E9C
-	UInt32								unk15C[3];		// 15C
-	NiFrustumPlanes						frustumPlanes;	// 168
-	NiVector3							unkPos;			// 1CC
-	UInt32								unk1D8;			// 1D8
-	UInt8								byte1DC;		// 1DC
-	UInt8								pad1DD[3];		// 1DD
-	BSPortalGraph						*portalGraph;	// 1E0
-	UInt32								unk1E4[3];		// 1E4
-	NiVector3							cameraPos;		// 1F0
-	UInt8								byte1FC;		// 1FC
-	UInt8								pad1FD[3];		// 1FD
+	UInt32								unk0AC[2];			// 0AC
+	DList<LightingData>					sceneLights;		// 0B4
+	DList<LightingData>					actorShadowCasters;	// 0C0
+	DList<LightingData>::Node			*node0CC;			// 0CC
+	DList<LightingData>::Node			*node0D0;			// 0D0
+	DList<LightingData>::Node			*node0D4;			// 0D4
+	LightingData						*sceneLight1;		// 0D8
+	LightingData						*sceneLight2;		// 0DC
+	LightingData						*pSunLight;			// 0E0
+	DList<LightingData>					lgtList0E4;			// 0E4
+	DList<LightingData>					list0F0;			// 0F0
+	DList<LightingData>					list0FC;			// 0FC
+	DList<void>							list108;			// 108
+	DList<void>							list114;			// 114
+	UInt32								unk120;				// 120
+	UInt32								unk124;				// 124
+	BSCubeMapCamera						*cubeMapCam;		// 128
+	UInt32								unk12C;				// 12C
+	bool								noLightProcessing;	// 130
+	bool								isWireFrameMode;	// 131
+	UInt8								pad132[2];			// 132
+	BSFogProperty						*fogProperty;		// 134
+	BSCompoundFrustum					compoundFrustum;	// 138
+	UInt8								byte1DC;			// 1DC
+	UInt8								pad1DD[3];			// 1DD
+	BSPortalGraph						*portalGraph;		// 1E0
+	NiPoint3							lightingOffset;		// 1E4
+	NiPoint3							cameraPos;			// 1F0
+	bool								allowLightRemoveQueues;	// 1FC
+	UInt8								pad1FD[3];			// 1FD
 };
 static_assert(sizeof(ShadowSceneNode) == 0x200);
 
@@ -2019,11 +2089,11 @@ public:
 	UInt8			effectType;		// 9D
 	bool			resetTraits;	// 9E	JIP only
 	UInt8			extraFlags;		// 9F	JIP only
-	UInt32			unkA0;			// A0
-	UInt32			unkA4;			// A4
-	UInt32			unkA8;			// A8
-	DList<void>		listAC;			// AC
-	DList<void>		listB8;			// B8
+	SInt32			iIndex;			// A0
+	UInt32			pushCount;		// A4
+	UInt32			revID;			// A8
+	DList<NiNode>	shadowGenerator;// AC
+	DList<NiNode>	unaffectedNodes;// B8
 };
 
 // F0
@@ -2075,32 +2145,34 @@ public:
 	NiColor			fogColor;		// E0
 	NiObject		*objEC;			// EC
 	NiVector3		direction;		// F0
+
+	__forceinline static NiDirectionalLight *Create() {return CdeclCall<NiDirectionalLight*>(0xA75D50);}
 };
 
 // 15C
 class NiTextureEffect : public NiDynamicEffect
 {
 public:
-	NiMatrix33		matrix0C4;		// 0C4
-	float			flt0E8;			// 0E8
-	float			flt0EC;			// 0EC
-	float			flt0F0;			// 0F0
-	NiMatrix33		matrix0F4;		// 0F4
-	float			flt118;			// 118
-	float			flt11C;			// 11C
-	float			flt120;			// 120
-	UInt32			unk124[5];		// 124
-	UInt8			byte138;		// 138
+	NiMatrix33		modelProjMat;	// 0C4
+	NiVector3		modelProjTrans;	// 0E8
+	NiMatrix33		worldProjMat;	// 0F4
+	NiVector3		worldProjTrans;	// 118
+	NiTexture		*texture;		// 124
+	UInt32			filterMode;		// 128
+	UInt32			clampMode;		// 12C
+	UInt32			textureMode;	// 130
+	UInt32			coordMode;		// 134
+	bool			planesEnable;	// 138
 	UInt8			pad139[3];		// 139
-	float			flt13C[4];		// 13C
-	float			flt14C[4];		// 14C
+	NiPlane			modelPlane;		// 13C
+	NiPlane			worldPlane;		// 14C
 };
 
 class BSSceneGraph : public NiNode
 {
 public:
-	/*100*/virtual void		Unk_40(void);
-	/*104*/virtual void		Unk_41(void);
+	/*100*/virtual double	CalculateNoLODFarDist();
+	/*104*/virtual void		SetViewDistanceBasedOnFrameRate(float afTime);
 };
 
 // C0
@@ -2108,10 +2180,16 @@ class SceneGraph : public BSSceneGraph
 {
 public:
 	NiCamera			*camera;			// AC
-	UInt32				unkB0;				// B0
+	void				*pVisArray;			// B0
 	NiCullingProcess	*cullingProc;		// B4
-	UInt32				isMinFarPlaneDist;	// B8 The farplane is set to 20480.0 when the flag is true. Probably used for interiors.
+	bool				isMenuSceneGraph;	// B8
+	UInt8				padB9[3];			// B9
 	float				cameraFOV;			// BC
+
+	__forceinline void SetCameraFOV(float fFOV, bool forceFOV, NiCamera *pCamera, bool bSetLODAdjust)
+	{
+		ThisCall(0xC52020, this, fFOV, forceFOV, pCamera, bSetLODAdjust);
+	}
 };
 
 // 3C
@@ -2297,12 +2375,14 @@ public:
 	/*C8*/virtual void		Unk_32(void);
 	/*CC*/virtual void		Unk_33(void);
 
-	UInt8			byte08;			// 08
-	UInt8			pad09[3];		// 09
-	Ni2DBuffer		*buffers[4];	// 0C
-	UInt32			unk1C;			// 1C
-	Ni2DBuffer		*stencilBuffer;	// 20
-	void			*ptr24;			// 24
+	class RendererData;
+
+	UInt8					byte08;			// 08
+	UInt8					pad09[3];		// 09
+	Ni2DBuffer				*buffers[4];	// 0C
+	UInt32					numBuffers;		// 1C
+	NiDepthStencilBuffer	*stencilBuffer;	// 20
+	RendererData			*rendererData;	// 24
 };
 
 // 210
@@ -2415,6 +2495,16 @@ enum D3DFORMAT : UInt32
 	D3DFMT_DXT5 =					0x35545844
 };
 
+enum D3DPRIMITIVETYPE : UInt32
+{
+    D3DPT_POINTLIST =		1,
+    D3DPT_LINELIST =		2,
+    D3DPT_LINESTRIP =		3,
+    D3DPT_TRIANGLELIST =	4,
+    D3DPT_TRIANGLESTRIP =	5,
+    D3DPT_TRIANGLEFAN =		6
+};
+
 // ???
 class IDirect3DBaseTexture9
 {
@@ -2437,7 +2527,7 @@ public:
 		kClear_ALL =			kClear_BACKBUFFER | kClear_STENCIL | kClear_ZBUFFER
 	};
 
-	/*090*/virtual void		Unk_24(void);
+	/*090*/virtual void		SetDefaultProgramCache();
 	/*094*/virtual void		Unk_25(void);
 	/*098*/virtual void		Unk_26(void);
 	/*09C*/virtual void		Unk_27(void);
@@ -2457,10 +2547,10 @@ public:
 	/*0D4*/virtual void		Unk_35(void);
 	/*0D8*/virtual void		Unk_36(void);
 	/*0DC*/virtual void		Unk_37(void);
-	/*0E0*/virtual void 	Unk_38(void);
+	/*0E0*/virtual bool		PrecacheTexture(NiTexture *pkIm, bool bForceLoad, bool bLocked);
 	/*0E4*/virtual void 	Unk_39(void);
 	/*0E8*/virtual void		Unk_3A(void);
-	/*0EC*/virtual void		Unk_3B(void);
+	/*0EC*/virtual bool		PrecacheGeometry(NiGeometry *pkGeometry, UInt32 uiBonesPerPartition, UInt32 uiBonesPerVertex);
 	/*0F0*/virtual void		PurgeGeometry(NiGeometryData* geo);
 	/*0F4*/virtual void		PurgeMaterial(NiMaterialProperty* material);
 	/*0F8*/virtual void		PurgeEffect(NiDynamicEffect* effect);
@@ -2468,10 +2558,10 @@ public:
 	/*100*/virtual void		PurgeSkinPartition(NiSkinPartition* skinPartition);
 	/*104*/virtual void		PurgeSkinInstance(NiSkinInstance* skinInstance);
 	/*108*/virtual void		Unk_42(void);
-	/*10C*/virtual bool		Unk_43(void);
-	/*110*/virtual void		Unk_44(void);
-	/*114*/virtual bool		FastCopy(void* src, void* dst, RECT* srcRect, SInt32 xOffset, SInt32 yOffset);
-	/*118*/virtual bool		Copy(void* src, void* dst, RECT* srcRect, RECT* dstRect, UInt32 filterMode);
+	/*10C*/virtual bool		PurgeAllTextures();
+	/*110*/virtual NiPixelData	*TakeScreenShot(const NiRect<UInt32> *pkScreenRect, const NiRenderTargetGroup *pkTarget);
+	/*114*/virtual bool		FastCopy(const Ni2DBuffer *pkSrc, Ni2DBuffer *pkDest, const NiRect<UInt32> *pkSrcRect, UInt32 uiDestX, UInt32 uiDestY);
+	/*118*/virtual bool		Copy(const Ni2DBuffer *pkSrc, Ni2DBuffer *pkDest, NiRect<UInt32> *pkSrcRect, NiRect<UInt32> *pkDestRect, UInt32 copyFilter);
 	/*11C*/virtual void		Unk_47(void);
 	/*120*/virtual bool		Unk_48(void* arg);
 	/*124*/virtual void		Unk_49(void);
@@ -2644,8 +2734,12 @@ public:
 	UInt32								unkAD0[17];					// AD0
 	NiTMapBase<D3DFORMAT, NiPixelFormat*>	formatMatchMao;			// B14
 	UInt32								unkB24[23];					// B24
+
+	__forceinline static NiDX9Renderer *GetSingleton() {return *(NiDX9Renderer**)0x11F4748;}
 };
 static_assert(sizeof(NiDX9Renderer) == 0xB80);
+
+#define NIDX9RENDERER ds:0x11F4748
 
 // 70
 class NiDX9TextureData : public NiObject
@@ -2700,19 +2794,19 @@ static_assert(sizeof(NiTexture) == 0x30);
 class NiSourceTexture : public NiTexture
 {
 public:
-	/*A4*/virtual void		Unk_29(void);
-	/*A8*/virtual void		Unk_2A(void);
-	/*AC*/virtual void		Unk_2B(void);
+	/*A4*/virtual void		LoadPixelDataFromFile();
+	/*A8*/virtual void		DestroyAppPixelData();
+	/*AC*/virtual void		CreateRendererData();
 
 	NiFixedString	ddsPath1;		// 30
 	NiFixedString	ddsPath2;		// 34
 	void			*ptr38;			// 38
 	NiPixelData		*pixelData;		// 3C
-	UInt8			loadDirectToRender;	// 40
-	UInt8			persistRenderData;	// 41
-	UInt8			byte42;			// 42
+	bool			loadDirectToRender;	// 40
+	bool			persistRenderData;	// 41
+	bool			srcRendererDataIsPersistent;			// 42
 	UInt8			byte43;			// 43
-	UInt32			unk44;			// 44
+	NiFile			*pFile;			// 44
 
 	static NiSourceTexture* __fastcall Create(const char *ddsPath);
 };
@@ -2730,29 +2824,28 @@ class NiRenderedTexture : public NiTexture
 public:
 	/*A4*/virtual Ni2DBuffer	*Get2DBuffer();
 
-	Ni2DBuffer			*buffer;	// 30
-	UInt32				unk34;		// 34
-	UInt32				unk38;		// 38
-	UInt32				unk3C;		// 3C
-	UInt8				byte40;		// 40
-	UInt8				byte41;		// 41
-	UInt8				pad42[2];	// 42
-	D3DFORMAT			texFormat;	// 44
+	Ni2DBuffer			*buffer;		// 30
+	UInt32				cellRefID;		// 34	Used by MiniMap; otherwise appears unused
+	UInt32				unk38;			// 38
+	UInt32				unk3C;			// 3C
+	bool				isRenderTarget;	// 40
+	bool				useCustomFormat;// 41
+	UInt8				pad42[2];		// 42
+	D3DFORMAT			customFormat;	// 44
 
 	void __fastcall SaveToFile(UInt32 fileFmt, char *filePath);
 };
 
 // 40
-class RenderTarget : public NiObject	//	0x10AE500
+class BSRenderedTexture : public NiObject	//	0x10AE500
 {
 public:
-	NiRenderTargetGroup		*targetGroup;	// 08
-	NiObject				*object0C[5];	// 0C
-	NiObject				*object20;		// 20
-	NiObject				*object24;		// 24
-	NiObject				*object28;		// 28
-	UInt32					unk2C;			// 2C
-	NiRenderedTexture		*textures[4];	// 30
+	NiRenderTargetGroup		*targetGroups[6];	// 08
+	NiRenderTargetGroup		*targetGroup20;		// 20
+	NiObject				*object24;			// 24
+	NiObject				*object28;			// 28
+	UInt32					unk2C;				// 2C
+	NiRenderedTexture		*textures[4];		// 30
 };
 
 // 0C
@@ -2801,6 +2894,26 @@ public:
 };
 static_assert(sizeof(BSBatchRenderer) == 0x98);
 
+enum RenderMode : UInt32
+{
+	kRndrMode_Normal,		//	Renders everything
+	kRndrMode_Unk1,
+	kRndrMode_Unk2,
+	kRndrMode_Unk3,
+	kRndrMode_Unk4,
+	kRndrMode_Unk5,
+	kRndrMode_Unk6,
+	kRndrMode_DepthMap,
+	kRndrMode_ConstAlpha,	//	Everything is green
+	kRndrMode_LocalMap,		//	Renders vertex normals, skips landscape
+	kRndrMode_Tiles,		//	Renders only UI tiles
+	kRndrMode_UnkB,
+	kRndrMode_NoWaterPass,	//	Skips water rendering
+	kRndrMode_UnkD,
+	kRndrMode_WaterDepth,
+	kRndrMode_UnkF			//	Everything is black except for grass, sky and emissives
+};
+
 // 280	vtbl @ 0x10ADFF8
 class BSShaderAccumulator : public NiAlphaAccumulator
 {
@@ -2808,26 +2921,6 @@ public:
 	/*A8*/virtual void		Unk_2A(void);
 	/*AC*/virtual void		Unk_2B(void);
 	/*B0*/virtual void		Unk_2C(UInt32 arg1, UInt32 arg2);
-
-	enum RenderMode
-	{
-		kRndrMode_Normal,
-		kRndrMode_Unk1,
-		kRndrMode_Unk2,
-		kRndrMode_Unk3,
-		kRndrMode_Unk4,
-		kRndrMode_Unk5,
-		kRndrMode_Unk6,
-		kRndrMode_DepthMap,
-		kRndrMode_ConstAlpha,
-		kRndrMode_LocalMap,
-		kRndrMode_Tiles,
-		kRndrMode_UnkB,
-		kRndrMode_NoWaterPass,
-		kRndrMode_UnkD,
-		kRndrMode_WaterDepth,
-		kRndrMode_UnkF
-	};
 
 	// 14
 	struct Struct48
@@ -2854,7 +2947,7 @@ public:
 	UInt8					byte039;			// 039
 	bool					renderDOF;			// 03A
 	UInt8					byte03B;			// 03B
-	UInt32					uiSunPixelCount;	// 03C
+	UInt32					sunPixelCount;		// 03C
 	bool					waitingForSunQuery;	// 040
 	UInt8					pad041[3];			// 041
 	float					percentSunOccludedStored;	// 044
@@ -2881,8 +2974,8 @@ public:
 	UInt8					byte150;			// 150
 	UInt8					pad151[3];			// 151
 	NiColorAlpha			ambientColor;		// 154
-	UInt8					byte164;			// 164
-	UInt8					byte165;			// 165
+	bool					ignoreWater;		// 164
+	bool					renderWaterDepth;	// 165
 	UInt8					byte166;			// 166
 	bool					isUnderwater;		// 167
 	UInt32					waterHeight;		// 168
@@ -2899,7 +2992,7 @@ public:
 	UInt32					maxPassCount;		// 190
 	ShadowSceneNode			*shadowScene;		// 194
 	UInt32					unk198;				// 198
-	UInt32					renderMode;			// 19C	Index of a callback in 2 arrays @ 0x11F9F40 & 0x11F9F80
+	RenderMode				renderMode;			// 19C	Index of a callback in 2 arrays @ 0x11F9F40 & 0x11F9F80
 	LightingData			*depthLight;		// 1A0
 	BSRenderPass			*tileRenderPass;	// 1A4
 	UInt16					renderPassType;		// 1A8
@@ -2910,11 +3003,14 @@ public:
 };
 static_assert(sizeof(BSShaderAccumulator) == 0x280);
 
+struct NiVBDynamicSet;
+struct NiVBChip;
+
 // 0C
 class NiGeometryGroup
 {
 public:
-	/*00*/virtual void	Unk_00();
+	/*00*/virtual void	Purge();
 	/*04*/virtual void	Unk_01(void *arg);
 	/*08*/virtual void	Unk_02(UInt32 arg1, UInt32 arg2, UInt32 arg3);
 	/*0C*/virtual void	Unk_03(UInt32 arg);
@@ -2922,11 +3018,11 @@ public:
 	/*14*/virtual void	Unk_05(UInt32 arg);
 	/*18*/virtual void	Unk_06(UInt32 arg1, UInt32 arg2);
 	/*1C*/virtual void	Unk_07(UInt32 arg1, UInt32 arg2);
-	/*20*/virtual void	Unk_08();
+	/*20*/virtual bool	IsDynamic();
 	/*24*/virtual void	Destroy(bool doFree);
 	
-	UInt32			unk04;		// 04
-	void			*ptr08;		// 08
+	UInt32			m_uiRefCount;		// 04
+	void			*pD3DDevice;		// 08
 };
 
 // 1C
@@ -2948,9 +3044,6 @@ public:
 class NiDynamicGeometryGroup : public NiGeometryGroup
 {
 public:
-	struct NiVBDynamicSet;
-	struct NiVBChip;
-	
 	NiTPointerMap<NiVBDynamicSet>	map0C;		// 0C
 	NiTPointerMap<NiVBChip>			map1C;		// 1C
 	NiTArray<NiVBDynamicSet*>		array2C;	// 2C
@@ -3001,24 +3094,24 @@ public:
 
 	UInt32					flags;			// 04
 	NiGeometryGroup			*geomGroup;		// 08
-	UInt32					unk0C;			// 0C
-	void					*ptr10;			// 10
-	UInt8					byte14;			// 14
+	UInt32					fvf;			// 0C
+	void					*declaration;	// 10
+	bool					softwareVP;		// 14
 	UInt8					pad15[3];		// 15
-	UInt32					unk18;			// 18	Vertices/Normals count
-	UInt32					unk1C;			// 1C		"			"
-	UInt32					finished;		// 20
-	void					*ptr24;			// 24
-	void					*ptr28;			// 28
+	UInt32					vertexCount;	// 18
+	UInt32					maxVertCount;	// 1C
+	UInt32					streamCount;	// 20
+	void					*vertexStride;	// 24
+	NiVBChip				**pVBChip;		// 28
 	UInt32					trianglePoints;	// 2C
-	UInt32					unk30;			// 30	Byte size of triangles array
+	UInt32					trigPtSize;		// 30	Byte size of triangles array
 	void					*ptr34;			// 34
-	UInt32					unk38;			// 38
-	UInt32					unk3C;			// 3C
-	UInt32					unk40;			// 40	Triangle count
-	UInt32					unk44;			// 44		"
-	UInt32					unk48;			// 48
-	UInt32					unk4C;			// 4C
+	UInt32					baseVertexIdx;	// 38
+	D3DPRIMITIVETYPE		primitiveType;	// 3C
+	UInt32					triangleCount;	// 40
+	UInt32					maxTriCount;	// 44
+	UInt32					numArrays;		// 48
+	UInt16					*indexArray;	// 4C
 	NiTriangle				*triangles;		// 50	Same ptr as in NiTriShapeData
 };
 static_assert(sizeof(NiGeometryBufferData) == 0x54);
@@ -3028,10 +3121,10 @@ class NiGeometryData : public NiObject
 {
 public:
 	/*8C*/virtual void		Unk_23(UInt32 arg);
-	/*90*/virtual UInt32	GetVertexCount();
+	/*90*/virtual UInt16	GetVertexCount();
 	/*94*/virtual void		Unk_25(void);
 	/*98*/virtual void		Unk_26(void);
-	/*9C*/virtual bool		Unk_27(UInt32 arg);
+	/*9C*/virtual bool		ContainsDataType(UInt32 dataType);
 	/*A0*/virtual void		Unk_28(void);
 
 	enum KeepFlag
@@ -3049,7 +3142,7 @@ public:
 	UInt16						id;				// 0A
 	UInt16						dataFlags;		// 0C	NormalBinormalTangent
 	UInt16						dirtyFlags;		// 0E
-	NiSphere					bounds;			// 10
+	NiBound						bounds;			// 10
 	NiVector3					*vertices;		// 20
 	NiVector3					*normals;		// 24
 	NiColorAlpha				*vertexColors;	// 28
@@ -3060,7 +3153,7 @@ public:
 	UInt8						compressFlags;	// 39
 	UInt8						byte3A;			// 3A
 	UInt8						byte3B;			// 3B
-	UInt8						canSave;		// 3C
+	bool						canSave;		// 3C
 	UInt8						pad3D[3];		// 3D
 };
 static_assert(sizeof(NiGeometryData) == 0x40);
@@ -3070,7 +3163,7 @@ class NiTriBasedGeomData : public NiGeometryData
 {
 public:
 	/*A4*/virtual void		Unk_29(UInt32 arg);
-	/*A8*/virtual void		Unk_2A(void);
+	/*A8*/virtual UInt16	GetNumTriangles();
 	/*AC*/virtual void		Unk_2B(UInt32 arg1, UInt32 arg2, UInt32 arg3, UInt32 arg4);
 	/*B0*/virtual void		Unk_2C(UInt32 arg1, UInt32 arg2, UInt32 arg3, UInt32 arg4);
 
@@ -3121,7 +3214,7 @@ public:
 class NiLinesData : public NiGeometryData
 {
 public:
-	UInt8			*unkArray;		// 44
+	UInt8			*vertexConnectFlags;	// 40
 };
 
 class NiSkinData : public NiObject
@@ -3129,37 +3222,39 @@ class NiSkinData : public NiObject
 public:
 };
 
+// 10
 class NiSkinPartition : public NiObject
 {
 public:
+
 };
 
 // 34
 class NiSkinInstance : public NiObject
 {
 public:
-	NiSkinData		*skinDate;		// 08
+	NiSkinData		*skinData;		// 08
 	NiSkinPartition	*skinPartition;	// 0C
 	NiNode			*actorRoot;		// 10
-	void			*ptr14;			// 14
-	UInt32			unk18;			// 18
-	UInt32			unk1C;			// 1C
-	UInt32			unk20;			// 20
-	UInt32			unk24;			// 24
-	void			*ptr28;			// 28
-	UInt32			unk2C;			// 2C
-	UInt32			unk30;			// 30
+	NiAVObject		**pBones;		// 14
+	UInt32			frameID;		// 18
+	UInt32			numMatrices;	// 1C
+	UInt32			numRegisters;	// 20
+	UInt32			allocatedSize;	// 24
+	void			*pBoneMatrices;	// 28
+	void			*ptr2C;			// 2C
+	void			*skinToWorldToSkinMatrix;	// 30
 };
 
 // C4
 class NiGeometry : public NiAVObject
 {
 public:
-	/*DC*/virtual void		Unk_37(UInt32 arg1);
-	/*E0*/virtual void		Unk_38(UInt32 arg1);
-	/*E4*/virtual void		Unk_39(void);
-	/*E8*/virtual void		Unk_3A(void);
-	/*EC*/virtual void		Unk_3B(UInt32 arg1);
+	/*DC*/virtual void		RenderImmediate(NiRenderer *pRenderer);
+	/*E0*/virtual void		Unk_38(NiRenderer *pRenderer);
+	/*E4*/virtual void		SetGeometryData(NiGeometryData* pkModelData);
+	/*E8*/virtual void		Unk_3A();	//	Calls NiGeometryData::Func28
+	/*EC*/virtual void		CalculateConsistency(UInt8 arg1);
 
 	NiAlphaProperty			*alphaProp;		// 9C
 	NiCullingProperty		*cullingProp;	// A0
@@ -3171,6 +3266,8 @@ public:
 	NiGeometryData			*geometryData;	// B8
 	NiSkinInstance			*skinInstance;	// BC
 	NiShader				*shader;		// C0
+
+	GeometryProperties *GetProperties() const {return (GeometryProperties*)&alphaProp;}
 };
 static_assert(sizeof(NiGeometry) == 0xC4);
 
@@ -3433,19 +3530,19 @@ public:
 };
 static_assert(sizeof(NiCullingProcess) == 0x90);
 
+enum CullingMode : UInt32
+{
+	kCull_Normal =						0,
+	kCull_AllPass =						1,
+	kCull_AllFail =						2,
+	kCull_IgnoreMultiBounds =			3,
+	kCull_ForceMultiBoundsNoUpdate =	4
+};
+
 // C8	vtbl @ 0x101E2EC
 class BSCullingProcess : public NiCullingProcess
 {
 public:
-	enum CullingMode : UInt32
-	{
-		kCull_Normal =						0,
-		kCull_AllPass =						1,
-		kCull_AllFail =						2,
-		kCull_IgnoreMultiBounds =			3,
-		kCull_ForceMultiBoundsNoUpdate =	4
-	};
-
 	CullingMode				topCullMode;		// 90
 	CullingMode				cullModeStack[10];	// 94
 	UInt32					stackSize;			// BC

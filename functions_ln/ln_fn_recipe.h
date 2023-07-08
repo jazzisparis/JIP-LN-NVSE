@@ -30,9 +30,9 @@ bool Cmd_GetFormRecipes_Execute(COMMAND_ARGS)
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &filter)) return true;
 	TempElements *tmpElements = GetTempElements();
 	if (filter && NOT_ID(filter, TESRecipeCategory)) filter = NULL;
-	ListNode<TESRecipe> *rcpeIter = g_dataHandler->recipeList.Head();
+	auto rcpeIter = g_dataHandler->recipeList.Head();
 	TESRecipe *recipe;
-	ListNode<RecipeComponent> *entryIter;
+	tList<RecipeComponent>::Node *entryIter;
 	RecipeComponent *component;
 	do
 	{
@@ -59,9 +59,9 @@ bool Cmd_GetFormRecipeOutputs_Execute(COMMAND_ARGS)
 		return true;
 	TempElements *tmpElements = GetTempElements();
 	if (filter && NOT_ID(filter, TESRecipeCategory)) filter = NULL;
-	ListNode<TESRecipe> *rcpeIter = g_dataHandler->recipeList.Head();
+	auto rcpeIter = g_dataHandler->recipeList.Head();
 	TESRecipe *recipe;
-	ListNode<RecipeComponent> *inputIter, *outputIter;
+	tList<RecipeComponent>::Node *inputIter, *outputIter;
 	RecipeComponent *component;
 	do
 	{
@@ -290,7 +290,7 @@ bool Cmd_AddRecipeCondition_Execute(COMMAND_ARGS)
 	UInt32 func, comp;
 	float value;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &recipe, &func, &param, &comp, &value) || NOT_ID(recipe, TESRecipe)) return true;
-	Condition *condition = (Condition*)GameHeapAlloc(sizeof(Condition));
+	Condition *condition = Game_HeapAlloc<Condition>();
 	condition->type = comp;
 	condition->comparisonValue.value = value;
 	condition->opcode = func;

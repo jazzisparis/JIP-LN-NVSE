@@ -604,11 +604,11 @@ class LoadedAreaBound : public NiRefObject
 public:
 	bhkPhantom							*phantoms[6];	// 08	Seen bhkAabbPhantom
 	TESObjectCELL						*cell;			// 20
-	NiTMapBase<bhkRigidBody*, UInt32>	boundsMap;		// 24
-	float								flt34;			// 34
-	float								flt38;			// 38
-	float								flt3C;			// 3C
-	float								flt40;			// 40
+	NiTMapBase<bhkRigidBody*, UInt16>	boundsMap;		// 24
+	float								flt34;			// 34	Init'd to 20.0
+	float								flt38;			// 38	Init'd to 600.0
+	float								flt3C;			// 3C	Init'd to 1000.0
+	float								flt40;			// 40	Init'd to 0.3
 
 	__forceinline void GetGroundPos(TESObjectREFR *refr, NiVector3 *currPos, NiVector3 *outPos)
 	{
@@ -623,39 +623,33 @@ struct WaterSurfaceManager
 	// B0 c'tor @ 0x4ED5F0
 	struct WaterGroup
 	{
-		TESWaterForm			*waterForm;		// 00
-		NiVector4				vector04;		// 04
-		NiVector4				vector14;		// 14
-		DList<TESObjectREFR>	waterPlanes;	// 24
-		DList<void>				list30;			// 30
-		DList<void>				list3C;			// 3C
-		DList<void>				list48;			// 48
-		NiAVObject				*object54;		// 54
-		NiAVObject				*object58;		// 58
-		UInt8					byte5C;			// 5C
-		UInt8					byte5D;			// 5D
-		UInt8					byte5E;			// 5E
-		UInt8					byte5F;			// 5F
-		UInt8					byte60;			// 60
-		UInt8					pad61[3];		// 61
-		DList<void>				list64;			// 64
-		DList<void>				list70;			// 70
-		DList<void>				list7C;			// 7C
-		DList<void>				list88;			// 88
-		NiObject				*object94;		// 94
-		NiObject				*object98;		// 98
-		UInt32					unk9C;			// 9C
-		UInt32					unkA0;			// A0
-		NiObject				*objectA4;		// A4
-		NiObject				*objectA8;		// A8
-		UInt32					unkAC;			// AC
-	};
-
-	struct Struct8C
-	{
-		UInt32		unk00;
-		UInt32		unk04;
-		UInt32		unk08;
+		TESWaterForm			*waterForm;			// 00
+		NiPlane					plane04;			// 04
+		NiPlane					plane14;			// 14
+		DList<TESObjectREFR>	waterPlanes;		// 24
+		DList<void>				list30;				// 30
+		DList<void>				list3C;				// 3C
+		DList<void>				list48;				// 48
+		BSRenderedTexture		*waterRenderTarget;	// 54
+		NiAVObject				*object58;			// 58
+		bool					usesWaterLevel;		// 5C
+		UInt8					byte5D;				// 5D
+		UInt8					byte5E;				// 5E
+		bool					isInterior;			// 5F
+		bool					allowLowDetailReflections;	// 60
+		UInt8					pad61[3];			// 61
+		DList<NiNode>			geometryGroup;		// 64
+		DList<NiNode>			list70;				// 70
+		DList<NiNode>			depthCellGeometry;	// 7C
+		DList<NiNode>			list88;				// 88
+		BSShaderAccumulator		*shaderAccum94;		// 94
+		BSShaderAccumulator		*shaderAccum98;		// 98
+		UInt32					reflectionGroupCount;	// 9C
+		UInt32					depthGroupCount;	// A0
+		NiCamera				*cameraA4;			// A4
+		NiCamera				*depthCamera;		// A8
+		UInt16					stencilMask;		// AC
+		UInt16					wordAE;				// AE
 	};
 
 	UInt32								unk00;			// 00
@@ -665,7 +659,7 @@ struct WaterSurfaceManager
 	NiObject							*object10;		// 10
 	NiObject							*object14;		// 14
 	NiObject							*object18;		// 18
-	NiObject							*object1C;		// 1C	Seen NiSourceTexture
+	NiObject							*noiseTexture;	// 1C	Seen NiSourceTexture
 	NiObject							*object20;		// 20
 	UInt32								unk24;			// 24
 	UInt32								unk28;			// 28
@@ -678,10 +672,16 @@ struct WaterSurfaceManager
 	NiTPointerMap<TESObjectREFR>		map4C;			// 4C
 	NiTPointerMap<TESObjectREFR>		map5C;			// 5C
 	NiTPointerMap<TESWaterForm>			map6C;			// 6C
-	NiTMapBase<TESObjectREFR*, void*>	map7C;			// 7C
-	Struct8C							unk8C;			// 8C
+	NiTMapBase<TESObjectREFR*, void*>	wadingWaterMap;	// 7C
+	Sound								sound8C;		// 8C
 	float								flt98;			// 98
 	UInt32								unk9C;			// 9C
+
+	__forceinline static NiNode *GetWaterLOD() {return *(NiNode**)0x11DEA1C;}
+	__forceinline static NiNode *GetWaterWade() {return *(NiNode**)0x11C7C28;}
+
+	void __fastcall Update(NiCamera *camera);
+	void __fastcall UpdateEx(NiCamera *camera);
 };
 static_assert(sizeof(WaterSurfaceManager) == 0xA0);
 

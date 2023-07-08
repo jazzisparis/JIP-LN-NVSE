@@ -10,8 +10,8 @@ ExtraContainerChanges *ExtraContainerChanges::Create()
 
 ExtraContainerChanges::Data *ExtraContainerChanges::Data::Create(TESObjectREFR *owner)
 {
-	Data *data = (Data*)GameHeapAlloc(sizeof(Data));
-	data->objList = (EntryDataList*)GameHeapAlloc(sizeof(EntryDataList));
+	Data *data = Game_HeapAlloc<Data>();
+	data->objList = Game_HeapAlloc<EntryDataList>();
 	data->objList->Init();
 	data->owner = owner;
 	data->totalWgCurrent = -1.0F;
@@ -49,10 +49,10 @@ ExtraCannotWear *ExtraCannotWear::Create()
 ExtraLock *ExtraLock::Create()
 {
 	CreatetraType(ExtraLock)
-	UInt32 *lockData = (UInt32*)GameHeapAlloc(sizeof(Data));
-	ZeroMemory(lockData, sizeof(Data));
-	dataPtr[3] = (UInt32)lockData;
-	return (ExtraLock*)dataPtr;
+	ExtraLock *xLock = (ExtraLock*)dataPtr;
+	xLock->data = Game_HeapAlloc<Data>();
+	ZeroMemory(xLock->data, sizeof(Data));
+	return xLock;
 }
 
 ExtraCount *ExtraCount::Create(SInt32 count)
@@ -70,10 +70,10 @@ ExtraCount *ExtraDataList::AddExtraCount(SInt32 count)
 ExtraTeleport *ExtraTeleport::Create()
 {
 	CreatetraType(ExtraTeleport)
-	UInt32 *teleData = (UInt32*)GameHeapAlloc(sizeof(Data));
-	ZeroMemory(teleData, sizeof(Data));
-	dataPtr[3] = (UInt32)teleData;
-	return (ExtraTeleport*)dataPtr;
+	ExtraTeleport *xTeleport = (ExtraTeleport*)dataPtr;
+	xTeleport->data = Game_HeapAlloc<Data>();
+	ZeroMemory(xTeleport->data, sizeof(Data));
+	return xTeleport;
 }
 
 ExtraWeaponModFlags *ExtraWeaponModFlags::Create(UInt32 _flags)
@@ -145,10 +145,10 @@ ExtraScript *ExtraScript::Create(Script *pScript)
 ExtraFactionChanges *ExtraFactionChanges::Create()
 {
 	CreatetraType(ExtraFactionChanges)
-	FactionListEntry *listData = (FactionListEntry*)GameHeapAlloc(sizeof(FactionListEntry));
-	listData->Init();
-	dataPtr[3] = (UInt32)listData;
-	return (ExtraFactionChanges*)dataPtr;
+	ExtraFactionChanges *xFacChanges = (ExtraFactionChanges*)dataPtr;
+	xFacChanges->data = Game_HeapAlloc<FactionListEntry>();
+	xFacChanges->data->Init();
+	return xFacChanges;
 }
 
 ExtraHotkey *ExtraHotkey::Create(UInt8 _index)
@@ -305,7 +305,7 @@ ExtraDataList *ContChangesEntry::CreateExtraData()
 		extendData->Prepend(newList);
 	else
 	{
-		extendData = (ContChangesExtraList*)GameHeapAlloc(8);
+		extendData = Game_HeapAlloc<ContChangesExtraList>();
 		extendData->Init(newList);
 	}
 	return newList;
@@ -558,14 +558,14 @@ __declspec(naked) float __vectorcall ContChangesEntry::GetHealthPercent() const
 		call	BaseExtraList::GetByType
 		test	eax, eax
 		jz		done
-		movaps	xmm2, xmm0
+		movq	xmm2, xmm0
 		movss	xmm3, [eax+0xC]
 		mov		ecx, esi
 		call	ContChangesEntry::GetBaseHealth
 		divss	xmm3, xmm0
 		mulss	xmm3, xmm2
 		minss	xmm2, xmm3
-		movaps	xmm0, xmm2
+		movq	xmm0, xmm2
 	done:
 		pop		esi
 		retn
@@ -578,7 +578,7 @@ __declspec(naked) float __vectorcall ContChangesEntry::GetHealthPercent() const
 	}
 }
 
-bool __fastcall GetEntryDataHasModHook(ContChangesEntry *entry, int EDX, UInt8 modType);
+bool __fastcall GetEntryDataHasModHook(ContChangesEntry *entry, int, UInt8 modType);
 
 __declspec(naked) float ContChangesEntry::CalculateWeaponDamage(Actor *owner, float condition, TESForm *ammo) const
 {
@@ -651,12 +651,12 @@ __declspec(naked) float ContChangesEntry::CalculateWeaponDamage(Actor *owner, fl
 
 ContChangesEntry *ContChangesEntry::Create(TESForm *item, SInt32 count, ExtraDataList *xData)
 {
-	ContChangesEntry *newEntry = (ContChangesEntry*)GameHeapAlloc(sizeof(ContChangesEntry));
+	ContChangesEntry *newEntry = Game_HeapAlloc<ContChangesEntry>();
 	newEntry->type = item;
 	newEntry->countDelta = count;
 	if (xData)
 	{
-		newEntry->extendData = (ExtendDataList*)GameHeapAlloc(sizeof(ExtendDataList));
+		newEntry->extendData = Game_HeapAlloc<ExtendDataList>();
 		newEntry->extendData->Init(xData);
 	}
 	else newEntry->extendData = nullptr;
@@ -665,12 +665,12 @@ ContChangesEntry *ContChangesEntry::Create(TESForm *item, SInt32 count, ExtraDat
 
 ContChangesEntry *ContChangesEntry::CreateCopy(ExtraDataList *xData)
 {
-	ContChangesEntry *pCopy = (ContChangesEntry*)GameHeapAlloc(sizeof(ContChangesEntry));
+	ContChangesEntry *pCopy = Game_HeapAlloc<ContChangesEntry>();
 	pCopy->type = type;
 	pCopy->countDelta = countDelta;
 	if (xData)
 	{
-		pCopy->extendData = (ExtendDataList*)GameHeapAlloc(sizeof(ExtendDataList));
+		pCopy->extendData = Game_HeapAlloc<ExtendDataList>();
 		pCopy->extendData->Init(xData);
 	}
 	else pCopy->extendData = nullptr;
@@ -679,15 +679,13 @@ ContChangesEntry *ContChangesEntry::CreateCopy(ExtraDataList *xData)
 
 void ContChangesExtraList::Clear()
 {
-	ListNode<ExtraDataList> *xdlIter = Head();
-	ExtraDataList *xData;
+	auto xdlIter = Head();
 	do
 	{
-		xData = xdlIter->data;
-		if (xData)
+		if (ExtraDataList *xData = xdlIter->data)
 		{
 			xData->RemoveAll(true);
-			GameHeapFree(xData);
+			Game_HeapFree(xData);
 		}
 	}
 	while (xdlIter = xdlIter->next);
@@ -696,14 +694,12 @@ void ContChangesExtraList::Clear()
 
 void ContChangesExtraList::CleanEmpty()
 {
-	ListNode<ExtraDataList> *xdlIter = Head(), *prev = NULL;
-	ExtraDataList *xDataList;
+	tList<ExtraDataList>::Node *xdlIter = Head(), *prev = NULL;
 	do
 	{
-		xDataList = xdlIter->data;
-		if (xDataList && !xDataList->m_data)
+		if (ExtraDataList *xDataList = xdlIter->data; xDataList && !xDataList->m_data)
 		{
-			GameHeapFree(xDataList);
+			Game_HeapFree(xDataList);
 			xdlIter = prev ? prev->RemoveNext() : xdlIter->RemoveMe();
 		}
 		else
@@ -727,11 +723,8 @@ ExtraJIP *ExtraJIP::Create(UINT _key)
 __declspec(noinline) UINT ExtraJIP::MakeKey()
 {
 	while (true)
-	{
-		UINT key = ThisCall<UINT, UINT>(0xAA5230, (void*)0x11C4180, 0xFFFFFFFF);
-		if (key && !s_extraDataKeysMap->HasKey(key))
+		if (UINT key = GetRandomUInt(0xFFFFFFFF); key && !s_extraDataKeysMap->HasKey(key))
 			return key;
-	}
 }
 
 __declspec(noinline) ExtraJIP *ExtraDataList::AddExtraJIP(UINT _key)

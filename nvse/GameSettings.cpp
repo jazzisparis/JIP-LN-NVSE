@@ -88,7 +88,7 @@ void Setting::Set(double newVal)
 
 void Setting::Set(const char *strVal, bool doFree)
 {
-	if (doFree) GameHeapFree(data.str);
+	if (doFree) Game_HeapFree(data.str);
 	data.str = CopyCString(strVal);
 }
 

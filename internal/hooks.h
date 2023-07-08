@@ -682,31 +682,29 @@ __declspec(naked) void __fastcall TextInputRefreshHook(TextEditMenu *menu)
 		mov		edx, [ecx+0x3C]
 		add		edx, [ecx+0x44]
 		mov		[edx], al
-		push	0
 		push	dword ptr [ecx+0x3C]
-		push	kTileValue_string
+		mov		edx, kTileValue_string
 		mov		ecx, [ecx+0x28]
-		CALL_EAX(ADDR_TileSetString)
+		call	Tile::SetString
 	doneCursor:
-		mov		ax, [esi+0x38]
-		mov		ecx, 0x3F800000
 		xor		edx, edx
+		mov		ax, [esi+0x38]
 		cmp		ax, [esi+0x48]
-		cmovb	ecx, edx
-		push	0
-		push	ecx
-		push	kTileValue_target
+		setnb	dl
+		push	edx
+		mov		edx, kTileValue_target
 		mov		ecx, [esi+0x2C]
-		CALL_EAX(ADDR_TileSetFloat)
+		call	Tile::SetBool
 		push	kTileValue_user1
 		mov		ecx, [esi+0x4C]
 		CALL_EAX(ADDR_TileGetFloat)
-		push	0
 		push	ecx
 		fstp	dword ptr [esp]
-		push	kTileValue_user2
+		movss	xmm0, [esp]
+		pop		ecx
+		mov		edx, kTileValue_user2
 		mov		ecx, [esi+0x4C]
-		CALL_EAX(ADDR_TileSetFloat)
+		call	Tile::SetFloat
 	done:
 		pop		esi
 		retn
@@ -860,11 +858,10 @@ __declspec(naked) bool __stdcall TextInputKeyPressHook(UInt32 inputKey)
 		push	eax
 		lea		ecx, [esi+0x3C]
 		call	String::InsertChar
-		push	0
 		push	dword ptr [esi+0x3C]
-		push	kTileValue_string
+		mov		edx, kTileValue_string
 		mov		ecx, [esi+0x28]
-		CALL_EAX(ADDR_TileSetString)
+		call	Tile::SetString
 		mov		ecx, esi
 		call	TextInputRefreshHook
 		mov		al, 1
@@ -892,7 +889,7 @@ __declspec(naked) void __fastcall UnsetTextInputHooks(TextEditMenu *menu)
 	}
 }
 
-__declspec(naked) void __fastcall TextInputCloseHook(TextEditMenu *menu, int EDX, int tileID, Tile *clicked)
+__declspec(naked) void __fastcall TextInputCloseHook(TextEditMenu *menu, int, int tileID, Tile *clicked)
 {
 	__asm
 	{
@@ -918,7 +915,7 @@ __declspec(naked) void __fastcall TextInputCloseHook(TextEditMenu *menu, int EDX
 	}
 }
 
-void __fastcall MenuHandleClickHook(Menu *menu, int EDX, int tileID, Tile *clickedTile);
+void __fastcall MenuHandleClickHook(Menu *menu, int, int tileID, Tile *clickedTile);
 
 struct MenuClickEvent
 {
@@ -950,7 +947,7 @@ s_menuClickEventMap[] =
 	kVtbl_SlotMachineMenu, kVtbl_BlackjackMenu, kVtbl_RouletteMenu, kVtbl_CaravanMenu, kVtbl_TraitMenu
 };
 
-void __fastcall MenuHandleClickHook(Menu *menu, int EDX, int tileID, Tile *clickedTile)
+void __fastcall MenuHandleClickHook(Menu *menu, int, int tileID, Tile *clickedTile)
 {
 	MenuClickEvent &clickEvent = s_menuClickEventMap[kMenuIDJumpTable[menu->id - kMenuType_Min]];
 	if (clickedTile && !clickEvent.filtersMap().Empty())
@@ -1112,7 +1109,7 @@ typedef UnorderedMap<Actor*, EventCallbackScripts> ActorEventCallbacks;
 TempObject<ActorEventCallbacks> s_fireWeaponEventMap;
 TempObject<EventCallbackScripts> s_fireWeaponEventScripts;
 
-__declspec(naked) bool __fastcall RemoveAmmoHook(Actor *actor, int EDX, TESObjectWEAP *weapon)
+__declspec(naked) bool __fastcall RemoveAmmoHook(Actor *actor, int, TESObjectWEAP *weapon)
 {
 	__asm
 	{
@@ -2230,7 +2227,7 @@ void __fastcall InvokeActorHitEvents(ActorHitData *hitData)
 			CallFunction(iter().callback, hitData->target, 2, hitData->source, hitData->weapon);
 }
 
-__declspec(naked) void __fastcall CopyHitDataHook(MiddleHighProcess *process, int EDX, ActorHitData *copyFrom)
+__declspec(naked) void __fastcall CopyHitDataHook(MiddleHighProcess *process, int, ActorHitData *copyFrom)
 {
 	__asm
 	{
@@ -2788,7 +2785,7 @@ bool __stdcall InsertFormEDID(const char *EDID, UInt32 **pForm)
 	return s_lightFormEDIDMap->InsertKey(EDID, pForm);
 }
 
-__declspec(naked) bool __fastcall TESObjectLIGHSetEDIDHook(TESObjectLIGH *lightForm, int EDX, const char *EDID)
+__declspec(naked) bool __fastcall TESObjectLIGHSetEDIDHook(TESObjectLIGH *lightForm, int, const char *EDID)
 {
 	__asm
 	{
@@ -2913,7 +2910,7 @@ __declspec(naked) void LoadNifRetnNodeHook()
 
 TempObject<Vector<NiPointLight*>> s_activePtLights(0x40);
 
-__declspec(naked) NiPointLight* __fastcall DestroyNiPointLightHook(NiPointLight *ptLight, int EDX, bool doFree)
+__declspec(naked) NiPointLight* __fastcall DestroyNiPointLightHook(NiPointLight *ptLight, int, bool doFree)
 {
 	__asm
 	{
@@ -3190,7 +3187,7 @@ __declspec(naked) void __fastcall DoInsertNode(NiAVObject *targetObj, const char
 	}
 }
 
-__declspec(naked) void __fastcall DoInsertNodes(TESForm *form, int EDX, NiNode *rootNode)
+__declspec(naked) void __fastcall DoInsertNodes(TESForm *form, int, NiNode *rootNode)
 {
 	__asm
 	{
@@ -3428,8 +3425,8 @@ __declspec(naked) NiNode* __fastcall DoAttachModel(NiAVObject *targetObj, const 
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
 		call	dword ptr [eax+0xDC]
-		mov		ecx, [ebp-0xC]
-		CALL_EAX(0xA5A040)
+		/*mov		ecx, [ebp-0xC]
+		CALL_EAX(0xA5A040)*/
 		push	offset kNiUpdateData
 		mov		ecx, [ebp-4]
 		mov		eax, [ecx]
@@ -3455,7 +3452,7 @@ __declspec(naked) NiNode* __fastcall DoAttachModel(NiAVObject *targetObj, const 
 	}
 }
 
-__declspec(naked) void __fastcall DoAttachModels(TESForm *form, int EDX, NiNode *rootNode)
+__declspec(naked) void __fastcall DoAttachModels(TESForm *form, int, NiNode *rootNode)
 {
 	__asm
 	{
@@ -3602,8 +3599,8 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		push	edi
 		mov		esi, ecx
 		mov		edi, [ecx+0x28]
-		mov		eax, fs:[0x2C]
-		mov		ecx, ds:0x126FD98
+		mov		eax, fs:0x2C
+		mov		ecx, g_TLSIndex
 		mov		edx, [eax+ecx*4]
 		add		edx, 0x2B4
 		push	dword ptr [edx]
@@ -3712,8 +3709,8 @@ __declspec(naked) void __fastcall DoQueuedReferenceHook(QueuedReference *queuedR
 		jnz		popTLS
 		and		dword ptr [ecx], 0
 	popTLS:
-		mov		eax, fs:[0x2C]
-		mov		ecx, ds:0x126FD98
+		mov		eax, fs:0x2C
+		mov		ecx, g_TLSIndex
 		mov		edx, [eax+ecx*4]
 		pop		dword ptr [edx+0x2B4]
 		pop		edi
@@ -3797,7 +3794,7 @@ __declspec(naked) void LoadWeaponSlotHook()
 	}
 }
 
-__declspec(naked) void __fastcall InitRagdollControllerHook(Actor *actor, int EDX, NiNode *rootNode, bool arg2, bool arg3, bool arg4)
+__declspec(naked) void __fastcall InitRagdollControllerHook(Actor *actor, int, NiNode *rootNode, bool, bool, bool)
 {
 	static NiNode *pc3rdPNode = nullptr;
 	__asm
@@ -3868,8 +3865,8 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 	doRecalc1:
 		push	esi
 		push	edi
-		mov		esi, 0xAA5230
-		mov		edi, 0x11C4180
+		mov		esi, ADDR_GetRandomInt
+		mov		edi, GAME_RNG
 		push	0xFFFFFFFF
 		mov		ecx, edi
 		call	esi
@@ -3964,8 +3961,8 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 	doRecalc2:
 		push	esi
 		push	edi
-		mov		esi, 0xAA5230
-		mov		edi, 0x11C4180
+		mov		esi, ADDR_GetRandomInt
+		mov		edi, GAME_RNG
 		push	0xFFFFFFFF
 		mov		ecx, edi
 		call	esi
@@ -4003,7 +4000,7 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 	}
 }
 
-__declspec(naked) void __fastcall UpdateAnimatedLightHook(TESObjectLIGH *lightForm, int EDX, ExtraLight::Data *xLightData, int arg2)
+__declspec(naked) void __fastcall UpdateAnimatedLightHook(TESObjectLIGH *lightForm, int, ExtraLight::Data *xLightData, int)
 {
 	__asm
 	{
@@ -4194,7 +4191,7 @@ __declspec(naked) void SetRefrPositionHook()
 
 TempObject<UnorderedMap<TESObjectREFR*, char*>> s_refrModelPathMap;
 
-__declspec(naked) char* __fastcall GetModelPathHook(TESObject *baseForm, int EDX, TESObjectREFR *refr)
+__declspec(naked) char* __fastcall GetModelPathHook(TESObject *baseForm, int, TESObjectREFR *refr)
 {
 	__asm
 	{
@@ -4216,12 +4213,12 @@ __declspec(naked) char* __fastcall GetModelPathHook(TESObject *baseForm, int EDX
 	}
 }
 
-bool __fastcall EraseRefID(AuxVarOwnersMap *pMap, int EDX, UInt32 refID)
+bool __fastcall EraseRefID(AuxVarOwnersMap *pMap, int, UInt32 refID)
 {
 	return pMap->Erase(refID);
 }
 
-__declspec(naked) bool __fastcall ClearRefAuxVars(AuxVarModsMap *varMap, int EDX, UInt32 refID)
+__declspec(naked) bool __fastcall ClearRefAuxVars(AuxVarModsMap *varMap, int, UInt32 refID)
 {
 	__asm
 	{
@@ -4375,7 +4372,7 @@ void HandleFramePreRender()
 	
 }
 
-void __fastcall DoRenderFrameHook(OSGlobals *osGlobals, int EDX, NiObject *renderer, UInt8 arg2, UInt8 arg3)
+void __fastcall DoRenderFrameHook(OSGlobals *osGlobals, int, NiObject *renderer, UInt8, UInt8)
 {
 	__asm
 	{
@@ -4751,7 +4748,7 @@ __declspec(naked) void InitCombatControllerHook()
 	}
 }
 
-__declspec(naked) bool __fastcall CombatActionApplicableHook(CombatAction *action, int EDX, void *arg1)
+__declspec(naked) bool __fastcall CombatActionApplicableHook(CombatAction *action, int, void*)
 {
 	__asm
 	{
@@ -4800,8 +4797,8 @@ __declspec(naked) void SkyRefreshClimateHook()
 {
 	__asm
 	{
-		mov		eax, fs:[0x2C]
-		mov		ecx, ds:0x126FD98
+		mov		eax, fs:0x2C
+		mov		ecx, g_TLSIndex
 		mov		edx, [eax+ecx*4]
 		add		edx, 0x2B4
 		mov		eax, [edx]
@@ -4891,7 +4888,7 @@ __declspec(naked) void SetCrosshairRefHook()
 
 UInt32 s_mouseMovementState = 7;
 
-__declspec(naked) int __fastcall GetMouseMovementHook(OSInputGlobals *inputGlobals, int EDX, UInt32 type)
+__declspec(naked) int __fastcall GetMouseMovementHook(OSInputGlobals *inputGlobals, int, UInt32 type)
 {
 	__asm
 	{

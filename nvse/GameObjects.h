@@ -138,7 +138,7 @@ public:
 	bool __fastcall GetInSameCellOrWorld(TESObjectREFR *target) const;
 	float __vectorcall GetDistance(TESObjectREFR *target) const;
 	void SetPos(const NiVector3 &posVector);
-	void __vectorcall SetAngle(__m128 pry, UInt8 setLocal);
+	void __vectorcall SetAngle(__m128 pry, UInt8 setMode);
 	void __fastcall MoveToCell(TESObjectCELL *cell, const NiVector3 &posVector);
 	__m128 __vectorcall GetTranslatedPos(const NiVector3 &posMods) const;
 	void __vectorcall Rotate(__m128 rotVector);
@@ -199,7 +199,7 @@ public:
 	/*27C*/virtual void		Unk_9F(void);
 	/*280*/virtual void		StartConversation(void);	// 9 args
 	/*284*/virtual void		DoSpeechLoadLipFiles(void);	// 13 args!
-	/*288*/virtual void		Unk_A2(void);
+	/*288*/virtual void		StopDialogue();
 	/*28C*/virtual void		SetExtraRunOncePacks(TESPackage *package, UInt8 arg2);
 	/*290*/virtual bool		HasStartingWorldOrCell();
 	/*294*/virtual TESWorldSpace	*GetStartingWorld();
@@ -736,7 +736,9 @@ public:
 	ContChangesEntry *GetAmmoInfo() const;
 	TESObjectWEAP *GetEquippedWeapon() const;
 	bool IsItemEquipped(TESForm *item) const;
-	UInt8 EquippedWeaponHasMod(UInt32 modType) const;
+	bool EquippedWeaponHasMod(UInt32 modType) const;
+	UInt8 EquippedWeaponHasScope() const;
+	UInt8 EquippedWeaponSilenced() const;
 	bool IsSneaking() const;
 	void StopCombat();
 	bool __fastcall IsInCombatWith(Actor *target) const;
@@ -805,6 +807,7 @@ struct MusicMarker
 	ExtraAudioMarker::Data	*markerData;
 
 	MusicMarker(TESObjectREFR *_markerRef, ExtraAudioMarker::Data *data) : markerRef(_markerRef), markerData(data) {}
+	MusicMarker(const MusicMarker &from) : markerRef(from.markerRef), markerData(from.markerData) {}
 
 	bool operator<(const MusicMarker &rhs) const {return markerData->mediaLocCtrlID < rhs.markerData->mediaLocCtrlID;}
 };
@@ -823,7 +826,7 @@ class PerkRankFinder
 public:
 	PerkRankFinder(BGSPerk *_perk) : m_perk(_perk) {}
 
-	bool Accept(PerkRank *perkRank) const {return perkRank->perk == m_perk;}
+	bool operator==(PerkRank *perkRank) const {return perkRank->perk == m_perk;}
 };
 
 struct CasinoStats

@@ -78,6 +78,7 @@ DEFINE_COMMAND_PLUGIN(GetLightAmountAtPoint, 0, 3, kParams_ThreeFloats);
 DEFINE_COMMAND_PLUGIN(TransformWorldToLocal, 0, 11, kParams_NineFloats_TwoScriptVars);
 DEFINE_COMMAND_PLUGIN(GetAnglesBetweenPoints, 0, 8, kParams_SixFloats_TwoScriptVars);
 DEFINE_COMMAND_PLUGIN(GetP2PRayCastRange, 0, 7, kParams_SixFloats_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetDamageToArmorMaxPercent, 0, 1, kParams_OneOptionalFloat);
 
 bool Cmd_DisableNavMeshAlt_Execute(COMMAND_ARGS)
 {
@@ -154,10 +155,8 @@ bool Cmd_GetExteriorCell_Execute(COMMAND_ARGS)
 	TESWorldSpace *wspc;
 	SInt32 coordX, coordY;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc, &coordX, &coordY) && wspc->cellMap)
-	{
-		TESObjectCELL *cell = wspc->cellMap->Lookup(Coordinate(coordX, coordY));
-		if (cell) REFR_RES = cell->refID;
-	}
+		if (TESObjectCELL *cell = wspc->cellMap->Lookup(Coordinate(coordX, coordY)))
+			REFR_RES = cell->refID;
 	return true;
 }
 
@@ -177,7 +176,7 @@ bool Cmd_GetCellBuffered_Execute(COMMAND_ARGS)
 	TESObjectCELL **cellsBuffer = cell->worldSpace ? g_TES->exteriorsBuffer : g_TES->interiorsBuffer;
 	if (cellsBuffer)
 	{
-		UInt32 maxVal = cell->worldSpace ? *(UInt32*)0x11C3C94 : *(UInt32*)0x11C3E3C;
+		UInt32 maxVal = cell->worldSpace ? INIS_UINT(uExterior_Cell_Buffer_General) : INIS_UINT(uInterior_Cell_Buffer_General);
 		while (maxVal && *cellsBuffer)
 		{
 			if (*cellsBuffer == cell)
@@ -465,7 +464,7 @@ bool Cmd_SetOnPCTargetChangeEventHandler_Execute(COMMAND_ARGS)
 
 bool Cmd_FreePlayer_Execute(COMMAND_ARGS)
 {
-	GameHeapFree(g_thePlayer);
+	Game_HeapFree(g_thePlayer);
 	return true;
 }
 
@@ -538,14 +537,10 @@ bool Cmd_SetOnDialogTopicEventHandler_Execute(COMMAND_ARGS)
 				HOOK_INC(RunResultScript);
 			callbacks->Insert(script);
 		}
-		else
+		else if (auto findTopic = s_dialogTopicEventMap->Find(form); findTopic && findTopic().Erase(script) && findTopic().Empty())
 		{
-			auto findTopic = s_dialogTopicEventMap->Find(form);
-			if (findTopic && findTopic().Erase(script) && findTopic().Empty())
-			{
-				findTopic.Remove();
-				HOOK_DEC(RunResultScript);
-			}
+			findTopic.Remove();
+			HOOK_DEC(RunResultScript);
 		}
 	}
 	return true;
@@ -578,8 +573,8 @@ bool Cmd_ToggleHardcoreTracking_Execute(COMMAND_ARGS)
 	UInt32 toggleON;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &toggleON))
 	{
-		if (toggleON) s_serializedFlags &= ~kSerializedFlag_NoHardcoreTracking;
-		else s_serializedFlags |= kSerializedFlag_NoHardcoreTracking;
+		if (toggleON) s_serializedVars.serializedFlags &= ~kSerializedFlag_NoHardcoreTracking;
+		else s_serializedVars.serializedFlags |= kSerializedFlag_NoHardcoreTracking;
 	}
 	return true;
 }
@@ -636,10 +631,9 @@ bool Cmd_GetBufferedCells_Execute(COMMAND_ARGS)
 		TESObjectCELL **cellsBuffer = interiors ? g_TES->interiorsBuffer : g_TES->exteriorsBuffer, *cell;
 		if (cellsBuffer)
 		{
-			UInt32 maxVal = interiors ? *(UInt32*)0x11C3E3C : *(UInt32*)0x11C3C94;
+			UInt32 maxVal = interiors ? INIS_UINT(uInterior_Cell_Buffer_General) : INIS_UINT(uExterior_Cell_Buffer_General);
 			while (maxVal && (cell = *cellsBuffer))
 			{
-				
 				tmpElements->Append(cell);
 				cellsBuffer++;
 				maxVal--;
@@ -759,7 +753,7 @@ bool Cmd_SetGameHour_Execute(COMMAND_ARGS)
 			g_gameHour->data = newHour;
 		else
 			g_gameHour->data = 24.0F + newHour;
-		s_forceHCNeedsUpdate = g_thePlayer->isHardcore && !(s_serializedFlags & kSerializedFlag_NoHardcoreTracking);
+		s_forceHCNeedsUpdate = g_thePlayer->isHardcore && !(s_serializedVars.serializedFlags & kSerializedFlag_NoHardcoreTracking);
 	}
 	return true;
 }
@@ -773,14 +767,11 @@ bool Cmd_StringToActorValue_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &avStr))
 	{
 		if (s_actorValueIDsMap->Empty())
-		{
-			ActorValueInfo *avInfo;
 			for (UInt32 avCode = 0; avCode < 77; avCode++)
 			{
-				avInfo = ActorValueInfo::Array()[avCode];
+				ActorValueInfo *avInfo = ActorValueInfo::Array()[avCode];
 				s_actorValueIDsMap()[avInfo->infoName] = avCode;
 			}
-		}
 		UInt32 *idPtr = s_actorValueIDsMap->GetPtr(avStr);
 		if (idPtr) *result = (int)*idPtr;
 	}
@@ -789,13 +780,13 @@ bool Cmd_StringToActorValue_Execute(COMMAND_ARGS)
 
 bool Cmd_GetHardcoreTracking_Execute(COMMAND_ARGS)
 {
-	*result = (s_serializedFlags & kSerializedFlag_NoHardcoreTracking) ? 0 : 1;
+	*result = (s_serializedVars.serializedFlags & kSerializedFlag_NoHardcoreTracking) ? 0 : 1;
 	return true;
 }
 
 bool Cmd_GetHardcoreTracking_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (s_serializedFlags & kSerializedFlag_NoHardcoreTracking) ? 0 : 1;
+	*result = (s_serializedVars.serializedFlags & kSerializedFlag_NoHardcoreTracking) ? 0 : 1;
 	return true;
 }
 
@@ -959,7 +950,7 @@ bool Cmd_ToggleCameraCollision_Execute(COMMAND_ARGS)
 
 TESObjectWEAP *g_rockItLauncher = nullptr;
 
-__declspec(naked) TESForm* __fastcall GetWeaponAmmoHook(TESObjectWEAP *weapon, int EDX, Actor *actor)
+__declspec(naked) TESForm* __fastcall GetWeaponAmmoHook(TESObjectWEAP *weapon, int, Actor *actor)
 {
 	__asm
 	{
@@ -1003,7 +994,7 @@ __declspec(naked) TESForm* __fastcall GetWeaponAmmoHook(TESObjectWEAP *weapon, i
 	}
 }
 
-__declspec(naked) BGSProjectile* __fastcall GetWeaponProjectileHook(TESObjectWEAP *weapon, int EDX, Actor *actor)
+__declspec(naked) BGSProjectile* __fastcall GetWeaponProjectileHook(TESObjectWEAP *weapon, int, Actor *actor)
 {
 	__asm
 	{
@@ -1099,17 +1090,12 @@ bool Cmd_ClearDeadActors_Execute(COMMAND_ARGS)
 	UInt32 count = procMngr->beginOffsets[0];
 	MobileObject **objArray = procMngr->objects.data + count;
 	count = procMngr->endOffsets[0] - count;
-	Actor *actor;
-	HighProcess *hiProcess;
 	while (count)
 	{
-		actor = (Actor*)objArray[--count];
-		if (!actor || NOT_ACTOR(actor) || (actor->lifeState != 2) || (actor->flags & 0x200000) || (actor->baseForm->flags & 0x400))
-			continue;
-		hiProcess = (HighProcess*)actor->baseProcess;
-		if (hiProcess && !hiProcess->processLevel && !hiProcess->fadeType && (hiProcess->dyingTimer < 0) &&
-			!actor->extraDataList.HasType(kXData_ExtraEnableStateChildren) && !ThisCall<bool>(0x577DE0, actor))
-			ThisCall(0x8FEB60, hiProcess, actor);
+		if (Actor *actor = (Actor*)objArray[--count]; actor && IS_ACTOR(actor) && (actor->lifeState == 2) && !(actor->flags & 0x200000) && !(actor->baseForm->flags & 0x400))
+			if (HighProcess *hiProcess = (HighProcess*)actor->baseProcess; hiProcess && !hiProcess->processLevel && !hiProcess->fadeType && (hiProcess->dyingTimer < 0) &&
+				!actor->extraDataList.HasType(kXData_ExtraEnableStateChildren) && !ThisCall<bool>(0x577DE0, actor))
+				ThisCall(0x8FEB60, hiProcess, actor);
 	}
 	return true;
 }
@@ -1138,9 +1124,9 @@ bool Cmd_GetCameraMovement_Execute(COMMAND_ARGS)
 		}
 		if (iMovX || iMovY)
 		{
-			if (iMovY && *(bool*)0x11E0A60)
+			if (iMovY && INIS_BOOL(bInvertYValues_Controls))
 				iMovY = -iMovY;
-			double mouseSensitivity = *(float*)0x11E0A70;
+			double mouseSensitivity = INIS_FLT(fMouseSensitivity_Controls);
 			double fMovX = iMovX * mouseSensitivity;
 			double fMovY = iMovY * mouseSensitivity;
 			if (controller)
@@ -1167,10 +1153,8 @@ bool Cmd_GetReticleNode_Execute(COMMAND_ARGS)
 	float maxRange = 50000.0F;
 	SInt32 layerType = 6;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &layerType))
-	{
-		NiAVObject *rtclObject = GetRayCastObject(g_thePlayer->cameraPos, g_mainCamera->WorldRotate(), maxRange, layerType);
-		if (rtclObject) nodeName = rtclObject->GetName();
-	}
+		if (NiAVObject *rtclObject = GetRayCastObject(g_thePlayer->cameraPos, g_mainCamera->WorldRotate(), maxRange, layerType))
+			nodeName = rtclObject->GetName();
 	AssignString(PASS_COMMAND_ARGS, nodeName);
 	return true;
 }
@@ -1253,9 +1237,8 @@ bool Cmd_PlaceModel_Execute(COMMAND_ARGS)
 bool Cmd_SetArmorConditionPenalty_Execute(COMMAND_ARGS)
 {
 	*result = s_condDRDTPenalty;
-	float value;
-	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &value))
-		s_condDRDTPenalty = value;
+	if (NUM_ARGS)
+		ExtractArgsEx(EXTRACT_ARGS_EX, &s_condDRDTPenalty);
 	return true;
 }
 
@@ -1324,6 +1307,19 @@ bool Cmd_GetP2PRayCastRange_Execute(COMMAND_ARGS)
 		NiVector4 rcPos;
 		if (rcPos.RayCastCoords(point1, rotMat + 1, length, layerType))
 			*result = Point3Distance(rcPos, point2);
+	}
+	return true;
+}
+
+bool Cmd_SetDamageToArmorMaxPercent_Execute(COMMAND_ARGS)
+{
+	*result = s_serializedVars.dmgArmorMaxPercent;
+	if (NUM_ARGS)
+	{
+		float value;
+		ExtractArgsEx(EXTRACT_ARGS_EX, &value);
+		if ((value >= 0) && (value <= 1.0F))
+			s_serializedVars.dmgArmorMaxPercent = value;
 	}
 	return true;
 }

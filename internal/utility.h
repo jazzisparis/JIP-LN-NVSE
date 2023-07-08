@@ -38,8 +38,9 @@
 #define NOP_0xE NOP_0x7 NOP_0x7
 #define NOP_0xF NOP_0x8 NOP_0x7
 
-#define GAME_HEAP_ALLOC __asm mov ecx, 0x11F6238 CALL_EAX(0xAA3E40)
-#define GAME_HEAP_FREE  __asm mov ecx, 0x11F6238 CALL_EAX(0xAA4060)
+#define GAME_HEAP 0x11F6238
+#define GAME_HEAP_ALLOC __asm mov ecx, GAME_HEAP CALL_EAX(0xAA3E40)
+#define GAME_HEAP_FREE  __asm mov ecx, GAME_HEAP CALL_EAX(0xAA4060)
 
 #define MARK_MODIFIED(form, flag) __asm push 0 __asm push flag __asm push form __asm mov ecx, g_BGSSaveLoadGame __asm mov eax, 0x84A690 __asm call eax
 
@@ -61,11 +62,34 @@ __forceinline T_Ret CdeclCall(UInt32 _addr, Args ...args)
 	return ((T_Ret (__cdecl *)(Args...))_addr)(std::forward<Args>(args)...);
 }
 
-#define GameHeapAlloc(size) ThisCall<void*, UInt32>(0xAA3E40, (void*)0x11F6238, size)
-#define GameHeapFree(ptr) ThisCall<void, void*>(0xAA4060, (void*)0x11F6238, ptr)
+void* __stdcall Game_DoHeapAlloc(UInt32 size);
+template <typename T = char> __forceinline T* Game_HeapAlloc(size_t count = 1)
+{
+	return (T*)Game_DoHeapAlloc(count * sizeof(T));
+}
+__forceinline void Game_HeapFree(void *ptr)
+{
+	ThisCall<void, void*>(0xAA4060, (void*)GAME_HEAP, ptr);
+}
 
-#define GetRandomInt(n) ThisCall<SInt32, SInt32>(0xAA5230, (void*)0x11C4180, n)
-#define GetRandomIntInRange(iMin, iMax) (GetRandomInt(iMax - iMin) + iMin)
+template <typename T = char> __forceinline T* Ni_Alloc(size_t count = 1)
+{
+	return CdeclCall<T*>(0xAA13E0, count * sizeof(T));
+}
+template <typename T = char> __forceinline void Ni_Free(T *ptr, size_t count = 1)
+{
+	CdeclCall(0xAA1460, ptr, count * sizeof(T));
+}
+
+#define GAME_RNG 0x11C4180
+__forceinline UInt32 GetRandomUInt(UInt32 uBound)
+{
+	return ThisCall<UInt32, UInt32>(ADDR_GetRandomInt, (void*)GAME_RNG, uBound);
+}
+__forceinline SInt32 GetRandomIntInRange(SInt32 iMin, SInt32 iMax)
+{
+	return ThisCall<SInt32, SInt32>(ADDR_GetRandomInt, (void*)GAME_RNG, iMax - iMin) + iMin;
+}
 
 #define LOG_HOOKS 0
 
@@ -137,6 +161,10 @@ extern memcpy_t MemCopy;
 #define ZERO_BYTES(addr, size) __stosb((UInt8*)(addr), 0, size)
 #define CPY_RET_END(dest, src, length) ((char*)memcpy(dest, src, length + 1) + length)
 
+#define NRGB(r, g, b) r / 255.0F, g / 255.0F, b / 255.0F
+
+extern UInt32 g_TLSIndex;
+
 //	Workaround used for:
 //	* Preventing the compiler from generating _atexit d'tors for static objects.
 //	* Bypassing the compiler calling the d'tor on function-scope objects.
@@ -189,12 +217,12 @@ public:
 };
 
 //	Swap lhs and rhs, bypassing operator=
-template <typename T> __forceinline void RawSwap(const T &lhs, const T &rhs)
+template <typename T> __forceinline void RawSwap(T *lhs, T *rhs)
 {
 	alignas(T) UInt8	buffer[sizeof(T)];
-	memcpy((void*)buffer, (const void*)&lhs, sizeof(T));
-	memcpy((void*)&lhs, (const void*)&rhs, sizeof(T));
-	memcpy((void*)&rhs, (const void*)buffer, sizeof(T));
+	memcpy((void*)buffer, (const void*)lhs, sizeof(T));
+	memcpy((void*)lhs, (const void*)rhs, sizeof(T));
+	memcpy((void*)rhs, (const void*)buffer, sizeof(T));
 }
 
 class CriticalSection : public CRITICAL_SECTION
@@ -276,6 +304,199 @@ template <const size_t numBits> struct BitField
 	inline void operator+=(UInt8 bitIndex) {bits |= (1 << bitIndex);}
 	inline void operator-=(UInt8 bitIndex) {bits &= ~(1 << bitIndex);}
 };
+
+template <typename T_Array> class ArrayUtils
+{
+	using T_Data = T_Array::Element;
+	using Data_Arg = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, const T_Data&>;
+	using Data_Val = std::conditional_t<std::is_scalar_v<T_Data>, T_Data, T_Data&&>;
+	
+	static bool __vectorcall CompareLT(Data_Arg lhs, Data_Arg rhs) {return lhs < rhs;}
+	static bool __vectorcall CompareGT(Data_Arg lhs, Data_Arg rhs) {return rhs < lhs;}
+
+	typedef bool (__vectorcall *SortComperator)(Data_Arg, Data_Arg);
+	static void QuickSort(T_Array &array, UInt32 l, UInt32 h, SortComperator comperator)
+	{
+		UInt32 i = l;
+		for (UInt32 j = l + 1; j < h; j++)
+			if (!comperator(array[l], array[j]))
+				RawSwap<T_Data>(&array[++i], &array[j]);
+		RawSwap<T_Data>(&array[l], &array[i]);
+		if (l < i)
+			QuickSort(array, l, i, comperator);
+		if (++i < h)
+			QuickSort(array, i, h, comperator);
+	}
+	
+public:
+	static void Sort(T_Array &array, bool descending = false)
+	{
+		if (array.Size() > 1)
+			QuickSort(array, 0, array.Size(), descending ? CompareGT : CompareLT);
+	}
+
+	static void Sort(T_Array &array, SortComperator comperator)
+	{
+		if (array.Size() > 1)
+			QuickSort(array, 0, array.Size(), comperator);
+	}
+
+	__declspec(noinline) static UInt32 InsertSorted(T_Array &array, Data_Val item, SortComperator comperator)
+	{
+		UInt32 lBound = 0, uBound = array.Size();
+		while (lBound != uBound)
+		{
+			UInt32 index = (lBound + uBound) >> 1;
+			if (comperator(item, array[index]))
+				uBound = index;
+			else lBound = index + 1;
+		}
+		uBound = array.Size() - lBound;
+		T_Data *pData = array.AllocateData();
+		if (uBound)
+		{
+			pData = array.Data() + lBound;
+			memmove(pData + 1, pData, sizeof(T_Data) * uBound);
+		}
+		*pData = std::move(item);
+		return lBound;
+	}
+	
+	static UInt32 InsertSorted(T_Array &array, Data_Val item, bool descending = false)
+	{
+		return InsertSorted(array, std::forward<T_Data>(item), descending ? CompareGT : CompareLT);
+	}
+
+	static void Shuffle(T_Array &array)
+	{
+		T_Data *pData = array.Data();
+		for (UInt32 count = array.Size(); count > 1; count--, pData++)
+			if (UInt32 rand = GetRandomUInt(count))
+				RawSwap<T_Data>(pData, &pData[rand]);
+	}
+
+	static void Reverse(T_Array &array)
+	{
+		if (array.Size() > 1)
+			for (UInt32 ftIdx = 0, bkIdx = array.Size() - 1; ftIdx < bkIdx; ftIdx++, bkIdx--)
+				RawSwap<T_Data>(&array[ftIdx], &array[bkIdx]);
+	}
+};
+
+template <typename T_List> class LinkedListUtils
+{
+	using T_Data = T_List::Element;
+	using Node = T_List::Node;
+
+	static void SwapData(Node *n1, Node *n2) {RawSwap<T_Data>(&n1->data, &n2->data);}
+	
+	static bool __fastcall CompareLT(const Node *n1, const Node *n2) {return n1->data < n2->data;}
+	static bool __fastcall CompareGT(const Node *n1, const Node *n2) {return n2->data < n1->data;}
+
+	typedef bool (__fastcall *SortComperator)(const Node*, const Node*);
+	static void QuickSort(Node *lNode, UInt32 l, UInt32 h, SortComperator comperator)
+	{
+		UInt32 i = l;
+		Node *iNode = lNode, *jNode = lNode->next;
+		for (UInt32 j = l + 1; j < h; j++, jNode = jNode->next)
+			if (!comperator(lNode, jNode))
+			{
+				i++;
+				iNode = iNode->next;
+				SwapData(jNode, iNode);
+			}
+		SwapData(lNode, iNode);
+		if (l < i)
+			QuickSort(lNode, l, i, comperator);
+		if (++i < h)
+			QuickSort(iNode->next, i, h, comperator);
+	}
+	
+public:
+	static void Sort(T_List &list, bool descending = false)
+	{
+		if (UInt32 count = list.Count(); count > 1)
+			QuickSort(list.Head(), 0, count, descending ? CompareGT : CompareLT);
+	}
+
+	static void Sort(T_List &list, SortComperator comperator)
+	{
+		if (UInt32 count = list.Count(); count > 1)
+			QuickSort(list.Head(), 0, count, comperator);
+	}
+
+	static void Shuffle(T_List &list)
+	{
+		Node *head = list.Head();
+		for (UInt32 count = list.Count(); count > 1; count--, head = head->next)
+			if (UInt32 rand = GetRandomUInt(count))
+				SwapData(head, head->GetNth(rand));
+	}
+
+	static void Exchange(T_List &list, UInt32 idx1, UInt32 idx2)
+	{
+		if (list.Empty()) return;
+		if (idx1 > idx2)
+		{
+			UInt32 tmp = idx1;
+			idx1 = idx2;
+			idx2 = tmp;
+		}
+		Node *iter = list.Head(), *node1 = nullptr;
+		UInt32 idx = 0;
+		do
+		{
+			if (!node1)
+			{
+				if (idx == idx1)
+					node1 = iter;
+			}
+			else if (idx == idx2)
+			{
+				SwapData(node1, iter);
+				break;
+			}
+			idx++;
+		}
+		while (iter = iter->next);
+	}
+};
+
+void PrintLog(const char *fmt, ...);
+void PrintDebug(const char *fmt, ...);
+
+template <typename T_HashMap> class HashMapUtils
+{
+	using Entry = T_HashMap::Entry;
+	using Bucket = T_HashMap::Bucket;
+	
+public:
+	static void DumpLoads(const T_HashMap &map)
+	{
+		UInt32 loadsArray[0x40];
+		ZERO_BYTES(loadsArray, sizeof(loadsArray));
+		UInt32 maxLoad = 0;
+		for (Bucket *pBucket = map.GetBuckets(), *pEnd = map.End(); pBucket != pEnd; pBucket++)
+		{
+			UInt32 entryCount = pBucket->Size();
+			loadsArray[entryCount]++;
+			if (maxLoad < entryCount)
+				maxLoad = entryCount;
+		}
+		PrintDebug("Size = %d\nBuckets = %d\n----------------\n", map.Size(), map.BucketCount());
+		for (UInt32 iter = 0; iter <= maxLoad; iter++)
+			if (loadsArray[iter]) PrintDebug("%d:\t%05d (%.4f%%)", iter, loadsArray[iter], 100.0 * (double)loadsArray[iter] / map.Size());
+	}
+};
+
+#define Use_ArrayUtils(cont_type, data_type)	\
+	using Element = data_type;	\
+	friend ArrayUtils<cont_type>;
+#define Use_LinkedListUtils(cont_type, data_type)	\
+	using Element = data_type;	\
+	friend LinkedListUtils<cont_type>;
+#define Use_HashMapUtils(cont_type)	\
+	friend HashMapUtils<cont_type>;
 
 struct CellCoord
 {
@@ -383,7 +604,7 @@ char *GetStrArgBuffer();
 
 void __fastcall NiReleaseObject(NiRefObject *toRelease);
 
-NiRefObject** __stdcall NiReleaseAddRef(void *toRelease, NiRefObject *toAdd);
+NiRefObject** __stdcall NiReplaceObject(void *toRelease, NiRefObject *toAdd);
 
 UInt32 __fastcall RGBHexToDec(UInt32 rgb);
 
@@ -563,6 +784,7 @@ public:
 		else Reset();
 	}
 	
+	void operator=(const XString &other);
 	void operator=(const char *other);
 	
 	bool operator==(const XString &other) const;
@@ -652,9 +874,6 @@ public:
 };
 
 extern TempObject<DebugLog> s_log, s_debug;
-
-void PrintLog(const char *fmt, ...);
-void PrintDebug(const char *fmt, ...);
 
 class LineIterator
 {

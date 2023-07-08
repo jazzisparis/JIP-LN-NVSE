@@ -50,7 +50,7 @@ bool Cmd_LeveledListReplaceForm_Execute(COMMAND_ARGS)
 	TESLeveledList *lvlList;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &list, &oldform, &newform) && (lvlList = list->GetLvlList()))
 	{
-		ListNode<TESLeveledList::ListData> *iter = lvlList->list.Head();
+		auto iter = lvlList->list.Head();
 		TESLeveledList::ListData *data;
 		do
 		{

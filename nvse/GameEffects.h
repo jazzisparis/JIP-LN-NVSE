@@ -335,10 +335,10 @@ public:
 	virtual void	Unk_2F(void);
 	virtual void	Unk_30(void);
 
-	float			duration;	// 08
+	float			lifetime;	// 08
 	TESObjectCELL	*cell;		// 0C
-	float			unk10;		// 10
-	UInt8			unk14;		// 14
+	float			age;		// 10
+	bool			initialized;// 14
 	UInt8			pad15[3];	// 15
 };
 
