@@ -108,6 +108,7 @@ bool Cmd_SetLockedOut_Execute(COMMAND_ARGS)
 			refr->extraDataList.AddExtra(xTerm);
 		}
 		xTerm->lockedOut = state;
+		refr->MarkModified(0x80000000);
 	}
 	else if IS_ID(refr->baseForm, TESObjectDOOR)
 	{
@@ -118,14 +119,18 @@ bool Cmd_SetLockedOut_Execute(COMMAND_ARGS)
 			if (xTeleport && xTeleport->data && xTeleport->data->linkedDoor)
 			{
 				xLock = GetExtraType(&xTeleport->data->linkedDoor->extraDataList, ExtraLock);
+				if (xLock && xLock->data)
+				{
+					xLock->data->unk0C = state;
+					xTeleport->data->linkedDoor->MarkModified(0x1000);
+					return true;
+				}
 			}
-			if (!xLock)
-			{
-				xLock = ExtraLock::Create();
-				refr->extraDataList.AddExtra(xLock);
-			}
+			xLock = ExtraLock::Create();
+			refr->extraDataList.AddExtra(xLock);
 		}
 		xLock->data->unk0C = state;
+		refr->MarkModified(0x1000);
 	}
 	else
 	{
@@ -136,6 +141,7 @@ bool Cmd_SetLockedOut_Execute(COMMAND_ARGS)
 			refr->extraDataList.AddExtra(xLock);
 		}
 		xLock->data->unk0C = state;
+		refr->MarkModified(0x1000);
 	}
 	return true;
 }
