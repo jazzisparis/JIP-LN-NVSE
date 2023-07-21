@@ -2951,7 +2951,7 @@ doneFlags:
 const UInt8 kValidEntryPoints[] =
 {
 	1, 2, 3, 0, 4, 0, 5, 0, 0, 0, 0, 0, 6, 0, 7, 8, 0, 0, 0, 0, 0, 0, 9, 10, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 13, 14,
-	15, 0, 0, 0, 16, 17, 0, 0, 18, 0, 0, 0, 0, 0, 19, 0, 0, 0, 20, 0, 21, 22, 0, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 24, 0
+	15, 0, 0, 0, 16, 17, 0, 0, 18, 0, 0, 0, 0, 0, 19, 0, 0, 25, 20, 0, 21, 22, 0, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 24, 0
 };
 
 TempObject<Vector<BGSPerk*>> s_validNPCPerks(0x40), s_validNPCTraits(0x20), s_NPCPerksPick(0x40);
@@ -3009,10 +3009,10 @@ void BuildValidNPCPerks()
 	}
 	while (perkIter = perkIter->next);
 
-	/*for (auto trtIter = s_validNPCTraits.Begin(); trtIter; ++trtIter)
+	/*for (auto trtIter = s_validNPCTraits->Begin(); trtIter; ++trtIter)
 		PrintLog("%08X\t%s", trtIter->refID, trtIter->GetEditorID());
 	PrintLog("\n================\n");
-	for (auto prkIter = s_validNPCPerks.Begin(); prkIter; ++prkIter)
+	for (auto prkIter = s_validNPCPerks->Begin(); prkIter; ++prkIter)
 		PrintLog("%08X\t%s", prkIter->refID, prkIter->GetEditorID());
 	PrintLog("\n================\n");*/
 }
@@ -3021,7 +3021,7 @@ typedef Map<BGSPerk*, UInt8, 4> PerkRanksMap;
 
 class NPCPerkEntryPoints
 {
-	PerkEntryPointList		perkEntries[24];
+	PerkEntryPointList		perkEntries[25];
 
 public:
 	static NPCPerkEntryPoints *Create()
