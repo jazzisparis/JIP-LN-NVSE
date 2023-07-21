@@ -62,15 +62,28 @@ bool Cmd_GetLockedOut_Execute(COMMAND_ARGS)
 		refr = thisObj;
 	}
 	if (refr->flags & 0x100) *result = 3;
+	else if IS_ID(refr->baseForm, BGSTerminal)
+	{
+		ExtraTerminalState *xTerm = GetExtraType(&refr->extraDataList, ExtraTerminalState);
+		if (xTerm) *result = xTerm->lockedOut & 0xF;
+	}
+	else if IS_ID(refr->baseForm, TESObjectDOOR)
+	{
+		ExtraLock *xLock = GetExtraType(&refr->extraDataList, ExtraLock);
+		if (!xLock)
+		{
+			ExtraTeleport *xTeleport = GetExtraType(&refr->extraDataList, ExtraTeleport);
+			if (xTeleport && xTeleport->data && xTeleport->data->linkedDoor)
+			{
+				xLock = GetExtraType(&xTeleport->data->linkedDoor->extraDataList, ExtraLock);
+			}
+		}
+		if (xLock && xLock->data) *result = (int)(xLock->data->unk0C & 0xF);
+	}
 	else
 	{
 		ExtraLock *xLock = GetExtraType(&refr->extraDataList, ExtraLock);
 		if (xLock && xLock->data) *result = (int)(xLock->data->unk0C & 0xF);
-		else
-		{
-			ExtraTerminalState *xTerm = GetExtraType(&refr->extraDataList, ExtraTerminalState);
-			if (xTerm) *result = xTerm->lockedOut & 0xF;
-		}
 	}
 	return true;
 }
@@ -91,9 +104,28 @@ bool Cmd_SetLockedOut_Execute(COMMAND_ARGS)
 		if (!xTerm)
 		{
 			xTerm = ExtraTerminalState::Create();
+			xTerm->lockLevel = ((BGSTerminal*)refr->baseForm)->data.difficulty;
 			refr->extraDataList.AddExtra(xTerm);
 		}
 		xTerm->lockedOut = state;
+	}
+	else if IS_ID(refr->baseForm, TESObjectDOOR)
+	{
+		ExtraLock *xLock = GetExtraType(&refr->extraDataList, ExtraLock);
+		if (!xLock)
+		{
+			ExtraTeleport *xTeleport = GetExtraType(&refr->extraDataList, ExtraTeleport);
+			if (xTeleport && xTeleport->data && xTeleport->data->linkedDoor)
+			{
+				xLock = GetExtraType(&xTeleport->data->linkedDoor->extraDataList, ExtraLock);
+			}
+			if (!xLock)
+			{
+				xLock = ExtraLock::Create();
+				refr->extraDataList.AddExtra(xLock);
+			}
+		}
+		xLock->data->unk0C = state;
 	}
 	else
 	{
