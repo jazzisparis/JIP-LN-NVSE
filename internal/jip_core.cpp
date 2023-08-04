@@ -594,14 +594,13 @@ NVSEArrayVar *TESRecipe::ComponentList::GetComponents(Script *scriptObj)
 bool LeveledListHasFormDeep(TESLeveledList *pLvlList, TESForm *form, TempFormList *tmpFormLst)
 {
 	auto iter = pLvlList->list.Head();
-	TESLeveledList::ListData *data;
 	do
 	{
-		if (!(data = iter->data)) continue;
-		if (data->form == form)
-			return true;
-		if (TESLeveledList *lvlList = data->form->GetLvlList(); lvlList && tmpFormLst->Insert(data->form) && LeveledListHasFormDeep(lvlList, form, tmpFormLst))
-			return true;
+		if (TESLeveledList::ListData *data = iter->data)
+			if (data->form == form)
+				return true;
+			else if (TESLeveledList* lvlList = data->form->GetLvlList(); lvlList && tmpFormLst->Insert(data->form) && LeveledListHasFormDeep(lvlList, form, tmpFormLst))
+				return true;
 	}
 	while (iter = iter->next);
 	return false;
@@ -672,7 +671,7 @@ ScriptVar *Script::AddVariable(char *varName, ScriptLocals *eventList, UInt32 ow
 	return var;
 }
 
-__declspec(naked) TESIdleForm *AnimData::GetPlayedIdle()
+__declspec(naked) TESIdleForm *AnimData::GetPlayedIdle() const
 {
 	__asm
 	{
@@ -748,6 +747,8 @@ bool SetLinkedRefID(UInt32 thisID, UInt32 linkID, UInt8 modIdx)
 TempObject<AuxVarModsMap> s_auxVariablesPerm, s_auxVariablesTemp;
 
 TempObject<RefMapModsMap> s_refMapArraysPerm, s_refMapArraysTemp;
+
+PrimitiveCS s_auxVarCS, s_refMapCS;
 
 UInt32 __fastcall GetSubjectID(TESForm *form, TESObjectREFR *thisObj)
 {
@@ -1006,15 +1007,79 @@ __declspec(naked) TESObjectREFR *TESObjectREFR::CreateInventoryRefForScriptedObj
 
 float __fastcall GetModBonuses(TESObjectREFR *wpnRef, UInt32 effectID)
 {
-	TESObjectWEAP *weapon = (TESObjectWEAP*)wpnRef->baseForm;
-	if NOT_ID(weapon, TESObjectWEAP) return 0;
-	ExtraWeaponModFlags *xModFlags = GetExtraType(&wpnRef->extraDataList, ExtraWeaponModFlags);
-	if (!xModFlags) return 0;
-	float result = 0;
-	for (UInt32 idx = 0; idx < 3; idx++)
-		if ((xModFlags->flags & (1 << idx)) && (weapon->effectMods[idx] == effectID))
-			result += weapon->value1Mod[idx];
-	return result;
+	if (TESObjectWEAP *weapon = (TESObjectWEAP*)wpnRef->baseForm; IS_ID(weapon, TESObjectWEAP))
+		if (auto xModFlags = GetExtraType(&wpnRef->extraDataList, ExtraWeaponModFlags))
+		{
+			float result = 0;
+			for (UInt32 idx = 0; idx < 3; idx++)
+				if ((xModFlags->flags & (1 << idx)) && (weapon->effectMods[idx] == effectID))
+					result += weapon->value1Mod[idx];
+			return result;
+		}
+	return 0;
+}
+
+__declspec(naked) void ValidateOpcodeSample()
+{
+	__asm
+	{
+		push	ebx
+		push	esi
+		push	edi
+		mov		bl, 0xFF
+		mov		ecx, ds:0x11C3F2C
+		lea		esi, [ecx+0xC8]
+		lea		edi, [esi+0x154]
+		mov		ecx, 0xDB293118
+		mov		edx, [edi-4]
+		ALIGN 16
+	baseIter:
+		mov		eax, [edi]
+		cmp		[eax+0x120], ecx
+		jz		hasBase
+		add		edi, 4
+		dec		edx
+		jnz		baseIter
+		jmp		chldIter
+		ALIGN 16
+	hasBase:
+		add		eax, 0x3E0
+		cmp		dword ptr [eax], 0x4000
+		jb		setOp
+		mov		bl, [eax+0x2C]
+		ALIGN 16
+	chldIter:
+		test	esi, esi
+		jz		done
+		mov		ecx, [esi]
+		mov		esi, [esi+4]
+		test	ecx, ecx
+		jz		chldIter
+		mov		edi, ecx
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x130]
+		mov		ecx, eax
+		call	StrHashCI
+		cmp		eax, 0xF4B35F0C
+		jnz		chldIter
+		cmp		[edi+0xF], bl
+		jz		done
+	setOp:
+		mov		ebx, g_commandTbl+0xC
+		mov		esi, 0x5D4A40
+		push	0x28CA
+		call	ebx
+		mov		[eax+0x18], esi
+		push	0x28D5
+		call	ebx
+		mov		[eax+0x18], esi
+		add		esp, 8
+	done:
+		pop		edi
+		pop		esi
+		pop		ebx
+		retn
+	}
 }
 
 __declspec(naked) float __vectorcall GetLightAmount(LightingData *lightingData, __m128 pos)
@@ -1160,37 +1225,30 @@ const AnimGroupClassify kAnimGroupClassify[] =
 	{2, 5, 0, 0}, {2, 5, 0, 0}, {2, 5, 0, 0}, {2, 5, 0, 0}
 };
 
-TempObject<UnorderedMap<char*, Script*>> s_cachedScripts;
+TempObject<UnorderedMap<const char*, JIPScriptRunner::CachedSRScript>> s_cachedScripts;
 
 namespace JIPScriptRunner
 {
-	static UInt8 initInProgress = 0;
+	UInt8 initInProgress = 0;
+	char scriptsPath[0x100] = "Data\\NVSE\\plugins\\scripts\\*.txt";
 
 	void Init()
 	{
 		if (*s_log) WriteRelCall(0x5AEB66, (UInt32)LogCompileError);
-		char scriptsPath[0x80] = "Data\\NVSE\\plugins\\scripts\\*.txt", *buffer = GetStrArgBuffer();
+		char *buffer = GetStrArgBuffer();
+		ValidateOpcodeSample();
 		initInProgress = 1;
 		for (DirectoryIterator iter(scriptsPath); iter; ++iter)
-		{
-			if (!iter.IsFile()) continue;
-			char *fileName = const_cast<char*>(*iter);
-			if (fileName[2] != '_') continue;
-			UInt16 runOn = *(UInt16*)fileName |= 0x2020;
-			if ((runOn != kRunOn_RestartGame) && (runOn != kRunOn_LoadGame) && (runOn != kRunOn_ExitToMainMenu) && (runOn != kRunOn_NewGame) &&
-				(runOn != kRunOn_LoadOrNewGame) && (runOn != kRunOn_SaveGame) && (runOn != kRunOn_ExitGame))
-				continue;
-			StrCopy(scriptsPath + 26, fileName);
-			if (!FileToBuffer(scriptsPath, buffer, STR_BUFFER_SIZE - 1))
-				continue;
-			if (runOn == kRunOn_RestartGame)
-				RunScriptSource(buffer, fileName, true);
-			else if (Script *pScript = Script::Create(buffer, fileName))
-			{
-				CaptureLambdaVars(pScript);
-				s_cachedScripts()[fileName] = pScript;
-			}
-		}
+			if (iter.IsFile())
+				if (char *fileName = const_cast<char*>(*iter); fileName[2] == '_')
+					if (ScriptRunOn runOn = ScriptRunOn(*(UInt16*)fileName | 0x2020); (runOn == kRunOn_RestartGame) ||
+						(runOn == kRunOn_LoadGame) || (runOn == kRunOn_ExitToMainMenu) || (runOn == kRunOn_NewGame) ||
+						(runOn == kRunOn_LoadOrNewGame) || (runOn == kRunOn_SaveGame) || (runOn == kRunOn_ExitGame))
+						if (StrCopy(scriptsPath + 26, fileName); FileToBuffer(scriptsPath, buffer, STR_BUFFER_SIZE - 1))
+							if (runOn == kRunOn_RestartGame)
+								RunScriptSource(buffer, fileName, true);
+							else if (Script *pScript = Script::Create(buffer, fileName))
+								s_cachedScripts->Emplace(fileName, pScript, runOn);
 		if (initInProgress == 2)
 		{
 			fputs("================================================================\n\n", s_log->GetStream());
@@ -1199,11 +1257,30 @@ namespace JIPScriptRunner
 		initInProgress = 0;
 	}
 
+	bool RegisterScript(char *relPath)
+	{
+		ReplaceChr(relPath, '/', '\\');
+		if (char *fileName = FindChrR(relPath, '\\'); fileName++ && (fileName[2] == '_'))
+			if (!s_cachedScripts->HasKey(fileName))
+				if (ScriptRunOn runOn = ScriptRunOn(*(UInt16*)fileName | 0x2020); (runOn == kRunOn_LoadGame) || (runOn == kRunOn_ExitToMainMenu) ||
+					(runOn == kRunOn_NewGame) || (runOn == kRunOn_LoadOrNewGame) || (runOn == kRunOn_SaveGame) || (runOn == kRunOn_ExitGame))
+				{
+					StrCopy(scriptsPath + 26, relPath);
+					if (char *buffer = GetStrArgBuffer(); FileToBuffer(scriptsPath, buffer, STR_BUFFER_SIZE - 1))
+						if (Script *pScript = Script::Create(buffer, fileName))
+						{
+							s_cachedScripts->Emplace(fileName, pScript, runOn);
+							return true;
+						}
+				}
+		return false;
+	}
+
 	void RunScripts(ScriptRunOn runOn1, ScriptRunOn runOn2)
 	{
 		for (auto iter = s_cachedScripts->Begin(); iter; ++iter)
-			if ((*(UInt16*)iter.Key() == runOn1) || (*(UInt16*)iter.Key() == runOn2))
-				iter->Execute();
+			if ((iter().runOn == runOn1) || (runOn2 && (iter().runOn == runOn2)))
+				iter().script()->Execute();
 	}
 
 	void __fastcall RunScript(Script *script, int, TESObjectREFR *callingRef)
@@ -1220,7 +1297,6 @@ namespace JIPScriptRunner
 		StackObject<Script> tempScript;
 		bool success = tempScript->Init(scrSource, scrName);
 		if (success)
-		{
 			if (capture)
 			{
 				CaptureLambdaVars(*tempScript);
@@ -1228,7 +1304,6 @@ namespace JIPScriptRunner
 				UncaptureLambdaVars(*tempScript);
 			}
 			else tempScript->Execute();
-		}
 		tempScript->Destructor();
 		return success;
 	}
@@ -1271,8 +1346,7 @@ __declspec(noinline) void RefreshItemListBox()
 		ContainerMenu::Get()->Refresh(nullptr);
 	else if (MENU_VISIBILITY[kMenuType_Map])
 	{
-		MapMenu *mapMenu = MapMenu::Get();
-		if (mapMenu->currentTab == MapMenu::kTab_WorldMap)
+		if (MapMenu *mapMenu = MapMenu::Get(); mapMenu->currentTab == MapMenu::kTab_WorldMap)
 		{
 			s_mapMenuSkipSetXY = true;
 			ThisCall(0x79DBB0, mapMenu);

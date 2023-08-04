@@ -497,7 +497,7 @@ __declspec(naked) InventoryIterator* __fastcall CreateInventoryIteratorHook(Extr
 		jz		doneList
 		push	ecx
 		call	TESContainer::FormCountList::RemoveAll
-		GAME_HEAP_FREE
+		call	Game_HeapFree
 	doneList:
 		xorps	xmm0, xmm0
 		movups	[esi], xmm0
@@ -567,7 +567,7 @@ __declspec(naked) void InventoryIterGetNextHook()
 		push	dword ptr [ecx]
 		push	eax
 		push	0xC
-		GAME_HEAP_ALLOC
+		call	Game_DoHeapAlloc
 		and		dword ptr [eax], 0
 		pop		dword ptr [eax+4]
 		pop		dword ptr [eax+8]
@@ -627,14 +627,14 @@ __declspec(naked) void __fastcall SetContainerItemsHealthHook(TESContainer *cont
 		jnz		iterHead
 		mov		[edi+8], edx
 		push	eax
-		GAME_HEAP_FREE
+		call	Game_HeapFree
 		jmp		iterHead
 		ALIGN 16
 	hasHealth:
 		test	eax, eax
 		jnz		hasExtra
 		push	0xC
-		GAME_HEAP_ALLOC
+		call	Game_DoHeapAlloc
 		mov		[edi+8], eax
 		xor		edx, edx
 		mov		[eax], edx
@@ -2102,7 +2102,6 @@ __declspec(naked) void DoHitArmorDamageHook()
 		mov		ecx, [eax+8]
 		cvtsi2ss	xmm0, [ecx+0x6C]
 		mulss	xmm0, s_serializedVars.dmgArmorMaxPercent
-		maxss	xmm0, PS_V3_One
 		mov		ecx, [ebx+8]
 		minss	xmm0, [ecx+0x28]
 		push	ecx
@@ -2280,6 +2279,44 @@ __declspec(naked) void SetAcousticSpaceFixHook()
 	}
 }
 
+__declspec(naked) void DamagePCFatigueMinFixHook()
+{
+	__asm
+	{
+		push	dword ptr [ebp+8]
+		mov		ecx, [ebp-0x38]
+		add		ecx, 0xA4
+		mov		eax, [ecx]
+		call	dword ptr [eax+0xC]
+		fstp	dword ptr [ebp-0x18]
+		cmp		dword ptr [ebp+8], kAVCode_Fatigue
+		jnz		done
+		movss	xmm0, [ebp+0xC]
+		movss	xmm1, [ebp-0x18]
+		addss	xmm1, xmm0
+		subss	xmm1, ds:0x11D2668	//	fMinFatigue
+		xorps	xmm2, xmm2
+		minss	xmm1, xmm2
+		subss	xmm0, xmm1
+		movss	[ebp+0xC], xmm0
+	done:
+		retn
+	}
+}
+
+__declspec(naked) void UpdateWaterTexturesHook()
+{
+	__asm
+	{
+		mov		al, ds:0x11F91C5
+		test	al, al
+		jnz		done
+		jmp		NiTPtrMap<UInt32>::Lookup
+	done:
+		retn	4
+	}
+}
+
 __declspec(naked) UInt32 __fastcall EffectItemGetModifiedDuration(EffectItem *effItem)
 {
 	__asm
@@ -2423,8 +2460,8 @@ __declspec(naked) bool __cdecl PickSoundFileFromFolderHook(char *outFilePath)
 		push	esi
 		push	dword ptr [esi]
 		mov		esi, [esi+4]
-		GAME_HEAP_FREE
-		GAME_HEAP_FREE
+		call	Game_HeapFree
+		call	Game_HeapFree
 		test	esi, esi
 		jnz		clearIter
 		mov		al, 1
@@ -2948,10 +2985,10 @@ doneFlags:
 	ThisCall(0x88DB20, actor, weapon, 1, xDataList, false);
 }
 
-const UInt8 kValidEntryPoints[] =
+const SInt8 kValidEntryPoints[] =
 {
-	1, 2, 3, 0, 4, 0, 5, 0, 0, 0, 0, 0, 6, 0, 7, 8, 0, 0, 0, 0, 0, 0, 9, 10, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 13, 14,
-	15, 0, 0, 0, 16, 17, 0, 0, 18, 0, 0, 0, 0, 0, 19, 0, 0, 0, 20, 0, 21, 22, 0, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 24, 0
+	0, 1, 2, -1, 3, -1, 4, -1, -1, -1, -1, -1, 5, -1, 6, -1, -1, -1, -1, -1, -1, -1, 7, 8, -1, 9, -1, -1, -1, -1, -1, -1, -1, -1, 10, -1, 11, 12,
+	13, -1, -1, -1, 14, 15, -1, -1, 16, -1, -1, -1, -1, -1, 17, -1, -1, 18, 19, -1, 20, 21, -1, -1, -1, -1, -1, -1, -1, -1, 22, -1, -1, -1, 23, -1
 };
 
 TempObject<Vector<BGSPerk*>> s_validNPCPerks(0x40), s_validNPCTraits(0x20), s_NPCPerksPick(0x40);
@@ -2959,60 +2996,57 @@ TempObject<Vector<BGSPerk*>> s_validNPCPerks(0x40), s_validNPCTraits(0x20), s_NP
 void BuildValidNPCPerks()
 {
 	auto perkIter = g_dataHandler->perkList.Head();
-	BGSPerk *perk;
-	BGSPerkEntry *entry;
-	SpellItem *ability;
-	EffectItem *effItem;
-	UInt8 isValid;
 	do
 	{
-		if (!(perk = perkIter->data) || perk->entries.Empty() || !perk->data.isPlayable || perk->data.isHidden)
-			continue;
-		auto entryIter = perk->entries.Head();
-		isValid = 0;
-		do
+		if (BGSPerk *perk = perkIter->data; perk && !perk->entries.Empty() && perk->data.isPlayable && !perk->data.isHidden)
 		{
-			if (!(entry = entryIter->data))
-				goto isInvalid;
-			switch (entry->GetType())
+			auto entryIter = perk->entries.Head();
+			bool isValid = 0;
+			do
 			{
-				default:
-				case 0:
-					goto isInvalid;
-				case 1:
+				BGSPerkEntry *entry = entryIter->data;
+				if (!entry) goto isInvalid;
+				switch (entry->GetType())
 				{
-					ability = ((BGSAbilityPerkEntry*)entry)->ability;
-					if (!ability) goto isInvalid;
-					auto effIter = ability->magicItem.list.list.Head();
-					do
+					default:
+					case 0:
+						goto isInvalid;
+					case 1:
 					{
-						if (!(effItem = effIter->data) || !effItem->setting || (effItem->setting->archtype == EffectSetting::kArchType_Script))
+						SpellItem *ability = ((BGSAbilityPerkEntry*)entry)->ability;
+						if (!ability) goto isInvalid;
+						auto effIter = ability->magicItem.list.list.Head();
+						do
+						{
+							if (EffectItem *effItem = effIter->data; effItem && effItem->setting && (effItem->setting->archtype != EffectSetting::kArchType_Script))
+								continue;
 							goto isInvalid;
+						}
+						while (effIter = effIter->next);
+						break;
 					}
-					while (effIter = effIter->next);
-					break;
+					case 2:
+						isValid |= kValidEntryPoints[((BGSEntryPointPerkEntry*)entry)->entryPoint] >= 0;
+						break;
 				}
-				case 2:
-					isValid |= kValidEntryPoints[((BGSEntryPointPerkEntry*)entry)->entryPoint];
-					break;
 			}
-		}
-		while (entryIter = entryIter->next);
-		if (isValid)
-		{
-			if (perk->data.isTrait)
-				s_validNPCTraits->Append(perk);
-			else s_validNPCPerks->Append(perk);
+			while (entryIter = entryIter->next);
+			if (isValid)
+			{
+				if (perk->data.isTrait)
+					s_validNPCTraits->Append(perk);
+				else s_validNPCPerks->Append(perk);
+			}
 		}
 	isInvalid:
 		continue;
 	}
 	while (perkIter = perkIter->next);
 
-	/*for (auto trtIter = s_validNPCTraits.Begin(); trtIter; ++trtIter)
+	/*for (auto trtIter = s_validNPCTraits->Begin(); trtIter; ++trtIter)
 		PrintLog("%08X\t%s", trtIter->refID, trtIter->GetEditorID());
 	PrintLog("\n================\n");
-	for (auto prkIter = s_validNPCPerks.Begin(); prkIter; ++prkIter)
+	for (auto prkIter = s_validNPCPerks->Begin(); prkIter; ++prkIter)
 		PrintLog("%08X\t%s", prkIter->refID, prkIter->GetEditorID());
 	PrintLog("\n================\n");*/
 }
@@ -3033,8 +3067,8 @@ public:
 
 	PerkEntryPointList* operator[](UInt8 entryPt)
 	{
-		UInt32 index = kValidEntryPoints[entryPt];
-		return index ? &perkEntries[index - 1] : nullptr;
+		int index = kValidEntryPoints[entryPt];
+		return (index >= 0) ? &perkEntries[index] : nullptr;
 	}
 
 	void Destroy()
@@ -3134,32 +3168,29 @@ void __fastcall AddPerkEntriesNPC(Actor *actor, BGSPerk *perk, UInt8 newRank, NP
 {
 	newRank--;
 	auto entryIter = perk->entries.Head();
-	BGSPerkEntry *entry;
-	UInt32 eType;
-	BGSEntryPointPerkEntry *entryPt;
-	PerkEntryPointList *entryList;
 	bool bUpdReload = false;
 	do
 	{
-		if (!(entry = entryIter->data) || !(eType = entry->GetType()))
-			continue;
-		if (eType == 2)
-		{
-			entryPt = (BGSEntryPointPerkEntry*)entry;
-			if (!(entryList = (*entryPoints)[entryPt->entryPoint]))
-				continue;
-			if (entryPt->rank != newRank)
-			{
-				if (!entryList->Remove(entryPt))
-					continue;
-			}
-			else if (!entryList->AppendNotIn(entryPt))
-				continue;
-			bUpdReload |= (entryPt->entryPoint == kPerkEntry_ReloadSpeed);
-		}
-		else if (entry->rank != newRank)
-			entry->RemoveEntry(actor, 0);
-		else entry->AddEntry(actor, 0);
+		if (BGSPerkEntry *entry = entryIter->data)
+			if (UInt32 eType = entry->GetType())
+				if (eType == 2)
+				{
+					BGSEntryPointPerkEntry *entryPt = (BGSEntryPointPerkEntry*)entry;
+					if (PerkEntryPointList *entryList = (*entryPoints)[entryPt->entryPoint])
+					{
+						if (entryPt->rank != newRank)
+						{
+							if (!entryList->Remove(entryPt))
+								continue;
+						}
+						else if (!entryList->AppendNotIn(entryPt))
+							continue;
+						bUpdReload |= (entryPt->entryPoint == kPerkEntry_ReloadSpeed);
+					}
+				}
+				else if (entry->rank != newRank)
+					entry->RemoveEntry(actor, 0);
+				else entry->AddEntry(actor, 0);
 	}
 	while (entryIter = entryIter->next);
 	if (bUpdReload)
@@ -3176,8 +3207,7 @@ void __fastcall SetPerkRankNPCHook(Actor *actor, int, BGSPerk *perk, UInt8 newRa
 			perksInfo->Reset();
 		AddStartingPerks(actor, perksInfo);
 	}
-	UInt8 *rankPtr;
-	if (perksInfo->perkRanks.InsertKey(perk, &rankPtr) || (*rankPtr < newRank))
+	if (UInt8 *rankPtr; perksInfo->perkRanks.InsertKey(perk, &rankPtr) || (*rankPtr < newRank))
 	{
 		*rankPtr = newRank;
 		s_dataChangedFlags |= kChangedFlag_NPCPerks;
@@ -3197,14 +3227,12 @@ void __fastcall AddTeammatePerkEntries(Actor *teammate, BGSPerk *perk, UInt8 new
 	if (teammate->extraDataList.perksInfo && teammate->extraDataList.perksInfo->perkRanks.HasKey(perk))
 		return;
 	auto entryIter = perk->entries.Head();
-	BGSPerkEntry *entry;
 	do
 	{
-		if (!(entry = entryIter->data) || NOT_TYPE(entry, BGSAbilityPerkEntry))
-			continue;
-		if (entry->rank != newRank)
-			entry->RemoveEntry(teammate, 0);
-		else entry->AddEntry(teammate, 0);
+		if (BGSPerkEntry *entry = entryIter->data; entry && IS_TYPE(entry, BGSAbilityPerkEntry))
+			if (entry->rank != newRank)
+				entry->RemoveEntry(teammate, 0);
+			else entry->AddEntry(teammate, 0);
 	}
 	while (entryIter = entryIter->next);
 }
@@ -3214,10 +3242,9 @@ void __fastcall RemoveTeammatePerkEntries(Actor *teammate, BGSPerk *perk)
 	if (teammate->extraDataList.perksInfo && teammate->extraDataList.perksInfo->perkRanks.HasKey(perk))
 		return;
 	auto entryIter = perk->entries.Head();
-	BGSPerkEntry *entry;
 	do
 	{
-		if ((entry = entryIter->data) && IS_TYPE(entry, BGSAbilityPerkEntry))
+		if (BGSPerkEntry *entry = entryIter->data; entry && IS_TYPE(entry, BGSAbilityPerkEntry))
 			entry->RemoveEntry(teammate, 0);
 	}
 	while (entryIter = entryIter->next);
@@ -3242,11 +3269,9 @@ void __fastcall SetPerkRankPlayerHook(PlayerCharacter *thePlayer, int, BGSPerk *
 		do
 		{
 			if (BGSPerkEntry *entry = entryIter->data)
-			{
 				if (entry->rank != newRank)
 					entry->RemoveEntry(thePlayer, 0);
 				else entry->AddEntry(thePlayer, 0);
-			}
 		}
 		while (entryIter = entryIter->next);
 		CdeclCall(0x7DD710);
@@ -3272,22 +3297,19 @@ void __fastcall RemovePerkNPCHook(Actor *actor, int, BGSPerk *perk, bool forTeam
 	s_dataChangedFlags |= kChangedFlag_NPCPerks;
 	NPCPerkEntryPoints *entryPoints = perksInfo->entryPoints;
 	auto entryIter = perk->entries.Head();
-	BGSPerkEntry *entry;
-	UInt32 eType;
-	BGSEntryPointPerkEntry *entryPt;
 	PerkEntryPointList *entryList;
 	bool bUpdReload = false;
 	do
 	{
-		if (!(entry = entryIter->data) || !(eType = entry->GetType()))
-			continue;
-		if (eType == 2)
-		{
-			entryPt = (BGSEntryPointPerkEntry*)entry;
-			if (entryPoints && (entryList = (*entryPoints)[entryPt->entryPoint]) && entryList->Remove(entryPt) && (entryPt->entryPoint == kPerkEntry_ReloadSpeed))
-				bUpdReload = true;
-		}
-		else entry->RemoveEntry(actor, 0);
+		if (BGSPerkEntry *entry = entryIter->data)
+			if (UInt32 eType = entry->GetType())
+				if (eType == 2)
+				{
+					BGSEntryPointPerkEntry *entryPt = (BGSEntryPointPerkEntry*)entry;
+					if (entryPoints && (entryList = (*entryPoints)[entryPt->entryPoint]) && entryList->Remove(entryPt) && (entryPt->entryPoint == kPerkEntry_ReloadSpeed))
+						bUpdReload = true;
+				}
+				else entry->RemoveEntry(actor, 0);
 	}
 	while (entryIter = entryIter->next);
 	if (bUpdReload)
@@ -3378,10 +3400,10 @@ __declspec(naked) PerkEntryPointList* __fastcall GetPerkEntryPointListNPCHook(Ac
 		test	ecx, ecx
 		jz		checkTM
 		mov		eax, [esp+8]
-		movzx	edx, byte ptr kValidEntryPoints[eax]
-		test	dl, dl
-		jz		checkTM
-		lea		eax, [ecx+edx*8-8]
+		movsx	edx, byte ptr kValidEntryPoints[eax]
+		test	edx, edx
+		js		checkTM
+		lea		eax, [ecx+edx*8]
 		cmp		dword ptr [eax], 0
 		jz		checkTM
 		pop		ecx
@@ -3407,7 +3429,6 @@ void __fastcall SetPlayerTeammateHook(Actor *actor, int, bool doSet)
 	if ((actor == thePlayer) || (actor->isTeammate == doSet))
 		return;
 	actor->isTeammate = doSet;
-	PerkRank *perkRank;
 	if (doSet)
 	{
 		thePlayer->teammateCount++;
@@ -3417,7 +3438,7 @@ void __fastcall SetPlayerTeammateHook(Actor *actor, int, bool doSet)
 			auto perkIter = thePlayer->perkRanksTM.Head();
 			do
 			{
-				if (perkRank = perkIter->data)
+				if (PerkRank *perkRank = perkIter->data)
 					AddTeammatePerkEntries(actor, perkRank->perk, perkRank->rank - 1);
 			}
 			while (perkIter = perkIter->next);
@@ -3432,7 +3453,7 @@ void __fastcall SetPlayerTeammateHook(Actor *actor, int, bool doSet)
 			auto perkIter = thePlayer->perkRanksTM.Head();
 			do
 			{
-				if (perkRank = perkIter->data)
+				if (PerkRank *perkRank = perkIter->data)
 					RemoveTeammatePerkEntries(actor, perkRank->perk);
 			}
 			while (perkIter = perkIter->next);
@@ -3526,14 +3547,10 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBloc
 		noBlock = s_doCalcDamage - 1;
 		s_doCalcDamage = 0;
 	}
-	else
+	else if (UInt32 retnAddr = (UInt32)_ReturnAddress(); (retnAddr == 0x9B5628) || (retnAddr == 0x9B5707))
 	{
-		UInt32 retnAddr = (UInt32)_ReturnAddress();
-		if ((retnAddr == 0x9B5628) || (retnAddr == 0x9B5707))
-		{
-			s_doCalcDamage = noBlock + 1;
-			return;
-		}
+		s_doCalcDamage = noBlock + 1;
+		return;
 	}
 	Actor *target = hitData->target;
 	if (!target || NOT_ACTOR(target)) return;
@@ -3578,7 +3595,8 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBloc
 		flagPCTM |= 0x10;
 	else if (s_NPCPerks)
 		flagPCTM |= 0x20;
-	float dmgResist, dmgThreshold, cpyThreshold, hitLocDT = 0, hitLocDR = 0, valueMod1, valueMod2;
+	float dmgResist, dmgThreshold, cpyThreshold, armorDT = 0, hitLocDT = 0, hitLocDR = 0, valueMod1, valueMod2;
+	TESObjectARMO *hitLocArmor = nullptr;
 	if (hitWeapon && (hitWeapon->weaponFlags1 & 1))
 	{
 		dmgResist = 1.0F;
@@ -3588,17 +3606,17 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBloc
 	else
 	{
 		Character *character = (Character*)target;
-		if (s_localizedDTDR && (hitData->hitLocation >= 0) && (hitData->hitLocation <= 12) && NOT_ID(character, Creature) && character->bipedAnims)
+		if (NOT_ID(character, Creature) && (hitData->hitLocation >= 0) && (hitData->hitLocation <= 12) && character->bipedAnims)
 		{
-			if (TESObjectARMO *hitLocArmor = character->bipedAnims->slotData[2].armor; hitLocArmor && IS_TYPE(hitLocArmor, TESObjectARMO))
-				if (ContChangesEntry *entry = character->GetContainerChangesEntry(hitLocArmor))
+			if (TESObjectARMO *armor = character->bipedAnims->slotData[2].armor; armor && IS_TYPE(armor, TESObjectARMO))
+				if (ContChangesEntry *entry = character->GetContainerChangesEntry(armor))
 					if (ExtraDataList *xDataList = entry->GetEquippedExtra())
 					{
-						hitLocDT = hitLocArmor->damageThreshold;
-						hitLocDR = hitLocArmor->armorRating * 0.01F;
+						hitLocDT = armor->damageThreshold;
+						hitLocDR = armor->armorRating * 0.01F;
 						if (ExtraHealth *xHealth = GetExtraType(xDataList, ExtraHealth))
 						{
-							valueMod1 = xHealth->health / (int)hitLocArmor->health.health;
+							valueMod1 = xHealth->health / (int)armor->health.health;
 							if (valueMod1 < 0.5F)
 							{
 								valueMod1 = 1.0F - (0.5F - valueMod1) * s_condDRDTPenalty;
@@ -3606,16 +3624,32 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBloc
 								hitLocDR *= valueMod1;
 							}
 						}
+						if (flagPCTM & 8)
+							hitLocArmor = armor;
 					}
+			valueMod1 = ThisCall<float>(0x8D2110, character) - hitLocDT;
 			if (hitData->hitLocation != 1)
 			{
-				hitLocDT = character->GetTotalArmorDT() - hitLocDT;
+				armorDT = hitLocDT;
+				hitLocDT = valueMod1;
 				if (hitLocDT < 0)
 					hitLocDT = 0;
-				hitLocDR = character->GetTotalArmorDR() - hitLocDR;
+				hitLocDR = ThisCall<float>(0x8D22B0, character) - hitLocDR;
 				if (hitLocDR < 0)
 					hitLocDR = 0;
 			}
+			else if (flagPCTM & 8)
+			{
+				armorDT = valueMod1;
+				if (!(hitLocArmor = character->bipedAnims->slotData[0].armor) || NOT_TYPE(hitLocArmor, TESObjectARMO))
+					if ((hitLocArmor = character->bipedAnims->slotData[1].armor) && NOT_TYPE(hitLocArmor, TESObjectARMO))
+						hitLocArmor = nullptr;
+			}
+		}
+		if (!s_localizedDTDR)
+		{
+			hitLocDT = 0;
+			hitLocDR = 0;
 		}
 		s_VATSHitLocDT = hitLocDT;
 		valueMod1 = 1.0F;
@@ -3640,11 +3674,10 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBloc
 			dmgThreshold = ApplyAmmoEffects(kAmmoEffect_DTMod, ammoEffects, dmgThreshold);
 	}
 	HighProcess *hiProcess = (HighProcess*)target->baseProcess;
-	ContChangesEntry *weaponInfo;
 	if (!noBlock && hiProcess && !hiProcess->processLevel && (hiProcess->currentAction == kAnimAction_Block) && !target->GetIsParalyzed() &&
 		CdeclCall<bool>(0x9A6AE0, target, hitData->projectile ? hitData->projectile : (TESObjectREFR*)source, 0))
 	{
-		weaponInfo = hiProcess->weaponInfo;
+		ContChangesEntry *weaponInfo = hiProcess->weaponInfo;
 		bool noInfo = !weaponInfo;
 		TESObjectWEAP *pWeapon = weaponInfo ? weaponInfo->weapon : nullptr;
 		hitData->flags |= 1;
@@ -3702,14 +3735,11 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBloc
 	if (dmgThreshold > 0)
 	{
 		if (source)
-		{
-			weaponInfo = source->GetWeaponInfo();
-			if (weaponInfo && GetEntryDataHasModHook(weaponInfo, 0, 0xC))
+			if (ContChangesEntry *weaponInfo = source->GetWeaponInfo(); weaponInfo && GetEntryDataHasModHook(weaponInfo, 0, 0xC))
 			{
 				valueMod1 = (float)ThisCall<UInt8>(0x525B20, hitWeapon, 1, 0, source);
 				dmgThreshold /= valueMod1;
 			}
-		}
 		dmgThreshold *= dmgResist;
 		flagArg = false;
 	}
@@ -3718,6 +3748,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBloc
 		dmgThreshold = 0;
 		flagArg = cpyThreshold > 0;
 	}
+	valueMod2 = hitData->healthDmg;
 	if (hitWeapon && hitWeapon->IsAutomatic() && (hitWeapon->eWeaponType <= 2))
 	{
 		int attackDmg = hitWeapon->attackDmg.damage;
@@ -3732,12 +3763,10 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBloc
 	{
 		hitData->flags |= 0x80000000;
 		if (flagArg)
-		{
 			if (flagPCTM & 8)
 				CdeclCall(0x77F420, true);
 			else if ((flagPCTM & 1) && !target->GetDead())
 				CdeclCall(0x77F490, true);
-		}
 	}
 	else
 	{
@@ -3749,26 +3778,35 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBloc
 		if (flagPCTM & 2)
 			CdeclCall(0x8D5CB0, source, 9);
 	}
-	if ((flagPCTM & 8) && (hitData->fatigueDmg <= 0))
+	if (hitLocArmor && (armorDT > 0) && (hitData->fatigueDmg <= 0))
 	{
-		//hitData->armorDmg = ((hitData->wpnBaseDmg > dmgThreshold) ? dmgThreshold : hitData->wpnBaseDmg) * *(float*)0x11CF100;	// fDamageToArmorPercentage
-
-		valueMod2 = hitData->healthDmg - valueMod1;
-		if (valueMod2 > dmgThreshold)
-			valueMod2 = dmgThreshold;
-		hitData->armorDmg = (hitData->wpnBaseDmg * dmgResist + valueMod2) * GMST_FLT(fDamageToArmorPercentage);
+		static const float k1d6 = 1 / 6.0F, k1d50 = 0.02F;
+		__asm
+		{
+			movss	xmm0, armorDT
+			movss	xmm1, valueMod2
+			minss	xmm1, xmm0
+			movq	xmm2, xmm0
+			rsqrtss	xmm2, xmm2
+			mulss	xmm0, xmm2
+			mulss	xmm0, xmm1
+			mulss	xmm0, k1d6
+			mulss	xmm0, ds:0x11CF100
+			mov		eax, hitLocArmor
+			cvtsi2ss	xmm1, [eax+0x6C]
+			mulss	xmm1, k1d50
+			minss	xmm0, xmm1
+			mov		eax, hitData
+			movss	[eax+0x28], xmm0
+		}
 	}
 	else hitData->armorDmg = 0;
 	if (hitWeapon && (hitWeapon->resistType != -1) && (!ammo || !(ammo->ammoFlags & 1)))
 	{
-		valueMod1 = target->avOwner.GetActorValue(hitWeapon->resistType);
-		if (valueMod1 > 0)
-		{
-			valueMod1 *= 0.01F;
-			if (valueMod1 < 1.0F)
-				hitData->healthDmg *= 1.0F - valueMod1;
+		if (valueMod1 = target->avOwner.GetActorValue(hitWeapon->resistType); valueMod1 > 0)
+			if (valueMod1 < 100.0F)
+				hitData->healthDmg *= 1.0F - valueMod1 * 0.01F;
 			else hitData->healthDmg = 0;
-		}
 	}
 	if ((hitData->fatigueDmg > 0) && (hitData->wpnBaseDmg > 0))
 		hitData->fatigueDmg *= hitData->healthDmg / hitData->wpnBaseDmg;
@@ -4830,14 +4868,12 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			if (bEnable && s_locationLoadScreens->Empty())
 			{
 				auto lscrIter = g_dataHandler->loadScreenList.Head();
-				TESLoadScreen *loadScreen;
 				do
 				{
-					loadScreen = lscrIter->data;
-					if (!loadScreen) continue;
-					if (loadScreen->locations.Empty())
-						s_genericLoadScreens->Append(loadScreen);
-					else s_locationLoadScreens->Append(loadScreen);
+					if (TESLoadScreen *loadScreen = lscrIter->data)
+						if (loadScreen->locations.Empty())
+							s_genericLoadScreens->Append(loadScreen);
+						else s_locationLoadScreens->Append(loadScreen);
 				}
 				while (lscrIter = lscrIter->next);
 			}
@@ -4897,7 +4933,7 @@ __declspec(naked) void InitFontManagerHook()
 		cmp		dword ptr [esi], 0
 		jnz		done
 		push	0x164
-		GAME_HEAP_ALLOC
+		call	Game_DoHeapAlloc
 		mov		[esi], eax
 		mov		g_fontManager, eax
 		mov		ebp, eax
@@ -4908,7 +4944,7 @@ __declspec(naked) void InitFontManagerHook()
 		ALIGN 16
 	defFontHead:
 		push	0x54
-		GAME_HEAP_ALLOC
+		call	Game_DoHeapAlloc
 		push	1
 		push	dword ptr [edi]
 		push	ebx
@@ -4947,7 +4983,7 @@ __declspec(naked) void InitFontManagerHook()
 		test	eax, eax
 		jnz		extFontNext
 		push	0x54
-		GAME_HEAP_ALLOC
+		call	Game_DoHeapAlloc
 		push	1
 		push	dword ptr [edi]
 		push	ebx
@@ -4968,7 +5004,7 @@ __declspec(naked) void InitFontManagerHook()
 		ALIGN 16
 	doFree:
 		push	eax
-		GAME_HEAP_FREE
+		call	Game_HeapFree
 		ALIGN 16
 	useDefault:
 		mov		eax, ebp
@@ -4997,7 +5033,6 @@ bool ProcessCustomINI()
 		char *buffer = GetStrArgBuffer();
 		SInt32 namesLen = GetPrivateProfileSectionNames(buffer, kMaxMessageLength, customINIPath), sectionLen, nameSize, pairSize;
 		char *currName = buffer, *section = buffer + namesLen, *currPair, *delim, settingName[0x100], *endPtr;
-		Setting *setting;
 		while (namesLen > 0)
 		{
 			sectionLen = GetPrivateProfileSection(currName, section, kMaxMessageLength, customINIPath);
@@ -5010,28 +5045,27 @@ bool ProcessCustomINI()
 				*endPtr = ':';
 				StrCopy(endPtr + 1, currName);
 				currPair += pairSize;
-				setting = s_gameSettingsMap->Get(settingName);
-				if (!setting) continue;
-				switch (*settingName | 0x20)
-				{
-					case 'b':
-						setting->data.uint = (*delim == '1');
-						break;
-					case 'i':
-						setting->data.i = StrToInt(delim);
-						break;
-					case 'u':
-						setting->data.uint = StrToUInt(delim);
-						break;
-					case 'f':
-						setting->data.f = StrToDbl(delim);
-						break;
-					case 's':
-						setting->Set(delim, false);
-						break;
-					default:
-						break;
-				}
+				if (Setting *setting = s_gameSettingsMap->Get(settingName))
+					switch (*settingName | 0x20)
+					{
+						case 'b':
+							setting->data.uint = (*delim == '1');
+							break;
+						case 'i':
+							setting->data.i = StrToInt(delim);
+							break;
+						case 'u':
+							setting->data.uint = StrToUInt(delim);
+							break;
+						case 'f':
+							setting->data.f = StrToDbl(delim);
+							break;
+						case 's':
+							setting->Set(delim, false);
+							break;
+						default:
+							break;
+					}
 			}
 			namesLen -= nameSize = StrLen(currName) + 1;
 			currName += nameSize;
@@ -5332,6 +5366,9 @@ void InitGamePatches()
 	SafeWrite16(0x54E421, 0x1EEB);
 	WritePushRetRelJump(0x54E4E1, 0x54E5E6, (UInt32)ClearAshPilesHook);
 	WritePushRetRelJump(0x82D8CA, 0x82D8F4, (UInt32)SetAcousticSpaceFixHook);
+	WritePushRetRelJump(0x93B87F, 0x93B8AA, (UInt32)DamagePCFatigueMinFixHook);
+	SafeWrite32(0x4E4000, 0x00401F0F);
+	WriteRelCall(0x4E400E, (UInt32)UpdateWaterTexturesHook);
 	WriteRelCall(0x7E0C1F, (UInt32)EffectItemGetModifiedDuration);
 	WritePushRetRelJump(0x8236FD, 0x82370C, (UInt32)ModPositiveChemDurationHook);
 	SAFE_WRITE_BUF(0xAEACAA, "\x31\xD2\x89\x90\x34\x01\x00\x00\x89\x90\x9C\x01\x00\x00\x89\x90\xA0\x01\x00\x00\x89\x90\xDC\x01\x00\x00\xC7\x80\x38\x01\x00\x00\x00\x00\x80\x3F\x0F\x1F\x00");
@@ -5378,74 +5415,68 @@ void InitGamePatches()
 	HOOK_INIT_JUMP(UpdateTimeGlobals, 0x867A40);
 	HOOK_INIT_JUMP(DoOperator, 0x593FBC);
 
-	char filePath[0x80] = "Data\\NVSE\\plugins\\xfonts\\*.txt", dataPath[0x80] = "data\\", *namePtr = filePath + 25, *buffer = GetStrArgBuffer(), *dataPtr, *delim;
-	UInt32 index;
+	char filePath[0x80] = "Data\\NVSE\\plugins\\xfonts\\*.txt", dataPath[0x80] = "data\\", *buffer = GetStrArgBuffer();
 	for (DirectoryIterator dirIter(filePath); dirIter; ++dirIter)
 	{
 		if (!dirIter.IsFile()) continue;
-		StrCopy(namePtr, *dirIter);
-		LineIterator lineIter(filePath, buffer);
-		while (lineIter)
+		StrCopy(filePath + 25, *dirIter);
+		for (LineIterator lineIter(filePath, buffer); lineIter;)
 		{
-			dataPtr = *lineIter;
+			char *dataPtr = *lineIter;
 			++lineIter;
-			delim = GetNextToken(dataPtr, '=');
-			if (!*delim) continue;
-			index = StrToInt(dataPtr) - 10;
-			if ((index > 79) || s_extraFontsPaths[index]) continue;
-			StrCopy(dataPath + 5, delim);
-			if (FileExists(dataPath))
-				s_extraFontsPaths[index] = CopyString(delim);
+			if (char *delim = GetNextToken(dataPtr, '='); *delim)
+				if (UInt32 index = StrToInt(dataPtr) - 10; (index <= 79) && !s_extraFontsPaths[index])
+					if (StrCopy(dataPath + 5, delim); FileExists(dataPath))
+						s_extraFontsPaths[index] = CopyString(delim);
 		}
 	}
 	WriteRelCall(0x70B285, (UInt32)InitFontManagerHook);
 	SafeWrite8(0xA1B032, 0x59);
 
 	for (DirectoryIterator dirIter("Data\\*.override"); dirIter; ++dirIter)
-	{
 		if (dirIter.IsFile())
 		{
 			memcpy(StrCopy(dataPath + 5, *dirIter) - 8, "bsa", 4);
 			s_overrideBSAFiles->Insert(dataPath);
 		}
-	}
 	if (!s_overrideBSAFiles->Empty())
 		WriteRelCall(0x463855, (UInt32)LoadBSAFileHook);
 
 	SInt32 lines = GetPrivateProfileSection("GamePatches", buffer, 0x10000, "Data\\NVSE\\plugins\\jip_nvse.ini");
-	dataPtr = buffer;
-	while (lines > 0)
+	if (lines <= 0)
+		for (UInt32 index : {1, 4, 5, 6, 7, 8, 9, 13, 14})
+			SetOptionalPatch(index, true);
+	else while (lines > 0)
 	{
-		UInt32 size = StrLen(dataPtr) + 1;
-		lines -= size;
-		delim = GetNextToken(dataPtr, '=');
-		index = s_optionalHacks->Get(dataPtr);
-		dataPtr += size;
-		if (!index) continue;
-		if (index >= 20)
-		{
-			UInt32 value = StrToInt(delim);
-			switch (index)
+		char *delim = GetNextToken(buffer, '=');
+		if (UInt32 index = s_optionalHacks->Get(buffer))
+			if (index >= 20)
 			{
-			case 20:
-				s_uWMChancePerLevel = value;
-				break;
-			case 21:
-				s_uWMChanceMin = value;
-				break;
-			case 22:
-				s_uWMChanceMax = value;
-				break;
+				UInt32 value = StrToInt(delim);
+				switch (index)
+				{
+				case 20:
+					s_uWMChancePerLevel = value;
+					break;
+				case 21:
+					s_uWMChanceMin = value;
+					break;
+				case 22:
+					s_uWMChanceMax = value;
+					break;
+				}
 			}
-		}
-		else if (*delim != '0')
-		{
-			if ((index == 18) && (*delim == '2'))
-				s_NPCPerksAutoAdd = true;
-			if ((index == 3) || (index >= 15))
-				s_deferrSetOptional |= 1 << index;
-			else SetOptionalPatch(index, true);
-		}
+			else if (*delim != '0')
+			{
+				if ((index == 18) && (*delim == '2'))
+					s_NPCPerksAutoAdd = true;
+				if ((index == 3) || (index >= 15))
+					s_deferrSetOptional |= 1 << index;
+				else SetOptionalPatch(index, true);
+			}
+		SInt32 size = StrLen(buffer) + 1;
+		buffer += size;
+		lines -= size;
 	}
 }
 
@@ -5468,9 +5499,6 @@ NiCamera* __fastcall GetSingletonsHook(SceneGraph *sceneGraph)
 	g_tileMenuArray = *(TileMenu***)0x11F350C;
 	return sceneGraph->camera;
 }
-
-typedef int (*_ReloadENB)(UInt32 type, void *data);
-_ReloadENB ReloadENB = nullptr;
 
 extern UInt8 s_miniMapIndex;
 TempObject<NiFixedString> s_BlackPlane01;
@@ -5518,7 +5546,7 @@ void DeferredInit()
 	eventCmdInfos[1].execute = Hook_MenuMode_Execute;
 	eventCmdInfos[0xE].execute = Cmd_EmptyCommand_Execute;
 
-	for (UInt32 index = 0; index <= 19; index++)
+	for (UInt32 index = 1; index <= 19; index++)
 		if (s_deferrSetOptional & (1 << index))
 			SetOptionalPatch(index, true);
 
@@ -5548,19 +5576,6 @@ void DeferredInit()
 
 	BSWin32Audio::Get()->PickSoundFileFromFolder = PickSoundFileFromFolderHook;
 
-	/*char filePath[MAX_PATH];
-	GetModuleFileName(GetModuleHandle(nullptr), filePath, MAX_PATH);
-	char *delim = SlashPosR(filePath) + 1;
-	memcpy(delim, "d3d9.dll", 9);
-	HMODULE handle = GetModuleHandle(filePath);
-	if (handle) ReloadENB = (_ReloadENB)GetProcAddress(handle, "DirtyHack");
-	if (!ReloadENB)
-	{
-		memcpy(delim, "enbseries.dll", 14);
-		handle = GetModuleHandle(filePath);
-		if (handle) ReloadENB = (_ReloadENB)GetProcAddress(handle, "DirtyHack");
-	}*/
-
 	ActorValueInfo *avInfo = ActorValueInfo::Array()[kAVCode_BigGuns];
 	avInfo->fullName.name = avInfo->avName;
 	avInfo->callback4C = (void*)0x643BD0;
@@ -5569,11 +5584,8 @@ void DeferredInit()
 
 	UInt8 modIdx = g_dataHandler->GetModIndex("JIP Companions Command & Control.esp");
 	if (modIdx != 0xFF)
-	{
-		Script *cccMain = (Script*)LookupFormByRefID((modIdx << 24) | 0xADE);
-		if (cccMain && (*(UInt32*)(cccMain->data + 0x29C) == ' 931'))
+		if (Script *cccMain = (Script*)LookupFormByRefID((modIdx << 24) | 0xADE); cccMain && (*(UInt32*)(cccMain->data + 0x29C) == ' 931'))
 			*(UInt32*)(cccMain->data + 0x29C) = ' 552';
-	}
 
 	modIdx = g_dataHandler->GetModIndex("JIP MiniMap.esp");
 	if (modIdx != 0xFF)
@@ -5584,14 +5596,11 @@ void DeferredInit()
 	}
 
 	if (s_NVACAddress)
-	{
-		FILE *nvacLog = _fsopen("nvac.log", "ab", 0x20);
-		if (nvacLog)
+		if (FILE *nvacLog = _fsopen("nvac.log", "ab", 0x20))
 		{
 			fprintf(nvacLog, "NVSE version: %.2f\tJIP LN version: %.2f\tBase address: %08X\n", s_nvseVersion, JIP_LN_VERSION, (UInt32)GetModuleHandle("jip_nvse"));
 			fclose(nvacLog);
 		}
-	}
 
 	Console_Print("JIP LN version: %.2f", JIP_LN_VERSION);
 

@@ -227,13 +227,13 @@ public:
 
 	__forceinline static InterfaceManager *GetSingleton() {return *(InterfaceManager**)0x11D8A80;}
 
-	UInt32 GetTopVisibleMenuID();
-	NiAVObject *GetCursorPick();
-	Tile *GetActiveTile();
+	UInt32 GetTopVisibleMenuID() const;
+	NiAVObject *GetCursorPick() const;
+	Tile *GetActiveTile() const;
 	void ClearHighlights();
 	void AddHighlightedRef(TESObjectREFR *refr);
 	void RemoveHighlightedRef(TESObjectREFR *refr);
-	bool IsRefHighlighted(TESObjectREFR *refr);
+	bool IsRefHighlighted(TESObjectREFR *refr) const;
 };
 static_assert(sizeof(InterfaceManager) == 0x580);
 
@@ -668,21 +668,6 @@ public:
 	UInt8							pad2A0[3];			// 2A1
 
 	__forceinline static StatsMenu *Get() {return *(StatsMenu**)0x11DACE0;}
-};
-
-struct Timer
-{
-	UInt8		disableCounter;			// 00
-	UInt8		pad01[3];				// 01
-	float		fpsClamp;				// 04
-	float		fpsClampRemainder;		// 08
-	float		secondsPassed;			// 0C
-	float		lastSecondsPassed;		// 10
-	UInt32		msPassed;				// 14
-	UInt32		tickCount;				// 18
-	UInt8		isChangeTimeMultSlowly;	// 1C
-	UInt8		byte1D;					// 1D
-	UInt8		pad1E[2];				// 1E
 };
 
 // 278

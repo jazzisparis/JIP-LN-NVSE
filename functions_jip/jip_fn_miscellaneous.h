@@ -31,7 +31,7 @@ DEFINE_COMMAND_ALT_PLUGIN(FreePlayer, GoodbyeWorldspace, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetLocalGravity, 0, 1, kParams_OneAxis);
 DEFINE_COMMAND_PLUGIN(SetLocalGravityVector, 0, 3, kParams_ThreeFloats);
 DEFINE_COMMAND_PLUGIN(GetReticlePos, 0, 2, kParams_OneOptionalInt_OneOptionalFloat);
-DEFINE_COMMAND_PLUGIN(GetReticleRange, 0, 2, kParams_OneOptionalInt_OneOptionalFloat);
+DEFINE_COMMAND_PLUGIN(GetReticleRange, 0, 3, kParams_OneOptionalInt_OneOptionalFloat_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetOnDialogTopicEventHandler, 0, 3, kParams_OneForm_OneInt_OneForm);
 DEFINE_COMMAND_PLUGIN(GetGameDaysPassed, 0, 3, kParams_ThreeOptionalInts);
 DEFINE_CMD_COND_PLUGIN(IsPCInCombat, 0, 0, nullptr);
@@ -59,7 +59,7 @@ DEFINE_COMMAND_PLUGIN(FreezeTime, 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetConditionDamagePenalty, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(SetConditionDamagePenalty, 0, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(ToggleBipedSlotVisibility, 0, 2, kParams_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(ToggleImmortalMode, 0, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_ALT_PLUGIN(ToggleImmortalMode, TIMM, 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(ToggleCameraCollision, 0, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(InitRockItLauncher, 0, 1, kParams_OneObjectID);
 DEFINE_COMMAND_PLUGIN(ToggleHitEffects, 0, 1, kParams_OneOptionalInt);
@@ -78,7 +78,7 @@ DEFINE_COMMAND_PLUGIN(GetLightAmountAtPoint, 0, 3, kParams_ThreeFloats);
 DEFINE_COMMAND_PLUGIN(TransformWorldToLocal, 0, 11, kParams_NineFloats_TwoScriptVars);
 DEFINE_COMMAND_PLUGIN(GetAnglesBetweenPoints, 0, 8, kParams_SixFloats_TwoScriptVars);
 DEFINE_COMMAND_PLUGIN(GetP2PRayCastRange, 0, 7, kParams_SixFloats_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetDamageToArmorMaxPercent, 0, 1, kParams_OneOptionalFloat);
+DEFINE_COMMAND_ALT_PLUGIN(SetDamageToArmorMaxPercent, DTAMP, 0, 1, kParams_OneOptionalFloat);
 
 bool Cmd_DisableNavMeshAlt_Execute(COMMAND_ARGS)
 {
@@ -514,12 +514,13 @@ bool Cmd_GetReticleRange_Execute(COMMAND_ARGS)
 		return true;
 	SInt32 layerType = -1;
 	float maxRange = 50000.0F;
+	UInt32 fromCam = 0;
 	UInt8 numArgs = NUM_ARGS_EX;
-	if (numArgs && !ExtractArgsEx(EXTRACT_ARGS_EX, &layerType, &maxRange))
+	if (numArgs && !ExtractArgsEx(EXTRACT_ARGS_EX, &layerType, &maxRange, &fromCam))
 		return true;
 	NiVector4 coords;
 	if (coords.RayCastCoords(g_mainCamera->WorldTranslate(), g_mainCamera->WorldRotate(), maxRange, layerType) || (numArgs >= 2))
-		*result = Point3Distance(g_thePlayer->position, coords);
+		*result = Point3Distance(!fromCam ? g_thePlayer->position : g_mainCamera->WorldTranslate(), coords);
 	return true;
 }
 
@@ -977,6 +978,8 @@ __declspec(naked) TESForm* __fastcall GetWeaponAmmoHook(TESObjectWEAP *weapon, i
 		test	eax, eax
 		jz		baseWeap
 		mov		eax, [eax+8]
+		test	eax, eax
+		jz		baseWeap
 		cmp		byte ptr [eax+4], kFormType_TESAmmo
 		jz		done
 		cmp		eax, edx
@@ -1021,10 +1024,9 @@ __declspec(naked) void RILAmmoFixHook()
 	__asm
 	{
 		mov		ecx, [eax+8]
+		xor		edx, edx
 		cmp		ecx, g_rockItLauncher
-		jnz		done
-		xor		eax, eax
-	done:
+		cmovz	eax, edx
 		retn
 	}
 }
@@ -1276,7 +1278,7 @@ bool Cmd_TransformWorldToLocal_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &origin.x, &origin.y, &origin.z, &target.x, &target.y, &target.z, &rotation.x, &rotation.y, &rotation.z, &outAngles.x, &outAngles.z))
 	{
 		outAngles.y = outAngles.z;
-		__m128 angles = TransformWorldToLocal(origin, target, _mm_mul_ps(rotation.PS(), GET_PS(8)));
+		__m128 angles = TransformWorldToLocal(origin, target, rotation.PS() * GET_PS(8));
 		outAngles.Set(angles, GET_PS(9));
 	}
 	return true;

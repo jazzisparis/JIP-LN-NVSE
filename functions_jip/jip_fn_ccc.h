@@ -529,33 +529,31 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 bool Cmd_CCCGetReputation_Execute(COMMAND_ARGS)
 {
 	REFR_RES = 0;
-	if (NOT_ACTOR(thisObj)) return true;
+	if (NOT_ACTOR(thisObj))
+		return true;
 	auto baseFacIt = ((TESActorBase*)thisObj->baseForm)->baseData.factionList.Head();
-	FactionListData *facData;
 	do
 	{
-		if (!(facData = baseFacIt->data)) continue;
-		if (facData->faction->reputation)
+		if (FactionListData *facData = baseFacIt->data; facData && facData->faction->reputation)
 		{
 			REFR_RES = facData->faction->reputation->refID;
 			return true;
 		}
 	}
 	while (baseFacIt = baseFacIt->next);
-	ExtraFactionChanges *xChanges = GetExtraType(&thisObj->extraDataList, ExtraFactionChanges);
-	if (!xChanges || !xChanges->data) return true;
-	auto refFacIt = xChanges->data->Head();
-	FactionListData *fclData;
-	do
+	if (auto xChanges = GetExtraType(&thisObj->extraDataList, ExtraFactionChanges); xChanges && xChanges->data)
 	{
-		if (!(fclData = refFacIt->data)) continue;
-		if (fclData->faction->reputation)
+		auto refFacIt = xChanges->data->Head();
+		do
 		{
-			REFR_RES = fclData->faction->reputation->refID;
-			return true;
+			if (FactionListData *facData = refFacIt->data; facData && facData->faction->reputation)
+			{
+				REFR_RES = facData->faction->reputation->refID;
+				return true;
+			}
 		}
+		while (refFacIt = refFacIt->next);
 	}
-	while (refFacIt = refFacIt->next);
 	return true;
 }
 

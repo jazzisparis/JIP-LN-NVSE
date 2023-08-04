@@ -1321,24 +1321,26 @@ bool Cmd_GetActorValueModifier_Execute(COMMAND_ARGS)
 bool Cmd_GetPerkModifier_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	UInt32 entryPointID;
+	PerkEntryPointID entryPointID;
 	float baseValue;
 	TESForm *filterForm1 = nullptr, *filterForm2 = nullptr;
-	if (NOT_ACTOR(thisObj) || !ExtractArgsEx(EXTRACT_ARGS_EX, &entryPointID, &baseValue, &filterForm1, &filterForm2) || (entryPointID > 73))
-		return true;
-	switch (EntryPointConditionInfo::Array()[entryPointID].numTabs)
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &entryPointID, &baseValue, &filterForm1, &filterForm2) && (entryPointID < kPerkEntry_Max))
 	{
-		case 1:
-			ApplyPerkModifiers(entryPointID, thisObj, &baseValue);
-			break;
-		case 2:
-			ApplyPerkModifiers(entryPointID, thisObj, filterForm1, &baseValue);
-			break;
-		case 3:
-			ApplyPerkModifiers(entryPointID, thisObj, filterForm1, filterForm2, &baseValue);
+		switch (EntryPointConditionInfo::Array()[entryPointID].numTabs)
+		{
+			case 1:
+				ApplyPerkModifiers(entryPointID, thisObj, &baseValue);
+				break;
+			case 2:
+				ApplyPerkModifiers(entryPointID, thisObj, filterForm1, &baseValue);
+				break;
+			case 3:
+				ApplyPerkModifiers(entryPointID, thisObj, filterForm1, filterForm2, &baseValue);
+				break;
+		}
+		*result = baseValue;
+		DoConsolePrint(result);
 	}
-	*result = baseValue;
-	DoConsolePrint(result);
 	return true;
 }
 

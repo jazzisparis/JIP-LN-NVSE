@@ -413,42 +413,50 @@ bool MainLoopHasCallback(void *cmdPtr, void *thisObj = nullptr)
 
 bool MainLoopRemoveCallback(void *cmdPtr, void *thisObj = nullptr)
 {
-	MainLoopCallback *callback = FindMainLoopCallback(cmdPtr, thisObj);
-	if (!callback) return false;
-	callback->bRemove = true;
-	return true;
+	if (MainLoopCallback *callback = FindMainLoopCallback(cmdPtr, thisObj))
+	{
+		callback->bRemove = true;
+		return true;
+	}
+	return false;
 }
 
-void MainLoopAddCallback(void *cmdPtr, void *thisObj = nullptr)
+MainLoopCallback *MainLoopAddCallback(void *cmdPtr, void *thisObj = nullptr)
 {
-	MainLoopCallback::Create(cmdPtr, thisObj);
+	return MainLoopCallback::Create(cmdPtr, thisObj);
 }
 
-void MainLoopAddCallbackArgs(void *cmdPtr, void *thisObj, UInt8 numArgs, ...)
+MainLoopCallback *MainLoopAddCallbackArgs(void *cmdPtr, void *thisObj, UInt8 numArgs, ...)
 {
 	MainLoopCallback *callback = MainLoopCallback::Create(cmdPtr, thisObj, 1, 1, numArgs);
-	if (!numArgs) return;
-	va_list args;
-	va_start(args, numArgs);
-	for (UInt32 argIdx = 0; argIdx < numArgs; argIdx++)
-		callback->args[argIdx] = va_arg(args, UInt32);
-	va_end(args);
+	if (numArgs)
+	{
+		va_list args;
+		va_start(args, numArgs);
+		for (UInt32 argIdx = 0; argIdx < numArgs; argIdx++)
+			callback->args[argIdx] = va_arg(args, UInt32);
+		va_end(args);
+	}
+	return callback;
 }
 
-void MainLoopAddCallbackEx(void *cmdPtr, void *thisObj, UInt32 callCount, UInt32 callDelay = 1)
+MainLoopCallback *MainLoopAddCallbackEx(void *cmdPtr, void *thisObj, UInt32 callCount, UInt32 callDelay = 1)
 {
-	MainLoopCallback::Create(cmdPtr, thisObj, callCount, callDelay ? callDelay : 1);
+	return MainLoopCallback::Create(cmdPtr, thisObj, callCount, callDelay ? callDelay : 1);
 }
 
-void MainLoopAddCallbackArgsEx(void *cmdPtr, void *thisObj, UInt32 callCount, UInt32 callDelay, UInt8 numArgs, ...)
+MainLoopCallback *MainLoopAddCallbackArgsEx(void *cmdPtr, void *thisObj, UInt32 callCount, UInt32 callDelay, UInt8 numArgs, ...)
 {
 	MainLoopCallback *callback = MainLoopCallback::Create(cmdPtr, thisObj, callCount, callDelay ? callDelay : 1, numArgs);
-	if (!numArgs) return;
-	va_list args;
-	va_start(args, numArgs);
-	for (UInt32 argIdx = 0; argIdx < numArgs; argIdx++)
-		callback->args[argIdx] = va_arg(args, UInt32);
-	va_end(args);
+	if (numArgs)
+	{
+		va_list args;
+		va_start(args, numArgs);
+		for (UInt32 argIdx = 0; argIdx < numArgs; argIdx++)
+			callback->args[argIdx] = va_arg(args, UInt32);
+		va_end(args);
+	}
+	return callback;
 }
 
 __declspec(naked) void __fastcall CycleMainLoopCallbacks(Vector<MainLoopCallback*> *mlCallbacks)
@@ -695,13 +703,9 @@ __declspec(naked) void __fastcall TextInputRefreshHook(TextEditMenu *menu)
 		mov		edx, kTileValue_target
 		mov		ecx, [esi+0x2C]
 		call	Tile::SetBool
-		push	kTileValue_user1
+		mov		edx, kTileValue_user1
 		mov		ecx, [esi+0x4C]
-		CALL_EAX(ADDR_TileGetFloat)
-		push	ecx
-		fstp	dword ptr [esp]
-		movss	xmm0, [esp]
-		pop		ecx
+		call	Tile::GetValueFloat
 		mov		edx, kTileValue_user2
 		mov		ecx, [esi+0x4C]
 		call	Tile::SetFloat
@@ -716,7 +720,7 @@ bool __fastcall HandleInputKey(TextEditMenu *menu, UInt32 inputKey)
 	if (!menu->isActive || (inputKey < 0x20))
 		return false;
 	char *currText = menu->currentText.m_data;
-	SInt32 currIdx = menu->cursorIndex, newIdx;
+	SInt32 currIdx = menu->cursorIndex;
 	UInt16 length = menu->currentText.m_dataLen;
 	if (inputKey < kInputCode_Backspace)
 	{
@@ -741,7 +745,6 @@ bool __fastcall HandleInputKey(TextEditMenu *menu, UInt32 inputKey)
 		menu->cursorIndex++;
 		return true;
 	}
-	char *chrPtr;
 	switch (inputKey)
 	{
 		case kInputCode_Backspace:
@@ -772,17 +775,17 @@ bool __fastcall HandleInputKey(TextEditMenu *menu, UInt32 inputKey)
 			char *pNextChr = currText + currIdx + 1;
 			char nextChr = *pNextChr;
 			*pNextChr = 0;
-			chrPtr = FindChrR(currText, '\n');
+			char *chrPtr = FindChrR(currText, '\n');
 			*pNextChr = nextChr;
-			newIdx = chrPtr ? (chrPtr - currText + 1) : 0;
+			SInt32 newIdx = chrPtr ? (chrPtr - currText + 1) : 0;
 			if (newIdx == currIdx) break;
 			menu->cursorIndex = newIdx;
 			return true;
 		}
 		case kInputCode_End:
 		{
-			chrPtr = FindChr(currText + currIdx, '\n');
-			newIdx = chrPtr ? (chrPtr - currText) : length;
+			char *chrPtr = FindChr(currText + currIdx, '\n');
+			SInt32 newIdx = chrPtr ? (chrPtr - currText) : length;
 			if (newIdx == currIdx) break;
 			menu->cursorIndex = newIdx;
 			return true;
@@ -963,15 +966,12 @@ void __fastcall MenuHandleClickHook(Menu *menu, int, int tileID, Tile *clickedTi
 		}
 	}
 	if (!clickEvent.idsMap().Empty())
-	{
-		EventCallbackScripts *callbacks = clickEvent.idsMap().GetPtr(tileID);
-		if (callbacks)
+		if (EventCallbackScripts *callbacks = clickEvent.idsMap().GetPtr(tileID))
 		{
 			const char *tileName = clickedTile ? clickedTile->name.m_data : "";
 			for (auto script = callbacks->BeginCp(); script; ++script)
 				CallFunction(*script, nullptr, 3, menu->id, tileID, tileName);
 		}
-	}
 	return clickEvent.funcPtr(menu, tileID, clickedTile);
 }
 
@@ -2236,7 +2236,7 @@ __declspec(naked) void __fastcall CopyHitDataHook(MiddleHighProcess *process, in
 		jnz		allocated
 		push	ecx
 		push	0x64
-		GAME_HEAP_ALLOC
+		call	Game_DoHeapAlloc
 		pop		ecx
 		mov		[ecx+0x240], eax
 	allocated:
@@ -4283,8 +4283,6 @@ __declspec(naked) bool __fastcall ClearRefAuxVars(AuxVarModsMap *varMap, int, UI
 		retn	4
 	}
 }
-
-extern PrimitiveCS s_auxVarCS;
 
 __declspec(naked) bool __fastcall DestroyRefrHook(TESObjectREFR *refr)
 {

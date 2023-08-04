@@ -22,10 +22,8 @@ bool Cmd_GetNthAmmoEffect_Execute(COMMAND_ARGS)
 	TESAmmo *ammo;
 	UInt32 idx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ammo, &idx) && IS_TYPE(ammo, TESAmmo))
-	{
-		TESAmmoEffect *effect = ammo->effectList.GetNthItem(idx);
-		if (effect) REFR_RES = effect->refID;
-	}
+		if (TESAmmoEffect *effect = ammo->effectList.GetNthItem(idx))
+			REFR_RES = effect->refID;
 	return true;
 }
 
@@ -57,17 +55,19 @@ bool Cmd_GetAmmoEffectTraitNumeric_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESAmmoEffect *effect;
 	UInt32 traitID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &effect, &traitID) || NOT_ID(effect, TESAmmoEffect)) return true;
-	switch (traitID)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &effect, &traitID) && IS_ID(effect, TESAmmoEffect))
 	{
-	case 0:
-		*result = (int)effect->type;
-		break;
-	case 1:
-		*result = (int)effect->operation;
-		break;
-	case 2:
-		*result = effect->value;
+		switch (traitID)
+		{
+			case 0:
+				*result = (int)effect->type;
+				break;
+			case 1:
+				*result = (int)effect->operation;
+				break;
+			case 2:
+				*result = effect->value;
+		}
 	}
 	return true;
 }
@@ -77,18 +77,20 @@ bool Cmd_SetAmmoEffectTraitNumeric_Execute(COMMAND_ARGS)
 	TESAmmoEffect *effect;
 	UInt32 traitID;
 	float fVal;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &effect, &traitID, &fVal) || NOT_ID(effect, TESAmmoEffect) || (fVal < 0)) return true;
-	UInt32 iVal = (int)fVal;
-	switch (traitID)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &effect, &traitID, &fVal) && IS_ID(effect, TESAmmoEffect) && (fVal >= 0))
 	{
-	case 0:
-		if (iVal < 6) effect->type = iVal;
-		break;
-	case 1:
-		if (iVal < 3) effect->operation = iVal;
-		break;
-	case 2:
-		effect->value = fVal;
+		UInt32 iVal = (int)fVal;
+		switch (traitID)
+		{
+			case 0:
+				if (iVal < 6) effect->type = (AmmoEffectID)iVal;
+				break;
+			case 1:
+				if (iVal < 3) effect->operation = iVal;
+				break;
+			case 2:
+				effect->value = fVal;
+		}
 	}
 	return true;
 }

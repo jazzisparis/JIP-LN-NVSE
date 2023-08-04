@@ -6,23 +6,7 @@ DEFINE_COMMAND_PLUGIN(UpdateMiniMap, 0, 2, kParams_OneInt_OneOptionalInt);
 #define CACHED_TEXTURES_MAX 60
 #define CACHED_TEXTURES_MIN 42
 
-#define TEXTURE_FMT_RGB D3DFMT_X8R8G8B8
-#define TEXTURE_FMT_BW D3DFMT_L8
-
 constexpr float kInteriorZoomMod = 0.3F;
-
-struct TextureParams
-{
-	UInt32		width;			// 00
-	UInt32		height;			// 04
-	D3DFORMAT	d3dFormat;		// 08
-	RenderMode	renderMode;		// 0C
-	bool		renderDecals;	// 10
-
-	TextureParams(UInt32 _width, UInt32 _height, D3DFORMAT _d3dFmt, RenderMode _renderMode = kRndrMode_Normal, bool _decals = true) :
-		width(_width), height(_height), d3dFormat(_d3dFmt), renderMode(_renderMode), renderDecals(_decals) {}
-}
-s_mmTextureParams(0x180, 0x180, TEXTURE_FMT_RGB, kRndrMode_Normal, false);
 
 TileValue /**s_miniMapVisible, */*s_miniMapScale, *s_localMapZoom;
 BSScissorTriShape *s_localMapShapes[9];
@@ -112,12 +96,12 @@ struct WorldDimensions
 		UInt32		coord;
 	};
 	
-	void __fastcall GetDimensions(TESWorldSpace *worldSpc);
-	void __fastcall GetPosMods(TESWorldSpace *worldSpc);
+	void __fastcall InitDimensions(TESWorldSpace *worldSpc);
+	void __fastcall InitPosMods(TESWorldSpace *worldSpc);
 }
 s_rootWorldDimensions;
 
-__declspec(naked) void __fastcall WorldDimensions::GetDimensions(TESWorldSpace *worldSpc)
+__declspec(naked) void __fastcall WorldDimensions::InitDimensions(TESWorldSpace *worldSpc)
 {
 	__asm
 	{
@@ -145,7 +129,7 @@ __declspec(naked) void __fastcall WorldDimensions::GetDimensions(TESWorldSpace *
 	}
 }
 
-__declspec(naked) void __fastcall WorldDimensions::GetPosMods(TESWorldSpace *worldSpc)
+__declspec(naked) void __fastcall WorldDimensions::InitPosMods(TESWorldSpace *worldSpc)
 {
 	__asm
 	{
@@ -825,7 +809,7 @@ __declspec(naked) SeenData* __fastcall AddExtraSeenData(TESObjectCELL *cell)
 		retn
 	createExtra:
 		push	0x10
-		GAME_HEAP_ALLOC
+		call	Game_DoHeapAlloc
 		mov		dword ptr [eax], kVtbl_ExtraSeenData
 		mov		[eax+4], 5
 		and		dword ptr [eax+8], 0
@@ -835,12 +819,12 @@ __declspec(naked) SeenData* __fastcall AddExtraSeenData(TESObjectCELL *cell)
 		test	byte ptr [esi+0x24], 1
 		jnz		isInterior
 		push	0x24
-		GAME_HEAP_ALLOC
+		call	Game_DoHeapAlloc
 		mov		dword ptr [eax], kVtbl_SeenData
 		jmp		doneData
 	isInterior:
 		push	0x2C
-		GAME_HEAP_ALLOC
+		call	Game_DoHeapAlloc
 		mov		dword ptr [eax], kVtbl_IntSeenData
 		movlps	[eax+0x24], xmm0
 		mov		[eax+0x24], bx
@@ -874,7 +858,7 @@ __declspec(naked) IntSeenData* __fastcall AddIntSeenData(IntSeenData *seenData, 
 		push	eax
 		push	edx
 		push	0x2C
-		GAME_HEAP_ALLOC
+		call	Game_DoHeapAlloc
 		pop		edx
 		mov		dword ptr [eax], kVtbl_IntSeenData
 		xorps	xmm0, xmm0
@@ -1043,15 +1027,10 @@ typedef Vector<DoorRef> DoorRefsList;
 
 void __fastcall GetTeleportDoors(TESObjectCELL *cell, DoorRefsList *doorRefsList)
 {
-	TESObjectREFR *refr;
 	for (auto iter = g_loadedReferences->teleportDoors.Begin(); iter; ++iter)
-	{
-		if (!(refr = iter.Get()) || (refr->flags & 0x860) || (refr->parentCell != cell))
-			continue;
-		ExtraTeleport *xTeleport = GetExtraType(&refr->extraDataList, ExtraTeleport);
-		if (xTeleport->data->linkedDoor)
-			doorRefsList->Append(refr, xTeleport->data->linkedDoor->parentCell);
-	}
+		if (TESObjectREFR *refr = iter.Get(); refr && !(refr->flags & 0x860) && (refr->parentCell == cell))
+			if (ExtraTeleport *xTeleport = GetExtraType(&refr->extraDataList, ExtraTeleport); xTeleport->data->linkedDoor)
+				doorRefsList->Append(refr, xTeleport->data->linkedDoor->parentCell);
 }
 
 __declspec(naked) UInt32* __vectorcall GetVtxAlphaPtr(__m128 posMult)
@@ -1087,98 +1066,8 @@ __declspec(naked) UInt32* __vectorcall GetVtxAlphaPtr(__m128 posMult)
 	}
 }
 
-__declspec(naked) void __stdcall GenerateRenderedTexture(NiCamera *camera, const TextureParams &texParams, NiTexture **pTexture)
-{
-	static BSCullingProcess *s_cullingProcess = nullptr;
-	__asm
-	{
-		push	ebp
-		mov		ebp, esp
-		mov		ecx, NIDX9RENDERER
-		lea		eax, [ecx+0x5E0]
-		push	eax
-		mov		edx, [ebp+0xC]
-		xor		eax, eax
-		push	eax
-		push	eax
-		push	eax
-		push	eax
-		push	eax
-		push	dword ptr [edx+8]
-		push	eax
-		push	dword ptr [edx+4]
-		push	dword ptr [edx]
-		push	ecx
-		mov		ecx, ds:0x11F91A8
-		CALL_EAX(0xB6D5E0)
-		push	eax
-		push	g_shadowSceneNode
-		mov		eax, s_cullingProcess
-		test	eax, eax
-		jnz		hasCulling
-		push	0x350
-		CALL_EAX(0xAA13E0)
-		pop		ecx
-		push	0x2F7
-		push	1
-		push	0x63
-		mov		ecx, eax
-		CALL_EAX(0xB660D0)
-		mov		dword ptr [eax+4], 2
-		mov		ecx, [ebp-0xC]
-		mov		[eax+0x194], ecx
-		push	eax
-		push	0
-		lea		ecx, [eax+0x280]
-		CALL_EAX(0x4A0EB0)
-		mov		dword ptr [eax+0x90], kCull_IgnoreMultiBounds
-		pop		dword ptr [eax+0xC4]
-		mov		s_cullingProcess, eax
-	hasCulling:
-		push	eax
-		mov		ecx, [eax+0xC4]
-		push	ecx
-		mov		eax, [ebp+0xC]
-		mov		dl, [eax+0x14]
-		mov		[ecx+0x16C], dl
-		mov		edx, [eax+0xC]
-		mov		[ecx+0x19C], edx
-		mov		eax, [ebp-0xC]
-		mov		[eax+0x130], 1
-		mov		eax, [ebp-4]
-		push	dword ptr [eax]
-		and		dword ptr [eax], 0
-		mov		byte ptr ds:0x11AD7B4, 0
-		mov		eax, [ebp-8]
-		push	dword ptr [eax+8]
-		push	7			//	NiRenderer::kClrFlag_All
-		CALL_EAX(0xB6B8D0)
-		push	dword ptr [ebp-0x10]
-		push	dword ptr [ebp-0xC]
-		push	dword ptr [ebp+8]
-		CALL_EAX(0xB6BEE0)
-		mov		eax, [ebp-0x14]
-		mov		[esp+4], eax
-		CALL_EAX(0xB6C0D0)
-		add		esp, 0x14
-		CALL_EAX(0xB6B790)
-		mov		byte ptr ds:0x11AD7B4, 1
-		mov		eax, [ebp-0xC]
-		mov		[eax+0x130], 0
-		mov		eax, [ebp-4]
-		pop		dword ptr [eax]
-		mov		eax, [ebp-8]
-		push	dword ptr [eax+0x30]
-		push	dword ptr [ebp+0x10]
-		call	NiReplaceObject
-		mov		ecx, [ebp-8]
-		call	NiReleaseObject
-		leave
-		retn	0xC
-	}
-}
-
 NiCamera *s_localMapCamera;
+TextureParams s_mmTextureParams(0x180, 0x180, D3DFMT_X8R8G8B8, kRndrMode_Normal, 0);
 
 __declspec(naked) void __fastcall GenerateLocalMapExterior(TESObjectCELL *cell, NiRenderedTexture **renderedTexture)
 {
@@ -1246,7 +1135,9 @@ __declspec(naked) void __fastcall GenerateLocalMapExterior(TESObjectCELL *cell, 
 		push	dword ptr [ebp-0x18]
 		push	offset s_mmTextureParams
 		push	eax
-		call	GenerateRenderedTexture
+		mov		byte ptr ds:0x11AD7B4, 0
+		call	BSTextureManager::GenerateRenderedTexture
+		mov		byte ptr ds:0x11AD7B4, 1
 		pop		eax
 		mov		[eax+0x1B], 0
 		pop		eax
@@ -1298,7 +1189,9 @@ __declspec(naked) void __vectorcall GenerateLocalMapInterior(__m128i coord, NiRe
 		push	ecx
 		push	offset s_mmTextureParams
 		push	eax
-		call	GenerateRenderedTexture
+		mov		byte ptr ds:0x11AD7B4, 0
+		call	BSTextureManager::GenerateRenderedTexture
+		mov		byte ptr ds:0x11AD7B4, 1
 		retn
 		ALIGN 16
 	kIntPosMod:
@@ -1460,7 +1353,7 @@ float s_fLocalMapZoomCurr;
 NiDirectionalLight *s_mmDirectionalLight;
 BSFogProperty *s_mmFogProperty;
 NiNode *s_fakeWaterPlanes, *s_shadowSceneNodes[5];
-bool s_isInInterior = false;
+bool s_isInExterior = true;
 
 struct MapMarkerInfo
 {
@@ -1615,7 +1508,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	s_fLocalMapZoomCurr = s_localMapZoom->num;
 	if (g_TES->currentInterior)
 	{
-		s_isInInterior = true;
+		s_isInExterior = false;
 		s_fLocalMapZoomCurr += kInteriorZoomMod;
 	}
 	UpdateTileScales(s_fLocalMapZoomCurr);
@@ -1686,7 +1579,7 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	}
 	while (++index < 9);
 
-	waterParent->RenderGeometryAndShader();
+	waterParent->AssignGeometryProps();
 	GameGlobals::ObjectLODRoot()->AddObject(waterParent, 1);
 	s_fakeWaterPlanes = waterParent;
 
@@ -1702,12 +1595,12 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	{
 		if (!(worldSpc = worldIter->data) || (!worldSpc->parent && !worldSpc->mapData.usableDimensions.X) || !(rootCell = worldSpc->cell) || rootCell->objectList.Empty())
 			continue;
-		worldDimensions.GetPosMods(worldSpc);
+		worldDimensions.InitPosMods(worldSpc);
 		worldSpc = worldSpc->GetRootMapWorld();
 		if (rootWorld != worldSpc)
 		{
 			rootWorld = worldSpc;
-			worldDimensions.GetDimensions(rootWorld);
+			worldDimensions.InitDimensions(rootWorld);
 			worldMarkers = &s_worldMapMarkers()[rootWorld];
 		}
 		auto refrIter = rootCell->objectList.Head();
@@ -1774,7 +1667,7 @@ struct DoorMarkerTile
 		visible = markerTile->GetValue(kTileValue_visible);
 		x = markerTile->GetValue(kTileValue_user0);
 		y = markerTile->GetValue(kTileValue_user1);
-		visited = markerTile->AddValue(kTileValue_user2);
+		visited = markerTile->GetValue(kTileValue_user2);
 		markerTile->SetFloat(kTileValue_depth, int((s_doorMarkerTiles->Size() & 0xF) + 18));
 	}
 
@@ -1802,7 +1695,7 @@ struct QuestMarkerTile
 
 UInt32 s_currentMapMode = 0, s_showFlags = 0;
 TESWorldSpace *s_pcCurrWorld, *s_pcRootWorld;
-Coordinate s_currWorldCoords(0x7FFF, 0x7FFF), s_currLocalCoords(0x7FFF, 0x7FFF), s_cellGridCenter;
+Coordinate s_currWorldCoords = 0x7FFF7FFF, s_currLocalCoords = 0x7FFF7FFF, s_cellGridCenter;
 WorldMapMarkers *s_currWorldMarkers;
 TempObject<Set<UInt32>> s_currMarkerCells(0x40);
 typedef UnorderedMap<UInt32, RenderedEntry, 0x40, false> LocalTexturesMap;
@@ -1870,8 +1763,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			cmovnz	eax, ecx
 			movd	xmm0, eax
 			jz		sameZoom
-			cmp		s_isInInterior, 0
-			jz		notInterior
+			cmp		s_isInExterior, 0
+			jnz		notInterior
 			addss	xmm0, kInteriorZoomMod
 		notInterior:
 			movss	s_fLocalMapZoomCurr, xmm0
@@ -1900,14 +1793,13 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		movlps	[ecx+0x6C], xmm0
 		movhps	[ecx+0x78], xmm0
 		cmp		parentWorld, 0
-		setz	al
-		cmp		s_isInInterior, al
+		setnz	al
+		cmp		s_isInExterior, al
 		jz		noChange
-		mov		s_isInInterior, al
-		movzx	eax, al
-		movss	xmm0, kInteriorZoomMod
-		movss	xmm1, PS_FlipSignMask0[eax*4]
-		xorps	xmm0, xmm1
+		mov		s_isInExterior, al
+		shl		eax, 0x1F
+		or		eax, kInteriorZoomMod
+		movd	xmm0, eax
 		addss	xmm0, s_fLocalMapZoomCurr
 		movss	s_fLocalMapZoomCurr, xmm0
 		call	UpdateTileScales
@@ -1967,12 +1859,12 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		if (s_pcCurrWorld != parentWorld)
 		{
 			s_pcCurrWorld = parentWorld;
-			s_rootWorldDimensions.GetPosMods(parentWorld);
+			s_rootWorldDimensions.InitPosMods(parentWorld);
 			auto rootWorld = parentWorld->GetRootMapWorld();
 			if (s_pcRootWorld != rootWorld)
 			{
 				s_pcRootWorld = rootWorld;
-				s_rootWorldDimensions.GetDimensions(rootWorld);
+				s_rootWorldDimensions.InitDimensions(rootWorld);
 				s_worldMapTile->SetString(kTileValue_filename, rootWorld->worldMap.ddsPath.m_dataLen ? rootWorld->worldMap.ddsPath.m_data : "jazzisparis\\minimap\\blanktile.dds");
 				s_worldMapRect->SetFloat(kTileValue_user1, rootWorld->mapData.usableDimensions.X);
 				s_worldMapRect->SetFloat(kTileValue_user2, rootWorld->mapData.usableDimensions.Y);
@@ -2064,7 +1956,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		bool updateFogOfWar = useFogOfWar & s_updateFogOfWar/*, saveToFile = (showFlags & 0x20) != 0*/;
 		s_updateFogOfWar = false;
 
-		D3DFORMAT d3dFormat = (showFlags & 8) ? TEXTURE_FMT_RGB : TEXTURE_FMT_BW;
+		D3DFORMAT d3dFormat = (showFlags & 8) ? D3DFMT_X8R8G8B8 : D3DFMT_L8;
 		if (s_mmTextureParams.d3dFormat != d3dFormat)
 		{
 			s_mmTextureParams.d3dFormat = d3dFormat;
@@ -2479,9 +2371,9 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			if (worldMap)
 				adjustedPos = GetWorldMapPosMults(objectRef->position.PS2(), s_rootWorldDimensions);
 			else if (parentWorld)
-				adjustedPos = _mm_mul_ps(_mm_sub_ps(objectRef->position.PS2(), nwXY.PS()), kLocalMapPosMults);
+				adjustedPos = (objectRef->position.PS2() - nwXY.PS()) * kLocalMapPosMults;
 			else
-				adjustedPos = _mm_mul_ps(_mm_sub_ps(AdjustInteriorPos(objectRef->position.PS2()), nwXY.PS()), kLocalMapPosMults);
+				adjustedPos = (AdjustInteriorPos(objectRef->position.PS2()) - nwXY.PS()) * kLocalMapPosMults;
 			markerData->x->SetFloat(adjustedPos.x);
 			markerData->y->SetFloat(adjustedPos.y);
 		}

@@ -2,7 +2,7 @@
 
 #include "nvse/GameTiles.h"
 
-typedef NiTMapBase<const char*, UInt32> TraitNameMap;
+typedef NiTMap<const char*, UInt32> TraitNameMap;
 TraitNameMap *g_traitNameMap = (TraitNameMap*)0x11F32F4;
 
 UInt32 __fastcall Tile::TraitNameToID(const char *traitName)
@@ -261,7 +261,7 @@ __declspec(naked) void Tile::Value::SetString(const char *strVal)
 		jz		done
 	doFree:
 		push	dword ptr [esi+0xC]
-		GAME_HEAP_FREE
+		call	Game_HeapFree
 		and		dword ptr [esi+0xC], 0
 		mov		edx, [esp+8]
 		test	edx, edx

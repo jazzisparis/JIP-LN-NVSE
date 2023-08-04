@@ -247,10 +247,10 @@ public:
 	AudioRequest				request024;			// 024
 	AudioRequest				request034;			// 034
 	AudioRequest				request044;			// 044
-	NiTPointerMap<BSGameSound>	playingSounds;		// 054
-	NiTPointerMap<BSSoundInfo>	playingSoundInfos1;	// 064
-	NiTPointerMap<BSSoundInfo>	playingSoundInfos2;	// 074
-	NiTPointerMap<NiAVObject>	soundPlayingObjects;// 084
+	NiTPtrMap<BSGameSound>		playingSounds;		// 054
+	NiTPtrMap<BSSoundInfo>		playingSoundInfos1;	// 064
+	NiTPtrMap<BSSoundInfo>		playingSoundInfos2;	// 074
+	NiTPtrMap<NiAVObject>		soundPlayingObjects;// 084
 	DList<BSGameSound>			cachedSounds;		// 094
 	UInt32						unk0A0;				// 0A0
 	UInt32						unk0A4;				// 0A4

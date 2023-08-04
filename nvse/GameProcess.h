@@ -884,7 +884,7 @@ struct AnimData
 	float							timePassed;			// 0D0
 	UInt32							unk0D4;				// 0D4
 	NiControllerManager				*controllerMngr;	// 0D8
-	NiTPointerMap<AnimSequenceBase>	*sequenceBaseMap;	// 0DC
+	NiTPtrMap<AnimSequenceBase>		*sequenceBaseMap;	// 0DC
 	BSAnimGroupSequence				*animSequence[8];	// 0E0
 	BSAnimGroupSequence				*animSeq100;		// 100
 	tList<KFModel>					loadingAnims;		// 104
@@ -902,7 +902,7 @@ struct AnimData
 	NiObject						*object130;			// 130
 	tList<PlayingIdle>				playingIdleAnims;	// 134
 
-	TESIdleForm *GetPlayedIdle();
+	TESIdleForm *GetPlayedIdle() const;
 
 	__forceinline void PlayIdle(TESIdleForm *idleAnim)
 	{

@@ -23,6 +23,7 @@ DEFINE_COMMAND_PLUGIN(HasScriptBlock, 0, 2, kParams_OneInt_OneOptionalForm);
 DEFINE_COMMAND_PLUGIN(DisableScriptedActivate, 1, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(RunBatchScript, 0, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(ExecuteScript, 1, 0, NULL);
+DEFINE_COMMAND_PLUGIN(RegisterSRScript, 0, 1, kParams_OneString);
 
 UInt8 s_scriptVarActionType = 0;
 
@@ -31,43 +32,36 @@ bool ScriptVariableAction_Execute(COMMAND_ARGS)
 	*result = 0;
 	char varName[0x50];
 	TESForm *form = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form) || !varName[0]) return true;
-	if (!form)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form) && varName[0])
 	{
-		if (!thisObj) return true;
-		form = thisObj;
-	}
-	if (s_scriptVarActionType == 2)
-	{
-		auto findOwner = s_scriptVariablesBuffer->Find(form->refID);
-		if (findOwner)
+		if (!form)
 		{
-			auto findVar = findOwner().Find(varName);
-			if (findVar)
+			if (!thisObj) return true;
+			form = thisObj;
+		}
+		if (s_scriptVarActionType == 2)
+		{
+			if (auto findOwner = s_scriptVariablesBuffer->Find(form->refID))
+				if (auto findVar = findOwner().Find(varName))
+				{
+					findVar.Remove();
+					if (findOwner().Empty()) findOwner.Remove();
+					*result = 1;
+				}
+			return true;
+		}
+		Script *pScript;
+		ScriptLocals *pEventList;
+		if (form->GetScriptAndEventList(&pScript, &pEventList))
+			if (s_scriptVarActionType)
 			{
-				findVar.Remove();
-				if (findOwner().Empty()) findOwner.Remove();
-				*result = 1;
+				if (pScript->AddVariable(varName, pEventList, form->refID, scriptObj->GetOverridingModIdx()))
+					*result = 1;
 			}
-		}
-		return true;
-	}
-	Script *pScript;
-	ScriptLocals *pEventList;
-	if (!form->GetScriptAndEventList(&pScript, &pEventList)) return true;
-	if (s_scriptVarActionType)
-	{
-		if (pScript->AddVariable(varName, pEventList, form->refID, scriptObj->GetOverridingModIdx()))
-			*result = 1;
-	}
-	else if (GetVariableAdded(pScript->refID, varName))
-	{
-		auto findOwner = s_scriptVariablesBuffer->Find(form->refID);
-		if (findOwner && findOwner().HasKey(varName))
-		{
-			VariableInfo *varInfo = pScript->GetVariableByName(varName);
-			if (varInfo && pEventList->GetVariable(varInfo->idx)) *result = 1;
-		}
+			else if (GetVariableAdded(pScript->refID, varName))
+				if (auto findOwner = s_scriptVariablesBuffer->Find(form->refID); findOwner && findOwner().HasKey(varName))
+					if (VariableInfo *varInfo = pScript->GetVariableByName(varName); varInfo && pEventList->GetVariable(varInfo->idx))
+						*result = 1;
 	}
 	return true;
 }
@@ -102,18 +96,21 @@ __declspec(naked) bool Cmd_RemoveScriptVariable_Execute(COMMAND_ARGS)
 bool Cmd_RemoveAllAddedVariables_Execute(COMMAND_ARGS)
 {
 	TESForm *form = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form)) return true;
-	if (!form)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
-		if (!thisObj) return true;
-		form = thisObj;
+		if (!form)
+		{
+			if (!thisObj) return true;
+			form = thisObj;
+		}
+		if (auto findOwner = s_scriptVariablesBuffer->Find(form->refID))
+		{
+			UInt8 modIdx = scriptObj->GetOverridingModIdx();
+			for (auto varIter = findOwner().Begin(); varIter; ++varIter)
+				if (varIter().modIdx == modIdx) varIter.Remove();
+			if (findOwner().Empty()) findOwner.Remove();
+		}
 	}
-	auto findOwner = s_scriptVariablesBuffer->Find(form->refID);
-	if (!findOwner) return true;
-	UInt8 modIdx = scriptObj->GetOverridingModIdx();
-	for (auto varIter = findOwner().Begin(); varIter; ++varIter)
-		if (varIter().modIdx == modIdx) varIter.Remove();
-	if (findOwner().Empty()) findOwner.Remove();
 	return true;
 }
 
@@ -208,16 +205,15 @@ bool Cmd_GetScriptEventDisabled_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESForm *form;
 	char evtName[0x40];
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &evtName)) return true;
-	UInt32 *inMask = s_eventMasks->GetPtr(evtName);
-	if (!inMask) return true;
-	if (*inMask)
-	{
-		if ((form->jipFormFlags6 & kHookFormFlag6_EventDisabled) && (s_disabledEventsMap->Get(form) & *inMask))
-			*result = 1;
-	}
-	else if (form->jipFormFlags6 & kHookFormFlag6_ActivateDisabled)
-		*result = 1;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &evtName))
+		if (UInt32 *inMask = s_eventMasks->GetPtr(evtName))
+			if (*inMask)
+			{
+				if ((form->jipFormFlags6 & kHookFormFlag6_EventDisabled) && (s_disabledEventsMap->Get(form) & *inMask))
+					*result = 1;
+			}
+			else if (form->jipFormFlags6 & kHookFormFlag6_ActivateDisabled)
+				*result = 1;
 	return true;
 }
 
@@ -301,15 +297,14 @@ bool Cmd_FakeScriptEvent_Execute(COMMAND_ARGS)
 	*result = 0;
 	char evtName[0x40];
 	TESForm *filterForm = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &evtName, &filterForm)) return true;
-	UInt32 inMask = s_eventMasks->Get(evtName);
-	if (!inMask) return true;
-	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
-	ExtraDataList *xData = invRef ? invRef->xData : &thisObj->extraDataList;
-	if (!xData) return true;
-	ExtraScript *xScript = GetExtraType(xData, ExtraScript);
-	if (xScript && xScript->eventList)
-		*result = ThisCall<bool>(0x5A8E20, xScript->eventList, filterForm, inMask);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &evtName, &filterForm))
+		if (UInt32 inMask = s_eventMasks->Get(evtName))
+		{
+			InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
+			if (ExtraDataList *xData = invRef ? invRef->xData : &thisObj->extraDataList)
+				if (ExtraScript *xScript = GetExtraType(xData, ExtraScript); xScript && xScript->eventList)
+					*result = ThisCall<bool>(0x5A8E20, xScript->eventList, filterForm, inMask);
+		}
 	return true;
 }
 
@@ -553,24 +548,21 @@ bool Cmd_RunBatchScript_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filePath))
 	{
 		ReplaceChr(filePath, '/', '\\');
-		Script **cachedScript;
-		if (s_cachedScripts->InsertKey(filePath, &cachedScript))
-		{
-			*cachedScript = nullptr;
-			char *fileName = FindChrR(filePath, '\\');
-			if (!fileName) fileName = filePath;
+		char *fileName = FindChrR(filePath, '\\');
+		if (fileName) fileName++;
+		else fileName = filePath;
+		auto cachedScript = s_cachedScripts->GetPtr(fileName);
+		if (!cachedScript)
 			if (char *buffer = GetStrArgBuffer(); FileToBuffer(filePath, buffer, STR_BUFFER_SIZE - 1))
 				if (Script *pScript = Script::Create(buffer, fileName))
 				{
-					*cachedScript = pScript;
-					CaptureLambdaVars(pScript);
+					cachedScript = s_cachedScripts->Emplace(fileName, pScript);
 					if (UInt32 modIdx = scriptObj->GetOverridingModIdx(); modIdx < 0xFF)
 						pScript->mods.Init(g_dataHandler->GetNthModInfo(modIdx));
 				}
-		}
-		if (*cachedScript)
+		if (cachedScript)
 		{
-			JIPScriptRunner::RunScript(*cachedScript, 0, thisObj ? thisObj : g_thePlayer);
+			JIPScriptRunner::RunScript(cachedScript->script, 0, thisObj ? thisObj : g_thePlayer);
 			*result = 1;
 		}
 	}
@@ -579,7 +571,16 @@ bool Cmd_RunBatchScript_Execute(COMMAND_ARGS)
 
 bool Cmd_ExecuteScript_Execute(COMMAND_ARGS)
 {
-	if (ExtraScript *xScript = GetExtraType(&thisObj->extraDataList, ExtraScript); xScript && xScript->script && xScript->eventList)
+	if (auto xScript = GetExtraType(&thisObj->extraDataList, ExtraScript); xScript && xScript->script && xScript->eventList)
 		xScript->script->Execute(thisObj, xScript->eventList, nullptr, false);
+	return true;
+}
+
+bool Cmd_RegisterSRScript_Execute(COMMAND_ARGS)
+{
+	char filePath[0x80];
+	if (JIPScriptRunner::initInProgress && ExtractArgsEx(EXTRACT_ARGS_EX, &filePath) && JIPScriptRunner::RegisterScript(filePath))
+		*result = 1;
+	else *result = 0;
 	return true;
 }

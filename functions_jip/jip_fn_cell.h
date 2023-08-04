@@ -13,15 +13,13 @@ bool Cmd_SetCellWaterForm_Execute(COMMAND_ARGS)
 	TESObjectCELL *cell;
 	TESWaterForm *water = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &water) && IS_ID(cell, TESObjectCELL) && (!water || IS_ID(water, TESWaterForm)))
-	{
-		ExtraCellWaterType *xCellWater = GetExtraType(&cell->extraDataList, ExtraCellWaterType);
-		if (xCellWater)
+		if (auto xCellWater = GetExtraType(&cell->extraDataList, ExtraCellWaterType))
 		{
 			if (water) xCellWater->waterForm = water;
 			else cell->extraDataList.RemoveByType(kXData_ExtraCellWaterType);
 		}
-		else if (water) cell->extraDataList.AddExtra(ExtraCellWaterType::Create(water));
-	}
+		else if (water)
+			cell->extraDataList.AddExtra(ExtraCellWaterType::Create(water));
 	return true;
 }
 
@@ -30,10 +28,8 @@ bool Cmd_GetCellClimate_Execute(COMMAND_ARGS)
 	REFR_RES = 0;
 	TESObjectCELL *cell;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && IS_ID(cell, TESObjectCELL))
-	{
-		ExtraCellClimate *xCellClimate = GetExtraType(&cell->extraDataList, ExtraCellClimate);
-		if (xCellClimate && xCellClimate->climate) REFR_RES = xCellClimate->climate->refID;
-	}
+		if (auto xCellClimate = GetExtraType(&cell->extraDataList, ExtraCellClimate); xCellClimate && xCellClimate->climate)
+			REFR_RES = xCellClimate->climate->refID;
 	return true;
 }
 
@@ -42,15 +38,13 @@ bool Cmd_SetCellClimate_Execute(COMMAND_ARGS)
 	TESObjectCELL *cell;
 	TESClimate *climate = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &climate) && IS_ID(cell, TESObjectCELL) && (!climate || IS_ID(climate, TESClimate)))
-	{
-		ExtraCellClimate *xCellClimate = GetExtraType(&cell->extraDataList, ExtraCellClimate);
-		if (xCellClimate)
+		if (auto xCellClimate = GetExtraType(&cell->extraDataList, ExtraCellClimate))
 		{
 			if (climate) xCellClimate->climate = climate;
 			else cell->extraDataList.RemoveByType(kXData_ExtraCellClimate);
 		}
-		else if (climate) cell->extraDataList.AddExtra(ExtraCellClimate::Create(climate));
-	}
+		else if (climate)
+			cell->extraDataList.AddExtra(ExtraCellClimate::Create(climate));
 	return true;
 }
 

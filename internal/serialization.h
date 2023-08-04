@@ -232,7 +232,7 @@ void ProcessDataChangedFlags(UInt8 changedFlags)
 		s_linkedRefModified->Clear();
 	s_scriptVariablesBuffer->Clear();
 	s_linkedRefsTemp->Clear();
-	s_serializedVars.serializedFlags = 0;
+	s_serializedVars.Reset();
 
 	if (!s_NPCPerksInfoMap->Empty() && (changedFlags & kChangedFlag_NPCPerks))
 	{
@@ -574,39 +574,34 @@ void LoadGameCallback(void*)
 			}
 		}
 		else if (type == kJIPTag_SerializedVars)
-		{
-			if (version != 9)
-				ReadRecordData(&s_serializedVars, length);
-			else
-				s_serializedVars.serializedFlags = ReadRecord32();
-		}
+			ReadRecordData(&s_serializedVars, length);
 		else if (type == kJIPTag_AppearanceUndo)
 		{
 			AppearanceUndo *aprUndo = (AppearanceUndo*)malloc(sizeof(AppearanceUndo));
-			ReadRecordData(aprUndo->values0, 0x214);
-			refID = ReadRecord32();
-			if (!GetResolvedRefID(&refID) || !(aprUndo->race = (TESRace*)LookupFormByRefID(refID)))
+			ReadRecordData(aprUndo, 0x214);
+			UInt32 *buf4Pos = (UInt32*)s_loadGameBuffer.Get(length - 0x214);
+			if (!GetResolvedRefID(buf4Pos) || !(aprUndo->race = (TESRace*)LookupFormByRefID(*buf4Pos)))
 				aprUndo->race = (TESRace*)LookupFormByRefID(0x19);
-			refID = ReadRecord32();
-			if (!GetResolvedRefID(&refID) || !(aprUndo->hair = (TESHair*)LookupFormByRefID(refID)))
-			{
-				refID = (aprUndo->flags & 1) ? 0x22E4E : 0x14B90;
-				aprUndo->hair = (TESHair*)LookupFormByRefID(refID);
-			}
-			refID = ReadRecord32();
-			if (!GetResolvedRefID(&refID) || !(aprUndo->eyes = (TESEyes*)LookupFormByRefID(refID)))
+			buf4Pos++;
+			if (!GetResolvedRefID(buf4Pos) || !(aprUndo->hair = (TESHair*)LookupFormByRefID(*buf4Pos)))
+				aprUndo->hair = (TESHair*)LookupFormByRefID((aprUndo->flags & 1) ? 0x22E4E : 0x14B90);
+			buf4Pos++;
+			if (!GetResolvedRefID(buf4Pos) || !(aprUndo->eyes = (TESEyes*)LookupFormByRefID(*buf4Pos)))
 				aprUndo->eyes = (TESEyes*)LookupFormByRefID(0x4255);
-			buffer1 = ReadRecord8();
+			buf4Pos++;
+			buffer1 = *(UInt8*)buf4Pos;
 			aprUndo->numParts = buffer1;
+			buf4Pos = (UInt32*)((UInt8*)buf4Pos + 1);
 			if (buffer1)
 			{
-				BGSHeadPart **ptr = aprUndo->headParts = (BGSHeadPart**)malloc(buffer1 * 4);
+				BGSHeadPart **ptr = (BGSHeadPart**)malloc(buffer1 * 4);
+				aprUndo->headParts = ptr;
 				do
 				{
-					refID = ReadRecord32();
-					if (GetResolvedRefID(&refID) && (*ptr = (BGSHeadPart*)LookupFormByRefID(refID)))
+					if (GetResolvedRefID(buf4Pos) && (*ptr = (BGSHeadPart*)LookupFormByRefID(*buf4Pos)))
 						ptr++;
 					else aprUndo->numParts--;
+					buf4Pos++;
 				}
 				while (--buffer1);
 			}
@@ -762,25 +757,15 @@ void SaveGameCallback(void*)
 		WriteRecord32(aprUndo->race->refID);
 		WriteRecord32(aprUndo->hair->refID);
 		WriteRecord32(aprUndo->eyes->refID);
-		buffer1 = aprUndo->numParts;
-		WriteRecord8(buffer1);
-		if (buffer1)
-		{
-			BGSHeadPart **ptr = aprUndo->headParts;
-			do
-			{
-				WriteRecord32((*ptr)->refID);
-				ptr++;
-			}
-			while (--buffer1);
-		}
+		WriteRecord8(aprUndo->numParts);
+		for (UInt32 idx = 0; idx < aprUndo->numParts; idx++)
+			WriteRecord32(aprUndo->headParts[idx]->refID);
 	}
 	if (buffer2 = s_NPCPerksInfoMap->Size())
 	{
-		Actor *actor;
 		for (auto refIter = s_NPCPerksInfoMap->Begin(); refIter; ++refIter)
 		{
-			if ((actor = (Actor*)LookupFormByRefID(refIter.Key())) && IS_ACTOR(actor))
+			if (Actor *actor = (Actor*)LookupFormByRefID(refIter.Key()); actor && IS_ACTOR(actor))
 			{
 				if (!refIter().perkRanks.Empty() && !actor->lifeState && (actor->isTeammate || !(((TESActorBase*)actor->baseForm)->baseData.flags & 8) || actor->GetRefNiNode()))
 					goto isValid;

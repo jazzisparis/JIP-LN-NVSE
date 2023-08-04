@@ -51,7 +51,7 @@ namespace GameGlobals
 	__forceinline SpellItem *PipBoyLight() {return *(SpellItem**)0x11C358C;}
 	__forceinline TESDescription **CurrentDescription() {return (TESDescription**)0x11C5490;}
 	__forceinline String *CurrentDescriptionText() {return (String*)0x11C5498;}
-	__forceinline NiTPointerMap<TESForm> *AllFormsMap() {return *(NiTPointerMap<TESForm>**)0x11C54C0;}
+	__forceinline NiTPtrMap<TESForm> *AllFormsMap() {return *(NiTPtrMap<TESForm>**)0x11C54C0;}
 	__forceinline NiTStringPointerMap<TESForm> *EditorIDsMap() {return *(NiTStringPointerMap<TESForm>**)0x11C54C8;}
 	__forceinline BSTCaseInsensitiveStringMap<void*> *IdleAnimsDirectoryMap() {return *(BSTCaseInsensitiveStringMap<void*>**)0x11CB6A0;}
 	__forceinline BSSimpleArray<TESRecipeCategory*> *RecipeMenuCategories() {return (BSSimpleArray<TESRecipeCategory*>*)0x11D8F08;}
@@ -90,19 +90,19 @@ __forceinline TESObjectREFR *GetCdBodyRef(hkpWorldObject *object)
 {
 	return CdeclCall<TESObjectREFR*>(0x62B4E0, &object->cdBody);
 }
-__forceinline float ApplyAmmoEffects(UInt32 effType, AmmoEffectList *effList, float baseValue)
+__forceinline float ApplyAmmoEffects(AmmoEffectID effType, AmmoEffectList *effList, float baseValue)
 {
 	return CdeclCall<float>(0x59A030, effType, effList, baseValue);
 }
-__forceinline void ApplyPerkModifiers(UInt32 entryPointID, TESObjectREFR *perkOwner, float *baseValue)
+__forceinline void ApplyPerkModifiers(PerkEntryPointID entryPointID, TESObjectREFR *perkOwner, float *baseValue)
 {
 	CdeclCall(0x5E58F0, entryPointID, perkOwner, baseValue);
 }
-__forceinline void ApplyPerkModifiers(UInt32 entryPointID, TESObjectREFR *perkOwner, TESForm *filter1, float *baseValue)
+__forceinline void ApplyPerkModifiers(PerkEntryPointID entryPointID, TESObjectREFR *perkOwner, TESForm *filter1, float *baseValue)
 {
 	CdeclCall(0x5E58F0, entryPointID, perkOwner, filter1, baseValue);
 }
-__forceinline void ApplyPerkModifiers(UInt32 entryPointID, TESObjectREFR *perkOwner, TESForm *filter1, TESForm *filter2, float *baseValue)
+__forceinline void ApplyPerkModifiers(PerkEntryPointID entryPointID, TESObjectREFR *perkOwner, TESForm *filter1, TESForm *filter2, float *baseValue)
 {
 	CdeclCall(0x5E58F0, entryPointID, perkOwner, filter1, filter2, baseValue);
 }
@@ -144,8 +144,14 @@ struct JIPSerializedVars
 		kSzVars_Version =	1
 	};
 
-	UInt32		serializedFlags = 0;
-	float		dmgArmorMaxPercent = 1.0F;
+	UInt32		serializedFlags;
+	float		dmgArmorMaxPercent;
+
+	void Reset()
+	{
+		serializedFlags = 0;
+		dmgArmorMaxPercent = 1.0F;
+	}
 };
 extern JIPSerializedVars s_serializedVars;
 
@@ -188,6 +194,8 @@ public:
 	~LambdaVarContext() {UncaptureLambdaVars(scriptLambda);}
 
 	inline LambdaVarContext& operator=(const LambdaVarContext &other) {Set(other.scriptLambda); return *this;}
+
+	inline Script* operator()() const {return scriptLambda;}
 
 	inline operator Script*() const {return scriptLambda;}
 
@@ -269,7 +277,8 @@ struct AppearanceUndo
 		while (partIter = partIter->next);
 		if (numParts)
 		{
-			BGSHeadPart **ptr = headParts = (BGSHeadPart**)malloc(numParts * 4);
+			BGSHeadPart **ptr = (BGSHeadPart**)malloc(numParts * 4);
+			headParts = ptr;
 			partIter = npc->headPart.Head();
 			do
 			{
@@ -294,17 +303,8 @@ struct AppearanceUndo
 		npc->hair = hair;
 		npc->eyes = eyes;
 		npc->headPart.RemoveAll();
-		if (numParts)
-		{
-			BGSHeadPart **ptr = headParts;
-			UInt8 idx = numParts;
-			do
-			{
-				npc->headPart.Prepend(*ptr);
-				ptr++;
-			}
-			while (--idx);
-		}
+		for (UInt32 idx = 0; idx < numParts; idx++)
+			npc->headPart.Prepend(headParts[idx]);
 	}
 
 	void Destroy()
@@ -504,16 +504,9 @@ typedef UnorderedMap<char*, RefMapIDsMap, 4> RefMapVarsMap;
 typedef UnorderedMap<UInt32, RefMapVarsMap> RefMapModsMap;
 extern TempObject<RefMapModsMap> s_refMapArraysPerm, s_refMapArraysTemp;
 
+extern PrimitiveCS s_auxVarCS, s_refMapCS;
+
 UInt32 __fastcall GetSubjectID(TESForm *form, TESObjectREFR *thisObj);
-
-#define JIP_VARS_CS 1
-#define JIP_XDATA_CS 1
-
-#if JIP_XDATA_CS
-#define XDATA_CS ScopedLightCS cs((LightCS*)EXTRA_DATA_CS);
-#else
-#define XDATA_CS
-#endif
 
 struct AuxVarInfo
 {
@@ -811,7 +804,7 @@ struct InventoryRef
 	bool				removed;		// 2D
 	UInt8				pad2E[2];		// 2E
 
-	SInt32 GetCount() {return entry->countDelta;}
+	SInt32 GetCount() const {return entry->countDelta;}
 	ExtraDataList *CreateExtraData();
 	ExtraDataList* __fastcall SplitFromStack(SInt32 maxStack = 1);
 };
@@ -842,8 +835,6 @@ struct AnimGroupClassify
 };
 extern const AnimGroupClassify kAnimGroupClassify[];
 
-extern TempObject<UnorderedMap<char*, Script*>> s_cachedScripts;
-
 namespace JIPScriptRunner
 {
 	enum ScriptRunOn : UInt16
@@ -858,7 +849,18 @@ namespace JIPScriptRunner
 		kRunOn_ExitGame =		'xg'
 	};
 
+	struct CachedSRScript
+	{
+		LambdaVarContext	script;
+		ScriptRunOn			runOn;
+
+		CachedSRScript(Script *_script, ScriptRunOn _runOn = kRunOn_Invalid) : script(_script), runOn(_runOn) {}
+	};
+
+	extern UInt8 initInProgress;
+
 	void Init();
+	bool RegisterScript(char *relPath);
 	void RunScripts(ScriptRunOn runOn1, ScriptRunOn runOn2 = kRunOn_Invalid);
 
 	void __fastcall RunScript(Script *script, int, TESObjectREFR *callingRef);
@@ -866,6 +868,8 @@ namespace JIPScriptRunner
 
 	void __fastcall LogCompileError(String &errorStr);
 };
+
+extern TempObject<UnorderedMap<const char*, JIPScriptRunner::CachedSRScript>> s_cachedScripts;
 
 extern TempObject<UnorderedMap<const char*, NiCamera*>> s_extraCamerasMap;
 

@@ -263,7 +263,7 @@ __declspec(naked) SInt32 TESObjectREFR::GetItemCount(TESForm *form) const
 	done:
 		leave
 		retn	4
-		NOP_0x7
+		NOP_0x2
 	itemList:
 		push	edx
 		push	esi
@@ -423,7 +423,7 @@ void TESObjectREFR::RemoveItemTarget(TESForm *itemForm, TESObjectREFR *target, S
 		if (ContChangesEntry *entry = GetContainerChangesEntry(itemForm); entry && entry->extendData)
 		{
 			ExtraDataList *xData;
-			while ((total > 0) && (xData = entry->extendData->GetFirstItem()))
+			while ((total > 0) && entry->extendData && (xData = entry->extendData->GetFirstItem()))
 			{
 				SInt32 subCount = xData->GetCount();
 				if (subCount < 1)
@@ -940,9 +940,9 @@ __declspec(naked) float __vectorcall TESObjectREFR::GetHeadingAngle(TESObjectREF
 		movshdup	xmm1, xmm0
 		call	ATan2
 		subss	xmm0, [ecx+0x2C]
-		movaps	xmm2, xmm0
+		movq	xmm2, xmm0
 		andps	xmm2, PS_FlipSignMask0
-		movaps	xmm1, xmm0
+		movq	xmm1, xmm0
 		xorps	xmm1, xmm2
 		cmpnless	xmm1, PS_V3_PI
 		andps	xmm1, PS_V3_PIx2
@@ -2020,7 +2020,7 @@ __declspec(naked) float __vectorcall Actor::AdjustPushForce(float baseForce)
 		mulss	xmm1, SS_10
 		mulss	xmm1, ds:0x11CEA6C
 		addss	xmm1, ds:0x11CE664
-		movaps	xmm2, xmm0
+		movq	xmm2, xmm0
 		andps	xmm2, PS_FlipSignMask0
 		xorps	xmm2, ds:0x11CF9C0
 		mulss	xmm0, ds:0x11CFA20
@@ -2059,7 +2059,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		movq	xmm0, qword ptr [esi+0x30]
 		movq	xmm1, qword ptr [eax+0x30]
 		subps	xmm0, xmm1
-		movaps	xmm1, xmm0
+		movq	xmm1, xmm0
 		mulps	xmm1, xmm1
 		haddps	xmm1, xmm1
 		comiss	xmm1, PS_Epsilon
@@ -2314,7 +2314,7 @@ __declspec(naked) BackUpPackage *Actor::AddBackUpPackage(TESObjectREFR *targetRe
 		jz		done
 	noPackage:
 		push	0x8C
-		GAME_HEAP_ALLOC
+		call	Game_DoHeapAlloc
 		mov		ecx, eax
 		CALL_EAX(0x9ED030)
 		mov		[ebp-0xC], eax

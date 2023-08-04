@@ -53,16 +53,14 @@ bool Cmd_SetValueAlt_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	UInt32 newVal;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &newVal))
-		return true;
-	TESValueForm *valForm = DYNAMIC_CAST(form, TESForm, TESValueForm);
-	if (valForm)
-	{
-		valForm->value = newVal;
-		//form->MarkModified(2);
-	}
-	else if IS_ID(form, AlchemyItem)
-		((AlchemyItem*)form)->value = newVal;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &newVal))
+		if (TESValueForm *valForm = DYNAMIC_CAST(form, TESForm, TESValueForm))
+		{
+			valForm->value = newVal;
+			//form->MarkModified(2);
+		}
+		else if IS_ID(form, AlchemyItem)
+			((AlchemyItem*)form)->value = newVal;
 	return true;
 }
 
@@ -80,12 +78,9 @@ bool Cmd_GetWeaponRefModFlags_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
-	ExtraDataList *xData = invRef ? invRef->xData : &thisObj->extraDataList;
-	if (xData)
-	{
-		ExtraWeaponModFlags *xModFlags = GetExtraType(xData, ExtraWeaponModFlags);
-		if (xModFlags) *result = xModFlags->flags;
-	}
+	if (ExtraDataList *xData = invRef ? invRef->xData : &thisObj->extraDataList)
+		if (auto xModFlags = GetExtraType(xData, ExtraWeaponModFlags))
+			*result = xModFlags->flags;
 	return true;
 }
 
@@ -102,11 +97,9 @@ bool Cmd_SetWeaponRefModFlags_Execute(COMMAND_ARGS)
 	if (!mods[0]) flags &= ~1;
 	if (!mods[1]) flags &= ~2;
 	if (!mods[2]) flags &= ~4;
-	ExtraDataList *xData = invRef->xData;
-	if (xData)
+	if (ExtraDataList *xData = invRef->xData)
 	{
-		ExtraWeaponModFlags *xModFlags = GetExtraType(xData, ExtraWeaponModFlags);
-		if (xModFlags)
+		if (auto xModFlags = GetExtraType(xData, ExtraWeaponModFlags))
 		{
 			if (xModFlags->flags == flags)
 				return true;
@@ -116,7 +109,7 @@ bool Cmd_SetWeaponRefModFlags_Execute(COMMAND_ARGS)
 				xData->RemoveByType(kXData_ExtraWeaponModFlags);
 				if (!xData->m_data)
 				{
-					ContChangesEntry *entry = invRef->containerRef->GetContainerChangesEntry(invRef->type);
+					auto entry = invRef->containerRef->GetContainerChangesEntry(invRef->type);
 					if (!entry || !entry->extendData) return true;
 					entry->extendData->Remove(xData);
 					Game_HeapFree(xData);
@@ -186,14 +179,11 @@ bool Cmd_SetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 		health *= baseHealth;
 	if (health > baseHealth)
 		health = baseHealth;
-	ExtraDataList *xData = invRef->xData;
-	if (xData)
-	{
-		if (ExtraHealth *xHealth = GetExtraType(xData, ExtraHealth))
+	if (ExtraDataList *xData = invRef->xData)
+		if (auto xHealth = GetExtraType(xData, ExtraHealth))
 			xHealth->health = health;
 		else
 			xData->AddExtra(ExtraHealth::Create(health));
-	}
 	else if (xData = invRef->CreateExtraData())
 		xData->AddExtra(ExtraHealth::Create(health));
 	else return true;
@@ -219,10 +209,9 @@ bool Cmd_SetHotkeyItemRef_Execute(COMMAND_ARGS)
 		return true;
 	}
 	keyNum--;
-	ExtraDataList *xData = invRef->xData;
-	if (xData)
+	if (ExtraDataList *xData = invRef->xData)
 	{
-		ExtraHotkey *xHotkey = GetExtraType(xData, ExtraHotkey);
+		auto xHotkey = GetExtraType(xData, ExtraHotkey);
 		if (!xHotkey)
 		{
 			if (!ClearHotkey(keyNum))
@@ -257,17 +246,14 @@ bool Cmd_UnequipItemAlt_Execute(COMMAND_ARGS)
 {
 	TESForm *item;
 	UInt32 noEquip = 0, noMessage = 1;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &item, &noEquip, &noMessage) || NOT_ACTOR(thisObj) || 
-		(NOT_ID(item, TESObjectWEAP) && NOT_TYPE(item, TESObjectARMO)))
-		return true;
-	ContChangesEntry *entry = thisObj->GetContainerChangesEntry(item);
-	ExtraDataList *xData;
-	if (entry && (xData = entry->GetEquippedExtra()))
-	{
-		((Actor*)thisObj)->UnequipItem(item, 1, xData, 1, noEquip, noMessage);
-		if (!noMessage)
-			ShowItemMessage(item, *(const char**)0x11D4250);
-	}
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &item, &noEquip, &noMessage) && IS_ACTOR(thisObj) && (IS_ID(item, TESObjectWEAP) || IS_TYPE(item, TESObjectARMO)))
+		if (ContChangesEntry *entry = thisObj->GetContainerChangesEntry(item))
+			if (ExtraDataList *xData = entry->GetEquippedExtra())
+			{
+				((Actor*)thisObj)->UnequipItem(item, 1, xData, 1, noEquip, noMessage);
+				if (!noMessage)
+					ShowItemMessage(item, *(const char**)0x11D4250);
+			}
 	return true;
 }
 
@@ -303,7 +289,7 @@ bool Cmd_DropAlt_Execute(COMMAND_ARGS)
 		{
 			hasScript = item->HasScript();
 			stacked = IS_ID(item, TESObjectWEAP) ? (((TESObjectWEAP*)item)->eWeaponType > 9) : NOT_TYPE(item, TESObjectARMO);
-			while ((total > 0) && (xData = entry->extendData->GetFirstItem()))
+			while ((total > 0) && entry->extendData && (xData = entry->extendData->GetFirstItem()))
 			{
 				subCount = xData->GetCount();
 				if (subCount < 1)

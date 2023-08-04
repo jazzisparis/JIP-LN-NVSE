@@ -55,7 +55,7 @@ template<class M, class T> class NiTStringTemplateMap: M
 	UInt8	fil0011[3];	// 0011
 };
 
-template<class T> class NiTStringMap : NiTStringTemplateMap<NiTMapBase<char const *, T>, T>
+template<class T> class NiTStringMap : NiTStringTemplateMap<NiTMap<char const *, T>, T>
 {
 };
 
@@ -92,7 +92,7 @@ public:
 	virtual void	Unk_0A(void);
 
 	// BSTCaseInsensitiveStringMap <Setting *>
-	typedef NiTMapBase <const char *, Setting *>	SettingMap;
+	typedef NiTMap<const char*, Setting*> SettingMap;
 
 	// void		** vtbl							// 000
 	UInt32		unk004[(0x10C - 0x004) >> 2];	// 004

@@ -696,10 +696,10 @@ bool Cmd_GetWaterTrait_Execute(COMMAND_ARGS)
 		case 12:
 		case 13:
 		case 14:
-			cvtul2d(RGBHexToDec(ULNG(water->visData[traitID - 2])), result);
+			cvtul2d(RGBHexToDec(water->visData[traitID - 2].u), result);
 			break;
 		default:
-			*result = water->visData[traitID - 2];
+			*result = water->visData[traitID - 2].f;
 	}
 	return true;
 }
@@ -722,10 +722,11 @@ bool Cmd_SetWaterTrait_Execute(COMMAND_ARGS)
 		case 12:
 		case 13:
 		case 14:
-			if (intVal <= 255255255) ULNG(water->visData[traitID - 2]) = RGBDecToHex(intVal);
+			if (intVal <= 255255255)
+				water->visData[traitID - 2].u = RGBDecToHex(intVal);
 			break;
 		default:
-			water->visData[traitID - 2] = value;
+			water->visData[traitID - 2].f = value;
 	}
 	return true;
 }

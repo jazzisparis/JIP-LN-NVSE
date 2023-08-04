@@ -18,7 +18,7 @@ Menu* __fastcall GetMenuByType(UInt32 menuID)
 	return tileMenu ? tileMenu->menu : NULL;
 }
 
-__declspec(naked) UInt32 InterfaceManager::GetTopVisibleMenuID()
+__declspec(naked) UInt32 InterfaceManager::GetTopVisibleMenuID() const
 {
 	__asm
 	{
@@ -61,7 +61,7 @@ __declspec(naked) UInt32 InterfaceManager::GetTopVisibleMenuID()
 	}
 }
 
-Tile *InterfaceManager::GetActiveTile()
+Tile *InterfaceManager::GetActiveTile() const
 {
 	return activeTile ? activeTile : activeTileAlt;
 }
@@ -119,7 +119,7 @@ void InterfaceManager::RemoveHighlightedRef(TESObjectREFR *refr)
 	}
 }
 
-bool InterfaceManager::IsRefHighlighted(TESObjectREFR *refr)
+bool InterfaceManager::IsRefHighlighted(TESObjectREFR *refr) const
 {
 	for (UInt32 index = numHighlighted; index;)
 		if (highlightedRefs[--index].refr == refr)
@@ -127,7 +127,7 @@ bool InterfaceManager::IsRefHighlighted(TESObjectREFR *refr)
 	return false;
 }
 
-__declspec(naked) NiAVObject *InterfaceManager::GetCursorPick()
+__declspec(naked) NiAVObject *InterfaceManager::GetCursorPick() const
 {
 	__asm
 	{

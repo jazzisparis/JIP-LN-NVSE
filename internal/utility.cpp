@@ -58,12 +58,21 @@ alignas(16) const UInt32 kStringMasks[] =
 UInt32 g_TLSIndex;
 memcpy_t MemCopy = memcpy;
 
-__declspec(naked) void* __stdcall Game_DoHeapAlloc(UInt32 size)
+__declspec(naked) void* __stdcall Game_DoHeapAlloc(size_t size)
 {
 	__asm
 	{
 		mov		ecx, GAME_HEAP
 		JMP_EAX(0xAA3E40)
+	}
+}
+
+__declspec(naked) void __stdcall Game_HeapFree(void *ptr)
+{
+	__asm
+	{
+		mov		ecx, GAME_HEAP
+		JMP_EAX(0xAA4060)
 	}
 }
 
@@ -632,7 +641,7 @@ __declspec(naked) float __vectorcall Length_V4(__m128 inPS)
 		haddps	xmm0, xmm1
 		comiss	xmm0, xmm1
 		jz		done
-		movaps	xmm1, xmm0
+		movq	xmm1, xmm0
 		rsqrtss	xmm2, xmm0
 		mulss	xmm1, xmm2
 		mulss	xmm1, xmm2
@@ -1505,7 +1514,7 @@ __declspec(naked) char* __fastcall CopyCString(const char *src)
 		inc		eax
 		push	eax
 		push	eax
-		GAME_HEAP_ALLOC
+		call	Game_DoHeapAlloc
 		pop		ecx
 		push	edi
 		mov		edi, eax
@@ -2274,8 +2283,7 @@ FileStream::FileStream(const char *filePath)
 
 FileStream::FileStream(const char *filePath, UInt32 inOffset)
 {
-	theFile = fopen(filePath, "rb");
-	if (theFile)
+	if (theFile = fopen(filePath, "rb"))
 	{
 		fseek(theFile, 0, SEEK_END);
 		if (ftell(theFile) < inOffset)
@@ -2507,17 +2515,16 @@ __declspec(naked) LineIterator::LineIterator(const char *filePath, char *buffer)
 
 __declspec(noinline) UInt32 __fastcall FileToBuffer(const char *filePath, char *buffer, UInt32 maxLen)
 {
-	FileStream srcFile(filePath);
-	if (!srcFile) return 0;
-	UInt32 length = srcFile.GetLength();
-	if (length)
-	{
-		if (length > maxLen)
-			length = maxLen;
-		srcFile.ReadBuf(buffer, length);
-		buffer[length] = 0;
-	}
-	return length;
+	if (FileStream srcFile(filePath); srcFile)
+		if (UInt32 length = srcFile.GetLength())
+		{
+			if (length > maxLen)
+				length = maxLen;
+			srcFile.ReadBuf(buffer, length);
+			buffer[length] = 0;
+			return length;
+		}
+	return 0;
 }
 
 __declspec(naked) void __stdcall SafeWrite8(UInt32 addr, UInt32 data)

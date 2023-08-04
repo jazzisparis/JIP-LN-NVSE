@@ -473,3 +473,34 @@ __declspec(naked) void __vectorcall hkpRigidBody::SetVelocity(__m128 vel, UInt32
 		JMP_EAX(0xC9C1D0)
 	}
 }
+
+void __fastcall hkpRigidBody::SetCollisionProperty(UInt32 propID, FltAndInt value)
+{
+	switch (propID)
+	{
+		case 0:
+			friction = value.f;
+			break;
+		case 1:
+			restitution = value.f;
+			break;
+		case 2:
+			motion.motionState.linearDamping = value.f;
+			break;
+		case 3:
+			motion.motionState.angularDamping = value.f;
+			break;
+		case 4:
+		case 5:
+		case 6:
+			motion.inertia[propID - 4] = value.f;
+			break;
+		case 7:
+			motion.bodyMassInv = value.f;
+			break;
+		case 8:
+			if (motion.type != value.i)
+				((bhkRigidBody*)object)->SetMotionType(value.i);
+			break;
+	}
+}

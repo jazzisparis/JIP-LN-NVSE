@@ -69,7 +69,7 @@ __declspec(naked) ExtraDataList *ExtraDataList::Create()
 	__asm
 	{
 		push	0x20
-		GAME_HEAP_ALLOC
+		call	Game_DoHeapAlloc
 		xorps	xmm0, xmm0
 		movups	[eax], xmm0
 		movups	[eax+0x10], xmm0

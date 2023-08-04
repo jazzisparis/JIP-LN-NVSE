@@ -32,37 +32,36 @@ bool Cmd_GetProjectileTraitNumeric_Execute(COMMAND_ARGS)
 	*result = 0;
 	BGSProjectile *projectile;
 	UInt32 traitID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &projectile, &traitID) || NOT_ID(projectile, BGSProjectile))
-		return true;
-	switch (traitID)
-	{
-		case 0:
-			*result = projectile->type;
-			break;
-		case 1:
-		case 2:
-		case 3:
-			*result = ((float*)projectile)[24 + traitID];
-			break;
-		case 4:
-		case 5:
-		case 6:
-			*result = ((float*)projectile)[26 + traitID];
-			break;
-		case 7:
-		case 8:
-		case 9:
-			*result = ((float*)projectile)[28 + traitID];
-			break;
-		case 10:
-		case 11:
-		case 12:
-		case 13:
-			*result = ((float*)projectile)[31 + traitID];
-			break;
-		case 14:
-			*result = projectile->soundLevel;
-	}
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile, &traitID) && IS_ID(projectile, BGSProjectile))
+		switch (traitID)
+		{
+			case 0:
+				*result = projectile->type;
+				break;
+			case 1:
+			case 2:
+			case 3:
+				*result = ((float*)projectile)[24 + traitID];
+				break;
+			case 4:
+			case 5:
+			case 6:
+				*result = ((float*)projectile)[26 + traitID];
+				break;
+			case 7:
+			case 8:
+			case 9:
+				*result = ((float*)projectile)[28 + traitID];
+				break;
+			case 10:
+			case 11:
+			case 12:
+			case 13:
+				*result = ((float*)projectile)[31 + traitID];
+				break;
+			case 14:
+				*result = projectile->soundLevel;
+		}
 	return true;
 }
 
@@ -71,37 +70,39 @@ bool Cmd_SetProjectileTraitNumeric_Execute(COMMAND_ARGS)
 	BGSProjectile *projectile;
 	UInt32 traitID;
 	float fVal;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &projectile, &traitID, &fVal) || NOT_ID(projectile, BGSProjectile)) return true;
-	UInt32 iVal = (int)fVal;
-	switch (traitID)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile, &traitID, &fVal) && IS_ID(projectile, BGSProjectile))
 	{
-		case 0:
-			if ((iVal == 1) || (iVal == 2) || (iVal == 4) || (iVal == 8) || (iVal == 16))
-				projectile->type = iVal;
-			break;
-		case 1:
-		case 2:
-		case 3:
-			((float*)projectile)[24 + traitID] = fVal;
-			break;
-		case 4:
-		case 5:
-		case 6:
-			((float*)projectile)[26 + traitID] = fVal;
-			break;
-		case 7:
-		case 8:
-		case 9:
-			((float*)projectile)[28 + traitID] = fVal;
-			break;
-		case 10:
-		case 11:
-		case 12:
-		case 13:
-			((float*)projectile)[31 + traitID] = fVal;
-			break;
-		case 14:
-			if (iVal && (iVal < 3)) projectile->soundLevel = iVal;
+		UInt32 iVal = (int)fVal;
+		switch (traitID)
+		{
+			case 0:
+				if ((iVal == 1) || (iVal == 2) || (iVal == 4) || (iVal == 8) || (iVal == 16))
+					projectile->type = iVal;
+				break;
+			case 1:
+			case 2:
+			case 3:
+				((float*)projectile)[24 + traitID] = fVal;
+				break;
+			case 4:
+			case 5:
+			case 6:
+				((float*)projectile)[26 + traitID] = fVal;
+				break;
+			case 7:
+			case 8:
+			case 9:
+				((float*)projectile)[28 + traitID] = fVal;
+				break;
+			case 10:
+			case 11:
+			case 12:
+			case 13:
+				((float*)projectile)[31 + traitID] = fVal;
+				break;
+			case 14:
+				if (iVal && (iVal < 3)) projectile->soundLevel = iVal;
+		}
 	}
 	return true;
 }
@@ -230,9 +231,8 @@ bool Cmd_SetDetonationTimer_Execute(COMMAND_ARGS)
 bool Cmd_GetMineArmed_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	if NOT_ID(thisObj, GrenadeProjectile) return true;
-	GrenadeProjectile *projectile = (GrenadeProjectile*)thisObj;
-	if (!(projectile->projFlags & 0x200) && (projectile->sourceRef != g_thePlayer) && ((((BGSProjectile*)thisObj->baseForm)->projFlags & 0x426) == 0x26))
+	if (GrenadeProjectile *projectile = (GrenadeProjectile*)thisObj; IS_ID(projectile, GrenadeProjectile) && !(projectile->projFlags & 0x200) &&
+		(projectile->sourceRef != g_thePlayer) && ((((BGSProjectile*)thisObj->baseForm)->projFlags & 0x426) == 0x26))
 		*result = 1;
 	return true;
 }
@@ -268,30 +268,32 @@ bool Cmd_SetOnProjectileImpactEventHandler_Execute(COMMAND_ARGS)
 	Script *script;
 	UInt32 addEvnt;
 	TESForm *projectileOrList;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &projectileOrList) || NOT_ID(script, Script)) return true;
-	tList<TESForm> tempList(projectileOrList);
-	if IS_ID(projectileOrList, BGSListForm)
-		tempList = ((BGSListForm*)projectileOrList)->list;
-	auto iter = tempList.Head();
-	do
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &projectileOrList) && IS_ID(script, Script))
 	{
-		if (BGSProjectile *projectile = (BGSProjectile*)iter->data; projectile && IS_ID(projectile, BGSProjectile))
-			if (addEvnt)
-			{
-				EventCallbackScripts *callbacks;
-				if (s_projectileImpactEventMap->Insert(projectile, &callbacks))
-					HOOK_INC(ProjectileImpact);
-				callbacks->Insert(script);
-				projectile->SetJIPFlag(kHookFormFlag6_ProjectileImpact, true);
-			}
-			else if (auto findProj = s_projectileImpactEventMap->Find(projectile); findProj && findProj().Erase(script) && findProj().Empty())
-			{
-				findProj.Remove();
-				HOOK_DEC(ProjectileImpact);
-				projectile->SetJIPFlag(kHookFormFlag6_ProjectileImpact, false);
-			}
+		tList<TESForm> tempList(projectileOrList);
+		if IS_ID(projectileOrList, BGSListForm)
+			tempList = ((BGSListForm*)projectileOrList)->list;
+		auto iter = tempList.Head();
+		do
+		{
+			if (BGSProjectile *projectile = (BGSProjectile*)iter->data; projectile && IS_ID(projectile, BGSProjectile))
+				if (addEvnt)
+				{
+					EventCallbackScripts *callbacks;
+					if (s_projectileImpactEventMap->Insert(projectile, &callbacks))
+						HOOK_INC(ProjectileImpact);
+					callbacks->Insert(script);
+					projectile->SetJIPFlag(kHookFormFlag6_ProjectileImpact, true);
+				}
+				else if (auto findProj = s_projectileImpactEventMap->Find(projectile); findProj && findProj().Erase(script) && findProj().Empty())
+				{
+					findProj.Remove();
+					HOOK_DEC(ProjectileImpact);
+					projectile->SetJIPFlag(kHookFormFlag6_ProjectileImpact, false);
+				}
+		}
+		while (iter = iter->next);
 	}
-	while (iter = iter->next);
 	return true;
 }
 

@@ -71,7 +71,7 @@ struct ModInfo		// referred to by game as TESFile
 	};
 
 	tList<UInt32>						unkList;			// 000 treated as ModInfo during InitializeForm, looks to be a linked list of modInfo
-	UInt32 /*NiTPointerMap<TESFile*>*/	* pointerMap;		// 008
+	UInt32/*NiTPtrMap<TESFile*>*/		*pointerMap;		// 008
 	UInt32								unk00C;				// 00C
 	BSFile*								unkFile;			// 010
 	UInt32								unk014;				// 014 
@@ -133,6 +133,30 @@ struct ModInfo		// referred to by game as TESFile
 };
 static_assert(sizeof(WIN32_FIND_DATA) == 0x140);
 static_assert(sizeof(ModInfo) == 0x42C);
+
+struct Timer
+{
+	UInt8		disableCounter;			// 00
+	UInt8		pad01[3];				// 01
+	float		fpsClamp;				// 04
+	float		fpsClampRemainder;		// 08
+	float		secondsPassed;			// 0C
+	float		lastSecondsPassed;		// 10
+	UInt32		msPassed;				// 14
+	UInt32		tickCount;				// 18
+	UInt8		isChangeTimeMultSlowly;	// 1C
+	UInt8		byte1D;					// 1D
+	UInt8		pad1E[2];				// 1E
+};
+
+struct TimeGlobal : Timer
+{
+	float		flt20;
+	float		flt24;
+	float		flt28;
+
+	static TimeGlobal *Get() {return (TimeGlobal*)0x11F6394;}
+};
 
 struct ModList
 {
@@ -538,7 +562,7 @@ public:
 	{
 		ThisCall(0x63C8F0, this, climate, immediate);
 	}
-	bool GetIsRaining();
+	bool GetIsRaining() const;
 };
 static_assert(sizeof(Sky) == 0x138);
 extern Sky *g_currentSky;
@@ -602,13 +626,13 @@ extern GridCellArray *g_gridCellArray;;
 class LoadedAreaBound : public NiRefObject
 {
 public:
-	bhkPhantom							*phantoms[6];	// 08	Seen bhkAabbPhantom
-	TESObjectCELL						*cell;			// 20
-	NiTMapBase<bhkRigidBody*, UInt16>	boundsMap;		// 24
-	float								flt34;			// 34	Init'd to 20.0
-	float								flt38;			// 38	Init'd to 600.0
-	float								flt3C;			// 3C	Init'd to 1000.0
-	float								flt40;			// 40	Init'd to 0.3
+	bhkPhantom						*phantoms[6];	// 08	Seen bhkAabbPhantom
+	TESObjectCELL					*cell;			// 20
+	NiTMap<bhkRigidBody*, UInt16>	boundsMap;		// 24
+	float							flt34;			// 34	Init'd to 20.0
+	float							flt38;			// 38	Init'd to 600.0
+	float							flt3C;			// 3C	Init'd to 1000.0
+	float							flt40;			// 40	Init'd to 0.3
 
 	__forceinline void GetGroundPos(TESObjectREFR *refr, NiVector3 *currPos, NiVector3 *outPos)
 	{
@@ -620,6 +644,8 @@ static_assert(sizeof(LoadedAreaBound) == 0x44);
 // A0
 struct WaterSurfaceManager
 {
+	struct WadingWaterData;
+
 	// B0 c'tor @ 0x4ED5F0
 	struct WaterGroup
 	{
@@ -652,30 +678,30 @@ struct WaterSurfaceManager
 		UInt16					wordAE;				// AE
 	};
 
-	UInt32								unk00;			// 00
-	UInt32								unk04;			// 04
-	NiObject							*object08;		// 08
-	NiObject							*object0C;		// 0C
-	NiObject							*object10;		// 10
-	NiObject							*object14;		// 14
-	NiObject							*object18;		// 18
-	NiObject							*noiseTexture;	// 1C	Seen NiSourceTexture
-	NiObject							*object20;		// 20
-	UInt32								unk24;			// 24
-	UInt32								unk28;			// 28
-	UInt32								unk2C;			// 2C
-	UInt32								unk30;			// 30
-	UInt32								unk34;			// 34
-	UInt32								unk38;			// 38
-	DList<WaterGroup>					waterGroups;	// 3C
-	WaterGroup							*waterLOD;		// 48	(Assumed)
-	NiTPointerMap<TESObjectREFR>		map4C;			// 4C
-	NiTPointerMap<TESObjectREFR>		map5C;			// 5C
-	NiTPointerMap<TESWaterForm>			map6C;			// 6C
-	NiTMapBase<TESObjectREFR*, void*>	wadingWaterMap;	// 7C
-	Sound								sound8C;		// 8C
-	float								flt98;			// 98
-	UInt32								unk9C;			// 9C
+	UInt32										unk00;			// 00
+	UInt32										unk04;			// 04
+	NiObject									*object08;		// 08
+	NiObject									*object0C;		// 0C
+	NiObject									*object10;		// 10
+	NiObject									*object14;		// 14
+	NiObject									*object18;		// 18
+	NiObject									*noiseTexture;	// 1C	Seen NiSourceTexture
+	NiObject									*object20;		// 20
+	UInt32										unk24;			// 24
+	UInt32										unk28;			// 28
+	UInt32										unk2C;			// 2C
+	UInt32										unk30;			// 30
+	UInt32										unk34;			// 34
+	UInt32										unk38;			// 38
+	DList<WaterGroup>							waterGroups;	// 3C
+	WaterGroup									*waterLOD;		// 48	(Assumed)
+	NiTMap<TESObjectREFR*, TESObjectREFR*>		map4C;			// 4C
+	NiTMap<TESObjectREFR*, TESObjectREFR*>		map5C;			// 5C
+	NiTMap<TESWaterForm*, bool>					map6C;			// 6C
+	NiTMap<TESObjectREFR*, WadingWaterData*>	wadingWaterMap;	// 7C
+	Sound										sound8C;		// 8C
+	float										flt98;			// 98
+	UInt32										unk9C;			// 9C
 
 	__forceinline static NiNode *GetWaterLOD() {return *(NiNode**)0x11DEA1C;}
 	__forceinline static NiNode *GetWaterWade() {return *(NiNode**)0x11C7C28;}
@@ -783,7 +809,7 @@ struct GameTimeGlobals
 };
 
 // 18
-class LoadedReferenceMap : public NiTPointerMap<TESObjectREFR>
+class LoadedReferenceMap : public NiTPtrMap<TESObjectREFR>
 {
 public:
 	UInt32			unk10;		// 10

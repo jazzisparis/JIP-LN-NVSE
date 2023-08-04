@@ -74,7 +74,8 @@ public:
 	/*23C*/virtual void		Unk_8F(void);
 	/*240*/virtual void		MoveToHighProcess();
 
-	enum {
+	enum
+	{
 		kFlags_Unk00000002			= 0x00000002,
 		kFlags_Deleted				= 0x00000020,		// refr removed from .esp or savegame
 		kFlags_Taken				= kFlags_Deleted | kFlags_Unk00000002,

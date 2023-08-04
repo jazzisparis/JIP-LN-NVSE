@@ -79,7 +79,7 @@ DEFINE_COMMAND_PLUGIN(GetPosEx, 1, 3, kParams_ThreeScriptVars);
 DEFINE_COMMAND_PLUGIN(GetAngleEx, 1, 4, kParams_ThreeScriptVars_OneOptionalInt);
 DEFINE_COMMAND_ALT_PLUGIN(SetTextureTransformKey, SetTexTransKey, 1, 4, kParams_OneString_TwoInts_OneFloat);
 DEFINE_COMMAND_ALT_PLUGIN(AttachExtraCamera, AttachCam, 1, 4, kParams_OneString_OneInt_OneOptionalString_OneOptionalInt);
-DEFINE_COMMAND_ALT_PLUGIN(ProjectExtraCamera, ProjCam, 0, 5, kParams_TwoStrings_OneFloat_TwoOptionalInts);
+DEFINE_COMMAND_ALT_PLUGIN(ProjectExtraCamera, ProjCam, 0, 6, kParams_TwoStrings_OneFloat_ThreeOptionalInts);
 DEFINE_COMMAND_PLUGIN(RenameNifBlock, 1, 3, kParams_TwoStrings_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(RemoveNifBlock, 1, 2, kParams_OneString_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(PlayAnimSequence, 1, 2, kParams_OneString_OneOptionalString);
@@ -405,32 +405,30 @@ bool Cmd_GetMaterialPropertyValue_Execute(COMMAND_ARGS)
 	*result = 0;
 	char blockName[0x40];
 	UInt32 traitID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &traitID) || (traitID > 8)) return true;
-	NiAVObject *block = thisObj->GetNiBlock(blockName);
-	if (!block || !IS_GEOMETRY(block)) return true;
-	NiMaterialProperty *matProp = ((NiGeometry*)block)->materialProp;
-	if (!matProp) return true;
-	switch (traitID)
-	{
-		case 0:
-		case 1:
-		case 2:
-			*result = matProp->specularRGB[traitID];
-			break;
-		case 3:
-		case 4:
-		case 5:
-			*result = matProp->emissiveRGB[traitID - 3];
-			break;
-		case 6:
-			*result = matProp->glossiness;
-			break;
-		case 7:
-			*result = matProp->alpha;
-			break;
-		default:
-			*result = matProp->emitMult;
-	}
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &traitID) && (traitID <= 8))
+		if (NiAVObject *block = thisObj->GetNiBlock(blockName); block && IS_GEOMETRY(block))
+			if (NiMaterialProperty *matProp = ((NiGeometry*)block)->materialProp)
+				switch (traitID)
+				{
+					case 0:
+					case 1:
+					case 2:
+						*result = matProp->specularRGB[traitID];
+						break;
+					case 3:
+					case 4:
+					case 5:
+						*result = matProp->emissiveRGB[traitID - 3];
+						break;
+					case 6:
+						*result = matProp->glossiness;
+						break;
+					case 7:
+						*result = matProp->alpha;
+						break;
+					default:
+						*result = matProp->emitMult;
+				}
 	return true;
 }
 
@@ -442,7 +440,7 @@ bool Cmd_SetMaterialPropertyValue_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &traitID, &value) && (traitID <= 8) && (value >= 0))
 		if (NiNode *niNode = thisObj->GetNiNode())
 			if (*(UInt16*)blockName == '*')
-				niNode->BulkSetMaterialPropertyTraitValue(traitID, value);
+				niNode->SetMaterialPropValueRecurse(traitID, value);
 			else if (NiAVObject *block = niNode->GetBlock(blockName); block && IS_GEOMETRY(block))
 				if (NiMaterialProperty *matProp = ((NiGeometry*)block)->materialProp)
 					matProp->SetTraitValue(traitID, value);
@@ -750,7 +748,7 @@ bool Cmd_RefHasMapMarker_Execute(COMMAND_ARGS)
 
 bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 {
-	NiVector4 posVector;
+	NiVector3 posVector;
 	UInt32 transform = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posVector.x, &posVector.y, &posVector.z, &transform))
 	{
@@ -762,7 +760,7 @@ bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 			thisObj->SetPos(posVector);
 		}
 		else if (transform == 2)
-			thisObj->SetPos(posVector += thisObj->position);
+			thisObj->SetPos(posVector += thisObj->position.PS());
 	}
 	return true;
 }
@@ -864,7 +862,7 @@ bool Cmd_SetAngleEx_Execute(COMMAND_ARGS)
 					pRotMat = &rootNode->WorldRotate();
 				else
 					rotMat = thisObj->rotation;
-				thisObj->SetAngle(_mm_add_ps(rotVector * GET_PS(8), pRotMat->ToEulerPRYInv()), 1);
+				thisObj->SetAngle((rotVector * GET_PS(8)) + pRotMat->ToEulerPRYInv(), 1);
 				break;
 			}
 			case 4:
@@ -1082,9 +1080,12 @@ bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &transltn.x, &transltn.y, &transltn.z, &pcNode, &transform) && blockName[0])
 		if (NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName))
 		{
-			if (transform)
+			if (!transform)
+				niBlock->LocalTranslate() = transltn;
+			else if (transform == 1)
 				niBlock->LocalTranslate() += transltn.PS();
-			else niBlock->LocalTranslate() = transltn;
+			else
+				niBlock->LocalTranslate() += niBlock->WorldRotate().MultiplyVector(transltn.PS());
 			if IS_NODE(niBlock)
 			{
 				if NOT_ACTOR(thisObj)
@@ -1150,7 +1151,7 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 					niBlock->LocalRotate().FromEulerPRYInv(rot * GET_PS(8));
 					break;
 				case 4:
-					niBlock->LocalRotate().FromEulerPRYInv(_mm_add_ps(rot * GET_PS(8), niBlock->WorldRotate().ToEulerPRYInv()));
+					niBlock->LocalRotate().FromEulerPRYInv((rot * GET_PS(8)) + niBlock->WorldRotate().ToEulerPRYInv());
 					niBlock->LocalRotate().MultiplyMatricesInv(niBlock->m_parent->WorldRotate());
 					break;
 				case 5:
@@ -1356,7 +1357,7 @@ bool Cmd_SetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &seqName, &frequency))
 		if (NiNode *rootNode = thisObj->GetNiNode(); rootNode && (NOT_ACTOR(thisObj) || (((Actor*)thisObj)->lifeState != 1)))
 			if (NiControllerManager *ctrlMgr = (NiControllerManager*)rootNode->m_controller; ctrlMgr && IS_TYPE(ctrlMgr, NiControllerManager))
-				if (seqName[0] == '*')
+				if (*(UInt16*)seqName == '*')
 					for (auto iter = ctrlMgr->sequences.Begin(); iter; ++iter)
 						iter->frequency = frequency;
 				else if (NiControllerSequence *sequence = ctrlMgr->FindSequence(seqName))
@@ -1394,14 +1395,9 @@ bool Cmd_GetNifBlockParentNodes_Execute(COMMAND_ARGS)
 	UInt32 pcNode = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &pcNode))
 	{
-		NiNode *rootNode;
-		if (pcNode && thisObj->IsPlayer())
-		{
-			if (pcNode & 1)
-				rootNode = thisObj->GetRefNiNode();
-			else rootNode = ((PlayerCharacter*)thisObj)->node1stPerson;
-		}
-		else rootNode = thisObj->GetNiNode();
+		NiNode *rootNode = thisObj->GetRefNiNode();
+		if (thisObj->IsPlayer() && !(pcNode & 1) && !((PlayerCharacter*)thisObj)->is3rdPerson)
+			rootNode = ((PlayerCharacter*)thisObj)->node1stPerson;
 		if (rootNode)
 			if (NiAVObject *niBlock = rootNode->GetBlock(blockName))
 			{
@@ -1598,22 +1594,15 @@ bool __fastcall RegisterInsertObject(char *inData)
 			bool useRoot = !blockName || (rootNode->m_blockName == blockName);
 			NiAVObject *targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName);
 			if (targetObj)
-			{
 				if (insertNode)
 					DoInsertNode(targetObj, objectName, *pDataStr, rootNode);
 				else if ((rootNode = DoAttachModel(targetObj, objectName, pDataStr, rootNode)) && (rootNode->m_flags & 0x20000000))
 					AddPointLights(rootNode);
-			}
 			if (refr->IsPlayer() && (rootNode = s_pc1stPersonNode))
-			{
-				targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName);
-				if (targetObj)
-				{
+				if (targetObj = useRoot ? rootNode : rootNode->GetBlockByName(blockName))
 					if (insertNode)
 						DoInsertNode(targetObj, objectName, *pDataStr, rootNode);
 					else DoAttachModel(targetObj, objectName, pDataStr, rootNode);
-				}
-			}
 		}
 	}
 	else
@@ -1975,10 +1964,11 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 	char camName[0x40], blockName[0x80];
 	float fov;
 	UInt32 pixelSize = 0x100, flags = 0/*Bit0: Grayscale; Bit1: Run actor culler*/;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &camName, &blockName, &fov, &pixelSize, &flags))
+	ImageSpaceEffectEffectID isEffect = IS_EFFECT_NONE;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &camName, &blockName, &fov, &pixelSize, &flags, &isEffect))
 		if (NiCamera *xCamera = s_extraCamerasMap->Get(camName); xCamera && xCamera->m_parent && (pixelSize &= 0xFF0))
 		{
-			D3DFORMAT d3dFormat = TEXTURE_FMT_RGB;
+			D3DFORMAT d3dFormat = D3DFMT_X8R8G8B8;
 			NiTexture **pTexture = nullptr;
 			if (blockName[0] == '*')
 			{
@@ -1986,11 +1976,15 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 				{
 					pTexture = &targetTile->shaderProp->srcTexture;
 					if (flags & 1)
-						d3dFormat = TEXTURE_FMT_BW;
+						d3dFormat = D3DFMT_L8;
 				}
 			}
 			else if (thisObj)
+			{
 				pTexture = thisObj->GetTexturePtr(blockName);
+				if (*(bool*)0x11F941E)
+					d3dFormat = D3DFMT_A16B16G16R16F;
+			}
 			if (pTexture)
 			{
 				if (ULNG(xCamera->m_transformLocal.scale) != ULNG(fov))
@@ -2002,7 +1996,7 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 				if (flags & 2)
 					HighActorCuller::Run(xCamera);
 				g_TES->waterManager->UpdateEx(xCamera);
-				GenerateRenderedTexture(xCamera, TextureParams(pixelSize, pixelSize, d3dFormat), pTexture);
+				BSTextureManager::GenerateRenderedTexture(xCamera, TextureParams(pixelSize, pixelSize, d3dFormat, kRndrMode_Normal, 0xFFFFFFFF, isEffect), pTexture);
 				*result = 1;
 			}
 		}
@@ -2161,7 +2155,7 @@ bool Cmd_GetCollisionObjProperty_Execute(COMMAND_ARGS)
 	*result = 0;
 	char blockName[0x40];
 	UInt32 propID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &propID) && (propID <= 7))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &propID) && (propID <= 8))
 		if (hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName))
 		{
 			switch (propID)
@@ -2187,6 +2181,9 @@ bool Cmd_GetCollisionObjProperty_Execute(COMMAND_ARGS)
 					if (rigidBody->motion.bodyMassInv > 0)
 						*result = 1.0 / rigidBody->motion.bodyMassInv;
 					break;
+				case 8:
+					*result = rigidBody->motion.type;
+					break;
 			}
 		}
 	return true;
@@ -2196,34 +2193,25 @@ bool Cmd_SetCollisionObjProperty_Execute(COMMAND_ARGS)
 {
 	char blockName[0x40];
 	UInt32 propID;
-	float value;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &propID, &value) && (propID <= 7))
-		if (hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName))
+	FltAndInt value;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &propID, &value) && (propID <= 8))
+	{
+		if (propID == 7)
 		{
-			switch (propID)
-			{
-				case 0:
-					rigidBody->friction = value;
-					break;
-				case 1:
-					rigidBody->restitution = value;
-					break;
-				case 2:
-					rigidBody->motion.motionState.linearDamping = value;
-					break;
-				case 3:
-					rigidBody->motion.motionState.angularDamping = value;
-					break;
-				case 4:
-				case 5:
-				case 6:
-					rigidBody->motion.inertia[propID - 4] = value;
-					break;
-				case 7:
-					rigidBody->motion.bodyMassInv = (value > 0) ? (1.0F / value) : 0;
-					break;
-			}
+			if (value.f > 0)
+				value.f = 1.0F / value.f;
+			else value.i = 0;
 		}
+		else if (propID == 8)
+			value.i = int(value.f);
+		if (*(UInt16*)blockName == '*')
+		{
+			if (NiNode *rootNode = thisObj->GetRefNiNode())
+				rootNode->SetCollisionPropRecurse(propID, value);
+		}
+		else if (hkpRigidBody *rigidBody = thisObj->GetRigidBody(blockName))
+			rigidBody->SetCollisionProperty(propID, value);
+	}
 	return true;
 }
 
@@ -2243,12 +2231,15 @@ bool Cmd_SetCollisionObjLayerType_Execute(COMMAND_ARGS)
 	char nodeName[0x40];
 	UInt32 layerType;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &nodeName, &layerType) && layerType && (layerType < LAYER_MAX))
-		if (NiNode *targetNode = thisObj->GetNode2(nodeName); targetNode && targetNode->m_collisionObject)
-			if (bhkWorldObject *worldObj = targetNode->m_collisionObject->worldObj)
-			{
-				((hkpWorldObject*)worldObj->refObject)->layerType = layerType;
-				worldObj->UpdateCollisionFilter();
-			}
+		if (NiNode *rootNode = thisObj->GetRefNiNode())
+			if (*(UInt16*)nodeName == '*')
+				rootNode->SetCollisionLayer(layerType);
+			else if ((rootNode = rootNode->GetNode(nodeName)) && rootNode->m_collisionObject)
+				if (bhkWorldObject *worldObj = rootNode->m_collisionObject->worldObj; worldObj && (((hkpWorldObject*)worldObj->refObject)->layerType != layerType))
+				{
+					((hkpWorldObject*)worldObj->refObject)->layerType = layerType;
+					worldObj->UpdateCollisionFilter();
+				}
 	return true;
 }
 

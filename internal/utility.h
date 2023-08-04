@@ -39,10 +39,8 @@
 #define NOP_0xF NOP_0x8 NOP_0x7
 
 #define GAME_HEAP 0x11F6238
-#define GAME_HEAP_ALLOC __asm mov ecx, GAME_HEAP CALL_EAX(0xAA3E40)
-#define GAME_HEAP_FREE  __asm mov ecx, GAME_HEAP CALL_EAX(0xAA4060)
 
-#define MARK_MODIFIED(form, flag) __asm push 0 __asm push flag __asm push form __asm mov ecx, g_BGSSaveLoadGame __asm mov eax, 0x84A690 __asm call eax
+#define MARK_MODIFIED(form, flag) __asm push 0 __asm push flag __asm push form __asm mov ecx, g_BGSSaveLoadGame CALL_EAX(0x84A690)
 
 template <typename T_Ret = void, typename ...Args>
 __forceinline T_Ret ThisCall(UInt32 _addr, void *_this, Args ...args)
@@ -62,14 +60,12 @@ __forceinline T_Ret CdeclCall(UInt32 _addr, Args ...args)
 	return ((T_Ret (__cdecl *)(Args...))_addr)(std::forward<Args>(args)...);
 }
 
-void* __stdcall Game_DoHeapAlloc(UInt32 size);
+void* __stdcall Game_DoHeapAlloc(size_t size);
+void __stdcall Game_HeapFree(void *ptr);
+
 template <typename T = char> __forceinline T* Game_HeapAlloc(size_t count = 1)
 {
 	return (T*)Game_DoHeapAlloc(count * sizeof(T));
-}
-__forceinline void Game_HeapFree(void *ptr)
-{
-	ThisCall<void, void*>(0xAA4060, (void*)GAME_HEAP, ptr);
 }
 
 template <typename T = char> __forceinline T* Ni_Alloc(size_t count = 1)
@@ -271,6 +267,12 @@ public:
 typedef ScopedLock<CriticalSection> ScopedCS;
 typedef ScopedLock<PrimitiveCS> ScopedPrimitiveCS;
 typedef ScopedLock<LightCS> ScopedLightCS;
+
+union FltAndInt
+{
+	float		f;
+	int			i;
+};
 
 union FunctionArg
 {
@@ -534,6 +536,31 @@ union Coordinate
 	inline operator UInt32() const {return xy;}
 	inline operator __m128i() const {return _mm_loadu_si32(this);}
 };
+
+__forceinline __m128 __vectorcall operator+(__m128 a, __m128 b)
+{
+	return _mm_add_ps(a, b);
+}
+__forceinline __m128 __vectorcall operator-(__m128 a, __m128 b)
+{
+	return _mm_sub_ps(a, b);
+}
+__forceinline __m128 __vectorcall operator*(__m128 a, __m128 b)
+{
+	return _mm_mul_ps(a, b);
+}
+__forceinline __m128 __vectorcall operator&(__m128 a, __m128 b)
+{
+	return _mm_and_ps(a, b);
+}
+__forceinline __m128 __vectorcall operator|(__m128 a, __m128 b)
+{
+	return _mm_or_ps(a, b);
+}
+__forceinline __m128 __vectorcall operator^(__m128 a, __m128 b)
+{
+	return _mm_xor_ps(a, b);
+}
 
 template <typename T1, typename T2> __forceinline T1 GetMin(T1 value1, T2 value2)
 {

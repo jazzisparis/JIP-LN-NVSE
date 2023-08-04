@@ -10,14 +10,16 @@ bool Cmd_GetTerminalLock_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	BGSTerminal *terminal = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &terminal)) return true;
-	if (!terminal)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &terminal))
 	{
-		if (!thisObj) return true;
-		terminal = (BGSTerminal*)thisObj->baseForm;
+		if (!terminal)
+		{
+			if (!thisObj) return true;
+			terminal = (BGSTerminal*)thisObj->baseForm;
+		}
+		if IS_ID(terminal, BGSTerminal)
+			* result = (terminal->data.terminalFlags & BGSTerminal::kTerminalFlagUnlocked) ? -1 : terminal->data.difficulty;
 	}
-	if IS_ID(terminal, BGSTerminal)
-		*result = (terminal->data.terminalFlags & BGSTerminal::kTerminalFlagUnlocked) ? -1 : terminal->data.difficulty;
 	return true;
 }
 
@@ -25,14 +27,16 @@ bool Cmd_GetPasswordNote_Execute(COMMAND_ARGS)
 {
 	REFR_RES = 0;
 	BGSTerminal *terminal = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &terminal)) return true;
-	if (!terminal)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &terminal))
 	{
-		if (!thisObj) return true;
-		terminal = (BGSTerminal*)thisObj->baseForm;
+		if (!terminal)
+		{
+			if (!thisObj) return true;
+			terminal = (BGSTerminal*)thisObj->baseForm;
+		}
+		if (IS_ID(terminal, BGSTerminal) && terminal->password)
+			REFR_RES = terminal->password->refID;
 	}
-	if (IS_ID(terminal, BGSTerminal) && terminal->password)
-		REFR_RES = terminal->password->refID;
 	return true;
 }
 
@@ -40,14 +44,16 @@ bool Cmd_SetPasswordNote_Execute(COMMAND_ARGS)
 {
 	BGSNote *note;
 	BGSTerminal *terminal = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &note, &terminal) || NOT_ID(note, BGSNote)) return true;
-	if (!terminal)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &note, &terminal) && IS_ID(note, BGSNote))
 	{
-		if (!thisObj) return true;
-		terminal = (BGSTerminal*)thisObj->baseForm;
+		if (!terminal)
+		{
+			if (!thisObj) return true;
+			terminal = (BGSTerminal*)thisObj->baseForm;
+		}
+		if IS_ID(terminal, BGSTerminal)
+			terminal->password = note;
 	}
-	if IS_ID(terminal, BGSTerminal)
-		terminal->password = note;
 	return true;
 }
 
@@ -55,22 +61,26 @@ bool Cmd_GetLockedOut_Execute(COMMAND_ARGS)
 {
 	*result = 0;
 	TESObjectREFR *refr = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &refr)) return true;
-	if (!refr)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &refr))
 	{
-		if (!thisObj) return true;
-		refr = thisObj;
-	}
-	if (refr->flags & 0x100) *result = 3;
-	else
-	{
-		ExtraLock *xLock = GetExtraType(&refr->extraDataList, ExtraLock);
-		if (xLock && xLock->data) *result = (int)(xLock->data->unk0C & 0xF);
-		else
+		if (!refr)
 		{
-			ExtraTerminalState *xTerm = GetExtraType(&refr->extraDataList, ExtraTerminalState);
-			if (xTerm) *result = xTerm->lockedOut & 0xF;
+			if (!thisObj) return true;
+			refr = thisObj;
 		}
+		if (refr->flags & 0x100)
+			*result = 3;
+		else if IS_ID(refr->baseForm, BGSTerminal)
+		{
+			if (auto xTermState = GetExtraType(&refr->extraDataList, ExtraTerminalState))
+				*result = xTermState->lockedOut & 0xF;
+		}
+		else if (auto xLock = GetExtraType(&refr->extraDataList, ExtraLock); xLock && xLock->data)
+			*result = (int)(xLock->data->unk0C & 0xF);
+		else if IS_ID(refr->baseForm, TESObjectDOOR)
+			if (auto xTeleport = GetExtraType(&refr->extraDataList, ExtraTeleport); xTeleport && xTeleport->data && xTeleport->data->linkedDoor)
+				if (xLock = GetExtraType(&xTeleport->data->linkedDoor->extraDataList, ExtraLock); xLock && xLock->data)
+					*result = (int)(xLock->data->unk0C & 0xF);
 	}
 	return true;
 }
@@ -79,31 +89,50 @@ bool Cmd_SetLockedOut_Execute(COMMAND_ARGS)
 {
 	UInt32 state;
 	TESObjectREFR *refr = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &state, &refr) || (state > 2)) return true;
-	if (!refr)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &state, &refr) && (state <= 2))
 	{
-		if (!thisObj) return true;
-		refr = thisObj;
-	}
-	if IS_ID(refr->baseForm, BGSTerminal)
-	{
-		ExtraTerminalState *xTerm = GetExtraType(&refr->extraDataList, ExtraTerminalState);
-		if (!xTerm)
+		if (!refr)
 		{
-			xTerm = ExtraTerminalState::Create();
-			refr->extraDataList.AddExtra(xTerm);
+			if (!thisObj) return true;
+			refr = thisObj;
 		}
-		xTerm->lockedOut = state;
-	}
-	else
-	{
-		ExtraLock *xLock = GetExtraType(&refr->extraDataList, ExtraLock);
-		if (!xLock)
+		if IS_ID(refr->baseForm, BGSTerminal)
 		{
-			xLock = ExtraLock::Create();
-			refr->extraDataList.AddExtra(xLock);
+			auto xTermState = GetExtraType(&refr->extraDataList, ExtraTerminalState);
+			if (!xTermState)
+			{
+				if (!state) return true;
+				xTermState = (ExtraTerminalState*)refr->extraDataList.AddExtra(ExtraTerminalState::Create());
+				xTermState->lockLevel = ((BGSTerminal*)refr->baseForm)->data.difficulty;
+			}
+			xTermState->lockedOut = state;
+			refr->MarkModified(0x80000000);
 		}
-		xLock->data->unk0C = state;
+		else if (auto xLock = GetExtraType(&refr->extraDataList, ExtraLock); xLock && xLock->data)
+		{
+			xLock->data->unk0C = state;
+			refr->MarkModified(0x1000);
+		}
+		else
+		{
+			if IS_ID(refr->baseForm, TESObjectDOOR)
+				if (auto xTeleport = GetExtraType(&refr->extraDataList, ExtraTeleport); xTeleport && xTeleport->data && xTeleport->data->linkedDoor)
+				{
+					refr = xTeleport->data->linkedDoor;
+					if (xLock = GetExtraType(&refr->extraDataList, ExtraLock); xLock && xLock->data)
+					{
+						xLock->data->unk0C = state;
+						refr->MarkModified(0x1000);
+						return true;
+					}
+				}
+			if (state)
+			{
+				xLock = (ExtraLock*)refr->extraDataList.AddExtra(ExtraLock::Create());
+				xLock->data->unk0C = state;
+				refr->MarkModified(0x1000);
+			}
+		}
 	}
 	return true;
 }

@@ -394,7 +394,10 @@ class NiDX9Renderer;
 class Ni2DBuffer;
 class NiDX92DBufferData;
 class IDirect3DBaseTexture9;
-
+class ImageSpaceShaderParam;
+class ImageSpaceTexture;
+struct ImageSpaceEffectParam;
+class ImageSpaceManager;
 class hkReferencedObject;
 class hkpWorldObject;
 class bhkRefObject;

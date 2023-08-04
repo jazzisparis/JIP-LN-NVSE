@@ -85,13 +85,13 @@ bool Cmd_SetWeaponSound_Execute(COMMAND_ARGS)
 	TESObjectWEAP *weapon;
 	UInt32 type;
 	TESSound *newSound = nullptr;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &type, &newSound) || NOT_ID(weapon, TESObjectWEAP) || (type > 13)) return true;
-	if (type < 12)
-		weapon->sounds[type] = newSound;
-	else if (type == 12)
-		weapon->pickupPutdownSounds.pickupSound = newSound;
-	else
-		weapon->pickupPutdownSounds.putdownSound = newSound;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &type, &newSound) && IS_ID(weapon, TESObjectWEAP) && (type <= 13))
+		if (type < 12)
+			weapon->sounds[type] = newSound;
+		else if (type == 12)
+			weapon->pickupPutdownSounds.pickupSound = newSound;
+		else
+			weapon->pickupPutdownSounds.putdownSound = newSound;
 	return true;
 }
 

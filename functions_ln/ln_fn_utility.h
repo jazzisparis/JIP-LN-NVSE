@@ -20,9 +20,6 @@ DEFINE_COMMAND_PLUGIN(GetFormCountType, 0, 2, kParams_TwoInts);
 DEFINE_COMMAND_ALT_PLUGIN(GetDefaultMessageTime, GetDMT, 0, 0, nullptr);
 DEFINE_COMMAND_ALT_PLUGIN(SetDefaultMessageTime, SetDMT, 0, 1, kParams_OneFloat);
 DEFINE_COMMAND_PLUGIN(Console, 0, 21, kParams_FormatString);
-DEFINE_COMMAND_PLUGIN(GetENBFloat, 0, 2, kParams_TwoStrings);
-DEFINE_COMMAND_PLUGIN(SetENBFloat, 0, 3, kParams_TwoStrings_OneDouble);
-DEFINE_COMMAND_PLUGIN(ReloadENB, 0, 0, nullptr);
 
 bool Cmd_GetLNVersion_Execute(COMMAND_ARGS)
 {
@@ -446,47 +443,6 @@ bool Cmd_Console_Execute(COMMAND_ARGS)
 	char *buffer = GetStrArgBuffer();
 	if (ExtractFormatStringArgs(0, buffer, EXTRACT_ARGS_EX, kCommandInfo_Console.numParams) && JIPScriptRunner::RunScriptSource(buffer, "Console"))
 		*result = 1;
-	else *result = 0;
-	return true;
-}
-
-bool Cmd_GetENBFloat_Execute(COMMAND_ARGS)
-{
-	*result = 0;
-	char fileName[0x40], valueName[0x80];
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fileName, &valueName) || !FileExists(fileName))
-		return true;
-	char *delim = GetNextToken(valueName, ':');
-	if (!*delim) return true;
-	char strVal[0x20];
-	if (GetPrivateProfileString(valueName, delim, nullptr, strVal, 0x20, fileName) && *strVal)
-		*result = StrToDbl(strVal);
-	return true;
-}
-
-bool Cmd_SetENBFloat_Execute(COMMAND_ARGS)
-{
-	*result = 0;
-	char fileName[0x40], valueName[0x80];
-	double value;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &fileName, &valueName, &value) || !FileExists(fileName))
-		return true;
-	char *delim = GetNextToken(valueName, ':');
-	if (!*delim) return true;
-	char strVal[0x20];
-	FltToStr(strVal, value);
-	if (WritePrivateProfileString(valueName, delim, strVal, fileName))
-		*result = 1;
-	return true;
-}
-
-bool Cmd_ReloadENB_Execute(COMMAND_ARGS)
-{
-	if (ReloadENB)
-	{
-		ReloadENB(3, result);
-		*result = 1;
-	}
 	else *result = 0;
 	return true;
 }

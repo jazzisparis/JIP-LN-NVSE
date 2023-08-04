@@ -1408,6 +1408,9 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*2936*/REG_CMD_FRM(GetSelfAsInventoryRef);
 	//	v57.05
 	/*2937*/REG_CMD(SetDamageToArmorMaxPercent);
+	//	v57.15
+	/*2938*/REG_CMD(RegisterSRScript);
+	/*2939*/REG_CMD(SetAmmoCasing);
 
 	//===========================================================
 
@@ -1551,6 +1554,7 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 		case NVSEMessagingInterface::kMessage_RenameNewGame:
 			break;
 		case NVSEMessagingInterface::kMessage_NewGame:
+			s_serializedVars.Reset();
 			RestoreJIPFormFlags();
 			JIPScriptRunner::RunScripts(JIPScriptRunner::kRunOn_NewGame, JIPScriptRunner::kRunOn_LoadOrNewGame);
 			break;

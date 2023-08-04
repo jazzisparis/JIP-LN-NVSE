@@ -397,7 +397,7 @@ public:
 };
 static_assert(sizeof(BGSSaveFormBuffer) == 0x24);
 
-typedef NiTPointerMap<BGSFormChange> BGSSaveLoadChangesMap;
+typedef NiTPtrMap<BGSFormChange> BGSSaveLoadChangesMap;
 BGSFormChange *BGSSaveLoadChangesMap::Lookup(UInt32 key) const;
 
 typedef BGSSaveLoadChangesMap ChangesMap;
@@ -424,7 +424,7 @@ public:
 	UInt32						unk024;				// 024
 	UInt32						unk028;				// 028
 	CreatedObject				createdObjectList;	// 02C data is formID - verified
-	NiTPointerMap<void*>		* map034;			// 034
+	NiTPtrMap<void*>			* map034;			// 034
 	UInt32				unk034[(0x58-0x44) >> 2];	// 044
 	NumericIDBufferMap			* idMap058;			// 058
 	NumericIDBufferMap			* idMap05C;			// 05C
@@ -471,8 +471,8 @@ public:
 	typedef UInt32	IndexRefID;
 	struct RefIDIndexMapping	// reversible map between refID and loaded form index
 	{
-		NiTMapBase<RefID, IndexRefID>	map000;	// 000
-		NiTMapBase<IndexRefID, RefID>	map010;	// 010
+		NiTMap<RefID, IndexRefID>	map000;	// 000
+		NiTMap<IndexRefID, RefID>	map010;	// 010
 		UInt32			            countRefID;	// 020
 	};
 
@@ -491,28 +491,28 @@ public:
 
 	struct BGSSaveLoadReferencesMap
 	{
-		NiTPointerMap<UInt32>						* map000;	// 000
-		BGSCellNumericIDArrayMap					* map010;	// 010
-		NiTPointerMap<BGSCellNumericIDArrayMap*>	* map020;	// 020
+		NiTPtrMap<UInt32>						* map000;	// 000
+		BGSCellNumericIDArrayMap				* map010;	// 010
+		NiTPtrMap<BGSCellNumericIDArrayMap*>	* map020;	// 020
 	};
 
-	BGSSaveLoadChangesMap						*changesMap;			// 000
-	BGSSaveLoadChangesMap						*previousChangeMap;		// 004
-	RefIDIndexMapping							*refIDmapping;			// 008
-	RefIDIndexMapping							*visitedWorldspaces;	// 00C
-	BGSSaveLoadReferencesMap					*referencesMap;			// 010
-	NiTMapBase<TESForm*, BGSLoadGameSubBuffer>	*maps014;				// 014
-	NiTMapBase<UInt32, UInt32>					*map018;				// 018
-	BSSimpleArray<char*>						*strings;				// 01C
-	BGSReconstructFormsInAllFilesMap			*rfiafMap;				// 020
-	BSSimpleArray<BGSLoadFormBuffer*>			changedForms;			// 024
-	NiTPointerMap<Actor*>						map03C;					// 034 Either dead or not dead actors
-	UInt8										saveMods[255];			// 044
-	UInt8										loadedMods[255];		// 143
-	UInt16										pad242;					// 242
-	UInt32										flags;					// 244 bit 6 block updating player position/rotation from save, bit 2 set during save
-	UInt8										formVersion;			// 248
-	UInt8										pad249[3];				// 249
+	BGSSaveLoadChangesMap					*changesMap;			// 000
+	BGSSaveLoadChangesMap					*previousChangeMap;		// 004
+	RefIDIndexMapping						*refIDmapping;			// 008
+	RefIDIndexMapping						*visitedWorldspaces;	// 00C
+	BGSSaveLoadReferencesMap				*referencesMap;			// 010
+	NiTMap<TESForm*, BGSLoadGameSubBuffer>	*maps014;				// 014
+	NiTMap<UInt32, UInt32>					*map018;				// 018
+	BSSimpleArray<char*>					*strings;				// 01C
+	BGSReconstructFormsInAllFilesMap		*rfiafMap;				// 020
+	BSSimpleArray<BGSLoadFormBuffer*>		changedForms;			// 024
+	NiTPtrMap<Actor*>						map03C;					// 034 Either dead or not dead actors
+	UInt8									saveMods[255];			// 044
+	UInt8									loadedMods[255];		// 143
+	UInt16									pad242;					// 242
+	UInt32									flags;					// 244 bit 6 block updating player position/rotation from save, bit 2 set during save
+	UInt8									formVersion;			// 248
+	UInt8									pad249[3];				// 249
 
 	__forceinline static BGSSaveLoadGame *GetSingleton() {return *(BGSSaveLoadGame**)0x11DDF38;}
 

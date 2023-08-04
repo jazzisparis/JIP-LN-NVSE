@@ -2343,6 +2343,8 @@ public:
 	bool Full() const {return numItems == size;}
 	T_Data *Data() const {return const_cast<T_Data*>(&data[0]);}
 
+	T_Data& operator[](UInt32 index) const {return data[index];}
+
 	bool Append(Data_Arg item)
 	{
 		if (numItems < size)
@@ -2351,6 +2353,26 @@ public:
 			return true;
 		}
 		return false;
+	}
+
+	SInt32 GetIndexOf(Data_Arg item) const
+	{
+		for (SInt32 idx = 0; idx < numItems; idx++)
+			if (data[idx] == item)
+				return idx;
+		return -1;
+	}
+	
+	bool RemoveNth(UInt32 index)
+	{
+		if (index >= numItems)
+			return false;
+		T_Data *pData = data + index;
+		pData->~T_Data();
+		numItems--;
+		if (UInt32 count = numItems - index)
+			memcpy(pData, pData + 1, sizeof(T_Data) * count);
+		return true;
 	}
 
 	T_Data *PopBack()

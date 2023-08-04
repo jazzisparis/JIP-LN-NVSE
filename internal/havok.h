@@ -35,10 +35,10 @@ struct alignas(16) hkQuaternion
 		_mm_store_ps(*this, _mm_shuffle_ps(m, m, 0x39));
 	}
 
-	inline __m128 operator+(const hkQuaternion &rhs) const {return _mm_add_ps(PS(), rhs.PS());}
-	inline __m128 operator-(const hkQuaternion &rhs) const {return _mm_sub_ps(PS(), rhs.PS());}
+	inline __m128 operator+(const hkQuaternion &rhs) const {return PS() + rhs.PS();}
+	inline __m128 operator-(const hkQuaternion &rhs) const {return PS() - rhs.PS();}
 
-	inline __m128 operator*(float s) const {return _mm_mul_ps(PS(), _mm_set_ps1(s));}
+	inline __m128 operator*(float s) const {return PS() * _mm_set_ps1(s);}
 	inline __m128 operator*(const hkQuaternion &rhs) const  {return MultiplyQuaternion(rhs);}
 	inline __m128 operator*(__m128 vec) const {return MultiplyVector(vec);}
 
@@ -63,14 +63,14 @@ struct alignas(16) hkQuaternion
 	__m128 __vectorcall MultiplyVector(__m128 vec) const;
 	__m128 __vectorcall MultiplyQuaternion(const hkQuaternion &rhs) const;
 
-	inline __m128 Invert() const {return _mm_xor_ps(PS(), _mm_load_ps((const float*)0x10C4C00));}
+	inline __m128 Invert() const {return PS() ^ _mm_load_ps((const float*)0x10C4C00);}
 
-	inline __m128 Negate() const {return _mm_xor_ps(PS(), GET_PS(2));}
+	inline __m128 Negate() const {return PS() ^ GET_PS(2);}
 
 	inline float __vectorcall DotProduct(const hkQuaternion &rhs) const
 	{
 		__m128 k = _mm_setzero_ps();
-		return _mm_cvtss_f32(_mm_hadd_ps(_mm_hadd_ps(_mm_mul_ps(PS(), rhs.PS()), k), k));
+		return _mm_cvtss_f32(_mm_hadd_ps(_mm_hadd_ps(PS() * rhs.PS(), k), k));
 	}
 
 	hkQuaternion& Normalize() {return *this = Normalize_V4(PS());}
@@ -358,10 +358,10 @@ public:
 	/*28*/virtual bool		Unk_0A(UInt32 arg1, UInt32 arg2);
 	/*2C*/virtual bool		Unk_0B(UInt32 arg1, UInt32 arg2);
 
-	UInt32								unk10;		// 10
-	UInt8								byte14;		// 14
-	UInt8								pad15[3];	// 15
-	NiTMapBase<TESObjectREFR*, int>		refrMap;	// 18
+	UInt32							unk10;		// 10
+	UInt8							byte14;		// 14
+	UInt8							pad15[3];	// 15
+	NiTMap<TESObjectREFR*, int>		refrMap;	// 18
 };
 static_assert(sizeof(BGSAcousticSpaceListener) == 0x28);
 
@@ -1705,6 +1705,8 @@ public:
 	__forceinline void ResetCollision() {CdeclCall(0xCA8700, this);}
 
 	__forceinline void UpdateMotion() {ThisCall(0xC9C1D0, this);}
+
+	void __fastcall SetCollisionProperty(UInt32 propID, FltAndInt value);
 };
 
 // 14

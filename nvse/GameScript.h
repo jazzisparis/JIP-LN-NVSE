@@ -17,8 +17,8 @@ public:
 
 	struct RefVarList : tList<RefVariable>
 	{
-		RefVariable *GetRefVariableByName(const char *name);
-		UInt32 GetIndex(RefVariable *refVar);
+		RefVariable *GetRefVariableByName(const char *name) const;
+		UInt32 GetIndex(RefVariable *refVar) const;
 	};
 
 	enum
@@ -59,8 +59,8 @@ public:
 	RefVarList		refList;				// 44
 	VarInfoList		varList;				// 4C
 
-	RefVariable *GetVariable(UInt32 reqIdx);
-	VariableInfo *GetVariableInfo(UInt32 idx);
+	RefVariable *GetVariable(UInt32 reqIdx) const;
+	VariableInfo *GetVariableInfo(UInt32 idx) const;
 
 	UInt32 AddVariable(TESForm *form);
 	void CleanupVariables() {refList.RemoveAll();}
@@ -69,9 +69,9 @@ public:
 	bool IsQuestScript() const {return info.isQuestScr;}
 	bool IsMagicScript() const {return info.isEffectScr;}
 
-	VariableInfo *GetVariableByName(const char *varName);
+	VariableInfo *GetVariableByName(const char *varName) const;
 	ScriptVar *AddVariable(char *varName, ScriptLocals *eventList, UInt32 ownerID, UInt8 modIdx);
-	UInt32 GetDataLength();
+	UInt32 GetDataLength() const;
 
 	/*Script() {Constructor();}
 	~Script() {Destructor();}*/

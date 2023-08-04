@@ -59,15 +59,14 @@ bool Cmd_SetWorldspaceClimate_Execute(COMMAND_ARGS)
 		if (wldSpc->parent && (wldSpc->parentFlags & 16))
 			wldSpc->parentFlags -= 16;
 		wldSpc->climate = climate;
-		Sky *currSky = Sky::Get();
-		if (!currSky || !g_thePlayer->parentCell)
-			return true;
-		TESWorldSpace *pcWspc = g_thePlayer->parentCell->worldSpace;
-		if (!pcWspc) return true;
-		while (pcWspc->parent && (pcWspc->parentFlags & 16))
-			pcWspc = pcWspc->parent;
-		if (pcWspc == wldSpc)
-			currSky->currClimate = climate;
+		if (Sky *currSky = Sky::Get(); currSky && g_thePlayer->parentCell)
+			if (TESWorldSpace *pcWspc = g_thePlayer->parentCell->worldSpace)
+			{
+				while (pcWspc->parent && (pcWspc->parentFlags & 16))
+					pcWspc = pcWspc->parent;
+				if (pcWspc == wldSpc)
+					currSky->currClimate = climate;
+			}
 	}
 	return true;
 }

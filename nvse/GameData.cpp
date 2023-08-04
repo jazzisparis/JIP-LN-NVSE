@@ -33,7 +33,7 @@ void Sky::RefreshMoon()
 	masserMoon->Refresh(niNode008, (const char*)0x104EEB0);
 }
 
-__declspec(naked) bool Sky::GetIsRaining()
+__declspec(naked) bool Sky::GetIsRaining() const
 {
 	__asm
 	{
@@ -62,8 +62,13 @@ __declspec(naked) bool Sky::GetIsRaining()
 void __fastcall WaterSurfaceManager::Update(NiCamera *camera)
 {
 	if (!waterGroups.Empty())
+	{
+		*(bool*)0x11F91C5 = 1;
 		ThisCall(0x4E21B0, this, camera, 0);
+		*(bool*)0x11F91C5 = 0;
+	}
 }
+
 __declspec(naked) void __fastcall WaterSurfaceManager::UpdateEx(NiCamera *camera)
 {
 	__asm
@@ -78,7 +83,9 @@ __declspec(naked) void __fastcall WaterSurfaceManager::UpdateEx(NiCamera *camera
 		push	eax
 		push	0
 		push	edx
+		mov		byte ptr ds:0x11F91C5, 1
 		CALL_EAX(0x4E21B0)
+		mov		byte ptr ds:0x11F91C5, 0
 		pop		eax
 		pop		dword ptr [eax+0x50]
 		pop		dword ptr [eax]

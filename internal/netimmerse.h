@@ -177,12 +177,12 @@ public:
 
 struct NiObjectCopyInfo
 {
-	NiTMapBase<NiObject*, NiObject*>	*map00;		// 00
-	NiTMapBase<NiObject*, bool>			*map04;		// 04
-	UInt32								unk08;		// 08	Init'd to 1
-	UInt8								byte0C;		// 0C	Init'd to 0x24
-	UInt8								pad0D[3];	// 0D
-	NiVector3							scale;		// 10	Appears to be unused
+	NiTMap<NiObject*, NiObject*>	*map00;		// 00
+	NiTMap<NiObject*, bool>			*map04;		// 04
+	UInt32							unk08;		// 08	Init'd to 1
+	UInt8							byte0C;		// 0C	Init'd to 0x24
+	UInt8							pad0D[3];	// 0D
+	NiVector3						scale;		// 10	Appears to be unused
 
 	NiObjectCopyInfo(UInt32 bucketCount)
 	{
@@ -1315,12 +1315,12 @@ public:
 	/*C4*/virtual void		Unk_31(void);
 	/*C8*/virtual void		Unk_32(void);
 
-	DList<LightingData>	illuminatingLights;	// 60
-	float				flt6C;				// 6C
-	UInt32				unk70;				// 70
-	UInt8				byte74;				// 74
-	UInt8				pad75[3];			// 75
-	UInt32				unk78;				// 78
+	DList<LightingData>			illuminatingLights;	// 60
+	float						flt6C;				// 6C
+	UInt32						unk70;				// 70
+	bool						lightListChanged;	// 74
+	UInt8						pad75[3];			// 75
+	DList<LightingData>::Node	*lastLight;			// 78
 };
 static_assert(sizeof(BSShaderLightingProperty) == 0x7C);
 
@@ -1586,7 +1586,7 @@ public:
 	NiProperty* __fastcall GetProperty(UInt32 propID) const;
 	__forceinline void AddProperty(NiProperty *niProperty) {ThisCall(0x439410, this, niProperty);}
 	TESObjectREFR *GetParentRef() const;
-	void RenderGeometryAndShader();
+	void AssignGeometryProps();
 
 	void Dump(UInt8 dumpFlags = 0xF);
 	void DumpParents();
@@ -1620,7 +1620,9 @@ public:
 	void __vectorcall SetAlphaRecurse(float alpha);
 	void ResetShaderRenderPass();
 	UInt32 GetBSXFlags() const;
-	void BulkSetMaterialPropertyTraitValue(UInt32 traitID, float value);
+	void __vectorcall SetMaterialPropValueRecurse(UInt32 traitID, float value);
+	void __fastcall SetCollisionPropRecurse(UInt32 propID, FltAndInt value);
+	void __fastcall SetCollisionLayer(UInt32 layerType);
 	void GetContactObjects(ContactObjects &contactObjs);
 	bool HasPhantom();
 	float __vectorcall GetBodyMass(float totalMass) const;
@@ -1946,54 +1948,57 @@ public:
 };
 static_assert(sizeof(BSPortalGraph) == 0x78);
 
+class BSPortal;
+
 // 250
 class LightingData : public NiRefObject
 {
 public:
-	UInt32					unk008;				// 008
-	float					flt00C;				// 00C
-	float					flt010[48];			// 010
-	float					lodDimmer;			// 0D0
-	float					alpha;				// 0D4
-	float					shadowFadeTime0D8;	// 0D8
-	float					shadowFadeTime0DC;	// 0DC
-	DList<NiTriStrips>		lgtList0E0;			// 0E0
-	bool					isShadowCasting;	// 0EC
-	UInt8					byte0ED;			// 0ED
-	UInt8					pad0EE[2];			// 0EE
-	NiRefObject				*obj0F0;			// 0F0
-	bool					isPointLight;		// 0F4
-	bool					isAmbientLight;		// 0F5
-	UInt8					pad0F6[2];			// 0F6
-	NiLight					*light;				// 0F8
-	bool					isDynamic;			// 0FC
-	UInt8					pad0FD[3];			// 0FD
-	NiVector3				centrePos;			// 100
-	NiRefObject				*obj10C;			// 10C
-	UInt16					state;				// 110	0xFF = disabled (distance too far), anything else = enabled
-	UInt16					word112;			// 112
-	NiRefObject				*obj114;			// 114
-	UInt8					byte118;			// 118
-	UInt8					pad119[3];			// 119
-	float					flt11C;				// 11C
-	float					flt120;				// 120
-	UInt8					byte124;			// 124
-	UInt8					pad125[3];			// 125
-	NiNode					*shadowCaster;		// 128
-	UInt32					unk12C[3];			// 12C
-	NiRefObject				*obj138;			// 138
-	NiTriShape				*fenceObject;		// 13C
-	NiCamera				*shadowMapCamera;	// 140
-	NiFrustumPlanes			frustumPlanes;		// 144
-	UInt32					unk1A8[24];			// 1A8
-	UInt8					byte208;			// 208
-	UInt8					pad209[3];			// 209
-	BSShaderAccumulator		*shaderAccum;		// 20C
-	BSSimpleArray<NiNode*>	array210;			// 210
-	BSSimpleArray<NiNode*>	array220;			// 220
-	BSSimpleArray<NiNode*>	array230;			// 230
-	BSPortalGraph			*portalGraph;		// 240
-	UInt32					unk244[3];			// 244
+	UInt32								unk008;				// 008
+	float								luminance;			// 00C
+	float								matrix4x4[4][4];	// 010
+	float								flt050[32];			// 050
+	float								lodDimmer;			// 0D0
+	float								alpha;				// 0D4
+	float								shadowFadeTime0D8;	// 0D8
+	float								shadowFadeTime0DC;	// 0DC
+	DList<NiGeometry>					geometryList;		// 0E0
+	bool								isShadowCasting;	// 0EC
+	UInt8								byte0ED;			// 0ED
+	UInt8								pad0EE[2];			// 0EE
+	NiRefObject							*obj0F0;			// 0F0
+	bool								isPointLight;		// 0F4
+	bool								isAmbientLight;		// 0F5
+	UInt8								pad0F6[2];			// 0F6
+	NiLight								*light;				// 0F8
+	bool								isDynamic;			// 0FC
+	UInt8								pad0FD[3];			// 0FD
+	NiVector3							centrePos;			// 100
+	BSRenderedTexture					*shadowRenderTarget;// 10C
+	UInt16								frustumCull;		// 110	0xFF = disabled (distance too far), anything else = enabled
+	UInt16								word112;			// 112
+	NiRefObject							*obj114;			// 114
+	UInt8								byte118;			// 118
+	UInt8								pad119[3];			// 119
+	float								flt11C;				// 11C
+	float								flt120;				// 120
+	bool								showDebugTexture;	// 124
+	UInt8								pad125[3];			// 125
+	NiNode								*shadowCaster;		// 128
+	DList<void>							list12C;			// 12C
+	DList<NiGeometry>::Node				*fenceGeomList;		// 138
+	NiTriShape							*fenceObject;		// 13C
+	NiCamera							*shadowMapCamera;	// 140
+	NiFrustumPlanes						frustumPlanes;		// 144
+	float								clipPlanes[24];		// 1A8
+	UInt8								byte208;			// 208
+	UInt8								pad209[3];			// 209
+	BSShaderAccumulator					*shaderAccum;		// 20C
+	BSSimpleArray<BSMultiBoundNode*>	multiboundRooms;	// 210
+	BSSimpleArray<BSPortal*>			array220;			// 220
+	BSSimpleArray<NiNode*>				processedNodes;		// 230
+	BSPortalGraph						*portalGraph;		// 240
+	UInt32								unk244[3];			// 244
 };
 static_assert(sizeof(LightingData) == 0x250);
 
@@ -2385,21 +2390,21 @@ public:
 	RendererData			*rendererData;	// 24
 };
 
+enum RendererClearFlag
+{
+	kClrFlag_BackBuffer =	1,
+	kClrFlag_Stencil =		2,
+	kClrFlag_ZBuffer =		4,
+	kClrFlag_All =			kClrFlag_BackBuffer | kClrFlag_Stencil | kClrFlag_ZBuffer
+};
+
 // 210
 class NiRenderer : public NiObject
 {
 public:
 	/*8C*/virtual void		Unk_23(void);
 
-	enum ClearFlag
-	{
-		kClrFlag_BackBuffer =	1,
-		kClrFlag_Stencil =		2,
-		kClrFlag_ZBuffer =		4,
-		kClrFlag_All =			kClrFlag_BackBuffer | kClrFlag_Stencil | kClrFlag_ZBuffer
-	};
-
-	enum FrameState
+	enum FrameState : UInt32
 	{
 		kFrmState_OutsideFrame,
 		kFrmState_InsideFrame,
@@ -2410,8 +2415,8 @@ public:
 
 	BSShaderAccumulator	*shaderAccum;		// 008
 	UInt32				unk00C[124];		// 00C
-	UInt32				savdFrameState;		// 1FC
-	UInt32				frameState;			// 200
+	FrameState			savdFrameState;		// 1FC
+	FrameState			frameState;			// 200
 	UInt32				frameID;			// 204
 	bool				renderTargetGroup;	// 208
 	bool				batchRendering;		// 209
@@ -2518,15 +2523,6 @@ public:
 class NiDX9Renderer : public NiRenderer
 {
 public:
-	enum ClearFlags
-	{
-		kClear_NONE =			0,
-		kClear_BACKBUFFER =		1,
-		kClear_STENCIL =		2,
-		kClear_ZBUFFER =		4,
-		kClear_ALL =			kClear_BACKBUFFER | kClear_STENCIL | kClear_ZBUFFER
-	};
-
 	/*090*/virtual void		SetDefaultProgramCache();
 	/*094*/virtual void		Unk_25(void);
 	/*098*/virtual void		Unk_26(void);
@@ -2592,7 +2588,7 @@ public:
 	/*188*/virtual void		Clear(float* rect, UInt32 flags);
 	/*18C*/virtual void		SetupCamera(NiVector3* pos, NiVector3* at, NiVector3* up, NiVector3* right, NiFrustum* frustum, float* viewport);
 	/*190*/virtual void		SetupScreenSpaceCamera(float* viewport);
-	/*194*/virtual bool		BeginUsingRenderTargetGroup(NiRenderTargetGroup* renderTarget, ClearFlags clearFlags);
+	/*194*/virtual bool		BeginUsingRenderTargetGroup(NiRenderTargetGroup* renderTarget, RendererClearFlag clearFlags);
 	/*198*/virtual bool		EndUsingRenderTargetGroup();
 	/*19C*/virtual void		BeginBatch(UInt32 arg0, UInt32 arg1);
 	/*1A0*/virtual void		EndBatch();
@@ -2706,16 +2702,16 @@ public:
 	UInt32								unk5D4[3];					// 5D4
 	UInt32								backgroundColor;			// 5E0	ARGB
 	UInt32								unk5E4[11];					// 5E4
-	NiTPointerMap<PrePackObject*>		prePackObjects;				// 610 - NiTPointerMap <NiVBBlock *, NiDX9Renderer::PrePackObject *>
+	NiTPtrMap<PrePackObject*>			prePackObjects;				// 610 - NiTPointerMap <NiVBBlock *, NiDX9Renderer::PrePackObject *>
 	UInt32								unk620[153];				// 620
 	NiRenderTargetGroup					*defaultRTGroup;			// 884 - back buffer
 	NiRenderTargetGroup					*currentRTGroup;			// 888
 	NiRenderTargetGroup					*currentscreenRTGroup;		// 88C
-	NiTPointerMap<NiRenderTargetGroup*>	screenRTGroups;				// 890 - NiTPointerMap <HWND *, NiPointer <NiRenderTargetGroup> >
+	NiTPtrMap<NiRenderTargetGroup*>		screenRTGroups;				// 890 - NiTPointerMap <HWND *, NiPointer <NiRenderTargetGroup> >
 	UInt32								unk8A0[6];					// 8A0
 	NiDX9RenderState					*renderState;				// 8B8
 	UInt32								unk8BC[3];					// 8BC
-	NiTMapBase<NiLight*, void*>			*lightsMap;					// 8C8
+	NiTMap<NiLight*, void*>				*lightsMap;					// 8C8
 	UInt32								unk8CC[115];				// 8CC
 	UInt32								width;						// A98
 	UInt32								height;						// A9C
@@ -2732,7 +2728,7 @@ public:
 	UInt32								backBufferCount;			// AC8
 	RefreshRate							refreshRate;				// ACC
 	UInt32								unkAD0[17];					// AD0
-	NiTMapBase<D3DFORMAT, NiPixelFormat*>	formatMatchMao;			// B14
+	NiTMap<D3DFORMAT, NiPixelFormat*>	formatMatchMao;				// B14
 	UInt32								unkB24[23];					// B24
 
 	__forceinline static NiDX9Renderer *GetSingleton() {return *(NiDX9Renderer**)0x11F4748;}
@@ -2827,13 +2823,85 @@ public:
 	Ni2DBuffer			*buffer;		// 30
 	UInt32				cellRefID;		// 34	Used by MiniMap; otherwise appears unused
 	UInt32				unk38;			// 38
-	UInt32				unk3C;			// 3C
+	UInt32				multiSampleLvl;	// 3C
 	bool				isRenderTarget;	// 40
 	bool				useCustomFormat;// 41
 	UInt8				pad42[2];		// 42
 	D3DFORMAT			customFormat;	// 44
 
 	void __fastcall SaveToFile(UInt32 fileFmt, char *filePath);
+};
+
+enum RenderTargetTypes : UInt32
+{
+	/*00*/eRTT_HDR_DOWNSAMPLE,
+	/*01*/eRTT_HDR_DOWNSAMPLE_ANISOINTERMEDIATE,
+	/*02*/eRTT_HDR_BLURSWAP,
+	/*03*/eRTT_IMAGESPACE_SWAP,
+	/*04*/eRTT_MAIN_IMAGESPACE,
+	/*05*/eRTT_MAIN_FIRSTPERSON,
+	/*06*/eRTT_MAIN_MENUBG,
+	/*07*/eRTT_TESWATER_FFT,
+	/*08*/eRTT_TESWATER_GREY,
+	/*09*/eRTT_TESWATER_REFLECTION,
+	/*0A*/eRTT_TESWATER_LOD_REFLECTION,
+	/*0B*/eRTT_TESWATER_REFRACTION,
+	/*0C*/eRTT_TESWATER_RAIN,
+	/*0D*/eRTT_TESWATER_SCRAMBLEMAP,
+	/*0E*/eRTT_TESWATER_IFFT_BUTTERFLYMAP,
+	/*0F*/eRTT_TESWATER_HIGH_W,
+	/*10*/eRTT_TESWATER_HIGH_AMPLITUDE,
+	/*11*/eRTT_TESWATER_DEPTH,
+	/*12*/eRTT_TESWATER_NOISE_HEIGHTMAP,
+	/*13*/eRTT_TESWATER_NOISE_NORMALMAP,
+	/*14*/eRTT_TESWATER_DISPLACEMENT,
+	/*15*/eRTT_TESWATER_DEBUG_DISPLAY,
+	/*16*/eRTT_TESWATER_BLUR,
+	/*17*/eRTT_TREES_CANOPYSHADOWMASK,
+	/*18*/eRTT_BLURFULL_BUFFER,
+	/*19*/eRTT_BLURFULL_SWAP,
+	/*1A*/eRTT_BLUR20_BUFFER,
+	/*1B*/eRTT_GETHIT_BUFFER,
+	/*1C*/eRTT_LOCALMAP_FINAL,
+	/*1D*/eRTT_LOCALMAP_COLOR,
+	/*1E*/eRTT_LOCALMAP_NORMALS,
+	/*1F*/eRTT_REFRACTION_NORMALS,
+	/*20*/eRTT_VFOG,
+	/*21*/eRTT_SCENE_DEPTH_BUFFER,
+	/*22*/eRTT_VFOG_SWAP,
+	/*23*/eRTT_VELOCITY,
+	/*24*/eRTT_VELOCITY_SWAP,
+	/*25*/eRTT_DOF_BLUR,
+	/*26*/eRTT_DOF_BLUR_SWAP,
+	/*27*/eRTT_DOF_MASK,
+	/*28*/eRTT_DEPTH_RADIALBLUR_BLUR,
+	/*29*/eRTT_CUBEMAP_CAMERA,
+	/*2A*/eRTT_SHADOWS_SHADOWMAP,
+	/*2B*/eRTT_SHADOWS_SHADOWMAPFRUSTUM,
+	/*2C*/eRTT_ENVMAP_WINDOWS,
+	/*2D*/eRTT_INTERFACE_RENDEREDMENU,
+	/*2E*/eRTT_INTERFACE_RENDEREDMENU_SWAP,
+	/*2F*/eRTT_INTERFACE_VATS,
+	/*30*/eRTT_INTERFACE_TEMP,
+	/*31*/eRTT_NOISE_BUFFER,
+	/*32*/eRTT_UNK_32,
+	/*33*/eRTT_DECAL_OCCLUSION
+};
+
+enum TextureCreationFlags
+{
+	eTCF_NONE =				0,
+	eTCF_UNK_1 =			1,
+	eTCF_UNK_2 =			2,
+	eTCF_NO_STENCIL =		4,
+	eTCF_NO_RENDER_TARGET =	8,
+	eTCF_CUBE_MAP =			0x10,
+	eTCF_UNK_20 =			0x20,
+	eTCF_USE_MSAA =			0x40,
+	eTCF_NO_DEPTH_DISCARD =	0x80,
+	eTCF_NO_DEPTH =			0x100,
+	eTCF_UNK_200 =			0x200,
+	eTCF_UNK_400 =			0x400
 };
 
 // 40
@@ -2844,7 +2912,7 @@ public:
 	NiRenderTargetGroup		*targetGroup20;		// 20
 	NiObject				*object24;			// 24
 	NiObject				*object28;			// 28
-	UInt32					unk2C;				// 2C
+	RenderTargetTypes		rtType;				// 2C
 	NiRenderedTexture		*textures[4];		// 30
 };
 
@@ -2911,7 +2979,7 @@ enum RenderMode : UInt32
 	kRndrMode_NoWaterPass,	//	Skips water rendering
 	kRndrMode_UnkD,
 	kRndrMode_WaterDepth,
-	kRndrMode_UnkF			//	Everything is black except for grass, sky and emissives
+	kRndrMode_Silhouette	//	Everything is black except for grass, sky and emissives
 };
 
 // 280	vtbl @ 0x10ADFF8
@@ -2998,7 +3066,7 @@ public:
 	UInt16					renderPassType;		// 1A8
 	UInt8					pad1AA[2];			// 1AA
 	UInt32					unk1A0[2];			// 1AC
-	NiTPointerMap<void*>	map1B4;				// 1B4
+	NiTPtrMap<void*>		map1B4;				// 1B4
 	UInt32					unk1C4[47];			// 1C4
 };
 static_assert(sizeof(BSShaderAccumulator) == 0x280);
@@ -3031,7 +3099,7 @@ class NiStaticGeometryGroup : public NiGeometryGroup
 public:
 	struct NiVBSet;
 	
-	NiTPointerMap<NiVBSet>	map0C;		// 0C
+	NiTPtrMap<NiVBSet>		map0C;		// 0C
 };
 
 // 0C
@@ -3044,8 +3112,8 @@ public:
 class NiDynamicGeometryGroup : public NiGeometryGroup
 {
 public:
-	NiTPointerMap<NiVBDynamicSet>	map0C;		// 0C
-	NiTPointerMap<NiVBChip>			map1C;		// 1C
+	NiTPtrMap<NiVBDynamicSet>		map0C;		// 0C
+	NiTPtrMap<NiVBChip>				map1C;		// 1C
 	NiTArray<NiVBDynamicSet*>		array2C;	// 2C
 	NiTArray<NiVBChip*>				array3C;	// 3C
 	UInt32							unk4C;		// 4C
@@ -3556,6 +3624,211 @@ class BSFadeNodeCuller : public NiCullingProcess
 {
 public:
 };
+
+class ImageSpaceEffect
+{
+public:
+	virtual void Destroy(bool doFree);
+	virtual void RenderShader(NiGeometry *apScreenShape, NiDX9Renderer *pkRenderer, ImageSpaceEffectParam *apParam, bool abEndFrame);
+	virtual void Setup(ImageSpaceManager *pISManager, ImageSpaceEffectParam *apParam);
+	virtual void Shutdown();
+	virtual void BorrowTextures(ImageSpaceEffectParam *apParam);
+	virtual void ReturnTextures();
+	virtual bool IsActive();
+	virtual bool UpdateParams(ImageSpaceEffectParam *apParam);
+
+	bool							bIsActive;
+	bool							bParamsChanged;
+	UInt8							pad02[2];
+	NiTArray<ImageSpaceEffect>		pEffectList;
+	NiTArray<ImageSpaceShaderParam>	pEffectParamList;
+	NiTArray<ImageSpaceTexture>		pTextures;
+	NiTArray<int>					pEffectInputs;
+	NiTArray<int>					pEffectOutput;
+};
+
+enum ImageSpaceEffectEffectID : SInt32
+{
+	IS_EFFECT_NONE = -1,
+	/*00*/IS_EFFECT_BLOOM,
+	/*01*/IS_EFFECT_HDR,
+	/*02*/IS_EFFECT_REFRACTION,
+	/*03*/IS_EFFECT_CINEMATIC,
+	/*04*/IS_EFFECT_DEPTH_OF_FIELD,
+	/*05*/IS_EFFECT_DEPTH_RADIAL_BLUR,
+	/*06*/IS_EFFECT_RADIAL_BLUR,
+	/*07*/IS_EFFECT_FULLSCREEN_BLUR,
+	/*08*/IS_EFFECT_GET_HIT,
+	/*09*/IS_EFFECT_SUNBEAMS,
+	/*0A*/IS_EFFECT_INTERFACE,
+	/*0B*/IS_EFFECT_VATS_SCAN,
+	/*0C*/IS_EFFECT_MOTION_BLUR,
+	/*0D*/IS_EFFECT_VOLUMETRIC_FOG,
+	/*0E*/IS_EFFECT_MAP,
+	/*0F*/IS_EFFECT_MENU_BG,
+	/*10*/IS_EFFECT_BLUR_3,
+	/*11*/IS_EFFECT_BLUR_5,
+	/*12*/IS_EFFECT_BLUR_7,
+	/*13*/IS_EFFECT_BLUR_9,
+	/*14*/IS_EFFECT_BLUR_11,
+	/*15*/IS_EFFECT_BLUR_13,
+	/*16*/IS_EFFECT_BLUR_15,
+	/*17*/IS_EFFECT_BRIGHTPASS_BLUR_3,
+	/*18*/IS_EFFECT_BRIGHTPASS_BLUR_5,
+	/*19*/IS_EFFECT_BRIGHTPASS_BLUR_7,
+	/*1A*/IS_EFFECT_BRIGHTPASS_BLUR_9,
+	/*1B*/IS_EFFECT_BRIGHTPASS_BLUR_11,
+	/*1C*/IS_EFFECT_BRIGHTPASS_BLUR_13,
+	/*1D*/IS_EFFECT_BRIGHTPASS_BLUR_15,
+	/*1E*/IS_EFFECT_TV,
+	/*1F*/IS_EFFECT_WATER_FFT,
+	/*20*/IS_EFFECT_WATER_DISPLACEMENT,
+	/*21*/IS_EFFECT_NOISE,
+	/*22*/IS_SHADER_COPY,
+	/*23*/IS_SHADER_COPY_RENDERTARGET1,
+	/*24*/IS_SHADER_RESTORE_EDRAM,
+	/*25*/IS_SHADER_NULL,
+	/*26*/IS_SHADER_COPY_ALPHA,
+	/*27*/IS_SHADER_COPY_STENCIL,
+	/*28*/IS_SHADER_COPY_STENCIL_NO_TEXTURE_NO_DEPTH,
+	/*29*/IS_SHADER_REFRACTION,
+	/*2A*/IS_SHADER_VOLUMETRIC_FOG,
+	/*2B*/IS_SHADER_BLUR,
+	/*2C*/IS_SHADER_DOUBLE_VISION,
+	/*2D*/IS_SHADER_ALPHA_MULT,
+	/*2E*/IS_SHADER_BLEND,
+	/*2F*/IS_SHADER_TEXTURE_MASK,
+	/*30*/IS_SHADER_MAP,
+	/*31*/IS_SHADER_MENU_BG,
+	/*32*/IS_SHADER_CINEMATIC,
+	/*33*/IS_SHADER_DEPTH_OF_FIELD,
+	/*34*/IS_SHADER_DEPTH_OF_FIELD_MASK,
+	/*35*/IS_SHADER_MOTION_BLUR,
+	/*36*/IS_SHADER_RADIAL_BLUR,
+	/*37*/IS_SHADER_RADIAL_BLUR_MEDIUM,
+	/*38*/IS_SHADER_RADIAL_BLUR_HIGH,
+	/*39*/IS_SHADER_SUNBEAMS,
+	/*3A*/IS_SHADER_HDR_BLEND,
+	/*3B*/IS_SHADER_HDR_BLEND_CINEMATIC,
+	/*3C*/IS_SHADER_HDR_BLEND_CINEMATIC_ALPHA_MASK,
+	/*3D*/IS_SHADER_HDR_BLUR,
+	/*3E*/IS_SHADER_BRIGHTPASS_FILTER,
+	/*3F*/IS_SHADER_DOWNSAMPLE_16,
+	/*40*/IS_SHADER_DOWNSAMPLE_9,
+	/*41*/IS_SHADER_DOWNSAMPLE_4,
+	/*42*/IS_SHADER_DOWNSAMPLE_4_LUM_CLAMP,
+	/*43*/IS_SHADER_DOWNSAMPLE_4_LIGHT_ADAPT,
+	/*44*/IS_SHADER_DOWNSAMPLE_16_LUM_CLAMP,
+	/*45*/IS_SHADER_DOWNSAMPLE_16_LIGHT_ADAPT,
+	/*46*/IS_SHADER_LIGHT_ADAPT,
+	/*47*/IS_SHADER_LUM_CLAMP,
+	/*48*/IS_SHADER_SCANLINES_BLEND,
+	/*49*/IS_SHADER_SCANLINES_BLEND_1,
+	/*4A*/IS_SHADER_UNK_4A,
+	/*4B*/IS_SHADER_VATS_SCAN,
+	/*4C*/IS_SHADER_MENU_UNPACK,
+	/*4D*/IS_SHADER_TV,
+	/*4E*/IS_SHADER_BLUR_3,
+	/*4F*/IS_SHADER_BLUR_5,
+	/*50*/IS_SHADER_BLUR_7,
+	/*51*/IS_SHADER_BLUR_9,
+	/*52*/IS_SHADER_BLUR_11,
+	/*53*/IS_SHADER_BLUR_13,
+	/*54*/IS_SHADER_BLUR_15,
+	/*55*/IS_SHADER_BRIGHTPASS_BLUR_3,
+	/*56*/IS_SHADER_BRIGHTPASS_BLUR_5,
+	/*57*/IS_SHADER_BRIGHTPASS_BLUR_7,
+	/*58*/IS_SHADER_BRIGHTPASS_BLUR_9,
+	/*59*/IS_SHADER_BRIGHTPASS_BLUR_11,
+	/*5A*/IS_SHADER_BRIGHTPASS_BLUR_13,
+	/*5B*/IS_SHADER_BRIGHTPASS_BLUR_15,
+	/*5C*/IS_SHADER_UNK_5C,
+	/*5D*/IS_SHADER_WATER_FFT_WATER_SPECTRUM,
+	/*5E*/IS_SHADER_WATER_FFT_HORIZONTAL_BUTTERFLY,
+	/*5F*/IS_SHADER_WATER_FFT_VERTICAL_BUTTERFLY,
+	/*60*/IS_SHADER_WATER_FFT_HORIZONTAL_SCRAMBLE,
+	/*61*/IS_SHADER_WATER_FFT_VERTICAL_SCRAMBLE,
+	/*62*/IS_SHADER_WATER_FFT_NORMALS,
+	/*63*/IS_SHADER_WATER_FFT_FILTER,
+	/*64*/IS_SHADER_WATER_FFT_DISPLAY_NORMALS,
+	/*65*/IS_SHADER_WATER_FFT_DISPLAY_HIGHW,
+	/*66*/IS_SHADER_WATER_FFT_DISPLAY_AMPLITUTE,
+	/*67*/IS_SHADER_WATER_FFT_WATER_SPECTRUM_1,
+	/*68*/IS_SHADER_WATER_FFT_DISPLAY_WATER_HEIGHT,
+	/*69*/kWaterDisplaceClearSimulation,
+	/*6A*/kWaterDisplaceTexOffset,
+	/*6B*/kWaterDisplacementWadingRipple,
+	/*6C*/kWaterDisplacementRainRipple,
+	/*6D*/kWaterWadingHeightmap,
+	/*6E*/kWaterRainHeightmap,
+	/*6F*/kWaterBlendHeightmaps,
+	/*70*/kWaterSmoothHeightmap,
+	/*71*/kWaterDisplacementNormals,
+	/*72*/IS_SHADER_NOISE_SCROLL_AND_BLEND,
+	/*73*/IS_SHADER_NOISE_NORMAL_MAP
+};
+
+// 31C
+class ImageSpaceManager
+{
+public:
+	BSRenderedTexture			*pMainTarget;
+	NiTArray<ImageSpaceEffect*>	effectList;
+	UInt32						unk14[194];
+
+	__forceinline static ImageSpaceManager *GetSingleton() {return *(ImageSpaceManager**)0x11F91AC;}
+};
+static_assert(sizeof(ImageSpaceManager) == 0x31C);
+
+#define IMAGESPACEMANAGER ds:0x11F91AC
+
+struct TextureParams
+{
+	UInt32						width;		// 00
+	UInt32						height;		// 04
+	D3DFORMAT					d3dFormat;	// 08
+	RenderMode					renderMode;	// 0C
+	UInt32						bgColorMask;// 10
+	ImageSpaceEffectEffectID	isEffect;	// 14
+
+	TextureParams(UInt32 _width, UInt32 _height, D3DFORMAT _d3dFmt, RenderMode _renderMode = kRndrMode_Normal, UInt32 _bgColorMask = 0xFFFFFFFF, ImageSpaceEffectEffectID _isEffect = IS_EFFECT_NONE) :
+		width(_width), height(_height), d3dFormat(_d3dFmt), renderMode(_renderMode), bgColorMask(_bgColorMask), isEffect(_isEffect) {}
+};
+
+// B0
+class BSTextureManager
+{
+public:
+	struct TextureHandle
+	{
+		BSRenderedTexture	*texture;
+		D3DFORMAT			d3dFormat;
+		TextureHandle		*next;
+		UInt32				uiFlags;
+		bool				byte10;
+		UInt8				pad11[3];
+		RenderTargetTypes	renderTargetType;
+	};
+
+	DList<void>					unkLists[5];			// 00
+	DList<BSRenderedTexture>	shadowFrustumTextures;	// 3C
+	DList<BSRenderedTexture>	waterDepthTextures;		// 48
+	DList<BSRenderedTexture>	waterReflectionTextures;// 54
+	DList<BSRenderedTexture>	waterBlurTextures;		// 60
+	DList<BSRenderedTexture>	waterNoiseTextures;		// 6C
+	DList<TextureHandle>		textureLists[2];		// 78
+	DList<BSRenderedTexture>	shadowMapLists[2];		// 90
+	NiDepthStencilBuffer		*depthStencilBuffer;	// A8
+	NiObject					*objAC;					// AC
+
+	__forceinline static BSTextureManager *GetSingleton() {return *(BSTextureManager**)0x11F91A8;}
+
+	static void __stdcall GenerateRenderedTexture(NiCamera *camera, const TextureParams &texParams, NiTexture **pTexture);
+	static void __stdcall GenerateRenderedUITexture(NiNode *tileNode, const NiVector4 &scrArea, NiTexture **pTexture);
+};
+static_assert(sizeof(BSTextureManager) == 0xB0);
+
+#define BSTEXTUREMANAGER ds:0x11F91A8
 
 // 08
 class MobIterOperator

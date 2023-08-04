@@ -120,7 +120,7 @@ void NiObjectNET::DumpExtraData()
 			PrintDebug("(X) %08X\t%08X\t%s\t#%d", xData, *(UInt32*)xData, xData->GetType()->name, xData->m_uiRefCount);
 }
 
-void __vectorcall NiMaterialProperty::SetTraitValue(UInt32 traitID, float value)
+__declspec(noinline) void __vectorcall NiMaterialProperty::SetTraitValue(UInt32 traitID, float value)
 {
 	switch (traitID)
 	{
@@ -271,7 +271,7 @@ __declspec(naked) TESObjectREFR *NiAVObject::GetParentRef() const
 	}
 }
 
-__declspec(naked) void NiAVObject::RenderGeometryAndShader()
+__declspec(naked) void NiAVObject::AssignGeometryProps()
 {
 	__asm
 	{
@@ -342,14 +342,16 @@ void NiAVObject::Dump(UInt8 dumpFlags)
 	{
 		/*if (m_kWorldBound)
 			PrintDebug("(WB) (%.4f, %.4f, %.4f) R = %.4f", m_kWorldBound->x, m_kWorldBound->y, m_kWorldBound->z, m_kWorldBound->radius);*/
-		PrintDebug("(LT) (%.4f, %.4f, %.4f) S %.4f", m_transformLocal.translate.x, m_transformLocal.translate.y, m_transformLocal.translate.z, m_transformLocal.scale);
-		PrintDebug("(WT) (%.4f, %.4f, %.4f) S %.4f", m_transformWorld.translate.x, m_transformWorld.translate.y, m_transformWorld.translate.z, m_transformWorld.scale);
+		/*PrintDebug("(LT) (%.4f, %.4f, %.4f) S %.4f", m_transformLocal.translate.x, m_transformLocal.translate.y, m_transformLocal.translate.z, m_transformLocal.scale);
+		PrintDebug("(WT) (%.4f, %.4f, %.4f) S %.4f", m_transformWorld.translate.x, m_transformWorld.translate.y, m_transformWorld.translate.z, m_transformWorld.scale);*/
 
 		/*PrintDebug("(LS) %.6f", m_transformLocal.scale);
 		PrintDebug("(WS) %.6f", m_transformWorld.scale);*/
 
-		/*m_transformLocal.Dump();
-		m_transformWorld.Dump();*/
+		s_debug().Indent();
+		m_transformLocal.Dump();
+		m_transformWorld.Dump();
+		s_debug().Outdent();
 	}
 	if (blkType == 'N')
 		for (auto iter = ((NiNode*)this)->m_children.Begin(); iter; ++iter)
@@ -386,7 +388,7 @@ __declspec(noinline) NiObjectCopyInfo *GetNiObjectCopyInfo()
 	return &s_NiObjectCopyInfo;
 }
 
-void NiTMapBase<int, int>::FreeBuckets();
+void NiTMap<int, int>::FreeBuckets();
 
 __declspec(naked) NiAVObject *NiAVObject::CreateCopy()
 {
@@ -412,9 +414,9 @@ __declspec(naked) NiAVObject *NiAVObject::CreateCopy()
 		movups	[esi+0x44], xmm0
 		movups	[esi+0x54], xmm0
 		mov		ecx, [edi]
-		call	NiTMapBase<int, int>::FreeBuckets
+		call	NiTMap<int, int>::FreeBuckets
 		mov		ecx, [edi+4]
-		call	NiTMapBase<int, int>::FreeBuckets
+		call	NiTMap<int, int>::FreeBuckets
 		mov		eax, esi
 		pop		edi
 		pop		esi
@@ -867,17 +869,139 @@ __declspec(naked) void __fastcall BSFadeNode::SetVisible(bool visible)
 	}
 }
 
-void NiNode::BulkSetMaterialPropertyTraitValue(UInt32 traitID, float value)
+__declspec(naked) void __vectorcall NiNode::SetMaterialPropValueRecurse(UInt32 traitID, float value)
 {
-	NiAVObject *block;
-	NiMaterialProperty *matProp;
-	for (auto iter = m_children.Begin(); iter; ++iter)
+	__asm
 	{
-		if (!(block = *iter)) continue;
-		if IS_NODE(block)
-			((NiNode*)block)->BulkSetMaterialPropertyTraitValue(traitID, value);
-		else if (IS_GEOMETRY(block) && (matProp = ((NiGeometry*)block)->materialProp))
-			matProp->SetTraitValue(traitID, value);
+		movzx	eax, word ptr [ecx+0xA6]
+		test	eax, eax
+		jz		done
+		push	esi
+		push	edi
+		mov		esi, [ecx+0xA0]
+		mov		edi, eax
+		ALIGN 16
+	iterHead:
+		dec		edi
+		js		iterEnd
+		mov		ecx, [esi]
+		add		esi, 4
+		test	ecx, ecx
+		jz		iterHead
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
+		jnz		notNode
+		call	NiNode::SetMaterialPropValueRecurse
+		jmp		iterHead
+		ALIGN 16
+	notNode:
+		cmp		dword ptr [eax+0x18], ADDR_ReturnThis2
+		jnz		iterHead
+		mov		ecx, [ecx+0xA4]
+		test	ecx, ecx
+		jz		iterHead
+		push	edx
+		call	NiMaterialProperty::SetTraitValue
+		pop		edx
+		jmp		iterHead
+		ALIGN 16
+	iterEnd:
+		pop		edi
+		pop		esi
+	done:
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall NiNode::SetCollisionLayer(UInt32 layerType)
+{
+	__asm
+	{
+		push	esi
+		push	edi
+		mov		esi, ecx
+		mov		eax, [ecx+0x1C]
+		test	eax, eax
+		jz		noColObj
+		mov		ecx, [eax+0x10]
+		test	ecx, ecx
+		jz		noColObj
+		mov		eax, [ecx+8]
+		cmp		[eax+0x2C], dl
+		jz		noColObj
+		mov		[eax+0x2C], dl
+		push	edx
+		mov		eax, [ecx]
+		call	dword ptr [eax+0xC4]
+		pop		edx
+	noColObj:
+		movzx	edi, word ptr [esi+0xA6]
+		test	edi, edi
+		jz		done
+		mov		esi, [esi+0xA0]
+		ALIGN 16
+	iterHead:
+		dec		edi
+		js		done
+		mov		ecx, [esi]
+		add		esi, 4
+		test	ecx, ecx
+		jz		iterHead
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
+		jnz		iterHead
+		call	NiNode::SetCollisionLayer
+		jmp		iterHead
+	done:
+		pop		edi
+		pop		esi
+		retn
+	}
+}
+
+__declspec(naked) void __fastcall NiNode::SetCollisionPropRecurse(UInt32 propID, FltAndInt value)
+{
+	__asm
+	{
+		push	esi
+		push	edi
+		mov		esi, ecx
+		mov		ecx, [ecx+0x1C]
+		test	ecx, ecx
+		jz		noColObj
+		mov		eax, [ecx+0x10]
+		test	eax, eax
+		jz		noColObj
+		mov		ecx, [eax+8]
+		cmp		byte ptr [ecx+0x28], 1
+		jnz		noColObj
+		push	edx
+		push	dword ptr [esp+0x10]
+		call	hkpRigidBody::SetCollisionProperty
+		pop		edx
+	noColObj:
+		movzx	edi, word ptr [esi+0xA6]
+		test	edi, edi
+		jz		done
+		mov		esi, [esi+0xA0]
+		ALIGN 16
+	iterHead:
+		dec		edi
+		js		done
+		mov		ecx, [esi]
+		add		esi, 4
+		test	ecx, ecx
+		jz		iterHead
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xC], ADDR_ReturnThis
+		jnz		iterHead
+		push	dword ptr [esp+0xC]
+		call	NiNode::SetCollisionPropRecurse
+		jmp		iterHead
+	done:
+		pop		edi
+		pop		esi
+		retn	4
 	}
 }
 
@@ -1165,25 +1289,25 @@ __declspec(naked) NiLines* __stdcall NiLines::Create(float length, const NiColor
 	__asm
 	{
 		push	2
-		GAME_HEAP_ALLOC
+		call	Game_DoHeapAlloc
 		mov		word ptr [eax], 1
 		push	eax
 		push	0
 		push	0
 		push	0
 		push	0x20
-		GAME_HEAP_ALLOC
-		mov		edx, [esp+0x18]
-		movups	xmm0, [edx]
+		call	Game_DoHeapAlloc
+		mov		ecx, [esp+0x18]
+		movups	xmm0, [ecx]
 		movups	[eax], xmm0
 		movups	[eax+0x10], xmm0
 		push	eax
 		push	0x18
-		GAME_HEAP_ALLOC
+		call	Game_DoHeapAlloc
 		xorps	xmm0, xmm0
 		movups	[eax], xmm0
+		movss	xmm0, PS_V3_One
 		movlps	[eax+0x10], xmm0
-		mov		dword ptr [eax+0x10], 0x3F800000
 		push	eax
 		push	2
 		push	0xC4
@@ -1191,32 +1315,30 @@ __declspec(naked) NiLines* __stdcall NiLines::Create(float length, const NiColor
 		pop		ecx
 		mov		ecx, eax
 		CALL_EAX(0xA746E0)
-		push	0
-		push	0
-		push	eax
-		push	eax
-		push	eax
+		push	ebx
+		mov		ebx, eax
 		push	0x80
 		CALL_EAX(0xAA13E0)
 		pop		ecx
 		mov		ecx, eax
 		CALL_EAX(0xB6FC90)
-		pop		ecx
 		push	eax
+		mov		ecx, ebx
 		CALL_EAX(0x439410)
 		CALL_EAX(0xA5CEB0)
 		mov		word ptr [eax+0x18], 0x10ED
-		pop		ecx
 		push	eax
+		mov		ecx, ebx
 		CALL_EAX(0x439410)
-		CALL_EAX(0xB57E30)
-		mov		edx, [esp+0x18]
-		mov		ecx, [esp]
+		mov		ecx, ebx
+		call	NiAVObject::AssignGeometryProps
+		mov		edx, [esp+0x10]
+		mov		ecx, ebx
 		call	NiObjectNET::SetName
-		pop		eax
-		add		esp, 8
-		mov		edx, [esp+4]
-		mov		[eax+0x64], edx
+		mov		eax, [esp+8]
+		mov		[ebx+0x64], eax
+		mov		eax, ebx
+		pop		ebx
 		retn	0xC
 	}
 }
@@ -1239,5 +1361,245 @@ __declspec(naked) NiPSysModifier* __fastcall NiParticleSystem::FindModifier(UInt
 	done:
 		xor		eax, eax
 		retn
+	}
+}
+
+__declspec(naked) void __stdcall BSTextureManager::GenerateRenderedTexture(NiCamera *camera, const TextureParams &texParams, NiTexture **pTexture)
+{
+	static BSCullingProcess *s_cullingProcess = nullptr;
+	__asm
+	{
+		push	ebp
+		mov		ebp, esp
+		xor		eax, eax
+		push	eax
+		push	eax
+		push	eax
+		push	eax
+		push	eax
+		push	eax
+		mov		ecx, [ebp+0xC]
+		push	dword ptr [ecx+8]
+		push	dword ptr [ecx+4]
+		push	dword ptr [ecx]
+		push	eax
+		mov		ecx, BSTEXTUREMANAGER
+		CALL_EAX(0xB6D170)
+		lock inc dword ptr [eax+4]
+		push	eax
+		push	g_shadowSceneNode
+		mov		eax, s_cullingProcess
+		test	eax, eax
+		jnz		hasCulling
+		push	0x350
+		CALL_EAX(0xAA13E0)
+		pop		ecx
+		push	0x2F7
+		push	1
+		push	0x63
+		mov		ecx, eax
+		CALL_EAX(0xB660D0)
+		mov		dword ptr [eax+4], 2
+		mov		ecx, [ebp-8]
+		mov		[eax+0x194], ecx
+		push	eax
+		push	0
+		lea		ecx, [eax+0x280]
+		CALL_EAX(0x4A0EB0)
+		mov		dword ptr [eax+0x90], kCull_IgnoreMultiBounds
+		pop		dword ptr [eax+0xC4]
+		mov		s_cullingProcess, eax
+	hasCulling:
+		push	eax
+		mov		ecx, [eax+0xC4]
+		push	ecx
+		mov		eax, [ebp+0xC]
+		mov		edx, [eax+0xC]
+		mov		[ecx+0x19C], edx
+		mov		edx, [eax+0x10]
+		mov		eax, NIDX9RENDERER
+		add		eax, 0x5E0
+		push	dword ptr [eax]
+		push	eax
+		and		[eax], edx
+		setnz	[ecx+0x16C]
+		mov		eax, [ebp-8]
+		mov		[eax+0x130], 1
+		mov		eax, [ebp-4]
+		push	dword ptr [eax+8]
+		push	kClrFlag_All
+		CALL_EAX(0xB6B8D0)
+		push	dword ptr [ebp-0xC]
+		push	dword ptr [ebp-8]
+		push	dword ptr [ebp+8]
+		CALL_EAX(0xB6BEE0)
+		mov		eax, [ebp-0x10]
+		mov		[esp+4], eax
+		CALL_EAX(0xB6C0D0)
+		add		esp, 0x14
+		CALL_EAX(0xB6B790)
+		mov		ecx, [ebp+0xC]
+		cmp		dword ptr [ecx+0x14], IS_SHADER_NOISE_NORMAL_MAP
+		ja		noISEff
+		xor		eax, eax
+		push	eax
+		push	eax
+		push	eax
+		push	eax
+		push	eax
+		push	eax
+		push	dword ptr [ecx+8]
+		push	dword ptr [ecx+4]
+		push	dword ptr [ecx]
+		push	eax
+		mov		ecx, BSTEXTUREMANAGER
+		CALL_EAX(0xB6D170)
+		lock inc dword ptr [eax+4]
+		push	eax
+		push	dword ptr [eax+8]
+		push	kClrFlag_All
+		CALL_EAX(0xB6B8D0)
+		add		esp, 8
+		push	1
+		push	0
+		push	dword ptr [ebp-0x1C]
+		push	dword ptr [ebp-4]
+		push	dword ptr NIDX9RENDERER
+		mov		ecx, IMAGESPACEMANAGER
+		mov		eax, [ebp+0xC]
+		mov		edx, [eax+0x14]
+		mov		eax, [ecx+8]
+		push	dword ptr [eax+edx*4]
+		CALL_EAX(0xB8C830)
+		mov		ecx, [ebp-4]
+		call	NiReleaseObject
+		pop		dword ptr [ebp-4]
+	noISEff:
+		mov		eax, [ebp-8]
+		mov		[eax+0x130], 0
+		pop		eax
+		pop		dword ptr [eax]
+		mov		eax, [ebp-4]
+		push	dword ptr [eax+0x30]
+		push	dword ptr [ebp+0x10]
+		call	NiReplaceObject
+		mov		ecx, [ebp-4]
+		call	NiReleaseObject
+		leave
+		retn	0xC
+	}
+}
+
+extern float g_screenHeight;
+__declspec(naked) void __stdcall BSTextureManager::GenerateRenderedUITexture(NiNode *tileNode, const NiVector4 &scrArea, NiTexture **pTexture)
+{
+	static BSCullingProcess *s_cullingProcessUI = nullptr;
+	__asm
+	{
+		push	ebp
+		mov		ebp, esp
+		xor		eax, eax
+		push	eax
+		push	eax
+		push	eax
+		push	eax
+		push	eax
+		push	eax
+		push	D3DFMT_A8R8G8B8
+		mov		ecx, [ebp+0xC]
+		movq	xmm0, qword ptr [ecx+8]
+		cvtps2dq	xmm0, xmm0
+		sub		esp, 8
+		movlps	[esp], xmm0
+		push	eax
+		mov		ecx, BSTEXTUREMANAGER
+		CALL_EAX(0xB6D170)
+		lock inc dword ptr [eax+4]
+		push	dword ptr NIDX9RENDERER
+		push	eax
+		mov		eax, s_cullingProcessUI
+		test	eax, eax
+		jnz		hasCulling
+		push	0x350
+		CALL_EAX(0xAA13E0)
+		pop		ecx
+		push	0x2F7
+		push	1
+		push	0x64
+		mov		ecx, eax
+		CALL_EAX(0xB660D0)
+		mov		dword ptr [eax+4], 2
+		mov		dword ptr [eax+0x19C], kRndrMode_Tiles
+		push	eax
+		push	0
+		lea		ecx, [eax+0x280]
+		CALL_EAX(0x4A0EB0)
+		pop		dword ptr [eax+0xC4]
+		mov		dword ptr [eax+0x90], kCull_AllPass
+		mov		s_cullingProcessUI, eax
+	hasCulling:
+		push	eax
+		push	dword ptr [eax+0xC4]
+		mov		ecx, g_interfaceManager
+		mov		ecx, [ecx+4]
+		push	dword ptr [ecx+0xAC]
+		mov		ecx, [ebp-4]
+		push	dword ptr [ecx+0x5E0]
+		and		dword ptr [ecx+0x5E0], 0
+		cmp		dword ptr [ecx+0x200], 0
+		jnz		scnActive
+		mov		ecx, [ebp-8]
+		push	dword ptr [ecx+8]
+		push	kClrFlag_BackBuffer
+		CALL_EAX(0xB6B8D0)
+		add		esp, 8
+	scnActive:
+		sub		esp, 0x14
+		mov		ecx, [ebp-0x14]
+		movups	xmm0, [ecx+0xDC]
+		movups	[ebp-0x28], xmm0
+		mov		eax, [ebp+0xC]
+		movq	xmm0, qword ptr [eax]
+		movq	xmm1, qword ptr [eax+8]
+		pshufd	xmm2, PS_FlipSignMask0, 0x51
+		xorps	xmm0, xmm2
+		xorps	xmm1, xmm2
+		movss	xmm2, g_screenHeight
+		addss	xmm2, xmm2
+		pslldq	xmm2, 4
+		addps	xmm0, xmm2
+		addps	xmm1, xmm0
+		unpcklps	xmm0, xmm1
+		movups	[ecx+0xDC], xmm0
+		mov		eax, [ebp+8]
+		test	byte ptr [eax+0x30], 1
+		setnz	[ebp-0x29]
+		and		byte ptr [eax+0x30], 0xFE
+		push	dword ptr [ebp-0xC]
+		push	eax
+		push	ecx
+		CALL_EAX(0xB6BEE0)
+		mov		eax, [ebp-0x10]
+		mov		[esp+4], eax
+		CALL_EAX(0xB6C0D0)
+		add		esp, 0xC
+		CALL_EAX(0xB6B790)
+		mov		eax, [ebp+8]
+		mov		dl, [ebp-0x29]
+		or		[eax+0x30], dl
+		mov		eax, [ebp-4]
+		mov		edx, [ebp-0x18]
+		mov		[eax+0x5E0], edx
+		mov		ecx, [ebp-0x14]
+		movups	xmm0, [ebp-0x28]
+		movups	[ecx+0xDC], xmm0
+		mov		ecx, [ebp-8]
+		push	dword ptr [ecx+0x30]
+		push	dword ptr [ebp+0x10]
+		call	NiReplaceObject
+		mov		ecx, [ebp-8]
+		call	NiReleaseObject
+		leave
+		retn	0xC
 	}
 }

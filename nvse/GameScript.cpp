@@ -69,7 +69,7 @@ public:
 	}
 };
 
-VariableInfo *Script::GetVariableByName(const char *varName)
+VariableInfo *Script::GetVariableByName(const char *varName) const
 {
 	auto varIter = varList.Head();
 	do
@@ -81,7 +81,7 @@ VariableInfo *Script::GetVariableByName(const char *varName)
 	return NULL;
 }
 
-Script::RefVariable	*Script::GetVariable(UInt32 reqIdx)
+Script::RefVariable	*Script::GetVariable(UInt32 reqIdx) const
 {
 	UInt32 idx = 1;	// yes, really starts at 1
 	if (reqIdx)
@@ -98,7 +98,7 @@ Script::RefVariable	*Script::GetVariable(UInt32 reqIdx)
 	return NULL;
 }
 
-VariableInfo *Script::GetVariableInfo(UInt32 idx)
+VariableInfo *Script::GetVariableInfo(UInt32 idx) const
 {
 	auto varIter = varList.Head();
 	do
@@ -122,7 +122,7 @@ UInt32 Script::AddVariable(TESForm *form)
 	return resultIdx;
 }
 
-UInt32 Script::RefVarList::GetIndex(RefVariable *refVar)
+UInt32 Script::RefVarList::GetIndex(RefVariable *refVar) const
 {
 	UInt32 idx = 0;
 	auto varIter = Head();
@@ -136,7 +136,7 @@ UInt32 Script::RefVarList::GetIndex(RefVariable *refVar)
 	return 0;
 }
 
-UInt32 Script::GetDataLength()
+UInt32 Script::GetDataLength() const
 {
 	UInt8 *dataPtr = data;
 	if (*(UInt32*)dataPtr != 0x1D) return 0;

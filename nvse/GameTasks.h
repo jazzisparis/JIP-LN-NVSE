@@ -664,7 +664,7 @@ static_assert(sizeof(BSTreeModel) == 0x50);
 // 20
 struct BSTreeManager
 {
-	NiTMapBase<TESObjectTREE*, BSTreeModel*>	*treeModelsMap;	// 00
+	NiTMap<TESObjectTREE*, BSTreeModel*>		*treeModelsMap;	// 00
 	NiSourceTexture								*canopyShadow;	// 04
 	NiMaterialProperty							*materialProp;	// 08
 	NiAlphaProperty								*alphaProp;		// 0C

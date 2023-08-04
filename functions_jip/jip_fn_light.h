@@ -10,30 +10,30 @@ bool Cmd_GetLightTraitNumeric_Execute(COMMAND_ARGS)
 	*result = 0;
 	TESObjectLIGH *light;
 	UInt32 traitID;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &light, &traitID) || NOT_ID(light, TESObjectLIGH)) return true;
-	switch (traitID)
-	{
-	case 0:
-		*result = (int)light->radius;
-		break;
-	case 1:
-		*result = light->red;
-		break;
-	case 2:
-		*result = light->green;
-		break;
-	case 3:
-		*result = light->blue;
-		break;
-	case 4:
-		*result = light->falloffExp;
-		break;
-	case 5:
-		*result = light->FOV;
-		break;
-	case 6:
-		*result = light->fadeValue;
-	}
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &light, &traitID) && IS_ID(light, TESObjectLIGH))
+		switch (traitID)
+		{
+			case 0:
+				*result = (int)light->radius;
+				break;
+			case 1:
+				*result = light->red;
+				break;
+			case 2:
+				*result = light->green;
+				break;
+			case 3:
+				*result = light->blue;
+				break;
+			case 4:
+				*result = light->falloffExp;
+				break;
+			case 5:
+				*result = light->FOV;
+				break;
+			case 6:
+				*result = light->fadeValue;
+		}
 	return true;
 }
 
@@ -70,37 +70,37 @@ bool Cmd_SetLightTraitNumeric_Execute(COMMAND_ARGS)
 	TESObjectLIGH *light;
 	UInt32 traitID;
 	float val;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &light, &traitID, &val) || NOT_ID(light, TESObjectLIGH))
-		return true;
-	UInt32 intVal = (int)val;
-	switch (traitID)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &light, &traitID, &val) && IS_ID(light, TESObjectLIGH))
 	{
-		case 0:
-			light->radius = intVal;
-			break;
-		case 1:
-			light->red = intVal;
-			break;
-		case 2:
-			light->green = intVal;
-			break;
-		case 3:
-			light->blue = intVal;
-			break;
-		case 4:
-			light->falloffExp = val;
-			goto skipMarkModified;
-		case 5:
-			light->FOV = val;
-			goto skipMarkModified;
-		case 6:
-			light->fadeValue = val;
-			break;
-		default:
-			goto skipMarkModified;
+		UInt32 intVal = (int)val;
+		switch (traitID)
+		{
+			case 0:
+				light->radius = intVal;
+				break;
+			case 1:
+				light->red = intVal;
+				break;
+			case 2:
+				light->green = intVal;
+				break;
+			case 3:
+				light->blue = intVal;
+				break;
+			case 4:
+				light->falloffExp = val;
+				return true;
+			case 5:
+				light->FOV = val;
+				return true;
+			case 6:
+				light->fadeValue = val;
+				break;
+			default:
+				return true;
+		}
+		MarkLightModified(light);
 	}
-	MarkLightModified(light);
-skipMarkModified:
 	return true;
 }
 

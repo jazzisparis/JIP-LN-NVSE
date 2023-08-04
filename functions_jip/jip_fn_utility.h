@@ -502,15 +502,12 @@ bool Cmd_GetPluginHeaderVersion_Execute(COMMAND_ARGS)
 	*(UInt32*)dataPath = 'atad';
 	dataPath[4] = '\\';
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, dataPath + 5))
-	{
-		FileStream sourceFile(dataPath, 0x1E);
-		if (sourceFile)
+		if (FileStream sourceFile(dataPath, 0x1E); sourceFile)
 		{
 			float version;
 			sourceFile.ReadBuf(&version, 4);
 			*result = version;
 		}
-	}
 	return true;
 }
 

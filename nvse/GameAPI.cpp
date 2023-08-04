@@ -148,8 +148,8 @@ ScriptLocals *ScriptLocals::CreateCopy()
 
 BGSSaveLoadGame *g_BGSSaveLoadGame;
 
-UInt32 *NiTPointerMap<UInt32>::Lookup(UInt32 key) const;
-void NiTPointerMap<UInt32>::Insert(UInt32 key, UInt32 value);
+UInt32 *NiTPtrMap<UInt32>::Lookup(UInt32 key) const;
+void NiTPtrMap<UInt32>::Insert(UInt32 key, UInt32 value);
 
 __declspec(naked) UInt32 __fastcall BGSSaveLoadGame::EncodeRefID(UInt32 *pRefID)
 {
@@ -164,7 +164,7 @@ __declspec(naked) UInt32 __fastcall BGSSaveLoadGame::EncodeRefID(UInt32 *pRefID)
 		mov		esi, ecx
 		mov		edi, edx
 		push	eax
-		call	NiTPointerMap<UInt32>::Lookup
+		call	NiTPtrMap<UInt32>::Lookup
 		test	eax, eax
 		jnz		found
 		mov		eax, [esi+0x20]
@@ -176,9 +176,9 @@ __declspec(naked) UInt32 __fastcall BGSSaveLoadGame::EncodeRefID(UInt32 *pRefID)
 		push	eax
 		push	edx
 		mov		ecx, esi
-		call	NiTPointerMap<UInt32>::Insert
+		call	NiTPtrMap<UInt32>::Insert
 		lea		ecx, [esi+0x10]
-		call	NiTPointerMap<UInt32>::Insert
+		call	NiTPtrMap<UInt32>::Insert
 		pop		eax
 	found:
 		mov		[edi], eax
@@ -200,7 +200,7 @@ __declspec(naked) UInt32 __fastcall BGSSaveLoadGame::DecodeRefID(UInt32 *pRefID)
 		push	eax
 		mov		ecx, [ecx+8]
 		add		ecx, 0x10
-		call	NiTPointerMap<UInt32>::Lookup
+		call	NiTPtrMap<UInt32>::Lookup
 		pop		ecx
 		mov		[ecx], eax
 	isCreated:

@@ -594,13 +594,12 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 	isActive:
 		mov		ds:0x11DAEC4, edi
 		CALL_EAX(0xA1DFB0)
+		push	0
 		push	ecx
 		fstp	dword ptr [esp]
-		movss	xmm0, [esp]
-		pop		ecx
-		mov		edx, kTileValue_depth
+		push	kTileValue_depth
 		mov		ecx, [edi+4]
-		call	Tile::SetFloat
+		CALL_EAX(ADDR_TileSetFloat)
 		movss	xmm0, [esp+0xC]
 		mov		edx, kTileValue_user0
 		mov		ecx, [edi+4]
@@ -622,13 +621,11 @@ __declspec(naked) TextEditMenu* __stdcall ShowTextEditMenu(float width, float he
 		mov		edx, kTileValue_string
 		mov		ecx, [edi+0x30]
 		call	Tile::SetString
-		push	kTileValue_font
+		mov		edx, kTileValue_font
 		mov		ecx, [edi+0x28]
-		CALL_EAX(ADDR_TileGetFloat)
-		fistp	dword ptr [edi+0x4C]
-		mov		ecx, [edi+0x4C]
-		mov		esi, offset s_fontHeightDatas
-		lea		esi, [esi+ecx*8]
+		call	Tile::GetValueFloat
+		cvtss2si	ecx, xmm0
+		lea		esi, s_fontHeightDatas[ecx*8]
 		movss	xmm0, [esi]
 		mov		edx, kTileValue_user0
 		mov		ecx, [edi+0x28]
@@ -1798,12 +1795,12 @@ bool Cmd_GetWorldMapPosMults_Execute(COMMAND_ARGS)
 			if (s_currWorldSpaceA != parentWorld)
 			{
 				s_currWorldSpaceA = parentWorld;
-				s_worldDimensionsA.GetPosMods(parentWorld);
+				s_worldDimensionsA.InitPosMods(parentWorld);
 				TESWorldSpace *rootWorld = parentWorld->GetRootMapWorld();
 				if (s_mapWorldSpaceA != rootWorld)
 				{
 					s_mapWorldSpaceA = rootWorld;
-					s_worldDimensionsA.GetDimensions(rootWorld);
+					s_worldDimensionsA.InitDimensions(rootWorld);
 				}
 			}
 			NiPoint2 outPos = GetWorldMapPosMults(thisObj->position.PS2(), s_worldDimensionsA);
@@ -1811,120 +1808,6 @@ bool Cmd_GetWorldMapPosMults_Execute(COMMAND_ARGS)
 			outY->data = outPos.y;
 		}
 	return true;
-}
-
-__declspec(naked) void __stdcall GenerateRenderedUITexture(NiNode *tileNode, const NiVector4 &scrArea, NiTexture **pTexture)
-{
-	static BSCullingProcess *s_cullingProcessUI = nullptr;
-	__asm
-	{
-		push	ebp
-		mov		ebp, esp
-		mov		ecx, NIDX9RENDERER
-		push	ecx
-		xor		eax, eax
-		push	eax
-		push	eax
-		push	eax
-		push	eax
-		push	eax
-		push	D3DFMT_A8R8G8B8
-		push	eax
-		mov		eax, [ebp+0xC]
-		movq	xmm0, qword ptr [eax+8]
-		cvtps2dq	xmm0, xmm0
-		sub		esp, 8
-		movlps	[esp], xmm0
-		push	ecx
-		mov		ecx, ds:0x11F91A8
-		CALL_EAX(0xB6D5E0)
-		push	eax
-		mov		eax, s_cullingProcessUI
-		test	eax, eax
-		jnz		hasCulling
-		push	0x350
-		CALL_EAX(0xAA13E0)
-		pop		ecx
-		push	0x2F7
-		push	1
-		push	0x64
-		mov		ecx, eax
-		CALL_EAX(0xB660D0)
-		mov		dword ptr [eax+4], 2
-		mov		dword ptr [eax+0x19C], kRndrMode_Tiles
-		push	eax
-		push	0
-		lea		ecx, [eax+0x280]
-		CALL_EAX(0x4A0EB0)
-		pop		dword ptr [eax+0xC4]
-		mov		dword ptr [eax+0x90], kCull_AllPass
-		mov		s_cullingProcessUI, eax
-	hasCulling:
-		push	eax
-		push	dword ptr [eax+0xC4]
-		mov		ecx, g_interfaceManager
-		mov		ecx, [ecx+4]
-		push	dword ptr [ecx+0xAC]
-		mov		ecx, [ebp-4]
-		push	dword ptr [ecx+0x5E0]
-		and		dword ptr [ecx+0x5E0], 0
-		cmp		dword ptr [ecx+0x200], 0
-		jnz		scnActive
-		mov		ecx, [ebp-8]
-		push	dword ptr [ecx+8]
-		push	1			//	NiRenderer::kClrFlag_BackBuffer
-		CALL_EAX(0xB6B8D0)
-		add		esp, 8
-	scnActive:
-		sub		esp, 0x14
-		mov		ecx, [ebp-0x14]
-		movups	xmm0, [ecx+0xDC]
-		movups	[ebp-0x28], xmm0
-		mov		eax, [ebp+0xC]
-		movq	xmm0, qword ptr [eax]
-		movq	xmm1, qword ptr [eax+8]
-		pshufd	xmm2, PS_FlipSignMask0, 0x51
-		xorps	xmm0, xmm2
-		xorps	xmm1, xmm2
-		movss	xmm2, g_screenHeight
-		addss	xmm2, xmm2
-		pslldq	xmm2, 4
-		addps	xmm0, xmm2
-		addps	xmm1, xmm0
-		unpcklps	xmm0, xmm1
-		movups	[ecx+0xDC], xmm0
-		mov		eax, [ebp+8]
-		test	byte ptr [eax+0x30], 1
-		setnz	[ebp-0x29]
-		and		byte ptr [eax+0x30], 0xFE
-		push	dword ptr [ebp-0xC]
-		push	eax
-		push	ecx
-		CALL_EAX(0xB6BEE0)
-		add		esp, 0xC
-		push	dword ptr [ebp-0x10]
-		push	dword ptr [ebp-0x14]
-		CALL_EAX(0xB6C0D0)
-		add		esp, 8
-		CALL_EAX(0xB6B790)
-		mov		eax, [ebp+8]
-		mov		dl, [ebp-0x29]
-		or		[eax+0x30], dl
-		mov		eax, [ebp-4]
-		mov		edx, [ebp-0x18]
-		mov		[eax+0x5E0], edx
-		mov		ecx, [ebp-0x14]
-		movups	xmm0, [ebp-0x28]
-		movups	[ecx+0xDC], xmm0
-		mov		ecx, [ebp-8]
-		push	dword ptr [ecx+0x30]
-		push	dword ptr [ebp+0x10]
-		call	NiReplaceObject
-		mov		ecx, [ebp-8]
-		call	NiReleaseObject
-		leave
-		retn	0xC
-	}
 }
 
 bool Cmd_ProjectUITile_Execute(COMMAND_ARGS)
@@ -1945,7 +1828,7 @@ bool Cmd_ProjectUITile_Execute(COMMAND_ARGS)
 			else tileNode = g_interfaceManager->uiRootNode;
 			if (tileNode)
 			{
-				GenerateRenderedUITexture(tileNode, scrArea, pTexture);
+				BSTextureManager::GenerateRenderedUITexture(tileNode, scrArea, pTexture);
 				*result = 1;
 			}
 		}

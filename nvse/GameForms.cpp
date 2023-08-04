@@ -112,6 +112,8 @@ __declspec(naked) TESContainer *TESForm::GetContainer() const
 {
 	__asm
 	{
+		test	ecx, ecx
+		jz		retnNULL
 		cmp		byte ptr [ecx+4], kFormType_TESObjectCONT
 		jz		isContainer
 		mov		eax, [ecx]
@@ -1126,7 +1128,22 @@ SInt32 BGSListForm::ReplaceForm(TESForm* pForm, TESForm* pReplaceWith)
 	return list.Replace(pForm, pReplaceWith);
 }
 
-BGSDefaultObjectManager* BGSDefaultObjectManager::GetSingleton()
+bool __fastcall ToggleDerivedActorValue(ActorValueCode specialID, ActorValueCode avID, bool toggle)
 {
-	return *(BGSDefaultObjectManager**)0x11CA80C;
+	if (ActorValueInfo *specialInfo = ActorValueInfo::Array()[specialID]; (specialInfo->avGroup == 0))
+		if (UInt32 avGroup = ActorValueInfo::Array()[avID]->avGroup; (avGroup == 1) || (avGroup == 2) || (avGroup == 6))
+		{
+			SInt32 index = specialInfo->derivedStatIDs.GetIndexOf(avID);
+			if (toggle)
+			{
+				if ((index < 0) && specialInfo->derivedStatIDs.Append(avID))
+					return true;
+			}
+			else if (index >= 0)
+			{
+				specialInfo->derivedStatIDs.RemoveNth(index);
+				return true;
+			}
+		}
+	return false;
 }
