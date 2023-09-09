@@ -4951,6 +4951,7 @@ enum INISettings
 };
 
 #define GMST_FLT(name) *(float*)(kGMST_##name + 4)
+#define GMST_FLT_P(name) (float*)(kGMST_##name + 4)
 #define GMST_INT(name) *(SInt32*)(kGMST_##name + 4)
 #define GMST_STR(name) *(const char**)(kGMST_##name + 4)
 

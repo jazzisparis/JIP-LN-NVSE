@@ -239,36 +239,3 @@ enum MaterialType
 	kMaterial_OrganicBug,
 	kMaterial_OrganicGlow
 };
-
-#define ADDR_AddExtraData		0x40FF60
-#define ADDR_RemoveExtraType	0x410140
-#define ADDR_LoadModel			0x447080
-#define ADDR_ApplyAmmoEffects	0x59A030
-#define ADDR_MoveToMarker		0x5CCB20
-#define ADDR_ApplyPerkModifiers	0x5E58F0
-#define ADDR_ReturnThis			0x6815C0
-#define ADDR_PurgeTerminalModel	0x7FFE00
-#define ADDR_EquipItem			0x88C650
-#define ADDR_UnequipItem		0x88C790
-#define ADDR_ReturnTrue			0x8D0360
-#define ADDR_TileGetFloat		0xA011B0
-#define ADDR_TileSetFloat		0xA012D0
-#define ADDR_TileSetString		0xA01350
-#define ADDR_InitFontInfo		0xA12020
-#define ADDR_GetRandomInt		0xAA5230
-#define ADDR_ReturnThis2		0xE68810
-
-#define EXTRA_DATA_CS			0x11C3920
-#define SCENE_LIGHTS_CS			0x11F9EA0
-
-#define IS_REFERENCE(form) ((*(UInt32**)form)[0x3C] == ADDR_ReturnTrue)
-#define NOT_REFERENCE(form) ((*(UInt32**)form)[0x3C] != ADDR_ReturnTrue)
-#define IS_ACTOR(form) ((*(UInt32**)form)[0x40] == ADDR_ReturnTrue)
-#define NOT_ACTOR(form) ((*(UInt32**)form)[0x40] != ADDR_ReturnTrue)
-#define IS_NODE(object) ((*(UInt32**)object)[3] == ADDR_ReturnThis)
-#define IS_GEOMETRY(object) ((*(UInt32**)object)[6] == ADDR_ReturnThis2)
-
-extern const bool kInventoryType[];
-extern const UInt8 kMaterialConvert[];
-extern const char kDaysPerMonth[], kMenuIDJumpTable[];
-extern bool s_NPCWeaponMods, s_NPCPerks;

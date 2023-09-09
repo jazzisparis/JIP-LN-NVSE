@@ -461,8 +461,6 @@ public:
 	}
 };
 
-struct CS_String;
-
 template <typename T_Key, typename T_Data> struct MappedPair
 {
 	T_Key		key;
@@ -509,25 +507,25 @@ public:
 	~MapKey() {FreeStringKey(key);}
 };
 
-template <> class MapKey<const CS_String*>
+template <> class MapKey<const SInt8*>
 {
-	const CS_String	*key;
+	const SInt8	*key;
 
 public:
-	__forceinline const CS_String *Get() const {return key;}
-	__forceinline char Compare(const CS_String *inKey) const {return StrCompareCS((const char*)inKey, (const char*)key);}
-	__forceinline void operator=(const CS_String *inKey) {key = inKey;}
+	__forceinline const SInt8 *Get() const {return key;}
+	__forceinline char Compare(const SInt8 *inKey) const {return StrCompareCS((const char*)inKey, (const char*)key);}
+	__forceinline void operator=(const SInt8 *inKey) {key = inKey;}
 	__forceinline bool operator==(const MapKey &other) const {return !StrCompareCS((const char*)key, (const char*)other.key);}
 };
 
-template <> class MapKey<CS_String*>
+template <> class MapKey<SInt8*>
 {
-	CS_String	*key;
+	SInt8		*key;
 
 public:
-	__forceinline CS_String *Get() const {return key;}
-	__forceinline char Compare(CS_String *inKey) const {return StrCompareCS((const char*)inKey, (const char*)key);}
-	__forceinline void operator=(CS_String *inKey) {key = (CS_String*)CopyStringKey((const char*)inKey);}
+	__forceinline SInt8 *Get() const {return key;}
+	__forceinline char Compare(SInt8 *inKey) const {return StrCompareCS((const char*)inKey, (const char*)key);}
+	__forceinline void operator=(SInt8 *inKey) {key = (SInt8*)CopyStringKey((const char*)inKey);}
 	__forceinline bool operator==(const MapKey &other) const {return !StrCompareCS((const char*)key, (const char*)other.key);}
 	~MapKey() {FreeStringKey((char*)key);}
 };
@@ -1108,7 +1106,7 @@ template <typename T_Key> __forceinline UInt32 HashKey(T_Key inKey)
 		return key.u32;
 	if (std::is_same_v<T_Key, char*> || std::is_same_v<T_Key, const char*>)
 		return StrHashCI(key.str);
-	if (std::is_same_v<T_Key, CS_String*> || std::is_same_v<T_Key, const CS_String*>)
+	if (std::is_same_v<T_Key, SInt8*> || std::is_same_v<T_Key, const SInt8*>)
 		return StrHashCS(key.str);
 	UInt32 uKey;
 	if (sizeof(T_Key) == 1)
@@ -1174,29 +1172,29 @@ public:
 	~HashedKey() {FreeStringKey(key);}
 };
 
-template <> class HashedKey<const CS_String*>
+template <> class HashedKey<const SInt8*>
 {
 	UInt32		hashVal;
 
 public:
-	__forceinline bool Match(const CS_String*, UInt32 inHash) const {return hashVal == inHash;}
-	__forceinline const CS_String *Get() const {return (const CS_String*)"";}
-	__forceinline void Set(const CS_String*, UInt32 inHash) {hashVal = inHash;}
+	__forceinline bool Match(const SInt8*, UInt32 inHash) const {return hashVal == inHash;}
+	__forceinline const SInt8 *Get() const {return (const SInt8*)"";}
+	__forceinline void Set(const SInt8*, UInt32 inHash) {hashVal = inHash;}
 	__forceinline UInt32 GetHash() const {return hashVal;}
 };
 
-template <> class HashedKey<CS_String*>
+template <> class HashedKey<SInt8*>
 {
 	UInt32		hashVal;
-	CS_String	*key;
+	SInt8		*key;
 
 public:
-	__forceinline bool Match(CS_String*, UInt32 inHash) const {return hashVal == inHash;}
-	__forceinline CS_String *Get() const {return key;}
-	__forceinline void Set(CS_String *inKey, UInt32 inHash)
+	__forceinline bool Match(SInt8*, UInt32 inHash) const {return hashVal == inHash;}
+	__forceinline SInt8 *Get() const {return key;}
+	__forceinline void Set(SInt8 *inKey, UInt32 inHash)
 	{
 		hashVal = inHash;
-		key = (CS_String*)CopyStringKey((const char*)inKey);
+		key = (SInt8*)CopyStringKey((const char*)inKey);
 	}
 	__forceinline UInt32 GetHash() const {return hashVal;}
 	~HashedKey() {FreeStringKey((char*)key);}
@@ -1323,6 +1321,8 @@ public:
 	UInt32 Size() const {return numEntries;}
 	bool Empty() const {return !numEntries;}
 	UInt32 BucketCount() const {return numBuckets;}
+
+	void operator=(const UnorderedMap &rhs) = delete;
 
 	void operator=(UnorderedMap &&rhs)
 	{
@@ -1673,6 +1673,8 @@ public:
 	UInt32 Size() const {return numEntries;}
 	bool Empty() const {return !numEntries;}
 	UInt32 BucketCount() const {return numBuckets;}
+
+	void operator=(const UnorderedSet &rhs) = delete;
 
 	void operator=(UnorderedSet &&rhs)
 	{

@@ -154,11 +154,11 @@ bool Cmd_SetSoundTraitNumeric_Execute(COMMAND_ARGS)
 
 bool Cmd_GetSoundFlag_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESSound *sound;
 	UInt32 flagID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &flagID) && (flagID <= 31))
-		*result = (sound->soundFlags & (1 << flagID)) ? 1 : 0;
+		*result = (sound->soundFlags & (1 << flagID)) != 0;
+	else *result = 0;
 	return true;
 }
 
@@ -173,11 +173,10 @@ bool Cmd_SetSoundFlag_Execute(COMMAND_ARGS)
 
 bool Cmd_GetSoundSourceFile_Execute(COMMAND_ARGS)
 {
-	const char *resStr;
+	const char *resStr = nullptr;
 	TESSound *sound;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sound))
 		resStr = sound->soundFile.path.m_data;
-	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
@@ -228,11 +227,10 @@ bool __fastcall PlayingSoundsIterator(TESSound *soundForm, bool doStop, TESObjec
 bool Cmd_IsSoundPlaying_Execute(COMMAND_ARGS)
 {
 	TESSound *soundForm;
-	TESObjectREFR *refr = NULL;
-	bool bResult = false;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm, &refr))
-		bResult = PlayingSoundsIterator(soundForm, false, refr);
-	*result = bResult;
+	TESObjectREFR *refr = nullptr;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm, &refr) && PlayingSoundsIterator(soundForm, false, refr))
+		*result = 1;
+	else *result = 0;
 	return true;
 }
 
@@ -260,7 +258,7 @@ bool Cmd_GetSoundPlayers_Execute(COMMAND_ARGS)
 bool Cmd_StopSound_Execute(COMMAND_ARGS)
 {
 	TESSound *soundForm;
-	TESObjectREFR *refr = NULL;
+	TESObjectREFR *refr = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm, &refr))
 		PlayingSoundsIterator(soundForm, true, refr);
 	return true;
@@ -269,7 +267,7 @@ bool Cmd_StopSound_Execute(COMMAND_ARGS)
 bool Cmd_IsMusicPlaying_Execute(COMMAND_ARGS)
 {
 	UInt8 playState = 0;
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
 		PlayingMusic *playingMus = PlayingMusic::Get();
@@ -339,9 +337,7 @@ bool Cmd_PlaySound3DNode_Execute(COMMAND_ARGS)
 	TESSound *soundForm;
 	char nodeName[0x40];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm, &nodeName))
-	{
-		NiNode *targetNode = thisObj->GetNode2(nodeName);
-		if (targetNode)
+		if (NiNode *targetNode = thisObj->GetNode2(nodeName))
 		{
 			Sound sound;
 			BSAudioManager::Get()->InitSoundForm(sound, soundForm->refID, 0x102);
@@ -352,6 +348,5 @@ bool Cmd_PlaySound3DNode_Execute(COMMAND_ARGS)
 				sound.Play();
 			}
 		}
-	}
 	return true;
 }

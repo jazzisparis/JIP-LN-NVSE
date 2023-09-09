@@ -997,8 +997,7 @@ public:
 		kPropertyType_Alpha =			0,
 		kPropertyType_Culling =			1,
 		kPropertyType_Material =		2,
-		kPropertyType_Shade =			3,
-		kPropertyType_TileShader =		kPropertyType_Shade,
+		kPropertyType_Shader =			3,
 		kPropertyType_Stencil =			4,
 		kPropertyType_Texturing =		5,
 		kPropertyType_Dither =			8,
@@ -1063,6 +1062,7 @@ public:
 
 	__forceinline static NiAlphaProperty *Create() {return CdeclCall<NiAlphaProperty*>(0xA5CEB0);}
 };
+extern NiAlphaProperty *s_alphaProperty;
 
 // 48
 struct TextureTransform
@@ -1116,6 +1116,8 @@ public:
 	UInt16				word1A;		// 1A
 	UInt32				unk1C;		// 1C
 	UInt32				mask;		// 20
+
+	__forceinline static NiStencilProperty *Create() {return CdeclCall<NiStencilProperty*>(0xA6F410);}
 };
 static_assert(sizeof(NiStencilProperty) == 0x24);
 
@@ -1583,10 +1585,10 @@ public:
 	void Update();
 	UInt32 GetIndex() const;
 	bool ReplaceObject(NiAVObject *object);
-	NiProperty* __fastcall GetProperty(UInt32 propID) const;
-	__forceinline void AddProperty(NiProperty *niProperty) {ThisCall(0x439410, this, niProperty);}
 	TESObjectREFR *GetParentRef() const;
 	void AssignGeometryProps();
+
+	void ExportToFile(const char *filePath);
 
 	void Dump(UInt8 dumpFlags = 0xF);
 	void DumpParents();
@@ -1620,6 +1622,8 @@ public:
 	void __vectorcall SetAlphaRecurse(float alpha);
 	void ResetShaderRenderPass();
 	UInt32 GetBSXFlags() const;
+	void AddPropertyRecurse(NiProperty *niProperty);
+	void AddNoLightingPropertyRecurse();
 	void __vectorcall SetMaterialPropValueRecurse(UInt32 traitID, float value);
 	void __fastcall SetCollisionPropRecurse(UInt32 propID, FltAndInt value);
 	void __fastcall SetCollisionLayer(UInt32 layerType);
@@ -1787,10 +1791,17 @@ public:
 static_assert(sizeof(BSFaceGenNiNode) == 0xF0);
 
 // B0
+class BSTempNode : public NiNode
+{
+public:
+	float			secondsLeft;// AC
+};
+
+// B0
 class BSTempNodeManager : public NiNode
 {
 public:
-	UInt32			unkAC;		// AC
+	float			lastTime;	// AC
 };
 
 // B8
@@ -3193,7 +3204,7 @@ public:
 	/*94*/virtual void		Unk_25(void);
 	/*98*/virtual void		Unk_26(void);
 	/*9C*/virtual bool		ContainsDataType(UInt32 dataType);
-	/*A0*/virtual void		Unk_28(void);
+	/*A0*/virtual void		CalculateNormals();
 
 	enum KeepFlag
 	{
@@ -3223,6 +3234,8 @@ public:
 	UInt8						byte3B;			// 3B
 	bool						canSave;		// 3C
 	UInt8						pad3D[3];		// 3D
+
+	void FlipNormals();
 };
 static_assert(sizeof(NiGeometryData) == 0x40);
 
@@ -3259,12 +3272,18 @@ public:
 		SharedNormArrBlock	*pNext;
 	};
 
-	UInt32			trianglePoints;		// 44
-	NiTriangle		*triangles;			// 48
-	SharedNormalArray	*sharedNormals;	// 4C
-	UInt16			sharedNormArrSize;	// 50
-	UInt16			pad52;				// 52
-	SharedNormArrBlock	*snArrBlock;	// 54
+	UInt32				trianglePoints;		// 44
+	NiTriangle			*triangles;			// 48
+	SharedNormalArray	*sharedNormals;		// 4C
+	UInt16				sharedNormArrSize;	// 50
+	UInt16				pad52;				// 52
+	SharedNormArrBlock	*snArrBlock;		// 54
+
+	static NiTriShapeData *Create(UInt32 numVertices, NiPoint3 *vertices, NiPoint3 *normals, NiColorAlpha *vertexColor,
+		NiPoint2 *uvCoords, UInt32 numTriangles, NiTriangle *triangles)
+	{
+		return ThisCall<NiTriShapeData*>(0xA7B630, Ni_Alloc<NiTriShapeData>(), numVertices, vertices, normals, vertexColor, uvCoords, 0, 0, numTriangles, triangles);
+	}
 };
 static_assert(sizeof(NiTriShapeData) == 0x58);
 
@@ -3276,6 +3295,17 @@ public:
 	UInt16			unk46;			// 46
 	UInt16			*stripLengths;	// 48
 	UInt16			*strips;		// 4C
+
+	static NiTriStripsData *Create(UInt32 numVertices, NiPoint3 *vertices, NiPoint3 *normals, NiColorAlpha *vertexColor,
+		NiPoint2 *uvCoords, UInt32 numTriangles, UInt32 numStrips, UInt16 *stripLengths, UInt16 *strips)
+	{
+		return ThisCall<NiTriStripsData*>(0xA75DC0, Ni_Alloc<NiTriStripsData>(), numVertices, vertices, normals, vertexColor,
+			uvCoords, 0, 0, numTriangles, numStrips, stripLengths, strips);
+	}
+
+	static NiTriStripsData* __vectorcall DrawConvex(float radius, UInt32 numEdges, const NiColorAlpha &color);
+	static NiTriStripsData* __vectorcall DrawCylinder(float radius, float height, UInt32 numEdges, const NiColorAlpha &color);
+	static NiTriStripsData* __vectorcall DrawPrism(float radius, float height, UInt32 numEdges, const NiColorAlpha &color);
 };
 
 // 44
@@ -3320,7 +3350,7 @@ class NiGeometry : public NiAVObject
 public:
 	/*DC*/virtual void		RenderImmediate(NiRenderer *pRenderer);
 	/*E0*/virtual void		Unk_38(NiRenderer *pRenderer);
-	/*E4*/virtual void		SetGeometryData(NiGeometryData* pkModelData);
+	/*E4*/virtual void		SetGeometryData(NiGeometryData *pkModelData);
 	/*E8*/virtual void		Unk_3A();	//	Calls NiGeometryData::Func28
 	/*EC*/virtual void		CalculateConsistency(UInt8 arg1);
 
@@ -3336,6 +3366,13 @@ public:
 	NiShader				*shader;		// C0
 
 	GeometryProperties *GetProperties() const {return (GeometryProperties*)&alphaProp;}
+
+	NiProperty *GetProperty(UInt32 propID) const
+	{
+		return ((NiProperty**)&alphaProp)[propID];
+	}
+
+	void __fastcall AddProperty(NiProperty *niProperty);
 };
 static_assert(sizeof(NiGeometry) == 0xC4);
 
@@ -3350,22 +3387,21 @@ public:
 class NiTriShape : public NiTriBasedGeom
 {
 public:
+	static NiTriShape *Create(NiTriShapeData *pShapeData) {return ThisCall<NiTriShape*>(0xA74480, Ni_Alloc<NiTriShape>(), pShapeData);}
 };
 
 // C4
 class NiTriStrips : public NiTriBasedGeom
 {
 public:
+	static NiTriStrips *Create(NiTriStripsData *pShapeData) {return ThisCall<NiTriStrips*>(0xA71CC0, Ni_Alloc<NiTriStrips>(), pShapeData);}
 };
 
 // D4
 class BSScissorTriShape : public NiTriShape
 {
 public:
-	UInt32			unkC4;			// C4
-	UInt32			unkC8;			// C8
-	UInt32			width;			// CC
-	UInt32			height;			// D0
+	RECT		scissorRect;	// C4
 };
 static_assert(sizeof(BSScissorTriShape) == 0xD4);
 
@@ -3556,7 +3592,7 @@ public:
 };
 static_assert(sizeof(ParticleShaderProperty) == 0x14C);
 
-struct NiCulledGeoList
+struct NiVisibleArray
 {
 	NiGeometry		**m_geo;		// 00
 	UInt32			m_numItems;		// 04
@@ -3568,8 +3604,8 @@ struct NiCulledGeoList
 class NiCullingProcess
 {
 public:
-	/*00*/virtual void		Unk_00(void);
-	/*04*/virtual void		Unk_01(void);
+	/*00*/virtual NiRTTI*	GetRTTI();
+	/*04*/virtual void		Unk_01(void);	//	Unk_01 through Unk_0F are unused
 	/*08*/virtual void		Unk_02(void);
 	/*0C*/virtual void		Unk_03(void);
 	/*10*/virtual void		Unk_04(void);
@@ -3584,14 +3620,14 @@ public:
 	/*34*/virtual void		Unk_0D(void);
 	/*38*/virtual void		Unk_0E(void);
 	/*3C*/virtual void		Unk_0F(void);
-	/*40*/virtual void		Destructor(bool freeMemory);
-	/*44*/virtual void		Unk_11(NiGeometry *arg);
-	/*48*/virtual void		Cull(NiCamera *camera, NiNode *node, NiCulledGeoList *culledGeo);
-	/*4C*/virtual void		AddGeo(NiGeometry *arg);
+	/*40*/virtual void		Destructor(bool doFree);
+	/*44*/virtual void		Process(NiAVObject *pObject);
+	/*48*/virtual void		ProcessAlt(NiCamera *camera, NiAVObject *pScene, NiVisibleArray *pVisibleArr);
+	/*4C*/virtual void		Append(NiGeometry *arg);
 
-	UInt8				m_useAddGeoFn;	// 04 - call AddGeo when true, else just add to the list
+	UInt8				useAppendFn;	// 04 - call AddGeo when true, else just add to the list
 	UInt8				pad05[3];		// 05
-	NiCulledGeoList		*m_culledGeo;	// 08
+	NiVisibleArray		*visibleArr;	// 08
 	NiCamera			*camera;		// 0C
 	NiFrustum			frustum;		// 10
 	NiFrustumPlanes		planes;			// 2C

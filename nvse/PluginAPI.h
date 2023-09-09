@@ -532,10 +532,14 @@ struct NVSEScriptInterface
 
 	bool	(*CallFunction)(Script *funcScript, TESObjectREFR *callingObj, TESObjectREFR *container, NVSEArrayVarInterface::Element *result, UInt8 numArgs, ...);
 	int		(*GetFunctionParams)(Script *funcScript, UInt8 *paramTypesOut);
-	bool	(*ExtractArgsEx)(ParamInfo *paramInfo, UInt8 *scriptDataIn, UInt32 *scriptDataOffset, Script *scriptObj, ScriptLocals *eventList, ...);
-	bool	(*ExtractFormatStringArgs)(UInt32 fmtStringPos, char *buffer, ParamInfo *paramInfo, UInt8 *scriptDataIn, UInt32 *scriptDataOffset,
-										Script *scriptObj, ScriptLocals *eventList, UInt32 maxParams, ...);
+	bool	(*ExtractArgsEx)(COMMAND_ARGS_EX, ...);
+	bool	(*ExtractFormatStringArgs)(UInt32 fmtStringPos, char *buffer, COMMAND_ARGS_EX, UInt32 maxParams, ...);
 	bool	(*CallFunctionAlt)(Script *funcScript, TESObjectREFR *callingObj, UInt8 numArgs, ...);
+
+	Script*	(*CompileScript)(const char *scriptText);
+	Script*	(*CompileExpression)(const char *expression);
+
+	size_t	(__stdcall *pDecompileToBuffer)(Script *pScript, FILE *pStream, char *pBuffer);
 
 	void operator=(const NVSEScriptInterface &rhs) {COPY_BYTES(this, &rhs, sizeof(NVSEScriptInterface));}
 };
@@ -897,6 +901,11 @@ struct PluginScriptToken
 	int GetInt()
 	{
 		return int(s_expEvalUtils.ScriptTokenGetFloat(this));
+	}
+
+	UInt32 GetUInt()
+	{
+		return cvtd2ul(s_expEvalUtils.ScriptTokenGetFloat(this));
 	}
 
 	bool GetBool()

@@ -34,6 +34,7 @@
 #define ExtractArgsEx g_script.ExtractArgsEx
 #define ExtractFormatStringArgs g_script.ExtractFormatStringArgs
 #define CallFunction g_script.CallFunctionAlt
+#define DecompileToBuffer g_script.pDecompileToBuffer
 
 typedef void (*_CaptureLambdaVars)(Script* scriptLambda);
 extern _CaptureLambdaVars CaptureLambdaVars;
@@ -120,6 +121,7 @@ __forceinline void *PurgeTerminalModel()
 }
 
 TESForm* __stdcall LookupFormByRefID(UInt32 refID);
+TESForm* __fastcall LookupFormByEDID(const char *edidStr);
 UInt32 __stdcall HasChangeData(UInt32 refID);
 bool __fastcall GetResolvedModIndex(UInt8 *pModIdx);
 UInt32 __fastcall GetResolvedRefID(UInt32 *refID);
@@ -163,14 +165,12 @@ struct QueuedCmdCall
 	UInt32			numArgs;	// 0C
 	FunctionArg		args[4];	// 10
 
-	QueuedCmdCall(void *_cmdAddr, UInt32 _thisObj, UInt32 _numArgs, ...) : opcode(0x2B), cmdAddr(_cmdAddr), thisObj(_thisObj), numArgs(_numArgs)
+	QueuedCmdCall(void *_cmdAddr, UInt32 _thisObj) : opcode(0x2B), cmdAddr(_cmdAddr), thisObj(_thisObj), numArgs(0) {}
+
+	void PushArg(FunctionArg arg)
 	{
-		if (!numArgs) return;
-		va_list args;
-		va_start(args, numArgs);
-		for (UInt32 argIdx = 0; argIdx < numArgs; argIdx++)
-			args[argIdx] = va_arg(args, UInt32);
-		va_end(args);
+		if (numArgs < 4)
+			args[numArgs++] = arg;
 	}
 
 	bool QueueCall() {return ThisCall<bool>(0x9054A0, g_scrapHeapQueue->taskQueue, this);}
@@ -517,24 +517,21 @@ struct AuxVarInfo
 
 	AuxVarInfo(TESForm *form, TESObjectREFR *thisObj, Script *scriptObj, char *pVarName)
 	{
-		if (!pVarName[0])
+		if (*pVarName)
 		{
-			ownerID = 0;
-			return;
+			if (ownerID = GetSubjectID(form, thisObj))
+			{
+				varName = pVarName;
+				isPerm = (varName[0] != '*');
+				modIndex = (varName[!isPerm] == '_') ? 0xFF : scriptObj->GetOverridingModIdx();
+			}
 		}
-		ownerID = GetSubjectID(form, thisObj);
-		if (ownerID)
-		{
-			varName = pVarName;
-			isPerm = (varName[0] != '*');
-			modIndex = (varName[!isPerm] == '_') ? 0xFF : scriptObj->GetOverridingModIdx();
-		}
+		else ownerID = 0;
 	}
 
-	AuxVarInfo(TESForm *form, TESObjectREFR *thisObj, Script *scriptObj, UInt8 type)
+	AuxVarInfo(TESForm *form, TESObjectREFR *thisObj, Script *scriptObj, UInt32 type)
 	{
-		ownerID = GetSubjectID(form, thisObj);
-		if (ownerID)
+		if (ownerID = GetSubjectID(form, thisObj))
 		{
 			isPerm = !(type & 1);
 			modIndex = (type > 1) ? 0xFF : scriptObj->GetOverridingModIdx();
@@ -542,6 +539,10 @@ struct AuxVarInfo
 	}
 
 	AuxVarModsMap& ModsMap() const {return isPerm ? s_auxVariablesPerm : s_auxVariablesTemp;}
+	AuxVarValsArr* __fastcall GetArray(bool addArr = false);
+	AuxVariableValue* __fastcall GetValue(SInt32 idx, bool addVal = false);
+
+	explicit operator bool() const {return ownerID != 0;}
 };
 
 struct RefMapInfo
@@ -551,11 +552,11 @@ struct RefMapInfo
 
 	RefMapInfo(Script *scriptObj, char *varName)
 	{
-		isPerm = (varName[0] != '*');
+		isPerm = (*varName != '*');
 		modIndex = (varName[!isPerm] == '_') ? 0xFF : scriptObj->GetOverridingModIdx();
 	}
 
-	RefMapInfo(Script *scriptObj, UInt8 type)
+	RefMapInfo(Script *scriptObj, UInt32 type)
 	{
 		isPerm = !(type & 1);
 		modIndex = (type > 1) ? 0xFF : scriptObj->GetOverridingModIdx();
@@ -732,8 +733,7 @@ struct TempArrayElements
 	TempArrayElements(NVSEArrayVar *srcArr)
 	{
 		doFree = true;
-		size = GetArraySize(srcArr);
-		if (size)
+		if (size = GetArraySize(srcArr))
 		{
 			elements = (ArrayElementR*)calloc(size, sizeof(ArrayElementR));
 			GetElements(srcArr, elements, nullptr);
@@ -765,8 +765,7 @@ struct ArrayData
 
 	ArrayData(NVSEArrayVar *srcArr, bool isPacked)
 	{
-		size = GetArraySize(srcArr);
-		if (size)
+		if (size = GetArraySize(srcArr))
 		{
 			vals = AuxBuffer::Get<ArrayElementR>(2, isPacked ? size : (size << 1));
 			keys = isPacked ? nullptr : (vals + size);
@@ -821,8 +820,6 @@ TESObjectREFR* __fastcall GetEquippedItemRef(Actor *actor, UInt32 slotIndex);
 ContChangesEntry* __fastcall GetHotkeyItemEntry(UInt8 index, ExtraDataList **outXData);
 
 bool __fastcall ClearHotkey(UInt8 index);
-
-float __fastcall GetModBonuses(TESObjectREFR *wpnRef, UInt32 effectID);
 
 float __vectorcall GetLightAmountAtPoint(const NiVector3 &pos);
 
@@ -943,5 +940,3 @@ void InitMemUsageDisplay(UInt32 callDelay);
 #define NUM_ARGS_EX (scriptData[*opcodeOffsetPtr - 2] ? scriptData[*opcodeOffsetPtr] : 0)
 
 DEFINE_COMMAND_PLUGIN(EmptyCommand, 0, 3, kParams_ThreeOptionalInts);
-
-void __stdcall StoreOriginalData(UInt32 addr, UInt8 size);

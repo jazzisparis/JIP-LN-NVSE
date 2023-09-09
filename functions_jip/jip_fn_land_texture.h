@@ -11,10 +11,10 @@ DEFINE_COMMAND_PLUGIN(LandTextureRemoveGrass, 0, 2, kParams_TwoForms);
 
 bool Cmd_GetLandTextureTextureSet_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESLandTexture *landTex;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &landTex) && IS_ID(landTex, TESLandTexture) && landTex->textureSet)
 		REFR_RES = landTex->textureSet->refID;
+	else REFR_RES = 0;
 	return true;
 }
 

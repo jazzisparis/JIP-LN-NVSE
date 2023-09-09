@@ -11,7 +11,7 @@ DEFINE_COMMAND_PLUGIN(GetCellNorthRotation, 0, 1, kParams_OneForm);
 bool Cmd_SetCellWaterForm_Execute(COMMAND_ARGS)
 {
 	TESObjectCELL *cell;
-	TESWaterForm *water = NULL;
+	TESWaterForm *water = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &water) && IS_ID(cell, TESObjectCELL) && (!water || IS_ID(water, TESWaterForm)))
 		if (auto xCellWater = GetExtraType(&cell->extraDataList, ExtraCellWaterType))
 		{
@@ -36,7 +36,7 @@ bool Cmd_GetCellClimate_Execute(COMMAND_ARGS)
 bool Cmd_SetCellClimate_Execute(COMMAND_ARGS)
 {
 	TESObjectCELL *cell;
-	TESClimate *climate = NULL;
+	TESClimate *climate = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &climate) && IS_ID(cell, TESObjectCELL) && (!climate || IS_ID(climate, TESClimate)))
 		if (auto xCellClimate = GetExtraType(&cell->extraDataList, ExtraCellClimate))
 		{
@@ -50,11 +50,10 @@ bool Cmd_SetCellClimate_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCellNoiseTexture_Execute(COMMAND_ARGS)
 {
-	const char *resStr;
+	const char *resStr = nullptr;
 	TESObjectCELL *cell;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && IS_ID(cell, TESObjectCELL))
 		resStr = cell->noiseTexture.ddsPath.m_data;
-	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }

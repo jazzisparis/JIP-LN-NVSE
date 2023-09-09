@@ -499,7 +499,7 @@ __declspec(naked) void Actor::EquipItemAlt(ContChangesEntry *entry, UInt32 noUne
 bool TESObjectREFR::ValidForHooks() const
 {
 	if IS_ACTOR(this) return IsPersistent();
-	return !kInventoryType[baseForm->typeID] && !IsProjectile();
+	return !kInventoryType[baseForm->typeID] && !IS_PROJECTILE(this);
 }
 
 __declspec(naked) TESObjectCELL *TESObjectREFR::GetParentCell() const
@@ -1050,7 +1050,7 @@ __declspec(naked) double TESObjectREFR::GetWaterImmersionPerc() const	// result 
 
 bool TESObjectREFR::IsMobile() const
 {
-	if (IS_ACTOR(this) || IsProjectile())
+	if (IS_ACTOR(this) || IS_PROJECTILE(this))
 		return true;
 	NiNode *objNode = GetRefNiNode();
 	return objNode && objNode->IsMovable();
@@ -1362,7 +1362,7 @@ bool TESObjectREFR::IsGrabbable() const
 {
 	if IS_ACTOR(this)
 		return INIS_BOOL(bAllowHavokGrabTheLiving_GamePlay) || ((Actor*)this)->GetDead();
-	if (IsProjectile())
+	if IS_PROJECTILE(this)
 	{
 		Projectile *projRefr = (Projectile*)this;
 		return (projRefr->projFlags & 0x200) && (projRefr->GetProjectileType() == 3) && projRefr->IsProximityTriggered();
@@ -2395,53 +2395,53 @@ void PlayerCharacter::ToggleSneak(bool toggle)
 void Projectile::GetData(UInt32 dataType, double *result) const
 {
 	*result = 0;
-	if (!IsProjectile()) return;
-	switch (dataType)
-	{
-		case 0:
-			if (sourceRef)
-				*(UInt32*)result = sourceRef->refID;
-			break;
-		case 1:
-			if (sourceWeap)
-				*(UInt32*)result = sourceWeap->refID;
-			break;
-		case 2:
-			*result = lifeTime;
-			break;
-		case 3:
-			*result = distTravelled;
-			break;
-		case 4:
-			*result = hitDamage;
-			break;
-		case 5:
-			*result = speedMult;
-			break;
-		case 6:
+	if IS_PROJECTILE(this)
+		switch (dataType)
 		{
-			if (hasImpacted)
+			case 0:
+				if (sourceRef)
+					*(UInt32*)result = sourceRef->refID;
+				break;
+			case 1:
+				if (sourceWeap)
+					*(UInt32*)result = sourceWeap->refID;
+				break;
+			case 2:
+				*result = lifeTime;
+				break;
+			case 3:
+				*result = distTravelled;
+				break;
+			case 4:
+				*result = hitDamage;
+				break;
+			case 5:
+				*result = speedMult;
+				break;
+			case 6:
 			{
-				auto traverse = impactDataList.Head();
-				do
+				if (hasImpacted)
 				{
-					if (ImpactData *impactData = traverse->data; impactData && impactData->refr)
+					auto traverse = impactDataList.Head();
+					do
 					{
-						*(UInt32*)result = impactData->refr->refID;
-						break;
+						if (ImpactData *impactData = traverse->data; impactData && impactData->refr)
+						{
+							*(UInt32*)result = impactData->refr->refID;
+							break;
+						}
 					}
+					while (traverse = traverse->next);
 				}
-				while (traverse = traverse->next);
+				break;
 			}
-			break;
+			case 7:
+			{
+				if (hasImpacted)
+					if (ImpactData *impactData = impactDataList.GetFirstItem(); impactData && (impactData->materialType <= 31))
+						*result = (impactData && (impactData->materialType <= 31)) ? kMaterialConvert[impactData->materialType] : -1;
+				break;
+			}
+			default: break;
 		}
-		case 7:
-		{
-			if (hasImpacted)
-				if (ImpactData *impactData = impactDataList.GetFirstItem(); impactData && (impactData->materialType <= 31))
-					*result = (impactData && (impactData->materialType <= 31)) ? kMaterialConvert[impactData->materialType] : -1;
-			break;
-		}
-		default: break;
-	}
 }

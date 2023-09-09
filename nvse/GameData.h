@@ -281,6 +281,8 @@ public:
 	{
 		return ThisCall<UInt32>(0x4603B0, this, pForm);
 	}
+
+	void DecompileModScripts(UInt8 modIdx, UInt8 typeMask = 0x1F);
 };
 static_assert(sizeof(DataHandler) == 0x63C);
 
@@ -717,6 +719,12 @@ class TES
 public:
 	virtual void Fn_00(UInt32 arg1, UInt32 arg2, UInt32 arg3, UInt32 arg4, UInt32 arg5);
 
+	struct DeathCount
+	{
+		TESActorBase	*actorBase;
+		UInt16			count;
+	};
+
 	struct ParticleNode
 	{
 		NiNode			*particleParent;
@@ -728,24 +736,26 @@ public:
 	GridCellArray						*gridCellArray;		// 08
 	NiNode								*objRoot;			// 0C
 	NiNode								*LODroot;			// 10
-	NiNode								*niNode14;			// 14
+	NiNode								*waterLODRoot;		// 14
 	BSTempNodeManager					*tempNodeMgr;		// 18
 	NiDirectionalLight					*directionalLight;	// 1C
-	void								*objFog;			// 20
+	BSFogProperty						*fogProperty;		// 20
 	CellCoord							exteriorGrid;		// 24
 	CellCoord							exteriorCoord;		// 2C
 	TESObjectCELL						*currentInterior;	// 34
 	TESObjectCELL						**interiorsBuffer;	// 38
 	TESObjectCELL						**exteriorsBuffer;	// 3C
-	UInt32								unk40[4];			// 40
+	UInt32								interiorBufferSize;	// 40
+	UInt32								exteriorBufferSize;	// 44
+	CellCoord							savedGrid;			// 48
 	UInt8								byte50;				// 50
-	UInt8								isTestAllCells;		// 51
+	bool								isTestAllCells;		// 51
 	UInt8								byte52;				// 52
 	UInt8								pad53;				// 53
 	void								*renderTestCellsCallback;	// 54
 	UInt32								unk58;				// 58
 	UInt32								unk5C;				// 5C
-	UInt8								showCellBorders;	// 60
+	bool								showCellBorders;	// 60
 	UInt8								pad61[3];			// 61
 	WaterSurfaceManager					*waterManager;		// 64
 	Sky									*sky;				// 68
@@ -755,17 +765,17 @@ public:
 	float								flt84;				// 84	Abs Y distance from centre of grid.
 	TESWorldSpace						*currentWrldspc;	// 88
 	tList<UInt32>						list8C;				// 8C
-	tList<UInt32>						list94;				// 94
-	tList<UInt32>						list9C;				// 9C
+	tList<TESObjectREFR>				cellFurnitureRefs;	// 94
+	tList<DeathCount>					deathCounts;		// 9C
 	QueuedFile							*unkA4;				// A4
 	NiSourceTexture						*bloodTexture;		// A8
 	QueuedFile							*unkAC;				// AC
 	ParticleNode						*particleCacheHead;	// B0
-	UInt8								byteB4;				// B4
-	UInt8								allowUnusedPurge;	// B5
+	bool								fadeWhenLoading;	// B4
+	bool								allowUnusedPurge;	// B5
 	UInt8								byteB6;				// B6
 	UInt8								byteB7;				// B7
-	UInt32								unkB8;				// B8
+	UInt32								placeableWaterCount;// B8
 	NavMeshInfoMap						*navMeshInfoMap;	// BC
 	LoadedAreaBound						*areaBound;			// C0
 
@@ -782,6 +792,95 @@ public:
 	}
 
 	void UnloadBufferedExterior(TESObjectCELL *cell);
+
+	__forceinline void CreateTextureImage(const char *filePath, NiSourceTexture **outTexture, bool mustFindFile = 1, bool archiveOnly = 0)
+	{
+		//	filePath is relative to FalloutNV root, or optionally to Data.
+		ThisCall(0x4568C0, this, filePath, outTexture, mustFindFile, archiveOnly);
+	}
+
+	static NiLines *DrawAxesLines(float size)
+	{
+		return CdeclCall<NiLines*>(0xC59200, size);
+	}
+
+	static NiLines *DrawArrow(NiVector3 *direction, const NiColorAlpha &color)
+	{
+		auto shape = CdeclCall<NiLines*>(0xC59A50, direction, &color);
+		shape->AddProperty(BSShaderNoLightingProperty::Create());
+		shape->AddProperty(s_alphaProperty);
+		shape->AssignGeometryProps();
+		return shape;
+	}
+
+	static NiTriShape *DrawOctahedron(float diagonal, const NiColorAlpha &color)
+	{
+		auto shape = CdeclCall<NiTriShape*>(0x4B29B0, diagonal, &color, 0);
+		shape->AddProperty(BSShaderNoLightingProperty::Create());
+		shape->AddProperty(s_alphaProperty);
+		shape->AssignGeometryProps();
+		return shape;
+	}
+
+	static NiNode *DrawSphere(float diameter, UInt32 numEdges, const NiColorAlpha &color)
+	{
+		auto sphere = CdeclCall<NiNode*>(0xC56680, diameter, numEdges, numEdges, &color);
+		sphere->AddNoLightingPropertyRecurse();
+		sphere->AddPropertyRecurse(s_alphaProperty);
+		sphere->AssignGeometryProps();
+		return sphere;
+	}
+
+	static NiTriStrips *DrawCylinder(float radius, float height, UInt32 numEdges, const NiColorAlpha &color)
+	{
+		auto shape = NiTriStrips::Create(NiTriStripsData::DrawCylinder(radius, height, numEdges, color));
+		/*auto stencilProp = NiStencilProperty::Create();
+		stencilProp->flags = 0x4D80;
+		shape->AddProperty(stencilProp);*/
+		shape->AddProperty(BSShaderNoLightingProperty::Create());
+		shape->AddProperty(s_alphaProperty);
+		shape->AssignGeometryProps();
+		return shape;
+	}
+
+	static NiTriStrips *DrawCone(float diameter, float height, UInt32 numEdges, const NiColorAlpha &color)
+	{
+		auto shape = CdeclCall<NiTriStrips*>(0xC584A0, diameter, 0, height, numEdges, 1, &color);
+		/*auto stencilProp = NiStencilProperty::Create();
+		stencilProp->flags = 0x4D80;
+		shape->AddProperty(stencilProp);*/
+		shape->AddProperty(BSShaderNoLightingProperty::Create());
+		shape->AddProperty(s_alphaProperty);
+		shape->AssignGeometryProps();
+		return shape;
+	}
+
+	static NiTriStrips *DrawConvex(float radius, UInt32 numEdges, const NiColorAlpha &color)
+	{
+		auto convex = NiTriStrips::Create(NiTriStripsData::DrawConvex(radius, numEdges, color));
+		convex->AddProperty(BSShaderNoLightingProperty::Create());
+		convex->AddProperty(s_alphaProperty);
+		convex->AssignGeometryProps();
+		return convex;
+	}
+
+	static NiTriStrips *DrawPrism(float radius, float height, UInt32 numEdges, const NiColorAlpha &color)
+	{
+		auto shape = NiTriStrips::Create(NiTriStripsData::DrawPrism(radius, height, numEdges, color));
+		shape->AddProperty(BSShaderNoLightingProperty::Create());
+		shape->AddProperty(s_alphaProperty);
+		shape->AssignGeometryProps();
+		return shape;
+	}
+
+	static NiTriStrips *DrawTorus(float diamtrTube, float diamtrRing, UInt32 numEdgesTube, UInt32 numEdgesRing, const NiColorAlpha &color)
+	{
+		auto shape = CdeclCall<NiTriStrips*>(0xC57D70, diamtrTube, diamtrRing, numEdgesRing, numEdgesTube, &color);
+		shape->AddProperty(BSShaderNoLightingProperty::Create());
+		shape->AddProperty(s_alphaProperty);
+		shape->AssignGeometryProps();
+		return shape;
+	}
 };
 static_assert(sizeof(TES) == 0xC4);
 
@@ -806,6 +905,21 @@ struct GameTimeGlobals
 	UInt32			initialized;	// 30
 
 	__forceinline static GameTimeGlobals *Get() {return (GameTimeGlobals*)0x11DE7B8;}
+};
+
+// 34
+struct PositionRequest
+{
+	TESWorldSpace		*worldSpace;	// 00
+	TESObjectCELL		*cell;			// 04
+	NiVector3			position;		// 08
+	NiVector3			rotation;		// 14
+	bool				resetWeather;	// 20
+	UInt8				pad21[3];		// 21
+	void				*callback;		// 24
+	UInt32				cbArg;			// 28
+	TESObjectREFR		*destRef;		// 2C
+	TESObjectREFR		*fastTravelRef;	// 30
 };
 
 // 18

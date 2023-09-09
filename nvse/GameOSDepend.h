@@ -7,6 +7,38 @@
 
 #define MAX_CONTROL_BIND 28
 
+enum ControlCode
+{
+	/*00*/eCtrlID_Forward,
+	/*01*/eCtrlID_Backward,
+	/*02*/eCtrlID_Left,
+	/*03*/eCtrlID_Right,
+	/*04*/eCtrlID_Attack,
+	/*05*/eCtrlID_Activate,
+	/*06*/eCtrlID_AimBlock,
+	/*07*/eCtrlID_ReadyItem,
+	/*08*/eCtrlID_Crouch,
+	/*09*/eCtrlID_Run,
+	/*0A*/eCtrlID_AlwaysRun,
+	/*0B*/eCtrlID_AutoMove,
+	/*0C*/eCtrlID_Jump,
+	/*0D*/eCtrlID_TogglePOV,
+	/*0E*/eCtrlID_MenuMode,
+	/*0F*/eCtrlID_SleepWait,
+	/*10*/eCtrlID_VATS_,
+	/*11*/eCtrlID_Hotkey1,
+	/*12*/eCtrlID_AmmoSwap,
+	/*13*/eCtrlID_Hotkey3,
+	/*14*/eCtrlID_Hotkey4,
+	/*15*/eCtrlID_Hotkey5,
+	/*16*/eCtrlID_Hotkey6,
+	/*17*/eCtrlID_Hotkey7,
+	/*18*/eCtrlID_Hotkey8,
+	/*19*/eCtrlID_QuickSave,
+	/*1A*/eCtrlID_QuickLoad,
+	/*1B*/eCtrlID_Grab
+};
+
 enum KeyState
 {
 	kKeyState_Held,

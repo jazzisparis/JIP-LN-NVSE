@@ -6,7 +6,7 @@ DEFINE_COMMAND_PLUGIN(UpdateMiniMap, 0, 2, kParams_OneInt_OneOptionalInt);
 #define CACHED_TEXTURES_MAX 60
 #define CACHED_TEXTURES_MIN 42
 
-constexpr float kInteriorZoomMod = 0.3F;
+constexpr float kInteriorZoomMod = 0.25F;
 
 TileValue /**s_miniMapVisible, */*s_miniMapScale, *s_localMapZoom;
 BSScissorTriShape *s_localMapShapes[9];
@@ -1108,9 +1108,6 @@ __declspec(naked) void __fastcall GenerateLocalMapExterior(TESObjectCELL *cell, 
 		jmp		iterHead
 		ALIGN 16
 	iterEnd:
-		mov		eax, ds:0x11D5C48
-		push	eax
-		mov		[eax+0x1B], 1
 		mov		ecx, [ebp-0x14]
 		mov		eax, [ecx+0x48]
 		movq	xmm0, qword ptr [eax]
@@ -1138,8 +1135,6 @@ __declspec(naked) void __fastcall GenerateLocalMapExterior(TESObjectCELL *cell, 
 		mov		byte ptr ds:0x11AD7B4, 0
 		call	BSTextureManager::GenerateRenderedTexture
 		mov		byte ptr ds:0x11AD7B4, 1
-		pop		eax
-		mov		[eax+0x1B], 0
 		pop		eax
 		and		byte ptr [eax+0x30], 0xFE
 		mov		edx, 4
@@ -1196,27 +1191,6 @@ __declspec(naked) void __vectorcall GenerateLocalMapInterior(__m128i coord, NiRe
 		ALIGN 16
 	kIntPosMod:
 		EMIT_PS_2(00, 00, 00, 01) EMIT_DW(47, 00, 00, 00)
-	}
-}
-
-__declspec(naked) void AttachToCellNodeHook()
-{
-	__asm
-	{
-		push	1
-		push	eax
-		push	0x54972C
-		mov		ecx, [ebp+0xC]
-		mov		eax, [eax+8]
-		cmp		eax, s_BlackPlane01
-		jnz		notBkPln
-		mov		eax, [ecx+0x18]
-		mov		ecx, [eax+0xA0]
-		mov		eax, [ecx+0x10]
-		mov		[ebp+0xC], eax
-		mov		ecx, [ecx+0x20]
-	notBkPln:
-		JMP_EAX(0xA5ED10)
 	}
 }
 
@@ -1322,7 +1296,7 @@ __declspec(naked) void SetQuestTargetsHook()
 		add		ecx, 0x4C
 		mov		[ebp-4], ecx
 		mov		s_updateQuestTargets, 1
-		retn
+		JMP_EAX(0x60F145)
 	}
 }
 
@@ -1354,6 +1328,96 @@ NiDirectionalLight *s_mmDirectionalLight;
 BSFogProperty *s_mmFogProperty;
 NiNode *s_fakeWaterPlanes, *s_shadowSceneNodes[5];
 bool s_isInExterior = true;
+TempObject<NiFixedString> s_BlackPlane01;
+
+__declspec(naked) NiNode *CreateFakeWaterPlanes()
+{
+	static const __m128 kWaterPlaneColor = NRGBA(23, 51, 47, 184);
+	static alignas(16) const NiPoint2 kWaterPlanePos[] =
+	{
+		{2048.0F, -10240.0F}, {2048.0F, -6144.0F}, {2048.0F, -2048.0F},
+		{6144.0F, -10240.0F}, {6144.0F, -6144.0F}, {6144.0F, -2048.0F},
+		{10240.0F, -10240.0F}, {10240.0F, -6144.0F}, {10240.0F, -2048.0F}
+	};
+	__asm
+	{
+		push	ebx
+		push	esi
+		push	edi
+		xor		ebx, ebx
+		CALL_EAX(0xA5F030)
+		mov		esi, eax
+		mov		dword ptr [eax+4], 2
+		push	0x7C
+		call	Game_DoHeapAlloc
+		mov		ecx, 0x45000000
+		movd	xmm0, ecx
+		unpcklpd	xmm0, xmm0
+		xorps	xmm0, PS_FlipSignMask0
+		shufps	xmm0, xmm0, 0x18
+		movups	[eax], xmm0
+		shufps	xmm0, xmm0, 0x58
+		movups	[eax+0x10], xmm0
+		shufps	xmm0, xmm0, 0x49
+		movups	[eax+0x20], xmm0
+		movaps	xmm0, kWaterPlaneColor
+		movups	[eax+0x30], xmm0
+		movups	[eax+0x40], xmm0
+		movups	[eax+0x50], xmm0
+		movups	[eax+0x60], xmm0
+		lea		ecx, [eax+0x70]
+		mov		dword ptr [ecx], 0x10000
+		mov		dword ptr [ecx+4], 0x20002
+		mov		dword ptr [ecx+8], 0x30001
+		push	ecx
+		push	2
+		push	ebx
+		push	ebx
+		push	ebx
+		sub		ecx, 0x40
+		push	ecx
+		push	ebx
+		push	eax
+		push	4
+		push	0x58
+		CALL_EAX(0xAA13E0)
+		pop		ecx
+		mov		ecx, eax
+		CALL_EAX(0xA7B630)
+		mov		edi, eax
+		ALIGN 16
+	iterHead:
+		push	edi
+		push	0xC4
+		CALL_EAX(0xAA13E0)
+		pop		ecx
+		mov		ecx, eax
+		CALL_EAX(0xA74480)
+		or		byte ptr [eax+0x30], 1
+		movq	xmm0, kWaterPlanePos[ebx*8]
+		movlps	[eax+0x58], xmm0
+		push	1
+		push	eax
+		mov		ecx, esi
+		mov		eax, [ecx]
+		call	dword ptr [eax+0xDC]
+		inc		ebx
+		cmp		bl, 9
+		jb		iterHead
+		mov		ecx, esi
+		call	NiNode::AddNoLightingPropertyRecurse
+		push	s_alphaProperty
+		mov		ecx, esi
+		call	NiNode::AddPropertyRecurse
+		mov		ecx, esi
+		call	NiAVObject::AssignGeometryProps
+		mov		eax, esi
+		pop		edi
+		pop		esi
+		pop		ebx
+		retn
+	}
+}
 
 struct MapMarkerInfo
 {
@@ -1367,277 +1431,6 @@ struct MapMarkerInfo
 typedef Vector<MapMarkerInfo, 2> CellMapMarkers;
 typedef UnorderedMap<UInt32, CellMapMarkers> WorldMapMarkers;
 TempObject<Map<TESWorldSpace*, WorldMapMarkers>> s_worldMapMarkers;
-
-const NiPoint2 kWaterPlanePos[] =
-{
-	{2048.0F, -10240.0F}, {2048.0F, -6144.0F}, {2048.0F, -2048.0F},
-	{6144.0F, -10240.0F}, {6144.0F, -6144.0F}, {6144.0F, -2048.0F},
-	{10240.0F, -10240.0F}, {10240.0F, -6144.0F}, {10240.0F, -2048.0F}
-};
-
-bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
-{
-	if (s_miniMapMode || (scriptObj->modIndex != s_miniMapIndex))
-		return true;
-
-	Tile *tile = g_HUDMainMenu->tile->GetComponentTile("JIPMiniMap");
-	if (!tile) return true;
-
-	UInt8 *codePtr = scriptData + 0x2FE5;
-	if (*(UInt32*)codePtr == 0x173031)
-	{
-		*codePtr = 0x33;
-		scriptObj->quest->questDelayTime = 1 / 60.0F;
-	}
-
-	//s_miniMapVisible = tile->GetValue(kTileValue_visible);
-	s_miniMapScale = tile->GetValue(kTileValue_user1);
-	auto node = tile->children.Tail()->prev;
-	s_pcMarkerRotate = node->data->GetValue(kTileValue_rotateangle);
-	node->data->SetFloat(kTileValue_depth, 34.0F);
-	tile = node->prev->data;
-	s_miniMapMode = tile->GetValue(kTileValue_user0);
-	s_miniMapPosX = tile->GetValue(kTileValue_user1);
-	s_miniMapPosY = tile->GetValue(kTileValue_user2);
-	node = tile->children.Tail()->prev;
-	tile = node->data;
-	s_localMapZoom = tile->GetValue(kTileValue_zoom);
-	s_worldMapRect = (TileRect*)node->prev->data;
-	s_worldMapZoom = s_worldMapRect->GetValue(kTileValue_zoom);
-	node = tile->children.Tail();
-
-	NiVector3 *shapeVertices = Game_HeapAlloc<NiVector3>(0x121);
-	NiPoint2 *shapeUVCoords = Game_HeapAlloc<NiPoint2>(0x121);
-	NiVector3 vertex = {0, 0, 0};
-	NiPoint2 uvCoord = {0, 0};
-	UInt32 index = 0x11, iterZ = 0x11;
-	while (true)
-	{
-		*shapeVertices++ = vertex;
-		*shapeUVCoords++ = uvCoord;
-		if (--iterZ)
-		{
-			vertex.z -= 8.0F;
-			uvCoord.y += 0.0625F;
-			continue;
-		}
-		if (!--index) break;
-		vertex.x += 8.0F;
-		vertex.z = 0;
-		uvCoord.x += 0.0625F;
-		uvCoord.y = 0;
-		iterZ = 0x11;
-	}
-	shapeVertices -= 0x121;
-	shapeUVCoords -= 0x121;
-
-	NiTriangle *shapeTriangles = Game_HeapAlloc<NiTriangle>(0x200);
-	UInt32 vtx1 = 0, vtx2 = 0x11;
-	do
-	{
-		index = 0x10;
-		do
-		{
-			shapeTriangles[0].point1 = vtx2;
-			shapeTriangles[0].point2 = vtx1++;
-			shapeTriangles[0].point3 = vtx1;
-			shapeTriangles[1].point1 = vtx1;
-			shapeTriangles[1].point3 = vtx2++;
-			shapeTriangles[1].point2 = vtx2;
-			shapeTriangles += 2;
-		}
-		while (--index);
-		vtx1++;
-		vtx2++;
-	}
-	while (vtx2 < 0x120);
-	shapeTriangles -= 0x200;
-
-	NiColorAlpha *vertexColors = Game_HeapAlloc<NiColorAlpha>(0xA29);
-	ZERO_BYTES(vertexColors, sizeof(NiColorAlpha) * 0xA29);
-
-	NiAlphaProperty *alphaProp = NiAlphaProperty::Create();
-	alphaProp->flags = 0x8D;
-
-	index = 0;
-	do
-	{
-		TileImage *localTile = (TileImage*)node->data;
-		node = node->prev;
-		BSScissorTriShape *sciTriShp = (BSScissorTriShape*)localTile->node->m_children[0];
-		s_localMapShapes[index] = sciTriShp;
-		NiTriShapeData *shapeData = (NiTriShapeData*)sciTriShp->geometryData;
-		s_localMapShapeDatas[index] = shapeData;
-		s_tileShaderProps[index] = localTile->shaderProp;
-		NiReplaceObject(&localTile->shaderProp->srcTexture, nullptr);
-
-		shapeData->numVertices = 0x121;
-		shapeData->numTriangles = 0x200;
-		shapeData->trianglePoints = 0x600;
-
-		Game_HeapFree(shapeData->vertices);
-		shapeData->vertices = shapeVertices;
-
-		Game_HeapFree(shapeData->normals);
-		shapeData->normals = nullptr;
-
-		Game_HeapFree(shapeData->vertexColors);
-		shapeData->vertexColors = vertexColors;
-		vertexColors += 0x121;
-
-		Game_HeapFree(shapeData->uvCoords);
-		shapeData->uvCoords = shapeUVCoords;
-
-		Game_HeapFree(shapeData->triangles);
-		shapeData->triangles = shapeTriangles;
-
-		NiReplaceObject(&sciTriShp->m_propertyList.Head()->data, alphaProp);
-		NiReplaceObject(&sciTriShp->alphaProp, alphaProp);
-	}
-	while (++index < 9);
-
-	s_doorMarkersRect = (TileRect*)node->data;
-	s_lQuestMarkersRect = (TileRect*)node->prev->data;
-	node = s_worldMapRect->children.Tail();
-	s_worldMapTile = (TileImage*)node->data;
-	node = node->prev;
-	s_mapMarkersRect = (TileRect*)node->data;
-	node = node->prev;
-	s_wQuestMarkersRect = (TileRect*)node->data;
-
-	s_fLocalMapZoomCurr = s_localMapZoom->num;
-	if (g_TES->currentInterior)
-	{
-		s_isInExterior = false;
-		s_fLocalMapZoomCurr += kInteriorZoomMod;
-	}
-	UpdateTileScales(s_fLocalMapZoomCurr);
-
-	NiCamera *lmCamera = NiCamera::Create();
-	lmCamera->m_uiRefCount = 2;
-	lmCamera->WorldRotate()[0] = 0;
-	lmCamera->WorldRotate()[2] = 1.0F;
-	lmCamera->WorldRotate()[6] = -1.0F;;
-	lmCamera->WorldRotate()[8] = 0;
-	lmCamera->frustum.viewPort = {-2048.0F, 2048.0F, 2048.0F, -2048.0F};
-	lmCamera->frustum.n = 1.0F;
-	lmCamera->frustum.f = 131072.0F;
-	lmCamera->frustum.o = 1;
-	lmCamera->minNearPlaneDist = 1.0F;
-	lmCamera->maxFarNearRatio = 70768.0F;
-	lmCamera->LODAdjust = 0.001F;
-	g_shadowSceneNode->AddObject(lmCamera, 1);
-	s_localMapCamera = lmCamera;
-
-	NiDirectionalLight *dirLight = NiDirectionalLight::Create();
-	dirLight->m_uiRefCount = 2;
-	dirLight->ambientColor = {NRGB(175, 175, 175)};
-	dirLight->diffuseColor = {NRGB(169, 167, 140)};
-	dirLight->fogColor = {0, 0, 0};
-	dirLight->direction = {0.6154797F, -0.5235988F, 0.6154797F};
-	s_mmDirectionalLight = dirLight;
-
-	BSFogProperty *fogProperty = (BSFogProperty*)memcpy(Ni_Alloc<BSFogProperty>(), *(void**)0x11DEB00, sizeof(BSFogProperty));
-	fogProperty->color = {NRGB(23, 51, 47)};
-	fogProperty->startDistance = FLT_MAX;
-	fogProperty->endDistance = FLT_MAX;
-	s_mmFogProperty = fogProperty;
-
-	NiNode *waterParent = CdeclCall<NiNode*>(0xA5F030);
-	waterParent->m_uiRefCount = 2;
-
-	NiVector4 *waterVertices = Game_HeapAlloc<NiVector4>(3);
-	waterVertices[0] = __m128{-2048.0F, 2048.0F, 0, -2048.0F};
-	waterVertices[1] = __m128{-2048.0F, 0, 2048.0F, 2048.0F};
-	waterVertices[2] = __m128{0, 2048.0F, -2048.0F, 0};
-
-	vertexColors = Game_HeapAlloc<NiColorAlpha>(4);
-	__m128 kWaterPlaneColor = {NRGB(23, 51, 47), 0.72F};
-	vertexColors[0] = kWaterPlaneColor;
-	vertexColors[1] = kWaterPlaneColor;
-	vertexColors[2] = kWaterPlaneColor;
-	vertexColors[3] = kWaterPlaneColor;
-
-	shapeTriangles = Game_HeapAlloc<NiTriangle>(2);
-	shapeTriangles[0] = {0, 1, 2};
-	shapeTriangles[1] = {2, 1, 3};
-
-	NiTriShapeData *shapeData = ThisCall<NiTriShapeData*>(0xA7B630, Ni_Alloc<NiTriShapeData>(), 4, waterVertices, nullptr, vertexColors, nullptr, 0, 0, 2, shapeTriangles);
-
-	alphaProp = NiAlphaProperty::Create();
-	alphaProp->flags = 0x10ED;
-
-	index = 0;
-	do
-	{
-		NiTriShape *waterPlane = ThisCall<NiTriShape*>(0xA74480, Ni_Alloc<NiTriShape>(), shapeData);
-		waterPlane->AddProperty(alphaProp);
-		waterPlane->AddProperty(BSShaderNoLightingProperty::Create());
-		waterPlane->Hide();
-		waterPlane->LocalTranslate() = kWaterPlanePos[index];
-		waterParent->AddObject(waterPlane, 1);
-	}
-	while (++index < 9);
-
-	waterParent->AssignGeometryProps();
-	GameGlobals::ObjectLODRoot()->AddObject(waterParent, 1);
-	s_fakeWaterPlanes = waterParent;
-
-	auto worldIter = g_dataHandler->worldSpaceList.Head();
-	TESWorldSpace *worldSpc, *rootWorld = nullptr;
-	TESObjectCELL *rootCell;
-	WorldDimensions worldDimensions;
-	WorldMapMarkers *worldMarkers;
-	TESObjectREFR *markerRef;
-	MapMarkerData *markerData;
-	NiPoint2 posXY;
-	do
-	{
-		if (!(worldSpc = worldIter->data) || (!worldSpc->parent && !worldSpc->mapData.usableDimensions.X) || !(rootCell = worldSpc->cell) || rootCell->objectList.Empty())
-			continue;
-		worldDimensions.InitPosMods(worldSpc);
-		worldSpc = worldSpc->GetRootMapWorld();
-		if (rootWorld != worldSpc)
-		{
-			rootWorld = worldSpc;
-			worldDimensions.InitDimensions(rootWorld);
-			worldMarkers = &s_worldMapMarkers()[rootWorld];
-		}
-		auto refrIter = rootCell->objectList.Head();
-		do
-		{
-			if (!(markerRef = refrIter->data) || !(markerData = markerRef->GetMapMarkerData()))
-				continue;
-			__asm
-			{
-				lea		ecx, worldDimensions
-				lea		edx, [ecx+0x24]
-				mov		eax, markerRef
-				movq	xmm0, qword ptr [eax+0x30]
-				call	GetWorldMapPosMults
-				movlps	posXY, xmm0
-			}
-			(*worldMarkers)[worldDimensions.coord].Append(markerRef, markerData, posXY);
-		}
-		while (refrIter = refrIter->next);
-	}
-	while (worldIter = worldIter->next);
-
-	s_shadowSceneNodes[0] = *(NiNode**)0x11DEB34;	// Sky
-	s_shadowSceneNodes[1] = *(NiNode**)0x11DEDA4;	// Weather
-	s_shadowSceneNodes[2] = *(NiNode**)0x11D86A8;	// TerrainLOD
-	s_shadowSceneNodes[3] = *(NiNode**)0x11DED58;	// ParticleSysMngr
-	s_shadowSceneNodes[4] = *(NiNode**)0x11CA438;	// Grass
-	SafeWrite16(0x452736, 0x7705);
-	SafeWrite8(0x555C20, 0xC3);
-	WriteRelCall(0x9438F6, (UInt32)UpdateCellsSeenBitsHook);
-	WriteRelCall(0x77951E, (UInt32)DiscoverLocationHook);
-	WritePushRetRelJump(0x60F13A, 0x60F145, (UInt32)SetQuestTargetsHook);
-	WriteRelCall(0x952C69, (UInt32)UpdatePlacedMarkerHook);
-	WriteRelCall(0x952F6B, (UInt32)UpdatePlacedMarkerHook);
-	WriteRelJump(0xE74C3C, (UInt32)RendererRecreateHook);
-	return true;
-}
 
 const __m128 kLocalMapPosMults = {1 / 12288.0F, 1 / -12288.0F, 0, 0}, kVertexAlphaMults = {0.25F, 0.5F, 0.75F, 1.0F};
 alignas(16) const int kNWCoordAdjust[] = {-1, 2, 0, 0};
@@ -1702,7 +1495,8 @@ typedef UnorderedMap<UInt32, RenderedEntry, 0x40, false> LocalTexturesMap;
 TempObject<LocalTexturesMap> s_renderedExteriors, s_renderedInterior;
 TempObject<UnorderedMap<UInt32, DoorRefsList, 0x20, false>> s_exteriorDoorRefs;
 TempObject<DoorRefsList> s_doorRefsList(0x40);
-TempObject<Vector<CulledObject>> s_hiddenObjects(0x40);
+TempObject<Vector<CulledObject>> s_hiddenObjectsExt(0x40);
+TempObject<Vector<NiAVObject*>> s_hiddenObjectsInt(0x40);
 TESQuest *s_activeQuest = nullptr;
 TESObjectREFR *s_placedMarker = nullptr;
 TempObject<Map<TESObjectREFR*, QuestMarkerTile>> s_questMarkers(0x10);
@@ -1742,6 +1536,237 @@ void MiniMapLoadGame()
 	s_pcCurrWorld = nullptr;
 	s_pcRootWorld = nullptr;
 	s_lastInterior = nullptr;
+}
+
+bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
+{
+	if (s_miniMapMode) return true;
+
+	if (!s_miniMapIndex)
+	{
+		UInt8 modIdx = g_dataHandler->GetModIndex("JIP MiniMap.esp");
+		if (modIdx != 0xFF)
+			s_miniMapIndex = modIdx;
+	}
+	if (scriptObj->modIndex != s_miniMapIndex)
+		return true;
+
+	auto tile = g_HUDMainMenu->tile->GetComponentTile("JIPMiniMap");
+	if (!tile) return true;
+
+	UInt8 *codePtr = scriptData + 0x2FE5;
+	if (*(UInt32*)codePtr == 0x173031)
+	{
+		*codePtr = 0x33;
+		scriptObj->quest->questDelayTime = 1 / 60.0F;
+	}
+
+	//s_miniMapVisible = tile->GetValue(kTileValue_visible);
+	s_miniMapScale = tile->GetValue(kTileValue_user1);
+	auto node = tile->children.Tail()->prev;
+	s_pcMarkerRotate = node->data->GetValue(kTileValue_rotateangle);
+	node->data->SetFloat(kTileValue_depth, 34.0F);
+	tile = node->prev->data;
+	s_miniMapMode = tile->GetValue(kTileValue_user0);
+	s_miniMapPosX = tile->GetValue(kTileValue_user1);
+	s_miniMapPosY = tile->GetValue(kTileValue_user2);
+	node = tile->children.Tail()->prev;
+	tile = node->data;
+	s_localMapZoom = tile->GetValue(kTileValue_zoom);
+	s_worldMapRect = (TileRect*)node->prev->data;
+	s_worldMapZoom = s_worldMapRect->GetValue(kTileValue_zoom);
+	node = tile->children.Tail();
+
+	NiVector3 *shapeVertices = Game_HeapAlloc<NiVector3>(0x121), *pVertices = shapeVertices, vertex = _mm_setzero_ps();
+	NiPoint2 *shapeUVCoords = Game_HeapAlloc<NiPoint2>(0x121), *pUVCoords = shapeUVCoords, uvCoord = _mm_setzero_ps();
+	UInt32 index = 0x11, iterZ = 0x11;
+	while (true)
+	{
+		*pVertices++ = vertex;
+		*pUVCoords++ = uvCoord;
+		if (--iterZ)
+		{
+			vertex.z -= 8.0F;
+			uvCoord.y += 0.0625F;
+			continue;
+		}
+		if (!--index) break;
+		vertex.x += 8.0F;
+		vertex.z = 0;
+		uvCoord.x += 0.0625F;
+		uvCoord.y = 0;
+		iterZ = 0x11;
+	}
+
+	NiTriangle *shapeTriangles = Game_HeapAlloc<NiTriangle>(0x200), *pTriangles = shapeTriangles;
+	UInt32 vtx1 = 0, vtx2 = 0x11;
+	do
+	{
+		index = 0x10;
+		do
+		{
+			pTriangles[0].point1 = vtx2;
+			pTriangles[0].point2 = vtx1++;
+			pTriangles[0].point3 = vtx1;
+			pTriangles[1].point1 = vtx1;
+			pTriangles[1].point3 = vtx2++;
+			pTriangles[1].point2 = vtx2;
+			pTriangles += 2;
+		}
+		while (--index);
+		vtx1++;
+		vtx2++;
+	}
+	while (vtx2 < 0x120);
+
+	auto vertexColors = Game_HeapAlloc<NiColorAlpha>(0xA29);
+	ZERO_BYTES(vertexColors, sizeof(NiColorAlpha) * 0xA29);
+
+	auto alphaProp = NiAlphaProperty::Create();
+	alphaProp->flags = 0x8D;
+
+	index = 0;
+	do
+	{
+		auto localTile = (TileImage*)node->data;
+		node = node->prev;
+		auto sciTriShp = (BSScissorTriShape*)localTile->node->m_children[0];
+		s_localMapShapes[index] = sciTriShp;
+		auto shapeData = (NiTriShapeData*)sciTriShp->geometryData;
+		s_localMapShapeDatas[index] = shapeData;
+		s_tileShaderProps[index] = localTile->shaderProp;
+		NiReplaceObject(&localTile->shaderProp->srcTexture, nullptr);
+
+		shapeData->numVertices = 0x121;
+		shapeData->numTriangles = 0x200;
+		shapeData->trianglePoints = 0x600;
+
+		Game_HeapFree(shapeData->vertices);
+		shapeData->vertices = shapeVertices;
+
+		Game_HeapFree(shapeData->normals);
+		shapeData->normals = nullptr;
+
+		Game_HeapFree(shapeData->vertexColors);
+		shapeData->vertexColors = vertexColors;
+		vertexColors += 0x121;
+
+		Game_HeapFree(shapeData->uvCoords);
+		shapeData->uvCoords = shapeUVCoords;
+
+		Game_HeapFree(shapeData->triangles);
+		shapeData->triangles = shapeTriangles;
+
+		NiReplaceObject(&sciTriShp->m_propertyList.Head()->data, alphaProp);
+		NiReplaceObject(&sciTriShp->alphaProp, alphaProp);
+	}
+	while (++index < 9);
+
+	s_doorMarkersRect = (TileRect*)node->data;
+	s_lQuestMarkersRect = (TileRect*)node->prev->data;
+	node = s_worldMapRect->children.Tail();
+	s_worldMapTile = (TileImage*)node->data;
+	node = node->prev;
+	s_mapMarkersRect = (TileRect*)node->data;
+	node = node->prev;
+	s_wQuestMarkersRect = (TileRect*)node->data;
+
+	s_fLocalMapZoomCurr = s_localMapZoom->num;
+	if (g_TES->currentInterior)
+	{
+		s_isInExterior = false;
+		s_fLocalMapZoomCurr += kInteriorZoomMod;
+	}
+	UpdateTileScales(s_fLocalMapZoomCurr);
+
+	auto lmCamera = NiCamera::Create();
+	lmCamera->m_uiRefCount = 2;
+	lmCamera->WorldRotate()[0] = 0;
+	lmCamera->WorldRotate()[2] = 1.0F;
+	lmCamera->WorldRotate()[6] = -1.0F;;
+	lmCamera->WorldRotate()[8] = 0;
+	lmCamera->frustum.viewPort = {-2048.0F, 2048.0F, 2048.0F, -2048.0F};
+	lmCamera->frustum.dNear = 1.0F;
+	lmCamera->frustum.dFar = 131072.0F;
+	lmCamera->frustum.ortho = 1;
+	lmCamera->minNearPlaneDist = 1.0F;
+	lmCamera->maxFarNearRatio = 70768.0F;
+	lmCamera->LODAdjust = 0.001F;
+	g_shadowSceneNode->AddObject(lmCamera, 1);
+	s_localMapCamera = lmCamera;
+
+	auto dirLight = NiDirectionalLight::Create();
+	dirLight->m_uiRefCount = 2;
+	dirLight->ambientColor = NRGBA(175, 175, 175, 0);
+	dirLight->diffuseColor = NRGBA(169, 167, 140, 0);
+	dirLight->fogColor = _mm_setzero_ps();
+	dirLight->direction = __m128{0.6154797F, -0.5235988F, 0.6154797F, 0};
+	s_mmDirectionalLight = dirLight;
+
+	auto fogProperty = (BSFogProperty*)memcpy(Ni_Alloc<BSFogProperty>(), *(void**)0x11DEB00, sizeof(BSFogProperty));
+	fogProperty->color = NRGBA(23, 51, 47, 0);
+	fogProperty->startDistance = FLT_MAX;
+	fogProperty->endDistance = FLT_MAX;
+	s_mmFogProperty = fogProperty;
+
+	s_fakeWaterPlanes = CreateFakeWaterPlanes();
+	GameGlobals::ObjectLODRoot()->AddObject(s_fakeWaterPlanes, 1);
+
+	auto worldIter = g_dataHandler->worldSpaceList.Head();
+	TESWorldSpace *worldSpc, *rootWorld = nullptr;
+	TESObjectCELL *rootCell;
+	WorldDimensions worldDimensions;
+	WorldMapMarkers *worldMarkers;
+	TESObjectREFR *markerRef;
+	MapMarkerData *markerData;
+	NiPoint2 posXY;
+	do
+	{
+		if (!(worldSpc = worldIter->data) || (!worldSpc->parent && !worldSpc->mapData.usableDimensions.X) || !(rootCell = worldSpc->cell) || rootCell->objectList.Empty())
+			continue;
+		worldDimensions.InitPosMods(worldSpc);
+		worldSpc = worldSpc->GetRootMapWorld();
+		if (rootWorld != worldSpc)
+		{
+			rootWorld = worldSpc;
+			worldDimensions.InitDimensions(rootWorld);
+			worldMarkers = &s_worldMapMarkers()[rootWorld];
+		}
+		auto refrIter = rootCell->objectList.Head();
+		do
+		{
+			if (!(markerRef = refrIter->data) || !(markerData = markerRef->GetMapMarkerData()))
+				continue;
+			__asm
+			{
+				lea		ecx, worldDimensions
+				lea		edx, [ecx+0x24]
+				mov		eax, markerRef
+				movq	xmm0, qword ptr [eax+0x30]
+				call	GetWorldMapPosMults
+				movlps	posXY, xmm0
+			}
+			(*worldMarkers)[worldDimensions.coord].Append(markerRef, markerData, posXY);
+		}
+		while (refrIter = refrIter->next);
+	}
+	while (worldIter = worldIter->next);
+
+	s_shadowSceneNodes[0] = *(NiNode**)0x11DEB34;	// Sky
+	s_shadowSceneNodes[1] = *(NiNode**)0x11DEDA4;	// Weather
+	s_shadowSceneNodes[2] = *(NiNode**)0x11D86A8;	// TerrainLOD
+	s_shadowSceneNodes[3] = *(NiNode**)0x11DED58;	// ParticleSysMngr
+	s_shadowSceneNodes[4] = *(NiNode**)0x11CA438;	// Grass
+	s_BlackPlane01() = "BlackPlane01";
+	SafeWrite16(0x452736, 0x7705);
+	SafeWrite8(0x555C20, 0xC3);
+	WriteRelCall(0x9438F6, (UInt32)UpdateCellsSeenBitsHook);
+	WriteRelCall(0x77951E, (UInt32)DiscoverLocationHook);
+	WriteRelJump(0x60F13A, (UInt32)SetQuestTargetsHook);
+	WriteRelCall(0x952C69, (UInt32)UpdatePlacedMarkerHook);
+	WriteRelCall(0x952F6B, (UInt32)UpdatePlacedMarkerHook);
+	WriteRelJump(0xE74C3C, (UInt32)RendererRecreateHook);
+	return true;
 }
 
 bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
@@ -1837,7 +1862,6 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 		for (auto shaderProp : s_tileShaderProps)
 			shaderProp->hasVtxColors = useFogOfWar;
 		if (useFogOfWar)
-		{
 			__asm
 			{
 				mov		eax, s_tileShaderProps
@@ -1846,7 +1870,6 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				mulps	xmm0, kVertexAlphaMults
 				movups	s_vertexAlphaLevel+4, xmm0
 			}
-		}
 	}
 
 	if (worldMap)
@@ -1953,7 +1976,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 	}
 	else
 	{
-		bool updateFogOfWar = useFogOfWar & s_updateFogOfWar/*, saveToFile = (showFlags & 0x20) != 0*/;
+		bool updateFogOfWar = useFogOfWar && s_updateFogOfWar/*, saveToFile = (showFlags & 0x20) != 0*/;
 		s_updateFogOfWar = false;
 
 		D3DFORMAT d3dFormat = (showFlags & 8) ? D3DFMT_X8R8G8B8 : D3DFMT_L8;
@@ -2045,10 +2068,10 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				{
 					if (!(cell = s_currCellGrid[gridIdx]))
 						continue;
-					s_hiddenObjects->Append(cell->Get3DNode(4));
+					s_hiddenObjectsExt->Append(cell->Get3DNode(4));
 					for (auto anmIter = cell->renderData->animatedRefs.Begin(); anmIter; ++anmIter)
 						if ((hideNode = anmIter.Get()) && ((hideNode->GetBSXFlags() & 0x23) == 0x21))
-							s_hiddenObjects->Append(hideNode);
+							s_hiddenObjectsExt->Append(hideNode);
 					if (!(cell->cellFlags & 2))
 						continue;
 					objectRef = nullptr;
@@ -2057,7 +2080,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					{
 						if (!awtIter->data || !awtIter->data->IsCreated() || !(hideNode = awtIter->data->GetRefNiNode()))
 							continue;
-						s_hiddenObjects->Append(hideNode);
+						s_hiddenObjectsExt->Append(hideNode);
 						objectRef = awtIter->data;
 					}
 					while (awtIter = awtIter->next);
@@ -2069,7 +2092,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				}
 				while (++gridIdx < 9);
 				if (!updateTiles)
-					s_hiddenObjects->Append(*(NiNode**)0x11D8690);
+					s_hiddenObjectsExt->Append(*(NiNode**)0x11D8690);
 				else if (updateWater)
 				{
 					s_fakeWaterPlanes->LocalTranslate() = nwXY;
@@ -2078,7 +2101,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				GameGlobals::SceneLightsLock()->Enter();
 				for (auto lgtNode = g_shadowSceneNode->sceneLights.Begin(); lgtNode; ++lgtNode)
 					if (lgtNode->isPointLight && lgtNode->light && !(lgtNode->light->m_flags & 1))
-						s_hiddenObjects->Append(lgtNode->light);
+						s_hiddenObjectsExt->Append(lgtNode->light);
 				g_shadowSceneNode->pSunLight->light = s_mmDirectionalLight;
 				g_shadowSceneNode->fogProperty = s_mmFogProperty;
 				
@@ -2134,7 +2157,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				while (++gridIdx < 9);
 
 				*(bool*)0x11FF104 = underwaterFog;
-				s_hiddenObjects->Clear();
+				s_hiddenObjectsExt->Clear();
 				g_shadowSceneNode->pSunLight->light = g_TES->directionalLight;
 				g_shadowSceneNode->fogProperty = *(BSFogProperty**)0x11DEB00;
 				GameGlobals::SceneLightsLock()->Leave();
@@ -2184,27 +2207,33 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				movlps	posMult, xmm0
 			}
 
-			if (s_lastInterior != parentCell)
+			if (updateTiles)
 			{
-				s_lastInterior = parentCell;
-				s_renderedInterior->Clear();
-				updateTiles = true;
-			}
-
-			if ((showFlags & 2) && updateTiles)
-			{
-				s_doorRefsList->Clear();
-				GetTeleportDoors(parentCell, *s_doorRefsList);
+				if (s_lastInterior != parentCell)
+				{
+					s_lastInterior = parentCell;
+					s_renderedInterior->Clear();
+				}
+				if (showFlags & 2)
+				{
+					s_doorRefsList->Clear();
+					GetTeleportDoors(parentCell, *s_doorRefsList);
+				}
+				s_hiddenObjectsInt->Clear();
+				auto cellNodes = parentCell->Get3DNodes();
+				s_hiddenObjectsInt->Append(cellNodes[0]);
+				s_hiddenObjectsInt->Append(cellNodes[4]);
+				for (auto objIter = cellNodes[3]->m_children.Begin(); objIter; ++objIter)
+					if (*objIter && (objIter->m_blockName == s_BlackPlane01))
+						s_hiddenObjectsInt->Append(*objIter);
 			}
 
 			if (updateTiles |= (s_currLocalCoords != coord))
 			{
 				s_currLocalCoords = coord;
 				PackCurrGridCoords(coord);
-				auto cellNodes = parentCell->Get3DNodes();
-				cellNodes[0]->Hide();
-				cellNodes[4]->Hide();
-				cellNodes[8]->Hide();
+				for (auto objIter = s_hiddenObjectsInt->Begin(); objIter; ++objIter)
+					objIter->Hide();
 				s_shadowSceneNodes[3]->Hide();
 				LIGHTING_PASSES = 0x34;
 
@@ -2225,9 +2254,8 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				}
 				while (++gridIdx < 9);
 
-				cellNodes[0]->Show();
-				cellNodes[4]->Show();
-				cellNodes[8]->Show();
+				for (auto objIter = s_hiddenObjectsInt->Begin(); objIter; ++objIter)
+					objIter->Show();
 				s_shadowSceneNodes[3]->Show();
 			}
 			else if (updateFogOfWar)

@@ -1536,9 +1536,10 @@ constexpr ParamInfo kParams_OneOptionalFloat_OneOptionalInt[] =
 	{"Integer", kParamType_Integer, 1}
 };
 
-constexpr ParamInfo kParams_OneOptionalString_OneOptionalInt[] =
+constexpr ParamInfo kParams_OneOptionalString_TwoOptionalInts[] =
 {
 	{"String", kParamType_String, 1},
+	{"Integer", kParamType_Integer, 1},
 	{"Integer", kParamType_Integer, 1}
 };
 

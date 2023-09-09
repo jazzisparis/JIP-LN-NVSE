@@ -48,38 +48,41 @@ __declspec(naked) UInt32 __fastcall StrHashCS(const char *inKey)
 {
 	__asm
 	{
+		push	ebx
 		mov		eax, 0x6B49D20B
 		test	ecx, ecx
 		jz		done
 		ALIGN 16
 	iterHead:
-		movzx	edx, byte ptr [ecx]
-		test	dl, dl
+		mov		ebx, [ecx]
+		test	bl, bl
 		jz		done
+		movzx	edx, bl
 		shl		edx, 4
 		sub		eax, edx
 		mov		edx, eax
 		shl		eax, 5
 		sub		eax, edx
-		movzx	edx, byte ptr [ecx+1]
-		test	dl, dl
+		test	bh, bh
 		jz		done
+		movzx	edx, bh
 		shl		edx, 0xC
 		sub		eax, edx
 		mov		edx, eax
 		shl		eax, 5
 		sub		eax, edx
-		movzx	edx, byte ptr [ecx+2]
-		test	dl, dl
+		shr		ebx, 0x10
+		test	bl, bl
 		jz		done
+		movzx	edx, bl
 		shl		edx, 0x14
 		sub		eax, edx
 		mov		edx, eax
 		shl		eax, 5
 		sub		eax, edx
-		movzx	edx, byte ptr [ecx+3]
-		test	dl, dl
+		test	bh, bh
 		jz		done
+		movzx	edx, bh
 		sub		eax, edx
 		mov		edx, eax
 		shl		eax, 5
@@ -87,6 +90,7 @@ __declspec(naked) UInt32 __fastcall StrHashCS(const char *inKey)
 		add		ecx, 4
 		jmp		iterHead
 	done:
+		pop		ebx
 		retn
 	}
 }
@@ -95,6 +99,7 @@ __declspec(naked) UInt32 __fastcall StrHashCI(const char *inKey)
 {
 	__asm
 	{
+		push	ebx
 		push	esi
 		mov		eax, 0x6B49D20B
 		test	ecx, ecx
@@ -103,36 +108,38 @@ __declspec(naked) UInt32 __fastcall StrHashCI(const char *inKey)
 		xor		ecx, ecx
 		ALIGN 16
 	iterHead:
-		mov		cl, [esi]
-		test	cl, cl
+		mov		ebx, [esi]
+		test	bl, bl
 		jz		done
+		mov		cl, bl
 		movzx	edx, kLwrCaseConverter[ecx]
 		shl		edx, 4
 		sub		eax, edx
 		mov		edx, eax
 		shl		eax, 5
 		sub		eax, edx
-		mov		cl, [esi+1]
-		test	cl, cl
+		test	bh, bh
 		jz		done
+		mov		cl, bh
 		movzx	edx, kLwrCaseConverter[ecx]
 		shl		edx, 0xC
 		sub		eax, edx
 		mov		edx, eax
 		shl		eax, 5
 		sub		eax, edx
-		mov		cl, [esi+2]
-		test	cl, cl
+		shr		ebx, 0x10
+		test	bl, bl
 		jz		done
+		mov		cl, bl
 		movzx	edx, kLwrCaseConverter[ecx]
 		shl		edx, 0x14
 		sub		eax, edx
 		mov		edx, eax
 		shl		eax, 5
 		sub		eax, edx
-		mov		cl, [esi+3]
-		test	cl, cl
+		test	bh, bh
 		jz		done
+		mov		cl, bh
 		movzx	edx, kLwrCaseConverter[ecx]
 		sub		eax, edx
 		mov		edx, eax
@@ -142,6 +149,7 @@ __declspec(naked) UInt32 __fastcall StrHashCI(const char *inKey)
 		jmp		iterHead
 	done:
 		pop		esi
+		pop		ebx
 		retn
 	}
 }

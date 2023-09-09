@@ -108,6 +108,8 @@ public:
 	tList(Item *item) {m_listHead = item;}
 	tList(const tList &rhs) {m_listHead = rhs.m_listHead;}
 
+	inline void operator=(const tList &rhs) {m_listHead = rhs.m_listHead;}
+
 	template <class Matcher>
 	UInt32 FreeNodes(Node *node, const Matcher &matcher) const
 	{

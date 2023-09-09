@@ -112,37 +112,116 @@ public:
 };
 static_assert(sizeof(CompressedArchiveFile) == 0x178);
 
-// 5C8 (?)
+// 5C8
 class NiStream
 {
 public:
 	virtual void	Destroy(bool doFree);
-	virtual void	Unk_01(void);
-	virtual void	Unk_02(void);
-	virtual void	Unk_03(void);
-	virtual void	Unk_04(void);
-	virtual void	Unk_05(void);
-	virtual void	Unk_06(void);
-	virtual void	Unk_07(void);
-	virtual void	Unk_08(void);
-	virtual void	Unk_09(void);
-	virtual void	Unk_0A(void);
-	virtual void	Unk_0B(void);
-	virtual void	Unk_0C(void);
-	virtual void	Unk_0D(void);
-	virtual void	Unk_0E(void);
-	virtual void	Unk_0F(void);
-	virtual void	Unk_10(void);
-	virtual void	Unk_11(void);
-	virtual void	Unk_12(void);
-	virtual void	Unk_13(void);
-	virtual void	Unk_14(void);
-	virtual void	Unk_15(void);
-	virtual void	Unk_16(void);
-	virtual void	Unk_17(void);
+	virtual bool	Load(NiBinaryStream *pkIstr);
+	virtual bool	Load1(char *pcBuffer, SInt32 *iBufferSize);
+	virtual bool	Load2(const char *pcName);
+	virtual bool	Save(NiBinaryStream *pkOstr);
+	virtual bool	Save1(char **pcBuffer, SInt32 *iBufferSize);
+	virtual bool	Save2(const char *pcName);
+	virtual void	Unk_07();
+	virtual void	RegisterFixedString();
+	virtual bool	RegisterSaveObject(NiObject *pkObject);
+	virtual void	ChangeObject(NiObject *pkNewObject);
+	virtual UInt32	GetLinkIDFromObject(const NiObject *pkObject);
+	virtual void	SaveLinkID(NiObject *pkObject);
+	virtual bool	LoadHeader();
+	virtual void	SaveHeader();
+	virtual bool	LoadStream();
+	virtual bool	SaveStream();
+	virtual void	RegisterObjects();
+	virtual void	LoadTopLevelObjects();
+	virtual void	SaveTopLevelObjects();
+	virtual bool	LoadObject();
+	virtual UInt32	PreSaveObjectSizeTable();
+	virtual bool	SaveObjectSizeTable(UInt32 uiStartOffset);
+	virtual bool	LoadObjectSizeTable();
 
-	UInt32			unk004[369];
+	enum ThreadStatus
+	{
+		eTS_IDLE,
+		eTS_LOADING,
+		eTS_CANCELLING,
+		eTS_PAUSING,
+		eTS_PAUSED
+	};
+
+	enum ErrorMessages
+	{
+		STREAM_OKAY,
+		FILE_NOT_LOADED,
+		NOT_NIF_FILE,
+		OLDER_VERSION,
+		LATER_VERSION,
+		NO_CREATE_FUNCTION,
+		ENDIAN_MISMATCH
+	};
+
+	struct BSStreamHeader
+	{
+		UInt32	NifBSVersion;
+		char	author[0x40];
+		char	processScript[0x40];
+		char	exportScript[0x40];
+	};
+
+	struct NiObjectGroup
+	{
+		UInt32		size;
+		void		*pBuffer;
+		void		*pFree;
+		UInt32		refCount;
+	};
+
+	class NiSearchPath
+	{
+		UInt32	nextPath;
+		char	filePath[0x104];
+		char	referencePath[0x104];
+	};
+
+	BSStreamHeader					streamHeader;		// 004
+	NiTArray<NiObjectGroup*>		objGroups;			// 0C8
+	UInt32							NifFileVersion;		// 0D8
+	UInt32							userDefinedVersion;	// 0DC
+	char							fileName[0x104];	// 0E0
+	bool							saveLittleEndian;	// 1E4
+	bool							sourceLittleEndian;	// 1E5
+	UInt8							pad1E6[2];			// 1E6
+	NiSearchPath					*pSearchPath;		// 1E8
+	NiTLargeArray<NiObject*>		objects;			// 1EC
+	NiTLargeArray<UInt32>			objectSizes;		// 204
+	NiTLargeArray<NiObject*>		topObjects;			// 21C
+	NiTLargeArray<NiFixedString>	fixedStrings;		// 234
+	NiBinaryStream					*inputStream;		// 24C
+	NiBinaryStream					*outputStream;		// 250
+	UInt32							unk254[8];			// 254
+	NiTMap<NiObject*, UInt32>		registerMap;		// 274
+	UInt32							unk284[2];			// 284
+	ThreadStatus					threadStatus;		// 28C
+	bool							bgLoadExitStatus;	// 290
+	UInt8							pad291[3];			// 291
+	UInt32							unk294[3];			// 294
+	void							*pThread;			// 2A0	NiThread
+	void							*bgLoadProcedure;	// 2A4
+	UInt32							threadPriority;		// 2A8
+	UInt32							pcuAffinity[2];		// 2AC
+	char							path2B4[0x104];		// 2B4
+	ErrorMessages					lastError;			// 3B8
+	char							lastErrorMsg[0x104];// 3BC
+	char							referencePath[0x104];	// 4C0
+	NiObject						*object5C4;			// 5C4
+
+	void Init() {ThisCall(0xA66150, this);}
+	void Clear() {ThisCall(0xA65300, this);}
+	void InsertObject(NiObject *pObject) {ThisCall(0xA66370, this, pObject);}
+	void ExportToFile(const char *filePath) {Save2(filePath);}
 };
+static_assert(sizeof(NiStream) == 0x5C8);
 
 // 5D4 (?)
 class BSStream : public NiStream

@@ -156,13 +156,13 @@ bool SetInputEventHandler(UInt32 eventMask, Script *script, SInt32 keyID, bool d
 	bool result = false;
 	if (keyID < 0)
 	{
-		if (doAdd) return false;
-		for (auto iter = events.Begin(); iter; ++iter)
-		{
-			result |= onUp ? iter().onUp.Erase(script) : iter().onDown.Erase(script);
-			if (iter().Empty())
-				s_inputEventClear |= eventMask;
-		}
+		if (!doAdd)
+			for (auto iter = events.Begin(); iter; ++iter)
+			{
+				result |= onUp ? iter().onUp.Erase(script) : iter().onDown.Erase(script);
+				if (iter().Empty())
+					s_inputEventClear |= eventMask;
+			}
 		return result;
 	}
 	else if (onKey)
@@ -175,18 +175,15 @@ bool SetInputEventHandler(UInt32 eventMask, Script *script, SInt32 keyID, bool d
 	LNDInpuCallbacks *callbacks;
 	if (doAdd)
 	{
-		if (events.Insert(keyID, &callbacks)) s_LNEventFlags |= eventMask;
+		if (events.Insert(keyID, &callbacks))
+			s_LNEventFlags |= eventMask;
 		result = onUp ? callbacks->onUp.Insert(script) : callbacks->onDown.Insert(script);
 	}
-	else
+	else if (callbacks = events.GetPtr(keyID))
 	{
-		callbacks = events.GetPtr(keyID);
-		if (callbacks)
-		{
-			result = onUp ? callbacks->onUp.Erase(script) : callbacks->onDown.Erase(script);
-			if (callbacks->Empty())
-				s_inputEventClear |= eventMask;
-		}
+		result = onUp ? callbacks->onUp.Erase(script) : callbacks->onDown.Erase(script);
+		if (callbacks->Empty())
+			s_inputEventClear |= eventMask;
 	}
 	return result;
 }
@@ -238,7 +235,6 @@ bool __stdcall ProcessLNEventHandler(UInt32 eventMask, Script *udfScript, bool a
 		}
 	}
 	else if (eventID >= kLNEventID_OnCrosshairOn)
-	{
 		if (numFilter)
 		{
 			evntData.typeID = numFilter;
@@ -253,7 +249,6 @@ bool __stdcall ProcessLNEventHandler(UInt32 eventMask, Script *udfScript, bool a
 		}
 		else if ((eventID >= kLNEventID_OnButtonDown) && addEvt)
 			return false;
-	}
 
 	LNEventCallbacks *callbacks = &s_LNEvents[eventID]();
 	if (addEvt)

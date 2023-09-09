@@ -21,10 +21,14 @@ struct BaseExtraList
 {
 	virtual void	Destroy(bool doFree);
 
-	BSExtraData		*m_data;					// 04
-	UInt8			m_presenceBitfield[0x13];	// 08 - if a bit is set, then the extralist should contain that extradata
-	UInt8			jipRefFlags5F;				// 1B	0x5F in TESObjectREFR
-	NPCPerksInfo	*perksInfo;					// 1C	JIP only!
+	BSExtraData			*m_data;					// 04
+	UInt8				m_presenceBitfield[0x13];	// 08 - if a bit is set, then the extralist should contain that extradata
+	UInt8				jipRefFlags5F;				// 1B	0x5F in TESObjectREFR
+	union											// 1C	JIP only!
+	{
+		NPCPerksInfo	*perksInfo;
+		TESAmmo			*ammo;		//	Stored for projectile refs
+	};
 
 	bool HasType(UInt32 type) const;
 	void __fastcall SetTypePresent(UInt32 type, bool present);

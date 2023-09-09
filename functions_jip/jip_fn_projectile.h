@@ -76,7 +76,7 @@ bool Cmd_SetProjectileTraitNumeric_Execute(COMMAND_ARGS)
 		switch (traitID)
 		{
 			case 0:
-				if ((iVal == 1) || (iVal == 2) || (iVal == 4) || (iVal == 8) || (iVal == 16))
+				if (!(iVal & (iVal - 1)))
 					projectile->type = iVal;
 				break;
 			case 1:
@@ -183,7 +183,7 @@ bool Cmd_GetProjectileRefSpeedMult_Execute(COMMAND_ARGS)
 bool Cmd_SetProjectileRefSource_Execute(COMMAND_ARGS)
 {
 	TESObjectREFR *newSource = NULL;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &newSource) && thisObj->IsProjectile())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &newSource) && IS_PROJECTILE(thisObj))
 		((Projectile*)thisObj)->sourceRef = newSource;
 	return true;
 }
@@ -191,7 +191,7 @@ bool Cmd_SetProjectileRefSource_Execute(COMMAND_ARGS)
 bool Cmd_SetProjectileRefWeapon_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon) && thisObj->IsProjectile() && IS_ID(weapon, TESObjectWEAP))
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon) && IS_PROJECTILE(thisObj) && IS_ID(weapon, TESObjectWEAP))
 		((Projectile*)thisObj)->sourceWeap = weapon;
 	return true;
 }
@@ -199,7 +199,7 @@ bool Cmd_SetProjectileRefWeapon_Execute(COMMAND_ARGS)
 bool Cmd_SetProjectileRefDamage_Execute(COMMAND_ARGS)
 {
 	float damage;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &damage) && thisObj->IsProjectile())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &damage) && IS_PROJECTILE(thisObj))
 		((Projectile*)thisObj)->hitDamage = damage;
 	return true;
 }
@@ -207,7 +207,7 @@ bool Cmd_SetProjectileRefDamage_Execute(COMMAND_ARGS)
 bool Cmd_SetProjectileRefSpeedMult_Execute(COMMAND_ARGS)
 {
 	float speedMult;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &speedMult) && thisObj->IsProjectile())
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &speedMult) && IS_PROJECTILE(thisObj))
 		((Projectile*)thisObj)->speedMult = speedMult;
 	return true;
 }
@@ -239,11 +239,10 @@ bool Cmd_GetMineArmed_Execute(COMMAND_ARGS)
 
 bool Cmd_GetProjectileMuzzleFlash_Execute(COMMAND_ARGS)
 {
-	const char *resStr;
+	const char *resStr = nullptr;
 	BGSProjectile *projectile;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile) && IS_ID(projectile, BGSProjectile))
 		resStr = projectile->muzzleFlash.GetModelPath();
-	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
@@ -305,10 +304,10 @@ bool Cmd_GetProjectileRefImpactMaterial_Execute(COMMAND_ARGS)
 
 bool Cmd_GetProjectileLight_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	BGSProjectile *projectile;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &projectile) && IS_ID(projectile, BGSProjectile) && projectile->lightProjectile)
 		REFR_RES = projectile->lightProjectile->refID;
+	else REFR_RES = 0;
 	return true;
 }
 

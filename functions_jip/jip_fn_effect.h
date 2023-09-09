@@ -333,7 +333,8 @@ bool Cmd_GetActiveEffects_Execute(COMMAND_ARGS)
 	TempElements *tmpElements = GetTempElements();
 	do
 	{
-		if (ActiveEffect *activeEff = iter->data; activeEff && activeEff->bActive && !activeEff->bTerminated && activeEff->magicItem && (activeEff->magnitude > 0))
+		if (ActiveEffect *activeEff = iter->data; activeEff && activeEff->bActive && !activeEff->bTerminated &&
+			activeEff->magicItem && ((activeEff->magnitude > 0) || (activeEff->effectItem->setting->effectFlags & 0x100)))
 			if (TESForm *form = DYNAMIC_CAST(activeEff->magicItem, MagicItem, TESForm); form && (!filter || ((form->typeID & filter) == filter)))
 				tmpElements->InsertUnique(form);
 	}

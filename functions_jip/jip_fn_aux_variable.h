@@ -17,30 +17,29 @@ DEFINE_CMD_COND_ONLY(AuxVarGetFltCond, 1, 2, kParams_OneQuest_OneInt);
 
 #define AUX_VAR_CS	ScopedPrimitiveCS cs(&s_auxVarCS);
 
-AuxVarValsArr* __fastcall AVGetArray(const AuxVarInfo &varInfo, bool addArr = false)
+AuxVarValsArr* __fastcall AuxVarInfo::GetArray(bool addArr)
 {
 	if (addArr) 
-		return &varInfo.ModsMap()[varInfo.modIndex][varInfo.ownerID][varInfo.varName];
-	if (AuxVarOwnersMap *ownersMap = varInfo.ModsMap().GetPtr(varInfo.modIndex))
-		if (AuxVarVarsMap *varsMap = ownersMap->GetPtr(varInfo.ownerID))
-			return varsMap->GetPtr(varInfo.varName);
+		return &ModsMap()[modIndex][ownerID][varName];
+	if (AuxVarOwnersMap *ownersMap = ModsMap().GetPtr(modIndex))
+		if (AuxVarVarsMap *varsMap = ownersMap->GetPtr(ownerID))
+			return varsMap->GetPtr(varName);
 	return nullptr;
 }
 
-AuxVariableValue* __fastcall AVGetValue(const AuxVarInfo &varInfo, SInt32 idx, bool addVal = false)
+AuxVariableValue* __fastcall AuxVarInfo::GetValue(SInt32 idx, bool addVal)
 {
-	if (AuxVarValsArr *valsArr = AVGetArray(varInfo, addVal && (idx <= 0)); valsArr && (idx <= (SInt32)valsArr->Size()))
+	if (AuxVarValsArr *valsArr = GetArray(addVal && (idx <= 0)))
 	{
-		if (!addVal)
-		{
-			if (valsArr->Empty())
-				return nullptr;
-			if (idx < 0)
-				idx = valsArr->Size() - 1;
-		}
-		else if ((idx < 0) || (idx == valsArr->Size()))
+		SInt32 size = valsArr->Size();
+		if (addVal && ((idx < 0) || (idx == size)))
 			return valsArr->Append();
-		return &(*valsArr)[idx];
+		if (size && (idx < size))
+		{
+			if (idx < 0)
+				idx = size - 1;
+			return &(*valsArr)[idx];
+		}
 	}
 	return nullptr;
 }
@@ -58,10 +57,10 @@ bool Cmd_AuxiliaryVariableGetSize_Execute(COMMAND_ARGS)
 	char varName[0x50];
 	TESForm *form = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
-		if (AuxVarInfo varInfo(form, thisObj, scriptObj, varName); varInfo.ownerID)
+		if (AuxVarInfo varInfo = {form, thisObj, scriptObj, varName})
 		{
 			AUX_VAR_CS
-			if (AuxVarValsArr *valsArr = AVGetArray(varInfo))
+			if (AuxVarValsArr *valsArr = varInfo.GetArray())
 				*result = (int)valsArr->Size();
 		}
 	return true;
@@ -73,11 +72,11 @@ bool Cmd_AuxiliaryVariableGetType_Execute(COMMAND_ARGS)
 	char varName[0x50];
 	SInt32 idx = 0;
 	TESForm *form = nullptr;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &idx, &form) && (idx >= 0))
-		if (AuxVarInfo varInfo(form, thisObj, scriptObj, varName); varInfo.ownerID)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &idx, &form))
+		if (AuxVarInfo varInfo = {form, thisObj, scriptObj, varName})
 		{
 			AUX_VAR_CS
-			if (AuxVariableValue *value = AVGetValue(varInfo, idx))
+			if (AuxVariableValue *value = varInfo.GetValue(idx))
 				*result = value->GetType();
 		}
 	return true;
@@ -89,11 +88,11 @@ bool Cmd_AuxiliaryVariableGetFloat_Execute(COMMAND_ARGS)
 	char varName[0x50];
 	SInt32 idx = 0;
 	TESForm *form = nullptr;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &idx, &form) && (idx >= 0))
-		if (AuxVarInfo varInfo(form, thisObj, scriptObj, varName); varInfo.ownerID)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &idx, &form))
+		if (AuxVarInfo varInfo = {form, thisObj, scriptObj, varName})
 		{
 			AUX_VAR_CS
-			if (AuxVariableValue *value = AVGetValue(varInfo, idx))
+			if (AuxVariableValue *value = varInfo.GetValue(idx))
 				*result = value->GetFlt();
 		}
 	return true;
@@ -105,11 +104,11 @@ bool Cmd_AuxiliaryVariableGetRef_Execute(COMMAND_ARGS)
 	char varName[0x50];
 	SInt32 idx = 0;
 	TESForm *form = nullptr;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &idx, &form) && (idx >= 0))
-		if (AuxVarInfo varInfo(form, thisObj, scriptObj, varName); varInfo.ownerID)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &idx, &form))
+		if (AuxVarInfo varInfo = {form, thisObj, scriptObj, varName})
 		{
 			AUX_VAR_CS
-			if (AuxVariableValue *value = AVGetValue(varInfo, idx))
+			if (AuxVariableValue *value = varInfo.GetValue(idx))
 				REFR_RES = value->GetRef();
 		}
 	return true;
@@ -121,11 +120,11 @@ bool Cmd_AuxiliaryVariableGetString_Execute(COMMAND_ARGS)
 	char varName[0x50];
 	SInt32 idx = 0;
 	TESForm *form = nullptr;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &idx, &form) && (idx >= 0))
-		if (AuxVarInfo varInfo(form, thisObj, scriptObj, varName); varInfo.ownerID)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &idx, &form))
+		if (AuxVarInfo varInfo = {form, thisObj, scriptObj, varName})
 		{
 			AUX_VAR_CS
-			if (AuxVariableValue *value = AVGetValue(varInfo, idx))
+			if (AuxVariableValue *value = varInfo.GetValue(idx))
 				resStr = value->GetStr();
 		}
 	AssignString(PASS_COMMAND_ARGS, resStr);
@@ -138,10 +137,10 @@ bool Cmd_AuxiliaryVariableGetAsArray_Execute(COMMAND_ARGS)
 	char varName[0x50];
 	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
-		if (AuxVarInfo varInfo(form, thisObj, scriptObj, varName); varInfo.ownerID)
+		if (AuxVarInfo varInfo = {form, thisObj, scriptObj, varName})
 		{
 			AUX_VAR_CS
-			if (AuxVarValsArr *valsArr = AVGetArray(varInfo))
+			if (AuxVarValsArr *valsArr = varInfo.GetArray())
 			{
 				TempElements *tmpElements = GetTempElements();
 				for (auto value = valsArr->Begin(); value; ++value)
@@ -159,7 +158,7 @@ bool Cmd_AuxiliaryVariableGetAll_Execute(COMMAND_ARGS)
 	UInt32 type;
 	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type, &form))
-		if (AuxVarInfo varInfo(form, thisObj, scriptObj, type); varInfo.ownerID)
+		if (AuxVarInfo varInfo = {form, thisObj, scriptObj, type})
 		{
 			AUX_VAR_CS
 			if (AuxVarOwnersMap *findMod = varInfo.ModsMap().GetPtr(varInfo.modIndex))
@@ -188,10 +187,10 @@ bool Cmd_AuxiliaryVariableSetFloat_Execute(COMMAND_ARGS)
 	SInt32 idx = 0;
 	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &fltVal, &idx, &form))
-		if (AuxVarInfo varInfo(form, thisObj, scriptObj, varName); varInfo.ownerID)
+		if (AuxVarInfo varInfo = {form, thisObj, scriptObj, varName})
 		{
 			AUX_VAR_CS
-			if (AuxVariableValue *value = AVGetValue(varInfo, idx, true))
+			if (AuxVariableValue *value = varInfo.GetValue(idx, true))
 			{
 				*value = fltVal;
 				if (varInfo.isPerm)
@@ -209,10 +208,10 @@ bool Cmd_AuxiliaryVariableSetRef_Execute(COMMAND_ARGS)
 	SInt32 idx = 0;
 	TESForm *refVal, *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &refVal, &idx, &form))
-		if (AuxVarInfo varInfo(form, thisObj, scriptObj, varName); varInfo.ownerID)
+		if (AuxVarInfo varInfo = {form, thisObj, scriptObj, varName})
 		{
 			AUX_VAR_CS
-			if (AuxVariableValue *value = AVGetValue(varInfo, idx, true))
+			if (AuxVariableValue *value = varInfo.GetValue(idx, true))
 			{
 				*value = refVal;
 				if (varInfo.isPerm)
@@ -230,10 +229,10 @@ bool Cmd_AuxiliaryVariableSetString_Execute(COMMAND_ARGS)
 	SInt32 idx = 0;
 	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, buffer, &idx, &form))
-		if (AuxVarInfo varInfo(form, thisObj, scriptObj, varName); varInfo.ownerID)
+		if (AuxVarInfo varInfo = {form, thisObj, scriptObj, varName})
 		{
 			AUX_VAR_CS
-			if (AuxVariableValue *value = AVGetValue(varInfo, idx, true))
+			if (AuxVariableValue *value = varInfo.GetValue(idx, true))
 			{
 				*value = buffer;
 				if (varInfo.isPerm)
@@ -256,7 +255,7 @@ bool Cmd_AuxiliaryVariableSetFromArray_Execute(COMMAND_ARGS)
 				if (AuxVarInfo varInfo(form, thisObj, scriptObj, varName); varInfo.ownerID)
 				{
 					AUX_VAR_CS
-					AuxVarValsArr *valsArr = AVGetArray(varInfo, true);
+					AuxVarValsArr *valsArr = varInfo.GetArray(true);
 					if (!valsArr->Empty())
 						valsArr->Clear();
 					for (UInt32 idx = 0; idx < arrData.size; idx++)
@@ -275,7 +274,7 @@ bool Cmd_AuxiliaryVariableErase_Execute(COMMAND_ARGS)
 	SInt32 idx = -1;
 	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &idx, &form))
-		if (AuxVarInfo varInfo(form, thisObj, scriptObj, varName); varInfo.ownerID)
+		if (AuxVarInfo varInfo = {form, thisObj, scriptObj, varName})
 		{
 			AUX_VAR_CS
 			if (auto findMod = varInfo.ModsMap().Find(varInfo.modIndex))
@@ -311,7 +310,7 @@ bool Cmd_AuxiliaryVariableEraseAll_Execute(COMMAND_ARGS)
 	UInt32 type;
 	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type, &form))
-		if (AuxVarInfo varInfo(form, thisObj, scriptObj, type); varInfo.ownerID)
+		if (AuxVarInfo varInfo = {form, thisObj, scriptObj, type})
 		{
 			AUX_VAR_CS
 			if (auto findMod = varInfo.ModsMap().Find(varInfo.modIndex))
@@ -335,7 +334,7 @@ bool Cmd_AuxVarGetFltCond_Eval(COMMAND_ARGS_EVAL)
 			{
 				AuxVarInfo varInfo(nullptr, thisObj, quest->scriptable.script, (char*)varName);
 				AUX_VAR_CS
-				if (AuxVariableValue *value = AVGetValue(varInfo, 0))
+				if (AuxVariableValue *value = varInfo.GetValue(0))
 					*result = value->GetFlt();
 			}
 	return true;

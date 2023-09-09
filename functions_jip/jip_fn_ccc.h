@@ -240,88 +240,88 @@ TempObject<UnorderedMap<UInt32, const char*, 0x20, false>> s_pathForID;
 bool Cmd_CCCSetTrait_Execute(COMMAND_ARGS)
 {
 	SInt32 trait, child, value = 0;
-	if (!s_UILoaded || !ExtractArgsEx(EXTRACT_ARGS_EX, &trait, &child, &value)) return true;
-	if (trait == 40)
-	{
-		const char *pathStr = kAvatarMale;
-		if (thisObj && IS_ACTOR(thisObj))
+	if (s_UILoaded && ExtractArgsEx(EXTRACT_ARGS_EX, &trait, &child, &value))
+		if (trait == 40)
 		{
-			TESActorBase *actorBase = (TESActorBase*)thisObj->baseForm;
-			const char *fullName = actorBase->fullName.name.m_data, **findID;
-			if (!fullName || !*fullName) return true;
-			if (s_pathForID->InsertKey(actorBase->refID, &findID))
+			const char *pathStr = kAvatarMale;
+			if (thisObj && IS_ACTOR(thisObj))
 			{
-				const char *findName = s_avatarPaths->Get(fullName);
-				if (!findName)
+				TESActorBase *actorBase = (TESActorBase*)thisObj->baseForm;
+				const char *fullName = actorBase->fullName.name.m_data, **findID;
+				if (!fullName || !*fullName) return true;
+				if (s_pathForID->InsertKey(actorBase->refID, &findID))
 				{
-					if IS_ID(actorBase, TESCreature)
+					const char *findName = s_avatarPaths->Get(fullName);
+					if (!findName)
 					{
-						for (auto iter = s_avatarCommon->Begin(); iter; ++iter)
+						if IS_ID(actorBase, TESCreature)
 						{
-							if (strstr(fullName, iter.Key()))
+							for (auto iter = s_avatarCommon->Begin(); iter; ++iter)
 							{
-								pathStr = *iter;
-								break;
+								if (strstr(fullName, iter.Key()))
+								{
+									pathStr = *iter;
+									break;
+								}
 							}
 						}
+						else if (actorBase->baseData.flags & 1) pathStr = kAvatarFemale;
 					}
-					else if (actorBase->baseData.flags & 1) pathStr = kAvatarFemale;
+					else pathStr = findName;
+					*findID = pathStr;
 				}
-				else pathStr = findName;
-				*findID = pathStr;
+				else pathStr = *findID;
+				s_UIelements[50 + child]->SetString(fullName);
 			}
-			else pathStr = *findID;
-			s_UIelements[50 + child]->SetString(fullName);
+			s_UIelements[40 + child]->SetString(pathStr);
 		}
-		s_UIelements[40 + child]->SetString(pathStr);
-	}
-	else if (!trait)
-	{
-		if (NOT_ACTOR(thisObj)) return true;
-		Actor *actor = (Actor*)thisObj;
-		if (actor->GetKnockedState() != 3)
+		else if (!trait)
 		{
-			s_UIelements[10 + child]->SetFloat(64.0F * actor->avOwner.GetActorValue(kAVCode_Health) / actor->avOwner.GetBaseActorValue(kAVCode_Health));
-			s_UIelements[20 + child]->SetBool(g_thePlayer->GetDistance(actor) > 8192.0F);
-		}
-		else s_UIelements[10 + child]->SetFloat(-1.0F);
-		value = actor->extraDataList.GetExtraFactionRank(s_taskFaction);
-		if (value < 7)
-		{
-			PackageInfo *packageInfo = actor->GetPackageInfo();
-			if (!packageInfo) return true;
-			switch (packageInfo->package->type)
+			if (NOT_ACTOR(thisObj)) return true;
+			Actor *actor = (Actor*)thisObj;
+			if (actor->GetKnockedState() != 3)
 			{
-			case 1:
-			case 2:
-			case 6:
-			case 7:
-				if (packageInfo->targetRef != g_thePlayer) return true;
-				value = 1;
-				break;
-			case 5:
-			case 9:
-			case 13:
-			case 14:
-				value = 2;
-				break;
-			case 18:
-				value = 5 + packageInfo->package->GetFleeCombat();
-				break;
-			case 10:
-			case 22:
-				value = 6;
-				break;
-			case 12:
-				value = 13;
-				break;
-			default:
-				return true;
+				s_UIelements[10 + child]->SetFloat(64.0F * actor->avOwner.GetActorValue(kAVCode_Health) / actor->avOwner.GetBaseActorValue(kAVCode_Health));
+				s_UIelements[20 + child]->SetBool(g_thePlayer->GetDistance(actor) > 8192.0F);
 			}
+			else s_UIelements[10 + child]->SetFloat(-1.0F);
+			value = actor->extraDataList.GetExtraFactionRank(s_taskFaction);
+			if (value < 7)
+			{
+				PackageInfo *packageInfo = actor->GetPackageInfo();
+				if (!packageInfo) return true;
+				switch (packageInfo->package->type)
+				{
+					case 1:
+					case 2:
+					case 6:
+					case 7:
+						if (packageInfo->targetRef != g_thePlayer) return true;
+						value = 1;
+						break;
+					case 5:
+					case 9:
+					case 13:
+					case 14:
+						value = 2;
+						break;
+					case 18:
+						value = 5 + packageInfo->package->GetFleeCombat();
+						break;
+					case 10:
+					case 22:
+						value = 6;
+						break;
+					case 12:
+						value = 13;
+						break;
+					default:
+						return true;
+				}
+			}
+			s_UIelements[30 + child]->SetFloat(value);
 		}
-		s_UIelements[30 + child]->SetFloat(value);
-	}
-	else s_UIelements[trait + child]->SetFloat(value);
+		else s_UIelements[trait + child]->SetFloat(value);
 	return true;
 }
 
@@ -381,15 +381,12 @@ bool Cmd_CCCSetNCCS_Execute(COMMAND_ARGS)
 double __fastcall GetEncumbranceRate(TESObjectREFR *thisObj)
 {
 	if (IS_ACTOR(thisObj))
-	{
-		ExtraContainerChanges *xChanges = GetExtraType(&thisObj->extraDataList, ExtraContainerChanges);
-		if (xChanges && xChanges->data)
+		if (auto xChanges = GetExtraType(&thisObj->extraDataList, ExtraContainerChanges); xChanges && xChanges->data)
 		{
 			double maxWeight = ThisCall<double>(0x8A0C20, thisObj);
 			if (maxWeight > 0)
 				return 100 * xChanges->data->GetInventoryWeight() / maxWeight;
 		}
-	}
 	return 0;
 }
 
@@ -418,9 +415,10 @@ bool Cmd_CCCLoadNCCS_Execute(COMMAND_ARGS)
 
 bool Cmd_CCCSavedForm_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	UInt32 idx;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idx)) REFR_RES = s_savedForms[idx];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idx))
+		REFR_RES = s_savedForms[idx];
+	else REFR_RES = 0;
 	return true;
 }
 
@@ -561,10 +559,10 @@ bool Cmd_CCCSayTo_Execute(COMMAND_ARGS)
 {
 	if NOT_ACTOR(thisObj) return true;
 	CdeclCall(0x5C9100, PASS_COMMAND_ARGS);
-	ExtraSayToTopicInfo *xSayTo = GetExtraType(&thisObj->extraDataList, ExtraSayToTopicInfo);
-	if (xSayTo)
+	if (auto xSayTo = GetExtraType(&thisObj->extraDataList, ExtraSayToTopicInfo))
 	{
-		if (xSayTo->info) xSayTo->info->RunResultScript(1, (Actor*)thisObj);
+		if (xSayTo->info)
+			xSayTo->info->RunResultScript(1, (Actor*)thisObj);
 		thisObj->extraDataList.RemoveByType(kXData_ExtraSayToTopicInfo);
 	}
 	return true;
@@ -787,17 +785,18 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 
 bool Cmd_CCCSMS_Execute(COMMAND_ARGS)
 {
-	TESObjectREFR *objRefr = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &objRefr) || !objRefr) return true;
-	auto effIter = ProcessManager::Get()->tempEffects.Head();
-	MagicShaderHitEffect *mshEff;
-	do
+	TESObjectREFR *objRefr = nullptr;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &objRefr) && objRefr)
 	{
-		mshEff = (MagicShaderHitEffect*)effIter->data;
-		if (mshEff && IS_TYPE(mshEff, MagicShaderHitEffect) && (mshEff->target == objRefr) && (mshEff->effectShader->modIndex == s_CCCModIdx))
-			mshEff->flags = 1;
+		auto effIter = ProcessManager::Get()->tempEffects.Head();
+		do
+		{
+			if (MagicShaderHitEffect *mshEff = (MagicShaderHitEffect*)effIter->data; mshEff && IS_TYPE(mshEff, MagicShaderHitEffect) &&
+				(mshEff->target == objRefr) && (mshEff->effectShader->modIndex == s_CCCModIdx))
+				mshEff->flags = 1;
+		}
+		while (effIter = effIter->next);
 	}
-	while (effIter = effIter->next);
 	return true;
 }
 

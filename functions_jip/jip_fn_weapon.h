@@ -73,10 +73,8 @@ bool Cmd_GetWeaponSound_Execute(COMMAND_ARGS)
 	TESObjectWEAP *weapon;
 	UInt32 type;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &type) && IS_ID(weapon, TESObjectWEAP) && (type <= 13))
-	{
-		TESSound *sound = (type < 12) ? weapon->sounds[type] : ((type == 12) ? weapon->pickupPutdownSounds.pickupSound : weapon->pickupPutdownSounds.putdownSound);
-		if (sound) REFR_RES = sound->refID;
-	}
+		if (TESSound *sound = (type < 12) ? weapon->sounds[type] : ((type == 12) ? weapon->pickupPutdownSounds.pickupSound : weapon->pickupPutdownSounds.putdownSound))
+			REFR_RES = sound->refID;
 	return true;
 }
 
@@ -144,11 +142,10 @@ bool Cmd_SetWeaponModReloadAnim_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWeaponShellCasingModel_Execute(COMMAND_ARGS)
 {
-	const char *resStr;
+	const char *resStr = nullptr;
 	TESObjectWEAP *weapon;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon) && IS_ID(weapon, TESObjectWEAP))
 		resStr = weapon->shellCasingModel.GetModelPath();
-	else resStr = nullptr;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
@@ -270,11 +267,10 @@ bool Cmd_SetWeaponSemiAutoFireDelay_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWeaponModel_Execute(COMMAND_ARGS)
 {
-	const char *resStr;
+	const char *resStr = nullptr;
 	TESObjectWEAP *weapon;
 	UInt32 modFlags;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &modFlags) && IS_ID(weapon, TESObjectWEAP) && (modFlags <= 7))
-	{
 		switch (modFlags)
 		{
 		case 0:
@@ -289,8 +285,6 @@ bool Cmd_GetWeaponModel_Execute(COMMAND_ARGS)
 		default:
 			resStr = weapon->modModels[modFlags - 1].GetModelPath();
 		}
-	}
-	else resStr = nullptr;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
@@ -301,22 +295,20 @@ bool Cmd_SetWeaponModel_Execute(COMMAND_ARGS)
 	UInt32 modFlags;
 	char path[0x80];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &modFlags, &path) && IS_ID(weapon, TESObjectWEAP) && (modFlags <= 7))
-	{
 		switch (modFlags)
 		{
-		case 0:
-			weapon->textureSwap.SetModelPath(path);
-			break;
-		case 3:
-			weapon->modModels[3].SetModelPath(path);
-			break;
-		case 4:
-			weapon->modModels[2].SetModelPath(path);
-			break;
-		default:
-			weapon->modModels[modFlags - 1].SetModelPath(path);
+			case 0:
+				weapon->textureSwap.SetModelPath(path);
+				break;
+			case 3:
+				weapon->modModels[3].SetModelPath(path);
+				break;
+			case 4:
+				weapon->modModels[2].SetModelPath(path);
+				break;
+			default:
+				weapon->modModels[modFlags - 1].SetModelPath(path);
 		}
-	}
 	return true;
 }
 

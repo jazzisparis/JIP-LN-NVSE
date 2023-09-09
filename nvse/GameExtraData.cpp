@@ -619,7 +619,7 @@ __declspec(naked) float ContChangesEntry::CalculateWeaponDamage(Actor *owner, fl
 		call	GetEntryDataHasModHook
 		test	al, al
 		jz		noMod
-		fmul	dword ptr kSplitBeamMult
+		fmul	dword ptr ds:0x1022004
 	noMod:
 		mov		ecx, [esp+8]
 		cmp		s_NPCPerks, 0
@@ -643,9 +643,6 @@ __declspec(naked) float ContChangesEntry::CalculateWeaponDamage(Actor *owner, fl
 	done:
 		pop		esi
 		retn	0xC
-		ALIGN 4
-	kSplitBeamMult:
-		EMIT_DW(3F, A6, 66, 66)
 	}
 }
 

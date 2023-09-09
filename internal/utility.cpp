@@ -2012,8 +2012,7 @@ DString& DString::operator+=(char chr)
 
 DString& DString::operator+=(const char *other)
 {
-	UInt16 otherLen = StrLen(other);
-	if (otherLen)
+	if (UInt16 otherLen = StrLen(other))
 	{
 		UInt16 newLen = length + otherLen;
 		Reserve(newLen);
@@ -2060,8 +2059,7 @@ DString& DString::Insert(UInt16 index, const char *other)
 {
 	if (index >= length)
 		return this->operator+=(other);
-	UInt16 otherLen = StrLen(other);
-	if (otherLen)
+	if (UInt16 otherLen = StrLen(other))
 	{
 		UInt16 newLen = length + otherLen;
 		Reserve(newLen);
@@ -2110,8 +2108,7 @@ DString& DString::Replace(UInt16 bgnIdx, const char *other)
 {
 	if (bgnIdx >= length)
 		return this->operator+=(other);
-	UInt16 otLen = StrLen(other);
-	if (otLen)
+	if (UInt16 otLen = StrLen(other))
 	{
 		UInt16 endIdx = bgnIdx + otLen;
 		if (endIdx > length)
@@ -2333,6 +2330,19 @@ bool FileStream::OpenWrite(char *filePath, bool append)
 	return theFile != nullptr;
 }
 
+bool FileStream::OpenWriteEx(char *filePath, char *buffer, size_t buffSize)
+{
+	if (theFile) fclose(theFile);
+	MakeAllDirs(filePath);
+	theFile = fopen(filePath, "wb");
+	if (theFile)
+	{
+		setvbuf(theFile, buffer, _IOFBF, buffSize);
+		return true;
+	}
+	return false;
+}
+
 UInt32 FileStream::GetLength() const
 {
 	fseek(theFile, 0, SEEK_END);
@@ -2531,11 +2541,6 @@ __declspec(naked) void __stdcall SafeWrite8(UInt32 addr, UInt32 data)
 {
 	__asm
 	{
-#if LOG_HOOKS
-		push	1
-		push	dword ptr [esp+8]
-		call	StoreOriginalData
-#endif
 		push	ecx
 		push	esp
 		push	PAGE_EXECUTE_READWRITE
@@ -2564,11 +2569,6 @@ __declspec(naked) void __stdcall SafeWrite16(UInt32 addr, UInt32 data)
 {
 	__asm
 	{
-#if LOG_HOOKS
-		push	2
-		push	dword ptr [esp+8]
-		call	StoreOriginalData
-#endif
 		push	ecx
 		push	esp
 		push	PAGE_EXECUTE_READWRITE
@@ -2597,11 +2597,6 @@ __declspec(naked) void __stdcall SafeWrite32(UInt32 addr, UInt32 data)
 {
 	__asm
 	{
-#if LOG_HOOKS
-		push	4
-		push	dword ptr [esp+8]
-		call	StoreOriginalData
-#endif
 		push	ecx
 		push	esp
 		push	PAGE_EXECUTE_READWRITE
@@ -2630,11 +2625,6 @@ __declspec(naked) void __stdcall SafeWriteBuf(UInt32 addr, const void *data, UIn
 {
 	__asm
 	{
-#if LOG_HOOKS
-		push	dword ptr [esp+0xC]
-		push	dword ptr [esp+8]
-		call	StoreOriginalData
-#endif
 		push	ecx
 		push	esp
 		push	PAGE_EXECUTE_READWRITE
@@ -2668,11 +2658,6 @@ __declspec(naked) void __stdcall WriteRelJump(UInt32 jumpSrc, UInt32 jumpTgt)
 {
 	__asm
 	{
-#if LOG_HOOKS
-		push	5
-		push	dword ptr [esp+8]
-		call	StoreOriginalData
-#endif
 		push	ecx
 		push	esp
 		push	PAGE_EXECUTE_READWRITE
@@ -2704,11 +2689,6 @@ __declspec(naked) void __stdcall WriteRelCall(UInt32 jumpSrc, UInt32 jumpTgt)
 {
 	__asm
 	{
-#if LOG_HOOKS
-		push	5
-		push	dword ptr [esp+8]
-		call	StoreOriginalData
-#endif
 		push	ecx
 		push	esp
 		push	PAGE_EXECUTE_READWRITE
@@ -2740,11 +2720,6 @@ __declspec(naked) void __stdcall WritePushRetRelJump(UInt32 baseAddr, UInt32 ret
 {
 	__asm
 	{
-#if LOG_HOOKS
-		push	0xA
-		push	dword ptr [esp+8]
-		call	StoreOriginalData
-#endif
 		push	ecx
 		push	esp
 		push	PAGE_EXECUTE_READWRITE

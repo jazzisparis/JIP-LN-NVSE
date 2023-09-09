@@ -1,4 +1,5 @@
 #include "nvse/GameData.h"
+#include "internal/jip_core.h"
 
 __declspec(naked) ModInfo* __fastcall DataHandler::LookupModByName(const char *modName) const
 {
@@ -22,6 +23,125 @@ __declspec(naked) ModInfo* __fastcall DataHandler::LookupModByName(const char *m
 	done:
 		pop		ebx
 		retn
+	}
+}
+
+char kDecompilePath[0x100] = "DecompiledScripts (JIP)\\";
+
+void DataHandler::DecompileModScripts(UInt8 modIdx, UInt8 typeMask)
+{
+	FileStream outFile;
+	char *wBuffer = GetStrArgBuffer(), *mainEnd = StrCopy(kDecompilePath + 24, GetNthModName(modIdx)), *typeEnd;
+	*mainEnd++ = '\\';
+
+	if (typeMask & 1)
+	{
+		typeEnd = StrCopy(mainEnd, "Script\\");
+		auto scrIter = scriptList.Head();
+		do
+		{
+			if (auto pScript = scrIter->data; pScript && pScript->info.dataLength && (pScript->GetOverridingModIdx() == modIdx))
+			{
+				char *fileEnd = StrCopy(typeEnd, pScript->GetEditorID());
+				*(UInt32*)fileEnd = 'txt.';
+				fileEnd[4] = 0;
+				if (outFile.OpenWriteEx(kDecompilePath, wBuffer, 0x10000))
+				{
+					size_t numWritten = DecompileToBuffer(pScript, outFile.GetStream(), nullptr);
+					outFile.Close();
+					if (!numWritten)
+						remove(kDecompilePath);
+				}
+			}
+		}
+		while (scrIter = scrIter->next);
+	}
+
+	if (typeMask & 2)
+	{
+		typeEnd = StrCopy(mainEnd, "Quest\\");
+		auto qstIter = questList.Head();
+		do
+		{
+			if (auto pQuest = qstIter->data; pQuest && (pQuest->GetOverridingModIdx() == modIdx))
+			{
+				char *fileEnd = StrCopy(typeEnd, pQuest->GetEditorID());
+				*(UInt32*)fileEnd = 'txt.';
+				fileEnd[4] = 0;
+				if (outFile.OpenWriteEx(kDecompilePath, wBuffer, 0x10000))
+				{
+					size_t numWritten = pQuest->DecompileResultScripts(outFile.GetStream(), nullptr);
+					outFile.Close();
+					if (!numWritten)
+						remove(kDecompilePath);
+				}
+			}
+		}
+		while (qstIter = qstIter->next);
+	}
+
+	if (typeMask & 4)
+	{
+		typeEnd = StrCopy(mainEnd, "Package\\");
+		auto pkgIter = packageList.Head();
+		do
+		{
+			if (auto pPackage = pkgIter->data; pPackage && (pPackage->GetOverridingModIdx() == modIdx))
+			{
+				char *fileEnd = StrCopy(typeEnd, pPackage->GetEditorID());
+				*(UInt32*)fileEnd = 'txt.';
+				fileEnd[4] = 0;
+				if (outFile.OpenWriteEx(kDecompilePath, wBuffer, 0x10000))
+				{
+					size_t numWritten = pPackage->DecompileResultScripts(outFile.GetStream(), nullptr);
+					outFile.Close();
+					if (!numWritten)
+						remove(kDecompilePath);
+				}
+			}
+		}
+		while (pkgIter = pkgIter->next);
+	}
+
+	if (typeMask & 8)
+	{
+		typeEnd = StrCopy(mainEnd, "Dialogue\\");
+		auto dlgIter = topicInfoList.Head();
+		do
+		{
+			if (auto pTopic = dlgIter->data; pTopic && (pTopic->GetOverridingModIdx() == modIdx) && pTopic->parentTopic)
+			{
+				sprintf_s(typeEnd, 0x80, "%06X [%s].txt", pTopic->refID & 0xFFFFFF, pTopic->parentTopic->editorIDstr.CStr());
+				if (outFile.OpenWriteEx(kDecompilePath, wBuffer, 0x10000))
+				{
+					size_t numWritten = pTopic->DecompileResultScripts(outFile.GetStream(), nullptr);
+					outFile.Close();
+					if (!numWritten)
+						remove(kDecompilePath);
+				}
+			}
+		}
+		while (dlgIter = dlgIter->next);
+	}
+
+	if (typeMask & 0x10)
+	{
+		typeEnd = StrCopy(mainEnd, "Terminal\\");
+		for (auto bndIter = boundObjectList->first; bndIter; bndIter = bndIter->next)
+			if (IS_ID(bndIter, BGSTerminal) && (bndIter->GetOverridingModIdx() == modIdx))
+				if (auto terminal = (BGSTerminal*)bndIter; !terminal->menuEntries.Empty())
+				{
+					char *fileEnd = StrCopy(typeEnd, terminal->GetEditorID());
+					*(UInt32*)fileEnd = 'txt.';
+					fileEnd[4] = 0;
+					if (outFile.OpenWriteEx(kDecompilePath, wBuffer, 0x10000))
+					{
+						size_t numWritten = terminal->DecompileResultScripts(outFile.GetStream(), nullptr);
+						outFile.Close();
+						if (!numWritten)
+							remove(kDecompilePath);
+					}
+				}
 	}
 }
 

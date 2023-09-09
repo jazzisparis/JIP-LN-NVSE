@@ -276,6 +276,8 @@ public:
 
 	tList<ModInfo>	mods;			// 10
 
+	TESForm *GetBaseIfRef() const;
+
 	bool IsCreated() const {return modIndex == 0xFF;}
 
 	bool IsPlayer() const {return refID == 0x14;}
@@ -1390,10 +1392,16 @@ public:
 	UInt32				modInfoFileOffset;	// 4C	during LoadForm
 	TESTopic			*parentTopic;		// 50	JIP only!
 
+	__forceinline Script *GetResultScript(UInt32 onEnd)
+	{
+		return ThisCall<Script*>(0x61EB60, this, onEnd);
+	}
 	__forceinline void RunResultScript(UInt32 onEnd, Actor *actor)
 	{
 		ThisCall(0x61F170, this, onEnd, actor);
 	}
+
+	size_t DecompileResultScripts(FILE *pStream, char *pBuffer);
 };
 
 typedef NiTLargeArray<TESTopicInfo*> TopicInfoArray;
@@ -2277,6 +2285,8 @@ public:
 	tList<TerminalEntry>	menuEntries;	// 98
 	BGSNote					*password;		// A0	PNAM
 	TermData				data;			// A4	DNAM
+
+	size_t DecompileResultScripts(FILE *pStream, char *pBuffer);
 };
 
 // 98
@@ -2452,7 +2462,7 @@ public:
 	float						FOV;			// 0B0
 	float						fadeValue;		// 0B4
 	TESSound					*sound;			// 0B8
-	UInt32						padBC[3];		// 0BC
+	NiVector3					vectorBC;		// 0BC
 
 	/*__forceinline NiPointLight *CreatePointLight(TESObjectREFR *targetRef, NiNode *targetNode, bool forceDynamic)
 	{
@@ -2890,10 +2900,13 @@ public:
 	UInt8 AttackAnimation() const;
 	void SetAttackAnimation(UInt32 attackAnim);
 	TESAmmo *GetAmmo() const;
+	TESAmmo *GetEquippedAmmo(Actor *actor) const;
 	float GetModBonuses(UInt8 modFlags, UInt32 effectID) const;
 	TESModelTextureSwap *GetWeaponModel(UInt32 modFlags, Actor *actor) const;
 };
 static_assert(sizeof(TESObjectWEAP) == 0x388);
+
+extern TESObjectWEAP *g_rockItLauncher;
 
 enum AmmoEffectID : UInt32
 {
@@ -3250,6 +3263,15 @@ public:
 		kFlags_PassSmallTransparent =	0x200,
 		kFlags_Detonates =				0x400,
 		kFlags_Rotation =				0x800,
+	};
+
+	enum ProjectileType
+	{
+		eProjType_Missile =			1,
+		eProjType_Lobber =			2,
+		eProjType_Beam =			4,
+		eProjType_Flame =			8,
+		eProjType_ContinuousBeam =	0x10
 	};
 
 	TESFullName						fullName;			// 30
@@ -4100,6 +4122,8 @@ public:
 		return ThisCall<bool>(0x60D510, this, stageID);
 	}
 	BGSQuestObjective *GetObjective(UInt32 objectiveID) const;
+
+	size_t DecompileResultScripts(FILE *pStream, char *pBuffer);
 };
 static_assert(sizeof(TESQuest) == 0x6C);
 
@@ -4546,6 +4570,8 @@ public:
 	}
 
 	static bool IsValidObjectCode(UInt8 o) { return o < kObjectType_Max; }
+
+	size_t DecompileResultScripts(FILE *pStream, char *pBuffer);
 };
 static_assert(sizeof(TESPackage) == 0x80);
 

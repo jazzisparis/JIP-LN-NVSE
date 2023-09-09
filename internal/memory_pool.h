@@ -4,16 +4,27 @@
 #define POOL_SECTION_SIZE	0x1000UL
 #define MEMORY_POOL_SIZE	0x40000UL
 
-namespace MemoryPool
+struct MemoryPool
 {
-	void* __fastcall Alloc(size_t size);
-	void __fastcall Free(void *pBlock, size_t size);
-	void* __fastcall Realloc(void *pBlock, size_t curSize, size_t reqSize);
+	struct BlockNode
+	{
+		BlockNode	*m_next;
+		//	Data
+	};
 
-	size_t GetTotalAllocSize();
+	PrimitiveCS		m_cs;
+	BlockNode		*m_freeSections = nullptr;
+	BlockNode		*m_sections[MAX_BLOCK_SIZE >> 4] = {nullptr};
+	size_t			m_allocPoolCount = 0;
+
+	static void* __fastcall Alloc(size_t size);
+	static void __fastcall Free(void *pBlock, size_t size);
+	static void* __fastcall Realloc(void *pBlock, size_t curSize, size_t reqSize);
+
+	static size_t GetTotalAllocSize();
 };
 
-template <typename T> constexpr size_t AlignAlloc()
+template <typename T> consteval size_t AlignAlloc()
 {
 	return (sizeof(T) & 0xF) ? ((sizeof(T) & 0xFFFFFFF0) + 0x10) : sizeof(T);
 }

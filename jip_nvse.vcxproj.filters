@@ -375,9 +375,6 @@
     <ClInclude Include="nvse\GameSound.h">
       <Filter>nvse</Filter>
     </ClInclude>
-    <ClInclude Include="internal\misc_consts.h">
-      <Filter>internal</Filter>
-    </ClInclude>
     <ClInclude Include="internal\jip_core.h">
       <Filter>internal</Filter>
     </ClInclude>
@@ -388,6 +385,12 @@
       <Filter>internal</Filter>
     </ClInclude>
     <ClInclude Include="internal\settings_enum.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\base_defs.h">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\misc_enums.h">
       <Filter>internal</Filter>
     </ClInclude>
   </ItemGroup>

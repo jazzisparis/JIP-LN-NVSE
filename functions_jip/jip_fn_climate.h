@@ -21,11 +21,10 @@ DEFINE_COMMAND_PLUGIN(ForceClimate, 0, 1, kParams_OneOptionalForm);
 
 bool Cmd_GetClimateSunTexture_Execute(COMMAND_ARGS)
 {
-	const char *resStr;
+	const char *resStr = nullptr;
 	TESClimate *climate;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate) && IS_ID(climate, TESClimate))
 		resStr = climate->sunTexture.ddsPath.m_data;
-	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
@@ -41,11 +40,10 @@ bool Cmd_SetClimateSunTexture_Execute(COMMAND_ARGS)
 
 bool Cmd_GetClimateSunGlareTexture_Execute(COMMAND_ARGS)
 {
-	const char *resStr;
+	const char *resStr = nullptr;
 	TESClimate *climate;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate) && IS_ID(climate, TESClimate))
 		resStr = climate->sunGlareTexture.ddsPath.m_data;
-	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
@@ -61,11 +59,10 @@ bool Cmd_SetClimateSunGlareTexture_Execute(COMMAND_ARGS)
 
 bool Cmd_GetClimateNightSkyModel_Execute(COMMAND_ARGS)
 {
-	const char *resStr;
+	const char *resStr = nullptr;
 	TESClimate *climate;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate) && IS_ID(climate, TESClimate))
 		resStr = climate->nightSkyModel.GetModelPath();
-	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
@@ -190,7 +187,7 @@ bool Cmd_ClimateAddWeatherType_Execute(COMMAND_ARGS)
 	TESClimate *climate;
 	TESWeather *weather;
 	UInt32 chance;
-	TESGlobal *global = NULL;
+	TESGlobal *global = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &weather, &chance, &global) && IS_ID(climate, TESClimate))
 		if (WeatherEntry *entry = climate->GetWeatherEntry(weather))
 		{
@@ -218,9 +215,8 @@ bool Cmd_ClimateRemoveWeatherType_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCurrentClimate_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESClimate *climate = g_currentSky->currClimate;
-	if (climate) REFR_RES = climate->refID;
+	REFR_RES = climate ? climate->refID : 0;
 	DoConsolePrint(climate);
 	return true;
 }
@@ -245,7 +241,7 @@ bool Cmd_RefreshCurrentClimate_Execute(COMMAND_ARGS)
 
 bool Cmd_ForceClimate_Execute(COMMAND_ARGS)
 {
-	TESClimate *climate = NULL;
+	TESClimate *climate = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate) && (!climate || IS_ID(climate, TESClimate)))
 		s_forcedClimate = climate;
 	return true;

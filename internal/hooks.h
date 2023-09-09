@@ -137,15 +137,14 @@ PrimitiveCS s_hookInfoCS;
 class HookInfo
 {
 	UInt32		patchAddr;			// 00
-	UInt8		length;				// 04
-	UInt8		pad05[3];			// 05
-	UInt8		instructions[20];	// 08
-	UInt32		userCount;			// 1C
+	UInt32		userCount;			// 04
+	UInt8		savedBytes[8];		// 08
+	UInt8		writeBytes[8];		// 10
 
 	bool DoSet(bool install);
 
 public:
-	void Init(UInt32 _patchAddr, void *hookPtr, UInt8 type, UInt32 retAddr = 0);
+	void Init(UInt32 _patchAddr, void *hookPtr, UInt8 type);
 	bool __fastcall Set(bool install);
 	void __fastcall ModUsers(bool add);
 	inline UInt32 GetCount() const {return userCount;}
@@ -158,44 +157,25 @@ enum
 	kHookInfoSize =	sizeof(HookInfo)
 };
 
-__declspec(naked) void HookInfo::Init(UInt32 _patchAddr, void *hookPtr, UInt8 type, UInt32 retAddr)
+__declspec(naked) void HookInfo::Init(UInt32 _patchAddr, void *hookPtr, UInt8 type)
 {
 	__asm
 	{
 		push	esi
 		mov		esi, ecx
-		and		dword ptr [esi+0x1C], 0
-		mov		edx, [esp+0x14]
-		mov		eax, 5
-		mov		ecx, 0xA
-		test	edx, edx
-		cmovnz	eax, ecx
-		mov		[esi+4], al
+		and		dword ptr [esi+4], 0
 		mov		ecx, [esp+8]
 		mov		[esi], ecx
-		movups	xmm0, [ecx]
-		movups	[esi+8], xmm0
-		add		ecx, eax
+		movq	xmm0, qword ptr [ecx]
+		movlps	[esi+8], xmm0
 		mov		al, [esp+0x10]
-		mov		[esi+0x12], al
+		mov		[esi+0x10], al
 		mov		eax, [esp+0xC]
 		sub		eax, ecx
-		test	edx, edx
-		jnz		isRET
-		mov		[esi+0x13], eax
-		jmp		done
-	isRET:
-		mov		[esi+0x13], edx
-		mov		byte ptr [esi+0x17], 0xE9
-		mov		[esi+0x18], eax
-	done:
-#if LOG_HOOKS
-		push	dword ptr [esi+4]
-		push	dword ptr [esp+0xC]
-		call	StoreOriginalData
-#endif
+		sub		eax, 5
+		mov		[esi+0x11], eax
 		pop		esi
-		retn	0x10
+		retn	0xC
 	}
 }
 
@@ -205,45 +185,36 @@ __declspec(naked) bool HookInfo::DoSet(bool install)
 	{
 		mov		al, [esp+4]
 		and		eax, 1
-		cmp		dword ptr [ecx+0x1C], 0
+		cmp		dword ptr [ecx+4], 0
 		setnz	dl
 		cmp		al, dl
 		jz		retnFalse
-		mov		[ecx+0x1C], eax
+		mov		[ecx+4], eax
 		push	esi
 		mov		esi, ecx
 		push	ecx
 		push	esp
 		push	PAGE_EXECUTE_READWRITE
-		push	0xA
+		push	8
 		push	dword ptr [esi]
 		call	VirtualProtect
 		mov		eax, 8
-		mov		ecx, 0x12
-		cmp		dword ptr [esi+0x1C], 0
-		cmovnz	eax, ecx
+		cmp		dword ptr [esi+4], 0
+		setnz	cl
+		shl		eax, cl
 		add		eax, esi
 		mov		ecx, [esi]
 		mov		edx, [eax]
 		mov		[ecx], edx
-		cmp		byte ptr [esi+4], 5
-		jnz		copy10
 		mov		dl, [eax+4]
 		mov		[ecx+4], dl
-		jmp		doneCopy
-	copy10:
-		mov		edx, [eax+4]
-		mov		[ecx+4], edx
-		mov		dx, [eax+8]
-		mov		[ecx+8], dx
-	doneCopy:
 		mov		edx, [esp]
 		push	esp
 		push	edx
-		push	0xA
+		push	8
 		push	dword ptr [esi]
 		call	VirtualProtect
-		push	0xA
+		push	8
 		push	dword ptr [esi]
 		push	0xFFFFFFFF
 		call	FlushInstructionCache
@@ -283,17 +254,17 @@ __declspec(naked) void __fastcall HookInfo::ModUsers(bool add)
 		pop		ecx
 		cmp		byte ptr [esp], 0
 		jz		doDecr
-		cmp		dword ptr [ecx+0x1C], 0
+		cmp		dword ptr [ecx+4], 0
 		jle		doSet
-		inc		dword ptr [ecx+0x1C]
+		inc		dword ptr [ecx+4]
 		pop		edx
 		and		s_hookInfoCS.selfPtr, 0
 		retn
 	doDecr:
-		cmp		dword ptr [ecx+0x1C], 1
+		cmp		dword ptr [ecx+4], 1
 		jz		doSet
 		jl		done
-		dec		dword ptr [ecx+0x1C]
+		dec		dword ptr [ecx+4]
 	done:
 		pop		edx
 		and		s_hookInfoCS.selfPtr, 0
@@ -305,9 +276,8 @@ __declspec(naked) void __fastcall HookInfo::ModUsers(bool add)
 	}
 }
 
-#define HOOK_INIT_CALL(name, baseAddr) s_hookInfos[kHook_##name].Init(baseAddr, ##name##Hook, 0xE8, 0)
-#define HOOK_INIT_JUMP(name, baseAddr) s_hookInfos[kHook_##name].Init(baseAddr, ##name##Hook, 0xE9, 0)
-#define HOOK_INIT_JPRT(name, baseAddr, retAddr) s_hookInfos[kHook_##name].Init(baseAddr, ##name##Hook, 0x68, retAddr)
+#define HOOK_INIT_CALL(name, baseAddr) s_hookInfos[kHook_##name].Init(baseAddr, ##name##Hook, 0xE8)
+#define HOOK_INIT_JUMP(name, baseAddr) s_hookInfos[kHook_##name].Init(baseAddr, ##name##Hook, 0xE9)
 #define HOOK_INSTALLED(name) s_hookInfos[kHook_##name].GetCount() != 0
 #define HOOK_MOD(name, add) s_hookInfos[kHook_##name].ModUsers(add)
 #define HOOK_INC(name) HOOK_MOD(name, true)
@@ -631,21 +601,20 @@ TempObject<EventCallbackScripts> s_fastTravelEventScripts;
 typedef UnorderedSet<TESForm*> InformedObjectsMap;
 TempObject<InformedObjectsMap> s_pcFastTravelInformed;
 
-__declspec(naked) InterfaceManager *PCFastTravelHook()
+__declspec(naked) void __fastcall PCFastTravelHook(PlayerCharacter *thePlayer, int, TESObjectREFR *markerRef)
 {
 	__asm
 	{
 		cmp		dword ptr s_fastTravelEventScripts+4, 0
 		jz		noEvents
-		mov		eax, ds:0x11DA368
-		push	dword ptr [eax+0x118]
+		push	eax
 		mov		ecx, offset s_fastTravelEventScripts
 		call	EventCallbackScripts::InvokeEvents
 	noEvents:
 		mov		ecx, offset s_pcFastTravelInformed
 		call	InformedObjectsMap::Clear
-		mov		eax, g_interfaceManager
-		retn
+		mov		ecx, g_thePlayer
+		JMP_EAX(0x93CDF0)
 	}
 }
 
@@ -1381,6 +1350,7 @@ __declspec(naked) void WeaponSwitchSelectHook()
 {
 	__asm
 	{
+		push	0x99987A
 		and		dword ptr [ebp-0xB0], 0
 		mov		ecx, [ebp-0x28]
 		test	byte ptr [ecx+0x105], kHookActorFlag1_LockedEquipment
@@ -1441,7 +1411,7 @@ __declspec(naked) void WeaponSwitchUnequipHook()
 		push	dword ptr [ebp-8]
 		CALL_EAX(ADDR_UnequipItem)
 	done:
-		retn
+		JMP_EAX(0x9DA900)
 	}
 }
 
@@ -1562,7 +1532,7 @@ __declspec(naked) void MenuStateCloseHook()
 		add		ecx, 0xC
 		call	EventCallbackScripts::InvokeEvents
 	done:
-		retn
+		JMP_EAX(0xA1C57D)
 	}
 }
 
@@ -1598,7 +1568,7 @@ __declspec(naked) void MenuHandleMouseoverHook()
 		jz		done
 		and		dword ptr [eax+0xBC], 0
 	done:
-		retn
+		JMP_EAX(0x70D658)
 	}
 }
 
@@ -1701,7 +1671,7 @@ __declspec(naked) void SetAnimGroupHook()
 		mov		ecx, eax
 		call	EventCallbackScripts::InvokeEventsThis1
 	done:
-		retn
+		JMP_EAX(0x494E32)
 	}
 }
 
@@ -1825,7 +1795,7 @@ __declspec(naked) void InitMoonHook()
 		lea		ecx, [esi+0x50]
 		call	String::Set
 		pop		esi
-		retn
+		JMP_EAX(0x634BF4)
 	}
 }
 
@@ -1836,7 +1806,7 @@ __declspec(naked) void UpdateWeatherHook()
 	__asm
 	{
 		fmul	s_weatherTransitionRateOverride
-		retn
+		JMP_EAX(0x63D528)
 	}
 }
 
@@ -1885,7 +1855,7 @@ __declspec(naked) void SetPCTargetHook()
 		call	EventCallbackScripts::InvokeEvents
 	done:
 		lea		ecx, [ebp-0x160]
-		retn
+		JMP_EAX(0x964684)
 	}
 }
 
@@ -2045,6 +2015,7 @@ __declspec(naked) void DoActivateHook()
 {
 	__asm
 	{
+		push	0x57351F
 		mov		ecx, [ebp-0x12C]
 		test	byte ptr [ecx+6], kHookFormFlag6_ActivateDisabled
 		jnz		retnTrue
@@ -2157,6 +2128,7 @@ __declspec(naked) void SetQuestStageHook()
 {
 	__asm
 	{
+		push	0x60F4C6
 		mov		eax, [ebp+8]
 		test	byte ptr [ecx+1], 1
 		jnz		checkRepeated
@@ -2216,7 +2188,7 @@ __declspec(naked) void RunResultScriptHook()
 		push	dword ptr [ebp+8]
 		mov		ecx, [ebp-0xC]
 		CALL_EAX(0x61EB60)
-		retn
+		JMP_EDX(0x61F190)
 	}
 }
 
@@ -2321,6 +2293,7 @@ __declspec(naked) void EvalEventBlockHook()
 {
 	__asm
 	{
+		push	0x5E238A
 		cmp		dword ptr [ebp-0x28], 0
 		setnz	al
 		jz		retnFalse
@@ -2451,7 +2424,7 @@ __declspec(naked) void LocationDiscoverHook()
 		push	dword ptr [eax+4]
 		mov		ecx, offset s_locationDiscoverEventScripts
 		call	EventCallbackScripts::InvokeEvents
-		retn
+		JMP_EAX(0x779567)
 	}
 }
 
@@ -2469,7 +2442,7 @@ __declspec(naked) void ItemCraftedHook()
 		push	dword ptr [ebp-0x20]
 		mov		ecx, offset s_itemCraftedEventScripts
 		call	EventCallbackScripts::InvokeEvents2
-		retn
+		JMP_EAX(0x728785)
 	}
 }
 
@@ -2616,7 +2589,7 @@ __declspec(naked) void ProjectileImpactHook()
 		push	eax
 		call	EventCallbackScripts::InvokeEventsThis
 	done:
-		retn
+		JMP_EAX(0x9C20C9)
 	}
 }
 
@@ -2634,7 +2607,7 @@ __declspec(naked) void AddNoteHook()
 		mov		edx, 0x1011584
 		test	eax, eax
 		cmovz	eax, edx
-		retn
+		JMP_EDX(0x966B04)
 	}
 }
 
@@ -2751,7 +2724,7 @@ __declspec(naked) void PlayerMinHealthHook()
 		subss	xmm2, xmm0
 		movss	[ebp+0xC], xmm2
 	done:
-		retn
+		JMP_EAX(0x93B84F)
 	}
 }
 
@@ -2774,30 +2747,52 @@ __declspec(naked) void ApplyActorVelocityHook()
 	}
 }
 
-typedef bool (__thiscall *_SetFormEDID)(TESForm*, const char*);
-_SetFormEDID SetFormEDID;
-
-typedef UnorderedMap<const char*, UInt32, 0x400, false> FormEDIDMap;
-TempObject<FormEDIDMap> s_lightFormEDIDMap;
-
-bool __stdcall InsertFormEDID(const char *EDID, UInt32 **pForm)
-{
-	return s_lightFormEDIDMap->InsertKey(EDID, pForm);
-}
-
 __declspec(naked) bool __fastcall TESObjectLIGHSetEDIDHook(TESObjectLIGH *lightForm, int, const char *EDID)
 {
 	__asm
 	{
-		push	ecx
-		push	ecx
-		push	esp
+		push	ebx
+		push	esi
+		push	edi
+		mov		ebx, ecx
+		mov		esi, ds:0x11C54C8
+		CALL_EAX(0x43A010)
+		mov		edi, eax
 		push	dword ptr [esp+0x10]
-		call	InsertFormEDID
-		pop		eax
-		pop		ecx
-		mov		[eax], ecx
-		jmp		SetFormEDID
+		mov		ecx, esi
+		mov		eax, [ecx]
+		call	dword ptr [eax+4]
+		mov		edx, [esi+8]
+		lea		ecx, [edx+eax*4]
+		mov		eax, [ecx]
+		mov		[ecx], edi
+		mov		[edi], eax
+		mov		ecx, esi
+		inc		dword ptr [ecx+0xC]
+		push	ebx
+		push	dword ptr [esp+0x14]
+		push	edi
+		mov		eax, [ecx]
+		call	dword ptr [eax+0xC]
+		mov		eax, [edi+4]
+		mov		[ebx+0xC8], eax
+		mov		al, 1
+		pop		edi
+		pop		esi
+		pop		ebx
+		retn	4
+	}
+}
+
+__declspec(naked) const char* __fastcall TESObjectLIGHGetEDIDHook(TESObjectLIGH *lightForm)
+{
+	__asm
+	{
+		mov		eax, [ecx+0xC8]
+		mov		edx, 0x1011584
+		test	eax, eax
+		cmovz	eax, edx
+		retn
 	}
 }
 
@@ -2851,9 +2846,9 @@ __declspec(naked) void __fastcall InitPointLights(NiNode *niNode)
 		mov		eax, [ecx+0xC]
 		test	eax, eax
 		jz		removeExtra
-		push	eax
-		mov		ecx, offset s_lightFormEDIDMap
-		call	FormEDIDMap::Get
+		mov		edx, eax
+		mov		ecx, ds:0x11C54C8
+		call	NiTMap<UInt32, UInt32>::Lookup
 		test	eax, eax
 		jz		removeExtra
 		mov		ecx, ebx
@@ -2904,7 +2899,11 @@ __declspec(naked) void LoadNifRetnNodeHook()
 		mov		eax, ebp
 		pop		ebp
 	done:
-		retn
+		mov		ecx, [ebp-0xC]
+		mov		fs:0, ecx
+		pop		ecx
+		leave
+		retn	0x18
 	}
 }
 
@@ -3760,6 +3759,7 @@ __declspec(naked) void LoadBip01SlotHook()
 	done:
 		lea		edx, [ebp-0x190]
 		mov		ecx, [ebp-0x40]
+		push	0x4ACD8C
 		jmp		NiObjectNET::SetName
 	}
 }
@@ -3790,7 +3790,7 @@ __declspec(naked) void LoadWeaponSlotHook()
 		jz		done
 		call	AddPointLights
 	done:
-		retn
+		JMP_EAX(0x4AF0F8)
 	}
 }
 
@@ -4185,7 +4185,7 @@ __declspec(naked) void SetRefrPositionHook()
 		movlps	[ecx+0x30], xmm0
 		unpckhpd	xmm0, xmm0
 		movss	[ecx+0x38], xmm0
-		retn
+		JMP_EAX(0x575B3C)
 	}
 }
 
@@ -4807,7 +4807,7 @@ __declspec(naked) void SkyRefreshClimateHook()
 		jz		done
 		mov		[ebp+8], eax
 	done:
-		retn
+		JMP_EAX(0x63C92E)
 	}
 }
 
@@ -4846,7 +4846,7 @@ __declspec(naked) void FireWeaponWobbleHook()
 		faddp	st(1), st
 	done:
 		fstp	dword ptr [ebp-0x1C]
-		retn
+		JMP_EAX(0x524072)
 	}
 }
 
@@ -5020,7 +5020,7 @@ __declspec(noinline) void InitJIPHooks()
 	WriteRelCall(0x9459ED, (UInt32)GetVanityDisabledHook);
 
 	HOOK_INIT_JUMP(GetDescription, 0x482F7F);
-	HOOK_INIT_CALL(PCFastTravel, 0x798727);
+	HOOK_INIT_CALL(PCFastTravel, 0x93BF22);
 	HOOK_INIT_CALL(PCCellChange, 0x94CB35);
 	HOOK_INIT_JUMP(TextInputClose, 0x7E66A0);
 	HOOK_INIT_JUMP(StartCombat, 0x9001C6);
@@ -5032,68 +5032,69 @@ __declspec(noinline) void InitJIPHooks()
 	HOOK_INIT_JUMP(TeleportWithPC, 0x8AD471);
 	HOOK_INIT_JUMP(EquipItem, 0x88C87A);
 	HOOK_INIT_JUMP(ReEquipAll, 0x6047C0);
-	HOOK_INIT_JPRT(WeaponSwitchSelect, 0x999857, 0x99987A);
-	HOOK_INIT_JPRT(WeaponSwitchUnequip, 0x9DA8E3, 0x9DA900);
+	HOOK_INIT_JUMP(WeaponSwitchSelect, 0x999857);
+	HOOK_INIT_JUMP(WeaponSwitchUnequip, 0x9DA8E3);
 	HOOK_INIT_JUMP(GetPreferedWeapon, 0x891C86);
 	HOOK_INIT_JUMP(ShowMessage, 0x5B46AA);
 	HOOK_INIT_JUMP(ShowTutorial, 0x7E88B6);
 	HOOK_INIT_JUMP(MenuStateOpen, 0xA1F2F9);
-	HOOK_INIT_JPRT(MenuStateClose, 0xA1C573, 0xA1C57D);
+	HOOK_INIT_JUMP(MenuStateClose, 0xA1C573);
 	HOOK_INIT_JUMP(SetAnimAction, 0x8A7551);
-	HOOK_INIT_JPRT(SetAnimGroup, 0x494E19, 0x494E32);
+	HOOK_INIT_JUMP(SetAnimGroup, 0x494E19);
 	HOOK_INIT_JUMP(DamageActorValue, 0x66EE72);
-	HOOK_INIT_JPRT(InitMoon, 0x634B30, 0x634BF4);
-	HOOK_INIT_JPRT(UpdateWeather, 0x63D4F5, 0x63D528);
-	HOOK_INIT_JPRT(MenuHandleMouseover, 0x70D642, 0x70D658);
+	HOOK_INIT_JUMP(InitMoon, 0x634B30);
+	HOOK_INIT_JUMP(UpdateWeather, 0x63D4F5);
+	HOOK_INIT_JUMP(MenuHandleMouseover, 0x70D642);
 	HOOK_INIT_JUMP(GetDetectionValue, 0x8A1535);
-	HOOK_INIT_JPRT(SetPCTarget, 0x964675, 0x964684);
+	HOOK_INIT_JUMP(SetPCTarget, 0x964675);
 	HOOK_INIT_JUMP(PCActivateRef, 0x943279);
 	HOOK_INIT_JUMP(SetRolloverText, 0x775B9B);
 	HOOK_INIT_CALL(MergeEventMask, 0x5AC782);
 	HOOK_INIT_JUMP(MarkScriptEvent, 0x5AC763);
-	HOOK_INIT_JPRT(DoActivate, 0x573512, 0x57351F);
+	HOOK_INIT_JUMP(DoActivate, 0x573512);
 	HOOK_INIT_CALL(CreateMapMarkers, 0x79EBA1);
 	HOOK_INIT_JUMP(GetRefName, 0x55D520);
-	HOOK_INIT_JPRT(SetQuestStage, 0x60F4A9, 0x60F4C6);
-	HOOK_INIT_JPRT(RunResultScript, 0x61F184, 0x61F190);
+	HOOK_INIT_JUMP(SetQuestStage, 0x60F4A9);
+	HOOK_INIT_JUMP(RunResultScript, 0x61F184);
 	HOOK_INIT_CALL(ScriptRunner, 0x5E0EC9);
-	HOOK_INIT_JPRT(EvalEventBlock, 0x5E1716, 0x5E238A);
+	HOOK_INIT_JUMP(EvalEventBlock, 0x5E1716);
 	HOOK_INIT_CALL(SetTerminalModel, 0x7FEF0B);
 	HOOK_INIT_JUMP(AddVATSTarget, 0x7F54B1);
-	HOOK_INIT_JPRT(LocationDiscover, 0x77955D, 0x779567);
-	HOOK_INIT_JPRT(ItemCrafted, 0x7289FF, 0x728785);
+	HOOK_INIT_JUMP(LocationDiscover, 0x77955D);
+	HOOK_INIT_JUMP(ItemCrafted, 0x7289FF);
 	HOOK_INIT_JUMP(MakeObjLODPath, 0x6F6DF1);
 	HOOK_INIT_JUMP(OnHitEvent, 0x5AC78A);
 	HOOK_INIT_CALL(CheckUniqueItem, 0x47BBEC);
-	HOOK_INIT_JPRT(ProjectileImpact, 0x9C20BF, 0x9C20C9);
-	HOOK_INIT_JPRT(AddNote, 0x966AF9, 0x966B04);
+	HOOK_INIT_JUMP(ProjectileImpact, 0x9C20BF);
+	HOOK_INIT_JUMP(AddNote, 0x966AF9);
 	HOOK_INIT_JUMP(EquipAidItem, 0x88C74E);
 	HOOK_INIT_JUMP(ReloadWeapon, 0x8A7549);
 	HOOK_INIT_JUMP(OnRagdoll, 0xC7C151);
-	HOOK_INIT_JPRT(PlayerMinHealth, 0x93B80A, 0x93B84F);
+	HOOK_INIT_JUMP(PlayerMinHealth, 0x93B80A);
 	HOOK_INIT_JUMP(ApplyActorVelocity, 0xC6D4E4);
 	HOOK_INIT_CALL(GetModelPath, 0x50FE8B);
 
 	for (UInt32 addr : {0x50DA73, 0x792DC0, 0x7C6F86, 0x7FC4DA, 0x7FD49F, 0x80EA39, 0x81C095, 0x9C6CB6, 0x9C6D3D, 0xA7D6E2, 0xA7D7C3, 0xB5CD2A})
 		SafeWrite32(addr, 0x110);
 
-	SetFormEDID = (_SetFormEDID)*(UInt32*)0x1029018;
+	SafeWrite8(0x465488, 0xCC);
 	SafeWrite32(0x1029018, (UInt32)TESObjectLIGHSetEDIDHook);
+	SafeWrite32(0x1029014, (UInt32)TESObjectLIGHGetEDIDHook);
 	SAFE_WRITE_BUF(0xA68D6B, "\x8B\x86\x9C\x00\x00\x00\x89\x87\x9C\x00\x00\x00");
-	WritePushRetRelJump(0x447155, 0x447171, (UInt32)LoadNifRetnNodeHook);
+	WriteRelJump(0x447155, (UInt32)LoadNifRetnNodeHook);
 	SafeWrite32(0x109DD0C, (UInt32)DestroyNiPointLightHook);
 	WriteRelJump(0x50EF46, (UInt32)CreateObjectNodeHook);
 	SafeWrite32(0x1016BE0, (UInt32)DoQueuedReferenceHook);
 	SafeWrite32(0x1016D28, (UInt32)DoQueuedReferenceHook);
 	SafeWrite32(0x1016D70, (UInt32)DoQueuedReferenceHook);
-	WritePushRetRelJump(0x4ACCF1, 0x4ACD8C, (UInt32)LoadBip01SlotHook);
-	WritePushRetRelJump(0x4AF0DE, 0x4AF0F8, (UInt32)LoadWeaponSlotHook);
+	WriteRelJump(0x4ACCF1, (UInt32)LoadBip01SlotHook);
+	WriteRelJump(0x4AF0DE, (UInt32)LoadWeaponSlotHook);
 	WriteRelCall(0x931384, (UInt32)InitRagdollControllerHook);
 	//SAFE_WRITE_BUF(0x50DCE7, "\x8B\x4D\xD4\x83\xC1\x7C\x8B\x82\xB4\x00\x00\x00\x89\x41\x48\x89\x51\x6C");
 	WriteRelJump(0x50DE20, (UInt32)UpdateAnimatedLightHook);
 	WriteRelCall(0x8C7C4E, (UInt32)UpdateAnimatedLightsHook);
 	WriteRelCall(0x8C7E18, (UInt32)UpdateAnimatedLightsHook);
-	WritePushRetRelJump(0x575A7F, 0x575B3C, (UInt32)SetRefrPositionHook);
+	WriteRelJump(0x575A7F, (UInt32)SetRefrPositionHook);
 	//WriteRelJump(0x8706B0, (UInt32)DoRenderFrameHook);
 	SafeWrite32(0x1087FD8, (UInt32)CopyHitDataHook);
 	SafeWrite32(0x10897C0, (UInt32)CopyHitDataHook);
@@ -5107,9 +5108,9 @@ __declspec(noinline) void InitJIPHooks()
 	SafeWrite8(0x97D55F, 0x40);
 	WriteRelCall(0x97D71F, (UInt32)InitCombatControllerHook);
 	WriteRelCall(0x9951B3, (UInt32)CombatActionApplicableHook);
-	WritePushRetRelJump(0x63C918, 0x63C92E, (UInt32)SkyRefreshClimateHook);
+	WriteRelJump(0x63C918, (UInt32)SkyRefreshClimateHook);
 	WriteRelJump(0x87F427, (UInt32)IsActorEssentialHook);
-	WritePushRetRelJump(0x524014, 0x524072, (UInt32)FireWeaponWobbleHook);
+	WriteRelJump(0x524014, (UInt32)FireWeaponWobbleHook);
 	//WritePushRetRelJump(0x70C105, 0x70C135, (UInt32)SetCrosshairRefHook);
 	WriteRelJump(0xA239E0, (UInt32)GetMouseMovementHook);
 	WriteRelCall(0x7704AE, (UInt32)ClearHUDOrphanedTiles);

@@ -6,7 +6,7 @@ DEFINE_COMMAND_PLUGIN(RemoveScriptVariable, 0, 2, kParams_OneString_OneOptionalQ
 DEFINE_COMMAND_PLUGIN(RemoveAllAddedVariables, 0, 1, kParams_OneOptionalQuest);
 DEFINE_COMMAND_PLUGIN(GetDelayElapsed, 0, 1, kParams_OneQuest);
 DEFINE_COMMAND_PLUGIN(SetDelayElapsed, 0, 2, kParams_OneQuest_OneFloat);
-DEFINE_COMMAND_PLUGIN(SetGameMainLoopCallback, 0, 4, kParams_OneForm_OneInt_TwoOptionalInts);
+DEFINE_COMMAND_ALT_PLUGIN(SetGameMainLoopCallback, SGMLC, 0, 4, kParams_OneForm_OneInt_TwoOptionalInts);
 DEFINE_COMMAND_PLUGIN(GetScriptDisabled, 0, 1, kParams_OneForm);
 DEFINE_COMMAND_PLUGIN(SetScriptDisabled, 0, 2, kParams_OneForm_OneInt);
 DEFINE_COMMAND_PLUGIN(GetScriptEventDisabled, 0, 2, kParams_OneForm_OneString);

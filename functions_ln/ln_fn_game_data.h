@@ -30,13 +30,13 @@ tList<TESForm> *GetSourceList(UInt8 formType)
 	return &((tList<TESForm>*)&g_dataHandler->packageList)[listIdx];
 }
 
-void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList, TempElements *tmpElements)
+void GetLoadedType(UInt32 formType, UInt8 modIndex, tList<TESForm> *outList, TempElements *tmpElements)
 {
 	if (formType == kFormType_TESObjectCELL)
 	{
 		auto &cellArr = g_dataHandler->cellArray;
 		for (UInt32 idx = 0; idx < cellArr.Size(); idx++)
-			if (TESObjectCELL *cell = cellArr[idx]; cell && ((index == -1) || (index == cell->modIndex)))
+			if (TESObjectCELL *cell = cellArr[idx]; cell && ((modIndex == 0xFF) || (modIndex == cell->GetOverridingModIdx())))
 				if (outList) outList->Prepend(cell);
 				else tmpElements->Append(cell);
 	}
@@ -50,7 +50,8 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList, TempElem
 				auto refrIter = wspc->cell->objectList.Head();
 				do
 				{
-					if (TESObjectREFR *refr = refrIter->data; refr && refr->extraDataList.HasType(kXData_ExtraMapMarker) && ((index == -1) || (index == refr->modIndex)))
+					if (TESObjectREFR *refr = refrIter->data; refr && refr->extraDataList.HasType(kXData_ExtraMapMarker) &&
+						((modIndex == 0xFF) || (modIndex == refr->GetOverridingModIdx())))
 						if (outList) outList->Prepend(refr);
 						else tmpElements->Append(refr);
 				}
@@ -68,7 +69,8 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList, TempElem
 				auto refrIter = cell->objectList.Head();
 				do
 				{
-					if (TESObjectREFR *refr = refrIter->data; refr && refr->extraDataList.HasType(kXData_ExtraRadioData) && ((index == -1) || (index == refr->modIndex)))
+					if (TESObjectREFR *refr = refrIter->data; refr && refr->extraDataList.HasType(kXData_ExtraRadioData) &&
+						((modIndex == 0xFF) || (modIndex == refr->GetOverridingModIdx())))
 						if (outList) outList->Prepend(refr);
 						else tmpElements->Append(refr);
 				}
@@ -81,7 +83,7 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList, TempElem
 			auto iter = sourceList->Head();
 			do
 			{
-				if (TESForm *form = iter->data; form && ((index == -1) || (index == form->modIndex)))
+				if (TESForm *form = iter->data; form && ((modIndex == 0xFF) || (modIndex == form->GetOverridingModIdx())))
 					if (outList) outList->Prepend(form);
 					else tmpElements->Append(form);
 			}
@@ -90,14 +92,14 @@ void GetLoadedType(UInt32 formType, int index, tList<TESForm> *outList, TempElem
 		else if (kTypeListJmpTbl[formType] == 0x80)
 		{
 			for (TESBoundObject *object = g_dataHandler->boundObjectList->first; object; object = object->next)
-				if ((object->typeID == formType) && ((index == -1) || (index == object->modIndex)))
+				if ((object->typeID == formType) && ((modIndex == 0xFF) || (modIndex == object->GetOverridingModIdx())))
 					if (outList) outList->Prepend(object);
 					else tmpElements->Append(object);
 		}
 		else
 		{
 			for (auto mIter = GameGlobals::AllFormsMap()->Begin(); mIter; ++mIter)
-				if (TESForm *form = mIter.Get(); form && (form->typeID == formType) && ((index == -1) || (index == form->modIndex)))
+				if (TESForm *form = mIter.Get(); form && (form->typeID == formType) && ((modIndex == 0xFF) || (modIndex == form->GetOverridingModIdx())))
 					if (outList) outList->Prepend(form);
 					else tmpElements->Append(form);
 		}
@@ -110,8 +112,9 @@ bool Cmd_GetLoadedType_Execute(COMMAND_ARGS)
 	int index = -1;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &listForm, &formType, &index, &noClear))
 	{
+		UInt8 modIndex = ((index >= 0) && (index < 255)) ? (UInt8)index : 0xFF;
 		if (!noClear) listForm->list.RemoveAll();
-		GetLoadedType(formType, index, &listForm->list, NULL);
+		GetLoadedType(formType, modIndex, &listForm->list, NULL);
 	}
 	return true;
 }
@@ -123,8 +126,9 @@ bool Cmd_GetLoadedTypeArray_Execute(COMMAND_ARGS)
 	int index = -1;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &formType, &index))
 	{
+		UInt8 modIndex = ((index >= 0) && (index < 255)) ? (UInt8)index : 0xFF;
 		TempElements *tmpElements = GetTempElements();
-		GetLoadedType(formType, index, NULL, tmpElements);
+		GetLoadedType(formType, modIndex, NULL, tmpElements);
 		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	}
 	return true;

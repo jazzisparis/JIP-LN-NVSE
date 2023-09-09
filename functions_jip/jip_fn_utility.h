@@ -22,45 +22,40 @@ DEFINE_COMMAND_PLUGIN(GetSessionTime, 0, 0, NULL);
 
 bool Cmd_RefToString_Execute(COMMAND_ARGS)
 {
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (!NUM_ARGS)
 		form = thisObj;
 	else if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && IS_REFERENCE(form))
 		form = ((TESObjectREFR*)form)->baseForm;
-	AssignString(PASS_COMMAND_ARGS, form ? form->RefToString() : NULL);
+	AssignString(PASS_COMMAND_ARGS, form ? form->RefToString() : nullptr);
 	return true;
 }
 
 bool Cmd_StringToRef_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	char refStr[0x80];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &refStr))
 		REFR_RES = StringToRef(refStr);
+	else REFR_RES = 0;
 	return true;
 }
 
 bool Cmd_GetMinOf_Execute(COMMAND_ARGS)
 {
 	UInt8 numArgs = NUM_ARGS;
-	double val1, val2, val3, val4, val5;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &val1, &val2, &val3, &val4, &val5))
+	double values[5];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &values, &values[1], &values[2], &values[3], &values[4]))
 	{
 		__asm
 		{
-			movq	xmm0, val1
-			minsd	xmm0, val2
-			mov		dl, numArgs
-			cmp		dl, 2
-			jz		done
-			minsd	xmm0, val3
-			cmp		dl, 3
-			jz		done
-			minsd	xmm0, val4
-			cmp		dl, 4
-			jz		done
-			minsd	xmm0, val5
-		done:
+			mov		eax, 1
+			movq	xmm0, values
+			ALIGN 16
+		iterHead:
+			minsd	xmm0, values[eax*8]
+			inc		eax
+			cmp		al, numArgs
+			jb		iterHead
 			mov		eax, result
 			movlpd	[eax], xmm0
 		}
@@ -72,24 +67,19 @@ bool Cmd_GetMinOf_Execute(COMMAND_ARGS)
 bool Cmd_GetMaxOf_Execute(COMMAND_ARGS)
 {
 	UInt8 numArgs = NUM_ARGS;
-	double val1, val2, val3, val4, val5;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &val1, &val2, &val3, &val4, &val5))
+	double values[5];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &values, &values[1], &values[2], &values[3], &values[4]))
 	{
 		__asm
 		{
-			movq	xmm0, val1
-			maxsd	xmm0, val2
-			mov		dl, numArgs
-			cmp		dl, 2
-			jz		done
-			maxsd	xmm0, val3
-			cmp		dl, 3
-			jz		done
-			maxsd	xmm0, val4
-			cmp		dl, 4
-			jz		done
-			maxsd	xmm0, val5
-		done:
+			mov		eax, 1
+			movq	xmm0, values
+			ALIGN 16
+		iterHead:
+			maxsd	xmm0, values[eax*8]
+			inc		eax
+			cmp		al, numArgs
+			jb		iterHead
 			mov		eax, result
 			movlpd	[eax], xmm0
 		}
@@ -284,7 +274,6 @@ bool Cmd_ReadStringFromFile_Execute(COMMAND_ARGS)
 	{
 		ReplaceChr(buffer, '/', '\\');
 		if ((lenRead = FileToBuffer(buffer, buffer, kMaxMessageLength - 1)) && ((--startAt > 0) || (lineCount > 0)))
-		{
 			while (buffer = FindChr(buffer, '\n'))
 			{
 				if (startAt > 0)
@@ -303,7 +292,6 @@ bool Cmd_ReadStringFromFile_Execute(COMMAND_ARGS)
 				}
 				buffer++;
 			}
-		}
 	}
 	if (!lenRead)
 		*startPtr = 0;
@@ -316,13 +304,14 @@ bool Cmd_WriteStringToFile_Execute(COMMAND_ARGS)
 	*result = 0;
 	char filePath[0x80], *buffer = GetStrArgBuffer();
 	UInt32 apnd;
-	if (!ExtractFormatStringArgs(2, buffer, EXTRACT_ARGS_EX, kCommandInfo_WriteStringToFile.numParams, &filePath, &apnd))
-		return true;
-	ReplaceChr(filePath, '/', '\\');
-	if (FileStream outputFile; outputFile.OpenWrite(filePath, apnd != 0))
+	if (ExtractFormatStringArgs(2, buffer, EXTRACT_ARGS_EX, kCommandInfo_WriteStringToFile.numParams, &filePath, &apnd))
 	{
-		outputFile.WriteStr(buffer);
-		*result = 1;
+		ReplaceChr(filePath, '/', '\\');
+		if (FileStream outputFile; outputFile.OpenWrite(filePath, apnd != 0))
+		{
+			outputFile.WriteStr(buffer);
+			*result = 1;
+		}
 	}
 	return true;
 }
@@ -422,7 +411,6 @@ bool Cmd_GetOptionalPatch_Execute(COMMAND_ARGS)
 	char patchName[0x40];
 	int enabled = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &patchName))
-	{
 		switch (s_optionalHacks->Get(patchName))
 		{
 			case 1:
@@ -480,7 +468,6 @@ bool Cmd_GetOptionalPatch_Execute(COMMAND_ARGS)
 				enabled = HOOK_INSTALLED(CreatureSpreadFix);
 				break;
 		}
-	}
 	*result = enabled;
 	DoConsolePrint(result);
 	return true;
@@ -498,16 +485,10 @@ bool Cmd_SetOptionalPatch_Execute(COMMAND_ARGS)
 bool Cmd_GetPluginHeaderVersion_Execute(COMMAND_ARGS)
 {
 	*result = 0;
-	char dataPath[0x80];
-	*(UInt32*)dataPath = 'atad';
-	dataPath[4] = '\\';
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, dataPath + 5))
-		if (FileStream sourceFile(dataPath, 0x1E); sourceFile)
-		{
-			float version;
-			sourceFile.ReadBuf(&version, 4);
-			*result = version;
-		}
+	char modName[0x50];
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &modName))
+		if (auto modInfo = g_dataHandler->LookupModByName(modName))
+			*result = modInfo->header.version;
 	return true;
 }
 
@@ -523,28 +504,25 @@ bool Cmd_GetArrayValue_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 arrID;
 	SInt32 index;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &arrID, &index) || !arrID)
-		return true;
-	ArrayElementR resElement;
-	if (!GetElement((NVSEArrayVar*)arrID, ArrayElementL(index), resElement))
-		return true;
-	switch (resElement.GetType())
-	{
-		case 0:
-			break;
-		case 1:
-			*result = resElement.num;
-			break;
-		case 2:
-			if (resElement.form)
-				REFR_RES = resElement.form->refID;
-			break;
-		case 3:
-			break;
-		case 4:
-			*result = (int)resElement.raw;
-			break;
-	}
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &arrID, &index) && arrID)
+		if (ArrayElementR resElement; GetElement((NVSEArrayVar*)arrID, ArrayElementL(index), resElement))
+			switch (resElement.GetType())
+			{
+				case 0:
+					break;
+				case 1:
+					*result = resElement.num;
+					break;
+				case 2:
+					if (resElement.form)
+						REFR_RES = resElement.form->refID;
+					break;
+				case 3:
+					break;
+				case 4:
+					*result = (int)resElement.raw;
+					break;
+			}
 	return true;
 }
 

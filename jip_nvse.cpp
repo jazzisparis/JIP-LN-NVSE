@@ -1411,6 +1411,11 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	//	v57.15
 	/*2938*/REG_CMD(RegisterSRScript);
 	/*2939*/REG_CMD(SetAmmoCasing);
+	//	v57.20
+	/*293A*/REG_CMD(AssignKeyword);
+	/*293B*/REG_CMD(HasKeyword);
+	/*293C*/REG_CMD_ARR(GetKeywordForms);
+	/*293D*/REG_CMD(ToggleDepthClear);
 
 	//===========================================================
 
@@ -1499,8 +1504,7 @@ void NVSEMessageHandler(NVSEMessagingInterface::Message *nvseMsg)
 			InitGamePatches();
 			InitCmdPatches();
 
-			HMODULE hUIO = GetModuleHandle("ui_organizer");
-			if (hUIO)
+			if (HMODULE hUIO = GetModuleHandle("ui_organizer"))
 				UIOInjectComponent = (_UIOInjectComponent)GetProcAddress(hUIO, (LPCSTR)0xA);
 
 			*s_inventoryIterator;

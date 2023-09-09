@@ -85,12 +85,10 @@ bool Hook_GetHitLocation_Execute(COMMAND_ARGS)
 UInt8 __fastcall DoGetPerkRank(Actor *actor, BGSPerk *perk, bool forTeammates)
 {
 	if IS_ACTOR(actor)
-	{
 		if (s_NPCPerks)
 			return actor->GetPerkRank(perk, forTeammates);
 		else if (actor->IsPlayer() || actor->isTeammate)
 			return g_thePlayer->GetPerkRank(perk, forTeammates | actor->isTeammate);
-	}
 	return 0;
 }
 
@@ -204,7 +202,6 @@ bool Hook_TapControl_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 ctrlID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ctrlID) && (ctrlID < MAX_CONTROL_BIND))
-	{
 		if (!s_controllerReady)
 		{
 			UInt32 keyID = KEYBOARD_BIND(ctrlID);
@@ -225,7 +222,6 @@ bool Hook_TapControl_Execute(COMMAND_ARGS)
 		}
 		else if (TapXIControl(ctrlID))
 			*result = 1;
-	}
 	return true;
 }
 
@@ -234,7 +230,6 @@ bool Hook_IsControlDisabled_Execute(COMMAND_ARGS)
 	*result = 0;
 	UInt32 ctrlID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ctrlID) && (ctrlID < MAX_CONTROL_BIND))
-	{
 		if (!s_controllerReady)
 		{
 			UInt32 keyID = KEYBOARD_BIND(ctrlID), btnID = MOUSE_BIND(ctrlID);
@@ -248,7 +243,6 @@ bool Hook_IsControlDisabled_Execute(COMMAND_ARGS)
 		}
 		else if (GetXIControlDisabled(ctrlID))
 			*result = 1;
-	}
 	return true;
 }
 
@@ -430,12 +424,10 @@ bool Hook_GetPluginVersion_Execute(COMMAND_ARGS)
 	*result = -1;
 	char pluginName[0x80];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pluginName))
-	{
 		if (IsJIPAlias(pluginName))
 			*result = JIP_LN_VERSION;
 		else if (const PluginInfo *pluginInfo = GetPluginInfoByName(pluginName))
 			*result = (int)pluginInfo->version;
-	}
 	DoConsolePrint(result);
 	return true;
 }

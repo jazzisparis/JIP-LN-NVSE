@@ -21,11 +21,11 @@ DEFINE_COMMAND_PLUGIN(ReloadCloudTextures, 0, 0, NULL);
 
 bool Cmd_GetWeatherImageSpaceMod_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESWeather *weather;
 	UInt32 time;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &time) && (time <= 5) && weather->imageSpaceMods[time])
 		REFR_RES = weather->imageSpaceMods[time]->refID;
+	else REFR_RES = 0;
 	return true;
 }
 
@@ -41,12 +41,11 @@ bool Cmd_SetWeatherImageSpaceMod_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWeatherTexture_Execute(COMMAND_ARGS)
 {
-	const char *resStr;
+	const char *resStr = nullptr;
 	TESWeather *weather;
 	UInt32 layer;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &layer) && (layer <= 3))
 		resStr = weather->layerTextures[layer].ddsPath.m_data;
-	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
@@ -63,11 +62,10 @@ bool Cmd_SetWeatherTexture_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWeatherPrecipitationModel_Execute(COMMAND_ARGS)
 {
-	const char *resStr;
+	const char *resStr = nullptr;
 	TESWeather *weather;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather))
 		resStr = weather->model.GetModelPath();
-	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
@@ -125,7 +123,7 @@ bool Cmd_GetWeatherTraitNumeric_Execute(COMMAND_ARGS)
 bool Cmd_SetWeatherTraitNumeric_Execute(COMMAND_ARGS)
 {
 	TESWeather *weather;
-	UInt32 traitID, intVal;
+	UInt32 traitID;
 	double value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weather, &traitID, &value) && (traitID <= 20))
 		switch (traitID)
@@ -152,14 +150,12 @@ bool Cmd_SetWeatherTraitNumeric_Execute(COMMAND_ARGS)
 				((UInt8*)weather)[0xDE + traitID] = (value > 1) ? 255 : (value * 255);
 				break;
 			case 13:
-				intVal = (int)value;
-				if (!intVal || (intVal == 1) || (intVal == 2) || (intVal == 4) || (intVal == 8))
+				if (UInt32 intVal = (int)value; !(intVal & (intVal - 1)))
 					weather->weatherClassification = intVal;
 				break;
 			case 14:
-				intVal = (int)value;
-				if (intVal <= 255255255)
-					weather->lightningColor = RGBDecToHex(intVal);
+				if (UInt32 decRGB = cvtd2ul(value); decRGB <= 255255255)
+					weather->lightningColor = RGBDecToHex(decRGB);
 				break;
 			default:
 				weather->fogDistance[traitID - 15] = value;

@@ -73,7 +73,7 @@ DEFINE_COMMAND_PLUGIN(ModelHasBlock, 0, 22, kParams_OneForm_OneFormatString);
 DEFINE_COMMAND_PLUGIN(GetRayCastRef, 1, 2, kParams_OneOptionalInt_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetRayCastMaterial, 1, 2, kParams_OneOptionalInt_OneOptionalString);
 DEFINE_COMMAND_PLUGIN(GetCollisionNodes, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(GetChildBlocks, 1, 2, kParams_OneOptionalString_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetChildBlocks, 1, 3, kParams_OneOptionalString_TwoOptionalInts);
 DEFINE_COMMAND_PLUGIN(GetBlockTextureSet, 1, 1, kParams_OneString);
 DEFINE_COMMAND_PLUGIN(GetPosEx, 1, 3, kParams_ThreeScriptVars);
 DEFINE_COMMAND_PLUGIN(GetAngleEx, 1, 4, kParams_ThreeScriptVars_OneOptionalInt);
@@ -102,7 +102,7 @@ DEFINE_COMMAND_PLUGIN(GetEditorPosition, 1, 6, kParams_ThreeScriptVars_ThreeOpti
 DEFINE_COMMAND_PLUGIN(RefHasExtraData, 1, 1, kParams_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN_EXP(GetRefExtraData, 1, 2, kParams_NVSE_OneNum_OneOptionalNum);
 DEFINE_COMMAND_PLUGIN_EXP(SetRefExtraData, 1, 2, kParams_NVSE_OneOptionalNum_OneOptionalBasicType);
-DEFINE_COMMAND_PLUGIN(TogglePurgeOnUnload, 1, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_ALT_PLUGIN(TogglePurgeOnUnload, TPOU, 1, 1, kParams_OneOptionalInt);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -751,7 +751,6 @@ bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 	NiVector3 posVector;
 	UInt32 transform = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &posVector.x, &posVector.y, &posVector.z, &transform))
-	{
 		if (!transform)
 			thisObj->SetPos(posVector);
 		else if (transform == 1)
@@ -761,7 +760,6 @@ bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 		}
 		else if (transform == 2)
 			thisObj->SetPos(posVector += thisObj->position.PS());
-	}
 	return true;
 }
 
@@ -772,17 +770,15 @@ bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 	NiVector4 posMods(_mm_setzero_ps());
 	UInt32 translate = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &posMods.x, &posMods.y, &posMods.z, &translate))
-	{
-		NiVector4 coords;
-		if (TESObjectCELL *cell = g_thePlayer->parentCell; cell && (coords.RayCastCoords(g_mainCamera->WorldTranslate(), g_mainCamera->WorldRotate(), maxRange, 6) || translate))
-		{
-			if (cell->worldSpace)
-				cell = cell->worldSpace->cell;
-			coords += posMods;
-			thisObj->MoveToCell(cell, coords);
-			*result = 1;
-		}
-	}
+		if (TESObjectCELL *cell = g_thePlayer->parentCell)
+			if (NiVector4 coords; coords.RayCastCoords(g_mainCamera->WorldTranslate(), g_mainCamera->WorldRotate(), maxRange, 6) || translate)
+			{
+				if (cell->worldSpace)
+					cell = cell->worldSpace->cell;
+				coords += posMods;
+				thisObj->MoveToCell(cell, coords);
+				*result = 1;
+			}
 	return true;
 }
 
@@ -791,7 +787,6 @@ bool Cmd_SetRefName_Execute(COMMAND_ARGS)
 	char name[0x80];
 	name[0] = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &name))
-	{
 		if (name[0])
 		{
 			char **namePtr;
@@ -810,7 +805,6 @@ bool Cmd_SetRefName_Execute(COMMAND_ARGS)
 			}
 			thisObj->JIPRefFlags() &= ~kHookRefFlag5F_AltRefName;
 		}
-	}
 	return true;
 }
 
@@ -1803,14 +1797,11 @@ bool Cmd_GetCollisionNodes_Execute(COMMAND_ARGS)
 void GetChildBlocks(NiNode *node, TempElements *tmpElements)
 {
 	tmpElements->Append(node->GetName());
-	NiAVObject *block;
 	for (auto iter = node->m_children.Begin(); iter; ++iter)
-	{
-		if (!(block = *iter)) continue;
-		if IS_NODE(block)
-			GetChildBlocks((NiNode*)block, tmpElements);
-		else tmpElements->Append(block->GetName());
-	}
+		if (*iter)
+			if IS_NODE(*iter)
+				GetChildBlocks((NiNode*)*iter, tmpElements);
+			else tmpElements->Append(iter->GetName());
 }
 
 bool Cmd_GetChildBlocks_Execute(COMMAND_ARGS)
@@ -1818,15 +1809,20 @@ bool Cmd_GetChildBlocks_Execute(COMMAND_ARGS)
 	*result = 0;
 	char blockName[0x40];
 	blockName[0] = 0;
-	UInt32 pcNode = 0;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &pcNode))
+	UInt32 pcNode = 0, noRecourse = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &pcNode, &noRecourse))
 		if (NiNode *objNode = (NiNode*)GetNifBlock(thisObj, pcNode, blockName); objNode && IS_NODE(objNode))
 		{
 			TempElements *tmpElements = GetTempElements();
-			GetChildBlocks(objNode, tmpElements);
-			UInt32 size = tmpElements->Size();
-			if (size > 1)
-				*result = (int)CreateArray(tmpElements->Data() + 1, size - 1, scriptObj);
+			if (noRecourse)
+			{
+				tmpElements->Append(0.0);
+				for (auto iter = objNode->m_children.Begin(); iter; ++iter)
+					if (*iter) tmpElements->Append(iter->GetName());
+			}
+			else GetChildBlocks(objNode, tmpElements);
+			if (tmpElements->Size() > 1)
+				*result = (int)CreateArray(tmpElements->Data() + 1, tmpElements->Size() - 1, scriptObj);
 		}
 	return true;
 }
@@ -1936,8 +1932,8 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 					xCamera->m_uiRefCount = 2;
 					xCamera->SetName(camName);
 					xCamera->m_transformLocal.scale = 0;
-					xCamera->frustum.n = 5.0F;
-					xCamera->frustum.f = 353840.0F;
+					xCamera->frustum.dNear = 5.0F;
+					xCamera->frustum.dFar = 353840.0F;
 					xCamera->minNearPlaneDist = 1.0F;
 					xCamera->maxFarNearRatio = 70768.0F;
 					xCamera->LODAdjust = 1.0F;
@@ -1993,10 +1989,9 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 					xCamera->frustum.viewPort.SetFOV(fov * FltPId180);
 					xCamera->LODAdjust = fov * 0.08F;
 				}
-				if (flags & 2)
-					HighActorCuller::Run(xCamera);
+				ProcessManager::Get()->UnCullHighActors();
 				g_TES->waterManager->UpdateEx(xCamera);
-				BSTextureManager::GenerateRenderedTexture(xCamera, TextureParams(pixelSize, pixelSize, d3dFormat, kRndrMode_Normal, 0xFFFFFFFF, isEffect), pTexture);
+				BSTextureManager::GenerateRenderedTexture(xCamera, TextureParams(pixelSize, pixelSize, d3dFormat, kRndrMode_Normal, 0xFFFFFFFF/*, isEffect*/), pTexture);
 				*result = 1;
 			}
 		}
@@ -2412,7 +2407,6 @@ bool Cmd_GetRefExtraData_Execute(COMMAND_ARGS)
 		if (modIdx >= 0xFF) return true;
 		XDATA_CS
 		if (ExtraJIPData *pData = GetExtraJIPData(thisObj, modIdx))
-		{
 			if (varIdx >= 18)
 			{
 				AssignString(PASS_COMMAND_ARGS, pData->strings[varIdx - 18].Data());
@@ -2424,7 +2418,6 @@ bool Cmd_GetRefExtraData_Execute(COMMAND_ARGS)
 				eval.SetExpectedReturnType(kRetnType_Form);
 			}
 			else *result = pData->values[varIdx];
-		}
 	}
 	return true;
 }
@@ -2476,13 +2469,11 @@ bool Cmd_SetRefExtraData_Execute(COMMAND_ARGS)
 							dataEntry->refID = 0;
 							xData->RemoveByType(kXData_ExtraJIP);
 							if (!xData->m_data || ((xData->m_data->type == kXData_ExtraCount) && !xData->m_data->next))
-							{
 								if (ContChangesEntry *entry = refr->GetContainerChangesEntry(invRef->type))
 								{
 									entry->extendData->Remove(xData);
 									xData->Destroy(1);
 								}
-							}
 						}
 					}
 				return true;

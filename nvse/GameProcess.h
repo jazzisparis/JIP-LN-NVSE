@@ -1456,6 +1456,18 @@ struct ProcessManager
 	{
 		return ThisCall<int>(0x973710, this, actor, arg2);
 	}
+
+	void UnCullHighActors()
+	{
+		auto iter = highActors.Head();
+		do
+		{
+			if (Actor *actor = iter->data)
+				if (NiNode *rootNode = actor->GetRefNiNode())
+					rootNode->m_flags &= ~NiAVObject::kNiFlag_Culled;
+		}
+		while (iter = iter->next);
+	}
 };
 static_assert(sizeof(ProcessManager) == 0x103CC);
 

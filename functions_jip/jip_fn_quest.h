@@ -126,7 +126,7 @@ bool Cmd_GetObjectiveText_Execute(COMMAND_ARGS)
 {
 	TESQuest *quest;
 	UInt32 objectiveID;
-	const char *resStr = NULL;
+	const char *resStr = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID))
 		if (BGSQuestObjective *objective = quest->GetObjective(objectiveID))
 			resStr = objective->displayText.m_data;
@@ -256,10 +256,8 @@ bool Cmd_SetQuestFlag_Execute(COMMAND_ARGS)
 	TESQuest *quest;
 	UInt32 flagID, doSet;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &flagID, &doSet) && (flagID <= 7))
-	{
 		if (doSet) quest->questFlags |= (1 << flagID);
 		else quest->questFlags &= ~(1 << flagID);
-	};
 	return true;
 }
 
@@ -293,7 +291,7 @@ bool Cmd_GetQuestTargetsChanged_Execute(COMMAND_ARGS)
 		}
 	}
 	while (objIter = objIter->next);
-	if (s_lastQuestTargets == *tmpFormLst)
+	if (s_lastQuestTargets() == *tmpFormLst)
 		*result = 0;
 	else
 	{

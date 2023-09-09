@@ -12,7 +12,7 @@ bool Cmd_GetImageSpaceTrait_Execute(COMMAND_ARGS)
 	UInt32 traitID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &imgSpace, &traitID) && (traitID <= 32))
 	{
-		if (((traitID >= 21) && (traitID <= 23)) || ((traitID >= 29) && (traitID <= 31)))
+		if ((traitID >= 21) && (traitID <= 31) && ((traitID <= 23) || (traitID >= 29)))
 			*result = imgSpace->traitValues[traitID] * 255;
 		else *result = imgSpace->traitValues[traitID];
 	}
@@ -26,11 +26,9 @@ bool Cmd_SetImageSpaceTrait_Execute(COMMAND_ARGS)
 	UInt32 traitID;
 	float value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &imgSpace, &traitID, &value) && (traitID <= 32))
-	{
-		if (((traitID >= 21) && (traitID <= 23)) || ((traitID >= 29) && (traitID <= 31)))
+		if ((traitID >= 21) && (traitID <= 31) && ((traitID <= 23) || (traitID >= 29)))
 			imgSpace->traitValues[traitID] = value * (1 / 255.0F);
 		else imgSpace->traitValues[traitID] = value;
-	}
 	return true;
 }
 
@@ -92,7 +90,6 @@ bool Cmd_SetImageSpaceModTrait_Execute(COMMAND_ARGS)
 	UInt32 traitID;
 	float value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &imod, &traitID, &value) && (traitID <= 67))
-	{
 		if (traitID <= 2)
 		{
 			switch (traitID)
@@ -153,7 +150,6 @@ bool Cmd_SetImageSpaceModTrait_Execute(COMMAND_ARGS)
 			imod->fltIntrpl2[traitID].value = value;
 			imod->data70C[traitID]->value = value;
 		}
-	}
 	return true;
 }
 
@@ -162,14 +158,11 @@ bool Cmd_GetActiveIMODs_Execute(COMMAND_ARGS)
 	*result = 0;
 	TempElements *tmpElements = GetTempElements();
 	auto traverse = g_TES->activeIMODs.Head();
-	ImageSpaceModifierInstance *imodInstance;
-	TESImageSpaceModifier *imod;
 	do
 	{
-		imodInstance = traverse->data;
-		if (!imodInstance || NOT_TYPE(imodInstance, ImageSpaceModifierInstanceForm) || imodInstance->hidden) continue;
-		imod = ((ImageSpaceModifierInstanceForm*)imodInstance)->imageSpaceMod;
-		if (imod) tmpElements->Append(imod);
+		if (ImageSpaceModifierInstance *imodInstance = traverse->data; imodInstance && IS_TYPE(imodInstance, ImageSpaceModifierInstanceForm) && !imodInstance->hidden)
+			if (TESImageSpaceModifier *imod = ((ImageSpaceModifierInstanceForm*)imodInstance)->imageSpaceMod)
+				tmpElements->Append(imod);
 	}
 	while (traverse = traverse->next);
 	if (!tmpElements->Empty())

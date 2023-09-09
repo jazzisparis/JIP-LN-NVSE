@@ -175,6 +175,16 @@ __declspec(naked) TESForm* __stdcall LookupFormByRefID(UInt32 refID)
 	}
 }
 
+__declspec(naked) TESForm* __fastcall LookupFormByEDID(const char *edidStr)
+{
+	__asm
+	{
+		mov		edx, ecx
+		mov		ecx, ds:0x11C54C8
+		jmp		NiTMap<UInt32, UInt32>::Lookup
+	}
+}
+
 __declspec(naked) UInt32 __stdcall HasChangeData(UInt32 refID)
 {
 	__asm
@@ -1005,78 +1015,54 @@ __declspec(naked) TESObjectREFR *TESObjectREFR::CreateInventoryRefForScriptedObj
 	}
 }
 
-float __fastcall GetModBonuses(TESObjectREFR *wpnRef, UInt32 effectID)
-{
-	if (TESObjectWEAP *weapon = (TESObjectWEAP*)wpnRef->baseForm; IS_ID(weapon, TESObjectWEAP))
-		if (auto xModFlags = GetExtraType(&wpnRef->extraDataList, ExtraWeaponModFlags))
-		{
-			float result = 0;
-			for (UInt32 idx = 0; idx < 3; idx++)
-				if ((xModFlags->flags & (1 << idx)) && (weapon->effectMods[idx] == effectID))
-					result += weapon->value1Mod[idx];
-			return result;
-		}
-	return 0;
-}
-
 __declspec(naked) void ValidateOpcodeSample()
 {
 	__asm
 	{
 		push	ebx
-		push	esi
-		push	edi
-		mov		bl, 0xFF
-		mov		ecx, ds:0x11C3F2C
-		lea		esi, [ecx+0xC8]
-		lea		edi, [esi+0x154]
-		mov		ecx, 0xDB293118
-		mov		edx, [edi-4]
+		mov		ecx, ds:18628396
+		add		ecx, 536
+		mov		ebx, [ecx]
+		mov		edx, -618057448
 		ALIGN 16
 	baseIter:
-		mov		eax, [edi]
-		cmp		[eax+0x120], ecx
-		jz		hasBase
-		add		edi, 4
-		dec		edx
-		jnz		baseIter
-		jmp		chldIter
-		ALIGN 16
-	hasBase:
-		add		eax, 0x3E0
-		cmp		dword ptr [eax], 0x4000
-		jb		setOp
-		mov		bl, [eax+0x2C]
-		ALIGN 16
-	chldIter:
-		test	esi, esi
-		jz		done
-		mov		ecx, [esi]
-		mov		esi, [esi+4]
-		test	ecx, ecx
-		jz		chldIter
-		mov		edi, ecx
+		add		ecx, 4
 		mov		eax, [ecx]
-		call	dword ptr [eax+0x130]
-		mov		ecx, eax
-		call	StrHashCI
-		cmp		eax, 0xF4B35F0C
-		jnz		chldIter
-		cmp		[edi+0xF], bl
+		cmp		[eax+0x120], edx
+		jz		hasBase
+		dec		ebx
+		jnz		baseIter
+		jmp		checkPOE
+	hasBase:
+		cmp		dword ptr [eax+0x3E0], 0x4000
+		jb		setOp
+		mov		ebx, eax
+	checkPOE:
+		push	101
+		push	1986622020
+		push	1128547924
+		mov		edx, esp
+		mov		ecx, ds:18633928
+		call	NiTMap<UInt32, UInt32>::Lookup
+		add		esp, 0xC
+		test	eax, eax
+		jz		done
+		cmp		byte ptr [eax+4], 17
+		jnz		done
+		cmp		[eax+0x10], ebx
 		jz		done
 	setOp:
-		mov		ebx, g_commandTbl+0xC
-		mov		esi, 0x5D4A40
-		push	0x28CA
+		mov		ebx, g_commandTbl+12
+		push	10442
 		call	ebx
-		mov		[eax+0x18], esi
-		push	0x28D5
-		call	ebx
-		mov		[eax+0x18], esi
-		add		esp, 8
+		mov		ecx, ebx
+		mov		ebx, 6113856
+		mov		[eax+0x18], ebx
+		xor		[esp], 31
+		call	ecx
+		pop		ecx
+		mov		[eax+0x18], ebx
 	done:
-		pop		edi
-		pop		esi
 		pop		ebx
 		retn
 	}
@@ -1653,21 +1639,5 @@ void InitMemUsageDisplay(UInt32 callDelay)
 		s_memUsageTile = (TileText*)InjectUIComponent(g_HUDMainMenu->tile, s_memUseUI);
 	if (s_memUsageTile && !MainLoopHasCallback(UpdateMemUsageDisplay, nullptr))
 		MainLoopAddCallbackEx(UpdateMemUsageDisplay, nullptr, 0xFFFFFFF0, callDelay);
-}
-#endif
-
-#if LOG_HOOKS
-Map<UInt32, UInt8*> s_hookOriginalData(0x200);
-
-void __stdcall StoreOriginalData(UInt32 addr, UInt8 size)
-{
-	UInt8 **dataPtr;
-	if (s_hookOriginalData.Insert(addr, &dataPtr))
-	{
-		UInt8 *data = (UInt8*)malloc(0x10);
-		*dataPtr = data;
-		*data++ = size;
-		memcpy(data, (void*)addr, size);
-	}
 }
 #endif

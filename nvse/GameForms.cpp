@@ -1,4 +1,19 @@
 #include "nvse/GameForms.h"
+#include "internal/jip_core.h"
+
+__declspec(naked) TESForm *TESForm::GetBaseIfRef() const
+{
+	__asm
+	{
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0xF0], ADDR_ReturnTrue
+		jz		isRef
+		mov		eax, ecx
+		retn
+	isRef:
+		jmp		TESObjectREFR::GetBaseForm
+	}
+}
 
 const UInt32 kBaseComponentOffsets[] =
 {
@@ -1109,6 +1124,40 @@ __declspec(naked) TESAmmo *TESObjectWEAP::GetAmmo() const
 	}
 }
 
+TESObjectWEAP *g_rockItLauncher = nullptr;
+
+__declspec(naked) TESAmmo *TESObjectWEAP::GetEquippedAmmo(Actor *actor) const
+{
+	__asm
+	{
+		cmp		ecx, g_rockItLauncher
+		jz		retnNull
+		mov		edx, [esp+4]
+		test	edx, edx
+		jz		baseWeap
+		mov		eax, [edx+0x68]
+		test	eax, eax
+		jz		baseWeap
+		cmp		byte ptr [eax+0x28], 1
+		ja		baseWeap
+		mov		edx, [eax+0x118]
+		test	edx, edx
+		jz		baseWeap
+		mov		eax, [edx+8]
+		test	eax, eax
+		jz		baseWeap
+		cmp		dword ptr [eax], kVtbl_TESAmmo
+		jnz		baseWeap
+		retn	4
+	baseWeap:
+		call	TESObjectWEAP::GetAmmo
+		retn	4
+	retnNull:
+		xor		eax, eax
+		retn	4
+	}
+}
+
 SInt32 BGSListForm::GetIndexOf(TESForm* pForm)
 {
 	return list.GetIndexOf(pForm);
@@ -1146,4 +1195,116 @@ bool __fastcall ToggleDerivedActorValue(ActorValueCode specialID, ActorValueCode
 			}
 		}
 	return false;
+}
+
+size_t TESQuest::DecompileResultScripts(FILE *pStream, char *pBuffer)
+{
+	size_t totalWritten = 0;
+	char fmtBuffer[0x30];
+	auto stgIter = stages.Head();
+	do
+	{
+		if (auto stgInfo = stgIter->data)
+		{
+			int logIdx = 0;
+			auto logIter = stgInfo->logEntries.Head();
+			do
+			{
+				logIdx++;
+				if (auto entry = logIter->data; entry && entry->resultScript.info.dataLength)
+				{
+					sprintf_s(fmtBuffer, "[Stage #%d :: Entry #%d]\n\n", stgInfo->stage, logIdx);
+					if (pStream)
+						fwrite(fmtBuffer, StrLen(fmtBuffer), 1, pStream);
+					if (pBuffer)
+						pBuffer = StrCopy(pBuffer, fmtBuffer);
+					if (size_t numWritten = DecompileToBuffer(&entry->resultScript, pStream, pBuffer))
+					{
+						totalWritten += numWritten;
+						if (pBuffer)
+							pBuffer += numWritten;
+					}
+				}
+			}
+			while (logIter = logIter->next);
+		}
+	}
+	while (stgIter = stgIter->next);
+	return totalWritten;
+}
+
+size_t BGSTerminal::DecompileResultScripts(FILE *pStream, char *pBuffer)
+{
+	size_t totalWritten = 0;
+	int entryIdx = 0;
+	char fmtBuffer[0x30];
+	auto entIter = menuEntries.Head();
+	do
+	{
+		if (auto entry = entIter->data)
+		{
+			entryIdx++;
+			if (entry->resultScript.info.dataLength)
+			{
+				sprintf_s(fmtBuffer, "[Entry #%d :: \"%s\"]\n\n", entryIdx, entry->entryText.CStr());
+				if (pStream)
+					fwrite(fmtBuffer, StrLen(fmtBuffer), 1, pStream);
+				if (pBuffer)
+					pBuffer = StrCopy(pBuffer, fmtBuffer);
+				if (size_t numWritten = DecompileToBuffer(&entry->resultScript, pStream, pBuffer))
+				{
+					totalWritten += numWritten;
+					if (pBuffer)
+						pBuffer += numWritten;
+				}
+			}
+		}
+	}
+	while (entIter = entIter->next);
+	return totalWritten;
+}
+
+const char *kResScrTitle = "[OnBegin]\n\n\0\0\0\0\0[OnEnd]\n\n\0\0\0\0\0\0\0[OnChange]\n\n";
+
+size_t TESTopicInfo::DecompileResultScripts(FILE *pStream, char *pBuffer)
+{
+	size_t totalWritten = 0;
+	for (UInt32 i = 0; i < 2; i++)
+		if (auto pScript = GetResultScript(i); pScript && pScript->info.dataLength)
+		{
+			auto title = kResScrTitle + (i << 4);
+			if (pStream)
+				fwrite(title, StrLen(title), 1, pStream);
+			if (pBuffer)
+				pBuffer = StrCopy(pBuffer, title);
+			if (size_t numWritten = DecompileToBuffer(pScript, pStream, pBuffer))
+			{
+				totalWritten += numWritten;
+				if (pBuffer)
+					pBuffer += numWritten;
+			}
+		}
+	return totalWritten;
+}
+
+size_t TESPackage::DecompileResultScripts(FILE *pStream, char *pBuffer)
+{
+	size_t totalWritten = 0;
+	PackageEvent *pEvents = &onBegin;
+	for (UInt32 i = 0; i < 3; i++)
+		if (auto pScript = pEvents[i].resScript; pScript && pScript->info.dataLength)
+		{
+			auto title = kResScrTitle + (i << 4);
+			if (pStream)
+				fwrite(title, StrLen(title), 1, pStream);
+			if (pBuffer)
+				pBuffer = StrCopy(pBuffer, title);
+			if (size_t numWritten = DecompileToBuffer(pScript, pStream, pBuffer))
+			{
+				totalWritten += numWritten;
+				if (pBuffer)
+					pBuffer += numWritten;
+			}
+		}
+	return totalWritten;
 }

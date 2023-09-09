@@ -886,7 +886,8 @@ public:
 		bhkSimpleShapePhantom	*phantom04;
 	};
 
-	UInt32								unk1C8[10];				// 1C8	208 could be a DialogPackage
+	UInt32								unk1C8[9];				// 1C8	208 could be a DialogPackage
+	PositionRequest						*posRequest;			// 1EC
 	TESForm								*queuedWeapon;			// 1F0
 	UInt32								unk1F4;					// 1F4
 	UInt8								byte1F8;				// 1F8
@@ -1111,12 +1112,12 @@ public:
 
 	/*304*/virtual UInt32	GetProjectileType();
 	/*308*/virtual void	Do3DLoaded();
-	/*30C*/virtual void	Unk_C3(void);
-	/*310*/virtual void	Unk_C4(void);
+	/*30C*/virtual void	HandleTracer();
+	/*310*/virtual void	UpdateProjectile(float timePassed);
 	/*314*/virtual bool	ProcessImpact();
 	/*318*/virtual bool	IsProximityTriggered();
 	/*31C*/virtual void	Unk_C7(void);
-	/*320*/virtual bool	DisarmPlacedExplosives(TESObjectREFR *refr, bool unk);
+	/*320*/virtual bool	DisarmPlacedExplosives(TESObjectREFR *refr, bool bSilent);
 	/*324*/virtual void	Unk_C9(void);
 	/*328*/virtual void	Unk_CA(void);
 	/*32C*/virtual void	Unk_CB(void);
@@ -1135,7 +1136,7 @@ public:
 		kProjFlag_MineDisarmed =				0x200,
 		kProjFlag_IsPickpocketLiveExplosive =	0x400,
 		kProjFlag_Bit0BUnk =					0x800,
-		kProjFlag_Bit0CUnk =					0x1000,
+		kProjFlag_AlwaysHit =					0x1000,
 		kProjFlag_Bit0DUnk =					0x2000,
 		kProjFlag_MineIgnoresPlayer =			0x4000,
 		kProjFlag_Bit0FUnk =					0x8000,		// Don't apply source-weapon's damage upon impact
@@ -1174,8 +1175,8 @@ public:
 	float				alpha;				// 0E0
 	float				detonationTime;		// 0E4
 	float				blinkTimer;			// 0E8
-	float				flt0EC;				// 0EC
-	float				flt0F0;				// 0F0
+	float				angMomentumZ;		// 0EC
+	float				angMomentumX;		// 0F0
 	float				wpnHealthPerc;		// 0F4
 	TESObjectWEAP		*sourceWeap;		// 0F8
 	TESObjectREFR		*sourceRef;			// 0FC
@@ -1193,10 +1194,14 @@ public:
 	UInt32				unk140;				// 140
 	ContChangesEntry	*rockItEntry;		// 144
 	UInt8				byte148;			// 148
-	UInt8				pad149[3];			// 149
+	bool				hasSplitBeams;		// 149	JIP only!
+	UInt8				numProjectiles;		// 14A	JIP only!
+	UInt8				pad14B;				// 14B
 	float				range;				// 14C
 
 	void GetData(UInt32 dataType, double *result) const;
+
+	TESAmmo *GetAmmo() const {return numProjectiles ? extraDataList.ammo : nullptr;}
 };
 static_assert(sizeof(Projectile) == 0x150);
 
