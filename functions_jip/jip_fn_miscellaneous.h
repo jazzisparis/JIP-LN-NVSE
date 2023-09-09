@@ -986,8 +986,12 @@ bool Cmd_InitRockItLauncher_Execute(COMMAND_ARGS)
 {
 	if (!g_rockItLauncher && ExtractArgsEx(EXTRACT_ARGS_EX, &g_rockItLauncher))
 	{
-		auto funcPtr = &TESObjectWEAP::GetEquippedAmmo;
-		WriteRelJump(0x525980, (UInt32)&funcPtr);
+		__asm
+		{
+			push	TESObjectWEAP::GetEquippedAmmo
+			push	0x525980
+			call	WriteRelJump
+		}
 		WriteRelJump(0x525A90, (UInt32)GetWeaponProjectileHook);
 		WriteRelJump(0x946310, (UInt32)RILAmmoFixHook);
 		if (*(UInt8*)0x781EE6 != 0xEB)

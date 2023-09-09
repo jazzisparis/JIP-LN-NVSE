@@ -1132,28 +1132,37 @@ __declspec(naked) TESAmmo *TESObjectWEAP::GetEquippedAmmo(Actor *actor) const
 	{
 		cmp		ecx, g_rockItLauncher
 		jz		retnNull
-		mov		edx, [esp+4]
-		test	edx, edx
+		mov		eax, [esp+4]
+		test	eax, eax
 		jz		baseWeap
-		mov		eax, [edx+0x68]
+		mov		eax, [eax+0x68]
 		test	eax, eax
 		jz		baseWeap
 		cmp		byte ptr [eax+0x28], 1
 		ja		baseWeap
-		mov		edx, [eax+0x118]
+		mov		edx, [eax+0x114]
 		test	edx, edx
+		jz		nullWeap
+		mov		edx, [edx+8]
+		cmp		edx, g_rockItLauncher
+		jnz		nullWeap
+	retnNull:
+		xor		eax, eax
+		retn	4
+	nullWeap:
+		mov		eax, [eax+0x118]
+		test	eax, eax
 		jz		baseWeap
-		mov		eax, [edx+8]
+		mov		eax, [eax+8]
 		test	eax, eax
 		jz		baseWeap
 		cmp		dword ptr [eax], kVtbl_TESAmmo
-		jnz		baseWeap
-		retn	4
+		jz		done
+		cmp		eax, edx
+		jnz		done
 	baseWeap:
 		call	TESObjectWEAP::GetAmmo
-		retn	4
-	retnNull:
-		xor		eax, eax
+	done:
 		retn	4
 	}
 }
