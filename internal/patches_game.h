@@ -3650,16 +3650,18 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBloc
 		dmgResist = GetMin(dmgResist, 100.0F);
 		if (ammoEffects)
 		{
-			if ((dmgResist > 0) && (ApplyAmmoEffects(kAmmoEffect_DRMod, ammoEffects, dmgResist) > 0))
+			if ((dmgResist >= 0) && (ApplyAmmoEffects(kAmmoEffect_DRMod, ammoEffects, dmgResist) >= 0))
 			{
 				dmgResist = ApplyAmmoEffects(kAmmoEffect_DRMod, ammoEffects, dmgResist);
 				dmgResist = 1.0F - (GetMin(dmgResist, GMST_FLT(fMaxArmorRating)) * 0.01F);
 			}
-			else if ((dmgResist > 0) && (ApplyAmmoEffects(kAmmoEffect_DRMod, ammoEffects, dmgResist) <= 0))
+			else if ((dmgResist >= 0) && (ApplyAmmoEffects(kAmmoEffect_DRMod, ammoEffects, dmgResist) < 0))
 				dmgResist = 1.0F;
-			else if ((dmgResist < 0) && (ApplyAmmoEffects(kAmmoEffect_DRMod, ammoEffects, dmgResist) > dmgResist))
+			else if ((dmgResist < 0) && (ApplyAmmoEffects(kAmmoEffect_DRMod, ammoEffects, dmgResist) >= dmgResist))
+			{
 				dmgResist = ApplyAmmoEffects(kAmmoEffect_DRMod, ammoEffects, dmgResist);
 				dmgResist = 1.0F - (GetMin(dmgResist, GMST_FLT(fMaxArmorRating)) * 0.01F);
+			}
 			else
 				dmgResist = 1.0F - (GetMin(dmgResist, GMST_FLT(fMaxArmorRating)) * 0.01F);
 		}
