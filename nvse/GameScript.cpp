@@ -45,7 +45,10 @@ Script *Script::Create(char *scrText, const char *scrName)
 {
 	Script *pScript = Game_HeapAlloc<Script>();
 	if (pScript->Init(scrText, scrName))
+	{
+		pScript->SetEditorID(scrName);
 		return pScript;
+	}
 	pScript->Destroy(1);
 	return nullptr;
 }
