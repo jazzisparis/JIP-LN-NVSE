@@ -72,7 +72,7 @@ bool Hook_IsInList_Eval(TESObjectREFR *thisObj, BGSListForm *formList, void *unu
 	return true;
 }
 
-bool Hook_GetHitLocation_Execute(COMMAND_ARGS)
+bool Hook_GetHitLocation_Eval(COMMAND_ARGS_EVAL)
 {
 	SInt32 hitLoc = -1;
 	if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->baseProcess)
@@ -80,6 +80,10 @@ bool Hook_GetHitLocation_Execute(COMMAND_ARGS)
 			hitLoc = hitData->unk60;
 	*result = hitLoc;
 	return true;
+}
+bool Hook_GetHitLocation_Execute(COMMAND_ARGS)
+{
+	return Hook_GetHitLocation_Eval(thisObj, nullptr, nullptr, result);
 }
 
 UInt8 __fastcall DoGetPerkRank(Actor *actor, BGSPerk *perk, bool forTeammates)
@@ -447,6 +451,7 @@ void InitCmdPatches()
 	cmdInfo->eval = (Cmd_Eval)Hook_IsInList_Eval;
 	cmdInfo = GetCmdByOpcode(0x1187);
 	cmdInfo->execute = Hook_GetHitLocation_Execute;
+	cmdInfo->eval = Hook_GetHitLocation_Eval;
 	cmdInfo = GetCmdByOpcode(0x11C1);
 	cmdInfo->execute = Hook_HasPerk_Execute;
 	cmdInfo->eval = (Cmd_Eval)Hook_HasPerk_Eval;
