@@ -1417,6 +1417,9 @@ bool NVSEPlugin_Load(const NVSEInterface *nvse)
 	/*293C*/REG_CMD_ARR(GetKeywordForms);
 	/*293D*/REG_CMD(ToggleDepthClear);
 
+	//	v57.??
+	/*293E*/REG_CMD(GetReticleTargetLimb);
+
 	//===========================================================
 
 	if (nvse->isEditor)

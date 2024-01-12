@@ -68,6 +68,7 @@ DEFINE_COMMAND_PLUGIN(RewardXPExact, 0, 1, kParams_OneInt);
 DEFINE_COMMAND_PLUGIN(ClearDeadActors, 0, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetCameraMovement, 0, 2, kParams_TwoScriptVars);
 DEFINE_COMMAND_PLUGIN(GetReticleNode, 0, 2, kParams_OneOptionalFloat_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetReticleTargetLimb, 0, 2, kParams_OneOptionalFloat_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(SetInternalMarker, 0, 2, kParams_OneForm_OneOptionalInt);
 DEFINE_COMMAND_PLUGIN(GetPointRayCastPos, 0, 10, kParams_FiveFloats_ThreeScriptVars_OneOptionalInt_OneOptionalFloat);
 DEFINE_COMMAND_PLUGIN(TogglePlayerSneaking, 0, 1, kParams_OneInt);
@@ -1102,6 +1103,26 @@ bool Cmd_GetReticleNode_Execute(COMMAND_ARGS)
 		if (NiAVObject *rtclObject = GetRayCastObject(g_thePlayer->cameraPos, g_mainCamera->WorldRotate(), maxRange, layerType))
 			nodeName = rtclObject->GetName();
 	AssignString(PASS_COMMAND_ARGS, nodeName);
+	return true;
+}
+
+bool Cmd_GetReticleTargetLimb_Execute(COMMAND_ARGS)
+{
+	*result = -1; // body part being looked at
+	float maxRange = 50000.0F;
+	SInt32 layerType = 54;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &maxRange, &layerType))
+		if (NiAVObject* rtclObject = GetRayCastObject(g_thePlayer->cameraPos, g_mainCamera->WorldRotate(), maxRange, layerType))
+		{
+			if (TESObjectREFR* resRefr = rtclObject->GetParentRef(); 
+				resRefr && IS_ACTOR(resRefr))
+			{
+				auto* node = rtclObject->GetNiNode();
+				if (!node) return true;
+				// Credits to lStewieAl for pointing out this address!
+				*result = ThisCall<int>(0x8B3EF0, (Actor*)resRefr, node); // Actor::GetHitLocationForNode
+			}
+		}
 	return true;
 }
 
