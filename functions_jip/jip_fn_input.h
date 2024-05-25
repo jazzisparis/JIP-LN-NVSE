@@ -1,24 +1,23 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(SetOnKeyDownEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetOnKeyUpEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetOnControlDownEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetOnControlUpEventHandler, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(HoldControl, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(ReleaseControl, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(ToggleVanityWheel, 0, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(ToggleMouseMovement, 0, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(ScrollMouseWheel, 0, 1, kParams_OneOptionalInt);
-
-UInt32 s_onKeyEventMask = 0;
+DEFINE_COMMAND_PLUGIN(SetOnKeyDownEventHandler, 0, kParams_OneForm_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetOnKeyUpEventHandler, 0, kParams_OneForm_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetOnControlDownEventHandler, 0, kParams_OneForm_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetOnControlUpEventHandler, 0, kParams_OneForm_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(HoldControl, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(ReleaseControl, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(ToggleVanityWheel, 0, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(ToggleMouseMovement, 0, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(ScrollMouseWheel, 0, kParams_OneOptionalInt);
 
 bool SetOnKeyEventHandler_Execute(COMMAND_ARGS)
 {
+	CAPTURE_ECX(eventMask)
 	Script *script;
 	UInt32 addEvnt;
 	SInt32 keyID = -1;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &keyID) && IS_ID(script, Script))
-		SetInputEventHandler(s_onKeyEventMask, script, keyID, addEvnt != 0);
+		SetInputEventHandler(eventMask, script, keyID, addEvnt != 0);
 	return true;
 }
 
@@ -26,7 +25,7 @@ __declspec(naked) bool Cmd_SetOnKeyDownEventHandler_Execute(COMMAND_ARGS)
 {
 	__asm
 	{
-		mov		s_onKeyEventMask, kLNEventMask_OnKeyDown
+		mov		ecx, kLNEventMask_OnKeyDown
 		jmp		SetOnKeyEventHandler_Execute
 	}
 }
@@ -35,7 +34,7 @@ __declspec(naked) bool Cmd_SetOnKeyUpEventHandler_Execute(COMMAND_ARGS)
 {
 	__asm
 	{
-		mov		s_onKeyEventMask, kLNEventMask_OnKeyUp
+		mov		ecx, kLNEventMask_OnKeyUp
 		jmp		SetOnKeyEventHandler_Execute
 	}
 }
@@ -44,7 +43,7 @@ __declspec(naked) bool Cmd_SetOnControlDownEventHandler_Execute(COMMAND_ARGS)
 {
 	__asm
 	{
-		mov		s_onKeyEventMask, kLNEventMask_OnControlDown
+		mov		ecx, kLNEventMask_OnControlDown
 		jmp		SetOnKeyEventHandler_Execute
 	}
 }
@@ -53,7 +52,7 @@ __declspec(naked) bool Cmd_SetOnControlUpEventHandler_Execute(COMMAND_ARGS)
 {
 	__asm
 	{
-		mov		s_onKeyEventMask, kLNEventMask_OnControlUp
+		mov		ecx, kLNEventMask_OnControlUp
 		jmp		SetOnKeyEventHandler_Execute
 	}
 }
@@ -90,7 +89,8 @@ bool s_vanityEnabled = true;
 
 bool Cmd_ToggleVanityWheel_Execute(COMMAND_ARGS)
 {
-	*result = s_vanityEnabled;
+	if (s_vanityEnabled)
+		*result = 1;
 	UInt32 toggle;
 	if (NUM_ARGS && ExtractArgsEx(EXTRACT_ARGS_EX, &toggle) && (s_vanityEnabled == !toggle))
 	{

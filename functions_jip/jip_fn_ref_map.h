@@ -1,22 +1,22 @@
 #pragma once
 
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetSize, RefMapSize, 0, 1, kParams_OneString);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetType, RefMapGetType, 0, 2, kParams_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetFloat, RefMapGetFlt, 0, 2, kParams_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetRef, RefMapGetRef, 0, 2, kParams_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetString, RefMapGetStr, 0, 2, kParams_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetValue, RefMapGetVal, 0, 2, kParams_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetFirst, RefMapFirst, 0, 1, kParams_OneString);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetNext, RefMapNext, 0, 1, kParams_OneString);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetKeys, RefMapKeys, 0, 1, kParams_OneString);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetAll, RefMapGetAll, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetFloat, RefMapSetFlt, 0, 3, kParams_OneString_OneDouble_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetRef, RefMapSetRef, 0, 3, kParams_OneString_OneForm_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetString, RefMapSetStr, 0, 3, kParams_TwoStrings_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetValue, RefMapSetVal, 0, 3, kParams_OneString_OneInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayErase, RefMapErase, 0, 2, kParams_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayValidate, RefMapValidate, 0, 1, kParams_OneString);
-DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayDestroy, RefMapDestroy, 0, 1, kParams_OneString);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetSize, RefMapSize, 0, kParams_OneString);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetType, RefMapGetType, 0, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetFloat, RefMapGetFlt, 0, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetRef, RefMapGetRef, 0, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetString, RefMapGetStr, 0, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetValue, RefMapGetVal, 0, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetFirst, RefMapFirst, 0, kParams_OneString);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetNext, RefMapNext, 0, kParams_OneString);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetKeys, RefMapKeys, 0, kParams_OneString);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayGetAll, RefMapGetAll, 0, kParams_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetFloat, RefMapSetFlt, 0, kParams_OneString_OneDouble_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetRef, RefMapSetRef, 0, kParams_OneString_OneForm_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetString, RefMapSetStr, 0, kParams_TwoStrings_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArraySetValue, RefMapSetVal, 0, kParams_OneString_OneInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayErase, RefMapErase, 0, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayValidate, RefMapValidate, 0, kParams_OneString);
+DEFINE_COMMAND_ALT_PLUGIN(RefMapArrayDestroy, RefMapDestroy, 0, kParams_OneString);
 
 #define REF_MAP_CS	ScopedPrimitiveCS cs(&s_refMapCS);
 
@@ -25,7 +25,7 @@ RefMapIDsMap *RMFind(Script *scriptObj, char *varName)
 	if (*varName)
 	{
 		RefMapInfo varInfo(scriptObj, varName);
-		if (RefMapVarsMap *findMod = varInfo.ModsMap().GetPtr(varInfo.modIndex))
+		if (RefMapVarsMap *findMod = varInfo().GetPtr(varInfo.modIndex))
 			return findMod->GetPtr(varName);
 	}
 	return nullptr;
@@ -33,7 +33,6 @@ RefMapIDsMap *RMFind(Script *scriptObj, char *varName)
 
 bool Cmd_RefMapArrayGetSize_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName))
 	{
@@ -46,7 +45,6 @@ bool Cmd_RefMapArrayGetSize_Execute(COMMAND_ARGS)
 
 bool Cmd_RefMapArrayGetType_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50];
 	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
@@ -61,7 +59,6 @@ bool Cmd_RefMapArrayGetType_Execute(COMMAND_ARGS)
 
 bool Cmd_RefMapArrayGetFloat_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50];
 	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
@@ -76,7 +73,6 @@ bool Cmd_RefMapArrayGetFloat_Execute(COMMAND_ARGS)
 
 bool Cmd_RefMapArrayGetRef_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	char varName[0x50];
 	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
@@ -107,7 +103,6 @@ bool Cmd_RefMapArrayGetString_Execute(COMMAND_ARGS)
 
 bool Cmd_RefMapArrayGetValue_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50];
 	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
@@ -148,7 +143,6 @@ bool Cmd_RefMapArrayGetFirst_Execute(COMMAND_ARGS)
 	char varName[0x50];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName))
 		*result = (int)RefMapArrayIterator(scriptObj, varName, true);
-	else *result = 0;
 	return true;
 }
 
@@ -157,13 +151,11 @@ bool Cmd_RefMapArrayGetNext_Execute(COMMAND_ARGS)
 	char varName[0x50];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName))
 		*result = (int)RefMapArrayIterator(scriptObj, varName, false);
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_RefMapArrayGetKeys_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName))
 	{
@@ -182,13 +174,12 @@ bool Cmd_RefMapArrayGetKeys_Execute(COMMAND_ARGS)
 
 bool Cmd_RefMapArrayGetAll_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 type;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type))
 	{
 		RefMapInfo varInfo(scriptObj, type);
 		REF_MAP_CS
-		if (RefMapVarsMap *findMod = varInfo.ModsMap().GetPtr(varInfo.modIndex); findMod && !findMod->Empty())
+		if (RefMapVarsMap *findMod = varInfo().GetPtr(varInfo.modIndex); findMod && !findMod->Empty())
 		{
 			NVSEArrayVar *varsMap = CreateStringMap(nullptr, nullptr, 0, scriptObj);
 			TempElements *tmpElements = GetTempElements();
@@ -211,13 +202,13 @@ AuxVariableValue* __fastcall RefMapAddValue(TESForm *form, TESObjectREFR *thisOb
 		if (UInt32 keyID = GetSubjectID(form, thisObj))
 		{
 			RefMapInfo varInfo(scriptObj, varName);
-			if (varInfo.isPerm)
+			if (!varInfo.isTemp)
 			{
 				s_dataChangedFlags |= kChangedFlag_RefMaps;
 				if (thisObj)
 					thisObj->MarkModified(0);
 			}
-			return &varInfo.ModsMap()[varInfo.modIndex][varName][keyID];
+			return &varInfo()[varInfo.modIndex][varName][keyID];
 		}
 	return nullptr;
 }
@@ -283,14 +274,13 @@ bool Cmd_RefMapArraySetValue_Execute(COMMAND_ARGS)
 
 bool Cmd_RefMapArrayErase_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50];
 	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form) && varName[0])
 	{
 		RefMapInfo varInfo(scriptObj, varName);
 		REF_MAP_CS
-		if (auto findMod = varInfo.ModsMap().Find(varInfo.modIndex))
+		if (auto findMod = varInfo().Find(varInfo.modIndex))
 			if (auto findVar = findMod().Find(varName))
 				if (auto findID = findVar().Find(GetSubjectID(form, thisObj)))
 				{
@@ -301,7 +291,7 @@ bool Cmd_RefMapArrayErase_Execute(COMMAND_ARGS)
 						if (findMod().Empty()) findMod.Remove();
 					}
 					else *result = (int)findVar().Size();
-					if (varInfo.isPerm)
+					if (!varInfo.isTemp)
 						s_dataChangedFlags |= kChangedFlag_RefMaps;
 				}
 	}
@@ -310,13 +300,12 @@ bool Cmd_RefMapArrayErase_Execute(COMMAND_ARGS)
 
 bool Cmd_RefMapArrayValidate_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName) && varName[0])
 	{
 		RefMapInfo varInfo(scriptObj, varName);
 		REF_MAP_CS
-		if (auto findMod = varInfo.ModsMap().Find(varInfo.modIndex))
+		if (auto findMod = varInfo().Find(varInfo.modIndex))
 			if (auto findVar = findMod().Find(varName))
 			{
 				bool cleaned = false;
@@ -332,7 +321,7 @@ bool Cmd_RefMapArrayValidate_Execute(COMMAND_ARGS)
 					if (findMod().Empty()) findMod.Remove();
 				}
 				else *result = (int)findVar().Size();
-				if (cleaned && varInfo.isPerm)
+				if (cleaned && !varInfo.isTemp)
 					s_dataChangedFlags |= kChangedFlag_RefMaps;
 			}
 	}
@@ -346,12 +335,12 @@ bool Cmd_RefMapArrayDestroy_Execute(COMMAND_ARGS)
 	{
 		RefMapInfo varInfo(scriptObj, varName);
 		REF_MAP_CS
-		if (auto findMod = varInfo.ModsMap().Find(varInfo.modIndex))
+		if (auto findMod = varInfo().Find(varInfo.modIndex))
 			if (auto findVar = findMod().Find(varName))
 			{
 				findVar.Remove();
 				if (findMod().Empty()) findMod.Remove();
-				if (varInfo.isPerm)
+				if (!varInfo.isTemp)
 					s_dataChangedFlags |= kChangedFlag_RefMaps;
 			}
 	}

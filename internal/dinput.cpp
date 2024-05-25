@@ -19,8 +19,8 @@ __declspec(naked) bool __fastcall DIHookControl::IsKeyPressed(UInt32 keycode, UI
 		retn	4
 		ALIGN 4
 	kFlagMask:
-		EMIT_DW(00, 00, 01, 00) EMIT_DW(00, 00, 01, 00) EMIT_DW(00, 00, 00, 01) EMIT_DW(00, 00, 01, 01)
-		EMIT_DW(00, 01, 00, 00) EMIT_DW(00, 01, 01, 00) EMIT_DW(00, 01, 00, 01) EMIT_DW(00, 01, 01, 01)
+		EMIT_DW_4(0x00000100, 0x00000100, 0x00000001, 0x00000101)
+		EMIT_DW_4(0x00010000, 0x00010100, 0x00010001, 0x00010101)
 	}
 }
 

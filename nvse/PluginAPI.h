@@ -1,8 +1,5 @@
 #pragma once
 
-struct ArrayKey;
-namespace PluginAPI { class ArrayAPI; }
-
 typedef UInt32	PluginHandle;	// treat this as an opaque type
 
 enum
@@ -342,8 +339,6 @@ struct NVSEArrayVarInterface
 		};
 		UInt8			dataType;
 
-		friend class PluginAPI::ArrayAPI;
-
 		bool IsValid() const {return dataType != kType_Invalid;}
 		UInt8 GetType() const {return dataType;}
 
@@ -353,7 +348,7 @@ struct NVSEArrayVarInterface
 		double Number() {return dataType == kType_Numeric ? num : 0;}
 		TESForm *Form() {return dataType == kType_Form ? form : NULL;}
 		const char *String() {return dataType == kType_String ? str : NULL;}
-		Array *Array() {return dataType == kType_Array ? arr : NULL;}
+		Array *GetArray() {return dataType == kType_Array ? arr : NULL;}
 	};
 
 	struct ElementL : Element
@@ -362,7 +357,7 @@ struct NVSEArrayVarInterface
 		ElementL(double _num) {dataType = kType_Numeric; num = _num;}
 		ElementL(TESForm *_form) {dataType = kType_Form; form = _form;}
 		ElementL(const char *_str) {dataType = kType_String; str = const_cast<char*>(_str);}
-		ElementL(NVSEArrayVarInterface::Array *_arr) {dataType = kType_Array; arr = _arr;}
+		ElementL(Array *_arr) {dataType = kType_Array; arr = _arr;}
 		ElementL(const Element &rhs)
 		{
 			num = rhs.num;
@@ -372,7 +367,7 @@ struct NVSEArrayVarInterface
 		ElementL& operator=(double _num) {dataType = kType_Numeric; num = _num; return *this;}
 		ElementL& operator=(TESForm *_form) {dataType = kType_Form; form = _form; return *this;}
 		ElementL& operator=(const char *_str) {dataType = kType_String; str = const_cast<char*>(_str); return *this;}
-		ElementL& operator=(NVSEArrayVarInterface::Array *_arr) {dataType = kType_Array; arr = _arr; return *this;}
+		ElementL& operator=(Array *_arr) {dataType = kType_Array; arr = _arr; return *this;}
 		ElementL& operator=(const Element &rhs)
 		{
 			num = rhs.num;
@@ -390,7 +385,7 @@ struct NVSEArrayVarInterface
 		ElementR(double _num) {dataType = kType_Numeric; num = _num;}
 		ElementR(TESForm *_form) {dataType = kType_Form; form = _form;}
 		ElementR(const char *_str) {dataType = kType_String; str = CopyCString(_str);}
-		ElementR(NVSEArrayVarInterface::Array *_arr) {dataType = kType_Array; arr = _arr;}
+		ElementR(Array *_arr) {dataType = kType_Array; arr = _arr;}
 		ElementR(const Element &rhs)
 		{
 			dataType = rhs.dataType;
@@ -404,7 +399,7 @@ struct NVSEArrayVarInterface
 		ElementR& operator=(double _num) {dataType = kType_Numeric; num = _num; return *this;}
 		ElementR& operator=(TESForm *_form) {dataType = kType_Form; form = _form; return *this;}
 		ElementR& operator=(const char *_str) {dataType = kType_String; str = CopyCString(_str); return *this;}
-		ElementR& operator=(NVSEArrayVarInterface::Array *_arr) {dataType = kType_Array; arr = _arr; return *this;}
+		ElementR& operator=(Array *_arr) {dataType = kType_Array; arr = _arr; return *this;}
 		ElementR& operator=(const Element &rhs)
 		{
 			if (dataType == kType_String)

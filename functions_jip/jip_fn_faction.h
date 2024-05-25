@@ -1,14 +1,13 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetFactionReputationType, 0, 1, kParams_OneFaction);
-DEFINE_COMMAND_PLUGIN(SetFactionReputationType, 0, 2, kParams_OneFaction_OneOptionalReputation);
+DEFINE_COMMAND_PLUGIN(GetFactionReputationType, 0, kParams_OneFaction);
+DEFINE_COMMAND_PLUGIN(SetFactionReputationType, 0, kParams_OneFaction_OneOptionalReputation);
 
 bool Cmd_GetFactionReputationType_Execute(COMMAND_ARGS)
 {
 	TESFaction *faction;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &faction) && faction->reputation)
 		REFR_RES = faction->reputation->refID;
-	else REFR_RES = 0;
 	return true;
 }
 

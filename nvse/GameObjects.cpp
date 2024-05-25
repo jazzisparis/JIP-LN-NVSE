@@ -682,7 +682,7 @@ __declspec(naked) void TESObjectREFR::SetPos(const NiVector3 &posVector)
 		retn	4
 		ALIGN 16
 	kUnitConv:
-		EMIT_PS_3(3E, 12, 4D, D2)
+		EMIT_PS_3(0x3E124DD2)
 	}
 }
 
@@ -1471,15 +1471,36 @@ __declspec(naked) char Actor::GetCurrentAIProcedure() const
 	}
 }
 
-bool Actor::IsFleeing() const
+__declspec(naked) bool Actor::IsFleeing() const
 {
-	if (baseProcess)
+	__asm
 	{
-		TESPackage *package = baseProcess->GetCurrentPackage();
-		if (package && ((package->type == 0xA) || (package->type == 0x16) || ((package->type == 0x12) && package->GetFleeCombat())))
-			return true;
+		mov		eax, [ecx]
+		cmp		dword ptr [eax+0x100], ADDR_ReturnTrue
+		jnz		retnFalse
+		mov		ecx, [ecx+0x68]
+		test	ecx, ecx
+		jz		retnFalse
+		mov		eax, [ecx]
+		call	dword ptr [eax+0x27C]
+		test	eax, eax
+		jz		retnFalse
+		mov		dl, [eax+0x20]
+		cmp		dl, 0xA
+		jz		retnTrue
+		cmp		dl, 0x16
+		jz		retnTrue
+		cmp		dl, 0x12
+		jnz		retnFalse
+		mov		ecx, eax
+		JMP_EAX(0x981990)
+	retnFalse:
+		xor		al, al
+		retn
+	retnTrue:
+		mov		al, 1
+		retn
 	}
-	return false;
 }
 
 __declspec(naked) ContChangesEntry *Actor::GetWeaponInfo() const
@@ -1605,9 +1626,9 @@ __declspec(naked) bool __fastcall Actor::IsInCombatWith(Actor *target) const
 
 void Actor::StopCombat()
 {
-	if (!isInCombat) return;
-	if (CombatController *combatCtrl = GetCombatController())
-		combatCtrl->stopCombat = true;
+	if (isInCombat)
+		if (CombatController *combatCtrl = GetCombatController())
+			combatCtrl->stopCombat = true;
 }
 
 void Actor::UpdateActiveEffects(MagicItem *magicItem, EffectItem *effItem, bool addNew)
@@ -1701,23 +1722,22 @@ float Actor::GetRadiationLevel() const
 		if (renderState && renderState->currWaterRef)
 		{
 			waterForm = ((BGSPlaceableWater*)renderState->currWaterRef->baseForm)->water;
-			if (waterForm && waterForm->waterForm) waterForm = waterForm->waterForm;
+			if (waterForm && waterForm->waterForm)
+				waterForm = waterForm->waterForm;
 		}
 		else waterForm = ThisCall<TESWaterForm*>(0x547770, parentCell);
-		if (waterForm && waterForm->radiation) result = waterForm->radiation * (isSwimming ? GMST_FLT(fSwimRadiationDamageMult) : GMST_FLT(fWadeRadiationDamageMult));
+		if (waterForm && waterForm->radiation)
+			result = waterForm->radiation * (isSwimming ? GMST_FLT(fSwimRadiationDamageMult) : GMST_FLT(fWadeRadiationDamageMult));
 	}
-	TESObjectREFR *refr;
 	for (auto iter = g_loadedReferences->radiationEmitters.Begin(); iter; ++iter)
-	{
-		if (!(refr = iter.Get())) continue;
-		ExtraRadius *xRadius = GetExtraType(&refr->extraDataList, ExtraRadius);
-		if (!xRadius) continue;
-		float distance = xRadius->radius - GetDistance(refr);
-		if (distance <= 0) continue;
-		if (ExtraRadiation *xRadiation = GetExtraType(&refr->extraDataList, ExtraRadiation))
-			result += xRadiation->radiation * distance / xRadius->radius;
-	}
-	return result ? ((1.0 - (avOwner.GetActorValue(kAVCode_RadResist) * 0.01)) * result) : 0;
+		if (TESObjectREFR *refr = iter.Get())
+			if (auto xRadius = GetExtraType(&refr->extraDataList, ExtraRadius))
+				if (float distance = xRadius->radius - GetDistance(refr); distance > 0)
+					if (auto xRadiation = GetExtraType(&refr->extraDataList, ExtraRadiation))
+						result += xRadiation->radiation * distance / xRadius->radius;
+	if (result)
+		result *= 1.0F - (avOwner.GetActorValue(kAVCode_RadResist) * 0.01F);
+	return result;
 }
 
 __declspec(naked) void __fastcall Actor::TurnToFaceObject(TESObjectREFR *target)
@@ -1795,7 +1815,7 @@ __declspec(naked) UInt32 Actor::GetLevel() const
 		mov		ecx, [ecx+0x20]
 		add		ecx, 0x30
 		CALL_EAX(0x47DED0)
-		movzx	eax, ax
+		cwde
 		retn
 	}
 }
@@ -1809,8 +1829,8 @@ __declspec(naked) double Actor::GetKillXP() const
 		add		ecx, 0x30
 		CALL_EAX(0x47DED0)
 		pop		ecx
-		movzx	edx, ax
-		push	edx
+		cwde
+		push	eax
 		cmp		byte ptr [ecx+4], kFormType_Creature
 		setnz	al
 		movzx	edx, al
@@ -1851,45 +1871,42 @@ __declspec(naked) double __fastcall AdjustDmgByDifficulty(ActorHitData *hitData)
 
 __declspec(noinline) void __fastcall Actor::GetHitDataValue(UInt32 valueType, double *result) const
 {
-	*result = 0;
-	if (NOT_ACTOR(this) || !baseProcess || (baseProcess->processLevel > 1))
-		return;
-	ActorHitData *hitData = ((MiddleHighProcess*)baseProcess)->lastHitData;
-	if (!hitData) return;
-	switch (valueType)
-	{
-		case 0:
-			*result = AdjustDmgByDifficulty(hitData);
-			break;
-		case 1:
-			*result = hitData->limbDmg;
-			break;
-		case 2:
-			if (hitData->source)
-				*(UInt32*)result = hitData->source->refID;
-			break;
-		case 3:
-			if (hitData->projectile)
-				*(UInt32*)result = hitData->projectile->refID;
-			break;
-		case 4:
-			if (hitData->weapon)
-				*(UInt32*)result = hitData->weapon->refID;
-			break;
-		case 5:
-			if (hitData->flags & 0x80000000)
-				*result = 1;
-			break;
-		case 6:
-			*result = hitData->wpnBaseDmg;
-			break;
-		case 7:
-			*result = hitData->fatigueDmg;
-			break;
-		case 8:
-			*result = hitData->armorDmg;
-			break;
-	}
+	if (IS_ACTOR(this) && baseProcess && (baseProcess->processLevel <= 1))
+		if (ActorHitData *hitData = ((MiddleHighProcess*)baseProcess)->lastHitData)
+			switch (valueType)
+			{
+				case 0:
+					*result = AdjustDmgByDifficulty(hitData);
+					break;
+				case 1:
+					*result = hitData->limbDmg;
+					break;
+				case 2:
+					if (hitData->source)
+						REFR_RES = hitData->source->refID;
+					break;
+				case 3:
+					if (hitData->projectile)
+						REFR_RES = hitData->projectile->refID;
+					break;
+				case 4:
+					if (hitData->weapon)
+						REFR_RES = hitData->weapon->refID;
+					break;
+				case 5:
+					if (hitData->flags & 0x80000000)
+						*result = 1;
+					break;
+				case 6:
+					*result = hitData->wpnBaseDmg;
+					break;
+				case 7:
+					*result = hitData->fatigueDmg;
+					break;
+				case 8:
+					*result = hitData->armorDmg;
+					break;
+			}
 }
 
 __declspec(naked) void Actor::DismemberLimb(UInt32 bodyPartID, bool explode)
@@ -2087,7 +2104,7 @@ __declspec(naked) void Actor::PushActor(float force, float angle, TESObjectREFR 
 		retn	0xC
 		ALIGN 8
 	kPushActor:
-		EMIT_DW(3F, 36, E1, 47) EMIT_DW(3C, 2A, AA, AB)
+		EMIT_DW(0x3F36E147) EMIT_DW(0x3C2AAAAB)
 	}
 }
 
@@ -2204,6 +2221,13 @@ __declspec(naked) void Actor::RefreshAnimData()
 	}
 }
 
+double Actor::GetPathingDistance(TESObjectREFR *target)
+{
+	PathingLocation from(this), to(target);
+	PathingRequest::ActorData actorData(this);
+	return CdeclCall<double>(0x6D4EB0, &from, &to, 0, &actorData, 0);
+}
+
 void MagicTarget::RemoveEffect(EffectItem *effItem)
 {
 	if (ActiveEffectList *effList = GetEffectList())
@@ -2229,8 +2253,9 @@ void MagicTarget::RemoveEffect(EffectItem *effItem)
 
 TESObjectREFR *TESObjectREFR::GetMerchantContainer() const
 {
-	ExtraMerchantContainer *xMerchCont = GetExtraType(&extraDataList, ExtraMerchantContainer);
-	return xMerchCont ? xMerchCont->containerRef : nullptr;
+	if (auto xMerchCont = GetExtraType(&extraDataList, ExtraMerchantContainer))
+		return xMerchCont->containerRef;
+	return nullptr;
 }
 
 __declspec(naked) TESActorBase *Actor::GetActorBase() const
@@ -2260,12 +2285,13 @@ __declspec(naked) TESActorBase *Actor::GetActorBase() const
 
 TESPackage *Actor::GetStablePackage() const
 {
-	if (!baseProcess) return nullptr;
-	TESPackage *package = baseProcess->currentPackage.package;
-	if (!package) return nullptr;
-	if ((package->type < 18) || (package->type == 26) || (package->type == 30)) return package;
-	ExtraPackage *xPackage = GetExtraType(&extraDataList, ExtraPackage);
-	return xPackage ? xPackage->package : nullptr;
+	if (baseProcess)
+		if (TESPackage *package = baseProcess->currentPackage.package)
+			if ((package->type < 18) || (package->type == 26) || (package->type == 30))
+				return package;
+			else if (auto xPackage = GetExtraType(&extraDataList, ExtraPackage))
+				return xPackage->package;
+	return nullptr;
 }
 
 bool Actor::GetLOS(Actor *target) const
@@ -2354,7 +2380,7 @@ __declspec(naked) BackUpPackage *Actor::AddBackUpPackage(TESObjectREFR *targetRe
 	}
 }
 
-int PlayerCharacter::GetDetectionState()
+__declspec(noinline) int PlayerCharacter::GetDetectionState()
 {
 	if (!parentCell)
 		return -1;
@@ -2392,19 +2418,18 @@ void PlayerCharacter::ToggleSneak(bool toggle)
 		hiProcess->cachedValues->flags &= ~0x3000;
 }
 
-void Projectile::GetData(UInt32 dataType, double *result) const
+void __fastcall Projectile::GetData(UInt32 dataType, double *result) const
 {
-	*result = 0;
 	if IS_PROJECTILE(this)
 		switch (dataType)
 		{
 			case 0:
 				if (sourceRef)
-					*(UInt32*)result = sourceRef->refID;
+					REFR_RES = sourceRef->refID;
 				break;
 			case 1:
 				if (sourceWeap)
-					*(UInt32*)result = sourceWeap->refID;
+					REFR_RES = sourceWeap->refID;
 				break;
 			case 2:
 				*result = lifeTime;
@@ -2427,7 +2452,7 @@ void Projectile::GetData(UInt32 dataType, double *result) const
 					{
 						if (ImpactData *impactData = traverse->data; impactData && impactData->refr)
 						{
-							*(UInt32*)result = impactData->refr->refID;
+							REFR_RES = impactData->refr->refID;
 							break;
 						}
 					}
@@ -2439,7 +2464,11 @@ void Projectile::GetData(UInt32 dataType, double *result) const
 			{
 				if (hasImpacted)
 					if (ImpactData *impactData = impactDataList.GetFirstItem(); impactData && (impactData->materialType <= 31))
-						*result = (impactData && (impactData->materialType <= 31)) ? kMaterialConvert[impactData->materialType] : -1;
+					{
+						*result = kMaterialConvert[impactData->materialType];
+						break;
+					}
+				*result = -1;
 				break;
 			}
 			default: break;

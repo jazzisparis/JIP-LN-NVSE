@@ -574,7 +574,7 @@ __declspec(naked) float __vectorcall ContChangesEntry::GetHealthPercent() const
 		retn
 		ALIGN 4
 	kFltMin1:
-		EMIT_DW(BF, 80, 00, 00)
+		EMIT_DW(0xBF800000)
 	}
 }
 
@@ -622,7 +622,7 @@ __declspec(naked) float ContChangesEntry::CalculateWeaponDamage(Actor *owner, fl
 		fmul	dword ptr ds:0x1022004
 	noMod:
 		mov		ecx, [esp+8]
-		cmp		s_NPCPerks, 0
+		cmp		s_patchInstallState.NPCPerks, 0
 		jnz		perkMod
 		cmp		dword ptr [ecx+0xC], 0x14
 		jz		perkMod

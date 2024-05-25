@@ -1,20 +1,20 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetBodyPartDataSkeleton, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetBodyPartDataSkeleton, 0, 2, kParams_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(GetBodyPartDataRagdoll, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetBodyPartDataRagdoll, 0, 2, kParams_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetBodyPartDataHasPart, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetBodyPartTraitNumeric, 0, 3, kParams_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(SetBodyPartTraitNumeric, 0, 4, kParams_OneForm_TwoInts_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetBodyPartTraitForm, 0, 3, kParams_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(SetBodyPartTraitForm, 0, 4, kParams_OneForm_TwoInts_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetBodyPartName, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetBodyPartName, 0, 3, kParams_OneForm_OneInt_OneString);
-DEFINE_COMMAND_PLUGIN(GetBodyPartReplacementModel, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetBodyPartReplacementModel, 0, 3, kParams_OneForm_OneInt_OneString);
-DEFINE_COMMAND_PLUGIN(GetBodyPartFlag, 0, 3, kParams_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(SetBodyPartFlag, 0, 4, kParams_OneForm_ThreeInts);
+DEFINE_COMMAND_PLUGIN(GetBodyPartDataSkeleton, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetBodyPartDataSkeleton, 0, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetBodyPartDataRagdoll, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetBodyPartDataRagdoll, 0, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetBodyPartDataHasPart, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetBodyPartTraitNumeric, 0, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(SetBodyPartTraitNumeric, 0, kParams_OneForm_TwoInts_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetBodyPartTraitForm, 0, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(SetBodyPartTraitForm, 0, kParams_OneForm_TwoInts_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetBodyPartName, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetBodyPartName, 0, kParams_OneForm_OneInt_OneString);
+DEFINE_COMMAND_PLUGIN(GetBodyPartReplacementModel, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetBodyPartReplacementModel, 0, kParams_OneForm_OneInt_OneString);
+DEFINE_COMMAND_PLUGIN(GetBodyPartFlag, 0, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(SetBodyPartFlag, 0, kParams_OneForm_ThreeInts);
 
 bool Cmd_GetBodyPartDataSkeleton_Execute(COMMAND_ARGS)
 {
@@ -40,7 +40,6 @@ bool Cmd_GetBodyPartDataRagdoll_Execute(COMMAND_ARGS)
 	BGSBodyPartData *bpData;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bpData) && IS_ID(bpData, BGSBodyPartData) && bpData->ragDoll)
 		REFR_RES = bpData->ragDoll->refID;
-	else REFR_RES = 0;
 	return true;
 }
 
@@ -59,13 +58,11 @@ bool Cmd_GetBodyPartDataHasPart_Execute(COMMAND_ARGS)
 	UInt32 partID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID) && IS_ID(bpData, BGSBodyPartData) && (partID <= 14) && bpData->bodyParts[partID])
 		*result = 1;
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_GetBodyPartTraitNumeric_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	BGSBodyPartData *bpData;
 	UInt32 partID, traitID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &traitID) && IS_ID(bpData, BGSBodyPartData) && (partID <= 14) && (traitID <= 18))
@@ -183,7 +180,6 @@ bool Cmd_SetBodyPartTraitNumeric_Execute(COMMAND_ARGS)
 
 bool Cmd_GetBodyPartTraitForm_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	BGSBodyPartData *bpData;
 	UInt32 partID, traitID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &traitID) && IS_ID(bpData, BGSBodyPartData) && (partID <= 14) && (traitID <= 5))
@@ -295,12 +291,11 @@ bool Cmd_SetBodyPartReplacementModel_Execute(COMMAND_ARGS)
 
 bool Cmd_GetBodyPartFlag_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	BGSBodyPartData *bpData;
 	UInt32 partID, flagID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &bpData, &partID, &flagID) && IS_ID(bpData, BGSBodyPartData) && (partID <= 14) && (flagID <= 7))
-		if (BGSBodyPart *bodyPart = bpData->bodyParts[partID])
-			*result = (bodyPart->flags & (1 << flagID)) != 0;
+		if (BGSBodyPart *bodyPart = bpData->bodyParts[partID]; bodyPart && (bodyPart->flags & (1 << flagID)))
+			*result = 1;
 	return true;
 }
 

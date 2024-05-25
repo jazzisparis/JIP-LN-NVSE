@@ -6,16 +6,17 @@ UInt32 g_valueID_enabled = 0, g_valueID_numVisible = 0;
 
 TileMenu* __fastcall GetMenuTile(const char *componentPath)
 {
-	UInt32 menuID = s_menuNameToID().Get(componentPath);
-	return menuID ? g_tileMenuArray[menuID - kMenuType_Min] : NULL;
+	if (UInt32 menuID = s_menuNameToID->Get(componentPath))
+		return g_tileMenuArray[menuID];
+	return nullptr;
 }
 
 Menu* __fastcall GetMenuByType(UInt32 menuID)
 {
-	menuID -= kMenuType_Min;
-	if (menuID > 83) return NULL;
-	TileMenu *tileMenu = g_tileMenuArray[menuID];
-	return tileMenu ? tileMenu->menu : NULL;
+	if ((menuID >= kMenuType_Min) && (menuID <= kMenuType_Max))
+		if (TileMenu *tileMenu = g_tileMenuArray[menuID])
+			return tileMenu->menu;
+	return nullptr;
 }
 
 __declspec(naked) UInt32 InterfaceManager::GetTopVisibleMenuID() const
@@ -190,7 +191,7 @@ __declspec(naked) NiAVObject *InterfaceManager::GetCursorPick() const
 	}
 }
 
-bool __fastcall IsMenuMode(UInt32 menuID)
+__declspec(noinline) bool __fastcall IsMenuMode(UInt32 menuID)
 {
 	switch (menuID)
 	{

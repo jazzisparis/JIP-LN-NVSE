@@ -1,14 +1,13 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetTerminalLock, 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetPasswordNote, 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetPasswordNote, 0, 2, kParams_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetLockedOut, 0, 1, kParams_OneOptionalObjectRef);
-DEFINE_COMMAND_PLUGIN(SetLockedOut, 0, 2, kParams_OneInt_OneOptionalObjectRef);
+DEFINE_COMMAND_PLUGIN(GetTerminalLock, 0, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetPasswordNote, 0, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetPasswordNote, 0, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetLockedOut, 0, kParams_OneOptionalObjectRef);
+DEFINE_COMMAND_PLUGIN(SetLockedOut, 0, kParams_OneInt_OneOptionalObjectRef);
 
 bool Cmd_GetTerminalLock_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	BGSTerminal *terminal = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &terminal))
 	{
@@ -25,7 +24,6 @@ bool Cmd_GetTerminalLock_Execute(COMMAND_ARGS)
 
 bool Cmd_GetPasswordNote_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	BGSTerminal *terminal = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &terminal))
 	{
@@ -59,7 +57,6 @@ bool Cmd_SetPasswordNote_Execute(COMMAND_ARGS)
 
 bool Cmd_GetLockedOut_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESObjectREFR *refr = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &refr))
 	{

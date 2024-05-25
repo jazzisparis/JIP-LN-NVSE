@@ -1,26 +1,26 @@
 #include "internal/utility.h"
 #include "nvse/GameAPI.h"
 
-alignas(16) const UInt32 kPackedValues[] =
+const __m128i kPackedValues[] =
 {
-	PS_DUP_4(0x7FFFFFFF),
-	PS_DUP_1(0x7FFFFFFF),
-	PS_DUP_4(0x80000000),
-	PS_DUP_1(0x80000000),
-	PS_DUP_3(0xFFFFFFFF),
-	0xFFFFFFFF, 0x7FFFFFFF, 0xFFFFFFFF, 0x7FFFFFFF,
-	0, 0x80000000, 0, 0x80000000,
-	PS_DUP_4(HEX(FLT_EPSILON)),
-	PS_DUP_3(HEX(FltPId180)),
-	PS_DUP_3(HEX(Flt180dPI)),
-	PS_DUP_3(HEX(FltPId2)),
-	PS_DUP_3(HEX(FltPI)),
-	PS_DUP_3(HEX(FltPIx2)),
-	PS_DUP_3(HEX(0.5F)),
-	PS_DUP_3(HEX(1.0F)),
-	PS_DUP_3(0x40DFF8D6),
-	HEX(0.001F), HEX(0.01F), HEX(0.1F), HEX(0.25F),
-	HEX(3.0F), HEX(10.0F), HEX(100.0F), 0
+	_MM_SET_EPI32_4(0x7FFFFFFF),
+	_MM_SET_EPI32_1(0x7FFFFFFF),
+	_MM_SET_EPI32_4(0x80000000),
+	_MM_SET_EPI32_1(0x80000000),
+	_MM_SET_EPI32_3(0xFFFFFFFF),
+	_MM_SET_EPI64_2(0x7FFFFFFFFFFFFFFF),
+	_MM_SET_EPI64_2(0x8000000000000000),
+	_MM_SET_EPI32_4(AS_I32(FLT_EPSILON)),
+	_MM_SET_EPI32_3(AS_I32(FltPId180)),
+	_MM_SET_EPI32_3(AS_I32(Flt180dPI)),
+	_MM_SET_EPI32_3(AS_I32(FltPId2)),
+	_MM_SET_EPI32_3(AS_I32(FltPI)),
+	_MM_SET_EPI32_3(AS_I32(FltPIx2)),
+	_MM_SET_EPI32_3(AS_I32(0.5F)),
+	_MM_SET_EPI32_3(AS_I32(1.0F)),
+	_MM_SET_EPI32_3(0x40DFF8D6),
+	_MM_SET_EPI32(AS_I32(0.001F), AS_I32(0.01F), AS_I32(0.1F), AS_I32(0.25F)),
+	_MM_SET_EPI32(AS_I32(3.0F), AS_I32(10.0F), AS_I32(100.0F), 0x00000000)
 };
 
 alignas(16) const char
@@ -44,19 +44,141 @@ kLwrCaseConverter[] =
 	'\xF0', '\xF1', '\xF2', '\xF3', '\xF4', '\xF5', '\xF6', '\xF7', '\xF8', '\xF9', '\xFA', '\xFB', '\xFC', '\xFD', '\xFE', '\xFF'
 };
 
-alignas(16) const UInt32 kStringMasks[] =
+const __m128i kStringMasks[] =
 {
-	PS_DUP_4(0xFFFFFFFF),
-	PS_DUP_4(0x00000000),
-	PS_DUP_4(0x41414141),
-	PS_DUP_4(0x61616161),
-	PS_DUP_4(0x7F7F7F7F),
-	PS_DUP_4(0x19191919),
-	PS_DUP_4(0x20202020)
+	_MM_SET_EPI32_4(0xFFFFFFFF),
+	_MM_SET_EPI32_4(0x00000000),
+	_MM_SET_EPI32_4(0x41414141),
+	_MM_SET_EPI32_4(0x61616161),
+	_MM_SET_EPI32_4(0x7F7F7F7F),
+	_MM_SET_EPI32_4(0x19191919),
+	_MM_SET_EPI32_4(0x20202020)
 };
 
 UInt32 g_TLSIndex;
-memcpy_t MemCopy = memcpy;
+
+__declspec(naked) void* __fastcall MemCopy(void *dst, const void *src, size_t size)
+{	
+	__asm
+	{
+		push	esi
+		push	edi
+		push	ecx
+		mov		esi, edx
+		mov		edi, ecx
+		mov		eax, ecx
+		sub		eax, edx
+		jz		CopyUpReturn
+		mov		ecx, [esp+0x10]
+		js		CopyUp
+		cmp		eax, ecx
+		jb		CopyDown
+	CopyUp:
+		cmp		ecx, 0x20
+		jb		CopyUpByteMov
+		cmp		ecx, 0x80
+		jnb		CopyUpByteMov
+		ALIGN 16
+	XmmCopySmallLoop:
+		movdqu	xmm0, xmmword ptr [esi]
+		movdqu	xmm1, xmmword ptr [esi+0x10]
+		movdqu	xmmword ptr [edi], xmm0
+		movdqu	xmmword ptr [edi+0x10], xmm1
+		lea		esi, [esi+0x20]
+		lea		edi, [edi+0x20]
+		sub		ecx, 0x20
+		cmp		ecx, 0x20
+		jnb		XmmCopySmallLoop
+		test	ecx, ecx
+		jz		CopyUpReturn
+	CopyUpByteMov:
+		rep movsb
+	CopyUpReturn:
+		pop		eax
+		pop		edi
+		pop		esi
+		retn	4
+		ALIGN 16
+	CopyDown:
+		lea		esi, [esi+ecx]
+		lea		edi, [edi+ecx]
+		cmp		ecx, 0x20
+		jb		CopyDownDwordLoop
+		test	edi, 0xF
+		jz		XmmMovLargeLoop
+		ALIGN 16
+	XmmMovAlignLoop:
+		dec		ecx
+		dec		esi
+		dec		edi
+		mov		al, [esi]
+		mov		[edi], al
+		test	edi, 0xF
+		jnz		XmmMovAlignLoop
+		ALIGN 16
+	XmmMovLargeLoop:
+		cmp		ecx, 0x80
+		jb		XmmMovSmallLoop
+		sub		esi, 0x80
+		sub		edi, 0x80
+		movdqu	xmm0, xmmword ptr [esi]
+		movdqu	xmm1, xmmword ptr [esi+0x10]
+		movdqu	xmm2, xmmword ptr [esi+0x20]
+		movdqu	xmm3, xmmword ptr [esi+0x30]
+		movdqu	xmm4, xmmword ptr [esi+0x40]
+		movdqu	xmm5, xmmword ptr [esi+0x50]
+		movdqu	xmm6, xmmword ptr [esi+0x60]
+		movdqu	xmm7, xmmword ptr [esi+0x70]
+		movdqa	xmmword ptr [edi], xmm0
+		movdqa	xmmword ptr [edi+0x10], xmm1
+		movdqa	xmmword ptr [edi+0x20], xmm2
+		movdqa	xmmword ptr [edi+0x30], xmm3
+		movdqa	xmmword ptr [edi+0x40], xmm4
+		movdqa	xmmword ptr [edi+0x50], xmm5
+		movdqa	xmmword ptr [edi+0x60], xmm6
+		movdqa	xmmword ptr [edi+0x70], xmm7
+		sub		ecx, 0x80
+		jmp		XmmMovLargeLoop
+		ALIGN 16
+	XmmMovSmallLoop:
+		cmp		ecx, 0x20
+		jb		CopyDownDwordLoop
+		sub		esi, 0x20
+		sub		edi, 0x20
+		movdqu	xmm0, xmmword ptr [esi]
+		movdqu	xmm1, xmmword ptr [esi+0x10]
+		movdqa	xmmword ptr [edi], xmm0
+		movdqa	xmmword ptr [edi+0x10], xmm1
+		sub		ecx, 0x20
+		jmp		XmmMovSmallLoop
+		ALIGN 16
+	CopyDownDwordLoop:
+		cmp		ecx, 4
+		jb		CopyDownByte
+		sub		edi, 4
+		sub		esi, 4
+		mov		eax, [esi]
+		mov		[edi], eax
+		sub		ecx, 4
+		jmp		CopyDownDwordLoop
+	CopyDownByte:
+		test	ecx, ecx
+		jz		CopyDownReturn
+		ALIGN 16
+	CopyDownByteLoop:
+		dec		edi
+		dec		esi
+		mov		al, [esi]
+		mov		[edi], al
+		dec		ecx
+		jnz		CopyDownByteLoop
+	CopyDownReturn:
+		pop		eax
+		pop		edi
+		pop		esi
+		retn	4
+	}
+}
 
 __declspec(naked) void* __stdcall Game_DoHeapAlloc(size_t size)
 {
@@ -192,6 +314,18 @@ __declspec(naked) UInt32 GetCPUFeatures()
 		pop		eax
 		or		eax, ecx
 		pop		ebx
+		retn
+	}
+}
+
+__declspec(naked) void __vectorcall Coordinate::operator=(__m128 rhs)
+{
+	__asm
+	{
+		cvttps2dq	xmm0, xmm0
+		psrad	xmm0, 0xC
+		pshuflw	xmm1, xmm0, 2
+		movd	[ecx], xmm1
 		retn
 	}
 }
@@ -335,13 +469,13 @@ __declspec(naked) float __vectorcall Cos(float angle)
 		retn
 		ALIGN 16
 	kFlt2dPI:
-		EMIT_DW(3F, 22, F9, 83)
+		EMIT_DW(0x3F22F983)
 	kCosConsts:
-		EMIT_DW(37, C2, 3A, B1)
-		EMIT_DW(3A, B5, 95, 51)
-		EMIT_DW(3D, 2A, A7, 6F)
-		EMIT_DW(3E, FF, FF, E0)
-		EMIT_DW(3F, 7F, FF, FF)
+		EMIT_DW(0x37C23AB1)
+		EMIT_DW(0x3AB59551)
+		EMIT_DW(0x3D2AA76F)
+		EMIT_DW(0x3EFFFFE0)
+		EMIT_DW(0x3F7FFFFF)
 	}
 }
 
@@ -391,16 +525,16 @@ __declspec(naked) __m128 __vectorcall Cos_V3(__m128 angles)
 		retn
 		ALIGN 16
 	kPS2dPI:
-		EMIT_PS_3(3F, 22, F9, 83)
+		EMIT_PS_3(0x3F22F983)
 	kQuadTest:
-		EMIT_PS_3(00, 00, 00, 03)
-		EMIT_PS_3(00, 00, 00, 02)
+		EMIT_PS_3(0x00000003)
+		EMIT_PS_3(0x00000002)
 	kCosConsts:
-		EMIT_PS_3(37, C2, 3A, B1)
-		EMIT_PS_3(3A, B5, 95, 51)
-		EMIT_PS_3(3D, 2A, A7, 6F)
-		EMIT_PS_3(3E, FF, FF, E0)
-		EMIT_PS_3(3F, 7F, FF, FF)
+		EMIT_PS_3(0x37C23AB1)
+		EMIT_PS_3(0x3AB59551)
+		EMIT_PS_3(0x3D2AA76F)
+		EMIT_PS_3(0x3EFFFFE0)
+		EMIT_PS_3(0x3F7FFFFF)
 	}
 }
 
@@ -622,12 +756,12 @@ __declspec(naked) float __vectorcall ATan2(float y, float x)
 		retn
 		ALIGN 16
 	kATanConsts:
-		EMIT_DW(BC, 5C, DD, 30)
-		EMIT_DW(3D, 6B, 6D, 55)
-		EMIT_DW(3D, F8, 4C, 31)
-		EMIT_DW(3E, 48, 54, C9)
-		EMIT_DW(3E, AA, 7E, 45)
-		EMIT_DW(3F, 7F, FF, B7)
+		EMIT_DW(0xBC5CDD30)
+		EMIT_DW(0x3D6B6D55)
+		EMIT_DW(0x3DF84C31)
+		EMIT_DW(0x3E4854C9)
+		EMIT_DW(0x3EAA7E45)
+		EMIT_DW(0x3F7FFFB7)
 	}
 }
 
@@ -1423,7 +1557,7 @@ __declspec(naked) char* __fastcall SlashPos(const char *str)
 		retn
 		ALIGN 16
 	kBFSlash:
-		DUP_2(EMIT_DW(2F, 2F, 2F, 2F)) DUP_2(EMIT_DW(5C, 5C, 5C, 5C))
+		DUP_2(EMIT_DW(0x2F2F2F2F)) DUP_2(EMIT_DW(0x5C5C5C5C))
 	}
 }
 
@@ -1572,8 +1706,6 @@ __declspec(naked) char* __fastcall IntToStr(char *str, int num)
 
 __declspec(naked) char* __vectorcall FltToStr(char *str, double value)
 {
-	static const double kDbl1Mil = 1000000.0;
-	static const int kIntDivisors[] = {10, 100, 1000, 10000, 100000};
 	__asm
 	{
 		xorps	xmm1, xmm1
@@ -1658,6 +1790,11 @@ __declspec(naked) char* __vectorcall FltToStr(char *str, double value)
 		mov		word ptr [ecx], '0'
 		lea		eax, [ecx+1]
 		retn
+		ALIGN 8
+	kDbl1Mil:
+		EMIT_DW_0 EMIT_DW(0x412E8480)
+	kIntDivisors:
+		EMIT_DW_4(0x0000000A, 0x00000064, 0x000003E8, 0x00002710) EMIT_DW(0x000186A0)
 	}
 }
 
@@ -1757,7 +1894,6 @@ __declspec(naked) UInt32 __fastcall StrToUInt(const char *str)
 
 __declspec(naked) double __vectorcall StrToDbl(const char *str)
 {
-	alignas(16) static const double kStrToDblConsts[] = {4294967296, -4294967296, 1.0e-09, 1.0e-08, 1.0e-07, 1.0e-06, 1.0e-05, 0.0001, 0.001, 0.01, 0.1};
 	__asm
 	{
 		push	esi
@@ -1829,10 +1965,18 @@ __declspec(naked) double __vectorcall StrToDbl(const char *str)
 		retn
 	overflow:
 		movzx	eax, dl
-		movq	xmm0, kStrToDblConsts[eax*8]
+		movq	xmm0, qword ptr kStrToDblConsts[eax*8]
 		pop		edi
 		pop		esi
 		retn
+		ALIGN 8
+	kStrToDblConsts:
+		EMIT_DW_4(0x00000000, 0x41F00000, 0x00000000, 0xC1F00000)
+		EMIT_DW_4(0xE826D695, 0x3E112E0B, 0xE2308C3A, 0x3E45798E)
+		EMIT_DW_4(0x9ABCAF48, 0x3E7AD7F2, 0xA0B5ED8D, 0x3EB0C6F7)
+		EMIT_DW_4(0x88E368F1, 0x3EE4F8B5, 0xEB1C432D, 0x3F1A36E2)
+		EMIT_DW_4(0xD2F1A9FC, 0x3F50624D, 0x47AE147B, 0x3F847AE1)
+		EMIT_DW(0x9999999A) EMIT_DW(0x3FB99999)
 	}
 }
 
@@ -1865,10 +2009,10 @@ __declspec(naked) char* __fastcall UIntToHex(char *str, UInt32 num)
 		mov		word ptr [ecx], '0'
 		lea		eax, [ecx+1]
 		retn
-		ALIGN 16
+		ALIGN 4
 	kCharAtlas:
-		EMIT(30) EMIT(31) EMIT(32) EMIT(33) EMIT(34) EMIT(35) EMIT(36) EMIT(37)
-		EMIT(38) EMIT(39) EMIT(41) EMIT(42) EMIT(43) EMIT(44) EMIT(45) EMIT(46)
+		EMIT_B_8('0', '1', '2', '3', '4', '5', '6', '7')
+		EMIT_B_8('8', '9', 'A', 'B', 'C', 'D', 'E', 'F')
 	}
 }
 
@@ -1908,24 +2052,6 @@ __declspec(naked) UInt32 __fastcall HexToUInt(const char *str)
 		pop		esi
 		retn
 	}
-}
-
-__declspec(noinline) UInt8 *AuxBuffer::Alloc(UInt32 bufIdx, UInt32 reqSize)
-{
-	thread_local static AuxBuffer s_auxBuffers[3] = {{}, {}, {}};
-	AuxBuffer *auxBuf = &s_auxBuffers[bufIdx];
-	if (auxBuf->size < reqSize)
-	{
-		auxBuf->size = reqSize;
-		if (auxBuf->ptr)
-		{
-			_aligned_free(auxBuf->ptr);
-			auxBuf->ptr = nullptr;
-		}
-	}
-	if (!auxBuf->ptr)
-		auxBuf->ptr = (UInt8*)_aligned_malloc(auxBuf->size, 0x10);
-	return auxBuf->ptr;
 }
 
 DString::DString(const char *from)
@@ -2049,7 +2175,7 @@ DString& DString::Insert(UInt16 index, char chr)
 	if (index >= length)
 		return this->operator+=(chr);
 	Reserve(length + 1);
-	memmove(str + index + 1, str + index, length - index + 1);
+	MemCopy(str + index + 1, str + index, length - index + 1);
 	str[index] = chr;
 	length++;
 	return *this;
@@ -2063,7 +2189,7 @@ DString& DString::Insert(UInt16 index, const char *other)
 	{
 		UInt16 newLen = length + otherLen;
 		Reserve(newLen);
-		memmove(str + index + otherLen, str + index, length - index + 1);
+		MemCopy(str + index + otherLen, str + index, length - index + 1);
 		COPY_BYTES(str + index, other, otherLen);
 		length = newLen;
 	}
@@ -2078,7 +2204,7 @@ DString& DString::Insert(UInt16 index, const DString &other)
 	{
 		UInt16 newLen = length + other.length;
 		Reserve(newLen);
-		memmove(str + index + other.length, str + index, length - index + 1);
+		MemCopy(str + index + other.length, str + index, length - index + 1);
 		COPY_BYTES(str + index, other.str, other.length);
 		length = newLen;
 	}
@@ -2423,7 +2549,7 @@ __declspec(naked) void __fastcall FileStream::MakeAllDirs(char *fullPath)
 
 bool DebugLog::Create(const char *filePath)
 {
-	theFile = _fsopen(filePath, "wb", 0x20);
+	theFile = _fsopen(filePath, "wb", _SH_DENYWR);
 	return theFile != nullptr;
 }
 
@@ -2463,8 +2589,11 @@ void PrintDebug(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	auto theLog = *s_debug ? *s_debug : *s_log;
-	theLog->FmtMessage(fmt, args);
+#if JIP_DEBUG
+	s_debug->FmtMessage(fmt, args);
+#else
+	s_log->FmtMessage(fmt, args);
+#endif
 	va_end(args);
 }
 
@@ -2535,6 +2664,19 @@ __declspec(noinline) UInt32 __fastcall FileToBuffer(const char *filePath, char *
 			return length;
 		}
 	return 0;
+}
+
+char* __fastcall FileToBuffer(const char *filePath)
+{
+	if (FileStream srcFile(filePath); srcFile)
+		if (UInt32 length = srcFile.GetLength())
+		{
+			char *buffer = (char*)malloc(length + 1);
+			srcFile.ReadBuf(buffer, length);
+			buffer[length] = 0;
+			return buffer;
+		}
+	return nullptr;
 }
 
 __declspec(naked) void __stdcall SafeWrite8(UInt32 addr, UInt32 data)
@@ -2801,6 +2943,41 @@ const char* __fastcall GetDXDescription(UInt32 keyID)
 		return "WheelDown";
 
 	return "<no key>";
+}
+
+__declspec(naked) void __fastcall DumpCallStack(UInt32 *EBP, UInt32 depth)
+{
+	static const char kAddrFmt[] = "%08X\t";
+	__asm
+	{
+		push	esi
+		push	edi
+		mov		esi, ecx
+		mov		edi, edx
+		mov		eax, dword ptr s_debug
+		mov		ecx, dword ptr s_log
+		test	eax, eax
+		cmovz	eax, ecx
+		push	eax
+		push	offset kAddrFmt
+		push	eax
+		ALIGN 16
+	iterHead:
+		mov		eax, [esi+4]
+		mov		esi, [esi]
+		mov		[esp+8], eax
+		call	fprintf
+		dec		edi
+		jnz		iterHead
+		push	'\n'
+		call	fputc
+		pop		ecx
+		call	fflush
+		add		esp, 0xC
+		pop		edi
+		pop		esi
+		retn
+	}
 }
 
 void __stdcall DumpMemImg(void *data, UInt32 size, UInt8 extra)

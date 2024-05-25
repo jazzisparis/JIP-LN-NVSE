@@ -1,12 +1,12 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetImpactDataModel, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetImpactDataModel, 0, 2, kParams_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(GetImpactDataTrait, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetImpactDataTraitNumeric, 0, 3, kParams_OneForm_OneInt_OneDouble);
-DEFINE_COMMAND_PLUGIN(SetImpactDataTraitForm, 0, 3, kParams_OneForm_OneInt_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetImpactDataSetForm, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetImpactDataSetForm, 0, 3, kParams_OneForm_OneInt_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetImpactDataModel, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetImpactDataModel, 0, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetImpactDataTrait, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetImpactDataTraitNumeric, 0, kParams_OneForm_OneInt_OneDouble);
+DEFINE_COMMAND_PLUGIN(SetImpactDataTraitForm, 0, kParams_OneForm_OneInt_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetImpactDataSetForm, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetImpactDataSetForm, 0, kParams_OneForm_OneInt_OneOptionalForm);
 
 bool Cmd_GetImpactDataModel_Execute(COMMAND_ARGS)
 {
@@ -29,7 +29,6 @@ bool Cmd_SetImpactDataModel_Execute(COMMAND_ARGS)
 
 bool Cmd_GetImpactDataTrait_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	BGSImpactData *impactData;
 	UInt32 traitID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &impactData, &traitID) && IS_ID(impactData, BGSImpactData))
@@ -145,7 +144,6 @@ bool Cmd_GetImpactDataSetForm_Execute(COMMAND_ARGS)
 	UInt32 materialID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &impactDataSet, &materialID) && IS_ID(impactDataSet, BGSImpactDataSet) && (materialID <= 11) && impactDataSet->impactDatas[materialID])
 		REFR_RES = impactDataSet->impactDatas[materialID]->refID;
-	else REFR_RES = 0;
 	return true;
 }
 

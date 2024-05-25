@@ -1,23 +1,22 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetSoundTraitNumeric, 0, 2, kParams_OneSound_OneInt);
-DEFINE_COMMAND_PLUGIN(SetSoundTraitNumeric, 0, 3, kParams_OneSound_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetSoundFlag, 0, 2, kParams_OneSound_OneInt);
-DEFINE_COMMAND_PLUGIN(SetSoundFlag, 0, 3, kParams_OneSound_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetSoundSourceFile, 0, 1, kParams_OneSound);
-DEFINE_COMMAND_PLUGIN(SetSoundSourceFile, 0, 2, kParams_OneSound_OneString);
-DEFINE_COMMAND_PLUGIN(IsSoundPlaying, 0, 2, kParams_OneSound_OneOptionalObjectRef);
-DEFINE_COMMAND_PLUGIN(GetSoundPlayers, 0, 1, kParams_OneSound);
-DEFINE_COMMAND_PLUGIN(StopSound, 0, 2, kParams_OneSound_OneOptionalObjectRef);
-DEFINE_COMMAND_PLUGIN(IsMusicPlaying, 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetMusicState, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetGameVolume, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(SetGameVolume, 0, 2, kParams_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(PlaySound3DNode, 1, 2, kParams_OneSound_OneString);
+DEFINE_COMMAND_PLUGIN(GetSoundTraitNumeric, 0, kParams_OneSound_OneInt);
+DEFINE_COMMAND_PLUGIN(SetSoundTraitNumeric, 0, kParams_OneSound_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetSoundFlag, 0, kParams_OneSound_OneInt);
+DEFINE_COMMAND_PLUGIN(SetSoundFlag, 0, kParams_OneSound_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetSoundSourceFile, 0, kParams_OneSound);
+DEFINE_COMMAND_PLUGIN(SetSoundSourceFile, 0, kParams_OneSound_OneString);
+DEFINE_COMMAND_PLUGIN(IsSoundPlaying, 0, kParams_OneSound_OneOptionalObjectRef);
+DEFINE_COMMAND_PLUGIN(GetSoundPlayers, 0, kParams_OneSound);
+DEFINE_COMMAND_PLUGIN(StopSound, 0, kParams_OneSound_OneOptionalObjectRef);
+DEFINE_COMMAND_PLUGIN(IsMusicPlaying, 0, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetMusicState, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetGameVolume, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(SetGameVolume, 0, kParams_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(PlaySound3DNode, 1, kParams_OneSound_OneString);
 
 bool Cmd_GetSoundTraitNumeric_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESSound *sound;
 	UInt32 traitID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &traitID))
@@ -156,9 +155,8 @@ bool Cmd_GetSoundFlag_Execute(COMMAND_ARGS)
 {
 	TESSound *sound;
 	UInt32 flagID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &flagID) && (flagID <= 31))
-		*result = (sound->soundFlags & (1 << flagID)) != 0;
-	else *result = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &flagID) && (flagID <= 31) && (sound->soundFlags & (1 << flagID)))
+		*result = 1;
 	return true;
 }
 
@@ -230,13 +228,11 @@ bool Cmd_IsSoundPlaying_Execute(COMMAND_ARGS)
 	TESObjectREFR *refr = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm, &refr) && PlayingSoundsIterator(soundForm, false, refr))
 		*result = 1;
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_GetSoundPlayers_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESSound *soundForm;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &soundForm))
 	{
@@ -319,7 +315,6 @@ bool Cmd_GetGameVolume_Execute(COMMAND_ARGS)
 	UInt32 volType;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &volType) && (volType <= 5))
 		*result = BSAudioManager::Get()->volumes[volType] * 100;
-	else *result = 0;
 	return true;
 }
 

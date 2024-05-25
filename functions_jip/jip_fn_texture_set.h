@@ -1,11 +1,11 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetTextureSetTexture, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetTextureSetTexture, 0, 3, kParams_OneForm_OneInt_OneString);
-DEFINE_COMMAND_PLUGIN(GetTextureSetTraitNumeric, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetTextureSetTraitNumeric, 0, 3, kParams_OneForm_OneInt_OneDouble);
-DEFINE_COMMAND_PLUGIN(GetTextureSetFlag, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetTextureSetFlag, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetTextureSetTexture, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetTextureSetTexture, 0, kParams_OneForm_OneInt_OneString);
+DEFINE_COMMAND_PLUGIN(GetTextureSetTraitNumeric, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetTextureSetTraitNumeric, 0, kParams_OneForm_OneInt_OneDouble);
+DEFINE_COMMAND_PLUGIN(GetTextureSetFlag, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetTextureSetFlag, 0, kParams_OneForm_TwoInts);
 
 bool Cmd_GetTextureSetTexture_Execute(COMMAND_ARGS)
 {
@@ -30,7 +30,6 @@ bool Cmd_SetTextureSetTexture_Execute(COMMAND_ARGS)
 
 bool Cmd_GetTextureSetTraitNumeric_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	BGSTextureSet *texSet;
 	UInt32 traitID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &texSet, &traitID) && IS_ID(texSet, BGSTextureSet) && texSet->decalInfo)
@@ -83,12 +82,16 @@ bool Cmd_SetTextureSetTraitNumeric_Execute(COMMAND_ARGS)
 
 bool Cmd_GetTextureSetFlag_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	BGSTextureSet *texSet;
 	UInt32 flagID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &texSet, &flagID) && IS_ID(texSet, BGSTextureSet) && (flagID <= 3))
-		if (!flagID) *result = texSet->texFlags ? 1 : 0;
-		else if (texSet->decalInfo) *result = (texSet->decalInfo->flags & (1 << (flagID - 1))) ? 1 : 0;
+		if (!flagID)
+		{
+			if (texSet->texFlags)
+				*result = 1;
+		}
+		else if (texSet->decalInfo && (texSet->decalInfo->flags & (1 << (flagID - 1))))
+			*result = 1;
 	return true;
 }
 
@@ -98,9 +101,11 @@ bool Cmd_SetTextureSetFlag_Execute(COMMAND_ARGS)
 	UInt32 flagID, val;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &texSet, &flagID, &val) && IS_ID(texSet, BGSTextureSet) && (flagID <= 3))
 		if (!flagID)
-			texSet->texFlags = val ? 1 : 0;
+			texSet->texFlags = val != 0;
 		else if (texSet->decalInfo)
-			if (val) texSet->decalInfo->flags |= (1 << (flagID - 1));
-			else texSet->decalInfo->flags &= ~(1 << (flagID - 1));
+			if (val)
+				texSet->decalInfo->flags |= (1 << (flagID - 1));
+			else
+				texSet->decalInfo->flags &= ~(1 << (flagID - 1));
 	return true;
 }

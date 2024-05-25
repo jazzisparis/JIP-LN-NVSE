@@ -1,25 +1,25 @@
 #pragma once
 
-DEFINE_COMMAND_ALT_PLUGIN(GetLNVersion, GetJIPLNVersion, 0, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(FileExists, 0, 2, kParams_OneString_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(ListToArray, 0, 1, kParams_FormList);
-DEFINE_COMMAND_PLUGIN(GetTimeStamp, 0, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(GetINIFloat, 0, 2, kParams_OneString_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(SetINIFloat, 0, 3, kParams_OneString_OneDouble_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(GetINIString, 0, 2, kParams_OneString_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(SetINIString, 0, 3, kParams_TwoString_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(GetINISection, 0, 3, kParams_OneString_OneOptionalString_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetINISection, 0, 3, kParams_OneString_OneInt_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(GetINISectionNames, 0, 1, kParams_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(RemoveINIKey, 0, 2, kParams_OneString_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(RemoveINISection, 0, 2, kParams_OneString_OneOptionalString);
-DEFINE_COMMAND_ALT_PLUGIN(GetFilesInFolder, GetFiles, 0, 2, kParams_OneString_OneOptionalString);
-DEFINE_COMMAND_ALT_PLUGIN(GetFoldersInFolder, GetFolders, 0, 2, kParams_OneString_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(SortFormsByType, 0, 2, kParams_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetFormCountType, 0, 2, kParams_TwoInts);
-DEFINE_COMMAND_ALT_PLUGIN(GetDefaultMessageTime, GetDMT, 0, 0, nullptr);
-DEFINE_COMMAND_ALT_PLUGIN(SetDefaultMessageTime, SetDMT, 0, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(Console, 0, 21, kParams_FormatString);
+DEFINE_COMMAND_ALT_PLUGIN(GetLNVersion, GetJIPLNVersion, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(FileExists, 0, kParams_OneString_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(ListToArray, 0, kParams_FormList);
+DEFINE_COMMAND_PLUGIN(GetTimeStamp, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetINIFloat, 0, kParams_OneString_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(SetINIFloat, 0, kParams_OneString_OneDouble_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(GetINIString, 0, kParams_OneString_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(SetINIString, 0, kParams_TwoString_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(GetINISection, 0, kParams_OneString_OneOptionalString_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetINISection, 0, kParams_OneString_OneInt_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(GetINISectionNames, 0, kParams_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(RemoveINIKey, 0, kParams_OneString_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(RemoveINISection, 0, kParams_OneString_OneOptionalString);
+DEFINE_COMMAND_ALT_PLUGIN(GetFilesInFolder, GetFiles, 0, kParams_OneString_OneOptionalString);
+DEFINE_COMMAND_ALT_PLUGIN(GetFoldersInFolder, GetFolders, 0, kParams_OneString_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(SortFormsByType, 0, kParams_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetFormCountType, 0, kParams_TwoInts);
+DEFINE_COMMAND_ALT_PLUGIN(GetDefaultMessageTime, GetDMT, 0, nullptr);
+DEFINE_COMMAND_ALT_PLUGIN(SetDefaultMessageTime, SetDMT, 0, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(Console, 0, kParams_FormatString);
 
 bool Cmd_GetLNVersion_Execute(COMMAND_ARGS)
 {
@@ -36,24 +36,25 @@ bool Cmd_FileExists_Execute(COMMAND_ARGS)
 	UInt32 checkDir = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, dataPath + 5, &checkDir))
 		*result = FileExistsEx(dataPath, checkDir != 0);
-	else *result = 0;
 	DoConsolePrint(result);
 	return true;
 }
 
 bool Cmd_ListToArray_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	BGSListForm *listForm;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &listForm)) return true;
-	TempElements *tmpElements = GetTempElements();
-	auto iter = listForm->list.Head();
-	do
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &listForm))
 	{
-		if (iter->data) tmpElements->Append(iter->data);
+		TempElements *tmpElements = GetTempElements();
+		auto iter = listForm->list.Head();
+		do
+		{
+			if (iter->data)
+				tmpElements->Append(iter->data);
+		}
+		while (iter = iter->next);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	}
-	while (iter = iter->next);
-	*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -153,42 +154,40 @@ __declspec(naked) char* __fastcall GetValueDelim(char *valueName)
 		retn
 		ALIGN 16
 	kINIDelims:
-		EMIT_DW(3A, 3A, 3A, 3A) EMIT_DW(2F, 2F, 2F, 2F)
-		EMIT_DW(5C, 5C, 5C, 5C) EMIT_DW(00, 00, 00, 00)
+		EMIT_DW(0x3A3A3A3A) EMIT_DW(0x2F2F2F2F) EMIT_DW(0x5C5C5C5C) EMIT_DW_0
 	}
 }
 
 bool Cmd_GetINIFloat_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char configPath[0x80], valueName[0x80];
 	configPath[12] = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, configPath + 12) || !GetINIPath(configPath, scriptObj))
-		return true;
-	char *delim = GetValueDelim(valueName);
-	if (!*delim) return true;
-	char valStr[0x20];
-	valStr[0] = 0;
-	if (GetPrivateProfileString(valueName, delim, nullptr, valStr, 0x20, configPath) && valStr[0])
-		*result = StrToDbl(valStr);
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, configPath + 12) && GetINIPath(configPath, scriptObj))
+		if (char *delim = GetValueDelim(valueName); *delim)
+		{
+			char valStr[0x20];
+			valStr[0] = 0;
+			if (GetPrivateProfileString(valueName, delim, nullptr, valStr, 0x20, configPath) && valStr[0])
+				*result = StrToDbl(valStr);
+		}
 	return true;
 }
 
 bool Cmd_SetINIFloat_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char configPath[0x80], valueName[0x80];
 	double value;
 	configPath[12] = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, &value, configPath + 12) || !GetINIPath(configPath, scriptObj))
-		return true;
-	char *delim = GetValueDelim(valueName);
-	if (!*delim) return true;
-	if (!FileExists(configPath)) FileStream::MakeAllDirs(configPath);
-	char valStr[0x20];
-	FltToStr(valStr, value);
-	if (WritePrivateProfileString(valueName, delim, valStr, configPath))
-		*result = 1;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, &value, configPath + 12) && GetINIPath(configPath, scriptObj))
+		if (char *delim = GetValueDelim(valueName); *delim)
+		{
+			if (!FileExists(configPath))
+				FileStream::MakeAllDirs(configPath);
+			char valStr[0x20];
+			FltToStr(valStr, value);
+			if (WritePrivateProfileString(valueName, delim, valStr, configPath))
+				*result = 1;
+		}
 	return true;
 }
 
@@ -198,32 +197,29 @@ bool Cmd_GetINIString_Execute(COMMAND_ARGS)
 	buffer[0] = 0;
 	configPath[12] = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, configPath + 12) && GetINIPath(configPath, scriptObj))
-	{
-		char *delim = GetValueDelim(valueName);
-		if (*delim) GetPrivateProfileString(valueName, delim, nullptr, buffer, kMaxMessageLength, configPath);
-	}
+		if (char *delim = GetValueDelim(valueName); *delim)
+			GetPrivateProfileString(valueName, delim, nullptr, buffer, kMaxMessageLength, configPath);
 	AssignString(PASS_COMMAND_ARGS, buffer);
 	return true;
 }
 
 bool Cmd_SetINIString_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char configPath[0x80], valueName[0x80], *buffer = GetStrArgBuffer();
 	configPath[12] = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, buffer, configPath + 12) || !GetINIPath(configPath, scriptObj))
-		return true;
-	char *delim = GetValueDelim(valueName);
-	if (!*delim) return true;
-	if (!FileExists(configPath)) FileStream::MakeAllDirs(configPath);
-	if (WritePrivateProfileString(valueName, delim, buffer, configPath))
-		*result = 1;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, buffer, configPath + 12) && GetINIPath(configPath, scriptObj))
+		if (char *delim = GetValueDelim(valueName); *delim)
+		{
+			if (!FileExists(configPath))
+				FileStream::MakeAllDirs(configPath);
+			if (WritePrivateProfileString(valueName, delim, buffer, configPath))
+				*result = 1;
+		}
 	return true;
 }
 
 bool Cmd_GetINISection_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char configPath[0x80], secName[0x40];
 	configPath[12] = 0;
 	UInt32 getNumeric = 0;
@@ -246,7 +242,6 @@ bool Cmd_GetINISection_Execute(COMMAND_ARGS)
 
 bool Cmd_SetINISection_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char configPath[0x80], secName[0x40];
 	UInt32 arrID;
 	configPath[12] = 0;
@@ -277,7 +272,6 @@ bool Cmd_SetINISection_Execute(COMMAND_ARGS)
 
 bool Cmd_GetINISectionNames_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char configPath[0x80];
 	configPath[12] = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, configPath + 12) || !GetINIPath(configPath, scriptObj))
@@ -297,14 +291,11 @@ bool Cmd_GetINISectionNames_Execute(COMMAND_ARGS)
 
 bool Cmd_RemoveINIKey_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char configPath[0x80], valueName[0x80];
 	configPath[12] = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, configPath + 12) || !GetINIPath(configPath, scriptObj) || !FileExists(configPath))
-		return true;
-	char *key = GetValueDelim(valueName);
-	if (*key && WritePrivateProfileString(valueName, key, nullptr, configPath))
-		*result = 1;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &valueName, configPath + 12) && GetINIPath(configPath, scriptObj) && FileExists(configPath))
+		if (char *key = GetValueDelim(valueName); *key && WritePrivateProfileString(valueName, key, nullptr, configPath))
+			*result = 1;
 	return true;
 }
 
@@ -314,13 +305,11 @@ bool Cmd_RemoveINISection_Execute(COMMAND_ARGS)
 	configPath[12] = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &secName, configPath + 12) && GetINIPath(configPath, scriptObj) && FileExists(configPath) &&
 		WritePrivateProfileStruct(secName, nullptr, nullptr, 0, configPath)) *result = 1;
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_GetFilesInFolder_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char dataPathFull[0x80], filter[0x40], *dataPath = dataPathFull + 5;
 	*(UInt32*)dataPathFull = 'atad';
 	dataPathFull[4] = '\\';
@@ -339,7 +328,6 @@ bool Cmd_GetFilesInFolder_Execute(COMMAND_ARGS)
 
 bool Cmd_GetFoldersInFolder_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char dataPathFull[0x80], filter[0x40], *dataPath = dataPathFull + 5;
 	*(UInt32*)dataPathFull = 'atad';
 	dataPathFull[4] = '\\';
@@ -358,7 +346,6 @@ bool Cmd_GetFoldersInFolder_Execute(COMMAND_ARGS)
 
 bool Cmd_SortFormsByType_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 formArrID, typeArrID;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &formArrID, &typeArrID)) return true;
 	NVSEArrayVar *formArray = LookupArrayByID(formArrID);
@@ -368,27 +355,21 @@ bool Cmd_SortFormsByType_Execute(COMMAND_ARGS)
 	if (!nForms || !nTypes) return true;
 	TempElements *tmpElements = GetTempElements();
 	Vector<TESForm*> tempForms(nForms);
-	ArrayElementL *elements = AuxBuffer::Get<ArrayElementL>(2, GetMax(nForms, nTypes));
+	AuxBuffer<ArrayElementL> elements(GetMax(nForms, nTypes));
 	GetElements(formArray, elements, nullptr);
-	TESForm *form;
 	for (int idx = 0; idx < nForms; idx++)
-	{
-		form = elements[idx].Form();
-		if (form) tempForms.Append(form);
-	}
+		if (TESForm *form = elements[idx].Form())
+			tempForms.Append(form);
 	GetElements(typeArray, elements, nullptr);
-	UInt8 typeID;
 	for (UInt32 idx = 0; idx < nTypes; idx++)
 	{
-		typeID = elements[idx].Number();
+		UInt8 typeID = elements[idx].Number();
 		for (auto iter = tempForms.BeginRv(); iter; --iter)
-		{
-			form = *iter;
-			if ((form->typeID != typeID) && (NOT_REFERENCE(form) || (((TESObjectREFR*)form)->baseForm->typeID != typeID)))
-				continue;
-			tmpElements->Append(form);
-			iter.Remove(tempForms);
-		}
+			if ((iter->typeID == typeID) || (IS_REFERENCE(*iter) && (((TESObjectREFR*)*iter)->baseForm->typeID == typeID)))
+			{
+				tmpElements->Append(*iter);
+				iter.Remove(tempForms);
+			}
 		if (tempForms.Empty()) break;
 	}
 	if (!tempForms.Empty())
@@ -400,7 +381,6 @@ bool Cmd_SortFormsByType_Execute(COMMAND_ARGS)
 
 bool Cmd_GetFormCountType_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 arrID, typeID;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &arrID, &typeID)) return true;
 	NVSEArrayVar *formArray = LookupArrayByID(arrID);
@@ -408,18 +388,15 @@ bool Cmd_GetFormCountType_Execute(COMMAND_ARGS)
 		return true;
 	UInt32 size = GetArraySize(formArray);
 	if (!size) return true;
-	ArrayElementR *elements = AuxBuffer::Get<ArrayElementR>(2, size);
-	if (!GetElements(formArray, elements, nullptr))
-		return true;
-	int count = 0;
-	TESForm *form;
-	for (UInt32 idx = 0; idx < size; idx++)
+	AuxBuffer<ArrayElementR> elements(size);
+	if (GetElements(formArray, elements, nullptr))
 	{
-		form = elements[idx].Form();
-		if (form && (form->typeID == typeID))
-			count++;
+		int count = 0;
+		for (UInt32 idx = 0; idx < size; idx++)
+			if (TESForm *form = elements[idx].Form(); form && (form->typeID == typeID))
+				count++;
+		*result = count;
 	}
-	*result = count;
 	return true;
 }
 
@@ -443,6 +420,5 @@ bool Cmd_Console_Execute(COMMAND_ARGS)
 	char *buffer = GetStrArgBuffer();
 	if (ExtractFormatStringArgs(0, buffer, EXTRACT_ARGS_EX, kCommandInfo_Console.numParams) && JIPScriptRunner::RunScriptSource(buffer, "Console"))
 		*result = 1;
-	else *result = 0;
 	return true;
 }

@@ -1,36 +1,37 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetWeaponDetectionSoundLevel, 0, 1, kParams_OneObjectID);
-DEFINE_COMMAND_PLUGIN(SetWeaponDetectionSoundLevel, 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_CMD_COND_PLUGIN(IsEquippedWeaponSilenced, 1, 0, nullptr);
-DEFINE_CMD_COND_PLUGIN(IsEquippedWeaponScoped, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(GetWeaponSound, 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_COMMAND_PLUGIN(SetWeaponSound, 0, 3, kParams_OneForm_OneInt_OneOptionalSound);
-DEFINE_COMMAND_PLUGIN(SetWeaponItemMod, 0, 3, kParams_OneForm_OneInt_OneOptionalObjectID);
-DEFINE_COMMAND_PLUGIN(SetWeaponItemModEffect, 0, 3, kParams_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(SetWeaponItemModValue, 0, 3, kParams_OneForm_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetWeaponModReloadAnim, 0, 1, kParams_OneObjectID);
-DEFINE_COMMAND_PLUGIN(SetWeaponModReloadAnim, 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_COMMAND_PLUGIN(GetWeaponShellCasingModel, 0, 1, kParams_OneObjectID);
-DEFINE_COMMAND_PLUGIN(SetWeaponShellCasingModel, 0, 2, kParams_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(SetEmbeddedWeaponNode, 0, 2, kParams_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(SetEmbeddedWeaponAV, 0, 2, kParams_OneObjectID_OneActorValue);
-DEFINE_COMMAND_PLUGIN(GetCalculatedWeaponDamage, 0, 1, kParams_OneOptionalObjectID);
-DEFINE_COMMAND_PLUGIN(GetWeaponOnHitSetting, 0, 1, kParams_OneObjectID);
-DEFINE_COMMAND_PLUGIN(SetWeaponOnHitSetting, 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_COMMAND_PLUGIN(GetWeaponSemiAutoFireDelay, 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_COMMAND_PLUGIN(SetWeaponSemiAutoFireDelay, 0, 3, kParams_OneObjectID_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetWeaponModel, 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_COMMAND_PLUGIN(SetWeaponModel, 0, 3, kParams_OneForm_OneInt_OneString);
-DEFINE_CMD_COND_PLUGIN(EquippedWeaponHasModType, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(WeaponHasModType, 0, 2, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetWeaponDetectionSoundLevel, 0, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(SetWeaponDetectionSoundLevel, 0, kParams_OneObjectID_OneInt);
+DEFINE_CMD_COND_PLUGIN(IsEquippedWeaponSilenced, 1, nullptr);
+DEFINE_CMD_COND_PLUGIN(IsEquippedWeaponScoped, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(GetWeaponSound, 0, kParams_OneObjectID_OneInt);
+DEFINE_COMMAND_PLUGIN(SetWeaponSound, 0, kParams_OneForm_OneInt_OneOptionalSound);
+DEFINE_COMMAND_PLUGIN(SetWeaponItemMod, 0, kParams_OneForm_OneInt_OneOptionalObjectID);
+DEFINE_COMMAND_PLUGIN(SetWeaponItemModEffect, 0, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(SetWeaponItemModValue, 0, kParams_OneForm_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetWeaponModReloadAnim, 0, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(SetWeaponModReloadAnim, 0, kParams_OneObjectID_OneInt);
+DEFINE_COMMAND_PLUGIN(GetWeaponShellCasingModel, 0, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(SetWeaponShellCasingModel, 0, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(SetEmbeddedWeaponNode, 0, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(SetEmbeddedWeaponAV, 0, kParams_OneObjectID_OneActorValue);
+DEFINE_COMMAND_PLUGIN(GetCalculatedWeaponDamage, 0, kParams_OneOptionalObjectID);
+DEFINE_COMMAND_PLUGIN(GetWeaponOnHitSetting, 0, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(SetWeaponOnHitSetting, 0, kParams_OneObjectID_OneInt);
+DEFINE_COMMAND_PLUGIN(GetWeaponSemiAutoFireDelay, 0, kParams_OneObjectID_OneInt);
+DEFINE_COMMAND_PLUGIN(SetWeaponSemiAutoFireDelay, 0, kParams_OneObjectID_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetWeaponModel, 0, kParams_OneObjectID_OneInt);
+DEFINE_COMMAND_PLUGIN(SetWeaponModel, 0, kParams_OneForm_OneInt_OneString);
+DEFINE_CMD_COND_PLUGIN(EquippedWeaponHasModType, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(WeaponHasModType, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(CalculateShotsPerSec, 1, kParams_OneForm);
+DEFINE_CMD_COND_PLUGIN(IsAttackQueued, 0, nullptr);
 
 bool Cmd_GetWeaponDetectionSoundLevel_Execute(COMMAND_ARGS)
 {
 	TESObjectWEAP *weapon;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon) && IS_ID(weapon, TESObjectWEAP))
 		*result = (int)weapon->soundLevel;
-	else *result = 0;
 	return true;
 }
 
@@ -45,31 +46,34 @@ bool Cmd_SetWeaponDetectionSoundLevel_Execute(COMMAND_ARGS)
 
 bool Cmd_IsEquippedWeaponSilenced_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->EquippedWeaponSilenced() : 0;
+	if IS_ACTOR(thisObj)
+		*result = ((Actor*)thisObj)->EquippedWeaponSilenced();
 	return true;
 }
 
 bool Cmd_IsEquippedWeaponSilenced_Execute(COMMAND_ARGS)
 {
-	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->EquippedWeaponSilenced() : 0;
+	if IS_ACTOR(thisObj)
+		*result = ((Actor*)thisObj)->EquippedWeaponSilenced();
 	return true;
 }
 
 bool Cmd_IsEquippedWeaponScoped_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->EquippedWeaponHasScope() : 0;
+	if IS_ACTOR(thisObj)
+		*result = ((Actor*)thisObj)->EquippedWeaponHasScope();
 	return true;
 }
 
 bool Cmd_IsEquippedWeaponScoped_Execute(COMMAND_ARGS)
 {
-	*result = IS_ACTOR(thisObj) ? ((Actor*)thisObj)->EquippedWeaponHasScope() : 0;
+	if IS_ACTOR(thisObj)
+		*result = ((Actor*)thisObj)->EquippedWeaponHasScope();
 	return true;
 }
 
 bool Cmd_GetWeaponSound_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESObjectWEAP *weapon;
 	UInt32 type;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &type) && IS_ID(weapon, TESObjectWEAP) && (type <= 13))
@@ -127,7 +131,6 @@ bool Cmd_GetWeaponModReloadAnim_Execute(COMMAND_ARGS)
 	TESObjectWEAP *weapon;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon) && IS_ID(weapon, TESObjectWEAP))
 		*result = weapon->modReloadAnim;
-	else *result = 0;
 	return true;
 }
 
@@ -179,7 +182,6 @@ bool Cmd_SetEmbeddedWeaponAV_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCalculatedWeaponDamage_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESObjectWEAP *weapon = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &weapon)) return true;
 	float condition = 1.0F;
@@ -251,7 +253,6 @@ bool Cmd_GetWeaponSemiAutoFireDelay_Execute(COMMAND_ARGS)
 	UInt32 getMax;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon, &getMax) && IS_ID(weapon, TESObjectWEAP))
 		*result = weapon->semiAutoFireDelay[getMax != 0];
-	else *result = 0;
 	return true;
 }
 
@@ -317,13 +318,13 @@ bool Cmd_EquippedWeaponHasModType_Execute(COMMAND_ARGS)
 	UInt32 modType;
 	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &modType) && ((Actor*)thisObj)->EquippedWeaponHasMod(modType))
 		*result = 1;
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_EquippedWeaponHasModType_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = IS_ACTOR(thisObj) && ((Actor*)thisObj)->EquippedWeaponHasMod((UInt32)arg1);
+	if (IS_ACTOR(thisObj) && ((Actor*)thisObj)->EquippedWeaponHasMod((UInt32)arg1))
+		*result = 1;
 	return true;
 }
 
@@ -351,5 +352,54 @@ bool Cmd_WeaponHasModType_Execute(COMMAND_ARGS)
 		}
 	}
 	*result = slotIdx;
+	return true;
+}
+
+bool Cmd_CalculateShotsPerSec_Execute(COMMAND_ARGS)
+{
+	TESForm *form;
+	if (IS_ACTOR(thisObj) && ExtractArgsEx(EXTRACT_ARGS_EX, &form))
+	{
+		ContChangesEntry *weapInfo = nullptr;
+		if IS_REFERENCE(form)
+			if (InventoryRef *invRef = InventoryRefGetForID(form->refID))
+			{
+				weapInfo = invRef->entry;
+				form = invRef->type;
+			}
+		if IS_ID(form, TESObjectWEAP)
+		{
+			TESObjectWEAP *weapon = (TESObjectWEAP*)form;
+			auto animData = thisObj->GetAnimData();
+			float animMult = weapon->animAttackMult;
+			if (weapInfo)
+				animMult += weapInfo->GetWeaponModEffectValue(8);
+			if (animData && !weapon->IsAutomatic())
+			{
+				UInt32 attackAnim = weapon->attackAnim;
+				if (attackAnim == 0xFF)
+					attackAnim = 0x20;
+				UInt32 animID = ThisCall<UInt16>(0x495740, animData, (((UInt32*)0x118A838)[weapon->eWeaponType] << 8) | attackAnim, 0);
+				if ((animID & 0xFF) == attackAnim)
+					if (TESAnimGroup *animGroup = ThisCall<TESAnimGroup*>(0x496500, animData, animID); animGroup && (animGroup->numKeys >= 2))
+						*result = (animMult * weapon->animMult) / animGroup->keyTimes[animGroup->numKeys - 2];
+			}
+			else *result = animMult * animMult * weapon->fireRate * weapon->animMult;
+		}
+	}
+	return true;
+}
+
+bool Cmd_IsAttackQueued_Execute(COMMAND_ARGS)
+{
+	if (*(UInt8*)0x11E07AC)
+		*result = 1;
+	return true;
+}
+
+bool Cmd_IsAttackQueued_Eval(COMMAND_ARGS_EVAL)
+{
+	if (*(UInt8*)0x11E07AC)
+		*result = 1;
 	return true;
 }

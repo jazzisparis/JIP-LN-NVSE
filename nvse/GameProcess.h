@@ -45,6 +45,7 @@ struct ActorHitData
 	{
 		Projectile		*projectile;
 		Explosion		*explosion;
+		//	Can in some cases be the source actor (seen w/ weapon == Fists) 
 	};
 	UInt32				weaponAV;		// 0C
 	SInt32				hitLocation;	// 10

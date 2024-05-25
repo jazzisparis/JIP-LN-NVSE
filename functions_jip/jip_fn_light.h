@@ -1,13 +1,12 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetLightTraitNumeric, 0, 2, kParams_OneBoundObject_OneInt);
-DEFINE_COMMAND_PLUGIN(SetLightTraitNumeric, 0, 3, kParams_OneForm_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetLightFlag, 0, 2, kParams_OneBoundObject_OneInt);
-DEFINE_COMMAND_PLUGIN(SetLightFlag, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetLightTraitNumeric, 0, kParams_OneBoundObject_OneInt);
+DEFINE_COMMAND_PLUGIN(SetLightTraitNumeric, 0, kParams_OneForm_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetLightFlag, 0, kParams_OneBoundObject_OneInt);
+DEFINE_COMMAND_PLUGIN(SetLightFlag, 0, kParams_OneForm_TwoInts);
 
 bool Cmd_GetLightTraitNumeric_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESObjectLIGH *light;
 	UInt32 traitID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &light, &traitID) && IS_ID(light, TESObjectLIGH))
@@ -108,9 +107,8 @@ bool Cmd_GetLightFlag_Execute(COMMAND_ARGS)
 {
 	TESObjectLIGH *light;
 	UInt32 flagID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &light, &flagID) && IS_ID(light, TESObjectLIGH) && (flagID <= 31))
-		*result = (light->lightFlags & (1 << flagID)) ? 1 : 0;
-	else *result = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &light, &flagID) && IS_ID(light, TESObjectLIGH) && (flagID <= 31) && (light->lightFlags & (1 << flagID)))
+		*result = 1;
 	return true;
 }
 

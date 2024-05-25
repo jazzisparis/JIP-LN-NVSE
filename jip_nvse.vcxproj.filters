@@ -390,9 +390,6 @@
     <ClInclude Include="internal\base_defs.h">
       <Filter>internal</Filter>
     </ClInclude>
-    <ClInclude Include="internal\misc_enums.h">
-      <Filter>internal</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="exports.def" />

@@ -7,12 +7,12 @@ void NiPoint2::Dump() const
 
 void NiVector3::operator=(const NiMatrix33 &from)
 {
-	*this = from.ToEulerPRY();
+	SetPS(from.ToEulerPRY());
 }
 
 void NiVector3::operator=(const NiQuaternion &from)
 {
-	*this = from.ToEulerPRY();
+	SetPS(from.ToEulerPRY());
 }
 
 __declspec(naked) NiVector3& NiVector3::Normalize()
@@ -984,7 +984,7 @@ __declspec(naked) NiQuaternion& __fastcall NiQuaternion::FromAxisAngle(const Axi
 void NiQuaternion::operator=(const hkQuaternion &hkQt)
 {
 	__m128 m = hkQt.PS();
-	*this = _mm_shuffle_ps(m, m, 0x93);
+	SetPS(_mm_shuffle_ps(m, m, 0x93));
 }
 
 __declspec(naked) __m128 __vectorcall NiQuaternion::MultiplyVector(__m128 vec) const
@@ -1305,7 +1305,7 @@ __declspec(naked) NiTransform& __fastcall NiTransform::GetInverse(NiTransform &o
 void NiTransform::Dump() const
 {
 	//rotate.Dump();
-	NiVector4 angles = rotate.ToEulerPRY() * GET_PS(9);
+	NiVector4 angles(rotate.ToEulerPRY() * GET_PS(9));
 	PrintDebug("T (%.4f, %.4f, %.4f) R (%.4f, %.4f, %.4f) S %.4f", translate.x, translate.y, translate.z, angles.x, angles.y, angles.z, scale);
 }
 
@@ -1366,7 +1366,7 @@ __declspec(naked) void __vectorcall NiViewport::SetFOV(float fov)
 		retn
 		ALIGN 4
 	kFlt2d3:
-		EMIT_DW(3F,2A,AA,AB)
+		EMIT_DW(0x3F2AAAAB)
 	}
 }
 

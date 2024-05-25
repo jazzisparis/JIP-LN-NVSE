@@ -2,11 +2,6 @@
 
 #pragma warning(disable: 4018 4221 4244 4267 4288 4302 4305 4309 4311 4312 4733 4838 4996)
 
-#define WIN32_LEAN_AND_MEAN
-#define _WIN32_WINNT	0x0501
-
-#define _HAS_EXCEPTIONS 0
-
 #include <Windows.h>
 #include <direct.h>
 #include <string>
@@ -370,6 +365,8 @@ class NiDepthStencilBuffer;
 class NiRenderTargetGroup;
 class BSRenderedTexture;
 class NiGeometryData;
+class NiTriShapeData;
+class NiTriStripsData;
 class NiParticles;
 class NiLines;
 class IDirect3DDevice9;
@@ -451,7 +448,6 @@ struct hkMatrix3x4;
 #include "internal/base_defs.h"
 #include "internal/class_vtbls.h"
 #include "internal/settings_enum.h"
-#include "internal/misc_enums.h"
 #include "internal/memory_pool.h"
 #include "internal/utility.h"
 #include "internal/containers.h"

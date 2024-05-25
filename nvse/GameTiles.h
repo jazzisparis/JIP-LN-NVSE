@@ -137,9 +137,9 @@ public:
 	/*008*/virtual NiNode	*CalcNode(void);
 	/*00C*/virtual UInt32	GetType(void);		// returns one of kTileValue_XXX
 	/*010*/virtual const char	*GetTypeStr(void);	// 4-byte id
-	/*014*/virtual bool		Unk_05(UInt32 arg0, UInt32 arg1);
+	/*014*/virtual bool		Unk_05(float arg0, float arg1);	// RadialTile only
 	/*018*/virtual Tile		*UpdateField(UInt32 valueID, float floatValue, const char *strValue);
-	/*01C*/virtual void		Unk_07(void);
+	/*01C*/virtual void		ClearTextures();
 	/*020*/virtual TileShaderProperty	*GetShaderProperty();
 	/*024*/virtual void		SetAlphaAndOverlayColor(NiNode *niNode, float alpha, NiColorAlpha *color);
 

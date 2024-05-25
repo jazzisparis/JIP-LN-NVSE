@@ -4,12 +4,12 @@
 class String
 {
 public:
-	String();
-	~String();
-
 	char		*m_data;
 	UInt16		m_dataLen;
 	UInt16		m_bufLen;
+
+	String() : m_data(nullptr), m_dataLen(0), m_bufLen(0) {}
+	~String() {if (m_data) Game_HeapFree(m_data);}
 
 	void Init(UInt32 bufSize);
 	void Set(const char *src);

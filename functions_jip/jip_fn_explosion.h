@@ -1,15 +1,14 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetExplosionTraitNumeric, 0, 2, kParams_OneBoundObject_OneInt);
-DEFINE_COMMAND_PLUGIN(SetExplosionTraitNumeric, 0, 3, kParams_OneForm_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetExplosionTraitForm, 0, 2, kParams_OneBoundObject_OneInt);
-DEFINE_COMMAND_PLUGIN(SetExplosionTraitForm, 0, 3, kParams_OneForm_OneInt_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetExplosionFlag, 0, 2, kParams_OneBoundObject_OneInt);
-DEFINE_COMMAND_PLUGIN(SetExplosionFlag, 0, 3, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetExplosionTraitNumeric, 0, kParams_OneBoundObject_OneInt);
+DEFINE_COMMAND_PLUGIN(SetExplosionTraitNumeric, 0, kParams_OneForm_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetExplosionTraitForm, 0, kParams_OneBoundObject_OneInt);
+DEFINE_COMMAND_PLUGIN(SetExplosionTraitForm, 0, kParams_OneForm_OneInt_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetExplosionFlag, 0, kParams_OneBoundObject_OneInt);
+DEFINE_COMMAND_PLUGIN(SetExplosionFlag, 0, kParams_OneForm_TwoInts);
 
 bool Cmd_GetExplosionTraitNumeric_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	BGSExplosion *explosion;
 	UInt32 traitID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &explosion, &traitID) && IS_ID(explosion, BGSExplosion))
@@ -79,7 +78,6 @@ bool Cmd_SetExplosionTraitNumeric_Execute(COMMAND_ARGS)
 
 bool Cmd_GetExplosionTraitForm_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	BGSExplosion *explosion;
 	UInt32 traitID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &explosion, &traitID) && IS_ID(explosion, BGSExplosion))
@@ -154,9 +152,8 @@ bool Cmd_GetExplosionFlag_Execute(COMMAND_ARGS)
 {
 	BGSExplosion *explosion;
 	UInt32 flagID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &explosion, &flagID) && IS_ID(explosion, BGSExplosion) && flagID && (flagID <= 31))
-		*result = (explosion->explFlags & (1 << flagID)) ? 1 : 0;
-	else *result = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &explosion, &flagID) && IS_ID(explosion, BGSExplosion) && flagID && (flagID <= 31) && (explosion->explFlags & (1 << flagID)))
+		*result = 1;
 	return true;
 }
 

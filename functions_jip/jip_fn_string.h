@@ -1,17 +1,17 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(sv_RegexMatch, 0, 22, kParams_OneInt_OneFormatString);
-DEFINE_COMMAND_PLUGIN(sv_RegexSearch, 0, 22, kParams_OneInt_OneFormatString);
-DEFINE_COMMAND_PLUGIN(sv_RegexReplace, 0, 22, kParams_OneInt_OneFormatString);
+DEFINE_COMMAND_PLUGIN(sv_RegexMatch, 0, kParams_OneInt_OneFormatString);
+DEFINE_COMMAND_PLUGIN(sv_RegexSearch, 0, kParams_OneInt_OneFormatString);
+DEFINE_COMMAND_PLUGIN(sv_RegexReplace, 0, kParams_OneInt_OneFormatString);
+DEFINE_COMMAND_ALT_PLUGIN(GetStringHash, GetHash, 0, kParams_OneString_TwoOptionalInts);
 
 bool Cmd_sv_RegexMatch_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 strID;
 	char rgxStr[0x80];
 	if (ExtractFormatStringArgs(1, rgxStr, EXTRACT_ARGS_EX, kCommandInfo_sv_RegexMatch.numParams, &strID))
-		if (const char *srcStr = GetStringVar(strID))
-			*result = std::regex_match(srcStr, std::regex(rgxStr));
+		if (const char *srcStr = GetStringVar(strID); srcStr && std::regex_match(srcStr, std::regex(rgxStr)))
+			*result = 1;
 	return true;
 }
 
@@ -43,5 +43,32 @@ bool Cmd_sv_RegexReplace_Execute(COMMAND_ARGS)
 				return true;
 			}
 	AssignString(PASS_COMMAND_ARGS, nullptr);
+	return true;
+}
+
+bool Cmd_GetStringHash_Execute(COMMAND_ARGS)
+{
+	char *buffer = GetStrArgBuffer();
+	UInt32 split = 0, useCase = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, buffer, &split, &useCase) && *buffer)
+	{
+		auto StrHash = !useCase ? StrHashCI : StrHashCS;
+		if (!split)
+		{
+			*result = (SInt32)StrHash(buffer);
+			DoConsolePrint(result);
+		}
+		else if (FILE *theFile = fopen("GetStringHash.txt", "wb"))
+		{
+			while (true)
+			{
+				char *barPtr = GetNextToken(buffer, '|');
+				fprintf(theFile, "\"%s\"\n%d\n\n", buffer, StrHash(buffer));
+				if (!*barPtr) break;
+				buffer = barPtr;
+			}
+			fclose(theFile);
+		}
+	}
 	return true;
 }

@@ -1,7 +1,7 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(InitMiniMap, 0, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(UpdateMiniMap, 0, 2, kParams_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(InitMiniMap, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(UpdateMiniMap, 0, kParams_OneInt_OneOptionalInt);
 
 #define CACHED_TEXTURES_MAX 60
 #define CACHED_TEXTURES_MIN 42
@@ -79,7 +79,7 @@ __declspec(naked) __m128 __vectorcall AdjustInteriorPos(__m128 inPos)
 		retn
 		ALIGN 16
 	kIntrPosMods:
-		EMIT_PS_2(45, 00, 00, 00)
+		EMIT_PS_2(0x45000000)
 	}
 }
 
@@ -125,7 +125,7 @@ __declspec(naked) void __fastcall WorldDimensions::InitDimensions(TESWorldSpace 
 		retn
 		ALIGN 16
 	kSizeMults:
-		EMIT_DW(00, 01, 00, 00) EMIT_DW_1(01) DUP_2(EMIT_DW(3F, 4C, 00, 00))
+		EMIT_DW(0x00010000) EMIT_DW(0x00000001) DUP_2(EMIT_DW(0x3F4C0000))
 	}
 }
 
@@ -184,7 +184,7 @@ __declspec(naked) __m128 __vectorcall GetWorldMapPosMults(__m128 inPos, const Wo
 		retn
 		ALIGN 16
 	kPosMultMods:
-		EMIT_PS_2(3D, D0, 00, 00)
+		EMIT_PS_2(0x3DD00000)
 	}
 }
 
@@ -570,8 +570,8 @@ __declspec(naked) UInt32 __vectorcall GetSectionSeenLevel(SectionSeenInfo seenIn
 		retn
 		ALIGN 16
 	kSeenLvlConsts:
-		EMIT_DW_1(00) EMIT_DW(00, 00, 00, 01) EMIT_DW(00, 01, 00, 00) EMIT_DW(00, 01, 00, 01)
-		EMIT_DW(04, 06, 00, 02) EMIT_DW(0C, 0E, 08, 0A) DUP_2(EMIT_DW(80, 80, 80, 80))
+		EMIT_DW_4(0x00000000, 0x00000001, 0x00010000, 0x00010001)
+		EMIT_DW_4(0x04060002, 0x0C0E080A, 0x80808080, 0x80808080)
 	}
 }
 
@@ -596,8 +596,8 @@ __declspec(naked) void __fastcall PackCurrGridCoords(UInt32 currCoords)
 		retn
 		ALIGN 16
 	kGridAdjustCoord:
-		EMIT_DW(FF, FF, FF, FF) EMIT_DW(FF, FF, 00, 00) EMIT_DW(FF, FF, 00, 01) EMIT_DW(00, 00, FF, FF)
-		EMIT_DW(00, 00, 00, 01) EMIT_DW(00, 01, FF, FF) EMIT_DW(00, 01, 00, 00) EMIT_DW(00, 01, 00, 01)
+		EMIT_DW_4(0xFFFFFFFF, 0xFFFF0000, 0xFFFF0001, 0x0000FFFF)
+		EMIT_DW_4(0x00000001, 0x0001FFFF, 0x00010000, 0x00010001)
 	}
 }
 
@@ -676,12 +676,12 @@ __declspec(naked) UInt32 __vectorcall GetFOWUpdateMask(__m128i inPos)
 		retn
 		ALIGN 16
 	kTruncMask:
-		EMIT_PS_4(00, 00, 0F, FF)
+		EMIT_PS_4(0x00000FFF)
 	kGridSlice:
-		DUP_2(EMIT_DW_2(04, FF) EMIT_DW_2(0A, FF))
+		DUP_2(EMIT_DW(0x000004FF) EMIT_DW(0x00000AFF))
 	kUpdateMask:
-		EMIT_4W(00, 1B, 00, 12, 00, 12, 00, 36) EMIT_4W(00, 18, 00, 10, 00, 10, 00, 30)
-		EMIT_4W(00, 30, 00, 30, 00, 30, 00, 30) EMIT_4W(00, D8, 00, 90, 00, 90, 01, B0)
+		EMIT_W_8(0x001B, 0x0012, 0x0012, 0x0036, 0x0018, 0x0010, 0x0010, 0x0030)
+		EMIT_W_8(0x0030, 0x0030, 0x0030, 0x0030, 0x00D8, 0x0090, 0x0090, 0x01B0)
 	}
 }
 
@@ -1008,10 +1008,10 @@ __declspec(naked) void UpdateCellsSeenBitsHook()
 		jmp		iterHeadInt
 		ALIGN 16
 	kUpdSeenConsts:
-		DUP_2(EMIT_DW(00, 00, 08, 00)) EMIT_DW(45, C8, 00, 00) EMIT_DW(80, 80, 00, 02)
-		EMIT_DW(FF, FF, FF, FF) EMIT_DW(FF, FF, 00, 00) EMIT_DW(FF, FF, 00, 01)
-		EMIT_DW(00, 00, FF, FF) EMIT_DW(00, 00, 00, 00) EMIT_DW(00, 00, 00, 01)
-		EMIT_DW(00, 01, FF, FF) EMIT_DW(00, 01, 00, 00) EMIT_DW(00, 01, 00, 01)
+		DUP_2(EMIT_DW(0x00000800)) EMIT_DW(0x45C80000) EMIT_DW(0x80800002)
+		EMIT_DW(0xFFFFFFFF) EMIT_DW(0xFFFF0000) EMIT_DW(0xFFFF0001)
+		EMIT_DW(0x0000FFFF) EMIT_DW_0 EMIT_DW(0x00000001)
+		EMIT_DW(0x0001FFFF) EMIT_DW(0x00010000) EMIT_DW(0x00010001)
 	}
 }
 
@@ -1062,7 +1062,7 @@ __declspec(naked) UInt32* __vectorcall GetVtxAlphaPtr(__m128 posMult)
 		retn
 		ALIGN 16
 	kGridPosMult:
-		EMIT_PS_2(42, 40, 00, 00)
+		EMIT_PS_2(0x42400000)
 	}
 }
 
@@ -1158,7 +1158,7 @@ __declspec(naked) void __fastcall GenerateLocalMapExterior(TESObjectCELL *cell, 
 		retn
 		ALIGN 16
 	kExtPosMod:
-		EMIT_PS_2(00, 00, 08, 00) EMIT_DW(47, 80, 00, 00) EMIT_DW(46, 80, 00, 00)
+		EMIT_PS_2(0x00000800) EMIT_DW(0x47800000) EMIT_DW(0x46800000)
 	}
 }
 
@@ -1190,7 +1190,7 @@ __declspec(naked) void __vectorcall GenerateLocalMapInterior(__m128i coord, NiRe
 		retn
 		ALIGN 16
 	kIntPosMod:
-		EMIT_PS_2(00, 00, 00, 01) EMIT_DW(47, 00, 00, 00)
+		EMIT_PS_2(0x00000001) EMIT_DW(0x47000000)
 	}
 }
 
@@ -1277,12 +1277,14 @@ bool s_discoveredLocation = false;
 
 const char* __fastcall DiscoverLocationHook(MapMarkerData *mkData, PlayerCharacter::MapMarkerInfo *mkInfo)
 {
-	if (TESObjectCELL *markerCell = mkInfo->markerRef->parentCell)
-		if (auto findRendered = s_renderedMapMarkers->Find(Coordinate(*markerCell->exteriorCoords)))
-		{
+	s_discoveredLocation = true;
+	if (!s_renderedMapMarkers->Empty())
+	{
+		Coordinate coord;
+		GetWorldMapPosMults(mkInfo->markerRef->position.PS2(), s_rootWorldDimensions, &coord);
+		if (auto findRendered = s_renderedMapMarkers->Find(coord))
 			FreeCellMapMarkers(findRendered);
-			s_discoveredLocation = true;
-		}
+	}
 	const char *mkName = mkData->fullName.name.m_data;
 	return mkName ? mkName : (const char*)0x1011584;
 }
@@ -1332,13 +1334,6 @@ TempObject<NiFixedString> s_BlackPlane01;
 
 __declspec(naked) NiNode *CreateFakeWaterPlanes()
 {
-	static const __m128 kWaterPlaneColor = NRGBA(23, 51, 47, 184);
-	static alignas(16) const NiPoint2 kWaterPlanePos[] =
-	{
-		{2048.0F, -10240.0F}, {2048.0F, -6144.0F}, {2048.0F, -2048.0F},
-		{6144.0F, -10240.0F}, {6144.0F, -6144.0F}, {6144.0F, -2048.0F},
-		{10240.0F, -10240.0F}, {10240.0F, -6144.0F}, {10240.0F, -2048.0F}
-	};
 	__asm
 	{
 		push	ebx
@@ -1350,11 +1345,8 @@ __declspec(naked) NiNode *CreateFakeWaterPlanes()
 		mov		dword ptr [eax+4], 2
 		push	0x7C
 		call	Game_DoHeapAlloc
-		mov		ecx, 0x45000000
-		movd	xmm0, ecx
-		unpcklpd	xmm0, xmm0
-		xorps	xmm0, PS_FlipSignMask0
-		shufps	xmm0, xmm0, 0x18
+		movq	xmm0, qword ptr kWaterPlanePos+0x10
+		shufps	xmm0, xmm0, 0x61
 		movups	[eax], xmm0
 		shufps	xmm0, xmm0, 0x58
 		movups	[eax+0x10], xmm0
@@ -1394,7 +1386,7 @@ __declspec(naked) NiNode *CreateFakeWaterPlanes()
 		mov		ecx, eax
 		CALL_EAX(0xA74480)
 		or		byte ptr [eax+0x30], 1
-		movq	xmm0, kWaterPlanePos[ebx*8]
+		movq	xmm0, qword ptr kWaterPlanePos[ebx*8]
 		movlps	[eax+0x58], xmm0
 		push	1
 		push	eax
@@ -1416,6 +1408,15 @@ __declspec(naked) NiNode *CreateFakeWaterPlanes()
 		pop		esi
 		pop		ebx
 		retn
+		ALIGN 16
+	kWaterPlaneColor:
+		EMIT_DW_4(0x3DB8B8B9, 0x3E4CCCCD, 0x3E3CBCBD, 0x3F38B8B9)
+	kWaterPlanePos:
+		EMIT_DW_4(0x45000000, 0xC6200000, 0x45000000, 0xC5C00000)
+		EMIT_DW_4(0x45000000, 0xC5000000, 0x45C00000, 0xC6200000)
+		EMIT_DW_4(0x45C00000, 0xC5C00000, 0x45C00000, 0xC5000000)
+		EMIT_DW_4(0x46200000, 0xC6200000, 0x46200000, 0xC5C00000)
+		EMIT_DW(0x46200000) EMIT_DW(0xC5000000)
 	}
 }
 
@@ -1427,13 +1428,40 @@ struct MapMarkerInfo
 
 	MapMarkerInfo(TESObjectREFR *_refr, MapMarkerData *_data, const NiPoint2 &posXY) :
 		refr(_refr), data(_data), pos(posXY) {}
+
+	const char *GetMarkerIconPath() const;
 };
+
+UInt32 kJGGetIconPathAddr = 0;
+
+__declspec(naked) const char *MapMarkerInfo::GetMarkerIconPath() const
+{
+	__asm
+	{
+		mov		edx, [ecx+4]
+		test	byte ptr [edx+0xC], 2
+		jz		undiscovered
+		movzx	edx, byte ptr [edx+0xE]
+		mov		eax, kJGGetIconPathAddr
+		test	eax, eax
+		jnz		jgHook
+		mov		eax, ds:0x11A0404[edx*4]
+		retn
+	undiscovered:
+		mov		eax, 0x1075030
+		retn
+	jgHook:
+		mov		ecx, [ecx]
+		jmp		eax
+	}
+}
+
 typedef Vector<MapMarkerInfo, 2> CellMapMarkers;
-typedef UnorderedMap<UInt32, CellMapMarkers> WorldMapMarkers;
+typedef UnorderedMap<UInt32, CellMapMarkers, 0x80, false> WorldMapMarkers;
 TempObject<Map<TESWorldSpace*, WorldMapMarkers>> s_worldMapMarkers;
 
 const __m128 kLocalMapPosMults = {1 / 12288.0F, 1 / -12288.0F, 0, 0}, kVertexAlphaMults = {0.25F, 0.5F, 0.75F, 1.0F};
-alignas(16) const int kNWCoordAdjust[] = {-1, 2, 0, 0};
+const __m128i kNWCoordAdjust = _MM_SET_EPI32(-1, 2, 0, 0);
 
 struct RenderedEntry
 {
@@ -1577,8 +1605,8 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 	s_worldMapZoom = s_worldMapRect->GetValue(kTileValue_zoom);
 	node = tile->children.Tail();
 
-	NiVector3 *shapeVertices = Game_HeapAlloc<NiVector3>(0x121), *pVertices = shapeVertices, vertex = _mm_setzero_ps();
-	NiPoint2 *shapeUVCoords = Game_HeapAlloc<NiPoint2>(0x121), *pUVCoords = shapeUVCoords, uvCoord = _mm_setzero_ps();
+	NiVector3 *shapeVertices = Game_HeapAlloc<NiVector3>(0x121), *pVertices = shapeVertices, vertex(0, 0, 0);
+	NiPoint2 *shapeUVCoords = Game_HeapAlloc<NiPoint2>(0x121), *pUVCoords = shapeUVCoords, uvCoord(0, 0);
 	UInt32 index = 0x11, iterZ = 0x11;
 	while (true)
 	{
@@ -1697,14 +1725,14 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 
 	auto dirLight = NiDirectionalLight::Create();
 	dirLight->m_uiRefCount = 2;
-	dirLight->ambientColor = NRGBA(175, 175, 175, 0);
-	dirLight->diffuseColor = NRGBA(169, 167, 140, 0);
-	dirLight->fogColor = _mm_setzero_ps();
-	dirLight->direction = __m128{0.6154797F, -0.5235988F, 0.6154797F, 0};
+	dirLight->ambientColor = {NRGB(175, 175, 175)};
+	dirLight->diffuseColor = {NRGB(169, 167, 140)};
+	dirLight->fogColor = {0, 0, 0};
+	dirLight->direction = {0.6154797F, -0.5235988F, 0.6154797F};
 	s_mmDirectionalLight = dirLight;
 
 	auto fogProperty = (BSFogProperty*)memcpy(Ni_Alloc<BSFogProperty>(), *(void**)0x11DEB00, sizeof(BSFogProperty));
-	fogProperty->color = NRGBA(23, 51, 47, 0);
+	fogProperty->color = {NRGB(23, 51, 47)};
 	fogProperty->startDistance = FLT_MAX;
 	fogProperty->endDistance = FLT_MAX;
 	s_mmFogProperty = fogProperty;
@@ -1751,6 +1779,13 @@ bool Cmd_InitMiniMap_Execute(COMMAND_ARGS)
 		while (refrIter = refrIter->next);
 	}
 	while (worldIter = worldIter->next);
+
+	if (*(UInt32*)0x79D32F == 0xE89090FF)
+	{
+		UInt32 procAddr = *(UInt32*)0x79D333 + 0x79D337;
+		if ((*(UInt32*)procAddr == 0x4D8BD08B) && (*(UInt16*)(procAddr + 4) == 0xE9DC))
+			kJGGetIconPathAddr = *(UInt32*)(procAddr + 6) + procAddr + 0xA;
+	}
 
 	s_shadowSceneNodes[0] = *(NiNode**)0x11DEB34;	// Sky
 	s_shadowSceneNodes[1] = *(NiNode**)0x11DEDA4;	// Weather
@@ -1905,7 +1940,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 			updateTiles = true;
 		}
 
-		posMult = GetWorldMapPosMults(objectRef->position.PS2(), s_rootWorldDimensions, &coord);
+		posMult.SetPS(GetWorldMapPosMults(objectRef->position.PS2(), s_rootWorldDimensions, &coord));
 		updateTiles |= s_currWorldCoords != coord;
 		s_currWorldCoords = coord;
 
@@ -1958,7 +1993,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 							dynamicTiles->Append(tileData);
 							tileData->x->SetFloat(mkIter().pos.x);
 							tileData->y->SetFloat(mkIter().pos.y);
-							tileData->filename->SetString(mkIter().data->GetTexturePath());
+							tileData->filename->SetString(mkIter().GetMarkerIconPath());
 						}
 					iterYnext:
 						coord.y++;
@@ -2025,7 +2060,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				gridIdx = 0;
 				do
 				{
-					s_currCellGrid[gridIdx] = g_gridCellArray->GetCellAtCoord(s_packedCellCoords[gridIdx]);
+					s_currCellGrid[gridIdx] = g_gridCellArray->GetCellAtCoord(s_packedCellCoords[gridIdx].PS());
 					if (useFogOfWar)
 						CalcVtxAlphaBySeenData(gridIdx);
 				}
@@ -2244,7 +2279,7 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 					coord = s_packedCellCoords[gridIdx];
 					if (s_renderedInterior->Insert(coord, &textureEntry))
 					{
-						GenerateLocalMapInterior(coord, &textureEntry->texture);
+						GenerateLocalMapInterior(coord.PS(), &textureEntry->texture);
 						/*if (saveToFile)
 							SaveLocalMapTexture(parentCell, textureEntry->texture, coord);*/
 					}
@@ -2397,11 +2432,11 @@ bool Cmd_UpdateMiniMap_Execute(COMMAND_ARGS)
 				markerData->pos = currX;
 			else if (!updateTiles) continue;
 			if (worldMap)
-				adjustedPos = GetWorldMapPosMults(objectRef->position.PS2(), s_rootWorldDimensions);
+				adjustedPos.SetPS(GetWorldMapPosMults(objectRef->position.PS2(), s_rootWorldDimensions));
 			else if (parentWorld)
-				adjustedPos = (objectRef->position.PS2() - nwXY.PS()) * kLocalMapPosMults;
+				adjustedPos.SetPS((objectRef->position.PS2() - nwXY.PS()) * kLocalMapPosMults);
 			else
-				adjustedPos = (AdjustInteriorPos(objectRef->position.PS2()) - nwXY.PS()) * kLocalMapPosMults;
+				adjustedPos.SetPS((AdjustInteriorPos(objectRef->position.PS2()) - nwXY.PS()) * kLocalMapPosMults);
 			markerData->x->SetFloat(adjustedPos.x);
 			markerData->y->SetFloat(adjustedPos.y);
 		}

@@ -1,33 +1,33 @@
 #pragma once
 
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetSize, AuxVarSize, 0, 2, kParams_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetType, AuxVarType, 0, 3, kParams_OneString_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetFloat, AuxVarGetFlt, 0, 3, kParams_OneString_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetRef, AuxVarGetRef, 0, 3, kParams_OneString_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetString, AuxVarGetStr, 0, 3, kParams_OneString_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetAsArray, AuxVarGetAsArr, 0, 2, kParams_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetAll, AuxVarGetAll, 0, 2, kParams_OneInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetFloat, AuxVarSetFlt, 0, 4, kParams_OneString_OneDouble_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetRef, AuxVarSetRef, 0, 4, kParams_OneString_OneForm_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetString, AuxVarSetStr, 0, 4, kParams_TwoStrings_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetFromArray, AuxVarSetFromArr, 0, 3, kParams_OneString_OneInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableErase, AuxVarErase, 0, 3, kParams_OneString_OneOptionalInt_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableEraseAll, AuxVarEraseAll, 0, 2, kParams_OneInt_OneOptionalForm);
-DEFINE_CMD_COND_ONLY(AuxVarGetFltCond, 1, 2, kParams_OneQuest_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetSize, AuxVarSize, 0, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetType, AuxVarType, 0, kParams_OneString_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetFloat, AuxVarGetFlt, 0, kParams_OneString_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetRef, AuxVarGetRef, 0, kParams_OneString_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetString, AuxVarGetStr, 0, kParams_OneString_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetAsArray, AuxVarGetAsArr, 0, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableGetAll, AuxVarGetAll, 0, kParams_OneInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetFloat, AuxVarSetFlt, 0, kParams_OneString_OneDouble_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetRef, AuxVarSetRef, 0, kParams_OneString_OneForm_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetString, AuxVarSetStr, 0, kParams_TwoStrings_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableSetFromArray, AuxVarSetFromArr, 0, kParams_OneString_OneInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableErase, AuxVarErase, 0, kParams_OneString_OneOptionalInt_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(AuxiliaryVariableEraseAll, AuxVarEraseAll, 0, kParams_OneInt_OneOptionalForm);
+DEFINE_CMD_COND_ONLY(AuxVarGetFltCond, kParams_OneQuest_OneInt);
 
 #define AUX_VAR_CS	ScopedPrimitiveCS cs(&s_auxVarCS);
 
-AuxVarValsArr* __fastcall AuxVarInfo::GetArray(bool addArr)
+__declspec(noinline) AuxVarValsArr* __fastcall AuxVarInfo::GetArray(bool addArr)
 {
 	if (addArr) 
-		return &ModsMap()[modIndex][ownerID][varName];
-	if (AuxVarOwnersMap *ownersMap = ModsMap().GetPtr(modIndex))
+		return &(*this)()[modIndex][ownerID][varName];
+	if (AuxVarOwnersMap *ownersMap = (*this)().GetPtr(modIndex))
 		if (AuxVarVarsMap *varsMap = ownersMap->GetPtr(ownerID))
 			return varsMap->GetPtr(varName);
 	return nullptr;
 }
 
-AuxVariableValue* __fastcall AuxVarInfo::GetValue(SInt32 idx, bool addVal)
+__declspec(noinline) AuxVariableValue* __fastcall AuxVarInfo::GetValue(SInt32 idx, bool addVal)
 {
 	if (AuxVarValsArr *valsArr = GetArray(addVal && (idx <= 0)))
 	{
@@ -53,7 +53,6 @@ void __fastcall MarkVarModified(TESObjectREFR *thisObj)
 
 bool Cmd_AuxiliaryVariableGetSize_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50];
 	TESForm *form = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
@@ -68,7 +67,6 @@ bool Cmd_AuxiliaryVariableGetSize_Execute(COMMAND_ARGS)
 
 bool Cmd_AuxiliaryVariableGetType_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50];
 	SInt32 idx = 0;
 	TESForm *form = nullptr;
@@ -84,7 +82,6 @@ bool Cmd_AuxiliaryVariableGetType_Execute(COMMAND_ARGS)
 
 bool Cmd_AuxiliaryVariableGetFloat_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50];
 	SInt32 idx = 0;
 	TESForm *form = nullptr;
@@ -100,7 +97,6 @@ bool Cmd_AuxiliaryVariableGetFloat_Execute(COMMAND_ARGS)
 
 bool Cmd_AuxiliaryVariableGetRef_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	char varName[0x50];
 	SInt32 idx = 0;
 	TESForm *form = nullptr;
@@ -133,7 +129,6 @@ bool Cmd_AuxiliaryVariableGetString_Execute(COMMAND_ARGS)
 
 bool Cmd_AuxiliaryVariableGetAsArray_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50];
 	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form))
@@ -154,14 +149,13 @@ bool Cmd_AuxiliaryVariableGetAsArray_Execute(COMMAND_ARGS)
 
 bool Cmd_AuxiliaryVariableGetAll_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 type;
 	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type, &form))
 		if (AuxVarInfo varInfo = {form, thisObj, scriptObj, type})
 		{
 			AUX_VAR_CS
-			if (AuxVarOwnersMap *findMod = varInfo.ModsMap().GetPtr(varInfo.modIndex))
+			if (AuxVarOwnersMap *findMod = varInfo().GetPtr(varInfo.modIndex))
 				if (AuxVarVarsMap *findOwner = findMod->GetPtr(varInfo.ownerID))
 				{
 					NVSEArrayVar *varsMap = CreateStringMap(nullptr, nullptr, 0, scriptObj);
@@ -181,7 +175,6 @@ bool Cmd_AuxiliaryVariableGetAll_Execute(COMMAND_ARGS)
 
 bool Cmd_AuxiliaryVariableSetFloat_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50];
 	double fltVal;
 	SInt32 idx = 0;
@@ -193,7 +186,7 @@ bool Cmd_AuxiliaryVariableSetFloat_Execute(COMMAND_ARGS)
 			if (AuxVariableValue *value = varInfo.GetValue(idx, true))
 			{
 				*value = fltVal;
-				if (varInfo.isPerm)
+				if (!varInfo.isTemp)
 					MarkVarModified(thisObj);
 				*result = 1;
 			}
@@ -203,7 +196,6 @@ bool Cmd_AuxiliaryVariableSetFloat_Execute(COMMAND_ARGS)
 
 bool Cmd_AuxiliaryVariableSetRef_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50];
 	SInt32 idx = 0;
 	TESForm *refVal, *form = nullptr;
@@ -214,7 +206,7 @@ bool Cmd_AuxiliaryVariableSetRef_Execute(COMMAND_ARGS)
 			if (AuxVariableValue *value = varInfo.GetValue(idx, true))
 			{
 				*value = refVal;
-				if (varInfo.isPerm)
+				if (!varInfo.isTemp)
 					MarkVarModified(thisObj);
 				*result = 1;
 			}
@@ -224,7 +216,6 @@ bool Cmd_AuxiliaryVariableSetRef_Execute(COMMAND_ARGS)
 
 bool Cmd_AuxiliaryVariableSetString_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50], *buffer = GetStrArgBuffer();
 	SInt32 idx = 0;
 	TESForm *form = nullptr;
@@ -235,7 +226,7 @@ bool Cmd_AuxiliaryVariableSetString_Execute(COMMAND_ARGS)
 			if (AuxVariableValue *value = varInfo.GetValue(idx, true))
 			{
 				*value = buffer;
-				if (varInfo.isPerm)
+				if (!varInfo.isTemp)
 					MarkVarModified(thisObj);
 				*result = 1;
 			}
@@ -245,7 +236,6 @@ bool Cmd_AuxiliaryVariableSetString_Execute(COMMAND_ARGS)
 
 bool Cmd_AuxiliaryVariableSetFromArray_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char varName[0x50];
 	UInt32 arrID;
 	TESForm *form = nullptr;
@@ -260,7 +250,7 @@ bool Cmd_AuxiliaryVariableSetFromArray_Execute(COMMAND_ARGS)
 						valsArr->Clear();
 					for (UInt32 idx = 0; idx < arrData.size; idx++)
 						valsArr->Append(arrData.vals[idx]);
-					if (varInfo.isPerm)
+					if (!varInfo.isTemp)
 						MarkVarModified(thisObj);
 					*result = (int)arrData.size;
 				}
@@ -277,7 +267,7 @@ bool Cmd_AuxiliaryVariableErase_Execute(COMMAND_ARGS)
 		if (AuxVarInfo varInfo = {form, thisObj, scriptObj, varName})
 		{
 			AUX_VAR_CS
-			if (auto findMod = varInfo.ModsMap().Find(varInfo.modIndex))
+			if (auto findMod = varInfo().Find(varInfo.modIndex))
 				if (auto findOwner = findMod().Find(varInfo.ownerID))
 					if (auto findVar = findOwner().Find(varInfo.varName))
 					{
@@ -288,17 +278,13 @@ bool Cmd_AuxiliaryVariableErase_Execute(COMMAND_ARGS)
 							*result = (int)findVar().Size();
 							if (findVar().Empty()) findVar.Remove();
 						}
-						else
-						{
-							findVar.Remove();
-							*result = 0;
-						}
+						else findVar.Remove();
 						if (findOwner().Empty())
 						{
 							findOwner.Remove();
 							if (findMod().Empty()) findMod.Remove();
 						}
-						if (varInfo.isPerm)
+						if (!varInfo.isTemp)
 							s_dataChangedFlags |= kChangedFlag_AuxVars;
 					}
 		}
@@ -313,12 +299,12 @@ bool Cmd_AuxiliaryVariableEraseAll_Execute(COMMAND_ARGS)
 		if (AuxVarInfo varInfo = {form, thisObj, scriptObj, type})
 		{
 			AUX_VAR_CS
-			if (auto findMod = varInfo.ModsMap().Find(varInfo.modIndex))
+			if (auto findMod = varInfo().Find(varInfo.modIndex))
 				if (auto findOwner = findMod().Find(varInfo.ownerID))
 				{
 					findOwner.Remove();
 					if (findMod().Empty()) findMod.Remove();
-					if (varInfo.isPerm)
+					if (!varInfo.isTemp)
 						s_dataChangedFlags |= kChangedFlag_AuxVars;
 				}
 		}
@@ -327,7 +313,6 @@ bool Cmd_AuxiliaryVariableEraseAll_Execute(COMMAND_ARGS)
 
 bool Cmd_AuxVarGetFltCond_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = 0;
 	if (TESQuest *quest = (TESQuest*)arg1; quest->scriptEventList)
 		if (ScriptVar *scriptVar = quest->scriptEventList->GetVariable((UInt32)arg2))
 			if (const char *varName = GetStringVar((int)scriptVar->data.num); varName && *varName)

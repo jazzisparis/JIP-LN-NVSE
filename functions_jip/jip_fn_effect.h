@@ -1,47 +1,45 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetNumEffects, 0, 1, kParams_OneMagicItem);
-DEFINE_COMMAND_PLUGIN(GetNthEffectBase, 0, 2, kParams_OneMagicItem_OneInt);
-DEFINE_COMMAND_PLUGIN(SetNthEffectBase, 0, 3, kParams_OneMagicItem_OneInt_OneMagicEffect);
-DEFINE_COMMAND_PLUGIN(GetNthEffectTraitNumeric, 0, 3, kParams_OneMagicItem_TwoInts);
-DEFINE_COMMAND_PLUGIN(SetNthEffectTraitNumeric, 0, 4, kParams_OneMagicItem_ThreeInts);
-DEFINE_COMMAND_PLUGIN(AddNewEffect, 0, 7, kParams_OneMagicItem_OneEffect_TwoInts_ThreeOptionalInts);
-DEFINE_COMMAND_PLUGIN(RemoveNthEffect, 0, 2, kParams_OneMagicItem_OneInt);
-DEFINE_COMMAND_PLUGIN(SetObjectEffect, 0, 2, kParams_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetNumActorEffects, 0, 1, kParams_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(GetNthActorEffect, 0, 2, kParams_OneInt_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(GetActorUnarmedEffect, 0, 1, kParams_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(SetActorUnarmedEffect, 0, 2, kParams_OneForm_OneOptionalActorBase);
-DEFINE_COMMAND_PLUGIN(GetAddictionEffect, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetAddictionEffect, 0, 2, kParams_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetAddictionChance, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetAddictionChance, 0, 2, kParams_OneForm_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetIsPoison, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(GetActiveEffects, 1, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetTempEffects, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(RemoveNthTempEffect, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetEffectFlag, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetEffectFlag, 0, 3, kParams_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetBaseEffectFlag, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetBaseEffectFlag, 0, 3, kParams_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetBaseEffectScript, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetBaseEffectScript, 0, 2, kParams_TwoForms);
-DEFINE_CMD_COND_PLUGIN(IsSpellTargetAlt, 1, 1, kParams_OneMagicItem);
-DEFINE_COMMAND_PLUGIN(CastImmediate, 1, 2, kParams_OneMagicItem_OneOptionalActor);
-DEFINE_CMD_COND_PLUGIN(IsSpellTargetList, 1, 1, kParams_FormList);
+DEFINE_COMMAND_PLUGIN(GetNumEffects, 0, kParams_OneMagicItem);
+DEFINE_COMMAND_PLUGIN(GetNthEffectBase, 0, kParams_OneMagicItem_OneInt);
+DEFINE_COMMAND_PLUGIN(SetNthEffectBase, 0, kParams_OneMagicItem_OneInt_OneMagicEffect);
+DEFINE_COMMAND_PLUGIN(GetNthEffectTraitNumeric, 0, kParams_OneMagicItem_TwoInts);
+DEFINE_COMMAND_PLUGIN(SetNthEffectTraitNumeric, 0, kParams_OneMagicItem_ThreeInts);
+DEFINE_COMMAND_PLUGIN(AddNewEffect, 0, kParams_OneMagicItem_OneEffect_TwoInts_ThreeOptionalInts);
+DEFINE_COMMAND_PLUGIN(RemoveNthEffect, 0, kParams_OneMagicItem_OneInt);
+DEFINE_COMMAND_PLUGIN(SetObjectEffect, 0, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetNumActorEffects, 0, kParams_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(GetNthActorEffect, 0, kParams_OneInt_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(GetActorUnarmedEffect, 0, kParams_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(SetActorUnarmedEffect, 0, kParams_OneForm_OneOptionalActorBase);
+DEFINE_COMMAND_PLUGIN(GetAddictionEffect, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetAddictionEffect, 0, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetAddictionChance, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetAddictionChance, 0, kParams_OneForm_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetIsPoison, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(GetActiveEffects, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetTempEffects, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(RemoveNthTempEffect, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetEffectFlag, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetEffectFlag, 0, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetBaseEffectFlag, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetBaseEffectFlag, 0, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetBaseEffectScript, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetBaseEffectScript, 0, kParams_TwoForms);
+DEFINE_CMD_COND_PLUGIN(IsSpellTargetAlt, 1, kParams_OneMagicItem);
+DEFINE_COMMAND_PLUGIN(CastImmediate, 1, kParams_OneMagicItem_OneOptionalActor);
+DEFINE_CMD_COND_PLUGIN(IsSpellTargetList, 1, kParams_FormList);
 
 bool Cmd_GetNumEffects_Execute(COMMAND_ARGS)
 {
 	MagicItem *magicItem;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem))
 		*result = (int)magicItem->list.list.Count();
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_GetNthEffectBase_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	MagicItem *magicItem;
 	UInt32 idx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &idx))
@@ -67,7 +65,6 @@ bool Cmd_SetNthEffectBase_Execute(COMMAND_ARGS)
 
 bool Cmd_GetNthEffectTraitNumeric_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	MagicItem *magicItem;
 	UInt32 idx, traitID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &idx, &traitID))
@@ -165,15 +162,15 @@ bool Cmd_RemoveNthEffect_Execute(COMMAND_ARGS)
 {
 	MagicItem *magicItem;
 	SInt32 idx;
+	int count = -1;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem, &idx) && magicItem->list.RemoveNthEffect(idx))
-		*result = (int)magicItem->list.list.Count();
-	else *result = -1;
+		count = (int)magicItem->list.list.Count();
+	*result = count;
 	return true;
 }
 
 bool Cmd_SetObjectEffect_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESForm *form;
 	EnchantmentItem *effect = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &effect))
@@ -198,7 +195,6 @@ bool Cmd_SetObjectEffect_Execute(COMMAND_ARGS)
 
 bool Cmd_GetNumActorEffects_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESActorBase *actorBase = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase))
 		return true;
@@ -214,7 +210,6 @@ bool Cmd_GetNumActorEffects_Execute(COMMAND_ARGS)
 
 bool Cmd_GetNthActorEffect_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	UInt32 idx;
 	TESActorBase *actorBase = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &idx, &actorBase))
@@ -232,7 +227,6 @@ bool Cmd_GetNthActorEffect_Execute(COMMAND_ARGS)
 
 bool Cmd_GetActorUnarmedEffect_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESActorBase *actorBase = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &actorBase))
 		return true;
@@ -249,7 +243,6 @@ bool Cmd_GetActorUnarmedEffect_Execute(COMMAND_ARGS)
 
 bool Cmd_SetActorUnarmedEffect_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESForm *effForm;
 	TESActorBase *actorBase = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &effForm, &actorBase))
@@ -278,7 +271,6 @@ bool Cmd_SetActorUnarmedEffect_Execute(COMMAND_ARGS)
 
 bool Cmd_GetAddictionEffect_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	AlchemyItem *alch;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &alch) && IS_ID(alch, AlchemyItem) && alch->withdrawalEffect)
 		REFR_RES = alch->withdrawalEffect->refID;
@@ -299,7 +291,6 @@ bool Cmd_GetAddictionChance_Execute(COMMAND_ARGS)
 	AlchemyItem *alch;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &alch) && IS_ID(alch, AlchemyItem) && alch->withdrawalEffect)
 		*result = alch->addictionChance;
-	else *result = 0;
 	return true;
 }
 
@@ -315,15 +306,13 @@ bool Cmd_SetAddictionChance_Execute(COMMAND_ARGS)
 bool Cmd_GetIsPoison_Execute(COMMAND_ARGS)
 {
 	AlchemyItem *alch;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &alch) && IS_ID(alch, AlchemyItem))
-		*result = alch->IsPoison() ? 1 : 0;
-	else *result = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &alch) && IS_ID(alch, AlchemyItem) && alch->IsPoison())
+		*result = 1;
 	return true;
 }
 
 bool Cmd_GetActiveEffects_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 filter = 7;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &filter) || NOT_ACTOR(thisObj))
 		return true;
@@ -363,7 +352,6 @@ struct SortEffectsEntry
 
 bool Cmd_GetTempEffects_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	if (NOT_ACTOR(thisObj))
 		return true;
 	if (auto iter = ((Actor*)thisObj)->magicTarget.GetEffectList()->Head())
@@ -402,7 +390,6 @@ bool Cmd_GetTempEffects_Execute(COMMAND_ARGS)
 
 bool Cmd_RemoveNthTempEffect_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 index;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &index) || NOT_ACTOR(thisObj))
 		return true;
@@ -419,26 +406,26 @@ bool Cmd_RemoveNthTempEffect_Execute(COMMAND_ARGS)
 
 bool Cmd_GetEffectFlag_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESForm *effForm;
 	UInt32 flagID;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &effForm, &flagID) || (flagID > 7)) return true;
 	UInt8 flags;
 	switch (effForm->typeID)
 	{
-	case kFormType_SpellItem:
-		flags = ((SpellItem*)effForm)->spellFlags;
-		break;
-	case kFormType_EnchantmentItem:
-		flags = ((EnchantmentItem*)effForm)->enchFlags;
-		break;
-	case kFormType_AlchemyItem:
-		flags = ((AlchemyItem*)effForm)->alchFlags;
-		break;
-	default:
-		return true;
+		case kFormType_SpellItem:
+			flags = ((SpellItem*)effForm)->spellFlags;
+			break;
+		case kFormType_EnchantmentItem:
+			flags = ((EnchantmentItem*)effForm)->enchFlags;
+			break;
+		case kFormType_AlchemyItem:
+			flags = ((AlchemyItem*)effForm)->alchFlags;
+			break;
+		default:
+			return true;
 	}
-	*result = (flags & (1 << flagID)) ? 1 : 0;
+	if (flags & (1 << flagID))
+		*result = 1;
 	return true;
 }
 
@@ -471,9 +458,8 @@ bool Cmd_GetBaseEffectFlag_Execute(COMMAND_ARGS)
 {
 	EffectSetting *effForm;
 	UInt32 flagID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &effForm, &flagID) && IS_ID(effForm, EffectSetting) && (flagID <= 31))
-		*result = (effForm->effectFlags & (1 << flagID)) ? 1 : 0;
-	else *result = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &effForm, &flagID) && IS_ID(effForm, EffectSetting) && (flagID <= 31) && (effForm->effectFlags & (1 << flagID)))
+		*result = 1;
 	return true;
 }
 
@@ -491,7 +477,6 @@ bool Cmd_SetBaseEffectFlag_Execute(COMMAND_ARGS)
 
 bool Cmd_GetBaseEffectScript_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	EffectSetting *effect;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &effect) && IS_ID(effect, EffectSetting) && (effect->archtype == 1) && effect->associatedItem)
 		REFR_RES = effect->associatedItem->refID;
@@ -507,7 +492,7 @@ bool Cmd_SetBaseEffectScript_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool __fastcall IsSpellTargetAlt(Actor *actor, MagicItem *magicItem)
+__declspec(noinline) bool __fastcall IsSpellTargetAlt(Actor *actor, MagicItem *magicItem)
 {
 	if IS_ACTOR(actor)
 		for (auto iter = actor->magicTarget.GetEffectList()->Head(); iter; iter = iter->next)
@@ -519,15 +504,15 @@ bool __fastcall IsSpellTargetAlt(Actor *actor, MagicItem *magicItem)
 bool Cmd_IsSpellTargetAlt_Execute(COMMAND_ARGS)
 {
 	MagicItem *magicItem;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem))
-		*result = IsSpellTargetAlt((Actor*)thisObj, magicItem);
-	else *result = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &magicItem) && IsSpellTargetAlt((Actor*)thisObj, magicItem))
+		*result = 1;
 	return true;
 }
 
 bool Cmd_IsSpellTargetAlt_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = IsSpellTargetAlt((Actor*)thisObj, (MagicItem*)arg1);
+	if (IsSpellTargetAlt((Actor*)thisObj, (MagicItem*)arg1))
+		*result = 1;
 	return true;
 }
 
@@ -545,7 +530,7 @@ bool Cmd_CastImmediate_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool __fastcall IsSpellTargetList(Actor *actor, BGSListForm *splList)
+__declspec(noinline) bool __fastcall IsSpellTargetList(Actor *actor, BGSListForm *splList)
 {
 	if (NOT_ACTOR(actor))
 		return false;
@@ -574,14 +559,14 @@ bool __fastcall IsSpellTargetList(Actor *actor, BGSListForm *splList)
 bool Cmd_IsSpellTargetList_Execute(COMMAND_ARGS)
 {
 	BGSListForm *splList;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &splList))
-		*result = IsSpellTargetList((Actor*)thisObj, splList);
-	else *result = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &splList) && IsSpellTargetList((Actor*)thisObj, splList))
+		*result = 1;
 	return true;
 }
 
 bool Cmd_IsSpellTargetList_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = arg1 ? IsSpellTargetList((Actor*)thisObj, (BGSListForm*)arg1) : 0;
+	if (arg1 && IsSpellTargetList((Actor*)thisObj, (BGSListForm*)arg1))
+		*result = 1;
 	return true;
 }

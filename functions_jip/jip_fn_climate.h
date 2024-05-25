@@ -1,23 +1,23 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetClimateSunTexture, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetClimateSunTexture, 0, 2, kParams_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(GetClimateSunGlareTexture, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetClimateSunGlareTexture, 0, 2, kParams_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(GetClimateNightSkyModel, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetClimateNightSkyModel, 0, 2, kParams_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(GetClimateTraitNumeric, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetClimateTraitNumeric, 0, 3, kParams_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetClimateNumWeatherTypes, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(GetClimateNthWeatherType, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetClimateNthWeatherChance, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetClimateNthWeatherGlobal, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(ClimateAddWeatherType, 0, 4, kParams_OneForm_OneWeatherID_OneInt_OneOptionalGlobal);
-DEFINE_COMMAND_PLUGIN(ClimateRemoveWeatherType, 0, 2, kParams_OneForm_OneWeatherID);
-DEFINE_COMMAND_PLUGIN(GetCurrentClimate, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetCurrentClimate, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(RefreshCurrentClimate, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(ForceClimate, 0, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetClimateSunTexture, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetClimateSunTexture, 0, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetClimateSunGlareTexture, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetClimateSunGlareTexture, 0, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetClimateNightSkyModel, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetClimateNightSkyModel, 0, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetClimateTraitNumeric, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetClimateTraitNumeric, 0, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetClimateNumWeatherTypes, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(GetClimateNthWeatherType, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetClimateNthWeatherChance, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetClimateNthWeatherGlobal, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(ClimateAddWeatherType, 0, kParams_OneForm_OneWeatherID_OneInt_OneOptionalGlobal);
+DEFINE_COMMAND_PLUGIN(ClimateRemoveWeatherType, 0, kParams_OneForm_OneWeatherID);
+DEFINE_COMMAND_PLUGIN(GetCurrentClimate, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(SetCurrentClimate, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(RefreshCurrentClimate, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(ForceClimate, 0, kParams_OneOptionalForm);
 
 bool Cmd_GetClimateSunTexture_Execute(COMMAND_ARGS)
 {
@@ -78,7 +78,6 @@ bool Cmd_SetClimateNightSkyModel_Execute(COMMAND_ARGS)
 
 bool Cmd_GetClimateTraitNumeric_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESClimate *climate;
 	UInt32 traitID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &traitID) && IS_ID(climate, TESClimate))
@@ -144,13 +143,11 @@ bool Cmd_GetClimateNumWeatherTypes_Execute(COMMAND_ARGS)
 	TESClimate *climate;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate) && IS_ID(climate, TESClimate))
 		*result = (int)climate->weatherTypes.Count();
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_GetClimateNthWeatherType_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESClimate *climate;
 	UInt32 idx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &idx) && IS_ID(climate, TESClimate))
@@ -161,7 +158,6 @@ bool Cmd_GetClimateNthWeatherType_Execute(COMMAND_ARGS)
 
 bool Cmd_GetClimateNthWeatherChance_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESClimate *climate;
 	UInt32 idx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &idx) && IS_ID(climate, TESClimate))
@@ -172,7 +168,6 @@ bool Cmd_GetClimateNthWeatherChance_Execute(COMMAND_ARGS)
 
 bool Cmd_GetClimateNthWeatherGlobal_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESClimate *climate;
 	UInt32 idx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &idx) && IS_ID(climate, TESClimate))
@@ -183,7 +178,6 @@ bool Cmd_GetClimateNthWeatherGlobal_Execute(COMMAND_ARGS)
 
 bool Cmd_ClimateAddWeatherType_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESClimate *climate;
 	TESWeather *weather;
 	UInt32 chance;
@@ -201,7 +195,6 @@ bool Cmd_ClimateAddWeatherType_Execute(COMMAND_ARGS)
 
 bool Cmd_ClimateRemoveWeatherType_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESClimate *climate;
 	TESWeather *weather;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &climate, &weather) && IS_ID(climate, TESClimate))
@@ -216,7 +209,8 @@ bool Cmd_ClimateRemoveWeatherType_Execute(COMMAND_ARGS)
 bool Cmd_GetCurrentClimate_Execute(COMMAND_ARGS)
 {
 	TESClimate *climate = g_currentSky->currClimate;
-	REFR_RES = climate ? climate->refID : 0;
+	if (climate)
+		REFR_RES = climate->refID;
 	DoConsolePrint(climate);
 	return true;
 }

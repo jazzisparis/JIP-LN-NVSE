@@ -149,7 +149,7 @@ UInt32 s_inputEventClear = 0;
 
 bool SetInputEventHandler(UInt32 eventMask, Script *script, SInt32 keyID, bool doAdd)
 {
-	bool onKey = (eventMask & kLNEventMask_OnKey) ? true : false;
+	bool onKey = (eventMask & kLNEventMask_OnKey) != 0;
 	bool onUp = (eventMask == kLNEventMask_OnKeyUp) || (eventMask == kLNEventMask_OnControlUp);
 	eventMask = onKey ? kLNEventMask_OnKey : kLNEventMask_OnControl;
 	LNDInputEventsMap &events = onKey ? s_LNOnKeyEvents : s_LNOnControlEvents;

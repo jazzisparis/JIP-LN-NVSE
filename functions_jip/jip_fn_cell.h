@@ -1,12 +1,12 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(SetCellWaterForm, 0, 2, kParams_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetCellClimate, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetCellClimate, 0, 2, kParams_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetCellNoiseTexture, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetCellNoiseTexture, 0, 2, kParams_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(GetOwnerOfCell, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(GetCellNorthRotation, 0, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetCellWaterForm, 0, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetCellClimate, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetCellClimate, 0, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetCellNoiseTexture, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetCellNoiseTexture, 0, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetOwnerOfCell, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(GetCellNorthRotation, 0, kParams_OneForm);
 
 bool Cmd_SetCellWaterForm_Execute(COMMAND_ARGS)
 {
@@ -25,7 +25,6 @@ bool Cmd_SetCellWaterForm_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCellClimate_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESObjectCELL *cell;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && IS_ID(cell, TESObjectCELL))
 		if (auto xCellClimate = GetExtraType(&cell->extraDataList, ExtraCellClimate); xCellClimate && xCellClimate->climate)
@@ -69,7 +68,6 @@ bool Cmd_SetCellNoiseTexture_Execute(COMMAND_ARGS)
 
 bool Cmd_GetOwnerOfCell_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESObjectCELL *cell;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && IS_ID(cell, TESObjectCELL))
 		if (TESForm *owner = ThisCall<TESForm*>(0x546A40, cell))
@@ -79,7 +77,6 @@ bool Cmd_GetOwnerOfCell_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCellNorthRotation_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESObjectCELL *cell;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell) && IS_ID(cell, TESObjectCELL) && cell->IsInterior())
 		if (ExtraNorthRotation *xNorthRot = GetExtraType(&cell->extraDataList, ExtraNorthRotation))

@@ -325,11 +325,15 @@ class PathingAvoidNodeArray;
 class PathingLocation
 {
 public:
-	virtual void	Unk_00(void);
+	/*virtual void	Unk_00(void);
 	virtual void	Unk_01(void);
-	virtual void	Unk_02(void);
+	virtual void	Unk_02(void);*/
 
-	UInt32			unk04[9];	// 04
+	void			**vtbl;		// 00
+	NiPoint3		pos;		// 04
+	UInt32			unk10[6];	// 10
+
+	PathingLocation(TESObjectREFR *refr) {ThisCall(0x6DCD70, this, refr);}
 };
 
 // B0
@@ -349,6 +353,8 @@ public:
 		TESForm		*baseForm;
 		void		*inventoryChanges;
 		bool		isAlarmed;
+
+		ActorData(Actor *actor) {ThisCall(0x502670, this, actor);}
 	};
 
 	UInt32					unk08;					// 08
@@ -423,7 +429,7 @@ public:
 		kMoveFlag_Slide =		0x8000
 	};
 
-	UInt32						unk04[3];			// 04
+	NiVector3					point04;			// 04
 	NiVector3					overrideMovement;	// 10
 	PathingRequest				*pathingRequest;	// 1C
 	PathingSolution				*pathingSolution;	// 20
@@ -492,7 +498,7 @@ public:
 	/*338*/virtual void		DamageHealthAndFatigue(float healthDmg, float fatigueDmg, Actor *source);
 	/*33C*/virtual void		DamageActionPoints(float amount); // checks GetIsGodMode before decreasing
 	/*340*/virtual void		Unk_D0(void);
-	/*344*/virtual void		Unk_D1(void);
+	/*344*/virtual int		CalculateDisposition(Actor *target, void *arg2);
 	/*348*/virtual void		UpdateMovement(float arg1, UInt32 arg2);
 	/*34C*/virtual void		Unk_D3(void);
 	/*350*/virtual void		Unk_D4(void);
@@ -535,10 +541,10 @@ public:
 	/*3E4*/virtual bool		RemoveActorEffect(SpellItem *actorEffect);
 	/*3E8*/virtual void		Reload(TESObjectWEAP *weapon, UInt32 animType, UInt8 hasExtendedClip);
 	/*3EC*/virtual void		Reload2(TESObjectWEAP *weapon, UInt32 animType, UInt8 hasExtendedClip, UInt8 isInstantSwapHotkey);
-	/*3F0*/virtual void		DecreaseAmmo();
+	/*3F0*/virtual void		DecreaseAmmo(int amount);
 	/*3F4*/virtual void		Unk_FD(void);
 	/*3F8*/virtual CombatActors	*GetCombatGroup();
-	/*3FC*/virtual void		Unk_FF(void);
+	/*3FC*/virtual void		SetCombatGroup(CombatActors *combatActors);
 	/*400*/virtual void		Unk_100(void);
 	/*404*/virtual void		Unk_101(void);
 	/*408*/virtual void		Unk_102(void);
@@ -561,12 +567,12 @@ public:
 	/*44C*/virtual void		Unk_113(void);
 	/*450*/virtual void		Unk_114(void);
 	/*454*/virtual void		Unk_115(void);
-	/*458*/virtual float	CalculateMoveSpeed();
+	/*458*/virtual float	CalculateWalkSpeed();
 	/*45C*/virtual float	CalculateRunSpeed();
-	/*460*/virtual void		Unk_118(void);
-	/*464*/virtual void		Unk_119(void);
-	/*468*/virtual void		Unk_11A(void);
-	/*46C*/virtual void		Unk_11B(void);
+	/*460*/virtual void		ModDisposition(Actor *target, float value);
+	/*464*/virtual float	GetDisposition(Actor *target);
+	/*468*/virtual void		ClearDisposition(Actor *target);
+	/*46C*/virtual void		SetStartingPosition();
 	/*470*/virtual bool		GetAttacked();
 	/*474*/virtual void		Unk_11D(void);
 	/*478*/virtual void		Unk_11E(void);
@@ -603,6 +609,12 @@ public:
 		kLifeState_Unconscious =	3,
 		kLifeState_Reanimate =		4,
 		kLifeState_Restrained =		5
+	};
+
+	struct Disposition
+	{
+		float	value;
+		Actor	*target;
 	};
 	
 	MagicCaster			magicCaster;			// 088
@@ -642,7 +654,7 @@ public:
 	UInt8								byte0F2;					// 0F2
 	UInt8								byte0F3;					// 0F3
 	tList<void>							list0F4;					// 0F4
-	tList<void>							list0FC;					// 0FC
+	tList<Disposition>					dispositionList;			// 0FC
 	bool								isInCombat;					// 104
 	UInt8								jipActorFlags1;				// 105
 	UInt8								jipActorFlags2;				// 106
@@ -768,6 +780,7 @@ public:
 	void PushActor(float force, float angle, TESObjectREFR *originRef);
 	int GetGroundMaterial() const;
 	void RefreshAnimData();
+	double GetPathingDistance(TESObjectREFR *target);
 };
 
 extern float s_moveAwayDistance;
@@ -797,6 +810,14 @@ public:
 	UInt8			isGuard;			// 1C1
 	UInt16			unk1C2;				// 1C2
 	float			unk1C4;				// 1C4
+
+	void RefreshWornDTDR()
+	{
+		totalArmorDR = -1.0F;
+		totalArmorDT = -1.0F;
+		ThisCall(0x8D2110, this);
+		ThisCall(0x8D22B0, this);
+	}
 };
 
 struct ParentSpaceNode;
@@ -999,14 +1020,8 @@ public:
 	TESForm								*pcWorldOrCell;			// 7AC
 	UInt32								unk7B0;					// 7B0
 	BGSMusicType						*musicType;				// 7B4
-	UInt8								gameDifficulty;			// 7B8
-	UInt8								byte7B9;				// 7B9
-	UInt8								byte7BA;				// 7BA
-	UInt8								byte7BB;				// 7BB
-	bool								isHardcore;				// 7BC
-	UInt8								byte7BD;				// 7BD
-	UInt8								byte7BE;				// 7BE
-	UInt8								byte7BF;				// 7BF
+	int									gameDifficulty;			// 7B8
+	UInt32								isHardcore;				// 7BC
 	UInt32								killCamMode;			// 7C0
 	UInt8								inCombatWithGuard;		// 7C4
 	bool								isYoung;				// 7C5
@@ -1034,9 +1049,9 @@ public:
 	UInt32								unkD4C;					// D4C
 	float								lastAmmoSwapTime;		// D50
 	UInt8								shouldOpenPipboy;		// D54
-	UInt8								byteD55;				// D55
-	UInt8								byteD56;				// D56
-	UInt8								byteD57;				// D57
+	UInt8								unusedByteD55;			// D55
+	UInt8								unusedByteD56;			// D56
+	UInt8								unusedByteD57;			// D57	Used by SneakBoundingBoxFixHook
 	NiVector3							cameraPos3rdPerson;		// D58
 	CombatActors						*combatActors;			// D64
 	UInt32								teammateCount;			// D68
@@ -1055,7 +1070,9 @@ public:
 	BSSimpleArray<ContChangesEntry*>	rockItLauncherContainer;// DF4
 	float								rockItLauncherWeight;	// E04
 	UInt8								nightVisionApplied;		// E08
-	UInt8								padE09[3];				// E09
+	UInt8								unusedByteE09;			// E09
+	UInt8								unusedByteE0A;			// E0A
+	UInt8								unusedByteE0B;			// E0B
 	TESReputation						*lastModifiedRep;		// E0C
 	UInt32								unkE10[2];				// E10
 	float								killCamTimer;			// E18
@@ -1199,7 +1216,7 @@ public:
 	UInt8				pad14B;				// 14B
 	float				range;				// 14C
 
-	void GetData(UInt32 dataType, double *result) const;
+	void __fastcall GetData(UInt32 dataType, double *result) const;
 
 	TESAmmo *GetAmmo() const {return numProjectiles ? extraDataList.ammo : nullptr;}
 };

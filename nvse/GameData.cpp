@@ -47,7 +47,7 @@ void DataHandler::DecompileModScripts(UInt8 modIdx, UInt8 typeMask)
 				fileEnd[4] = 0;
 				if (outFile.OpenWriteEx(kDecompilePath, wBuffer, 0x10000))
 				{
-					size_t numWritten = DecompileToBuffer(pScript, outFile.GetStream(), nullptr);
+					size_t numWritten = DecompileToBuffer(pScript, outFile, nullptr);
 					outFile.Close();
 					if (!numWritten)
 						remove(kDecompilePath);
@@ -70,7 +70,7 @@ void DataHandler::DecompileModScripts(UInt8 modIdx, UInt8 typeMask)
 				fileEnd[4] = 0;
 				if (outFile.OpenWriteEx(kDecompilePath, wBuffer, 0x10000))
 				{
-					size_t numWritten = pQuest->DecompileResultScripts(outFile.GetStream(), nullptr);
+					size_t numWritten = pQuest->DecompileResultScripts(outFile, nullptr);
 					outFile.Close();
 					if (!numWritten)
 						remove(kDecompilePath);
@@ -93,7 +93,7 @@ void DataHandler::DecompileModScripts(UInt8 modIdx, UInt8 typeMask)
 				fileEnd[4] = 0;
 				if (outFile.OpenWriteEx(kDecompilePath, wBuffer, 0x10000))
 				{
-					size_t numWritten = pPackage->DecompileResultScripts(outFile.GetStream(), nullptr);
+					size_t numWritten = pPackage->DecompileResultScripts(outFile, nullptr);
 					outFile.Close();
 					if (!numWritten)
 						remove(kDecompilePath);
@@ -114,7 +114,7 @@ void DataHandler::DecompileModScripts(UInt8 modIdx, UInt8 typeMask)
 				sprintf_s(typeEnd, 0x80, "%06X [%s].txt", pTopic->refID & 0xFFFFFF, pTopic->parentTopic->editorIDstr.CStr());
 				if (outFile.OpenWriteEx(kDecompilePath, wBuffer, 0x10000))
 				{
-					size_t numWritten = pTopic->DecompileResultScripts(outFile.GetStream(), nullptr);
+					size_t numWritten = pTopic->DecompileResultScripts(outFile, nullptr);
 					outFile.Close();
 					if (!numWritten)
 						remove(kDecompilePath);
@@ -136,7 +136,7 @@ void DataHandler::DecompileModScripts(UInt8 modIdx, UInt8 typeMask)
 					fileEnd[4] = 0;
 					if (outFile.OpenWriteEx(kDecompilePath, wBuffer, 0x10000))
 					{
-						size_t numWritten = terminal->DecompileResultScripts(outFile.GetStream(), nullptr);
+						size_t numWritten = terminal->DecompileResultScripts(outFile, nullptr);
 						outFile.Close();
 						if (!numWritten)
 							remove(kDecompilePath);
@@ -296,7 +296,7 @@ void TES::UnloadBufferedExterior(TESObjectCELL *cell)
 	{
 		if (exteriorsBuffer[i] != cell)
 			continue;
-		memmove(exteriorsBuffer + i, exteriorsBuffer + i + 1, (bufferSize - i - 1) << 2);
+		MemCopy(exteriorsBuffer + i, exteriorsBuffer + i + 1, (bufferSize - i - 1) << 2);
 		ThisCall(0x462290, g_dataHandler, cell);
 		break;
 	}

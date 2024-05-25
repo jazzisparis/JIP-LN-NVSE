@@ -1,17 +1,17 @@
 #pragma once
 
-DEFINE_COMMAND_ALT_PLUGIN(GetLoadedType, GLT, 0, 4, kParams_OneList_OneInt_TwoOptionalInts);
-DEFINE_COMMAND_ALT_PLUGIN(GetLoadedTypeArray, GLTA, 0, 2, kParams_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(Search, 0, 2, kParams_OneString_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(GetModName, 0, 2, kParams_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetFormMods, 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetFormRefs, 0, 2, kParams_OneForm_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetSelfModIndex, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(IsFormOverridden, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_ALT_PLUGIN(GetFormFromMod, GFFM, 0, 2, kParams_TwoStrings);
-DEFINE_COMMAND_PLUGIN(GetStringSetting, 0, 1, kParams_OneString);
-DEFINE_COMMAND_PLUGIN(SetStringSetting, 0, 2, kParams_TwoStrings);
-DEFINE_COMMAND_PLUGIN(GetGameSettings, 0, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_ALT_PLUGIN(GetLoadedType, GLT, 0, kParams_OneList_OneInt_TwoOptionalInts);
+DEFINE_COMMAND_ALT_PLUGIN(GetLoadedTypeArray, GLTA, 0, kParams_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(Search, 0, kParams_OneString_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(GetModName, 0, kParams_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetFormMods, 0, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetFormRefs, 0, kParams_OneForm_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetSelfModIndex, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(IsFormOverridden, 0, kParams_OneForm);
+DEFINE_COMMAND_ALT_PLUGIN(GetFormFromMod, GFFM, 0, kParams_TwoStrings);
+DEFINE_COMMAND_PLUGIN(GetStringSetting, 0, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(SetStringSetting, 0, kParams_TwoStrings);
+DEFINE_COMMAND_PLUGIN(GetGameSettings, 0, kParams_OneOptionalInt);
 
 const UInt8 kTypeListJmpTbl[] =
 {
@@ -25,9 +25,9 @@ tList<TESForm> *GetSourceList(UInt8 formType)
 {
 	if (formType == kFormType_TESRegion)
 		return (tList<TESForm>*)&g_dataHandler->regionList->list;
-	UInt8 listIdx = kTypeListJmpTbl[formType];
-	if (listIdx >= 0x80) return NULL;
-	return &((tList<TESForm>*)&g_dataHandler->packageList)[listIdx];
+	if (UInt8 listIdx = kTypeListJmpTbl[formType]; listIdx < 0x80)
+		return &((tList<TESForm>*)&g_dataHandler->packageList)[listIdx];
+	return nullptr;
 }
 
 void GetLoadedType(UInt32 formType, UInt8 modIndex, tList<TESForm> *outList, TempElements *tmpElements)
@@ -36,7 +36,7 @@ void GetLoadedType(UInt32 formType, UInt8 modIndex, tList<TESForm> *outList, Tem
 	{
 		auto &cellArr = g_dataHandler->cellArray;
 		for (UInt32 idx = 0; idx < cellArr.Size(); idx++)
-			if (TESObjectCELL *cell = cellArr[idx]; cell && ((modIndex == 0xFF) || (modIndex == cell->GetOverridingModIdx())))
+			if (TESObjectCELL *cell = cellArr[idx]; cell && ((modIndex == 0xFF) || (modIndex == cell->modIndex)))
 				if (outList) outList->Prepend(cell);
 				else tmpElements->Append(cell);
 	}
@@ -51,7 +51,7 @@ void GetLoadedType(UInt32 formType, UInt8 modIndex, tList<TESForm> *outList, Tem
 				do
 				{
 					if (TESObjectREFR *refr = refrIter->data; refr && refr->extraDataList.HasType(kXData_ExtraMapMarker) &&
-						((modIndex == 0xFF) || (modIndex == refr->GetOverridingModIdx())))
+						((modIndex == 0xFF) || (modIndex == refr->modIndex)))
 						if (outList) outList->Prepend(refr);
 						else tmpElements->Append(refr);
 				}
@@ -70,7 +70,7 @@ void GetLoadedType(UInt32 formType, UInt8 modIndex, tList<TESForm> *outList, Tem
 				do
 				{
 					if (TESObjectREFR *refr = refrIter->data; refr && refr->extraDataList.HasType(kXData_ExtraRadioData) &&
-						((modIndex == 0xFF) || (modIndex == refr->GetOverridingModIdx())))
+						((modIndex == 0xFF) || (modIndex == refr->modIndex)))
 						if (outList) outList->Prepend(refr);
 						else tmpElements->Append(refr);
 				}
@@ -83,7 +83,7 @@ void GetLoadedType(UInt32 formType, UInt8 modIndex, tList<TESForm> *outList, Tem
 			auto iter = sourceList->Head();
 			do
 			{
-				if (TESForm *form = iter->data; form && ((modIndex == 0xFF) || (modIndex == form->GetOverridingModIdx())))
+				if (TESForm *form = iter->data; form && ((modIndex == 0xFF) || (modIndex == form->modIndex)))
 					if (outList) outList->Prepend(form);
 					else tmpElements->Append(form);
 			}
@@ -92,17 +92,14 @@ void GetLoadedType(UInt32 formType, UInt8 modIndex, tList<TESForm> *outList, Tem
 		else if (kTypeListJmpTbl[formType] == 0x80)
 		{
 			for (TESBoundObject *object = g_dataHandler->boundObjectList->first; object; object = object->next)
-				if ((object->typeID == formType) && ((modIndex == 0xFF) || (modIndex == object->GetOverridingModIdx())))
+				if ((object->typeID == formType) && ((modIndex == 0xFF) || (modIndex == object->modIndex)))
 					if (outList) outList->Prepend(object);
 					else tmpElements->Append(object);
 		}
-		else
-		{
-			for (auto mIter = GameGlobals::AllFormsMap()->Begin(); mIter; ++mIter)
-				if (TESForm *form = mIter.Get(); form && (form->typeID == formType) && ((modIndex == 0xFF) || (modIndex == form->GetOverridingModIdx())))
-					if (outList) outList->Prepend(form);
-					else tmpElements->Append(form);
-		}
+		else for (auto mIter = GameGlobals::AllFormsMap()->Begin(); mIter; ++mIter)
+			if (TESForm *form = mIter.Get(); form && (form->typeID == formType) && ((modIndex == 0xFF) || (modIndex == form->modIndex)))
+				if (outList) outList->Prepend(form);
+				else tmpElements->Append(form);
 }
 
 bool Cmd_GetLoadedType_Execute(COMMAND_ARGS)
@@ -112,23 +109,20 @@ bool Cmd_GetLoadedType_Execute(COMMAND_ARGS)
 	int index = -1;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &listForm, &formType, &index, &noClear))
 	{
-		UInt8 modIndex = ((index >= 0) && (index < 255)) ? (UInt8)index : 0xFF;
 		if (!noClear) listForm->list.RemoveAll();
-		GetLoadedType(formType, modIndex, &listForm->list, NULL);
+		GetLoadedType(formType, ((index >= 0) && (index < 255)) ? (UInt8)index : 0xFF, &listForm->list, nullptr);
 	}
 	return true;
 }
 
 bool Cmd_GetLoadedTypeArray_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 formType;
 	int index = -1;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &formType, &index))
 	{
-		UInt8 modIndex = ((index >= 0) && (index < 255)) ? (UInt8)index : 0xFF;
 		TempElements *tmpElements = GetTempElements();
-		GetLoadedType(formType, modIndex, NULL, tmpElements);
+		GetLoadedType(formType, ((index >= 0) && (index < 255)) ? (UInt8)index : 0xFF, nullptr, tmpElements);
 		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	}
 	return true;
@@ -196,73 +190,42 @@ bool Cmd_GetModName_Execute(COMMAND_ARGS)
 	modName[0] = 0;
 	UInt32 index, keepExt = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &index, &keepExt) && (index < 0xFF))
-	{
-		StrCopy(modName, g_dataHandler->GetNthModName(index));
-		if (modName[0] && !keepExt) GetNextToken(modName, '.');
-	}
+		if (StrCopy(modName, g_dataHandler->GetNthModName(index)); modName[0] && !keepExt)
+			GetNextToken(modName, '.');
 	AssignString(PASS_COMMAND_ARGS, modName);
 	return true;
 }
 
 bool Cmd_GetFormMods_Execute(COMMAND_ARGS)
 {
-	*result = 0;
-	TESForm *form = NULL;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form)) return true;
-	if (!form)
-	{
-		if (!thisObj) return true;
-		form = thisObj->baseForm;
-	}
-	TempElements *tmpElements = GetTempElements();
-	auto iter = form->mods.Head();
-	do
-	{
-		if (iter->data) tmpElements->Append(iter->data->name);
-	}
-	while (iter = iter->next);
-	*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
+	TESForm *form = nullptr;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
+		if (form || (thisObj && (form = thisObj->baseForm)))
+		{
+			TempElements *tmpElements = GetTempElements();
+			auto iter = form->mods.Head();
+			do
+			{
+				if (iter->data)
+					tmpElements->Append(iter->data->name);
+			}
+			while (iter = iter->next);
+			*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
+		}
 	return true;
 }
 
 bool Cmd_GetFormRefs_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESForm *form;
 	UInt32 scanGrid = 0;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form, &scanGrid)) return true;
-	TempElements *tmpElements = GetTempElements();
-	for (auto intrIter = g_dataHandler->cellArray.Begin(); intrIter; ++intrIter)
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &scanGrid))
 	{
-		if (!*intrIter) continue;
-		auto refrIter = intrIter->objectList.Head();
-		do
+		TempElements *tmpElements = GetTempElements();
+		for (auto intrIter = g_dataHandler->cellArray.Begin(); intrIter; ++intrIter)
 		{
-			if (TESObjectREFR *refr = refrIter->data; refr && (refr->baseForm == form))
-				tmpElements->Append(refr);
-		}
-		while (refrIter = refrIter->next);
-	}
-	if (scanGrid)
-	{
-		for (auto gridIter = g_TES->gridCellArray->Begin(); gridIter; ++gridIter)
-		{
-			if (!*gridIter) continue;
-			auto refrIter = gridIter->objectList.Head();
-			do
-			{
-				if (TESObjectREFR *refr = refrIter->data; refr && (refr->baseForm == form) && !(refr->flags & TESObjectREFR::kFlags_Persistent))
-					tmpElements->Append(refr);
-			}
-			while (refrIter = refrIter->next);
-		}
-	}
-	auto wspcIter = g_dataHandler->worldSpaceList.Head();
-	do
-	{
-		if (TESWorldSpace *wspc = wspcIter->data; wspc && wspc->cell)
-		{
-			auto refrIter = wspc->cell->objectList.Head();
+			if (!*intrIter) continue;
+			auto refrIter = intrIter->objectList.Head();
 			do
 			{
 				if (TESObjectREFR *refr = refrIter->data; refr && (refr->baseForm == form))
@@ -270,9 +233,37 @@ bool Cmd_GetFormRefs_Execute(COMMAND_ARGS)
 			}
 			while (refrIter = refrIter->next);
 		}
+		if (scanGrid)
+		{
+			for (auto gridIter = g_TES->gridCellArray->Begin(); gridIter; ++gridIter)
+			{
+				if (!*gridIter) continue;
+				auto refrIter = gridIter->objectList.Head();
+				do
+				{
+					if (TESObjectREFR *refr = refrIter->data; refr && (refr->baseForm == form) && !(refr->flags & TESObjectREFR::kFlags_Persistent))
+						tmpElements->Append(refr);
+				}
+				while (refrIter = refrIter->next);
+			}
+		}
+		auto wspcIter = g_dataHandler->worldSpaceList.Head();
+		do
+		{
+			if (TESWorldSpace *wspc = wspcIter->data; wspc && wspc->cell)
+			{
+				auto refrIter = wspc->cell->objectList.Head();
+				do
+				{
+					if (TESObjectREFR *refr = refrIter->data; refr && (refr->baseForm == form))
+						tmpElements->Append(refr);
+				}
+				while (refrIter = refrIter->next);
+			}
+		}
+		while (wspcIter = wspcIter->next);
+		*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	}
-	while (wspcIter = wspcIter->next);
-	*result = (int)CreateArray(tmpElements->Data(), tmpElements->Size(), scriptObj);
 	return true;
 }
 
@@ -286,19 +277,16 @@ bool Cmd_IsFormOverridden_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
-	{
-		UInt8 overriding = form->GetOverridingModIdx();
-		*result = ((overriding > scriptObj->modIndex) && (overriding != 0xFF)) ? 1 : 0;
-	}
-	else *result = 0;
+		if (UInt8 overriding = form->GetOverridingModIdx(); (overriding != 0xFF) && (overriding > scriptObj->modIndex))
+			*result = 1;
 	return true;
 }
 
 bool Cmd_GetFormFromMod_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	char modName[0x80], refIDStr[0x10];
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &modName, &refIDStr)) return true;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &modName, &refIDStr))
+		return true;
 	UInt8 modIndex;
 	if (StrCompareCI(modName, "NONE"))
 	{
@@ -306,15 +294,15 @@ bool Cmd_GetFormFromMod_Execute(COMMAND_ARGS)
 		if (modIndex == 0xFF) return true;
 	}
 	else modIndex = 0xFF;
-	UInt32 refID = (HexToUInt(refIDStr) & 0xFFFFFF) | (modIndex << 24);
-	if (LookupFormByRefID(refID)) REFR_RES = refID;
+	if (UInt32 refID = (HexToUInt(refIDStr) & 0xFFFFFF) | (modIndex << 24); LookupFormByRefID(refID))
+		REFR_RES = refID;
 	return true;
 }
 
 bool Cmd_GetStringSetting_Execute(COMMAND_ARGS)
 {
 	char settingName[0x80];
-	const char *resStr = NULL;
+	const char *resStr = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &settingName) && ((settingName[0] | 0x20) == 's'))
 		if (Setting *setting = s_gameSettingsMap->Get(settingName))
 			resStr = setting->data.str;
@@ -334,27 +322,23 @@ bool Cmd_SetStringSetting_Execute(COMMAND_ARGS)
 
 bool Cmd_GetGameSettings_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 gmstType = 3;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &gmstType))
 	{
-		NVSEArrayVar *outArray = CreateStringMap(NULL, NULL, 0, scriptObj);
-		char namePrfx;
+		NVSEArrayVar *outArray = CreateStringMap(nullptr, nullptr, 0, scriptObj);
 		for (auto gmstIter = s_gameSettingsMap->Begin(); gmstIter; ++gmstIter)
 		{
-			namePrfx = *gmstIter->name | 0x20;
+			char namePrfx = *gmstIter->name | 0x20;
 			if (namePrfx == 's')
 			{
 				if (gmstType & 2)
 					SetElement(outArray, ArrayElementL(gmstIter->name), ArrayElementL(gmstIter->data.str));
 			}
 			else if (gmstType & 1)
-			{
 				if (namePrfx == 'f')
 					SetElement(outArray, ArrayElementL(gmstIter->name), ArrayElementL(gmstIter->data.f));
 				else
 					SetElement(outArray, ArrayElementL(gmstIter->name), ArrayElementL(gmstIter->data.i));
-			}
 		}
 		*result = (int)outArray;
 	}

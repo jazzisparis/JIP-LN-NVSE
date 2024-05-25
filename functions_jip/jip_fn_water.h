@@ -1,10 +1,10 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetWaterNoiseTexture, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetWaterNoiseTexture, 0, 2, kParams_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(SetWaterFormEffect, 0, 2, kParams_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetWaterSound, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetWaterSound, 0, 2, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetWaterNoiseTexture, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetWaterNoiseTexture, 0, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(SetWaterFormEffect, 0, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetWaterSound, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetWaterSound, 0, kParams_OneForm_OneOptionalForm);
 
 bool Cmd_GetWaterNoiseTexture_Execute(COMMAND_ARGS)
 {
@@ -39,7 +39,6 @@ bool Cmd_GetWaterSound_Execute(COMMAND_ARGS)
 	TESWaterForm *water;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &water) && IS_ID(water, TESWaterForm) && water->sound)
 		REFR_RES = water->sound->refID;
-	else REFR_RES = 0;
 	return true;
 }
 

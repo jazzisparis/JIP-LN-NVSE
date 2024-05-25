@@ -1,24 +1,23 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetWorldspaceFlag, 0, 2, kParams_OneWorldspace_OneInt);
-DEFINE_COMMAND_PLUGIN(SetWorldspaceFlag, 0, 3, kParams_OneWorldspace_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetWorldspaceClimate, 0, 1, kParams_OneWorldspace);
-DEFINE_COMMAND_PLUGIN(SetWorldspaceClimate, 0, 2, kParams_OneWorldspace_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetWorldspaceNoiseTexture, 0, 1, kParams_OneWorldspace);
-DEFINE_COMMAND_PLUGIN(SetWorldspaceNoiseTexture, 0, 2, kParams_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(GetWorldspaceWaterType, 0, 1, kParams_OneWorldspace);
-DEFINE_COMMAND_PLUGIN(SetWorldspaceWaterType, 0, 2, kParams_OneWorldspace_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetWorldspaceImagespace, 0, 1, kParams_OneWorldspace);
-DEFINE_COMMAND_PLUGIN(SetWorldspaceImagespace, 0, 2, kParams_OneWorldspace_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetWorldspacePersistentCell, 0, 1, kParams_OneWorldspace);
+DEFINE_COMMAND_PLUGIN(GetWorldspaceFlag, 0, kParams_OneWorldspace_OneInt);
+DEFINE_COMMAND_PLUGIN(SetWorldspaceFlag, 0, kParams_OneWorldspace_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetWorldspaceClimate, 0, kParams_OneWorldspace);
+DEFINE_COMMAND_PLUGIN(SetWorldspaceClimate, 0, kParams_OneWorldspace_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetWorldspaceNoiseTexture, 0, kParams_OneWorldspace);
+DEFINE_COMMAND_PLUGIN(SetWorldspaceNoiseTexture, 0, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetWorldspaceWaterType, 0, kParams_OneWorldspace);
+DEFINE_COMMAND_PLUGIN(SetWorldspaceWaterType, 0, kParams_OneWorldspace_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetWorldspaceImagespace, 0, kParams_OneWorldspace);
+DEFINE_COMMAND_PLUGIN(SetWorldspaceImagespace, 0, kParams_OneWorldspace_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetWorldspacePersistentCell, 0, kParams_OneWorldspace);
 
 bool Cmd_GetWorldspaceFlag_Execute(COMMAND_ARGS)
 {
 	TESWorldSpace *wspc;
 	UInt32 flagID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc, &flagID) && (flagID <= 7))
-		*result = (wspc->worldFlags & (1 << flagID)) ? 1 : 0;
-	else *result = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc, &flagID) && (flagID <= 7) && (wspc->worldFlags & (1 << flagID)))
+		*result = 1;
 	return true;
 }
 
@@ -37,7 +36,6 @@ bool Cmd_SetWorldspaceFlag_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWorldspaceClimate_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESWorldSpace *wldSpc;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wldSpc))
 	{
@@ -95,7 +93,6 @@ bool Cmd_GetWorldspaceWaterType_Execute(COMMAND_ARGS)
 	TESWorldSpace *wldSpc;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wldSpc) && wldSpc->waterFormFirst)
 		REFR_RES = wldSpc->waterFormFirst->refID;
-	else REFR_RES = 0;
 	return true;
 }
 
@@ -113,7 +110,6 @@ bool Cmd_GetWorldspaceImagespace_Execute(COMMAND_ARGS)
 	TESWorldSpace *wldSpc;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wldSpc) && wldSpc->imageSpace)
 		REFR_RES = wldSpc->imageSpace->refID;
-	else REFR_RES = 0;
 	return true;
 }
 
@@ -131,6 +127,5 @@ bool Cmd_GetWorldspacePersistentCell_Execute(COMMAND_ARGS)
 	TESWorldSpace *wldSpc;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wldSpc) && wldSpc->cell)
 		REFR_RES = wldSpc->cell->refID;
-	else REFR_RES = 0;
 	return true;
 }

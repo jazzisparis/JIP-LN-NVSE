@@ -105,7 +105,7 @@ Menu *Tile::GetParentMenu() const
 			return ((TileMenu*)tile)->menu;
 	}
 	while (tile = tile->parent);
-	return NULL;
+	return nullptr;
 }
 
 __declspec(naked) void __fastcall Tile::PokeValue(UInt32 valueID)
@@ -157,11 +157,11 @@ Tile *Tile::GetChild(const char *childName)
 	char *colon = FindChr(childName, ':');
 	if (colon)
 	{
-		if (colon == childName) return NULL;
+		if (colon == childName) return nullptr;
 		*colon = 0;
 		childIndex = StrToInt(colon + 1);
 	}
-	Tile *result = NULL;
+	Tile *result = nullptr;
 	bool wildcard = *childName == '*';
 	for (auto node = children.Begin(); node; ++node)
 	{
@@ -182,7 +182,7 @@ Tile *Tile::GetComponent(const char *componentPath, const char **trait)
 	{
 		*slashPos = 0;
 		parentTile = parentTile->GetChild(componentPath);
-		if (!parentTile) return NULL;
+		if (!parentTile) return nullptr;
 		componentPath = slashPos + 1;
 	}
 	if (*componentPath)
@@ -196,16 +196,16 @@ Tile *Tile::GetComponent(const char *componentPath, const char **trait)
 
 TileValue *Tile::GetComponentValue(const char *componentPath)
 {
-	const char *trait = NULL;
+	const char *trait = nullptr;
 	Tile *tile = GetComponent(componentPath, &trait);
-	return (tile && trait) ? tile->GetValueName(trait) : NULL;
+	return (tile && trait) ? tile->GetValueName(trait) : nullptr;
 }
 
 Tile *Tile::GetComponentTile(const char *componentPath)
 {
-	const char *trait = NULL;
+	const char *trait = nullptr;
 	Tile *tile = GetComponent(componentPath, &trait);
-	return (tile && !trait) ? tile : NULL;
+	return (tile && !trait) ? tile : nullptr;
 }
 
 __declspec(naked) void __vectorcall Tile::Value::SetFloat(float value)
@@ -356,18 +356,18 @@ Tile* __fastcall GetTargetComponent(const char *componentPath, TileValue **value
 	*slashPos = 0;
 	Tile *component = GetMenuTile(componentPath);
 	if (!component)
-		return NULL;
-	const char *trait = NULL;
+		return nullptr;
+	const char *trait = nullptr;
 	component = component->GetComponent(slashPos + 1, &trait);
 	if (!component)
-		return NULL;
+		return nullptr;
 	if (trait)
 	{
 		if (!value || !(*value = component->GetValueName(trait)))
-			return NULL;
+			return nullptr;
 	}
 	else if (value)
-		return NULL;
+		return nullptr;
 	return component;
 }
 
@@ -435,5 +435,5 @@ const char *TraitIDToName(UInt32 id)
 {
 	for (auto iter = g_traitNameMap->Begin(); iter; ++iter)
 		if (iter.Get() == id) return iter.Key();
-	return NULL;
+	return nullptr;
 }

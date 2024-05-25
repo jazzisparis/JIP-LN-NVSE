@@ -1342,6 +1342,8 @@ public:
 	ListBox<int>		skillListBox;			// 64
 	ListBox<BGSPerk*>	perkListBox;			// 94
 	tList<BGSPerk>		availablePerks;			// C4	Perks to show in the perk listBox
+
+	__forceinline static LevelUpMenu *Get() {return *(LevelUpMenu**)0x11D9FDC;}
 };
 static_assert(sizeof(LevelUpMenu) == 0xCC);
 
@@ -1895,8 +1897,8 @@ public:
 	/*38*/virtual void		HandleStaticEffect(float msPassed);
 	/*3C*/virtual void		HandleVerticalHoldEffect(float msPassed);
 	/*40*/virtual void		HandleShudderEffect(float msPassed);
-	/*44*/virtual void		Unk_11(void);
-	/*48*/virtual void		Unk_12(void);
+	/*44*/virtual void		HandlePulseEffect(float msPassed);
+	/*48*/virtual void		HandleScreenLightEffect(float msPassed);
 	/*4C*/virtual void		HandleScanlines(float msPassed);
 	/*50*/virtual void		Unk_14(void);
 

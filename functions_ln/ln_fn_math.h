@@ -1,15 +1,15 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(fsqrt, 0, 1, kParams_OneDouble);
-DEFINE_CMD_COND_PLUGIN(GetDistance2D, 1, 1, kParams_OneObjectRef);
-DEFINE_CMD_COND_PLUGIN(GetDistance3D, 1, 1, kParams_OneObjectRef);
-DEFINE_COMMAND_PLUGIN(fSin, 0, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(fCos, 0, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(fTan, 0, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(fAsin, 0, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(fAcos, 0, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(fAtan, 0, 1, kParams_OneFloat);
-DEFINE_COMMAND_PLUGIN(fAtan2, 0, 2, kParams_TwoFloats);
+DEFINE_COMMAND_PLUGIN(fsqrt, 0, kParams_OneDouble);
+DEFINE_CMD_COND_PLUGIN(GetDistance2D, 1, kParams_OneObjectRef);
+DEFINE_CMD_COND_PLUGIN(GetDistance3D, 1, kParams_OneObjectRef);
+DEFINE_COMMAND_PLUGIN(fSin, 0, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(fCos, 0, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(fTan, 0, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(fAsin, 0, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(fAcos, 0, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(fAtan, 0, kParams_OneFloat);
+DEFINE_COMMAND_PLUGIN(fAtan2, 0, kParams_TwoFloats);
 
 bool Cmd_fsqrt_Execute(COMMAND_ARGS)
 {
@@ -25,7 +25,6 @@ bool Cmd_fsqrt_Execute(COMMAND_ARGS)
 			movlpd	[eax], xmm0
 		}
 	}
-	else *result = 0;
 	return true;
 }
 
@@ -65,7 +64,6 @@ bool Cmd_fSin_Execute(COMMAND_ARGS)
 	float value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
 		*result = Sin(value * FltPId180);
-	else *result = 0;
 	return true;
 }
 
@@ -74,7 +72,6 @@ bool Cmd_fCos_Execute(COMMAND_ARGS)
 	float value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
 		*result = Cos(value * FltPId180);
-	else *result = 0;
 	return true;
 }
 
@@ -83,7 +80,6 @@ bool Cmd_fTan_Execute(COMMAND_ARGS)
 	float value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
 		*result = Tan(value * FltPId180);
-	else *result = 0;
 	return true;
 }
 
@@ -92,7 +88,6 @@ bool Cmd_fAsin_Execute(COMMAND_ARGS)
 	float value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
 		*result = ASin(value) * Dbl180dPI;
-	else *result = 0;
 	return true;
 }
 
@@ -101,7 +96,6 @@ bool Cmd_fAcos_Execute(COMMAND_ARGS)
 	float value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
 		*result = ACos(value) * Dbl180dPI;
-	else *result = 0;
 	return true;
 }
 
@@ -110,7 +104,6 @@ bool Cmd_fAtan_Execute(COMMAND_ARGS)
 	float value;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &value))
 		*result = ATan(value) * Dbl180dPI;
-	else *result = 0;
 	return true;
 }
 
@@ -119,6 +112,5 @@ bool Cmd_fAtan2_Execute(COMMAND_ARGS)
 	float y, x;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &y, &x))
 		*result = ATan2(y, x) * Dbl180dPI;
-	else *result = 0;
 	return true;
 }

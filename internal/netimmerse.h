@@ -3151,7 +3151,7 @@ public:
 		UInt8			pad0D[3];	// 0D
 	};
 
-	/*8C*/virtual bool		Unk_23(void);
+	/*8C*/virtual bool		IsPacked();
 	/*90*/virtual NiAGDDataBlock	*AllocDataBlock();
 
 	UInt32						unk08;		// 08
@@ -3199,22 +3199,32 @@ static_assert(sizeof(NiGeometryBufferData) == 0x54);
 class NiGeometryData : public NiObject
 {
 public:
-	/*8C*/virtual void		Unk_23(UInt32 arg);
+	/*8C*/virtual void		SetVertexCount(UInt16 vtxCount);
 	/*90*/virtual UInt16	GetVertexCount();
-	/*94*/virtual void		Unk_25(void);
-	/*98*/virtual void		Unk_26(void);
+	/*94*/virtual NiTriStripsData	*GetStripsData();
+	/*98*/virtual NiTriShapeData	*GetShapeData();
 	/*9C*/virtual bool		ContainsDataType(UInt32 dataType);
 	/*A0*/virtual void		CalculateNormals();
 
 	enum KeepFlag
 	{
-		kKeep_Vertices =	1,
-        kKeep_Normals =		2,
-        kKeep_VertexColor =	4,
-        kKeep_UVCoords =	8,
-        kKeep_Indices =		0x10,
-        kKeep_BoneData =	0x20,
-		kKeep_All =			kKeep_Vertices | kKeep_Normals | kKeep_VertexColor | kKeep_UVCoords | kKeep_Indices | kKeep_BoneData
+		eKeep_Vertices =	1,
+        eKeep_Normals =		2,
+        eKeep_VertexColor =	4,
+        eKeep_UVCoords =	8,
+        eKeep_Indices =		0x10,
+        eKeep_BoneData =	0x20,
+		eKeep_All =			eKeep_Vertices | eKeep_Normals | eKeep_VertexColor | eKeep_UVCoords | eKeep_Indices | eKeep_BoneData
+	};
+
+	enum CompressFlag
+	{
+		eCompress_Normals =		1,
+		eCompress_Color =		2,
+		eCompress_UV =			4,
+		eCompress_Weight =		8,
+		eCompress_Position =	0x10,
+		eCompress_All =			0x1F
 	};
 
 	UInt16						numVertices;	// 08
@@ -3349,9 +3359,9 @@ class NiGeometry : public NiAVObject
 {
 public:
 	/*DC*/virtual void		RenderImmediate(NiRenderer *pRenderer);
-	/*E0*/virtual void		Unk_38(NiRenderer *pRenderer);
+	/*E0*/virtual void		RenderImmediateAlt(NiRenderer *pRenderer);
 	/*E4*/virtual void		SetGeometryData(NiGeometryData *pkModelData);
-	/*E8*/virtual void		Unk_3A();	//	Calls NiGeometryData::Func28
+	/*E8*/virtual void		CalculateNormals();
 	/*EC*/virtual void		CalculateConsistency(UInt8 arg1);
 
 	NiAlphaProperty			*alphaProp;		// 9C

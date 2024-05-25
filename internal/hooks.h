@@ -8,30 +8,21 @@ enum
 	kHook_TextInputClose,
 	kHook_StartCombat,
 	kHook_SetCombatTarget,
-	kHook_ResetHPCommand,
-	kHook_ResetHPWakeUp,
+	kHook_NoHealthReset,
 	kHook_RemoveAmmo,
 	kHook_ActivateDoor,
 	kHook_TeleportWithPC,
-	kHook_EquipItem,
-	kHook_ReEquipAll,
-	kHook_WeaponSwitchSelect,
-	kHook_WeaponSwitchUnequip,
-	kHook_GetPreferedWeapon,
-	kHook_ShowMessage,
-	kHook_ShowTutorial,
-	kHook_MenuStateOpen,
-	kHook_MenuStateClose,
+	kHook_LockEquipment,
+	kHook_MessageDisabled,
+	kHook_MenuState,
 	kHook_SetAnimAction,
 	kHook_SetAnimGroup,
 	kHook_DamageActorValue,
-	kHook_InitMoon,
 	kHook_UpdateWeather,
 	kHook_MenuHandleMouseover,
 	kHook_GetDetectionValue,
 	kHook_SetPCTarget,
-	kHook_PCActivateRef,
-	kHook_SetRolloverText,
+	kHook_InteractionDisabled,
 	kHook_MergeEventMask,
 	kHook_MarkScriptEvent,
 	kHook_DoActivate,
@@ -39,8 +30,7 @@ enum
 	kHook_GetRefName,
 	kHook_SetQuestStage,
 	kHook_RunResultScript,
-	kHook_ScriptRunner,
-	kHook_EvalEventBlock,
+	kHook_ScriptWait,
 	kHook_SetTerminalModel,
 	kHook_AddVATSTarget,
 	kHook_LocationDiscover,
@@ -57,23 +47,11 @@ enum
 	kHook_ApplyActorVelocity,
 	kHook_GetModelPath,
 	kHook_CalculateHitDamage,
-	kHook_EnableRepairButton,
-	kHook_PopulateRepairList,
-	kHook_SetRepairListValues,
-	kHook_DoRepairItem,
-	kHook_RepairMenuClick,
-	kHook_InitMissileFlags,
-	kHook_QttSelectInventory,
-	kHook_QttSelectContainer,
-	kHook_QttSelectBarter,
+	kHook_FO3Repair,
+	kHook_QuantitySelect,
 	kHook_VoiceModulationFix,
-	kHook_SneakBoundingBoxFix,
-	kHook_InitControllerShape,
-	kHook_GetSuitableLoadScreens,
-	kHook_PickLoadScreen,
-	kHook_CreatureSpreadFix,
+	kHook_LoadScreenFix,
 	kHook_UpdateTimeGlobals,
-	kHook_DoOperator,
 #if JIP_DEBUG
 	kHook_JIPTest,
 #endif
@@ -132,19 +110,163 @@ enum
 	kHookActorFlags_DetectionModified =		kHookActorFlag1_DetectionFix | (kHookActorFlag2_ForceDetectionVal << 8),
 };
 
+struct HookData
+{
+	UInt8		*pData = nullptr;
+	
+	void Init(UInt32 patchAddr, void *data, UInt32 length);
+	void InitRel(UInt32 patchAddr, void *hookPtr, UInt8 type);
+	
+	void Set(bool install);
+};
+
+__declspec(naked) void HookData::Init(UInt32 patchAddr, void *data, UInt32 length)
+{
+	__asm
+	{
+		push	esi
+		push	edi
+		mov		esi, ecx
+		mov		edi, [esp+0x14]
+		lea		eax, [edi*2+8]
+		push	eax
+		call	malloc
+		pop		ecx
+		mov		[esi], eax
+		mov		edx, [esp+0xC]
+		mov		[eax], edx
+		mov		[eax+4], edi
+		mov		esi, edx
+		mov		ecx, edi
+		lea		edi, [eax+8]
+		rep movsb
+		mov		esi, [esp+0x10]
+		mov		ecx, [esp+0x14]
+		rep movsb
+		pop		edi
+		pop		esi
+		retn	0xC
+	}
+}
+
+__declspec(naked) void HookData::InitRel(UInt32 patchAddr, void *hookPtr, UInt8 type)
+{
+	__asm
+	{
+		push	ecx
+		push	0x12
+		call	malloc
+		pop		ecx
+		pop		ecx
+		mov		[ecx], eax
+		mov		edx, [esp+4]
+		mov		[eax], edx
+		mov		dword ptr [eax+4], 5
+		mov		ecx, [edx]
+		mov		[eax+8], ecx
+		mov		cl, [edx+4]
+		mov		[eax+0xC], cl
+		mov		cl, [esp+0xC]
+		mov		[eax+0xD], cl
+		add		edx, 5
+		mov		ecx, [esp+8]
+		sub		ecx, edx
+		mov		[eax+0xE], ecx
+		retn	0xC
+	}
+}
+
+__declspec(naked) void HookData::Set(bool install)
+{
+	__asm
+	{
+		push	esi
+		mov		esi, [ecx]
+		push	ecx
+		push	esp
+		push	PAGE_EXECUTE_READWRITE
+		push	dword ptr [esi+4]
+		push	dword ptr [esi]
+		call	VirtualProtect
+		mov		ecx, [esi+4]
+		mov		dl, [esp+0xC]
+		and		edx, 1
+		neg		edx
+		and		edx, ecx
+		push	edi
+		mov		edi, [esi]
+		mov		eax, esi
+		lea		esi, [eax+edx+8]
+		rep movsb
+		pop		edi
+		mov		edx, esp
+		push	dword ptr [eax+4]
+		push	dword ptr [eax]
+		push	0xFFFFFFFF
+		push	edx
+		push	dword ptr [edx]
+		push	dword ptr [eax+4]
+		push	dword ptr [eax]
+		call	VirtualProtect
+		call	FlushInstructionCache
+		pop		ecx
+		pop		esi
+		retn	4
+	}
+}
+
+struct HookTuple
+{
+	UInt32			patchAddr;
+	union
+	{
+		void		*func;
+		UInt32		data;
+		const char	*str;
+	};
+	UInt32			length;
+	UInt8			type;
+
+	__forceinline HookTuple(UInt32 _patchAddr, void *_func, UInt32 _length, UInt8 _type) : patchAddr(_patchAddr), func(_func), length(_length), type(_type) {}
+	__forceinline HookTuple(UInt32 _patchAddr, UInt32 _data, UInt32 _length, UInt8 _type) : patchAddr(_patchAddr), data(_data), length(_length), type(_type) {}
+	__forceinline HookTuple(UInt32 _patchAddr, const char *_str, UInt32 _length, UInt8 _type) : patchAddr(_patchAddr), str(_str), length(_length), type(_type) {}
+};
+
 PrimitiveCS s_hookInfoCS;
 
 class HookInfo
 {
-	UInt32		patchAddr;			// 00
-	UInt32		userCount;			// 04
-	UInt8		savedBytes[8];		// 08
-	UInt8		writeBytes[8];		// 10
+	UInt32		userCount = 0;
+	HookData	*hookData = nullptr;
 
 	bool DoSet(bool install);
 
 public:
-	void Init(UInt32 _patchAddr, void *hookPtr, UInt8 type);
+	void Init(UInt32 patchAddr, UInt32 data, UInt32 length);
+	void InitStr(UInt32 patchAddr, const char *data, UInt32 length);
+	void InitRel(UInt32 patchAddr, void *hookPtr, UInt8 type);
+	__declspec(noinline) void InitList(std::initializer_list<HookTuple> &&inList)
+	{
+		hookData = (HookData*)malloc(inList.size() * sizeof(HookData) + 4);
+		HookData *pData = hookData;
+		for (auto iter = inList.begin(); iter != inList.end(); ++iter)
+		{
+			switch (iter->type)
+			{
+				case 0:
+					pData->Init(iter->patchAddr, (void*)&iter->func, iter->length);
+					break;
+				case 1:
+					pData->Init(iter->patchAddr, iter->func, iter->length);
+					break;
+				default:
+					pData->InitRel(iter->patchAddr, iter->func, iter->type);
+					break;
+			}
+			pData++;
+		}
+		*(UInt32*)pData = 0;
+	}
 	bool __fastcall Set(bool install);
 	void __fastcall ModUsers(bool add);
 	inline UInt32 GetCount() const {return userCount;}
@@ -157,25 +279,53 @@ enum
 	kHookInfoSize =	sizeof(HookInfo)
 };
 
-__declspec(naked) void HookInfo::Init(UInt32 _patchAddr, void *hookPtr, UInt8 type)
+__declspec(naked) void HookInfo::Init(UInt32 patchAddr, UInt32 data, UInt32 length)
 {
 	__asm
 	{
-		push	esi
-		mov		esi, ecx
-		and		dword ptr [esi+4], 0
-		mov		ecx, [esp+8]
-		mov		[esi], ecx
-		movq	xmm0, qword ptr [ecx]
-		movlps	[esi+8], xmm0
-		mov		al, [esp+0x10]
-		mov		[esi+0x10], al
-		mov		eax, [esp+0xC]
-		sub		eax, ecx
-		sub		eax, 5
-		mov		[esi+0x11], eax
-		pop		esi
-		retn	0xC
+		push	ecx
+		push	8
+		call	malloc
+		pop		ecx
+		pop		ecx
+		mov		[ecx+4], eax
+		and		dword ptr [eax+4], 0
+		lea		ecx, [esp+8]
+		mov		[esp+8], ecx
+		mov		ecx, eax
+		jmp		HookData::Init
+	}
+}
+
+__declspec(naked) void HookInfo::InitStr(UInt32 patchAddr, const char *data, UInt32 length)
+{
+	__asm
+	{
+		push	ecx
+		push	8
+		call	malloc
+		pop		ecx
+		pop		ecx
+		mov		[ecx+4], eax
+		and		dword ptr [eax+4], 0
+		mov		ecx, eax
+		jmp		HookData::Init
+	}
+}
+
+__declspec(naked) void HookInfo::InitRel(UInt32 patchAddr, void *hookPtr, UInt8 type)
+{
+	__asm
+	{
+		push	ecx
+		push	8
+		call	malloc
+		pop		ecx
+		pop		ecx
+		mov		[ecx+4], eax
+		and		dword ptr [eax+4], 0
+		mov		ecx, eax
+		jmp		HookData::InitRel
 	}
 }
 
@@ -185,40 +335,21 @@ __declspec(naked) bool HookInfo::DoSet(bool install)
 	{
 		mov		al, [esp+4]
 		and		eax, 1
-		cmp		dword ptr [ecx+4], 0
+		cmp		dword ptr [ecx], 0
 		setnz	dl
 		cmp		al, dl
 		jz		retnFalse
-		mov		[ecx+4], eax
+		mov		[ecx], eax
 		push	esi
-		mov		esi, ecx
-		push	ecx
-		push	esp
-		push	PAGE_EXECUTE_READWRITE
-		push	8
-		push	dword ptr [esi]
-		call	VirtualProtect
-		mov		eax, 8
-		cmp		dword ptr [esi+4], 0
-		setnz	cl
-		shl		eax, cl
-		add		eax, esi
-		mov		ecx, [esi]
-		mov		edx, [eax]
-		mov		[ecx], edx
-		mov		dl, [eax+4]
-		mov		[ecx+4], dl
-		mov		edx, [esp]
-		push	esp
-		push	edx
-		push	8
-		push	dword ptr [esi]
-		call	VirtualProtect
-		push	8
-		push	dword ptr [esi]
-		push	0xFFFFFFFF
-		call	FlushInstructionCache
-		pop		ecx
+		mov		esi, [ecx+4]
+		ALIGN 16
+	iterHead:
+		push	dword ptr [esp+8]
+		mov		ecx, esi
+		call	HookData::Set
+		add		esi, 4
+		cmp		dword ptr [esi], 0
+		jnz		iterHead
 		mov		al, 1
 		pop		esi
 		retn	4
@@ -254,17 +385,17 @@ __declspec(naked) void __fastcall HookInfo::ModUsers(bool add)
 		pop		ecx
 		cmp		byte ptr [esp], 0
 		jz		doDecr
-		cmp		dword ptr [ecx+4], 0
+		cmp		dword ptr [ecx], 0
 		jle		doSet
-		inc		dword ptr [ecx+4]
+		inc		dword ptr [ecx]
 		pop		edx
 		and		s_hookInfoCS.selfPtr, 0
 		retn
 	doDecr:
-		cmp		dword ptr [ecx+4], 1
+		cmp		dword ptr [ecx], 1
 		jz		doSet
 		jl		done
-		dec		dword ptr [ecx+4]
+		dec		dword ptr [ecx]
 	done:
 		pop		edx
 		and		s_hookInfoCS.selfPtr, 0
@@ -276,8 +407,11 @@ __declspec(naked) void __fastcall HookInfo::ModUsers(bool add)
 	}
 }
 
-#define HOOK_INIT_CALL(name, baseAddr) s_hookInfos[kHook_##name].Init(baseAddr, ##name##Hook, 0xE8)
-#define HOOK_INIT_JUMP(name, baseAddr) s_hookInfos[kHook_##name].Init(baseAddr, ##name##Hook, 0xE9)
+#define HOOK_INIT_CALL(baseAddr, name) s_hookInfos[kHook_##name].InitRel(baseAddr, ##name##Hook, 0xE8)
+#define HOOK_INIT_JUMP(baseAddr, name) s_hookInfos[kHook_##name].InitRel(baseAddr, ##name##Hook, 0xE9)
+#define HOOK_INIT_UINT(baseAddr, name, uiData, length) s_hookInfos[kHook_##name].Init(baseAddr, uiData, length)
+#define HOOK_INIT_BUFF(baseAddr, name, str) s_hookInfos[kHook_##name].InitStr(baseAddr, str, sizeof(str) - 1)
+#define HOOK_INIT_LIST(name, ...) s_hookInfos[kHook_##name].InitList({__VA_ARGS__})
 #define HOOK_INSTALLED(name) s_hookInfos[kHook_##name].GetCount() != 0
 #define HOOK_MOD(name, add) s_hookInfos[kHook_##name].ModUsers(add)
 #define HOOK_INC(name) HOOK_MOD(name, true)
@@ -495,29 +629,28 @@ __declspec(naked) void __fastcall CycleMainLoopCallbacks(Vector<MainLoopCallback
 		ALIGN 16
 	cycleEnd:
 		mov		eax, [ebx]
-		mov		edi, [ebx+4]
-		lea		esi, [eax+edi*4]
+		mov		esi, [ebx+4]
+		lea		edi, [eax+esi*4]
 		ALIGN 16
 	removeHead:
-		dec		edi
+		dec		esi
 		js		done
-		sub		esi, 4
-		mov		ecx, [esi]
+		sub		edi, 4
+		mov		ecx, [edi]
 		cmp		[ecx+9], 0
 		jz		removeHead
 		call	MainLoopCallback::Destroy
-		mov		eax, [ebx+4]
-		dec		eax
-		mov		[ebx+4], eax
-		sub		eax, edi
+		mov		ecx, [ebx+4]
+		dec		ecx
+		mov		[ebx+4], ecx
+		sub		ecx, esi
 		jz		removeHead
-		shl		eax, 2
-		push	eax
-		lea		edx, [esi+4]
-		push	edx
-		push	esi
-		call	MemCopy
-		add		esp, 0xC
+		mov		eax, esi
+		mov		edx, edi
+		lea		esi, [edi+4]
+		rep movsd
+		mov		esi, eax
+		mov		edi, edx
 		jmp		removeHead
 		ALIGN 16
 	done:
@@ -889,7 +1022,7 @@ __declspec(naked) void __fastcall TextInputCloseHook(TextEditMenu *menu, int, in
 
 void __fastcall MenuHandleClickHook(Menu *menu, int, int tileID, Tile *clickedTile);
 
-struct MenuClickEvent
+struct alignas(16) MenuClickEvent
 {
 	typedef void (__thiscall *MenuHandleClick)(Menu*, int, Tile*);
 
@@ -898,15 +1031,16 @@ struct MenuClickEvent
 	MenuClickFiltersMap filtersMap;
 	MenuClickIDsMap		idsMap;
 
-	MenuClickEvent(UInt32 menuVtbl)
-	{
-		patchAddr = menuVtbl + 0xC;
-		funcPtr = (MenuHandleClick)*(UInt32*)patchAddr;
-	}
+	MenuClickEvent(UInt32 menuVtbl) : patchAddr(menuVtbl + 0xC), funcPtr(nullptr) {}
 
 	bool Empty() {return filtersMap().Empty() && idsMap().Empty();}
 
-	void SetHook(bool doSet) {SafeWrite32(patchAddr, doSet ? (UInt32)MenuHandleClickHook : (UInt32)funcPtr);}
+	void __fastcall SetHook(bool doSet)
+	{
+		if (!funcPtr)
+			funcPtr = (MenuHandleClick)*(UInt32*)patchAddr;
+		SafeWrite32(patchAddr, doSet ? (UInt32)MenuHandleClickHook : (UInt32)funcPtr);
+	}
 }
 s_menuClickEventMap[] =
 {
@@ -1015,11 +1149,10 @@ __declspec(naked) void ResetHPCommandHook()
 		cmp		[ebp+0x1C], eax
 		jnz		contRetn
 		mov		eax, [eax+8]
-		test	eax, eax
-		jz		contRetn
-		mov		edx, [ebp+0x10]
 		ALIGN 16
 	loopHead:
+		test	eax, eax
+		jz		contRetn
 		mov		ecx, [eax]
 		test	ecx, ecx
 		jz		contRetn
@@ -1029,15 +1162,15 @@ __declspec(naked) void ResetHPCommandHook()
 		mov		ecx, [ecx]
 		test	ecx, ecx
 		jz		skipRetn
-		cmp		ecx, edx
-		jz		skipRetn
-		jmp		loopHead
-	contRetn:
-		JMP_EAX(0x5C6B91)
+		cmp		[ebp+0x10], ecx
+		jnz		loopHead
 	skipRetn:
 		mov		al, 1
 		leave
 		retn
+		ALIGN 16
+	contRetn:
+		JMP_EAX(0x5C6B91)
 	}
 }
 
@@ -1749,56 +1882,6 @@ __declspec(naked) void DamageActorValueHook()
 	}
 }
 
-const char *kMoonTexturesDefault[] =
-{
-	"textures\\sky\\masser_full.dds",
-	"textures\\sky\\masser_three_wan.dds",
-	"textures\\sky\\masser_half_wan.dds",
-	"textures\\sky\\masser_one_wan.dds",
-	nullptr,
-	"textures\\sky\\masser_one_wax.dds",
-	"textures\\sky\\masser_half_wax.dds",
-	"textures\\sky\\masser_three_wax.dds"
-};
-const char *s_moonTexturesOverride[8] = {nullptr};
-const char *s_moonTexturesSet[8] = {nullptr};
-
-__declspec(naked) void InitMoonHook()
-{
-	__asm
-	{
-		push	esi
-		mov		esi, [ebp-0x18]
-		mov		eax, offset s_moonTexturesSet
-		push	dword ptr [eax+0x1C]
-		push	dword ptr [eax+0x18]
-		push	dword ptr [eax+0x14]
-		push	dword ptr [eax+0x10]
-		push	dword ptr [eax+0xC]
-		push	dword ptr [eax+8]
-		push	dword ptr [eax+4]
-		push	dword ptr [eax]
-		lea		ecx, [esi+0x18]
-		call	String::Set
-		lea		ecx, [esi+0x20]
-		call	String::Set
-		lea		ecx, [esi+0x28]
-		call	String::Set
-		lea		ecx, [esi+0x30]
-		call	String::Set
-		lea		ecx, [esi+0x38]
-		call	String::Set
-		lea		ecx, [esi+0x40]
-		call	String::Set
-		lea		ecx, [esi+0x48]
-		call	String::Set
-		lea		ecx, [esi+0x50]
-		call	String::Set
-		pop		esi
-		JMP_EAX(0x634BF4)
-	}
-}
-
 float s_weatherTransitionRateOverride = 4;
 
 __declspec(naked) void UpdateWeatherHook()
@@ -1816,23 +1899,24 @@ __declspec(naked) void GetDetectionValueHook()
 {
 	__asm
 	{
-		mov		[ebp-8], eax
-		mov		ecx, [ebp+0xC]
-		test	byte ptr [ecx+0x106], kHookActorFlag2_ForceDetectionVal
-		jz		done
-		push	ecx
+		mov		eax, [ebp+0xC]
+		test	byte ptr [eax+0x106], kHookActorFlag2_ForceDetectionVal
+		jnz		getAltVal
+		push	0x8A1532
+		JMP_EAX(0x642ED0)
+	getAltVal:
+		push	eax
 		mov		ecx, offset s_forceDetectionValueMap
 		call	UnorderedMap<Actor*, UInt32>::Get
-		movsx	edx, ax
 		test	eax, 0x10000
-		jnz		doAdd
-		mov		[ebp-8], edx
-		jmp		done
-	doAdd:
-		add		[ebp-8], edx
-	done:
-		movzx	eax, [ebp+8]
-		JMP_EDX(0x8A153C)
+		cwde
+		jnz		doModVal
+		JMP_EDX(0x8A1532)
+	doModVal:
+		mov		[ebp-8], eax
+		CALL_EAX(0x642ED0)
+		add		eax, [ebp-8]
+		JMP_EDX(0x8A1532)
 	}
 }
 
@@ -3016,7 +3100,7 @@ __declspec(naked) void __fastcall SetLightProperties(NiPointLight *ptLight, TESO
 		retn
 		ALIGN 16
 	kColourMults:
-		DUP_3(EMIT_DW(3B, 80, 80, 81)) EMIT_DW(3F, 80, 00, 00)
+		DUP_3(EMIT_DW(0x3B808081)) EMIT_DW(0x3F800000)
 	}
 }
 
@@ -3810,24 +3894,12 @@ __declspec(naked) void __fastcall InitRagdollControllerHook(Actor *actor, int, N
 		jnz		doInit
 		cmp		dword ptr [ecx+0xAC], 0
 		jz		doInit
-		mov		eax, [ebp]
-		cmp		byte ptr [eax+7], 0		// Lazy workaround for a conflict w/ Tweaks' 'bFixEnhancedCameraGroundSinkBug'.
-		ja		doInit
 		retn	0x10
 	}
 }
 
 __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm, NiPointLight *ptLight)
 {
-	alignas(16) static constexpr UInt32 kAnimatedLightMods[] =
-	{
-		HEX(7.5F), HEX(30 / 7.0F), HEX(0.125F), HEX(0.0625F),
-		HEX(4.0F), HEX(2.0F), HEX(1 / 210.0F), HEX(0.675F),
-		PS_DUP_3(HEX(0.1F)),
-		PS_DUP_3(HEX(1 / 127.0F)),
-		PS_DUP_3(0x7F),
-		PS_DUP_3(0x3F)
-	};
 	__asm
 	{
 		push	ebp
@@ -3997,6 +4069,12 @@ __declspec(naked) void __fastcall DoUpdateAnimatedLight(TESObjectLIGH *lightForm
 		pop		ebx
 		pop		ebp
 		retn
+		ALIGN 16
+	kAnimatedLightMods:
+		EMIT_DW_4(0x40F00000, 0x40892492, 0x3E000000, 0x3D800000)
+		EMIT_DW_4(0x40800000, 0x40000000, 0x3B9C09C1, 0x3F2CCCCD)
+		EMIT_PS_3(0x3DCCCCCD) EMIT_PS_3(0x3C010204)
+		EMIT_PS_3(0x0000007F) EMIT_PS_3(0x0000003F)
 	}
 }
 
@@ -4339,18 +4417,18 @@ __declspec(naked) bool __fastcall DestroyRefrHook(TESObjectREFR *refr)
 		mov		eax, [eax+0x208]
 		cmp		[esi+0xC], eax
 		jnz		doneVars*/
-		mov		eax, s_auxVariablesPerm+8
-		or		eax, s_auxVariablesTemp+8
+		mov		eax, s_auxVariables+8
+		or		eax, s_auxVariables+0x14
 		jz		doneVars
 		mov		ecx, offset s_auxVarCS
 		call	PrimitiveCS::Enter
 		mov		eax, [esi+0xC]
 		push	eax
 		push	eax
-		mov		ecx, offset s_auxVariablesPerm
+		mov		ecx, offset s_auxVariables
 		call	ClearRefAuxVars
 		or		s_dataChangedFlags, al
-		mov		ecx, offset s_auxVariablesTemp
+		mov		ecx, offset s_auxVariables+0xC
 		call	ClearRefAuxVars
 		and		s_auxVarCS.selfPtr, 0
 	doneVars:
@@ -5019,67 +5097,61 @@ __declspec(noinline) void InitJIPHooks()
 	SafeWrite32(0x87CE34, (UInt32)DoQueuedCmdCallHook);
 	WriteRelCall(0x9459ED, (UInt32)GetVanityDisabledHook);
 
-	HOOK_INIT_JUMP(GetDescription, 0x482F7F);
-	HOOK_INIT_CALL(PCFastTravel, 0x93BF22);
-	HOOK_INIT_CALL(PCCellChange, 0x94CB35);
-	HOOK_INIT_JUMP(TextInputClose, 0x7E66A0);
-	HOOK_INIT_JUMP(StartCombat, 0x9001C6);
-	HOOK_INIT_JUMP(SetCombatTarget, 0x986C79);
-	HOOK_INIT_JUMP(ResetHPCommand, 0x5C6B8B);
-	HOOK_INIT_JUMP(ResetHPWakeUp, 0x8A0963);
-	HOOK_INIT_JUMP(RemoveAmmo, 0x8A8DD0);
-	HOOK_INIT_JUMP(ActivateDoor, 0x573673);
-	HOOK_INIT_JUMP(TeleportWithPC, 0x8AD471);
-	HOOK_INIT_JUMP(EquipItem, 0x88C87A);
-	HOOK_INIT_JUMP(ReEquipAll, 0x6047C0);
-	HOOK_INIT_JUMP(WeaponSwitchSelect, 0x999857);
-	HOOK_INIT_JUMP(WeaponSwitchUnequip, 0x9DA8E3);
-	HOOK_INIT_JUMP(GetPreferedWeapon, 0x891C86);
-	HOOK_INIT_JUMP(ShowMessage, 0x5B46AA);
-	HOOK_INIT_JUMP(ShowTutorial, 0x7E88B6);
-	HOOK_INIT_JUMP(MenuStateOpen, 0xA1F2F9);
-	HOOK_INIT_JUMP(MenuStateClose, 0xA1C573);
-	HOOK_INIT_JUMP(SetAnimAction, 0x8A7551);
-	HOOK_INIT_JUMP(SetAnimGroup, 0x494E19);
-	HOOK_INIT_JUMP(DamageActorValue, 0x66EE72);
-	HOOK_INIT_JUMP(InitMoon, 0x634B30);
-	HOOK_INIT_JUMP(UpdateWeather, 0x63D4F5);
-	HOOK_INIT_JUMP(MenuHandleMouseover, 0x70D642);
-	HOOK_INIT_JUMP(GetDetectionValue, 0x8A1535);
-	HOOK_INIT_JUMP(SetPCTarget, 0x964675);
-	HOOK_INIT_JUMP(PCActivateRef, 0x943279);
-	HOOK_INIT_JUMP(SetRolloverText, 0x775B9B);
-	HOOK_INIT_CALL(MergeEventMask, 0x5AC782);
-	HOOK_INIT_JUMP(MarkScriptEvent, 0x5AC763);
-	HOOK_INIT_JUMP(DoActivate, 0x573512);
-	HOOK_INIT_CALL(CreateMapMarkers, 0x79EBA1);
-	HOOK_INIT_JUMP(GetRefName, 0x55D520);
-	HOOK_INIT_JUMP(SetQuestStage, 0x60F4A9);
-	HOOK_INIT_JUMP(RunResultScript, 0x61F184);
-	HOOK_INIT_CALL(ScriptRunner, 0x5E0EC9);
-	HOOK_INIT_JUMP(EvalEventBlock, 0x5E1716);
-	HOOK_INIT_CALL(SetTerminalModel, 0x7FEF0B);
-	HOOK_INIT_JUMP(AddVATSTarget, 0x7F54B1);
-	HOOK_INIT_JUMP(LocationDiscover, 0x77955D);
-	HOOK_INIT_JUMP(ItemCrafted, 0x7289FF);
-	HOOK_INIT_JUMP(MakeObjLODPath, 0x6F6DF1);
-	HOOK_INIT_JUMP(OnHitEvent, 0x5AC78A);
-	HOOK_INIT_CALL(CheckUniqueItem, 0x47BBEC);
-	HOOK_INIT_JUMP(ProjectileImpact, 0x9C20BF);
-	HOOK_INIT_JUMP(AddNote, 0x966AF9);
-	HOOK_INIT_JUMP(EquipAidItem, 0x88C74E);
-	HOOK_INIT_JUMP(ReloadWeapon, 0x8A7549);
-	HOOK_INIT_JUMP(OnRagdoll, 0xC7C151);
-	HOOK_INIT_JUMP(PlayerMinHealth, 0x93B80A);
-	HOOK_INIT_JUMP(ApplyActorVelocity, 0xC6D4E4);
-	HOOK_INIT_CALL(GetModelPath, 0x50FE8B);
+	HOOK_INIT_JUMP(0x482F7F, GetDescription);
+	HOOK_INIT_CALL(0x93BF22, PCFastTravel);
+	HOOK_INIT_CALL(0x94CB35, PCCellChange);
+	HOOK_INIT_JUMP(0x7E66A0, TextInputClose);
+	HOOK_INIT_JUMP(0x9001C6, StartCombat);
+	HOOK_INIT_JUMP(0x986C79, SetCombatTarget);
+	HOOK_INIT_LIST(NoHealthReset, {0x5C6B8B, ResetHPCommandHook, 5, 0xE9}, {0x8A0963, ResetHPWakeUpHook, 5, 0xE9});
+	HOOK_INIT_JUMP(0x8A8DD0, RemoveAmmo);
+	HOOK_INIT_JUMP(0x573673, ActivateDoor);
+	HOOK_INIT_JUMP(0x8AD471, TeleportWithPC);
+	HOOK_INIT_LIST(LockEquipment, {0x88C87A, EquipItemHook, 5, 0xE9}, {0x6047C0, ReEquipAllHook, 5, 0xE9}, {0x999857, WeaponSwitchSelectHook, 5, 0xE9},
+		{0x9DA8E3, WeaponSwitchUnequipHook, 5, 0xE9}, {0x891C86, GetPreferedWeaponHook, 5, 0xE9});
+	HOOK_INIT_LIST(MessageDisabled, {0x5B46AA, ShowMessageHook, 5, 0xE9}, {0x7E88B6, ShowTutorialHook, 5, 0xE9});
+	HOOK_INIT_LIST(MenuState, {0xA1F2F9, MenuStateOpenHook, 5, 0xE9}, {0xA1C573, MenuStateCloseHook, 5, 0xE9});
+	HOOK_INIT_JUMP(0x8A7551, SetAnimAction);
+	HOOK_INIT_JUMP(0x494E19, SetAnimGroup);
+	HOOK_INIT_JUMP(0x66EE72, DamageActorValue);
+	HOOK_INIT_JUMP(0x63D4F5, UpdateWeather);
+	HOOK_INIT_JUMP(0x70D642, MenuHandleMouseover);
+	HOOK_INIT_JUMP(0x8A152D, GetDetectionValue);
+	HOOK_INIT_JUMP(0x964675, SetPCTarget);
+	HOOK_INIT_LIST(InteractionDisabled, {0x943279, PCActivateRefHook, 5, 0xE9}, {0x775B9B, SetRolloverTextHook, 5, 0xE9});
+	HOOK_INIT_CALL(0x5AC782, MergeEventMask);
+	HOOK_INIT_JUMP(0x5AC763, MarkScriptEvent);
+	HOOK_INIT_JUMP(0x573512, DoActivate);
+	HOOK_INIT_CALL(0x79EBA1, CreateMapMarkers);
+	HOOK_INIT_JUMP(0x55D520, GetRefName);
+	HOOK_INIT_JUMP(0x60F4A9, SetQuestStage);
+	HOOK_INIT_JUMP(0x61F184, RunResultScript);
+	HOOK_INIT_LIST(ScriptWait, {0x5E0EC9, ScriptRunnerHook, 5, 0xE8}, {0x5E1716, EvalEventBlockHook, 5, 0xE9});
+	HOOK_INIT_CALL(0x7FEF0B, SetTerminalModel);
+	HOOK_INIT_JUMP(0x7F54B1, AddVATSTarget);
+	HOOK_INIT_JUMP(0x77955D, LocationDiscover);
+	HOOK_INIT_JUMP(0x7289FF, ItemCrafted);
+	HOOK_INIT_JUMP(0x6F6DF1, MakeObjLODPath);
+	HOOK_INIT_JUMP(0x5AC78A, OnHitEvent);
+	HOOK_INIT_CALL(0x47BBEC, CheckUniqueItem);
+	HOOK_INIT_JUMP(0x9C20BF, ProjectileImpact);
+	HOOK_INIT_JUMP(0x966AF9, AddNote);
+	HOOK_INIT_JUMP(0x88C74E, EquipAidItem);
+	HOOK_INIT_JUMP(0x8A7549, ReloadWeapon);
+	HOOK_INIT_JUMP(0xC7C151, OnRagdoll);
+	HOOK_INIT_JUMP(0x93B80A, PlayerMinHealth);
+	HOOK_INIT_JUMP(0xC6D4E4, ApplyActorVelocity);
+	HOOK_INIT_CALL(0x50FE8B, GetModelPath);
 
 	for (UInt32 addr : {0x50DA73, 0x792DC0, 0x7C6F86, 0x7FC4DA, 0x7FD49F, 0x80EA39, 0x81C095, 0x9C6CB6, 0x9C6D3D, 0xA7D6E2, 0xA7D7C3, 0xB5CD2A})
 		SafeWrite32(addr, 0x110);
 
-	SafeWrite8(0x465488, 0xCC);
-	SafeWrite32(0x1029018, (UInt32)TESObjectLIGHSetEDIDHook);
-	SafeWrite32(0x1029014, (UInt32)TESObjectLIGHGetEDIDHook);
+	if (!GetModuleHandle("johnnyguitar"))
+	{
+		SafeWrite8(0x465488, 0xCC);
+		SafeWrite32(0x1029018, (UInt32)TESObjectLIGHSetEDIDHook);
+		SafeWrite32(0x1029014, (UInt32)TESObjectLIGHGetEDIDHook);
+	}
 	SAFE_WRITE_BUF(0xA68D6B, "\x8B\x86\x9C\x00\x00\x00\x89\x87\x9C\x00\x00\x00");
 	WriteRelJump(0x447155, (UInt32)LoadNifRetnNodeHook);
 	SafeWrite32(0x109DD0C, (UInt32)DestroyNiPointLightHook);

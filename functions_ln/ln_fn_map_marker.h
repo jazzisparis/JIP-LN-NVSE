@@ -1,28 +1,31 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(IsMapMarker, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetMapMarkerName, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetMapMarkerName, 1, 1, kParams_OneString);
-DEFINE_COMMAND_PLUGIN(SetMapMarkerVisible, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetMapMarkerTravel, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetMapMarkerTravel, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetMapMarkerHidden, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetMapMarkerHidden, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetMapMarkerType, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetMapMarkerType, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetMapMarkerRep, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetMapMarkerRep, 1, 1, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(IsMapMarker, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(GetMapMarkerName, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(SetMapMarkerName, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(SetMapMarkerVisible, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetMapMarkerTravel, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(SetMapMarkerTravel, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetMapMarkerHidden, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(SetMapMarkerHidden, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetMapMarkerType, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(SetMapMarkerType, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetMapMarkerRep, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(SetMapMarkerRep, 1, kParams_OneOptionalForm);
 
 bool Cmd_IsMapMarker_Execute(COMMAND_ARGS)
 {
-	*result = (thisObj->baseForm->refID == 0x10) ? 1 : 0;
+	if (thisObj->baseForm->refID == 0x10)
+		*result = 1;
 	return true;
 }
 
 bool Cmd_GetMapMarkerName_Execute(COMMAND_ARGS)
 {
-	auto markerData = thisObj->GetMapMarkerData();
-	AssignString(PASS_COMMAND_ARGS, markerData ? markerData->fullName.name.m_data : nullptr);
+	const char *resStr = nullptr;
+	if (auto markerData = thisObj->GetMapMarkerData())
+		resStr = markerData->fullName.name.m_data;
+	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
 
@@ -49,8 +52,8 @@ bool Cmd_SetMapMarkerVisible_Execute(COMMAND_ARGS)
 
 bool Cmd_GetMapMarkerTravel_Execute(COMMAND_ARGS)
 {
-	auto markerData = thisObj->GetMapMarkerData();
-	*result = (markerData && (markerData->flags & 2)) ? 1 : 0;
+	if (auto markerData = thisObj->GetMapMarkerData(); markerData && (markerData->flags & 2))
+		*result = 1;
 	return true;
 }
 
@@ -68,8 +71,8 @@ bool Cmd_SetMapMarkerTravel_Execute(COMMAND_ARGS)
 
 bool Cmd_GetMapMarkerHidden_Execute(COMMAND_ARGS)
 {
-	auto markerData = thisObj->GetMapMarkerData();
-	*result = (markerData && (markerData->flags & 4)) ? 1 : 0;
+	if (auto markerData = thisObj->GetMapMarkerData(); markerData && (markerData->flags & 4))
+		*result = 1;
 	return true;
 }
 
@@ -87,8 +90,10 @@ bool Cmd_SetMapMarkerHidden_Execute(COMMAND_ARGS)
 
 bool Cmd_GetMapMarkerType_Execute(COMMAND_ARGS)
 {
-	auto markerData = thisObj->GetMapMarkerData();
-	*result = markerData ? markerData->type : -1;
+	int type = -1;
+	if (auto markerData = thisObj->GetMapMarkerData())
+		type = markerData->type;
+	*result = type;
 	return true;
 }
 
@@ -103,10 +108,8 @@ bool Cmd_SetMapMarkerType_Execute(COMMAND_ARGS)
 
 bool Cmd_GetMapMarkerRep_Execute(COMMAND_ARGS)
 {
-	auto markerData = thisObj->GetMapMarkerData();
-	TESReputation *reputation = markerData ? markerData->reputation : nullptr;
-	REFR_RES = reputation ? reputation->refID : 0;
-	DoConsolePrint(reputation);
+	if (auto markerData = thisObj->GetMapMarkerData(); markerData && markerData->reputation)
+		REFR_RES = markerData->reputation->refID;
 	return true;
 }
 

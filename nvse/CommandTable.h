@@ -3,9 +3,46 @@
 struct ScriptLineBuffer;
 struct ScriptBuffer;
 
-// for IsInventoryObjectType list, see GameForms.h
+enum TokenTypes
+{
+	kTokenType_Number,
+	kTokenType_Boolean,
+	kTokenType_String,
+	kTokenType_Form,
+	kTokenType_Ref,
+	kTokenType_Global,
+	kTokenType_Array,
+	kTokenType_ArrayElement,
+	kTokenType_Slice,
+	kTokenType_Command,
+	kTokenType_Variable,
+	kTokenType_NumericVar,
+	kTokenType_RefVar,
+	kTokenType_StringVar,
+	kTokenType_ArrayVar,
+	kTokenType_Ambiguous,
+	kTokenType_Operator,
+	kTokenType_ForEachContext,
 
-enum ParamType
+	// numeric literals can optionally be encoded as one of the following
+	// all are converted to _Number on evaluation
+	kTokenType_Byte,
+	kTokenType_Short,		// 2 bytes
+	kTokenType_Int,			// 4 bytes
+
+	kTokenType_Pair,
+	kTokenType_AssignableString,
+	// xNVSE 6.1.0
+	kTokenType_Lambda,
+
+	kTokenType_Invalid,
+	kTokenType_Max = kTokenType_Invalid,
+
+	// sigil value, returned when an empty expression is parsed
+	kTokenType_Empty = kTokenType_Max + 1,
+};
+
+enum ParamType : UInt32
 {
 	kParamType_String =					0x00,
 	kParamType_Integer =				0x01,
@@ -83,51 +120,9 @@ enum ParamType
 	kParamType_Region =					0x45,	//							kFormType_Region
 
 	// custom NVSE types
-	kParamType_StringVar =			0x01,
-	kParamType_Array =				0x100,	// only usable with compiler override; StandardCompile() will report unrecognized param type
-};
+	kParamType_StringVar =				0x01,
+	kParamType_Array =					0x100,	// only usable with compiler override; StandardCompile() will report unrecognized param type
 
-enum TokenTypes
-{
-	kTokenType_Number,
-	kTokenType_Boolean,
-	kTokenType_String,
-	kTokenType_Form,
-	kTokenType_Ref,
-	kTokenType_Global,
-	kTokenType_Array,
-	kTokenType_ArrayElement,
-	kTokenType_Slice,
-	kTokenType_Command,
-	kTokenType_Variable,
-	kTokenType_NumericVar,
-	kTokenType_RefVar,
-	kTokenType_StringVar,
-	kTokenType_ArrayVar,
-	kTokenType_Ambiguous,
-	kTokenType_Operator,
-	kTokenType_ForEachContext,
-
-	// numeric literals can optionally be encoded as one of the following
-	// all are converted to _Number on evaluation
-	kTokenType_Byte,
-	kTokenType_Short,		// 2 bytes
-	kTokenType_Int,			// 4 bytes
-
-	kTokenType_Pair,
-	kTokenType_AssignableString,
-	// xNVSE 6.1.0
-	kTokenType_Lambda,
-
-	kTokenType_Invalid,
-	kTokenType_Max = kTokenType_Invalid,
-
-	// sigil value, returned when an empty expression is parsed
-	kTokenType_Empty = kTokenType_Max + 1,
-};
-
-enum NVSEParamTypes
-{
 	kNVSEParamType_Number =				(1 << kTokenType_Number) | (1 << kTokenType_Ambiguous),
 	kNVSEParamType_Boolean =			(1 << kTokenType_Boolean) | (1 << kTokenType_Ambiguous),
 	kNVSEParamType_String =				(1 << kTokenType_String) | (1 << kTokenType_Ambiguous),
@@ -167,9 +162,12 @@ enum CommandReturnType
 
 struct ParamInfo
 {
-	const char	* typeStr;
-	UInt32		typeID;		// ParamType
-	UInt32		isOptional;	// do other bits do things?
+	const char	*typeStr;
+	ParamType	typeID;
+	UInt32		isOptional;
+
+	constexpr ParamInfo(ParamType _typeID, UInt32 _isOptional = 0) : typeStr(""), typeID(_typeID), isOptional(_isOptional) {}
+	constexpr ParamInfo(const char *_typeStr, ParamType _typeID, UInt32 _isOptional = 0) : typeStr(_typeStr), typeID(_typeID), isOptional(_isOptional) {}
 };
 
 #define COMMAND_ARGS		ParamInfo *paramInfo, UInt8 *scriptData, TESObjectREFR *thisObj, TESObjectREFR *containingObj, Script *scriptObj, ScriptLocals *eventList, double *result, UInt32 *opcodeOffsetPtr
@@ -180,84 +178,14 @@ struct ParamInfo
 #define COMMAND_ARGS_EX		ParamInfo *paramInfo, UInt8 *scriptData, UInt32 *opcodeOffsetPtr, Script *scriptObj, ScriptLocals *eventList
 #define EXTRACT_ARGS_EX		paramInfo, scriptData, opcodeOffsetPtr, scriptObj, eventList
 
-//Macro to make CommandInfo definitions a bit less tedious
-
-#define DEFINE_CMD_FULL(name, altName, refRequired, numParams, paramInfo, parser) \
-	extern bool Cmd_ ## name ## _Execute(COMMAND_ARGS); \
-	static CommandInfo (kCommandInfo_ ## name) = { \
-	#name, \
-	#altName, \
-	0, \
-	"", \
-	refRequired, \
-	numParams, \
-	paramInfo, \
-	Cmd_ ## name ## _Execute, \
-	parser, \
-	NULL, \
-	0 \
-	};
-
-#define DEFINE_COMMAND_PLUGIN(name, refRequired, numParams, paramInfo) \
-	DEFINE_CMD_FULL(name, , refRequired, numParams, paramInfo, NULL)
-
-#define DEFINE_COMMAND_ALT_PLUGIN(name, altName, refRequired, numParams, paramInfo) \
-	DEFINE_CMD_FULL(name, altName, refRequired, numParams, paramInfo, NULL)
-
-#define DEFINE_COMMAND_PLUGIN_EXP(name, refRequired, numParams, paramInfo) \
-	DEFINE_CMD_FULL(name, , refRequired, numParams, paramInfo, Cmd_Expression_Plugin_Parse)
-
-#define DEFINE_COMMAND_ALT_PLUGIN_EXP(name, altName, refRequired, numParams, paramInfo) \
-	DEFINE_CMD_FULL(name, altName, refRequired, numParams, paramInfo, Cmd_Expression_Plugin_Parse)
-
-// for commands which can be used as conditionals
-#define DEFINE_CMD_ALT_COND_ANY(name, altName, refRequired, numParams, paramInfo, parser) \
-	extern bool Cmd_ ## name ## _Execute(COMMAND_ARGS); \
-	extern bool Cmd_ ## name ## _Eval(COMMAND_ARGS_EVAL); \
-	static CommandInfo (kCommandInfo_ ## name) = { \
-	#name,	\
-	#altName,		\
-	0,		\
-	"",	\
-	refRequired,	\
-	numParams,	\
-	paramInfo,	\
-	Cmd_ ## name ## _Execute,	\
-	parser,	\
-	Cmd_ ## name ## _Eval,	\
-	1	\
-	};
-
-#define DEFINE_CMD_COND_PLUGIN(name, refRequired, numParams, paramInfo) \
-	DEFINE_CMD_ALT_COND_ANY(name, , refRequired, numParams, paramInfo, NULL)
-
-#define DEFINE_CMD_ALT_COND_PLUGIN(name, altName, refRequired, numParams, paramInfo) \
-	DEFINE_CMD_ALT_COND_ANY(name, altName, refRequired, numParams, paramInfo, NULL)
-
-#define DEFINE_CMD_COND_ONLY(name, refRequired, numParams, paramInfo) \
-	extern bool Cmd_ ## name ## _Eval(COMMAND_ARGS_EVAL); \
-	static CommandInfo (kCommandInfo_ ## name) = { \
-	#name,	\
-	"",		\
-	0,		\
-	"",	\
-	refRequired,	\
-	numParams,	\
-	paramInfo,	\
-	NULL,	\
-	NULL,	\
-	Cmd_ ## name ## _Eval,	\
-	1	\
-	};
-
-typedef bool (* Cmd_Execute)(COMMAND_ARGS);
+typedef bool (*Cmd_Execute)(COMMAND_ARGS);
 bool Cmd_Default_Execute(COMMAND_ARGS);
 
-typedef bool (* Cmd_Parse)(UInt32 numParams, ParamInfo * paramInfo, ScriptLineBuffer * lineBuf, ScriptBuffer * scriptBuf);
-bool Cmd_Default_Parse(UInt32 numParams, ParamInfo * paramInfo, ScriptLineBuffer * lineBuf, ScriptBuffer * scriptBuf);
+typedef bool (*Cmd_Parse)(UInt32 numParams, ParamInfo *paramInfo, ScriptLineBuffer *lineBuf, ScriptBuffer *scriptBuf);
+bool Cmd_Default_Parse(UInt32 numParams, ParamInfo *paramInfo, ScriptLineBuffer *lineBuf, ScriptBuffer *scriptBuf);
 const Cmd_Parse Cmd_Expression_Plugin_Parse = (Cmd_Parse)0x08000000;
 
-typedef bool (* Cmd_Eval)(COMMAND_ARGS_EVAL);
+typedef bool (*Cmd_Eval)(COMMAND_ARGS_EVAL);
 bool Cmd_Default_Eval(COMMAND_ARGS_EVAL);
 
 struct CommandInfo
@@ -277,3 +205,117 @@ struct CommandInfo
 
 	UInt32			flags;			// 24		might be more than one field (reference to 25 as a byte)
 };
+
+#define DEFINE_COMMAND_PLUGIN(name, refRequired, paramInfo) \
+	extern bool Cmd_##name##_Execute(COMMAND_ARGS); \
+	static CommandInfo kCommandInfo_##name = { \
+	#name, \
+	nullptr, \
+	0, \
+	nullptr, \
+	refRequired, \
+	sizeof(paramInfo) / sizeof(ParamInfo), \
+	paramInfo, \
+	Cmd_##name##_Execute, \
+	nullptr, \
+	nullptr, \
+	0 \
+	};
+
+#define DEFINE_COMMAND_ALT_PLUGIN(name, altName, refRequired, paramInfo) \
+	extern bool Cmd_##name##_Execute(COMMAND_ARGS); \
+	static CommandInfo kCommandInfo_##name = { \
+	#name, \
+	#altName, \
+	0, \
+	nullptr, \
+	refRequired, \
+	sizeof(paramInfo) / sizeof(ParamInfo), \
+	paramInfo, \
+	Cmd_##name##_Execute, \
+	nullptr, \
+	nullptr, \
+	0 \
+	};
+
+#define DEFINE_COMMAND_PLUGIN_EXP(name, refRequired, paramInfo) \
+	extern bool Cmd_##name##_Execute(COMMAND_ARGS); \
+	static CommandInfo kCommandInfo_##name = { \
+	#name, \
+	nullptr, \
+	0, \
+	nullptr, \
+	refRequired, \
+	sizeof(paramInfo) / sizeof(ParamInfo), \
+	paramInfo, \
+	Cmd_##name##_Execute, \
+	Cmd_Expression_Plugin_Parse, \
+	nullptr, \
+	0 \
+	};
+
+#define DEFINE_COMMAND_ALT_PLUGIN_EXP(name, altName, refRequired, paramInfo) \
+	extern bool Cmd_##name##_Execute(COMMAND_ARGS); \
+	static CommandInfo kCommandInfo_##name = { \
+	#name, \
+	#altName, \
+	0, \
+	nullptr, \
+	refRequired, \
+	sizeof(paramInfo) / sizeof(ParamInfo), \
+	paramInfo, \
+	Cmd_##name##_Execute, \
+	Cmd_Expression_Plugin_Parse, \
+	nullptr, \
+	0 \
+	};
+
+#define DEFINE_CMD_COND_PLUGIN(name, refRequired, paramInfo) \
+	extern bool Cmd_##name##_Execute(COMMAND_ARGS); \
+	extern bool Cmd_##name##_Eval(COMMAND_ARGS_EVAL); \
+	static CommandInfo kCommandInfo_##name = { \
+	#name,	\
+	nullptr,	\
+	0,		\
+	nullptr,	\
+	refRequired,	\
+	sizeof(paramInfo) / sizeof(ParamInfo),	\
+	paramInfo,	\
+	Cmd_##name##_Execute,	\
+	nullptr,	\
+	Cmd_##name##_Eval,	\
+	1	\
+	};
+
+#define DEFINE_CMD_ALT_COND_PLUGIN(name, altName, refRequired, paramInfo) \
+	extern bool Cmd_##name##_Execute(COMMAND_ARGS); \
+	extern bool Cmd_##name##_Eval(COMMAND_ARGS_EVAL); \
+	static CommandInfo kCommandInfo_##name = { \
+	#name,	\
+	#altName,		\
+	0,		\
+	nullptr,	\
+	refRequired,	\
+	sizeof(paramInfo) / sizeof(ParamInfo),	\
+	paramInfo,	\
+	Cmd_##name##_Execute,	\
+	nullptr,	\
+	Cmd_##name##_Eval,	\
+	1	\
+	};
+
+#define DEFINE_CMD_COND_ONLY(name, paramInfo) \
+	extern bool Cmd_##name##_Eval(COMMAND_ARGS_EVAL); \
+	static CommandInfo kCommandInfo_##name = { \
+	#name,	\
+	nullptr,	\
+	0,		\
+	nullptr,	\
+	1,		\
+	sizeof(paramInfo) / sizeof(ParamInfo),	\
+	paramInfo,	\
+	nullptr,	\
+	nullptr,	\
+	Cmd_##name##_Eval,	\
+	1	\
+	};

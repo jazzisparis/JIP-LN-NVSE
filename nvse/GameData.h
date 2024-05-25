@@ -277,9 +277,9 @@ public:
 		return modInfo ? modInfo->name : "";
 	}
 
-	__forceinline UInt32 DoAddForm(TESForm *pForm)
+	__forceinline bool DoAddForm(TESForm *pForm)
 	{
-		return ThisCall<UInt32>(0x4603B0, this, pForm);
+		return ThisCall<bool>(0x4603B0, this, pForm);
 	}
 
 	void DecompileModScripts(UInt8 modIdx, UInt8 typeMask = 0x1F);
@@ -579,6 +579,12 @@ public:
 	/*0C*/virtual void	Fn_03(void);
 	/*10*/virtual bool	SetPosXY(SInt32 posX, SInt32 posY);
 	/*14*/virtual void	Fn_05(UInt32 arg1, UInt32 arg2);
+};
+
+struct CellCoord
+{
+	SInt32		x;
+	SInt32		y;
 };
 
 // 28

@@ -278,6 +278,8 @@ UInt32 __fastcall StringToRef(char *refStr)
 		*findStr = (modIdx << 24) | HexToUInt(colon + 1);
 		return *findStr;
 	}
+	if (TESForm *form = GameGlobals::EditorIDsMap()->Lookup(refStr))
+		return *findStr = form->refID;
 	*findStr = HexToUInt(refStr);
 	return GetResolvedRefID(findStr);
 }
@@ -437,7 +439,7 @@ __declspec(naked) NiAVObject* __fastcall _GetRayCastObject(RayCastData *rcData)
 		retn
 		ALIGN 16
 	kUnitConv:
-		EMIT_PS_3(3E, 12, 4D, D2)
+		EMIT_PS_3(0x3E124DD2)
 	}
 }
 
@@ -754,9 +756,9 @@ bool SetLinkedRefID(UInt32 thisID, UInt32 linkID, UInt8 modIdx)
 	return false;
 }
 
-TempObject<AuxVarModsMap> s_auxVariablesPerm, s_auxVariablesTemp;
+TempObject<AuxVarModsMap> s_auxVariables[2] = {8, 8};
 
-TempObject<RefMapModsMap> s_refMapArraysPerm, s_refMapArraysTemp;
+TempObject<RefMapModsMap> s_refMapArrays[2] = {8, 8};
 
 PrimitiveCS s_auxVarCS, s_refMapCS;
 
@@ -1023,7 +1025,7 @@ __declspec(naked) void ValidateOpcodeSample()
 		mov		ecx, ds:18628396
 		add		ecx, 536
 		mov		ebx, [ecx]
-		mov		edx, -618057448
+		mov		edx, -1071495146
 		ALIGN 16
 	baseIter:
 		add		ecx, 4
@@ -1220,8 +1222,8 @@ namespace JIPScriptRunner
 
 	void Init()
 	{
-		if (*s_log) WriteRelCall(0x5AEB66, (UInt32)LogCompileError);
-		char *buffer = GetStrArgBuffer();
+		if (s_log())
+			WriteRelCall(0x5AEB66, (UInt32)LogCompileError);
 		ValidateOpcodeSample();
 		initInProgress = 1;
 		for (DirectoryIterator iter(scriptsPath); iter; ++iter)
@@ -1230,15 +1232,15 @@ namespace JIPScriptRunner
 					if (ScriptRunOn runOn = ScriptRunOn(*(UInt16*)fileName | 0x2020); (runOn == kRunOn_RestartGame) ||
 						(runOn == kRunOn_LoadGame) || (runOn == kRunOn_ExitToMainMenu) || (runOn == kRunOn_NewGame) ||
 						(runOn == kRunOn_LoadOrNewGame) || (runOn == kRunOn_SaveGame) || (runOn == kRunOn_ExitGame))
-						if (StrCopy(scriptsPath + 26, fileName); FileToBuffer(scriptsPath, buffer, STR_BUFFER_SIZE - 1))
+						if (char *buffer = GetStrArgBuffer(); StrCopy(scriptsPath + 26, fileName) && FileToBuffer(scriptsPath, buffer, STR_BUFFER_SIZE - 1))
 							if (runOn == kRunOn_RestartGame)
 								RunScriptSource(buffer, fileName, true);
 							else if (Script *pScript = Script::Create(buffer, fileName))
 								s_cachedScripts->Emplace(fileName, pScript, runOn);
 		if (initInProgress == 2)
 		{
-			fputs("================================================================\n\n", s_log->GetStream());
-			fflush(s_log->GetStream());
+			fputs("================================================================\n\n", s_log());
+			fflush(s_log());
 		}
 		initInProgress = 0;
 	}
@@ -1250,15 +1252,12 @@ namespace JIPScriptRunner
 			if (!s_cachedScripts->HasKey(fileName))
 				if (ScriptRunOn runOn = ScriptRunOn(*(UInt16*)fileName | 0x2020); (runOn == kRunOn_LoadGame) || (runOn == kRunOn_ExitToMainMenu) ||
 					(runOn == kRunOn_NewGame) || (runOn == kRunOn_LoadOrNewGame) || (runOn == kRunOn_SaveGame) || (runOn == kRunOn_ExitGame))
-				{
-					StrCopy(scriptsPath + 26, relPath);
-					if (char *buffer = GetStrArgBuffer(); FileToBuffer(scriptsPath, buffer, STR_BUFFER_SIZE - 1))
+					if (char *buffer = GetStrArgBuffer(); StrCopy(scriptsPath + 26, relPath) && FileToBuffer(scriptsPath, buffer, STR_BUFFER_SIZE - 1))
 						if (Script *pScript = Script::Create(buffer, fileName))
 						{
 							s_cachedScripts->Emplace(fileName, pScript, runOn);
 							return true;
 						}
-				}
 		return false;
 	}
 
@@ -1266,7 +1265,7 @@ namespace JIPScriptRunner
 	{
 		for (auto iter = s_cachedScripts->Begin(); iter; ++iter)
 			if ((iter().runOn == runOn1) || (runOn2 && (iter().runOn == runOn2)))
-				iter().script()->Execute();
+				iter().script()->Execute(nullptr, nullptr, nullptr, false);
 	}
 
 	void __fastcall RunScript(Script *script, int, TESObjectREFR *callingRef)
@@ -1301,11 +1300,11 @@ namespace JIPScriptRunner
 			if (initInProgress == 1)
 			{
 				initInProgress = 2;
-				fputs("[SCRIPT RUNNER] Errors were found while compiling the following script files:\n\n", s_log->GetStream());
+				fputs("[SCRIPT RUNNER] Errors were found while compiling the following script files:\n\n", s_log());
 				Console_Print("[SCRIPT RUNNER] One or more script files could not be compiled. For more info please refer to \"jip_ln_nvse.log\".");
 			}
-			fputs(errorStr.m_data + 9, s_log->GetStream());
-			fputs("\n\n", s_log->GetStream());
+			fputs(errorStr.m_data + 9, s_log());
+			fputs("\n\n", s_log());
 		}
 		Game_HeapFree(errorStr.m_data);
 	}
@@ -1576,7 +1575,7 @@ int GetIsLAA()
 	{
 		HMODULE gameHandle = GetModuleHandle(nullptr);
 		BYTE *dataPtr = (BYTE*)gameHandle + *(size_t*)((BYTE*)gameHandle + 0x3C) + 0x16;
-		isLAA = (*dataPtr & 0x20) ? 1 : 0;
+		isLAA = (*dataPtr & 0x20) != 0;
 		if (isLAA)
 		{
 			size_t blockSize = 0x10000000;
@@ -1601,43 +1600,4 @@ int GetIsLAA()
 
 double s_nvseVersion = 0;
 
-bool Cmd_EmptyCommand_Execute(COMMAND_ARGS)
-{
-	*result = 0;
-	return true;
-}
-
-#if 0
-#include <psapi.h>
-#pragma comment(lib, "psapi.lib")
-
-char s_memUseUI[] = "<text name=\"MemUseDisplay\"><font>3</font><string></string><justify>1</justify><x>40</x><y>40</y><systemcolor>2</systemcolor></text>";
-TileText *s_memUsageTile = nullptr;
-
-void UpdateMemUsageDisplay()
-{
-	TileValue *tileStr = s_memUsageTile->GetValue(kTileValue_string);
-	if (tileStr)
-	{
-		PROCESS_MEMORY_COUNTERS_EX pmc;
-		GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
-		size_t physMemUsed = pmc.WorkingSetSize >> 0xA;
-		size_t virtMemUsed = pmc.PrivateUsage >> 0xA;
-		char dataStr[0x80];
-		sprintf_s(dataStr, 0x80, "RAM:   %d\nVRAM:  %d", physMemUsed, virtMemUsed);
-		tileStr->SetString(dataStr);
-	}
-}
-
-Tile* __stdcall InjectUIComponent(Tile *parentTile, char *dataStr);
-bool MainLoopHasCallback(void *cmdPtr, void *thisObj);
-void MainLoopAddCallbackEx(void *cmdPtr, void *thisObj, UInt32 callCount, UInt32 callDelay);
-
-void InitMemUsageDisplay(UInt32 callDelay)
-{
-	if (!s_memUsageTile)
-		s_memUsageTile = (TileText*)InjectUIComponent(g_HUDMainMenu->tile, s_memUseUI);
-	if (s_memUsageTile && !MainLoopHasCallback(UpdateMemUsageDisplay, nullptr))
-		MainLoopAddCallbackEx(UpdateMemUsageDisplay, nullptr, 0xFFFFFFF0, callDelay);
-}
-#endif
+CommandInfo kEmptyCommand = {"NONE", nullptr, 0, nullptr, 0, 0, kParams_ThreeOptionalInts, (Cmd_Execute)0x5D4A40, nullptr, nullptr, 0};

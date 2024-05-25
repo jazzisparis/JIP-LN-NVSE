@@ -1,10 +1,5 @@
 #pragma once
 
-// keeping this in a separate file so we don't need to include dinput/dsound everywhere
-
-#define DIRECTINPUT_VERSION 0x0800
-#define DIRECTSOUND_VERSION 0x0800
-
 #define MAX_CONTROL_BIND 28
 
 enum ControlCode
@@ -115,6 +110,21 @@ enum XboxButtonMask
 	kXboxMask_BUTTON_B = 0x2000,
 	kXboxMask_BUTTON_X = 0x4000,
 	kXboxMask_BUTTON_Y = 0x8000,
+};
+
+enum SpecialInputCode : UInt32
+{
+	kInputCode_Backspace =	0x80000000,
+	kInputCode_ArrowLeft =	0x80000001,
+	kInputCode_ArrowRight =	0x80000002,
+	kInputCode_ArrowUp =	0x80000003,
+	kInputCode_ArrowDown =	0x80000004,
+	kInputCode_Home =		0x80000005,
+	kInputCode_End =		0x80000006,
+	kInputCode_Delete =		0x80000007,
+	kInputCode_Enter =		0x80000008,
+	kInputCode_PageUp =		0x80000009,
+	kInputCode_PageDown =	0x8000000A
 };
 
 struct _IDirectInput8;

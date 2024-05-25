@@ -775,11 +775,11 @@ SInt32 TESLeveledList::GetItemIndexByForm(TESForm *form)
 	return -1;
 }
 
-UInt8 s_dumpLvlListIndent = 50;
+UInt32 s_dumpLvlListIndent = 60;
 
 void TESLeveledList::Dump()
 {
-	static const char kDumpLvlListIndentStr[] = "                                                  ";
+	static const char kDumpLvlListIndentStr[] = "                                                            ";
 	ListData *data;
 	auto iter = list.Head();
 	do
@@ -791,9 +791,9 @@ void TESLeveledList::Dump()
 			lvlList ? "(LeveledList)" : form->GetTheName(), form->refID, data->level, data->count, data->extra ? data->extra->health : 0);
 		if (lvlList)
 		{
-			s_dumpLvlListIndent -= 5;
+			s_dumpLvlListIndent -= 3;
 			lvlList->Dump();
-			s_dumpLvlListIndent += 5;
+			s_dumpLvlListIndent += 3;
 		}
 	}
 	while (iter = iter->next);
@@ -959,68 +959,6 @@ UInt32 TESBipedModelForm::MaskForSlot(UInt32 slot)
 	}
 }
 
-UInt32 TESBipedModelForm::GetSlotsMask() const {
-	return partMask;
-}
-
-void TESBipedModelForm::SetSlotsMask(UInt32 mask)
-{
-	partMask = (mask & ePartBitMask_Full);
-}
-
-UInt32 TESBipedModelForm::GetBipedMask() const {
-	return bipedFlags;
-}
-
-void TESBipedModelForm::SetBipedMask(UInt32 mask)
-{
-	bipedFlags = mask & 0xFF;
-}
-
-void  TESBipedModelForm::SetPath(const char* newPath, UInt32 whichPath, bool bFemalePath)
-{
-	String* toSet = nullptr;
-
-	switch (whichPath)
-	{
-	case ePath_Biped:
-		toSet = &bipedModel[bFemalePath ? 1 : 0].nifPath;
-		break;
-	case ePath_Ground:
-		toSet = &groundModel[bFemalePath ? 1 : 0].nifPath;
-		break;
-	case ePath_Icon:
-		toSet = &icon[bFemalePath ? 1 : 0].ddsPath;
-		break;
-	}
-
-	if (toSet)
-		toSet->Set(newPath);
-}
-
-const char* TESBipedModelForm::GetPath(UInt32 whichPath, bool bFemalePath)
-{
-	String* pathStr = nullptr;
-
-	switch (whichPath)
-	{
-	case ePath_Biped:
-		pathStr = &bipedModel[bFemalePath ? 1 : 0].nifPath;
-		break;
-	case ePath_Ground:
-		pathStr = &groundModel[bFemalePath ? 1 : 0].nifPath;
-		break;
-	case ePath_Icon:
-		pathStr = &icon[bFemalePath ? 1 : 0].ddsPath;
-		break;
-	}
-
-	if (pathStr)
-		return pathStr->m_data;
-	else
-		return "";
-}
-
 char TESActorBaseData::GetFactionRank(TESFaction *faction) const
 {
 	auto facIter = factionList.Head();
@@ -1142,27 +1080,23 @@ __declspec(naked) TESAmmo *TESObjectWEAP::GetEquippedAmmo(Actor *actor) const
 		ja		baseWeap
 		mov		edx, [eax+0x114]
 		test	edx, edx
-		jz		nullWeap
-		mov		edx, [edx+8]
-		cmp		edx, g_rockItLauncher
-		jnz		nullWeap
-	retnNull:
-		xor		eax, eax
-		retn	4
-	nullWeap:
-		mov		eax, [eax+0x118]
-		test	eax, eax
 		jz		baseWeap
-		mov		eax, [eax+8]
+		cmp		ecx, [edx+8]
+		jnz		baseWeap
+		mov		edx, [eax+0x118]
+		test	edx, edx
+		jz		baseWeap
+		mov		eax, [edx+8]
 		test	eax, eax
 		jz		baseWeap
 		cmp		dword ptr [eax], kVtbl_TESAmmo
-		jz		done
-		cmp		eax, edx
-		jnz		done
+		jnz		baseWeap
+		retn	4
 	baseWeap:
 		call	TESObjectWEAP::GetAmmo
-	done:
+		retn	4
+	retnNull:
+		xor		eax, eax
 		retn	4
 	}
 }

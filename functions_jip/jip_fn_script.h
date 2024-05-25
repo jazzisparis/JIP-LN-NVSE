@@ -1,35 +1,33 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(HasVariableAdded, 0, 2, kParams_OneString_OneOptionalQuest);
-DEFINE_COMMAND_PLUGIN(AddScriptVariable, 0, 2, kParams_OneString_OneOptionalQuest);
-DEFINE_COMMAND_PLUGIN(RemoveScriptVariable, 0, 2, kParams_OneString_OneOptionalQuest);
-DEFINE_COMMAND_PLUGIN(RemoveAllAddedVariables, 0, 1, kParams_OneOptionalQuest);
-DEFINE_COMMAND_PLUGIN(GetDelayElapsed, 0, 1, kParams_OneQuest);
-DEFINE_COMMAND_PLUGIN(SetDelayElapsed, 0, 2, kParams_OneQuest_OneFloat);
-DEFINE_COMMAND_ALT_PLUGIN(SetGameMainLoopCallback, SGMLC, 0, 4, kParams_OneForm_OneInt_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(GetScriptDisabled, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetScriptDisabled, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetScriptEventDisabled, 0, 2, kParams_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(SetScriptEventDisabled, 0, 3, kParams_OneForm_OneString_OneInt);
-DEFINE_COMMAND_PLUGIN(FakeScriptEvent, 1, 2, kParams_OneString_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetOnQuestStageEventHandler, 0, 5, kParams_OneForm_OneInt_OneQuest_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(RunScriptSnippet, 0, 22, kParams_OneInt_OneFormatString);
-DEFINE_COMMAND_PLUGIN(ScriptWait, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(IsScriptWaiting, 0, 1, kParams_OneOptionalQuest);
-DEFINE_COMMAND_PLUGIN(StopScriptWaiting, 0, 1, kParams_OneOptionalQuest);
-DEFINE_COMMAND_PLUGIN(GetScriptBlockDisabled, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetScriptBlockDisabled, 0, 3, kParams_OneForm_OneInt_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(HasScriptBlock, 0, 2, kParams_OneInt_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(DisableScriptedActivate, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(RunBatchScript, 0, 1, kParams_OneString);
-DEFINE_COMMAND_PLUGIN(ExecuteScript, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(RegisterSRScript, 0, 1, kParams_OneString);
-
-UInt8 s_scriptVarActionType = 0;
+DEFINE_COMMAND_PLUGIN(HasVariableAdded, 0, kParams_OneString_OneOptionalQuest);
+DEFINE_COMMAND_PLUGIN(AddScriptVariable, 0, kParams_OneString_OneOptionalQuest);
+DEFINE_COMMAND_PLUGIN(RemoveScriptVariable, 0, kParams_OneString_OneOptionalQuest);
+DEFINE_COMMAND_PLUGIN(RemoveAllAddedVariables, 0, kParams_OneOptionalQuest);
+DEFINE_COMMAND_PLUGIN(GetDelayElapsed, 0, kParams_OneQuest);
+DEFINE_COMMAND_PLUGIN(SetDelayElapsed, 0, kParams_OneQuest_OneFloat);
+DEFINE_COMMAND_ALT_PLUGIN(SetGameMainLoopCallback, SGMLC, 0, kParams_OneForm_ThreeOptionalInts);
+DEFINE_COMMAND_PLUGIN(GetScriptDisabled, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetScriptDisabled, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetScriptEventDisabled, 0, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(SetScriptEventDisabled, 0, kParams_OneForm_OneString_OneInt);
+DEFINE_COMMAND_PLUGIN(FakeScriptEvent, 1, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetOnQuestStageEventHandler, 0, kParams_OneForm_OneInt_OneQuest_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(RunScriptSnippet, 0, kParams_OneInt_OneFormatString);
+DEFINE_COMMAND_PLUGIN(ScriptWait, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(IsScriptWaiting, 0, kParams_OneOptionalQuest);
+DEFINE_COMMAND_PLUGIN(StopScriptWaiting, 0, kParams_OneOptionalQuest);
+DEFINE_COMMAND_PLUGIN(GetScriptBlockDisabled, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetScriptBlockDisabled, 0, kParams_OneForm_OneInt_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(HasScriptBlock, 0, kParams_OneInt_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(DisableScriptedActivate, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(RunBatchScript, 0, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(ExecuteScript, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(RegisterSRScript, 0, kParams_OneString);
 
 bool ScriptVariableAction_Execute(COMMAND_ARGS)
 {
-	*result = 0;
+	CAPTURE_CL(actionType)
 	char varName[0x50];
 	TESForm *form = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &varName, &form) && varName[0])
@@ -39,7 +37,7 @@ bool ScriptVariableAction_Execute(COMMAND_ARGS)
 			if (!thisObj) return true;
 			form = thisObj;
 		}
-		if (s_scriptVarActionType == 2)
+		if (actionType == 2)
 		{
 			if (auto findOwner = s_scriptVariablesBuffer->Find(form->refID))
 				if (auto findVar = findOwner().Find(varName))
@@ -53,7 +51,7 @@ bool ScriptVariableAction_Execute(COMMAND_ARGS)
 		Script *pScript;
 		ScriptLocals *pEventList;
 		if (form->GetScriptAndEventList(&pScript, &pEventList))
-			if (s_scriptVarActionType)
+			if (actionType)
 			{
 				if (pScript->AddVariable(varName, pEventList, form->refID, scriptObj->GetOverridingModIdx()))
 					*result = 1;
@@ -70,7 +68,7 @@ __declspec(naked) bool Cmd_HasVariableAdded_Execute(COMMAND_ARGS)
 {
 	__asm
 	{
-		mov		s_scriptVarActionType, 0
+		xor		cl, cl
 		jmp		ScriptVariableAction_Execute
 	}
 }
@@ -79,7 +77,7 @@ __declspec(naked) bool Cmd_AddScriptVariable_Execute(COMMAND_ARGS)
 {
 	__asm
 	{
-		mov		s_scriptVarActionType, 1
+		mov		cl, 1
 		jmp		ScriptVariableAction_Execute
 	}
 }
@@ -88,7 +86,7 @@ __declspec(naked) bool Cmd_RemoveScriptVariable_Execute(COMMAND_ARGS)
 {
 	__asm
 	{
-		mov		s_scriptVarActionType, 2
+		mov		cl, 2
 		jmp		ScriptVariableAction_Execute
 	}
 }
@@ -116,7 +114,6 @@ bool Cmd_RemoveAllAddedVariables_Execute(COMMAND_ARGS)
 
 bool Cmd_GetDelayElapsed_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESQuest *quest;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest) && quest->scriptable.script)
 		*result = quest->scriptable.script->questDelayTimeCounter;
@@ -134,13 +131,19 @@ bool Cmd_SetDelayElapsed_Execute(COMMAND_ARGS)
 
 bool Cmd_SetGameMainLoopCallback_Execute(COMMAND_ARGS)
 {
+	UInt8 numArgs = NUM_ARGS;
 	Script *script;
 	UInt32 doAdd, callDelay = 1, modeFlag = 3;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script, &doAdd, &callDelay, &modeFlag) && IS_ID(script, Script))
 	{
 		TESObjectREFR *callingRef = thisObj ? thisObj : g_thePlayer;
 		MainLoopCallback *callback = FindMainLoopCallback(script, callingRef);
-		if (doAdd)
+		if (numArgs < 2)
+		{
+			if (callback)
+				*result = 1;
+		}
+		else if (doAdd)
 		{
 			if (!callDelay) callDelay = 1;
 			if (callback)
@@ -166,7 +169,6 @@ bool Cmd_GetScriptDisabled_Execute(COMMAND_ARGS)
 	Script *script;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script) && IS_ID(script, Script) && !script->info.dataLength)
 		*result = 1;
-	else *result = 0;
 	return true;
 }
 
@@ -202,7 +204,6 @@ bool Cmd_SetScriptDisabled_Execute(COMMAND_ARGS)
 
 bool Cmd_GetScriptEventDisabled_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESForm *form;
 	char evtName[0x40];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &evtName))
@@ -294,7 +295,6 @@ bool Cmd_SetScriptEventDisabled_Execute(COMMAND_ARGS)
 
 bool Cmd_FakeScriptEvent_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char evtName[0x40];
 	TESForm *filterForm = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &evtName, &filterForm))
@@ -302,15 +302,14 @@ bool Cmd_FakeScriptEvent_Execute(COMMAND_ARGS)
 		{
 			InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 			if (ExtraDataList *xData = invRef ? invRef->xData : &thisObj->extraDataList)
-				if (ExtraScript *xScript = GetExtraType(xData, ExtraScript); xScript && xScript->eventList)
-					*result = ThisCall<bool>(0x5A8E20, xScript->eventList, filterForm, inMask);
+				if (auto xScript = GetExtraType(xData, ExtraScript); xScript && xScript->eventList && ThisCall<bool>(0x5A8E20, xScript->eventList, filterForm, inMask))
+					*result = 1;
 		}
 	return true;
 }
 
 bool Cmd_SetOnQuestStageEventHandler_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	Script *script;
 	UInt32 addEvnt, stageID, skipRes = 0;
 	TESQuest *quest;
@@ -392,8 +391,7 @@ bool Cmd_ScriptWait_Execute(COMMAND_ARGS)
 		return true;
 	s_scriptWaitInfoMap()[owner].Init(owner, iterNum, blockIter.NextOpOffset(), opcodeOffsetPtr);
 	owner->jipFormFlags5 |= kHookFormFlag5_ScriptOnWait;
-	HOOK_SET(ScriptRunner, true);
-	HOOK_SET(EvalEventBlock, true);
+	HOOK_SET(ScriptWait, true);
 	UInt32 *callerArgs = opcodeOffsetPtr + 6;
 	*(UInt32*)callerArgs[3] = blockIter.NextBlockOffset() - 4 - callerArgs[4];
 	return true;
@@ -401,7 +399,6 @@ bool Cmd_ScriptWait_Execute(COMMAND_ARGS)
 
 bool Cmd_IsScriptWaiting_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESForm *owner = NULL;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &owner))
 	{
@@ -435,7 +432,6 @@ bool Cmd_StopScriptWaiting_Execute(COMMAND_ARGS)
 
 bool Cmd_GetScriptBlockDisabled_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	Script *script;
 	UInt32 blockType;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &script, &blockType) && IS_ID(script, Script) && (blockType <= 0x25))
@@ -470,7 +466,6 @@ bool Cmd_SetScriptBlockDisabled_Execute(COMMAND_ARGS)
 
 bool Cmd_HasScriptBlock_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 blockType;
 	TESForm *form = NULL;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &blockType, &form) || (blockType > 0x25)) return true;
@@ -510,7 +505,7 @@ bool Cmd_DisableScriptedActivate_Execute(COMMAND_ARGS)
 	Script *script = xScript->script;
 	UInt8 *dataPtr = script->data, *endPtr = dataPtr + script->info.dataLength;
 	dataPtr += 4;
-	UInt16 lookFor = disable ? 0x100D : 0x2210, replace = disable ? 0x2210 : 0x100D, *opcodePtr, length;
+	UInt16 lookFor = disable ? 0x100D : 0x2215, replace = disable ? 0x2215 : 0x100D, *opcodePtr, length;
 	bool onActivate = false;
 	while (dataPtr < endPtr)
 	{
@@ -543,7 +538,6 @@ bool Cmd_DisableScriptedActivate_Execute(COMMAND_ARGS)
 
 bool Cmd_RunBatchScript_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char filePath[0x80];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &filePath))
 	{
@@ -581,6 +575,5 @@ bool Cmd_RegisterSRScript_Execute(COMMAND_ARGS)
 	char filePath[0x80];
 	if (JIPScriptRunner::initInProgress && ExtractArgsEx(EXTRACT_ARGS_EX, &filePath) && JIPScriptRunner::RegisterScript(filePath))
 		*result = 1;
-	else *result = 0;
 	return true;
 }

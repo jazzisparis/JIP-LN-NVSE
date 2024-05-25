@@ -79,6 +79,8 @@ extern TESObjectMISC *g_capsItem;
 extern TESImageSpaceModifier *g_getHitIMOD, *g_explosionInFaceIMOD;
 extern UInt32 s_mainThreadID, s_initialTickCount;
 
+extern const char kDaysPerMonth[], kMenuIDJumpTable[];
+
 __forceinline TESObjectREFR *PlaceAtMe(TESObjectREFR *refr, TESForm *form, UInt32 count, UInt32 distance, UInt32 direction, float health)
 {
 	return CdeclCall<TESObjectREFR*>(0x5C4B30, refr, form, count, distance, direction, health);
@@ -107,7 +109,7 @@ __forceinline void ApplyPerkModifiers(PerkEntryPointID entryPointID, TESObjectRE
 {
 	CdeclCall(0x5E58F0, entryPointID, perkOwner, filter1, filter2, baseValue);
 }
-__forceinline TESTopicInfo *GetTopicInfo(TESTopic *topic, bool *result, Actor *actor, Actor *target)
+__forceinline TESTopicInfo *GetTopicInfo(TESTopic *topic, void *result, Actor *actor, Actor *target)
 {
 	return CdeclCall<TESTopicInfo*>(0x61A7D0, topic, result, actor, target, true, nullptr, nullptr);
 }
@@ -125,6 +127,23 @@ TESForm* __fastcall LookupFormByEDID(const char *edidStr);
 UInt32 __stdcall HasChangeData(UInt32 refID);
 bool __fastcall GetResolvedModIndex(UInt8 *pModIdx);
 UInt32 __fastcall GetResolvedRefID(UInt32 *refID);
+
+struct PatchInstallState
+{
+	bool	bigGunsSkill = false;
+	bool	impactDmgFix = false;
+	bool	hardcoreNeedsFix = false;
+	bool	failedScriptLocks = false;
+	bool	dblPrecision = false;
+	bool	FO3WpnDegrade = false;
+	bool	localizedDTDR = false;
+	bool	sneakBoundsFix = false;
+	bool	NVACAlerts = false;
+	bool	NPCWeaponMods = false;
+	bool	NPCPerks = false;
+	bool	creSpreadFix = false;
+};
+extern PatchInstallState s_patchInstallState;
 
 enum
 {
@@ -379,8 +398,8 @@ class AuxVariableValue
 
 public:
 	AuxVariableValue() : alloc(0) {}
-	AuxVariableValue(UInt8 _type) : type(_type), alloc(0) {}
-	AuxVariableValue(const NVSEArrayElement &elem) : alloc(0) {*this = elem;}
+	__forceinline AuxVariableValue(UInt8 _type) : type(_type), alloc(0) {}
+	explicit AuxVariableValue(const NVSEArrayElement &elem) : alloc(0) {*this = elem;}
 
 	~AuxVariableValue() {Clear();}
 
@@ -445,6 +464,21 @@ public:
 		return rhs.alloc && (length == rhs.length) && !StrCompareCS(str, rhs.str);
 	}
 
+	inline bool operator==(const NVSEArrayElement &rhs) const
+	{
+		switch (rhs.GetType())
+		{
+			case 1:
+				return (type == 1) && (num == rhs.num);
+			case 2:
+				return (type == 2) && rhs.form && (refID == rhs.form->refID);
+			case 3:
+				return (type == 4) && alloc && rhs.str && !StrCompareCI(str, rhs.str);
+			default:
+				return false;
+		}
+	}
+
 	ArrayElementL GetAsElement() const
 	{
 		if (type == 2) return ArrayElementL(LookupFormByRefID(refID));
@@ -497,12 +531,12 @@ typedef Vector<AuxVariableValue, 2> AuxVarValsArr;
 typedef UnorderedMap<char*, AuxVarValsArr, 4> AuxVarVarsMap;
 typedef UnorderedMap<UInt32, AuxVarVarsMap> AuxVarOwnersMap;
 typedef UnorderedMap<UInt32, AuxVarOwnersMap> AuxVarModsMap;
-extern TempObject<AuxVarModsMap> s_auxVariablesPerm, s_auxVariablesTemp;
+extern TempObject<AuxVarModsMap> s_auxVariables[2];
 
 typedef UnorderedMap<UInt32, AuxVariableValue, 4> RefMapIDsMap;
 typedef UnorderedMap<char*, RefMapIDsMap, 4> RefMapVarsMap;
 typedef UnorderedMap<UInt32, RefMapVarsMap> RefMapModsMap;
-extern TempObject<RefMapModsMap> s_refMapArraysPerm, s_refMapArraysTemp;
+extern TempObject<RefMapModsMap> s_refMapArrays[2];
 
 extern PrimitiveCS s_auxVarCS, s_refMapCS;
 
@@ -513,7 +547,7 @@ struct AuxVarInfo
 	UInt32		ownerID;
 	UInt32		modIndex;
 	char		*varName;
-	bool		isPerm;
+	bool		isTemp;
 
 	AuxVarInfo(TESForm *form, TESObjectREFR *thisObj, Script *scriptObj, char *pVarName)
 	{
@@ -522,8 +556,8 @@ struct AuxVarInfo
 			if (ownerID = GetSubjectID(form, thisObj))
 			{
 				varName = pVarName;
-				isPerm = (varName[0] != '*');
-				modIndex = (varName[!isPerm] == '_') ? 0xFF : scriptObj->GetOverridingModIdx();
+				isTemp = (*pVarName == '*');
+				modIndex = (pVarName[isTemp] == '_') ? 0xFF : scriptObj->GetOverridingModIdx();
 			}
 		}
 		else ownerID = 0;
@@ -533,12 +567,13 @@ struct AuxVarInfo
 	{
 		if (ownerID = GetSubjectID(form, thisObj))
 		{
-			isPerm = !(type & 1);
+			isTemp = type & 1;
 			modIndex = (type > 1) ? 0xFF : scriptObj->GetOverridingModIdx();
 		}
 	}
 
-	AuxVarModsMap& ModsMap() const {return isPerm ? s_auxVariablesPerm : s_auxVariablesTemp;}
+	inline AuxVarModsMap& operator()() const {return s_auxVariables[isTemp];}
+
 	AuxVarValsArr* __fastcall GetArray(bool addArr = false);
 	AuxVariableValue* __fastcall GetValue(SInt32 idx, bool addVal = false);
 
@@ -548,21 +583,21 @@ struct AuxVarInfo
 struct RefMapInfo
 {
 	UInt32		modIndex;
-	bool		isPerm;
+	bool		isTemp;
 
 	RefMapInfo(Script *scriptObj, char *varName)
 	{
-		isPerm = (*varName != '*');
-		modIndex = (varName[!isPerm] == '_') ? 0xFF : scriptObj->GetOverridingModIdx();
+		isTemp = (*varName == '*');
+		modIndex = (varName[isTemp] == '_') ? 0xFF : scriptObj->GetOverridingModIdx();
 	}
 
 	RefMapInfo(Script *scriptObj, UInt32 type)
 	{
-		isPerm = !(type & 1);
+		isTemp = type & 1;
 		modIndex = (type > 1) ? 0xFF : scriptObj->GetOverridingModIdx();
 	}
 
-	RefMapModsMap& ModsMap() const {return isPerm ? s_refMapArraysPerm : s_refMapArraysTemp;}
+	inline RefMapModsMap& operator()() const {return s_refMapArrays[isTemp];}
 };
 
 extern UInt8 s_dataChangedFlags;
@@ -759,15 +794,15 @@ struct TempArrayElements
 
 struct ArrayData
 {
-	UInt32			size;
-	ArrayElementR	*vals;
-	ArrayElementR	*keys;
+	UInt32						size;
+	AuxBuffer<ArrayElementR>	vals;
+	ArrayElementR				*keys;
 
 	ArrayData(NVSEArrayVar *srcArr, bool isPacked)
 	{
 		if (size = GetArraySize(srcArr))
 		{
-			vals = AuxBuffer::Get<ArrayElementR>(2, isPacked ? size : (size << 1));
+			vals = isPacked ? size : (size << 1);
 			keys = isPacked ? nullptr : (vals + size);
 			if (!GetElements(srcArr, vals, keys))
 				size = 0;
@@ -934,9 +969,11 @@ void InitMemUsageDisplay(UInt32 callDelay);
 #define REG_CMD_STR(name) RegisterTypedCommand(&kCommandInfo_##name, kRetnType_String)
 #define REG_CMD_ARR(name) RegisterTypedCommand(&kCommandInfo_##name, kRetnType_Array)
 #define REG_CMD_AMB(name) RegisterTypedCommand(&kCommandInfo_##name, kRetnType_Ambiguous)
+extern CommandInfo kEmptyCommand;
+#define REG_EMPTY RegisterCommand(&kEmptyCommand)
 
-#define REFR_RES *(UInt32*)result
+#define OPCODE_ID (*(UInt16*)(scriptData + *opcodeOffsetPtr - 4))
 #define NUM_ARGS scriptData[*opcodeOffsetPtr]
 #define NUM_ARGS_EX (scriptData[*opcodeOffsetPtr - 2] ? scriptData[*opcodeOffsetPtr] : 0)
-
-DEFINE_COMMAND_PLUGIN(EmptyCommand, 0, 3, kParams_ThreeOptionalInts);
+#define CAPTURE_CL(varName) UInt8 varName; __asm mov varName, cl
+#define CAPTURE_ECX(varName) UInt32 varName; __asm mov varName, ecx

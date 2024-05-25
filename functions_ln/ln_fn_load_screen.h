@@ -1,19 +1,18 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetLoadScreenTexture, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetLoadScreenTexture, 0, 2, kParams_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(GetLoadScreenType, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetLoadScreenType, 0, 2, kParams_TwoForms);
-DEFINE_COMMAND_PLUGIN(GetLoadScreenTypeTextRGB, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetLoadScreenTypeTextRGB, 0, 4, kParams_OneForm_ThreeFloats);
+DEFINE_COMMAND_PLUGIN(GetLoadScreenTexture, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetLoadScreenTexture, 0, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(GetLoadScreenType, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetLoadScreenType, 0, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(GetLoadScreenTypeTextRGB, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetLoadScreenTypeTextRGB, 0, kParams_OneForm_ThreeFloats);
 
 bool Cmd_GetLoadScreenTexture_Execute(COMMAND_ARGS)
 {
-	const char *resStr;
+	const char *resStr = nullptr;
 	TESLoadScreen *loadScreen;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &loadScreen) && IS_ID(loadScreen, TESLoadScreen))
 		resStr = loadScreen->texture.ddsPath.m_data;
-	else resStr = NULL;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
@@ -29,7 +28,6 @@ bool Cmd_SetLoadScreenTexture_Execute(COMMAND_ARGS)
 
 bool Cmd_GetLoadScreenType_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESLoadScreen *loadScreen;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &loadScreen) && IS_ID(loadScreen, TESLoadScreen) && loadScreen->type)
 		REFR_RES = loadScreen->type->refID;
@@ -49,7 +47,6 @@ const char *kRGBPrefixes[] = {"r", "g", "b"};
 
 bool Cmd_GetLoadScreenTypeTextRGB_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESLoadScreenType *loadScrType;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &loadScrType) && IS_ID(loadScrType, TESLoadScreenType))
 	{

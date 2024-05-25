@@ -1,108 +1,108 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(SetPersistent, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(GetObjectDimensions, GetObjDim, 0, 2, kParams_OneAxis_OneOptionalBoundObject);
-DEFINE_COMMAND_PLUGIN(GetIsItem, 0, 1, kParams_OneOptionalObjectID);
-DEFINE_COMMAND_ALT_PLUGIN(SetLinkedReference, SetLinkedRef, 1, 1, kParams_OneOptionalObjectRef);
-DEFINE_COMMAND_PLUGIN(GetEnableChildren, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(GetLinkedChildren, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(HasPrimitive, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(GetPrimitiveBound, 1, 1, kParams_OneAxis);
-DEFINE_COMMAND_PLUGIN(SetPrimitiveBound, 1, 2, kParams_OneAxis_OneFloat);
-DEFINE_COMMAND_PLUGIN(AddPrimitive, 1, 4, kParams_OneInt_ThreeFloats);
-DEFINE_COMMAND_PLUGIN(GetTeammates, 0, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(MoveToCell, 1, 4, kParams_OneForm_ThreeFloats);
-DEFINE_COMMAND_PLUGIN(MoveToEditorPosition, 1, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetCenterPos, 1, 1, kParams_OneAxis);
-DEFINE_COMMAND_PLUGIN(GetRefType, 0, 1, kParams_OneOptionalObjectRef);
-DEFINE_COMMAND_ALT_PLUGIN(ToggleObjectCollision, TOC, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(GetMaterialPropertyValue, GetMatrPropVal, 1, 2, kParams_OneString_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(SetMaterialPropertyValue, SetMatrPropVal, 1, 3, kParams_OneString_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetHasContact, 1, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(GetHasContactBase, 1, 1, kParams_OneForm);
-DEFINE_CMD_COND_PLUGIN(GetHasContactType, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetContactRefs, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(GetHasPhantom, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(GetInteractionDisabled, 0, 1, kParams_OneOptionalBoundObject);
-DEFINE_COMMAND_PLUGIN(SetInteractionDisabled, 0, 2, kParams_OneInt_OneOptionalBoundObject);
-DEFINE_COMMAND_PLUGIN(GetInteractionDisabledType, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(SetInteractionDisabledType, 0, 2, kParams_TwoInts);
-DEFINE_COMMAND_PLUGIN(AddRefMapMarker, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(RemoveRefMapMarker, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(RefHasMapMarker, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(SetPosEx, 1, 4, kParams_ThreeFloats_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(MoveToReticle, 1, 5, kParams_FourOptionalFloats_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetRefName, 1, 1, kParams_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(SetAngleEx, 1, 4, kParams_ThreeFloats_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetTeleportDoor, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(SetOnCriticalHitEventHandler, 0, 5, kParams_OneForm_OneInt_ThreeOptionalForms);
-DEFINE_COMMAND_PLUGIN(MoveToFadeDelay, 1, 2, kParams_OneObjectRef_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetCrosshairWater, 0, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(IsAnimPlayingEx, 1, 4, kParams_OneInt_ThreeOptionalInts);
-DEFINE_COMMAND_PLUGIN(GetRigidBodyMass, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(PushObject, 1, 5, kParams_FourFloats_OneOptionalObjectRef);
-DEFINE_COMMAND_PLUGIN(MoveToContainer, 1, 2, kParams_OneObjectRef_OneOptionalInt);
-DEFINE_COMMAND_ALT_PLUGIN(GetNifBlockTranslation, GetNifTrans, 1, 3, kParams_OneString_TwoOptionalInts);
-DEFINE_COMMAND_ALT_PLUGIN(SetNifBlockTranslation, SetNifTrans, 1, 6, kParams_OneString_ThreeFloats_TwoOptionalInts);
-DEFINE_COMMAND_ALT_PLUGIN(GetNifBlockRotation, GetNifRot, 1, 3, kParams_OneString_TwoOptionalInts);
-DEFINE_COMMAND_ALT_PLUGIN(SetNifBlockRotation, SetNifRot, 1, 6, kParams_OneString_ThreeFloats_TwoOptionalInts);
-DEFINE_COMMAND_ALT_PLUGIN(GetNifBlockScale, GetNifScale, 1, 2, kParams_OneString_OneOptionalInt);
-DEFINE_COMMAND_ALT_PLUGIN(SetNifBlockScale, SetNifScale, 1, 3, kParams_OneString_OneFloat_OneOptionalInt);
-DEFINE_COMMAND_ALT_PLUGIN(GetNifBlockFlag, GetNifFlag, 1, 3, kParams_OneString_OneInt_OneOptionalInt);
-DEFINE_COMMAND_ALT_PLUGIN(SetNifBlockFlag, SetNifFlag, 1, 4, kParams_OneString_TwoInts_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetObjectVelocity, 1, 1, kParams_OneOptionalAxis);
-DEFINE_COMMAND_ALT_PLUGIN(GetAngularVelocity, GetAngVel, 1, 2, kParams_OneString_OneOptionalAxis);
-DEFINE_COMMAND_ALT_PLUGIN(SetAngularVelocity, SetAngVel, 1, 3, kParams_OneString_OneAxis_OneFloat);
-DEFINE_COMMAND_PLUGIN(PlaceAtCell, 0, 6, kParams_OneForm_OneInt_OneForm_ThreeFloats);
-DEFINE_COMMAND_PLUGIN(GetRayCastPos, 1, 7, kParams_ThreeGlobals_OneOptFloat_OneOptInt_OneOptString_OneOptFloat);
-DEFINE_COMMAND_ALT_PLUGIN(GetAnimSequenceFrequency, GetAnimSeqFreq, 1, 1, kParams_OneString);
-DEFINE_COMMAND_ALT_PLUGIN(SetAnimSequenceFrequency, SetAnimSeqFreq, 1, 2, kParams_OneString_OneFloat);
-DEFINE_COMMAND_PLUGIN(MoveToNode, 1, 5, kParams_OneObjectRef_OneString_ThreeOptionalFloats);
-DEFINE_COMMAND_PLUGIN(GetPlayerPerks, 0, 0, nullptr);
-DEFINE_COMMAND_ALT_PLUGIN(GetNifBlockParentNodes, GetNifParents, 1, 2, kParams_OneString_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetCrosshairRefEx, 0, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(IsMobile, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(IsGrabbable, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(AttachLight, 1, 5, kParams_OneString_OneForm_ThreeOptionalFloats);
-DEFINE_COMMAND_PLUGIN(RemoveLight, 1, 1, kParams_OneString);
-DEFINE_COMMAND_PLUGIN(SetLinearVelocity, 1, 5, kParams_OneString_ThreeFloats_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(InsertNode, 0, 23, kParams_OneForm_OneInt_OneFormatString);
-DEFINE_COMMAND_PLUGIN(AttachModel, 0, 23, kParams_OneForm_OneInt_OneFormatString);
-DEFINE_COMMAND_ALT_PLUGIN(SynchronizePosition, SyncPos, 0, 4, kParams_OneOptionalObjectRef_OneOptionalInt_OneOptionalFloat_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(ModelHasBlock, 0, 22, kParams_OneForm_OneFormatString);
-DEFINE_COMMAND_PLUGIN(GetRayCastRef, 1, 2, kParams_OneOptionalInt_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(GetRayCastMaterial, 1, 2, kParams_OneOptionalInt_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(GetCollisionNodes, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(GetChildBlocks, 1, 3, kParams_OneOptionalString_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(GetBlockTextureSet, 1, 1, kParams_OneString);
-DEFINE_COMMAND_PLUGIN(GetPosEx, 1, 3, kParams_ThreeScriptVars);
-DEFINE_COMMAND_PLUGIN(GetAngleEx, 1, 4, kParams_ThreeScriptVars_OneOptionalInt);
-DEFINE_COMMAND_ALT_PLUGIN(SetTextureTransformKey, SetTexTransKey, 1, 4, kParams_OneString_TwoInts_OneFloat);
-DEFINE_COMMAND_ALT_PLUGIN(AttachExtraCamera, AttachCam, 1, 4, kParams_OneString_OneInt_OneOptionalString_OneOptionalInt);
-DEFINE_COMMAND_ALT_PLUGIN(ProjectExtraCamera, ProjCam, 0, 6, kParams_TwoStrings_OneFloat_ThreeOptionalInts);
-DEFINE_COMMAND_PLUGIN(RenameNifBlock, 1, 3, kParams_TwoStrings_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(RemoveNifBlock, 1, 2, kParams_OneString_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(PlayAnimSequence, 1, 2, kParams_OneString_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(GetTranslatedPos, 1, 6, kParams_ThreeFloats_ThreeScriptVars);
-DEFINE_COMMAND_ALT_PLUGIN(GetNifBlockTranslationAlt, GetNifTransAlt, 1, 6, kParams_OneString_ThreeScriptVars_TwoOptionalInts);
-DEFINE_COMMAND_ALT_PLUGIN(GetNifBlockRotationAlt, GetNifRotAlt, 1, 6, kParams_OneString_ThreeScriptVars_TwoOptionalInts);
-DEFINE_COMMAND_ALT_PLUGIN(GetLinearVelocityAlt, GetLinVelAlt, 1, 5, kParams_OneString_ThreeScriptVars_OneOptionalInt);
-DEFINE_COMMAND_ALT_PLUGIN(GetAngularVelocityAlt, GetAngVelAlt, 1, 5, kParams_OneString_ThreeScriptVars_OneOptionalInt);
-DEFINE_COMMAND_ALT_PLUGIN(SetAngularVelocityEx, SetAngVelEx, 1, 5, kParams_OneString_ThreeFloats_OneOptionalInt);
-DEFINE_COMMAND_ALT_PLUGIN(GetCollisionObjProperty, GetCollProp, 1, 2, kParams_OneString_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(SetCollisionObjProperty, SetCollProp, 1, 3, kParams_OneString_OneInt_OneFloat);
-DEFINE_COMMAND_ALT_PLUGIN(GetCollisionObjLayerType, GetCollLayer, 1, 1, kParams_OneString);
-DEFINE_COMMAND_ALT_PLUGIN(SetCollisionObjLayerType, SetCollLayer, 1, 2, kParams_OneString_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(SetRefrModelPath, SetRefModel, 1, 1, kParams_OneOptionalString);
-DEFINE_COMMAND_PLUGIN(AttachLine, 1, 7, kParams_TwoStrings_FiveFloats);
-DEFINE_COMMAND_PLUGIN(ToggleNoZPosReset, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(RotateAroundPoint, 1, 7, kParams_SixFloats_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(ToggleNodeCollision, 1, 2, kParams_OneString_OneInt);
-DEFINE_COMMAND_PLUGIN(GetEditorPosition, 1, 6, kParams_ThreeScriptVars_ThreeOptionalScriptVars);
-DEFINE_COMMAND_PLUGIN(RefHasExtraData, 1, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN_EXP(GetRefExtraData, 1, 2, kParams_NVSE_OneNum_OneOptionalNum);
-DEFINE_COMMAND_PLUGIN_EXP(SetRefExtraData, 1, 2, kParams_NVSE_OneOptionalNum_OneOptionalBasicType);
-DEFINE_COMMAND_ALT_PLUGIN(TogglePurgeOnUnload, TPOU, 1, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetPersistent, 1, kParams_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(GetObjectDimensions, GetObjDim, 0, kParams_OneAxis_OneOptionalBoundObject);
+DEFINE_COMMAND_PLUGIN(GetIsItem, 0, kParams_OneOptionalObjectID);
+DEFINE_COMMAND_ALT_PLUGIN(SetLinkedReference, SetLinkedRef, 1, kParams_OneOptionalObjectRef);
+DEFINE_COMMAND_PLUGIN(GetEnableChildren, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(GetLinkedChildren, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(HasPrimitive, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(GetPrimitiveBound, 1, kParams_OneAxis);
+DEFINE_COMMAND_PLUGIN(SetPrimitiveBound, 1, kParams_OneAxis_OneFloat);
+DEFINE_COMMAND_PLUGIN(AddPrimitive, 1, kParams_OneInt_ThreeFloats);
+DEFINE_COMMAND_PLUGIN(GetTeammates, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(MoveToCell, 1, kParams_OneForm_ThreeFloats);
+DEFINE_COMMAND_PLUGIN(MoveToEditorPosition, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetCenterPos, 1, kParams_OneAxis);
+DEFINE_COMMAND_PLUGIN(GetRefType, 0, kParams_OneOptionalObjectRef);
+DEFINE_COMMAND_ALT_PLUGIN(ToggleObjectCollision, TOC, 1, kParams_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(GetMaterialPropertyValue, GetMatrPropVal, 1, kParams_OneString_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(SetMaterialPropertyValue, SetMatrPropVal, 1, kParams_OneString_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetHasContact, 1, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(GetHasContactBase, 1, kParams_OneForm);
+DEFINE_CMD_COND_PLUGIN(GetHasContactType, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetContactRefs, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(GetHasPhantom, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(GetInteractionDisabled, 0, kParams_OneOptionalBoundObject);
+DEFINE_COMMAND_PLUGIN(SetInteractionDisabled, 0, kParams_OneInt_OneOptionalBoundObject);
+DEFINE_COMMAND_PLUGIN(GetInteractionDisabledType, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(SetInteractionDisabledType, 0, kParams_TwoInts);
+DEFINE_COMMAND_PLUGIN(AddRefMapMarker, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(RemoveRefMapMarker, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(RefHasMapMarker, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(SetPosEx, 1, kParams_ThreeFloats_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(MoveToReticle, 1, kParams_FourOptionalFloats_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetRefName, 1, kParams_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(SetAngleEx, 1, kParams_ThreeFloats_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetTeleportDoor, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(SetOnCriticalHitEventHandler, 0, kParams_OneForm_OneInt_ThreeOptionalForms);
+DEFINE_COMMAND_PLUGIN(MoveToFadeDelay, 1, kParams_OneObjectRef_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetCrosshairWater, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(IsAnimPlayingEx, 1, kParams_OneInt_ThreeOptionalInts);
+DEFINE_COMMAND_PLUGIN(GetRigidBodyMass, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(PushObject, 1, kParams_FourFloats_OneOptionalObjectRef);
+DEFINE_COMMAND_PLUGIN(MoveToContainer, 1, kParams_OneObjectRef_OneOptionalInt);
+DEFINE_COMMAND_ALT_PLUGIN(GetNifBlockTranslation, GetNifTrans, 1, kParams_OneString_TwoOptionalInts);
+DEFINE_COMMAND_ALT_PLUGIN(SetNifBlockTranslation, SetNifTrans, 1, kParams_OneString_ThreeFloats_TwoOptionalInts);
+DEFINE_COMMAND_ALT_PLUGIN(GetNifBlockRotation, GetNifRot, 1, kParams_OneString_TwoOptionalInts);
+DEFINE_COMMAND_ALT_PLUGIN(SetNifBlockRotation, SetNifRot, 1, kParams_OneString_ThreeFloats_TwoOptionalInts);
+DEFINE_COMMAND_ALT_PLUGIN(GetNifBlockScale, GetNifScale, 1, kParams_OneString_OneOptionalInt);
+DEFINE_COMMAND_ALT_PLUGIN(SetNifBlockScale, SetNifScale, 1, kParams_OneString_OneFloat_OneOptionalInt);
+DEFINE_COMMAND_ALT_PLUGIN(GetNifBlockFlag, GetNifFlag, 1, kParams_OneString_OneInt_OneOptionalInt);
+DEFINE_COMMAND_ALT_PLUGIN(SetNifBlockFlag, SetNifFlag, 1, kParams_OneString_TwoInts_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetObjectVelocity, 1, kParams_OneOptionalAxis);
+DEFINE_COMMAND_ALT_PLUGIN(GetAngularVelocity, GetAngVel, 1, kParams_OneString_OneOptionalAxis);
+DEFINE_COMMAND_ALT_PLUGIN(SetAngularVelocity, SetAngVel, 1, kParams_OneString_OneAxis_OneFloat);
+DEFINE_COMMAND_PLUGIN(PlaceAtCell, 0, kParams_OneForm_OneInt_OneForm_ThreeFloats);
+DEFINE_COMMAND_PLUGIN(GetRayCastPos, 1, kParams_ThreeGlobals_OneOptFloat_OneOptInt_OneOptString_OneOptFloat);
+DEFINE_COMMAND_ALT_PLUGIN(GetAnimSequenceFrequency, GetAnimSeqFreq, 1, kParams_OneString);
+DEFINE_COMMAND_ALT_PLUGIN(SetAnimSequenceFrequency, SetAnimSeqFreq, 1, kParams_OneString_OneFloat);
+DEFINE_COMMAND_PLUGIN(MoveToNode, 1, kParams_OneObjectRef_OneString_ThreeOptionalFloats);
+DEFINE_COMMAND_PLUGIN(GetPlayerPerks, 0, nullptr);
+DEFINE_COMMAND_ALT_PLUGIN(GetNifBlockParentNodes, GetNifParents, 1, kParams_OneString_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetCrosshairRefEx, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(IsMobile, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(IsGrabbable, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(AttachLight, 1, kParams_OneString_OneForm_ThreeOptionalFloats);
+DEFINE_COMMAND_PLUGIN(RemoveLight, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(SetLinearVelocity, 1, kParams_OneString_ThreeFloats_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(InsertNode, 0, kParams_OneForm_OneInt_OneFormatString);
+DEFINE_COMMAND_PLUGIN(AttachModel, 0, kParams_OneForm_OneInt_OneFormatString);
+DEFINE_COMMAND_ALT_PLUGIN(SynchronizePosition, SyncPos, 0, kParams_OneOptionalObjectRef_OneOptionalInt_OneOptionalFloat_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(ModelHasBlock, 0, kParams_OneForm_OneFormatString);
+DEFINE_COMMAND_PLUGIN(GetRayCastRef, 1, kParams_OneOptionalInt_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(GetRayCastMaterial, 1, kParams_OneOptionalInt_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(GetCollisionNodes, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(GetChildBlocks, 1, kParams_OneOptionalString_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(GetBlockTextureSet, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(GetPosEx, 1, kParams_ThreeScriptVars);
+DEFINE_COMMAND_PLUGIN(GetAngleEx, 1, kParams_ThreeScriptVars_OneOptionalInt);
+DEFINE_COMMAND_ALT_PLUGIN(SetTextureTransformKey, SetTexTransKey, 1, kParams_OneString_TwoInts_OneFloat);
+DEFINE_COMMAND_ALT_PLUGIN(AttachExtraCamera, AttachCam, 1, kParams_OneString_OneInt_OneOptionalString_OneOptionalInt);
+DEFINE_COMMAND_ALT_PLUGIN(ProjectExtraCamera, ProjCam, 0, kParams_TwoStrings_OneFloat_ThreeOptionalInts);
+DEFINE_COMMAND_PLUGIN(RenameNifBlock, 1, kParams_TwoStrings_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(RemoveNifBlock, 1, kParams_OneString_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(PlayAnimSequence, 1, kParams_OneString_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(GetTranslatedPos, 1, kParams_ThreeFloats_ThreeScriptVars);
+DEFINE_COMMAND_ALT_PLUGIN(GetNifBlockTranslationAlt, GetNifTransAlt, 1, kParams_OneString_ThreeScriptVars_TwoOptionalInts);
+DEFINE_COMMAND_ALT_PLUGIN(GetNifBlockRotationAlt, GetNifRotAlt, 1, kParams_OneString_ThreeScriptVars_TwoOptionalInts);
+DEFINE_COMMAND_ALT_PLUGIN(GetLinearVelocityAlt, GetLinVelAlt, 1, kParams_OneString_ThreeScriptVars_OneOptionalInt);
+DEFINE_COMMAND_ALT_PLUGIN(GetAngularVelocityAlt, GetAngVelAlt, 1, kParams_OneString_ThreeScriptVars_OneOptionalInt);
+DEFINE_COMMAND_ALT_PLUGIN(SetAngularVelocityEx, SetAngVelEx, 1, kParams_OneString_ThreeFloats_OneOptionalInt);
+DEFINE_COMMAND_ALT_PLUGIN(GetCollisionObjProperty, GetCollProp, 1, kParams_OneString_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(SetCollisionObjProperty, SetCollProp, 1, kParams_OneString_OneInt_OneFloat);
+DEFINE_COMMAND_ALT_PLUGIN(GetCollisionObjLayerType, GetCollLayer, 1, kParams_OneString);
+DEFINE_COMMAND_ALT_PLUGIN(SetCollisionObjLayerType, SetCollLayer, 1, kParams_OneString_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(SetRefrModelPath, SetRefModel, 1, kParams_OneOptionalString);
+DEFINE_COMMAND_PLUGIN(AttachLine, 1, kParams_TwoStrings_FiveFloats);
+DEFINE_COMMAND_PLUGIN(ToggleNoZPosReset, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(RotateAroundPoint, 1, kParams_SixFloats_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(ToggleNodeCollision, 1, kParams_OneString_OneInt);
+DEFINE_COMMAND_PLUGIN(GetEditorPosition, 1, kParams_ThreeScriptVars_ThreeOptionalScriptVars);
+DEFINE_COMMAND_PLUGIN(RefHasExtraData, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN_EXP(GetRefExtraData, 1, kParams_NVSE_OneNum_OneOptionalNum);
+DEFINE_COMMAND_PLUGIN_EXP(SetRefExtraData, 1, kParams_NVSE_OneOptionalNum_OneOptionalBasicType);
+DEFINE_COMMAND_ALT_PLUGIN(TogglePurgeOnUnload, TPOU, 1, kParams_OneOptionalInt);
 
 bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 {
@@ -114,7 +114,6 @@ bool Cmd_SetPersistent_Execute(COMMAND_ARGS)
 
 bool Cmd_GetObjectDimensions_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char axis;
 	TESBoundObject *boundObj = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &axis, &boundObj)) return true;
@@ -137,7 +136,6 @@ bool Cmd_GetObjectDimensions_Execute(COMMAND_ARGS)
 
 bool Cmd_GetIsItem_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESForm *form = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form)) return true;
 	if (!form)
@@ -151,7 +149,6 @@ bool Cmd_GetIsItem_Execute(COMMAND_ARGS)
 
 bool Cmd_SetLinkedReference_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESObjectREFR *linkRef = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &linkRef) && thisObj->SetLinkedRef(linkRef, scriptObj->GetOverridingModIdx()))
 	{
@@ -163,7 +160,6 @@ bool Cmd_SetLinkedReference_Execute(COMMAND_ARGS)
 
 bool Cmd_GetEnableChildren_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	ExtraEnableStateChildren *xEnableChildren = GetExtraType(&thisObj->extraDataList, ExtraEnableStateChildren);
 	if (!xEnableChildren) return true;
 	TempElements *tmpElements = GetTempElements();
@@ -180,7 +176,6 @@ bool Cmd_GetEnableChildren_Execute(COMMAND_ARGS)
 
 bool Cmd_GetLinkedChildren_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	ExtraLinkedRefChildren *xLinkedChildren = GetExtraType(&thisObj->extraDataList, ExtraLinkedRefChildren);
 	if (!xLinkedChildren) return true;
 	TempElements *tmpElements = GetTempElements();
@@ -197,8 +192,8 @@ bool Cmd_GetLinkedChildren_Execute(COMMAND_ARGS)
 
 bool Cmd_HasPrimitive_Execute(COMMAND_ARGS)
 {
-	ExtraPrimitive *xPrimitive = GetExtraType(&thisObj->extraDataList, ExtraPrimitive);
-	*result = (xPrimitive && xPrimitive->primitive) ? 1 : 0;
+	if (auto xPrimitive = GetExtraType(&thisObj->extraDataList, ExtraPrimitive); xPrimitive && xPrimitive->primitive)
+		*result = 1;
 	return true;
 }
 
@@ -224,7 +219,7 @@ bool Cmd_SetPrimitiveBound_Execute(COMMAND_ARGS)
 			val *= 0.5F;
 			*result = xPrimitive->primitive->bounds[axis] * 2.0;
 			if (xPrimitive->primitive->type == 2)
-				xPrimitive->primitive->bounds = _mm_set_ps1(val);
+				xPrimitive->primitive->bounds = {val, val, val};
 			else xPrimitive->primitive->bounds[axis] = val;
 			thisObj->Update3D();
 		}
@@ -233,7 +228,6 @@ bool Cmd_SetPrimitiveBound_Execute(COMMAND_ARGS)
 
 bool Cmd_AddPrimitive_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 type;
 	NiVector3 bounds;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &type, &bounds.x, &bounds.y, &bounds.z) && (type >= 1) && (type <= 3) &&
@@ -268,7 +262,6 @@ bool Cmd_AddPrimitive_Execute(COMMAND_ARGS)
 
 bool Cmd_GetTeammates_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TempElements *tmpElements = GetTempElements();
 	auto iter = g_thePlayer->teammates.Head();
 	do
@@ -283,7 +276,6 @@ bool Cmd_GetTeammates_Execute(COMMAND_ARGS)
 
 bool Cmd_MoveToCell_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESObjectCELL *cell;
 	NiVector3 posVector;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &cell, &posVector.x, &posVector.y, &posVector.z))
@@ -302,7 +294,6 @@ bool Cmd_MoveToCell_Execute(COMMAND_ARGS)
 
 bool Cmd_MoveToEditorPosition_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 resetRot = 0;
 	if (NUM_ARGS_EX)
 		ExtractArgsEx(EXTRACT_ARGS_EX, &resetRot);
@@ -361,7 +352,6 @@ bool Cmd_GetCenterPos_Execute(COMMAND_ARGS)
 		}
 		*result = thisObj->position[axis] + (cntPos * thisObj->GetScale());
 	}
-	else *result = 0;
 	return true;
 }
 
@@ -373,7 +363,6 @@ bool Cmd_GetRefType_Execute(COMMAND_ARGS)
 		*result = objRefr->typeID;
 		DoConsolePrint(result);
 	}
-	else *result = 0;
 	return true;
 }
 
@@ -402,7 +391,6 @@ bool Cmd_ToggleObjectCollision_Execute(COMMAND_ARGS)
 
 bool Cmd_GetMaterialPropertyValue_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	UInt32 traitID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &traitID) && (traitID <= 8))
@@ -447,7 +435,7 @@ bool Cmd_SetMaterialPropertyValue_Execute(COMMAND_ARGS)
 	return true;
 }
 
-void __fastcall PopulateFormSet(TESForm *form, TempFormList *tmpFormLst)
+__declspec(noinline) void __fastcall PopulateFormSet(TESForm *form, TempFormList *tmpFormLst)
 {
 	if IS_ID(form, BGSListForm)
 	{
@@ -473,97 +461,99 @@ void __fastcall GetRefrContactObjects(TESObjectREFR *thisObj, ContactObjects &co
 		}
 }
 
-bool __stdcall GetHasContact(TESObjectREFR *thisObj, TESForm *form)
-{
-	TempFormList *tmpFormLst = GetTempFormList();
-	PopulateFormSet(form, tmpFormLst);
-	hkpWorldObject **bodies;
-	UInt32 count;
-	TESObjectREFR *refr;
-	if (IS_ACTOR(thisObj))
-	{
-		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
-		if (!charCtrl) return false;
-		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
-		{
-			refr = charCtrl->bodyUnderFeet->GetParentRef();
-			if (refr && tmpFormLst->HasKey(refr))
-				return true;
-		}
-		bodies = charCtrl->pointCollector.contactBodies.data;
-		count = charCtrl->pointCollector.contactBodies.size;
-	}
-	else
-	{
-		ContactObjects contactObjs;
-		GetRefrContactObjects(thisObj, contactObjs);
-		bodies = contactObjs.Data();
-		count = contactObjs.Size();
-	}
-	for (; count; count--, bodies++)
-	{
-		refr = (*bodies)->GetParentRef();
-		if (refr && tmpFormLst->HasKey(refr))
-			return true;
-	}
-	return false;
-}
-
 bool Cmd_GetHasContact_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
-		*result = GetHasContact(thisObj, form);
-	else *result = 0;
-	return true;
-}
-
-bool __stdcall GetHasContactBase(TESObjectREFR *thisObj, TESForm *form)
-{
-	TempFormList *tmpFormLst = GetTempFormList();
-	PopulateFormSet(form, tmpFormLst);
-	hkpWorldObject **bodies;
-	UInt32 count;
-	TESObjectREFR *refr;
-	if (IS_ACTOR(thisObj))
 	{
-		bhkCharacterController *charCtrl = thisObj->GetCharacterController();
-		if (!charCtrl) return false;
-		if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
+		TempFormList *tmpFormLst = GetTempFormList();
+		PopulateFormSet(form, tmpFormLst);
+		hkpWorldObject **bodies;
+		UInt32 count;
+		TESObjectREFR *refr;
+		if (IS_ACTOR(thisObj))
 		{
-			refr = charCtrl->bodyUnderFeet->GetParentRef();
-			if (refr && tmpFormLst->HasKey(refr->baseForm))
-				return true;
+			bhkCharacterController *charCtrl = thisObj->GetCharacterController();
+			if (!charCtrl) return true;
+			if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
+			{
+				refr = charCtrl->bodyUnderFeet->GetParentRef();
+				if (refr && tmpFormLst->HasKey(refr))
+				{
+					*result = 1;
+					return true;
+				}
+			}
+			bodies = charCtrl->pointCollector.contactBodies.data;
+			count = charCtrl->pointCollector.contactBodies.size;
 		}
-		bodies = charCtrl->pointCollector.contactBodies.data;
-		count = charCtrl->pointCollector.contactBodies.size;
+		else
+		{
+			ContactObjects contactObjs;
+			GetRefrContactObjects(thisObj, contactObjs);
+			bodies = contactObjs.Data();
+			count = contactObjs.Size();
+		}
+		for (; count; count--, bodies++)
+		{
+			refr = (*bodies)->GetParentRef();
+			if (refr && tmpFormLst->HasKey(refr))
+			{
+				*result = 1;
+				return true;
+			}
+		}
 	}
-	else
-	{
-		ContactObjects contactObjs;
-		GetRefrContactObjects(thisObj, contactObjs);
-		bodies = contactObjs.Data();
-		count = contactObjs.Size();
-	}
-	for (; count; count--, bodies++)
-	{
-		refr = (*bodies)->GetParentRef();
-		if (refr && tmpFormLst->HasKey(refr->baseForm))
-			return true;
-	}
-	return false;
+	return true;
 }
 
 bool Cmd_GetHasContactBase_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
-		*result = GetHasContactBase(thisObj, form);
-	else *result = 0;
+	{
+		TempFormList *tmpFormLst = GetTempFormList();
+		PopulateFormSet(form, tmpFormLst);
+		hkpWorldObject **bodies;
+		UInt32 count;
+		TESObjectREFR *refr;
+		if (IS_ACTOR(thisObj))
+		{
+			bhkCharacterController *charCtrl = thisObj->GetCharacterController();
+			if (!charCtrl) return true;
+			if (!charCtrl->byte608 && charCtrl->bodyUnderFeet)
+			{
+				refr = charCtrl->bodyUnderFeet->GetParentRef();
+				if (refr && tmpFormLst->HasKey(refr->baseForm))
+				{
+					*result = 1;
+					return true;
+				}
+			}
+			bodies = charCtrl->pointCollector.contactBodies.data;
+			count = charCtrl->pointCollector.contactBodies.size;
+		}
+		else
+		{
+			ContactObjects contactObjs;
+			GetRefrContactObjects(thisObj, contactObjs);
+			bodies = contactObjs.Data();
+			count = contactObjs.Size();
+		}
+		for (; count; count--, bodies++)
+		{
+			refr = (*bodies)->GetParentRef();
+			if (refr && tmpFormLst->HasKey(refr->baseForm))
+			{
+				*result = 1;
+				return true;
+			}
+		}
+	}
 	return true;
 }
 
-bool __stdcall GetHasContactType(TESObjectREFR *thisObj, UInt32 typeID)
+__declspec(noinline) bool __stdcall GetHasContactType(TESObjectREFR *thisObj, UInt32 typeID)
 {
 	hkpWorldObject **bodies;
 	UInt32 count;
@@ -600,21 +590,20 @@ bool __stdcall GetHasContactType(TESObjectREFR *thisObj, UInt32 typeID)
 bool Cmd_GetHasContactType_Execute(COMMAND_ARGS)
 {
 	UInt32 typeID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &typeID))
-		*result = GetHasContactType(thisObj, typeID);
-	else *result = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &typeID) && GetHasContactType(thisObj, typeID))
+		*result = 1;
 	return true;
 }
 
 bool Cmd_GetHasContactType_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = GetHasContactType(thisObj, (UInt32)arg1);
+	if (GetHasContactType(thisObj, (UInt32)arg1))
+		*result = 1;
 	return true;
 }
 
 bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TempElements *tmpElements = GetTempElements();
 	hkpWorldObject **bodies;
 	UInt32 count;
@@ -650,7 +639,6 @@ bool Cmd_GetContactRefs_Execute(COMMAND_ARGS)
 
 bool Cmd_GetHasPhantom_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	if (TESObjectREFR::RenderState *renderState = thisObj->renderState)
 		if (NiNode *niNode = renderState->rootNode; niNode &&
 			(IS_ACTOR(thisObj) || (renderState->phantom && IS_TYPE(renderState->phantom, bhkSimpleShapePhantom)) || niNode->HasPhantom()))
@@ -661,9 +649,8 @@ bool Cmd_GetHasPhantom_Execute(COMMAND_ARGS)
 bool Cmd_GetInteractionDisabled_Execute(COMMAND_ARGS)
 {
 	TESForm *form = nullptr;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (form || (form = thisObj)))
-		*result = (form->jipFormFlags6 & kHookFormFlag6_NoPCActivation) ? 1 : 0;
-	else *result = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (form || (form = thisObj)) && (form->jipFormFlags6 & kHookFormFlag6_NoPCActivation))
+		*result = 1;
 	return true;
 }
 
@@ -681,8 +668,7 @@ bool Cmd_SetInteractionDisabled_Execute(COMMAND_ARGS)
 	if (add == !(form->jipFormFlags6 & kHookFormFlag6_NoPCActivation))
 	{
 		form->SetJIPFlag(kHookFormFlag6_NoPCActivation, add);
-		HOOK_MOD(PCActivateRef, add);
-		HOOK_MOD(SetRolloverText, add);
+		HOOK_MOD(InteractionDisabled, add);
 	}
 	return true;
 }
@@ -690,9 +676,8 @@ bool Cmd_SetInteractionDisabled_Execute(COMMAND_ARGS)
 bool Cmd_GetInteractionDisabledType_Execute(COMMAND_ARGS)
 {
 	UInt32 typeID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &typeID) && (typeID < kFormType_Max) && kValidFilterForm[typeID])
-		*result = s_activationDisabledTypes[typeID] ? 1 : 0;
-	else *result = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &typeID) && (typeID < kFormType_Max) && kValidFilterForm[typeID] && s_activationDisabledTypes[typeID])
+		*result = 1;
 	return true;
 }
 
@@ -703,8 +688,7 @@ bool Cmd_SetInteractionDisabledType_Execute(COMMAND_ARGS)
 	{
 		bool add = (disable != 0);
 		s_activationDisabledTypes[typeID] = add;
-		HOOK_MOD(PCActivateRef, add);
-		HOOK_MOD(SetRolloverText, add);
+		HOOK_MOD(InteractionDisabled, add);
 	}
 	return true;
 }
@@ -742,7 +726,6 @@ bool Cmd_RefHasMapMarker_Execute(COMMAND_ARGS)
 			return true;
 		}
 	}
-	*result = 0;
 	return true;
 }
 
@@ -754,10 +737,7 @@ bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 		if (!transform)
 			thisObj->SetPos(posVector);
 		else if (transform == 1)
-		{
-			posVector = thisObj->GetTranslatedPos(posVector);
-			thisObj->SetPos(posVector);
-		}
+			thisObj->SetPos(posVector.SetPS(thisObj->GetTranslatedPos(posVector)));
 		else if (transform == 2)
 			thisObj->SetPos(posVector += thisObj->position.PS());
 	return true;
@@ -765,7 +745,6 @@ bool Cmd_SetPosEx_Execute(COMMAND_ARGS)
 
 bool Cmd_MoveToReticle_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	float maxRange = 50000.0F;
 	NiVector4 posMods(_mm_setzero_ps());
 	UInt32 translate = 0;
@@ -824,7 +803,7 @@ bool Cmd_GetAngleEx_Execute(COMMAND_ARGS)
 				angles = rootNode->WorldRotate().ToEulerPRYInv();
 			else
 			{
-				NiMatrix33 rotMat = thisObj->rotation;
+				NiMatrix33 rotMat(thisObj->rotation);
 				angles = rotMat.ToEulerPRYInv();
 			}
 		}
@@ -868,7 +847,6 @@ bool Cmd_SetAngleEx_Execute(COMMAND_ARGS)
 
 bool Cmd_GetTeleportDoor_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	if (thisObj->baseForm && IS_ID(thisObj->baseForm, TESObjectDOOR))
 		if (ExtraTeleport *xTeleport = GetExtraType(&thisObj->extraDataList, ExtraTeleport); xTeleport && xTeleport->data && xTeleport->data->linkedDoor)
 			REFR_RES = xTeleport->data->linkedDoor->refID;
@@ -930,7 +908,6 @@ bool Cmd_MoveToFadeDelay_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCrosshairWater_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESWaterForm *water = nullptr;
 	TESObjectREFR *refr = g_interfaceManager->crosshairRef;
 	if (refr && IS_ID(refr->baseForm, BGSPlaceableWater))
@@ -942,7 +919,6 @@ bool Cmd_GetCrosshairWater_Execute(COMMAND_ARGS)
 
 bool Cmd_IsAnimPlayingEx_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 category, subType = 0, flags = 0, pcPOV = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &category, &subType, &flags, &pcPOV))
 	{
@@ -975,7 +951,6 @@ bool Cmd_IsAnimPlayingEx_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRigidBodyMass_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	if (NOT_ACTOR(thisObj))
 		if (NiNode *niNode = thisObj->GetRefNiNode())
 			*result = niNode->GetBodyMass(0);
@@ -1053,7 +1028,6 @@ __declspec(naked) NiAVObject* __fastcall GetNifBlock(TESObjectREFR *thisObj, UIn
 
 bool Cmd_GetNifBlockTranslation_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	UInt32 getWorld = 0, pcNode = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &getWorld, &pcNode))
@@ -1095,7 +1069,6 @@ bool Cmd_SetNifBlockTranslation_Execute(COMMAND_ARGS)
 
 bool Cmd_GetNifBlockRotation_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	UInt32 getMode = 0, pcNode = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &getMode, &pcNode))
@@ -1162,7 +1135,6 @@ bool Cmd_SetNifBlockRotation_Execute(COMMAND_ARGS)
 
 bool Cmd_GetNifBlockScale_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	UInt32 pcNode = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &pcNode))
@@ -1189,12 +1161,11 @@ bool Cmd_SetNifBlockScale_Execute(COMMAND_ARGS)
 
 bool Cmd_GetNifBlockFlag_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	UInt32 flagID, pcNode = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &flagID, &pcNode) && (flagID <= 31))
-		if (NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName))
-			*result = (niBlock->m_flags & (1 << flagID)) != 0;
+		if (NiAVObject *niBlock = GetNifBlock(thisObj, pcNode, blockName); niBlock && (niBlock->m_flags & (1 << flagID)))
+			*result = 1;
 	return true;
 }
 
@@ -1213,7 +1184,6 @@ bool Cmd_SetNifBlockFlag_Execute(COMMAND_ARGS)
 
 bool Cmd_GetObjectVelocity_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char axis = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &axis))
 		if (hkpRigidBody *rigidBody = thisObj->GetRigidBody(""); rigidBody && rigidBody->IsMobile())
@@ -1226,7 +1196,6 @@ bool Cmd_GetObjectVelocity_Execute(COMMAND_ARGS)
 
 bool Cmd_GetAngularVelocity_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	char axis = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &axis))
@@ -1288,7 +1257,6 @@ bool Cmd_SetAngularVelocity_Execute(COMMAND_ARGS)
 
 bool Cmd_PlaceAtCell_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESForm *form;
 	UInt32 count;
 	TESObjectCELL *worldOrCell;
@@ -1310,7 +1278,6 @@ bool Cmd_PlaceAtCell_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRayCastPos_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESGlobal *outX, *outY, *outZ;
 	float posZmod, maxRange = 50000.0F;
 	SInt32 layerType = 6;
@@ -1361,7 +1328,6 @@ bool Cmd_SetAnimSequenceFrequency_Execute(COMMAND_ARGS)
 
 bool Cmd_MoveToNode_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESObjectREFR *targetRef;
 	char nodeName[0x40];
 	NiVector4 posMods(_mm_setzero_ps());
@@ -1384,7 +1350,6 @@ bool Cmd_GetPlayerPerks_Execute(COMMAND_ARGS)
 
 bool Cmd_GetNifBlockParentNodes_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	UInt32 pcNode = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &pcNode))
@@ -1442,7 +1407,6 @@ __declspec(naked) TESObjectREFR *GetCrosshairRef()
 
 bool Cmd_GetCrosshairRefEx_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESObjectREFR *resRefr = g_interfaceManager->crosshairRef;
 	if (!resRefr)
 	{
@@ -1458,19 +1422,20 @@ bool Cmd_GetCrosshairRefEx_Execute(COMMAND_ARGS)
 
 bool Cmd_IsMobile_Execute(COMMAND_ARGS)
 {
-	*result = thisObj->IsMobile();
+	if (thisObj->IsMobile())
+		*result = 1;
 	return true;
 }
 
 bool Cmd_IsGrabbable_Execute(COMMAND_ARGS)
 {
-	*result = thisObj->IsGrabbable();
+	if (thisObj->IsGrabbable())
+		*result = 1;
 	return true;
 }
 
 bool Cmd_AttachLight_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char nodeName[0x40];
 	TESObjectLIGH *lightForm;
 	NiVector4 offsetMod(_mm_setzero_ps());
@@ -1505,7 +1470,6 @@ bool Cmd_RemoveLight_Execute(COMMAND_ARGS)
 
 bool Cmd_SetLinearVelocity_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	NiVector4 velocity(_mm_setzero_ps());
 	UInt32 flags = 0;	//	1 - set local; 2 - add value
@@ -1636,13 +1600,15 @@ bool __fastcall RegisterInsertObject(char *inData)
 
 bool Cmd_InsertNode_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char *dataStr = Pool_CAlloc(0x100);
 	if (ExtractFormatStringArgs(2, dataStr + 8, EXTRACT_ARGS_EX, kCommandInfo_InsertNode.numParams, dataStr, dataStr + 4))
 	{
 		((UInt8*)dataStr)[5] = kHookFormFlag6_InsertNode;
 		if (!(dataStr[4] & 2) || IsInMainThread())
-			*result = RegisterInsertObject(dataStr);
+		{
+			if (RegisterInsertObject(dataStr))
+				*result = 1;
+		}
 		else MainLoopAddCallback(RegisterInsertObject, dataStr);
 	}
 	else Pool_CFree(dataStr, 0x100);
@@ -1651,13 +1617,15 @@ bool Cmd_InsertNode_Execute(COMMAND_ARGS)
 
 bool Cmd_AttachModel_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char *dataStr = Pool_CAlloc(0x100);
 	if (ExtractFormatStringArgs(2, dataStr + 8, EXTRACT_ARGS_EX, kCommandInfo_AttachModel.numParams, dataStr, dataStr + 4))
 	{
 		((UInt8*)dataStr)[5] = kHookFormFlag6_AttachModel;
 		if (!(dataStr[4] & 2) || IsInMainThread())
-			*result = RegisterInsertObject(dataStr);
+		{
+			if (RegisterInsertObject(dataStr))
+				*result = 1;
+		}
 		else MainLoopAddCallback(RegisterInsertObject, dataStr);
 	}
 	else Pool_CFree(dataStr, 0x100);
@@ -1682,7 +1650,7 @@ bool Cmd_SynchronizePosition_Execute(COMMAND_ARGS)
 				if (cell) g_thePlayer->MoveToCell(cell, targetRef->position);
 			}
 			s_syncPositionFlags = (syncRot != 0);
-			s_syncPositionPos = targetRef->position.PS3();
+			s_syncPositionPos.SetPS(targetRef->position.PS3());
 			s_syncPositionNode() = nodeName;
 			s_syncPositionRef = targetRef;
 		}
@@ -1738,7 +1706,6 @@ bool Cmd_ModelHasBlock_Execute(COMMAND_ARGS)
 		}
 	}
 Retn0:
-	*result = 0;
 	return true;
 Retn1:
 	*result = 1;
@@ -1747,7 +1714,6 @@ Retn1:
 
 bool Cmd_GetRayCastRef_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	SInt32 layerType = 6;
 	char nodeName[0x40];
 	nodeName[0] = 0;
@@ -1783,7 +1749,6 @@ void GetCollisionNodes(NiNode *node, TempElements *tmpElements)
 
 bool Cmd_GetCollisionNodes_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	if (NiNode *rootNode = thisObj->GetRefNiNode())
 	{
 		TempElements *tmpElements = GetTempElements();
@@ -1806,7 +1771,6 @@ void GetChildBlocks(NiNode *node, TempElements *tmpElements)
 
 bool Cmd_GetChildBlocks_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	blockName[0] = 0;
 	UInt32 pcNode = 0, noRecourse = 0;
@@ -1829,7 +1793,6 @@ bool Cmd_GetChildBlocks_Execute(COMMAND_ARGS)
 
 bool Cmd_GetBlockTextureSet_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName))
 		if (NiAVObject *block = thisObj->GetNiBlock(blockName); block && IS_GEOMETRY(block))
@@ -1914,7 +1877,6 @@ bool Cmd_SetTextureTransformKey_Execute(COMMAND_ARGS)
 
 bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char camName[0x40], nodeName[0x40];
 	UInt32 doAttach;
 	nodeName[0] = 0;
@@ -1956,7 +1918,6 @@ bool Cmd_AttachExtraCamera_Execute(COMMAND_ARGS)
 
 bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char camName[0x40], blockName[0x80];
 	float fov;
 	UInt32 pixelSize = 0x100, flags = 0/*Bit0: Grayscale; Bit1: Run actor culler*/;
@@ -2000,7 +1961,6 @@ bool Cmd_ProjectExtraCamera_Execute(COMMAND_ARGS)
 
 bool Cmd_RenameNifBlock_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40], newName[0x40];
 	UInt32 pcNode = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &newName, &pcNode))
@@ -2014,7 +1974,6 @@ bool Cmd_RenameNifBlock_Execute(COMMAND_ARGS)
 
 bool Cmd_RemoveNifBlock_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	UInt32 pcNode = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &pcNode))
@@ -2028,7 +1987,6 @@ bool Cmd_RemoveNifBlock_Execute(COMMAND_ARGS)
 
 bool Cmd_PlayAnimSequence_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char sequenceName[0x60], nodeName[0x40];
 	nodeName[0] = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &sequenceName, &nodeName))
@@ -2058,13 +2016,11 @@ bool Cmd_GetTranslatedPos_Execute(COMMAND_ARGS)
 		outPos.Set(thisObj->GetTranslatedPos(posMods));
 		*result = 1;
 	}
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_GetNifBlockTranslationAlt_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	ResultVars outPos;
 	UInt32 getWorld = 0, pcNode = 0;
@@ -2079,7 +2035,6 @@ bool Cmd_GetNifBlockTranslationAlt_Execute(COMMAND_ARGS)
 
 bool Cmd_GetNifBlockRotationAlt_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	ResultVars outRot;
 	UInt32 getMode = 0, pcNode = 0;
@@ -2096,7 +2051,6 @@ bool Cmd_GetNifBlockRotationAlt_Execute(COMMAND_ARGS)
 
 bool Cmd_GetLinearVelocityAlt_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	ResultVars outVel;
 	UInt32 getLocal = 0;
@@ -2114,7 +2068,6 @@ bool Cmd_GetLinearVelocityAlt_Execute(COMMAND_ARGS)
 
 bool Cmd_GetAngularVelocityAlt_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	ResultVars outVel;
 	UInt32 getGlobal = 0;
@@ -2132,7 +2085,6 @@ bool Cmd_GetAngularVelocityAlt_Execute(COMMAND_ARGS)
 
 bool Cmd_SetAngularVelocityEx_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	NiVector4 velocity(_mm_setzero_ps());
 	UInt32 flags = 0;	//	1 - set global; 2 - add value
@@ -2147,7 +2099,6 @@ bool Cmd_SetAngularVelocityEx_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCollisionObjProperty_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char blockName[0x40];
 	UInt32 propID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &blockName, &propID) && (propID <= 8))
@@ -2212,7 +2163,6 @@ bool Cmd_SetCollisionObjProperty_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCollisionObjLayerType_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char nodeName[0x40];
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &nodeName))
 		if (NiNode *targetNode = thisObj->GetNode2(nodeName); targetNode && targetNode->m_collisionObject)
@@ -2268,7 +2218,6 @@ bool Cmd_SetRefrModelPath_Execute(COMMAND_ARGS)
 
 bool Cmd_AttachLine_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char nodeName[0x40], lineName[0x40];
 	float length;
 	NiColorAlpha color;
@@ -2330,7 +2279,6 @@ bool Cmd_ToggleNodeCollision_Execute(COMMAND_ARGS)
 
 bool Cmd_GetEditorPosition_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	ResultVars outPos, outRot;
 	UInt8 numArgs = NUM_ARGS;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &outPos.x, &outPos.y, &outPos.z, &outRot.x, &outRot.y, &outRot.z))
@@ -2377,7 +2325,6 @@ ExtraJIPData* __fastcall GetExtraJIPData(TESObjectREFR *thisObj, UInt32 modIdx)
 
 bool Cmd_RefHasExtraData_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 modIdx = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &modIdx))
 	{
@@ -2395,7 +2342,6 @@ bool Cmd_RefHasExtraData_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRefExtraData_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	double fVarIdx, fModIdx = 0;
 	if (PluginExpressionEvaluator eval(PASS_COMMAND_ARGS); eval.ExtractArgsVA(nullptr, &fVarIdx, &fModIdx))
 	{

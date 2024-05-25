@@ -669,7 +669,7 @@ __declspec(naked) void __fastcall SetContainerItemsHealthHook(TESContainer *cont
 		retn	4
 		ALIGN 4
 	kMaxHealth:
-		EMIT_DW(3F, 7F, BE, 77)
+		EMIT_DW(0x3F7FBE77)
 	}
 }
 
@@ -773,7 +773,7 @@ __declspec(naked) float MaxMessageWidthHook()
 		retn	4
 		ALIGN 4
 	kMaxWidth:
-		EMIT_DW(44, 96, 00, 00)
+		EMIT_DW(0x44960000)
 	}
 }
 
@@ -1351,7 +1351,7 @@ __declspec(naked) void SetScaleHook()
 		JMP_EAX(0x567554)
 		ALIGN 4
 	kMinScale:
-		EMIT_DW(38, D1, B7, 17)
+		EMIT_DW(0x38D1B717)
 	}
 }
 
@@ -1592,7 +1592,7 @@ __declspec(naked) float __cdecl GetConditionDamagePenaltyHook(float healthPercen
 		retn
 		ALIGN 4
 	kPenaltyThreshold:
-		EMIT_DW(3F, 40, 00, 00)
+		EMIT_DW(0x3F400000)
 	}
 }
 
@@ -1788,10 +1788,10 @@ __declspec(naked) TESModelTextureSwap *TESObjectWEAP::GetWeaponModel(UInt32 modF
 		retn	8
 		ALIGN 16
 	kModelByMod:
-		EMIT_DW_1(3C) EMIT_DW_2(02, 70) EMIT_DW_2(02, 90) EMIT_DW_2(02, D0)
-		EMIT_DW_2(02, B0) EMIT_DW_2(02, F0) EMIT_DW_2(03, 10) EMIT_DW_2(03, 30)
-		EMIT_DW_2(02, 50) EMIT_DW_2(02, 54) EMIT_DW_2(02, 58) EMIT_DW_2(02, 60)
-		EMIT_DW_2(02, 5C) EMIT_DW_2(02, 68) EMIT_DW_2(02, 64) EMIT_DW_2(02, 6C)
+		EMIT_DW_4(0x0000003C, 0x00000270, 0x00000290, 0x000002D0)
+		EMIT_DW_4(0x000002B0, 0x000002F0, 0x00000310, 0x00000330)
+		EMIT_DW_4(0x00000250, 0x00000254, 0x00000258, 0x00000260)
+		EMIT_DW_4(0x0000025C, 0x00000268, 0x00000264, 0x0000026C)
 	}
 }
 
@@ -2204,7 +2204,7 @@ __declspec(naked) Actor* __fastcall GetNearestLivingAlly(Actor *actor)
 		retn
 		ALIGN 4
 	kMaxDist:
-		EMIT_DW(44, 80, 00, 00)
+		EMIT_DW(0x44800000)
 	}
 }
 
@@ -2510,7 +2510,7 @@ __declspec(naked) float __vectorcall GetFrequencyModifier(TESSound *soundForm)
 		retn
 		ALIGN 4
 	kFreqMult:
-		EMIT_DW(3C, 23, D7, 0A) EMIT_DW(3B, A3, D7, 0A)
+		EMIT_DW(0x3C23D70A) EMIT_DW(0x3BA3D70A)
 	}
 }
 
@@ -2600,7 +2600,7 @@ __declspec(naked) UInt32 __fastcall AdjustSoundFrequencyHook(BSGameSound *gameSo
 		retn	4
 		ALIGN 4
 	kFlt200K:
-		EMIT_DW(48, 43, 50, 00)
+		EMIT_DW(0x48435000)
 	}
 }
 
@@ -2690,12 +2690,10 @@ __declspec(naked) void __fastcall MarkRefAsModifiedHook(TESObjectREFR *refr, int
 	}
 }
 
-bool s_FO3WpnDegradation = false;
+PatchInstallState s_patchInstallState;
 
 __declspec(naked) float __cdecl GetDamageToWeaponHook(Actor *actor)
 {
-	static const char kSkillMatcher[] = {3, 1, 3, -1, -1, 2, -1, -1, 0, -1, -1, -1, 2};
-	static const float kDegrMults[] = {0.15F, 0.2F, 0.25F, 0.3F};
 	__asm
 	{
 		mov		eax, [esp+4]
@@ -2713,7 +2711,7 @@ __declspec(naked) float __cdecl GetDamageToWeaponHook(Actor *actor)
 		test	byte ptr [ecx+0x12C], 0x80
 		cmovnz	edx, eax
 		movss	xmm0, [edx]
-		cmp		s_FO3WpnDegradation, 0
+		cmp		s_patchInstallState.FO3WpnDegrade, 0
 		jz		skipFO3
 		xor		edx, edx
 		mov		dl, [ecx+0x15C]
@@ -2721,7 +2719,7 @@ __declspec(naked) float __cdecl GetDamageToWeaponHook(Actor *actor)
 		js		skipFO3
 		cmp		dl, 0xC
 		ja		skipFO3
-		mov		dl, kSkillMatcher[edx]
+		mov		dl, byte ptr kSkillMatcher[edx]
 		test	dl, dl
 		js		skipFO3
 		mulss	xmm0, kDegrMults[edx*4]
@@ -2758,6 +2756,12 @@ __declspec(naked) float __cdecl GetDamageToWeaponHook(Actor *actor)
 	noWeapon:
 		fld		dword ptr [edx]
 		retn
+		ALIGN 8
+	kSkillMatcher:
+		EMIT_B_8(3, 1, 3, -1, -1, 2, -1, -1)
+		EMIT_B_8(0, -1, -1, -1, 2, 0, 0, 0)
+	kDegrMults:
+		EMIT_DW_4(0x3E19999A, 0x3E4CCCCD, 0x3E800000, 0x3E99999A)
 	}
 }
 
@@ -3514,12 +3518,12 @@ __declspec(naked) void DoOnLoadActorHook()
 		jnz		done
 		cmp		dword ptr [ecx+0x108], 0
 		jnz		done
-		cmp		s_NPCPerks, 0
+		cmp		s_patchInstallState.NPCPerks, 0
 		jz		donePerks
 		call	InitNPCPerks
 		mov		ecx, [ebp+8]
 	donePerks:
-		cmp		s_NPCWeaponMods, 0
+		cmp		s_patchInstallState.NPCWeaponMods, 0
 		jz		done
 		test	byte ptr [ecx+0x143], 0x10
 		jnz		done
@@ -3554,10 +3558,9 @@ __declspec(naked) void ResetActorFlagsRespawnHook()
 	}
 }
 
-bool s_localizedDTDR = false;
 UInt32 s_doCalcDamage = 0;
 
-float s_VATSHitLocDT = 0;
+float s_VATSHitDT = -FLT_MAX;
 
 void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBlock)
 {
@@ -3598,14 +3601,14 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBloc
 			flagPCTM = 1;
 		else if (source->isTeammate)
 			flagPCTM = 2;
-		else if (s_NPCPerks)
+		else if (s_patchInstallState.NPCPerks)
 			flagPCTM = 4;
 	}
 	if (target->IsPlayer())
 		flagPCTM |= 8;
 	else if (target->isTeammate)
 		flagPCTM |= 0x10;
-	else if (s_NPCPerks)
+	else if (s_patchInstallState.NPCPerks)
 		flagPCTM |= 0x20;
 	float dmgResist, dmgThreshold, cpyThreshold, hitLocDT = 0, hitLocDR = 0, valueMod;
 	if (hitWeapon && (hitWeapon->weaponFlags1 & 1))
@@ -3616,7 +3619,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBloc
 	}
 	else
 	{
-		if (Character *character = (Character*)target; s_localizedDTDR && NOT_ID(character, Creature) &&
+		if (Character *character = (Character*)target; s_patchInstallState.localizedDTDR && NOT_ID(character, Creature) &&
 			(hitData->hitLocation >= 0) && (hitData->hitLocation <= 12) && character->bipedAnims)
 		{
 			if (TESObjectARMO *armor = character->bipedAnims->slotData[2].armor; armor && IS_TYPE(armor, TESObjectARMO))
@@ -3642,7 +3645,6 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBloc
 				hitLocDR = GetMax(ThisCall<float>(0x8D22B0, character) - hitLocDR, 0.0F);
 			}
 		}
-		s_VATSHitLocDT = hitLocDT;
 		valueMod = 1.0F;
 		if (flagPCTM & 0x10)
 			valueMod += g_thePlayer->avOwner.GetThresholdedAV(kAVCode_Charisma) * 0.05F;
@@ -3717,6 +3719,7 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBloc
 		ApplyPerkModifiers(kPerkEntry_ModifyDamageThresholdAttacker, source, hitWeapon, target, &valueMod);
 		dmgThreshold -= valueMod;
 	}
+	s_VATSHitDT = dmgThreshold;
 	bool flagArg;
 	if (dmgThreshold > 0)
 	{
@@ -3842,10 +3845,11 @@ __declspec(naked) void InitProjectileSetAmmoHook()
 		jz		foundMod
 		add		ecx, 4
 		cmp		[ecx], eax
+		jnz		restoreProj
 	foundMod:
-		jnz		noSplBeam
 		cvttss2si	eax, [ecx+0xC]
 		add		edx, eax
+	restoreProj:
 		mov		eax, [ebp-0x28]
 	noSplBeam:
 		mov		[eax+0x14A], dl
@@ -3870,6 +3874,8 @@ __declspec(naked) void RunAmmoImpactScriptHook()
 		mov		eax, [ecx+0x60]
 		test	eax, eax
 		jz		done
+		cmp		dword ptr [eax], kVtbl_TESAmmo
+		jnz		done
 		mov		ecx, [eax+0xA0]
 		test	ecx, ecx
 		jz		done
@@ -3911,62 +3917,16 @@ __declspec(naked) float __cdecl GetVATSTargetDTHook(PlayerCharacter *thePlayer, 
 {
 	__asm
 	{
-		push	ebp
-		mov		ebp, esp
-		push	0
-		push	esi
-		mov		esi, ds:0x11D98D4
-		test	esi, esi
-		cmovz	esi, g_fistsWeapon
-		push	kAVCode_DamageThreshold
-		mov		ecx, [ebp+0xC]
-		add		ecx, 0xA4
-		mov		eax, [ecx]
-		call	dword ptr [eax+0xC]
-		fsub	s_VATSHitLocDT
-		lea		eax, [ebp-4]
-		push	eax
-		push	dword ptr [ebp+0xC]
-		push	esi
-		push	dword ptr [ebp+8]
-		push	kPerkEntry_ModifyDamageThresholdAttacker
-		CALL_EAX(ADDR_ApplyPerkModifiers)
-		add		esp, 0x10
-		fsub	dword ptr [ebp-4]
-		and		dword ptr [ebp-4], 0
-		push	esi
-		push	dword ptr [ebp+8]
-		push	dword ptr [ebp+0xC]
-		push	kPerkEntry_ModifyDamageThresholdDefender
-		CALL_EAX(ADDR_ApplyPerkModifiers)
-		add		esp, 0x14
-		fadd	dword ptr [ebp-4]
-		cmp		dword ptr [esi+0xA8], 0
-		jz		done
-		mov		ecx, [ebp+8]
-		mov		ecx, [ecx+0x68]
-		mov		ecx, [ecx+0x118]
-		test	ecx, ecx
-		jz		done
-		mov		ecx, [ecx+8]
-		test	ecx, ecx
-		jz		done
-		add		ecx, 0xD4
-		cmp		dword ptr [ecx], 0
-		jz		done
-		push	ecx
-		fstp	dword ptr [esp]
-		push	ecx
-		push	kAmmoEffect_DTMod
-		CALL_EAX(ADDR_ApplyAmmoEffects)
-		add		esp, 0xC
-		fldz
-		fucomi	st, st(1)
-		fcmovb	st, st(1)
-		fstp	st(1)
-	done:
-		pop		esi
-		leave
+		mov		eax, s_VATSHitDT
+		cmp		eax, 0xFF7FFFFF
+		jnz		skipCall
+		JMP_EAX(0x7700F0)
+	skipCall:
+		xor		edx, edx
+		test	eax, eax
+		cmovs	eax, edx
+		mov		[esp+4], eax
+		fld		dword ptr [esp+4]
 		retn
 	}
 }
@@ -4418,13 +4378,12 @@ __declspec(naked) void InitControllerShapeHook()
 		retn
 		ALIGN 4
 	kFltSix:
-		EMIT_DW(40, C0, 00, 00)
+		EMIT_DW(0x40C00000)
 	}
 }
 
 __declspec(naked) bool __fastcall SneakBoundingBoxFixHook(PlayerCharacter *thePlayer)
 {
-	static bool playerIsSneaking = false;
 	__asm
 	{
 		mov		eax, [ecx+0x190]
@@ -4434,12 +4393,13 @@ __declspec(naked) bool __fastcall SneakBoundingBoxFixHook(PlayerCharacter *thePl
 		and		eax, 0xC00
 		cmp		eax, 0x400
 		setz	al
-		cmp		playerIsSneaking, al
+		lea		edx, [ecx+0xD57]
+		cmp		[edx], al
 		jz		done
 		mov		ecx, s_pcControllerShape
 		test	ecx, ecx
 		jz		done
-		mov		playerIsSneaking, al
+		mov		[edx], al
 		mov		ecx, [ecx+8]
 		mov		ecx, [ecx+0x40]
 		movzx	edx, al
@@ -4510,11 +4470,10 @@ bool s_forceHCNeedsUpdate = false;
 
 __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlobals, int, float secPassed)
 {
-	static const double kMults[] = {24.0, 1 / 3600.0, 0.05, -0.05};
 	alignas(16) static double hourAndDays[] = {0, 0};
 	__asm
 	{
-		movq	xmm4, kMults
+		movq	xmm4, qword ptr kMults
 		cvtss2sd	xmm2, [esp+4]
 		mov		eax, [ecx+0x14]
 		cvtss2sd	xmm0, [eax+0x24]
@@ -4607,17 +4566,19 @@ __declspec(naked) void __fastcall UpdateTimeGlobalsHook(GameTimeGlobals *timeGlo
 		unpcklpd	xmm0, xmm1
 		movaps	hourAndDays, xmm0
 		retn	4
+		ALIGN 8
+	kMults:
+		EMIT_DW_4(0x00000000, 0x40380000, 0x789ABCDF, 0x3F323456)
+		EMIT_DW_4(0x9999999A, 0x3FA99999, 0x9999999A, 0xBFA99999)
 	}
 }
-
-bool s_hardcoreNeedsFix = false;
 
 __declspec(naked) bool __fastcall ModHardcoreNeedsHook(PlayerCharacter *thePlayer, int, UInt32 flag)
 {
 	__asm
 	{
 		lea		eax, [ecx+0x5D4]
-		cmp		s_hardcoreNeedsFix, 0
+		cmp		s_patchInstallState.hardcoreNeedsFix, 0
 		jz		tracking
 		add		ecx, 0x49C
 		movups	xmm0, [eax]
@@ -4646,21 +4607,53 @@ __declspec(naked) bool __fastcall ModHardcoreNeedsHook(PlayerCharacter *thePlaye
 #define OPERATOR_CMP_FLT(cmpr) __asm xor edx, edx __asm comisd xmm0, xmm1 __asm set##cmpr dl OPERATOR_RES_EDX
 #define OPERATOR_CMP_INT(cmpr) __asm xor edx, edx __asm cmp eax, ecx __asm set##cmpr dl OPERATOR_RES_EDX
 
-__declspec(naked) void DoOperator()
+__declspec(naked) void DoOperatorHook()
 {
 	__asm
 	{
+		push	0x5948BB
+		mov		[ebp-0x10], 0
+		movzx	eax, byte ptr [ebp-0x40]
+		shl		al, 1
+		or		al, byte ptr [ebp-0x28]
+		lea		ecx, kDoOperatorJumpTable[edx*8]
+		cmp		edx, 1
+		mov		edx, ecx
+		jbe		doJump
+		jmp		kConvertJumpTable[eax*4]
+		ALIGN 16
+//	Both int
+		mov		eax, [ebp-0x20]
+		mov		ecx, [ebp-0x38]
+		jmp		dword ptr [edx+4]
+		ALIGN 16
+//	rvalue int
+		movq	xmm0, qword ptr [ebp-0x20]
+		cvtsi2sd	xmm1, [ebp-0x38]
+		jmp		dword ptr [edx]
+		ALIGN 16
+//	lvalue int
+		cvtsi2sd	xmm0, [ebp-0x20]
+		movq	xmm1, qword ptr [ebp-0x38]
+		jmp		dword ptr [edx]
+		ALIGN 16
+//	Both float
+		movq	xmm0, qword ptr [ebp-0x20]
+		movq	xmm1, qword ptr [ebp-0x38]
+	doJump:
+		jmp		dword ptr [edx]
+		ALIGN 16
 //	Operator &&
 		xor		edx, edx
 		mov		ecx, [ebp-0x20]
-		test	al, al
+		test	al, 1
 		jz		lIntAND
 		or		ecx, [ebp-0x1C]
 	lIntAND:
 		test	ecx, ecx
 		jz		doneAND
 		mov		ecx, [ebp-0x38]
-		test	ah, ah
+		test	al, 2
 		jz		rIntAND
 		or		ecx, [ebp-0x34]
 	rIntAND:
@@ -4671,14 +4664,14 @@ __declspec(naked) void DoOperator()
 //	Operator ||
 		xor		edx, edx
 		mov		ecx, [ebp-0x20]
-		test	al, al
+		test	al, 1
 		jz		lIntOR
 		or		ecx, [ebp-0x1C]
 	lIntOR:
 		test	ecx, ecx
 		jnz		doneOR
 		mov		ecx, [ebp-0x38]
-		test	ah, ah
+		test	al, 2
 		jz		rIntOR
 		or		ecx, [ebp-0x34]
 	rIntOR:
@@ -4759,59 +4752,17 @@ __declspec(naked) void DoOperator()
 		idiv	ecx
 	mod0Int:
 		OPERATOR_RES_EDX
-	}
-}
-
-__declspec(naked) void DoOperatorHook()
-{
-	static const UInt32 kDoOperatorJumpTable[] =
-	{
-		(UInt32)DoOperator, (UInt32)DoOperator, (UInt32)DoOperator + 0x30, (UInt32)DoOperator + 0x30,
-		(UInt32)DoOperator + 0x60, (UInt32)DoOperator + 0x70, (UInt32)DoOperator + 0x80, (UInt32)DoOperator + 0x90,
-		(UInt32)DoOperator + 0xA0, (UInt32)DoOperator + 0xB0, (UInt32)DoOperator + 0xC0, (UInt32)DoOperator + 0xD0,
-		(UInt32)DoOperator + 0xE0, (UInt32)DoOperator + 0xF0, (UInt32)DoOperator + 0x100, (UInt32)DoOperator + 0x110,
-		(UInt32)DoOperator + 0x120, (UInt32)DoOperator + 0x130, (UInt32)DoOperator + 0x140, (UInt32)DoOperator + 0x150,
-		(UInt32)DoOperator + 0x160, (UInt32)DoOperator + 0x170, (UInt32)DoOperator + 0x180, (UInt32)DoOperator + 0x1A0,
-		(UInt32)DoOperator + 0x1B0, (UInt32)DoOperator + 0x1D0
-	};
-	__asm
-	{
-		push	0x5948BB
-		mov		[ebp-0x10], 0
-		mov		al, [ebp-0x28]
-		mov		ah, [ebp-0x40]
-		lea		ecx, kDoOperatorJumpTable[edx*8]
-		cmp		edx, 1
-		mov		edx, ecx
-		jbe		doJump
-		test	al, al
-		jnz		lValFlt
-		test	ah, ah
-		jnz		lValCvt
-		mov		eax, [ebp-0x20]
-		mov		ecx, [ebp-0x38]
-		jmp		dword ptr [edx+4]
-		ALIGN 16
-	lValFlt:
-		movq	xmm0, qword ptr [ebp-0x20]
-		test	ah, ah
-		jnz		rValFlt
-		cvtsi2sd	xmm1, [ebp-0x38]
-	doJump:
-		jmp		dword ptr [edx]
-		ALIGN 16
-	lValCvt:
-		cvtsi2sd	xmm0, [ebp-0x20]
-	rValFlt:
-		movq	xmm1, qword ptr [ebp-0x38]
-		jmp		dword ptr [edx]
+	kConvertJumpTable:
+		EMIT_DW_4(0x30, 0x40, 0x50, 0x60)
+	kDoOperatorJumpTable:
+		EMIT_DW_4(0x70, 0x70, 0xA0, 0xA0) EMIT_DW_4(0xD0, 0xE0, 0xF0, 0x100) EMIT_DW_4(0x110, 0x120, 0x130, 0x140)
+		EMIT_DW_4(0x150, 0x160, 0x170, 0x180) EMIT_DW_4(0x190, 0x1A0, 0x1B0, 0x1C0) EMIT_DW_4(0x1D0, 0x1E0, 0x1F0, 0x210)
+		EMIT_DW(0x220) EMIT_DW(0x240)
 	}
 }
 
 TempObject<UnorderedMap<const char*, UInt32, 0x20, false>> s_optionalHacks;
 
-bool s_bigGunsSkill = false, s_failedScriptLocks = false, s_NVACAlerts = false, s_NPCWeaponMods = false, s_NPCPerks = false;
-UInt32 s_NVACAddress = 0;
 const char kBigGunsDescription[] = "The Big Guns skill determines your combat effectiveness with all oversized weapons such as the Fat Man, Missile Launcher, Flamer, Minigun, Gatling Laser, etc.";
 
 bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
@@ -4826,119 +4777,109 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			{
 				if (!bEnable)
 				{
-					s_localizedDTDR = false;
-					s_VATSHitLocDT = 0;
+					s_patchInstallState.localizedDTDR = false;
+					s_VATSHitDT = -FLT_MAX;
 				}
-				//else s_serializedVars.dmgArmorMaxPercent = 0.025F;
 				return true;
 			}
 			return false;
 		case 2:
-		{
-			if (!HOOK_SET(EnableRepairButton, bEnable))
-				return false;
-			SafeWrite8(0x7818D3, bEnable ? 0x77 : 0x7A);
-			SafeWrite8(0x7B5D05, bEnable ? 0x76 : 0x75);
-			HOOK_SET(PopulateRepairList, bEnable);
-			HOOK_SET(SetRepairListValues, bEnable);
-			HOOK_SET(DoRepairItem, bEnable);
-			HOOK_SET(RepairMenuClick, bEnable);
-			return true;
-		}
+			return HOOK_SET(FO3Repair, bEnable);
 		case 3:
 		{
-			if (s_bigGunsSkill == bEnable)
+			if (s_patchInstallState.bigGunsSkill == bEnable)
 				return false;
-			s_bigGunsSkill = bEnable;
+			s_patchInstallState.bigGunsSkill = bEnable;
 			ActorValueInfo *avInfo = ActorValueInfo::Array()[kAVCode_BigGuns];
 			avInfo->avFlags = bEnable ? 0x410 : 0x2000;
 			SetDescriptionAltText(&avInfo->description, bEnable ? kBigGunsDescription : nullptr);
 			return true;
 		}
 		case 4:
-			return HOOK_SET(InitMissileFlags, bEnable);
+		{
+			if (!bEnable || s_patchInstallState.impactDmgFix)
+				return false;
+			s_patchInstallState.impactDmgFix = true;
+			WriteRelCall(0x9B7E14, (UInt32)InitMissileFlagsHook);
+			return true;
+		}
 		case 5:
 			return HOOK_SET(UpdateTimeGlobals, bEnable);
 		case 6:
 		{
-			if (s_hardcoreNeedsFix == bEnable)
+			if (s_patchInstallState.hardcoreNeedsFix == bEnable)
 				return false;
-			s_hardcoreNeedsFix = bEnable;
+			s_patchInstallState.hardcoreNeedsFix = bEnable;
 			return true;
 		}
 		case 7:
 		{
-			if (!bEnable || s_failedScriptLocks)
+			if (!bEnable || s_patchInstallState.failedScriptLocks)
 				return false;
-			s_failedScriptLocks = true;
+			s_patchInstallState.failedScriptLocks = true;
 			SafeWrite16(0x5E0FBE, 0x7AEB);
 			SafeWrite16(0x5E1A23, 0x0DEB);
 			SafeWrite16(0x5E1F0B, 0x0DEB);
 			return true;
 		}
 		case 8:
-			return HOOK_SET(DoOperator, bEnable);
-		case 9:
 		{
-			if (!HOOK_SET(QttSelectInventory, bEnable))
+			if (!bEnable || s_patchInstallState.dblPrecision)
 				return false;
-			HOOK_SET(QttSelectContainer, bEnable);
-			HOOK_SET(QttSelectBarter, bEnable);
-			SafeWrite16(0x75BF18, bEnable ? 0x63EB : 0x0D8B);
+			s_patchInstallState.dblPrecision = true;
+			UInt32 doOperAddr = (UInt32)DoOperatorHook, *jmpTblAddr = (UInt32*)(doOperAddr + 0x250);
+			UInt32 oldProtect;
+			VirtualProtect(jmpTblAddr, 0x78, PAGE_EXECUTE_READWRITE, &oldProtect);
+			for (UInt32 i = 0; i < 30; i++)
+				jmpTblAddr[i] += doOperAddr;
+			VirtualProtect(jmpTblAddr, 0x78, oldProtect, &oldProtect);
+			WriteRelJump(0x593FBC, (UInt32)DoOperatorHook);
 			return true;
 		}
+		case 9:
+			return HOOK_SET(QuantitySelect, bEnable);
 		case 11:
-			if (s_FO3WpnDegradation == bEnable)
+			if (s_patchInstallState.FO3WpnDegrade == bEnable)
 				return false;
-			s_FO3WpnDegradation = bEnable;
+			s_patchInstallState.FO3WpnDegrade = bEnable;
 			return true;
 		case 12:
-			if ((s_localizedDTDR == bEnable) || !HOOK_INSTALLED(CalculateHitDamage))
+			if ((s_patchInstallState.localizedDTDR == bEnable) || !HOOK_INSTALLED(CalculateHitDamage))
 				return false;
-			s_localizedDTDR = bEnable;
+			s_patchInstallState.localizedDTDR = bEnable;
 			return true;
 		case 13:
-			if (!HOOK_SET(VoiceModulationFix, bEnable))
-				return false;
-			SafeWrite8(0x578E16, bEnable ? 8 : 0);
-			SafeWrite8(0x7974CC, bEnable ? 8 : 0);
-			return true;
+			return HOOK_SET(VoiceModulationFix, bEnable);
 		case 14:
-			if (!HOOK_SET(InitControllerShape, bEnable))
+		{
+			if (!bEnable || s_patchInstallState.sneakBoundsFix)
 				return false;
-			HOOK_SET(SneakBoundingBoxFix, bEnable);
+			s_patchInstallState.sneakBoundsFix = true;
+			WriteRelJump(0xC72EA3, (UInt32)InitControllerShapeHook);
+			WriteRelCall(0x770B0E, (UInt32)SneakBoundingBoxFixHook);
 			return true;
+		}
 		case 15:
 		{
-			if (!s_NVACAddress || (s_NVACAlerts == bEnable))
+			if (!bEnable || s_patchInstallState.NVACAlerts)
 				return false;
-			UInt32 patchAddr = s_NVACAddress + 0x14B0;
-			if (*(UInt32*)patchAddr != 0xFF102474)
+			UInt32 patchAddr = (UInt32)GetModuleHandle("nvac");
+			if (!patchAddr || (*(UInt32*)(patchAddr + 0x14B0) != 0xFF102474))
 				return false;
-			s_NVACAlerts = bEnable;
-			patchAddr += 0x10;
-			if (bEnable)
-			{
-				UInt8 buffer[10];
-				*(UInt16*)buffer = 0x5C6;
-				*(UInt32*)(buffer + 2) = (UInt32)&s_NVACLogUpdated;
-				*(UInt32*)(buffer + 6) = 0x8C201;
-				SafeWriteBuf(patchAddr, buffer, sizeof(buffer));
-				MainLoopAddCallbackEx(CheckNVACLog, nullptr, 0, 60);
-				s_NVACLogUpdated = true;
-			}
-			else
-			{
-				SafeWrite32(patchAddr, 0x8C2);
-				MainLoopRemoveCallback(CheckNVACLog);
-			}
+			s_patchInstallState.NVACAlerts = true;
+			UInt8 buffer[10];
+			*(UInt16*)buffer = 0x5C6;
+			*(UInt32*)(buffer + 2) = (UInt32)&s_NVACLogUpdated;
+			*(UInt32*)(buffer + 6) = 0x8C201;
+			SafeWriteBuf(patchAddr + 0x14C0, buffer, sizeof(buffer));
+			MainLoopAddCallbackEx(CheckNVACLog, nullptr, 0, 60);
+			s_NVACLogUpdated = true;
 			return true;
 		}
 		case 16:
 		{
-			if (!HOOK_SET(GetSuitableLoadScreens, bEnable))
+			if (!HOOK_SET(LoadScreenFix, bEnable))
 				return false;
-			HOOK_SET(PickLoadScreen, bEnable);
 			if (bEnable && s_locationLoadScreens->Empty())
 			{
 				auto lscrIter = g_dataHandler->loadScreenList.Head();
@@ -4955,18 +4896,18 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 		}
 		case 17:
 		{
-			if (!bEnable || s_NPCWeaponMods || !s_uWMChancePerLevel || !s_uWMChanceMin || !s_uWMChanceMax)
+			if (!bEnable || s_patchInstallState.NPCWeaponMods || !s_uWMChancePerLevel || !s_uWMChanceMin || !s_uWMChanceMax)
 				return false;
-			s_NPCWeaponMods = true;
+			s_patchInstallState.NPCWeaponMods = true;
 			WriteRelJump(0x45234E, (UInt32)DoOnLoadActorHook);
 			WriteRelCall(0x54E2A4, (UInt32)ResetActorFlagsRespawnHook);
 			return true;
 		}
 		case 18:
 		{
-			if (!bEnable || s_NPCPerks)
+			if (!bEnable || s_patchInstallState.NPCPerks)
 				return false;
-			s_NPCPerks = true;
+			s_patchInstallState.NPCPerks = true;
 			BuildValidNPCPerks();
 			WriteRelJump(0x45234E, (UInt32)DoOnLoadActorHook);
 			WriteRelCall(0x87DE3F, (UInt32)DestroyActorHook);
@@ -4988,7 +4929,13 @@ bool __fastcall SetOptionalPatch(UInt32 patchID, bool bEnable)
 			return true;
 		}
 		case 19:
-			return HOOK_SET(CreatureSpreadFix, bEnable);
+		{
+			if (!bEnable || s_patchInstallState.creSpreadFix)
+				return false;
+			s_patchInstallState.creSpreadFix = true;
+			WriteRelCall(0x8B0FBF, (UInt32)CreatureSpreadFixHook);
+			return true;
+		}
 	}
 }
 
@@ -5105,17 +5052,17 @@ bool ProcessCustomINI()
 	if (FileExists(customINIPath))
 	{
 		char *buffer = GetStrArgBuffer();
-		SInt32 namesLen = GetPrivateProfileSectionNames(buffer, kMaxMessageLength, customINIPath), sectionLen, nameSize, pairSize;
-		char *currName = buffer, *section = buffer + namesLen, *currPair, *delim, settingName[0x100], *endPtr;
+		SInt32 namesLen = GetPrivateProfileSectionNames(buffer, kMaxMessageLength, customINIPath);
+		char *currName = buffer, *section = buffer + namesLen, settingName[0x100];
 		while (namesLen > 0)
 		{
-			sectionLen = GetPrivateProfileSection(currName, section, kMaxMessageLength, customINIPath);
-			currPair = section;
+			SInt32 sectionLen = GetPrivateProfileSection(currName, section, kMaxMessageLength, customINIPath);
+			char *currPair = section;
 			while (sectionLen > 0)
 			{
-				sectionLen -= pairSize = StrLen(currPair) + 1;
-				delim = GetNextToken(currPair, '=');
-				endPtr = StrCopy(settingName, currPair);
+				SInt32 pairSize = StrLen(currPair) + 1;
+				sectionLen -= pairSize;
+				char *delim = GetNextToken(currPair, '='), *endPtr = StrCopy(settingName, currPair);
 				*endPtr = ':';
 				StrCopy(endPtr + 1, currName);
 				currPair += pairSize;
@@ -5141,7 +5088,8 @@ bool ProcessCustomINI()
 							break;
 					}
 			}
-			namesLen -= nameSize = StrLen(currName) + 1;
+			SInt32 nameSize = StrLen(currName) + 1;
+			namesLen -= nameSize;
 			currName += nameSize;
 		}
 	}
@@ -5173,6 +5121,11 @@ void InitGamePatches()
 	SAFE_WRITE_BUF(0x5A8ECF, "\x8B\x45\xFC\x8B\x40\x04\x89\x45\xFC\x85\xD2\x74\x0D\xC7\x42\x04\x00\x00\x00\x00\xEB\xCD");
 	SAFE_WRITE_BUF(0xB707E0, "\x8B\x4A\x08\x8B\x12\x85\xC9\x74\x26\x66\x81\xB9\x10\x01\x00\x00\xFF\x00\x74\x1B\x8B\xB1\xF8\x00\x00\x00\x85\xF6\x74\x11\x90");
 
+	//	Cmd_Execute >> *result = 0 by default
+	SAFE_WRITE_BUF(0x5ACB9D, "\xD9\xEE\xDD\x19\xFF\x75\x20\xFF\x75\x1C\xFF\x75\x18\xFF\x75\xD4");
+	SAFE_WRITE_BUF(0x5E16C3, "\x0F\x57\xC0\x66\x0F\xD6\x01\xFF\x75\x08\xFF\x32\x90");
+	SAFE_WRITE_BUF(0x5E2329, "\x0F\x57\xC0\x66\x0F\xD6\x02\xFF\x75\x08\xFF\x30\x90");
+
 	//	Earn Steam achievements even if the console has been used
 	SafeWrite16(0x5D3B69, 0x9066);
 
@@ -5188,12 +5141,11 @@ void InitGamePatches()
 		SAFE_WRITE_BUF(patchAddr, "\x8B\x41\x20\xF6\x40\x06\x20\x0F\x95\xC0\x34\x01\xEB\x0D");
 	SAFE_WRITE_BUF(0x573194, "\x8B\x41\x20\xF6\x40\x06\x20\x0F\x95\xC0\x34\x01\xEB\x10");
 
-	s_NVACAddress = (UInt32)GetModuleHandle("nvac");
-	if (!s_NVACAddress)		//	NVAC already patches those
-	{
-		SafeWrite16(0x57D3B9, 0x1AEB);	//	Increase grass fade distance
-		SafeWrite8(0xC44405, 4);		//	Increase buffer size for GetPrivateProfileString
-	}
+	//	Increase grass fade distance
+	SafeWrite16(0x57D3B9, 0x1AEB);
+
+	//	Increase buffer size for GetPrivateProfileString
+	SafeWrite8(0xC44405, 4);
 
 	//	Override display time of default UI messages.
 	WriteRelJump(0x70535C, (UInt32)QueueUIMessageHook);
@@ -5359,6 +5311,8 @@ void InitGamePatches()
 	WriteRelJump(0x470D56, (UInt32)InitModInfoNameHook);
 	SAFE_WRITE_BUF(0x47079D, "\x66\xC7\x80\x9A\x02\x00\x00\x00\x00\x90");
 	SAFE_WRITE_BUF(0x4F15A0, "\x0F\xB6\x44\x24\x04\x89\x41\x04\x3C\x3B\x74\x07\x3C\x3C\x74\x03\xC2\x04\x00\x31\xD2\x89\x91\x04\x01\x00\x00\xC2\x04\x00");
+	SafeWrite32(0x939258, 0xD54A183);
+	//SafeWrite32(0x9394AE, 0xE08A083);
 	WriteRelJump(0x482090, (UInt32)SetContainerItemsHealthHook);
 	SafeWrite16(0x5B4DBC, 0x19EB);
 	WriteRelJump(0x5A64D7, (UInt32)TESGlobalLoadFormHook);
@@ -5476,26 +5430,21 @@ void InitGamePatches()
 	WriteRelJump(0x9C3BD6, (UInt32)MineExplodeChanceHook);
 	WriteRelCall(0x8751C6, (UInt32)RendererClearBufferHook);
 
-	HOOK_INIT_JUMP(CalculateHitDamage, 0x9B5A30);
-	HOOK_INIT_JUMP(EnableRepairButton, 0x7818B2);
-	HOOK_INIT_JUMP(PopulateRepairList, 0x4D4C11);
-	HOOK_INIT_JUMP(SetRepairListValues, 0x7B58DB);
-	HOOK_INIT_JUMP(DoRepairItem, 0x7B5DAD);
-	HOOK_INIT_JUMP(RepairMenuClick, 0x7B5CED);
-	HOOK_INIT_CALL(InitMissileFlags, 0x9B7E14);
-	HOOK_INIT_JUMP(QttSelectInventory, 0x780B09);
-	HOOK_INIT_JUMP(QttSelectContainer, 0x75BF97);
-	HOOK_INIT_JUMP(QttSelectBarter, 0x72D8B4);
-	HOOK_INIT_JUMP(VoiceModulationFix, 0x934AC8);
-	HOOK_INIT_CALL(SneakBoundingBoxFix, 0x770B0E);
-	HOOK_INIT_JUMP(InitControllerShape, 0xC72EA3);
-	HOOK_INIT_JUMP(GetSuitableLoadScreens, 0x78AC60);
-	HOOK_INIT_JUMP(PickLoadScreen, 0x78A79B);
-	HOOK_INIT_CALL(CreatureSpreadFix, 0x8B0FBF);
-	HOOK_INIT_JUMP(UpdateTimeGlobals, 0x867A40);
-	HOOK_INIT_JUMP(DoOperator, 0x593FBC);
+	HOOK_INIT_JUMP(0x9B5A30, CalculateHitDamage);
+	HOOK_INIT_LIST(FO3Repair, {0x7818B2, EnableRepairButtonHook, 5, 0xE9}, {0x4D4C11, PopulateRepairListHook, 5, 0xE9},
+		{0x7B58DB, SetRepairListValuesHook, 5, 0xE9}, {0x7B5DAD, DoRepairItemHook, 5, 0xE9}, {0x7B5CED, RepairMenuClickHook, 5, 0xE9},
+		{0x7818D3, 0x77UL, 1, 0}, {0x7B5D05, 0x76UL, 1, 0});
+	HOOK_INIT_LIST(QuantitySelect, {0x780B09, QttSelectInventoryHook, 5, 0xE9}, {0x75BF97, QttSelectContainerHook, 5, 0xE9},
+		{0x72D8B4, QttSelectBarterHook, 5, 0xE9}, {0x75BF18, 0x63EBUL, 2, 0});
+	HOOK_INIT_LIST(VoiceModulationFix, {0x934AC8, VoiceModulationFixHook, 5, 0xE9}, {0x578E16, 8UL, 1, 0}, {0x7974CC, 8UL, 1, 0});
+	HOOK_INIT_LIST(LoadScreenFix, {0x78AC60, GetSuitableLoadScreensHook, 5, 0xE9}, {0x78A79B, PickLoadScreenHook, 5, 0xE9});
+	HOOK_INIT_JUMP(0x867A40, UpdateTimeGlobals);
 
-	char filePath[0x80] = "Data\\NVSE\\plugins\\xfonts\\*.txt", dataPath[0x80] = "data\\", *buffer = GetStrArgBuffer();
+	//char filePath[0x80] = "Data\\NVSE\\plugins\\xfonts\\*.txt", dataPath[0x80] = "data\\", *buffer = GetStrArgBuffer();
+
+	char filePath[0x80], dataPath[0x80], *buffer = GetStrArgBuffer();
+	memcpy(filePath, "Data\\NVSE\\plugins\\xfonts\\*.txt", 31);
+	memcpy(dataPath, "data\\", 6);
 	for (DirectoryIterator dirIter(filePath); dirIter; ++dirIter)
 	{
 		if (!dirIter.IsFile()) continue;
@@ -5558,11 +5507,14 @@ void InitGamePatches()
 		buffer += size;
 		lines -= size;
 	}
+
+	//	Fix Enhanced Camera ground sinking bug when switching to 3rd person
+	if (UInt32 enCamAddr = (UInt32)GetModuleHandle("NVSE_EnhancedCamera"); enCamAddr && (*(UInt32*)(enCamAddr + 0x1815) == 0x5F605ED9))
+		SafeWrite32(enCamAddr + 0x1815, 0x5F90D8DD);
 }
 
 NiCamera* __fastcall GetSingletonsHook(SceneGraph *sceneGraph)
 {
-	g_mainCamera = sceneGraph->camera;
 	g_TLSIndex = *(UInt32*)0x126FD98;
 	g_modelLoader = ModelLoader::GetSingleton();
 	g_dataHandler = DataHandler::GetSingleton();
@@ -5570,14 +5522,14 @@ NiCamera* __fastcall GetSingletonsHook(SceneGraph *sceneGraph)
 	g_interfaceManager = InterfaceManager::GetSingleton();
 	g_OSGlobals = OSGlobals::GetSingleton();
 	g_TES = TES::GetSingleton();
+	g_gridCellArray = g_TES->gridCellArray;
 	g_currentSky = Sky::Get();
 	g_BGSSaveLoadGame = BGSSaveLoadGame::GetSingleton();
-	g_gridCellArray = g_TES->gridCellArray;
 	g_thePlayer = PlayerCharacter::GetSingleton();
 	g_inputGlobals = OSInputGlobals::GetSingleton();
 	g_scrapHeapQueue = TaskQueueInterface::GetSingleton();
-	g_tileMenuArray = *(TileMenu***)0x11F350C;
-	return sceneGraph->camera;
+	g_tileMenuArray = *(TileMenu***)0x11F350C - kMenuType_Min;
+	return g_mainCamera = sceneGraph->camera;
 }
 
 void DeferredInit()
@@ -5620,7 +5572,14 @@ void DeferredInit()
 
 	CommandInfo *eventCmdInfos = (CommandInfo*)0x118E2F0;
 	eventCmdInfos[1].execute = Hook_MenuMode_Execute;
-	eventCmdInfos[0xE].execute = Cmd_EmptyCommand_Execute;
+	eventCmdInfos[0xE].execute = (Cmd_Execute)0x5D4A40;
+
+	if (GetModuleHandle("nvac"))
+		if (FILE *nvacLog = _fsopen("nvac.log", "ab", _SH_DENYWR))
+		{
+			fprintf(nvacLog, "NVSE version: %.2f\tJIP LN version: %.2f\tBase address: %08X\n", s_nvseVersion, JIP_LN_VERSION, (UInt32)GetModuleHandle("jip_nvse"));
+			fclose(nvacLog);
+		}
 
 	for (UInt32 index = 1; index <= 19; index++)
 		if (s_deferrSetOptional & (1 << index))
@@ -5661,13 +5620,6 @@ void DeferredInit()
 	if (modIdx != 0xFF)
 		if (Script *cccMain = (Script*)LookupFormByRefID((modIdx << 24) | 0xADE); cccMain && (*(UInt32*)(cccMain->data + 0x29C) == ' 931'))
 			*(UInt32*)(cccMain->data + 0x29C) = ' 552';
-
-	if (s_NVACAddress)
-		if (FILE *nvacLog = _fsopen("nvac.log", "ab", 0x20))
-		{
-			fprintf(nvacLog, "NVSE version: %.2f\tJIP LN version: %.2f\tBase address: %08X\n", s_nvseVersion, JIP_LN_VERSION, (UInt32)GetModuleHandle("jip_nvse"));
-			fclose(nvacLog);
-		}
 
 	Console_Print("JIP LN version: %.2f", JIP_LN_VERSION);
 

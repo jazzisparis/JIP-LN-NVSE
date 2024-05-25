@@ -1,14 +1,13 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetAmmoTraitNumeric, 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_COMMAND_PLUGIN(SetAmmoTraitNumeric, 0, 3, kParams_OneObjectID_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetAmmoProjectile, 0, 1, kParams_OneObjectID);
-DEFINE_COMMAND_PLUGIN(SetAmmoProjectile, 0, 2, kParams_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetAmmoCasing, 0, 2, kParams_OneObjectID_OneOptionalObjectID);
+DEFINE_COMMAND_PLUGIN(GetAmmoTraitNumeric, 0, kParams_OneObjectID_OneInt);
+DEFINE_COMMAND_PLUGIN(SetAmmoTraitNumeric, 0, kParams_OneObjectID_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetAmmoProjectile, 0, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(SetAmmoProjectile, 0, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetAmmoCasing, 0, kParams_OneObjectID_OneOptionalObjectID);
 
 bool Cmd_GetAmmoTraitNumeric_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESAmmo *ammo;
 	UInt32 traitID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ammo, &traitID) && IS_TYPE(ammo, TESAmmo))
@@ -61,7 +60,6 @@ bool Cmd_GetAmmoProjectile_Execute(COMMAND_ARGS)
 	TESAmmo *ammo;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ammo) && IS_TYPE(ammo, TESAmmo) && ammo->projectile)
 		REFR_RES = ammo->projectile->refID;
-	else REFR_RES = 0;
 	return true;
 }
 

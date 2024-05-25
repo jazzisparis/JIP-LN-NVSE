@@ -1352,9 +1352,17 @@ __declspec(naked) NiSourceTexture* __fastcall NiSourceTexture::Create(const char
 {
 	__asm
 	{
-		push	eax
+		push	0
+		push	esp
 		push	ecx
-		lea		ecx, [esp+4]
+		CALL_EAX(0xA61B90)
+		pop		edx
+		pop		eax
+		mov		eax, [esp]
+		test	eax, eax
+		jnz		done
+		mov		ecx, esp
+		push	edx
 		CALL_EAX(0x438170)
 		push	0
 		push	1
@@ -1363,10 +1371,13 @@ __declspec(naked) NiSourceTexture* __fastcall NiSourceTexture::Create(const char
 		CALL_EAX(0xA5FD70)
 		add		esp, 0x10
 		pop		ecx
-		test	ecx, ecx
-		jz		done
 		lock dec dword ptr [ecx-8]
+		push	0
+		push	eax
+		CALL_EAX(0xA61C50)
+		pop		eax
 	done:
+		pop		ecx
 		retn
 	}
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+void* __fastcall MemCopy(void *dst, const void *src, size_t size);
+
 #define GAME_HEAP 0x11F6238
 
 #define MARK_MODIFIED(form, flag) __asm push 0 __asm push flag __asm push form __asm mov ecx, g_BGSSaveLoadGame CALL_EAX(0x84A690)
@@ -31,7 +33,7 @@ __forceinline SInt32 GetRandomIntInRange(SInt32 iMin, SInt32 iMax)
 	return ThisCall<SInt32, SInt32>(ADDR_GetRandomInt, (void*)GAME_RNG, iMax - iMin) + iMin;
 }
 
-extern const UInt32 kPackedValues[];
+extern const __m128i kPackedValues[];
 extern const char kLwrCaseConverter[];
 
 #define GET_PS(i)	((const __m128*)kPackedValues)[i]
@@ -71,38 +73,10 @@ extern const char kLwrCaseConverter[];
 #define DblPId180	0.017453292519943295
 #define Dbl180dPI	57.29577951308232
 
-typedef void* (__cdecl *memcpy_t)(void*, const void*, size_t);
-extern memcpy_t MemCopy;
-
 #define NRGB(r, g, b) r / 255.0F, g / 255.0F, b / 255.0F
-#define NRGBA(r, g, b, a) __m128{r / 255.0F, g / 255.0F, b / 255.0F, a / 255.0F}
+#define NRGBA(r, g, b, a) r / 255.0F, g / 255.0F, b / 255.0F, a / 255.0F
 
 extern UInt32 g_TLSIndex;
-
-union FltAndInt
-{
-	float		f;
-	int			i;
-};
-
-union FunctionArg
-{
-	void		*pVal;
-	float		fVal;
-	UInt32		uVal;
-	SInt32		iVal;
-
-	FunctionArg() {}
-	FunctionArg(void *_val) : pVal(_val) {}
-	FunctionArg(float _val) : fVal(_val) {}
-	FunctionArg(UInt32 _val) : uVal(_val) {}
-	FunctionArg(SInt32 _val) : iVal(_val) {}
-
-	inline void operator=(void *other) {pVal = other;}
-	inline void operator=(float other) {fVal = other;}
-	inline void operator=(UInt32 other) {uVal = other;}
-	inline void operator=(SInt32 other) {iVal = other;}
-};
 
 template <typename T_Array> class ArrayUtils
 {
@@ -155,7 +129,7 @@ public:
 		if (uBound)
 		{
 			pData = array.Data() + lBound;
-			memmove(pData + 1, pData, sizeof(T_Data) * uBound);
+			MemCopy(pData + 1, pData, sizeof(T_Data) * uBound);
 		}
 		*pData = std::move(item);
 		return lBound;
@@ -297,12 +271,6 @@ public:
 #define Use_HashMapUtils(cont_type)	\
 	friend HashMapUtils<cont_type>;
 
-struct CellCoord
-{
-	SInt32		x;
-	SInt32		y;
-};
-
 union Coordinate
 {
 	UInt32		xy;
@@ -313,66 +281,31 @@ union Coordinate
 	};
 
 	Coordinate() {}
-	Coordinate(SInt16 _x, SInt16 _y) : x(_x), y(_y) {}
-	Coordinate(UInt32 _xy) : xy(_xy) {}
-	Coordinate(const CellCoord &coord) {*this = coord;}
+	__forceinline Coordinate(SInt16 _x, SInt16 _y) : x(_x), y(_y) {}
+	__forceinline Coordinate(UInt32 _xy) : xy(_xy) {}
+	__forceinline explicit Coordinate(const __m128 pos) {*this = pos;}
 
-	inline void operator=(const Coordinate &rhs) {xy = rhs.xy;}
-	inline void operator=(UInt32 rhs) {xy = rhs;}
-	inline void operator=(__m128i rhs) {_mm_storeu_si32(this, rhs);}
-	inline void operator=(const CellCoord &rhs) {_mm_storeu_si32(this, _mm_shufflelo_epi16(_mm_loadu_si64(&rhs), 2));}
+	__forceinline void operator=(Coordinate &&rhs) {xy = rhs.xy;}
+	__forceinline void operator=(const Coordinate &rhs) {xy = rhs.xy;}
+	__forceinline void operator=(UInt32 rhs) {xy = rhs;}
+	__forceinline void operator=(__m128i rhs) {xy = _mm_cvtsi128_si32(rhs);}
+	void __vectorcall operator=(__m128 rhs);
 
-	inline bool operator==(const Coordinate &rhs) {return xy == rhs.xy;}
-	inline bool operator!=(const Coordinate &rhs) {return xy != rhs.xy;}
+	__forceinline bool operator==(const Coordinate &rhs) {return xy == rhs.xy;}
+	__forceinline bool operator!=(const Coordinate &rhs) {return xy != rhs.xy;}
 
-	inline __m128i operator+(const Coordinate &rhs)
+	__forceinline __m128i operator+(const Coordinate &rhs)
 	{
-		return _mm_add_epi16(*this, rhs);
+		return _mm_add_epi16(PS(), rhs.PS());
+	}
+	__forceinline __m128i operator-(const Coordinate &rhs)
+	{
+		return _mm_sub_epi16(PS(), rhs.PS());
 	}
 
 	inline operator UInt32() const {return xy;}
-	inline operator __m128i() const {return _mm_loadu_si32(this);}
+	__forceinline __m128i PS() const {return _mm_cvtsi32_si128(xy);}
 };
-
-__forceinline __m128 __vectorcall operator+(__m128 a, __m128 b)
-{
-	return _mm_add_ps(a, b);
-}
-__forceinline __m128 __vectorcall operator-(__m128 a, __m128 b)
-{
-	return _mm_sub_ps(a, b);
-}
-__forceinline __m128 __vectorcall operator*(__m128 a, __m128 b)
-{
-	return _mm_mul_ps(a, b);
-}
-__forceinline __m128 __vectorcall operator&(__m128 a, __m128 b)
-{
-	return _mm_and_ps(a, b);
-}
-__forceinline __m128 __vectorcall operator|(__m128 a, __m128 b)
-{
-	return _mm_or_ps(a, b);
-}
-__forceinline __m128 __vectorcall operator^(__m128 a, __m128 b)
-{
-	return _mm_xor_ps(a, b);
-}
-
-template <typename T1, typename T2> __forceinline T1 GetMin(T1 value1, T2 value2)
-{
-	return (value1 < value2) ? value1 : value2;
-}
-
-template <typename T1, typename T2> __forceinline T1 GetMax(T1 value1, T2 value2)
-{
-	return (value1 > value2) ? value1 : value2;
-}
-
-template <typename T> __forceinline T sqr(T value)
-{
-	return value * value;
-}
 
 extern UInt32 s_CPUFeatures;
 UInt32 GetCPUFeatures();
@@ -423,7 +356,7 @@ __m128 __vectorcall Normalize_V4(__m128 inPS);
 bool __vectorcall Equal_V3(__m128 v1, __m128 v2);
 bool __vectorcall Equal_V4(__m128 v1, __m128 v2);
 
-#define STR_BUFFER_SIZE 0x20000
+#define STR_BUFFER_SIZE 0x40000
 char *GetStrArgBuffer();
 
 void __fastcall NiReleaseObject(NiRefObject *toRelease);
@@ -547,6 +480,8 @@ public:
 
 	char At(UInt16 index) const {return (index < length) ? str[index] : 0;}
 
+	inline operator const char*() const {return str;}
+
 	char& operator[](UInt16 index) const {return str[index];}
 
 	DString& operator=(const char *other);
@@ -612,31 +547,85 @@ public:
 	void operator=(const char *other);
 	
 	bool operator==(const XString &other) const;
+
+	inline operator const char*() const {return str;}
 };
 
-#define AUX_BUFFER_INIT_SIZE 0x8000
+#define AUX_BUFFER_ARRAY_SIZE 0x10
+#define AUX_BUFFER_INIT_SIZE 0x8000U
 
-class AuxBuffer
+class AuxBufferArray
 {
-	UInt8		*ptr = nullptr;
-	UInt32		size = AUX_BUFFER_INIT_SIZE;
-
-	static UInt8 *Alloc(UInt32 bufIdx, UInt32 reqSize);
-
 public:
-	template <typename T> static T *Get(UInt32 bufIdx, UInt32 numElements, bool clear = true)
+	template <typename T> struct Buffer
 	{
-		UInt32 required = numElements * sizeof(T);
-		T *resPtr = (T*)Alloc(bufIdx, required);
-		if (clear)
-			ZERO_BYTES(resPtr, required);
-		return resPtr;
+		T			*ptr;
+		UInt32		size;
+	};
+
+	__declspec(noinline) static Buffer<void>* __fastcall GetAvailable(UInt32 reqSize)
+	{
+		thread_local static AuxBufferArray *s_auxBufferArray = nullptr;
+		if (!s_auxBufferArray)
+			s_auxBufferArray = (AuxBufferArray*)calloc(1, sizeof(AuxBufferArray));
+		Buffer<void> *buffer = nullptr, *pIter = s_auxBufferArray->buffers, *pEnd = pIter + AUX_BUFFER_ARRAY_SIZE;
+		do
+		{
+			if (NBYTE(pIter->size, 3) & 0x80)
+				continue;
+			if (pIter->size >= reqSize)
+			{
+				NBYTE(pIter->size, 3) |= 0x80;
+				return pIter;
+			}
+			if (!buffer)
+				buffer = pIter;
+			if (!pIter->ptr)
+				break;
+		}
+		while (++pIter != pEnd);
+		if (buffer)
+		{
+			buffer->size = (reqSize > AUX_BUFFER_INIT_SIZE) ? reqSize : AUX_BUFFER_INIT_SIZE;
+			if (buffer->ptr)
+				_aligned_free(buffer->ptr);
+			buffer->ptr = _aligned_malloc(buffer->size, 0x10);
+			NBYTE(buffer->size, 3) |= 0x80;
+		}
+		return buffer;
 	}
 
-	template <typename T> static T *Copy(UInt32 bufIdx, UInt32 numElements, T *data)
+private:
+	Buffer<void>	buffers[AUX_BUFFER_ARRAY_SIZE];
+};
+
+template <typename T> class AuxBuffer
+{
+	using Buffer = AuxBufferArray::Buffer<T>;
+
+	Buffer		*buffer;
+
+public:
+	AuxBuffer() : buffer(nullptr) {}
+	AuxBuffer(UInt32 numElements) {*this = numElements;}
+	~AuxBuffer() {if (buffer) NBYTE(buffer->size, 3) &= 0x7F;}
+
+	inline void operator=(UInt32 numElements)
 	{
 		UInt32 required = numElements * sizeof(T);
-		return (T*)memcpy(Alloc(bufIdx, required), data, required);
+		if (buffer = reinterpret_cast<Buffer*>(AuxBufferArray::GetAvailable(required)))
+			if (!std::is_scalar_v<T>) __stosd((UInt32*)buffer->ptr, 0, required >> 2);
+	}
+
+	inline operator T*() const {return buffer->ptr;}
+	inline T* operator*() const {return buffer->ptr;}
+
+	T *Copy(UInt32 numElements, T *data)
+	{
+		UInt32 required = numElements * sizeof(T);
+		if (buffer = reinterpret_cast<Buffer*>(AuxBufferArray::GetAvailable(required)))
+			return (T*)MemCopy(buffer->ptr, data, required);
+		return nullptr;
 	}
 };
 
@@ -664,9 +653,9 @@ public:
 		theFile = nullptr;
 	}
 
+	inline operator FILE*() const {return theFile;}
 	explicit operator bool() const {return theFile != nullptr;}
 
-	FILE *GetStream() const {return theFile;}
 	UInt32 GetLength() const;
 	char ReadChar();
 	void ReadBuf(void *outData, UInt32 inLength);
@@ -689,12 +678,12 @@ public:
 	~DebugLog() {if (theFile) fclose(theFile);}
 
 	bool Create(const char *filePath);
-	FILE *GetStream() const {return theFile;}
 	void Message(const char *msgStr);
 	void FmtMessage(const char *fmt, va_list args);
 	void Indent() {if (indent) indent--;}
 	void Outdent() {if (indent < 40) indent++;}
 
+	inline operator FILE*() const {return theFile;}
 	explicit operator bool() const {return theFile != nullptr;}
 };
 
@@ -749,6 +738,7 @@ public:
 };
 
 UInt32 __fastcall FileToBuffer(const char *filePath, char *buffer, UInt32 maxLen);
+char* __fastcall FileToBuffer(const char *filePath);
 
 void __stdcall StoreOriginalData(UInt32 addr, UInt8 size);
 
@@ -771,5 +761,9 @@ void __fastcall GetTimeStamp(char *buffer);
 UInt64 GetTimeMs64();
 
 const char* __fastcall GetDXDescription(UInt32 keyID);
+
+__forceinline UInt32 *GetFramePtr() {return (UInt32*)_AddressOfReturnAddress() - 1;}
+
+void __fastcall DumpCallStack(UInt32 *EBP, UInt32 depth);
 
 void __stdcall DumpMemImg(void *data, UInt32 size, UInt8 extra = 0);

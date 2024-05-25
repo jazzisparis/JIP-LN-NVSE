@@ -1,22 +1,22 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(SetStageAlt, 0, 2, kParams_OneQuest_OneInt);
-DEFINE_COMMAND_PLUGIN(ClearActiveQuest, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetObjectiveTargets, 0, 2, kParams_OneQuest_OneInt);
-DEFINE_COMMAND_PLUGIN(SetObjectiveNthTarget, 0, 4, kParams_OneQuest_TwoInts_OneObjectRef);
-DEFINE_COMMAND_PLUGIN(GetObjectiveHasTarget, 0, 3, kParams_OneQuest_OneInt_OneObjectRef);
-DEFINE_COMMAND_PLUGIN(AddObjectiveTarget, 0, 3, kParams_OneQuest_OneInt_OneObjectRef);
-DEFINE_COMMAND_PLUGIN(RemoveObjectiveTarget, 0, 3, kParams_OneQuest_OneInt_OneObjectRef);
-DEFINE_COMMAND_PLUGIN(GetObjectiveText, 0, 2, kParams_OneQuest_OneInt);
-DEFINE_COMMAND_PLUGIN(SetObjectiveText, 0, 23, kParams_OneQuest_OneInt_OneFormatString);
-DEFINE_COMMAND_PLUGIN(GetQuests, 0, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetQuestObjectives, 0, 2, kParams_OneQuest_OneInt);
-DEFINE_COMMAND_PLUGIN(GetActiveObjectives, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetObjectiveTeleportLinks, 0, 2, kParams_OneQuest_OneInt);
-DEFINE_COMMAND_PLUGIN(GetQuestFlag, 0, 2, kParams_OneQuest_OneInt);
-DEFINE_COMMAND_PLUGIN(SetQuestFlag, 0, 3, kParams_OneQuest_TwoInts);
-DEFINE_COMMAND_PLUGIN(FailQuest, 0, 1, kParams_OneQuest);
-DEFINE_COMMAND_PLUGIN(GetQuestTargetsChanged, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(SetStageAlt, 0, kParams_OneQuest_OneInt);
+DEFINE_COMMAND_PLUGIN(ClearActiveQuest, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetObjectiveTargets, 0, kParams_OneQuest_OneInt);
+DEFINE_COMMAND_PLUGIN(SetObjectiveNthTarget, 0, kParams_OneQuest_TwoInts_OneObjectRef);
+DEFINE_COMMAND_PLUGIN(GetObjectiveHasTarget, 0, kParams_OneQuest_OneInt_OneObjectRef);
+DEFINE_COMMAND_PLUGIN(AddObjectiveTarget, 0, kParams_OneQuest_OneInt_OneObjectRef);
+DEFINE_COMMAND_PLUGIN(RemoveObjectiveTarget, 0, kParams_OneQuest_OneInt_OneObjectRef);
+DEFINE_COMMAND_PLUGIN(GetObjectiveText, 0, kParams_OneQuest_OneInt);
+DEFINE_COMMAND_PLUGIN(SetObjectiveText, 0, kParams_OneQuest_OneInt_OneFormatString);
+DEFINE_COMMAND_PLUGIN(GetQuests, 0, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetQuestObjectives, 0, kParams_OneQuest_OneInt);
+DEFINE_COMMAND_PLUGIN(GetActiveObjectives, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetObjectiveTeleportLinks, 0, kParams_OneQuest_OneInt);
+DEFINE_COMMAND_PLUGIN(GetQuestFlag, 0, kParams_OneQuest_OneInt);
+DEFINE_COMMAND_PLUGIN(SetQuestFlag, 0, kParams_OneQuest_TwoInts);
+DEFINE_COMMAND_PLUGIN(FailQuest, 0, kParams_OneQuest);
+DEFINE_COMMAND_PLUGIN(GetQuestTargetsChanged, 0, nullptr);
 
 bool Cmd_SetStageAlt_Execute(COMMAND_ARGS)
 {
@@ -27,7 +27,6 @@ bool Cmd_SetStageAlt_Execute(COMMAND_ARGS)
 		quest->currentStage = stageID;
 		*result = 1;
 	}
-	else *result = 0;
 	return true;
 }
 
@@ -40,7 +39,6 @@ bool Cmd_ClearActiveQuest_Execute(COMMAND_ARGS)
 
 bool Cmd_GetObjectiveTargets_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESQuest *quest;
 	UInt32 objectiveID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID))
@@ -79,7 +77,6 @@ bool Cmd_SetObjectiveNthTarget_Execute(COMMAND_ARGS)
 
 bool Cmd_GetObjectiveHasTarget_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESQuest *quest;
 	UInt32 objectiveID;
 	TESObjectREFR *refr;
@@ -147,7 +144,6 @@ bool Cmd_SetObjectiveText_Execute(COMMAND_ARGS)
 
 bool Cmd_GetQuests_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 completed = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &completed))
 	{
@@ -169,7 +165,6 @@ bool Cmd_GetQuests_Execute(COMMAND_ARGS)
 
 bool Cmd_GetQuestObjectives_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESQuest *quest;
 	UInt32 completed;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &completed))
@@ -192,7 +187,6 @@ bool Cmd_GetQuestObjectives_Execute(COMMAND_ARGS)
 
 bool Cmd_GetActiveObjectives_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	if (g_thePlayer->activeQuest)
 	{
 		TempElements *tmpElements = GetTempElements();
@@ -211,7 +205,6 @@ bool Cmd_GetActiveObjectives_Execute(COMMAND_ARGS)
 
 bool Cmd_GetObjectiveTeleportLinks_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESQuest *quest;
 	UInt32 objectiveID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &objectiveID))
@@ -245,9 +238,8 @@ bool Cmd_GetQuestFlag_Execute(COMMAND_ARGS)
 {
 	TESQuest *quest;
 	UInt32 flagID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &flagID) && (flagID <= 7))
-		*result = (quest->questFlags & (1 << flagID)) ? 1 : 0;
-	else *result = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &quest, &flagID) && (flagID <= 7) && (quest->questFlags & (1 << flagID)))
+		*result = 1;
 	return true;
 }
 
@@ -269,7 +261,7 @@ bool Cmd_FailQuest_Execute(COMMAND_ARGS)
 	return true;
 }
 
-TempObject<TempFormList> s_lastQuestTargets(0x40);
+TempObject<TempFormList> s_lastQuestTargets;
 
 bool Cmd_GetQuestTargetsChanged_Execute(COMMAND_ARGS)
 {
@@ -291,9 +283,7 @@ bool Cmd_GetQuestTargetsChanged_Execute(COMMAND_ARGS)
 		}
 	}
 	while (objIter = objIter->next);
-	if (s_lastQuestTargets() == *tmpFormLst)
-		*result = 0;
-	else
+	if (s_lastQuestTargets() != *tmpFormLst)
 	{
 		s_lastQuestTargets = *tmpFormLst;
 		*result = 1;

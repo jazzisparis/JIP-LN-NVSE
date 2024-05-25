@@ -1,28 +1,28 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetFormRecipes, 0, 2, kParams_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetFormRecipeOutputs, 0, 2, kParams_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetRecipeRequiredSkill, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetRecipeRequiredSkill, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetRecipeRequiredSkillLevel, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetRecipeRequiredSkillLevel, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetRecipeInputForms, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(GetRecipeOutputForms, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(AddRecipeInputForm, 0, 3, kParams_TwoForms_OneInt);
-DEFINE_COMMAND_PLUGIN(AddRecipeOutputForm, 0, 3, kParams_TwoForms_OneInt);
-DEFINE_COMMAND_PLUGIN(RemoveRecipeInputForm, 0, 2, kParams_TwoForms);
-DEFINE_COMMAND_PLUGIN(RemoveRecipeOutputForm, 0, 2, kParams_TwoForms);
-DEFINE_COMMAND_PLUGIN(ReplaceRecipeInputForm, 0, 3, kParams_ThreeForms);
-DEFINE_COMMAND_PLUGIN(ReplaceRecipeOutputForm, 0, 3, kParams_ThreeForms);
-DEFINE_COMMAND_PLUGIN(GetRecipeInputCount, 0, 2, kParams_TwoForms);
-DEFINE_COMMAND_PLUGIN(SetRecipeInputCount, 0, 3, kParams_TwoForms_OneInt);
-DEFINE_COMMAND_PLUGIN(GetRecipeOutputCount, 0, 2, kParams_TwoForms);
-DEFINE_COMMAND_PLUGIN(SetRecipeOutputCount, 0, 3, kParams_TwoForms_OneInt);
-DEFINE_COMMAND_PLUGIN(GetRecipeCategory, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetRecipeCategory, 0, 2, kParams_TwoForms);
-DEFINE_COMMAND_PLUGIN(GetRecipeSubcategory, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetRecipeSubcategory, 0, 2, kParams_TwoForms);
-DEFINE_COMMAND_PLUGIN(AddRecipeCondition, 0, 5, kParams_FormCondition);
+DEFINE_COMMAND_PLUGIN(GetFormRecipes, 0, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetFormRecipeOutputs, 0, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetRecipeRequiredSkill, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetRecipeRequiredSkill, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetRecipeRequiredSkillLevel, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetRecipeRequiredSkillLevel, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetRecipeInputForms, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(GetRecipeOutputForms, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(AddRecipeInputForm, 0, kParams_TwoForms_OneInt);
+DEFINE_COMMAND_PLUGIN(AddRecipeOutputForm, 0, kParams_TwoForms_OneInt);
+DEFINE_COMMAND_PLUGIN(RemoveRecipeInputForm, 0, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(RemoveRecipeOutputForm, 0, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(ReplaceRecipeInputForm, 0, kParams_ThreeForms);
+DEFINE_COMMAND_PLUGIN(ReplaceRecipeOutputForm, 0, kParams_ThreeForms);
+DEFINE_COMMAND_PLUGIN(GetRecipeInputCount, 0, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(SetRecipeInputCount, 0, kParams_TwoForms_OneInt);
+DEFINE_COMMAND_PLUGIN(GetRecipeOutputCount, 0, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(SetRecipeOutputCount, 0, kParams_TwoForms_OneInt);
+DEFINE_COMMAND_PLUGIN(GetRecipeCategory, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetRecipeCategory, 0, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(GetRecipeSubcategory, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetRecipeSubcategory, 0, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(AddRecipeCondition, 0, kParams_FormCondition);
 
 bool Cmd_GetFormRecipes_Execute(COMMAND_ARGS)
 {
@@ -129,7 +129,6 @@ bool Cmd_GetRecipeInputForms_Execute(COMMAND_ARGS)
 	TESRecipe *recipe;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &recipe) && IS_ID(recipe, TESRecipe))
 		*result = (int)recipe->inputs.GetComponents(scriptObj);
-	else *result = 0;
 	return true;
 }
 
@@ -138,7 +137,6 @@ bool Cmd_GetRecipeOutputForms_Execute(COMMAND_ARGS)
 	TESRecipe *recipe;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &recipe) && IS_ID(recipe, TESRecipe))
 		*result = (int)recipe->outputs.GetComponents(scriptObj);
-	else *result = 0;
 	return true;
 }
 
@@ -168,7 +166,6 @@ bool Cmd_RemoveRecipeInputForm_Execute(COMMAND_ARGS)
 	TESForm *form;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &recipe, &form) && IS_ID(recipe, TESRecipe))
 		*result = (int)recipe->inputs.RemoveComponent(form);
-	else *result = 0;
 	return true;
 }
 
@@ -178,7 +175,6 @@ bool Cmd_RemoveRecipeOutputForm_Execute(COMMAND_ARGS)
 	TESForm *form;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &recipe, &form) && IS_ID(recipe, TESRecipe))
 		*result = (int)recipe->outputs.RemoveComponent(form);
-	else *result = 0;
 	return true;
 }
 
@@ -202,12 +198,10 @@ bool Cmd_ReplaceRecipeOutputForm_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRecipeInputCount_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESRecipe *recipe;
 	TESForm *form;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &recipe, &form) && IS_ID(recipe, TESRecipe))
 		*result = (int)recipe->inputs.GetQuantity(form);
-	else *result = 0;
 	return true;
 }
 
@@ -227,7 +221,6 @@ bool Cmd_GetRecipeOutputCount_Execute(COMMAND_ARGS)
 	TESForm *form;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &recipe, &form) && IS_ID(recipe, TESRecipe))
 		*result = (int)recipe->outputs.GetQuantity(form);
-	else *result = 0;
 	return true;
 }
 
@@ -243,7 +236,6 @@ bool Cmd_SetRecipeOutputCount_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRecipeCategory_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESRecipe *recipe;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &recipe) && IS_ID(recipe, TESRecipe) && recipe->category)
 		REFR_RES = recipe->category->refID;
@@ -264,7 +256,6 @@ bool Cmd_SetRecipeCategory_Execute(COMMAND_ARGS)
 
 bool Cmd_GetRecipeSubcategory_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESRecipe *recipe;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &recipe) && IS_ID(recipe, TESRecipe) && recipe->subCategory)
 		REFR_RES = recipe->subCategory->refID;

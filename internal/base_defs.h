@@ -18,29 +18,29 @@ typedef signed long long SInt64;
 #define DUP_4(a) a a a a
 
 // These are used for 10h aligning segments in ASM code (massive performance gain, particularly with loops).
-#define EMIT(bt) __asm _emit 0x ## bt
+#define EMIT(bt) __asm _emit bt
 
-#define NOP_0x1 EMIT(90)
+#define NOP_0x1 EMIT(0x90)
 //	"\x90"
-#define NOP_0x2 EMIT(66) NOP_0x1
+#define NOP_0x2 EMIT(0x66) NOP_0x1
 //	"\x66\x90"
-#define NOP_0x3 EMIT(0F) EMIT(1F) EMIT(00)
+#define NOP_0x3 EMIT(0x0F) EMIT(0x1F) EMIT(0x00)
 //	"\x0F\x1F\x00"
-#define NOP_0x4 EMIT(0F) EMIT(1F) EMIT(40) EMIT(00)
+#define NOP_0x4 EMIT(0x0F) EMIT(0x1F) EMIT(0x40) EMIT(0x00)
 //	"\x0F\x1F\x40\x00"
-#define NOP_0x5 EMIT(0F) EMIT(1F) EMIT(44) EMIT(00) EMIT(00)
+#define NOP_0x5 EMIT(0x0F) EMIT(0x1F) EMIT(0x44) EMIT(0x00) EMIT(0x00)
 //	"\x0F\x1F\x44\x00\x00"
-#define NOP_0x6 EMIT(66) NOP_0x5
+#define NOP_0x6 EMIT(0x66) NOP_0x5
 //	"\x66\x0F\x1F\x44\x00\x00"
-#define NOP_0x7 EMIT(0F) EMIT(1F) EMIT(80) EMIT(00) EMIT(00) EMIT(00) EMIT(00)
+#define NOP_0x7 EMIT(0x0F) EMIT(0x1F) EMIT(0x80) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00)
 //	"\x0F\x1F\x80\x00\x00\x00\x00"
-#define NOP_0x8 EMIT(0F) EMIT(1F) EMIT(84) EMIT(00) EMIT(00) EMIT(00) EMIT(00) EMIT(00)
+#define NOP_0x8 EMIT(0x0F) EMIT(0x1F) EMIT(0x84) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00) EMIT(0x00)
 //	"\x0F\x1F\x84\x00\x00\x00\x00\x00"
-#define NOP_0x9 EMIT(66) NOP_0x8
+#define NOP_0x9 EMIT(0x66) NOP_0x8
 //	"\x66\x0F\x1F\x84\x00\x00\x00\x00\x00"
-#define NOP_0xA EMIT(66) NOP_0x9
+#define NOP_0xA EMIT(0x66) NOP_0x9
 //	"\x66\x66\x0F\x1F\x84\x00\x00\x00\x00\x00"
-#define NOP_0xB EMIT(66) NOP_0xA
+#define NOP_0xB EMIT(0x66) NOP_0xA
 //	"\x66\x66\x66\x0F\x1F\x84\x00\x00\x00\x00\x00"
 #define NOP_0xC NOP_0x8 NOP_0x4
 #define NOP_0xD NOP_0x8 NOP_0x5
@@ -56,16 +56,51 @@ typedef signed long long SInt64;
 #define USHT(a) *((UInt16*)&a)
 #define ULNG(a) *((UInt32*)&a)
 
-#define EMIT_DW(b0, b1, b2, b3) EMIT(b3) EMIT(b2) EMIT(b1) EMIT(b0)
-#define EMIT_DW_3(b0, b1, b2) EMIT_DW(00, b0, b1, b2)
-#define EMIT_DW_2(b0, b1) EMIT_DW(00, 00, b0, b1)
-#define EMIT_DW_1(b0) EMIT_DW(00, 00, 00, b0)
-#define EMIT_PS_1(b0, b1, b2, b3) EMIT_DW(b0, b1, b2, b3) DUP_3(EMIT_DW_1(00))
-#define EMIT_PS_2(b0, b1, b2, b3) DUP_2(EMIT_DW(b0, b1, b2, b3)) DUP_2(EMIT_DW_1(00))
-#define EMIT_PS_3(b0, b1, b2, b3) DUP_3(EMIT_DW(b0, b1, b2, b3)) EMIT_DW_1(00)
-#define EMIT_PS_4(b0, b1, b2, b3) DUP_4(EMIT_DW(b0, b1, b2, b3))
-#define EMIT_8(b0, b1, b2, b3, b4, b5, b6, b7) EMIT(b0) EMIT(b1) EMIT(b2) EMIT(b3) EMIT(b4) EMIT(b5) EMIT(b6) EMIT(b7)
-#define EMIT_4W(b0, b1, b2, b3, b4, b5, b6, b7) EMIT(b1) EMIT(b0) EMIT(b3) EMIT(b2) EMIT(b5) EMIT(b4) EMIT(b7) EMIT(b6)
+#define NBYTE(a, n) ((UInt8*)&a)[n]
+#define NWORD(a, n) ((UInt16*)&a)[n]
+
+#define GET_N_BYTE(a, n) ((a >> (n * 8)) & 0xFF)
+
+#define EMIT_W(a) EMIT(GET_N_BYTE(a, 0)) EMIT(GET_N_BYTE(a, 1))
+#define EMIT_DW(a) EMIT(GET_N_BYTE(a, 0)) EMIT(GET_N_BYTE(a, 1)) EMIT(GET_N_BYTE(a, 2)) EMIT(GET_N_BYTE(a, 3))
+#define EMIT_DW_0 DUP_4(EMIT(0x00))
+#define EMIT_PS_1(a) EMIT_DW(a) DUP_3(EMIT_DW_0)
+#define EMIT_PS_2(a) DUP_2(EMIT_DW(a)) DUP_2(EMIT_DW_0)
+#define EMIT_PS_3(a) DUP_3(EMIT_DW(a)) EMIT_DW_0
+#define EMIT_PS_4(a) DUP_4(EMIT_DW(a))
+#define EMIT_B_8(a0, a1, a2, a3, a4, a5, a6, a7) EMIT(a0) EMIT(a1) EMIT(a2) EMIT(a3) EMIT(a4) EMIT(a5) EMIT(a6) EMIT(a7)
+#define EMIT_W_4(a0, a1, a2, a3) EMIT_W(a0) EMIT_W(a1) EMIT_W(a2) EMIT_W(a3)
+#define EMIT_W_8(a0, a1, a2, a3, a4, a5, a6, a7) EMIT_W(a0) EMIT_W(a1) EMIT_W(a2) EMIT_W(a3) EMIT_W(a4) EMIT_W(a5) EMIT_W(a6) EMIT_W(a7)
+#define EMIT_DW_4(a0, a1, a2, a3) EMIT_DW(a0) EMIT_DW(a1) EMIT_DW(a2) EMIT_DW(a3)
+
+#define AS_CHAR1(a) GET_N_BYTE(a, 0)
+#define AS_CHAR2(a) GET_N_BYTE(a, 0), GET_N_BYTE(a, 1)
+#define AS_CHAR4(a) GET_N_BYTE(a, 0), GET_N_BYTE(a, 1), GET_N_BYTE(a, 2), GET_N_BYTE(a, 3)
+#define AS_CHAR8(a) GET_N_BYTE(a, 0), GET_N_BYTE(a, 1), GET_N_BYTE(a, 2), GET_N_BYTE(a, 3), \
+	GET_N_BYTE(a, 4), GET_N_BYTE(a, 5), GET_N_BYTE(a, 6), GET_N_BYTE(a, 7)
+
+#define _MM_SET_EPI8(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, aa, ab, ac, ad, ae, af) \
+	{AS_CHAR1(a0), AS_CHAR1(a1), AS_CHAR1(a2), AS_CHAR1(a3), \
+	 AS_CHAR1(a4), AS_CHAR1(a5), AS_CHAR1(a6), AS_CHAR1(a7), \
+	 AS_CHAR1(a8), AS_CHAR1(a9), AS_CHAR1(aa), AS_CHAR1(ab), \
+	 AS_CHAR1(ac), AS_CHAR1(ad), AS_CHAR1(ae), AS_CHAR1(af)}
+
+#define _MM_SET_EPI16(a0, a1, a2, a3, a4, a5, a6, a7) \
+	{AS_CHAR2(a0), AS_CHAR2(a1), AS_CHAR2(a2), AS_CHAR2(a3), \
+	 AS_CHAR2(a4), AS_CHAR2(a5), AS_CHAR2(a6), AS_CHAR2(a7)}
+
+#define _MM_SET_EPI32(a0, a1, a2, a3) \
+	{AS_CHAR4(a0), AS_CHAR4(a1), AS_CHAR4(a2), AS_CHAR4(a3)}
+
+#define _MM_SET_EPI64(a0, a1) {AS_CHAR8(a0), AS_CHAR8(a1)}
+
+#define _MM_SET_EPI32_1(a) _MM_SET_EPI32(a, 0, 0, 0)
+#define _MM_SET_EPI32_2(a) _MM_SET_EPI32(a, a, 0, 0)
+#define _MM_SET_EPI32_3(a) _MM_SET_EPI32(a, a, a, 0)
+#define _MM_SET_EPI32_4(a) _MM_SET_EPI32(a, a, a, a)
+
+#define _MM_SET_EPI64_1(a) _MM_SET_EPI64(a, 0)
+#define _MM_SET_EPI64_2(a) _MM_SET_EPI64(a, a)
 
 template <typename T_Ret = void, typename ...Args>
 __forceinline T_Ret ThisCall(UInt32 _addr, void *_this, Args ...args)
@@ -192,6 +227,8 @@ typedef ScopedLock<CriticalSection> ScopedCS;
 typedef ScopedLock<PrimitiveCS> ScopedPrimitiveCS;
 typedef ScopedLock<LightCS> ScopedLightCS;
 
+void PrintDebug(const char *fmt, ...);
+
 template <const size_t numBits> struct BitField
 {
 	static_assert((numBits == 8) || (numBits == 16) || (numBits == 32));
@@ -210,7 +247,100 @@ template <const size_t numBits> struct BitField
 	inline bool operator[](UInt8 bitIndex) const {return (bits & (1 << bitIndex)) != 0;}
 	inline void operator+=(UInt8 bitIndex) {bits |= (1 << bitIndex);}
 	inline void operator-=(UInt8 bitIndex) {bits &= ~(1 << bitIndex);}
+
+	void Dump()
+	{
+		char bitStr[numBits << 1];
+		bitStr[(numBits << 1) - 1] = 0;
+		for (UInt32 i = 0; i < (numBits << 1) - 1; i++)
+			if (i & 1)
+				bitStr[i] = ' ';
+			else bitStr[i] = ((bits >> i) & 1) + '0';
+		PrintDebug(bitStr);
+	}
 };
+
+union Pointers
+{
+	void	*v;
+	char	*c;
+	UInt8	*b;
+	UInt16	*s;
+	UInt32	*l;
+
+	Pointers() {}
+	__forceinline Pointers(void *ptr) : v(ptr) {}
+	__forceinline Pointers(Pointers &&other) : v(other.v) {}
+
+	__forceinline void operator=(void *ptr) {v = ptr;}
+
+	__forceinline void operator+=(size_t n) {c += n;}
+};
+
+union FltAndInt
+{
+	float		f;
+	int			i;
+};
+
+union FunctionArg
+{
+	void		*pVal;
+	float		fVal;
+	UInt32		uVal;
+	SInt32		iVal;
+
+	FunctionArg() {}
+	__forceinline FunctionArg(void *_val) : pVal(_val) {}
+	__forceinline FunctionArg(float _val) : fVal(_val) {}
+	__forceinline FunctionArg(UInt32 _val) : uVal(_val) {}
+	__forceinline FunctionArg(SInt32 _val) : iVal(_val) {}
+
+	__forceinline void operator=(void *other) {pVal = other;}
+	__forceinline void operator=(float other) {fVal = other;}
+	__forceinline void operator=(UInt32 other) {uVal = other;}
+	__forceinline void operator=(SInt32 other) {iVal = other;}
+};
+
+__forceinline __m128 __vectorcall operator+(__m128 a, __m128 b)
+{
+	return _mm_add_ps(a, b);
+}
+__forceinline __m128 __vectorcall operator-(__m128 a, __m128 b)
+{
+	return _mm_sub_ps(a, b);
+}
+__forceinline __m128 __vectorcall operator*(__m128 a, __m128 b)
+{
+	return _mm_mul_ps(a, b);
+}
+__forceinline __m128 __vectorcall operator&(__m128 a, __m128 b)
+{
+	return _mm_and_ps(a, b);
+}
+__forceinline __m128 __vectorcall operator|(__m128 a, __m128 b)
+{
+	return _mm_or_ps(a, b);
+}
+__forceinline __m128 __vectorcall operator^(__m128 a, __m128 b)
+{
+	return _mm_xor_ps(a, b);
+}
+
+template <typename T1, typename T2> __forceinline T1 GetMin(T1 value1, T2 value2)
+{
+	return (value1 < value2) ? value1 : value2;
+}
+
+template <typename T1, typename T2> __forceinline T1 GetMax(T1 value1, T2 value2)
+{
+	return (value1 > value2) ? value1 : value2;
+}
+
+template <typename T> __forceinline T sqr(T value)
+{
+	return value * value;
+}
 
 #define COPY_BYTES(dest, src, count) __movsb((UInt8*)(dest), (const UInt8*)(src), count)
 #define ZERO_BYTES(addr, size) __stosb((UInt8*)(addr), 0, size)
@@ -237,7 +367,8 @@ template <const size_t numBits> struct BitField
 #define EXTRA_DATA_CS			0x11C3920
 #define SCENE_LIGHTS_CS			0x11F9EA0
 
-#define HEX(a) std::bit_cast<UInt32>(a)
+#define AS_I32(a) std::bit_cast<UInt32>(a)
+#define AS_I64(a) std::bit_cast<UInt64>(a)
 
 #define IS_REFERENCE(form) ((*(UInt32**)form)[0xF0 >> 2] == ADDR_ReturnTrue)
 #define NOT_REFERENCE(form) ((*(UInt32**)form)[0xF0 >> 2] != ADDR_ReturnTrue)
@@ -247,7 +378,4 @@ template <const size_t numBits> struct BitField
 #define IS_NODE(object) ((*(UInt32**)object)[0xC >> 2] == ADDR_ReturnThis)
 #define IS_GEOMETRY(object) ((*(UInt32**)object)[0x18 >> 2] == ADDR_ReturnThis2)
 
-extern const bool kInventoryType[];
-extern const UInt8 kMaterialConvert[];
-extern const char kDaysPerMonth[], kMenuIDJumpTable[];
-extern bool s_NPCWeaponMods, s_NPCPerks;
+#define REFR_RES *(UInt32*)result

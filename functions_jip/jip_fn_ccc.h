@@ -1,32 +1,32 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(CCCOnLoad, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(CCCSetFloat, 0, 2, kParams_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(CCCSetString, 0, 22, kParams_OneInt_OneFormatString);
-DEFINE_COMMAND_PLUGIN(CCCSetTrait, 0, 3, kParams_TwoInts_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(CCCGetDistance, 1, 2, kParams_OneObjectRef_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(CCCInFaction, 1, 2, kParams_OneFaction_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(CCCSetNCCS, 1, 1, kParams_OneOptionalInt);
-DEFINE_CMD_COND_PLUGIN(GetEncumbranceRate, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(CCCLoadNCCS, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(CCCSavedForm, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(CCCLocationName, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(CCCGetReputation, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(CCCSayTo, 1, 4, kParams_OneActor_OneTopic_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(CCCRunResultScripts, 1, 1, kParams_OneTopic);
-DEFINE_COMMAND_PLUGIN(CCCSetFollowState, 1, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(RefToPosStr, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(MoveToPosStr, 1, 1, kParams_OneString);
-DEFINE_COMMAND_PLUGIN(LockEquipment, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(CCCSetEquipped, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(CCCSMS, 0, 1, kParams_OneOptionalObjectRef);
-DEFINE_COMMAND_PLUGIN(CCCTaskPackageFlags, 0, 4, kParams_OneAIPackage_ThreeInts);
+DEFINE_COMMAND_PLUGIN(CCCOnLoad, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(CCCSetFloat, 0, kParams_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(CCCSetString, 0, kParams_OneInt_OneFormatString);
+DEFINE_COMMAND_PLUGIN(CCCSetTrait, 0, kParams_TwoInts_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(CCCGetDistance, 1, kParams_OneObjectRef_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(CCCInFaction, 1, kParams_OneFaction_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(CCCSetNCCS, 1, kParams_OneOptionalInt);
+DEFINE_CMD_COND_PLUGIN(GetEncumbranceRate, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(CCCLoadNCCS, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(CCCSavedForm, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(CCCLocationName, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(CCCGetReputation, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(CCCSayTo, 1, kParams_OneActor_OneTopic_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(CCCRunResultScripts, 1, kParams_OneTopic);
+DEFINE_COMMAND_PLUGIN(CCCSetFollowState, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(RefToPosStr, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(MoveToPosStr, 1, kParams_OneString);
+DEFINE_COMMAND_PLUGIN(LockEquipment, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(CCCSetEquipped, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(CCCSMS, 0, kParams_OneOptionalObjectRef);
+DEFINE_COMMAND_PLUGIN(CCCTaskPackageFlags, 0, kParams_OneAIPackage_ThreeInts);
 
 UInt8 s_CCCModIdx = 0;
 TempObject<UnorderedMap<const char*, const char*, 0x80, false>> s_avatarPaths;
 TempObject<Map<char*, const char*>> s_avatarCommon(0x30);
 bool s_UILoaded = false;
-TileValue **s_UIelements = NULL;
+TileValue **s_UIelements = nullptr;
 UInt32 s_savedForms[10] = {};
 TESFaction *s_taskFaction;
 const char kLoadError[] = "ERROR: Failed to load JIP CC&C UI components.";
@@ -335,7 +335,6 @@ bool Cmd_CCCGetDistance_Execute(COMMAND_ARGS)
 			*result = abs(thisObj->position.z - objRef->position.z);
 		else *result = Point2Distance(thisObj->position, objRef->position);
 	}
-	else *result = 0;
 	return true;
 }
 
@@ -345,8 +344,8 @@ bool Cmd_CCCInFaction_Execute(COMMAND_ARGS)
 	UInt32 inBase = 0;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &faction, &inBase) && IS_ACTOR(thisObj) && 
 		((inBase && (((TESActorBase*)thisObj->baseForm)->baseData.GetFactionRank(faction) >= 0)) || 
-		(thisObj->extraDataList.GetExtraFactionRank(faction) >= 0))) *result = 1;
-	else *result = 0;
+		(thisObj->extraDataList.GetExtraFactionRank(faction) >= 0)))
+		*result = 1;
 	return true;
 }
 
@@ -354,10 +353,9 @@ TempObject<Set<TESActorBase*>> s_NCCSActors;
 
 void SetNCCS(TESActorBase *actorBase, bool doSet)
 {
-	Script *script = actorBase->scriptable.script;
-	if (script)
+	if (actorBase->scriptable.script)
 	{
-		SetScriptDisabled(script, doSet);
+		SetScriptDisabled(actorBase->scriptable.script, doSet);
 		SetScriptEventDisabled(actorBase, 0, true, doSet);
 	}
 }
@@ -378,7 +376,7 @@ bool Cmd_CCCSetNCCS_Execute(COMMAND_ARGS)
 	return true;
 }
 
-double __fastcall GetEncumbranceRate(TESObjectREFR *thisObj)
+__declspec(noinline) double __fastcall GetEncumbranceRate(TESObjectREFR *thisObj)
 {
 	if (IS_ACTOR(thisObj))
 		if (auto xChanges = GetExtraType(&thisObj->extraDataList, ExtraContainerChanges); xChanges && xChanges->data)
@@ -418,11 +416,10 @@ bool Cmd_CCCSavedForm_Execute(COMMAND_ARGS)
 	UInt32 idx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idx))
 		REFR_RES = s_savedForms[idx];
-	else REFR_RES = 0;
 	return true;
 }
 
-typedef UnorderedMap<UInt32, TESObjectREFR*> MapMarkersGrid;
+typedef UnorderedMap<UInt32, TESObjectREFR*, 0x80, false> MapMarkersGrid;
 TempObject<Map<TESWorldSpace*, MapMarkersGrid>> s_worldspaceMap;
 
 bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
@@ -454,8 +451,7 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 			{
 				if (!(mkRefr = objIter->data) || !(markerData = mkRefr->GetMapMarkerData()) || !markerData->fullName.name.m_dataLen)
 					continue;
-				coord.x = ifloor(mkRefr->position.x * (1 / 4096.0F));
-				coord.y = ifloor(mkRefr->position.y * (1 / 4096.0F));
+				coord = mkRefr->position.PS2();
 				(*markersGrid)[coord] = mkRefr;
 			}
 			while (objIter = objIter->next);
@@ -463,22 +459,18 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 	}
 	if (!markersGrid->Empty())
 	{
-		mkRefr = NULL;
-		SInt16 gridX = coord.x = ifloor(thisObj->position.x * (1 / 4096.0F)), gridY = coord.y = ifloor(thisObj->position.y * (1 / 4096.0F));
-		char modX, modY, count;
-		TESObjectREFR *findMarker;
-		float distMin = 40000, distTmp;
+		mkRefr = nullptr;
+		Coordinate gridXY(thisObj->position.PS2());
+		float distMin = 40000.0F, distTmp;
 		for (char radius = 0; radius <= 8; radius++)
 		{
-			coord.x = gridX - radius;
-			coord.y = gridY - radius;
-			modX = 0;
-			modY = 1;
-			count = 1;
+			coord = gridXY;
+			coord.x -= radius;
+			coord.y -= radius;
+			char modX = 0, modY = 1, count = 1;
 			do
 			{
-				findMarker = markersGrid->Get(coord);
-				if (findMarker)
+				if (TESObjectREFR *findMarker = markersGrid->Get(coord))
 				{
 					distTmp = Point3Distance(thisObj->position, findMarker->position);
 					if (distMin > distTmp)
@@ -502,12 +494,12 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 			markerData = mkRefr->GetMapMarkerData();
 			if (markerData)
 			{
-				if (distMin > 4096)
+				if (distMin > 4096.0F)
 				{
 					distTmp = (thisObj->position.x - mkRefr->position.x) / distMin;
 					distMin = thisObj->position.y - mkRefr->position.y;
-					if ((distTmp >= 0.97F) && (distTmp <= 1)) memcpy(locName, "East of ", 9);
-					else if ((distTmp >= -1) && (distTmp <= -0.97F)) memcpy(locName, "West of ", 9);
+					if ((distTmp >= 0.97F) && (distTmp <= 1.0F)) memcpy(locName, "East of ", 9);
+					else if ((distTmp >= -1.0F) && (distTmp <= -0.97F)) memcpy(locName, "West of ", 9);
 					else if ((distTmp >= -0.26F) && (distTmp <= 0.26F)) StrCopy(locName, (distMin > 0) ? "North of " : "South of ");
 					else if (distTmp > 0) StrCopy(locName, (distMin > 0) ? "NE of " : "SE of ");
 					else StrCopy(locName, (distMin > 0) ? "NW of " : "SW of ");
@@ -526,7 +518,6 @@ bool Cmd_CCCLocationName_Execute(COMMAND_ARGS)
 
 bool Cmd_CCCGetReputation_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	if (NOT_ACTOR(thisObj))
 		return true;
 	auto baseFacIt = ((TESActorBase*)thisObj->baseForm)->baseData.factionList.Head();
@@ -571,17 +562,13 @@ bool Cmd_CCCSayTo_Execute(COMMAND_ARGS)
 bool Cmd_CCCRunResultScripts_Execute(COMMAND_ARGS)
 {
 	TESTopic *topic;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &topic) && IS_ACTOR(thisObj))
-	{
-		Actor *actor = (Actor*)thisObj;
-		bool eval;
-		TESTopicInfo *topicInfo = GetTopicInfo(topic, &eval, actor, g_thePlayer);
-		if (topicInfo)
+	Actor *actor = (Actor*)thisObj;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &topic) && IS_ACTOR(actor))
+		if (auto topicInfo = GetTopicInfo(topic, &topic, actor, g_thePlayer))
 		{
 			topicInfo->RunResultScript(0, actor);
 			topicInfo->RunResultScript(1, actor);
 		}
-	}
 	return true;
 }
 
@@ -632,7 +619,6 @@ bool Cmd_RefToPosStr_Execute(COMMAND_ARGS)
 
 bool Cmd_MoveToPosStr_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	char posStr[0x40];
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &posStr)) return true;
 	char *pos = posStr, *delim = GetNextToken(pos, ' ');
@@ -669,25 +655,19 @@ bool Cmd_LockEquipment_Execute(COMMAND_ARGS)
 		(!lockEqp != !(((Character*)thisObj)->jipActorFlags1 & kHookActorFlag1_LockedEquipment)))
 	{
 		((Character*)thisObj)->jipActorFlags1 ^= kHookActorFlag1_LockedEquipment;
-		bool doLock = lockEqp != 0;
-		HOOK_MOD(EquipItem, doLock);
-		HOOK_MOD(ReEquipAll, doLock);
-		HOOK_MOD(WeaponSwitchSelect, doLock);
-		HOOK_MOD(WeaponSwitchUnequip, doLock);
-		HOOK_MOD(GetPreferedWeapon, doLock);
+		HOOK_MOD(LockEquipment, lockEqp != 0);
 	}
 	return true;
 }
 
 bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	Character *character;
 	TESCombatStyle *cmbStyle;
 	TESObjectWEAP *weapon;
 	ContChangesEntry *entry;
 	TESForm *item;
-	ExtraDataList *xData = NULL;
+	ExtraDataList *xData = nullptr;
 	UInt8 restrictions;
 	if (thisObj)
 	{
@@ -728,12 +708,11 @@ bool Cmd_CCCSetEquipped_Execute(COMMAND_ARGS)
 			if (biped->IsPlayable() || (usedSlots & biped->partMask))
 				continue;
 			entry = armIter().entry;
-			xData = (entry && entry->extendData) ? entry->extendData->GetFirstItem() : NULL;
+			xData = (entry && entry->extendData) ? entry->extendData->GetFirstItem() : nullptr;
 			character->EquipItem(item, 1, xData, 1, 0, 0);
 			usedSlots |= biped->partMask;
 		}
-		character->ModActorValue(kAVCode_DamageResist, 0, 0);
-		character->ModActorValue(kAVCode_DamageThreshold, 0, 0);
+		character->RefreshWornDTDR();
 		return true;
 	}
 	ContainerMenu *containerMenu = ContainerMenu::Get();

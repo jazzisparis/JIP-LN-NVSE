@@ -146,17 +146,23 @@ __declspec(naked) void* __fastcall MemoryPool::Realloc(void *pBlock, size_t curS
 		jbe		done
 		cmp		edx, MAX_BLOCK_SIZE
 		ja		doRealloc
-		push	edx
-		push	eax
+		push	esi
+		push	edi
+		mov		esi, eax
+		mov		edi, edx
 		call	MemoryPool::Alloc
-		push	eax
-		call	MemCopy
-		pop		eax
-		pop		ecx
-		pop		edx
-		push	eax
+		mov		ecx, edi
+		mov		edx, ecx
+		shr		ecx, 2
+		mov		edi, eax
+		rep movsd
+		mov		edi, eax
+		mov		ecx, esi
+		sub		ecx, edx
 		call	MemoryPool::Free
-		pop		eax
+		mov		eax, edi
+		pop		edi
+		pop		esi
 		retn	4
 		ALIGN 16
 	doRealloc:

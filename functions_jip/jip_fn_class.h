@@ -1,13 +1,12 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetClassTraitNumeric, 0, 2, kParams_OneClass_OneInt);
-DEFINE_COMMAND_PLUGIN(SetClassTraitNumeric, 0, 3, kParams_OneClass_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetClassFlag, 0, 2, kParams_OneClass_OneInt);
-DEFINE_COMMAND_PLUGIN(SetClassFlag, 0, 3, kParams_OneClass_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetClassTraitNumeric, 0, kParams_OneClass_OneInt);
+DEFINE_COMMAND_PLUGIN(SetClassTraitNumeric, 0, kParams_OneClass_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetClassFlag, 0, kParams_OneClass_OneInt);
+DEFINE_COMMAND_PLUGIN(SetClassFlag, 0, kParams_OneClass_TwoInts);
 
 bool Cmd_GetClassTraitNumeric_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESClass *pClass;
 	UInt32 traitID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pClass, &traitID) && (traitID <= 10))
@@ -36,14 +35,16 @@ bool Cmd_SetClassTraitNumeric_Execute(COMMAND_ARGS)
 
 bool Cmd_GetClassFlag_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESClass *pClass;
 	UInt32 flagID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &pClass, &flagID) && (flagID <= 19))
 		if (flagID < 2)
-			*result = (pClass->classFlags & (1 << flagID)) ? 1 : 0;
-		else
-			*result = (pClass->services & (1 << (flagID - 2))) ? 1 : 0;
+		{
+			if (pClass->classFlags & (1 << flagID))
+				*result = 1;
+		}
+		else if (pClass->services & (1 << (flagID - 2)))
+			*result = 1;
 	return true;
 }
 

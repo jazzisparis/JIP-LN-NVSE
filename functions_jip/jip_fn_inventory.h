@@ -1,34 +1,34 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(AddItemAlt, 1, 5, kParams_OneItemOrList_OneOptInt_OneOptFloat_TwoOptInts);
-DEFINE_COMMAND_PLUGIN(GetValueAlt, 0, 1, kParams_OneOptionalObjectID);
-DEFINE_COMMAND_PLUGIN(SetValueAlt, 0, 2, kParams_OneObjectID_OneInt);
-DEFINE_COMMAND_PLUGIN(RemoveItemTarget, 1, 4, kParams_OneItemOrList_OneContainer_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(GetWeaponRefModFlags, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(SetWeaponRefModFlags, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetItemRefCurrentHealth, 1, 1, kParams_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetItemRefCurrentHealth, 1, 2, kParams_OneFloat_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(SetHotkeyItemRef, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(EquipItemAlt, 1, 3, kParams_OneObjectID_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(UnequipItemAlt, 1, 3, kParams_OneObjectID_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(DropAlt, 1, 3, kParams_OneItemOrList_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(DropMeAlt, 1, 2, kParams_TwoOptionalInts);
-DEFINE_COMMAND_PLUGIN(GetAllItems, 1, 5, kParams_FourOptionalInts_OneOptionalList);
-DEFINE_COMMAND_PLUGIN(GetAllItemRefs, 1, 5, kParams_FourOptionalInts_OneOptionalList);
-DEFINE_COMMAND_PLUGIN(RemoveMeIRAlt, 1, 3, kParams_TwoOptionalInts_OneOptionalContainer);
-DEFINE_COMMAND_PLUGIN(GetEquippedItemRef, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetNoUnequip, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(SetNoUnequip, 1, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(GetEquippedWeaponPoison, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(ToggleItemUnique, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(GetBaseItems, 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetOnUseAidItemEventHandler, 0, 3, kParams_OneForm_OneInt_OneForm);
-DEFINE_COMMAND_PLUGIN(GetEquippedArmorRefs, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDT, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDR, 1, 0, nullptr);
-DEFINE_COMMAND_PLUGIN(GetHotkeyItemRef, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(IsItemUnique, 0, 1, kParams_OneObjectID);
-DEFINE_COMMAND_PLUGIN(GetSelfAsInventoryRef, 1, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(AddItemAlt, 1, kParams_OneItemOrList_OneOptInt_OneOptFloat_TwoOptInts);
+DEFINE_COMMAND_PLUGIN(GetValueAlt, 0, kParams_OneOptionalObjectID);
+DEFINE_COMMAND_PLUGIN(SetValueAlt, 0, kParams_OneObjectID_OneInt);
+DEFINE_COMMAND_PLUGIN(RemoveItemTarget, 1, kParams_OneItemOrList_OneContainer_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(GetWeaponRefModFlags, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(SetWeaponRefModFlags, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetItemRefCurrentHealth, 1, kParams_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetItemRefCurrentHealth, 1, kParams_OneFloat_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(SetHotkeyItemRef, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(EquipItemAlt, 1, kParams_OneObjectID_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(UnequipItemAlt, 1, kParams_OneObjectID_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(DropAlt, 1, kParams_OneItemOrList_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(DropMeAlt, 1, kParams_TwoOptionalInts);
+DEFINE_COMMAND_PLUGIN(GetAllItems, 1, kParams_FourOptionalInts_OneOptionalList);
+DEFINE_COMMAND_PLUGIN(GetAllItemRefs, 1, kParams_FourOptionalInts_OneOptionalList);
+DEFINE_COMMAND_PLUGIN(RemoveMeIRAlt, 1, kParams_TwoOptionalInts_OneOptionalContainer);
+DEFINE_COMMAND_PLUGIN(GetEquippedItemRef, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetNoUnequip, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(SetNoUnequip, 1, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(GetEquippedWeaponPoison, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(ToggleItemUnique, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(GetBaseItems, 0, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetOnUseAidItemEventHandler, 0, kParams_OneForm_OneInt_OneForm);
+DEFINE_COMMAND_PLUGIN(GetEquippedArmorRefs, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDT, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(GetArmorEffectiveDR, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(GetHotkeyItemRef, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(IsItemUnique, 0, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(GetSelfAsInventoryRef, 1, nullptr);
 
 bool Cmd_AddItemAlt_Execute(COMMAND_ARGS)
 {
@@ -45,7 +45,6 @@ bool Cmd_GetValueAlt_Execute(COMMAND_ARGS)
 	TESForm *form = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form) && (form || (thisObj && (form = thisObj->baseForm) && kInventoryType[form->typeID])))
 		*result = (int)form->GetItemValue();
-	else *result = 0;
 	return true;
 }
 
@@ -76,7 +75,6 @@ bool Cmd_RemoveItemTarget_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWeaponRefModFlags_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
 	if (ExtraDataList *xData = invRef ? invRef->xData : &thisObj->extraDataList)
 		if (auto xModFlags = GetExtraType(xData, ExtraWeaponModFlags))
@@ -86,7 +84,6 @@ bool Cmd_GetWeaponRefModFlags_Execute(COMMAND_ARGS)
 
 bool Cmd_SetWeaponRefModFlags_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 flags;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &flags) || (flags > 7))
 		return true;
@@ -166,7 +163,6 @@ bool Cmd_GetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 
 bool Cmd_SetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	float health;
 	UInt32 setPercent = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &health, &setPercent))
@@ -193,7 +189,6 @@ bool Cmd_SetItemRefCurrentHealth_Execute(COMMAND_ARGS)
 
 bool Cmd_SetHotkeyItemRef_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 keyNum;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &keyNum) || !keyNum || (keyNum > 8))
 		return true;
@@ -345,7 +340,6 @@ bool Cmd_DropMeAlt_Execute(COMMAND_ARGS)
 
 bool Cmd_GetAllItems_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 typeID = 0, noNonPlayable = 0, noQuestItem = 0, noEquipped = 0;
 	BGSListForm *listForm = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &typeID, &noNonPlayable, &noQuestItem, &noEquipped, &listForm))
@@ -380,7 +374,6 @@ bool Cmd_GetAllItems_Execute(COMMAND_ARGS)
 
 bool Cmd_GetAllItemRefs_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 typeID = 0, noNonPlayable = 0, noQuestItem = 0, noEquipped = 0;
 	BGSListForm *listForm = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &typeID, &noNonPlayable, &noQuestItem, &noEquipped, &listForm))
@@ -465,7 +458,6 @@ bool Cmd_RemoveMeIRAlt_Execute(COMMAND_ARGS)
 
 bool Cmd_GetEquippedItemRef_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	UInt32 slotIdx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &slotIdx) && (slotIdx <= 19) && IS_ACTOR(thisObj))
 		if (TESObjectREFR *invRef = GetEquippedItemRef((Actor*)thisObj, slotIdx))
@@ -475,8 +467,8 @@ bool Cmd_GetEquippedItemRef_Execute(COMMAND_ARGS)
 
 bool Cmd_GetNoUnequip_Execute(COMMAND_ARGS)
 {
-	InventoryRef *invRef = InventoryRefGetForID(thisObj->refID);
-	*result = (invRef && invRef->xData && invRef->xData->HasType(kXData_ExtraCannotWear)) ? 1 : 0;
+	if (InventoryRef *invRef = InventoryRefGetForID(thisObj->refID); invRef && invRef->xData && invRef->xData->HasType(kXData_ExtraCannotWear))
+		*result = 1;
 	return true;
 }
 
@@ -500,7 +492,6 @@ bool Cmd_SetNoUnequip_Execute(COMMAND_ARGS)
 
 bool Cmd_GetEquippedWeaponPoison_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	if (IS_ACTOR(thisObj))
 		if (ContChangesEntry *wpnInfo = ((Actor*)thisObj)->GetWeaponInfo(); wpnInfo && wpnInfo->extendData)
 			if (ExtraDataList *xDataList = wpnInfo->extendData->GetFirstItem())
@@ -537,7 +528,6 @@ bool Cmd_ToggleItemUnique_Execute(COMMAND_ARGS)
 
 bool Cmd_GetBaseItems_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESForm *baseForm = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &baseForm))
 		return true;
@@ -597,7 +587,6 @@ bool Cmd_SetOnUseAidItemEventHandler_Execute(COMMAND_ARGS)
 
 bool Cmd_GetEquippedArmorRefs_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	if (IS_ACTOR(thisObj))
 		if (BipedAnim *equipment = ((Actor*)thisObj)->GetBipedAnim())
 			if (ContChangesEntryList *entryList = thisObj->GetContainerChangesList())
@@ -646,7 +635,6 @@ bool Cmd_GetArmorEffectiveDR_Execute(COMMAND_ARGS)
 
 bool Cmd_GetHotkeyItemRef_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	UInt32 keyNum;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &keyNum) && keyNum && (keyNum <= 8))
 	{
@@ -666,13 +654,11 @@ bool Cmd_IsItemUnique_Execute(COMMAND_ARGS)
 	TESForm *item;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &item) && (item->jipFormFlags6 & kHookFormFlag6_UniqueItem))
 		*result = 1;
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_GetSelfAsInventoryRef_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	if (containingObj && thisObj->baseForm)
 		if (TESObjectREFR *invRef = containingObj->CreateInventoryRefForScriptedObj(thisObj->baseForm, eventList))
 			REFR_RES = invRef->refID;

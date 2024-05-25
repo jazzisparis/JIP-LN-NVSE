@@ -85,7 +85,10 @@ public:
 		ThisCall(0x5AA1A0, this);
 	}
 
-	bool Execute(TESObjectREFR *thisObj = nullptr, ScriptLocals *eventList = nullptr, TESObjectREFR *containingObj = nullptr, bool arg3 = true);
+	__forceinline bool Execute(TESObjectREFR *thisObj = nullptr, ScriptLocals *eventList = nullptr, TESObjectREFR *containingObj = nullptr, bool arg3 = true)
+	{
+		return ThisCall<bool>(0x5AC1E0, this, thisObj, eventList, containingObj, arg3);
+	}
 
 	__forceinline bool Run(void *scriptContext, TESObjectREFR *object)
 	{
@@ -129,30 +132,6 @@ struct ScriptRunner
 	UInt8				padA2[2];			// A2
 };
 static_assert(sizeof(ScriptRunner) == 0xA4);
-
-struct ConditionEntry
-{
-	struct Data
-	{
-		union Param
-		{
-			float	number;
-			TESForm	* form;
-		};
-
-		// ### TODO: this
-		UInt32		operatorAndFlags;	// 00
-		float		comparisonValue;	// 04
-		UInt16		functionIndex;		// 08 is opcode & 0x0FFF
-		UInt16		unk0A;
-		Param		param1;				// 0C
-		Param		param2;				// 10
-		UInt32		unk14;
-	};
-
-	Data			* data;
-	ConditionEntry	* next;
-};
 
 // 74
 struct QuestLogEntry

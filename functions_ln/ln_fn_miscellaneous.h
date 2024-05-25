@@ -1,51 +1,51 @@
 #pragma once
 
-DEFINE_CMD_ALT_COND_PLUGIN(GetArmorClass, GetAC, 0, 1, kParams_OneOptionalObjectID);
-DEFINE_COMMAND_ALT_PLUGIN(SetGlobalValue, SGV, 0, 2, kParams_OneString_OneFloat);
-DEFINE_COMMAND_ALT_PLUGIN(GetWorldspaceParentWorldspace, GetWorldParentWorld, 0, 1, kParams_OneWorldspace);
-DEFINE_COMMAND_PLUGIN(GetCellCoords, 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(GetBipedModelList, GetBMList, 0, 1, kParams_OneOptionalObjectID);
-DEFINE_COMMAND_ALT_PLUGIN(SetBipedModelList, SetBMList, 0, 2, kParams_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetPCCanUsePowerArmor, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetIdleAnimPath, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetIdleAnimPath, 0, 2, kParams_OneForm_OneString);
-DEFINE_COMMAND_PLUGIN(LNGetName, 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(LNSetName, 0, 2, kParams_OneString_OneOptionalForm);
-DEFINE_COMMAND_ALT_PLUGIN(GetGlobalTimeMultiplier, ggtm, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetWaterFormEffect, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_ALT_PLUGIN(ar_Cat, pinto_Cat, 0, 3, kParams_TwoInts_OneOptionalInt);
-DEFINE_COMMAND_PLUGIN(GetFormFlag, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetFormFlag, 0, 3, kParams_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetIngestibleFlag, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetIngestibleFlag, 0, 3, kParams_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(IsSkillMagazine, 0, 1, kParams_OneForm);
-DEFINE_CMD_COND_PLUGIN(PlayerHasKey, 1, 0, NULL);
-DEFINE_COMMAND_ALT_PLUGIN(GetAnimObjectIdle, GetANIOIdle, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_ALT_PLUGIN(SetAnimObjectIdle, SetANIOIdle, 0, 2, kParams_TwoForms);
-DEFINE_COMMAND_PLUGIN(GetPickupSound, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetPickupSound, 0, 2, kParams_TwoForms);
-DEFINE_COMMAND_PLUGIN(GetPutdownSound, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(SetPutdownSound, 0, 2, kParams_TwoForms);
-DEFINE_COMMAND_PLUGIN(GetContainerOpenSound, 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetContainerOpenSound, 0, 2, kParams_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetContainerCloseSound, 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(SetContainerCloseSound, 0, 2, kParams_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetPlayerRegions, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetZoneFlag, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetZoneFlag, 0, 3, kParams_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(GetImpactDataSet, 0, 1, kParams_OneObjectID);
-DEFINE_COMMAND_PLUGIN(SetImpactDataSet, 0, 2, kParams_TwoForms);
-DEFINE_COMMAND_PLUGIN(LNIsPlayable, 0, 1, kParams_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(LNSetIsPlayable, 0, 2, kParams_OneInt_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetZone, 1, 0, NULL);
-DEFINE_COMMAND_PLUGIN(AddNoteNS, 0, 1, kParams_OneNote);
-DEFINE_COMMAND_PLUGIN(CrosshairRefInList, 0, 1, kParams_FormList);
-DEFINE_COMMAND_PLUGIN(GetShowQuestItems, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetWaterTrait, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetWaterTrait, 0, 3, kParams_OneForm_OneInt_OneDouble);
-DEFINE_COMMAND_PLUGIN(GetActiveQuest, 0, 0, NULL);
+DEFINE_CMD_ALT_COND_PLUGIN(GetArmorClass, GetAC, 0, kParams_OneOptionalObjectID);
+DEFINE_COMMAND_ALT_PLUGIN(SetGlobalValue, SGV, 0, kParams_OneString_OneFloat);
+DEFINE_COMMAND_ALT_PLUGIN(GetWorldspaceParentWorldspace, GetWorldParentWorld, 0, kParams_OneWorldspace);
+DEFINE_COMMAND_PLUGIN(GetCellCoords, 0, kParams_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(GetBipedModelList, GetBMList, 0, kParams_OneOptionalObjectID);
+DEFINE_COMMAND_ALT_PLUGIN(SetBipedModelList, SetBMList, 0, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetPCCanUsePowerArmor, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetIdleAnimPath, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetIdleAnimPath, 0, kParams_OneForm_OneString);
+DEFINE_COMMAND_PLUGIN(LNGetName, 0, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(LNSetName, 0, kParams_OneString_OneOptionalForm);
+DEFINE_COMMAND_ALT_PLUGIN(GetGlobalTimeMultiplier, ggtm, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetWaterFormEffect, 0, kParams_OneForm);
+DEFINE_COMMAND_ALT_PLUGIN(ar_Cat, pinto_Cat, 0, kParams_TwoInts_OneOptionalInt);
+DEFINE_COMMAND_PLUGIN(GetFormFlag, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetFormFlag, 0, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetIngestibleFlag, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetIngestibleFlag, 0, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(IsSkillMagazine, 0, kParams_OneForm);
+DEFINE_CMD_COND_PLUGIN(PlayerHasKey, 1, nullptr);
+DEFINE_COMMAND_ALT_PLUGIN(GetAnimObjectIdle, GetANIOIdle, 0, kParams_OneForm);
+DEFINE_COMMAND_ALT_PLUGIN(SetAnimObjectIdle, SetANIOIdle, 0, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(GetPickupSound, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetPickupSound, 0, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(GetPutdownSound, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(SetPutdownSound, 0, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(GetContainerOpenSound, 0, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetContainerOpenSound, 0, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetContainerCloseSound, 0, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(SetContainerCloseSound, 0, kParams_OneForm_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetPlayerRegions, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetZoneFlag, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetZoneFlag, 0, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetImpactDataSet, 0, kParams_OneObjectID);
+DEFINE_COMMAND_PLUGIN(SetImpactDataSet, 0, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(LNIsPlayable, 0, kParams_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(LNSetIsPlayable, 0, kParams_OneInt_OneOptionalForm);
+DEFINE_COMMAND_PLUGIN(GetZone, 1, nullptr);
+DEFINE_COMMAND_PLUGIN(AddNoteNS, 0, kParams_OneNote);
+DEFINE_COMMAND_PLUGIN(CrosshairRefInList, 0, kParams_FormList);
+DEFINE_COMMAND_PLUGIN(GetShowQuestItems, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetWaterTrait, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetWaterTrait, 0, kParams_OneForm_OneInt_OneDouble);
+DEFINE_COMMAND_PLUGIN(GetActiveQuest, 0, nullptr);
 
-UInt8 __fastcall GetArmorClass(Character *character)
+__declspec(noinline) UInt8 __fastcall GetArmorClass(Character *character)
 {
 	if (!character->IsCharacter()) return 0;
 	BipedAnim *equipment = character->GetBipedAnim();
@@ -66,8 +66,7 @@ UInt8 __fastcall GetArmorClass(Character *character)
 
 bool Cmd_GetArmorClass_Execute(COMMAND_ARGS)
 {
-	*result = 0;
-	TESObjectARMO *armor = NULL;
+	TESObjectARMO *armor = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &armor)) return true;
 	if (armor)
 	{
@@ -107,7 +106,6 @@ bool Cmd_SetGlobalValue_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWorldspaceParentWorldspace_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESWorldSpace *wspc;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &wspc) && wspc->parent)
 		REFR_RES = wspc->parent->refID;
@@ -116,11 +114,10 @@ bool Cmd_GetWorldspaceParentWorldspace_Execute(COMMAND_ARGS)
 
 bool Cmd_GetCellCoords_Execute(COMMAND_ARGS)
 {
-	*result = 0;
-	TESObjectCELL *cell = NULL;
+	TESObjectCELL *cell = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &cell) || (cell && NOT_ID(cell, TESObjectCELL)))
 		return true;
-	NVSEArrayVar *outArray = CreateStringMap(NULL, NULL, 0, scriptObj);
+	NVSEArrayVar *outArray = CreateStringMap(nullptr, nullptr, 0, scriptObj);
 	if (!cell) cell = thisObj ? thisObj->parentCell : g_thePlayer->parentCell;
 	SetElement(outArray, ArrayElementL("x"), (cell && !cell->IsInterior()) ? ArrayElementL(cell->exteriorCoords->x) : ArrayElementL(0.0));
 	SetElement(outArray, ArrayElementL("y"), (cell && !cell->IsInterior()) ? ArrayElementL(cell->exteriorCoords->y) : ArrayElementL(0.0));
@@ -131,15 +128,14 @@ bool Cmd_GetCellCoords_Execute(COMMAND_ARGS)
 
 bool Cmd_GetBipedModelList_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form)) return true;
 	if (!form)
 	{
 		if (!thisObj) return true;
 		form = thisObj->baseForm;
 	}
-	BGSListForm *models = NULL;
+	BGSListForm *models = nullptr;
 	if IS_TYPE(form, TESObjectARMO) models = ((TESObjectARMO*)form)->bipedModelList.models;
 	else if IS_ID(form, TESObjectWEAP) models = ((TESObjectWEAP*)form)->bipedModelList.models;
 	if (models) REFR_RES = models->refID;
@@ -149,7 +145,7 @@ bool Cmd_GetBipedModelList_Execute(COMMAND_ARGS)
 bool Cmd_SetBipedModelList_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
-	BGSListForm *list = NULL;
+	BGSListForm *list = nullptr;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &list) && (!list || IS_ID(list, BGSListForm)))
 	{
 		if IS_TYPE(form, TESObjectARMO) ((TESObjectARMO*)form)->bipedModelList.models = list;
@@ -160,7 +156,8 @@ bool Cmd_SetBipedModelList_Execute(COMMAND_ARGS)
 
 bool Cmd_GetPCCanUsePowerArmor_Execute(COMMAND_ARGS)
 {
-	*result = g_thePlayer->canUsePA;
+	if (g_thePlayer->canUsePA)
+		*result = 1;
 	return true;
 }
 
@@ -170,7 +167,7 @@ bool Cmd_GetIdleAnimPath_Execute(COMMAND_ARGS)
 	TESIdleForm *idle;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &idle) && IS_ID(idle, TESIdleForm))
 		resStr = idle->anim.GetModelPath();
-	else resStr = NULL;
+	else resStr = nullptr;
 	AssignString(PASS_COMMAND_ARGS, resStr);
 	return true;
 }
@@ -220,7 +217,6 @@ bool Cmd_GetGlobalTimeMultiplier_Execute(COMMAND_ARGS)
 
 bool Cmd_GetWaterFormEffect_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESWaterForm *water;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &water) && IS_ID(water, TESWaterForm) && water->drinkEffect)
 		REFR_RES = water->drinkEffect->refID;
@@ -229,7 +225,6 @@ bool Cmd_GetWaterFormEffect_Execute(COMMAND_ARGS)
 
 bool Cmd_ar_Cat_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	UInt32 arr1ID, arr2ID, overrideOldKeys = 0;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &arr1ID, &arr2ID, &overrideOldKeys))
 		return true;
@@ -259,9 +254,8 @@ bool Cmd_GetFormFlag_Execute(COMMAND_ARGS)
 {
 	TESForm *form;
 	UInt32 flag;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &flag))
-		*result = (form->flags & flag) ? 1 : 0;
-	else *result = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form, &flag) && (form->flags & flag))
+		*result = 1;
 	DoConsolePrint(result);
 	return true;
 }
@@ -282,9 +276,8 @@ bool Cmd_GetIngestibleFlag_Execute(COMMAND_ARGS)
 {
 	AlchemyItem *alch;
 	UInt32 flag;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &alch, &flag) && IS_ID(alch, AlchemyItem))
-		*result = (alch->alchFlags & flag) ? 1 : 0;
-	else *result = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &alch, &flag) && IS_ID(alch, AlchemyItem) && (alch->alchFlags & flag))
+		*result = 1;
 	return true;
 }
 
@@ -302,7 +295,6 @@ bool Cmd_SetIngestibleFlag_Execute(COMMAND_ARGS)
 
 bool Cmd_IsSkillMagazine_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	AlchemyItem *ingestible;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &ingestible) || NOT_ID(ingestible, AlchemyItem)) return true;
 	auto effIter = ingestible->magicItem.list.list.Head();
@@ -330,7 +322,7 @@ bool Cmd_IsSkillMagazine_Execute(COMMAND_ARGS)
 	return true;
 }
 
-bool __fastcall PlayerHasKey(TESObjectREFR *thisObj)
+__declspec(noinline) bool __fastcall PlayerHasKey(TESObjectREFR *thisObj)
 {
 	if IS_ID(thisObj->baseForm, BGSTerminal)
 	{
@@ -341,7 +333,7 @@ bool __fastcall PlayerHasKey(TESObjectREFR *thisObj)
 	else
 	{
 		ExtraLock *xLock = GetExtraType(&thisObj->extraDataList, ExtraLock);
-		TESKey *key = (xLock && xLock->data) ? xLock->data->key : NULL;
+		TESKey *key = (xLock && xLock->data) ? xLock->data->key : nullptr;
 		if (key && g_thePlayer->GetItemCount(key))
 			return true;
 	}
@@ -350,19 +342,20 @@ bool __fastcall PlayerHasKey(TESObjectREFR *thisObj)
 
 bool Cmd_PlayerHasKey_Execute(COMMAND_ARGS)
 {
-	*result = PlayerHasKey(thisObj);
+	if (PlayerHasKey(thisObj))
+		*result = 1;
 	return true;
 }
 
 bool Cmd_PlayerHasKey_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = PlayerHasKey(thisObj);
+	if (PlayerHasKey(thisObj))
+		*result = 1;
 	return true;
 }
 
 bool Cmd_GetAnimObjectIdle_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESObjectANIO *anio;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &anio) && IS_ID(anio, TESObjectANIO) && anio->idleForm)
 		REFR_RES = anio->idleForm->refID;
@@ -380,7 +373,6 @@ bool Cmd_SetAnimObjectIdle_Execute(COMMAND_ARGS)
 
 bool Cmd_GetPickupSound_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESForm *form;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
@@ -404,7 +396,6 @@ bool Cmd_SetPickupSound_Execute(COMMAND_ARGS)
 
 bool Cmd_GetPutdownSound_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESForm *form;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &form))
 	{
@@ -428,8 +419,7 @@ bool Cmd_SetPutdownSound_Execute(COMMAND_ARGS)
 
 bool Cmd_GetContainerOpenSound_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
-	TESObjectCONT *container = NULL;
+	TESObjectCONT *container = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &container)) return true;
 	if (!container)
 	{
@@ -444,7 +434,7 @@ bool Cmd_GetContainerOpenSound_Execute(COMMAND_ARGS)
 bool Cmd_SetContainerOpenSound_Execute(COMMAND_ARGS)
 {
 	TESSound *sound;
-	TESObjectCONT *container = NULL;
+	TESObjectCONT *container = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &container) || NOT_ID(sound, TESSound)) return true;
 	if (!container)
 	{
@@ -458,8 +448,7 @@ bool Cmd_SetContainerOpenSound_Execute(COMMAND_ARGS)
 
 bool Cmd_GetContainerCloseSound_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
-	TESObjectCONT *container = NULL;
+	TESObjectCONT *container = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &container)) return true;
 	if (!container)
 	{
@@ -474,7 +463,7 @@ bool Cmd_GetContainerCloseSound_Execute(COMMAND_ARGS)
 bool Cmd_SetContainerCloseSound_Execute(COMMAND_ARGS)
 {
 	TESSound *sound;
-	TESObjectCONT *container = NULL;
+	TESObjectCONT *container = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &sound, &container) || NOT_ID(sound, TESSound)) return true;
 	if (!container)
 	{
@@ -503,9 +492,8 @@ bool Cmd_GetZoneFlag_Execute(COMMAND_ARGS)
 {
 	BGSEncounterZone *encZone;
 	UInt32 flag;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &encZone, &flag) && IS_ID(encZone, BGSEncounterZone))
-		*result = (encZone->zoneFlags & flag) ? 1 : 0;
-	else *result = 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &encZone, &flag) && IS_ID(encZone, BGSEncounterZone) && (encZone->zoneFlags & flag))
+		*result = 1;
 	return true;
 }
 
@@ -523,7 +511,6 @@ bool Cmd_SetZoneFlag_Execute(COMMAND_ARGS)
 
 bool Cmd_GetImpactDataSet_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESObjectWEAP *weapon;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &weapon) && IS_ID(weapon, TESObjectWEAP) && weapon->impactDataSet)
 		REFR_RES = weapon->impactDataSet->refID;
@@ -541,8 +528,7 @@ bool Cmd_SetImpactDataSet_Execute(COMMAND_ARGS)
 
 bool Cmd_LNIsPlayable_Execute(COMMAND_ARGS)
 {
-	*result = 0;
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &form)) return true;
 	if (!form)
 	{
@@ -582,7 +568,7 @@ bool Cmd_LNIsPlayable_Execute(COMMAND_ARGS)
 bool Cmd_LNSetIsPlayable_Execute(COMMAND_ARGS)
 {
 	UInt32 playable;
-	TESForm *form = NULL;
+	TESForm *form = nullptr;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &playable, &form)) return true;
 	if (!form)
 	{
@@ -619,7 +605,6 @@ bool Cmd_LNSetIsPlayable_Execute(COMMAND_ARGS)
 
 bool Cmd_GetZone_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	if (thisObj->parentCell)
 	{
 		ExtraEncounterZone *xEncZone = GetExtraType(&thisObj->parentCell->extraDataList, ExtraEncounterZone);
@@ -640,7 +625,7 @@ bool Cmd_AddNoteNS_Execute(COMMAND_ARGS)
 	return true;
 }
 
-UInt8 __fastcall CrosshairRefInList(BGSListForm *listForm)
+__declspec(noinline) UInt8 __fastcall CrosshairRefInList(BGSListForm *listForm)
 {
 	TESObjectREFR *refr = g_interfaceManager->crosshairRef;
 	if (!refr) return 0;
@@ -663,7 +648,6 @@ bool Cmd_CrosshairRefInList_Execute(COMMAND_ARGS)
 	BGSListForm *listForm;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &listForm))
 		*result = CrosshairRefInList(listForm);
-	else *result = 0;
 	return true;
 }
 
@@ -675,13 +659,13 @@ bool Cmd_CrosshairRefInList_Eval(COMMAND_ARGS_EVAL)
 
 bool Cmd_GetShowQuestItems_Execute(COMMAND_ARGS)
 {
-	*result = g_thePlayer->showQuestItems;
+	if (g_thePlayer->showQuestItems)
+		*result = 1;
 	return true;
 }
 
 bool Cmd_GetWaterTrait_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESWaterForm *water;
 	UInt32 traitID;
 	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &water, &traitID) || NOT_ID(water, TESWaterForm) || (traitID > 50)) return true;
@@ -733,6 +717,7 @@ bool Cmd_SetWaterTrait_Execute(COMMAND_ARGS)
 
 bool Cmd_GetActiveQuest_Execute(COMMAND_ARGS)
 {
-	REFR_RES = g_thePlayer->activeQuest ? g_thePlayer->activeQuest->refID : 0;
+	if (g_thePlayer->activeQuest)
+		REFR_RES = g_thePlayer->activeQuest->refID;
 	return true;
 }

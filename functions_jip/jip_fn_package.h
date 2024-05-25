@@ -1,15 +1,14 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetPackageFlag, 0, 2, kParams_OneAIPackage_OneInt);
-DEFINE_COMMAND_PLUGIN(SetPackageFlag, 0, 3, kParams_OneAIPackage_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetPackageFlag, 0, kParams_OneAIPackage_OneInt);
+DEFINE_COMMAND_PLUGIN(SetPackageFlag, 0, kParams_OneAIPackage_TwoInts);
 
 bool Cmd_GetPackageFlag_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESPackage *package;
 	UInt32 flagID;
-	if (ExtractArgsEx(EXTRACT_ARGS_EX, &package, &flagID) && (flagID <= 31))
-		*result = (package->packageFlags & (1 << flagID)) != 0;
+	if (ExtractArgsEx(EXTRACT_ARGS_EX, &package, &flagID) && (flagID <= 31) && (package->packageFlags & (1 << flagID)))
+		*result = 1;
 	return true;
 }
 

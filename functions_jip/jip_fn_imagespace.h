@@ -1,10 +1,10 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetImageSpaceTrait, 0, 2, kParams_OneImageSpace_OneInt);
-DEFINE_COMMAND_PLUGIN(SetImageSpaceTrait, 0, 3, kParams_OneImageSpace_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetImageSpaceModTrait, 0, 2, kParams_OneIMOD_OneInt);
-DEFINE_COMMAND_PLUGIN(SetImageSpaceModTrait, 0, 3, kParams_OneIMOD_OneInt_OneFloat);
-DEFINE_COMMAND_PLUGIN(GetActiveIMODs, 0, 0, NULL);
+DEFINE_COMMAND_PLUGIN(GetImageSpaceTrait, 0, kParams_OneImageSpace_OneInt);
+DEFINE_COMMAND_PLUGIN(SetImageSpaceTrait, 0, kParams_OneImageSpace_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetImageSpaceModTrait, 0, kParams_OneIMOD_OneInt);
+DEFINE_COMMAND_PLUGIN(SetImageSpaceModTrait, 0, kParams_OneIMOD_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetActiveIMODs, 0, nullptr);
 
 bool Cmd_GetImageSpaceTrait_Execute(COMMAND_ARGS)
 {
@@ -16,7 +16,6 @@ bool Cmd_GetImageSpaceTrait_Execute(COMMAND_ARGS)
 			*result = imgSpace->traitValues[traitID] * 255;
 		else *result = imgSpace->traitValues[traitID];
 	}
-	else *result = 0;
 	return true;
 }
 
@@ -80,7 +79,6 @@ bool Cmd_GetImageSpaceModTrait_Execute(COMMAND_ARGS)
 		else
 			*result = imod->data70C[traitID - 55]->value;
 	}
-	else *result = 0;
 	return true;
 }
 
@@ -155,7 +153,6 @@ bool Cmd_SetImageSpaceModTrait_Execute(COMMAND_ARGS)
 
 bool Cmd_GetActiveIMODs_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TempElements *tmpElements = GetTempElements();
 	auto traverse = g_TES->activeIMODs.Head();
 	do

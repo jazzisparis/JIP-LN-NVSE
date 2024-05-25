@@ -1,36 +1,36 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetController, 0, 0, NULL);
-DEFINE_CMD_COND_PLUGIN(IsButtonPressed, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_ALT_PLUGIN(GetPressedButtons, GetButtons, 0, 0, NULL);
-DEFINE_CMD_ALT_COND_PLUGIN(GetLeftStickX, GetLSX, 0, 0, NULL);
-DEFINE_CMD_ALT_COND_PLUGIN(GetLeftStickY, GetLSY, 0, 0, NULL);
-DEFINE_CMD_ALT_COND_PLUGIN(GetRightStickX, GetRSX, 0, 0, NULL);
-DEFINE_CMD_ALT_COND_PLUGIN(GetRightStickY, GetRSY, 0, 0, NULL);
-DEFINE_CMD_ALT_COND_PLUGIN(GetLeftTrigger, GetLTr, 0, 0, NULL);
-DEFINE_CMD_ALT_COND_PLUGIN(GetRightTrigger, GetRTr, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetDeadZoneLS, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(GetDeadZoneRS, 0, 0, NULL);
-DEFINE_COMMAND_PLUGIN(SetDeadZoneLS, 0, 1, kParams_OneDouble);
-DEFINE_COMMAND_PLUGIN(SetDeadZoneRS, 0, 1, kParams_OneDouble);
-DEFINE_COMMAND_PLUGIN(EnableButton, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(DisableButton, 0, 1, kParams_OneInt);
-DEFINE_CMD_COND_PLUGIN(IsButtonDisabled, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(HoldButton, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(ReleaseButton, 0, 1, kParams_OneInt);
-DEFINE_CMD_COND_PLUGIN(IsButtonHeld, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(EnableTrigger, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(DisableTrigger, 0, 1, kParams_OneInt);
-DEFINE_CMD_COND_PLUGIN(IsTriggerDisabled, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(HoldTrigger, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(ReleaseTrigger, 0, 1, kParams_OneInt);
-DEFINE_CMD_COND_PLUGIN(IsTriggerHeld, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(TapButton, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(TapTrigger, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(SetOnTriggerDownEventHandler, 0, 3, kParams_OneForm_TwoInts);
-DEFINE_COMMAND_PLUGIN(SetOnTriggerUpEventHandler, 0, 3, kParams_OneForm_TwoInts);
-DEFINE_CMD_COND_PLUGIN(IsStickDisabled, 0, 1, kParams_OneInt);
-DEFINE_COMMAND_PLUGIN(SetStickDisabled, 0, 2, kParams_TwoInts);
+DEFINE_COMMAND_PLUGIN(GetController, 0, nullptr);
+DEFINE_CMD_COND_PLUGIN(IsButtonPressed, 0, kParams_OneInt);
+DEFINE_COMMAND_ALT_PLUGIN(GetPressedButtons, GetButtons, 0, nullptr);
+DEFINE_CMD_ALT_COND_PLUGIN(GetLeftStickX, GetLSX, 0, nullptr);
+DEFINE_CMD_ALT_COND_PLUGIN(GetLeftStickY, GetLSY, 0, nullptr);
+DEFINE_CMD_ALT_COND_PLUGIN(GetRightStickX, GetRSX, 0, nullptr);
+DEFINE_CMD_ALT_COND_PLUGIN(GetRightStickY, GetRSY, 0, nullptr);
+DEFINE_CMD_ALT_COND_PLUGIN(GetLeftTrigger, GetLTr, 0, nullptr);
+DEFINE_CMD_ALT_COND_PLUGIN(GetRightTrigger, GetRTr, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetDeadZoneLS, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(GetDeadZoneRS, 0, nullptr);
+DEFINE_COMMAND_PLUGIN(SetDeadZoneLS, 0, kParams_OneDouble);
+DEFINE_COMMAND_PLUGIN(SetDeadZoneRS, 0, kParams_OneDouble);
+DEFINE_COMMAND_PLUGIN(EnableButton, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(DisableButton, 0, kParams_OneInt);
+DEFINE_CMD_COND_PLUGIN(IsButtonDisabled, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(HoldButton, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(ReleaseButton, 0, kParams_OneInt);
+DEFINE_CMD_COND_PLUGIN(IsButtonHeld, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(EnableTrigger, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(DisableTrigger, 0, kParams_OneInt);
+DEFINE_CMD_COND_PLUGIN(IsTriggerDisabled, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(HoldTrigger, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(ReleaseTrigger, 0, kParams_OneInt);
+DEFINE_CMD_COND_PLUGIN(IsTriggerHeld, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(TapButton, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(TapTrigger, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(SetOnTriggerDownEventHandler, 0, kParams_OneForm_TwoInts);
+DEFINE_COMMAND_PLUGIN(SetOnTriggerUpEventHandler, 0, kParams_OneForm_TwoInts);
+DEFINE_CMD_COND_PLUGIN(IsStickDisabled, 0, kParams_OneInt);
+DEFINE_COMMAND_PLUGIN(SetStickDisabled, 0, kParams_TwoInts);
 
 bool Cmd_GetController_Execute(COMMAND_ARGS)
 {
@@ -44,13 +44,13 @@ bool Cmd_IsButtonPressed_Execute(COMMAND_ARGS)
 	UInt32 button;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button) && (s_gamePad.wButtons & (UInt16)button))
 		*result = 1;
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_IsButtonPressed_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (s_gamePad.wButtons & (UInt16)arg1) ? 1 : 0;
+	if (s_gamePad.wButtons & (UInt16)arg1)
+		*result = 1;
 	return true;
 }
 
@@ -64,7 +64,8 @@ __declspec(naked) double __vectorcall GetLeftStick(SInt16 value)
 {
 	__asm
 	{
-		movsx	eax, cx
+		mov		eax, ecx
+		cwde
 		test	eax, eax
 		jz		retnZero
 		js		isNeg
@@ -88,7 +89,8 @@ __declspec(naked) double __vectorcall GetRightStick(SInt16 value)
 {
 	__asm
 	{
-		movsx	eax, cx
+		mov		eax, ecx
+		cwde
 		test	eax, eax
 		jz		retnZero
 		js		isNeg
@@ -262,13 +264,13 @@ bool Cmd_IsButtonDisabled_Execute(COMMAND_ARGS)
 	UInt32 button;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button) && !(s_XIStateMods.buttonSkip & button))
 		*result = 1;
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_IsButtonDisabled_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = !(s_XIStateMods.buttonSkip & (UInt16)arg1);
+	if (!(s_XIStateMods.buttonSkip & (UInt16)arg1))
+		*result = 1;
 	return true;
 }
 
@@ -293,13 +295,13 @@ bool Cmd_IsButtonHeld_Execute(COMMAND_ARGS)
 	UInt32 button;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &button) && (s_XIStateMods.buttonHold & button))
 		*result = 1;
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_IsButtonHeld_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (s_XIStateMods.buttonHold & (UInt16)arg1) ? 1 : 0;
+	if (s_XIStateMods.buttonHold & (UInt16)arg1)
+		*result = 1;
 	return true;
 }
 
@@ -324,13 +326,13 @@ bool Cmd_IsTriggerDisabled_Execute(COMMAND_ARGS)
 	UInt32 trigger;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (s_XIStateMods.triggerMods & (trigger ? 2 : 1)))
 		*result = 1;
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_IsTriggerDisabled_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (s_XIStateMods.triggerMods & (arg1 ? 2 : 1)) ? 1 : 0;
+	if (s_XIStateMods.triggerMods & (arg1 ? 2 : 1))
+		*result = 1;
 	return true;
 }
 
@@ -355,13 +357,13 @@ bool Cmd_IsTriggerHeld_Execute(COMMAND_ARGS)
 	UInt32 trigger;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &trigger) && (s_XIStateMods.triggerMods & (trigger ? 8 : 4)))
 		*result = 1;
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_IsTriggerHeld_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (s_XIStateMods.triggerMods & (arg1 ? 8 : 4)) ? 1 : 0;
+	if (s_XIStateMods.triggerMods & (arg1 ? 8 : 4))
+		*result = 1;
 	return true;
 }
 
@@ -381,25 +383,22 @@ bool Cmd_TapTrigger_Execute(COMMAND_ARGS)
 	return true;
 }
 
-UInt8 s_onTriggerEventType = 0;
-
 bool SetOnTriggerEventHandler_Execute(COMMAND_ARGS)
 {
+	CAPTURE_ECX(eventType)
 	Script *script;
 	UInt32 addEvnt, rTrigger;
-	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &rTrigger) || NOT_ID(script, Script) || !s_controllerReady) return true;
-	UInt8 idx = rTrigger ? 2 : 0;
-	UInt32 eventMask = s_onTriggerEventType ? kLNEventMask_OnTriggerDown : kLNEventMask_OnTriggerUp;
+	if (!ExtractArgsEx(EXTRACT_ARGS_EX, &script, &addEvnt, &rTrigger) || NOT_ID(script, Script) || !s_controllerReady)
+		return true;
+	rTrigger = ((rTrigger & 1) << 1) + eventType;
+	UInt32 eventMask = eventType ? kLNEventMask_OnTriggerDown : kLNEventMask_OnTriggerUp;
 	if (addEvnt)
 	{
-		if (s_LNOnTriggerEvents[idx + s_onTriggerEventType]().Insert(script))
+		if (s_LNOnTriggerEvents[rTrigger]().Insert(script))
 			s_LNEventFlags |= eventMask;
 	}
-	else if (s_LNOnTriggerEvents[idx + s_onTriggerEventType]().Erase(script))
-	{
-		if (s_LNOnTriggerEvents[s_onTriggerEventType]().Empty() && s_LNOnTriggerEvents[s_onTriggerEventType + 2]().Empty())
-			s_LNEventFlags &= ~eventMask;
-	}
+	else if (s_LNOnTriggerEvents[rTrigger]().Erase(script) && s_LNOnTriggerEvents[eventType]().Empty() && s_LNOnTriggerEvents[eventType + 2]().Empty())
+		s_LNEventFlags &= ~eventMask;
 	return true;
 }
 
@@ -407,7 +406,7 @@ __declspec(naked) bool Cmd_SetOnTriggerDownEventHandler_Execute(COMMAND_ARGS)
 {
 	__asm
 	{
-		mov		s_onTriggerEventType, 1
+		mov		ecx, 1
 		jmp		SetOnTriggerEventHandler_Execute
 	}
 }
@@ -416,7 +415,7 @@ __declspec(naked) bool Cmd_SetOnTriggerUpEventHandler_Execute(COMMAND_ARGS)
 {
 	__asm
 	{
-		mov		s_onTriggerEventType, 0
+		xor		ecx, ecx
 		jmp		SetOnTriggerEventHandler_Execute
 	}
 }
@@ -426,13 +425,13 @@ bool Cmd_IsStickDisabled_Execute(COMMAND_ARGS)
 	UInt32 stick;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &stick) && (s_XIStateMods.stickSkip & (stick ? 0xF0 : 0xF)))
 		*result = 1;
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_IsStickDisabled_Eval(COMMAND_ARGS_EVAL)
 {
-	*result = (s_XIStateMods.stickSkip & (arg1 ? 0xF0 : 0xF)) ? 1 : 0;
+	if (s_XIStateMods.stickSkip & (arg1 ? 0xF0 : 0xF))
+		*result = 1;
 	return true;
 }
 

@@ -1,29 +1,30 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetChallengeType, 0, 1, kParams_OneChallenge);
-DEFINE_COMMAND_PLUGIN(GetChallengeFlags, 0, 1, kParams_OneChallenge);
-DEFINE_COMMAND_PLUGIN(SetChallengeFlags, 0, 2, kParams_OneChallenge_OneInt);
-DEFINE_COMMAND_PLUGIN(GetChallengeThreshold, 0, 1, kParams_OneChallenge);
-DEFINE_COMMAND_PLUGIN(SetChallengeThreshold, 0, 2, kParams_OneChallenge_OneInt);
-DEFINE_COMMAND_PLUGIN(GetChallengeInterval, 0, 1, kParams_OneChallenge);
-DEFINE_COMMAND_PLUGIN(SetChallengeInterval, 0, 2, kParams_OneChallenge_OneInt);
-DEFINE_COMMAND_PLUGIN(GetChallengeValue1, 0, 1, kParams_OneChallenge);
-DEFINE_COMMAND_PLUGIN(SetChallengeValue1, 0, 2, kParams_OneChallenge_OneInt);
-DEFINE_COMMAND_PLUGIN(GetChallengeValue2, 0, 1, kParams_OneChallenge);
-DEFINE_COMMAND_PLUGIN(SetChallengeValue2, 0, 2, kParams_OneChallenge_OneInt);
-DEFINE_COMMAND_PLUGIN(GetChallengeValue3, 0, 1, kParams_OneChallenge);
-DEFINE_COMMAND_PLUGIN(SetChallengeValue3, 0, 2, kParams_OneChallenge_OneInt);
-DEFINE_COMMAND_PLUGIN(GetChallengeForm1, 0, 1, kParams_OneChallenge);
-DEFINE_COMMAND_PLUGIN(SetChallengeForm1, 0, 2, kParams_OneChallenge_OneForm);
-DEFINE_COMMAND_PLUGIN(GetChallengeForm2, 0, 1, kParams_OneChallenge);
-DEFINE_COMMAND_PLUGIN(SetChallengeForm2, 0, 2, kParams_OneChallenge_OneForm);
+DEFINE_COMMAND_PLUGIN(GetChallengeType, 0, kParams_OneChallenge);
+DEFINE_COMMAND_PLUGIN(GetChallengeFlags, 0, kParams_OneChallenge);
+DEFINE_COMMAND_PLUGIN(SetChallengeFlags, 0, kParams_OneChallenge_OneInt);
+DEFINE_COMMAND_PLUGIN(GetChallengeThreshold, 0, kParams_OneChallenge);
+DEFINE_COMMAND_PLUGIN(SetChallengeThreshold, 0, kParams_OneChallenge_OneInt);
+DEFINE_COMMAND_PLUGIN(GetChallengeInterval, 0, kParams_OneChallenge);
+DEFINE_COMMAND_PLUGIN(SetChallengeInterval, 0, kParams_OneChallenge_OneInt);
+DEFINE_COMMAND_PLUGIN(GetChallengeValue1, 0, kParams_OneChallenge);
+DEFINE_COMMAND_PLUGIN(SetChallengeValue1, 0, kParams_OneChallenge_OneInt);
+DEFINE_COMMAND_PLUGIN(GetChallengeValue2, 0, kParams_OneChallenge);
+DEFINE_COMMAND_PLUGIN(SetChallengeValue2, 0, kParams_OneChallenge_OneInt);
+DEFINE_COMMAND_PLUGIN(GetChallengeValue3, 0, kParams_OneChallenge);
+DEFINE_COMMAND_PLUGIN(SetChallengeValue3, 0, kParams_OneChallenge_OneInt);
+DEFINE_COMMAND_PLUGIN(GetChallengeForm1, 0, kParams_OneChallenge);
+DEFINE_COMMAND_PLUGIN(SetChallengeForm1, 0, kParams_OneChallenge_OneForm);
+DEFINE_COMMAND_PLUGIN(GetChallengeForm2, 0, kParams_OneChallenge);
+DEFINE_COMMAND_PLUGIN(SetChallengeForm2, 0, kParams_OneChallenge_OneForm);
 
 bool Cmd_GetChallengeType_Execute(COMMAND_ARGS)
 {
 	TESChallenge *challenge;
+	int type = -1;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &challenge))
-		*result = (int)challenge->data.type;
-	else *result = -1;
+		type = (int)challenge->data.type;
+	*result = type;
 	return true;
 }
 
@@ -32,7 +33,6 @@ bool Cmd_GetChallengeFlags_Execute(COMMAND_ARGS)
 	TESChallenge *challenge;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &challenge))
 		*result = (int)challenge->data.flags;
-	else *result = 0;
 	return true;
 }
 
@@ -50,7 +50,6 @@ bool Cmd_GetChallengeThreshold_Execute(COMMAND_ARGS)
 	TESChallenge *challenge;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &challenge))
 		*result = (int)challenge->data.threshold;
-	else *result = 0;
 	return true;
 }
 
@@ -68,7 +67,6 @@ bool Cmd_GetChallengeInterval_Execute(COMMAND_ARGS)
 	TESChallenge *challenge;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &challenge))
 		*result = (int)challenge->data.interval;
-	else *result = 0;
 	return true;
 }
 
@@ -86,7 +84,6 @@ bool Cmd_GetChallengeValue1_Execute(COMMAND_ARGS)
 	TESChallenge *challenge;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &challenge))
 		*result = challenge->data.value1;
-	else *result = 0;
 	return true;
 }
 
@@ -104,7 +101,6 @@ bool Cmd_GetChallengeValue2_Execute(COMMAND_ARGS)
 	TESChallenge *challenge;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &challenge))
 		*result = challenge->data.value2;
-	else *result = 0;
 	return true;
 }
 
@@ -122,7 +118,6 @@ bool Cmd_GetChallengeValue3_Execute(COMMAND_ARGS)
 	TESChallenge *challenge;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &challenge))
 		*result = (int)challenge->data.value3;
-	else *result = 0;
 	return true;
 }
 
@@ -137,7 +132,6 @@ bool Cmd_SetChallengeValue3_Execute(COMMAND_ARGS)
 
 bool Cmd_GetChallengeForm1_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESChallenge *challenge;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &challenge) && challenge->SNAM)
 		REFR_RES = challenge->SNAM->refID;
@@ -155,7 +149,6 @@ bool Cmd_SetChallengeForm1_Execute(COMMAND_ARGS)
 
 bool Cmd_GetChallengeForm2_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESChallenge *challenge;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &challenge) && challenge->XNAM)
 		REFR_RES = challenge->XNAM->refID;

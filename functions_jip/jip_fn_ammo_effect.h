@@ -1,24 +1,22 @@
 #pragma once
 
-DEFINE_COMMAND_PLUGIN(GetNumAmmoEffects, 0, 1, kParams_OneForm);
-DEFINE_COMMAND_PLUGIN(GetNthAmmoEffect, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(AddAmmoEffect, 0, 2, kParams_TwoForms);
-DEFINE_COMMAND_PLUGIN(RemoveAmmoEffect, 0, 2, kParams_TwoForms);
-DEFINE_COMMAND_PLUGIN(GetAmmoEffectTraitNumeric, 0, 2, kParams_OneForm_OneInt);
-DEFINE_COMMAND_PLUGIN(SetAmmoEffectTraitNumeric, 0, 3, kParams_OneForm_OneInt_OneFloat);
+DEFINE_COMMAND_PLUGIN(GetNumAmmoEffects, 0, kParams_OneForm);
+DEFINE_COMMAND_PLUGIN(GetNthAmmoEffect, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(AddAmmoEffect, 0, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(RemoveAmmoEffect, 0, kParams_TwoForms);
+DEFINE_COMMAND_PLUGIN(GetAmmoEffectTraitNumeric, 0, kParams_OneForm_OneInt);
+DEFINE_COMMAND_PLUGIN(SetAmmoEffectTraitNumeric, 0, kParams_OneForm_OneInt_OneFloat);
 
 bool Cmd_GetNumAmmoEffects_Execute(COMMAND_ARGS)
 {
 	TESAmmo *ammo;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ammo) && IS_TYPE(ammo, TESAmmo))
 		*result = (int)ammo->effectList.Count();
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_GetNthAmmoEffect_Execute(COMMAND_ARGS)
 {
-	REFR_RES = 0;
 	TESAmmo *ammo;
 	UInt32 idx;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ammo, &idx) && IS_TYPE(ammo, TESAmmo))
@@ -36,7 +34,6 @@ bool Cmd_AddAmmoEffect_Execute(COMMAND_ARGS)
 		ammo->effectList.Prepend(effect);
 		*result = 1;
 	}
-	else *result = 0;
 	return true;
 }
 
@@ -46,13 +43,11 @@ bool Cmd_RemoveAmmoEffect_Execute(COMMAND_ARGS)
 	TESAmmoEffect *effect;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &ammo, &effect) && IS_TYPE(ammo, TESAmmo) && IS_ID(effect, TESAmmoEffect) && ammo->effectList.Remove(effect))
 		*result = 1;
-	else *result = 0;
 	return true;
 }
 
 bool Cmd_GetAmmoEffectTraitNumeric_Execute(COMMAND_ARGS)
 {
-	*result = 0;
 	TESAmmoEffect *effect;
 	UInt32 traitID;
 	if (ExtractArgsEx(EXTRACT_ARGS_EX, &effect, &traitID) && IS_ID(effect, TESAmmoEffect))

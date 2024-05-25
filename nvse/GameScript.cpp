@@ -24,7 +24,7 @@ bool Script::Compile(const char *scrName)
 {
 	ScriptBuffer scrBuffer;
 	scrBuffer.scriptText = text;
-	scrBuffer.runtimeMode = 1;
+	scrBuffer.runtimeMode = 0;
 	scrBuffer.scriptName.Set(scrName);
 	scrBuffer.partialScript = true;
 	scrBuffer.currScript = this;
@@ -45,15 +45,12 @@ Script *Script::Create(char *scrText, const char *scrName)
 {
 	Script *pScript = Game_HeapAlloc<Script>();
 	if (pScript->Init(scrText, scrName))
+	{
+		pScript->SetEditorID(scrName);
 		return pScript;
+	}
 	pScript->Destroy(1);
 	return nullptr;
-}
-
-bool Script::Execute(TESObjectREFR *thisObj, ScriptLocals *eventList, TESObjectREFR *containingObj, bool arg3)
-{
-	//SuppressConsoleOutput();
-	return ThisCall<bool>(0x5AC1E0, this, thisObj, eventList, containingObj, arg3);
 }
 
 class ScriptVarFinder
