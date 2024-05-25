@@ -3651,9 +3651,22 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBloc
 		dmgResist = (target->avOwner.GetActorValue(kAVCode_DamageResist) - hitLocDR) * valueMod;
 		dmgResist = GetMin(dmgResist, 100.0F);
 		if (ammoEffects)
-			dmgResist = ApplyAmmoEffects(kAmmoEffect_DRMod, ammoEffects, dmgResist);
-		if (dmgResist <= 0)
-			dmgResist = 1.0F;
+		{
+			if ((dmgResist >= 0) && (ApplyAmmoEffects(kAmmoEffect_DRMod, ammoEffects, dmgResist) >= 0))
+			{
+				dmgResist = ApplyAmmoEffects(kAmmoEffect_DRMod, ammoEffects, dmgResist);
+				dmgResist = 1.0F - (GetMin(dmgResist, GMST_FLT(fMaxArmorRating)) * 0.01F);
+			}
+			else if ((dmgResist >= 0) && (ApplyAmmoEffects(kAmmoEffect_DRMod, ammoEffects, dmgResist) < 0))
+				dmgResist = 1.0F;
+			else if ((dmgResist < 0) && (ApplyAmmoEffects(kAmmoEffect_DRMod, ammoEffects, dmgResist) >= dmgResist))
+			{
+				dmgResist = ApplyAmmoEffects(kAmmoEffect_DRMod, ammoEffects, dmgResist);
+				dmgResist = 1.0F - (GetMin(dmgResist, GMST_FLT(fMaxArmorRating)) * 0.01F);
+			}
+			else
+				dmgResist = 1.0F - (GetMin(dmgResist, GMST_FLT(fMaxArmorRating)) * 0.01F);
+		}
 		else
 			dmgResist = 1.0F - (GetMin(dmgResist, GMST_FLT(fMaxArmorRating)) * 0.01F);
 		cpyThreshold = dmgThreshold = (target->avOwner.GetActorValue(kAVCode_DamageThreshold) - hitLocDT) * valueMod;
@@ -3725,7 +3738,6 @@ void __fastcall CalculateHitDamageHook(ActorHitData *hitData, int, UInt32 noBloc
 	{
 		if (projectile && projectile->hasSplitBeams && (projectile->numProjectiles > 1))
 			dmgThreshold /= (float)projectile->numProjectiles;
-		dmgThreshold *= dmgResist;
 		flagArg = false;
 	}
 	else
