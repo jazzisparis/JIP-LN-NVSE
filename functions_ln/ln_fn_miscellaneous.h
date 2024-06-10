@@ -6,7 +6,7 @@ DEFINE_COMMAND_ALT_PLUGIN(GetWorldspaceParentWorldspace, GetWorldParentWorld, 0,
 DEFINE_COMMAND_PLUGIN(GetCellCoords, 0, kParams_OneOptionalForm);
 DEFINE_COMMAND_ALT_PLUGIN(GetBipedModelList, GetBMList, 0, kParams_OneOptionalObjectID);
 DEFINE_COMMAND_ALT_PLUGIN(SetBipedModelList, SetBMList, 0, kParams_OneForm_OneOptionalForm);
-DEFINE_COMMAND_PLUGIN(GetPCCanUsePowerArmor, 0, nullptr);
+DEFINE_CMD_COND_PLUGIN(GetPCCanUsePowerArmor, 0, nullptr);
 DEFINE_COMMAND_PLUGIN(GetIdleAnimPath, 0, kParams_OneForm);
 DEFINE_COMMAND_PLUGIN(SetIdleAnimPath, 0, kParams_OneForm_OneString);
 DEFINE_COMMAND_PLUGIN(LNGetName, 0, kParams_OneOptionalForm);
@@ -160,6 +160,15 @@ bool Cmd_GetPCCanUsePowerArmor_Execute(COMMAND_ARGS)
 		*result = 1;
 	return true;
 }
+
+bool Cmd_GetPCCanUsePowerArmor_Eval(COMMAND_ARGS_EVAL)
+{
+	*result = 0; // just in case...
+	if (g_thePlayer->canUsePA)
+		*result = 1;
+	return true;
+}
+
 
 bool Cmd_GetIdleAnimPath_Execute(COMMAND_ARGS)
 {
